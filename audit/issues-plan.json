@@ -1,0 +1,2124 @@
+{
+  "audit": "2026-09 coherence audit",
+  "created": "2026-09-29",
+  "method": {
+    "touches_open_pr": "Each PR's own diff (git diff --name-only <base>...<head>) intersected with the files the fix edits (edit_files: finding files minus evidence-only citations). Stack PRs use their stack parent as base, so an upper PR is not credited with lower PRs' files. #832 is an issue; its fix lives on the local branch fix/speckit-pro-sweep-keeps-running (not pushed), diffed against origin/fix/speckit-pro-deferral-resolution, which it builds on. '#839' names the stop-policy stack #837, #838, #843-#852; after_839 means the fix edits a file that stack or the #832 branch changes.",
+    "severity": "Lane severity after seam-review severity_corrections; a merged duplicate takes the highest member severity; an issue's priority is the highest finding severity inside it.",
+    "duplicates": "Each seam-review duplicate group is filed in one issue with all ids listed.",
+    "host_parity": "Per owner direction, Claude/Codex content-drift findings are absorbed into single-source-host-parity; drift_kept_separate lists the exceptions and why."
+  },
+  "issues": [
+    {
+      "key": "parity-vacuous-fixtures",
+      "title": "Layer 7 parity fixtures 02 and 03 pass when autopilot does nothing",
+      "labels": [
+        "bug"
+      ],
+      "priority": "blocking",
+      "finding_ids": [
+        "parity-layer7-001",
+        "seam-003"
+      ],
+      "owning_paths": [
+        "tests/speckit-pro/layer7-parity",
+        "tests/speckit-pro/layer7-parity/02-repository-migration-guidance",
+        "tests/speckit-pro/layer7-parity/03-reviewability-backstop-parent-child-routing"
+      ],
+      "depends_on": [],
+      "touches_open_pr": [],
+      "after_839": false,
+      "stack": "now-parity",
+      "edit_files": [
+        "tests/speckit-pro/layer7-parity/02-repository-migration-guidance/expected-equivalence.json",
+        "tests/speckit-pro/layer7-parity/02-repository-migration-guidance/workflow.md",
+        "tests/speckit-pro/layer7-parity/03-reviewability-backstop-parent-child-routing/expected-equivalence.json",
+        "tests/speckit-pro/layer7-parity/03-reviewability-backstop-parent-child-routing/workflow.md",
+        "tests/speckit-pro/layer7-parity/run-parity-fixtures.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "unregistered-unit-tests",
+      "title": "Two unit tests never run because the Layer 4 manifest omits them, and nothing checks the roster",
+      "labels": [
+        "bug"
+      ],
+      "priority": "blocking",
+      "finding_ids": [
+        "structural-layers-2-001",
+        "native-eval-harness-004"
+      ],
+      "owning_paths": [
+        "tests/speckit-pro",
+        "tests/speckit-pro/unit"
+      ],
+      "depends_on": [],
+      "touches_open_pr": [
+        685,
+        832,
+        843,
+        845,
+        850,
+        851,
+        852
+      ],
+      "after_839": true,
+      "stack": "after839-test-roster",
+      "edit_files": [
+        "tests/speckit-pro/suite-manifest.json",
+        "tests/speckit-pro/unit/test-consensus-synthesizer-regressions.py",
+        "tests/speckit-pro/unit/test-native-eval-fixture-setup.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "dispatch-parser-blind",
+      "title": "Layer 6 dispatch fixtures 19 to 21 cannot detect serial or foreground dispatch",
+      "labels": [
+        "bug"
+      ],
+      "priority": "blocking",
+      "finding_ids": [
+        "integration-layer6-2-001"
+      ],
+      "owning_paths": [
+        "tests/speckit-pro/layer6-integration/dispatch-fixtures/19-implement-parallel-p-tasks",
+        "tests/speckit-pro/layer6-integration/dispatch-fixtures/20-consensus-multi-item-batch",
+        "tests/speckit-pro/layer6-integration/dispatch-fixtures/21-resolve-pr-parallel-files",
+        "tests/speckit-pro/layer6-integration/lib"
+      ],
+      "depends_on": [],
+      "touches_open_pr": [],
+      "after_839": false,
+      "stack": "now-layer6-parser",
+      "edit_files": [
+        "tests/speckit-pro/layer6-integration/dispatch-fixtures/19-implement-parallel-p-tasks/README.md",
+        "tests/speckit-pro/layer6-integration/dispatch-fixtures/20-consensus-multi-item-batch/README.md",
+        "tests/speckit-pro/layer6-integration/dispatch-fixtures/21-resolve-pr-parallel-files/expected.json",
+        "tests/speckit-pro/layer6-integration/lib/fixture_runner.py",
+        "tests/speckit-pro/layer6-integration/lib/transcript_helpers.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "class2-replay-tautology",
+      "title": "Layer 6 return-format replay checks keywords it wrote into the fixture itself",
+      "labels": [
+        "bug"
+      ],
+      "priority": "blocking",
+      "finding_ids": [
+        "integration-layer6-2-004"
+      ],
+      "owning_paths": [
+        "tests/speckit-pro/layer6-integration",
+        "tests/speckit-pro/layer6-integration/return-format-fixtures/04-synthesizer-keyword-only-majority",
+        "tests/speckit-pro/layer6-integration/return-format-fixtures/05-synthesizer-keyword-security-relevant"
+      ],
+      "depends_on": [],
+      "touches_open_pr": [
+        832,
+        851
+      ],
+      "after_839": true,
+      "stack": "after839-layer6",
+      "edit_files": [
+        "tests/speckit-pro/layer6-integration/reduce-transcript-fixture.py",
+        "tests/speckit-pro/layer6-integration/return-format-fixtures/04-synthesizer-keyword-only-majority/parser-fixture.jsonl",
+        "tests/speckit-pro/layer6-integration/return-format-fixtures/05-synthesizer-keyword-security-relevant/parser-fixture.jsonl",
+        "tests/speckit-pro/layer6-integration/run-return-format-fixtures.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "readme-install-drift",
+      "title": "README and Codex install docs list a stale agent roster, skill map and contributor steps",
+      "labels": [
+        "documentation"
+      ],
+      "priority": "major",
+      "finding_ids": [
+        "docs-001",
+        "lifecycle-skills-001",
+        "docs-004",
+        "docs-012",
+        "docs-013"
+      ],
+      "owning_paths": [
+        ".",
+        "docs-site/src/content/docs/install",
+        "speckit-pro"
+      ],
+      "depends_on": [],
+      "touches_open_pr": [
+        844
+      ],
+      "after_839": true,
+      "stack": "after839-readme",
+      "edit_files": [
+        "README.md",
+        "docs-site/src/content/docs/install/codex.md",
+        "speckit-pro/README.md"
+      ],
+      "issue": null
+    },
+    {
+      "key": "docs-site-generator",
+      "title": "Generated reference pages misstate hooks, scripts and manifests, and one docs check verifies nothing",
+      "labels": [
+        "bug",
+        "documentation"
+      ],
+      "priority": "major",
+      "finding_ids": [
+        "docs-002",
+        "docs-003",
+        "docs-015",
+        "docs-016"
+      ],
+      "owning_paths": [
+        "docs-site/scripts",
+        "speckit-pro",
+        "speckit-pro/.codex-plugin",
+        "speckit-pro/hooks",
+        "speckit-pro/scripts"
+      ],
+      "depends_on": [],
+      "touches_open_pr": [],
+      "after_839": false,
+      "stack": "now-docs",
+      "edit_files": [
+        "docs-site/scripts/generate-reference-pages.mjs",
+        "docs-site/scripts/validate-docs-quality.mjs",
+        "speckit-pro/.codex-plugin/plugin.json",
+        "speckit-pro/codex-hooks.json",
+        "speckit-pro/hooks/hooks.json",
+        "speckit-pro/scripts/sweep-isolation-hook.py",
+        "speckit-pro/scripts/workflow-guard-hook.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "docs-site-pages-config",
+      "title": "Public docs pages show internal planning scaffolding and duplicate site config",
+      "labels": [
+        "documentation"
+      ],
+      "priority": "minor",
+      "finding_ids": [
+        "docs-005",
+        "docs-006",
+        "docs-011",
+        "docs-007",
+        "docs-009",
+        "docs-010"
+      ],
+      "owning_paths": [
+        ".",
+        "docs-site",
+        "docs-site/public",
+        "docs-site/src",
+        "docs-site/src/components",
+        "docs-site/src/content/docs",
+        "docs-site/src/pages",
+        "docs-site/src/pages/og",
+        "docs-site/src/styles"
+      ],
+      "depends_on": [],
+      "touches_open_pr": [],
+      "after_839": false,
+      "stack": "now-docs",
+      "edit_files": [
+        "README.md",
+        "docs-site/AGENTS.md",
+        "docs-site/astro.config.mjs",
+        "docs-site/public/site.webmanifest",
+        "docs-site/src/components/LifecycleFlow.astro",
+        "docs-site/src/content/docs/choose-your-path.mdx",
+        "docs-site/src/content/docs/first-run.md",
+        "docs-site/src/content/docs/glossary.md",
+        "docs-site/src/content/docs/reference.md",
+        "docs-site/src/content/docs/spec-kit-lifecycle.mdx",
+        "docs-site/src/pages/[...slug].md.ts",
+        "docs-site/src/pages/og/[...slug].ts",
+        "docs-site/src/routeData.ts",
+        "docs-site/src/styles/brand.css"
+      ],
+      "issue": null
+    },
+    {
+      "key": "stale-planning-records",
+      "title": "Roadmaps, PRDs, spec records, runbooks and eval audit notes make stale claims",
+      "labels": [
+        "documentation"
+      ],
+      "priority": "major",
+      "finding_ids": [
+        "docs-008",
+        "docs-014",
+        "artifact-gallery-010",
+        "artifact-gallery-011",
+        "runner-core-010",
+        "coach-and-formal-004",
+        "coach-and-formal-005",
+        "release-tooling-004",
+        "native-eval-harness-007",
+        "native-eval-harness-008",
+        "native-eval-harness-009",
+        "brokers-and-verification-013",
+        "coach-and-formal-007"
+      ],
+      "owning_paths": [
+        "docs",
+        "docs-site/src/pages",
+        "docs/ai/research",
+        "docs/ai/specs",
+        "specs/formal-001-selective-formal-methods",
+        "tests/speckit-pro/evals",
+        "tests/speckit-pro/evals/audit",
+        "tests/speckit-pro/lib"
+      ],
+      "depends_on": [],
+      "touches_open_pr": [],
+      "after_839": false,
+      "stack": "now-docs",
+      "edit_files": [
+        "docs-site/src/pages/robots.txt.ts",
+        "docs/ai/research/spec-pr-size-governance-research.md",
+        "docs/ai/research/tool-agnostic-capability-discovery-spike.md",
+        "docs/ai/specs/PRSG-001-design-concept.md",
+        "docs/ai/specs/PRSG-001-workflow.md",
+        "docs/ai/specs/SPEC-001-workflow.md",
+        "docs/ai/specs/SPEC-004-workflow.md",
+        "docs/ai/specs/SPEC-006a-design-concept.md",
+        "docs/ai/specs/SPEC-006a-workflow.md",
+        "docs/ai/specs/cicd-release-pipeline-verification.md",
+        "docs/ai/specs/html-artifacts-technical-roadmap.md",
+        "docs/ai/specs/interactive-documentation-technical-roadmap.md",
+        "docs/prd-html-artifacts.md",
+        "specs/formal-001-selective-formal-methods/acceptance.md",
+        "specs/formal-001-selective-formal-methods/plan.md",
+        "specs/formal-001-selective-formal-methods/tasks.md",
+        "tests/speckit-pro/evals/README.md",
+        "tests/speckit-pro/evals/audit/execution-surface-inventory.md",
+        "tests/speckit-pro/evals/audit/trigger-audit.md",
+        "tests/speckit-pro/evals/audit/unit-execution-contract-audit.md",
+        "tests/speckit-pro/evals/audit/unit-quality-formal-audit.json",
+        "tests/speckit-pro/evals/audit/unit-quality-formal-audit.md",
+        "tests/speckit-pro/evals/native-runner-progress.md",
+        "tests/speckit-pro/lib/native_eval_catalog.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "consensus-mode-unimplemented",
+      "title": "Consensus-mode and security-keywords settings are declared but unimplemented",
+      "labels": [
+        "bug"
+      ],
+      "priority": "major",
+      "finding_ids": [
+        "seam-004",
+        "functional-evals-2-002",
+        "autopilot-and-agents-004"
+      ],
+      "owning_paths": [
+        "speckit-pro",
+        "speckit-pro/agents",
+        "speckit-pro/codex-agents",
+        "speckit-pro/codex-skills/speckit-autopilot/references",
+        "speckit-pro/skills/speckit-autopilot/references",
+        "speckit-pro/speckit_pro_runner/helpers",
+        "tests/speckit-pro/layer3-functional/evals"
+      ],
+      "depends_on": [
+        "single-source-host-parity"
+      ],
+      "touches_open_pr": [
+        685,
+        832,
+        844,
+        845,
+        849,
+        850,
+        851,
+        852
+      ],
+      "after_839": true,
+      "stack": "after-design-autopilot",
+      "edit_files": [
+        "speckit-pro/README.md",
+        "speckit-pro/agents/analyze-executor.md",
+        "speckit-pro/agents/checklist-executor.md",
+        "speckit-pro/agents/clarify-executor.md",
+        "speckit-pro/agents/consensus-synthesizer.md",
+        "speckit-pro/codex-agents/clarify-executor.toml",
+        "speckit-pro/codex-agents/consensus-synthesizer.toml",
+        "speckit-pro/codex-skills/speckit-autopilot/references/prerequisites-codex.md",
+        "speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md",
+        "speckit-pro/skills/speckit-autopilot/references/prerequisites.md",
+        "speckit-pro/speckit_pro_runner/helpers/read_only.py",
+        "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json"
+      ],
+      "issue": null
+    },
+    {
+      "key": "stack-helper-scope",
+      "title": "Parity fixture 04 and Codex eval 7 call the stack-manager helper out of scope although both hosts run it",
+      "labels": [
+        "bug"
+      ],
+      "priority": "major",
+      "finding_ids": [
+        "pr-emission-and-stack-2-001",
+        "seam-001",
+        "pr-emission-and-stack-2-002"
+      ],
+      "owning_paths": [
+        "speckit-pro/skills/speckit-autopilot/references",
+        "speckit-pro/speckit_pro_runner/helpers",
+        "tests/speckit-pro/evals/fixtures/functional",
+        "tests/speckit-pro/layer3-functional/codex-evals",
+        "tests/speckit-pro/layer7-parity/04-stack-manager-guidance"
+      ],
+      "depends_on": [
+        "parity-vacuous-fixtures"
+      ],
+      "touches_open_pr": [
+        832,
+        845,
+        849,
+        850,
+        851
+      ],
+      "after_839": true,
+      "stack": "after-design-autopilot",
+      "edit_files": [
+        "speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
+        "speckit-pro/speckit_pro_runner/helpers/registry.py",
+        "tests/speckit-pro/evals/fixtures/functional/legacy-selection.json",
+        "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+        "tests/speckit-pro/layer7-parity/04-stack-manager-guidance/env-fallback.json",
+        "tests/speckit-pro/layer7-parity/04-stack-manager-guidance/env-teams.json",
+        "tests/speckit-pro/layer7-parity/04-stack-manager-guidance/expected-equivalence.json",
+        "tests/speckit-pro/layer7-parity/04-stack-manager-guidance/workflow.md"
+      ],
+      "issue": null
+    },
+    {
+      "key": "parity-runner-drift",
+      "title": "Layer 7 parity runner and fixtures use wrong skill names, retired flags and a lenient schema",
+      "labels": [
+        "bug"
+      ],
+      "priority": "major",
+      "finding_ids": [
+        "parity-layer7-002",
+        "functional-evals-2-001",
+        "parity-layer7-003",
+        "integration-layer6-1-004",
+        "parity-layer7-004",
+        "parity-layer7-005",
+        "parity-layer7-006",
+        "parity-layer7-007",
+        "parity-layer7-008",
+        "parity-layer7-009"
+      ],
+      "owning_paths": [
+        "speckit-pro/skills/grill-me",
+        "speckit-pro/skills/speckit-autopilot/references",
+        "tests/speckit-pro/layer3-functional/evals",
+        "tests/speckit-pro/layer6-integration/dispatch-fixtures/18-post-impl-parallel-subagents",
+        "tests/speckit-pro/layer7-parity",
+        "tests/speckit-pro/layer7-parity/01-post-impl-parity",
+        "tests/speckit-pro/layer7-parity/lib",
+        "tests/speckit-pro/lib"
+      ],
+      "depends_on": [
+        "parity-vacuous-fixtures"
+      ],
+      "touches_open_pr": [],
+      "after_839": false,
+      "stack": "now-parity",
+      "edit_files": [
+        "speckit-pro/skills/grill-me/SKILL.md",
+        "speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
+        "tests/speckit-pro/layer3-functional/evals/grill-me-evals.json",
+        "tests/speckit-pro/layer6-integration/dispatch-fixtures/18-post-impl-parallel-subagents/prompt.txt",
+        "tests/speckit-pro/layer7-parity/01-post-impl-parity/README.md",
+        "tests/speckit-pro/layer7-parity/01-post-impl-parity/expected-equivalence.json",
+        "tests/speckit-pro/layer7-parity/01-post-impl-parity/tolerance.json",
+        "tests/speckit-pro/layer7-parity/01-post-impl-parity/workflow.md",
+        "tests/speckit-pro/layer7-parity/README.md",
+        "tests/speckit-pro/layer7-parity/lib/extractors.py",
+        "tests/speckit-pro/layer7-parity/lib/judge.py",
+        "tests/speckit-pro/layer7-parity/run-parity-fixtures.py",
+        "tests/speckit-pro/lib/native_eval_pairing.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "layer6-fixtures-retired",
+      "title": "Layer 6 dispatch fixtures and README encode retired behavior",
+      "labels": [
+        "bug"
+      ],
+      "priority": "major",
+      "finding_ids": [
+        "integration-layer6-1-001",
+        "integration-layer6-2-002",
+        "integration-layer6-1-005",
+        "integration-layer6-2-003",
+        "pr-emission-and-stack-1-003",
+        "integration-layer6-1-002",
+        "integration-layer6-2-006",
+        "integration-layer6-1-003"
+      ],
+      "owning_paths": [
+        "tests/speckit-pro/layer6-integration",
+        "tests/speckit-pro/layer6-integration/dispatch-fixtures/03-redelegation-chain",
+        "tests/speckit-pro/layer6-integration/dispatch-fixtures/05-clarify-spec-only",
+        "tests/speckit-pro/layer6-integration/dispatch-fixtures/19-implement-parallel-p-tasks",
+        "tests/speckit-pro/layer6-integration/dispatch-fixtures/21-resolve-pr-parallel-files",
+        "tests/speckit-pro/layer6-integration/dispatch-fixtures/22-stack-manager-replay",
+        "tests/speckit-pro/layer6-integration/e2e-fixtures/01-autopilot-minimal-smoke",
+        "tests/speckit-pro/layer6-integration/e2e-fixtures/02-autopilot-extended-pipeline"
+      ],
+      "depends_on": [
+        "dispatch-parser-blind"
+      ],
+      "touches_open_pr": [
+        832,
+        845,
+        851
+      ],
+      "after_839": true,
+      "stack": "after839-layer6",
+      "edit_files": [
+        "tests/speckit-pro/layer6-integration/README.md",
+        "tests/speckit-pro/layer6-integration/dispatch-fixtures/03-redelegation-chain/README.md",
+        "tests/speckit-pro/layer6-integration/dispatch-fixtures/03-redelegation-chain/sample-spec.md",
+        "tests/speckit-pro/layer6-integration/dispatch-fixtures/05-clarify-spec-only/expected.json",
+        "tests/speckit-pro/layer6-integration/dispatch-fixtures/19-implement-parallel-p-tasks/README.md",
+        "tests/speckit-pro/layer6-integration/dispatch-fixtures/19-implement-parallel-p-tasks/parser-fixture.jsonl",
+        "tests/speckit-pro/layer6-integration/dispatch-fixtures/19-implement-parallel-p-tasks/prompt.txt",
+        "tests/speckit-pro/layer6-integration/dispatch-fixtures/21-resolve-pr-parallel-files/prompt.txt",
+        "tests/speckit-pro/layer6-integration/dispatch-fixtures/22-stack-manager-replay/expected.json",
+        "tests/speckit-pro/layer6-integration/dispatch-fixtures/22-stack-manager-replay/parser-fixture.jsonl",
+        "tests/speckit-pro/layer6-integration/dispatch-fixtures/22-stack-manager-replay/prompt.txt",
+        "tests/speckit-pro/layer6-integration/e2e-fixtures/01-autopilot-minimal-smoke/prompt.txt",
+        "tests/speckit-pro/layer6-integration/e2e-fixtures/01-autopilot-minimal-smoke/sample-spec.md",
+        "tests/speckit-pro/layer6-integration/e2e-fixtures/02-autopilot-extended-pipeline/README.md",
+        "tests/speckit-pro/layer6-integration/e2e-fixtures/02-autopilot-extended-pipeline/sample-spec.md"
+      ],
+      "issue": null
+    },
+    {
+      "key": "layer6-lib-fail-open",
+      "title": "Layer 6 helpers reject valid grounding notes, runners fail open, and the scrubber misses private paths",
+      "labels": [
+        "bug"
+      ],
+      "priority": "major",
+      "finding_ids": [
+        "integration-layer6-2-005",
+        "integration-layer6-2-010",
+        "integration-layer6-2-011",
+        "integration-layer6-2-008",
+        "integration-layer6-2-009",
+        "integration-layer6-2-007",
+        "coach-and-formal-006"
+      ],
+      "owning_paths": [
+        "specs/formal-001-selective-formal-methods",
+        "tests/speckit-pro/layer6-integration",
+        "tests/speckit-pro/layer6-integration/lib",
+        "tests/speckit-pro/lib",
+        "tests/speckit-pro/unit"
+      ],
+      "depends_on": [
+        "class2-replay-tautology"
+      ],
+      "touches_open_pr": [
+        832,
+        851
+      ],
+      "after_839": true,
+      "stack": "after839-layer6",
+      "edit_files": [
+        "specs/formal-001-selective-formal-methods/stack-uat.md",
+        "tests/speckit-pro/layer6-integration/lib/fixture_runner.py",
+        "tests/speckit-pro/layer6-integration/lib/transcript_helpers.py",
+        "tests/speckit-pro/layer6-integration/reduce-transcript-fixture.py",
+        "tests/speckit-pro/layer6-integration/run-dispatch-fixtures.py",
+        "tests/speckit-pro/layer6-integration/run-grounding-fixtures.py",
+        "tests/speckit-pro/layer6-integration/run-return-format-fixtures.py",
+        "tests/speckit-pro/layer6-integration/scrub-transcript.py",
+        "tests/speckit-pro/lib/privacy_patterns.py",
+        "tests/speckit-pro/unit/test-integration-runners.py",
+        "tests/speckit-pro/unit/test-transcript-helpers.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "layer3-runners",
+      "title": "Layer 3 headless runner drifts from Layer 2 and the executor-mode scorer accepts bad input",
+      "labels": [
+        "bug"
+      ],
+      "priority": "major",
+      "finding_ids": [
+        "functional-evals-2-005",
+        "functional-evals-2-006",
+        "functional-evals-2-009",
+        "functional-evals-1-004",
+        "functional-evals-2-008"
+      ],
+      "owning_paths": [
+        "docs/ai/specs",
+        "tests/speckit-pro/layer2-trigger",
+        "tests/speckit-pro/layer3-functional",
+        "tests/speckit-pro/layer3-functional/executor-modes"
+      ],
+      "depends_on": [],
+      "touches_open_pr": [],
+      "after_839": false,
+      "stack": "now-layer2-layer3",
+      "edit_files": [
+        "docs/ai/specs/executor-mode-paired-eval-design.md",
+        "tests/speckit-pro/layer2-trigger/run_codex_evals.py",
+        "tests/speckit-pro/layer3-functional/executor-modes/catalog.json",
+        "tests/speckit-pro/layer3-functional/executor-modes/score-executor-modes.py",
+        "tests/speckit-pro/layer3-functional/headless_cases.json",
+        "tests/speckit-pro/layer3-functional/run-headless-evals.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "orphan-fixtures",
+      "title": "Unreferenced and legacy-shaped test fixtures look like coverage but assert nothing",
+      "labels": [
+        "enhancement"
+      ],
+      "priority": "minor",
+      "finding_ids": [
+        "functional-evals-1-003",
+        "lifecycle-skills-011",
+        "pr-emission-and-stack-2-003",
+        "runner-core-009",
+        "pr-emission-and-stack-2-004",
+        "pr-emission-and-stack-2-007"
+      ],
+      "owning_paths": [
+        "tests/speckit-pro/evals/fixtures/functional/speckit-coach/case-2",
+        "tests/speckit-pro/evals/fixtures/functional/speckit-status/case-1/docs/ai/specs",
+        "tests/speckit-pro/evals/fixtures/functional/speckit-status/case-2/docs/ai/specs",
+        "tests/speckit-pro/evals/fixtures/functional/speckit-status/case-3/docs/ai/specs",
+        "tests/speckit-pro/evals/fixtures/functional/speckit-status/case-5/docs/ai",
+        "tests/speckit-pro/evals/fixtures/functional/speckit-status/case-6/docs/ai",
+        "tests/speckit-pro/evals/fixtures/scaffold-contracts/push-rejected",
+        "tests/speckit-pro/evals/fixtures/scaffold-contracts/relocation",
+        "tests/speckit-pro/evals/fixtures/status-contracts/overall-dashboard/docs/ai",
+        "tests/speckit-pro/unit",
+        "tests/speckit-pro/unit/fixtures/estimate-spec-size",
+        "tests/speckit-pro/unit/fixtures/plan-layers/checkbox-state",
+        "tests/speckit-pro/unit/fixtures/plan-layers/empty-increment",
+        "tests/speckit-pro/unit/fixtures/plan-layers/invalid-dependency",
+        "tests/speckit-pro/unit/fixtures/plan-layers/invalid-reference",
+        "tests/speckit-pro/unit/fixtures/plan-layers/missing-headings",
+        "tests/speckit-pro/unit/fixtures/plan-layers/missing-references",
+        "tests/speckit-pro/unit/fixtures/pr-packet",
+        "tests/speckit-pro/unit/fixtures/pr-split-ratification",
+        "tests/speckit-pro/unit/fixtures/read-only-helpers",
+        "tests/speckit-pro/unit/fixtures/read-only-helpers/requests"
+      ],
+      "depends_on": [],
+      "touches_open_pr": [
+        850,
+        852
+      ],
+      "after_839": true,
+      "stack": "after839-test-roster",
+      "edit_files": [
+        "tests/speckit-pro/evals/fixtures/functional/speckit-coach/case-2/spec.md",
+        "tests/speckit-pro/evals/fixtures/functional/speckit-status/case-1/docs/ai/specs/SPEC-021-workflow.md",
+        "tests/speckit-pro/evals/fixtures/functional/speckit-status/case-2/docs/ai/specs/SPEC-013-workflow.md",
+        "tests/speckit-pro/evals/fixtures/functional/speckit-status/case-3/docs/ai/specs/SPEC-013-workflow.md",
+        "tests/speckit-pro/evals/fixtures/functional/speckit-status/case-5/docs/ai/current-quarter-technical-roadmap.md",
+        "tests/speckit-pro/evals/fixtures/functional/speckit-status/case-6/docs/ai/current-technical-roadmap.md",
+        "tests/speckit-pro/evals/fixtures/scaffold-contracts/push-rejected/roadmap.txt",
+        "tests/speckit-pro/evals/fixtures/scaffold-contracts/relocation/team-123-legacy.txt",
+        "tests/speckit-pro/evals/fixtures/status-contracts/overall-dashboard/docs/ai/current-technical-roadmap.md",
+        "tests/speckit-pro/unit/fixtures/estimate-spec-size/multi-slice.args",
+        "tests/speckit-pro/unit/fixtures/plan-layers/checkbox-state/tasks.md",
+        "tests/speckit-pro/unit/fixtures/plan-layers/empty-increment/tasks.md",
+        "tests/speckit-pro/unit/fixtures/plan-layers/invalid-dependency/tasks.md",
+        "tests/speckit-pro/unit/fixtures/plan-layers/invalid-reference/tasks.md",
+        "tests/speckit-pro/unit/fixtures/plan-layers/missing-headings/tasks.md",
+        "tests/speckit-pro/unit/fixtures/plan-layers/missing-references/tasks.md",
+        "tests/speckit-pro/unit/fixtures/pr-packet/split-partial-failure-state.json",
+        "tests/speckit-pro/unit/fixtures/pr-split-ratification/preserving-split.json",
+        "tests/speckit-pro/unit/fixtures/read-only-helpers/normalization-cases.json",
+        "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/ratify-pr-split.json",
+        "tests/speckit-pro/unit/fixtures/read-only-helpers/synthetic-paths.json",
+        "tests/speckit-pro/unit/test-estimate-spec-size.py",
+        "tests/speckit-pro/unit/test-ratify-pr-split.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "trigger-inputs-drift",
+      "title": "Layer 2 trigger queries name missing files and pinned identities have drifted",
+      "labels": [
+        "bug"
+      ],
+      "priority": "major",
+      "finding_ids": [
+        "trigger-evals-001",
+        "trigger-evals-003",
+        "trigger-evals-004"
+      ],
+      "owning_paths": [
+        "tests/speckit-pro/layer2-trigger",
+        "tests/speckit-pro/layer2-trigger/campaign-drafts",
+        "tests/speckit-pro/layer2-trigger/codex-evals",
+        "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace"
+      ],
+      "depends_on": [],
+      "touches_open_pr": [],
+      "after_839": false,
+      "stack": "now-layer2-layer3",
+      "edit_files": [
+        "tests/speckit-pro/layer2-trigger/MEASUREMENT.md",
+        "tests/speckit-pro/layer2-trigger/campaign-drafts/issue-573-full.draft.json",
+        "tests/speckit-pro/layer2-trigger/campaign-drafts/issue-573-pilot.draft.json",
+        "tests/speckit-pro/layer2-trigger/codex-evals/speckit-prd-trigger.json",
+        "tests/speckit-pro/layer2-trigger/codex-evals/speckit-resolve-pr-trigger.json",
+        "tests/speckit-pro/layer2-trigger/codex-evals/speckit-scaffold-spec-trigger.json",
+        "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/SPEC-009-workflow.md",
+        "tests/speckit-pro/layer2-trigger/measurement-capabilities.json",
+        "tests/speckit-pro/layer2-trigger/run-trigger-evals.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "trigger-lib-cohesion",
+      "title": "Layer 2 trigger library hard-codes one campaign and the runners duplicate shared code",
+      "labels": [
+        "enhancement"
+      ],
+      "priority": "major",
+      "finding_ids": [
+        "trigger-evals-002",
+        "trigger-evals-009",
+        "trigger-evals-005",
+        "trigger-evals-006",
+        "trigger-evals-007",
+        "trigger-evals-008"
+      ],
+      "owning_paths": [
+        "tests/speckit-pro/layer2-trigger",
+        "tests/speckit-pro/layer2-trigger/codex-evals",
+        "tests/speckit-pro/layer2-trigger/controlled-descriptions",
+        "tests/speckit-pro/layer2-trigger/evals",
+        "tests/speckit-pro/lib",
+        "tests/speckit-pro/unit"
+      ],
+      "depends_on": [
+        "trigger-inputs-drift"
+      ],
+      "touches_open_pr": [],
+      "after_839": false,
+      "stack": "now-layer2-layer3",
+      "edit_files": [
+        "tests/speckit-pro/layer2-trigger/codex-evals/speckit-status-trigger.json",
+        "tests/speckit-pro/layer2-trigger/controlled-descriptions.json",
+        "tests/speckit-pro/layer2-trigger/controlled-descriptions/candidate.txt",
+        "tests/speckit-pro/layer2-trigger/evals/speckit-status-trigger.json",
+        "tests/speckit-pro/layer2-trigger/qualification-protocol.md",
+        "tests/speckit-pro/layer2-trigger/run-trigger-evals-codex.py",
+        "tests/speckit-pro/layer2-trigger/run-trigger-evals.py",
+        "tests/speckit-pro/layer2-trigger/run_codex_evals.py",
+        "tests/speckit-pro/lib/native_eval_trigger.py",
+        "tests/speckit-pro/lib/trigger_campaign.py",
+        "tests/speckit-pro/lib/trigger_campaign_execution.py",
+        "tests/speckit-pro/lib/trigger_carry_forward.py",
+        "tests/speckit-pro/lib/trigger_comparison.py",
+        "tests/speckit-pro/lib/trigger_process.py",
+        "tests/speckit-pro/unit/test-trigger-campaign-execution.py",
+        "tests/speckit-pro/unit/test-trigger-campaign.py",
+        "tests/speckit-pro/unit/test-trigger-eval-coverage.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "native-eval-lib-cohesion",
+      "title": "Duplicated JSON loaders and dead code in the native eval lib",
+      "labels": [
+        "enhancement"
+      ],
+      "priority": "major",
+      "finding_ids": [
+        "native-eval-harness-002",
+        "native-eval-harness-003",
+        "native-eval-harness-005",
+        "native-eval-harness-006",
+        "native-eval-harness-010",
+        "native-eval-harness-012"
+      ],
+      "owning_paths": [
+        "tests/speckit-pro",
+        "tests/speckit-pro/lib",
+        "tests/speckit-pro/unit"
+      ],
+      "depends_on": [],
+      "touches_open_pr": [],
+      "after_839": false,
+      "stack": "now-native-eval",
+      "edit_files": [
+        "tests/speckit-pro/lib/native_eval_adapters.py",
+        "tests/speckit-pro/lib/native_eval_dispatch_context.py",
+        "tests/speckit-pro/lib/native_eval_execution.py",
+        "tests/speckit-pro/lib/native_eval_git_observation.py",
+        "tests/speckit-pro/lib/native_eval_grading.py",
+        "tests/speckit-pro/lib/native_eval_runner_result.py",
+        "tests/speckit-pro/lib/native_eval_skill_reads.py",
+        "tests/speckit-pro/lib/native_eval_store.py",
+        "tests/speckit-pro/lib/native_eval_upstream.py",
+        "tests/speckit-pro/lib/native_eval_verification.py",
+        "tests/speckit-pro/run-native-evals.py",
+        "tests/speckit-pro/unit/test-native-eval-skill-reads.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "rosters-hand-kept",
+      "title": "Layer 1 validators and tests restate agent and skill rosters by hand",
+      "labels": [
+        "enhancement"
+      ],
+      "priority": "major",
+      "finding_ids": [
+        "structural-layers-2-002",
+        "release-tooling-011",
+        "structural-layers-2-003",
+        "native-eval-harness-011",
+        "autopilot-and-agents-010",
+        "structural-layers-2-006",
+        "structural-layers-2-010",
+        "structural-layers-2-012",
+        "structural-layers-2-013"
+      ],
+      "owning_paths": [
+        "speckit-pro/skills/speckit-autopilot/references",
+        "speckit-pro/speckit_pro_runner",
+        "tests/speckit-pro/layer1-structural",
+        "tests/speckit-pro/layer5-tool-scoping",
+        "tests/speckit-pro/unit"
+      ],
+      "depends_on": [],
+      "touches_open_pr": [
+        685,
+        832,
+        845,
+        847,
+        849,
+        850,
+        851,
+        852,
+        853
+      ],
+      "after_839": true,
+      "stack": "after839-test-roster",
+      "edit_files": [
+        "speckit-pro/skills/speckit-autopilot/references/subagent-memory-policy.md",
+        "speckit-pro/speckit_pro_runner/agent_inventory.json",
+        "tests/speckit-pro/layer1-structural/validate-agent-contracts.py",
+        "tests/speckit-pro/layer1-structural/validate-plugin-metadata.py",
+        "tests/speckit-pro/layer1-structural/validate-skill-contracts.py",
+        "tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.py",
+        "tests/speckit-pro/unit/test-native-eval-adapters.py",
+        "tests/speckit-pro/unit/test-native-functional-catalog.py",
+        "tests/speckit-pro/unit/test-native-trigger-catalog.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "test-infra-residue",
+      "title": "Test runners and unit tests hand-list cases, duplicate helpers and keep retired dispatch modes",
+      "labels": [
+        "enhancement"
+      ],
+      "priority": "minor",
+      "finding_ids": [
+        "structural-layers-2-011",
+        "brokers-and-verification-014",
+        "autopilot-and-agents-012",
+        "pr-emission-and-stack-2-006",
+        "runner-core-008",
+        "release-tooling-016",
+        "structural-layers-2-007",
+        "release-tooling-015",
+        "release-tooling-017",
+        "native-eval-harness-001"
+      ],
+      "owning_paths": [
+        "scripts",
+        "speckit-pro/speckit_pro_runner/gates",
+        "tests/speckit-pro",
+        "tests/speckit-pro/evals",
+        "tests/speckit-pro/layer5-tool-scoping",
+        "tests/speckit-pro/unit",
+        "tests/speckit-pro/unit/fixtures/runner-gates/requests"
+      ],
+      "depends_on": [
+        "unregistered-unit-tests"
+      ],
+      "touches_open_pr": [
+        685,
+        832,
+        837,
+        838,
+        843,
+        844,
+        845,
+        846,
+        847,
+        848,
+        849,
+        850,
+        851,
+        852
+      ],
+      "after_839": true,
+      "stack": "after839-test-roster",
+      "edit_files": [
+        "scripts/check-go-module.py",
+        "scripts/classify-docs-validation.py",
+        "speckit-pro/speckit_pro_runner/gates/suite.py",
+        "tests/speckit-pro/check-toolchain.py",
+        "tests/speckit-pro/evals/README.md",
+        "tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.py",
+        "tests/speckit-pro/run-all.py",
+        "tests/speckit-pro/run-layer-scripts.py",
+        "tests/speckit-pro/suite-manifest.json",
+        "tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json",
+        "tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py",
+        "tests/speckit-pro/unit/test-execution-control.py",
+        "tests/speckit-pro/unit/test-finalize-run.py",
+        "tests/speckit-pro/unit/test-pr-checks-helpers.py",
+        "tests/speckit-pro/unit/test-release-pr-reconciliation.py",
+        "tests/speckit-pro/unit/test-speckit-pro-gates.py",
+        "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py",
+        "tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py",
+        "tests/speckit-pro/unit/test-speckit-pro-runner.py",
+        "tests/speckit-pro/unit/test-typesafe-jev-release-build.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "spec-lifecycle-validator",
+      "title": "Spec lifecycle validator reimplements the spec-index rules and its fixtures use a retired sentinel",
+      "labels": [
+        "bug"
+      ],
+      "priority": "major",
+      "finding_ids": [
+        "structural-layers-2-004",
+        "structural-layers-2-005",
+        "structural-layers-2-008",
+        "structural-layers-1-001",
+        "structural-layers-1-002",
+        "structural-layers-2-009"
+      ],
+      "owning_paths": [
+        "tests/speckit-pro/layer1-structural",
+        "tests/speckit-pro/layer1-structural/fixtures/spec-index",
+        "tests/speckit-pro/layer1-structural/fixtures/spec-index/current-empty/specs/prsg-900-current",
+        "tests/speckit-pro/layer1-structural/fixtures/spec-index/roadmap-moc/docs/ai/specs",
+        "tests/speckit-pro/layer1-structural/fixtures/spec-index/roadmap-moc/specs/prsg-011-flat-owned",
+        "tests/speckit-pro/lib",
+        "tests/speckit-pro/unit"
+      ],
+      "depends_on": [],
+      "touches_open_pr": [],
+      "after_839": false,
+      "stack": "now-spec-lifecycle",
+      "edit_files": [
+        "tests/speckit-pro/layer1-structural/fixtures/spec-index/README.md",
+        "tests/speckit-pro/layer1-structural/fixtures/spec-index/current-empty/specs/prsg-900-current/SPEC-MOC.md",
+        "tests/speckit-pro/layer1-structural/fixtures/spec-index/roadmap-moc/docs/ai/specs/myproject-roadmap-MOC.md",
+        "tests/speckit-pro/layer1-structural/fixtures/spec-index/roadmap-moc/specs/prsg-011-flat-owned/spec.md",
+        "tests/speckit-pro/layer1-structural/validate-spec-lifecycle-contracts.py",
+        "tests/speckit-pro/lib/test_result.py",
+        "tests/speckit-pro/unit/test-generate-spec-index.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "read-only-helpers-split",
+      "title": "Core runner modules reach into helpers/read_only.py through hidden local imports",
+      "labels": [
+        "enhancement"
+      ],
+      "priority": "major",
+      "finding_ids": [
+        "brokers-and-verification-003",
+        "runner-core-001",
+        "brokers-and-verification-005"
+      ],
+      "owning_paths": [
+        "speckit-pro/speckit_pro_runner",
+        "speckit-pro/speckit_pro_runner/helpers"
+      ],
+      "depends_on": [],
+      "touches_open_pr": [
+        685,
+        832,
+        837,
+        838,
+        846,
+        847,
+        848,
+        849,
+        850,
+        851,
+        852
+      ],
+      "after_839": true,
+      "stack": "after839-runner-core",
+      "edit_files": [
+        "speckit-pro/speckit_pro_runner/execution_control.py",
+        "speckit-pro/speckit_pro_runner/helpers/gate_preflight_coverage.py",
+        "speckit-pro/speckit_pro_runner/helpers/read_only.py",
+        "speckit-pro/speckit_pro_runner/sweep_isolation.py",
+        "speckit-pro/speckit_pro_runner/task_results.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "coverage-report-schema",
+      "title": "The autopilot phase coverage report fails its own schema",
+      "labels": [
+        "bug"
+      ],
+      "priority": "major",
+      "finding_ids": [
+        "autopilot-and-agents-005"
+      ],
+      "owning_paths": [
+        "speckit-pro/skills/speckit-autopilot/scripts",
+        "tests/speckit-pro/unit",
+        "tests/speckit-pro/unit/fixtures/mutation-helpers/contracts"
+      ],
+      "depends_on": [],
+      "touches_open_pr": [
+        685,
+        850,
+        852
+      ],
+      "after_839": true,
+      "stack": "after839-coverage-gates",
+      "edit_files": [
+        "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
+        "tests/speckit-pro/unit/fixtures/mutation-helpers/contracts/autopilot-phase-coverage-report.schema.json",
+        "tests/speckit-pro/unit/test-autopilot-phase-coverage.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "coverage-validator-split",
+      "title": "Split the autopilot phase coverage validator and use the runner's JSON Schema validator",
+      "labels": [
+        "enhancement"
+      ],
+      "priority": "major",
+      "finding_ids": [
+        "autopilot-and-agents-008",
+        "pr-emission-and-stack-2-009",
+        "autopilot-and-agents-007",
+        "runner-core-004",
+        "runner-core-005"
+      ],
+      "owning_paths": [
+        "speckit-pro/skills/speckit-autopilot/scripts",
+        "speckit-pro/speckit_pro_runner",
+        "speckit-pro/speckit_pro_runner/contracts",
+        "tests/speckit-pro/unit"
+      ],
+      "depends_on": [
+        "coverage-report-schema"
+      ],
+      "touches_open_pr": [
+        685,
+        850,
+        852
+      ],
+      "after_839": true,
+      "stack": "after839-coverage-gates",
+      "edit_files": [
+        "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
+        "speckit-pro/speckit_pro_runner/architecture_graph.py",
+        "speckit-pro/speckit_pro_runner/contracts/architecture-graph.schema.json",
+        "speckit-pro/speckit_pro_runner/gate_discovery.py",
+        "tests/speckit-pro/unit/test-autonomy-boundary-receipt-replay.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "runner-primitive-dups",
+      "title": "Runner duplicates canonical JSON, version parsing and gh subprocess wrappers",
+      "labels": [
+        "enhancement"
+      ],
+      "priority": "major",
+      "finding_ids": [
+        "autopilot-and-agents-006",
+        "lifecycle-skills-005",
+        "brokers-and-verification-016",
+        "pr-emission-and-stack-1-008"
+      ],
+      "owning_paths": [
+        "speckit-pro/speckit_pro_runner",
+        "speckit-pro/speckit_pro_runner/helpers"
+      ],
+      "depends_on": [],
+      "touches_open_pr": [
+        832,
+        846,
+        847,
+        850,
+        851,
+        852
+      ],
+      "after_839": true,
+      "stack": "after839-runner-core",
+      "edit_files": [
+        "speckit-pro/speckit_pro_runner/agent_materialization.py",
+        "speckit-pro/speckit_pro_runner/failing_checks.py",
+        "speckit-pro/speckit_pro_runner/helpers/archive_sweep.py",
+        "speckit-pro/speckit_pro_runner/helpers/install.py",
+        "speckit-pro/speckit_pro_runner/helpers/stack_manager.py",
+        "speckit-pro/speckit_pro_runner/research_preflight.py",
+        "speckit-pro/speckit_pro_runner/runtime.py",
+        "speckit-pro/speckit_pro_runner/sweep_isolation.py",
+        "speckit-pro/speckit_pro_runner/task_results.py",
+        "speckit-pro/speckit_pro_runner/verification_records.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "install-module-split",
+      "title": "helpers/install.py carries five unrelated jobs and a second inventory contract",
+      "labels": [
+        "enhancement"
+      ],
+      "priority": "major",
+      "finding_ids": [
+        "lifecycle-skills-003",
+        "lifecycle-skills-004",
+        "lifecycle-skills-006",
+        "lifecycle-skills-007",
+        "runner-core-007"
+      ],
+      "owning_paths": [
+        "speckit-pro/speckit_pro_runner",
+        "speckit-pro/speckit_pro_runner/gates",
+        "speckit-pro/speckit_pro_runner/helpers"
+      ],
+      "depends_on": [
+        "runner-primitive-dups"
+      ],
+      "touches_open_pr": [],
+      "after_839": false,
+      "stack": "after839-runner-core",
+      "edit_files": [
+        "speckit-pro/speckit_pro_runner/gates/payloads.py",
+        "speckit-pro/speckit_pro_runner/gates/registry.py",
+        "speckit-pro/speckit_pro_runner/gates/suite.py",
+        "speckit-pro/speckit_pro_runner/helpers/install.py",
+        "speckit-pro/speckit_pro_runner/helpers/registry.py",
+        "speckit-pro/speckit_pro_runner/install_inventory.json"
+      ],
+      "issue": null
+    },
+    {
+      "key": "execution-control-allowances",
+      "title": "Execution control implements the review and remediation allowances twice",
+      "labels": [
+        "enhancement"
+      ],
+      "priority": "major",
+      "finding_ids": [
+        "brokers-and-verification-001"
+      ],
+      "owning_paths": [
+        "speckit-pro/speckit_pro_runner"
+      ],
+      "depends_on": [],
+      "touches_open_pr": [
+        837,
+        838,
+        846,
+        847,
+        848,
+        852
+      ],
+      "after_839": true,
+      "stack": "after839-runner-core",
+      "edit_files": [
+        "speckit-pro/speckit_pro_runner/execution_control.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "sweep-broker-cohesion",
+      "title": "Sweep receipt and stage contracts are stated several times, and the brokers duplicate their plumbing",
+      "labels": [
+        "bug",
+        "enhancement"
+      ],
+      "priority": "minor",
+      "finding_ids": [
+        "brokers-and-verification-006",
+        "brokers-and-verification-007",
+        "brokers-and-verification-015",
+        "brokers-and-verification-002",
+        "brokers-and-verification-008",
+        "artifact-gallery-007",
+        "artifact-gallery-008"
+      ],
+      "owning_paths": [
+        "speckit-pro/agents",
+        "speckit-pro/codex-skills/speckit-autopilot/references/sweep-prompts",
+        "speckit-pro/scripts",
+        "speckit-pro/speckit_pro_runner",
+        "speckit-pro/speckit_pro_runner/contracts"
+      ],
+      "depends_on": [
+        "read-only-helpers-split",
+        "single-source-host-parity"
+      ],
+      "touches_open_pr": [
+        832,
+        851
+      ],
+      "after_839": true,
+      "stack": "after-design-autopilot",
+      "edit_files": [
+        "speckit-pro/agents/sweep-analyst.md",
+        "speckit-pro/codex-skills/speckit-autopilot/references/sweep-prompts/analyst.md",
+        "speckit-pro/codex-skills/speckit-autopilot/references/sweep-prompts/classifier.md",
+        "speckit-pro/scripts/sweep-isolation-hook.py",
+        "speckit-pro/speckit_pro_runner/author_broker.py",
+        "speckit-pro/speckit_pro_runner/contracts/sweep-receipt-output.schema.json",
+        "speckit-pro/speckit_pro_runner/mcp_protocol.py",
+        "speckit-pro/speckit_pro_runner/preview_launcher.py",
+        "speckit-pro/speckit_pro_runner/research_broker.py",
+        "speckit-pro/speckit_pro_runner/sweep_broker.py",
+        "speckit-pro/speckit_pro_runner/sweep_isolation.py",
+        "speckit-pro/speckit_pro_runner/sweep_launcher.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "artifact-gallery-drift",
+      "title": "Artifact gallery contract is untested and preview guidance disagrees with the code",
+      "labels": [
+        "bug"
+      ],
+      "priority": "major",
+      "finding_ids": [
+        "artifact-gallery-001",
+        "artifact-gallery-002",
+        "artifact-gallery-003",
+        "artifact-gallery-005",
+        "artifact-gallery-009"
+      ],
+      "owning_paths": [
+        "docs-site",
+        "docs/ai/specs",
+        "speckit-pro/agents",
+        "speckit-pro/artifact-gallery",
+        "speckit-pro/codex-agents",
+        "speckit-pro/codex-skills/speckit-autopilot/references",
+        "speckit-pro/skills/speckit-autopilot/templates",
+        "speckit-pro/speckit_pro_runner",
+        "tests/speckit-pro/unit"
+      ],
+      "depends_on": [
+        "single-source-host-parity"
+      ],
+      "touches_open_pr": [
+        832,
+        837,
+        838,
+        844,
+        847,
+        848,
+        849,
+        850,
+        851
+      ],
+      "after_839": true,
+      "stack": "after-design-autopilot",
+      "edit_files": [
+        "docs-site/package.json",
+        "docs/ai/specs/html-artifacts-technical-roadmap.md",
+        "speckit-pro/agents/artifact-author.md",
+        "speckit-pro/artifact-gallery/SPA-CONTRACT.md",
+        "speckit-pro/codex-agents/artifact-author.toml",
+        "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
+        "speckit-pro/skills/speckit-autopilot/templates/uat-runbook-template.md",
+        "speckit-pro/speckit_pro_runner/author_broker.py",
+        "speckit-pro/speckit_pro_runner/preview_launcher.py",
+        "tests/speckit-pro/unit/test-artifact-gallery.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "formal-package-cohesion",
+      "title": "Formal package holds autopilot policy and hand-copied tool pins",
+      "labels": [
+        "enhancement"
+      ],
+      "priority": "minor",
+      "finding_ids": [
+        "artifact-gallery-006",
+        "coach-and-formal-008",
+        "coach-and-formal-002",
+        "coach-and-formal-003"
+      ],
+      "owning_paths": [
+        "speckit-pro/skills/speckit-coach/examples/formal/counter",
+        "speckit-pro/skills/speckit-coach/examples/formal/counter-tlc",
+        "speckit-pro/skills/speckit-coach/references",
+        "speckit-pro/skills/speckit-coach/scripts",
+        "speckit-pro/speckit_pro_runner",
+        "speckit-pro/speckit_pro_runner/contracts",
+        "speckit-pro/speckit_pro_runner/formal"
+      ],
+      "depends_on": [],
+      "touches_open_pr": [],
+      "after_839": false,
+      "stack": "now-formal",
+      "edit_files": [
+        "speckit-pro/skills/speckit-coach/examples/formal/counter-tlc/catalog.json",
+        "speckit-pro/skills/speckit-coach/examples/formal/counter/catalog.json",
+        "speckit-pro/skills/speckit-coach/references/formal-setup.md",
+        "speckit-pro/skills/speckit-coach/references/quint-guide.md",
+        "speckit-pro/skills/speckit-coach/scripts/setup-formal-tools.py",
+        "speckit-pro/speckit_pro_runner/artifact_review.py",
+        "speckit-pro/speckit_pro_runner/contracts/formal-methods.schema.json",
+        "speckit-pro/speckit_pro_runner/formal/catalog.py",
+        "speckit-pro/speckit_pro_runner/formal/engine.py",
+        "speckit-pro/speckit_pro_runner/formal/helper.py",
+        "speckit-pro/speckit_pro_runner/formal/lifecycle.py",
+        "speckit-pro/speckit_pro_runner/formal/quint.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "docker-verification",
+      "title": "Docker verification hides an arm64-only requirement and a module cycle",
+      "labels": [
+        "bug"
+      ],
+      "priority": "minor",
+      "finding_ids": [
+        "brokers-and-verification-004",
+        "brokers-and-verification-011"
+      ],
+      "owning_paths": [
+        "speckit-pro/skills/speckit-autopilot/references",
+        "speckit-pro/speckit_pro_runner"
+      ],
+      "depends_on": [],
+      "touches_open_pr": [
+        837,
+        838,
+        846,
+        847,
+        848,
+        850
+      ],
+      "after_839": true,
+      "stack": "after839-runner-core",
+      "edit_files": [
+        "speckit-pro/skills/speckit-autopilot/references/execution-efficiency.md",
+        "speckit-pro/speckit_pro_runner/verification_docker.py",
+        "speckit-pro/speckit_pro_runner/verification_docker_image.py",
+        "speckit-pro/speckit_pro_runner/verification_docker_qualification.py",
+        "speckit-pro/speckit_pro_runner/verification_docker_runtime.py",
+        "speckit-pro/speckit_pro_runner/verification_records.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "research-broker-privacy",
+      "title": "Research broker spec-text privacy guard is off in any plugin marketplace repository",
+      "labels": [
+        "bug"
+      ],
+      "priority": "major",
+      "finding_ids": [
+        "brokers-and-verification-009"
+      ],
+      "owning_paths": [
+        "docs/ai/specs",
+        "speckit-pro/speckit_pro_runner"
+      ],
+      "depends_on": [],
+      "touches_open_pr": [],
+      "after_839": false,
+      "stack": "now-research-broker",
+      "edit_files": [
+        "docs/ai/specs/research-broker-contract.md",
+        "speckit-pro/speckit_pro_runner/research_broker.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "quality-gate-drift",
+      "title": "Quality-gate docs misstate the threshold scope and the egress check misses govulncheck",
+      "labels": [
+        "bug"
+      ],
+      "priority": "minor",
+      "finding_ids": [
+        "brokers-and-verification-010",
+        "runner-core-002",
+        "runner-core-011"
+      ],
+      "owning_paths": [
+        "docs/ai/specs",
+        "speckit-pro/scripts",
+        "speckit-pro/skills/speckit-coach/references",
+        "speckit-pro/speckit_pro_runner",
+        "speckit-pro/speckit_pro_runner/contracts",
+        "speckit-pro/speckit_pro_runner/helpers"
+      ],
+      "depends_on": [],
+      "touches_open_pr": [
+        849,
+        850
+      ],
+      "after_839": true,
+      "stack": "after839-coverage-gates",
+      "edit_files": [
+        "docs/ai/specs/gate-tooling-decision.md",
+        "speckit-pro/scripts/crap-score.py",
+        "speckit-pro/skills/speckit-coach/references/quality-gates-guide.md",
+        "speckit-pro/speckit_pro_runner/contracts/quality-gates.schema.json",
+        "speckit-pro/speckit_pro_runner/gate_discovery.py",
+        "speckit-pro/speckit_pro_runner/gate_discovery_table.json",
+        "speckit-pro/speckit_pro_runner/helpers/gate_preflight_coverage.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "codex-lockfile-hook-matcher",
+      "title": "Codex lockfile guard hook has no shell matcher and runs on every tool call",
+      "labels": [
+        "bug"
+      ],
+      "priority": "minor",
+      "finding_ids": [
+        "brokers-and-verification-012"
+      ],
+      "owning_paths": [
+        "speckit-pro",
+        "speckit-pro/hooks",
+        "speckit-pro/scripts",
+        "tests/speckit-pro/unit"
+      ],
+      "depends_on": [],
+      "touches_open_pr": [],
+      "after_839": false,
+      "stack": "now-docs",
+      "edit_files": [
+        "speckit-pro/codex-hooks.json",
+        "speckit-pro/hooks/hooks.json",
+        "speckit-pro/scripts/workflow-guard-hook.py",
+        "tests/speckit-pro/unit/test-workflow-guard-hook.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "trust-and-payload-gates",
+      "title": "Runner trust metadata skips data files and payload gates fail open",
+      "labels": [
+        "bug"
+      ],
+      "priority": "major",
+      "finding_ids": [
+        "runner-core-003",
+        "release-tooling-003",
+        "release-tooling-012",
+        "release-tooling-013"
+      ],
+      "owning_paths": [
+        "scripts",
+        "speckit-pro/speckit_pro_runner",
+        "speckit-pro/speckit_pro_runner/gates",
+        "tests/speckit-pro/unit/fixtures/installed-plugin-release/contracts"
+      ],
+      "depends_on": [],
+      "touches_open_pr": [],
+      "after_839": false,
+      "stack": "now-release-gates",
+      "edit_files": [
+        "scripts/build-plugin-payloads.py",
+        "scripts/refresh-local-plugin.py",
+        "scripts/refresh-release-artifacts.py",
+        "speckit-pro/speckit_pro_runner/envelope.py",
+        "speckit-pro/speckit_pro_runner/gate_discovery.py",
+        "speckit-pro/speckit_pro_runner/gates/payloads.py",
+        "speckit-pro/speckit_pro_runner/gates/release.py",
+        "speckit-pro/speckit_pro_runner/runtime.py",
+        "tests/speckit-pro/unit/fixtures/installed-plugin-release/contracts/runner-invocation.schema.json"
+      ],
+      "issue": null
+    },
+    {
+      "key": "active-path-guard-split",
+      "title": "Active-path guard carries two parallel guard families",
+      "labels": [
+        "enhancement"
+      ],
+      "priority": "major",
+      "finding_ids": [
+        "runner-core-006"
+      ],
+      "owning_paths": [
+        "gates",
+        "speckit-pro/speckit_pro_runner/gates"
+      ],
+      "depends_on": [],
+      "touches_open_pr": [],
+      "after_839": false,
+      "stack": "now-active-path-guard",
+      "edit_files": [
+        "gates/active_path_guard.py",
+        "speckit-pro/speckit_pro_runner/gates/active_path_guard.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "pr-packet-validation",
+      "title": "PR packet validation accepts titles the title gate rejects and deferred items the body rejects",
+      "labels": [
+        "bug"
+      ],
+      "priority": "major",
+      "finding_ids": [
+        "pr-emission-and-stack-1-001",
+        "pr-emission-and-stack-1-004",
+        "pr-emission-and-stack-2-008"
+      ],
+      "owning_paths": [
+        "speckit-pro/skills/speckit-autopilot/contracts",
+        "speckit-pro/speckit_pro_runner/gates",
+        "speckit-pro/speckit_pro_runner/helpers",
+        "tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/source/contracts",
+        "tests/speckit-pro/unit/fixtures"
+      ],
+      "depends_on": [],
+      "touches_open_pr": [
+        685,
+        838,
+        847,
+        848
+      ],
+      "after_839": true,
+      "stack": "after839-pr-emission",
+      "edit_files": [
+        "speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json",
+        "speckit-pro/speckit_pro_runner/gates/release.py",
+        "speckit-pro/speckit_pro_runner/helpers/pr_emission.py",
+        "speckit-pro/speckit_pro_runner/helpers/run_finalization.py",
+        "tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/source/contracts/draft-packet-mode.md",
+        "tests/speckit-pro/unit/fixtures/pr-packet-title-patterns.json"
+      ],
+      "issue": null
+    },
+    {
+      "key": "stack-manager-qualification",
+      "title": "Stack-manager qualification pins an undocumented digest and mislabels its evidence",
+      "labels": [
+        "bug"
+      ],
+      "priority": "major",
+      "finding_ids": [
+        "pr-emission-and-stack-1-002",
+        "pr-emission-and-stack-1-010",
+        "pr-emission-and-stack-1-011"
+      ],
+      "owning_paths": [
+        "speckit-pro/skills/speckit-autopilot/contracts",
+        "speckit-pro/skills/speckit-autopilot/references",
+        "speckit-pro/speckit_pro_runner/helpers"
+      ],
+      "depends_on": [],
+      "touches_open_pr": [
+        850
+      ],
+      "after_839": true,
+      "stack": "after839-runner-core",
+      "edit_files": [
+        "speckit-pro/skills/speckit-autopilot/contracts/stack-manager-decision.schema.json",
+        "speckit-pro/skills/speckit-autopilot/references/stack-manager.md",
+        "speckit-pro/speckit_pro_runner/helpers/stack_manager.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "pr-emission-cohesion",
+      "title": "pr_emission.py mixes five jobs and its registry routes ids it cannot dispatch",
+      "labels": [
+        "enhancement"
+      ],
+      "priority": "minor",
+      "finding_ids": [
+        "pr-emission-and-stack-1-005",
+        "pr-emission-and-stack-1-006",
+        "pr-emission-and-stack-1-007",
+        "pr-emission-and-stack-1-009"
+      ],
+      "owning_paths": [
+        "speckit-pro/speckit_pro_runner/helpers",
+        "tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/source/contracts"
+      ],
+      "depends_on": [
+        "pr-packet-validation"
+      ],
+      "touches_open_pr": [
+        685
+      ],
+      "after_839": false,
+      "stack": "after839-pr-emission",
+      "edit_files": [
+        "speckit-pro/speckit_pro_runner/helpers/pr_emission.py",
+        "speckit-pro/speckit_pro_runner/helpers/registry.py",
+        "tests/speckit-pro/layer6-integration/performance-fixtures/draft-pr-emission/source/contracts/draft-packet-mode.md"
+      ],
+      "issue": null
+    },
+    {
+      "key": "autopilot-reference-drift",
+      "title": "Autopilot references and a workflow fixture carry stale indexes, links and counts",
+      "labels": [
+        "documentation"
+      ],
+      "priority": "minor",
+      "finding_ids": [
+        "integration-layer6-1-007",
+        "autopilot-and-agents-011",
+        "autopilot-and-agents-009",
+        "functional-evals-2-003"
+      ],
+      "owning_paths": [
+        "speckit-pro/codex-skills/speckit-autopilot/references",
+        "speckit-pro/skills/speckit-autopilot",
+        "speckit-pro/skills/speckit-autopilot/references",
+        "tests/speckit-pro/layer3-functional/fixtures/autopilot/SPEC-009/docs/ai/specs"
+      ],
+      "depends_on": [
+        "single-source-host-parity"
+      ],
+      "touches_open_pr": [
+        685,
+        832,
+        843,
+        844,
+        847,
+        849,
+        850,
+        851
+      ],
+      "after_839": true,
+      "stack": "after-design-autopilot",
+      "edit_files": [
+        "speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md",
+        "speckit-pro/skills/speckit-autopilot/SKILL.md",
+        "speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
+        "speckit-pro/skills/speckit-autopilot/references/token-discipline.md",
+        "tests/speckit-pro/layer3-functional/fixtures/autopilot/SPEC-009/docs/ai/specs/SPEC-009-workflow.md"
+      ],
+      "issue": null
+    },
+    {
+      "key": "lifecycle-skill-drift",
+      "title": "Lifecycle skill references, evals and templates disagree with the shipped skills",
+      "labels": [
+        "bug"
+      ],
+      "priority": "minor",
+      "finding_ids": [
+        "lifecycle-skills-008",
+        "lifecycle-skills-013",
+        "functional-evals-2-004",
+        "functional-evals-2-007",
+        "coach-and-formal-010"
+      ],
+      "owning_paths": [
+        "speckit-pro/skills/grill-me/references",
+        "speckit-pro/skills/speckit-coach/references",
+        "speckit-pro/skills/speckit-coach/templates",
+        "speckit-pro/skills/speckit-prd",
+        "speckit-pro/skills/speckit-scaffold-spec",
+        "speckit-pro/skills/speckit-status",
+        "specs/formal-001-selective-formal-methods",
+        "tests/speckit-pro/layer3-functional/codex-evals",
+        "tests/speckit-pro/layer3-functional/evals"
+      ],
+      "depends_on": [
+        "single-source-host-parity"
+      ],
+      "touches_open_pr": [
+        685,
+        850
+      ],
+      "after_839": true,
+      "stack": "after-design-lifecycle",
+      "edit_files": [
+        "speckit-pro/skills/grill-me/references/output-formats.md",
+        "speckit-pro/skills/speckit-coach/references/checklist-domains-guide.md",
+        "speckit-pro/skills/speckit-coach/references/roadmap-moc-guide.md",
+        "speckit-pro/skills/speckit-coach/templates/prd-template.md",
+        "speckit-pro/skills/speckit-coach/templates/workflow-template.md",
+        "speckit-pro/skills/speckit-prd/SKILL.md",
+        "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
+        "speckit-pro/skills/speckit-status/SKILL.md",
+        "specs/formal-001-selective-formal-methods/SPEC-MOC.md",
+        "tests/speckit-pro/layer3-functional/codex-evals/speckit-install-evals.json",
+        "tests/speckit-pro/layer3-functional/codex-evals/speckit-upgrade-evals.json",
+        "tests/speckit-pro/layer3-functional/evals/speckit-install-evals.json",
+        "tests/speckit-pro/layer3-functional/evals/speckit-prd-evals.json",
+        "tests/speckit-pro/layer3-functional/evals/speckit-upgrade-evals.json"
+      ],
+      "issue": null
+    },
+    {
+      "key": "release-script-dups",
+      "title": "Release and preflight scripts restate shared constants and contracts",
+      "labels": [
+        "enhancement"
+      ],
+      "priority": "minor",
+      "finding_ids": [
+        "release-tooling-001",
+        "release-tooling-005",
+        "release-tooling-006",
+        "release-tooling-007",
+        "release-tooling-008",
+        "release-tooling-009",
+        "release-tooling-010",
+        "release-tooling-014"
+      ],
+      "owning_paths": [
+        ".github/workflows",
+        "docs-site",
+        "docs-site/src/content/docs",
+        "scripts",
+        "speckit-pro/speckit_pro_runner",
+        "tests/speckit-pro",
+        "tests/speckit-pro/layer1-structural",
+        "tests/speckit-pro/unit"
+      ],
+      "depends_on": [],
+      "touches_open_pr": [],
+      "after_839": false,
+      "stack": "now-release-gates",
+      "edit_files": [
+        ".github/workflows/deploy-docs.yml",
+        "docs-site/package.json",
+        "docs-site/src/content/docs/contribute-and-release.md",
+        "scripts/audit-release-notes.py",
+        "scripts/classify-docs-validation.py",
+        "scripts/compose-release-notes.py",
+        "scripts/dispatch-release-pr-checks.py",
+        "scripts/release_note_policy.py",
+        "scripts/resolve_release_prs.py",
+        "scripts/sync_release_pr.py",
+        "speckit-pro/speckit_pro_runner/envelope.py",
+        "tests/speckit-pro/check-toolchain.py",
+        "tests/speckit-pro/layer1-structural/validate-ci-release-contracts.py",
+        "tests/speckit-pro/run-container-preflight.py",
+        "tests/speckit-pro/run-hosted-windows-preflight.py",
+        "tests/speckit-pro/unit/test-speckit-pro-gates.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "codex-skill-dead-links",
+      "title": "Four Codex skills link shared contracts by a path that is dead in the installed payload",
+      "labels": [
+        "bug"
+      ],
+      "priority": "major",
+      "finding_ids": [
+        "seam-002"
+      ],
+      "owning_paths": [
+        "speckit-pro/codex-skills/grill-me",
+        "speckit-pro/codex-skills/speckit-coach",
+        "speckit-pro/codex-skills/speckit-prd",
+        "speckit-pro/codex-skills/ubiquitous-language",
+        "speckit-pro/skills/grill-me",
+        "speckit-pro/speckit_pro_runner/gates",
+        "tests/speckit-pro/layer1-structural"
+      ],
+      "depends_on": [],
+      "touches_open_pr": [
+        832,
+        845,
+        851
+      ],
+      "after_839": true,
+      "stack": "after839-test-roster",
+      "edit_files": [
+        "speckit-pro/codex-skills/grill-me/SKILL.md",
+        "speckit-pro/codex-skills/speckit-coach/SKILL.md",
+        "speckit-pro/codex-skills/speckit-prd/SKILL.md",
+        "speckit-pro/codex-skills/ubiquitous-language/SKILL.md",
+        "speckit-pro/skills/grill-me/SKILL.md",
+        "speckit-pro/speckit_pro_runner/gates/payloads.py",
+        "tests/speckit-pro/layer1-structural/validate-skill-contracts.py"
+      ],
+      "issue": null
+    },
+    {
+      "key": "single-source-host-parity",
+      "title": "Generate Codex agents and skill overlays from one source and enforce agent limits in config",
+      "labels": [
+        "enhancement"
+      ],
+      "priority": "major",
+      "finding_ids": [
+        "functional-evals-1-001",
+        "functional-evals-1-002",
+        "coach-and-formal-009",
+        "autopilot-and-agents-001",
+        "autopilot-and-agents-002",
+        "autopilot-and-agents-003",
+        "artifact-gallery-004",
+        "coach-and-formal-001",
+        "lifecycle-skills-002",
+        "lifecycle-skills-009",
+        "lifecycle-skills-010",
+        "lifecycle-skills-012",
+        "pr-emission-and-stack-2-005"
+      ],
+      "owning_paths": [
+        "speckit-pro/agents",
+        "speckit-pro/codex-agents",
+        "speckit-pro/codex-skills/grill-me",
+        "speckit-pro/codex-skills/speckit-autopilot",
+        "speckit-pro/codex-skills/speckit-autopilot/references",
+        "speckit-pro/codex-skills/speckit-autopilot/references/preview-prompts",
+        "speckit-pro/codex-skills/speckit-scaffold-spec",
+        "speckit-pro/codex-skills/speckit-status",
+        "speckit-pro/codex-skills/ubiquitous-language",
+        "speckit-pro/skills/grill-me",
+        "speckit-pro/skills/speckit-autopilot",
+        "speckit-pro/skills/speckit-autopilot/references",
+        "speckit-pro/skills/speckit-coach/templates",
+        "speckit-pro/skills/speckit-install",
+        "speckit-pro/skills/speckit-scaffold-spec",
+        "speckit-pro/skills/speckit-status",
+        "speckit-pro/skills/ubiquitous-language",
+        "tests/speckit-pro/evals/fixtures/functional",
+        "tests/speckit-pro/layer3-functional/codex-evals",
+        "tests/speckit-pro/unit"
+      ],
+      "depends_on": [
+        "unregistered-unit-tests",
+        "codex-skill-dead-links"
+      ],
+      "touches_open_pr": [
+        685,
+        832,
+        837,
+        838,
+        843,
+        844,
+        845,
+        847,
+        848,
+        849,
+        850,
+        851,
+        852
+      ],
+      "after_839": true,
+      "stack": "host-parity-design",
+      "edit_files": [
+        "speckit-pro/agents/consensus-synthesizer.md",
+        "speckit-pro/agents/formal-model-author.md",
+        "speckit-pro/codex-agents/codebase-analyst.toml",
+        "speckit-pro/codex-agents/formal-model-author.toml",
+        "speckit-pro/codex-skills/grill-me/SKILL.md",
+        "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
+        "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
+        "speckit-pro/codex-skills/speckit-autopilot/references/preview-prompts/observer.md",
+        "speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md",
+        "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
+        "speckit-pro/codex-skills/speckit-status/SKILL.md",
+        "speckit-pro/codex-skills/ubiquitous-language/SKILL.md",
+        "speckit-pro/skills/grill-me/SKILL.md",
+        "speckit-pro/skills/speckit-autopilot/SKILL.md",
+        "speckit-pro/skills/speckit-autopilot/references/artifact-review.md",
+        "speckit-pro/skills/speckit-autopilot/references/formal-methods.md",
+        "speckit-pro/skills/speckit-autopilot/references/grounding.md",
+        "speckit-pro/skills/speckit-autopilot/references/hardener-delegation.md",
+        "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
+        "speckit-pro/skills/speckit-autopilot/references/task-list-canonical.md",
+        "speckit-pro/skills/speckit-coach/templates/workflow-template.md",
+        "speckit-pro/skills/speckit-install/SKILL.md",
+        "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
+        "speckit-pro/skills/speckit-status/SKILL.md",
+        "speckit-pro/skills/ubiquitous-language/SKILL.md",
+        "tests/speckit-pro/evals/fixtures/functional/legacy-selection.json",
+        "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+        "tests/speckit-pro/unit/test-agent-terminal-contracts.py",
+        "tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py",
+        "tests/speckit-pro/unit/test-consensus-synthesizer-regressions.py"
+      ],
+      "issue": null
+    }
+  ],
+  "not_filed": [],
+  "not_filed_note": "No finding is fixed-in-flight except integration-layer6-1-006, which the seam review also marked fully invalid; it is listed under invalid only.",
+  "invalid": [
+    {
+      "id": "integration-layer6-1-006",
+      "reason": "The cited rule (error-recovery.md:64-70, phase-execution.md 'Blocked Actions Mid-Run') covers blocked actions once Phase 7 is running: vetoes, missing approvals, unavailable tools. Fixture 17 is a Plan-phase executor FAIL, which that rule does not cover, and phase-execution.md:2925-2928 still lists correctness stops that end the run. Offering 'stop and report' does not contradict the reference.",
+      "also": "fixed-in-flight: the open stop-policy stack already rewrites fixture 17"
+    },
+    {
+      "id": "release-tooling-002",
+      "reason": "AGENTS.md:63-65 calls Jev optional for agents working on this repository and forbids checks from depending on it. It says nothing about the plugin's runtime dependency. The Codex manifest has no dependency mechanism, and speckit-pro/README.md:122-126 plus codex-skills/speckit-install/SKILL.md:212-215 and speckit-upgrade/SKILL.md:266-269 tell Codex users to add typesafe-jev. No contradiction remains."
+    }
+  ],
+  "partial_invalid": [
+    {
+      "id": "parity-layer7-006",
+      "dropped": "Partial. 'The tree holds two' is false: git tracks four fixtures (01 to 04) under tests/speckit-pro/layer7-parity, so the README's four-case count is right. The CI-wording and catalog-status sub-claims still hold. The miscount also hid seam-003.",
+      "filed_in": "parity-runner-drift"
+    },
+    {
+      "id": "coach-and-formal-009",
+      "dropped": "Partial. The Codex canonical Post list (task-list-canonical-codex.md:55-67) has 13 rows, not 14; codex eval 7 also says 13, and '14' appears only in the Codex SKILL.md claim that functional-evals-1-001 reports. The core claim holds: the shared workflow template lacks the two Codex-only rows.",
+      "filed_in": "single-source-host-parity"
+    },
+    {
+      "id": "autopilot-and-agents-001",
+      "dropped": "Partial. 'The Codex reference never tells the orchestrator to run it' is false (post-implementation-codex.md:45). The placement and anchor drift survives; see its severity correction.",
+      "filed_in": "single-source-host-parity"
+    }
+  ],
+  "drift_kept_separate": {
+    "brokers-and-verification-012": "Behavioral bug today: the Codex lockfile hook fires on every tool call. A one-line matcher fix in codex-hooks.json should not wait for the redesign.",
+    "seam-002": "Behavioral bug today: four links are dead in the installed Codex payload. The fix is a path change plus a validator fix and should land before the redesign.",
+    "functional-evals-2-007": "Eval coverage gap, not generated content: Claude and Codex eval corpora are authored per host, so generating agents and overlays would not close it."
+  },
+  "stacks": [
+    {
+      "name": "now-parity",
+      "phase": "now",
+      "after_839": false,
+      "note": "Starts now; runs in parallel with the other 'now' stacks.",
+      "issues": [
+        "parity-vacuous-fixtures",
+        "parity-runner-drift"
+      ]
+    },
+    {
+      "name": "now-layer6-parser",
+      "phase": "now",
+      "after_839": false,
+      "note": "Starts now; runs in parallel with the other 'now' stacks.",
+      "issues": [
+        "dispatch-parser-blind"
+      ]
+    },
+    {
+      "name": "now-docs",
+      "phase": "now",
+      "after_839": false,
+      "note": "Starts now; runs in parallel with the other 'now' stacks.",
+      "issues": [
+        "docs-site-generator",
+        "codex-lockfile-hook-matcher",
+        "docs-site-pages-config",
+        "stale-planning-records"
+      ]
+    },
+    {
+      "name": "now-layer2-layer3",
+      "phase": "now",
+      "after_839": false,
+      "note": "Starts now; runs in parallel with the other 'now' stacks.",
+      "issues": [
+        "trigger-inputs-drift",
+        "layer3-runners",
+        "trigger-lib-cohesion"
+      ]
+    },
+    {
+      "name": "now-native-eval",
+      "phase": "now",
+      "after_839": false,
+      "note": "Starts now; runs in parallel with the other 'now' stacks.",
+      "issues": [
+        "native-eval-lib-cohesion"
+      ]
+    },
+    {
+      "name": "now-spec-lifecycle",
+      "phase": "now",
+      "after_839": false,
+      "note": "Starts now; runs in parallel with the other 'now' stacks.",
+      "issues": [
+        "spec-lifecycle-validator"
+      ]
+    },
+    {
+      "name": "now-release-gates",
+      "phase": "now",
+      "after_839": false,
+      "note": "Starts now; runs in parallel with the other 'now' stacks.",
+      "issues": [
+        "trust-and-payload-gates",
+        "release-script-dups"
+      ]
+    },
+    {
+      "name": "now-formal",
+      "phase": "now",
+      "after_839": false,
+      "note": "Starts now; runs in parallel with the other 'now' stacks.",
+      "issues": [
+        "formal-package-cohesion"
+      ]
+    },
+    {
+      "name": "now-research-broker",
+      "phase": "now",
+      "after_839": false,
+      "note": "Starts now; runs in parallel with the other 'now' stacks.",
+      "issues": [
+        "research-broker-privacy"
+      ]
+    },
+    {
+      "name": "now-active-path-guard",
+      "phase": "now",
+      "after_839": false,
+      "note": "Starts now; runs in parallel with the other 'now' stacks.",
+      "issues": [
+        "active-path-guard-split"
+      ]
+    },
+    {
+      "name": "after839-test-roster",
+      "phase": "after_839",
+      "after_839": true,
+      "note": "after_839: starts once the #837-#852 stack and the #832 fix land; runs in parallel with the other after_839 stacks.",
+      "issues": [
+        "unregistered-unit-tests",
+        "codex-skill-dead-links",
+        "rosters-hand-kept",
+        "test-infra-residue",
+        "orphan-fixtures"
+      ]
+    },
+    {
+      "name": "after839-layer6",
+      "phase": "after_839",
+      "after_839": true,
+      "note": "after_839: starts once the #837-#852 stack and the #832 fix land; runs in parallel with the other after_839 stacks.",
+      "issues": [
+        "class2-replay-tautology",
+        "layer6-lib-fail-open",
+        "layer6-fixtures-retired"
+      ]
+    },
+    {
+      "name": "after839-pr-emission",
+      "phase": "after_839",
+      "after_839": true,
+      "note": "after_839: starts once the #837-#852 stack and the #832 fix land; runs in parallel with the other after_839 stacks.",
+      "issues": [
+        "pr-packet-validation",
+        "pr-emission-cohesion"
+      ]
+    },
+    {
+      "name": "after839-coverage-gates",
+      "phase": "after_839",
+      "after_839": true,
+      "note": "after_839: starts once the #837-#852 stack and the #832 fix land; runs in parallel with the other after_839 stacks.",
+      "issues": [
+        "coverage-report-schema",
+        "coverage-validator-split",
+        "quality-gate-drift"
+      ]
+    },
+    {
+      "name": "after839-readme",
+      "phase": "after_839",
+      "after_839": true,
+      "note": "after_839: starts once the #837-#852 stack and the #832 fix land; runs in parallel with the other after_839 stacks.",
+      "issues": [
+        "readme-install-drift"
+      ]
+    },
+    {
+      "name": "after839-runner-core",
+      "phase": "after_839_wave2",
+      "after_839": true,
+      "note": "after_839: second wave; starts after the first after_839 wave merges (shares files with it).",
+      "issues": [
+        "read-only-helpers-split",
+        "runner-primitive-dups",
+        "execution-control-allowances",
+        "install-module-split",
+        "docker-verification",
+        "stack-manager-qualification"
+      ]
+    },
+    {
+      "name": "host-parity-design",
+      "phase": "after_839_wave2",
+      "after_839": true,
+      "note": "after_839: second wave; starts after the first after_839 wave merges (shares files with it).",
+      "issues": [
+        "single-source-host-parity"
+      ]
+    },
+    {
+      "name": "after-design-autopilot",
+      "phase": "after_design",
+      "after_839": true,
+      "note": "after_839: starts after the host-parity design issue lands.",
+      "issues": [
+        "consensus-mode-unimplemented",
+        "stack-helper-scope",
+        "autopilot-reference-drift",
+        "artifact-gallery-drift",
+        "sweep-broker-cohesion"
+      ]
+    },
+    {
+      "name": "after-design-lifecycle",
+      "phase": "after_design",
+      "after_839": true,
+      "note": "after_839: starts after the host-parity design issue lands.",
+      "issues": [
+        "lifecycle-skill-drift"
+      ]
+    }
+  ]
+}
