@@ -229,6 +229,14 @@ ORCHESTRATION_REQUIRING_TEXT = {
          RESCOPE_RECONCILIATION_RULE),
     ),
 }
+DEFERRED_DECISION_RULE = (
+    "Print `end_of_run_request` as plain text in the final message. It is the handoff: it opens with the "
+    "ready stack, lists each of `decisions` under \"Decisions for you\" with its evidence, then the human UAT."
+)
+ORCHESTRATION_REQUIRING_TEXT["functional.speckit-autopilot.deferred-decision-ready-stack"] = (
+    ("speckit-pro/skills/speckit-autopilot/references/phase-execution.md", DEFERRED_DECISION_RULE),
+    ("speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md", DEFERRED_DECISION_RULE),
+)
 ORCHESTRATION_IDS = set(ORCHESTRATION_REQUIRING_TEXT)
 # Native-only scaffold cases for the spec-scoped reviewability setup gate. The
 # staged roadmap puts the over-budget target first and a small entry last, so a
@@ -279,6 +287,7 @@ ORCHESTRATION_FAILURE_PHRASES = {
     "functional.speckit-autopilot.clarify-answer-provenance": "consensus answer as a human answer",
     "functional.speckit-autopilot.progress-projection-mid-run": "summary rows as an acceptable projection",
     "functional.speckit-autopilot.rescope-reconciliation": "accepts the rescoped plan.md alone",
+    "functional.speckit-autopilot.deferred-decision-ready-stack": "keeps the stack in draft over the exhausted unit",
 }
 LOCAL_COMMAND_LEGACY_SOURCES = {
     "functional.speckit-autopilot.case-2": (
@@ -708,6 +717,15 @@ ORCHESTRATION_FAILURE_ANSWERS = {
         "g3_may_run": True,
         "reconcile_before_g3": False,
     },
+    "functional.speckit-autopilot.deferred-decision-ready-stack": {
+        "outcome": "human_stop",
+        "stack_ready": False,
+        "keeps_draft": True,
+        "decision_units": [],
+        "decision_classes": [],
+        "tier_reached": 1,
+        "asked_question": True,
+    },
 }
 
 
@@ -829,6 +847,21 @@ def _derive_orchestration_answers(case: dict) -> dict:
             "g3_may_run": not stale,
             "reconcile_before_g3": bool(stale),
         }
+    if scenario == "deferred-decision-ready-stack":
+        result = json.loads(read("scenario-inputs/finalize-result.json"))
+        ledger = json.loads(read("scenario-inputs/ledger.json"))
+        first = result["decisions"][0]
+        unit_kind = next(entry["unit_kind"] for entry in ledger["deferred"] if entry["unit"] == first["unit"].rsplit(" ", 1)[-1])
+        record = ledger["escalation_allowances"][f"{unit_kind}:{first['unit'].rsplit(' ', 1)[-1]}"]
+        return {
+            "outcome": result["outcome"],
+            "stack_ready": result["mark_ready"],
+            "keeps_draft": not result["mark_ready"],
+            "decision_units": [decision["unit"] for decision in result["decisions"]],
+            "decision_classes": [decision["class"] for decision in result["decisions"]],
+            "tier_reached": record["tier"],
+            "asked_question": False,
+        }
     raise AssertionError(f"unknown orchestration scenario {case['id']}")
 
 
@@ -875,8 +908,8 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
             - REDIRECT_IDS - WORKTREE_MIGRATION_IDS - TASK_LIST_CONTRACT_IDS
         )
         self.assertEqual(len(response_only_ids), 59)
-        self.assertEqual(len(self.all_cases), 216)
-        self.assertEqual(len(self.catalog["cases"]), 100)
+        self.assertEqual(len(self.all_cases), 219)
+        self.assertEqual(len(self.catalog["cases"]), 101)
         self.assertEqual(
             set(self.cases),
             selected_ids | GROUNDED_IDS | NATIVE_RESPONSE_IDS | DASHBOARD_IDS | NATIVE_ONLY_IDS,
@@ -2286,6 +2319,30 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
         )
         self.assertEqual(control["missing_state_prefixes"], [])
         self.assertEqual(control["missing_state_post_items"], [])
+
+    def test_the_finish_fixture_is_the_real_runner_result_and_forged_records_are_refused(self) -> None:
+        """The frozen finalize-run result must equal what the runner derives from the staged ledger (issue 829)."""
+        sys.path.insert(0, str(REPO_ROOT / "speckit-pro"))
+        from speckit_pro_runner.helpers.run_finalization import finalize_run
+
+        root = REPO_ROOT / ORCHESTRATION_FIXTURE_ROOT / "deferred-decision-ready-stack"
+        request = json.loads((root / "finalize-request.json").read_text(encoding="utf-8"))
+        ledger = (root / "ledger.json").read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            (workspace / ".process/execution-control").mkdir(parents=True)
+            target = workspace / ".process/execution-control/ledger.json"
+            target.write_text(ledger, encoding="utf-8")
+            actual = finalize_run(workspace, request["inputs"])
+            frozen = json.loads((root / "finalize-result.json").read_text(encoding="utf-8"))
+            self.assertEqual(actual, frozen)
+            self.assertEqual((actual["outcome"], actual["mark_ready"], actual["human_stop"]),
+                             ("complete_with_deferred", True, None))
+            forged = json.loads(ledger)
+            forged["escalation_allowances"]["failure_family:FR-001"]["dispatches"][1]["dispatch_id"] = "never-ran"
+            target.write_text(json.dumps(forged), encoding="utf-8")
+            with self.assertRaises(ValueError):
+                finalize_run(workspace, request["inputs"])
 
     def test_orchestration_grading_separates_the_failure_from_correct_behaviour(self) -> None:
         for case_id in sorted(ORCHESTRATION_IDS):
