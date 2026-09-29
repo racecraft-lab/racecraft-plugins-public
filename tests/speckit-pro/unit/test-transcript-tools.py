@@ -282,6 +282,31 @@ class TranscriptToolTests(unittest.TestCase):
             with self.subTest(private_value=name):
                 self.assertNotIn(value, reduced.stdout)
 
+    def test_reduced_replay_fixtures_keep_their_must_include_terms(self) -> None:
+        checked = 0
+        for family in ("dispatch-fixtures", "return-format-fixtures"):
+            for fixture in sorted((LAYER6 / family).iterdir()):
+                expected = fixture / "expected.json"
+                parser_fixture = fixture / "parser-fixture.jsonl"
+                if not expected.is_file() or not parser_fixture.is_file():
+                    continue
+                terms = json.loads(expected.read_text(encoding="utf-8")).get("must_include_terms", [])
+                with self.subTest(fixture=f"{family}/{fixture.name}", field="must_include_terms"):
+                    # The fixture runners read only a JSON list of strings; a string would iterate by character.
+                    self.assertIsInstance(terms, list)
+                    self.assertTrue(all(isinstance(term, str) for term in terms), terms)
+                if not isinstance(terms, list) or not terms:
+                    continue
+                reduced = run_script(REDUCE, str(parser_fixture))
+                self.assertEqual(reduced.returncode, 0, reduced.stderr)
+                for term in terms:
+                    checked += 1
+                    with self.subTest(fixture=f"{family}/{fixture.name}", term=term):
+                        self.assertIn(term, reduced.stdout)
+        self.assertGreater(checked, 0, "no replay fixture declares must_include_terms")
+
+
+class ReducedResponseTests(unittest.TestCase):
     def test_reduce_keeps_redacted_capped_subagent_responses(self) -> None:
         home_path = "/" + "Users/" + "operator/work"
         agent_block = {
@@ -320,30 +345,8 @@ class TranscriptToolTests(unittest.TestCase):
         self.assertEqual(reduced_content["non-text"], "")
         self.assertEqual(len(reduced_content["oversized"]), 8000)
 
-    def test_reduced_replay_fixtures_keep_their_must_include_terms(self) -> None:
-        checked = 0
-        for family in ("dispatch-fixtures", "return-format-fixtures"):
-            for fixture in sorted((LAYER6 / family).iterdir()):
-                expected = fixture / "expected.json"
-                parser_fixture = fixture / "parser-fixture.jsonl"
-                if not expected.is_file() or not parser_fixture.is_file():
-                    continue
-                terms = json.loads(expected.read_text(encoding="utf-8")).get("must_include_terms", [])
-                with self.subTest(fixture=f"{family}/{fixture.name}", field="must_include_terms"):
-                    # The fixture runners read only a JSON list of strings; a string would iterate by character.
-                    self.assertIsInstance(terms, list)
-                    self.assertTrue(all(isinstance(term, str) for term in terms), terms)
-                if not isinstance(terms, list) or not terms:
-                    continue
-                reduced = run_script(REDUCE, str(parser_fixture))
-                self.assertEqual(reduced.returncode, 0, reduced.stderr)
-                for term in terms:
-                    checked += 1
-                    with self.subTest(fixture=f"{family}/{fixture.name}", term=term):
-                        self.assertIn(term, reduced.stdout)
-        self.assertGreater(checked, 0, "no replay fixture declares must_include_terms")
-
 
 if __name__ == "__main__":
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(TranscriptToolTests)
+    suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(ReducedResponseTests))
     raise SystemExit(run_counted(suite, label="test-transcript-tools"))
