@@ -340,7 +340,7 @@ def _lint(mode: str, argv: list[str], scan: Callable[[Path], int | list[str]], c
 
 
 def run_moc_orphan(argv: list[str]) -> int:
-    return _lint("--moc-orphan", argv, lambda root: scan_moc_orphans(root), ValidateMocOrphan)
+    return _lint("--moc-orphan", argv, scan_moc_orphans, ValidateMocOrphan)
 
 
 def run_moc_stale(argv: list[str]) -> int:
