@@ -239,7 +239,7 @@ class WritableRootCoverageTests(unittest.TestCase):
         request = json.loads(FIXTURE_REQUEST.read_text(encoding="utf-8"))
         with tempfile.TemporaryDirectory() as temp:
             repo = Path(temp).resolve()
-            _git(repo, "init", "-q", "-b", "main")
+            git(repo, "init", "-q", "-b", "main")
             (repo / ".specify").mkdir()
             request["inputs"].update(writable_roots=[str(repo)], write_paths=["/external-workflow-root"],
                                      inventory_actions=[])
