@@ -969,12 +969,12 @@ class CleanFinishAndStopWordingSourceContractTests(unittest.TestCase):
         for skill in (CLAUDE_AUTOPILOT_SKILL, CODEX_AUTOPILOT_SKILL):
             text = _flat(skill)
             self.assertIn(CLEAN_FINISH_QUESTION, text)
-            self.assertIn("ask only on `human_stop` or deferred human UAT", text)
+            self.assertIn("The run never pauses to ask.", text)
             self.assertNotIn("Either way, make one consolidated", text)
             self.assertNotIn("Either way, make the one consolidated", text)
         codex_phase = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "phase-execution-codex.md")
         self.assertIn(CLEAN_FINISH_QUESTION, codex_phase)
-        self.assertIn("ask only on `human_stop` or deferred human UAT", codex_phase)
+        self.assertIn("The run never pauses to ask", codex_phase)
 
     def test_claude_executors_return_a_blocker_instead_of_escalating(self) -> None:
         agents = REPO_ROOT / "speckit-pro" / "agents"

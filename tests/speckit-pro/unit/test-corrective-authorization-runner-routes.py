@@ -79,6 +79,11 @@ class CorrectiveAuthorizationReplayTests(unittest.TestCase):
             return self.ledger["run_id"]
         if value == "$spec_file":
             return SPEC
+        if value == "$check_command":
+            return f"{sys.executable} check.py"
+        if value == "$head_sha":
+            return subprocess.run(["git", "-C", str(self.root), "rev-parse", "HEAD"], check=True, text=True,
+                                  capture_output=True).stdout.strip()
         if value == "$spec_sha256":
             return self.ledger["invariant_binding"]["spec_sha256"]
         if value.startswith("$reservation:"):
@@ -108,7 +113,7 @@ class CorrectiveAuthorizationReplayTests(unittest.TestCase):
     def finalize(self, step: dict) -> None:
         """Send the run's end-of-run request through the read-only `finalize-run` helper."""
         inputs = {"ledger_path": self.ledger_path.relative_to(self.root).as_posix(),
-                  "expected_run_id": self.ledger["run_id"], **step["finalize"]}
+                  "expected_run_id": self.ledger["run_id"], **self.resolve(step["finalize"])}
         code, envelope = self.run_runner({
             "schema_version": "1.0", "helper_id": "finalize-run", "operation": "finalize-run",
             "mode": "read_only", "inputs": inputs,
@@ -127,13 +132,13 @@ class CorrectiveAuthorizationReplayTests(unittest.TestCase):
         else:
             shutil.copyfile(FIXTURE_ROOT / name, target)
 
-    def place_check(self, fixture: str) -> None:
-        """Stage a verification command that prints one captured test-runner output and fails, as the runner would run it."""
+    def place_check(self, fixture: str, exit_code: int = 1) -> None:
+        """Stage a verification command that prints one captured test-runner output and exits, as the runner would run it."""
         commands = {"UNIT_TEST": f"{sys.executable} check.py"}
         (self.root / WORKFLOW).write_text("# Workflow\n\n## PROJECT_COMMANDS\n```json\n" + json.dumps(commands) + "\n```\n",
                                           encoding="utf-8")
         output = (CHECK_FIXTURES / fixture).read_text(encoding="utf-8")
-        (self.root / "check.py").write_text(f"import sys\nsys.stdout.write({output!r})\nsys.exit(1)\n", encoding="utf-8")
+        (self.root / "check.py").write_text(f"import sys\nsys.stdout.write({output!r})\nsys.exit({exit_code})\n", encoding="utf-8")
 
     def stage(self, files: dict[str, str]) -> None:
         """Copy frozen fixture files into the consumer repository."""
@@ -197,7 +202,7 @@ class CorrectiveAuthorizationReplayTests(unittest.TestCase):
                     if "place_spec" in step:
                         self.place_spec(step["place_spec"])
                     elif "place_check" in step:
-                        self.place_check(step["place_check"])
+                        self.place_check(step["place_check"], step.get("exit_code", 1))
                     elif "stage" in step:
                         self.stage(step["stage"])
                     elif "write" in step:

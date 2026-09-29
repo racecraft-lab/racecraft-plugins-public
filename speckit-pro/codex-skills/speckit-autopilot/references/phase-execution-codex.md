@@ -2893,6 +2893,8 @@ whose refreshed preflight disposition is `operator_action_required`.
      - Run each of `ready_commands` to mark the whole stack ready for review.
        The run never merges.
      - The run marks the thread goal complete.
+     - Print the final report as plain text on `outcome=complete` with nothing
+       deferred, and ask no question.
      - Print `end_of_run_request` as plain text in the final message. It is the
        handoff: it opens with the ready stack, lists each of `decisions` under
        "Decisions for you" with its evidence, then the human UAT. The run never
