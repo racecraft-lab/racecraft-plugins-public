@@ -12,7 +12,8 @@
     "phase-executor",
     "spec-context-analyst",
     "uat-runbook-author",
-    "consensus-synthesizer"
+    "consensus-synthesizer",
+    "consensus-tiebreaker"
   ],
   "optional_helper": "autopilot-fast-helper",
   "base_case": {

@@ -13,6 +13,8 @@ from .sweep_isolation import (
     ARTIFACT_ALLOWLIST,
     BROKER_TOOL_NAMES,
     CLASS_VALUES,
+    TIEBREAK_AGREEMENT,
+    TIEBREAK_SCOPE_BASIS,
     IsolationViolation,
     MAX_ANCHOR_BYTES,
     MAX_FINDING_BYTES,
@@ -122,7 +124,7 @@ RESULT_RECORD_SCHEMAS = (
             "outcome": {"type": "string", "enum": ["resolved", "human_review"]},
             "agreement": {
                 "anyOf": [
-                    {"type": "string", "enum": ["3/3", "2/3"]},
+                    {"type": "string", "enum": ["3/3", "2/3", TIEBREAK_AGREEMENT]},
                     {"type": "null"},
                 ]
             },
@@ -130,7 +132,12 @@ RESULT_RECORD_SCHEMAS = (
                 "anyOf": [
                     {
                         "type": "string",
-                        "enum": ["all_disagree", "escape_unresolved", "analyst_failed"],
+                        "enum": [
+                            "all_disagree",
+                            "escape_unresolved",
+                            "analyst_failed",
+                            TIEBREAK_SCOPE_BASIS,
+                        ],
                     },
                     {"type": "null"},
                 ]
@@ -201,12 +208,12 @@ TOOLS = (
     },
     {
         "name": "consensus_inputs",
-        "description": "Return the accepted upstream records for the comment and stage this process is bound to. Takes no arguments. Shape depends on the stage: classifier stage returns only {comment_id} (nothing upstream exists, so classifiers need not call it); perspective stage returns {comment_id, target, classifier} with the accepted classifier record; synthesis stage returns {comment_id, target, perspectives} with the three accepted perspective records in fixed order. Errors with broker_error:receipt_violation when the prerequisite records have not been accepted yet. Returns nothing about other comments.",
+        "description": "Return the accepted upstream records for the comment and stage this process is bound to. Takes no arguments. Shape depends on the stage: classifier stage returns only {comment_id} (nothing upstream exists, so classifiers need not call it); perspective stage returns {comment_id, target, classifier} with the accepted classifier record; synthesis stage returns {comment_id, target, perspectives} with the three accepted perspective records in fixed order, plus tiebreak: true and prior_basis when an earlier synthesis for this comment returned human_review, which makes this the Round 3 tiebreak call. Errors with broker_error:receipt_violation when the prerequisite records have not been accepted yet. Returns nothing about other comments.",
         "inputSchema": _tool_schema(),
     },
     {
         "name": "submit_result",
-        "description": "Submit the one result record for the stage this process is bound to; call it once, as the final action. `result` must match the bound stage exactly, with no extra keys. Classifier: {comment_id, class, target, reason} where class is one of the listed classes, target is one allowed artifact filename or null, and reason is one physical line of at most 512 bytes containing no | or newline. Perspective: {comment_id, perspective, finding, evidence, escape_hatch} where finding is at most 6144 bytes, evidence is a list of path or path:line citations that exist in the snapshot, and escape_hatch is a boolean. Synthesis: {comment_id, outcome, agreement, basis, edit} where edit is null or {file, anchor, replacement} with file from the allowlist and equal to the accepted classifier target, anchor at most 512 bytes, replacement at most 8192 bytes. comment_id must equal the comment bound to this process. On success returns only the receipt string sweep-result:v1:<64 hex>; the record itself is stored privately and never echoed back. Schema or consistency failures return isError with broker_error:<code> (for example classifier_reason, evidence_path, synthesis_consistency) and nothing is stored.",
+        "description": "Submit the one result record for the stage this process is bound to; call it once, as the final action. `result` must match the bound stage exactly, with no extra keys. Classifier: {comment_id, class, target, reason} where class is one of the listed classes, target is one allowed artifact filename or null, and reason is one physical line of at most 512 bytes containing no | or newline. Perspective: {comment_id, perspective, finding, evidence, escape_hatch} where finding is at most 6144 bytes, evidence is a list of path or path:line citations that exist in the snapshot, and escape_hatch is a boolean. Synthesis: {comment_id, outcome, agreement, basis, edit} (the Round 3 tiebreak call uses agreement tiebreak for a resolved result and basis scope_unsettled for human_review, and no other call may) where edit is null or {file, anchor, replacement} with file from the allowlist and equal to the accepted classifier target, anchor at most 512 bytes, replacement at most 8192 bytes. comment_id must equal the comment bound to this process. On success returns only the receipt string sweep-result:v1:<64 hex>; the record itself is stored privately and never echoed back. Schema or consistency failures return isError with broker_error:<code> (for example classifier_reason, evidence_path, synthesis_consistency) and nothing is stored.",
         "inputSchema": _tool_schema({"result": {"oneOf": list(RESULT_RECORD_SCHEMAS)}}, ["result"]),
     },
 )

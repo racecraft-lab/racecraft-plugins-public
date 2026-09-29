@@ -1,0 +1,28 @@
+{
+  "fixture_id": "06-synthesizer-round3-all-disagree",
+  "purpose": "Verify a Round 2 all-disagree resolves through the Round 3 tiebreak: the synthesizer returns an assumption with the dissent logged and no human-review flag.",
+  "must_dispatch_to": [
+    "speckit-pro:consensus-tiebreaker"
+  ],
+  "must_not_have_forbidden_spawns": true,
+  "response_assertions": [
+    {
+      "subagent_type": "speckit-pro:consensus-tiebreaker",
+      "must_contain_any": [
+        "tiebreak"
+      ],
+      "rationale": "Round 3 resolves the item as a tiebreak instead of flagging human review"
+    },
+    {
+      "subagent_type": "speckit-pro:consensus-tiebreaker",
+      "must_contain_section_keywords": [
+        "Assumption",
+        "Dissent"
+      ],
+      "rationale": "The result records the chosen option as an assumption and logs the dissent"
+    }
+  ],
+  "must_not_invoke_skill": [
+    "grill-me"
+  ]
+}

@@ -24,13 +24,13 @@ Treat `NOT SPAWNED` as absent.
   `confidence: low` and `Flags: [ESCAPE_TO_ROUND_2]`.
 - **N = 3:** Unanimity produces high confidence. A 2/3 majority wins while the
   dissent is preserved. If all three disagree, return
-  `[HUMAN REVIEW NEEDED]` with all perspectives and do not choose one.
+  `[ROUND_3_TIEBREAK]` for `consensus-tiebreaker` with all perspectives, choosing none.
 - **Security override on a security route:** The `Security Route` input line
   says why the item reached all three analysts. When the route is `tag`, apply
   the answer only when all three analysts agree. When the route is `keyword`
   and any routed response returns `security_relevant: true`, or omits the
   field, apply the same unanimity bar. A 2/3 majority or no agreement returns
-  `[HUMAN REVIEW NEEDED]` with all perspectives; a keyword alone never stops
+  `[ROUND_3_TIEBREAK]` with all perspectives; a keyword alone never stops
   the run. When the route is `keyword` and every routed response returns
   `security_relevant: false`, apply the ordinary rule for N above, so a 2/3
   majority wins at N = 3. When the route is `none`, a `security_relevant: true`
@@ -48,7 +48,7 @@ Escape phrases are: `insufficient context`, `not in this codebase`,
 
 For an accepted answer, return the exact file, section, action, and Markdown
 content proposed for the parent to apply. Do not include an artifact edit when
-escaping or requesting human review. Name the supporting analysts and their
+escaping or requesting the Round 3 tiebreak. Name the supporting analysts and their
 evidence. Preserve any dissent. Add no analysis, arguments, or evidence beyond
 what the supplied responses contain. Never invoke or recommend `$grill-me`.
 
@@ -92,7 +92,7 @@ item with no block is treated as a missing synthesis result.
 **Confidence:** high | low
 
 **Answer:**
-<synthesized answer> | (omit when escaping or flagging human review)
+<synthesized answer> | (omit when escaping or flagging the Round 3 tiebreak)
 
 **Supporting Analysts:** <names + key evidence cited>
 **Dissent:** <dissenting perspective, if any> | None
@@ -104,7 +104,7 @@ item with no block is treated as a missing synthesis result.
 - **Content:**
 <exact markdown to apply>
 
-**Flags:** None | [ESCAPE_TO_ROUND_2] <reason> | [HUMAN REVIEW NEEDED] <reason>
+**Flags:** None | [ESCAPE_TO_ROUND_2] <reason> | [ROUND_3_TIEBREAK] <reason>
 ```
 
 Omit the complete `Artifact Edit` block whenever `Flags` is not `None`.

@@ -66,7 +66,13 @@ Two optional tools save reading and tokens; work on without them, and no check
 may depend on either. With `ripwire` on PATH (one argument per flag), run
 `ripwire . --for="<task>"` first, `--callers=SYM` and `--impact=SYM` before a
 change, and `--quality-delta=$(git merge-base origin/main HEAD)..HEAD` before a
-PR; confirm its graph with a read. Jev (the `typesafe-jev` plugin's `evaluate`
+PR; confirm its graph with a read. Committed ripwire config: `.ripwire_arch_rules`
+(intended layering) with `.ripwire_arch_baseline` (today's debt), checked by
+`ripwire . --arch=.ripwire_arch_rules` (exit 2 means a new violation), and
+`.ripwire_notes` (field notes that `--for` surfaces). Never re-baseline to hide a
+new edge; use `--baseline-update` in its own reviewed commit. There is no
+committed quality baseline, because ripwire honors one only at the exact commit
+it pinned. Jev (the `typesafe-jev` plugin's `evaluate`
 tool) gives advisory judgments only: its verdict never approves a destructive
 step, and each call bills a third party, so send no secrets or local paths.
 
@@ -214,7 +220,8 @@ the two in step when either changes.
 
 - `AGENTS.md` is the only authored agent-instruction source in each scoped
   directory.
-- `CLAUDE.md` files must only import the sibling `AGENTS.md`.
+- Do not add a `CLAUDE.md`: Claude Code reads `AGENTS.md` directly. Put
+  Claude-only guidance in your own `~/.claude/rules/`, not in this repository.
 - `GEMINI.md` files must only import the sibling `AGENTS.md`.
 - Do not put feature plans, release notes, implementation transcripts, or
   detailed process history in agent files.

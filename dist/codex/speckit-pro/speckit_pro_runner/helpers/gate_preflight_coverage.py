@@ -12,11 +12,19 @@ Given a repository root, it also reads the root agent instruction files and
 adds each declared pre-PR command that sends data off the machine (a
 dependency audit named in a code span or a fenced code line) as a required
 gate. Its need is `external_side_effect` with the exact command as the target.
+
+With `writable_roots` it also requires an inventory action for the private
+autonomy-record directory and for each `write_paths` entry that lies outside
+those roots, so a sandbox denial on either surfaces at run start. Each missing
+`external_side_effect` need is returned as a `policy_classes` entry, the input
+`render-egress-authorization` takes as `derived_classes`, so the standing
+policy covers it and no gate needs a mid-run approval.
 """
 
 from __future__ import annotations
 
 import re
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -24,12 +32,15 @@ from ..envelope import diagnostic, response
 
 # The autonomy-boundary schema's action categories; a test pins the two together.
 CATEGORIES = ("outside_writable_roots", "privileged_command", "interactive_authentication", "external_side_effect")
-ALLOWED_INPUTS = frozenset({"repo_root", "gates", "inventory_actions"})
+ALLOWED_INPUTS = frozenset({"repo_root", "gates", "inventory_actions", "writable_roots", "write_paths"})
 # Root agent instruction files, read in this order; the first file to declare a command is its source.
 INSTRUCTION_FILES = ("AGENTS.md", "CLAUDE.md")
 # Dependency audits send dependency metadata to a registry or advisory service.
 EGRESS_COMMAND = re.compile(r"(?:(?:npm|pnpm|bun)\s+audit|yarn\s+(?:npm\s+)?audit|pip-audit|cargo\s+audit"
                             r"|bundle(?:\s+|-)audit)(?:\s.*)?")
+GIT_TIMEOUT_SECONDS = 30
+RECORD_GATE = "run-start: private autonomy record"
+ROOT_GATE = "run-start: workflow root"
 CODE_SPAN = re.compile(r"`([^`\n]+)`")
 FENCE = re.compile(r"\s*(?:```|~~~)")
 
@@ -81,6 +92,89 @@ def declared_commands(root: Path) -> list[dict[str, str]]:
     return [{"command": command, "source": sources[command]} for command in sorted(sources)]
 
 
+def _paths(value: Any, field: str) -> list[Path]:
+    if not isinstance(value, list):
+        raise ValueError(f"{field} must be a list of absolute paths")
+    paths: list[Path] = []
+    for index, raw in enumerate(value):
+        text = _text(raw, f"{field}[{index}]")
+        if not Path(text).is_absolute():
+            raise ValueError(f"{field}[{index}] must be an absolute path")
+        paths.append(Path(text).resolve())
+    return paths
+
+
+def private_record_dir(root: Path) -> Path:
+    """Where the private autonomy record lives: inside the git common directory, shared by every worktree."""
+    try:
+        done = subprocess.run(["git", "-C", str(root), "rev-parse", "--git-common-dir"], text=True,
+                              capture_output=True, shell=False, check=False, timeout=GIT_TIMEOUT_SECONDS)
+    except (OSError, subprocess.SubprocessError) as error:
+        raise ValueError("git could not report the common directory, so the private record path is unknown") from error
+    if done.returncode != 0 or not done.stdout.strip():
+        raise ValueError("git could not report the common directory, so the private record path is unknown")
+    return (root / done.stdout.strip()).resolve() / "speckit-pro" / "autonomy-boundary"
+
+
+def _slug(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+
+
+def derived_policy_classes(missing: list[dict[str, str]], declared: list[dict[str, str]]) -> list[dict[str, str]]:
+    """One standing-policy class per missing external_side_effect need, in order."""
+    audits = {item["command"] for item in declared}
+    classes: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for item in missing:
+        if item["category"] != "external_side_effect":
+            continue
+        class_id = base = "gate-" + _slug(item["gate"])
+        suffix = 1
+        while class_id in seen:
+            suffix += 1
+            class_id = f"{base}-{suffix}"
+        seen.add(class_id)
+        if item["target"] in audits:
+            entry = {"class_id": class_id, "gate": item["gate"],
+                     "target": f"the registry or advisory service that `{item['target']}` contacts",
+                     "effect": "dependency names and versions sent for a dependency audit",
+                     "probe": item["target"]}
+        else:
+            entry = {"class_id": class_id, "gate": item["gate"], "target": item["target"],
+                     "effect": f"repository content that `{item['command']}` sends when the gate runs"}
+        classes.append(entry)
+    return classes
+
+
+def _gate_needs(gates: list[Any]) -> list[tuple[str, str, str, str]]:
+    required: list[tuple[str, str, str, str]] = []
+    for index, raw in enumerate(gates):
+        if not isinstance(raw, dict) or set(raw) != {"gate", "command", "needs"} or not isinstance(raw["needs"], list):
+            raise ValueError(f"gates[{index}] must have exactly gate, command, and a needs list")
+        gate = _text(raw["gate"], f"gates[{index}].gate")
+        command = _text(raw["command"], f"gates[{index}].command")
+        required.extend((gate, command, *_need(need, f"gates[{index}].needs[{need_index}]"))
+                        for need_index, need in enumerate(raw["needs"]))
+    return required
+
+
+def _write_surface_needs(inputs: dict[str, Any], root: Path | None) -> tuple[list[tuple[str, str, str, str]], Path | None]:
+    """Needs for the private record and each write path that lie outside `writable_roots`."""
+    if "writable_roots" not in inputs:
+        if "write_paths" in inputs:
+            raise ValueError("write_paths needs writable_roots")
+        return [], None
+    if root is None:
+        raise ValueError("writable_roots needs a repository root")
+    writable = _paths(inputs["writable_roots"], "writable_roots")
+    private_dir = private_record_dir(root)
+    surfaces = [(RECORD_GATE, "write the private autonomy record", private_dir)]
+    surfaces += [(ROOT_GATE, "write the workflow files", path)
+                 for path in _paths(inputs.get("write_paths", []), "write_paths")]
+    return [(gate, command, "outside_writable_roots", str(path)) for gate, command, path in surfaces
+            if not any(path.is_relative_to(base) for base in writable)], private_dir
+
+
 def gate_preflight_coverage(inputs: Any, root: Path | None = None) -> dict[str, Any]:
     """Which gate needs the inventory covers; raises ValueError on malformed evidence.
 
@@ -101,19 +195,14 @@ def gate_preflight_coverage(inputs: Any, root: Path | None = None) -> dict[str, 
     for index, raw in enumerate(actions):
         key = _need(raw, f"inventory_actions[{index}]")
         inventory.setdefault(key, []).append(_text(raw.get("action_id"), f"inventory_actions[{index}].action_id"))
-    required: list[tuple[str, str, str, str]] = []
-    for index, raw in enumerate(gates):
-        if not isinstance(raw, dict) or set(raw) != {"gate", "command", "needs"} or not isinstance(raw["needs"], list):
-            raise ValueError(f"gates[{index}] must have exactly gate, command, and a needs list")
-        gate = _text(raw["gate"], f"gates[{index}].gate")
-        command = _text(raw["command"], f"gates[{index}].command")
-        required.extend((gate, command, *_need(need, f"gates[{index}].needs[{need_index}]"))
-                        for need_index, need in enumerate(raw["needs"]))
+    required = _gate_needs(gates)
     declared = declared_commands(root) if root is not None else []
     for item in declared:
         need = ("external_side_effect", item["command"])
         if not any((category, target) == need for _, _, category, target in required):
             required.append((f"pre-PR: {item['command']}", item["command"], *need))
+    write_needs, private_dir = _write_surface_needs(inputs, root)
+    required.extend(write_needs)
     missing: list[dict[str, str]] = []
     covering: dict[str, list[str]] = {}
     for gate, command, category, target in required:
@@ -122,7 +211,8 @@ def gate_preflight_coverage(inputs: Any, root: Path | None = None) -> dict[str, 
         else:
             missing.append({"gate": gate, "command": command, "category": category, "target": target})
     return {"covered": not missing, "missing": missing, "covering_actions": covering,
-            "declared_commands": declared, "writes_state": False}
+            "declared_commands": declared, "policy_classes": derived_policy_classes(missing, declared),
+            "private_record_dir": str(private_dir) if private_dir is not None else None, "writes_state": False}
 
 
 def run_gate_preflight_coverage_helper(entry: Any, request: Any) -> dict[str, Any]:

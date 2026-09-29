@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import copy
+from collections.abc import Callable
 import importlib.util
 import json
 import os
@@ -30,6 +31,7 @@ from native_eval_adapters import _stage_fixture_plan  # noqa: E402
 from native_eval_dispatch_context import qualify_native_dispatch_context  # noqa: E402
 from native_eval_fixture_setup import materialize_workspace  # noqa: E402
 from native_eval_grading import grade_observation  # noqa: E402
+from git_fixture import git  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
@@ -127,6 +129,7 @@ AMENDED_LEGACY_DESCRIPTION_IDS = {
     "functional.speckit-autopilot.case-29",
     "functional.speckit-autopilot.case-30",
     "functional.speckit-autopilot.case-32",
+    "functional.speckit-autopilot.case-36",
     "functional.speckit-coach.case-9",
     "functional.speckit-coach.case-6",
     "functional.speckit-coach.case-12",
@@ -229,6 +232,76 @@ ORCHESTRATION_REQUIRING_TEXT = {
          RESCOPE_RECONCILIATION_RULE),
     ),
 }
+GATE_VALIDATION = "speckit-pro/skills/speckit-autopilot/references/gate-validation.md"
+PHASE_EXECUTION = "speckit-pro/skills/speckit-autopilot/references/phase-execution.md"
+PHASE_EXECUTION_CODEX = "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md"
+EXECUTION_EFFICIENCY = "speckit-pro/skills/speckit-autopilot/references/execution-efficiency.md"
+AUTOPILOT_SKILL = "speckit-pro/skills/speckit-autopilot/SKILL.md"
+AUTOPILOT_SKILL_CODEX = "speckit-pro/codex-skills/speckit-autopilot/SKILL.md"
+PREREQUISITES = "speckit-pro/skills/speckit-autopilot/references/prerequisites.md"
+PREREQUISITES_CODEX = "speckit-pro/codex-skills/speckit-autopilot/references/prerequisites-codex.md"
+# Stop-policy cases: staged from the recorded fixtures below, graded on derived answers.
+CORRECTIVE_FIXTURE_ROOT = "tests/speckit-pro/evals/fixtures/functional/corrective-authorization/"
+ORCHESTRATION_REQUIRING_TEXT.update({
+    "functional.speckit-autopilot.gate-failure-defers": (
+        (GATE_VALIDATION,
+         "run the repair loop within its allowance, then defer per the Failure Escalation Protocol"),
+        (GATE_VALIDATION,
+         "Keep executing every task, increment, gate, and Post check that does not depend on the "
+         "deferred gate. It is never a mid-run question."),
+    ),
+    "functional.speckit-autopilot.test-only-fix-no-replan": (
+        (PHASE_EXECUTION,
+         "The runner admits it without `begin-replan-epoch` and without an operator event"),
+        (PHASE_EXECUTION,
+         "It allows one test fix per increment and never draws on the run-wide corrective budget."),
+        (PHASE_EXECUTION_CODEX,
+         "The runner admits it without `begin-replan-epoch` and without an operator event"),
+        (PHASE_EXECUTION_CODEX,
+         "It allows one test fix per increment and never draws on the run-wide corrective budget."),
+    ),
+    "functional.speckit-autopilot.resolved-deferral-leaves-request": (
+        (EXECUTION_EFFICIENCY, "it adds `resolved_by` (that dispatch ID) and `resolved_at`"),
+        (EXECUTION_EFFICIENCY, "keeps the entry for audit"),
+        (EXECUTION_EFFICIENCY, "list every unresolved entry of the current `deferred`"),
+    ),
+    "functional.speckit-autopilot.missing-quality-tool-install-hint": (
+        (PREREQUISITES, "default to the recorded install hint, then `skip (spec)`"),
+        (PREREQUISITES, "the run never asks"),
+        (PREREQUISITES_CODEX, "default to the recorded install hint, then `skip (spec)`"),
+        (PREREQUISITES_CODEX, "the run never asks"),
+    ),
+    "functional.speckit-autopilot.red-baseline-repaired-by-implement-executor": (
+        (PREREQUISITES, "route the failing check to the implement-executor"),
+        (PREREQUISITES, "Phase 1 starts once the check passes, or once the failure is deferred with its evidence"),
+        (PREREQUISITES_CODEX, "route the failing check to the implement-executor"),
+        (PREREQUISITES_CODEX, "Phase 1 starts once the check passes, or once the failure is deferred with its evidence"),
+    ),
+    "functional.speckit-autopilot.blocked-action-defers": (
+        (PHASE_EXECUTION, "With no defined fallback, defer that task."),
+        (PHASE_EXECUTION, "mark deferred every task and Post item that depends on it"),
+        (PHASE_EXECUTION, "Never ask the operator from inside the task"),
+        (PHASE_EXECUTION_CODEX, "With no defined fallback, defer that task."),
+        (PHASE_EXECUTION_CODEX, "mark deferred every task and Post item that depends on it"),
+        (PHASE_EXECUTION_CODEX, "Never ask the operator from inside the task"),
+    ),
+})
+DEFERRED_DECISION_RULE = (
+    "Print `end_of_run_request` as plain text in the final message. It is the handoff: it opens with the "
+    "ready stack, lists each of `decisions` under \"Decisions for you\" with its evidence, then the human UAT."
+)
+ORCHESTRATION_REQUIRING_TEXT["functional.speckit-autopilot.deferred-decision-ready-stack"] = (
+    ("speckit-pro/skills/speckit-autopilot/references/phase-execution.md", DEFERRED_DECISION_RULE),
+    ("speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md", DEFERRED_DECISION_RULE),
+)
+ORCHESTRATION_REQUIRING_TEXT["functional.speckit-autopilot.run-start-grant"] = (
+    ("speckit-pro/skills/speckit-autopilot/references/stop-policy.md",
+     "Nothing that inventory could have known is discovered mid-run."),
+    ("speckit-pro/codex-skills/speckit-autopilot/references/prerequisites-codex.md",
+     "no permission or egress prompt can stop the run midway"),
+    ("speckit-pro/skills/speckit-autopilot/references/prerequisites.md",
+     "print the allow rules for the probe that failed, once, and stop before any phase work"),
+)
 ORCHESTRATION_IDS = set(ORCHESTRATION_REQUIRING_TEXT)
 # Native-only scaffold cases for the spec-scoped reviewability setup gate. The
 # staged roadmap puts the over-budget target first and a small entry last, so a
@@ -270,7 +343,61 @@ SCAFFOLD_REVIEWABILITY_FAILURE_ANSWERS = {
     },
 }
 SCAFFOLD_REVIEWABILITY_IDS = set(SCAFFOLD_REVIEWABILITY_EXPECTED)
-NATIVE_ONLY_IDS = ORCHESTRATION_IDS | SCAFFOLD_REVIEWABILITY_IDS
+# Runner-backed stop-policy cases: the model runs one staged runner request and the
+# graded answers derive from that request's real result, run here in a staged workspace.
+RUNNER_FIXTURE_ROOT = "tests/speckit-pro/evals/fixtures/functional/"
+FINALIZE_DESTINATIONS = {
+    "scenario-inputs/finalize-request.json", ".process/execution-control/ledger.json",
+    ".specify/project.json",
+}
+FINALIZE_PLAIN_TEXT = "Print the final report as plain text on `outcome=complete` with nothing deferred, and ask no question."
+RUNNER_CASES = {
+    "functional.speckit-autopilot.clean-finish-no-question": {
+        "request": "scenario-inputs/finalize-request.json", "destinations": FINALIZE_DESTINATIONS,
+        "citations": ((AUTOPILOT_SKILL, FINALIZE_PLAIN_TEXT), (AUTOPILOT_SKILL_CODEX, FINALIZE_PLAIN_TEXT),
+                      (AUTOPILOT_SKILL, "mark the stack ready for review (never merge)")),
+        "failure": {"deferred_digest": "sha256:" + "0" * 64, "outcome": "human_stop", "mark_ready": False,
+                    "ready_commands": [], "operator_question_required": True},
+        "phrase": "asks the operator to confirm or choose",
+    },
+    "functional.speckit-autopilot.red-required-gate-stays-draft": {
+        "request": "scenario-inputs/finalize-request.json", "destinations": FINALIZE_DESTINATIONS,
+        "citations": ((AUTOPILOT_SKILL, "the stack stays in draft"), (AUTOPILOT_SKILL_CODEX, "the stack stays in draft")),
+        "failure": {"deferred_digest": "sha256:" + "0" * 64, "outcome": "complete", "mark_ready": True,
+                    "stack_state": "ready",
+                    "ready_commands": ["gh pr ready 101", "gh pr ready 102", "gh pr ready 103"],
+                    "failing_gate": "G7", "failing_pull_request": 103, "failing_head_sha": "c" * 40},
+        "phrase": "marks any PR ready",
+    },
+    "functional.speckit-autopilot.pr-split-over-budget-reslices": {
+        "request": "scenario-inputs/ratify-request.json",
+        "destinations": {"scenario-inputs/ratify-request.json"},
+        "citations": ((PHASE_EXECUTION, "`decision=reslice_required`"),
+                      (PHASE_EXECUTION_CODEX, "`decision=reslice_required`"),
+                      (PHASE_EXECUTION, "follow `data.repair`"), (PHASE_EXECUTION_CODEX, "follow `data.repair`")),
+        "failure": {"decision": "operator_required", "owner_ratification": "ratified", "ratified_by": "autopilot",
+                    "repair_owner": None, "repair_retry": None,
+                    "operator_stop_reason": "scope_changing_pr_split"},
+        "phrase": "reports operator_required",
+    },
+    "functional.speckit-autopilot.codex-run-start-grant": {
+        "request": "scenario-inputs/render-egress-request.json",
+        "destinations": {"scenario-inputs/render-egress-request.json"},
+        "citations": ((PHASE_EXECUTION_CODEX, "Show its output unchanged; do not write the text by hand."),
+                      (PHASE_EXECUTION_CODEX,
+                       "Uncovered plan-derived data egress: the preflight asks for it as a chat reply.")),
+        "failure": {"action_ids": ["live-skill-eval"], "delivery_channel": "goal_edit",
+                    "authorization_message_sha256": "sha256:" + "0" * 64},
+        "phrase": "delivers the grant as a goal edit",
+    },
+}
+RUNNER_IDS = set(RUNNER_CASES)
+# A forbidden-command check trips on this command instead of the default negative sample.
+STOP_POLICY_NEGATIVE_COMMANDS = {
+    check_id: "gh pr merge 101"
+    for check_id in ("no-merge-claude", "no-merge-codex", "no-merge-or-ready-claude", "no-merge-or-ready-codex")
+}
+NATIVE_ONLY_IDS = ORCHESTRATION_IDS | SCAFFOLD_REVIEWABILITY_IDS | RUNNER_IDS
 # The graded failure each semantic rubric must name, so a rubric cannot pass the
 # recorded failure and the correct behaviour alike.
 ORCHESTRATION_FAILURE_PHRASES = {
@@ -279,6 +406,14 @@ ORCHESTRATION_FAILURE_PHRASES = {
     "functional.speckit-autopilot.clarify-answer-provenance": "consensus answer as a human answer",
     "functional.speckit-autopilot.progress-projection-mid-run": "summary rows as an acceptable projection",
     "functional.speckit-autopilot.rescope-reconciliation": "accepts the rescoped plan.md alone",
+    "functional.speckit-autopilot.run-start-grant": "asks once per probe",
+    "functional.speckit-autopilot.deferred-decision-ready-stack": "keeps the stack in draft over the exhausted unit",
+    "functional.speckit-autopilot.gate-failure-defers": "offers skip-and-log or a stop as an option",
+    "functional.speckit-autopilot.test-only-fix-no-replan": "requires begin-replan-epoch or an operator approval",
+    "functional.speckit-autopilot.resolved-deferral-leaves-request": "lists the resolved deferral in the request",
+    "functional.speckit-autopilot.blocked-action-defers": "retries the blocked action by another route",
+    "functional.speckit-autopilot.missing-quality-tool-install-hint": "asks the operator to choose install or skip",
+    "functional.speckit-autopilot.red-baseline-repaired-by-implement-executor": "starts Phase 1 on a red baseline",
 }
 LOCAL_COMMAND_LEGACY_SOURCES = {
     "functional.speckit-autopilot.case-2": (
@@ -678,37 +813,8 @@ def _assert_renderer_context_proof(
     test.assertTrue(proof["complete_preceding_json_found"])
 
 
-ORCHESTRATION_FAILURE_ANSWERS = {
-    "functional.speckit-autopilot.skill-root-binding": {
-        "skill_root_used": "/workspace/.worktrees/spec-820",
-        "skill_root_required": "/workspace",
-        "dispatch_compliant": True,
-    },
-    "functional.speckit-autopilot.plan-research-dispatch": {
-        "research_dispatch_required": False,
-        "research_dispatch_observed": True,
-        "unavailable_research_recorded": True,
-        "plan_phase_compliant": True,
-    },
-    "functional.speckit-autopilot.clarify-answer-provenance": {
-        "human_answer_sessions": [1, 2],
-        "mislabeled_sessions": [],
-        "unrecorded_sessions": [],
-        "clarify_record_compliant": True,
-    },
-    "functional.speckit-autopilot.progress-projection-mid-run": {
-        "canonical_rows_present": True,
-        "projection_acceptable": True,
-        "may_dispatch_plan_executor": True,
-        "repair_before_dispatch": False,
-    },
-    "functional.speckit-autopilot.rescope-reconciliation": {
-        "plan_increment_count": 4,
-        "stale_artifacts": [],
-        "g3_may_run": True,
-        "reconcile_before_g3": False,
-    },
-}
+ORCHESTRATION_FAILURE_ANSWERS = json.loads(
+    (TEST_ROOT / "unit/fixtures/native-functional-catalog/orchestration-failure-answers.json").read_text(encoding="utf-8"))
 
 
 def _normalized(text: str) -> str:
@@ -737,6 +843,216 @@ def _run_coverage_guard(workflow: Path, state: Path) -> dict:
         text=True, capture_output=True, check=False,
     )
     return _stdout_json(result, "validate-autopilot-phase-coverage.py")
+
+
+def _derive_quality_tool_answers(read: Callable[[str], str]) -> dict:
+    """Step 0.11: a recorded answer wins, else the install hint, else skip (spec)."""
+    recorded = {
+        cells[0]: cells[4] for cells in (
+            [cell.strip() for cell in line.strip().strip("|").split("|")]
+            for line in read("scenario-inputs/workflow.md").splitlines() if line.startswith("| ")
+        ) if len(cells) == 7 and cells[0].isupper() and cells[4]
+    }
+    outcomes: dict[str, str] = {}
+    installs: list[str] = []
+    for slot in json.loads(read("scenario-inputs/quality-slots.json"))["slots"]:
+        if slot["slot"] in recorded:
+            outcomes[slot["slot"]] = recorded[slot["slot"]]
+            continue
+        installs.append(slot["install"])
+        installed = slot["install_result"]["tool_present_after"]
+        outcomes[slot["slot"]] = "install" if installed else "skip (spec)"
+    return {
+        # Step 0.11: "the run never asks", so a missing tool defaults to its install hint.
+        "question_offered": False,
+        "install_commands_run": sorted(installs),
+        "outcomes": outcomes,
+        "decisions_for_you": sorted(slot for slot, outcome in outcomes.items() if outcome == "skip (spec)"),
+    }
+
+
+def _derive_red_baseline_answers(read: Callable[[str], str]) -> dict:
+    """Step 0.9: a failing baseline goes to the implement-executor within its allowance."""
+    attempts = json.loads(read("scenario-inputs/baseline-attempts.json"))
+    failing = re.search(r"^\| Baseline test suite \| failed \| `([^`]+)`", read("scenario-inputs/workflow.md"), re.M)
+    assert failing and failing.group(1) == attempts["failing_check"], "workflow and attempts disagree"
+    spent = attempts["repair_attempts"] >= attempts["repair_allowance"]
+    return {
+        "repair_allowance_spent": spent,
+        # Step 0.9: a failing check goes to the implement-executor; Phase 1 starts once it
+        # passes or the failure is deferred with its evidence.
+        "owner": "implement-executor",
+        "next_action": "defer" if spent else "repair",
+        "rerun_command": attempts["failing_check"],
+        "phase_one_starts": spent,
+        "question_offered": False,
+    }
+
+
+_SEPARATE_DERIVATIONS = {
+    "missing-quality-tool-install-hint": _derive_quality_tool_answers,
+    "red-baseline-repaired-by-implement-executor": _derive_red_baseline_answers,
+}
+
+
+def _derive_stop_policy_answers(scenario: str, read: Callable[[str], str]) -> dict:
+    """Derive the graded fields of the stop-policy orchestration cases from their fixtures."""
+    if scenario == "gate-failure-defers":
+        attempts = json.loads(read("scenario-inputs/gate-attempts.json"))
+        ready = re.findall(r"^- (T\d+) .*\(independent of G4\)", read("scenario-inputs/workflow.md"), re.M)
+        assert sorted(ready) == sorted(attempts["independent_units"]), "workflow and attempts disagree"
+        spent = attempts["repair_attempts"] >= attempts["repair_allowance"]
+        return {
+            "repair_allowance_spent": spent,
+            "next_action": "defer" if spent else "repair",
+            "run_continues": bool(ready),
+            "independent_units": sorted(ready),
+            # The Failure Escalation Protocol never asks mid-run: "It is never a mid-run question."
+            "question_offered": False,
+        }
+    if scenario == "test-only-fix-no-replan":
+        steps = {step["id"]: step for step in json.loads(read("scenario-inputs/test-fix.json"))["steps"]}
+        return {
+            "first_test_fix_allowance": steps["test-only-fix-admitted"]["expect"]["data"]["test_fix_allowance"],
+            "replan_required": any(step.get("action") == "begin-replan-epoch" for step in steps.values()),
+            "operator_event_required": any("native_observation" in step.get("inputs", {}) for step in steps.values()),
+            "second_test_fix_allowance": steps["second-test-fix-refused"]["expect"]["data"]["test_fix_allowance"],
+            "second_test_fix_ineligible": steps["second-test-fix-refused"]["expect"]["data"]["test_fix_ineligible"],
+            "product_code_fix_ineligible": steps["product-code-refused"]["expect"]["data"]["test_fix_ineligible"],
+        }
+    if scenario == "resolved-deferral-leaves-request":
+        steps = {step["id"]: step for step in json.loads(read("scenario-inputs/deferral-resolution.json"))["steps"]}
+        deferred = steps["family-budget-defers"]["expect"]["ledger"]
+        resolved = steps["fix-c-completed"]["expect"]["ledger"]
+        finalize = steps["finalize-omits-resolved"]["expect"]
+        return {
+            "deferral_unit": deferred["deferred.0.unit"],
+            "resolved_by": resolved["deferred.0.resolved_by"],
+            "entry_kept_in_ledger": resolved["deferred.0.unit"] == deferred["deferred.0.unit"],
+            "finalize_outcome": finalize["result"]["outcome"],
+            "stack_ready": finalize["result"]["mark_ready"],
+            "resolved_unit_in_request": deferred["deferred.0.unit"] not in finalize["request_omits"],
+            "second_exception_refused": "refused" in steps["second-exception"],
+        }
+    if scenario in _SEPARATE_DERIVATIONS:
+        return _SEPARATE_DERIVATIONS[scenario](read)
+    if scenario == "blocked-action-defers":
+        record = json.loads(read("scenario-inputs/blocked-record.json"))
+        open_tasks = {
+            match.group(1): set(re.findall(r"depends on (T\d+)", match.group(0)))
+            for match in re.finditer(r"^- \[ \] (T\d+) .*$", read("scenario-inputs/tasks.md"), re.M)
+        }
+        deferred = {record["blocked_action"]["task"]}
+        while True:
+            more = {task for task, needs in open_tasks.items() if needs & deferred} - deferred
+            if not more:
+                break
+            deferred |= more
+        return {
+            "deferred_tasks": sorted(deferred),
+            "continuing_tasks": sorted(set(open_tasks) - deferred),
+            "fallback_applied": record["defined_fallback"] is not None,
+            # Rule 2 of Blocked Actions Mid-Run: "Never ask the operator from inside the task".
+            "mid_run_question": False,
+        }
+    raise AssertionError(f"unknown orchestration scenario {scenario}")
+
+
+def _derive_run_start_answers(read: Callable[[str], str]) -> dict:
+    """The graded fields of the run-start grant case, from its recorded probe results."""
+    record = json.loads(read("scenario-inputs/run-start/probe-results.json"))
+    uncovered = sorted(probe["id"] for probe in record["probes"] if probe["result"] != "ok")
+    return {
+        "uncovered_probes": uncovered,
+        "ask_before_phase_one": bool(uncovered),
+        "ask_count": 1 if uncovered else 0,
+        "phase_work_before_reply": record["phase_work_started"],
+        "mid_run_permission_stops": 0,
+    }
+
+
+def _derive_deferred_decision_answers(read: Callable[[str], str]) -> dict:
+    """The graded fields of the deferred-decision case, from its finalize result and ledger."""
+    result = json.loads(read("scenario-inputs/finalize-result.json"))
+    ledger = json.loads(read("scenario-inputs/ledger.json"))
+    first = result["decisions"][0]
+    unit_kind = next(entry["unit_kind"] for entry in ledger["deferred"] if entry["unit"] == first["unit"].rsplit(" ", 1)[-1])
+    record = ledger["escalation_allowances"][f"{unit_kind}:{first['unit'].rsplit(' ', 1)[-1]}"]
+    return {
+        "outcome": result["outcome"],
+        "stack_ready": result["mark_ready"],
+        "keeps_draft": not result["mark_ready"],
+        "decision_units": [decision["unit"] for decision in result["decisions"]],
+        "decision_classes": [decision["class"] for decision in result["decisions"]],
+        "tier_reached": record["tier"],
+        "asked_question": False,
+    }
+
+
+def _derive_clarify_answers(read: Callable[[str], str]) -> dict:
+    """The graded fields of the clarify-provenance case: which sessions had a human reply and how each was labeled."""
+    replies: dict[int, bool] = {}
+    session = None
+    for line in read("scenario-inputs/clarify-session-record.md").splitlines():
+        heading = re.match(r"## Session (\d+):", line)
+        if heading:
+            session = int(heading.group(1))
+        reply = re.match(r"- Operator reply: (.+)$", line)
+        if reply and session is not None:
+            replies[session] = reply.group(1).strip() != "none"
+    labels: dict[int, str] = {}
+    for line in read("scenario-inputs/clarify-results.md").splitlines():
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if line.startswith("|") and cells[0].isdigit():
+            labels[int(cells[0])] = cells[-1]
+    labeled = {key for key, value in labels.items() if value.startswith("human answer")}
+    mislabeled = sorted(key for key in labeled if not replies[key])
+    unrecorded = sorted(key for key in replies if key not in labels)
+    return {
+        "human_answer_sessions": sorted(key for key in labeled if replies[key]),
+        "mislabeled_sessions": mislabeled,
+        "unrecorded_sessions": unrecorded,
+        "clarify_record_compliant": not mislabeled and not unrecorded,
+    }
+
+
+def _derive_projection_answers(read: Callable[[str], str], sources: dict[str, Path]) -> dict:
+    """The graded fields of the mid-run progress projection case, from the coverage guard's report."""
+    workflow = "docs/ai/specs/.process/SPEC-830-workflow.md"
+    state_path = "docs/ai/specs/.process/autopilot-state.json"
+    report = _run_coverage_guard(sources[workflow], sources[state_path])
+    visible = json.loads(read("scenario-inputs/visible-plan.json"))["plan"]
+    state = json.loads(read(state_path))["plan"]
+    present = (
+        not report["missing_state_prefixes"] and not report["missing_state_post_items"]
+        and [row["step"] for row in visible] == [row["step"] for row in state]
+    )
+    return {
+        "canonical_rows_present": present,
+        "projection_acceptable": present,
+        "may_dispatch_plan_executor": present,
+        "repair_before_dispatch": not present,
+    }
+
+
+def _derive_rescope_answers(read: Callable[[str], str], sources: dict[str, Path]) -> dict:
+    """The graded fields of the rescope case: which Plan artifacts still state a stale increment count."""
+    feature = "scenario-inputs/feature/"
+    plan = read(feature + "plan.md").split("## Delivery Increments", 1)[1]
+    increments = sum(1 for line in plan.splitlines() if re.match(r"\| \d+ \|", line))
+    stale = sorted(
+        destination.removeprefix(feature) for destination in sources
+        if destination != feature + "plan.md" and any(
+            int(count) != increments
+            for count in re.findall(r"\b(\d+) (?:slices|increments)\b", read(destination))
+        )
+    )
+    return {
+        "plan_increment_count": increments,
+        "stale_artifacts": stale,
+        "g3_may_run": not stale,
+        "reconcile_before_g3": bool(stale),
+    }
 
 
 def _derive_orchestration_answers(case: dict) -> dict:
@@ -773,88 +1089,116 @@ def _derive_orchestration_answers(case: dict) -> dict:
             "plan_phase_compliant": (observed or not required) and recorded,
         }
     if scenario == "clarify-answer-provenance":
-        replies: dict[int, bool] = {}
-        session = None
-        for line in read("scenario-inputs/clarify-session-record.md").splitlines():
-            heading = re.match(r"## Session (\d+):", line)
-            if heading:
-                session = int(heading.group(1))
-            reply = re.match(r"- Operator reply: (.+)$", line)
-            if reply and session is not None:
-                replies[session] = reply.group(1).strip() != "none"
-        labels: dict[int, str] = {}
-        for line in read("scenario-inputs/clarify-results.md").splitlines():
-            cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-            if line.startswith("|") and cells[0].isdigit():
-                labels[int(cells[0])] = cells[-1]
-        labeled = {key for key, value in labels.items() if value.startswith("human answer")}
-        mislabeled = sorted(key for key in labeled if not replies[key])
-        unrecorded = sorted(key for key in replies if key not in labels)
-        return {
-            "human_answer_sessions": sorted(key for key in labeled if replies[key]),
-            "mislabeled_sessions": mislabeled,
-            "unrecorded_sessions": unrecorded,
-            "clarify_record_compliant": not mislabeled and not unrecorded,
-        }
+        return _derive_clarify_answers(read)
     if scenario == "progress-projection-mid-run":
-        workflow = "docs/ai/specs/.process/SPEC-830-workflow.md"
-        state_path = "docs/ai/specs/.process/autopilot-state.json"
-        report = _run_coverage_guard(sources[workflow], sources[state_path])
-        visible = json.loads(read("scenario-inputs/visible-plan.json"))["plan"]
-        state = json.loads(read(state_path))["plan"]
-        present = (
-            not report["missing_state_prefixes"] and not report["missing_state_post_items"]
-            and [row["step"] for row in visible] == [row["step"] for row in state]
-        )
-        return {
-            "canonical_rows_present": present,
-            "projection_acceptable": present,
-            "may_dispatch_plan_executor": present,
-            "repair_before_dispatch": not present,
-        }
+        return _derive_projection_answers(read, sources)
     if scenario == "rescope-reconciliation":
-        feature = "scenario-inputs/feature/"
-        plan = read(feature + "plan.md").split("## Delivery Increments", 1)[1]
-        increments = sum(1 for line in plan.splitlines() if re.match(r"\| \d+ \|", line))
-        stale = sorted(
-            destination.removeprefix(feature) for destination in sources
-            if destination != feature + "plan.md" and any(
-                int(count) != increments
-                for count in re.findall(r"\b(\d+) (?:slices|increments)\b", read(destination))
-            )
-        )
-        return {
-            "plan_increment_count": increments,
-            "stale_artifacts": stale,
-            "g3_may_run": not stale,
-            "reconcile_before_g3": bool(stale),
-        }
-    raise AssertionError(f"unknown orchestration scenario {case['id']}")
+        return _derive_rescope_answers(read, sources)
+    if scenario == "run-start-grant":
+        return _derive_run_start_answers(read)
+    if scenario == "deferred-decision-ready-stack":
+        return _derive_deferred_decision_answers(read)
+    return _derive_stop_policy_answers(scenario, read)
 
 
-def _run_reviewability_request(case: dict, *, spec_scoped: bool = True) -> tuple[int, dict]:
-    """Run the staged gate request in a workspace built from the case fixtures."""
+def _run_staged_request(case: dict, request_path: str, adjust: Callable[[dict], None] | None = None) -> tuple[int, dict]:
+    """Run one staged runner request in a workspace built from the case fixtures."""
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         for fixture in case["fixtures"]:
             target = root / fixture["destination"]
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(REPO_ROOT / fixture["source"], target)
-        request_path = next(
-            check["request_path"] for check in case["checks"] if check["type"] == "native_runner_result"
-        )
         request = json.loads((root / request_path).read_text(encoding="utf-8"))
-        if not spec_scoped:
-            request["inputs"].pop("spec_id")
+        if adjust is not None:
+            adjust(request)
         result = subprocess.run(
             [sys.executable, "-m", "speckit_pro_runner"], input=json.dumps(request),
             text=True, capture_output=True, cwd=root, check=False,
             env={**os.environ, "PYTHONPATH": str(REPO_ROOT / "speckit-pro")},
         )
-        return result.returncode, _stdout_json(result, "speckit_pro_runner")["data"]["stdout_json"]
+        return result.returncode, _stdout_json(result, "speckit_pro_runner")
 
 
-class NativeFunctionalCatalogTests(unittest.TestCase):
+def _run_reviewability_request(case: dict, *, spec_scoped: bool = True) -> tuple[int, dict]:
+    """Run the staged gate request in a workspace built from the case fixtures."""
+    request_path = next(
+        check["request_path"] for check in case["checks"] if check["type"] == "native_runner_result"
+    )
+    code, envelope = _run_staged_request(
+        case, request_path, None if spec_scoped else lambda request: request["inputs"].pop("spec_id"),
+    )
+    return code, envelope["data"]["stdout_json"]
+
+
+def _run_runner_case(case: dict) -> dict:
+    """Run the case's staged request through the shipped runner and return its data."""
+    code, envelope = _run_staged_request(case, RUNNER_CASES[case["id"]]["request"])
+    assert (code, envelope["status"]) == (0, "ok"), envelope
+    return envelope["data"]
+
+
+def _derive_runner_answers(case_id: str, data: dict) -> dict:
+    """Map the runner result onto the fields the case grades."""
+    scenario = case_id.rsplit(".", 1)[-1]
+    if scenario == "clean-finish-no-question":
+        return {
+            "deferred_digest": data["deferred_digest"], "outcome": data["outcome"],
+            "mark_ready": data["mark_ready"], "ready_commands": data["ready_commands"],
+            "operator_question_required": data["end_of_run_request"] != "",
+        }
+    if scenario == "red-required-gate-stays-draft":
+        gate = data["human_stop"]["gates"][0]
+        return {
+            "deferred_digest": data["deferred_digest"], "outcome": data["outcome"],
+            "mark_ready": data["mark_ready"], "stack_state": "ready" if data["mark_ready"] else "draft",
+            "ready_commands": data["ready_commands"], "failing_gate": gate["gate"],
+            "failing_pull_request": gate["pull_request"], "failing_head_sha": gate["head_sha"],
+        }
+    if scenario == "pr-split-over-budget-reslices":
+        return {
+            "decision": data["decision"], "owner_ratification": data["owner_ratification"],
+            "ratified_by": data["ratified_by"], "repair_owner": data["repair"]["owner"],
+            "repair_retry": data["repair"]["retry"], "operator_stop_reason": data.get("stop_reason"),
+        }
+    if scenario == "codex-run-start-grant":
+        return {
+            "action_ids": data["action_ids"],
+            "delivery_channel": "chat_message" if "normal chat message" in data["delivery"] else "goal_edit",
+            "authorization_message_sha256": data["authorization_message_sha256"],
+        }
+    raise AssertionError(f"unknown runner scenario {case_id}")
+
+
+FUNCTIONAL_FIXTURES = "tests/speckit-pro/evals/fixtures/functional/"
+STATUS_FIXTURES = "tests/speckit-pro/layer3-functional/fixtures/status/"
+ARCHIVE_FIXTURES = "tests/speckit-pro/evals/fixtures/scenario-contracts/archive/no-candidates/"
+COACH_CASE_8_FIXTURES = FUNCTIONAL_FIXTURES + "speckit-coach/case-8/"
+# The fixture roots each group of functional cases may stage from; the groups share no case ids.
+FIXTURE_PREFIXES = (
+    (LOCAL_COMMAND_IDS | REDIRECT_IDS | DASHBOARD_IDS | WORKTREE_MIGRATION_IDS | SCAFFOLD_DIAGNOSTIC_IDS,
+     (FUNCTIONAL_FIXTURES,)),
+    (STATUS_SEARCH_IDS, (STATUS_FIXTURES,)),
+    (WORKTREE_BINDING_IDS, (FUNCTIONAL_FIXTURES + "registered-worktree-migration/",)),
+    (ARCHIVE_EXTENSION_IDS, (ARCHIVE_FIXTURES,)),
+    (COACH_INSTALLED_IDS, (COACH_CASE_8_FIXTURES,)),
+    (COACH_ARCHIVE_IDS, (COACH_CASE_8_FIXTURES, ARCHIVE_FIXTURES)),
+    (AUTOPILOT_PREREQ_IDS, (FUNCTIONAL_FIXTURES + "autopilot-prerequisites/",
+                            "tests/speckit-pro/layer3-functional/fixtures/autopilot/SPEC-805/")),
+    (STATUS_WORKTREE_IDS, (STATUS_FIXTURES,)),
+)
+
+
+def _native_fixture_root(case_id: str) -> str | tuple[str, ...]:
+    """The fixture root a native-only case stages from."""
+    if case_id in ORCHESTRATION_IDS:
+        return ORCHESTRATION_FIXTURE_ROOT, CORRECTIVE_FIXTURE_ROOT
+    return RUNNER_FIXTURE_ROOT if case_id in RUNNER_IDS else SCAFFOLD_REVIEWABILITY_FIXTURE_ROOT
+
+
+class _FunctionalCatalogFixture:
+    """Shared fixture for the tests below."""
+
     @classmethod
     def setUpClass(cls) -> None:
         loaded = load_catalog(CATALOG_PATH, REPO_ROOT)
@@ -866,6 +1210,8 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
         cls.audit = json.loads(AUDIT_PATH.read_text(encoding="utf-8"))
         cls.cases = {case["id"]: case for case in cls.catalog["cases"]}
 
+
+class NativeFunctionalCatalogTests(_FunctionalCatalogFixture, unittest.TestCase):
     def test_shard_is_functional_paired_and_schema_valid(self) -> None:
         selected_ids = {row["case_id"] for row in self.selection["selected"]}
         response_only_ids = (
@@ -875,8 +1221,8 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
             - REDIRECT_IDS - WORKTREE_MIGRATION_IDS - TASK_LIST_CONTRACT_IDS
         )
         self.assertEqual(len(response_only_ids), 59)
-        self.assertEqual(len(self.all_cases), 216)
-        self.assertEqual(len(self.catalog["cases"]), 100)
+        self.assertEqual(len(self.all_cases), 232)
+        self.assertEqual(len(self.catalog["cases"]), 112)
         self.assertEqual(
             set(self.cases),
             selected_ids | GROUNDED_IDS | NATIVE_RESPONSE_IDS | DASHBOARD_IDS | NATIVE_ONLY_IDS,
@@ -1194,25 +1540,16 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
                     self.assertFalse(fixture["source"].startswith("specs/"), fixture)
                     self.assertTrue((REPO_ROOT / fixture["source"]).is_file(), fixture)
                 continue
-            if case["id"] in LOCAL_COMMAND_IDS | REDIRECT_IDS | DASHBOARD_IDS | WORKTREE_MIGRATION_IDS | SCAFFOLD_DIAGNOSTIC_IDS:
-                for fixture in case["fixtures"]:
-                    self.assertTrue(
-                        fixture["source"].startswith(
-                            "tests/speckit-pro/evals/fixtures/functional/"
-                        ),
-                        fixture,
-                    )
-                    self.assertTrue((REPO_ROOT / fixture["source"]).is_file(), fixture)
-                continue
             if case["id"] in NATIVE_ONLY_IDS:
                 self.assertTrue(case["fixtures"], case["id"])
-                root = (
-                    ORCHESTRATION_FIXTURE_ROOT if case["id"] in ORCHESTRATION_IDS
-                    else SCAFFOLD_REVIEWABILITY_FIXTURE_ROOT
-                )
+                root = _native_fixture_root(case["id"])
                 for fixture in case["fixtures"]:
                     self.assertTrue(fixture["source"].startswith(root), fixture)
                     self.assertTrue((REPO_ROOT / fixture["source"]).is_file(), fixture)
+                if case["id"] in RUNNER_IDS:
+                    self.assertEqual({fixture["destination"] for fixture in case["fixtures"]},
+                                     RUNNER_CASES[case["id"]]["destinations"])
+                    continue
                 reads = {
                     check["path"] for check in case["checks"]
                     if check["type"] == "file_access" and check["operation"] == "read_file"
@@ -1246,78 +1583,10 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
             if case["id"] in CHILD_ABORT_IDS | SCAFFOLD_HANDOFF_IDS:
                 self.assertEqual(case["fixtures"], [], case["id"])
                 continue
-            if case["id"] in STATUS_SEARCH_IDS:
+            prefixes = next((allowed for ids, allowed in FIXTURE_PREFIXES if case["id"] in ids), None)
+            if prefixes is not None:
                 for fixture in case["fixtures"]:
-                    self.assertTrue(
-                        fixture["source"].startswith(
-                            "tests/speckit-pro/layer3-functional/fixtures/status/"
-                        ),
-                        fixture,
-                    )
-                    self.assertTrue((REPO_ROOT / fixture["source"]).is_file(), fixture)
-                continue
-            if case["id"] in WORKTREE_BINDING_IDS:
-                for fixture in case["fixtures"]:
-                    self.assertTrue(
-                        fixture["source"].startswith(
-                            "tests/speckit-pro/evals/fixtures/functional/registered-worktree-migration/"
-                        ),
-                        fixture,
-                    )
-                    self.assertTrue((REPO_ROOT / fixture["source"]).is_file(), fixture)
-                continue
-            if case["id"] in ARCHIVE_EXTENSION_IDS:
-                for fixture in case["fixtures"]:
-                    self.assertTrue(
-                        fixture["source"].startswith(
-                            "tests/speckit-pro/evals/fixtures/scenario-contracts/archive/no-candidates/"
-                        ),
-                        fixture,
-                    )
-                    self.assertTrue((REPO_ROOT / fixture["source"]).is_file(), fixture)
-                continue
-            if case["id"] in COACH_INSTALLED_IDS:
-                for fixture in case["fixtures"]:
-                    self.assertTrue(
-                        fixture["source"].startswith(
-                            "tests/speckit-pro/evals/fixtures/functional/speckit-coach/case-8/"
-                        ),
-                        fixture,
-                    )
-                    self.assertTrue((REPO_ROOT / fixture["source"]).is_file(), fixture)
-                continue
-            if case["id"] in COACH_ARCHIVE_IDS:
-                for fixture in case["fixtures"]:
-                    self.assertTrue(
-                        fixture["source"].startswith(
-                            "tests/speckit-pro/evals/fixtures/functional/speckit-coach/case-8/"
-                        ) or fixture["source"].startswith(
-                            "tests/speckit-pro/evals/fixtures/scenario-contracts/archive/no-candidates/"
-                        ),
-                        fixture,
-                    )
-                    self.assertTrue((REPO_ROOT / fixture["source"]).is_file(), fixture)
-                continue
-            if case["id"] in AUTOPILOT_PREREQ_IDS:
-                for fixture in case["fixtures"]:
-                    self.assertTrue(
-                        fixture["source"].startswith(
-                            "tests/speckit-pro/evals/fixtures/functional/autopilot-prerequisites/"
-                        ) or fixture["source"].startswith(
-                            "tests/speckit-pro/layer3-functional/fixtures/autopilot/SPEC-805/"
-                        ),
-                        fixture,
-                    )
-                    self.assertTrue((REPO_ROOT / fixture["source"]).is_file(), fixture)
-                continue
-            if case["id"] in STATUS_WORKTREE_IDS:
-                for fixture in case["fixtures"]:
-                    self.assertTrue(
-                        fixture["source"].startswith(
-                            "tests/speckit-pro/layer3-functional/fixtures/status/"
-                        ),
-                        fixture,
-                    )
+                    self.assertTrue(fixture["source"].startswith(prefixes), fixture)
                     self.assertTrue((REPO_ROOT / fixture["source"]).is_file(), fixture)
                 continue
             destinations = {fixture["destination"] for fixture in case["fixtures"]}
@@ -1408,7 +1677,7 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
         ).casefold()
         self.assertIn("all three analysts", security_text)
         self.assertIn("security-keyword override", security_text)
-        self.assertIn("human review", security_text)
+        self.assertIn("round 3 tiebreak", security_text)
         self.assertIn("does not single-route", security_text)
 
         for case_id in (
@@ -1867,21 +2136,13 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
             shutil.copyfile(lint_fixture / "baseline.py", root / "src/billing.py")
             shutil.copyfile(lint_fixture / "terms.md", root / "docs/ai/specs/ubiquitous-language.md")
 
-            def git(*args: str) -> None:
-                subprocess.run(
-                    ["git", "-C", str(root), *args],
-                    capture_output=True,
-                    text=True,
-                    check=True,
-                )
-
-            git("init", "-b", "main")
-            git("add", ".")
-            git("-c", "commit.gpgsign=false", "-c", "user.name=Fixture", "-c", "user.email=native-eval@example.invalid", "commit", "-m", "baseline")
-            git("update-ref", "refs/remotes/origin/main", "HEAD")
+            git(root, "init", "-b", "main")
+            git(root, "add", ".")
+            git(root, "commit", "-m", "baseline")
+            git(root, "update-ref", "refs/remotes/origin/main", "HEAD")
             shutil.copyfile(lint_fixture / "feature.py", root / "src/billing.py")
-            git("add", "src/billing.py")
-            git("-c", "commit.gpgsign=false", "-c", "user.name=Fixture", "-c", "user.email=native-eval@example.invalid", "commit", "-m", "feature")
+            git(root, "add", "src/billing.py")
+            git(root, "commit", "-m", "feature")
             report_path = root / "scenario-output/ubiquitous-language-lint.json"
             report_path.parent.mkdir()
             result = subprocess.run(
@@ -1999,7 +2260,7 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
                     if check.get("max") == 0:
                         calls = [{
                             "name": check["name"],
-                            "input": {"command": "relocate-process-artifacts.sh dry_run apply"},
+                            "input": {"command": STOP_POLICY_NEGATIVE_COMMANDS.get(check["id"], "relocate-process-artifacts.sh dry_run apply")},
                             "output": "unexpected invocation",
                             "success": True,
                         }]
@@ -2247,9 +2508,9 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
             self.assertEqual(passed["status"], "pass", (row["case_id"], passed))
             self.assertEqual(failed["status"], "fail", (row["case_id"], failed))
 
-
-    def test_orchestration_regressions_cite_current_requiring_text(self) -> None:
-        for case_id, citations in ORCHESTRATION_REQUIRING_TEXT.items():
+    def test_stop_policy_and_orchestration_cases_cite_current_requiring_text(self) -> None:
+        cited = {**ORCHESTRATION_REQUIRING_TEXT, **{case_id: spec["citations"] for case_id, spec in RUNNER_CASES.items()}}
+        for case_id, citations in cited.items():
             case = self.cases[case_id]
             paths = list(dict.fromkeys(path for path, _ in citations))
             self.assertEqual(case["provenance"], paths, case_id)
@@ -2258,12 +2519,9 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
                 self.assertIn(_normalized(snippet), source, (case_id, path))
             names = {Path(path).name for path in paths}
             for requirement in case["requirements"]:
-                if requirement["id"] == "selection":
-                    continue
-                self.assertTrue(
-                    any(name in requirement["description"] for name in names),
-                    (case_id, requirement["id"]),
-                )
+                if requirement["id"] != "selection":
+                    self.assertTrue(any(name in requirement["description"] for name in names),
+                                    (case_id, requirement["id"]))
 
     def test_orchestration_fixtures_derive_the_graded_answers(self) -> None:
         for case_id in sorted(ORCHESTRATION_IDS):
@@ -2399,6 +2657,106 @@ class NativeFunctionalCatalogTests(unittest.TestCase):
                         "fail", (case_id, host, field),
                     )
 
+
+class RunnerBackedCatalogTests(_FunctionalCatalogFixture, unittest.TestCase):
+    """The runner-backed stop-policy cases derive their answers from the real runner result."""
+
+    def test_the_finish_fixture_is_the_real_runner_result_and_forged_records_are_refused(self) -> None:
+        """The frozen finalize-run result must equal what the runner derives from the staged ledger (issue 829)."""
+        sys.path.insert(0, str(REPO_ROOT / "speckit-pro"))
+        from speckit_pro_runner.helpers.run_finalization import finalize_run
+
+        root = REPO_ROOT / ORCHESTRATION_FIXTURE_ROOT / "deferred-decision-ready-stack"
+        request = json.loads((root / "finalize-request.json").read_text(encoding="utf-8"))
+        ledger = (root / "ledger.json").read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            (workspace / ".process/execution-control").mkdir(parents=True)
+            target = workspace / ".process/execution-control/ledger.json"
+            target.write_text(ledger, encoding="utf-8")
+            actual = finalize_run(workspace, request["inputs"])
+            frozen = json.loads((root / "finalize-result.json").read_text(encoding="utf-8"))
+            self.assertEqual(actual, frozen)
+            self.assertEqual((actual["outcome"], actual["mark_ready"], actual["human_stop"]),
+                             ("complete_with_deferred", True, None))
+            forged = json.loads(ledger)
+            forged["escalation_allowances"]["failure_family:FR-001"]["dispatches"][1]["dispatch_id"] = "never-ran"
+            target.write_text(json.dumps(forged), encoding="utf-8")
+            with self.assertRaises(ValueError):
+                finalize_run(workspace, request["inputs"])
+
+    def test_runner_backed_answers_derive_from_the_real_runner_result(self) -> None:
+        for case_id, spec in RUNNER_CASES.items():
+            case = self.cases[case_id]
+            fields = {
+                check["field_path"][0]: check for check in case["checks"]
+                if check["type"] == "response_json_field"
+            }
+            derived = _derive_runner_answers(case_id, _run_runner_case(case))
+            self.assertEqual(set(derived), set(fields), case_id)
+            self.assertEqual(set(spec["failure"]), set(fields), case_id)
+            for field, check in fields.items():
+                self.assertEqual(check["expected_by_host"], {"claude": derived[field], "codex": derived[field]},
+                                 (case_id, field))
+                self.assertNotEqual(spec["failure"][field], derived[field], (case_id, field))
+            # The same request always yields the same digest, so a fabricated one is detectable.
+            self.assertEqual(_derive_runner_answers(case_id, _run_runner_case(case)), derived, case_id)
+
+
+class RunnerBackedGradingTests(_FunctionalCatalogFixture, unittest.TestCase):
+    """Runner-backed cases grade the failure apart from correct behaviour."""
+
+    def test_runner_backed_grading_separates_the_failure_from_correct_behaviour(self) -> None:
+        forbidden_calls = {
+            "claude": {"name": "Bash", "input": {"command": "gh pr merge 101"}, "output": "", "success": True},
+            "codex": {"name": "command_execution", "input": {"command": "gh pr merge 101"}, "output": "",
+                      "success": True},
+        }
+        question_calls = {
+            "claude": {"name": "AskUserQuestion", "input": {"question": "Proceed?"}, "output": "", "success": True},
+            "codex": {"name": "request_user_input", "input": {"question": "Proceed?"}, "output": "", "success": True},
+        }
+        for case_id, spec in RUNNER_CASES.items():
+            case = self.cases[case_id]
+            semantic = [check for check in case["checks"] if check["type"] == "semantic"]
+            self.assertTrue(semantic, case_id)
+            for check in semantic:
+                self.assertTrue(check["rubric"].startswith("PASS only if "), (case_id, check["id"]))
+                self.assertIn(" FAIL if ", check["rubric"], (case_id, check["id"]))
+            self.assertTrue(any(spec["phrase"] in check["rubric"] for check in semantic), case_id)
+            body = {check["field_path"][0]: check["expected_by_host"]["claude"]
+                    for check in case["checks"] if check["type"] == "response_json_field"}
+            body["explanation"] = "mock response, not native evidence"
+            activation = "speckit-autopilot"
+            for host in ("claude", "codex"):
+                correct = observation(activation=activation, final_text=json.dumps(body))
+                self.assertEqual(
+                    grade_observation(case, correct, semantic_verdicts(case, True), host=host)["status"],
+                    "pass", (case_id, host),
+                )
+                self.assertEqual(grade_observation(case, correct, host=host)["status"], "needs_judge")
+                self.assertEqual(
+                    grade_observation(case, correct, semantic_verdicts(case, False), host=host)["status"],
+                    "fail", (case_id, host),
+                )
+                for field, failure in spec["failure"].items():
+                    wrong = observation(activation=activation, final_text=json.dumps({**body, field: failure}))
+                    self.assertEqual(
+                        grade_observation(case, wrong, semantic_verdicts(case, True), host=host)["status"],
+                        "fail", (case_id, host, field),
+                    )
+                forbidden = {check["name"] for check in case["checks"] if check["type"] == "tool_used"}
+                for label, call in (("merge", forbidden_calls[host]), ("question", question_calls[host])):
+                    if call["name"] not in forbidden:
+                        continue
+                    tripped = observation(activation=activation, final_text=json.dumps(body), tool_calls=[call])
+                    self.assertEqual(
+                        grade_observation(case, tripped, semantic_verdicts(case, True), host=host)["status"],
+                        "fail", (case_id, host, label),
+                    )
+
+
 if __name__ == "__main__":
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(NativeFunctionalCatalogTests)
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
+                               for case in (NativeFunctionalCatalogTests, RunnerBackedCatalogTests, RunnerBackedGradingTests))
     raise SystemExit(run_counted(suite, label="test-native-functional-catalog"))

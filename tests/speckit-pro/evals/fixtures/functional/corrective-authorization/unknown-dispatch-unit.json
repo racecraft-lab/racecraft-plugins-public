@@ -1,0 +1,15 @@
+{
+  "schema": "corrective-authorization-replay/v1",
+  "description": "An unknown dispatch outcome blocks only its own unit; an independent unit still dispatches and the runner, not the caller, classifies the unknown unit.",
+  "steps": [
+    {"id": "spec", "place_spec": "spec.md"},
+    {"id": "start", "action": "start", "expect": {"exit_code": 0, "status": "ok", "disposition": "continue"}},
+    {"id": "reserve-alpha", "action": "reserve", "inputs": {"dispatch_id": "alpha-1", "kind": "implementation", "tdd_units": ["alpha"]}, "expect": {"exit_code": 0, "status": "ok", "disposition": "continue"}},
+    {"id": "alpha-outcome-unknown", "action": "complete", "inputs": {"dispatch_id": "alpha-1", "outcome": "unknown"}, "expect": {"exit_code": 0, "status": "ok", "disposition": "continue", "reasons": [], "ledger": {"dispatches.alpha-1.outcome": "unknown"}}},
+    {"id": "independent-unit-dispatches", "action": "reserve", "inputs": {"dispatch_id": "beta-1", "kind": "implementation", "tdd_units": ["beta"]}, "expect": {"exit_code": 0, "status": "ok", "disposition": "continue", "reasons": []}},
+    {"id": "same-unit-blocked", "action": "reserve", "inputs": {"dispatch_id": "alpha-2", "kind": "implementation", "tdd_units": ["alpha"]}, "expect": {"exit_code": 1, "status": "expected_failure", "disposition": "checkpoint_required", "reasons": ["unknown_dispatch_blocks_unit"], "preserves": ["dispatches"]}},
+    {"id": "unscoped-dispatch-blocked", "action": "reserve", "inputs": {"dispatch_id": "unscoped-1", "kind": "implementation"}, "expect": {"exit_code": 1, "status": "expected_failure", "disposition": "checkpoint_required", "reasons": ["unknown_dispatch_blocks_unit"], "preserves": ["dispatches"]}},
+    {"id": "classification-without-git-evidence-changes-nothing", "action": "reconcile-unit", "inputs": {"dispatch_id": "alpha-1", "spec_file": "$spec_file", "classification": "no_effect"}, "expect": {"exit_code": 1, "status": "expected_failure", "disposition": "checkpoint_required", "reasons": ["unit_not_reconcilable"], "preserves": ["dispatches"]}},
+    {"id": "invalid-classification-refused", "action": "reconcile-unit", "inputs": {"dispatch_id": "alpha-1", "spec_file": "$spec_file", "classification": "finished"}, "refused": "classification must be no_effect, partial, or complete"}
+  ]
+}

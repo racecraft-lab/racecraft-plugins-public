@@ -48,7 +48,7 @@ false`, or `enabled_tools`/`disabled_tools`).
 
 The runner-owned policy defines each bundled agent's model and reasoning effort.
 An explicit route manifest materializes its selected model-and-effort tuple.
-Nine bundled agents default to `gpt-6-sol`. The three consensus analysts
+Ten bundled agents default to `gpt-6-sol`. The three consensus analysts
 (`codebase-analyst`, `spec-context-analyst`, `domain-researcher`) run on
 `gpt-6-luna` at max effort. The optional `autopilot-fast-helper` runs on
 `gpt-6-luna` at low effort for tiny advisory text-only prep, never for SDD
