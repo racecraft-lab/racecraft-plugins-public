@@ -18,7 +18,7 @@ subagents in ONE assistant message:
 After the three subagents return, the parent-owned serial tail must keep
 reviewer-ready PR packet ordering intact: final-reviewability backstop
 precedes packet generation, generated packets are validated with
-validate-pr-packet.sh, and every split slice validates before its own
+validate-pr-packet-read-only, and every split slice validates before its own
 gh pr create --base --head --title --body-file call.
 
 All three Agent calls go in the SAME assistant message with
