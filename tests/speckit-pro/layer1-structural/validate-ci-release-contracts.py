@@ -359,8 +359,7 @@ class ValidatePrChecksSentinel(unittest.TestCase):
             self.assertIn('sorted_workflow_files', actionlint_content)
             self.assertIn('shell=False', actionlint_content)
             docs_content = helper_contents[DOCS_CLASSIFIER_FILE]
-            self.assertIn('_changed_files.changed_files_for_base(base_ref', docs_content)
-            self.assertIn('["git", "diff", "--name-only", f"origin/{base_ref}...HEAD"]', (REPO_ROOT / 'scripts' / 'changed_files.py').read_text(encoding='utf-8'))
+            self.assertTrue('_changed_files.changed_files_for_base(base_ref' in docs_content and '["git", "diff", "--name-only", f"origin/{base_ref}...HEAD"]' in (REPO_ROOT / 'scripts' / 'changed_files.py').read_text(encoding='utf-8'))
             for output_name in ('should_validate_docs', 'validation_mode', 'rendered_docs', 'generated_reference', 'docs_contract'):
                 self.assertIn(output_name, docs_content)
             self.assertNotIn('git add -A', content)
