@@ -117,7 +117,11 @@ invariants against `workflow.md`. The runner rejects a fixture whose every
 compare source is the `workflow.md` it copies unchanged into both outputs,
 unless the fixture declares `required_invariants`; such a comparison passes when
 autopilot does nothing. Fixtures 02 and 03 were retired for that reason, and
-the native parity catalog covers their surfaces. Live mode evaluates the same invariants
+the native parity catalog covers their surfaces. Declared invariants do not
+change that: a fixture whose compare and invariant sources are all `workflow.md`
+is checked live against the fixture's original bytes, and a run that leaves
+`workflow.md` unchanged fails, because its comparisons read nothing the run
+produced. Fixture 04 stays under that rule. Live mode evaluates the same invariants
 independently against both captured outputs before parity comparison. Live
 validation remains developer-triggered because it runs two budgeted
 `claude -p` processes per fixture.
