@@ -21,25 +21,9 @@ if str(TEST_LIB) not in sys.path:
 
 from privacy_patterns import redact_private_text  # noqa: E402
 
+from lib.transcript_helpers import event_blocks, load_events  # noqa: E402
+
 JsonObject = dict[str, Any]
-
-
-def load_jsonl(path: Path) -> list[JsonObject]:
-    events: list[JsonObject] = []
-    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
-        if not line.strip():
-            continue
-        value = json.loads(line)
-        if not isinstance(value, dict):
-            raise ValueError(f"event {line_number} is not a JSON object")
-        events.append(value)
-    return events
-
-
-def _blocks(event: JsonObject) -> list[JsonObject]:
-    message = event.get("message")
-    content = message.get("content", []) if isinstance(message, dict) else []
-    return [block for block in content if isinstance(block, dict)] if isinstance(content, list) else []
 
 
 def jq_coalesce_empty(value: Any) -> Any:
@@ -71,7 +55,7 @@ def reduce_transcript(events: list[JsonObject]) -> list[JsonObject]:
         if event.get("type") == "assistant":
             output_blocks: list[JsonObject] = []
             is_sidechain = boolean_or_default(event.get("isSidechain", False))
-            for block in _blocks(event):
+            for block in event_blocks(event):
                 if block.get("type") == "text" and not is_sidechain and isinstance(block.get("text"), str):
                     output_blocks.append({"type": "text", "text": redact_private_text(block["text"])})
                     continue
@@ -118,7 +102,7 @@ def reduce_transcript(events: list[JsonObject]) -> list[JsonObject]:
 
         if event.get("type") == "user":
             output_results: list[JsonObject] = []
-            for block in _blocks(event):
+            for block in event_blocks(event):
                 if block.get("type") != "tool_result":
                     continue
                 old_id = block.get("tool_use_id")
@@ -158,7 +142,7 @@ def main(argv: list[str]) -> int:
         print(f"reduce-transcript-fixture.py: transcript not found: {transcript_path}", file=sys.stderr)
         return 1
     try:
-        write_jsonl(reduce_transcript(load_jsonl(transcript_path)), sys.stdout)
+        write_jsonl(reduce_transcript(load_events(transcript_path)), sys.stdout)
         return 0
     except (OSError, UnicodeError, ValueError, json.JSONDecodeError) as exc:
         print(f"reduce-transcript-fixture.py: {exc}", file=sys.stderr)

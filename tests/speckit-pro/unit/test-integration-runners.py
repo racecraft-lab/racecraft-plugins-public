@@ -297,7 +297,106 @@ class ReturnFormatReplayTests(unittest.TestCase):
         self.assertEqual((reporter.total, reporter.passed), (1, 0))
 
 
+class DispatchExpectationTests(unittest.TestCase):
+    """Each dispatch expected.json key needs a failing case, or it could stop failing unnoticed."""
+
+    TRANSCRIPT = LAYER6 / "test-fixtures" / "multi-dispatch.jsonl"
+    ANALYST = "speckit-pro:codebase-analyst"
+    SYNTHESIZER = "speckit-pro:consensus-synthesizer"
+
+    def failed_checks(self, expected: dict[str, object]) -> int:
+        reporter = fixture_runner.Reporter()
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = Path(temporary) / "case"
+            fixture.mkdir()
+            (fixture / "expected.json").write_text(json.dumps(expected), encoding="utf-8")
+            (fixture / "parser-fixture.jsonl").write_text(self.TRANSCRIPT.read_text(encoding="utf-8"), encoding="utf-8")
+            with contextlib.redirect_stderr(io.StringIO()):
+                fixture_runner.assert_dispatch_fixture(fixture, "replay", reporter, check_terms=True)
+        return reporter.total - reporter.passed
+
+    def test_each_key_passes_when_met_and_fails_when_violated(self) -> None:
+        cases = {
+            "min_dispatch_count": ({"min_dispatch_count": 3}, {"min_dispatch_count": 4}),
+            "max_dispatch_count": ({"max_dispatch_count": 3}, {"max_dispatch_count": 2}),
+            "dispatch_order_constraints": (
+                {"dispatch_order_constraints": [{"before": self.ANALYST, "after": self.SYNTHESIZER}]},
+                {"dispatch_order_constraints": [{"before": self.SYNTHESIZER, "after": self.ANALYST}]},
+            ),
+            "must_dispatch_to_at_least_one_of": (
+                {"must_dispatch_to_at_least_one_of": [self.ANALYST, "speckit-pro:absent"]},
+                {"must_dispatch_to_at_least_one_of": ["speckit-pro:absent"]},
+            ),
+            "must_not_include_terms": ({"must_not_include_terms": ["absent-term"]}, {"must_not_include_terms": ["Synthesize"]}),
+            "must_not_dispatch_to": ({"must_not_dispatch_to": ["speckit-pro:absent"]}, {"must_not_dispatch_to": [self.ANALYST]}),
+        }
+        for key, (met, violated) in cases.items():
+            with self.subTest(key=key, case="met"):
+                self.assertEqual(self.failed_checks(met), 0)
+            with self.subTest(key=key, case="violated"):
+                self.assertEqual(self.failed_checks(violated), 1)
+
+    def test_replay_fails_a_fixture_without_a_parser_fixture(self) -> None:
+        reporter = fixture_runner.Reporter()
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = Path(temporary) / "no-parser-fixture"
+            fixture.mkdir()
+            (fixture / "expected.json").write_text("{}", encoding="utf-8")
+            with contextlib.redirect_stderr(io.StringIO()):
+                fixture_runner.assert_dispatch_fixture(fixture, "replay", reporter, check_terms=True)
+        self.assertEqual((reporter.total, reporter.passed), (2, 1))
+
+
+class LiveCaptureFailureTests(unittest.TestCase):
+    def test_failed_live_capture_fails_instead_of_asserting_a_stale_transcript(self) -> None:
+        for runner_name in ("run-dispatch-fixtures.py", "run-e2e-fixtures.py", "run-return-format-fixtures.py"):
+            with self.subTest(runner=runner_name), tempfile.TemporaryDirectory() as temporary:
+                fixture = Path(temporary) / "stale"
+                fixture.mkdir()
+                stale = (LAYER6 / "test-fixtures" / "single-dispatch.jsonl").read_text(encoding="utf-8")
+                (fixture / "transcript.jsonl").write_text(stale, encoding="utf-8")
+                (fixture / "expected.json").write_text('{"must_dispatch_to":["speckit-pro:codebase-analyst"]}', encoding="utf-8")
+                (fixture / "prompt.txt").write_text("prompt\n", encoding="utf-8")
+                module = load_script_module(LAYER6 / runner_name, f"live_failure_{runner_name.replace('-', '_')}")
+                module.FIXTURES = Path(temporary)
+                with (
+                    patch.object(fixture_runner, "capture_live", return_value=False),
+                    contextlib.redirect_stdout(io.StringIO()),
+                    contextlib.redirect_stderr(io.StringIO()) as stderr,
+                ):
+                    exit_code = module.main(["--live", fixture.name])
+                self.assertEqual(exit_code, 1)
+                self.assertIn("live transcript captured", stderr.getvalue())
+                self.assertNotIn("dispatched to", stderr.getvalue())
+
+
+class GroundingRunnerModeTests(unittest.TestCase):
+    def test_grounding_runner_rejects_live_mode(self) -> None:
+        result = run_runner(LAYER6 / "run-grounding-fixtures.py", "--live")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("replay-only", result.stderr)
+        self.assertNotIn("--live]", run_runner(LAYER6 / "run-grounding-fixtures.py", "--help").stdout)
+
+    def test_run_all_always_replays_the_grounding_class(self) -> None:
+        aggregate_module = load_script_module(AGGREGATE_RUNNER, "run_all_fixtures_mode_test")
+        seen: dict[str, str] = {}
+
+        def fake_run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+            runner = Path(argv[1]).stem
+            seen[runner] = argv[2]
+            return subprocess.CompletedProcess(argv, 0, stdout=f"{runner}: 1/1 passed\n", stderr="")
+
+        with (
+            patch.object(aggregate_module.subprocess, "run", side_effect=fake_run),
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            aggregate_module.main(["--live"])
+        self.assertEqual(seen["run-grounding-fixtures"], "--replay")
+        self.assertEqual(seen["run-dispatch-fixtures"], "--live")
+
+
 if __name__ == "__main__":
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(Layer6RunnerTests)
-    suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(ReturnFormatReplayTests))
+    for case in (ReturnFormatReplayTests, DispatchExpectationTests, LiveCaptureFailureTests, GroundingRunnerModeTests):
+        suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(case))
     raise SystemExit(run_counted(suite, label="test-integration-runners"))

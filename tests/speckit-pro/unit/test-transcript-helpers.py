@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -17,7 +19,12 @@ for value in (TRANSCRIPT_LIB, SHARED_LIB):
     if str(value) not in sys.path:
         sys.path.insert(0, str(value))
 
+LAYER6 = TESTS_ROOT / "layer6-integration"
+if str(LAYER6) not in sys.path:
+    sys.path.insert(0, str(LAYER6))
+
 import transcript_helpers as helpers  # noqa: E402
+from lib import grounding_helpers as grounding  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
@@ -203,6 +210,50 @@ class TranscriptHelperTests(unittest.TestCase):
                 check()
 
 
+class GroundingHelperTests(unittest.TestCase):
+    def verdict(self, text: str) -> str:
+        event = {"type": "assistant", "message": {"role": "assistant", "content": [{"type": "text", "text": text}]}}
+        with tempfile.TemporaryDirectory() as temporary:
+            transcript = Path(temporary) / "transcript.jsonl"
+            transcript.write_text(json.dumps(event) + "\n", encoding="utf-8")
+            return grounding.grounding_verdict(transcript)
+
+    def test_notes_the_contract_allows_are_not_malformed(self) -> None:
+        cases = {
+            "several citations": "Capability path: docs -> repo-local fallback; Evidence: https://a.example/x; https://b.example/y; Confidence: low (why).",
+            "local file source": "Capability path: layout -> tests/speckit-pro/README.md; Evidence: tests/speckit-pro/README.md:3; Confidence: high (read).",
+            "fallback source": "Capability path: docs -> native fallback; Evidence: none usable; Confidence: medium (reason).",
+        }
+        for name, note in cases.items():
+            with self.subTest(note=name):
+                self.assertEqual(self.verdict(note), "grounded")
+
+    def test_notes_missing_a_segment_or_confidence_level_stay_malformed(self) -> None:
+        cases = {
+            "no confidence": "Capability path: docs -> repo-local fallback; Evidence: none.",
+            "unknown confidence": "Capability path: docs -> repo-local fallback; Evidence: none; Confidence: certain.",
+            "no evidence": "Capability path: docs -> repo-local fallback; Confidence: low.",
+        }
+        for name, note in cases.items():
+            with self.subTest(note=name):
+                self.assertEqual(self.verdict(note), "ungrounded")
+
+    def test_a_tool_source_needs_a_completed_call_but_local_and_fallback_sources_do_not(self) -> None:
+        self.assertEqual(self.verdict("Capability path: docs -> mcp__x__y; Evidence: e; Confidence: high."), "ungrounded")
+        kinds = {
+            "mcp__x__y": "tool",
+            "ToolSearch": "tool",
+            "README.md": "local",
+            "tests/speckit-pro/README.md": "local",
+            "repo-local fallback": "fallback",
+            "Native Fallback": "fallback",
+        }
+        for source, kind in kinds.items():
+            with self.subTest(source=source):
+                self.assertEqual(grounding.source_kind(source), kind)
+
+
 if __name__ == "__main__":
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(TranscriptHelperTests)
+    suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(GroundingHelperTests))
     raise SystemExit(run_counted(suite, label="test-transcript-helpers"))

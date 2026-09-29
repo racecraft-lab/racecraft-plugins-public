@@ -10,14 +10,15 @@ from pathlib import Path
 from lib import transcript_helpers as helpers
 from lib.fixture_runner import (
     Reporter,
-    capture_live,
+    capture_or_fail,
+    check_dispatch_shape,
+    check_transcript_terms,
     collect_fixtures,
-    load_expected,
+    load_fixture,
     parse_runner_args,
     print_fixture_heading,
     report_runtime_error,
     string_list,
-    transcript_for,
 )
 
 
@@ -85,50 +86,14 @@ def check_response_assertion(
 
 
 def assert_fixture(fixture: Path, mode: str, reporter: Reporter) -> None:
-    expected_path = fixture / "expected.json"
-    transcript = transcript_for(fixture, mode)
-    if not expected_path.is_file():
-        reporter.check(f"{fixture.name}: expected.json", False, "missing")
+    loaded = load_fixture(fixture, mode, reporter)
+    if loaded is None:
         return
-    if not transcript.is_file():
-        if mode == "replay":
-            print(f"  SKIP {fixture.name}: no parser-fixture.jsonl committed")
-        else:
-            reporter.check(f"{fixture.name}: transient transcript captured", False, "no transcript")
-        return
-
-    expected = load_expected(expected_path)
-    fixture_id = fixture.name
-    for target in string_list(expected.get("must_dispatch_to")):
-        reporter.check(
-            f"{fixture_id}: dispatched to {target}",
-            helpers.assert_dispatched_to(transcript, target),
-            f"expected dispatch to {target}",
-        )
-
-    if expected.get("must_not_have_forbidden_spawns") is True:
-        reporter.check(
-            f"{fixture_id}: no subagent spawned an Agent()",
-            helpers.assert_no_forbidden_spawns(transcript),
-            "found subagent spawning Agent",
-        )
-
-    for pattern in string_list(expected.get("must_not_invoke_skill")):
-        reporter.check(
-            f"{fixture_id}: skill never invoked: {pattern} (any scope)",
-            helpers.assert_skill_not_invoked(transcript, pattern),
-            f"skill matching {pattern!r} was invoked",
-        )
-
-    for term in string_list(expected.get("must_include_terms")):
-        reporter.check(
-            f"{fixture_id}: transcript includes term: {term}",
-            helpers.assert_transcript_contains_term(transcript, term),
-            f"expected transcript to include {term!r}",
-        )
-
-    for assertion in response_assertions(expected, fixture_id):
-        check_response_assertion(reporter, fixture_id, transcript, assertion, mode)
+    transcript, expected = loaded
+    check_dispatch_shape(reporter, fixture.name, transcript, expected)
+    check_transcript_terms(reporter, fixture.name, transcript, expected, forbidden=False)
+    for assertion in response_assertions(expected, fixture.name):
+        check_response_assertion(reporter, fixture.name, transcript, assertion, mode)
 
 
 def main(argv: list[str]) -> int:
@@ -143,8 +108,8 @@ def main(argv: list[str]) -> int:
         budget = os.environ.get("RETURN_FORMAT_FIXTURE_BUDGET_USD", "1.00")
         for fixture in fixtures:
             print_fixture_heading(fixture)
-            if mode == "live":
-                capture_live(fixture, budget)
+            if mode == "live" and not capture_or_fail(fixture, budget, reporter):
+                continue
             assert_fixture(fixture, mode, reporter)
         return reporter.finish(LABEL)
     except (OSError, ValueError, RuntimeError) as exc:

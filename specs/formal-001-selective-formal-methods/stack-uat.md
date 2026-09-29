@@ -52,10 +52,9 @@ not separately report a resolved model identity; gpt-6-astra is the request.
   TypeScript and Swift producers, type/compile checks, and seeded defects.
 - The changed source is two coaching documents and one unused test import;
   generated copies account for the remaining implementation diff.
-- Raw local records are under `/private/tmp/formal-stack-uat-evidence` and
-  `/private/tmp/formal-uat-live-*`. They are temporary evidence, not shipped
-  payloads. The record above preserves the relevant results without publishing
-  provider startup configuration or machine-specific inventories.
+- The raw local records were temporary evidence, not shipped payloads. The
+  record above preserves the relevant results without publishing provider
+  startup configuration or machine-specific inventories.
 - The full final regression result and hosted status are recorded in the PR
   follow-up after they complete. An earlier local run overlapping branch changes
   was discarded; it is not acceptance evidence.
