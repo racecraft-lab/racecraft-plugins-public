@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import importlib.util
 from pathlib import Path
 import subprocess
 import sys
@@ -15,6 +14,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 
+from script_loader import load_script  # noqa: E402
 from test_result import run_counted  # noqa: E402
 import uuid
 
@@ -51,11 +51,8 @@ class NativeEvalEntrypointTests(unittest.TestCase):
         self.catalog = self.temp / "catalog.json"
         self.catalog.write_text(json.dumps({"schema_version": "native-eval-catalog/v1", "cases": [catalog_case()]}))
         name = "native_entrypoint_test_" + uuid.uuid4().hex
-        spec = importlib.util.spec_from_file_location(name, ENTRYPOINT)
-        self.module = importlib.util.module_from_spec(spec)
-        sys.modules[name] = self.module
+        self.module = load_script(name, ENTRYPOINT)
         self.addCleanup(sys.modules.pop, name)
-        spec.loader.exec_module(self.module)
 
     def run_entrypoint(self, *args: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(

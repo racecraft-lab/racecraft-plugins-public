@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import importlib.util
 import json
-import sys
 import unittest
 from pathlib import Path
 
@@ -13,6 +11,7 @@ TEST_DIR = LIB_DIR.parent / "unit"
 REPO_ROOT = TEST_DIR.parents[2]
 
 from guide_text import guide_text
+from script_loader import load_script
 
 PHRASES = json.loads(
     (TEST_DIR / "fixtures" / "autopilot-guidance" / "bookkeeping-guard-phrases.json").read_text(encoding="utf-8")
@@ -32,11 +31,7 @@ CODEX_AUTOPILOT_SKILL = REPO_ROOT / "speckit-pro" / "codex-skills" / "speckit-au
 
 
 def _load(path: Path, name: str):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_script(name, path)
 
 
 validator = _load(VALIDATOR, "speckit_autopilot_phase_coverage_under_test")

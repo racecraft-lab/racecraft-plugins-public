@@ -36,6 +36,7 @@ TEST_LIB = Path(__file__).resolve().parent / "lib"
 if str(TEST_LIB) not in sys.path:
     sys.path.insert(0, str(TEST_LIB))
 
+from runner_invocation import run_runner  # noqa: E402
 from suite_child_env import child_environment  # noqa: E402
 from test_result import classify_counted_child, failure_report  # noqa: E402
 
@@ -226,20 +227,8 @@ def run_toolchain_preflight(root: Path) -> bool:
         "mode": "read_only",
         "inputs": {"mode": "tests", "repo_root": "."},
     }
-    env = child_environment(root)
-    env["PYTHONDONTWRITEBYTECODE"] = "1"
-    completed = subprocess.run(
-        [sys.executable, "-m", "speckit_pro_runner"],
-        input=json.dumps(request),
-        text=True,
-        capture_output=True,
-        cwd=root,
-        env=env,
-        shell=False,
-        check=False,
-    )
     try:
-        response = json.loads(completed.stdout) if completed.stdout.strip() else {}
+        _, response, _ = run_runner(request, cwd=root, extra_env={"PYTHONDONTWRITEBYTECODE": "1"})
     except json.JSONDecodeError:
         return False
     return response.get("status") == "ok"

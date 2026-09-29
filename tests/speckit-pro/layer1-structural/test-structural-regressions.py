@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import importlib.util
 import shutil
 import sys
 import tempfile
@@ -18,18 +17,14 @@ for path in (LIB_DIR, LAYER1_DIR):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 import agent_roster  # noqa: E402
+from script_loader import load_script  # noqa: E402
 import structural_helpers  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
 def load_module(name: str, filename: str):
     path = LAYER1_DIR / filename
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    assert spec.loader is not None
-    spec.loader.exec_module(module)
-    return module
+    return load_script(name, path)
 
 
 ci_release = load_module("validate_ci_release_contracts", "validate-ci-release-contracts.py")

@@ -115,8 +115,7 @@ def classify_changed_files(changed_files: Iterable[str]) -> DocsClassification:
                 ".github/workflows/pr-checks.yml",
                 ".github/workflows/deploy-docs.yml",
                 ".github/workflows/release.yml",
-                "scripts/changed_files.py",
-                "scripts/classify-docs-validation.py",
+                "scripts/changed_files.py", "scripts/classify-docs-validation.py",
                 "scripts/docs-artifact.py",
             }
         ):

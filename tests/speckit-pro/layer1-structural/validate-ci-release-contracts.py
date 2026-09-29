@@ -6,7 +6,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
-import importlib.util
 import json
 import posixpath
 import re
@@ -22,6 +21,7 @@ for _import_root in (LIB_DIR, PLUGIN_ROOT):
         sys.path.insert(0, str(_import_root))
 
 from speckit_pro_runner.helpers import read_only
+from script_loader import load_script
 from test_result import run_counted
 
 CollectionKind = Literal['mapping', 'sequence']
@@ -1187,13 +1187,7 @@ def collect_errors(*directories: Path) -> dict[str, list[str]]:
 
 def load_coverage_validator():
     """Import the shipped phase-coverage validator so the vocabulary lock reads real bytes."""
-    spec = importlib.util.spec_from_file_location('speckit_autopilot_phase_coverage', COVERAGE_VALIDATOR)
-    if spec is None or spec.loader is None:
-        return None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_script('speckit_autopilot_phase_coverage', COVERAGE_VALIDATOR)
 
 class ValidateWorkflowStatusEvidence(unittest.TestCase):
 

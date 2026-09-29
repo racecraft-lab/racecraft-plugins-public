@@ -6,14 +6,13 @@ Only prospectively retained execution and replay context can qualify a record.
 from __future__ import annotations
 
 import hashlib
-import importlib.util
 import json
 from pathlib import Path
 import re
 import sqlite3
-import sys
 
 import trigger_evidence as evidence
+from script_loader import load_script
 from trigger_inventory import canonical_sha256, validate_inventory
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -132,11 +131,7 @@ def _artifact_json(root: Path, reference: dict, artifact_reader=read_artifact):
 def _parser(host: str):
     if host not in _PARSERS:
         filename = "run-trigger-evals.py" if host == "claude" else "run_codex_evals.py"
-        spec = importlib.util.spec_from_file_location(f"trigger_replay_{host}", ROOT / "layer2-trigger" / filename)
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[spec.name] = module
-        spec.loader.exec_module(module)
-        _PARSERS[host] = module
+        _PARSERS[host] = load_script(f"trigger_replay_{host}", ROOT / "layer2-trigger" / filename)
     return _PARSERS[host]
 
 

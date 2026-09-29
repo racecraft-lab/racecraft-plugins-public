@@ -219,8 +219,7 @@ class DocsClassificationHelperTests(unittest.TestCase):
     def test_full_mode_for_docs_contract(self) -> None:
         for file_path in (
             ".github/workflows/pr-checks.yml",
-            "scripts/changed_files.py",
-            "scripts/classify-docs-validation.py",
+            "scripts/changed_files.py", "scripts/classify-docs-validation.py",
             "scripts/docs-artifact.py",
         ):
             with self.subTest(file_path=file_path):
@@ -476,8 +475,7 @@ class GoModuleHelperTests(unittest.TestCase):
             ["typesafe-jev/cmd/evaluate/main.go"],
             ["typesafe-jev/go.mod"],
             ["README.md", "scripts/check-go-module.py"],
-            ["scripts/changed_files.py"],
-            [".github/workflows/pr-checks.yml"],
+            ["scripts/changed_files.py"], [".github/workflows/pr-checks.yml"],
         ):
             with self.subTest(changed=changed):
                 self.assertTrue(GO_MODULE.go_module_changed(changed))

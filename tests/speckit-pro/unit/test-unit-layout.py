@@ -124,31 +124,28 @@ def _contains_repository_spec_id(value: str, families: frozenset[str]) -> bool:
 SUITE_LOADER_ATTRIBUTES = frozenset({"loadTestsFromModule", "discover", "main"})
 
 
-def unreferenced_test_cases(source: str) -> list[str]:
-    """TestCase classes with tests that no suite builder in ``source`` mentions.
+def _base_names(node: ast.ClassDef) -> list[str]:
+    return [b.id if isinstance(b, ast.Name) else b.attr for b in node.bases if isinstance(b, (ast.Name, ast.Attribute))]
 
-    A module that loads by module, discovery or ``unittest.main`` runs them all.
-    Otherwise a class must appear by name (or as a string for loadTestsFromNames)
-    outside its own definition, or its tests never run and the suite still passes.
-    """
-    tree = ast.parse(source)
-    if any(isinstance(node, ast.Attribute) and node.attr in SUITE_LOADER_ATTRIBUTES for node in ast.walk(tree)):
-        return []
-    classes = {node.name: node for node in tree.body if isinstance(node, ast.ClassDef)}
 
-    def base_names(node: ast.ClassDef) -> list[str]:
-        return [b.id if isinstance(b, ast.Name) else b.attr for b in node.bases if isinstance(b, (ast.Name, ast.Attribute))]
+def _same_file_bases(node: ast.ClassDef, classes: dict[str, ast.ClassDef], seen: frozenset[str]) -> list[ast.ClassDef]:
+    return [classes[name] for name in _base_names(node) if name in classes and name not in seen]
 
-    def inherits_tests(node: ast.ClassDef, seen: frozenset[str] = frozenset()) -> tuple[bool, bool]:
-        """(is a TestCase, has test methods) through same-file bases."""
-        is_case = "TestCase" in base_names(node)
-        has_tests = any(isinstance(m, ast.FunctionDef) and m.name.startswith("test") for m in node.body)
-        for name in base_names(node):
-            if name in classes and name not in seen:
-                base_case, base_tests = inherits_tests(classes[name], seen | {node.name})
-                is_case, has_tests = is_case or base_case, has_tests or base_tests
-        return is_case, has_tests
 
+def _is_test_case(node: ast.ClassDef, classes: dict[str, ast.ClassDef], seen: frozenset[str] = frozenset()) -> bool:
+    return "TestCase" in _base_names(node) or any(
+        _is_test_case(base, classes, seen | {node.name}) for base in _same_file_bases(node, classes, seen)
+    )
+
+
+def _has_tests(node: ast.ClassDef, classes: dict[str, ast.ClassDef], seen: frozenset[str] = frozenset()) -> bool:
+    return any(isinstance(m, ast.FunctionDef) and m.name.startswith("test") for m in node.body) or any(
+        _has_tests(base, classes, seen | {node.name}) for base in _same_file_bases(node, classes, seen)
+    )
+
+
+def _mentioned_names(tree: ast.Module) -> set[str]:
+    """Names and string constants used outside the class definitions' own headers."""
     mentioned: set[str] = set()
 
     class Mentions(ast.NodeVisitor):
@@ -164,14 +161,34 @@ def unreferenced_test_cases(source: str) -> list[str]:
                 mentioned.add(node.value)
 
     Mentions().visit(tree)
+    return mentioned
+
+
+def _with_listed_bases(mentioned: set[str], classes: dict[str, ast.ClassDef]) -> set[str]:
+    """A listed subclass runs the tests it inherits, so its same-file bases count as listed."""
     covered = set(mentioned)
     pending = [name for name in classes if name in mentioned]
-    while pending:  # a listed subclass runs the tests it inherits
-        for base in base_names(classes[pending.pop()]):
+    while pending:
+        for base in _base_names(classes[pending.pop()]):
             if base in classes and base not in covered:
                 covered.add(base)
                 pending.append(base)
-    return sorted(name for name, node in classes.items() if all(inherits_tests(node)) and name not in covered)
+    return covered
+
+
+def unreferenced_test_cases(source: str) -> list[str]:
+    """TestCase classes with tests that no suite builder in ``source`` mentions.
+
+    A module that loads by module, discovery or ``unittest.main`` runs them all.
+    Otherwise a class must appear by name (or as a string for loadTestsFromNames)
+    outside its own definition, or its tests never run and the suite still passes.
+    """
+    tree = ast.parse(source)
+    if any(isinstance(node, ast.Attribute) and node.attr in SUITE_LOADER_ATTRIBUTES for node in ast.walk(tree)):
+        return []
+    classes = {node.name: node for node in tree.body if isinstance(node, ast.ClassDef)}
+    covered = _with_listed_bases(_mentioned_names(tree), classes)
+    return sorted(name for name, node in classes.items() if _is_test_case(node, classes) and _has_tests(node, classes) and name not in covered)
 
 
 class UnitLayoutTests(unittest.TestCase):
@@ -342,6 +359,8 @@ class UnitRosterTests(unittest.TestCase):
         }
         self.assertEqual(sorted(discovered - registered), [])
 
+
+class UnitSuiteCompletenessTests(unittest.TestCase):
     def test_every_registered_test_case_is_added_to_its_suite(self) -> None:
         manifest = json.loads((TEST_ROOT / "suite-manifest.json").read_text(encoding="utf-8"))
         scripts = [
@@ -377,6 +396,6 @@ class UnitRosterTests(unittest.TestCase):
 if __name__ == "__main__":
     suite = unittest.TestSuite(
         unittest.defaultTestLoader.loadTestsFromTestCase(case)
-        for case in (UnitLayoutTests, UnitRosterTests)
+        for case in (UnitLayoutTests, UnitRosterTests, UnitSuiteCompletenessTests)
     )
     raise SystemExit(run_counted(suite, label="test-unit-layout"))
