@@ -1,0 +1,7 @@
+--- FAIL: TestSub (0.00s)
+    demo_test.go:4: want 1 got 2
+--- FAIL: TestGroup (0.00s)
+    --- FAIL: TestGroup/inner_bad (0.00s)
+FAIL
+FAIL	example.test/demo	0.149s
+FAIL

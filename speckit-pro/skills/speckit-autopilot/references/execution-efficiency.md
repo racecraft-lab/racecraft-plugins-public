@@ -58,8 +58,11 @@ ownership from the caller's current workflow.
 - `reserve`: before each native dispatch or command, supply `dispatch_id` and
   `kind=implementation|corrective|verification|infrastructure`. A corrective
   dispatch supplies `failure_invariant`: a stable approved requirement or
-  invariant ID. Unknown mappings share `unresolved`; changed wording, task IDs,
-  agents, and commits are not new families.
+  invariant ID. A failure that names no approved ID takes the family
+  `untagged-<digest>` from the failing set the runner last recorded, so
+  unrelated untagged failures get separate reservations and the same set keeps
+  one; with no recorded failing set they share `unresolved`. Changed wording,
+  task IDs, agents, and commits are not new families.
   A review fix for the increment under review also supplies
   `review_remediation`: `{"tdd_unit": <the increment's TDD unit>, "paths":
   [<every repo-relative path the fix touches>]}`, plus an explicit `spec_file`
@@ -347,7 +350,7 @@ reservation (`failure_family_budget_exhausted`), the helper first asks whether
 that family's previous correction measurably converged, judged only from
 evidence the runner recorded itself. Every `execute-verification` run parses
 the output it executed, from a closed set of formats (unittest, pytest, bun,
-and jest), into `failing_checks` on its verification dispatch: `command_id`,
+jest, go test, cargo test, vitest, mocha, and JUnit XML), into `failing_checks` on its verification dispatch: `command_id`,
 `command_sha256` (the digest of the argv it ran), `format`, the sorted
 `failing` test identifiers, the `passing` identifiers when the format names
 them, `checks_run` (the run's own summary count), an `output_sha256` digest,
