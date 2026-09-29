@@ -76,27 +76,24 @@ def _safe_parent(workspace: Path, destination: PurePosixPath) -> Path:
 
 def _source_root_and_workspace(plan: Mapping[str, object], workspace: str | Path) -> tuple[Path, Path]:
     source_root_value = plan["source_root"]
-    _require(isinstance(source_root_value, str) and Path(source_root_value).is_absolute(),
-             "fixture source_root must be absolute")
-    try:
-        source_root = Path(source_root_value).resolve(strict=True)
-    except OSError as exc:
-        raise ValueError("fixture source_root is unavailable") from exc
-    _require(source_root.is_dir(), "fixture source_root must be a directory")
+    _require(isinstance(source_root_value, str), "fixture source_root must be absolute")
+    return _resolved_directory(Path(source_root_value), "fixture source_root"), workspace_directory(workspace)
 
-    return source_root, workspace_directory(workspace)
+
+def _resolved_directory(path: Path, label: str, *, allow_symlink: bool = True) -> Path:
+    """Resolve an absolute path to an existing directory, optionally refusing a symlink."""
+    _require(path.is_absolute(), f"{label} must be absolute")
+    _require(allow_symlink or not path.is_symlink(), f"{label} must not be a symlink")
+    try:
+        resolved = path.resolve(strict=True)
+    except OSError as exc:
+        raise ValueError(f"{label} is unavailable") from exc
+    _require(resolved.is_dir(), f"{label} must be a directory")
+    return resolved
 
 
 def workspace_directory(workspace: str | Path) -> Path:
-    target = Path(workspace)
-    _require(target.is_absolute(), "fixture workspace must be absolute")
-    _require(not target.is_symlink(), "fixture workspace must not be a symlink")
-    try:
-        target = target.resolve(strict=True)
-    except OSError as exc:
-        raise ValueError("fixture workspace is unavailable") from exc
-    _require(target.is_dir(), "fixture workspace must be a directory")
-    return target
+    return _resolved_directory(Path(workspace), "fixture workspace", allow_symlink=False)
 
 
 def _fixture_records(
