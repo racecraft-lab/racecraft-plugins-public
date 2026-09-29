@@ -291,7 +291,7 @@ Before dispatching any memory-enabled Claude agent in the bound workflow worktre
 
 Read `.claude/speckit-pro.local.md` if it exists. Parse YAML
 frontmatter for: `consensus-mode` (default: `moderate`),
-`gate-failure` (default: `stop`), `auto-commit` (default:
+`gate-failure` (default: `defer`), `auto-commit` (default:
 `per-phase`), `security-keywords` (default: the list in the
 Security Keywords section of `consensus-protocol.md`).
 If the file doesn't exist, use all defaults.

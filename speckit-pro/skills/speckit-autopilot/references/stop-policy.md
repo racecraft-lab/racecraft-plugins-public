@@ -72,7 +72,9 @@ deferred item and its evidence. Keep it draft only while a required gate is red.
 Deferred decisions and human UAT never hold a PR in draft. Never merge.
 
 The `--stage plan` boundary stays: a plan-stage run stops after the plan for
-human review.
+human review (`stop_reason:plan_stage_boundary`). Opt-in `--strict` also stays:
+below the confidence threshold it stops before Phase 7
+(`stop_reason:strict_confidence_opt_in`). Neither applies to a default run.
 
 ## Stop reasons
 
@@ -90,10 +92,14 @@ Each reason has one class.
 | `stop_reason:boundary_file_edit` | authority | Editing a file the boundary rules protect. |
 | `stop_reason:veto_bypass` | authority | Bypassing a veto. |
 | `stop_reason:reopen_closed_pr` | authority | Reopening a closed PR. |
+| `stop_reason:plan_stage_boundary` | authority | A `--stage plan` run stops after the plan. |
+| `stop_reason:strict_confidence_opt_in` | authority | An opt-in `--strict` run stops before Phase 7 below the confidence threshold. |
 | `stop_reason:all_tiers_failed` | exhausted | All three escalation tiers failed. |
 | `stop_reason:tier3_cap_reached` | exhausted | The per-run tier 3 cap is spent. |
 | `stop_reason:tampering_or_forged_evidence` | harm_halt | Tampering or forged evidence. |
 | `stop_reason:secret_exposure` | harm_halt | A secret was exposed. |
 | `stop_reason:integrity_failure` | harm_halt | An integrity failure. |
 
-Authority and exhausted reasons defer. Harm halt reasons halt the run.
+Authority and exhausted reasons defer, except the two operator opt-in
+boundaries, `plan_stage_boundary` and `strict_confidence_opt_in`, which end the
+run at the boundary the operator chose. Harm halt reasons halt the run.

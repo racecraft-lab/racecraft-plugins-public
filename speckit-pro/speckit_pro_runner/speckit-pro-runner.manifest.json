@@ -87,7 +87,7 @@
         "value": "speckit_pro_runner/execution_control.py",
         "display": "speckit_pro_runner/execution_control.py"
       },
-      "sha256": "fa50dea6d0b3f5c1e3908360c3772deaf71bf40be6358da3769157f874ba90b3"
+      "sha256": "e55e1107249b9b884d1321390436e757a83c3536d5f1f30d013e4aa0d9cc824c"
     },
     {
       "path": {
@@ -95,7 +95,7 @@
         "value": "speckit_pro_runner/failing_checks.py",
         "display": "speckit_pro_runner/failing_checks.py"
       },
-      "sha256": "ae39839c874e792e4692c1bc01e6ff1686a730c592a5207aa59b09a0bf986bff"
+      "sha256": "fe92c2ce294a5c54553549d6387930493f26e92b7b6f18af70bd4502a5aa0bae"
     },
     {
       "path": {
@@ -367,7 +367,7 @@
         "value": "speckit_pro_runner/helpers/run_finalization.py",
         "display": "speckit_pro_runner/helpers/run_finalization.py"
       },
-      "sha256": "d27e00a98b54f3391932d1558026d1066ec9bb08d003528f78c307fbc77236fb"
+      "sha256": "cd044954ba387d2ebe211b498f1a5ee7abc44d6a718fe5479b054eaac7df970d"
     },
     {
       "path": {
@@ -439,7 +439,7 @@
         "value": "speckit_pro_runner/stop_policy.py",
         "display": "speckit_pro_runner/stop_policy.py"
       },
-      "sha256": "3424554c5e526a405a85c7e13f900fc429017bfe8ea06b85eb48202aee34e333"
+      "sha256": "21f5f94e47354f79602adc8810704dedb62524f90ad9468fe2f41b05266992ee"
     },
     {
       "path": {
@@ -535,7 +535,7 @@
         "value": "speckit_pro_runner/verification_docker_workflow.py",
         "display": "speckit_pro_runner/verification_docker_workflow.py"
       },
-      "sha256": "fba7339c3d25ff64bf77ee05055055a2d7603e3314c03620b9efa98290b6864a"
+      "sha256": "37240738b3d0753edbf19eda3f5fcb9da1a409c30063b6c1dbce7fb140b04a0b"
     },
     {
       "path": {
@@ -551,7 +551,7 @@
         "value": "speckit_pro_runner/verification_records.py",
         "display": "speckit_pro_runner/verification_records.py"
       },
-      "sha256": "d7a5e12e1d91de58aacc8cb1d138ddf25e20bf5cf47dcd7754f15c4acfe0eb7b"
+      "sha256": "00e7e1e8b20041af7a52a8d2fc36e92ef0d6bfd6a26bfdc7230f95cbc07e9b4a"
     }
   ]
 }

@@ -19,6 +19,9 @@ HARM_HALT = "harm_halt"
 
 STOP_CLASSES = frozenset({AUTHORITY, EXHAUSTED, HARM_HALT})
 
+ALL_TIERS_FAILED = "all_tiers_failed"
+TIER3_CAP_REACHED = "tier3_cap_reached"
+
 # reason -> class. Authority reasons follow the owner's Q6 list.
 STOP_REASONS = {"merge": AUTHORITY,
                 "publish": AUTHORITY,
@@ -30,8 +33,10 @@ STOP_REASONS = {"merge": AUTHORITY,
                 "boundary_file_edit": AUTHORITY,
                 "veto_bypass": AUTHORITY,
                 "reopen_closed_pr": AUTHORITY,
-                "all_tiers_failed": EXHAUSTED,
-                "tier3_cap_reached": EXHAUSTED,
+                "plan_stage_boundary": AUTHORITY,
+                "strict_confidence_opt_in": AUTHORITY,
+                ALL_TIERS_FAILED: EXHAUSTED,
+                TIER3_CAP_REACHED: EXHAUSTED,
                 "tampering_or_forged_evidence": HARM_HALT,
                 "secret_exposure": HARM_HALT,
                 "integrity_failure": HARM_HALT}

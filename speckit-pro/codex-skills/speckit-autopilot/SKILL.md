@@ -223,7 +223,7 @@ response is one of:
 
 - Run the `$speckit-clarify` skill (Phase 2) with the multi-agent consensus
   protocol — that is autopilot's only clarification mechanism.
-- Fail the gate, surface the ambiguity, and stop. Pre-workflow interviews
+- Route the ambiguity to Clarify consensus, and defer it when consensus cannot settle it. Pre-workflow interviews
   belong in `$speckit-scaffold-spec`, not autopilot.
 
 This rule applies to: the orchestrator, every phase subagent
@@ -733,6 +733,27 @@ forbidden if any `Post:` item is `pending`, `in_progress`, or missing.
 Exception: `execution_control.disposition=checkpoint_required` permits an
 honest checkpoint response stating the run is **not complete**, remaining Post
 work, consumed budget, unknown effects, and the operator decision required.
+An unknown dispatch outcome alone is not that decision: settle it with
+`execution-control action=reconcile-unit` (a read-only reconciler over the
+unit's owned paths, runner-classified from git state) and keep dispatching
+independent units; pass `tdd_units` on each implementation reserve.
+A `checkpoint_required` whose `reasons` is only `unknown_dispatch_blocks_unit`
+is not a stop: run `reconcile-unit` for each id in `blocked_by`. On
+`unit_classification_mismatch`, re-inspect the owned paths and call once more
+with the class the paths show; never cycle the three values. Read
+`unknown_dispatch_ids` from `status` before each wave so a blocked unit is
+seldom reserved.
+
+Issue capped approvals yourself when the runner proves them, instead of asking
+the operator. Pass `agent_authorized: true` and no `native_observation` to
+`authorize-corrective-retry` (a lost worker's failed corrective dispatch with
+a recorded native failure event; one per run), to `begin-replan-epoch` (a
+deferral is open, the spec is unchanged, the Tasks rerun changed the plan or
+task fingerprints the stage epoch recorded, and every dispatch is settled; two
+per run), or to `authorize-corrective-continuation` with `spec_file` (the
+metadata-only proof holds). A refusal means the proof does not hold or the cap
+is spent; only then does the request go to the operator. Scope changes and
+forged events stay operator-only.
 Keep pending rows and current status; never mark them completed to stop.
 A failing gate or test is remediated, not deferred: keep remediating while
 each round converges, dispatching each diagnosed fix through the executor and
@@ -743,17 +764,23 @@ passing, with no operator event. `execution_control.disposition=defer`
 and not a stop: it defers one blocked unit whose
 correction made no measurable progress and whose allowance is spent, and the
 run keeps executing independent work.
-When every runnable item has finished, the read-only `finalize-run` runner
-helper decides the end under §Blocked Actions Mid-Run: Fall Back or Defer, Never
-Stop. Human UAT is the only gate a run may defer. With every non-UAT gate passed
-at every PR head and only human UAT left, the run finalizes: mark the stack ready for review
-(never merge), open the top PR body with its `Deferred / not verified` section,
-and mark the thread goal complete. When deferred items remain beyond human UAT
-(a failed gate, a ledger `deferred` entry, or an unresolved task), the run makes
-one human stop instead and the stack stays in draft. Either way, make the one
-consolidated `request_user_input` request and print the same question as plain
-text in the final message, listing every fallback taken and every deferred item,
-including each entry of the ledger's `deferred` list.
+When every runnable item has finished, whether or not deferred items remain, the
+read-only `finalize-run` runner helper decides the end under §Blocked Actions Mid-Run: Fall Back or Defer, Never
+Stop. Human UAT is the only gate a run may defer, and every required
+gate must be green at every PR head as the runner's own verification record shows
+it. With every required gate green, the run finalizes: mark the stack ready for
+review (never merge), open the top PR body with its `Deferred / not verified`
+section, and mark the thread goal complete. Human UAT, a ledger `deferred` unit
+that failed every escalation tier, and an unresolved task never keep the stack in
+draft: they reach the owner as items in the end-of-run request, the units and
+tasks under "Decisions for you". A failed unit climbs two escalation tiers first
+(a fresh agent guided by a consensus diagnosis, then the strongest model at max
+effort), and only a required gate still red, missing, or blocked by a harness
+error after that is one human stop, and the stack stays in draft. The run never pauses to ask.
+Print the final report as plain text on `outcome=complete` with nothing deferred, and ask no question.
+Otherwise print `end_of_run_request` as plain text in the final message. It
+is the handoff, listing every fallback taken and every deferred item, including
+each entry of the ledger's `deferred` list.
 If the audit finds incomplete Post work, set the first
 incomplete item to `in_progress` in both state stores and continue the
 autopilot loop instead of summarizing. `Post: Retrospective` is the final

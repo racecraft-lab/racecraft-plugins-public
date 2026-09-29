@@ -1,0 +1,286 @@
+{
+  "schema": "corrective-authorization-replay/v1",
+  "description": "A deferral parked by an exhausted failure-family budget is resolved when the operator-approved correction completes; the ledger keeps the deferral with resolved_by, and a second exception is refused.",
+  "steps": [
+    {
+      "id": "greenfield",
+      "place_spec": "absent"
+    },
+    {
+      "id": "start",
+      "action": "start",
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "spec-written",
+      "place_spec": "spec.md"
+    },
+    {
+      "id": "bind",
+      "action": "bind-invariants",
+      "inputs": {
+        "spec_file": "$spec_file"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "reserve-fix-a",
+      "action": "reserve",
+      "inputs": {
+        "dispatch_id": "fix-a",
+        "kind": "corrective",
+        "failure_invariant": "FR-001"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "fix-a-completed",
+      "action": "complete",
+      "inputs": {
+        "dispatch_id": "fix-a",
+        "outcome": "completed"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "reserve-fix-b",
+      "action": "reserve",
+      "inputs": {
+        "dispatch_id": "fix-b",
+        "kind": "corrective",
+        "failure_invariant": "FR-002"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "fix-b-completed",
+      "action": "complete",
+      "inputs": {
+        "dispatch_id": "fix-b",
+        "outcome": "completed"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "family-budget-defers",
+      "action": "reserve",
+      "inputs": {
+        "dispatch_id": "fix-c",
+        "kind": "corrective",
+        "failure_invariant": "FR-001"
+      },
+      "expect": {
+        "exit_code": 1,
+        "status": "expected_failure",
+        "disposition": "defer",
+        "reasons": [
+          "failure_family_budget_exhausted"
+        ],
+        "ledger": {
+          "deferred.0.unit": "FR-001",
+          "deferred.0.dispatch_id": "fix-c"
+        }
+      }
+    },
+    {
+      "id": "approved-exception",
+      "action": "authorize-corrective-exception",
+      "inputs": {
+        "dispatch_id": "fix-c",
+        "failure_invariant": "FR-001",
+        "scope_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "native_observation": {
+          "native_event_id": "operator-exception",
+          "run_id": "$run_id",
+          "action": "corrective_exception_approved",
+          "failure_invariant": "FR-001",
+          "dispatch_id": "fix-c",
+          "failure_kind": "application",
+          "refusal_reason": "failure_family_budget_exhausted",
+          "scope_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "spec_sha256": "$spec_sha256"
+        }
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue",
+        "preserves": [
+          "run_id",
+          "corrective_cycles",
+          "reservations",
+          "invariant_binding"
+        ],
+        "ledger": {
+          "corrective_exception.dispatch_id": "fix-c"
+        }
+      }
+    },
+    {
+      "id": "fix-c-completed",
+      "action": "complete",
+      "inputs": {
+        "dispatch_id": "fix-c",
+        "outcome": "completed"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue",
+        "preserves": [
+          "run_id",
+          "invariant_binding"
+        ],
+        "ledger": {
+          "deferred.0.unit": "FR-001",
+          "deferred.0.resolved_by": "fix-c"
+        }
+      }
+    },
+    {
+      "id": "stage-passing-gate",
+      "place_check": "go-test.txt",
+      "exit_code": 0
+    },
+    {
+      "id": "commit-baseline",
+      "git": "baseline"
+    },
+    {
+      "id": "reserve-verify",
+      "action": "reserve",
+      "inputs": {
+        "dispatch_id": "verify-1",
+        "kind": "verification"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "run-verify",
+      "action": "execute-verification",
+      "helper": "execute-verification",
+      "inputs": {
+        "command_id": "UNIT_TEST",
+        "dispatch_id": "verify-1"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok"
+      }
+    },
+    {
+      "id": "complete-verify",
+      "action": "complete",
+      "inputs": {
+        "dispatch_id": "verify-1",
+        "outcome": "completed"
+      },
+      "expect": {
+        "exit_code": 0,
+        "status": "ok",
+        "disposition": "continue"
+      }
+    },
+    {
+      "id": "finalize-omits-resolved",
+      "finalize": {
+        "gates": [
+          {
+            "gate": "G7",
+            "status": "passed",
+            "command": "$check_command",
+            "head_sha": "$head_sha",
+            "dispatch_id": "verify-1"
+          }
+        ],
+        "pending_items": [],
+        "unresolved_deferrals": [],
+        "human_uat": [],
+        "pull_requests": [
+          {
+            "number": 7,
+            "url": "https://github.com/example-org/example-repo/pull/7",
+            "draft": true,
+            "head_sha": "$head_sha"
+          }
+        ],
+        "resume_command": "/speckit-pro:speckit-autopilot feature/workflow.md --from-phase implement"
+      },
+      "expect": {
+        "result": {
+          "outcome": "complete",
+          "mark_ready": true,
+          "ready_commands": [
+            "gh pr ready 7"
+          ],
+          "end_of_run_request": ""
+        },
+        "request_omits": [
+          "FR-001"
+        ]
+      }
+    },
+    {
+      "id": "second-exception",
+      "action": "authorize-corrective-exception",
+      "inputs": {
+        "dispatch_id": "fix-d",
+        "failure_invariant": "FR-001",
+        "scope_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "native_observation": {
+          "native_event_id": "second-exception",
+          "run_id": "$run_id",
+          "action": "corrective_exception_approved",
+          "failure_invariant": "FR-001",
+          "dispatch_id": "fix-d",
+          "failure_kind": "application",
+          "refusal_reason": "failure_family_budget_exhausted",
+          "scope_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "spec_sha256": "$spec_sha256"
+        }
+      },
+      "refused": "not eligible for the run's one operator-approved exception"
+    },
+    {
+      "id": "replayed-approval",
+      "action": "pause",
+      "inputs": {
+        "native_observation": {
+          "native_event_id": "operator-exception",
+          "run_id": "$run_id",
+          "kind": "human_uat",
+          "action": "wait_started"
+        }
+      },
+      "refused": "already consumed"
+    }
+  ]
+}

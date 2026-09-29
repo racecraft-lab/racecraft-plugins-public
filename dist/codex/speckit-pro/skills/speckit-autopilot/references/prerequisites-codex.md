@@ -318,7 +318,7 @@ workflow file's `Branch` field. Warn if they don't match.
 
 Read the project-level settings file if it exists (`.claude/speckit-pro.local.md` for Claude Code, or the equivalent Codex project config). Parse YAML
 frontmatter for: `consensus-mode` (default: `moderate`),
-`gate-failure` (default: `stop`), `auto-commit` (default:
+`gate-failure` (default: `defer`), `auto-commit` (default:
 `per-phase`), `security-keywords` (default: standard list).
 If the file doesn't exist, use all defaults.
 
