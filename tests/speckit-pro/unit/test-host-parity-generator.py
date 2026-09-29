@@ -19,8 +19,10 @@ for import_root in (PLUGIN_ROOT, LIB_DIR):
 
 from speckit_pro_runner.agent_inventory import AGENT_INVENTORY  # noqa: E402
 from speckit_pro_runner.host_parity import (  # noqa: E402
+    CodexHookPolicy,
     HostParityError,
     derive_codex_enforcement,
+    derive_codex_hook_policy,
     emit_host,
     pairing_manifest,
     split_frontmatter,
@@ -105,32 +107,43 @@ class FrontmatterTests(unittest.TestCase):
             split_frontmatter("name: a\n---\n")
 
 
-class EnforcementTests(unittest.TestCase):
-    def assert_rejected(self, fields: dict[str, str], reason: str) -> None:
-        with self.assertRaisesRegex(HostParityError, reason):
-            derive_codex_enforcement(fields)
+RESEARCH_TOOLS = (
+    "mcp__plugin_speckit-pro_research-broker__research_search, "
+    "mcp__plugin_speckit-pro_research-broker__docs_query"
+)
 
-    def test_allowlist_without_mutation_tools_derives_read_only(self) -> None:
-        derived = derive_codex_enforcement(
-            {
-                "tools": "Read, Grep, Glob, "
-                "mcp__plugin_speckit-pro_research-broker__research_search, "
-                "mcp__plugin_speckit-pro_research-broker__docs_query"
-            }
-        )
-        self.assertEqual(derived.sandbox_mode, "read-only")
-        self.assertEqual(
-            derived.enabled_tools, {"research-broker": ("docs_query", "research_search")}
-        )
 
-    def test_allowlist_with_any_mutation_tool_derives_workspace_write(self) -> None:
-        for tool in ("Write", "Edit", "MultiEdit"):
-            with self.subTest(tool=tool):
-                derived = derive_codex_enforcement({"tools": f"Read, {tool}"})
-                self.assertEqual(derived.sandbox_mode, "workspace-write")
-                self.assertEqual(derived.enabled_tools, {})
+class SandboxDerivationTests(unittest.TestCase):
+    CASES = (
+        ({"tools": "Read, Grep, " + RESEARCH_TOOLS}, "read-only"),
+        ({"tools": "Read, Write"}, "workspace-write"),
+        ({"tools": "Read, Edit"}, "workspace-write"),
+        ({"tools": "Read, MultiEdit"}, "workspace-write"),
+        ({"disallowedTools": "Write, Edit, MultiEdit, NotebookEdit, Skill"}, "read-only"),
+        ({"disallowedTools": "Write, Skill"}, "workspace-write"),
+        ({}, "workspace-write"),
+    )
 
-    def test_enabled_tools_group_per_broker_server(self) -> None:
+    def test_sandbox_mode_follows_the_mutation_tools_left_to_the_role(self) -> None:
+        for fields, expected in self.CASES:
+            with self.subTest(fields=fields):
+                self.assertEqual(derive_codex_enforcement(fields).sandbox_mode, expected)
+
+    def test_advisory_config_keys_carry_only_sandbox_mode(self) -> None:
+        derived = derive_codex_enforcement({"tools": "Read, " + RESEARCH_TOOLS})
+        self.assertEqual(derived.advisory_config_keys(), {"sandbox_mode": "read-only"})
+
+    def test_shipped_read_only_roles_derive_read_only(self) -> None:
+        for name in ("clarify-executor", "codebase-analyst", "domain-researcher"):
+            with self.subTest(role=name):
+                fields, _ = split_frontmatter(
+                    (PLUGIN_ROOT / "agents" / f"{name}.md").read_text(encoding="utf-8")
+                )
+                self.assertEqual(derive_codex_enforcement(fields).sandbox_mode, "read-only")
+
+
+class BrokerAllowlistTests(unittest.TestCase):
+    def test_broker_tools_group_per_server(self) -> None:
         derived = derive_codex_enforcement(
             {
                 "tools": "Read, mcp__plugin_speckit-pro_author-broker__write_formal_file, "
@@ -146,35 +159,43 @@ class EnforcementTests(unittest.TestCase):
             },
         )
 
-    def test_allowlisted_foreign_mcp_tool_fails_closed(self) -> None:
-        self.assert_rejected({"tools": "Read, mcp__tavily__search"}, "mcp__tavily__search")
+    def test_roles_without_an_allowlist_have_no_broker_limit(self) -> None:
+        self.assertIsNone(derive_codex_enforcement({"disallowedTools": "Write"}).enabled_tools)
+        self.assertEqual(derive_codex_enforcement({"tools": "Read, Write"}).enabled_tools, {})
 
-    def test_no_allowlist_is_read_only_only_when_every_mutation_tool_is_denied(self) -> None:
-        denied = derive_codex_enforcement(
-            {"disallowedTools": "Write, Edit, MultiEdit, NotebookEdit, Skill"}
-        )
-        self.assertEqual(denied.sandbox_mode, "read-only")
-        self.assertEqual(denied.enabled_tools, {})
-        partial = derive_codex_enforcement({"disallowedTools": "Write, Skill"})
-        self.assertEqual(partial.sandbox_mode, "workspace-write")
-        self.assertEqual(derive_codex_enforcement({}).sandbox_mode, "workspace-write")
+    def test_unmappable_allowlists_fail_closed(self) -> None:
+        for fields, reason in (
+            ({"tools": "Read, mcp__tavily__search"}, "mcp__tavily__search"),
+            ({"tools": " , "}, "empty"),
+        ):
+            with self.subTest(fields=fields), self.assertRaisesRegex(HostParityError, reason):
+                derive_codex_enforcement(fields)
 
-    def test_empty_allowlist_fails_closed(self) -> None:
-        self.assert_rejected({"tools": " , "}, "empty")
 
-    def test_config_keys_emit_sandbox_mode_but_no_unproven_enabled_tools_key(self) -> None:
-        derived = derive_codex_enforcement(
-            {"tools": "Read, mcp__plugin_speckit-pro_research-broker__docs_query"}
-        )
-        self.assertEqual(derived.config_keys(), {"sandbox_mode": "read-only"})
+class HookPolicyTests(unittest.TestCase):
+    def policy(self, fields: dict[str, str]) -> CodexHookPolicy:
+        return derive_codex_hook_policy("probe-role", derive_codex_enforcement(fields))
 
-    def test_shipped_read_only_roles_derive_read_only(self) -> None:
-        for name in ("clarify-executor", "codebase-analyst", "domain-researcher"):
-            with self.subTest(role=name):
-                fields, _ = split_frontmatter(
-                    (PLUGIN_ROOT / "agents" / f"{name}.md").read_text(encoding="utf-8")
-                )
-                self.assertEqual(derive_codex_enforcement(fields).sandbox_mode, "read-only")
+    def test_read_only_role_denies_file_edits_only_for_that_role(self) -> None:
+        policy = self.policy({"disallowedTools": "Write, Edit, MultiEdit"})
+        self.assertTrue(policy.denies("probe-role", "apply_patch"))
+        self.assertFalse(policy.denies(None, "apply_patch"))
+        self.assertFalse(policy.denies("other-role", "apply_patch"))
+        self.assertFalse(policy.denies("probe-role", "Bash"))
+
+    def test_allowlist_role_denies_every_mcp_tool_it_does_not_list(self) -> None:
+        policy = self.policy({"tools": "Read, mcp__plugin_speckit-pro_research-broker__docs_query"})
+        self.assertEqual(policy.allowed_mcp_tools, ("mcp__research_broker__docs_query",))
+        self.assertFalse(policy.denies("probe-role", "mcp__research_broker__docs_query"))
+        self.assertTrue(policy.denies("probe-role", "mcp__research_broker__research_search"))
+        self.assertTrue(policy.denies("probe-role", "mcp__codex_apps__tavily_tavily_research"))
+        self.assertFalse(policy.denies(None, "mcp__research_broker__research_search"))
+
+    def test_role_without_an_allowlist_leaves_mcp_tools_alone(self) -> None:
+        policy = self.policy({"disallowedTools": "Skill"})
+        self.assertIsNone(policy.allowed_mcp_tools)
+        self.assertFalse(policy.denies("probe-role", "mcp__research_broker__research_search"))
+        self.assertFalse(policy.denies("probe-role", "apply_patch"))
 
 
 class PairingManifestTests(unittest.TestCase):
@@ -209,7 +230,14 @@ def main() -> int:
     loader = unittest.defaultTestLoader
     suite = unittest.TestSuite(
         loader.loadTestsFromTestCase(case)
-        for case in (HostBlockTests, FrontmatterTests, EnforcementTests, PairingManifestTests)
+        for case in (
+            HostBlockTests,
+            FrontmatterTests,
+            SandboxDerivationTests,
+            BrokerAllowlistTests,
+            HookPolicyTests,
+            PairingManifestTests,
+        )
     )
     return run_counted(suite, label="test-host-parity-generator")
 

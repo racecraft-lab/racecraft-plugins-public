@@ -56,12 +56,20 @@ that their content matches.
   `autopilot-fast-helper` on Codex; `artifact-preview-observer`,
   `sweep-analyst` and `sweep-classifier` on Claude. A twin that the manifest
   does not list fails the check (Q4).
-- **Limits enforced in config.** Codex agent limits are derived from the Claude
-  frontmatter allowlist, not restated in prose:
-  - no Write, Edit or MultiEdit tools gives `sandbox_mode = "read-only"`;
-  - each `mcp__plugin_speckit-pro_<server>__<tool>` gives an `enabled_tools`
-    entry for that server;
-  - the inventory's `codex.sandbox` becomes a checked output (Q5).
+- **Limits derived from one allowlist.** Codex agent limits are derived from
+  the Claude frontmatter, not restated by hand (Q5). The slice-1 probe decided
+  where each one can be enforced:
+  - no Write, Edit or MultiEdit tools gives `sandbox_mode = "read-only"`. This
+    key is **advisory**: a spawned agent keeps the parent's sandbox. It is
+    emitted to document intent, and the inventory's `codex.sandbox` is checked
+    against it, but no check or doc may call it enforced;
+  - each `mcp__plugin_speckit-pro_<server>__<tool>` gives a per-server broker
+    allowlist. No agent-file `enabled_tools` form works, so none is emitted;
+  - a project-level `PreToolUse` hook keyed on the payload's `agent_type`
+    enforces the rest: it denies `apply_patch` for read-only roles and every
+    MCP tool outside a role's broker allowlist;
+  - a read-only role's shell writes stay a prose rule, because a hook cannot
+    tell a shell write from a shell read.
 - **Skill overlays use the same markers.** Each `speckit-pro/codex-skills/**`
   overlay merges back into its shared file as host blocks. The payload build
   emits per-host copies, so `dist/codex` gets only Codex text and `dist/claude`
@@ -71,10 +79,14 @@ that their content matches.
   - an unexplained divergence becomes one shared text that matches them;
   - a divergence caused by a real host capability (tool names, team dispatch,
     sandbox) becomes a host block with a one-line reason (Q7).
-- **Prove enforcement live.** Before any migration, a live Codex probe shows
-  that a generated read-only agent is refused a write, and is refused a broker
-  tool outside its `enabled_tools`. The redacted evidence is committed. If a
-  key is ignored, that limit falls back to prose and the gap is recorded (Q8).
+- **Prove enforcement live.** Before any migration, a live Codex probe tests
+  whether a generated read-only agent is refused a write, and is refused a
+  broker tool outside its allowlist. The redacted evidence is committed. If a
+  key is ignored, that limit falls back to prose or to a hook, and the gap is
+  recorded (Q8). Result (slice 1, `codex-cli 0.156.0`): agent-file keys
+  enforce neither limit; a project `PreToolUse` hook enforces both per role,
+  except shell writes (evidence:
+  `tests/speckit-pro/fixtures/codex-enforcement-probe/evidence.md`).
 - **Slicing** (Q9): one gh-stack of vertical slices, each passing CI alone.
   1. The live Codex enforcement probe and the generator skeleton, with marker
      parsing and the pairing manifest.
@@ -98,7 +110,12 @@ that their content matches.
 
 - **Agent generator (new):** a Python standard-library module run by
   `scripts/refresh-release-artifacts.py`. It reads the Claude `.md`,
-  frontmatter and inventory, and writes the Codex TOML (Q1, Q2, Q5).
+  frontmatter and inventory, and writes the Codex TOML (Q1, Q2, Q5). It also
+  derives each role's `PreToolUse` hook policy; a later slice ships the hook
+  that applies it.
+- **Bare `tools:` (decision):** in Claude a bare `tools:` line is YAML null
+  and inherits every tool. The generator reads it as an empty allowlist and
+  fails closed, so an agent that means "inherit" must omit the key.
 - **`speckit-pro/agents/*.md` (changed):** gains host blocks where Codex text
   differs (Q3).
 - **`speckit-pro/codex-agents/*.toml` (changed):** generated for paired roles,
@@ -141,9 +158,11 @@ that their content matches.
 - **Content parity:** for every paired role and merged skill file, the
   generated host text equals the source with the other host's blocks removed
   (Q9).
-- **Live Codex probe:** a read-only generated agent is refused a write, and a
-  broker tool outside `enabled_tools` is not available. The redacted evidence
-  is committed. The probe is required before slice 2 (Q8).
+- **Live Codex probe:** done in slice 1. Agent-file `sandbox_mode` and
+  `enabled_tools` are not enforced; a project `PreToolUse` hook keyed on
+  `agent_type` denies `apply_patch` and out-of-allowlist MCP calls for one
+  role while the parent is unaffected. The redacted evidence is committed
+  (Q8).
 - **Existing gates:** `run-all.py`, the CI default suite, ruff, mypy,
   `reference:check`, and `ripwire --quality-delta` with 0 regressions (evidence:
   AGENTS.md).
@@ -191,6 +210,12 @@ that their content matches.
 
 **Alternatives offered:** declare them in the inventory.
 **User's answer:** derive them from the Claude tools
+**Outcome (slice-1 probe):** the derivation stands, but the premise did not
+hold. Codex accepts `sandbox_mode` in an agent file and then applies the
+parent's sandbox, and no `enabled_tools` form limits a plugin broker. The
+derived limits are enforced by a project `PreToolUse` hook keyed on
+`agent_type`; `sandbox_mode` stays as an advisory key; shell writes by
+read-only roles stay prose.
 
 ### Q6. How should Codex skill overlays become host deltas?
 **Branch:** interface
@@ -215,6 +240,10 @@ that their content matches.
 
 **Alternatives offered:** unit tests only.
 **User's answer:** a live Codex probe
+**Outcome (slice 1):** the probe showed both agent-file limits are ignored,
+which unit tests alone would have missed. It then showed a project hook can
+deny one role's `apply_patch` and MCP calls while the parent's calls pass.
+Evidence: `tests/speckit-pro/fixtures/codex-enforcement-probe/evidence.md`.
 
 ### Q9. How should the work be sliced?
 **Branch:** slice sizing
@@ -226,12 +255,16 @@ that their content matches.
 
 ## Open Questions
 
-- **What:** whether agent-file keys scope plugin-provided MCP servers as
-  `plugins.<plugin>.mcp_servers.<server>.enabled_tools` or as
-  `mcp_servers.<server>.enabled_tools`.
-  **Why deferred:** the docs list both keys at config level, but not their
-  behavior inside a custom agent file.
-  **Suggested next step:** the slice-1 live probe settles it.
+- **Resolved in slice 1:** neither form works inside a custom agent file.
+  `mcp_servers.<server>.enabled_tools` without a transport makes Codex reject
+  the agent file, and `plugins.<plugin>.mcp_servers.<server>.enabled_tools`
+  is accepted and ignored. Broker allowlists are enforced by a project
+  `PreToolUse` hook instead.
+- **What:** whether the hook payload's `agent_type` field stays available.
+  **Why deferred:** the Codex hooks guide documents `agent_type` only for
+  `SubagentStart`; `PreToolUse` carries it in practice (observed in 0.156.0).
+  **Suggested next step:** the slice that ships the hook reruns
+  `run-hook-probe.py` against the current Codex release before it merges.
 
 ## Recommended Next Step
 

@@ -11,9 +11,10 @@ repository:
 Each case writes one probe custom agent under `<project>/.codex/agents/`,
 then runs `codex exec` as a parent that spawns it. The parent's sandbox comes
 from the operator's own config; the script passes no sandbox or approval flag,
-because Codex reapplies a parent's live runtime overrides to a child. It
-trusts the project only through a `-c projects...trust_level` override, so the
-operator's `~/.codex/config.toml` is never written. The parent's JSON events
+because Codex reapplies a parent's live runtime overrides to a child. It trusts the project through a `-c projects...trust_level` override.
+Codex 0.156.0 persists the `-c projects."<project>".trust_level` override as a
+`[projects."<project>"]` entry in the operator's `~/.codex/config.toml`;
+remove that entry after the run. The parent's JSON events
 and stderr land in `<project>/logs/<case>.*`; the child rollouts stay in the
 operator's Codex session store, found by each case's nonce.
 

@@ -12,18 +12,23 @@ fenced code, so an example of the syntax cannot appear verbatim in a source.
 Any unbalanced, nested, unknown-host, or inline marker fails closed.
 
 `derive_codex_enforcement` maps a Claude agent's frontmatter tool policy to
-Codex agent-file limits. The live probe under
-`tests/speckit-pro/fixtures/codex-enforcement-probe/` found that Codex
-0.156.0 applies neither limit from an agent file: the child keeps the
-parent's sandbox, and no `enabled_tools` form hides a plugin broker tool. So
-`config_keys` emits `sandbox_mode` as a declaration and no `enabled_tools`
-key; both limits stay in prose.
+Codex limits. The live probe under
+`tests/speckit-pro/fixtures/codex-enforcement-probe/` (Codex 0.156.0) found:
+
+- An agent file's `sandbox_mode` is advisory. A spawned agent keeps the
+  parent's sandbox, so `advisory_config_keys` never enforces anything.
+- No `enabled_tools` form in an agent file hides a plugin broker tool, so no
+  such key is emitted.
+- A project `PreToolUse` hook sees the calling agent's `agent_type` and can
+  deny its `apply_patch` edits and its MCP calls. `derive_codex_hook_policy`
+  states that per-role policy. Shell writes cannot be told apart from shell
+  reads by a hook, so a read-only role's shell writes stay a prose rule.
 """
 
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from .agent_inventory import PLATFORMS
@@ -117,10 +122,12 @@ class CodexEnforcement:
     """Codex limits derived from one Claude agent's tool policy."""
 
     sandbox_mode: str
-    enabled_tools: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    # Broker tools per server; None when the role has no `tools:` allowlist.
+    enabled_tools: dict[str, tuple[str, ...]] | None = None
 
-    def config_keys(self) -> dict[str, Any]:
-        """Agent-file keys to emit. `enabled_tools` has no working form."""
+    def advisory_config_keys(self) -> dict[str, Any]:
+        """Agent-file keys to emit. They document intent and enforce nothing:
+        the parent's sandbox wins, and `enabled_tools` has no working form."""
         return {"sandbox_mode": self.sandbox_mode}
 
 
@@ -147,6 +154,46 @@ def derive_codex_enforcement(fields: dict[str, str]) -> CodexEnforcement:
         "read-only" if read_only else "workspace-write",
         {server: tuple(sorted(tools)) for server, tools in sorted(servers.items())},
     )
+
+
+FILE_EDIT_TOOL = "apply_patch"
+
+
+def codex_mcp_tool_name(server: str, tool: str) -> str:
+    """Codex's hook name for a plugin MCP tool; it turns `-` into `_`."""
+    return f"mcp__{server.replace('-', '_')}__{tool}"
+
+
+@dataclass(frozen=True)
+class CodexHookPolicy:
+    """What a Codex `PreToolUse` hook denies for one agent type."""
+
+    agent_type: str
+    deny_file_edits: bool
+    # Every MCP tool outside this tuple is denied; None leaves MCP tools alone.
+    allowed_mcp_tools: tuple[str, ...] | None
+
+    def denies(self, agent_type: str | None, tool_name: str) -> bool:
+        """Decide one call. A call from another agent or the parent passes."""
+        if agent_type != self.agent_type:
+            return False
+        if tool_name == FILE_EDIT_TOOL:
+            return self.deny_file_edits
+        if tool_name.startswith("mcp__") and self.allowed_mcp_tools is not None:
+            return tool_name not in self.allowed_mcp_tools
+        return False
+
+
+def derive_codex_hook_policy(agent_type: str, enforcement: CodexEnforcement) -> CodexHookPolicy:
+    """Turn derived limits into the hook policy a probe showed Codex enforces."""
+    allowed = None
+    if enforcement.enabled_tools is not None:
+        allowed = tuple(
+            codex_mcp_tool_name(server, tool)
+            for server, tools in enforcement.enabled_tools.items()
+            for tool in tools
+        )
+    return CodexHookPolicy(agent_type, enforcement.sandbox_mode == "read-only", allowed)
 
 
 @dataclass(frozen=True)

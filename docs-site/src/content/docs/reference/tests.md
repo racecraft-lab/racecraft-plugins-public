@@ -394,24 +394,26 @@ SpecKit Pro validation layers and test-only files.
 - **Purpose:** Validation files in fixtures.
 - **Classification:** `test-only`
 - **Platform concept:** SpecKit Pro validation layer
-- **Claude Code:** tests/speckit-pro/fixtures/codex-enforcement-probe/evidence.md, tests/speckit-pro/fixtures/codex-enforcement-probe/run-probe.py
-- **Codex:** tests/speckit-pro/fixtures/codex-enforcement-probe/evidence.md, tests/speckit-pro/fixtures/codex-enforcement-probe/run-probe.py
+- **Claude Code:** tests/speckit-pro/fixtures/codex-enforcement-probe/evidence.md, tests/speckit-pro/fixtures/codex-enforcement-probe/run-hook-probe.py, tests/speckit-pro/fixtures/codex-enforcement-probe/run-probe.py
+- **Codex:** tests/speckit-pro/fixtures/codex-enforcement-probe/evidence.md, tests/speckit-pro/fixtures/codex-enforcement-probe/run-hook-probe.py, tests/speckit-pro/fixtures/codex-enforcement-probe/run-probe.py
 - **Runtime difference:** Layer 1 includes separate Claude Code and Codex structural checks where the repository has runtime-specific plugin surfaces.
 
 #### Source Facts
 
 - tests/speckit-pro/fixtures/codex-enforcement-probe/evidence.md is checked in under the SpecKit Pro test suite. Source refs: `tests/speckit-pro/fixtures/codex-enforcement-probe/evidence.md`.
+- tests/speckit-pro/fixtures/codex-enforcement-probe/run-hook-probe.py is checked in under the SpecKit Pro test suite. Source refs: `tests/speckit-pro/fixtures/codex-enforcement-probe/run-hook-probe.py`.
 - tests/speckit-pro/fixtures/codex-enforcement-probe/run-probe.py is checked in under the SpecKit Pro test suite. Source refs: `tests/speckit-pro/fixtures/codex-enforcement-probe/run-probe.py`.
 
 #### Sources
 
 - [tests/speckit-pro/fixtures/codex-enforcement-probe/evidence.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/fixtures/codex-enforcement-probe/evidence.md)
+- [tests/speckit-pro/fixtures/codex-enforcement-probe/run-hook-probe.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/fixtures/codex-enforcement-probe/run-hook-probe.py)
 - [tests/speckit-pro/fixtures/codex-enforcement-probe/run-probe.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/fixtures/codex-enforcement-probe/run-probe.py)
 
 #### Inferred Notes
 
 - These files are validation evidence only; DOC-007 does not change test semantics unless a docs-site validation need explicitly requires it.
-  - Based on: `tests/speckit-pro/fixtures/codex-enforcement-probe/evidence.md`, `tests/speckit-pro/fixtures/codex-enforcement-probe/run-probe.py`
+  - Based on: `tests/speckit-pro/fixtures/codex-enforcement-probe/evidence.md`, `tests/speckit-pro/fixtures/codex-enforcement-probe/run-hook-probe.py`, `tests/speckit-pro/fixtures/codex-enforcement-probe/run-probe.py`
 
 ### tests/speckit-pro/GEMINI.md
 
