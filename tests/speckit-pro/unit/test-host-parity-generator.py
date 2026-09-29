@@ -38,6 +38,10 @@ def agent(frontmatter: str, body: str = "# Body\n") -> str:
 
 
 class HostBlockTests(unittest.TestCase):
+    def assert_rejected(self, text: str, reason: str, host: str = "codex") -> None:
+        with self.assertRaisesRegex(HostParityError, reason):
+            emit_host(text, host)
+
     def test_balanced_blocks_keep_the_target_host_and_strip_the_other(self) -> None:
         text = SHARED + CODEX_BLOCK + CLAUDE_BLOCK + "Tail.\n"
         self.assertEqual(emit_host(text, "codex"), "Shared line.\nCodex only.\nTail.\n")
@@ -49,42 +53,38 @@ class HostBlockTests(unittest.TestCase):
         self.assertEqual(emit_host(text, "claude"), text)
 
     def test_nested_block_fails_closed(self) -> None:
-        text = "<!-- host:codex -->\n<!-- host:claude -->\nx\n<!-- /host -->\n<!-- /host -->\n"
-        with self.assertRaisesRegex(HostParityError, "nested"):
-            emit_host(text, "codex")
+        self.assert_rejected(
+            "<!-- host:codex -->\n<!-- host:claude -->\nx\n<!-- /host -->\n<!-- /host -->\n",
+            "nested",
+        )
 
     def test_unknown_host_fails_closed(self) -> None:
-        with self.assertRaisesRegex(HostParityError, "unknown host"):
-            emit_host("<!-- host:gemini -->\nx\n<!-- /host -->\n", "codex")
+        self.assert_rejected("<!-- host:gemini -->\nx\n<!-- /host -->\n", "unknown host")
 
     def test_unknown_target_host_fails_closed(self) -> None:
-        with self.assertRaisesRegex(HostParityError, "unknown host"):
-            emit_host(SHARED, "gemini")
+        self.assert_rejected(SHARED, "unknown host", host="gemini")
 
     def test_unterminated_block_fails_closed(self) -> None:
-        with self.assertRaisesRegex(HostParityError, "unterminated"):
-            emit_host("<!-- host:codex -->\nx\n", "claude")
+        self.assert_rejected("<!-- host:codex -->\nx\n", "unterminated", host="claude")
 
     def test_close_without_open_fails_closed(self) -> None:
-        with self.assertRaisesRegex(HostParityError, "without an open"):
-            emit_host("x\n<!-- /host -->\n", "codex")
+        self.assert_rejected("x\n<!-- /host -->\n", "without an open")
 
-    def test_marker_sharing_a_line_with_text_fails_closed(self) -> None:
-        for text in (
-            "<!-- host:codex --> trailing\nx\n<!-- /host -->\n",
-            "<!-- host:codex -->\nx <!-- /host -->\n",
-            "lead <!-- host:claude -->\nx\n<!-- /host -->\n",
-        ):
-            with self.subTest(text=text), self.assertRaisesRegex(HostParityError, "own line"):
-                emit_host(text, "codex")
+    def test_open_marker_with_trailing_text_fails_closed(self) -> None:
+        self.assert_rejected("<!-- host:codex --> trailing\nx\n<!-- /host -->\n", "own line")
+
+    def test_close_marker_after_text_fails_closed(self) -> None:
+        self.assert_rejected("<!-- host:codex -->\nx <!-- /host -->\n", "own line")
+
+    def test_open_marker_after_text_fails_closed(self) -> None:
+        self.assert_rejected("lead <!-- host:claude -->\nx\n<!-- /host -->\n", "own line")
 
     def test_markers_inside_fenced_code_still_count(self) -> None:
         text = "```\n<!-- host:codex -->\nx\n<!-- /host -->\n```\n"
         self.assertEqual(emit_host(text, "claude"), "```\n```\n")
 
     def test_error_names_the_line_number(self) -> None:
-        with self.assertRaisesRegex(HostParityError, "line 2"):
-            emit_host("ok\n<!-- /host -->\n", "codex")
+        self.assert_rejected("ok\n<!-- /host -->\n", "line 2")
 
 
 class FrontmatterTests(unittest.TestCase):
@@ -106,6 +106,10 @@ class FrontmatterTests(unittest.TestCase):
 
 
 class EnforcementTests(unittest.TestCase):
+    def assert_rejected(self, fields: dict[str, str], reason: str) -> None:
+        with self.assertRaisesRegex(HostParityError, reason):
+            derive_codex_enforcement(fields)
+
     def test_allowlist_without_mutation_tools_derives_read_only(self) -> None:
         derived = derive_codex_enforcement(
             {
@@ -143,8 +147,7 @@ class EnforcementTests(unittest.TestCase):
         )
 
     def test_allowlisted_foreign_mcp_tool_fails_closed(self) -> None:
-        with self.assertRaisesRegex(HostParityError, "mcp__tavily__search"):
-            derive_codex_enforcement({"tools": "Read, mcp__tavily__search"})
+        self.assert_rejected({"tools": "Read, mcp__tavily__search"}, "mcp__tavily__search")
 
     def test_no_allowlist_is_read_only_only_when_every_mutation_tool_is_denied(self) -> None:
         denied = derive_codex_enforcement(
@@ -157,8 +160,7 @@ class EnforcementTests(unittest.TestCase):
         self.assertEqual(derive_codex_enforcement({}).sandbox_mode, "workspace-write")
 
     def test_empty_allowlist_fails_closed(self) -> None:
-        with self.assertRaisesRegex(HostParityError, "empty"):
-            derive_codex_enforcement({"tools": ""})
+        self.assert_rejected({"tools": " , "}, "empty")
 
     def test_config_keys_emit_sandbox_mode_but_no_unproven_enabled_tools_key(self) -> None:
         derived = derive_codex_enforcement(

@@ -36,11 +36,28 @@ BROKER_TOOL = re.compile(r"mcp__plugin_speckit-pro_(?P<server>[a-z0-9-]+)__(?P<t
 _OPEN = re.compile(r"<!-- host:(?P<host>[^ ]*) -->")
 _CLOSE = "<!-- /host -->"
 _MARKER_HINT = re.compile(r"<!--\s*/?\s*host\b")
+_LIST_ITEM = re.compile(r"[^,\s][^,]*")
 _FRONTMATTER_KEY = re.compile(r"(?P<key>[A-Za-z][A-Za-z0-9_-]*):(?:\s+(?P<value>.*))?$")
 
 
 class HostParityError(ValueError):
     """Raised when a source cannot be split or mapped without guessing."""
+
+
+def _marker(line: str, number: int) -> tuple[str, str | None] | None:
+    """Classify one line as an open marker, a close marker, or text."""
+    stripped = line.strip()
+    opened = _OPEN.fullmatch(stripped)
+    if opened:
+        host = opened.group("host")
+        if host not in HOSTS:
+            raise HostParityError(f"line {number}: unknown host {host!r}")
+        return ("open", host)
+    if stripped == _CLOSE:
+        return ("close", None)
+    if _MARKER_HINT.search(line):
+        raise HostParityError(f"line {number}: a host marker must be on its own line")
+    return None
 
 
 def emit_host(text: str, host: str) -> str:
@@ -51,25 +68,18 @@ def emit_host(text: str, host: str) -> str:
     block: str | None = None
     opened_at = 0
     for number, line in enumerate(text.splitlines(keepends=True), start=1):
-        stripped = line.strip()
-        opened = _OPEN.fullmatch(stripped)
-        if opened:
+        marker = _marker(line, number)
+        if marker is None:
+            if block in (None, host):
+                kept.append(line)
+        elif marker[0] == "open":
             if block is not None:
                 raise HostParityError(f"line {number}: nested host block inside line {opened_at}")
-            block = opened.group("host")
-            if block not in HOSTS:
-                raise HostParityError(f"line {number}: unknown host {block!r}")
-            opened_at = number
-            continue
-        if stripped == _CLOSE:
-            if block is None:
-                raise HostParityError(f"line {number}: host block close without an open")
+            block, opened_at = marker[1], number
+        elif block is None:
+            raise HostParityError(f"line {number}: host block close without an open")
+        else:
             block = None
-            continue
-        if _MARKER_HINT.search(line):
-            raise HostParityError(f"line {number}: a host marker must be on its own line")
-        if block is None or block == host:
-            kept.append(line)
     if block is not None:
         raise HostParityError(f"line {opened_at}: unterminated host block")
     return "".join(kept)
@@ -99,7 +109,7 @@ def split_frontmatter(text: str) -> tuple[dict[str, str], str]:
 
 
 def _tool_list(value: str) -> list[str]:
-    return [item.strip() for item in value.split(",") if item.strip()]
+    return [match.group().rstrip() for match in _LIST_ITEM.finditer(value)]
 
 
 @dataclass(frozen=True)
