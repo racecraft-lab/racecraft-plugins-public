@@ -48,6 +48,42 @@ def response_assertions(expected: dict[str, object], fixture_id: str) -> list[di
     return validated
 
 
+def check_response_assertion(
+    reporter: Reporter,
+    fixture_id: str,
+    transcript: Path,
+    assertion: dict[str, object],
+    mode: str,
+) -> None:
+    subagent_type = str(assertion["subagent_type"])
+    content = helpers.get_response_content(transcript, subagent_type)
+    if not content.strip():
+        if mode == "replay":
+            print(f"  SKIP {fixture_id}: {subagent_type} response format is checked by --live (no captured response retained)")
+        else:
+            reporter.check(f"{fixture_id}: {subagent_type} response captured", False, "empty response")
+        return
+    if "must_contain_any" in assertion:
+        needles = string_list(assertion.get("must_contain_any"))
+        reporter.check(
+            f"{fixture_id}: {subagent_type} response contains any of allowed substrings",
+            any(needle in content for needle in needles),
+            f"none of the expected substrings found in {subagent_type} response",
+        )
+    for needle in string_list(assertion.get("must_not_contain_any")):
+        reporter.check(
+            f"{fixture_id}: {subagent_type} response excludes {needle!r}",
+            needle not in content,
+            f"forbidden substring {needle!r} found in {subagent_type} response",
+        )
+    for keyword in string_list(assertion.get("must_contain_section_keywords")):
+        reporter.check(
+            f"{fixture_id}: {subagent_type} response contains section keyword '{keyword}'",
+            keyword.casefold() in content.casefold(),
+            f"missing keyword {keyword!r} in {subagent_type} response",
+        )
+
+
 def assert_fixture(fixture: Path, mode: str, reporter: Reporter) -> None:
     expected_path = fixture / "expected.json"
     transcript = transcript_for(fixture, mode)
@@ -92,27 +128,7 @@ def assert_fixture(fixture: Path, mode: str, reporter: Reporter) -> None:
         )
 
     for assertion in response_assertions(expected, fixture_id):
-        subagent_type = assertion["subagent_type"]
-        content = helpers.get_response_content(transcript, subagent_type)
-        if "must_contain_any" in assertion:
-            needles = string_list(assertion.get("must_contain_any"))
-            reporter.check(
-                f"{fixture_id}: {subagent_type} response contains any of allowed substrings",
-                any(needle in content for needle in needles),
-                f"none of the expected substrings found in {subagent_type} response",
-            )
-        for needle in string_list(assertion.get("must_not_contain_any")):
-            reporter.check(
-                f"{fixture_id}: {subagent_type} response excludes {needle!r}",
-                needle not in content,
-                f"forbidden substring {needle!r} found in {subagent_type} response",
-            )
-        for keyword in string_list(assertion.get("must_contain_section_keywords")):
-            reporter.check(
-                f"{fixture_id}: {subagent_type} response contains section keyword '{keyword}'",
-                keyword.casefold() in content.casefold(),
-                f"missing keyword {keyword!r} in {subagent_type} response",
-            )
+        check_response_assertion(reporter, fixture_id, transcript, assertion, mode)
 
 
 def main(argv: list[str]) -> int:

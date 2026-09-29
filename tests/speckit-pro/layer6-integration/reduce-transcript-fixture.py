@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Reduce a scrubbed transcript to the fields required for parser replay.
+"""Reduce a scrubbed transcript to the fields required for replay.
 
 Replay checks such as ``must_include_terms`` read dispatch prompts and the
 orchestrator's own text, so both are kept, redacted with the privacy scan's
-patterns. Skill arguments, subagent (sidechain) text and tool results are not.
+patterns. Each subagent response is kept as real text (redacted and capped),
+never rebuilt from ``expected.json``, so replay response assertions can fail.
+Skill arguments and subagent (sidechain) text are not kept.
 """
 
 from __future__ import annotations
@@ -48,33 +50,21 @@ def boolean_or_default(value: Any, default: bool = False) -> bool:
     return value if isinstance(value, bool) else default
 
 
-def response_keywords(expected: JsonObject, subagent_type: Any) -> list[str]:
-    keywords: list[str] = []
-    assertions = expected.get("response_assertions", [])
-    if not isinstance(assertions, list):
-        return keywords
-    for assertion in assertions:
-        if not isinstance(assertion, dict) or assertion.get("subagent_type") != subagent_type:
-            continue
-        must_contain_any = assertion.get("must_contain_any", [])
-        if isinstance(must_contain_any, list):
-            keywords.extend(str(value) for value in must_contain_any[:1])
-        section_keywords = assertion.get("must_contain_section_keywords", [])
-        if isinstance(section_keywords, list):
-            keywords.extend(str(value) for value in section_keywords)
-    return keywords
+RESPONSE_LIMIT = 8000
 
 
-def reduced_response(expected: JsonObject, subagent_type: Any) -> str:
-    prefix = f"Reduced parser fixture response for {subagent_type}"
-    keywords = response_keywords(expected, subagent_type)
-    return f"{prefix}: {' '.join(keywords)}" if keywords else prefix
+def reduced_response(block: JsonObject) -> str:
+    content = block.get("content", "")
+    if isinstance(content, list):
+        content = "\n".join(str(item.get("text", "")) for item in content if isinstance(item, dict))
+    if not isinstance(content, str):
+        return ""
+    return redact_private_text(content)[:RESPONSE_LIMIT]
 
 
-def reduce_transcript(events: list[JsonObject], expected: JsonObject) -> list[JsonObject]:
+def reduce_transcript(events: list[JsonObject]) -> list[JsonObject]:
     reduced: list[JsonObject] = []
     id_map: dict[str, str] = {}
-    agent_for: dict[str, Any] = {}
     sequence = 0
 
     for event in events:
@@ -95,7 +85,6 @@ def reduce_transcript(events: list[JsonObject], expected: JsonObject) -> list[Js
                 inputs = block.get("input") if isinstance(block.get("input"), dict) else {}
                 if block.get("name") == "Agent":
                     subagent_type = jq_coalesce_empty(inputs.get("subagent_type", ""))
-                    agent_for[new_id] = subagent_type
                     output_blocks.append(
                         {
                             "type": "tool_use",
@@ -136,12 +125,11 @@ def reduce_transcript(events: list[JsonObject], expected: JsonObject) -> list[Js
                 new_id = id_map.get(old_id) if isinstance(old_id, str) else None
                 if new_id is None:
                     continue
-                subagent_type = agent_for.get(new_id, "")
                 output_results.append(
                     {
                         "type": "tool_result",
                         "tool_use_id": new_id,
-                        "content": reduced_response(expected, subagent_type),
+                        "content": reduced_response(block),
                     }
                 )
             if output_results:
@@ -162,22 +150,15 @@ def write_jsonl(events: list[JsonObject], destination: TextIO) -> None:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 2:
-        print("Usage: reduce-transcript-fixture.py <scrubbed-transcript.jsonl> <expected.json>", file=sys.stderr)
+    if len(argv) != 1:
+        print("Usage: reduce-transcript-fixture.py <scrubbed-transcript.jsonl>", file=sys.stderr)
         return 2
     transcript_path = Path(argv[0])
-    expected_path = Path(argv[1])
     if not transcript_path.is_file():
         print(f"reduce-transcript-fixture.py: transcript not found: {transcript_path}", file=sys.stderr)
         return 1
-    if not expected_path.is_file():
-        print(f"reduce-transcript-fixture.py: expected.json not found: {expected_path}", file=sys.stderr)
-        return 1
     try:
-        expected = json.loads(expected_path.read_text(encoding="utf-8"))
-        if not isinstance(expected, dict):
-            raise ValueError("expected JSON must be an object")
-        write_jsonl(reduce_transcript(load_jsonl(transcript_path), expected), sys.stdout)
+        write_jsonl(reduce_transcript(load_jsonl(transcript_path)), sys.stdout)
         return 0
     except (OSError, UnicodeError, ValueError, json.JSONDecodeError) as exc:
         print(f"reduce-transcript-fixture.py: {exc}", file=sys.stderr)

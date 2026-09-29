@@ -136,7 +136,7 @@ def capture_live(fixture: Path, budget_usd: str, *, announce_saved: bool = False
     if os.environ.get("L6_UPDATE_PARSER_FIXTURE", "false").lower() == "true" and transcript_file.stat().st_size > 0:
         with parser_fixture.open("w", encoding="utf-8") as destination:
             reduced = subprocess.run(
-                [sys.executable, str(REDUCER), str(transcript_file), str(fixture / "expected.json")],
+                [sys.executable, str(REDUCER), str(transcript_file)],
                 stdout=destination,
                 stderr=subprocess.PIPE,
                 text=True,

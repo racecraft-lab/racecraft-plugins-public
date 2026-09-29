@@ -24,7 +24,7 @@ These are all **dispatch graph** failures. Layer 6 exists to catch them.
 | Class | Goal | Runner |
 |-------|------|--------|
 | **1 — Dispatch fixtures** | Verify the orchestrator routes specific inputs to the right subagent(s) | `run-dispatch-fixtures.py` |
-| **2 — Return-format fixtures** | Verify cross-agent parsing — one agent's output is parseable by its consumer | `run-return-format-fixtures.py` |
+| **2 — Return-format fixtures** | Verify cross-agent parsing — one agent's output is parseable by its consumer. Replay checks dispatch shape and asserts response format only on a retained real response; `--live` always asserts it | `run-return-format-fixtures.py` |
 | **3 — End-to-end fixtures** | Verify the dispatch graph for a real autopilot run has the expected shape | `run-e2e-fixtures.py` |
 | **4 — Grounding fixtures** | Verify capability citations correspond to completed tool calls | `run-grounding-fixtures.py` |
 
@@ -130,6 +130,14 @@ LLM transcripts. Running `--live` writes an ignored transient
 `transcript.jsonl`, scrubs it immediately, and asserts against that live
 capture. Set `L6_UPDATE_PARSER_FIXTURE=true` with `--live` only when you
 intend to refresh the committed reduced replay fixture.
+
+Class 2 response assertions (`response_assertions` in `expected.json`) read
+the subagent's real response text. The reducer keeps that text, redacted and
+capped, so a refreshed fixture fails replay when the response drifts from
+`expected.json`. A fixture that retains no response text skips those
+assertions in replay (each skip is printed) and is checked by `--live`, where
+an empty response fails. The committed Class 2 fixtures retain no response
+text yet, so today their response format is verified only by `--live`.
 
 ## Quick start
 
@@ -256,15 +264,15 @@ To manually regenerate a reduced replay fixture:
 ```bash
 python3 tests/speckit-pro/layer6-integration/reduce-transcript-fixture.py \
   path/to/transcript.jsonl \
-  path/to/expected.json \
   > path/to/parser-fixture.jsonl
 ```
 
 The reducer keeps dispatch prompts and the orchestrator's own text, because
 `must_include_terms` checks read them in replay. It redacts both with the
 privacy scan's patterns (`tests/speckit-pro/lib/privacy_patterns.py`), and
-drops skill arguments and subagent text. Tool results become synthesized
-responses built from `expected.json`.
+drops skill arguments and subagent text. Each subagent response is kept as
+its real text, redacted and capped at 8000 characters; it is never rebuilt
+from `expected.json`.
 
 ## Live-mode side effects (read this before running `--live`)
 
