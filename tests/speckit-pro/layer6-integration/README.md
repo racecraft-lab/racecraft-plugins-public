@@ -31,7 +31,7 @@ These are all **dispatch graph** failures. Layer 6 exists to catch them.
 ## Coverage matrix
 
 L7 covers every named subagent and every routing branch in
-`/speckit-pro:autopilot`. The fixtures are organized by what they
+`/speckit-pro:speckit-autopilot`. The fixtures are organized by what they
 exercise:
 
 ### Consensus routing (Class 1, fixtures 01–11)
@@ -175,6 +175,12 @@ python3 tests/speckit-pro/layer6-integration/run-all-fixtures.py --live
   "must_not_have_forbidden_spawns": true,
   "min_dispatch_count": 1,
   "max_dispatch_count": 3,
+  // At least `size` dispatches (of `subagent_type`, when given) inside ONE
+  // assistant message. Catches serial dispatch across messages.
+  "same_message_dispatch_groups": [{ "subagent_type": "...", "size": 3 }],
+  "must_run_in_background": true,   // every dispatch sets run_in_background: true
+  "required_isolation": "worktree", // every dispatch sets this isolation value
+  "forbidden_isolation": "worktree", // no dispatch sets this isolation value
   "dispatch_order_constraints": [
     { "before": "...", "after": "...", "reason": "..." }
   ],
