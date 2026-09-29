@@ -1,0 +1,67 @@
+[
+  {
+    "id": "functional-evals-1-001",
+    "lane": "functional-evals-1",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json:420",
+      "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json:86",
+      "speckit-pro/codex-skills/speckit-autopilot/SKILL.md:543",
+      "speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md:55-67"
+    ],
+    "ripwire_command": "ripwire . --grep=all 14 Post",
+    "summary": "Codex eval 31 says Codex keeps \"all 14 Post items\", and the Codex SKILL.md says \"14 mandatory rows\". Eval 7, the canonical list and post-implementation-codex.md all define 13 distinct rows.",
+    "proposed_fix": "Change the count to 13 in eval 31 and in codex-skills/speckit-autopilot/SKILL.md (lines 543 and 791), then regenerate dependent fixtures.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "functional-evals-1-002",
+    "lane": "functional-evals-1",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/evals/fixtures/functional/legacy-selection.json:5800",
+      "tests/speckit-pro/evals/fixtures/functional/legacy-selection.json:5958",
+      "speckit-pro/skills/speckit-autopilot/references/task-list-canonical.md:38-48",
+      "speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md:55-67"
+    ],
+    "ripwire_command": "ripwire . --grep=host-divergent-canonical",
+    "summary": "The Post plan is 11 rows on Claude and 13 on Codex (Codex adds Final Reviewability Backstop and PR Packet/Body Generation). legacy-selection.json records this as an unresolved gap: shared eval requirements cannot assert one sequence, so eval 7 and 25 are split by host.",
+    "proposed_fix": "Reconcile the Post-plan contract across both hosts, or add host-scoped expected values so the evals stop carrying the divergence.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "functional-evals-1-003",
+    "lane": "functional-evals-1",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/evals/fixtures/functional/speckit-status/case-1/docs/ai/specs/SPEC-021-workflow.md:1",
+      "tests/speckit-pro/evals/fixtures/functional/speckit-status/case-2/docs/ai/specs/SPEC-013-workflow.md:1",
+      "tests/speckit-pro/evals/fixtures/functional/speckit-status/case-3/docs/ai/specs/SPEC-013-workflow.md:1",
+      "tests/speckit-pro/evals/fixtures/functional/speckit-status/case-5/docs/ai/current-quarter-technical-roadmap.md:1",
+      "tests/speckit-pro/evals/fixtures/functional/speckit-status/case-6/docs/ai/current-technical-roadmap.md:1",
+      "tests/speckit-pro/evals/fixtures/functional/speckit-coach/case-2/spec.md:1"
+    ],
+    "ripwire_command": "ripwire . --grep=speckit-status/case",
+    "summary": "The speckit-status/case-{1,2,3,5,6}/ and speckit-coach/case-2/ fixture trees are referenced by no catalog entry, test or runner. Catalog cases 2, 5, 6 use byte-identical copies under fixtures/grounding/ (frozen from headless scenario-roots); case-1 uses status-dashboard/case-1 (differing text) and coach case-2 uses grounding/coach-checklist. plan.md duplicates the headless coach-webhook-project.",
+    "proposed_fix": "Delete the unreferenced speckit-status/case-* and speckit-coach/case-2 trees (keep speckit-coach/case-8), or point the catalog at them and drop the grounding copies.",
+    "in_flight_status": null
+  },
+  {
+    "id": "functional-evals-1-004",
+    "lane": "functional-evals-1",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "docs/ai/specs/executor-mode-paired-eval-design.md:112",
+      "docs/ai/specs/executor-mode-paired-eval-design.md:18",
+      "tests/speckit-pro/layer3-functional/executor-modes/score-executor-modes.py:236-238"
+    ],
+    "ripwire_command": "ripwire . --grep=mutation-floor",
+    "summary": "The design doc says the floor comes from .specify/quality-gates.json and lists the scorer flags without --mutation-floor. The scorer reads no such file; the floor is an optional CLI flag defaulting to None, so the \"no task below the floor\" rule is skipped unless passed. The doc also names only \"beats\" and \"inconclusive\" while the scorer can return \"loses\".",
+    "proposed_fix": "Document --mutation-floor and the loses verdict, and state that the caller supplies the floor from quality-gates.json.",
+    "in_flight_status": null
+  }
+]

@@ -1,0 +1,500 @@
+{
+  "tests/speckit-pro/layer2-trigger/MEASUREMENT.md": {
+    "verdict": [
+      "trigger-evals-001",
+      "trigger-evals-003"
+    ],
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md",
+      "ripwire . --uses=PINNED_CLAUDE_VERSION"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/campaign-drafts/issue-573-full.draft.json": {
+    "verdict": [
+      "trigger-evals-004"
+    ],
+    "checks_run": [
+      "ripwire . --grep=identities_current"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/campaign-drafts/issue-573-pilot.draft.json": {
+    "verdict": [
+      "trigger-evals-004"
+    ],
+    "checks_run": [
+      "ripwire . --grep=identities_current"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/case-inventory.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --uses=PINNED_CLAUDE_VERSION"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/codex-evals/grill-me-trigger.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/codex-evals/install-trigger.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/codex-evals/speckit-autopilot-trigger.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/codex-evals/speckit-coach-trigger.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/codex-evals/speckit-install-trigger.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/codex-evals/speckit-prd-trigger.json": {
+    "verdict": [
+      "trigger-evals-001"
+    ],
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/codex-evals/speckit-resolve-pr-trigger.json": {
+    "verdict": [
+      "trigger-evals-001"
+    ],
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/codex-evals/speckit-scaffold-spec-trigger.json": {
+    "verdict": [
+      "trigger-evals-001"
+    ],
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/codex-evals/speckit-status-trigger.json": {
+    "verdict": [
+      "trigger-evals-008"
+    ],
+    "checks_run": [
+      "ripwire . --callers=find_eval_file"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/codex-evals/speckit-upgrade-trigger.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/codex-evals/ubiquitous-language-trigger.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/compare-trigger-evals.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --uses=PINNED_CLAUDE_VERSION"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/controlled-descriptions.json": {
+    "verdict": [
+      "trigger-evals-007"
+    ],
+    "checks_run": [
+      "ripwire . --uses=NO_SPECKIT_SKILL_DESCRIPTION"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/controlled-descriptions/baseline.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --uses=PINNED_CLAUDE_VERSION"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/controlled-descriptions/candidate.txt": {
+    "verdict": [
+      "trigger-evals-007"
+    ],
+    "checks_run": [
+      "ripwire . --uses=NO_SPECKIT_SKILL_DESCRIPTION"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/evals/grill-me-trigger.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/evals/speckit-autopilot-trigger.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/evals/speckit-coach-trigger.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/evals/speckit-install-trigger.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/evals/speckit-prd-trigger.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/evals/speckit-resolve-pr-trigger.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/evals/speckit-scaffold-spec-trigger.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/evals/speckit-status-trigger.json": {
+    "verdict": [
+      "trigger-evals-008"
+    ],
+    "checks_run": [
+      "ripwire . --callers=find_eval_file"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/evals/speckit-upgrade-trigger.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/evals/ubiquitous-language-trigger.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/.specify/memory/constitution.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/SPEC-009-workflow.md": {
+    "verdict": [
+      "trigger-evals-001"
+    ],
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/docs/ai/specs/027-calendar-sync/SPEC-027-workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/docs/ai/specs/SPEC-004-workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/docs/ai/specs/SPEC-013-workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/docs/ai/specs/SPEC-015-workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/docs/ai/specs/SPEC-031-auth-refactor/SPEC-031-workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/docs/ai/specs/SPEC-041-db-migration/SPEC-041-workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/docs/ai/specs/ubiquitous-language.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/docs/idea.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/notes/discovery-call.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/notes/stakeholder-call.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/plan.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/specs/022-search/SPEC-022-workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/specs/SPEC-019-workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/generate-carry-forward-replay.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --uses=PINNED_CLAUDE_VERSION"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/measurement-capabilities.json": {
+    "verdict": [
+      "trigger-evals-003"
+    ],
+    "checks_run": [
+      "ripwire . --uses=PINNED_CLAUDE_VERSION"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/plan-trigger-evals.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --uses=PINNED_CLAUDE_VERSION"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/qualification-protocol.md": {
+    "verdict": [
+      "trigger-evals-002"
+    ],
+    "checks_run": [
+      "ripwire . --grep=891"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/run-trigger-campaign.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --uses=PINNED_CLAUDE_VERSION"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/run-trigger-evals-codex.py": {
+    "verdict": [
+      "trigger-evals-005",
+      "trigger-evals-008"
+    ],
+    "checks_run": [
+      "ripwire . --callers=load_eval_corpus",
+      "ripwire . --callers=find_eval_file"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/run-trigger-evals.py": {
+    "verdict": [
+      "trigger-evals-003",
+      "trigger-evals-005",
+      "trigger-evals-007"
+    ],
+    "checks_run": [
+      "ripwire . --uses=PINNED_CLAUDE_VERSION",
+      "ripwire . --callers=load_eval_corpus",
+      "ripwire . --uses=NO_SPECKIT_SKILL_DESCRIPTION"
+    ]
+  },
+  "tests/speckit-pro/layer2-trigger/run_codex_evals.py": {
+    "verdict": [
+      "trigger-evals-005",
+      "trigger-evals-006",
+      "trigger-evals-007",
+      "trigger-evals-008"
+    ],
+    "checks_run": [
+      "ripwire . --callers=load_eval_corpus",
+      "ripwire . --callers=_parser",
+      "ripwire . --uses=NO_SPECKIT_SKILL_DESCRIPTION",
+      "ripwire . --callers=find_eval_file"
+    ]
+  },
+  "tests/speckit-pro/lib/trigger_campaign.py": {
+    "verdict": [
+      "trigger-evals-002"
+    ],
+    "checks_run": [
+      "ripwire . --grep=891"
+    ]
+  },
+  "tests/speckit-pro/lib/trigger_campaign_execution.py": {
+    "verdict": [
+      "trigger-evals-002"
+    ],
+    "checks_run": [
+      "ripwire . --grep=891"
+    ]
+  },
+  "tests/speckit-pro/lib/trigger_carry_forward.py": {
+    "verdict": [
+      "trigger-evals-002",
+      "trigger-evals-009"
+    ],
+    "checks_run": [
+      "ripwire . --grep=891",
+      "ripwire . --grep=contextual_approval"
+    ]
+  },
+  "tests/speckit-pro/lib/trigger_comparison.py": {
+    "verdict": [
+      "trigger-evals-002",
+      "trigger-evals-006"
+    ],
+    "checks_run": [
+      "ripwire . --grep=891",
+      "ripwire . --callers=_parser"
+    ]
+  },
+  "tests/speckit-pro/lib/trigger_evidence.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=891"
+    ]
+  },
+  "tests/speckit-pro/lib/trigger_first_selection_guard.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=891"
+    ]
+  },
+  "tests/speckit-pro/lib/trigger_inventory.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=891"
+    ]
+  },
+  "tests/speckit-pro/lib/trigger_process.py": {
+    "verdict": [
+      "trigger-evals-005"
+    ],
+    "checks_run": [
+      "ripwire . --callers=load_eval_corpus"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/signal-restoration/claude": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=891"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/skill-selection/claude": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=891"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/trigger-runners/codex": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=891"
+    ]
+  },
+  "tests/speckit-pro/unit/test-trigger-campaign-execution.py": {
+    "verdict": [
+      "trigger-evals-009"
+    ],
+    "checks_run": [
+      "ripwire . --grep=contextual_approval"
+    ]
+  },
+  "tests/speckit-pro/unit/test-trigger-campaign.py": {
+    "verdict": [
+      "trigger-evals-009"
+    ],
+    "checks_run": [
+      "ripwire . --grep=contextual_approval"
+    ]
+  },
+  "tests/speckit-pro/unit/test-trigger-carry-forward.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=891"
+    ]
+  },
+  "tests/speckit-pro/unit/test-trigger-comparison.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=891"
+    ]
+  },
+  "tests/speckit-pro/unit/test-trigger-controlled-description.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=891"
+    ]
+  },
+  "tests/speckit-pro/unit/test-trigger-eval-coverage.py": {
+    "verdict": [
+      "trigger-evals-008"
+    ],
+    "checks_run": [
+      "ripwire . --callers=find_eval_file"
+    ]
+  },
+  "tests/speckit-pro/unit/test-trigger-inventory.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=891"
+    ]
+  },
+  "tests/speckit-pro/unit/test-trigger-signal-restoration.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=891"
+    ]
+  },
+  "tests/speckit-pro/unit/test-trigger-trial-records.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=891"
+    ]
+  }
+}

@@ -1,0 +1,187 @@
+[
+  {
+    "id": "native-eval-harness-001",
+    "lane": "native-eval-harness",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/evals/README.md:217-225",
+      "tests/speckit-pro/suite-manifest.json:223-248",
+      "tests/speckit-pro/suite-manifest.json:195-218"
+    ],
+    "ripwire_command": "ripwire . --grep=run-trigger-evals",
+    "summary": "README says layers 2, 3, 6 and 7 are live native selectors of run-native-evals.py, but the manifest ids 2 and 3 still dispatch the legacy run-trigger-evals and run-functional-evals runners, and 6 and 7 dispatch deterministic fixture runners. run-all.py never mentions run-native-evals.py, so one layer id has two unrelated entry points.",
+    "proposed_fix": "State in the README that native evaluation is a separate CLI whose selectors reuse the layer numbers, or register the native runner in the manifest layers and retire the legacy runners once migration ends.",
+    "in_flight_status": null
+  },
+  {
+    "id": "native-eval-harness-002",
+    "lane": "native-eval-harness",
+    "severity": "major",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/lib/native_eval_adapters.py:3375",
+      "tests/speckit-pro/lib/native_eval_store.py:165",
+      "tests/speckit-pro/lib/native_eval_runner_result.py:105",
+      "tests/speckit-pro/lib/native_eval_verification.py:111",
+      "tests/speckit-pro/lib/native_eval_execution.py:284",
+      "tests/speckit-pro/lib/native_eval_upstream.py:562"
+    ],
+    "ripwire_command": "ripwire . --grep=object_pairs_hook",
+    "summary": "The strict duplicate-key JSON loader is re-implemented in about 20 places across 16 lib modules with different error types and different rules. Adapters (482, 3385, 3991) and the store (165) do not reject NaN or Infinity constants, while catalog, judge, execution, capture and pairing do, so the README's strict-JSON contract holds only in some paths.",
+    "proposed_fix": "Add one strict_json helper (duplicate keys, constants, recursion) in a shared lib module with a caller-supplied error class, and replace every local copy.",
+    "in_flight_status": null
+  },
+  {
+    "id": "native-eval-harness-003",
+    "lane": "native-eval-harness",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/lib/native_eval_runner_result.py:39",
+      "tests/speckit-pro/lib/native_eval_verification.py:50",
+      "tests/speckit-pro/lib/native_eval_runner_result.py:322",
+      "tests/speckit-pro/lib/native_eval_verification.py:290",
+      "tests/speckit-pro/lib/native_eval_grading.py:181"
+    ],
+    "ripwire_command": "ripwire . --grep=def attach_receipt",
+    "summary": "runner_result and verification are near copies: _path, _loads, _output_text, attach_receipt and the *_checks selectors differ only in the exception class and metadata key. _strict_equal is defined four times (execution:2228, grading:181, runner_result:124, verification:130).",
+    "proposed_fix": "Extract the shared receipt attach, output parsing and strict equality into one helper module and parameterize the metadata key and error class.",
+    "in_flight_status": null
+  },
+  {
+    "id": "native-eval-harness-004",
+    "lane": "native-eval-harness",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/unit/test-native-eval-fixture-setup.py:1",
+      "tests/speckit-pro/suite-manifest.json:59-88"
+    ],
+    "ripwire_command": "ripwire . --grep=test-native-eval-fixture-setup",
+    "summary": "test-native-eval-fixture-setup.py is absent from the Layer 4 manifest, so run-layer-scripts.py never runs it and it is the only test of the feature_deletions symlink and reserved-path guards. Nothing in test-unit-layout.py enforces that every unit test is registered.",
+    "proposed_fix": "Register the script in suite-manifest.json layer 4 and add a layout test that every unit/test-*.py appears in the manifest.",
+    "in_flight_status": null
+  },
+  {
+    "id": "native-eval-harness-005",
+    "lane": "native-eval-harness",
+    "severity": "major",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/lib/native_eval_skill_reads.py:187",
+      "tests/speckit-pro/unit/test-native-eval-skill-reads.py:15"
+    ],
+    "ripwire_command": "ripwire . --callers=qualify_codex_skill_reads",
+    "summary": "native_eval_skill_reads.py (296 lines) has no production importer; only its own unit test uses it. Codex activation is now derived from injection evidence in native_eval_codex_rollouts.py, so the read-based qualifier is orphaned code that still ships a schema (codex-skill-read-qualification/v1).",
+    "proposed_fix": "Delete the module and its test, or wire it into grading and document why both activation sources exist.",
+    "in_flight_status": null
+  },
+  {
+    "id": "native-eval-harness-006",
+    "lane": "native-eval-harness",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/lib/native_eval_verification.py:79",
+      "tests/speckit-pro/lib/native_eval_execution.py:93",
+      "tests/speckit-pro/lib/native_eval_git_observation.py:149",
+      "tests/speckit-pro/lib/native_eval_dispatch_context.py:271"
+    ],
+    "ripwire_command": "ripwire . --callers=pointer_artifacts",
+    "summary": "pointer_artifacts has no caller anywhere (only its __all__ entry), and _GIT_OBSERVATION_V1 is never read. observe_git_topology and decode_sealed_plan_repair_message are called only from unit tests.",
+    "proposed_fix": "Remove the unused symbols; keep the test-only ones only if a production caller is planned.",
+    "in_flight_status": null
+  },
+  {
+    "id": "native-eval-harness-007",
+    "lane": "native-eval-harness",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/evals/native-runner-progress.md:1",
+      "tests/speckit-pro/evals/native-runner-progress.md:853",
+      "tests/speckit-pro/evals/native-runner-progress.md:49"
+    ],
+    "ripwire_command": "ripwire . --grep=native-runner-progress",
+    "summary": "A 1126-line append-only session log sits beside the README as a contract doc. It holds contradictory point-in-time claims (a section titled 'Hosted suite gate: current red state', 'pending' adoptions, 8,436/8,436 totals) and orchestration-agent paths, while the README says it does not hard-code totals. It is also cited by the generated docs-site test reference as a source.",
+    "proposed_fix": "Move dated checkpoints to an archive or delete them, and keep only durable, current statements (or none) in evals/.",
+    "in_flight_status": null
+  },
+  {
+    "id": "native-eval-harness-008",
+    "lane": "native-eval-harness",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/evals/README.md:373",
+      "tests/speckit-pro/evals/audit/execution-surface-inventory.md:6-15",
+      "tests/speckit-pro/evals/audit/trigger-audit.md:88-93"
+    ],
+    "ripwire_command": "ripwire . --grep=test-native-agent-bootstrap-contracts",
+    "summary": "README sends readers to the audit directory for 'current coverage and gaps', but those reports are frozen snapshots: the inventory cites a 102-entry manifest (now about 140 scripts) and trigger-audit proposes four bootstrap tests in test-native-agent-bootstrap-contracts.py that do not exist, though the same ids are in trigger-inventory.json.",
+    "proposed_fix": "Label the audit directory as dated history in the README, and drop or resolve the proposed-test ids that never landed.",
+    "in_flight_status": null
+  },
+  {
+    "id": "native-eval-harness-009",
+    "lane": "native-eval-harness",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/evals/README.md:103-135",
+      "tests/speckit-pro/lib/native_eval_catalog.py:41-46",
+      "tests/speckit-pro/lib/native_eval_catalog.py:467-475"
+    ],
+    "ripwire_command": "ripwire . --grep=native_plan_repair_context",
+    "summary": "README lists 'supported checks and parameters' but omits native_synthesis_mechanism, native_subagent_dispatch, native_plan_repair_context, native_verification_pointer, native_runner_result and subagent_returns_before_parent_file_change, and the case fields git_fixture, required_tools, pairing and git_metadata_access. Catalog.json uses all of these except the last check type.",
+    "proposed_fix": "Document each check type and optional case field, or generate the table from CHECK_TYPES and the validator field sets.",
+    "in_flight_status": null
+  },
+  {
+    "id": "native-eval-harness-010",
+    "lane": "native-eval-harness",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/lib/native_eval_adapters.py:72-160",
+      "tests/speckit-pro/lib/native_eval_adapters.py:1340"
+    ],
+    "ripwire_command": "ripwire . --expand=_CLAUDE_GIT_SCAFFOLD_SOURCE",
+    "summary": "The 4,500-line adapters module mixes Claude and Codex staging, isolation proofs, receipts and two embedded Python programs held as raw string literals (git and upstream scaffolds). String-embedded code escapes lint, mypy and direct tests, and it calls private setup helpers (_workspace_directory, _write_receipt).",
+    "proposed_fix": "Ship the scaffolds as real files under lib/ and split adapters into per-host modules.",
+    "in_flight_status": null
+  },
+  {
+    "id": "native-eval-harness-011",
+    "lane": "native-eval-harness",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/unit/test-native-eval-adapters.py:2564",
+      "tests/speckit-pro/unit/test-native-eval-adapters.py:2623",
+      "tests/speckit-pro/unit/test-native-functional-catalog.py:21-22",
+      "tests/speckit-pro/unit/test-native-functional-catalog.py:878",
+      "tests/speckit-pro/unit/test-native-trigger-catalog.py:98"
+    ],
+    "ripwire_command": "ripwire . --grep=catalog-functional",
+    "summary": "Tests hard-code derived facts: the Codex agent roster size (13, versus 13 files in codex-agents/), and catalog totals (216, 109). Every catalog or roster change needs a hand edit, and open PRs already bump them (14, 232). test-native-functional-catalog also keeps a fallback to a catalog-functional.json shard that does not exist.",
+    "proposed_fix": "Derive the counts from speckit-pro/codex-agents and the catalog, and delete the shard fallback.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "native-eval-harness-012",
+    "lane": "native-eval-harness",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/run-native-evals.py:35-96",
+      "tests/speckit-pro/run-native-evals.py:20",
+      "tests/speckit-pro/run-native-evals.py:116-118"
+    ],
+    "ripwire_command": "ripwire . --expand=NativeJudge",
+    "summary": "The public CLI embeds the NativeJudge callback (process supervision, cleanup and result validation) instead of native_eval_judge.py, imports the private _validate_limits from the pool module, and exposes --claude-model, --codex-model and --judge-model with hard-coded defaults that the README never mentions.",
+    "proposed_fix": "Move NativeJudge into native_eval_judge.py, make the limits validator public, and document or remove the model flags.",
+    "in_flight_status": null
+  }
+]

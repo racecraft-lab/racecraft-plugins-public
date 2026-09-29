@@ -1,0 +1,597 @@
+{
+  "tests/speckit-pro/layer3-functional/codex-evals/speckit-upgrade-evals.json": {
+    "verdict": [
+      "functional-evals-2-007"
+    ],
+    "checks_run": [
+      "ripwire . --grep=speckit-upgrade-evals.json"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/codex-evals/ubiquitous-language-evals.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=ubiquitous-language-evals.json"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/evals/grill-me-evals.json": {
+    "verdict": [
+      "functional-evals-2-001"
+    ],
+    "checks_run": [
+      "ripwire . --grep=grill-me-evals.json"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json": {
+    "verdict": [
+      "functional-evals-2-002"
+    ],
+    "checks_run": [
+      "ripwire . --grep=speckit-autopilot-evals.json"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/evals/speckit-coach-evals.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-coach-evals.json"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/evals/speckit-install-evals.json": {
+    "verdict": [
+      "functional-evals-2-007"
+    ],
+    "checks_run": [
+      "ripwire . --grep=speckit-install-evals.json"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/evals/speckit-prd-evals.json": {
+    "verdict": [
+      "functional-evals-2-004"
+    ],
+    "checks_run": [
+      "ripwire . --grep=speckit-prd-evals.json"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/evals/speckit-scaffold-spec-evals.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-scaffold-spec-evals.json"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/evals/speckit-upgrade-evals.json": {
+    "verdict": [
+      "functional-evals-2-007"
+    ],
+    "checks_run": [
+      "ripwire . --grep=speckit-upgrade-evals.json"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/evals/ubiquitous-language-evals.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=ubiquitous-language-evals.json"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/executor-modes/catalog.json": {
+    "verdict": [
+      "functional-evals-2-008"
+    ],
+    "checks_run": [
+      "ripwire . --grep=score-executor-modes",
+      "ripwire . --grep=queue-public-api"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/executor-modes/score-executor-modes.py": {
+    "verdict": [
+      "functional-evals-2-008"
+    ],
+    "checks_run": [
+      "ripwire . --grep=score-executor-modes",
+      "ripwire . --grep=queue-public-api"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/autopilot/SPEC-009/.specify/project.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=fixtures/autopilot/SPEC-009"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/autopilot/SPEC-009/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=fixtures/autopilot/SPEC-009"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/autopilot/SPEC-009/docs/ai/specs/SPEC-009-workflow.md": {
+    "verdict": [
+      "functional-evals-2-003"
+    ],
+    "checks_run": [
+      "ripwire . --grep=fixtures/autopilot/SPEC-009"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/autopilot/SPEC-009/git-history/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=fixtures/autopilot/SPEC-009"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/autopilot/SPEC-009/git-history/checkpoints.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=fixtures/autopilot/SPEC-009"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/autopilot/SPEC-805/.specify/project.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"headless eval runner case catalog and eval json loading\""
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/autopilot/SPEC-805/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"headless eval runner case catalog and eval json loading\""
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/grill/SPEC-009-scope.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"headless eval runner case catalog and eval json loading\""
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/grill/billing-rewrite-transcript.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"headless eval runner case catalog and eval json loading\""
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/headless/coach-empty-project/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"headless eval runner case catalog and eval json loading\""
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project/.specify/extensions.yml": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=coach-installed-project"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project/.specify/extensions/review/manifest.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=coach-installed-project"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project/.specify/extensions/verify/manifest.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=coach-installed-project"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project/PROVENANCE.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=coach-installed-project"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project/installed-cli-observation.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=coach-installed-project"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project/specify-1.0.1-help.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=coach-installed-project"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/headless/coach-webhook-project/plan.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"headless eval runner case catalog and eval json loading\""
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/headless/coach-webhook-project/spec.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"headless eval runner case catalog and eval json loading\""
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/headless/coach-workflow-project/SPEC-025-workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"headless eval runner case catalog and eval json loading\""
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/prd/discovery-call.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"headless eval runner case catalog and eval json loading\""
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/status/scenario-roots/all-blocked/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-roots"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/status/scenario-roots/all-blocked/docs/ai/current-technical-roadmap.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-roots"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/status/scenario-roots/empty-project/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-roots"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/status/scenario-roots/external-worktree/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-roots"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/status/scenario-roots/external-worktree/attached-worktree/docs/ai/specs/SPEC-021-workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-roots"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/status/scenario-roots/external-worktree/docs/ai/current-technical-roadmap.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-roots"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/status/scenario-roots/multiple-roadmaps/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-roots"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/status/scenario-roots/multiple-roadmaps/docs/ai/current-quarter-technical-roadmap.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-roots"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/status/scenario-roots/multiple-roadmaps/docs/ai/last-quarter-technical-roadmap.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-roots"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/status/scenario-roots/overall-dashboard/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-roots"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/status/scenario-roots/overall-dashboard/docs/ai/current-technical-roadmap.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-roots"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/status/scenario-roots/overall-dashboard/docs/ai/specs/SPEC-021-workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-roots"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/status/scenario-roots/spec-specific/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-roots"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/status/scenario-roots/spec-specific/docs/ai/current-technical-roadmap.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-roots"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/status/scenario-roots/spec-specific/docs/ai/specs/SPEC-013-workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-roots"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/status/scenario-roots/workflow-without-roadmap/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-roots"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/status/scenario-roots/workflow-without-roadmap/docs/ai/specs/SPEC-013-workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-roots"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/fixtures/status/scenarios.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=scenario-roots"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/headless_cases.json": {
+    "verdict": [
+      "functional-evals-2-006"
+    ],
+    "checks_run": [
+      "ripwire . --grep=headless_cases.json",
+      "ripwire . --grep=required_tools"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/preview_helpers.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=preview_helpers",
+      "ripwire . --grep=run-functional-evals"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/run-functional-evals-codex.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=preview_helpers",
+      "ripwire . --grep=run-functional-evals"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/run-functional-evals.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=preview_helpers",
+      "ripwire . --grep=run-functional-evals"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/run-headless-evals.py": {
+    "verdict": [
+      "functional-evals-2-005",
+      "functional-evals-2-006",
+      "functional-evals-2-009"
+    ],
+    "checks_run": [
+      "ripwire . --callers=enumerate_codex_mcp_servers",
+      "ripwire . --callers=skill_isolation_args",
+      "ripwire . --callers=codex_permission_args",
+      "ripwire . --grep=def main"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/executor-modes/results/queue-internal-compaction-boundary-1.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=score-executor-modes",
+      "ripwire . --grep=queue-public-api"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/executor-modes/results/queue-internal-compaction-boundary-2.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=score-executor-modes",
+      "ripwire . --grep=queue-public-api"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/executor-modes/results/queue-internal-compaction-boundary-3.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=score-executor-modes",
+      "ripwire . --grep=queue-public-api"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/executor-modes/results/queue-internal-compaction-function_first-1.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=score-executor-modes",
+      "ripwire . --grep=queue-public-api"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/executor-modes/results/queue-internal-compaction-function_first-2.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=score-executor-modes",
+      "ripwire . --grep=queue-public-api"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/executor-modes/results/queue-internal-compaction-function_first-3.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=score-executor-modes",
+      "ripwire . --grep=queue-public-api"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/executor-modes/results/queue-internal-compaction-strict-1.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=score-executor-modes",
+      "ripwire . --grep=queue-public-api"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/executor-modes/results/queue-internal-compaction-strict-2.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=score-executor-modes",
+      "ripwire . --grep=queue-public-api"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/executor-modes/results/queue-internal-compaction-strict-3.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=score-executor-modes",
+      "ripwire . --grep=queue-public-api"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/executor-modes/results/queue-public-api-boundary-1.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=score-executor-modes",
+      "ripwire . --grep=queue-public-api"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/executor-modes/results/queue-public-api-boundary-2.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=score-executor-modes",
+      "ripwire . --grep=queue-public-api"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/executor-modes/results/queue-public-api-boundary-3.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=score-executor-modes",
+      "ripwire . --grep=queue-public-api"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/executor-modes/results/queue-public-api-function_first-1.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=score-executor-modes",
+      "ripwire . --grep=queue-public-api"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/executor-modes/results/queue-public-api-function_first-2.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=score-executor-modes",
+      "ripwire . --grep=queue-public-api"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/executor-modes/results/queue-public-api-function_first-3.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=score-executor-modes",
+      "ripwire . --grep=queue-public-api"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/executor-modes/results/queue-public-api-strict-1.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=score-executor-modes",
+      "ripwire . --grep=queue-public-api"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/executor-modes/results/queue-public-api-strict-2.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=score-executor-modes",
+      "ripwire . --grep=queue-public-api"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/executor-modes/results/queue-public-api-strict-3.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=score-executor-modes",
+      "ripwire . --grep=queue-public-api"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/executor-modes/results/report-formatter-boundary-1.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=score-executor-modes",
+      "ripwire . --grep=queue-public-api"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/executor-modes/results/report-formatter-boundary-2.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=score-executor-modes",
+      "ripwire . --grep=queue-public-api"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/executor-modes/results/report-formatter-boundary-3.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=score-executor-modes",
+      "ripwire . --grep=queue-public-api"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/executor-modes/results/report-formatter-function_first-1.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=score-executor-modes",
+      "ripwire . --grep=queue-public-api"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/executor-modes/results/report-formatter-function_first-2.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=score-executor-modes",
+      "ripwire . --grep=queue-public-api"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/executor-modes/results/report-formatter-function_first-3.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=score-executor-modes",
+      "ripwire . --grep=queue-public-api"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/executor-modes/results/report-formatter-strict-1.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=score-executor-modes",
+      "ripwire . --grep=queue-public-api"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/executor-modes/results/report-formatter-strict-2.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=score-executor-modes",
+      "ripwire . --grep=queue-public-api"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/executor-modes/results/report-formatter-strict-3.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=score-executor-modes",
+      "ripwire . --grep=queue-public-api"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/headless-actors/codex": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=headless-actors"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/headless-actors/empty-version": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=headless-actors"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/headless-actors/invalid-utf8": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=headless-actors"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/headless-actors/orphaned-child": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=headless-actors"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/headless-actors/supervisor-signal": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=headless-actors"
+    ]
+  },
+  "tests/speckit-pro/unit/test-executor-mode-scorer.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --for=\"headless eval runner case catalog and eval json loading\""
+    ]
+  },
+  "tests/speckit-pro/unit/test-functional-headless-runner.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --callers=enumerate_codex_mcp_servers",
+      "ripwire . --grep=headless_cases.json"
+    ]
+  }
+}

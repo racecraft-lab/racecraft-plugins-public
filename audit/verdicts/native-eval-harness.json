@@ -1,0 +1,632 @@
+{
+  "tests/speckit-pro/evals/README.md": {
+    "verdict": [
+      "native-eval-harness-001",
+      "native-eval-harness-008",
+      "native-eval-harness-009"
+    ],
+    "checks_run": [
+      "ripwire . --grep=README.md"
+    ]
+  },
+  "tests/speckit-pro/evals/audit/deterministic-audit.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=deterministic-audit.md"
+    ]
+  },
+  "tests/speckit-pro/evals/audit/deterministic-inventory.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=deterministic-inventory.json"
+    ]
+  },
+  "tests/speckit-pro/evals/audit/execution-surface-inventory.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=execution-surface-inventory.json"
+    ]
+  },
+  "tests/speckit-pro/evals/audit/execution-surface-inventory.md": {
+    "verdict": [
+      "native-eval-harness-008"
+    ],
+    "checks_run": [
+      "ripwire . --grep=execution-surface-inventory.md"
+    ]
+  },
+  "tests/speckit-pro/evals/audit/functional-audit.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=functional-audit.md"
+    ]
+  },
+  "tests/speckit-pro/evals/audit/functional-inventory.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=functional-inventory.json"
+    ]
+  },
+  "tests/speckit-pro/evals/audit/integration-parity-audit.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=integration-parity-audit.md"
+    ]
+  },
+  "tests/speckit-pro/evals/audit/integration-parity-inventory.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=integration-parity-inventory.json"
+    ]
+  },
+  "tests/speckit-pro/evals/audit/native-agent-bootstrap-reconciliation.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=native-agent-bootstrap-reconciliation.md"
+    ]
+  },
+  "tests/speckit-pro/evals/audit/trigger-audit.md": {
+    "verdict": [
+      "native-eval-harness-008"
+    ],
+    "checks_run": [
+      "ripwire . --grep=trigger-audit.md"
+    ]
+  },
+  "tests/speckit-pro/evals/audit/trigger-inventory.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=trigger-inventory.json"
+    ]
+  },
+  "tests/speckit-pro/evals/audit/unit-execution-contract-audit.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=unit-execution-contract-audit.json"
+    ]
+  },
+  "tests/speckit-pro/evals/audit/unit-execution-contract-audit.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=unit-execution-contract-audit.md"
+    ]
+  },
+  "tests/speckit-pro/evals/audit/unit-final-remainder-audit.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=unit-final-remainder-audit.json"
+    ]
+  },
+  "tests/speckit-pro/evals/audit/unit-final-remainder-audit.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=unit-final-remainder-audit.md"
+    ]
+  },
+  "tests/speckit-pro/evals/audit/unit-native-migration-audit.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=unit-native-migration-audit.json"
+    ]
+  },
+  "tests/speckit-pro/evals/audit/unit-native-migration-audit.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=unit-native-migration-audit.md"
+    ]
+  },
+  "tests/speckit-pro/evals/audit/unit-remaining-behavior-audit.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=unit-remaining-behavior-audit.json"
+    ]
+  },
+  "tests/speckit-pro/evals/audit/unit-remaining-behavior-audit.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=unit-remaining-behavior-audit.md"
+    ]
+  },
+  "tests/speckit-pro/evals/audit/unit-remaining-layer4-audit.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=unit-remaining-layer4-audit.json"
+    ]
+  },
+  "tests/speckit-pro/evals/audit/unit-remaining-layer4-audit.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=unit-remaining-layer4-audit.md"
+    ]
+  },
+  "tests/speckit-pro/evals/audit/unit-remaining-support-audit.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=unit-remaining-support-audit.json"
+    ]
+  },
+  "tests/speckit-pro/evals/audit/unit-remaining-support-audit.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=unit-remaining-support-audit.md"
+    ]
+  },
+  "tests/speckit-pro/evals/audit/unit-trigger-audit.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=unit-trigger-audit.json"
+    ]
+  },
+  "tests/speckit-pro/evals/audit/unit-trigger-audit.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=unit-trigger-audit.md"
+    ]
+  },
+  "tests/speckit-pro/evals/audit/unit-workflow-eval-audit.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=unit-workflow-eval-audit.json"
+    ]
+  },
+  "tests/speckit-pro/evals/audit/unit-workflow-eval-audit.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=unit-workflow-eval-audit.md"
+    ]
+  },
+  "tests/speckit-pro/evals/catalog.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=catalog.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/runtime-agent/runtime-probe.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=runtime-probe.txt"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/search-observation/workspace/.search-fixtures/nested/docs/ai/specs/SPEC-777-workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-777-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/search-observation/workspace/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=README.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/search-observation/workspace/notes/current-technical-roadmap.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=current-technical-roadmap.txt"
+    ]
+  },
+  "tests/speckit-pro/evals/native-runner-progress.md": {
+    "verdict": [
+      "native-eval-harness-007"
+    ],
+    "checks_run": [
+      "ripwire . --grep=native-runner-progress.md"
+    ]
+  },
+  "tests/speckit-pro/lib/native_eval_adapters.py": {
+    "verdict": [
+      "native-eval-harness-002",
+      "native-eval-harness-010"
+    ],
+    "checks_run": [
+      "ripwire . --grep=native_eval_adapters.py",
+      "ripwire . --callers=native_eval_adapters"
+    ]
+  },
+  "tests/speckit-pro/lib/native_eval_capture.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=native_eval_capture.py",
+      "ripwire . --callers=native_eval_capture"
+    ]
+  },
+  "tests/speckit-pro/lib/native_eval_catalog.py": {
+    "verdict": [
+      "native-eval-harness-009"
+    ],
+    "checks_run": [
+      "ripwire . --grep=native_eval_catalog.py",
+      "ripwire . --callers=native_eval_catalog"
+    ]
+  },
+  "tests/speckit-pro/lib/native_eval_claude_activation.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=native_eval_claude_activation.py",
+      "ripwire . --callers=native_eval_claude_activation"
+    ]
+  },
+  "tests/speckit-pro/lib/native_eval_codex_rollouts.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=native_eval_codex_rollouts.py",
+      "ripwire . --callers=native_eval_codex_rollouts"
+    ]
+  },
+  "tests/speckit-pro/lib/native_eval_dispatch_context.py": {
+    "verdict": [
+      "native-eval-harness-006"
+    ],
+    "checks_run": [
+      "ripwire . --grep=native_eval_dispatch_context.py",
+      "ripwire . --callers=native_eval_dispatch_context"
+    ]
+  },
+  "tests/speckit-pro/lib/native_eval_execution.py": {
+    "verdict": [
+      "native-eval-harness-002",
+      "native-eval-harness-006"
+    ],
+    "checks_run": [
+      "ripwire . --grep=native_eval_execution.py",
+      "ripwire . --callers=native_eval_execution"
+    ]
+  },
+  "tests/speckit-pro/lib/native_eval_fixture_reads.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=native_eval_fixture_reads.py",
+      "ripwire . --callers=native_eval_fixture_reads"
+    ]
+  },
+  "tests/speckit-pro/lib/native_eval_fixture_setup.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=native_eval_fixture_setup.py",
+      "ripwire . --callers=native_eval_fixture_setup"
+    ]
+  },
+  "tests/speckit-pro/lib/native_eval_git_grading.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=native_eval_git_grading.py",
+      "ripwire . --callers=native_eval_git_grading"
+    ]
+  },
+  "tests/speckit-pro/lib/native_eval_git_observation.py": {
+    "verdict": [
+      "native-eval-harness-006"
+    ],
+    "checks_run": [
+      "ripwire . --grep=native_eval_git_observation.py",
+      "ripwire . --callers=native_eval_git_observation"
+    ]
+  },
+  "tests/speckit-pro/lib/native_eval_grading.py": {
+    "verdict": [
+      "native-eval-harness-003"
+    ],
+    "checks_run": [
+      "ripwire . --grep=native_eval_grading.py",
+      "ripwire . --callers=native_eval_grading"
+    ]
+  },
+  "tests/speckit-pro/lib/native_eval_judge.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=native_eval_judge.py",
+      "ripwire . --callers=native_eval_judge"
+    ]
+  },
+  "tests/speckit-pro/lib/native_eval_pairing.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=native_eval_pairing.py",
+      "ripwire . --callers=native_eval_pairing"
+    ]
+  },
+  "tests/speckit-pro/lib/native_eval_pool.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=native_eval_pool.py",
+      "ripwire . --callers=native_eval_pool"
+    ]
+  },
+  "tests/speckit-pro/lib/native_eval_runner_result.py": {
+    "verdict": [
+      "native-eval-harness-002",
+      "native-eval-harness-003"
+    ],
+    "checks_run": [
+      "ripwire . --grep=native_eval_runner_result.py",
+      "ripwire . --callers=native_eval_runner_result"
+    ]
+  },
+  "tests/speckit-pro/lib/native_eval_runtime.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=native_eval_runtime.py",
+      "ripwire . --callers=native_eval_runtime"
+    ]
+  },
+  "tests/speckit-pro/lib/native_eval_skill_reads.py": {
+    "verdict": [
+      "native-eval-harness-005"
+    ],
+    "checks_run": [
+      "ripwire . --grep=native_eval_skill_reads.py",
+      "ripwire . --callers=native_eval_skill_reads"
+    ]
+  },
+  "tests/speckit-pro/lib/native_eval_store.py": {
+    "verdict": [
+      "native-eval-harness-002"
+    ],
+    "checks_run": [
+      "ripwire . --grep=native_eval_store.py",
+      "ripwire . --callers=native_eval_store"
+    ]
+  },
+  "tests/speckit-pro/lib/native_eval_toolchain.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=native_eval_toolchain.py",
+      "ripwire . --callers=native_eval_toolchain"
+    ]
+  },
+  "tests/speckit-pro/lib/native_eval_trigger.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=native_eval_trigger.py",
+      "ripwire . --callers=native_eval_trigger"
+    ]
+  },
+  "tests/speckit-pro/lib/native_eval_upstream.py": {
+    "verdict": [
+      "native-eval-harness-002"
+    ],
+    "checks_run": [
+      "ripwire . --grep=native_eval_upstream.py",
+      "ripwire . --callers=native_eval_upstream"
+    ]
+  },
+  "tests/speckit-pro/lib/native_eval_verification.py": {
+    "verdict": [
+      "native-eval-harness-002",
+      "native-eval-harness-003",
+      "native-eval-harness-006"
+    ],
+    "checks_run": [
+      "ripwire . --grep=native_eval_verification.py",
+      "ripwire . --callers=native_eval_verification"
+    ]
+  },
+  "tests/speckit-pro/run-native-evals.py": {
+    "verdict": [
+      "native-eval-harness-012"
+    ],
+    "checks_run": [
+      "ripwire . --grep=run-native-evals.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-eval-runner-skill-selection.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-eval-runner-skill-selection.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-eval-adapters.py": {
+    "verdict": [
+      "native-eval-harness-011"
+    ],
+    "checks_run": [
+      "ripwire . --grep=test-native-eval-adapters.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-eval-capture.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-native-eval-capture.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-eval-claude-activation.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-native-eval-claude-activation.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-eval-codex-rollouts.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-native-eval-codex-rollouts.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-eval-contracts.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-native-eval-contracts.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-eval-dispatch-context.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-native-eval-dispatch-context.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-eval-entrypoint.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-native-eval-entrypoint.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-eval-execution.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-native-eval-execution.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-eval-fixture-reads.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-native-eval-fixture-reads.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-eval-fixture-setup.py": {
+    "verdict": [
+      "native-eval-harness-004"
+    ],
+    "checks_run": [
+      "ripwire . --grep=test-native-eval-fixture-setup.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-eval-git-grading.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-native-eval-git-grading.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-eval-git-observation.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-native-eval-git-observation.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-eval-judge.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-native-eval-judge.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-eval-pairing.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-native-eval-pairing.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-eval-pool.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-native-eval-pool.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-eval-runner-result.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-native-eval-runner-result.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-eval-runtime.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-native-eval-runtime.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-eval-search.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-native-eval-search.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-eval-skill-reads.py": {
+    "verdict": [
+      "native-eval-harness-005"
+    ],
+    "checks_run": [
+      "ripwire . --grep=test-native-eval-skill-reads.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-eval-store.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-native-eval-store.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-eval-toolchain.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-native-eval-toolchain.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-eval-trigger.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-native-eval-trigger.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-eval-upstream.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-native-eval-upstream.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-eval-verification.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-native-eval-verification.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-functional-catalog.py": {
+    "verdict": [
+      "native-eval-harness-011"
+    ],
+    "checks_run": [
+      "ripwire . --grep=test-native-functional-catalog.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-integration-catalog.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-native-integration-catalog.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-parity-catalog.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-native-parity-catalog.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-response-json.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-native-response-json.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-scaffold-noninteractive.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-native-scaffold-noninteractive.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-trigger-catalog.py": {
+    "verdict": [
+      "native-eval-harness-011"
+    ],
+    "checks_run": [
+      "ripwire . --grep=test-native-trigger-catalog.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-workflow-binding-fixtures.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-native-workflow-binding-fixtures.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-native-worktree-migration.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-native-worktree-migration.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-trigger-eval-runners.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-trigger-eval-runners.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-unit-layout.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-unit-layout.py"
+    ]
+  }
+}

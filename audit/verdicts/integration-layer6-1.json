@@ -1,0 +1,565 @@
+{
+  "speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md": {
+    "verdict": [
+      "integration-layer6-1-001",
+      "integration-layer6-1-004",
+      "integration-layer6-1-007"
+    ],
+    "checks_run": [
+      "ripwire . --grep=agent-teams-integration.md"
+    ]
+  },
+  "speckit-pro/skills/speckit-autopilot/references/grounding.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=grounding.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/grounding/coach-checklist/spec.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=spec.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/grounding/status-blocked/docs/ai/current-technical-roadmap.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=current-technical-roadmap.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/grounding/status-multiple/docs/ai/current-quarter-technical-roadmap.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=current-quarter-technical-roadmap.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/grounding/status-multiple/docs/ai/last-quarter-technical-roadmap.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=last-quarter-technical-roadmap.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/grounding/status-specific/docs/ai/current-technical-roadmap.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=current-technical-roadmap.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/grounding/status-specific/docs/ai/specs/SPEC-013-workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-013-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/integration-return-contracts/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=README.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-01-synthesizer-disagreement/codebase-analyst.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=codebase-analyst.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-01-synthesizer-disagreement/domain-researcher.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=domain-researcher.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-02-synthesizer-majority/codebase-analyst.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=codebase-analyst.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-02-synthesizer-majority/domain-researcher.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=domain-researcher.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-02-synthesizer-majority/spec-context-analyst.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=spec-context-analyst.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-03-analyze-confidence/analyze-result.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=analyze-result.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-04-keyword-only-majority/codebase-analyst.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=codebase-analyst.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-04-keyword-only-majority/domain-researcher.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=domain-researcher.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-04-keyword-only-majority/spec-context-analyst.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=spec-context-analyst.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-05-keyword-security-relevant/codebase-analyst.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=codebase-analyst.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-05-keyword-security-relevant/domain-researcher.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=domain-researcher.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-05-keyword-security-relevant/spec-context-analyst.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=spec-context-analyst.md"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/README.md": {
+    "verdict": [
+      "integration-layer6-1-002",
+      "integration-layer6-1-003"
+    ],
+    "checks_run": [
+      "ripwire . --grep=README.md"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/01-clarify-codebase-only/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=README.md"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/01-clarify-codebase-only/expected.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=expected.json"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/01-clarify-codebase-only/parser-fixture.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=parser-fixture.jsonl"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/01-clarify-codebase-only/prompt.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=prompt.txt"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/02-clarify-multi-category/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=README.md"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/02-clarify-multi-category/expected.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=expected.json"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/02-clarify-multi-category/parser-fixture.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=parser-fixture.jsonl"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/02-clarify-multi-category/prompt.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=prompt.txt"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/03-redelegation-chain/README.md": {
+    "verdict": [
+      "integration-layer6-1-005"
+    ],
+    "checks_run": [
+      "ripwire . --grep=README.md"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/03-redelegation-chain/expected.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=expected.json"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/03-redelegation-chain/parser-fixture.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=parser-fixture.jsonl"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/03-redelegation-chain/prompt.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=prompt.txt"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/03-redelegation-chain/sample-spec.md": {
+    "verdict": [
+      "integration-layer6-1-005"
+    ],
+    "checks_run": [
+      "ripwire . --grep=sample-spec.md"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/04-clarify-domain-only/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=README.md"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/04-clarify-domain-only/expected.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=expected.json"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/04-clarify-domain-only/parser-fixture.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=parser-fixture.jsonl"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/04-clarify-domain-only/prompt.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=prompt.txt"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/05-clarify-spec-only/expected.json": {
+    "verdict": [
+      "integration-layer6-1-003"
+    ],
+    "checks_run": [
+      "ripwire . --grep=expected.json"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/05-clarify-spec-only/parser-fixture.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=parser-fixture.jsonl"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/05-clarify-spec-only/prompt.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=prompt.txt"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/06-clarify-security-fanout/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=README.md"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/06-clarify-security-fanout/expected.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=expected.json"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/06-clarify-security-fanout/parser-fixture.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=parser-fixture.jsonl"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/06-clarify-security-fanout/prompt.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=prompt.txt"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/08-clarify-codebase-spec/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=README.md"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/08-clarify-codebase-spec/expected.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=expected.json"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/08-clarify-codebase-spec/parser-fixture.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=parser-fixture.jsonl"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/08-clarify-codebase-spec/prompt.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=prompt.txt"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/09-clarify-domain-spec/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=README.md"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/09-clarify-domain-spec/expected.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=expected.json"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/09-clarify-domain-spec/parser-fixture.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=parser-fixture.jsonl"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/09-clarify-domain-spec/prompt.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=prompt.txt"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/10-clarify-all-three/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=README.md"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/10-clarify-all-three/expected.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=expected.json"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/10-clarify-all-three/parser-fixture.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=parser-fixture.jsonl"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/10-clarify-all-three/prompt.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=prompt.txt"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/11-clarify-round2-escape/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=README.md"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/11-clarify-round2-escape/expected.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=expected.json"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/11-clarify-round2-escape/parser-fixture.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=parser-fixture.jsonl"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/11-clarify-round2-escape/prompt.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=prompt.txt"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/12-tasks-phase/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=README.md"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/12-tasks-phase/expected.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=expected.json"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/12-tasks-phase/parser-fixture.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=parser-fixture.jsonl"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/12-tasks-phase/prompt.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=prompt.txt"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/12-tasks-phase/sample-spec.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=sample-spec.md"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/12-tasks-phase/tasks.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tasks.md"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/13-implement-task/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=README.md"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/13-implement-task/expected.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=expected.json"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/13-implement-task/parser-fixture.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=parser-fixture.jsonl"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/13-implement-task/prompt.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=prompt.txt"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/14-analyze-phase/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=README.md"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/14-analyze-phase/expected.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=expected.json"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/14-analyze-phase/parser-fixture.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=parser-fixture.jsonl"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/14-analyze-phase/prompt.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=prompt.txt"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/15-checklist-phase/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=README.md"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/15-checklist-phase/expected.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=expected.json"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/15-checklist-phase/parser-fixture.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=parser-fixture.jsonl"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/15-checklist-phase/prompt.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=prompt.txt"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/17-phase-error-handling/README.md": {
+    "verdict": [
+      "integration-layer6-1-006"
+    ],
+    "checks_run": [
+      "ripwire . --grep=README.md"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/17-phase-error-handling/expected.json": {
+    "verdict": [
+      "integration-layer6-1-006"
+    ],
+    "checks_run": [
+      "ripwire . --grep=expected.json"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/17-phase-error-handling/parser-fixture.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=parser-fixture.jsonl"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/17-phase-error-handling/prompt.txt": {
+    "verdict": [
+      "integration-layer6-1-006"
+    ],
+    "checks_run": [
+      "ripwire . --grep=prompt.txt"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/18-post-impl-parallel-subagents/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=README.md"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/18-post-impl-parallel-subagents/expected.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=expected.json"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/18-post-impl-parallel-subagents/parser-fixture.jsonl": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=parser-fixture.jsonl"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/18-post-impl-parallel-subagents/prompt.txt": {
+    "verdict": [
+      "integration-layer6-1-004"
+    ],
+    "checks_run": [
+      "ripwire . --grep=prompt.txt"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/19-implement-parallel-p-tasks/README.md": {
+    "verdict": [
+      "integration-layer6-1-001"
+    ],
+    "checks_run": [
+      "ripwire . --grep=README.md"
+    ]
+  },
+  "tests/speckit-pro/layer6-integration/dispatch-fixtures/19-implement-parallel-p-tasks/expected.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=expected.json"
+    ]
+  }
+}

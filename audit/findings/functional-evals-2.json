@@ -1,0 +1,141 @@
+[
+  {
+    "id": "functional-evals-2-001",
+    "lane": "functional-evals-2",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer3-functional/evals/grill-me-evals.json:55",
+      "tests/speckit-pro/layer3-functional/evals/grill-me-evals.json:71",
+      "tests/speckit-pro/layer3-functional/evals/grill-me-evals.json:77",
+      "speckit-pro/skills/grill-me/SKILL.md:34"
+    ],
+    "ripwire_command": "ripwire . --grep=speckit-pro:scaffold-spec",
+    "summary": "Claude grill-me evals 5, 6 and 7 name /speckit-pro:scaffold-spec and /speckit-pro:autopilot, which are not skills. The skills are speckit-scaffold-spec and speckit-autopilot. Eval 6 requires the answer to state that exact wrong command, and the Codex twins use the right names.",
+    "proposed_fix": "Rename to /speckit-pro:speckit-scaffold-spec and /speckit-pro:speckit-autopilot (and /scaffold-spec to the full name) in prompts, expected_output and expectations of evals 5 to 7.",
+    "in_flight_status": null
+  },
+  {
+    "id": "functional-evals-2-002",
+    "lane": "functional-evals-2",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json:43",
+      "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json:48",
+      "speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md:336-345"
+    ],
+    "ripwire_command": "ripwire . --grep=Aggressive Mode",
+    "summary": "Eval 4 says aggressive mode auto-accepts single-agent answers with a lower agreement threshold. The protocol keeps the 2/3 threshold in aggressive mode and only differs by synthesizing an answer when all analysts disagree and by stopping only on security items. The Codex twin repeats the same wording.",
+    "proposed_fix": "Rewrite the expected_output and the aggressive expectation to match consensus-protocol.md (2/3 auto-answers, all-disagree still proceeds, only unresolved security items stop). Apply the same edit to codex-evals/speckit-autopilot-evals.json:43-48.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "functional-evals-2-003",
+    "lane": "functional-evals-2",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer3-functional/fixtures/autopilot/SPEC-009/docs/ai/specs/SPEC-009-workflow.md:24",
+      "tests/speckit-pro/layer3-functional/fixtures/autopilot/SPEC-009/docs/ai/specs/SPEC-009-workflow.md:216-230",
+      "speckit-pro/skills/speckit-coach/templates/workflow-template.md:43"
+    ],
+    "ripwire_command": "ripwire . --grep=canonical 12-item closeout",
+    "summary": "The SPEC-009 workflow fixture calls the Post list a canonical 12-item closeout, but it lists 11 rows, the template says 11, and the shipped evals say 11.",
+    "proposed_fix": "Change the fixture note to canonical 11-item closeout (fixture bytes are hashed elsewhere, so regenerate any dependent digest).",
+    "in_flight_status": null
+  },
+  {
+    "id": "functional-evals-2-004",
+    "lane": "functional-evals-2",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer3-functional/evals/speckit-prd-evals.json:12",
+      "tests/speckit-pro/layer3-functional/evals/speckit-prd-evals.json:36",
+      "speckit-pro/skills/speckit-coach/templates/prd-template.md:149",
+      "speckit-pro/skills/speckit-prd/SKILL.md:63-69"
+    ],
+    "ripwire_command": "ripwire . --grep=SPEC Catalog Crosswalk",
+    "summary": "PRD eval 3 checks the crosswalk at section 7, but the template puts it at section 8 after the required Module and Interface Deltas. Eval 1 lists the PRD sections without Module and Interface Deltas or the crosswalk, and omits the required roadmap-MOC artifact. The Codex twin repeats both.",
+    "proposed_fix": "Drop the section numbers or use 8, and align eval 1's section list and artifact list with the PRD output contract. Mirror in codex-evals/speckit-prd-evals.json:12,36.",
+    "in_flight_status": null
+  },
+  {
+    "id": "functional-evals-2-005",
+    "lane": "functional-evals-2",
+    "severity": "major",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/layer3-functional/run-headless-evals.py:34-37",
+      "tests/speckit-pro/layer3-functional/run-headless-evals.py:349-410",
+      "tests/speckit-pro/layer2-trigger/run_codex_evals.py:62-65",
+      "tests/speckit-pro/layer2-trigger/run_codex_evals.py:559-635",
+      "tests/speckit-pro/layer3-functional/run-headless-evals.py:342"
+    ],
+    "ripwire_command": "ripwire . --callers=skill_isolation_args",
+    "summary": "Layer 3 already imports the Layer 2 Codex runner, yet it re-implements the permission args, MCP inventory and skill isolation args. The copies drifted: CODEX_DISABLED_FEATURES lacks unbounded_connection_retries, which Layer 2 disables, and Layer 3 reaches into the private _canonical_skill_files.",
+    "proposed_fix": "Move the shared Codex isolation helpers and feature list into one module under tests/speckit-pro/lib and import it from both layers.",
+    "in_flight_status": null
+  },
+  {
+    "id": "functional-evals-2-006",
+    "lane": "functional-evals-2",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/layer3-functional/headless_cases.json:42",
+      "tests/speckit-pro/layer3-functional/run-headless-evals.py:1038",
+      "tests/speckit-pro/layer3-functional/run-headless-evals.py:1067-1073"
+    ],
+    "ripwire_command": "ripwire . --grep=required_tools",
+    "summary": "required_tools is enforced only for Codex cases. The Claude branch of require_provider_evidence returns before the check, so the 54 Claude cases that require Skill and Read carry unenforced metadata. launch_policy read_only and restricted_read_only are likewise never read; only hold is.",
+    "proposed_fix": "Enforce required_tools against the Claude tool trace, or drop the field and the unused launch_policy values from Claude cases.",
+    "in_flight_status": null
+  },
+  {
+    "id": "functional-evals-2-007",
+    "lane": "functional-evals-2",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer3-functional/evals/speckit-upgrade-evals.json:1-17",
+      "tests/speckit-pro/layer3-functional/codex-evals/speckit-upgrade-evals.json:1-65",
+      "tests/speckit-pro/layer3-functional/evals/speckit-install-evals.json:1-30",
+      "tests/speckit-pro/layer3-functional/codex-evals/speckit-install-evals.json:1"
+    ],
+    "ripwire_command": "ripwire . --grep=speckit-upgrade-evals",
+    "summary": "Claude Layer 3 evals cover only 1 of the 5 Codex speckit-upgrade behaviors (snapshot, --force restore, legacy dedupe, missing .specify), and 2 of 3 install cases. The Claude evals directory has no speckit-status, speckit-resolve-pr or speckit-archive-cleanup file, while Codex has status and resolve-pr.",
+    "proposed_fix": "Port the missing upgrade, install, status and resolve-pr cases to the Claude evals directory, or record the intentional gap in the functional audit.",
+    "in_flight_status": null
+  },
+  {
+    "id": "functional-evals-2-008",
+    "lane": "functional-evals-2",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer3-functional/executor-modes/score-executor-modes.py:91-121",
+      "tests/speckit-pro/layer3-functional/executor-modes/score-executor-modes.py:124-140",
+      "tests/speckit-pro/layer3-functional/executor-modes/catalog.json:8",
+      "docs/ai/specs/executor-mode-paired-eval-design.md:52-54"
+    ],
+    "ripwire_command": "ripwire . --grep=score-executor-modes",
+    "summary": "The scorer says exit 1 is for malformed input, but a result file holding a non-object JSON value raises an uncaught TypeError traceback. Duplicate (case, mode, seed) documents are accepted and blended into the median, and the catalog repeats value is never read, so a short or duplicated run set scores silently.",
+    "proposed_fix": "Reject non-object documents and duplicate seeds as InputError, and check each (case, mode) has catalog repeats distinct seeds or report the shortfall.",
+    "in_flight_status": null
+  },
+  {
+    "id": "functional-evals-2-009",
+    "lane": "functional-evals-2",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/layer3-functional/run-headless-evals.py:1121-1326"
+    ],
+    "ripwire_command": "ripwire . --grep=def main",
+    "summary": "main() is about 200 lines (cyclomatic complexity 40) and mixes argument validation, staging, launch, event parsing, evidence writing and manifest status in one function.",
+    "proposed_fix": "Split into a per-case runner returning a manifest and a thin main that loops cases.",
+    "in_flight_status": null
+  }
+]

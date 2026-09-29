@@ -1,0 +1,109 @@
+[
+  {
+    "id": "integration-layer6-1-001",
+    "lane": "integration-layer6-1",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer6-integration/dispatch-fixtures/19-implement-parallel-p-tasks/README.md:5-16",
+      "tests/speckit-pro/layer6-integration/dispatch-fixtures/19-implement-parallel-p-tasks/prompt.txt:12-27",
+      "tests/speckit-pro/layer6-integration/dispatch-fixtures/19-implement-parallel-p-tasks/parser-fixture.jsonl:1",
+      "speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md:171-173",
+      "speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md:216-219"
+    ],
+    "ripwire_command": "ripwire . --grep=isolation",
+    "summary": "Fixture 19 requires each Phase 7 [P] worker to carry isolation: worktree and cites a run-partitioning algorithm in phase-execution.md Step 3. The reference forbids per-agent worktree isolation for Phase 7, requires declared disjoint file ownership (T001-T003 declare none, so they serialize), and now partitions through the partition-phase7-tasks helper. The fixture encodes retired behavior and nothing asserts the isolation field.",
+    "proposed_fix": "Rewrite the fixture 19 prompt, README and parser fixture to the current contract: no isolation field, tasks with declared disjoint ownership, partition-phase7-tasks batches. Update the citation from Step 3 to Steps 3a-3b.",
+    "in_flight_status": null
+  },
+  {
+    "id": "integration-layer6-1-002",
+    "lane": "integration-layer6-1",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer6-integration/README.md:326-341",
+      "tests/speckit-pro/layer6-integration/README.md:33",
+      "tests/speckit-pro/layer6-integration/README.md:314"
+    ],
+    "ripwire_command": "ripwire . --grep=validate-codex-skills",
+    "summary": "The Codex side section names validate-codex-skills.sh and validate-codex-agents.sh as the structural coverage, but neither file exists anywhere in the repo (checks now live in Python validators). The README also calls this layer L7 in six places, while layer 7 in suite-manifest.json is the parity layer (layer7-parity) and this directory is layer 6.",
+    "proposed_fix": "Point the Codex section at the actual Python validators (validate-agent-contracts.py, validate-skill-contracts.py or wherever those assertions live) and rename L7 to L6 in the README and in the fixture READMEs and sample specs that repeat it.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "integration-layer6-1-003",
+    "lane": "integration-layer6-1",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer6-integration/README.md:31-72",
+      "tests/speckit-pro/layer6-integration/README.md:294-302",
+      "tests/speckit-pro/layer6-integration/dispatch-fixtures/05-clarify-spec-only/expected.json:1"
+    ],
+    "ripwire_command": "ripwire . --grep=20-consensus-multi-item-batch",
+    "summary": "The coverage matrix, subagents-reached list and cost-guard table stop at dispatch fixtures 01-17, and omit fixtures 18-22 (post-impl parallel, Phase 7 parallel, batch consensus, resolve-pr, stack manager) and the Class 4 grounding budget. Fixture 05 is the only dispatch fixture with no README, though the Fixture format section lists README.md for each.",
+    "proposed_fix": "Add rows for fixtures 18-22 and the grounding class to the matrix and guards, and add a README to fixture 05.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "integration-layer6-1-004",
+    "lane": "integration-layer6-1",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer6-integration/dispatch-fixtures/18-post-impl-parallel-subagents/prompt.txt:5-7",
+      "speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md:77-92",
+      "speckit-pro/speckit_pro_runner/helpers/read_only.py:3075"
+    ],
+    "ripwire_command": "ripwire . --grep=2.1.32",
+    "summary": "Fixture 18's prompt says AGENT_TEAMS_AVAILABLE is false when the env var is unset or Claude Code is older than 2.1.32. The reference and resolver require 2.1.178, an interactive session and passed live UAT, so the fixture states a retired capability rule.",
+    "proposed_fix": "Reword the prompt to say the runtime record reports teams unavailable, without a version number.",
+    "in_flight_status": null
+  },
+  {
+    "id": "integration-layer6-1-005",
+    "lane": "integration-layer6-1",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer6-integration/dispatch-fixtures/03-redelegation-chain/sample-spec.md:8-27",
+      "tests/speckit-pro/layer6-integration/dispatch-fixtures/03-redelegation-chain/README.md:5-20",
+      "speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md:345-363"
+    ],
+    "ripwire_command": "ripwire . --grep=password",
+    "summary": "The fixture 03 sample spec says Clarify should tag the password-hashing ambiguity [codebase, domain]. The word password is a security keyword, so parse-consensus-categories widens any such item to all three analysts and raises the bar to unanimity. The unit test that guards routing skips this fixture because its prompt has no fenced tagged item. The expected.json only requires one analyst, so the drift is silent.",
+    "proposed_fix": "Change the sample spec to a keyword-free ambiguity, or state that the item widens to all three and assert that in expected.json.",
+    "in_flight_status": null
+  },
+  {
+    "id": "integration-layer6-1-006",
+    "lane": "integration-layer6-1",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer6-integration/dispatch-fixtures/17-phase-error-handling/prompt.txt:17-21",
+      "tests/speckit-pro/layer6-integration/dispatch-fixtures/17-phase-error-handling/expected.json:3",
+      "tests/speckit-pro/layer6-integration/dispatch-fixtures/17-phase-error-handling/README.md:7-10",
+      "speckit-pro/skills/speckit-autopilot/references/error-recovery.md:64-70"
+    ],
+    "ripwire_command": "ripwire . --grep=Never Stop",
+    "summary": "Fixture 17 offers stop and report the blocking issue as an acceptable outcome. The reference says a blocked action falls back or defers to the end-of-run request and never stops the run or asks mid-run.",
+    "proposed_fix": "Replace option (b) with defer to the end-of-run request and add must_not_include_terms for asking the user. The open stop-policy stack already does this.",
+    "in_flight_status": "fixed-in-flight"
+  },
+  {
+    "id": "integration-layer6-1-007",
+    "lane": "integration-layer6-1",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/skills/speckit-autopilot/SKILL.md:858",
+      "speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md:120-139"
+    ],
+    "ripwire_command": "ripwire . --grep=agent-teams-integration",
+    "summary": "SKILL.md indexes the agent-teams reference as a use-site map of current plus planned sites. The reference now lists six current sites and no planned ones.",
+    "proposed_fix": "Drop the word planned from the SKILL.md index line.",
+    "in_flight_status": null
+  }
+]

@@ -1,0 +1,571 @@
+{
+  "docs/ai/specs/executor-mode-paired-eval-design.md": {
+    "verdict": [
+      "functional-evals-1-004"
+    ],
+    "checks_run": [
+      "ripwire . --grep=executor-mode-paired-eval-design.md",
+      "ripwire . --grep=mutation-floor"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/autopilot-prerequisites/check-prerequisites-request.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=check-prerequisites-request.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/autopilot-scenarios/common/project.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=project.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/autopilot-scenarios/confidence/direct-source.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=direct-source.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/autopilot-scenarios/confidence/fallback-source.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=fallback-source.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/autopilot-scenarios/evidence-presentation/external-source.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=external-source.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/autopilot-scenarios/evidence-presentation/local-source.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=local-source.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/autopilot-scenarios/partial-plan.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=partial-plan.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/autopilot-scenarios/partial-state.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=partial-state.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/autopilot-scenarios/placeholder-plan.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=placeholder-plan.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/autopilot-scenarios/placeholder-state.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=placeholder-state.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/autopilot-scenarios/plan-repair/explicit/architecture.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=architecture.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/autopilot-scenarios/plan-repair/explicit/clarify-results.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=clarify-results.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/autopilot-scenarios/plan-repair/explicit/context-request.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=context-request.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/autopilot-scenarios/plan-repair/explicit/g3-request.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=g3-request.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/autopilot-scenarios/plan-repair/explicit/original-plan-prompt.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=original-plan-prompt.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/autopilot-scenarios/plan-repair/explicit/plan.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=plan.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/autopilot-scenarios/plan-repair/explicit/workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=workflow.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/autopilot-scenarios/plan-repair/inference/clarify-results.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=clarify-results.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/autopilot-scenarios/plan-repair/inference/context-request.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=context-request.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/autopilot-scenarios/plan-repair/inference/g3-request.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=g3-request.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/autopilot-scenarios/plan-repair/inference/original-plan-prompt.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=original-plan-prompt.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/autopilot-scenarios/plan-repair/inference/plan.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=plan.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/autopilot-scenarios/plan-repair/inference/workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=workflow.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/autopilot-scenarios/tasks-after-g5.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tasks-after-g5.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/coach-redirect/workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=workflow.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/criterion-examples.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=criterion-examples.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/legacy-selection.json": {
+    "verdict": [
+      "functional-evals-1-002"
+    ],
+    "checks_run": [
+      "ripwire . --grep=legacy-selection.json",
+      "ripwire . --grep=host-divergent-canonical"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/local-command/baseline.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=baseline.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/local-command/project.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=project.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/local-command/validate-g7-request.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=validate-g7-request.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/local-command/workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=workflow.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/native-orchestration/clarify-provenance/clarify-results.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=clarify-results.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/native-orchestration/clarify-provenance/clarify-session-record.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=clarify-session-record.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/native-orchestration/plan-research/plan-executor-record.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=plan-executor-record.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/native-orchestration/plan-research/research.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=research.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/native-orchestration/plan-research/speckit-plan-phase0.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-plan-phase0.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/native-orchestration/progress-projection/autopilot-state.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=autopilot-state.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/native-orchestration/progress-projection/canonical-state.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=canonical-state.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/native-orchestration/progress-projection/visible-plan.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=visible-plan.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/native-orchestration/progress-projection/workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=workflow.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/native-orchestration/rescope-reconciliation/checklists/requirements.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=requirements.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/native-orchestration/rescope-reconciliation/contracts/gate-verdict.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=gate-verdict.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/native-orchestration/rescope-reconciliation/data-model.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=data-model.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/native-orchestration/rescope-reconciliation/plan.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=plan.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/native-orchestration/rescope-reconciliation/quickstart.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=quickstart.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/native-orchestration/rescope-reconciliation/research.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=research.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/native-orchestration/skill-root/binding-result.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=binding-result.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/native-orchestration/skill-root/plan-dispatch-record.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=plan-dispatch-record.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/registered-worktree-migration/ambiguous/binding-request.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=binding-request.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/registered-worktree-migration/claude-handoff/binding-result.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=binding-result.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/registered-worktree-migration/descendant/binding-request.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=binding-request.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/registered-worktree-migration/external/binding-request.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=binding-request.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/registered-worktree-migration/external/binding-result.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=binding-result.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/registered-worktree-migration/revalidation/binding-request.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=binding-request.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/registered-worktree-migration/shared/baseline/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=README.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/scaffold-handoff/SPEC-009-workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-009-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/scaffold-noninteractive/baseline/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=README.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/scaffold-noninteractive/feature/docs/ai/current-technical-roadmap.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=current-technical-roadmap.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/speckit-coach/case-2/plan.md": {
+    "verdict": [
+      "functional-evals-1-003"
+    ],
+    "checks_run": [
+      "ripwire . --grep=plan.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/speckit-coach/case-2/spec.md": {
+    "verdict": [
+      "functional-evals-1-003"
+    ],
+    "checks_run": [
+      "ripwire . --grep=spec.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/speckit-coach/case-8/.specify/extensions.yml": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=extensions.yml"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/speckit-coach/case-8/.specify/extensions/review/manifest.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=manifest.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/speckit-coach/case-8/.specify/extensions/verify/manifest.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=manifest.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/speckit-coach/case-8/installed-cli-observation.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=installed-cli-observation.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/speckit-coach/case-8/specify-1.0.1-help.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=specify-1.0.1-help.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/speckit-status/case-1/docs/ai/current-technical-roadmap.md": {
+    "verdict": [
+      "functional-evals-1-003"
+    ],
+    "checks_run": [
+      "ripwire . --grep=current-technical-roadmap.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/speckit-status/case-1/docs/ai/specs/SPEC-021-workflow.md": {
+    "verdict": [
+      "functional-evals-1-003"
+    ],
+    "checks_run": [
+      "ripwire . --grep=SPEC-021-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/speckit-status/case-2/docs/ai/current-technical-roadmap.md": {
+    "verdict": [
+      "functional-evals-1-003"
+    ],
+    "checks_run": [
+      "ripwire . --grep=current-technical-roadmap.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/speckit-status/case-2/docs/ai/specs/SPEC-013-workflow.md": {
+    "verdict": [
+      "functional-evals-1-003"
+    ],
+    "checks_run": [
+      "ripwire . --grep=SPEC-013-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/speckit-status/case-3/docs/ai/specs/SPEC-013-workflow.md": {
+    "verdict": [
+      "functional-evals-1-003"
+    ],
+    "checks_run": [
+      "ripwire . --grep=SPEC-013-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/speckit-status/case-5/docs/ai/current-quarter-technical-roadmap.md": {
+    "verdict": [
+      "functional-evals-1-003"
+    ],
+    "checks_run": [
+      "ripwire . --grep=current-quarter-technical-roadmap.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/speckit-status/case-5/docs/ai/last-quarter-technical-roadmap.md": {
+    "verdict": [
+      "functional-evals-1-003"
+    ],
+    "checks_run": [
+      "ripwire . --grep=last-quarter-technical-roadmap.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/speckit-status/case-6/docs/ai/current-technical-roadmap.md": {
+    "verdict": [
+      "functional-evals-1-003"
+    ],
+    "checks_run": [
+      "ripwire . --grep=current-technical-roadmap.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/status-dashboard/case-1/baseline/README.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=README.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/status-dashboard/case-1/expected.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=expected.json"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/status-dashboard/case-1/feature/docs/ai/current-technical-roadmap.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=current-technical-roadmap.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/status-dashboard/case-1/feature/docs/ai/specs/SPEC-021-workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=SPEC-021-workflow.md"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/ubiquitous-language-lint/baseline.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=baseline.py"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/ubiquitous-language-lint/feature.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=feature.py"
+    ]
+  },
+  "tests/speckit-pro/evals/fixtures/functional/ubiquitous-language-lint/terms.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=terms.md"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/codex-evals/grill-me-evals.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=grill-me-evals.json"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/codex-evals/install-evals.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=install-evals.json"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json": {
+    "verdict": [
+      "functional-evals-1-001"
+    ],
+    "checks_run": [
+      "ripwire . --grep=speckit-autopilot-evals.json",
+      "ripwire . --grep=all 14 Post"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/codex-evals/speckit-coach-evals.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-coach-evals.json"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/codex-evals/speckit-install-evals.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-install-evals.json"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/codex-evals/speckit-prd-evals.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-prd-evals.json"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/codex-evals/speckit-resolve-pr-evals.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-resolve-pr-evals.json"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/codex-evals/speckit-scaffold-spec-evals.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-scaffold-spec-evals.json"
+    ]
+  },
+  "tests/speckit-pro/layer3-functional/codex-evals/speckit-status-evals.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-status-evals.json"
+    ]
+  }
+}

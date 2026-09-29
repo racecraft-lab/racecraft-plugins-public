@@ -1,0 +1,628 @@
+{
+  "docs/ai/research/cross-platform-runtime-inventory.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=cross-platform-runtime-inventory.md"
+    ]
+  },
+  "docs/ai/research/interactive-documentation-framework-spike.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=interactive-documentation-framework-spike.md"
+    ]
+  },
+  "docs/ai/research/spec-pr-size-governance-research.md": {
+    "verdict": [
+      "runner-core-010"
+    ],
+    "checks_run": [
+      "ripwire . --grep=spec-pr-size-governance-research.md"
+    ]
+  },
+  "docs/ai/research/tool-agnostic-capability-discovery-spike.md": {
+    "verdict": [
+      "runner-core-010"
+    ],
+    "checks_run": [
+      "ripwire . --grep=tool-agnostic-capability-discovery-spike.md"
+    ]
+  },
+  "docs/ai/specs/gate-tooling-decision.md": {
+    "verdict": [
+      "runner-core-002"
+    ],
+    "checks_run": [
+      "ripwire . --grep=gate-tooling-decision.md"
+    ]
+  },
+  "speckit-pro/scripts/curated-set.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=curated-set.json"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/__init__.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=runtime.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/__main__.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=__main__.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/architecture_graph.py": {
+    "verdict": [
+      "runner-core-005"
+    ],
+    "checks_run": [
+      "ripwire . --grep=architecture_graph.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/contracts/architecture-graph.schema.json": {
+    "verdict": [
+      "runner-core-005"
+    ],
+    "checks_run": [
+      "ripwire . --grep=architecture-graph.schema.json"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/contracts/gate-discovery-table.schema.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=gate-discovery-table.schema.json"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/envelope.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=envelope.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/gate_discovery.py": {
+    "verdict": [
+      "runner-core-002",
+      "runner-core-003",
+      "runner-core-005"
+    ],
+    "checks_run": [
+      "ripwire . --grep=gate_discovery.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/gate_discovery_table.json": {
+    "verdict": [
+      "runner-core-002",
+      "runner-core-011"
+    ],
+    "checks_run": [
+      "ripwire . --grep=gate_discovery_table.json"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/gates/__init__.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=runtime.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/gates/active_path_guard.py": {
+    "verdict": [
+      "runner-core-006"
+    ],
+    "checks_run": [
+      "ripwire . --grep=active_path_guard.py",
+      "ripwire . --grep=def scan_installed_runtime_sources"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/gates/gate_response.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=gate_response.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/gates/registry.py": {
+    "verdict": [
+      "runner-core-007"
+    ],
+    "checks_run": [
+      "ripwire . --grep=registry.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/gates/suite.py": {
+    "verdict": [
+      "runner-core-007"
+    ],
+    "checks_run": [
+      "ripwire . --grep=suite.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/helpers/__init__.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=runtime.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/helpers/gate_preflight_coverage.py": {
+    "verdict": [
+      "runner-core-001",
+      "runner-core-011"
+    ],
+    "checks_run": [
+      "ripwire . --grep=gate_preflight_coverage.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/helpers/mutation.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=mutation.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/helpers/read_only.py": {
+    "verdict": [
+      "runner-core-001",
+      "runner-core-004"
+    ],
+    "checks_run": [
+      "ripwire . --grep=read_only.py",
+      "ripwire . --callers=sweep_export_record",
+      "ripwire . --grep=def sweep_",
+      "ripwire . --grep=json_schema_type_matches",
+      "ripwire . --callers=detect_plugin_root"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/helpers/registry.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=registry.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/path_utils.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=path_utils.py"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/runtime.py": {
+    "verdict": [
+      "runner-core-003"
+    ],
+    "checks_run": [
+      "ripwire . --grep=runtime.py",
+      "ripwire . --callers=detect_plugin_root",
+      "ripwire . --uses=RUNNER_DATA_FILES"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-pro-runner.manifest.json"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=speckit-pro-runner.sha256"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/architecture-graph/out-of-scope.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=out-of-scope.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/architecture-graph/pr-graph.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=pr-graph.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/gate-discovery/bad-slot.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=bad-slot.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/mutation-helpers/codex-agent-routing/cases.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=cases.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/mutation-helpers/contracts/mutation-helper-request.schema.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=mutation-helper-request.schema.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/mutation-helpers/contracts/mutation-helper-result.schema.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=mutation-helper-result.schema.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/mutation-helpers/fixture-manifest.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=fixture-manifest.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/mutation-helpers/requests/doctor-preflight.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=doctor-preflight.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/mutation-helpers/requests/doctor-repair.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=doctor-repair.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/mutation-helpers/requests/execute-verification.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=execute-verification.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/mutation-helpers/requests/generate-pr-body.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=generate-pr-body.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/mutation-helpers/requests/generate-uat-skeleton.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=generate-uat-skeleton.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/mutation-helpers/requests/multi-pr-emission.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=multi-pr-emission.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/mutation-helpers/requests/mutation-foundation.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=mutation-foundation.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/mutation-helpers/requests/task-results.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=task-results.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/plan-layers/checkbox-state/tasks.md": {
+    "verdict": [
+      "runner-core-009"
+    ],
+    "checks_run": [
+      "ripwire . --grep=checkbox-state"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/plan-layers/dependency-cycle/tasks.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=dependency-cycle"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/plan-layers/empty-increment/tasks.md": {
+    "verdict": [
+      "runner-core-009"
+    ],
+    "checks_run": [
+      "ripwire . --grep=empty-increment"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/plan-layers/invalid-dependency/tasks.md": {
+    "verdict": [
+      "runner-core-009"
+    ],
+    "checks_run": [
+      "ripwire . --grep=invalid-dependency"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/plan-layers/invalid-reference/tasks.md": {
+    "verdict": [
+      "runner-core-009"
+    ],
+    "checks_run": [
+      "ripwire . --grep=invalid-reference"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/plan-layers/malformed-task/tasks.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=malformed-task"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/plan-layers/missing-headings/tasks.md": {
+    "verdict": [
+      "runner-core-009"
+    ],
+    "checks_run": [
+      "ripwire . --grep=missing-headings"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/plan-layers/missing-references/tasks.md": {
+    "verdict": [
+      "runner-core-009"
+    ],
+    "checks_run": [
+      "ripwire . --grep=missing-references"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/plan-layers/path-normalization/tasks.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=path-normalization"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/plan-layers/valid-real/tasks.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=valid-real"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/fixture-manifest.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=fixture-manifest.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/normalization-cases.json": {
+    "verdict": [
+      "runner-core-009"
+    ],
+    "checks_run": [
+      "ripwire . --grep=normalization-cases.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/plan-repair-attempts.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=plan-repair-attempts.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/plan-repair-original.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=plan-repair-original.md"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/plan-repair-source.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=plan-repair-source.md"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-changed-files.txt": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=read-only-helper-changed-files.txt"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/aggregate-crl.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=aggregate-crl.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/check-gate-preflight-coverage.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=check-gate-preflight-coverage.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/check-prerequisites.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=check-prerequisites.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/confidence-gate.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=confidence-gate.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/count-markers.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=count-markers.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/detect-commands.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=detect-commands.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/detect-presets.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=detect-presets.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/estimate-reviewable-loc.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=estimate-reviewable-loc.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/o5-topology.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=o5-topology.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/plan-layers-feature-dir.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=plan-layers-feature-dir.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/preview-isolation-session.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=preview-isolation-session.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/render-plan-repair-context.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=render-plan-repair-context.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/resolve-claude-subagent-runtime.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=resolve-claude-subagent-runtime.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/resolve-confidence-mode.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=resolve-confidence-mode.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/resolve-workflow-binding.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=resolve-workflow-binding.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/validate-execution-record.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=validate-execution-record.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/validate-gate.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=validate-gate.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/validate-pr-workflow-contract.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=validate-pr-workflow-contract.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/smoke-runtime-info-request.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=smoke-runtime-info-request.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/synthetic-paths.json": {
+    "verdict": [
+      "runner-core-009"
+    ],
+    "checks_run": [
+      "ripwire . --grep=synthetic-paths.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/runner-gates/active-path-guard-cases.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=active-path-guard-cases.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/runner-gates/requests/active-path-guard.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=active-path-guard.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/runner-gates/requests/classify-shell-finding.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=classify-shell-finding.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=run-default-suite.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/runner-gates/requests/run-toolchain-preflight-docs.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=run-toolchain-preflight-docs.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/runner-gates/requests/run-toolchain-preflight.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=run-toolchain-preflight.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/runner-gates/requests/validate-pr-title-live.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=validate-pr-title-live.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/speckit-pro-runner/contract-fixtures.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=contract-fixtures.json"
+    ]
+  },
+  "tests/speckit-pro/unit/test-architecture-graph.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-architecture-graph.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-gate-discovery-table.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-gate-discovery-table.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-gate-preflight-coverage.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-gate-preflight-coverage.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-speckit-pro-gates.py": {
+    "verdict": [
+      "runner-core-008"
+    ],
+    "checks_run": [
+      "ripwire . --grep=test-speckit-pro-gates.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py": {
+    "verdict": [
+      "runner-core-008"
+    ],
+    "checks_run": [
+      "ripwire . --grep=test-speckit-pro-mutation-helpers.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py": {
+    "verdict": [
+      "runner-core-008"
+    ],
+    "checks_run": [
+      "ripwire . --grep=test-speckit-pro-read-only-helpers.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-speckit-pro-runner.py": {
+    "verdict": [
+      "runner-core-008"
+    ],
+    "checks_run": [
+      "ripwire . --grep=test-speckit-pro-runner.py"
+    ]
+  }
+}

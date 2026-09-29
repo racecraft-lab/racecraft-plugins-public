@@ -1,0 +1,183 @@
+[
+  {
+    "id": "runner-core-001",
+    "lane": "runner-core",
+    "severity": "major",
+    "kind": "cohesion",
+    "files": [
+      "speckit-pro/speckit_pro_runner/helpers/read_only.py:3391-4267",
+      "speckit-pro/speckit_pro_runner/sweep_isolation.py:660",
+      "speckit-pro/speckit_pro_runner/execution_control.py:387",
+      "speckit-pro/speckit_pro_runner/helpers/gate_preflight_coverage.py:130"
+    ],
+    "ripwire_command": "ripwire . --callers=sweep_export_record",
+    "summary": "helpers/read_only.py (8964 lines) holds 23 sweep_* functions (comment export, redaction, fence handling) that belong with the sweep modules, plus primitives that core modules need. sweep_isolation.py, execution_control.py, task_results.py and gate_preflight_coverage.py import it through function-local imports to dodge the 20-file cycle that ripwire --deps reports.",
+    "proposed_fix": "Move the sweep_* cluster next to sweep_isolation.py, and move shared primitives (is_test_path, PHASE7_* constants, trusted_open_*, resolve_repo_root) into a lower module so imports can be top-level and the core-to-helpers arrows disappear.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "runner-core-002",
+    "lane": "runner-core",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "docs/ai/specs/gate-tooling-decision.md:14-15",
+      "docs/ai/specs/gate-tooling-decision.md:106-114",
+      "docs/ai/specs/gate-tooling-decision.md:131",
+      "docs/ai/specs/gate-tooling-decision.md:260",
+      "speckit-pro/speckit_pro_runner/gate_discovery.py:47-52",
+      "speckit-pro/speckit_pro_runner/gate_discovery_table.json:44"
+    ],
+    "ripwire_command": "ripwire . --grep=complexity_ceiling",
+    "summary": "The decision record states a raw complexity ceiling of 8, Bob's 6 as the no-code fallback, three slots, ESLint plus c8 for TypeScript, and 'gate wiring is the next layer'. The shipped code and coach guide use 10 (NIST) as the default and fallback (gate_discovery.py DEFAULT_THRESHOLDS, quality_gates.py recommend), a fourth DEPENDENCY_AUDIT slot with Go and Rust rows, and oxlint plus Bun for TypeScript.",
+    "proposed_fix": "Update the record's threshold table, fallback sentence, slot enum and TypeScript pick to match the code, or mark it superseded and point to gate_discovery.py, quality_gates.py and the quality-gates guide as the source.",
+    "in_flight_status": null
+  },
+  {
+    "id": "runner-core-003",
+    "lane": "runner-core",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/speckit_pro_runner/runtime.py:27",
+      "speckit-pro/speckit_pro_runner/runtime.py:304-311",
+      "scripts/refresh-release-artifacts.py:37",
+      "scripts/refresh-release-artifacts.py:288",
+      "speckit-pro/speckit_pro_runner/gate_discovery.py:41"
+    ],
+    "ripwire_command": "ripwire . --uses=RUNNER_DATA_FILES",
+    "summary": "The runner integrity list (RUNNER_DATA_FILES plus *.py) is hand-copied in runtime.py and in the refresh script, and covers only agent_inventory.json. gate_discovery_table.json (its commands run in the operator's session), install_inventory.json and contracts/*.schema.json are loaded at runtime but sit outside the manifest and checksum, so preflight reports verified while they change.",
+    "proposed_fix": "Define the file roster once (import it in the refresh script or derive both from the manifest) and include the runtime-loaded JSON data files, or document why they are excluded.",
+    "in_flight_status": null
+  },
+  {
+    "id": "runner-core-004",
+    "lane": "runner-core",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/speckit_pro_runner/helpers/read_only.py:6778-7016",
+      "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py:1439-1610"
+    ],
+    "ripwire_command": "ripwire . --grep=json_schema_type_matches",
+    "summary": "Two hand-written JSON Schema validators exist. The runner's supports patternProperties, propertyNames, maxLength, maximum, exclusiveMinimum, prefixItems, dependentRequired and maxProperties; the autopilot script's copy supports none of these. The type and equality helpers are byte-level clones, so the copies can drift silently.",
+    "proposed_fix": "Have the script import the runner validator (both ship in the plugin), or document the intentionally smaller keyword subset and test that both agree on it.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "runner-core-005",
+    "lane": "runner-core",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/speckit_pro_runner/contracts/architecture-graph.schema.json:12-17",
+      "speckit-pro/speckit_pro_runner/architecture_graph.py:63-71",
+      "speckit-pro/speckit_pro_runner/gate_discovery.py:1-6"
+    ],
+    "ripwire_command": "ripwire . --grep=validate_graph",
+    "summary": "architecture_graph.py, gate_discovery.py and quality_gates.py each re-implement their JSON schema by hand instead of using the generic validator. The arch-graph schema documents less than the validator enforces: kind=pr requires base and a non-empty touched list, and kind=repository forbids them, but the schema declares only kind as required. A graph valid per the schema fails validation. The parity tests compare enums and required lists only.",
+    "proposed_fix": "Add if/then rules to the schema for kind=pr and kind=repository, and extend the parity test to run schema and validator over the same good and bad fixtures.",
+    "in_flight_status": null
+  },
+  {
+    "id": "runner-core-006",
+    "lane": "runner-core",
+    "severity": "major",
+    "kind": "cohesion",
+    "files": [
+      "speckit-pro/speckit_pro_runner/gates/active_path_guard.py:4156",
+      "gates/active_path_guard.py:4186"
+    ],
+    "ripwire_command": "ripwire . --grep=def scan_installed_runtime_sources",
+    "summary": "active_path_guard.py (5591 lines, 204 functions) carries two parallel guard families, the v1.0 active-path guard and the v2.0 installed-runtime guard, plus repo-bash-confinement, zero-bash and a Python AST analyzer. Paired near-duplicates: guard_response/active_runtime_guard_response (4156/4186), scan_sources/scan_installed_runtime_sources (4254/4302), classify_raw_finding/classify_installed_runtime_raw_finding (4380/4403), remediation_for/installed_runtime_remediation_for (4951/4969). A fix to one pair member can miss the other.",
+    "proposed_fix": "Split by guard (path guard, runtime guard, AST analyzer) and parameterize the paired functions on a small policy object.",
+    "in_flight_status": null
+  },
+  {
+    "id": "runner-core-007",
+    "lane": "runner-core",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "speckit-pro/speckit_pro_runner/gates/registry.py:12",
+      "speckit-pro/speckit_pro_runner/helpers/install.py:1944",
+      "speckit-pro/speckit_pro_runner/gates/suite.py:22-24",
+      "speckit-pro/speckit_pro_runner/gates/suite.py:36"
+    ],
+    "ripwire_command": "ripwire . --callers=run_runner_invocation_gate",
+    "summary": "gates/registry.py dispatches the runner-invocation gate to a function that lives in helpers/install.py, a 5714-line install-helper module, so gates depend on helpers. suite.py says the suite manifest is the single source of truth for layers but hard-codes CANONICAL_LAYER_KEYS as a second copy.",
+    "proposed_fix": "Move run_runner_invocation_gate into gates/, and derive the canonical key set from the manifest or keep it only in the manifest schema.",
+    "in_flight_status": null
+  },
+  {
+    "id": "runner-core-008",
+    "lane": "runner-core",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/unit/test-speckit-pro-gates.py:85",
+      "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py:395",
+      "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py:419",
+      "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py:3974",
+      "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py:5810",
+      "tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py:271",
+      "tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py:304",
+      "tests/speckit-pro/unit/test-speckit-pro-runner.py:38"
+    ],
+    "ripwire_command": "ripwire . --grep=def run_runner",
+    "summary": "The runner-subprocess helper run_runner is redefined in at least nine unit test modules, and command_stdin_fixture and assert_response in two or three each, though tests/speckit-pro/lib/test_lib.py exists. move_after_copy_open is defined twice in one test file. Copies already differ in signature and return shape.",
+    "proposed_fix": "Add one shared runner-invocation helper to tests/speckit-pro/lib/ and import it.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "runner-core-009",
+    "lane": "runner-core",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/unit/fixtures/plan-layers/checkbox-state/tasks.md:1",
+      "tests/speckit-pro/unit/fixtures/plan-layers/empty-increment/tasks.md:1",
+      "tests/speckit-pro/unit/fixtures/plan-layers/invalid-dependency/tasks.md:1",
+      "tests/speckit-pro/unit/fixtures/plan-layers/invalid-reference/tasks.md:1",
+      "tests/speckit-pro/unit/fixtures/plan-layers/missing-headings/tasks.md:1",
+      "tests/speckit-pro/unit/fixtures/plan-layers/missing-references/tasks.md:1",
+      "tests/speckit-pro/unit/fixtures/read-only-helpers/normalization-cases.json:1",
+      "tests/speckit-pro/unit/fixtures/read-only-helpers/synthetic-paths.json:1"
+    ],
+    "ripwire_command": "ripwire . --grep=missing-headings",
+    "summary": "Eight fixtures are referenced by no test or code: six plan-layers cases (only valid-real, dependency-cycle, malformed-task, path-normalization and the bash-confinement plan are used) and normalization-cases.json and synthetic-paths.json (named only in a fixture plan.md as NEW). They look like coverage but assert nothing.",
+    "proposed_fix": "Add the missing plan-layers negative tests (each case names a distinct invalid-plan path), or delete the unused fixtures.",
+    "in_flight_status": null
+  },
+  {
+    "id": "runner-core-010",
+    "lane": "runner-core",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "docs/ai/research/tool-agnostic-capability-discovery-spike.md:73",
+      "docs/ai/research/tool-agnostic-capability-discovery-spike.md:77",
+      "docs/ai/research/tool-agnostic-capability-discovery-spike.md:194",
+      "docs/ai/research/tool-agnostic-capability-discovery-spike.md:75",
+      "docs/ai/research/spec-pr-size-governance-research.md:165"
+    ],
+    "ripwire_command": "ripwire . --doc-drift=docs/ai/research/tool-agnostic-capability-discovery-spike.md",
+    "summary": "The spike cites files that no longer exist (check-prerequisites.sh, layer5 validate-tool-scoping.sh) and line ranges past the end of speckit-pro/codex-skills/speckit-autopilot/agents/openai.yaml (7 lines, cited 9-16). The governance research cites scripts/generate-spec-index.sh, also gone. Doc-drift counts 16 drifted anchors in the spike.",
+    "proposed_fix": "Add a dated-record banner stating the citations describe the tree at spike time, or re-point them to current paths.",
+    "in_flight_status": null
+  },
+  {
+    "id": "runner-core-011",
+    "lane": "runner-core",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/speckit_pro_runner/helpers/gate_preflight_coverage.py:31-32",
+      "speckit-pro/speckit_pro_runner/gate_discovery_table.json:152-155"
+    ],
+    "ripwire_command": "ripwire . --grep=EGRESS_COMMAND",
+    "summary": "EGRESS_COMMAND recognizes npm, pnpm, bun, yarn, pip-audit, cargo audit and bundle audit, but the shipped DEPENDENCY_AUDIT table also has a Go row (govulncheck), which sends module data to vuln.go.dev. A repo that declares govulncheck as a pre-PR command is not flagged as an egress need, and cargo-audit in its hyphen form is missed.",
+    "proposed_fix": "Add govulncheck and cargo-audit to the pattern, and add a test that every DEPENDENCY_AUDIT row command in the table is matched by it.",
+    "in_flight_status": "still-open"
+  }
+]

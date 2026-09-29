@@ -1,0 +1,163 @@
+[
+  {
+    "id": "trigger-evals-001",
+    "lane": "trigger-evals",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer2-trigger/codex-evals/speckit-prd-trigger.json:23",
+      "tests/speckit-pro/layer2-trigger/codex-evals/speckit-prd-trigger.json:31",
+      "tests/speckit-pro/layer2-trigger/codex-evals/speckit-resolve-pr-trigger.json:27",
+      "tests/speckit-pro/layer2-trigger/codex-evals/speckit-scaffold-spec-trigger.json:27",
+      "tests/speckit-pro/layer2-trigger/MEASUREMENT.md:113",
+      "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/SPEC-009-workflow.md:1"
+    ],
+    "ripwire_command": "ripwire . --grep=SPEC-009-workflow.md",
+    "summary": "Four active Codex queries name files the workspace fixture does not hold (docs/prd.md, docs/ai/specs/SPEC-027-workflow.md, docs/ai/specs/SPEC-009-workflow.md twice), so a model that reads them hits a failed command, which the harness rejects as an invalid trial. MEASUREMENT.md claims the fixture holds every file named by file-backed queries. The fixture instead carries a root-level SPEC-009-workflow.md and unreferenced plan.md, notes/*, SPEC-015, SPEC-019, SPEC-041 and ubiquitous-language.md.",
+    "proposed_fix": "Add the four missing paths to fixtures/codex-workspace, drop the unreferenced files, and add a unit test that every path-like token in a codex-evals query resolves inside the fixture. Changing the fixture changes the frozen fixture identity, so fold it into the next reviewed freeze.",
+    "in_flight_status": null
+  },
+  {
+    "id": "trigger-evals-002",
+    "lane": "trigger-evals",
+    "severity": "major",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/lib/trigger_carry_forward.py:34",
+      "tests/speckit-pro/lib/trigger_carry_forward.py:41",
+      "tests/speckit-pro/lib/trigger_carry_forward.py:60",
+      "tests/speckit-pro/lib/trigger_carry_forward.py:1216",
+      "tests/speckit-pro/lib/trigger_comparison.py:394",
+      "tests/speckit-pro/lib/trigger_campaign.py:273",
+      "tests/speckit-pro/lib/trigger_campaign_execution.py:1165",
+      "tests/speckit-pro/layer2-trigger/qualification-protocol.md:110",
+      "tests/speckit-pro/layer2-trigger/qualification-protocol.md:272"
+    ],
+    "ripwire_command": "ripwire . --grep=891",
+    "summary": "One historical campaign is hard-coded into durable library and protocol text: reviewed SHA-256 pins, case ids, and counts (137, 138, 410, 411, 414, 891, 1302, 1305) appear as literals in five modules, while a single 2,337-line file mixes those one-off pins with generic validators. qualification-protocol.md line 110 says campaign-specific evidence stays in the record rather than in repository code, and line 272 then documents one recovery scenario's arithmetic. The literal 1305 in trigger_campaign_execution.py duplicates EXPECTED_ACCOUNTING.",
+    "proposed_fix": "Move the frozen campaign pins and counts into the reviewed component or a single data module read by every validator, derive 891, 1305 and the like from it, keep generic admission logic in trigger_carry_forward.py, and move the recovery scenario out of the protocol doc.",
+    "in_flight_status": null
+  },
+  {
+    "id": "trigger-evals-003",
+    "lane": "trigger-evals",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer2-trigger/measurement-capabilities.json:4",
+      "tests/speckit-pro/layer2-trigger/measurement-capabilities.json:21",
+      "tests/speckit-pro/layer2-trigger/MEASUREMENT.md:5",
+      "tests/speckit-pro/layer2-trigger/MEASUREMENT.md:39",
+      "tests/speckit-pro/layer2-trigger/run-trigger-evals.py:34"
+    ],
+    "ripwire_command": "ripwire . --uses=PINNED_CLAUDE_VERSION",
+    "summary": "measurement-capabilities.json records Claude Code 2.1.269 as qualified while the runner, MEASUREMENT.md line 39, the drafts and the test stubs pin 2.1.270. MEASUREMENT.md admits the drift, but no code or test reads the JSON (ripwire grep finds only the prose link), so nothing detects it and the 'qualified' status has no enforcement.",
+    "proposed_fix": "Either add a unit test that binds measurement-capabilities.json versions, models and thresholds to the runner constants, or requalify on 2.1.270 and update the record. Consider one shared pin module for the runners, drafts and stub fixtures.",
+    "in_flight_status": null
+  },
+  {
+    "id": "trigger-evals-004",
+    "lane": "trigger-evals",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/layer2-trigger/campaign-drafts/issue-573-full.draft.json:1542",
+      "tests/speckit-pro/layer2-trigger/campaign-drafts/issue-573-full.draft.json:1543",
+      "tests/speckit-pro/layer2-trigger/campaign-drafts/issue-573-pilot.draft.json:79",
+      "tests/speckit-pro/layer2-trigger/campaign-drafts/issue-573-pilot.draft.json:80"
+    ],
+    "ripwire_command": "ripwire . --grep=identities_current",
+    "summary": "Both frozen campaign drafts pin observer and catalog digests that no longer match the tree: compare-trigger-evals.py validate reports identities_current false for each. Only the fixture digest still matches. No test catches the drift, so the drafts cannot be used without a rebind.",
+    "proposed_fix": "Rebind the drafts with compare-trigger-evals.py snapshot at the next freeze, and add a check that flags stale draft identities, or delete the drafts once the campaign is closed.",
+    "in_flight_status": null
+  },
+  {
+    "id": "trigger-evals-005",
+    "lane": "trigger-evals",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/layer2-trigger/run-trigger-evals.py:87",
+      "tests/speckit-pro/layer2-trigger/run_codex_evals.py:106",
+      "tests/speckit-pro/layer2-trigger/run-trigger-evals.py:155",
+      "tests/speckit-pro/layer2-trigger/run_codex_evals.py:190",
+      "tests/speckit-pro/layer2-trigger/run-trigger-evals.py:667",
+      "tests/speckit-pro/layer2-trigger/run_codex_evals.py:1400",
+      "tests/speckit-pro/layer2-trigger/run-trigger-evals.py:73",
+      "tests/speckit-pro/lib/trigger_process.py:15",
+      "tests/speckit-pro/layer2-trigger/run-trigger-evals-codex.py:20"
+    ],
+    "ripwire_command": "ripwire . --callers=load_eval_corpus",
+    "summary": "The two runners carry near-identical copies of load_eval_corpus, sibling_skill_dirs and the trial-evidence retainer. run-trigger-evals.py redefines CLEANUP_TIMEOUT and DESCENDANT_EXIT_GRACE already defined in lib/trigger_process.py, and run-trigger-evals-codex.py re-implements eval-name listing. The shared lib modules already exist for this purpose.",
+    "proposed_fix": "Move corpus loading and sibling discovery into lib/trigger_evidence.py or lib/trigger_process.py, and import the process constants instead of redefining them.",
+    "in_flight_status": null
+  },
+  {
+    "id": "trigger-evals-006",
+    "lane": "trigger-evals",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/layer2-trigger/run_codex_evals.py:711",
+      "tests/speckit-pro/layer2-trigger/run_codex_evals.py:1011",
+      "tests/speckit-pro/layer2-trigger/run_codex_evals.py:1295",
+      "tests/speckit-pro/lib/trigger_comparison.py:132",
+      "tests/speckit-pro/lib/trigger_comparison.py:143"
+    ],
+    "ripwire_command": "ripwire . --callers=_parser",
+    "summary": "run_codex_evals.py (about 76 KB) mixes CLI orchestration with catalog inspection and the JSONL observer, and lib/trigger_comparison.py loads the whole runner script through spec_from_file_location just to call inspect_codex_jsonl and inspect_claude_stream. The library depends upward on a script, and replay imports the full script's top-level state.",
+    "proposed_fix": "Extract the observers (inspect_codex_jsonl, inspect_claude_stream and their helpers) into a lib module that both the runners and the comparator import.",
+    "in_flight_status": null
+  },
+  {
+    "id": "trigger-evals-007",
+    "lane": "trigger-evals",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/layer2-trigger/controlled-descriptions.json:8",
+      "tests/speckit-pro/layer2-trigger/controlled-descriptions/candidate.txt:1",
+      "tests/speckit-pro/layer2-trigger/run-trigger-evals.py:45",
+      "tests/speckit-pro/layer2-trigger/run_codex_evals.py:72",
+      "tests/speckit-pro/lib/native_eval_trigger.py:24"
+    ],
+    "ripwire_command": "ripwire . --uses=NO_SPECKIT_SKILL_DESCRIPTION",
+    "summary": "The candidate no-op description exists as four copies: two runner constants, controlled-descriptions.json and candidate.txt. The unit test only checks both runners against the JSON. Both runners also mutate the module global inside main() and restore it in finally.",
+    "proposed_fix": "Keep the string in one lib constant that the runners import, and have the JSON and text files be checked against it. Pass the override as a parameter instead of mutating a global.",
+    "in_flight_status": null
+  },
+  {
+    "id": "trigger-evals-008",
+    "lane": "trigger-evals",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/layer2-trigger/run-trigger-evals-codex.py:35",
+      "tests/speckit-pro/layer2-trigger/run_codex_evals.py:137",
+      "tests/speckit-pro/layer2-trigger/codex-evals/speckit-status-trigger.json:1",
+      "tests/speckit-pro/layer2-trigger/evals/speckit-status-trigger.json:1",
+      "tests/speckit-pro/unit/test-trigger-eval-coverage.py:88"
+    ],
+    "ripwire_command": "ripwire . --callers=find_eval_file",
+    "summary": "codex-evals/ and evals/ are near-identical copies (across 11 shared skills only 1 to 3 queries per file differ, mostly the explicit-invocation query). Both the wrapper and run_codex_evals.find_eval_file fall back to the Claude eval set, but the coverage test requires a codex-evals file for every Codex skill, so the fallback is unreachable. It would also run a query naming speckit-pro:<skill> on Codex.",
+    "proposed_fix": "Drop the fallback so a missing codex-evals file fails loudly, or store one shared corpus plus per-host overrides.",
+    "in_flight_status": null
+  },
+  {
+    "id": "trigger-evals-009",
+    "lane": "trigger-evals",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/unit/test-trigger-campaign.py:28",
+      "tests/speckit-pro/unit/test-trigger-campaign-execution.py:65",
+      "tests/speckit-pro/unit/test-trigger-campaign.py:34",
+      "tests/speckit-pro/unit/test-trigger-campaign-execution.py:71",
+      "tests/speckit-pro/lib/trigger_carry_forward.py:187"
+    ],
+    "ripwire_command": "ripwire . --grep=contextual_approval",
+    "summary": "test-trigger-campaign.py and test-trigger-campaign-execution.py copy the contextual_approval and observation builders, and trigger_carry_forward._file_identity clones the shipped validate-autopilot-phase-coverage._stable_file_identity.",
+    "proposed_fix": "Put the approval and observation builders in one shared test helper, and import or share the file-identity helper.",
+    "in_flight_status": null
+  }
+]
