@@ -78,18 +78,6 @@ def verification_checks(case: Mapping[str, object]) -> list[Mapping[str, object]
             and check.get("type") == "native_verification_pointer"]
 
 
-def pointer_artifacts(case: Mapping[str, object]) -> tuple[str, ...]:
-    """Return the configured subject-emission pointers that must be captured."""
-
-    result = []
-    for check in verification_checks(case):
-        validate_check(check, "native_verification_pointer check")
-        path = str(check["pointer_path"])
-        if path not in result:
-            result.append(path)
-    return tuple(result)
-
-
 def _evidence_directory(workflow_file: str) -> PurePosixPath:
     """Mirror the runner: a workflow already in `.process` keeps evidence in `verification/`."""
 
@@ -503,6 +491,6 @@ def grade_pointer(
 __all__ = (
     "ABSENCE_KIND", "ABSENCE_SCHEMA", "CHECK_FIELDS", "ROOT_TRACE_SCHEMA",
     "VerificationError", "absence_bytes", "absence_marker", "absence_row",
-    "attach_receipt", "bind_result", "grade_pointer", "pointer_artifacts",
+    "attach_receipt", "bind_result", "grade_pointer",
     "record_directories", "validate_check", "verification_checks",
 )

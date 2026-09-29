@@ -253,12 +253,6 @@ def decode_sealed_plan_repair_payload(message: str) -> dict[str, object] | None:
     return rendered
 
 
-def decode_sealed_plan_repair_message(message: str) -> str | None:
-    """Decode the executor message from a validated renderer response."""
-    payload = decode_sealed_plan_repair_payload(message)
-    return payload["executor_message"] if payload is not None else None
-
-
 __all__ = [
     "DispatchContextProofError",
     "MAX_CONTEXTS",
@@ -270,6 +264,5 @@ __all__ = [
     "MAX_PRECEDING_JSON_BYTES",
     "contains_complete_json_value",
     "decode_sealed_plan_repair_payload",
-    "decode_sealed_plan_repair_message",
     "qualify_native_dispatch_context",
 ]

@@ -82,7 +82,6 @@
         { "path": "tests/speckit-pro/unit/test-native-eval-dispatch-context.py", "label": "test-native-eval-dispatch-context" },
         { "path": "tests/speckit-pro/unit/test-native-eval-claude-activation.py", "label": "test-native-eval-claude-activation" },
         { "path": "tests/speckit-pro/unit/test-native-eval-trigger.py", "label": "test-native-eval-trigger" },
-        { "path": "tests/speckit-pro/unit/test-native-eval-skill-reads.py", "label": "test-native-eval-skill-reads" },
         { "path": "tests/speckit-pro/unit/test-native-eval-pairing.py", "label": "test-native-eval-pairing" },
         { "path": "tests/speckit-pro/unit/test-native-trigger-catalog.py", "label": "test-native-trigger-catalog" },
         { "path": "tests/speckit-pro/unit/test-native-functional-catalog.py", "label": "test-native-functional-catalog" },

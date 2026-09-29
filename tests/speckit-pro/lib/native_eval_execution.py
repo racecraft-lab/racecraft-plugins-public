@@ -91,7 +91,6 @@ _TERMINAL = {"pass", "fail", "invalid"}
 _ARTIFACT_LIMIT = 1024 * 1024
 _PLUGIN_NAME = re.compile(r"[a-z0-9][a-z0-9-]*")
 _GIT_FIXTURE_V2 = "native-eval-fixtures/v2"
-_GIT_OBSERVATION_V1 = "native-eval-git-observation/v1"
 _CONTROLLER_GIT_OBSERVATION_V1 = "native-eval-controller-git-observation/v1"
 _OBJECT_ID = re.compile(r"[a-f0-9]{40}|[a-f0-9]{64}")
 _DISPATCH_ITEM_MARKER = re.compile(r"\[\[work-item:([a-z0-9][a-z0-9._-]*)\]\]")
