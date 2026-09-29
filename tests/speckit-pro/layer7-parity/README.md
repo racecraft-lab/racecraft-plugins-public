@@ -9,9 +9,9 @@ Native tools may differ, but normalization must preserve ownership, ordering,
 required work, and side effects.
 
 Claude runs through the official plugin evaluation runner; Codex runs through
-native `codex exec`. The shared evaluation entrypoint and canonical catalog are
-being integrated under `../evals/`. Their contract tests are not evidence that
-the full behavioral corpus has passed.
+native `codex exec`. The shared evaluation entrypoint and the active canonical catalog live under
+`../evals/`. Their contract tests are not evidence that the full behavioral
+corpus has passed.
 
 Genuine Claude agent teams require an interactive session. They are **separate
 manual verification**, not an automated parity arm, not a claimed live pass,
@@ -29,7 +29,11 @@ subagent, or final claim of team execution does not prove a genuine team ran.
 
 The material below describes the retained legacy fixture format and runner.
 Its headless teams-versus-fallback procedure cannot establish genuine team
-execution on the current client. Preserve it for audit and deterministic parser
+execution on the current client: `claude -p` always uses ordinary subagents.
+Genuine teams need Claude Code 2.1.178 or later and a positively interactive
+session (`speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md`
+is the source for this rule). Fixtures 01 and 04 are parser-regression coverage
+only, not proof of Path A versus Path B. Preserve it for audit and deterministic parser
 regression coverage while replacements are qualified; do not use its live
 command as the new Layer 7 release gate. The audit and replacement mapping live
 in `../evals/audit/integration-parity-audit.md`.
@@ -64,7 +68,8 @@ For each fixture, run the same workflow twice on the same machine:
 
 1. **Subagents-fallback run** — env var unset, Claude Code on any
    supported version. Forces Path B.
-2. **Teams run** — env var set, Claude Code ≥ 2.1.32. Forces Path A.
+2. **Teams run** — env var set. Requests Path A; see the version and
+   interactive-session rule in the migration boundary above.
 
 Then compare:
 
@@ -75,7 +80,8 @@ Then compare:
 - **Workflow-file Post-Implementation Checklist**: row count
   identical, same task status per row (pass/fail/skipped), same
   Findings column modulo LLM-driven prose variance.
-- **Gate results**: every gate G0–G7 returns identical PASS/FAIL.
+- **Workflow Overview phase statuses**: the seven phase rows report identical
+  statuses.
 - **PR packet boundary**: identical feature-local packet lookup and deferred
   blocker behavior. A missing current packet stops both paths before PR body or
   PR creation side effects.
@@ -95,9 +101,11 @@ Tolerance band:
   fixture should be capped (suggest `$L7_FIXTURE_BUDGET_USD=$20` per
   fixture pair).
 - **Opt-in for the developer running tests** (not user opt-in for the
-  product) — Layer 7 must NOT run in CI default. It requires
-  developer opt-in via
-  `python3 tests/speckit-pro/layer7-parity/run-parity-fixtures.py --live`.
+  product) — the live mode must NOT run in CI. It requires developer opt-in
+  via `python3 tests/speckit-pro/layer7-parity/run-parity-fixtures.py --live`.
+  CI runs only the free dry-run through `suite-manifest.json`. A live run
+  exits non-zero when any comparison was skipped, such as an unjudged
+  `semantic-equivalent` field, unless `--accept-skips` is passed.
 
 ## Status
 

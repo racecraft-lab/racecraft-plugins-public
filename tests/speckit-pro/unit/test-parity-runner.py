@@ -57,12 +57,13 @@ CURRENT_INVENTORY = [
     "invalid env contract is labeled to the env file",
     "diff reports consume bounded input and truncate deterministically",
     "no-extractor exact fallback passes identical bytes",
-    "no-extractor tolerance-1 fallback passes identical bytes",
+    "no-extractor tolerance-1 comparison is rejected even for identical bytes",
     "no-extractor tolerance-1 fallback rejects numeric drift as byte diff",
     "no-extractor exact fallback rejects byte drift",
     "fail_fast stops after first failing comparison",
     "fail_fast omits later comparison label",
     "live mode writes claude exit code files",
+    "live stub receives the shipped autopilot skill name",
 ]
 
 
@@ -93,11 +94,6 @@ LIVE_COMPARE = [
         "source": "same-exact.txt",
         "tolerance_key": "whole_file.exact",
     },
-    {
-        "field": "whole_file.tolerance_one",
-        "source": "same-number.txt",
-        "tolerance_key": "whole_file.tolerance_one",
-    },
 ]
 
 LIVE_TOLERANCES = {
@@ -105,7 +101,6 @@ LIVE_TOLERANCES = {
     "extractor.row_count": {"tolerance": "tolerance-1"},
     "semantic.findings": {"tolerance": "semantic-equivalent"},
     "whole_file.exact": {"tolerance": "exact"},
-    "whole_file.tolerance_one": {"tolerance": "tolerance-1"},
 }
 
 
@@ -161,7 +156,7 @@ def make_fixture(
     write_json(
         fixture / "tolerance.json",
         {
-            "schema": "speckit.layer7.tolerance.v1",
+            "schema": "speckit.layer7.legacy.tolerance.v1",
             "fixture_id": name,
             "fields": {
                 key: value | {"rationale": value.get("rationale", "focused unit-test contract")}
@@ -172,7 +167,7 @@ def make_fixture(
     write_json(
         fixture / "expected-equivalence.json",
         {
-            "schema": "speckit.layer7.expected-equivalence.v1",
+            "schema": "speckit.layer7.legacy.expected-equivalence.v1",
             "fixture_id": name,
             "compare": compare,
             "fail_fast": fail_fast,
@@ -351,6 +346,57 @@ class Layer7RunnerTests(unittest.TestCase):
                 )
                 runner.validate_fixture_contracts(fixture, produced, tolerance)
 
+    def test_legacy_schema_ids_are_distinct_and_whole_file_tolerance_one_is_rejected(self) -> None:
+        runner = import_runner()
+        import native_eval_pairing
+
+        self.assertNotEqual(runner.EXPECTED_SCHEMA, native_eval_pairing.EXPECTED_SCHEMA_VERSION)
+        self.assertNotEqual(runner.TOLERANCE_SCHEMA, native_eval_pairing.TOLERANCE_SCHEMA_VERSION)
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = make_fixture(
+                Path(temporary),
+                "schema-canary",
+                [{"field": "artifact", "source": "artifact.md", "tolerance_key": "artifact"}],
+                {"artifact": {"tolerance": "tolerance-1"}},
+            )
+            expected = runner.load_json(fixture / "expected-equivalence.json")
+            tolerance = runner.load_json(fixture / "tolerance.json")
+            with self.subTest(msg="whole-file tolerance-1 is rejected"):
+                with self.assertRaisesRegex(ValueError, "tolerance-1 requires table_row_count"):
+                    runner.validate_fixture_contracts(fixture, expected, tolerance)
+            with self.subTest(msg="native pairing schema ids are rejected"):
+                native = copy.deepcopy(expected)
+                native["schema"] = native_eval_pairing.EXPECTED_SCHEMA_VERSION
+                with self.assertRaisesRegex(ValueError, "schema must be"):
+                    runner.validate_fixture_contracts(fixture, native, tolerance)
+
+    def test_live_skip_fails_unless_accepted(self) -> None:
+        runner = import_runner()
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = make_fixture(
+                Path(temporary),
+                "skip-canary",
+                [{"field": "artifact", "source": "artifact.md", "tolerance_key": "artifact"}],
+                {"artifact": {"tolerance": "exact"}},
+            )
+
+            def skipped(_fixture: Path, _config: object, counts: object) -> None:
+                counts.skip("skip-canary:semantic", "unjudged")
+
+            def run_main(*flags: str) -> int:
+                with (
+                    patch.object(runner, "discover_fixtures", return_value=[fixture]),
+                    patch.object(runner, "run_fixture_live", side_effect=skipped),
+                    contextlib.redirect_stdout(io.StringIO()),
+                    contextlib.redirect_stderr(io.StringIO()),
+                ):
+                    return runner.main(["--live", *flags])
+
+            with self.subTest(msg="live skip exits nonzero"):
+                self.assertEqual(run_main(), 1)
+            with self.subTest(msg="accept-skips exits zero"):
+                self.assertEqual(run_main("--accept-skips"), 0)
+
     def test_layer7_runner_contract(self) -> None:
         runner = import_runner()
         source = RUNNER.read_text(encoding="utf-8")
@@ -493,6 +539,17 @@ class Layer7RunnerTests(unittest.TestCase):
             bounded_diff_output = io.StringIO()
             runner._write_bounded_diff(bounded_diff_output, bounded_diff_lines())
 
+            same_number_status = self._compare_direct(
+                runner,
+                path_a,
+                path_b,
+                {
+                    "field": "whole_file.tolerance_same",
+                    "source": "same-number.txt",
+                    "tolerance_key": "whole_file.tolerance_same",
+                },
+                {"fields": {"whole_file.tolerance_same": {"tolerance": "tolerance-1"}}},
+            )
             drift_number_status = self._compare_direct(
                 runner,
                 path_a,
@@ -687,10 +744,7 @@ class Layer7RunnerTests(unittest.TestCase):
                 ),
                 (
                     next(names),
-                    lambda: self.assertIn(
-                        "PASS canonical-live:whole_file.tolerance_one (tolerance-1, whole-file)",
-                        output,
-                    ),
+                    lambda: self.assertEqual(same_number_status, "fail"),
                 ),
                 (
                     next(names),
@@ -716,6 +770,13 @@ class Layer7RunnerTests(unittest.TestCase):
                             (path_b / ".claude-exit-code").read_text(encoding="utf-8").strip(),
                         ],
                         ["0", "0"],
+                    ),
+                ),
+                (
+                    next(names),
+                    lambda: self.assertEqual(
+                        [entry["argv"][-1] for entry in logs],
+                        ["/speckit-pro:speckit-autopilot workflow.md"] * 2,
                     ),
                 ),
             ]
