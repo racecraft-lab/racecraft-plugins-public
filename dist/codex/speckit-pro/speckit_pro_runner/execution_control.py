@@ -21,7 +21,7 @@ from collections.abc import Callable
 from pathlib import Path, PurePosixPath
 from typing import Any, NamedTuple
 
-from .formal.selection import require_text as require_nonempty_text
+from .strict_input import require_text as require_nonempty_text
 
 SCHEMA = "execution-control/v1"
 KINDS = {"implementation", "corrective", "verification", "infrastructure"}

@@ -15,7 +15,7 @@ import unicodedata
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from .formal.selection import SelectionError, unique_object
+from .strict_input import SelectionError, unique_object
 
 
 class TaskExecutionError(ValueError):

@@ -6,9 +6,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .catalog import CATALOG_PATH, FormalError, confined, read_json, selected_catalog
-from .evidence import CHECKPOINT_ROWS, atomic_record, fingerprint, read_checkpoint, record_path, write_checkpoint
-from .selection import SelectionError, require_fields, require_text, selection_from_workflow
+from ..strict_input import SelectionError, require_fields, require_text
+from .catalog import selected_catalog
+from .evidence import CHECKPOINT_ROWS, fingerprint, read_checkpoint, record_path, write_checkpoint
+from .primitives import CATALOG_PATH, FormalError, atomic_record, confined, read_json
+from .selection import selection_from_workflow
 
 
 def recorded_now() -> str:
@@ -140,40 +142,3 @@ def mirror_checkpoint(root: Path, workflow: str, value: str, record: dict[str, A
     state["formal_checkpoints"] = {"schema_version": "1.0", "workflow_file": workflow,
                                    "selection": record["selection"], "checkpoints": checkpoints}
     atomic_record(path, state)
-
-
-def required_checkpoints(steps: list[tuple[str, str | None]]) -> list[str]:
-    active = {name for name, status in steps if status in ("completed", "in_progress")}
-    completed = {name for name, status in steps if status == "completed"}
-    required = []
-    if "Phase 3: Plan" in completed or any(name.startswith(("Phase 4:", "Phase 5:", "Phase 6:", "Phase 6.5:", "Phase 7:", "Post:")) for name in active):
-        required.append("plan")
-    if any(name.startswith("Post:") for name in active):
-        required.append("final")
-    after_integration = {"Post: Reviewability Diff Gate", "Post: UAT Runbook Generation", "Post: PR Body Generation", "Post: PR Creation", "Post: Review Remediation", "Post: Retrospective"}
-    if "Post: Integration Suite" in completed or active & after_integration:
-        required.append("post")
-    return required
-
-
-def coverage_errors(root: Path, workflow: str, state: dict[str, Any], steps: list[tuple[str, str | None]]) -> list[str]:
-    from .helper import checkpoint_guard
-
-    selection = selection_from_workflow(confined(root, workflow).read_text(encoding="utf-8"))
-    if selection["status"] != "enabled":
-        return []
-    errors = []
-    formal = state.get("formal_checkpoints", {})
-    for checkpoint in required_checkpoints(steps):
-        current = checkpoint_guard(root, workflow, checkpoint)
-        if not current["complete"]:
-            errors.append(f"formal {checkpoint} is {current['verdict']}; reconcile and rerun the selected checkpoint")
-            continue
-        if not isinstance(formal, dict) or formal.get("selection") != selection or formal.get("workflow_file") != workflow or formal.get("schema_version") != "1.0":
-            errors.append("formal state mirror is missing or differs from the workflow selection")
-            continue
-        mirrors = formal.get("checkpoints", {})
-        expected = {key: current[key] for key in ("verdict", "fingerprint", "evidence")}
-        if not isinstance(mirrors, dict) or mirrors.get(current["checkpoint"]) != expected:
-            errors.append(f"formal {checkpoint} state mirror differs from current evidence")
-    return errors

@@ -23,11 +23,18 @@ PLUGIN = ROOT / "speckit-pro"
 sys.path.insert(0, str(ROOT / "tests/speckit-pro/lib"))
 from test_result import run_counted
 
+sys.path.insert(0, str(PLUGIN))
+from speckit_pro_runner.formal import catalog, pins, quint
+from speckit_pro_runner.helpers.read_only import json_schema_failures
+
 SCRIPTS = "skills/speckit-coach/scripts"
 spec = importlib.util.spec_from_file_location("formal_setup", PLUGIN / SCRIPTS / "setup-formal-tools.py")
 setup = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(setup)
 CACHE: Path | None = None
+SCHEMA_PATH = PLUGIN / "speckit_pro_runner/contracts/formal-methods.schema.json"
+EXAMPLES = PLUGIN / "skills/speckit-coach/examples/formal"
+EXAMPLE_CATALOGS = {"counter": ["apalache"], "counter-tlc": ["tlc"], "counter-quint": ["apalache", "quint"]}
 
 
 class SetupTests(unittest.TestCase):
@@ -127,6 +134,69 @@ class SetupTests(unittest.TestCase):
                     setup.materialize_jar(archive_path, jar, tool)
 
 
+class PinAndExampleTests(unittest.TestCase):
+    """One pin set: the schema, package manifest, and example catalogs must agree with setup and the runner."""
+
+    def catalog_from_pins(self) -> dict:
+        return {"schema_version": "1.0", "models": {},
+                "tools": {**{name: setup.tool_entry(name) for name in pins.VERSIONS}, "quint": setup.quint_entry()}}
+
+    def test_setup_entries_carry_the_runner_pins(self) -> None:
+        for name, version in pins.VERSIONS.items():
+            with self.subTest(tool=name):
+                entry = setup.tool_entry(name)
+                self.assertEqual((version, pins.CHECKER_SHA256[name]), (entry["version"], entry["sha256"]))
+                self.assertEqual(entry["sha256"], setup.TOOLS[name]["sha256"])
+                self.assertEqual(entry["version"], catalog.validate_tool(entry, name)["version"])
+        self.assertEqual((pins.QUINT_VERSION, pins.QUINT_TREE_SHA256), (quint.VERSION, quint.TREE_SHA256))
+        self.assertEqual(setup.quint_entry(), quint.validate_tool(setup.quint_entry()))
+
+    def test_schema_constants_agree_with_the_pins(self) -> None:
+        schema = json.loads(SCHEMA_PATH.read_text())
+        self.assertEqual([], json_schema_failures(self.catalog_from_pins(), schema, schema, "$"))
+
+    def test_schema_drift_is_detected(self) -> None:
+        for path in (("tools", "properties", "apalache"), ("tools", "properties", "tlc")):
+            with self.subTest(path=path):
+                schema = json.loads(SCHEMA_PATH.read_text())
+                node = schema["properties"]["tools"]["properties"][path[-1]]["allOf"][1]["properties"]["version"]
+                node["const"] = "9.9.9"
+                self.assertTrue(json_schema_failures(self.catalog_from_pins(), schema, schema, "$"))
+        schema = json.loads(SCHEMA_PATH.read_text())
+        schema["$defs"]["quint"]["properties"]["version"]["const"] = "9.9.9"
+        self.assertTrue(json_schema_failures(self.catalog_from_pins(), schema, schema, "$"))
+        schema = json.loads(SCHEMA_PATH.read_text())
+        schema["$defs"]["tool"]["properties"]["version"]["enum"] = ["0.62.2"]
+        self.assertTrue(json_schema_failures(self.catalog_from_pins(), schema, schema, "$"))
+
+    def test_quint_package_manifest_agrees_with_the_pin(self) -> None:
+        manifest = json.loads((EXAMPLES / "tooling/quint/package.json").read_text())
+        self.assertEqual(pins.QUINT_VERSION, manifest["dependencies"]["@informalsystems/quint"])
+
+    def test_example_catalogs_match_what_setup_installs(self) -> None:
+        schema = json.loads(SCHEMA_PATH.read_text())
+        entries = {**{name: setup.tool_entry(name) for name in pins.VERSIONS}, "quint": setup.quint_entry()}
+        for directory, tools in EXAMPLE_CATALOGS.items():
+            with self.subTest(example=directory):
+                example = json.loads((EXAMPLES / directory / "catalog.json").read_text())
+                self.assertEqual([], json_schema_failures(example, schema, schema, "$"))
+                self.assertEqual({name: entries[name] for name in tools}, example["tools"])
+                for model in example["models"].values():
+                    self.assertTrue(model["module"].startswith(f"formal/{directory}/"), model["module"])
+
+    def test_example_catalogs_pass_the_runner_validators(self) -> None:
+        for directory in EXAMPLE_CATALOGS:
+            with self.subTest(example=directory), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary).resolve()
+                shutil.copytree(EXAMPLES / directory, root / "formal" / directory)
+                example = json.loads((root / "formal" / directory / "catalog.json").read_text())
+                for model_id, model in example["models"].items():
+                    catalog.validate_model(model, root, {"id": model_id, "origin": "existing", "evidence": "model"})
+                    catalog.validate_tool(example["tools"][model["checker"]], model["checker"])
+                    if model.get("language") == "quint":
+                        quint.validate_tool(example["tools"]["quint"])
+
+
 class NativeSetupTests(unittest.TestCase):
     def test_install_reuse_and_installed_consumer_checkpoints(self) -> None:
         with tempfile.TemporaryDirectory(prefix="formal-consumer-") as temporary:
@@ -186,7 +256,7 @@ if __name__ == "__main__":
     parser.add_argument("--download-cache", type=Path)
     args = parser.parse_args()
     CACHE = args.download_cache
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(SetupTests)
+    suite = unittest.TestSuite([unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (SetupTests, PinAndExampleTests)])
     if args.native_setup:
         suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(NativeSetupTests))
     raise SystemExit(run_counted(suite, label="test-formal-setup"))
