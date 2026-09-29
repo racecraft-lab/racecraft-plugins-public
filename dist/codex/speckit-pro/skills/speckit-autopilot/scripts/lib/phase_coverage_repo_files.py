@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 import re
 import stat
+from collections.abc import Iterator
 from pathlib import Path, PurePosixPath
 
 
@@ -88,19 +90,19 @@ def _normalized_absolute_path(path: Path) -> str:
 def _windows_final_path_from_descriptor(descriptor: int) -> Path:
     try:
         import ctypes
+        import ctypes.wintypes
         import msvcrt
-        from ctypes import wintypes
     except ImportError as exc:  # pragma: no cover - available on supported Windows Python
         raise OSError("repository file handle inspection is unavailable") from exc
     get_final_path = ctypes.WinDLL("kernel32", use_last_error=True).GetFinalPathNameByHandleW
     get_final_path.argtypes = [
-        wintypes.HANDLE,
-        wintypes.LPWSTR,
-        wintypes.DWORD,
-        wintypes.DWORD,
+        ctypes.wintypes.HANDLE,
+        ctypes.wintypes.LPWSTR,
+        ctypes.wintypes.DWORD,
+        ctypes.wintypes.DWORD,
     ]
-    get_final_path.restype = wintypes.DWORD
-    handle = wintypes.HANDLE(msvcrt.get_osfhandle(descriptor))
+    get_final_path.restype = ctypes.wintypes.DWORD
+    handle = ctypes.wintypes.HANDLE(msvcrt.get_osfhandle(descriptor))
     required = get_final_path(handle, None, 0, 0)
     if required == 0:
         raise OSError("repository file handle could not be resolved")
@@ -281,6 +283,18 @@ def _read_stable_file(
         os.close(descriptor)
 
 
+@contextlib.contextmanager
+def _owned_descriptor(
+    path: Path | str, flags: int, dir_fd: int | None = None
+) -> Iterator[int]:
+    """Open a descriptor and close it on every exit path."""
+    descriptor = os.open(path, flags, dir_fd=dir_fd)
+    try:
+        yield descriptor
+    finally:
+        os.close(descriptor)
+
+
 def _verify_directory_chain(
     root: Path,
     relative: Path,
@@ -289,28 +303,23 @@ def _verify_directory_chain(
     after: os.stat_result,
 ) -> None:
     """Re-walk the path from the root and fail if any directory or the file was swapped."""
-    verifier_descriptors: list[int] = []
-    try:
+    with contextlib.ExitStack() as stack:
         root_current = os.stat(root, follow_symlinks=False)
-        verifier = os.open(root, directory_flags)
-        verifier_descriptors.append(verifier)
+        verifier = stack.enter_context(_owned_descriptor(root, directory_flags))
         if (
             _stable_directory_identity(root_current) != identities[0]
             or _stable_directory_identity(os.fstat(verifier)) != identities[0]
         ):
             raise OSError("repository root changed while it was being read")
         for component, expected_identity in zip(relative.parts[:-1], identities[1:], strict=True):
-            next_descriptor = os.open(component, directory_flags, dir_fd=verifier)
-            verifier_descriptors.append(next_descriptor)
-            if _stable_directory_identity(os.fstat(next_descriptor)) != expected_identity:
+            verifier = stack.enter_context(
+                _owned_descriptor(component, directory_flags, dir_fd=verifier)
+            )
+            if _stable_directory_identity(os.fstat(verifier)) != expected_identity:
                 raise OSError("repository directory changed while it was being read")
-            verifier = next_descriptor
         current_path = os.stat(relative.parts[-1], dir_fd=verifier, follow_symlinks=False)
         if _stable_file_identity(current_path) != _stable_file_identity(after):
             raise OSError("repository file path changed while it was being read")
-    finally:
-        for verifier_descriptor in reversed(verifier_descriptors):
-            os.close(verifier_descriptor)
 
 
 def _read_repo_file_by_descriptor(
