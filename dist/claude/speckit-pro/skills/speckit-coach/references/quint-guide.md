@@ -53,7 +53,9 @@ SpecKit. Do not install its full Docker/MCP environment as a workflow prerequisi
 
 ## Start with the working counter
 
-Use `examples/formal/counter-quint/Counter.qnt` and its native configuration.
+Use `examples/formal/counter-quint/Counter.qnt`, its native configuration, and its
+`catalog.json` (copy the model files to `formal/counter-quint/` and merge the
+catalog into `.specify/formal-methods.json`).
 The rule is: start at zero, increment by exactly one until two, then hold. The
 `Bounded` property says the count stays between zero and two. After the first
 successful check, temporarily change `count <= 2` to `count < 2`: the checker
@@ -67,9 +69,9 @@ Select the model in the workflow exactly as for TLA+, using `origin: new` or
 {
   "language": "quint",
   "checker": "apalache",
-  "module": "formal/counter/Counter.qnt",
-  "config": "formal/counter/Counter.cfg",
-  "inputs": ["formal/counter/Counter.qnt", "formal/counter/Counter.cfg"],
+  "module": "formal/counter-quint/Counter.qnt",
+  "config": "formal/counter-quint/Counter.cfg",
+  "inputs": ["formal/counter-quint/Counter.qnt", "formal/counter-quint/Counter.cfg"],
   "main": "Counter",
   "init": "init",
   "next": "step",
