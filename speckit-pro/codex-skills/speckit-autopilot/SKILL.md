@@ -729,6 +729,27 @@ forbidden if any `Post:` item is `pending`, `in_progress`, or missing.
 Exception: `execution_control.disposition=checkpoint_required` permits an
 honest checkpoint response stating the run is **not complete**, remaining Post
 work, consumed budget, unknown effects, and the operator decision required.
+An unknown dispatch outcome alone is not that decision: settle it with
+`execution-control action=reconcile-unit` (a read-only reconciler over the
+unit's owned paths, runner-classified from git state) and keep dispatching
+independent units; pass `tdd_units` on each implementation reserve.
+A `checkpoint_required` whose `reasons` is only `unknown_dispatch_blocks_unit`
+is not a stop: run `reconcile-unit` for each id in `blocked_by`. On
+`unit_classification_mismatch`, re-inspect the owned paths and call once more
+with the class the paths show; never cycle the three values. Read
+`unknown_dispatch_ids` from `status` before each wave so a blocked unit is
+seldom reserved.
+
+Issue capped approvals yourself when the runner proves them, instead of asking
+the operator. Pass `agent_authorized: true` and no `native_observation` to
+`authorize-corrective-retry` (a lost worker's failed corrective dispatch with
+a recorded native failure event; one per run), to `begin-replan-epoch` (a
+deferral is open, the spec is unchanged, the Tasks rerun changed the plan or
+task fingerprints the stage epoch recorded, and every dispatch is settled; two
+per run), or to `authorize-corrective-continuation` with `spec_file` (the
+metadata-only proof holds). A refusal means the proof does not hold or the cap
+is spent; only then does the request go to the operator. Scope changes and
+forged events stay operator-only.
 Keep pending rows and current status; never mark them completed to stop.
 A failing gate or test is remediated, not deferred: keep remediating while
 each round converges, dispatching each diagnosed fix through the executor and

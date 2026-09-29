@@ -25,6 +25,19 @@ from .formal.selection import require_text as require_nonempty_text
 SCHEMA = "execution-control/v1"
 KINDS = {"implementation", "corrective", "verification", "infrastructure"}
 OUTCOMES = {"completed", "failed", "unknown", "expected_tdd_red"}
+UNKNOWN_BLOCKED = "unknown_dispatch_blocks_unit"
+# An agent may issue these approvals itself when the runner proves the preconditions.
+# Each is capped run-wide, counted from the runner-derived event IDs in the ledger.
+AGENT_RETRY_PREFIX, AGENT_RETRY_CAP = "agent-recovery:", 1
+AGENT_REPLAN_PREFIX, AGENT_REPLAN_CAP = "agent-replan:", 2
+AGENT_CONTINUATION_PREFIX, AGENT_CONTINUATION_CAP = "agent-continuation:", 2
+AGENT_APPROVAL_CAPS = ((AGENT_RETRY_PREFIX, AGENT_RETRY_CAP), (AGENT_REPLAN_PREFIX, AGENT_REPLAN_CAP),
+                       (AGENT_CONTINUATION_PREFIX, AGENT_CONTINUATION_CAP))
+UNIT_CLASSIFICATIONS = ("no_effect", "partial", "complete")
+UNKNOWN_GUARDED_ACTIONS = frozenset({"reserve", "authorize-corrective-retry", "authorize-corrective-continuation",
+                                     "authorize-corrective-exception", "reserve-class-correction",
+                                     "begin-replan-epoch", "begin-stage-epoch", "begin-verification",
+                                     "bind-invariants"})
 CORRECTIVE_REFUSALS = {"failure_family_budget_exhausted", "corrective_run_budget_exhausted"}
 CLASS_CHANGE_KINDS = {"test_timeout"}
 CLASS_FOLLOW_UP_LIMIT = 2
@@ -221,7 +234,9 @@ def _validate_invariant_binding(ledger: dict[str, Any]) -> None:
     if "invariant_binding" not in ledger:
         return
     binding = ledger["invariant_binding"]
-    if (not isinstance(binding, dict) or set(binding) != {"spec_file", "spec_sha256", "bound_at"}
+    if (not isinstance(binding, dict)
+            or set(binding) not in ({"spec_file", "spec_sha256", "bound_at"},
+                                    {"spec_file", "spec_sha256", "bound_at", "planning_fingerprints"})
             or not ledger["approved_invariants"]):
         raise ValueError("invalid invariant binding")
     bound_spec = require_text(binding["spec_file"], "bound spec_file")
@@ -230,6 +245,11 @@ def _validate_invariant_binding(ledger: dict[str, Any]) -> None:
             or not isinstance(binding["spec_sha256"], str)
             or not re.fullmatch(r"[0-9a-f]{64}", binding["spec_sha256"])):
         raise ValueError("invalid invariant binding provenance")
+    fingerprint = binding.get("planning_fingerprints", {"spec_sha256": "0" * 64, "plan_sha256": "0" * 64,
+                                                        "tasks_sha256": "0" * 64})
+    if (not isinstance(fingerprint, dict) or set(fingerprint) != {"spec_sha256", "plan_sha256", "tasks_sha256"}
+            or not all(isinstance(v, str) and re.fullmatch(r"[0-9a-f]{64}", v) for v in fingerprint.values())):
+        raise ValueError("invalid planning fingerprint record")
     if (type(binding["bound_at"]) not in (int, float)
             or not ledger["started_at"] <= binding["bound_at"] < float("inf")):
         raise ValueError("invalid invariant binding clock")
@@ -248,6 +268,9 @@ def validate_ledger(value: Any) -> None:
     validate_intervals(value)
     _validate_corrective_state(value)
     _validate_corrective_epochs(value)
+    events = _consumed_native_event_ids(value)
+    if any(sum(event.startswith(prefix) for event in events) > cap for prefix, cap in AGENT_APPROVAL_CAPS):
+        raise ValueError("agent-authorized approvals exceed their run-wide cap")
     _validate_escalation_cap(value)
     _validate_finalize_observations(value)
 
@@ -306,6 +329,7 @@ def _validate_corrective_state(value: dict[str, Any]) -> None:
                 and (exception_reservation is None or reservation != exception_reservation)):
             raise ValueError("corrective dispatch has no reservation")
     _validate_progress(value)
+    _validate_unit_reconciliation(value)
     validate_recovery_records(value)
     validate_continuation_records(value)
 
@@ -340,9 +364,12 @@ def _validate_corrective_epochs(ledger: dict[str, Any]) -> None:
     corrected_tasks = {task for entry in ledger.get("metadata_corrections", []) for task in entry["task_ids"]}
     event_ids = _consumed_native_event_ids({key: value for key, value in ledger.items() if key != "corrective_epochs"})
     previous_close = ledger["started_at"]
-    for epoch in epochs:
+    for number, epoch in enumerate(epochs, start=1):
         if not isinstance(epoch, dict) or not required <= set(epoch) <= allowed:
             raise ValueError("invalid corrective epoch record")
+        if (str(epoch["epoch_event_id"]).startswith(AGENT_REPLAN_PREFIX)
+                and epoch["epoch_event_id"] != AGENT_REPLAN_PREFIX + str(number)):
+            raise ValueError("invalid agent-authorized re-plan epoch")
         stage = epoch.get("stage_transition")
         if (("stage_transition" in epoch or str(epoch["epoch_event_id"]).startswith(STAGE_EPOCH_PREFIX))
                 and (stage not in STAGE_EPOCH_STAGES or epoch["epoch_event_id"] != STAGE_EPOCH_PREFIX + stage)):
@@ -923,6 +950,41 @@ def _record_failing_checks(ledger: dict[str, Any], inputs: dict[str, Any], evide
     return {"dispatch_id": dispatch_id}
 
 
+def _validate_unit_reconciliation(ledger: dict[str, Any]) -> None:
+    """The runner's own unit-reconciliation records agree with the dispatches they name."""
+    for dispatch_id, item in ledger["dispatches"].items():
+        record = item.get("reconciliation")
+        if "reconciled_as" in item and (item["reconciled_as"] != "no_effect" or item["outcome"] != "failed"
+                                        or record is not None or "verified_by" in item):
+            raise ValueError("invalid no-effect reconciliation record")
+        if record is None:
+            if "verified_by" in item:
+                raise ValueError("a verified unit resolution needs its reconciliation record")
+        else:
+            if (not isinstance(record, dict) or set(record) != {"class", "paths", "at"}
+                    or record["class"] not in UNIT_CLASSIFICATIONS[1:] or not _sorted_paths(record["paths"])
+                    or not record["paths"] or type(record["at"]) not in (int, float)
+                    or "tdd_units" not in item or item["outcome"] not in {"unknown", "completed", "failed"}
+                    or (item["outcome"] == "unknown") == ("verified_by" in item)):
+                raise ValueError("invalid unit reconciliation record")
+            if "verified_by" in item and not _unit_verified(ledger, item, dispatch_id):
+                raise ValueError("unit resolution is not backed by a completed verification dispatch")
+        if "verifies" in item:
+            target = ledger["dispatches"].get(item["verifies"])
+            if item["kind"] != "verification" or not isinstance(target, dict) or "reconciliation" not in target:
+                raise ValueError("a verification dispatch verifies one reconciled unit dispatch")
+
+
+def _unit_verified(ledger: dict[str, Any], item: dict[str, Any], dispatch_id: str) -> bool:
+    """True when the ledger shows a completed verification dispatch resolved this reconciled unit."""
+    verifier = ledger["dispatches"].get(item.get("verified_by"))
+    record = item["reconciliation"]
+    return (isinstance(verifier, dict) and verifier.get("kind") == "verification" and verifier.get("verifies") == dispatch_id
+            and verifier.get("outcome") == "completed" and type(verifier.get("completed_at")) in (int, float)
+            and verifier["completed_at"] >= record["at"]
+            and item["outcome"] == ("completed" if record["class"] == "complete" else "failed"))
+
+
 def validate_recovery_records(ledger: dict[str, Any]) -> None:
     sources: set[str] = set()
     events: set[str] = set()
@@ -936,6 +998,8 @@ def validate_recovery_records(ledger: dict[str, Any]) -> None:
         failed_id = require_text(item["recovery_of"], "recovery_of")
         failed_event_id = require_text(item["failure_event_id"], "failure_event_id")
         approval_event_id = require_text(item["operator_recovery_event_id"], "operator_recovery_event_id")
+        if approval_event_id.startswith(AGENT_RETRY_PREFIX) and approval_event_id != AGENT_RETRY_PREFIX + dispatch_id:
+            raise ValueError("invalid agent-authorized recovery event")
         failed = ledger["dispatches"].get(failed_id)
         if not isinstance(failed, dict):
             raise ValueError("invalid corrective recovery source")
@@ -976,6 +1040,8 @@ def validate_continuation_records(ledger: dict[str, Any]) -> None:
             raise ValueError("incomplete corrective continuation record")
         source_id = require_text(item["continuation_of"], "continuation_of")
         event_id = require_text(item["operator_continuation_event_id"], "operator_continuation_event_id")
+        if event_id.startswith(AGENT_CONTINUATION_PREFIX) and event_id != AGENT_CONTINUATION_PREFIX + dispatch_id:
+            raise ValueError("invalid agent-authorized continuation event")
         reservation = item.get("reservation_id")
         source = ledger["dispatches"].get(source_id)
         owner_id = ledger["reservations"].get(reservation, {}).get("dispatch_id")
@@ -1036,8 +1102,6 @@ def clock_reasons(ledger: dict[str, Any], now: float) -> list[str]:
         reasons.append("clock_moved_backwards")
     if ledger.get("active_wait"):
         reasons.append("awaiting_external_event")
-    if any(item["outcome"] == "unknown" for item in ledger["dispatches"].values()):
-        reasons.append("unknown_side_effects_require_operator_reconciliation")
     return reasons
 
 
@@ -1070,7 +1134,26 @@ def _operator_event(ledger: dict[str, Any], inputs: dict[str, Any], keys: set[st
     event_id = require_text(event.get("native_event_id"), "native_event_id")
     if event_id in _consumed_native_event_ids(ledger):
         raise ValueError(f"operator {name} event was already consumed")
+    if event_id.startswith(tuple(prefix for prefix, _ in AGENT_APPROVAL_CAPS)):
+        raise ValueError(f"operator {name} event uses an ID reserved for agent approvals")
     return event, event_id
+
+
+def _agent_approval(ledger: dict[str, Any], inputs: dict[str, Any], prefix: str, cap: int,
+                    suffix: str, name: str) -> str | None:
+    """The runner-derived event ID for an agent-issued approval, or None when the request names none.
+
+    The request says `agent_authorized: true` and carries no operator event. The
+    approval counts against a run-wide cap; the next one goes to the operator.
+    """
+    if "agent_authorized" not in inputs:
+        return None
+    if inputs["agent_authorized"] is not True or inputs.get("native_observation") is not None:
+        raise ValueError(f"an agent-authorized {name} is agent_authorized true with no operator event")
+    used = sum(event.startswith(prefix) for event in _consumed_native_event_ids(ledger))
+    if used >= cap:
+        raise ValueError(f"the run's {cap} agent-authorized {name} approvals are spent; the next needs the operator")
+    return prefix + suffix
 
 
 def _corrective_refusal(ledger: dict[str, Any], family: str) -> str | None:
@@ -1280,14 +1363,14 @@ def _review_remediation(inputs: dict[str, Any]) -> dict[str, Any] | None:
     return request
 
 
-def _increment_ineligibility(root: Path, spec: Path, request: dict[str, Any]) -> str | None:
-    """Why a review fix does not qualify for its increment's allowance, or None when it does.
+def _task_ownership(root: Path, spec: Path) -> tuple[str | None, dict[str, Any]]:
+    """The sidecar's per-unit owned paths bound to the current sources, or an error reason and no record.
 
     Ownership comes only from the task-execution sidecar beside the explicit
     feature spec's tasks, bound to the current spec, plan, and tasks by their fingerprints.
     Missing, stale, or malformed evidence never qualifies.
     """
-    from .task_execution import TaskExecutionError, fingerprints, owned_path, overlaps, path_key
+    from .task_execution import TaskExecutionError, fingerprints, owned_path
 
     try:
         feature = spec.parent.relative_to(root.resolve()).as_posix()
@@ -1295,10 +1378,10 @@ def _increment_ineligibility(root: Path, spec: Path, request: dict[str, Any]) ->
                    for name in ("spec.md", "plan.md", "tasks.md")]
         metadata = json.loads(confined_path(root, f"{feature}/.process/task-execution.json").read_text(encoding="utf-8"))
     except (OSError, UnicodeError, ValueError):
-        return "ownership_evidence_unavailable"
+        return "ownership_evidence_unavailable", {}
     if (not isinstance(metadata, dict) or metadata.get("schema_version") != "task-execution.v1"
             or metadata.get("fingerprints") != fingerprints(*sources)):
-        return "ownership_evidence_stale"
+        return "ownership_evidence_stale", {}
     tasks = metadata.get("tasks")
     units: dict[str, list[str]] = {}
     try:
@@ -1310,7 +1393,19 @@ def _increment_ineligibility(root: Path, spec: Path, request: dict[str, Any]) ->
                 raise TaskExecutionError("malformed task ownership")
             units.setdefault(entry["tdd_unit"], []).extend(owned_path(path, root) for path in entry["owns"])
     except TaskExecutionError:
-        return "ownership_evidence_unavailable"
+        return "ownership_evidence_unavailable", {}
+    return None, {"feature": feature, "sources": sources, "metadata": metadata, "tasks": tasks, "units": units}
+
+
+def _increment_ineligibility(root: Path, spec: Path, request: dict[str, Any]) -> str | None:
+    """Why a review fix does not qualify for its increment's allowance, or None when it does."""
+    from .task_execution import TaskExecutionError, overlaps, owned_path, path_key
+
+    error, evidence = _task_ownership(root, spec)
+    if error is not None:
+        return error
+    feature, sources, metadata = evidence["feature"], evidence["sources"], evidence["metadata"]
+    tasks, units = evidence["tasks"], evidence["units"]
     owns = units.get(request["tdd_unit"])
     if owns is None:
         return "increment_not_in_ownership_evidence"
@@ -1746,6 +1841,7 @@ def reserve(ledger: dict[str, Any], inputs: dict[str, Any], now: float, root: Pa
     units = _implementation_units(inputs)
     if dispatch_id in _used_dispatch_ids(ledger):
         return {"reasons": ["dispatch_already_reserved_no_relaunch"]}
+    verifies = _verifies_request(ledger, inputs)
     reservation = inputs.get("reservation_id")
     if "escalation" in inputs:
         return _reserve_escalation(ledger, inputs, dispatch_id, now)
@@ -1807,6 +1903,8 @@ def reserve(ledger: dict[str, Any], inputs: dict[str, Any], now: float, root: Pa
         raise ValueError("only corrective dispatches use corrective reservations")
     ledger["dispatches"][dispatch_id] = {"kind": kind, "outcome": "reserved", "reserved_at": now,
                                         "reservation_id": reservation, "reconciliations": 0}
+    if verifies is not None:
+        ledger["dispatches"][dispatch_id]["verifies"] = verifies
     if units is not None:
         ledger["dispatches"][dispatch_id]["tdd_units"] = units
         snapshot = _worktree_snapshot(root)
@@ -1819,44 +1917,65 @@ def authorize_corrective_retry(ledger: dict[str, Any], inputs: dict[str, Any], n
     dispatch_id = require_text(inputs.get("dispatch_id"), "dispatch_id")
     failed_id = require_text(inputs.get("failed_dispatch_id"), "failed_dispatch_id")
     reservation = require_text(inputs.get("reservation_id"), "reservation_id")
-    keys = {"native_event_id", "run_id", "action", "failed_dispatch_id", "failed_native_event_id",
-            "retry_dispatch_id", "reservation_id", "failure_kind"}
-    event, event_id = _operator_event(ledger, inputs, keys, "corrective retry")
     failed = ledger["dispatches"].get(failed_id)
-    binding = (event.get("run_id"), event.get("action"), event.get("failed_dispatch_id"),
-               event.get("retry_dispatch_id"), event.get("reservation_id"), event.get("failure_kind"))
-    expected = (ledger["run_id"], "corrective_retry_approved", failed_id, dispatch_id,
-                reservation, "infrastructure")
-    if binding != expected:
-        raise ValueError("operator recovery event does not match this run")
+    agent_event = _agent_approval(ledger, inputs, AGENT_RETRY_PREFIX, AGENT_RETRY_CAP, dispatch_id, "corrective retry")
+    if agent_event is not None:
+        # The runner's own record of the failed dispatch's native resolution is the failure event.
+        if inputs.get("failure_kind") != "infrastructure":
+            raise ValueError("an agent-authorized corrective retry covers only an infrastructure failure")
+        event_id = agent_event
+        failed_event = failed.get("resolution_event_id") if isinstance(failed, dict) else None
+    else:
+        keys = {"native_event_id", "run_id", "action", "failed_dispatch_id", "failed_native_event_id",
+                "retry_dispatch_id", "reservation_id", "failure_kind"}
+        event, event_id = _operator_event(ledger, inputs, keys, "corrective retry")
+        binding = (event.get("run_id"), event.get("action"), event.get("failed_dispatch_id"),
+                   event.get("retry_dispatch_id"), event.get("reservation_id"), event.get("failure_kind"))
+        expected = (ledger["run_id"], "corrective_retry_approved", failed_id, dispatch_id,
+                    reservation, "infrastructure")
+        if binding != expected:
+            raise ValueError("operator recovery event does not match this run")
+        failed_event = event.get("failed_native_event_id")
     if (dispatch_id in _used_dispatch_ids(ledger) or ledger["corrective_cycles"] != 2 or
             not isinstance(failed, dict) or failed.get("kind") != "corrective" or
             failed.get("outcome") != "failed" or failed.get("reservation_id") != reservation or
-            failed.get("resolution_event_id") != event.get("failed_native_event_id") or
+            not isinstance(failed_event, str) or failed.get("resolution_event_id") != failed_event or
             ledger["reservations"].get(reservation, {}).get("dispatch_id") != failed_id or
             any(item.get("reservation_id") == reservation for item_id, item in ledger["dispatches"].items()
                 if item_id != failed_id)):
         raise ValueError("failed corrective dispatch is not eligible for a one-time infrastructure retry")
     ledger["dispatches"][dispatch_id] = {"kind": "corrective", "outcome": "reserved", "reserved_at": now,
                                          "reservation_id": reservation, "reconciliations": 0,
-                                         "recovery_of": failed_id, "failure_event_id": event["failed_native_event_id"],
+                                         "recovery_of": failed_id, "failure_event_id": failed_event,
                                          "operator_recovery_event_id": event_id}
     return {"reservation_id": reservation, "dispatch_id": dispatch_id, "recovery_of": failed_id}
 
 
-def authorize_corrective_continuation(ledger: dict[str, Any], inputs: dict[str, Any], now: float) -> dict[str, Any]:
+def authorize_corrective_continuation(root: Path, ledger: dict[str, Any], inputs: dict[str, Any], spec: Path,
+                                      now: float) -> dict[str, Any]:
     dispatch_id = require_text(inputs.get("dispatch_id"), "dispatch_id")
     source_id = require_text(inputs.get("completed_dispatch_id"), "completed_dispatch_id")
     reservation = require_text(inputs.get("reservation_id"), "reservation_id")
-    keys = {"native_event_id", "run_id", "action", "completed_dispatch_id",
-            "continuation_dispatch_id", "reservation_id", "purpose"}
-    event, event_id = _operator_event(ledger, inputs, keys, "corrective continuation")
-    expected = (ledger["run_id"], "corrective_continuation_approved", source_id, dispatch_id,
-                reservation, "task_metadata_reconciliation")
-    binding = (event.get("run_id"), event.get("action"), event.get("completed_dispatch_id"),
-               event.get("continuation_dispatch_id"), event.get("reservation_id"), event.get("purpose"))
-    if binding != expected:
-        raise ValueError("operator continuation event does not match this run")
+    agent_event = _agent_approval(ledger, inputs, AGENT_CONTINUATION_PREFIX, AGENT_CONTINUATION_CAP, dispatch_id,
+                                  "corrective continuation")
+    if agent_event is not None:
+        # The runner proves the metadata-only correction itself, as the reserve path does.
+        if inputs.get("spec_file") is None:
+            raise ValueError("an agent-authorized continuation requires an explicit spec_file naming the feature spec")
+        ineligible, _ = _metadata_ineligibility(root, spec, ledger)
+        if ineligible is not None:
+            raise ValueError(f"the metadata-only proof does not hold ({ineligible}); the operator approves a continuation")
+        event_id = agent_event
+    else:
+        keys = {"native_event_id", "run_id", "action", "completed_dispatch_id",
+                "continuation_dispatch_id", "reservation_id", "purpose"}
+        event, event_id = _operator_event(ledger, inputs, keys, "corrective continuation")
+        expected = (ledger["run_id"], "corrective_continuation_approved", source_id, dispatch_id,
+                    reservation, "task_metadata_reconciliation")
+        binding = (event.get("run_id"), event.get("action"), event.get("completed_dispatch_id"),
+                   event.get("continuation_dispatch_id"), event.get("reservation_id"), event.get("purpose"))
+        if binding != expected:
+            raise ValueError("operator continuation event does not match this run")
     source = ledger["dispatches"].get(source_id)
     owner_id = ledger["reservations"].get(reservation, {}).get("dispatch_id")
     owner = ledger["dispatches"].get(owner_id)
@@ -1947,6 +2066,155 @@ def _observed_changes(item: dict[str, Any], outcome: str, root: Path) -> list[st
     return _changed_since(root, item["worktree_before"])
 
 
+def _dispatch_scope(ledger: dict[str, Any], item: dict[str, Any]) -> set[str]:
+    """The units a dispatch works on, derived only from the ledger's own records; empty means unscoped."""
+    scope = {f"unit:{unit}" for unit in item.get("tdd_units", [])}
+    scope.update(f"unit:{item[key]}" for key in ("increment", "test_fix") if isinstance(item.get(key), str))
+    if isinstance(item.get("gate"), str):
+        scope.add(f"gate:{item['gate']}")
+    scope.update(_reservation_scope(ledger, item.get("reservation_id")))
+    if "metadata_correction" in item:
+        scope.add("metadata")
+    if isinstance(ledger["dispatches"].get(item.get("verifies")), dict):
+        scope |= _dispatch_scope(ledger, ledger["dispatches"][item["verifies"]])
+    return scope
+
+
+def _reservation_scope(ledger: dict[str, Any], reservation: Any) -> set[str]:
+    if not isinstance(reservation, str):
+        return set()
+    family = ledger["reservations"].get(reservation, {}).get("family")
+    return {f"reservation:{reservation}", *([f"family:{family}"] if family is not None else [])}
+
+
+def _request_scope(ledger: dict[str, Any], action: str, inputs: dict[str, Any]) -> set[str] | None:
+    """The units a new request would work on, or None when it needs every dispatch settled."""
+    if action in {"begin-replan-epoch", "begin-stage-epoch", "bind-invariants"}:
+        return None
+    target = _verified_target(ledger, inputs) if action == "reserve" else None
+    if target is not None:
+        return _dispatch_scope(ledger, ledger["dispatches"][target])
+    scope = _reservation_scope(ledger, inputs.get("reservation_id"))
+    if action == "reserve-class-correction":
+        scope |= _reservation_scope(ledger, ledger.get("corrective_exception", {}).get("reservation_id"))
+    if action == "begin-verification":
+        return None
+    units = inputs.get("tdd_units")
+    scope.update(f"unit:{unit}" for unit in (units if isinstance(units, list) else []) if isinstance(unit, str))
+    for key in ("review_remediation", "test_fix"):
+        if isinstance(inputs.get(key), dict) and isinstance(inputs[key].get("tdd_unit"), str):
+            scope.add(f"unit:{inputs[key]['tdd_unit']}")
+    if isinstance(inputs.get("gate_remediation"), dict) and isinstance(inputs["gate_remediation"].get("gate"), str):
+        scope.add(f"gate:{inputs['gate_remediation']['gate']}")
+    if inputs.get("metadata_only") is True:
+        scope.add("metadata")
+    invariant = inputs.get("failure_invariant")
+    if isinstance(invariant, str) and (action == "authorize-corrective-exception" or inputs.get("kind") == "corrective"):
+        scope.add(f"family:{invariant if invariant in ledger['approved_invariants'] else 'unresolved'}")
+    return scope
+
+
+def _verified_target(ledger: dict[str, Any], inputs: dict[str, Any]) -> str | None:
+    """The reconciled unknown dispatch a verification request names, or None when it names no valid one."""
+    target = inputs.get("verifies_dispatch_id")
+    item = ledger["dispatches"].get(target) if isinstance(target, str) else None
+    if (inputs.get("kind") == "verification" and isinstance(item, dict) and item.get("outcome") == "unknown"
+            and "reconciliation" in item):
+        return target
+    return None
+
+
+def _unknown_blockers(ledger: dict[str, Any], action: str, inputs: dict[str, Any]) -> list[str]:
+    """Unknown-outcome dispatches that block this request: those sharing its unit, or any when it or they are unscoped.
+
+    A verification dispatch of a reconciled unknown dispatch is exempt from that one dispatch.
+    """
+    if action == "begin-verification" and "verifies" in ledger["dispatches"].get(inputs.get("dispatch_id"), {}):
+        return []
+    scope = _request_scope(ledger, action, inputs)
+    exempt = _verified_target(ledger, inputs) if action == "reserve" else None
+    return [dispatch_id for dispatch_id, item in ledger["dispatches"].items()
+            if item["outcome"] == "unknown" and dispatch_id != exempt
+            and (not scope or scope & _dispatch_scope(ledger, item) or not _dispatch_scope(ledger, item))]
+
+
+def _verifies_request(ledger: dict[str, Any], inputs: dict[str, Any]) -> str | None:
+    """The reconciled unknown dispatch a new verification dispatch verifies; anything else naming one is refused."""
+    if "verifies_dispatch_id" not in inputs:
+        return None
+    target = _verified_target(ledger, inputs)
+    if target is None:
+        raise ValueError("verifies_dispatch_id names a reconciled unknown dispatch and applies only to a verification dispatch")
+    return target
+
+
+def reconcile_unit(root: Path, ledger: dict[str, Any], inputs: dict[str, Any], spec: Path, now: float) -> dict[str, Any]:
+    """Classify an unknown dispatch from git state under its owned paths, with no operator event.
+
+    The reconciler agent reports a classification; the runner compares the
+    dispatch's own worktree snapshot with the tree now, restricted to the paths
+    the sidecar gives the dispatch's units, and accepts only a matching claim.
+    `no_effect` marks the dispatch failed so its unit can be dispatched again.
+    `partial` and `complete` keep it unknown until a verification dispatch that
+    names it completes.
+    """
+    from .task_execution import path_key
+
+    dispatch_id = require_text(inputs.get("dispatch_id"), "dispatch_id")
+    claimed = inputs.get("classification")
+    if claimed not in UNIT_CLASSIFICATIONS:
+        raise ValueError("classification must be no_effect, partial, or complete")
+    if inputs.get("native_observation") is not None:
+        raise ValueError("reconcile-unit takes no operator event; the runner classifies from git state")
+    if inputs.get("spec_file") is None:
+        raise ValueError("reconcile-unit requires an explicit spec_file naming the feature spec")
+    item = ledger["dispatches"].get(dispatch_id)
+    if not isinstance(item, dict):
+        raise ValueError("dispatch was not reserved")
+    units = item.get("tdd_units")
+    if item["outcome"] != "unknown" or "reconciliation" in item or not units or "worktree_before" not in item:
+        return {"reasons": ["unit_not_reconcilable"]}
+    error, evidence = _task_ownership(root, spec)
+    if error is not None:
+        return {"reasons": [error]}
+    if any(unit not in evidence["units"] for unit in units):
+        return {"reasons": ["increment_not_in_ownership_evidence"]}
+    owns = [path_key(own) for unit in units for own in evidence["units"][unit]]
+    changed = _changed_since(root, item["worktree_before"])
+    if changed is None:
+        return {"reasons": ["worktree_state_unavailable"]}
+    under = [path for path in changed if any(path_key(path) == own or path_key(path).startswith(own + "/") for own in owns)]
+    members = {task_id for task_id, entry in evidence["tasks"].items() if entry["tdd_unit"] in units}
+    computed = ("no_effect" if not under
+                else "complete" if members <= _checked_tasks(evidence["sources"][2]) else "partial")
+    if computed != claimed:
+        return {"reasons": ["unit_classification_mismatch"]}
+    if computed == "no_effect":
+        del item["worktree_before"]
+        item.update(outcome="failed", completed_at=now, reconciled_as="no_effect", changed_paths=[])
+        return {"dispatch_id": dispatch_id, "reconciled": computed, "relaunch_allowed": True}
+    item["reconciliation"] = {"class": computed, "paths": under, "at": now}
+    return {"dispatch_id": dispatch_id, "reconciled": computed, "verification_required": True}
+
+
+def _resolve_verified_unit(ledger: dict[str, Any], dispatch_id: str, inputs: dict[str, Any], outcome: Any,
+                           now: float) -> dict[str, Any]:
+    """Resolve a reconciled unknown dispatch once its verification dispatch completed; the class fixes the outcome."""
+    item = ledger["dispatches"][dispatch_id]
+    verifier_id = require_text(inputs.get("verification_dispatch_id"), "verification_dispatch_id")
+    record = item["reconciliation"]
+    trial = {**item, "verified_by": verifier_id, "outcome": "completed" if record["class"] == "complete" else "failed"}
+    if not _unit_verified({**ledger, "dispatches": {**ledger["dispatches"], dispatch_id: trial}}, trial, dispatch_id):
+        return {"reasons": ["unit_verification_not_completed"]}
+    if outcome != trial["outcome"]:
+        return {"reasons": ["unit_resolution_mismatch"]}
+    item.pop("worktree_before", None)
+    item.update(outcome=outcome, completed_at=now, changed_paths=list(record["paths"]), verified_by=verifier_id)
+    if outcome == "completed":
+        _resolve_deferrals(ledger, dispatch_id, now)
+    return {"reasons": []}
+
+
 def record_result(ledger: dict[str, Any], inputs: dict[str, Any], now: float, root: Path) -> dict[str, Any]:
     dispatch_id = require_text(inputs.get("dispatch_id"), "dispatch_id")
     if dispatch_id not in ledger["dispatches"]:
@@ -1962,6 +2230,8 @@ def record_result(ledger: dict[str, Any], inputs: dict[str, Any], now: float, ro
     outcome = inputs.get("outcome")
     if outcome not in OUTCOMES or (outcome == "expected_tdd_red" and item["kind"] != "implementation"):
         raise ValueError("invalid outcome for dispatch kind")
+    if item["outcome"] == "unknown" and "reconciliation" in item and inputs.get("verification_dispatch_id") is not None:
+        return _resolve_verified_unit(ledger, dispatch_id, inputs, outcome, now)
     changed = _observed_changes(item, outcome, root)
     if "test_fix" in item and outcome == "completed" and item["outcome"] in {"reserved", "running"}:
         # A test fix completes only when the runner saw a change and every change stayed in its declared test files.
@@ -1985,7 +2255,7 @@ def record_result(ledger: dict[str, Any], inputs: dict[str, Any], now: float, ro
     item.update(outcome=outcome, completed_at=now)
     if outcome == "completed":
         _resolve_deferrals(ledger, dispatch_id, now)
-    return {"reasons": ["unknown_side_effects_require_operator_reconciliation"] if outcome == "unknown" else []}
+    return {"reasons": []}
 
 
 def begin_verification(ledger: dict[str, Any], inputs: dict[str, Any]) -> dict[str, Any]:
@@ -2056,27 +2326,75 @@ def _spec_invariants(spec_bytes: bytes) -> list[str]:
     return invariants
 
 
+def _planning_fingerprints(root: Path, spec_file: str) -> dict[str, str] | None:
+    """The sidecar's fingerprints when they match the feature's current spec, plan, and tasks, else None."""
+    from .task_execution import fingerprints
+
+    feature = PurePosixPath(spec_file).parent.as_posix()
+    try:
+        sources = [confined_path(root, f"{feature}/{name}").read_text(encoding="utf-8")
+                   for name in ("spec.md", "plan.md", "tasks.md")]
+        metadata = json.loads(confined_path(root, f"{feature}/.process/task-execution.json").read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, ValueError):
+        return None
+    current = fingerprints(*sources)
+    return current if isinstance(metadata, dict) and metadata.get("fingerprints") == current else None
+
+
+def _replan_ineligibility(root: Path, ledger: dict[str, Any], spec: Path, spec_bytes: bytes) -> str | None:
+    """Why an agent may not open a re-plan epoch, or None when the ledger and tree prove it may.
+
+    A deferral is open, the spec (scope) is the bound one, and the Tasks rerun is
+    complete: the sidecar matches the current sources and differs from the
+    fingerprints recorded when the current epoch was bound. Settled dispatches
+    are checked by the caller.
+    """
+    binding = ledger.get("invariant_binding")
+    if not isinstance(binding, dict) or "planning_fingerprints" not in binding:
+        return "no_recorded_planning_fingerprints"
+    if (binding["spec_file"] != spec.relative_to(root.resolve()).as_posix()
+            or binding["spec_sha256"] != hashlib.sha256(spec_bytes).hexdigest()
+            or _spec_invariants(spec_bytes) != ledger["approved_invariants"]):
+        return "spec_changed_scope_needs_operator"
+    if all("resolved_by" in entry for entry in ledger.get("deferred", [])):
+        return "no_open_deferral"
+    current = _planning_fingerprints(root, binding["spec_file"])
+    if current is None:
+        return "planning_rerun_unproven"
+    return "planning_unchanged" if current == binding["planning_fingerprints"] else None
+
+
 def begin_replan_epoch(root: Path, ledger: dict[str, Any], inputs: dict[str, Any], spec: Path,
                        now: float) -> dict[str, Any]:
-    """Archive the spent allowance and open a fresh one for an operator-approved re-plan."""
+    """Archive the spent allowance and open a fresh one for an operator-approved or agent-proved re-plan."""
     if inputs.get("spec_file") is None:
         raise ValueError("begin-replan-epoch requires an explicit spec_file")
-    keys = {"native_event_id", "run_id", "action", "spec_sha256"}
-    event, event_id = _operator_event(ledger, inputs, keys, "re-plan epoch")
     spec_bytes = spec.read_bytes()
     spec_digest = hashlib.sha256(spec_bytes).hexdigest()
-    if (event.get("run_id"), event.get("action"), event.get("spec_sha256")) != (
-            ledger["run_id"], "replan_epoch_approved", spec_digest):
-        raise ValueError("operator re-plan event does not match this run and the current spec")
+    agent_event = _agent_approval(ledger, inputs, AGENT_REPLAN_PREFIX, AGENT_REPLAN_CAP,
+                                  str(len(ledger.get("corrective_epochs", [])) + 1), "re-plan epoch")
+    if agent_event is not None:
+        event_id = agent_event
+        ineligible = _replan_ineligibility(root, ledger, spec, spec_bytes)
+        if ineligible is not None:
+            raise ValueError(f"agent-authorized re-plan epoch is not provable ({ineligible}); the operator approves it")
+    else:
+        keys = {"native_event_id", "run_id", "action", "spec_sha256"}
+        event, event_id = _operator_event(ledger, inputs, keys, "re-plan epoch")
+        if (event.get("run_id"), event.get("action"), event.get("spec_sha256")) != (
+                ledger["run_id"], "replan_epoch_approved", spec_digest):
+            raise ValueError("operator re-plan event does not match this run and the current spec")
     if ledger.get("active_wait") or any(item["outcome"] not in OUTCOMES - {"unknown"}
                                         for item in ledger["dispatches"].values()):
         raise ValueError("settle every dispatch and wait before opening a new corrective epoch")
     epoch = {key: ledger.pop(key) for key in (*EPOCH_STATE_KEYS, *EPOCH_OPTIONAL_KEYS) if key in ledger}
     epoch.update(epoch_event_id=event_id, closed_at=now)
     ledger.setdefault("corrective_epochs", []).append(epoch)
+    binding: dict[str, Any] = {"spec_file": spec.relative_to(root.resolve()).as_posix(), "spec_sha256": spec_digest,
+                               "bound_at": now}
+    fingerprints = _planning_fingerprints(root, binding["spec_file"])
     ledger.update(corrective_cycles=0, reservations={}, dispatches={}, approved_invariants=_spec_invariants(spec_bytes),
-                  invariant_binding={"spec_file": spec.relative_to(root.resolve()).as_posix(),
-                                     "spec_sha256": spec_digest, "bound_at": now})
+                  invariant_binding={**binding, **({"planning_fingerprints": fingerprints} if fingerprints else {})})
     return {"corrective_epoch": len(ledger["corrective_epochs"])}
 
 
@@ -2118,6 +2436,9 @@ def begin_stage_epoch(root: Path, ledger: dict[str, Any], inputs: dict[str, Any]
                   approved_invariants=list(epoch["approved_invariants"]))
     if "invariant_binding" in epoch:
         ledger["invariant_binding"] = dict(epoch["invariant_binding"])
+        fingerprints = _planning_fingerprints(root, str(ledger["invariant_binding"]["spec_file"]))
+        if fingerprints is not None:
+            ledger["invariant_binding"]["planning_fingerprints"] = fingerprints
     epoch.update(epoch_event_id=event_id, closed_at=now, stage_transition=stage)
     ledger.setdefault("corrective_epochs", []).append(epoch)
     return {"stage_epoch_opened": True, "corrective_epoch": len(ledger["corrective_epochs"])}
@@ -2158,7 +2479,7 @@ def execution_control(root: Path, inputs: dict[str, Any], mode: str,
     if spec_name is not None and not spec.is_file():
         raise ValueError("spec_file must be an existing contained file")
     action = inputs.get("action", "status")
-    if action not in {"start", "status", "bind-invariants", "reserve", "authorize-corrective-retry", "authorize-corrective-continuation", "authorize-corrective-exception", "reserve-class-correction", "begin-replan-epoch", "begin-stage-epoch", "begin-verification", "complete", "reconcile", "checkpoint", "pause", "resume", "relocate-workflow", RECORD_FINALIZE_CYCLE}:
+    if action not in {"start", "status", "bind-invariants", "reserve", "authorize-corrective-retry", "authorize-corrective-continuation", "authorize-corrective-exception", "reserve-class-correction", "begin-replan-epoch", "begin-stage-epoch", "begin-verification", "complete", "reconcile", "reconcile-unit", "checkpoint", "pause", "resume", "relocate-workflow", RECORD_FINALIZE_CYCLE}:
         if evidence is None or action != RECORD_FAILING_CHECKS:
             raise ValueError("unsupported action; pauses/resets require verified native authorization")
     elif evidence is not None:
@@ -2200,6 +2521,10 @@ def execution_control(root: Path, inputs: dict[str, Any], mode: str,
             raise ValueError("execution ledger belongs to a different workflow")
         reasons = clock_reasons(ledger, now)
         extra: dict[str, Any] = {}
+        blockers = _unknown_blockers(ledger, action, inputs) if action in UNKNOWN_GUARDED_ACTIONS else []
+        if blockers:
+            reasons.append(UNKNOWN_BLOCKED)
+            extra["blocked_by"] = blockers
         if "clock_moved_backwards" in reasons and action not in {"status", "start"}:
             raise ValueError("clock moved backwards; preserve the ledger and reconcile time before continuing")
         _bind_invariants_if_requested(root, inputs, spec, ledger, now, reasons)
@@ -2212,7 +2537,7 @@ def execution_control(root: Path, inputs: dict[str, Any], mode: str,
         elif action == "authorize-corrective-retry" and not reasons:
             extra = authorize_corrective_retry(ledger, inputs, now)
         elif action == "authorize-corrective-continuation" and not reasons:
-            extra = authorize_corrective_continuation(ledger, inputs, now)
+            extra = authorize_corrective_continuation(root, ledger, inputs, spec, now)
         elif action == "authorize-corrective-exception" and not reasons:
             extra = authorize_corrective_exception(ledger, inputs, now)
         elif action == "reserve-class-correction" and not reasons:
@@ -2223,6 +2548,8 @@ def execution_control(root: Path, inputs: dict[str, Any], mode: str,
             extra = begin_stage_epoch(root, ledger, inputs, workflow, now)
         elif action == "begin-verification" and not reasons:
             extra = begin_verification(ledger, inputs)
+        elif action == "reconcile-unit":
+            extra = reconcile_unit(root, ledger, inputs, spec, now)
         elif action in {"complete", "reconcile"}:
             extra = record_result(ledger, inputs, now, root)
             reasons = clock_reasons(ledger, now)
@@ -2238,7 +2565,9 @@ def execution_control(root: Path, inputs: dict[str, Any], mode: str,
         return {"ledger": ledger, "ledger_path": relative, "disposition": disposition,
                 "reasons": reasons, "elapsed_seconds": elapsed(ledger, now, ledger["started_at"]),
                 "checkpoint_due": elapsed(ledger, now, ledger["checkpoint_at"]) >= 2700,
-                "authorization_granted": False, "writes_state": mode == "apply", **extra}
+                "authorization_granted": False, "writes_state": mode == "apply", **extra,
+                **({"unknown_dispatch_ids": unknown} if (unknown := sorted(
+                    key for key, item in ledger["dispatches"].items() if item["outcome"] == "unknown")) else {})}
 
     if mode == "apply":
         # Mark the evidence directory before the orchestrator can write its own logs there (#813).

@@ -40,6 +40,7 @@ SCENARIOS = (
     "deferral-resolution.json",
     "test-fix.json",
 )
+UNIT_SCENARIOS = ("unknown-dispatch-unit.json", "agent-authorized-retry.json")
 CONVERGENCE_SCENARIOS = ("convergence-go-test.json",)
 CHECK_FIXTURES = TEST_ROOT / "unit" / "fixtures" / "failing-checks"
 APPROVAL_SCENARIOS = tuple(name for name in SCENARIOS if name != "test-fix.json")
@@ -213,6 +214,9 @@ class CorrectiveAuthorizationReplayTests(unittest.TestCase):
                         self.git_baseline()
                     else:
                         self.check_step(step)
+
+    def test_unit_scoped_unknown_outcome_scenarios_replay_against_the_shipped_runner(self) -> None:
+        self.replay(UNIT_SCENARIOS)
 
     def test_fixture_scenarios_replay_against_the_shipped_runner(self) -> None:
         self.replay(SCENARIOS)

@@ -2702,6 +2702,9 @@ For each dependency-ready wave from the helper:
   confirm owned cleanup before starting another team. Idle is not a result.
   Reconcile partial results; schedule only proven unfinished work.
   Missing/unknown effects permit one read-only reconciliation, not relaunch.
+  Pass `tdd_units` on each implementation reserve. An unknown outcome blocks
+  only that unit: settle it with `execution-control action=reconcile-unit`
+  while independent units keep running.
   Record execution-control completion for each dispatch.
 
 At each completed capability group:
@@ -2980,9 +2983,15 @@ and never treat an earlier answer as authorization for the vetoed action. A revi
 authorization is a genuine external failure: retry with backoff, then the veto
 is a decision for the owner in the end-of-run request. The
 correctness stops in this reference are unchanged and still stop the run:
-unknown side effects, an execution-control `checkpoint_required` disposition,
-a ledger or clock error, invalid or stale state, and a failed gate whose
-repair is out of scope.
+unknown side effects the runner cannot classify with `reconcile-unit`, an
+execution-control `checkpoint_required` disposition, a ledger or clock error,
+invalid or stale state, and a failed gate whose repair is out of scope.
+A `checkpoint_required` whose `reasons` is only `unknown_dispatch_blocks_unit`
+is not a stop: run `reconcile-unit` for each id in `blocked_by`. On
+`unit_classification_mismatch`, re-inspect the owned paths and call once more
+with the class the paths show; never cycle the three values. Read
+`unknown_dispatch_ids` from `status` before each wave so a blocked unit is
+seldom reserved.
 
 A failed gate or test is not a blocked action: diagnose it through the
 consensus agents, fix it through the executor, rerun verification, and keep
@@ -3006,6 +3015,17 @@ still ready for review (a deferral whose unit a later completed dispatch fixed i
 ledger and drops out); there the owner can approve `authorize-corrective-exception` or
 `begin-replan-epoch` once for everything deferred. It is never a mid-run question, and it never keeps
 the stack in draft: only a required gate that is not green does.
+
+Issue capped approvals yourself when the runner proves them, instead of asking
+the operator. Pass `agent_authorized: true` and no `native_observation` to
+`authorize-corrective-retry` (a lost worker's failed corrective dispatch with
+a recorded native failure event; one per run), to `begin-replan-epoch` (a
+deferral is open, the spec is unchanged, the Tasks rerun changed the plan or
+task fingerprints the stage epoch recorded, and every dispatch is settled; two
+per run), or to `authorize-corrective-continuation` with `spec_file` (the
+metadata-only proof holds). A refusal means the proof does not hold or the cap
+is spent; only then does the request go to the operator. Scope changes and
+forged events stay operator-only.
 
 #### Repeated Gate Failures: Diagnose One Class, Approve It Once
 

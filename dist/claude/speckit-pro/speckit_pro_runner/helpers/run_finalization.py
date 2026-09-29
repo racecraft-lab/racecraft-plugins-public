@@ -57,6 +57,7 @@ from ..agent_materialization import canonical_bytes
 from ..envelope import diagnostic, response
 from ..execution_control import (ESCALATION_TIER3_CAP, confined_path, escalation_key, escalation_progress,
                                  failed_verification, finalize_observation_key, require_text, validate_ledger)
+from ..stop_policy import ALL_TIERS_FAILED, AUTHORITY, EXHAUSTED, TIER3_CAP_REACHED, stop_class
 from ..sweep_isolation import HEX_OBJECT_RE
 
 ALLOWED_INPUTS = frozenset({"repo_root", "ledger_path", "expected_run_id", "gates", "pending_items",
@@ -69,9 +70,6 @@ HARNESS_RETRY_BUDGET = 3
 # One more attempt, in a changed environment, before a persistent harness error stops the run.
 HARNESS_ENVIRONMENT_ATTEMPTS = 1
 ENVIRONMENT_CHANGES = ("fresh_worktree", "cleared_caches")
-# The closed stop classes a record names: `authority` needs an owner's decision, `exhausted` spent every
-# escalation tier, `harm_halt` is a halt for harm. A sibling change owns the shared set.
-STOP_CLASSES = ("authority", "exhausted", "harm_halt")
 DEFERRAL_FIELDS = ("unit", "reason", "finish")
 UAT_FIELDS = ("item", "reason", "finish")
 UNIT_LABELS = {"failure_family": "Failure family", "failure_class": "Failure class",
@@ -266,7 +264,13 @@ def _missing(prs: list[dict[str, Any]], gates: list[dict[str, Any]]) -> list[dic
 def _exhausted_reason(ledger: dict[str, Any], unit_kind: str, unit: str) -> str:
     """`all_tiers_failed` after tier 3, `tier3_cap_reached` when the run's cap kept the unit from tier 3."""
     record = ledger["escalation_allowances"][escalation_key(unit_kind, unit)]
-    return "all_tiers_failed" if record["tier"] == 3 else "tier3_cap_reached"
+    return ALL_TIERS_FAILED if record["tier"] == 3 else TIER3_CAP_REACHED
+
+
+def _exhausted_stop(ledger: dict[str, Any], unit_kind: str, unit: str) -> dict[str, str]:
+    """The stop class and reason of an exhausted unit; a reason the stop policy does not know fails closed."""
+    reason = _exhausted_reason(ledger, unit_kind, unit)
+    return {"class": stop_class(reason), "reason_code": reason}
 
 
 def _decision(ledger: dict[str, Any], entry: dict[str, Any], resume_command: str) -> dict[str, str]:
@@ -281,8 +285,7 @@ def _decision(ledger: dict[str, Any], entry: dict[str, Any], resume_command: str
         "finish": f"Reply approving one `authorize-corrective-exception` for {unit}, or a re-plan with "
                   f"`begin-replan-epoch`, then resume with: {resume_command}",
         "evidence": f"Ledger deferral {entry['dispatch_id']}; escalation reached tier {record['tier']} ({reached}).",
-        "class": "exhausted",
-        "reason_code": _exhausted_reason(ledger, entry["unit_kind"], unit),
+        **_exhausted_stop(ledger, entry["unit_kind"], unit),
     }
 
 
@@ -411,18 +414,17 @@ def _gate_findings(ledger: dict[str, Any], gates: list[dict[str, Any]], numbers:
     observed: list[str] = []
     for gate in gates:
         where = {"gate": gate["gate"], "command": gate["command"], "pull_request": numbers[gate["head_sha"]],
-                 "head_sha": gate["head_sha"], "class": "exhausted"}
+                 "head_sha": gate["head_sha"]}
         if gate["status"] == "failed":
             progress = _gate_progress(ledger, gate)
             if progress == "exhausted":
-                failed.append({**where, "reason_code": _exhausted_reason(
-                    ledger, "gate_failure", gate_command_digest(gate["command"]))})
+                failed.append({**where, **_exhausted_stop(ledger, "gate_failure", gate_command_digest(gate["command"]))})
             else:
                 pending.append(_gate_pending(where, gate, progress))
         elif gate["status"] == "harness_error":
             key = finalize_observation_key("harness_error", gate["head_sha"], gate["gate"])
             if "environment_change" in gate and counted.get(key, 0) >= 1:
-                harness.append({**where, "attempts": gate["attempts"], "evidence": gate["evidence"]})
+                harness.append({**where, "class": EXHAUSTED, "attempts": gate["attempts"], "evidence": gate["evidence"]})
             else:
                 pending.append(_harness_pending(where, gate))
                 observed.append(key)
@@ -438,7 +440,7 @@ def _missing_findings(prs: list[dict[str, Any]], gates: list[dict[str, Any]],
     for entry in _missing(prs, gates):
         key = finalize_observation_key("missing_gate", entry["head_sha"], entry["gate"])
         if counted.get(key, 0) >= 1:
-            missing.append({**entry, "class": "exhausted"})
+            missing.append({**entry, "class": EXHAUSTED})
         else:
             pending.append(f"Run gate {entry['gate']} at head {entry['head_sha']} of PR "
                            f"#{entry['pull_request']}: {entry['command']}")
@@ -456,7 +458,7 @@ def finalize_run(root: Path, inputs: dict[str, Any]) -> dict[str, Any]:
     ledger = _ledger(root, inputs)
     decisions, unit_pending = _units(ledger, resume_command)
     unresolved = _records(inputs.get("unresolved_deferrals", []), "unresolved_deferrals", DEFERRAL_FIELDS)
-    decisions += [{**item, "evidence": "Recorded as a deferred task by the orchestrator.", "class": "authority"}
+    decisions += [{**item, "evidence": "Recorded as a deferred task by the orchestrator.", "class": AUTHORITY}
                   for item in unresolved]
     human_uat = _records(inputs.get("human_uat", []), "human_uat", UAT_FIELDS)
     prs = _pull_requests(inputs.get("pull_requests"))
