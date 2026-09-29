@@ -30,10 +30,7 @@ def write_exclude(workspace: Path, controller_exclude: bytes, include_worktrees:
     if not stat.S_ISDIR(status.st_mode) or stat.S_ISLNK(status.st_mode):
         raise ValueError("git fixture control directory is unsafe")
     info_directory = git_directory / "info"
-    try:
-        info_directory.mkdir(mode=0o700)
-    except FileExistsError:
-        pass
+    info_directory.mkdir(mode=0o700, exist_ok=True)
     status = info_directory.lstat()
     if not stat.S_ISDIR(status.st_mode) or stat.S_ISLNK(status.st_mode):
         raise ValueError("git fixture info directory is unsafe")

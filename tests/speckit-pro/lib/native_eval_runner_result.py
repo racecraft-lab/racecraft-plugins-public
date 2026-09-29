@@ -33,6 +33,11 @@ class RunnerResultError(ValueError):
     """Raised when native runner evidence cannot be authenticated."""
 
 
+_RECEIPT_BINDING = strict_json.ReceiptBinding(
+    "controller_runner_results", RECEIPT_SCHEMA, RECEIPT_AUTHORITY, RunnerResultError,
+)
+
+
 def _need(condition: bool, message: str) -> None:
     if not condition:
         raise RunnerResultError(message)
@@ -260,10 +265,7 @@ def bind_result(
 
 
 def attach_receipt(observation: dict[str, Any], rows: list[Mapping[str, object]]) -> None:
-    strict_json.attach_receipt(
-        observation, rows, key="controller_runner_results", schema=RECEIPT_SCHEMA,
-        authority=RECEIPT_AUTHORITY, error=RunnerResultError,
-    )
+    strict_json.attach_receipt(observation, rows, _RECEIPT_BINDING)
 
 
 def _lookup(value: object, path: object, label: str) -> object:

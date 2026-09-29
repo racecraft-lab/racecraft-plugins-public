@@ -1524,13 +1524,7 @@ def _claude_activation_binding(
 
 
 def _strict_json_evidence(payload: bytes, label: str) -> dict[str, Any]:
-    try:
-        value = strict_json.loads(payload, error=ValueError)
-    except ValueError as exc:
-        raise ValueError(f"{label} is malformed") from exc
-    if not isinstance(value, dict):
-        raise ValueError(f"{label} is malformed")
-    return value
+    return strict_json.load_object(payload, error=ValueError, message=f"{label} is malformed")
 
 
 def _capture_can_be_renormalized(found: Mapping[str, object]) -> bool:

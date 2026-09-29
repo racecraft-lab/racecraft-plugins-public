@@ -102,21 +102,6 @@ def _preceding(value: object) -> object:
     return value
 
 
-def _json_equal(left: object, right: object) -> bool:
-    if type(left) is not type(right):
-        return False
-    if type(left) is dict:
-        if left.keys() != right.keys():  # type: ignore[union-attr]
-            return False
-        return all(_json_equal(left[key], right[key]) for key in left)  # type: ignore[index,union-attr]
-    if type(left) is list:
-        return len(left) == len(right) and all(  # type: ignore[arg-type]
-            _json_equal(left_item, right_item)
-            for left_item, right_item in zip(left, right, strict=True)  # type: ignore[arg-type]
-        )
-    return left == right
-
-
 def _contains_complete_json(message: str, expected: object) -> bool:
     starts = [index for index, character in enumerate(message) if character in "{["]
     _require(len(starts) <= MAX_JSON_CANDIDATES,
@@ -135,7 +120,7 @@ def _contains_complete_json(message: str, expected: object) -> bool:
             if "depth bound" in str(exc):
                 raise
             continue
-        if _json_equal(candidate, expected):
+        if strict_json.strict_equal(candidate, expected):
             return True
     return False
 

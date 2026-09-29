@@ -556,10 +556,9 @@ def _validated_timestamp(value: object, label: str) -> None:
 
 
 def _load_json_bytes(payload: bytes, label: str) -> dict[str, Any]:
-    value = strict_json.loads(payload, error=UpstreamStageError, label=f"{label} is unreadable")
-    if not isinstance(value, dict):
-        raise UpstreamStageError(f"{label} must be a JSON object")
-    return value
+    return strict_json.load_object(
+        payload, error=UpstreamStageError, message=f"{label} must be a readable JSON object",
+    )
 
 
 def _load_json(path: Path, label: str) -> dict[str, Any]:

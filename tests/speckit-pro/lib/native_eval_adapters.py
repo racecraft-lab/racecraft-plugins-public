@@ -470,13 +470,6 @@ def _write_text(path: Path, text: str, *, mode: int = 0o600) -> None:
     path.chmod(mode)
 
 
-def _write_bytes(path: Path, payload: bytes, *, mode: int = 0o600) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("xb") as stream:
-        stream.write(payload)
-    path.chmod(mode)
-
-
 def _stage_module(case_dir: Path, module: Any) -> None:
     """Copy one lib module beside the case inputs, read-only, for standalone scaffold runs."""
     source = Path(module.__file__).resolve()
@@ -2489,9 +2482,9 @@ def _prepare_claude(
             scaffold = native_eval_upstream_scaffold
             if git_settings is not None:
                 scaffold = native_eval_git_scaffold
-                _write_bytes(case_dir / "git-controller-exclude.bin", _git_controller_exclude(
+                _write_text(case_dir / "git-controller-exclude.bin", _git_controller_exclude(
                     {}, host="claude", include_upstream=True,
-                ))
+                ).decode("utf-8"))
             _stage_module(case_dir, scaffold)
             launcher += f' -B "${{0%/*}}/{Path(scaffold.__file__).name}"\n'
         elif git_settings is not None:

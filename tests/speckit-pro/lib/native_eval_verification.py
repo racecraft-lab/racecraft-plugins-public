@@ -44,6 +44,11 @@ class VerificationError(ValueError):
     """Raised when native verification evidence cannot be authenticated."""
 
 
+_RECEIPT_BINDING = strict_json.ReceiptBinding(
+    "controller_verification", RECEIPT_SCHEMA, RECEIPT_AUTHORITY, VerificationError,
+)
+
+
 def _need(condition: bool, message: str) -> None:
     if not condition:
         raise VerificationError(message)
@@ -223,10 +228,7 @@ def bind_result(
 
 
 def attach_receipt(observation: dict[str, Any], rows: list[Mapping[str, object]]) -> None:
-    strict_json.attach_receipt(
-        observation, rows, key="controller_verification", schema=RECEIPT_SCHEMA,
-        authority=RECEIPT_AUTHORITY, error=VerificationError,
-    )
+    strict_json.attach_receipt(observation, rows, _RECEIPT_BINDING)
 
 
 def _check_identity(check: Mapping[str, object]) -> dict[str, object]:

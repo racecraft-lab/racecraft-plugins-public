@@ -219,10 +219,10 @@ class SealedPlanRepairMessageTests(unittest.TestCase):
     def test_decodes_hash_bound_executor_message(self) -> None:
         envelope, executor_message = self._build_envelope()
         transport = json.dumps(envelope, separators=(",", ":"))
-        payload = decode_sealed_plan_repair_payload(transport)
-        self.assertEqual(payload["executor_message"], executor_message)
+        self.assertEqual(
+            executor := decode_sealed_plan_repair_payload(transport)["executor_message"], executor_message)
         proof = qualify_native_dispatch_context(
-            payload["executor_message"],
+            executor,
             {"original-plan": PROMPT, "architecture": ARCHITECTURE},
             G3,
         )

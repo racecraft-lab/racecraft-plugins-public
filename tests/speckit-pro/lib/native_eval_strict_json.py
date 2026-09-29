@@ -9,6 +9,7 @@ it, and the fixture scripts staged beside it can import it standalone.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import json
 from typing import Any, Mapping
 
@@ -70,6 +71,20 @@ def loads(
         raise _failure(error, label, exc) from exc
 
 
+def load_object(
+    value: str | bytes | bytearray, *, error: type[Exception], message: str,
+) -> dict[str, Any]:
+    """Parse strict JSON that must be one object; every failure raises ``error(message)``."""
+
+    try:
+        result = loads(value, error=error)
+    except error as exc:
+        raise error(message) from exc
+    if not isinstance(result, dict):
+        raise error(message)
+    return result
+
+
 def stream(
     value: str, *, error: type[Exception] = ValueError, label: str | None = None,
 ) -> list[Any]:
@@ -128,15 +143,25 @@ def output_text(output: object, *, error: type[Exception], message: str) -> str:
     return "".join(str(item["text"]) for item in output)
 
 
+@dataclass(frozen=True)
+class ReceiptBinding:
+    """Where a controller receipt lives in native metadata and how it is labelled."""
+
+    key: str
+    schema: str
+    authority: str
+    error: type[Exception]
+
+
 def attach_receipt(
-    observation: dict[str, Any], rows: list[Mapping[str, object]], *, key: str,
-    schema: str, authority: str, error: type[Exception],
+    observation: dict[str, Any], rows: list[Mapping[str, object]], binding: ReceiptBinding,
 ) -> None:
     """Attach one controller receipt to native metadata, exactly once."""
 
     metadata = observation.get("native_metadata")
-    if not isinstance(metadata, dict) or key in metadata:
-        raise error(f"native {key} observation metadata is malformed")
-    metadata[key] = {
-        "schema": schema, "authority": authority, "checks": [dict(row) for row in rows],
+    if not isinstance(metadata, dict) or binding.key in metadata:
+        raise binding.error(f"native {binding.key} observation metadata is malformed")
+    metadata[binding.key] = {
+        "schema": binding.schema, "authority": binding.authority,
+        "checks": [dict(row) for row in rows],
     }

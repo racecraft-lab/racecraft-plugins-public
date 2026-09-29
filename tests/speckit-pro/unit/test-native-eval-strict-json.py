@@ -62,89 +62,69 @@ class ReceiptTests(unittest.TestCase):
     def test_attach_receipt_binds_once_under_the_callers_key(self) -> None:
         import native_eval_strict_json as strict_json
         observation = {"native_metadata": {}}
-        strict_json.attach_receipt(
-            observation, [{"check_id": "one"}], key="controller_rows",
-            schema="schema/v1", authority="authority", error=ValueError,
-        )
+        binding = strict_json.ReceiptBinding("controller_rows", "schema/v1", "authority", ValueError)
+        strict_json.attach_receipt(observation, [{"check_id": "one"}], binding)
         self.assertEqual(observation["native_metadata"]["controller_rows"], {
             "schema": "schema/v1", "authority": "authority", "checks": [{"check_id": "one"}],
         })
-        with self.assertRaises(ValueError):
-            strict_json.attach_receipt(
-                observation, [], key="controller_rows",
-                schema="schema/v1", authority="authority", error=ValueError,
-            )
-        with self.assertRaises(ValueError):
-            strict_json.attach_receipt(
-                {}, [], key="controller_rows",
-                schema="schema/v1", authority="authority", error=ValueError,
-            )
+        for candidate in (observation, {}):
+            with self.assertRaises(ValueError):
+                strict_json.attach_receipt(candidate, [], binding)
+
+
+def prepared_trial(attempt: Path, result_path: Path | None = None) -> adapters.PreparedTrial:
+    return adapters.PreparedTrial(
+        command=[], cwd=attempt, environment={}, host="claude", mode="plugin",
+        attempt_dir=attempt, trace_path=None, result_path=result_path,
+        artifact_root=None, runtime_identity={},
+    )
 
 
 class NonFiniteConstantTests(unittest.TestCase):
     """NaN and Infinity are the only defect in each payload below."""
 
-    def setUp(self) -> None:
-        self.temp = Path(self.enterContext(tempfile.TemporaryDirectory()))
+    def assert_constants_rejected(self, name: str, template: str, read, error, pattern: str) -> None:
+        for index, constant in enumerate(CONSTANTS):
+            with self.subTest(constant=constant):
+                root = Path(self.enterContext(tempfile.TemporaryDirectory())) / f"{name}-{index}"
+                (root / ".codex-plugin").mkdir(parents=True)
+                payload = root / "payload.json"
+                payload.write_text(template.replace("CONSTANT", constant), encoding="utf-8")
+                os.chmod(payload, 0o600)
+                with self.assertRaisesRegex(error, pattern):
+                    read(root, payload)
 
     def test_codex_plugin_manifest_rejects_constants(self) -> None:
-        for index, constant in enumerate(CONSTANTS):
-            with self.subTest(constant=constant):
-                root = self.temp / str(index)
-                (root / ".codex-plugin").mkdir(parents=True)
-                (root / ".codex-plugin" / "plugin.json").write_text(
-                    '{"name":"speckit-pro","extra":' + constant + "}", encoding="utf-8")
-                with self.assertRaisesRegex(adapters.NativeAdapterError, "manifest is unavailable"):
-                    adapters._codex_native_skill_reference(root, "native-skill")
+        def read(root: Path, payload: Path) -> None:
+            payload.rename(root / ".codex-plugin" / "plugin.json")
+            adapters._codex_native_skill_reference(root, "native-skill")
+
+        self.assert_constants_rejected(
+            "manifest", '{"name":"speckit-pro","extra":CONSTANT}', read,
+            adapters.NativeAdapterError, "manifest is unavailable")
 
     def test_claude_framework_result_rejects_constants(self) -> None:
-        for index, constant in enumerate(CONSTANTS):
-            with self.subTest(constant=constant):
-                attempt = self.temp / ("result-" + str(index))
-                attempt.mkdir()
-                result = attempt / "result.json"
-                result.write_text('{"schemaVersion":1,"extra":' + constant + "}", encoding="utf-8")
-                prepared = adapters.PreparedTrial(
-                    command=[], cwd=attempt, environment={}, host="claude", mode="plugin",
-                    attempt_dir=attempt, trace_path=None, result_path=result,
-                    artifact_root=None, runtime_identity={},
-                )
-                with self.assertRaisesRegex(adapters.NativeAdapterError, "result is malformed"):
-                    adapters._read_claude_result(prepared)
+        self.assert_constants_rejected(
+            "result", '{"schemaVersion":1,"extra":CONSTANT}',
+            lambda root, payload: adapters._read_claude_result(prepared_trial(root, payload)),
+            adapters.NativeAdapterError, "result is malformed")
 
     def test_claude_fixture_receipt_rejects_constants(self) -> None:
-        for index, constant in enumerate(CONSTANTS):
-            with self.subTest(constant=constant):
-                attempt = self.temp / ("receipt-" + str(index))
-                attempt.mkdir()
-                receipt = attempt / "receipt.json"
-                receipt.write_text('{"extra":' + constant + "}", encoding="utf-8")
-                os.chmod(receipt, 0o600)
-                prepared = adapters.PreparedTrial(
-                    command=[], cwd=attempt, environment={}, host="claude", mode="plugin",
-                    attempt_dir=attempt, trace_path=None, result_path=None,
-                    artifact_root=None, runtime_identity={},
-                )
-                settings = {"receipt_relative_path": "receipt.json", "expected_result": {}}
-                with self.assertRaisesRegex(adapters.NativeAdapterError, "receipt is malformed"):
-                    adapters._read_claude_fixture_receipt(prepared, settings)
+        settings = {"receipt_relative_path": "payload.json", "expected_result": {}}
+        self.assert_constants_rejected(
+            "receipt", '{"extra":CONSTANT}',
+            lambda root, payload: adapters._read_claude_fixture_receipt(prepared_trial(root), settings),
+            adapters.NativeAdapterError, "receipt is malformed")
 
     def test_store_receipt_rejects_constants(self) -> None:
-        for index, constant in enumerate(CONSTANTS):
-            with self.subTest(constant=constant):
-                path = self.temp / ("store-" + str(index) + ".json")
-                path.write_text('{"payload":{"n":' + constant + '},"sha256":"' + "0" * 64 + '"}',
-                                encoding="utf-8")
-                with self.assertRaisesRegex(store.StoreError, "invalid JSON constant"):
-                    store._read(path)
+        self.assert_constants_rejected(
+            "store", '{"payload":{"n":CONSTANT},"sha256":"' + "0" * 64 + '"}',
+            lambda root, payload: store._read(payload), store.StoreError, "invalid JSON constant")
 
     def test_fixture_plan_rejects_constants(self) -> None:
-        for index, constant in enumerate(CONSTANTS):
-            with self.subTest(constant=constant):
-                path = self.temp / ("plan-" + str(index) + ".json")
-                path.write_text('{"extra":' + constant + "}", encoding="utf-8")
-                with self.assertRaisesRegex(ValueError, "fixture plan could not be read"):
-                    fixture_setup.load_plan(path)
+        self.assert_constants_rejected(
+            "plan", '{"extra":CONSTANT}', lambda root, payload: fixture_setup.load_plan(payload),
+            ValueError, "fixture plan could not be read")
 
 
 if __name__ == "__main__":
