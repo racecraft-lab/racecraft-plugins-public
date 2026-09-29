@@ -178,6 +178,14 @@ def validate_relative_source(value: object, label: str) -> str:
     return value
 
 
+def reject_input_only_compare(compare_sources: set[str], invariants: object) -> None:
+    if invariants is None and compare_sources == {INPUT_WORKFLOW}:
+        raise ValueError(
+            f"every compare source is the copied {INPUT_WORKFLOW}, which the runner writes unchanged to both "
+            "outputs; compare a run-produced artifact or declare required_invariants"
+        )
+
+
 def validate_fixture_contracts(fixture_dir: Path, expected: dict[str, Any], tolerance: dict[str, Any]) -> None:
     fixture_id = fixture_dir.name
     if expected.get("schema") != EXPECTED_SCHEMA:
@@ -232,11 +240,7 @@ def validate_fixture_contracts(fixture_dir: Path, expected: dict[str, Any], tole
 
     invariants = expected.get("required_invariants")
     invariant_source = expected.get("required_invariants_source")
-    if invariants is None and compare_sources == {INPUT_WORKFLOW}:
-        raise ValueError(
-            f"every compare source is the copied {INPUT_WORKFLOW}, which the runner writes unchanged to both "
-            "outputs; compare a run-produced artifact or declare required_invariants"
-        )
+    reject_input_only_compare(compare_sources, invariants)
     if invariants is None:
         if invariant_source is not None:
             raise ValueError("required_invariants_source requires required_invariants")
