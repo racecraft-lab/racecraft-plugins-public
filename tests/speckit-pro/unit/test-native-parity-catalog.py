@@ -23,7 +23,7 @@ sys.path.insert(0, str(TEST_ROOT / "lib"))
 
 from finalize_fixture import run_finalize_fixture  # noqa: E402
 from native_eval_catalog import load_catalog  # noqa: E402
-from native_eval_adapters import _git_controller_exclude, _write_git_controller_exclude  # noqa: E402
+from native_eval_adapter_common import _git_controller_exclude, _write_git_controller_exclude  # noqa: E402
 from native_eval_fixture_setup import (  # noqa: E402
     materialize_workspace,
     snapshot_git_repository_controls,

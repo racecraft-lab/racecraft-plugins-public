@@ -27,7 +27,7 @@ AUDIT_PATH = TEST_ROOT / "evals" / "audit" / "functional-inventory.json"
 sys.path.insert(0, str(TEST_ROOT / "lib"))
 
 from native_eval_catalog import load_catalog, validate_catalog  # noqa: E402
-from native_eval_adapters import _stage_fixture_plan  # noqa: E402
+from native_eval_adapter_common import _stage_fixture_plan  # noqa: E402
 from native_eval_dispatch_context import qualify_native_dispatch_context  # noqa: E402
 from native_eval_fixture_setup import materialize_workspace  # noqa: E402
 from native_eval_grading import grade_observation  # noqa: E402
