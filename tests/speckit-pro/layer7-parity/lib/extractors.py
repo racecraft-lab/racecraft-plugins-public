@@ -3,9 +3,7 @@
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
-from typing import Sequence
 
 
 class ExtractorError(Exception):
@@ -85,44 +83,9 @@ def extract_table_column(file: str | Path, header: str, column: str) -> str:
     return "\n".join(values)
 
 
-def _write_stdout(text: str) -> None:
-    if text:
-        sys.stdout.write(text)
-        sys.stdout.write("\n")
-
-
-def _usage(argv0: str) -> str:
-    return f"Usage: {Path(argv0).name} {{section|row-count|column}} <file> <h2_header> [<column_name>]"
-
-
-def main(argv: Sequence[str] | None = None) -> int:
-    args = list(sys.argv[1:] if argv is None else argv)
-    command = args[0] if args else ""
-    try:
-        if command == "section" and len(args) == 3:
-            _write_stdout(extract_section(args[1], args[2]))
-            return 0
-        if command == "row-count" and len(args) == 3:
-            _write_stdout(extract_table_row_count(args[1], args[2]))
-            return 0
-        if command == "column" and len(args) == 4:
-            _write_stdout(extract_table_column(args[1], args[2], args[3]))
-            return 0
-    except ExtractorError:
-        return 1
-
-    print(_usage(sys.argv[0]), file=sys.stderr)
-    return 2
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
-
-
 __all__ = (
     "ExtractorError",
     "extract_section",
     "extract_table_column",
     "extract_table_row_count",
-    "main",
 )

@@ -53,22 +53,34 @@ Root scripts and SpecKit Pro helper scripts with repository-role classification.
 - **Purpose:** SpecKit Pro plugin-level scripts and configuration data.
 - **Classification:** `source`
 - **Platform concept:** Repository script group
-- **Claude Code:** speckit-pro/scripts/curated-set.json
-- **Codex:** speckit-pro/scripts/curated-set.json
+- **Claude Code:** speckit-pro/scripts/agent-memory-ignore.py, speckit-pro/scripts/crap-score.py, speckit-pro/scripts/curated-set.json, speckit-pro/scripts/mutation-score.py, speckit-pro/scripts/sweep-isolation-hook.py, speckit-pro/scripts/ubiquitous-language-lint.py, speckit-pro/scripts/workflow-guard-hook.py
+- **Codex:** speckit-pro/scripts/agent-memory-ignore.py, speckit-pro/scripts/crap-score.py, speckit-pro/scripts/curated-set.json, speckit-pro/scripts/mutation-score.py, speckit-pro/scripts/sweep-isolation-hook.py, speckit-pro/scripts/ubiquitous-language-lint.py, speckit-pro/scripts/workflow-guard-hook.py
 - **Runtime difference:** Script groups are repository role inventories; paths are shared unless an individual script name or source file declares a runtime-specific purpose.
 
 #### Source Facts
 
+- speckit-pro/scripts/agent-memory-ignore.py is a checked-in source file. Source refs: `speckit-pro/scripts/agent-memory-ignore.py`.
+- speckit-pro/scripts/crap-score.py is a checked-in source file. Source refs: `speckit-pro/scripts/crap-score.py`.
 - speckit-pro/scripts/curated-set.json is a checked-in source file. Source refs: `speckit-pro/scripts/curated-set.json`.
+- speckit-pro/scripts/mutation-score.py is a checked-in source file. Source refs: `speckit-pro/scripts/mutation-score.py`.
+- speckit-pro/scripts/sweep-isolation-hook.py is a checked-in source file. Source refs: `speckit-pro/scripts/sweep-isolation-hook.py`.
+- speckit-pro/scripts/ubiquitous-language-lint.py is a checked-in source file. Source refs: `speckit-pro/scripts/ubiquitous-language-lint.py`.
+- speckit-pro/scripts/workflow-guard-hook.py is a checked-in source file. Source refs: `speckit-pro/scripts/workflow-guard-hook.py`.
 
 #### Sources
 
+- [speckit-pro/scripts/agent-memory-ignore.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/scripts/agent-memory-ignore.py)
+- [speckit-pro/scripts/crap-score.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/scripts/crap-score.py)
 - [speckit-pro/scripts/curated-set.json](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/scripts/curated-set.json)
+- [speckit-pro/scripts/mutation-score.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/scripts/mutation-score.py)
+- [speckit-pro/scripts/sweep-isolation-hook.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/scripts/sweep-isolation-hook.py)
+- [speckit-pro/scripts/ubiquitous-language-lint.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/scripts/ubiquitous-language-lint.py)
+- [speckit-pro/scripts/workflow-guard-hook.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/scripts/workflow-guard-hook.py)
 
 #### Inferred Notes
 
 - Review script behavior in its owning source files before changing generated docs that describe the group.
-  - Based on: `speckit-pro/scripts/curated-set.json`
+  - Based on: `speckit-pro/scripts/agent-memory-ignore.py`, `speckit-pro/scripts/crap-score.py`, `speckit-pro/scripts/curated-set.json`, `speckit-pro/scripts/mutation-score.py`, `speckit-pro/scripts/sweep-isolation-hook.py`, `speckit-pro/scripts/ubiquitous-language-lint.py`, `speckit-pro/scripts/workflow-guard-hook.py`
 
 ### Root Release Scripts
 

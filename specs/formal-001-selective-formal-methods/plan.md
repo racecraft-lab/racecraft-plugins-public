@@ -51,9 +51,9 @@ optional/null values, sets, dates and identifiers need an explicit tested
 projection; never silently round, coerce, reorder or drop them. Concurrent traces
 need a justified action ordering and observation boundary, not wall-clock sorting.
 
-- [ ] T5: ship and execute equivalent Python, TypeScript, and Swift examples,
+- [x] T5: ship and execute equivalent Python, TypeScript, and Swift examples,
   including a seeded illegal transition whose individual states remain valid.
-- [ ] T6: verify test/compile hooks, source fingerprinting and hosted CI profiles
+- [x] T6: verify test/compile hooks, source fingerprinting and hosted CI profiles
   across all three; do not advertise an unexecuted runtime or Apple platform.
 
 Research uses current Context7 plus official documentation:
@@ -82,7 +82,7 @@ actions and states, including illegal transitions with individually valid states
 - [x] T5: use the official ITF value encoding and action metadata where applicable,
   documenting and testing the supported subset. Cover Python, TypeScript and
   Swift with explicit drivers/projections; do not infer a supported Swift library.
-- [ ] T6: preserve disabled behavior, compiler/model/import fingerprints, failure
+- [x] T6: preserve disabled behavior, compiler/model/import fingerprints, failure
   classification, and profile-specific installation/upgrade recovery. Simulation
   and generated tests cannot be reported as exhaustive model-checking evidence.
 
@@ -114,7 +114,7 @@ parity and manual-UAT status against the exact pushed revision.
   bounded agent permissions, and both Claude/Codex distributions. Audit upstream
   instructions before adoption; Docker/MCP setup must remain optional.
 
-- [ ] Before final qualification and PR delivery, review the complete SpecKit Pro
+- [x] Before final qualification and PR delivery, review the complete SpecKit Pro
   harness against `tests/speckit-pro/suite-manifest.json`: structural and unit
   tests, trigger and functional evals, integration runners, installed Claude and
   Codex payloads, scaffold/autopilot lifecycle, disabled-feature compatibility,
