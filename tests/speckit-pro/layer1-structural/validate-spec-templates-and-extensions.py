@@ -155,7 +155,6 @@ class ValidateSpecifyExtensions(unittest.TestCase):
                 self.assertIn(command, registered_commands)
         self.check_verify_extension(extensions)
 
-# Contracts transferred from validate-process-gitattributes.py.
 GITATTRIBUTES = REPO_ROOT / '.gitattributes'
 
 def rules_scoped(text: str) -> bool:
