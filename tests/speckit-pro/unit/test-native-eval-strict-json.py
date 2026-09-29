@@ -12,7 +12,9 @@ import unittest
 TEST_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(TEST_ROOT / "lib"))
 
-import native_eval_adapters as adapters  # noqa: E402
+import native_eval_adapter_common as adapter_common  # noqa: E402
+import native_eval_claude_adapter as claude_adapter  # noqa: E402
+import native_eval_codex_adapter as codex_adapter  # noqa: E402
 import native_eval_fixture_setup as fixture_setup  # noqa: E402
 import native_eval_store as store  # noqa: E402
 from test_result import run_counted  # noqa: E402
@@ -81,23 +83,23 @@ class NonFiniteConstantTests(unittest.TestCase):
 
         def manifest(root: Path, payload: Path) -> None:
             payload.rename(root / ".codex-plugin" / "plugin.json")
-            adapters._codex_native_skill_reference(root, "native-skill")
+            codex_adapter._codex_native_skill_reference(root, "native-skill")
 
         # name: (payload template, read the payload, expected error class, expected message)
         paths = {
             "codex manifest": (
                 '{"name":"speckit-pro","extra":CONSTANT}', manifest,
-                adapters.NativeAdapterError, "manifest is unavailable"),
+                adapter_common.NativeAdapterError, "manifest is unavailable"),
             "claude framework result": (
                 '{"schemaVersion":1,"extra":CONSTANT}',
-                lambda root, payload: adapters._read_claude_result(
+                lambda root, payload: claude_adapter._read_claude_result(
                     types.SimpleNamespace(result_path=payload)),
-                adapters.NativeAdapterError, "result is malformed"),
+                adapter_common.NativeAdapterError, "result is malformed"),
             "claude fixture receipt": (
                 '{"extra":CONSTANT}',
-                lambda root, payload: adapters._read_claude_fixture_receipt(
+                lambda root, payload: claude_adapter._read_claude_fixture_receipt(
                     types.SimpleNamespace(cwd=root), receipt_settings),
-                adapters.NativeAdapterError, "receipt is malformed"),
+                adapter_common.NativeAdapterError, "receipt is malformed"),
             "store receipt": (
                 '{"payload":{"n":CONSTANT},"sha256":"' + "0" * 64 + '"}',
                 lambda root, payload: store._read(payload),
