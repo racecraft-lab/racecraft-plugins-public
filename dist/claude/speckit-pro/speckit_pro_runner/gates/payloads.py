@@ -14,6 +14,7 @@ from typing import Any
 from .. import RUNNER_VERSION
 from ..envelope import diagnostic, is_diagnostic, response
 from ..path_utils import find_repo_root, is_relative_to, sha256_file, sha256_text
+from ..runtime import runner_source_files
 from .gate_response import gate_base_data
 
 FIXTURE_BOUNDARY = Path("tests") / "speckit-pro" / "unit" / "fixtures" / "runner-gates"
@@ -22,6 +23,10 @@ DEFAULT_INSTALL_CASES = FIXTURE_BOUNDARY / "install-verification-cases.json"
 INSTALL_INVENTORY = Path("speckit-pro") / "speckit_pro_runner" / "install_inventory.json"
 INSTALLED_PLUGIN_FIXTURE_BOUNDARY = Path("tests") / "speckit-pro" / "unit" / "fixtures" / "installed-plugin-release"
 DEFAULT_INSTALLED_PLUGIN_PAYLOAD_CASES = INSTALLED_PLUGIN_FIXTURE_BOUNDARY / "payload-completeness-cases.json"
+# A payload cannot work without these; a missing source fails the build.
+CLAUDE_REQUIRED_PAYLOAD_PATHS = (".claude-plugin", "agents", "hooks", "skills", "speckit_pro_runner")
+# The Codex payload also requires skills/ and codex-skills/, copied below.
+CODEX_REQUIRED_PAYLOAD_PATHS = (".codex-plugin", "codex-agents", "speckit_pro_runner")
 PROHIBITED_SCRIPT_SUFFIXES = (".sh", ".bash", ".zsh", ".ps1", ".bat", ".cmd")
 PAYLOAD_INPUT_FIELDS = {
     "build-test-payload-evidence": frozenset({"case_file", "case_id", "output_root"}),
@@ -300,16 +305,13 @@ def build_installed_plugin_payloads(repo_root: Path, dist_root: Path) -> None:
         raise FileNotFoundError(f"source plugin directory not found: {source}")
 
     reset_payload_dir(claude, dist_root)
+    for name in CLAUDE_REQUIRED_PAYLOAD_PATHS:
+        copy_required_installed_plugin(source / name, claude / name)
     for name in [
-        ".claude-plugin",
         ".mcp.json",
-        "agents",
         "commands",
-        "hooks",
-        "skills",
         "artifact-gallery",
         "scripts",
-        "speckit_pro_runner",
         "README.md",
         "CHANGELOG.md",
     ]:
@@ -320,13 +322,12 @@ def build_installed_plugin_payloads(repo_root: Path, dist_root: Path) -> None:
     remove_payload_shell_scripts_installed_plugin(claude)
 
     reset_payload_dir(codex, dist_root)
+    for name in CODEX_REQUIRED_PAYLOAD_PATHS:
+        copy_required_installed_plugin(source / name, codex / name)
     for name in [
-        ".codex-plugin",
-        "codex-agents",
         "codex-hooks.json",
         "artifact-gallery",
         "scripts",
-        "speckit_pro_runner",
         "README.md",
         "CHANGELOG.md",
     ]:
@@ -543,15 +544,7 @@ def payload_trust_metadata_mismatches(payload_root: Path) -> list[str]:
     checksum_path = runner_root / "speckit-pro-runner.sha256"
     manifest_rel = "speckit_pro_runner/speckit-pro-runner.manifest.json"
     checksum_rel = "speckit_pro_runner/speckit-pro-runner.sha256"
-    inventory_path = runner_root / "agent_inventory.json"
-    runner_files = sorted(
-        [
-            path
-            for path in runner_root.rglob("*.py")
-            if path.is_file() and "__pycache__" not in path.parts and not path.name.endswith(".pyc")
-        ]
-        + ([inventory_path] if inventory_path.is_file() else [])
-    )
+    runner_files = runner_source_files(runner_root)
     if not runner_files:
         return []
 
