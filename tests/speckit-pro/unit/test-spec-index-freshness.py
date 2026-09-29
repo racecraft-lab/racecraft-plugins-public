@@ -136,7 +136,10 @@ class SpecIndexFreshnessTests(unittest.TestCase):
         def source_status_clean(argv, **kwargs):
             if argv[:2] == ["git", "status"]:
                 return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
-            return subprocess.run(argv, **kwargs)
+            if argv[0] == "git":
+                return subprocess.run(["git", *argv[1:]], **kwargs)
+            self.assertEqual(sys.executable, argv[0])
+            return subprocess.run([sys.executable, *argv[1:]], **kwargs)
 
         errors = io.StringIO()
         self.assertEqual(
