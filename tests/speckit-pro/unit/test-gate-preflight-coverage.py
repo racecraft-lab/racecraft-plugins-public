@@ -198,6 +198,10 @@ class RunStartCoverageTests(unittest.TestCase):
                              ["gate-pre-pr-pip-audit", "gate-pre-pr-pnpm-audit-prod"])
         self.assertEqual(check({"gates": GATES, "inventory_actions": INVENTORY})["policy_classes"], [])
 
+
+class WritableRootCoverageTests(unittest.TestCase):
+    """Write surfaces outside the writable roots are needs the run-start preflight reports."""
+
     def test_a_private_record_and_workflow_root_outside_the_writable_roots_are_needs(self) -> None:
         """A linked worktree's git common dir and an external workflow root sit outside its writable roots."""
         import tempfile
