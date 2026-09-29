@@ -21,14 +21,13 @@ import time
 from typing import Any, Callable, Mapping
 import uuid
 
+from native_eval_adapter_common import _tree_digest
 from native_eval_adapters import (
-    _capture_claude_artifacts,
-    _read_claude_trace,
-    _tree_digest,
     prepare_trial,
     execute_prepared,
     trigger_stage_from_runtime_identity,
 )
+from native_eval_claude_adapter import _capture_claude_artifacts, _read_claude_trace
 from native_eval_capture import CaptureError, normalize_trace
 import native_eval_strict_json as strict_json
 from native_eval_catalog import _relative_path, input_fingerprint

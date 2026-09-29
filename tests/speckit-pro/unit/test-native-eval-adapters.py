@@ -26,7 +26,10 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 TEST_ROOT = REPO_ROOT / "tests" / "speckit-pro"
 sys.path.insert(0, str(TEST_ROOT / "lib"))
 
+import native_eval_adapter_common as adapter_common  # noqa: E402
 import native_eval_adapters as adapters  # noqa: E402
+import native_eval_claude_adapter as claude_adapter  # noqa: E402
+import native_eval_codex_adapter as codex_adapter  # noqa: E402
 import native_eval_fixture_setup as fixture_setup  # noqa: E402
 import native_eval_git_scaffold as git_scaffold  # noqa: E402
 from native_eval_judge import build_judge_request  # noqa: E402
@@ -148,7 +151,7 @@ def stage_test_codex_runtime(
     target = Path(workspace)
     build.mkdir()
     payload = target / ".agents"
-    adapters._copy_tree(repo / "speckit-pro" / "codex-skills", payload / "skills")
+    claude_adapter._copy_tree(repo / "speckit-pro" / "codex-skills", payload / "skills")
     manifest = payload / ".codex-plugin" / "plugin.json"
     manifest.parent.mkdir()
     shutil.copyfile(repo / "speckit-pro" / ".claude-plugin" / "plugin.json", manifest)
@@ -171,7 +174,7 @@ def stage_test_codex_runtime(
         "schema_version": adapters.native_eval_runtime.SCHEMA_VERSION,
         "payload": {
             "root": ".agents",
-            "tree_sha256": adapters._tree_digest(payload),
+            "tree_sha256": adapter_common._tree_digest(payload),
         },
         "materializations": materializations,
         "pythonpath_relative": ".agents",
@@ -458,7 +461,7 @@ class AdapterPreparationTests(unittest.TestCase):
         self.repo.mkdir()
         repository(self.repo)
         self.case = native_case(self.repo)
-        self.version = mock.patch.object(adapters, "_probe_cli_version", return_value="test-cli 1.0")
+        self.version = mock.patch.object(adapter_common, "_probe_cli_version", return_value="test-cli 1.0")
         self.version.start()
         self.addCleanup(self.version.stop)
         self.isolation_receipt = {
@@ -468,9 +471,9 @@ class AdapterPreparationTests(unittest.TestCase):
             "permission_policy_sha256": "1" * 64, "checker_sha256": "2" * 64,
             "reader": "/bin/cat", "directory_maker": "/bin/mkdir", "probes": [],
         }
-        self.real_isolation_qualifier = adapters._qualify_codex_isolation
+        self.real_isolation_qualifier = codex_adapter._qualify_codex_isolation
         self.isolation = mock.patch.object(
-            adapters, "_qualify_codex_isolation", return_value=self.isolation_receipt,
+            codex_adapter, "_qualify_codex_isolation", return_value=self.isolation_receipt,
         )
         self.isolation_mock = self.isolation.start()
         self.addCleanup(self.isolation.stop)
@@ -492,9 +495,9 @@ class AdapterPreparationTests(unittest.TestCase):
             "runtime_root": "/protected/python",
             "sha256": "3" * 64,
         }
-        self.real_protected_python = getattr(adapters, "_protected_python_runtime", None)
+        self.real_protected_python = getattr(codex_adapter, "_protected_python_runtime", None)
         self.python_runtime = mock.patch.object(
-            adapters,
+            codex_adapter,
             "_protected_python_runtime",
             create=True,
             return_value=(Path(self.python_identity["executable"]), self.python_identity),
@@ -575,56 +578,82 @@ class AdapterPreparationTests(unittest.TestCase):
                 command, 0, b"git version 2.54.0\n", b"",
             )
         if program.endswith("cat") and target == cwd / ".codex/native-eval-isolation-control.txt":
-            return subprocess.CompletedProcess(command, 0, adapters._ISOLATION_CONTROL, b"")
+            return subprocess.CompletedProcess(command, 0, codex_adapter._ISOLATION_CONTROL, b"")
         if program.endswith("mkdir") and target.parent == cwd:
             target.mkdir()
             return subprocess.CompletedProcess(command, 0, b"", b"")
         return subprocess.CompletedProcess(command, 1, b"", b"cat: Operation not permitted\n")
 
+    @staticmethod
+    def checker_sources(*, codex: bytes | None = None, shared: bytes | None = None):
+        """Serve replacement source bytes for the Codex and shared adapter modules only."""
+        real_read_bytes = Path.read_bytes
+        overrides = {
+            Path(codex_adapter.__file__): codex,
+            Path(adapter_common.__file__): shared,
+        }
+
+        def read_bytes(path: Path) -> bytes:
+            replacement = overrides.get(Path(path))
+            return real_read_bytes(path) if replacement is None else replacement
+
+        return mock.patch.object(Path, "read_bytes", autospec=True, side_effect=read_bytes)
+
     def test_isolation_checker_identity_derives_exact_local_security_closure(self) -> None:
-        identity = adapters._isolation_checker_identity()
+        identity = codex_adapter._isolation_checker_identity()
         self.assertEqual(identity["schema_version"], "native-eval-isolation-checker/v1")
+        shared = "native_eval_adapter_common."
         self.assertEqual(
             set(identity["components"]),
             {
                 "Mapping",
-                "NativeAdapterError",
                 "Path",
+                "_CheckerSource",
                 "_ISOLATION_CONTROL",
                 "_ISOLATION_DENIAL",
-                "_canonical_json",
+                "_SHARED_CHECKER_MODULE",
+                "_checker_closure",
+                "_checker_component",
+                "_checker_dependencies",
+                "_checker_source",
                 "_is_broad_temporary_root",
                 "_isolation_checker_identity",
                 "_qualify_codex_git_metadata", "_qualify_codex_isolation",
                 "_real_canonical_directory",
-                "_relocated",
                 "_remove_exact_probe_entry",
-                "_require",
                 "_require_probe_result",
                 "_require_unchanged_probe",
-                "_resolve_executable",
                 "_run_codex_sandbox_probe",
                 "_sandbox_probe_command",
                 "_temporary_isolation_probes",
                 "_write_exclusive_probe",
+                "adapter_common",
                 "ast",
                 "contextmanager",
+                "dataclass",
                 "hashlib",
-                "json",
                 "os",
                 "re",
-                "shutil",
                 "stat",
                 "subprocess",
                 "sys",
                 "tempfile",
                 "uuid",
+                shared + "NativeAdapterError",
+                shared + "Path",
+                shared + "_canonical_json",
+                shared + "_relocated",
+                shared + "_require",
+                shared + "_resolve_executable",
+                shared + "json",
+                shared + "os",
+                shared + "shutil",
             },
         )
         unsigned = copy.deepcopy(identity)
         digest = unsigned.pop("digest")
-        self.assertEqual(digest, hashlib.sha256(adapters._canonical_json(unsigned)).hexdigest())
-        self.assertEqual(identity["components"]["NativeAdapterError"]["kind"], "class")
+        self.assertEqual(digest, hashlib.sha256(adapter_common._canonical_json(unsigned)).hexdigest())
+        self.assertEqual(identity["components"][shared + "NativeAdapterError"]["kind"], "class")
         self.assertEqual(identity["components"]["_ISOLATION_CONTROL"]["kind"], "constant")
         self.assertEqual(
             identity["components"]["Path"]["binding"],
@@ -634,26 +663,44 @@ class AdapterPreparationTests(unittest.TestCase):
             },
         )
         self.assertNotIn("PurePosixPath", identity["components"])
-        self.assertNotIn("native_eval_pairing", identity["components"])
-        with mock.patch.object(adapters.Path, "read_bytes", return_value=b"\xff"):
-            with self.assertRaisesRegex(adapters.NativeAdapterError, "checker source is unavailable"):
-                adapters._isolation_checker_identity()
-        with mock.patch.object(adapters.Path, "read_bytes", return_value=b"value = 1\n"):
-            with self.assertRaisesRegex(adapters.NativeAdapterError, "closure is incomplete"):
-                adapters._isolation_checker_identity()
+        self.assertNotIn("native_eval_verification", identity["components"])
+        self.assertNotIn(shared + "_tree_digest", identity["components"])
+        for sources in ({"codex": b"\xff"}, {"shared": b"\xff"}):
+            with self.subTest(unreadable=next(iter(sources))), self.checker_sources(**sources):
+                with self.assertRaisesRegex(adapter_common.NativeAdapterError, "checker source is unavailable"):
+                    codex_adapter._isolation_checker_identity()
+        for sources in ({"codex": b"value = 1\n"}, {"shared": b"value = 1\n"}):
+            with self.subTest(incomplete=next(iter(sources))), self.checker_sources(**sources):
+                with self.assertRaisesRegex(adapter_common.NativeAdapterError, "closure is incomplete"):
+                    codex_adapter._isolation_checker_identity()
 
-    def test_isolation_checker_identity_tracks_new_security_dependencies_not_judge_edits(self) -> None:
-        source = Path(adapters.__file__).read_text(encoding="utf-8")
-        baseline = adapters._isolation_checker_identity()
+    def test_isolation_checker_identity_tracks_new_security_dependencies_not_unrelated_edits(self) -> None:
+        source = Path(codex_adapter.__file__).read_text(encoding="utf-8")
+        shared_source = Path(adapter_common.__file__).read_text(encoding="utf-8")
+        baseline = codex_adapter._isolation_checker_identity()
 
-        judge_edited = source.replace(
-            "Evaluate every trusted semantic_criteria rubric",
-            "Evaluate each trusted semantic_criteria rubric",
-            1,
+        def identity(*, codex: str | None = None, shared: str | None = None) -> dict[str, object]:
+            with self.checker_sources(
+                codex=None if codex is None else codex.encode("utf-8"),
+                shared=None if shared is None else shared.encode("utf-8"),
+            ):
+                return codex_adapter._isolation_checker_identity()
+
+        unrelated_edit = source.replace("enabled = true", "enabled = false", 1)
+        self.assertNotEqual(unrelated_edit, source)
+        self.assertEqual(identity(codex=unrelated_edit), baseline)
+
+        unrelated_shared_edit = shared_source.replace(
+            "def _tree_digest(", "def _tree_digest(  # unrelated to isolation\n", 1,
         )
-        self.assertNotEqual(judge_edited, source)
-        with mock.patch.object(adapters.Path, "read_bytes", return_value=judge_edited.encode("utf-8")):
-            self.assertEqual(adapters._isolation_checker_identity(), baseline)
+        self.assertNotEqual(unrelated_shared_edit, shared_source)
+        self.assertEqual(identity(shared=unrelated_shared_edit), baseline)
+
+        shared_helper_edit = shared_source.replace(
+            "        raise ValueError(message)\n", "        raise ValueError(message) from None\n", 1,
+        )
+        self.assertNotEqual(shared_helper_edit, shared_source)
+        self.assertNotEqual(identity(shared=shared_helper_edit)["digest"], baseline["digest"])
 
         helper = (
             "\ndef _future_isolation_security_helper() -> None:\n"
@@ -667,48 +714,50 @@ class AdapterPreparationTests(unittest.TestCase):
             1,
         )
         self.assertNotEqual(future_source, source)
-        with mock.patch.object(adapters.Path, "read_bytes", return_value=future_source.encode("utf-8")):
-            future = adapters._isolation_checker_identity()
+        future = identity(codex=future_source)
         self.assertIn("_future_isolation_security_helper", future["components"])
         self.assertNotEqual(future["digest"], baseline["digest"])
+
+        future_shared = source.replace(
+            '    """Qualify the exact local profile without contacting a model provider."""\n',
+            '    """Qualify the exact local profile without contacting a model provider."""\n'
+            "    adapter_common._tree_digest\n",
+            1,
+        )
+        self.assertNotEqual(future_shared, source)
+        self.assertIn(
+            "native_eval_adapter_common._tree_digest", identity(codex=future_shared)["components"],
+        )
 
         helper_edited = source.replace(
             "probe returned malformed evidence", "probe returned invalid evidence", 1,
         )
-        with mock.patch.object(adapters.Path, "read_bytes", return_value=helper_edited.encode("utf-8")):
-            self.assertNotEqual(adapters._isolation_checker_identity()["digest"], baseline["digest"])
+        self.assertNotEqual(identity(codex=helper_edited)["digest"], baseline["digest"])
 
         policy_edited = source.replace(
             'native-eval-isolation-control/v1\\n', 'native-eval-isolation-control/v2\\n', 1,
         )
-        with mock.patch.object(adapters.Path, "read_bytes", return_value=policy_edited.encode("utf-8")):
-            self.assertNotEqual(adapters._isolation_checker_identity()["digest"], baseline["digest"])
+        self.assertNotEqual(policy_edited, source)
+        self.assertNotEqual(identity(codex=policy_edited)["digest"], baseline["digest"])
 
-        relevant_import_edited = source.replace("import stat\n", "import os as stat\n", 1)
-        with mock.patch.object(
-            adapters.Path, "read_bytes", return_value=relevant_import_edited.encode("utf-8"),
-        ):
-            relevant = adapters._isolation_checker_identity()
+        relevant = identity(codex=source.replace("import stat\n", "import os as stat\n", 1))
         self.assertEqual(relevant["components"]["stat"]["binding"]["module"], "os")
         self.assertNotEqual(relevant["digest"], baseline["digest"])
 
         unrelated_import_edited = source.replace(
-            "import native_eval_pairing\n", "import native_eval_pairing as changed_pairing\n", 1,
+            "import native_eval_verification\n",
+            "import native_eval_verification as changed_verification\n", 1,
         )
-        with mock.patch.object(
-            adapters.Path, "read_bytes", return_value=unrelated_import_edited.encode("utf-8"),
-        ):
-            self.assertEqual(adapters._isolation_checker_identity(), baseline)
+        self.assertNotEqual(unrelated_import_edited, source)
+        self.assertEqual(identity(codex=unrelated_import_edited), baseline)
 
         same_statement_unrelated_alias = source.replace(
             "from pathlib import Path, PurePosixPath\n",
             "from pathlib import Path,   PurePosixPath as OtherPosixPath\n",
             1,
         )
-        with mock.patch.object(
-            adapters.Path, "read_bytes", return_value=same_statement_unrelated_alias.encode("utf-8"),
-        ):
-            self.assertEqual(adapters._isolation_checker_identity(), baseline)
+        self.assertNotEqual(same_statement_unrelated_alias, source)
+        self.assertEqual(identity(codex=same_statement_unrelated_alias), baseline)
 
         imported_helper = source.replace("import hashlib\n", "import fractions\nimport hashlib\n", 1)
         imported_helper = imported_helper.replace(
@@ -717,10 +766,7 @@ class AdapterPreparationTests(unittest.TestCase):
             "    fractions.Fraction(1, 1)\n",
             1,
         )
-        with mock.patch.object(
-            adapters.Path, "read_bytes", return_value=imported_helper.encode("utf-8"),
-        ):
-            future_import = adapters._isolation_checker_identity()
+        future_import = identity(codex=imported_helper)
         self.assertEqual(
             future_import["components"]["fractions"]["binding"]["module"], "fractions",
         )
@@ -738,10 +784,10 @@ class AdapterPreparationTests(unittest.TestCase):
         helpers.codex_environment.side_effect = lambda workspace: {
             "PATH": "/bin", "HOME": str(workspace), "CODEX_HOME": str(codex_home),
         }
-        with mock.patch.object(adapters, "_codex_helpers", return_value=helpers), \
-                mock.patch.object(adapters, "_qualify_codex_isolation", self.real_isolation_qualifier), \
-                mock.patch.object(adapters, "_is_broad_temporary_root", return_value=False), \
-                mock.patch.object(adapters, "_run_codex_sandbox_probe", side_effect=self.successful_sandbox_probe) as probe, \
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=helpers), \
+                mock.patch.object(codex_adapter, "_qualify_codex_isolation", self.real_isolation_qualifier), \
+                mock.patch.object(codex_adapter, "_is_broad_temporary_root", return_value=False), \
+                mock.patch.object(codex_adapter, "_run_codex_sandbox_probe", side_effect=self.successful_sandbox_probe) as probe, \
                 mock.patch.object(adapters.subprocess, "Popen") as provider:
             prepared = adapters.prepare_trial(
                 self.case, "codex", "project", self.repo, attempt, "gpt-5.6-sol",
@@ -778,8 +824,8 @@ class AdapterPreparationTests(unittest.TestCase):
 
         changed_receipt = copy.deepcopy(qualification)
         changed_receipt["checker_sha256"] = "f" * 64
-        with mock.patch.object(adapters, "_codex_helpers", return_value=helpers), \
-                mock.patch.object(adapters, "_qualify_codex_isolation", return_value=changed_receipt):
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=helpers), \
+                mock.patch.object(codex_adapter, "_qualify_codex_isolation", return_value=changed_receipt):
             checker_changed = adapters.prepare_trial(
                 self.case, "codex", "project", self.repo,
                 store / "staging" / "launch-three", "gpt-5.6-sol",
@@ -789,8 +835,8 @@ class AdapterPreparationTests(unittest.TestCase):
 
         changed_receipt = copy.deepcopy(qualification)
         changed_receipt["permission_policy_sha256"] = "e" * 64
-        with mock.patch.object(adapters, "_codex_helpers", return_value=helpers), \
-                mock.patch.object(adapters, "_qualify_codex_isolation", return_value=changed_receipt):
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=helpers), \
+                mock.patch.object(codex_adapter, "_qualify_codex_isolation", return_value=changed_receipt):
             policy_changed = adapters.prepare_trial(
                 self.case, "codex", "project", self.repo,
                 store / "staging" / "launch-four", "gpt-5.6-sol",
@@ -799,10 +845,10 @@ class AdapterPreparationTests(unittest.TestCase):
         self.assertNotEqual(prepared.runtime_identity, policy_changed.runtime_identity)
 
         other_store, other_attempt = self.isolation_store("different-output-root")
-        with mock.patch.object(adapters, "_codex_helpers", return_value=helpers), \
-                mock.patch.object(adapters, "_qualify_codex_isolation", self.real_isolation_qualifier), \
-                mock.patch.object(adapters, "_is_broad_temporary_root", return_value=False), \
-                mock.patch.object(adapters, "_run_codex_sandbox_probe", side_effect=self.successful_sandbox_probe):
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=helpers), \
+                mock.patch.object(codex_adapter, "_qualify_codex_isolation", self.real_isolation_qualifier), \
+                mock.patch.object(codex_adapter, "_is_broad_temporary_root", return_value=False), \
+                mock.patch.object(codex_adapter, "_run_codex_sandbox_probe", side_effect=self.successful_sandbox_probe):
             output_root_changed = adapters.prepare_trial(
                 self.case, "codex", "project", self.repo, other_attempt, "gpt-5.6-sol",
                 evidence_root=other_store,
@@ -822,11 +868,11 @@ class AdapterPreparationTests(unittest.TestCase):
             "PATH": os.environ["PATH"], "HOME": str(workspace),
             "CODEX_HOME": str(codex_home),
         }
-        with mock.patch.object(adapters, "_codex_helpers", return_value=helpers), \
-                mock.patch.object(adapters, "_qualify_codex_isolation", self.real_isolation_qualifier), \
-                mock.patch.object(adapters, "_is_broad_temporary_root", return_value=False), \
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=helpers), \
+                mock.patch.object(codex_adapter, "_qualify_codex_isolation", self.real_isolation_qualifier), \
+                mock.patch.object(codex_adapter, "_is_broad_temporary_root", return_value=False), \
                 mock.patch.object(
-                    adapters, "_run_codex_sandbox_probe",
+                    codex_adapter, "_run_codex_sandbox_probe",
                     side_effect=self.successful_sandbox_probe,
                 ) as sandbox_probe:
             prepared = adapters.prepare_trial(
@@ -900,10 +946,10 @@ class AdapterPreparationTests(unittest.TestCase):
                 command, cwd=cwd, environment=environment,
             )
 
-        with mock.patch.object(adapters, "_codex_helpers", return_value=helpers), \
-                mock.patch.object(adapters, "_qualify_codex_isolation", self.real_isolation_qualifier), \
-                mock.patch.object(adapters, "_is_broad_temporary_root", return_value=False), \
-                mock.patch.object(adapters, "_run_codex_sandbox_probe", side_effect=denied_metadata), \
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=helpers), \
+                mock.patch.object(codex_adapter, "_qualify_codex_isolation", self.real_isolation_qualifier), \
+                mock.patch.object(codex_adapter, "_is_broad_temporary_root", return_value=False), \
+                mock.patch.object(codex_adapter, "_run_codex_sandbox_probe", side_effect=denied_metadata), \
                 self.assertRaisesRegex(ValueError, "failed the protected-git-runtime control"):
             adapters.prepare_trial(
                 git_native_case(self.repo), "codex", "project", self.repo,
@@ -918,7 +964,7 @@ class AdapterPreparationTests(unittest.TestCase):
                 workspace = attempt / "workspace"
                 (workspace / ".codex").mkdir(parents=True)
                 (workspace / ".codex/native-eval-isolation-control.txt").write_bytes(
-                    adapters._ISOLATION_CONTROL,
+                    codex_adapter._ISOLATION_CONTROL,
                 )
 
                 def probe(command, *, cwd, environment):
@@ -932,8 +978,8 @@ class AdapterPreparationTests(unittest.TestCase):
                         )
                     return self.successful_sandbox_probe(command, cwd=cwd, environment=environment)
 
-                with mock.patch.object(adapters, "_is_broad_temporary_root", return_value=False), \
-                        mock.patch.object(adapters, "_run_codex_sandbox_probe", side_effect=probe), \
+                with mock.patch.object(codex_adapter, "_is_broad_temporary_root", return_value=False), \
+                        mock.patch.object(codex_adapter, "_run_codex_sandbox_probe", side_effect=probe), \
                         mock.patch.object(adapters.subprocess, "Popen") as provider:
                     arguments = dict(
                         executable="codex", workspace=workspace, environment={},
@@ -963,9 +1009,9 @@ class AdapterPreparationTests(unittest.TestCase):
         helpers.codex_environment.side_effect = lambda workspace: {
             "PATH": "/bin", "HOME": str(workspace), "CODEX_HOME": str(codex_home),
         }
-        with mock.patch.object(adapters, "_codex_helpers", return_value=helpers), \
-                mock.patch.object(adapters, "_qualify_codex_isolation", self.real_isolation_qualifier), \
-                mock.patch.object(adapters, "_run_codex_sandbox_probe") as probe, \
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=helpers), \
+                mock.patch.object(codex_adapter, "_qualify_codex_isolation", self.real_isolation_qualifier), \
+                mock.patch.object(codex_adapter, "_run_codex_sandbox_probe") as probe, \
                 self.assertRaisesRegex(ValueError, "explicit non-temporary evidence_root"):
             adapters.prepare_trial(
                 self.case, "codex", "project", self.repo, self.temp / "missing-root", "gpt-5.6-sol",
@@ -973,9 +1019,9 @@ class AdapterPreparationTests(unittest.TestCase):
         probe.assert_not_called()
 
         store, attempt = self.isolation_store("broad-temp-store")
-        with mock.patch.object(adapters, "_codex_helpers", return_value=helpers), \
-                mock.patch.object(adapters, "_qualify_codex_isolation", self.real_isolation_qualifier), \
-                mock.patch.object(adapters, "_run_codex_sandbox_probe") as probe, \
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=helpers), \
+                mock.patch.object(codex_adapter, "_qualify_codex_isolation", self.real_isolation_qualifier), \
+                mock.patch.object(codex_adapter, "_run_codex_sandbox_probe") as probe, \
                 self.assertRaisesRegex(ValueError, "outside broad temporary storage"):
             adapters.prepare_trial(
                 self.case, "codex", "project", self.repo, attempt, "gpt-5.6-sol",
@@ -990,10 +1036,10 @@ class AdapterPreparationTests(unittest.TestCase):
                 return self.successful_sandbox_probe(command, **kwargs)
             return subprocess.CompletedProcess(command, 1, b"", b"No such file or directory\n")
 
-        with mock.patch.object(adapters, "_codex_helpers", return_value=helpers), \
-                mock.patch.object(adapters, "_qualify_codex_isolation", self.real_isolation_qualifier), \
-                mock.patch.object(adapters, "_is_broad_temporary_root", return_value=False), \
-                mock.patch.object(adapters, "_run_codex_sandbox_probe", side_effect=missing_denial), \
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=helpers), \
+                mock.patch.object(codex_adapter, "_qualify_codex_isolation", self.real_isolation_qualifier), \
+                mock.patch.object(codex_adapter, "_is_broad_temporary_root", return_value=False), \
+                mock.patch.object(codex_adapter, "_run_codex_sandbox_probe", side_effect=missing_denial), \
                 self.assertRaisesRegex(ValueError, "private-evidence denial"):
             adapters.prepare_trial(
                 self.case, "codex", "project", self.repo, attempt, "gpt-5.6-sol",
@@ -1005,10 +1051,10 @@ class AdapterPreparationTests(unittest.TestCase):
 
         store, attempt = self.isolation_store("generic-failure-store")
         generic_failure = subprocess.CompletedProcess([], 1, b"", b"No such file or directory\n")
-        with mock.patch.object(adapters, "_codex_helpers", return_value=helpers), \
-                mock.patch.object(adapters, "_qualify_codex_isolation", self.real_isolation_qualifier), \
-                mock.patch.object(adapters, "_is_broad_temporary_root", return_value=False), \
-                mock.patch.object(adapters, "_run_codex_sandbox_probe", return_value=generic_failure), \
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=helpers), \
+                mock.patch.object(codex_adapter, "_qualify_codex_isolation", self.real_isolation_qualifier), \
+                mock.patch.object(codex_adapter, "_is_broad_temporary_root", return_value=False), \
+                mock.patch.object(codex_adapter, "_run_codex_sandbox_probe", return_value=generic_failure), \
                 self.assertRaisesRegex(ValueError, "workspace-read control"):
             adapters.prepare_trial(
                 self.case, "codex", "project", self.repo, attempt, "gpt-5.6-sol",
@@ -1023,10 +1069,10 @@ class AdapterPreparationTests(unittest.TestCase):
                 return subprocess.CompletedProcess(command, 0, b"3.9\n", b"")
             return self.successful_sandbox_probe(command, **kwargs)
 
-        with mock.patch.object(adapters, "_codex_helpers", return_value=helpers), \
-                mock.patch.object(adapters, "_qualify_codex_isolation", self.real_isolation_qualifier), \
-                mock.patch.object(adapters, "_is_broad_temporary_root", return_value=False), \
-                mock.patch.object(adapters, "_run_codex_sandbox_probe", side_effect=wrong_python), \
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=helpers), \
+                mock.patch.object(codex_adapter, "_qualify_codex_isolation", self.real_isolation_qualifier), \
+                mock.patch.object(codex_adapter, "_is_broad_temporary_root", return_value=False), \
+                mock.patch.object(codex_adapter, "_run_codex_sandbox_probe", side_effect=wrong_python), \
                 self.assertRaisesRegex(ValueError, "protected-python-runtime control"):
             adapters.prepare_trial(
                 self.case, "codex", "project", self.repo, attempt, "gpt-5.6-sol",
@@ -1044,14 +1090,14 @@ class AdapterPreparationTests(unittest.TestCase):
         outer_sandbox_failure = subprocess.CompletedProcess(
             [], 71, b"", b"sandbox-exec: sandbox_apply: Operation not permitted\n",
         )
-        with mock.patch.object(adapters, "_codex_helpers", return_value=helpers), \
-                mock.patch.object(adapters, "_qualify_codex_isolation", self.real_isolation_qualifier), \
-                mock.patch.object(adapters, "_is_broad_temporary_root", return_value=False), \
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=helpers), \
+                mock.patch.object(codex_adapter, "_qualify_codex_isolation", self.real_isolation_qualifier), \
+                mock.patch.object(codex_adapter, "_is_broad_temporary_root", return_value=False), \
                 mock.patch.object(
-                    adapters, "_run_codex_sandbox_probe", return_value=outer_sandbox_failure,
+                    codex_adapter, "_run_codex_sandbox_probe", return_value=outer_sandbox_failure,
                 ), mock.patch.object(adapters.subprocess, "Popen") as provider, \
                 self.assertRaisesRegex(
-                    adapters.NativeAdapterError,
+                    adapter_common.NativeAdapterError,
                     "relaunch the native-eval controller outside the outer sandbox",
                 ):
             adapters.prepare_trial(
@@ -1069,7 +1115,7 @@ class AdapterPreparationTests(unittest.TestCase):
         ):
             with self.subTest(ordinary_failure=ordinary_failure), \
                     self.assertRaisesRegex(ValueError, "workspace-read control"):
-                adapters._require_probe_result(ordinary_failure, label="workspace-read")
+                codex_adapter._require_probe_result(ordinary_failure, label="workspace-read")
 
     @unittest.skipUnless(NATIVE_CODEX_SANDBOX_PROBES, "requires native POSIX sandbox probes")
     def test_codex_isolation_detects_probe_replacement_without_following_symlink(self) -> None:
@@ -1093,11 +1139,11 @@ class AdapterPreparationTests(unittest.TestCase):
                 os.symlink(outside, target)
             return self.successful_sandbox_probe(command, **kwargs)
 
-        with mock.patch.object(adapters, "_codex_helpers", return_value=helpers), \
-                mock.patch.object(adapters, "_qualify_codex_isolation", self.real_isolation_qualifier), \
-                mock.patch.object(adapters, "_is_broad_temporary_root", return_value=False), \
-                mock.patch.object(adapters, "_run_codex_sandbox_probe", side_effect=replacing_probe), \
-                self.assertRaisesRegex(adapters.NativeAdapterError, "private-evidence probe changed"):
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=helpers), \
+                mock.patch.object(codex_adapter, "_qualify_codex_isolation", self.real_isolation_qualifier), \
+                mock.patch.object(codex_adapter, "_is_broad_temporary_root", return_value=False), \
+                mock.patch.object(codex_adapter, "_run_codex_sandbox_probe", side_effect=replacing_probe), \
+                self.assertRaisesRegex(adapter_common.NativeAdapterError, "private-evidence probe changed"):
             adapters.prepare_trial(
                 self.case, "codex", "project", self.repo, attempt, "gpt-5.6-sol",
                 evidence_root=store,
@@ -1107,7 +1153,7 @@ class AdapterPreparationTests(unittest.TestCase):
         self.assertFalse(any((store / "staging").glob(".native-isolation-*")))
 
     def test_codex_isolation_missing_evidence_root_fails_before_any_probe(self) -> None:
-        with mock.patch.object(adapters, "_run_codex_sandbox_probe") as probe, \
+        with mock.patch.object(codex_adapter, "_run_codex_sandbox_probe") as probe, \
                 self.assertRaisesRegex(ValueError, "explicit non-temporary evidence_root"):
             self.real_isolation_qualifier(
                 executable="codex", workspace=self.temp, environment={}, permission_args=[],
@@ -1128,8 +1174,8 @@ class AdapterPreparationTests(unittest.TestCase):
         }
         for host, mode in (("claude", "plugin"), ("codex", "project")):
             with self.subTest(host=host), \
-                    mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"), \
-                    mock.patch.object(adapters, "_codex_helpers", return_value=helpers):
+                    mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"), \
+                    mock.patch.object(codex_adapter, "_codex_helpers", return_value=helpers):
                 prepared = adapters.prepare_trial(
                     self.case, host, mode, self.repo, self.temp / host, "test-model",
                 )
@@ -1140,15 +1186,15 @@ class AdapterPreparationTests(unittest.TestCase):
         self.case["checks"].append({"type": "file_access", "operation": "read_file", "path": "input.txt"})
         stage = self.temp / "witness-stage"
         stage.mkdir()
-        plan, path = adapters._stage_fixture_plan(self.case, self.repo, stage)
+        plan, path = adapter_common._stage_fixture_plan(self.case, self.repo, stage)
         source = self.repo / self.case["fixtures"][0]["source"]
         source.write_bytes(b"later repository edit\n")
         expected = {"input.txt": {"bytes": 11, "sha256": hashlib.sha256(b"fixture-v1\n").hexdigest()}}
-        self.assertEqual(adapters._fixture_read_witnesses(self.case, path), expected)
+        self.assertEqual(adapter_common._fixture_read_witnesses(self.case, path), expected)
         staged = stage / "fixture-sources" / plan["fixtures"][0]["source"]
         staged.write_bytes(b"tampered staged bytes\n")
         with self.assertRaisesRegex(ValueError, "digest does not match"):
-            adapters._fixture_read_witnesses(self.case, path)
+            adapter_common._fixture_read_witnesses(self.case, path)
 
     def test_fixture_read_witnesses_preserve_git_feature_precedence(self) -> None:
         value = git_native_case(self.repo)
@@ -1156,16 +1202,16 @@ class AdapterPreparationTests(unittest.TestCase):
         value["checks"] = [{"type": "file_access", "operation": "read_file", "path": "baseline.txt"}]
         stage = self.temp / "git-witness-stage"
         stage.mkdir()
-        _, path = adapters._stage_fixture_plan(value, self.repo, stage)
-        self.assertEqual(adapters._fixture_read_witnesses(value, path), {
+        _, path = adapter_common._stage_fixture_plan(value, self.repo, stage)
+        self.assertEqual(adapter_common._fixture_read_witnesses(value, path), {
             "baseline.txt": {"bytes": 11, "sha256": hashlib.sha256(b"fixture-v1\n").hexdigest()},
         })
         value["checks"] = []
-        self.assertEqual(adapters._fixture_read_witnesses(value, path), {})
+        self.assertEqual(adapter_common._fixture_read_witnesses(value, path), {})
 
     def test_prepares_official_claude_plugin_eval_without_launching_provider(self) -> None:
         attempt = self.temp / "claude-attempt"
-        with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"), \
+        with mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"), \
                 mock.patch.object(adapters.subprocess, "Popen") as launch:
             prepared = adapters.prepare_trial(
                 self.case, "claude", "plugin", self.repo, attempt, "claude-sonnet-5",
@@ -1224,7 +1270,7 @@ class AdapterPreparationTests(unittest.TestCase):
         adjacent.parent.mkdir()
         adjacent.write_text("adjacent reference\n", encoding="utf-8")
         attempt = self.temp / "claude-reference-access"
-        with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"):
+        with mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"):
             prepared = adapters.prepare_trial(
                 self.case, "claude", "plugin", self.repo, attempt, "claude-sonnet-5",
             )
@@ -1256,7 +1302,7 @@ class AdapterPreparationTests(unittest.TestCase):
             "skill": "mini-plugin:native-skill",
             "add_dir": ".native-eval-skill-references",
             "target": "skills/native-skill/references",
-            "tree_sha256": adapters._tree_digest(staged_selected),
+            "tree_sha256": adapter_common._tree_digest(staged_selected),
         })
         self.assertNotIn("staged_tree_exclusions", prepared.runtime_identity)
         grant = (case_dir / access["add_dir"]).resolve()
@@ -1284,7 +1330,7 @@ class AdapterPreparationTests(unittest.TestCase):
         case = copy.deepcopy(self.case)
         case["hosts"]["claude"]["allowed_tools"] = ["Skill", "Write"]
         attempt = self.temp / "claude-no-reference-read"
-        with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"):
+        with mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"):
             prepared = adapters.prepare_trial(
                 case, "claude", "plugin", self.repo, attempt, "claude-sonnet-5",
             )
@@ -1304,7 +1350,7 @@ class AdapterPreparationTests(unittest.TestCase):
         case = copy.deepcopy(self.case)
         case["resource_class"] = "nested"
         attempt = self.temp / "claude-nested-attempt"
-        with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"):
+        with mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"):
             prepared = adapters.prepare_trial(
                 case, "claude", "plugin", self.repo, attempt, "claude-sonnet-5",
             )
@@ -1314,7 +1360,7 @@ class AdapterPreparationTests(unittest.TestCase):
     def test_claude_stages_empty_private_docker_config_when_ambient_is_unset(self) -> None:
         attempt = self.temp / "claude-docker-config"
         with mock.patch.dict(os.environ, {}, clear=False), \
-                mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"):
+                mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"):
             os.environ.pop("DOCKER_CONFIG", None)
             prepared = adapters.prepare_trial(
                 self.case, "claude", "plugin", self.repo,
@@ -1374,7 +1420,7 @@ class AdapterPreparationTests(unittest.TestCase):
         with mock.patch.dict(os.environ, {
                     "HOME": str(ambient_home), "DOCKER_CONFIG": str(ambient),
                 }), \
-                mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"):
+                mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"):
             prepared = adapters.prepare_trial(
                 self.case, "claude", "plugin", self.repo,
                 attempt, "claude-sonnet-5",
@@ -1391,7 +1437,7 @@ class AdapterPreparationTests(unittest.TestCase):
                 with self.subTest(directory=directory, mutation=mutation):
                     attempt = self.temp / f"claude-{directory}-{mutation}"
                     with mock.patch.object(
-                        adapters, "_resolve_executable", return_value="/opt/bin/claude",
+                        adapter_common, "_resolve_executable", return_value="/opt/bin/claude",
                     ):
                         prepared = adapters.prepare_trial(
                             self.case, "claude", "plugin", self.repo,
@@ -1412,7 +1458,7 @@ class AdapterPreparationTests(unittest.TestCase):
                         message = "mode 0700"
                     with mock.patch.object(adapters.subprocess, "Popen") as launch, \
                             self.assertRaisesRegex(
-                                (ValueError, adapters.NativeAdapterError), message,
+                                (ValueError, adapter_common.NativeAdapterError), message,
                             ):
                         adapters.execute_prepared(prepared, 10)
                     launch.assert_not_called()
@@ -1421,7 +1467,7 @@ class AdapterPreparationTests(unittest.TestCase):
         explicit = self.temp / "explicit-claude-config"
         explicit.mkdir(mode=0o700)
         with mock.patch.dict(os.environ, {"CLAUDE_CONFIG_DIR": str(explicit)}), \
-                mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"):
+                mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"):
             prepared = adapters.prepare_trial(
                 self.case, "claude", "plugin", self.repo,
                 self.temp / "claude-explicit-config", "claude-sonnet-5",
@@ -1433,7 +1479,7 @@ class AdapterPreparationTests(unittest.TestCase):
         default_config = default_home / ".claude"
         default_config.mkdir(mode=0o700)
         with mock.patch.dict(os.environ, {"HOME": str(default_home)}, clear=False), \
-                mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"):
+                mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"):
             os.environ.pop("CLAUDE_CONFIG_DIR", None)
             prepared = adapters.prepare_trial(
                 self.case, "claude", "plugin", self.repo,
@@ -1448,7 +1494,7 @@ class AdapterPreparationTests(unittest.TestCase):
             {"CLAUDE_CODE_OAUTH_TOKEN": secret},
             clear=False,
         ), mock.patch.object(
-            adapters, "_resolve_executable", return_value="/opt/bin/claude",
+            adapter_common, "_resolve_executable", return_value="/opt/bin/claude",
         ):
             prepared = adapters.prepare_trial(
                 self.case, "claude", "plugin", self.repo,
@@ -1464,7 +1510,7 @@ class AdapterPreparationTests(unittest.TestCase):
         for mutation in ("missing", "ambiguous"):
             with self.subTest(mutation=mutation):
                 environment = {
-                    name: "" for name in adapters._CLAUDE_AUTOMATION_AUTH_VARIABLES
+                    name: "" for name in adapter_common._CLAUDE_AUTOMATION_AUTH_VARIABLES
                 }
                 if mutation == "ambiguous":
                     environment.update({
@@ -1473,7 +1519,7 @@ class AdapterPreparationTests(unittest.TestCase):
                     })
                 with mock.patch.dict(os.environ, environment, clear=False), \
                         mock.patch.object(
-                            adapters, "_resolve_executable", return_value="/opt/bin/claude",
+                            adapter_common, "_resolve_executable", return_value="/opt/bin/claude",
                         ), self.assertRaisesRegex(
                             ValueError, "exactly one documented automation credential",
                         ):
@@ -1491,7 +1537,7 @@ class AdapterPreparationTests(unittest.TestCase):
                 attempt = self.temp / f"claude-config-attempt-{mutation}"
                 with mock.patch.dict(os.environ, {"CLAUDE_CONFIG_DIR": str(config)}), \
                         mock.patch.object(
-                            adapters, "_resolve_executable", return_value="/opt/bin/claude",
+                            adapter_common, "_resolve_executable", return_value="/opt/bin/claude",
                         ):
                     prepared = adapters.prepare_trial(
                         self.case, "claude", "plugin", self.repo,
@@ -1512,7 +1558,7 @@ class AdapterPreparationTests(unittest.TestCase):
                     message = "group/world writable"
                 with mock.patch.object(adapters.subprocess, "Popen") as launch, \
                         self.assertRaisesRegex(
-                            (ValueError, adapters.NativeAdapterError), message,
+                            (ValueError, adapter_common.NativeAdapterError), message,
                         ):
                     adapters.execute_prepared(prepared, 10)
                 launch.assert_not_called()
@@ -1522,7 +1568,7 @@ class AdapterPreparationTests(unittest.TestCase):
         attempt.mkdir(mode=0o700)
         with mock.patch.dict(os.environ, {"CLAUDE_CONFIG_DIR": str(attempt)}), \
                 mock.patch.object(
-                    adapters, "_resolve_executable", return_value="/opt/bin/claude",
+                    adapter_common, "_resolve_executable", return_value="/opt/bin/claude",
                 ), self.assertRaisesRegex(ValueError, "outside attempt staging"):
             adapters.prepare_trial(
                 self.case, "claude", "plugin", self.repo,
@@ -1542,7 +1588,7 @@ class AdapterPreparationTests(unittest.TestCase):
             " Invoke {{resolved_python}} -m speckit_pro_runner < request.json exactly."
         )
         attempt = self.temp / "claude-manual"
-        with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"):
+        with mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"):
             prepared = adapters.prepare_trial(
                 manual_case, "claude", "plugin", self.repo, attempt, "claude-sonnet-5",
             )
@@ -1587,7 +1633,7 @@ class AdapterPreparationTests(unittest.TestCase):
         for label, (body, error) in invalid.items():
             with self.subTest(label=label):
                 source.write_text(body, encoding="utf-8")
-                with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"), \
+                with mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"), \
                         self.assertRaisesRegex(ValueError, error):
                     adapters.prepare_trial(
                         self.case, "claude", "plugin", self.repo,
@@ -1602,7 +1648,7 @@ class AdapterPreparationTests(unittest.TestCase):
                 case["hosts"]["claude"]["allowed_tools"] = ["Read", "Skill", *scoped]
                 if required:
                     case["required_tools"] = ["specify"]
-                with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"):
+                with mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"):
                     prepared = adapters.prepare_trial(
                         case, "claude", "plugin", self.repo,
                         self.temp / f"scoped-{required}", "claude-sonnet-5",
@@ -1635,8 +1681,8 @@ class AdapterPreparationTests(unittest.TestCase):
         helpers.codex_environment.side_effect = lambda workspace: {
             "PATH": "/bin", "HOME": str(workspace), "CODEX_HOME": str(codex_home),
         }
-        with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"), \
-                mock.patch.object(adapters, "_codex_helpers", return_value=helpers):
+        with mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"), \
+                mock.patch.object(codex_adapter, "_codex_helpers", return_value=helpers):
             claude = adapters.prepare_trial(
                 required, "claude", "plugin", self.repo,
                 self.temp / "required-claude", "claude-sonnet-5",
@@ -1837,7 +1883,7 @@ class AdapterPreparationTests(unittest.TestCase):
                 value = copy.deepcopy(self.case)
                 value["required_tools"] = ["specify"]
                 value["fixtures"][0]["destination"] = destination
-                with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"), \
+                with mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"), \
                         self.assertRaisesRegex(ValueError, "overlaps"):
                     adapters.prepare_trial(
                         value, host, "plugin" if host == "claude" else "project",
@@ -1853,7 +1899,7 @@ class AdapterPreparationTests(unittest.TestCase):
                 value = copy.deepcopy(self.case)
                 value["required_tools"] = ["specify"]
                 value["fixtures"][0]["destination"] = destination
-                with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"):
+                with mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"):
                     prepared_coexistence = adapters.prepare_trial(
                         value, host, "plugin" if host == "claude" else "project",
                         self.repo, self.temp / f"coexist-{host}",
@@ -1865,7 +1911,7 @@ class AdapterPreparationTests(unittest.TestCase):
 
         value = copy.deepcopy(self.case)
         value["required_tools"] = ["specify"]
-        with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"):
+        with mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"):
             prepared = adapters.prepare_trial(
                 value, "claude", "plugin", self.repo,
                 self.temp / "upstream-tamper", "claude-sonnet-5",
@@ -1879,7 +1925,7 @@ class AdapterPreparationTests(unittest.TestCase):
         trigger = copy.deepcopy(self.case)
         trigger["layer"] = "trigger"
         trigger["required_tools"] = ["specify"]
-        with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"), \
+        with mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"), \
                 self.assertRaisesRegex(ValueError, "trigger measurements"):
             adapters.prepare_trial(
                 trigger, "claude", "plugin", self.repo,
@@ -1887,7 +1933,7 @@ class AdapterPreparationTests(unittest.TestCase):
             )
 
     def test_absent_required_tools_preserves_legacy_preparation(self) -> None:
-        with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"):
+        with mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"):
             prepared = adapters.prepare_trial(
                 self.case, "claude", "plugin", self.repo,
                 self.temp / "legacy-no-toolchain", "claude-sonnet-5",
@@ -1914,8 +1960,8 @@ class AdapterPreparationTests(unittest.TestCase):
         helpers.codex_environment.side_effect = lambda workspace: {
             "PATH": "/bin", "HOME": str(workspace), "CODEX_HOME": str(codex_home),
         }
-        with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"), \
-                mock.patch.object(adapters, "_codex_helpers", return_value=helpers):
+        with mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"), \
+                mock.patch.object(codex_adapter, "_codex_helpers", return_value=helpers):
             claude = adapters.prepare_trial(
                 required, "claude", "plugin", self.repo,
                 self.temp / "git-toolchain-claude", "claude-sonnet-5",
@@ -1974,7 +2020,7 @@ class AdapterPreparationTests(unittest.TestCase):
             controller_exclude = prepared.runtime_identity["settings"]["git_fixture"][
                 "controller_info_exclude"
             ].encode("ascii")
-            adapters._write_git_controller_exclude(workspace, controller_exclude)
+            adapter_common._write_git_controller_exclude(workspace, controller_exclude)
             generated = workspace / ".specify/templates/spec-template.md"
             generated.parent.mkdir(parents=True, exist_ok=True)
             generated.write_text("controller generated\n", encoding="utf-8")
@@ -2029,7 +2075,7 @@ class AdapterPreparationTests(unittest.TestCase):
     def test_toolchain_source_and_staged_tamper_are_rejected_before_and_after_launch(self) -> None:
         required = copy.deepcopy(self.case)
         required["required_tools"] = ["specify"]
-        with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"):
+        with mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"):
             staged = adapters.prepare_trial(
                 required, "claude", "plugin", self.repo,
                 self.temp / "tampered-toolchain-stage", "claude-sonnet-5",
@@ -2049,7 +2095,7 @@ class AdapterPreparationTests(unittest.TestCase):
         ):
             adapters._verify_post_execution_controls(staged)
 
-        with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"):
+        with mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"):
             source = adapters.prepare_trial(
                 required, "claude", "plugin", self.repo,
                 self.temp / "tampered-toolchain-source", "claude-sonnet-5",
@@ -2068,7 +2114,7 @@ class AdapterPreparationTests(unittest.TestCase):
                 adapters.execute_prepared(source, 10)
             provider.assert_not_called()
             with mock.patch.object(
-                adapters, "_resolve_executable", return_value="/opt/bin/claude",
+                adapter_common, "_resolve_executable", return_value="/opt/bin/claude",
             ):
                 changed_source = adapters.prepare_trial(
                     required, "claude", "plugin", self.repo,
@@ -2132,8 +2178,8 @@ class AdapterPreparationTests(unittest.TestCase):
                 "PATH": "/bin", "HOME": str(workspace),
                 "CODEX_HOME": str(self.temp / "pair-codex-home"),
             }
-            with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"), \
-                    mock.patch.object(adapters, "_codex_helpers", return_value=fake_helpers):
+            with mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"), \
+                    mock.patch.object(codex_adapter, "_codex_helpers", return_value=fake_helpers):
                 prepared_by_host[host] = adapters.prepare_trial(
                     pair_case, host, mode, self.repo, self.temp / f"pair-{host}-one", "native-model",
                 )
@@ -2160,8 +2206,8 @@ class AdapterPreparationTests(unittest.TestCase):
                 "PATH": "/bin", "HOME": str(workspace),
                 "CODEX_HOME": str(self.temp / "pair-codex-home"),
             }
-            with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"), \
-                    mock.patch.object(adapters, "_codex_helpers", return_value=fake_helpers):
+            with mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"), \
+                    mock.patch.object(codex_adapter, "_codex_helpers", return_value=fake_helpers):
                 changed_rubric = adapters.prepare_trial(
                     pair_case, host, mode, self.repo, self.temp / f"pair-{host}-two", "native-model",
                 )
@@ -2177,7 +2223,7 @@ class AdapterPreparationTests(unittest.TestCase):
         }]
         trigger["hosts"]["claude"]["allowed_tools"] = ["Skill"]
         attempt = self.temp / "claude-trigger"
-        with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"):
+        with mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"):
             prepared = adapters.prepare_trial(
                 trigger, "claude", "plugin", self.repo, attempt, "claude-sonnet-5",
             )
@@ -2201,7 +2247,7 @@ class AdapterPreparationTests(unittest.TestCase):
         self.assertNotIn("--allow-tools", prepared.command)
 
     def test_identical_claude_inputs_have_identical_runtime_identity_across_attempts(self) -> None:
-        with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"):
+        with mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"):
             first = adapters.prepare_trial(
                 self.case, "claude", "plugin", self.repo, self.temp / "attempt-one", "claude-sonnet-5",
             )
@@ -2225,7 +2271,7 @@ class AdapterPreparationTests(unittest.TestCase):
         fake_helpers.codex_environment.return_value = {
             "PATH": "/bin", "HOME": str(attempt / "workspace"), "CODEX_HOME": str(codex_home),
         }
-        with mock.patch.object(adapters, "_codex_helpers", return_value=fake_helpers), \
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=fake_helpers), \
                 mock.patch.object(adapters.subprocess, "Popen") as launch:
             prepared = adapters.prepare_trial(
                 self.case, "codex", "project", self.repo, attempt, "gpt-5.6-sol",
@@ -2317,10 +2363,10 @@ class AdapterPreparationTests(unittest.TestCase):
         git_check["checks"] = [{
             "id": "git", "requirement": "r1", "type": "native_git_final_state",
         }]
-        self.assertFalse(adapters._codex_protected_git_required(plain))
-        self.assertTrue(adapters._codex_protected_git_required(runner))
-        self.assertTrue(adapters._codex_protected_git_required(git_check))
-        self.assertTrue(adapters._codex_protected_git_required(git_native_case(self.repo)))
+        self.assertFalse(codex_adapter._codex_protected_git_required(plain))
+        self.assertTrue(codex_adapter._codex_protected_git_required(runner))
+        self.assertTrue(codex_adapter._codex_protected_git_required(git_check))
+        self.assertTrue(codex_adapter._codex_protected_git_required(git_native_case(self.repo)))
 
         attempt = self.temp / "runner-git"
         codex_home = self.temp / "runner-git-home"
@@ -2339,7 +2385,7 @@ class AdapterPreparationTests(unittest.TestCase):
             "GIT_ASKPASS": "/ambient/credential-helper",
             "TMPDIR": str(ambient_temp),
         }
-        with mock.patch.object(adapters, "_codex_helpers", return_value=helpers):
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=helpers):
             prepared = adapters.prepare_trial(
                 runner, "codex", "project", self.repo, attempt, "gpt-5.6-sol",
             )
@@ -2399,7 +2445,7 @@ class AdapterPreparationTests(unittest.TestCase):
         }
         explicit = git_native_case(self.repo)
         explicit["git_metadata_access"] = "write"
-        with mock.patch.object(adapters, "_codex_helpers", return_value=helpers):
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=helpers):
             prepared = adapters.prepare_trial(
                 explicit, "codex", "project", self.repo,
                 self.temp / "git-metadata-explicit", "gpt-5.6-sol",
@@ -2420,7 +2466,7 @@ class AdapterPreparationTests(unittest.TestCase):
         )
 
         implicit = git_native_case(self.repo)
-        with mock.patch.object(adapters, "_codex_helpers", return_value=helpers):
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=helpers):
             least_privilege = adapters.prepare_trial(
                 implicit, "codex", "project", self.repo,
                 self.temp / "git-metadata-implicit", "gpt-5.6-sol",
@@ -2451,9 +2497,9 @@ class AdapterPreparationTests(unittest.TestCase):
                     )
 
                 with mock.patch.object(
-                    adapters, "_run_codex_sandbox_probe", side_effect=probe,
+                    codex_adapter, "_run_codex_sandbox_probe", side_effect=probe,
                 ):
-                    receipt = adapters._qualify_codex_git_metadata(
+                    receipt = codex_adapter._qualify_codex_git_metadata(
                         executable="codex", workspace=workspace, environment={}, permission_args=[],
                         permission_name="native-eval-write", filesystem_access="write",
                         directory_maker="/bin/mkdir",
@@ -2473,7 +2519,7 @@ class AdapterPreparationTests(unittest.TestCase):
         shutil.copyfile(Path(sys.executable).resolve(strict=True), executable)
         executable.chmod(0o755)
         (runtime_directory / "python3").symlink_to(executable.name)
-        with mock.patch.object(adapters.sys, "executable", str(executable)):
+        with mock.patch.object(codex_adapter.sys, "executable", str(executable)):
             resolved, identity = self.real_protected_python()
             self.assertEqual(resolved, executable.resolve())
             self.assertEqual(identity["directory_mode"], 0o755)
@@ -2510,7 +2556,7 @@ class AdapterPreparationTests(unittest.TestCase):
         helpers.codex_environment.side_effect = lambda workspace: {
             "PATH": "/bin", "HOME": str(workspace), "CODEX_HOME": str(codex_home),
         }
-        with mock.patch.object(adapters, "_codex_helpers", return_value=helpers):
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=helpers):
             baseline = adapters.prepare_trial(
                 self.case, "codex", "project", self.repo,
                 self.temp / "runtime-baseline", "gpt-5.6-sol",
@@ -2553,7 +2599,7 @@ class AdapterPreparationTests(unittest.TestCase):
             "PATH": os.environ.get("PATH", ""), "HOME": str(workspace),
             "CODEX_HOME": str(codex_home),
         }
-        with mock.patch.object(adapters, "_codex_helpers", return_value=helpers), \
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=helpers), \
                 mock.patch.object(
                     adapters.native_eval_runtime, "stage_codex_runtime",
                     wraps=self.real_runtime_stage,
@@ -2606,13 +2652,13 @@ class AdapterPreparationTests(unittest.TestCase):
             "CODEX_HOME": str(codex_home),
         }
 
-        def prepare(index: int) -> adapters.PreparedTrial:
+        def prepare(index: int) -> adapter_common.PreparedTrial:
             return adapters.prepare_trial(
                 checkout_runtime_case(), "codex", "project", REPO_ROOT,
                 self.temp / f"parallel-runtime-{index}", "gpt-5.6-sol",
             )
 
-        with mock.patch.object(adapters, "_codex_helpers", return_value=helpers), \
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=helpers), \
                 mock.patch.object(
                     adapters.native_eval_runtime, "stage_codex_runtime",
                     wraps=self.real_runtime_stage,
@@ -2635,7 +2681,7 @@ class AdapterPreparationTests(unittest.TestCase):
         helpers.codex_environment.side_effect = lambda workspace: {
             "PATH": "/bin", "HOME": str(workspace), "CODEX_HOME": str(codex_home),
         }
-        with mock.patch.object(adapters, "_codex_helpers", return_value=helpers), \
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=helpers), \
                 mock.patch.object(
                     adapters.native_eval_runtime, "stage_codex_runtime",
                     side_effect=adapters.native_eval_runtime.RuntimeStageError("runtime missing"),
@@ -2647,7 +2693,7 @@ class AdapterPreparationTests(unittest.TestCase):
             )
         provider.assert_not_called()
 
-        with mock.patch.object(adapters, "_codex_helpers", return_value=helpers):
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=helpers):
             prepared = adapters.prepare_trial(
                 self.case, "codex", "project", self.repo,
                 self.temp / "runtime-immutable", "gpt-5.6-sol",
@@ -2672,7 +2718,7 @@ class AdapterPreparationTests(unittest.TestCase):
         fake_helpers.codex_environment.return_value = {
             "PATH": "/bin", "HOME": str(attempt / "workspace"), "CODEX_HOME": str(codex_home),
         }
-        with mock.patch.object(adapters, "_codex_helpers", return_value=fake_helpers):
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=fake_helpers):
             prepared = adapters.prepare_trial(
                 self.case, "codex", "project", self.repo, attempt, "gpt-5.6-sol",
             )
@@ -2727,7 +2773,7 @@ class AdapterPreparationTests(unittest.TestCase):
         repository(relocated_repo)
         relocated_case = native_case(relocated_repo)
         relocated_case["hosts"]["codex"]["skill"] = "$native-skill"
-        with mock.patch.object(adapters, "_codex_helpers", return_value=fake_helpers):
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=fake_helpers):
             first = adapters.prepare_trial(
                 requested, "codex", "project", self.repo, self.temp / "moved-one", "gpt-5.6-sol",
             )
@@ -2746,7 +2792,7 @@ class AdapterPreparationTests(unittest.TestCase):
         )
         changed_source = self.repo / "speckit-pro/codex-skills/sibling-skill/SKILL.md"
         changed_source.write_text(changed_source.read_text() + "changed source bytes\n", encoding="utf-8")
-        with mock.patch.object(adapters, "_codex_helpers", return_value=fake_helpers):
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=fake_helpers):
             changed = adapters.prepare_trial(
                 requested, "codex", "project", self.repo, self.temp / "moved-three", "gpt-5.6-sol",
             )
@@ -2758,7 +2804,7 @@ class AdapterPreparationTests(unittest.TestCase):
 
         manifest = self.repo / "speckit-pro/.claude-plugin/plugin.json"
         manifest.write_text('{"name":"bad:plugin","version":"1.2.3"}\n', encoding="utf-8")
-        with mock.patch.object(adapters, "_codex_helpers", return_value=fake_helpers), \
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=fake_helpers), \
                 mock.patch.object(adapters.subprocess, "Popen") as provider, \
                 self.assertRaisesRegex(ValueError, "plugin name is malformed"):
             adapters.prepare_trial(
@@ -2781,7 +2827,7 @@ class AdapterPreparationTests(unittest.TestCase):
             "PATH": "/bin", "HOME": str(attempt / "workspace"),
             "CODEX_HOME": str(self.temp / "tampered-codex-home"),
         }
-        with mock.patch.object(adapters, "_codex_helpers", return_value=fake_helpers):
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=fake_helpers):
             prepared = adapters.prepare_trial(
                 self.case, "codex", "project", self.repo, attempt, "gpt-5.6-sol",
             )
@@ -2808,7 +2854,7 @@ class AdapterPreparationTests(unittest.TestCase):
         nested = copy.deepcopy(self.case)
         nested["resource_class"] = "nested"
         nested["hosts"]["codex"]["allowed_tools"].append("spawn_agent")
-        with mock.patch.object(adapters, "_codex_helpers", return_value=fake_helpers):
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=fake_helpers):
             prepared = adapters.prepare_trial(
                 nested, "codex", "project", self.repo, attempt, "gpt-5.6-sol",
             )
@@ -2848,7 +2894,7 @@ class AdapterPreparationTests(unittest.TestCase):
             "-c", "skills.bundled.enabled=false", "-c", "skills.config=[]",
             "-c", "mcp_servers={}", "-c", 'web_search="disabled"',
         ]
-        with mock.patch.object(adapters, "_codex_helpers", return_value=fake_helpers), \
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=fake_helpers), \
                 mock.patch.object(adapters.subprocess, "Popen") as launch:
             prepared = adapters.prepare_judge(
                 request, attempt_dir=attempt, model="gpt-5.6-sol",
@@ -2961,7 +3007,7 @@ class AdapterPreparationTests(unittest.TestCase):
             "-c", "skills.bundled.enabled=false", "-c", "skills.config=[]",
             "-c", "mcp_servers={}", "-c", 'web_search="disabled"',
         ]
-        with mock.patch.object(adapters, "_codex_helpers", return_value=fake_helpers):
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=fake_helpers):
             first = adapters.prepare_judge(
                 first_request, attempt_dir=self.temp / "compat-one", model="gpt-5.6-sol",
             )
@@ -3008,7 +3054,7 @@ class AdapterPreparationTests(unittest.TestCase):
         no_skill["prompt"] = "Inspect the fixture without invoking a skill."
         no_skill["hosts"]["codex"]["skill"] = None
         no_skill["hosts"]["codex"]["allowed_tools"] = ["read_file"]
-        with mock.patch.object(adapters, "_codex_helpers", return_value=fake_helpers):
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=fake_helpers):
             prepared = adapters.prepare_trial(
                 no_skill, "codex", "project", self.repo, self.temp / "read-only", "gpt-5.6-sol",
             )
@@ -3031,7 +3077,7 @@ class AdapterPreparationTests(unittest.TestCase):
 
         unknown = copy.deepcopy(self.case)
         unknown["hosts"]["codex"]["allowed_tools"] = ["WebSearch"]
-        with mock.patch.object(adapters, "_codex_helpers", return_value=fake_helpers), \
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=fake_helpers), \
                 self.assertRaisesRegex(ValueError, "unsupported filesystem/tool profile"):
             adapters.prepare_trial(
                 unknown, "codex", "project", self.repo, self.temp / "unknown-tool", "gpt-5.6-sol",
@@ -3039,7 +3085,7 @@ class AdapterPreparationTests(unittest.TestCase):
 
         control = copy.deepcopy(self.case)
         control["fixtures"][0]["destination"] = ".agents/skills/poison/SKILL.md"
-        with mock.patch.object(adapters, "_codex_helpers", return_value=fake_helpers), \
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=fake_helpers), \
                 self.assertRaisesRegex(ValueError, "runtime control path"):
             adapters.prepare_trial(
                 control, "codex", "project", self.repo, self.temp / "control-path", "gpt-5.6-sol",
@@ -3055,14 +3101,14 @@ class AdapterPreparationTests(unittest.TestCase):
             os.symlink(target, codex_link)
         except OSError as exc:
             self.skipTest(f"symlinks unavailable: {exc}")
-        with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"), \
+        with mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"), \
                 self.assertRaisesRegex(ValueError, "source tree contains a symlink"):
             adapters.prepare_trial(
                 self.case, "claude", "plugin", self.repo, self.temp / "symlink", "claude-sonnet-5",
             )
         fake_helpers = mock.Mock()
         fake_helpers.codex_executable.return_value = str(Path(sys.executable).resolve())
-        with mock.patch.object(adapters, "_codex_helpers", return_value=fake_helpers), \
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=fake_helpers), \
                 self.assertRaisesRegex(ValueError, "source tree contains a symlink"):
             adapters.prepare_trial(
                 self.case, "codex", "project", self.repo, self.temp / "codex-symlink", "gpt-5.6-sol",
@@ -3109,8 +3155,8 @@ class AdapterPreparationTests(unittest.TestCase):
                         "PATH": "/bin", "HOME": str(workspace),
                         "CODEX_HOME": str(self.temp / "codex-home"),
                     }
-                    with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"), \
-                            mock.patch.object(adapters, "_codex_helpers", return_value=fake_helpers), \
+                    with mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"), \
+                            mock.patch.object(codex_adapter, "_codex_helpers", return_value=fake_helpers), \
                             mock.patch.object(adapters.subprocess, "Popen") as launch:
                         prepared = adapters.prepare_trial(
                             trigger, host, mode, self.repo, attempt, "native-model",
@@ -3225,7 +3271,7 @@ class AdapterPreparationTests(unittest.TestCase):
             "GIT_CONFIG_GLOBAL": "/ambient/.gitconfig",
             "GIT_ASKPASS": "/ambient/credential-helper",
         }
-        with mock.patch.object(adapters, "_codex_helpers", return_value=helpers):
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=helpers):
             prepared = adapters.prepare_trial(
                 trigger, "codex", "project", self.repo, self.temp / "trigger-git",
                 "gpt-5.6-sol", trial_identity="campaign/case/codex/run-1",
@@ -3277,8 +3323,8 @@ class AdapterPreparationTests(unittest.TestCase):
         }
         for host, mode in (("claude", "plugin"), ("codex", "project")):
             with self.subTest(host=host), \
-                    mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"), \
-                    mock.patch.object(adapters, "_codex_helpers", return_value=fake_helpers):
+                    mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"), \
+                    mock.patch.object(codex_adapter, "_codex_helpers", return_value=fake_helpers):
                 first = adapters.prepare_trial(
                     trigger, host, mode, self.repo, self.temp / f"{host}-resume-one",
                     "native-model", trial_identity="campaign/case/run-1",
@@ -3332,8 +3378,8 @@ class AdapterPreparationTests(unittest.TestCase):
                         "CODEX_HOME": str(self.temp / "real-catalog-codex-home"),
                     }
                     attempt = self.temp / f"real-{case['id']}-{host}"
-                    with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"), \
-                            mock.patch.object(adapters, "_codex_helpers", return_value=fake_helpers), \
+                    with mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"), \
+                            mock.patch.object(codex_adapter, "_codex_helpers", return_value=fake_helpers), \
                             mock.patch.object(adapters.subprocess, "Popen") as launch:
                         prepared = adapters.prepare_trial(
                             case, host, mode, REPO_ROOT, attempt, "native-model",
@@ -3367,7 +3413,7 @@ class AdapterPreparationTests(unittest.TestCase):
             with self.subTest(path=path):
                 case = copy.deepcopy(self.case)
                 case["checks"][0]["path"] = path
-                with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"), \
+                with mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"), \
                         self.assertRaisesRegex(ValueError, "not canonical"):
                     adapters.prepare_trial(
                         case, "claude", "plugin", self.repo,
@@ -3380,7 +3426,7 @@ class AdapterPreparationTests(unittest.TestCase):
         attempt.mkdir()
         reservation = attempt / "reservation.json"
         reservation.write_text('{"immutable":true}\n', encoding="utf-8")
-        with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"):
+        with mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"):
             prepared = adapters.prepare_trial(
                 self.case, "claude", "plugin", self.repo, attempt, "claude-sonnet-5",
             )
@@ -3389,7 +3435,7 @@ class AdapterPreparationTests(unittest.TestCase):
 
     def test_v1_fixture_plan_and_launcher_remain_unchanged(self) -> None:
         attempt = self.temp / "v1-compatibility"
-        with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"):
+        with mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"):
             prepared = adapters.prepare_trial(
                 self.case, "claude", "plugin", self.repo, attempt, "claude-sonnet-5",
             )
@@ -3406,7 +3452,7 @@ class AdapterPreparationTests(unittest.TestCase):
         })
         self.assertEqual(
             (case_dir / "fixture.sh").read_text(),
-            "#!/bin/sh\nexec " + adapters.shlex.quote(str(Path(sys.executable).resolve()))
+            "#!/bin/sh\nexec " + claude_adapter.shlex.quote(str(Path(sys.executable).resolve()))
             + ' "${0%/*}/native_eval_fixture_setup.py" "${0%/*}/fixture-plan.json"\n',
         )
         self.assertNotIn("git_fixture", prepared.runtime_identity["settings"])
@@ -3418,7 +3464,7 @@ class AdapterPreparationTests(unittest.TestCase):
         value["git_fixture"]["feature_deletions"] = ["workflow.md"]
         plan_dir = self.temp / "feature-deletion-plan"
         plan_dir.mkdir()
-        plan, plan_path = adapters._stage_fixture_plan(value, self.repo, plan_dir)
+        plan, plan_path = adapter_common._stage_fixture_plan(value, self.repo, plan_dir)
         self.assertEqual(plan["fixtures"], [])
         self.assertEqual(plan["git_repository"]["feature_deletions"], ["workflow.md"])
         self.assertEqual(json.loads(plan_path.read_text()), plan)
@@ -3438,7 +3484,7 @@ class AdapterPreparationTests(unittest.TestCase):
                 malformed_dir = self.temp / f"feature-deletion-{label}"
                 malformed_dir.mkdir()
                 with self.assertRaisesRegex(ValueError, "feature_deletion"):
-                    adapters._stage_fixture_plan(malformed, self.repo, malformed_dir)
+                    adapter_common._stage_fixture_plan(malformed, self.repo, malformed_dir)
 
     def test_v2_git_fixture_codex_identity_is_semantic_and_relocatable(self) -> None:
         case = git_native_case(self.repo)
@@ -3453,7 +3499,7 @@ class AdapterPreparationTests(unittest.TestCase):
             "GIT_ASKPASS": "/ambient/credential-helper",
             "GIT_CONFIG_GLOBAL": "/ambient/global-config",
         }
-        with mock.patch.object(adapters, "_codex_helpers", return_value=helpers):
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=helpers):
             first = adapters.prepare_trial(
                 case, "codex", "project", self.repo, self.temp / "git-one", "gpt-5.6-sol",
             )
@@ -3519,7 +3565,7 @@ class AdapterPreparationTests(unittest.TestCase):
 
     def test_v2_registered_worktrees_are_staged_and_bound_for_both_hosts(self) -> None:
         case = git_worktree_native_case(self.repo)
-        with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"):
+        with mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"):
             claude = adapters.prepare_trial(
                 case, "claude", "plugin", self.repo,
                 self.temp / "git-worktree-claude", "claude-sonnet-5",
@@ -3533,7 +3579,7 @@ class AdapterPreparationTests(unittest.TestCase):
         helpers.codex_environment.side_effect = lambda workspace: {
             "PATH": os.environ["PATH"], "HOME": str(workspace), "CODEX_HOME": str(codex_home),
         }
-        with mock.patch.object(adapters, "_codex_helpers", return_value=helpers):
+        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=helpers):
             codex = adapters.prepare_trial(
                 case, "codex", "project", self.repo,
                 self.temp / "git-worktree-codex", "gpt-5.6-sol",
@@ -3581,7 +3627,7 @@ class AdapterPreparationTests(unittest.TestCase):
             evidence = {}
             adapters._retain_git_observation(prepared, actual_workspace, settings, evidence)
             self.assertEqual(evidence["git_worktree_observation"], observed)
-            payload = adapters._canonical_json(observed) + b"\n"
+            payload = adapter_common._canonical_json(observed) + b"\n"
             self.assertEqual(
                 evidence["git_worktree_observation_sha256"], hashlib.sha256(payload).hexdigest(),
             )
@@ -3599,7 +3645,7 @@ class AdapterPreparationTests(unittest.TestCase):
                 mock.patch.object(
                     adapters.native_eval_git_observation, "observe_git_state",
                 ) as root_observation, \
-                self.assertRaisesRegex(adapters.NativeAdapterError, "worktree observation failed"):
+                self.assertRaisesRegex(adapter_common.NativeAdapterError, "worktree observation failed"):
             adapters._retain_git_observation(
                 codex, codex.cwd, settings, poisoned_evidence,
             )
@@ -3634,10 +3680,10 @@ class AdapterPreparationTests(unittest.TestCase):
             store, attempt = self.isolation_store(f"git-tamper-{label}-store")
             isolation_receipt = dict(self.isolation_receipt, evidence_root=str(store))
             with self.subTest(label=label), \
-                    mock.patch.object(adapters, "_codex_helpers", return_value=helpers), \
+                    mock.patch.object(codex_adapter, "_codex_helpers", return_value=helpers), \
                     mock.patch.object(
-                        adapters, "_qualify_codex_isolation", return_value=isolation_receipt,
-                    ), mock.patch.object(adapters, "_is_broad_temporary_root", return_value=False):
+                        codex_adapter, "_qualify_codex_isolation", return_value=isolation_receipt,
+                    ), mock.patch.object(codex_adapter, "_is_broad_temporary_root", return_value=False):
                 prepared = adapters.prepare_trial(
                     case, "codex", "project", self.repo, attempt, "gpt-5.6-sol",
                     evidence_root=store,
@@ -3659,11 +3705,11 @@ class AdapterPreparationTests(unittest.TestCase):
         nested = root / "nested/.git/config"
         nested.write_text("nested-one\n")
         policy = {"root_directories": [".git"], "files": []}
-        first = adapters._tree_digest(root, exclusions=policy)
+        first = adapter_common._tree_digest(root, exclusions=policy)
         (root / ".git/config").write_text("volatile-two\n")
-        self.assertEqual(first, adapters._tree_digest(root, exclusions=policy))
+        self.assertEqual(first, adapter_common._tree_digest(root, exclusions=policy))
         nested.write_text("nested-two\n")
-        self.assertNotEqual(first, adapters._tree_digest(root, exclusions=policy))
+        self.assertNotEqual(first, adapter_common._tree_digest(root, exclusions=policy))
 
     def test_v2_git_fixture_claude_uses_exclusive_hidden_receipt(self) -> None:
         references = self.repo / "speckit-pro" / "skills" / "native-skill" / "references"
@@ -3672,7 +3718,7 @@ class AdapterPreparationTests(unittest.TestCase):
         case = git_native_case(self.repo)
         case["fixtures"] = []
         case["git_fixture"]["feature_deletions"] = ["baseline.txt"]
-        with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"):
+        with mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"):
             first = adapters.prepare_trial(
                 case, "claude", "plugin", self.repo, self.temp / "claude-git-one", "claude-sonnet-5",
             )
@@ -3721,7 +3767,7 @@ class AdapterPreparationTests(unittest.TestCase):
 
     def test_v2_git_fixture_claude_rejects_preexisting_receipt_before_launch(self) -> None:
         case = git_native_case(self.repo)
-        with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"):
+        with mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"):
             prepared = adapters.prepare_trial(
                 case, "claude", "plugin", self.repo,
                 self.temp / "claude-git-preexisting", "claude-sonnet-5",
@@ -3735,7 +3781,7 @@ class AdapterPreparationTests(unittest.TestCase):
 
     def git_process_trial(
         self, host: str, behavior: str, label: str,
-    ) -> adapters.PreparedTrial:
+    ) -> adapter_common.PreparedTrial:
         case = git_native_case(self.repo)
         if host == "codex":
             codex_home = self.temp / f"{label}-codex-home"
@@ -3748,7 +3794,7 @@ class AdapterPreparationTests(unittest.TestCase):
                 "PATH": os.environ["PATH"], "HOME": str(workspace),
                 "CODEX_HOME": str(codex_home),
             }
-            with mock.patch.object(adapters, "_codex_helpers", return_value=helpers):
+            with mock.patch.object(codex_adapter, "_codex_helpers", return_value=helpers):
                 prepared = adapters.prepare_trial(
                     case, "codex", "project", self.repo,
                     self.temp / f"{label}-codex", "gpt-5.6-sol",
@@ -3777,7 +3823,7 @@ class AdapterPreparationTests(unittest.TestCase):
         trace.parent.mkdir()
         workspace = retained / "sealed" / "home" / "cwd"
         workspace.mkdir(parents=True)
-        with mock.patch.object(adapters, "_resolve_executable", return_value="/opt/bin/claude"):
+        with mock.patch.object(adapter_common, "_resolve_executable", return_value="/opt/bin/claude"):
             prepared = adapters.prepare_trial(
                 case, "claude", "plugin", self.repo,
                 self.temp / f"{label}-claude", "claude-sonnet-5",
@@ -3875,7 +3921,7 @@ class AdapterPreparationTests(unittest.TestCase):
                 prepared = self.git_process_trial(host, "tamper", f"tamper-{host}")
                 with mock.patch.object(adapters, "_verify_prepared_identity"), \
                         self.assertRaisesRegex(
-                            (ValueError, adapters.NativeAdapterError),
+                            (ValueError, adapter_common.NativeAdapterError),
                             "Git controls changed|Git observation failed",
                         ):
                     adapters.execute_prepared(prepared, 20)
@@ -3896,16 +3942,16 @@ class AdapterExecutionTests(unittest.TestCase):
         workspace.mkdir(parents=True)
         return retained, workspace
 
-    def capture_prepared(self, attempt: Path, declared: list[str]) -> adapters.PreparedTrial:
+    def capture_prepared(self, attempt: Path, declared: list[str]) -> adapter_common.PreparedTrial:
         attempt.mkdir()
-        return adapters.PreparedTrial(
+        return adapter_common.PreparedTrial(
             command=[], cwd=attempt, environment={}, host="claude", mode="plugin",
             attempt_dir=attempt, trace_path=None, result_path=None, artifact_root=None,
             runtime_identity={"settings": {"declared_artifacts": declared}},
         )
 
     def test_codex_transport_returns_exact_trace_and_process_evidence(self) -> None:
-        prepared = adapters.PreparedTrial(
+        prepared = adapter_common.PreparedTrial(
             command=[sys.executable, "-c", "import sys; print('{\"type\":\"thread.started\"}'); sys.stderr.write('note')"],
             cwd=self.temp,
             environment=dict(os.environ),
@@ -3937,10 +3983,10 @@ class AdapterExecutionTests(unittest.TestCase):
         (safe / ".agents/SKILL.md").write_text("skill\n", encoding="utf-8")
         (safe / ".codex/control.txt").write_text("control\n", encoding="utf-8")
         protected = {
-            ".agents": adapters._tree_digest(safe / ".agents"),
-            ".codex": adapters._tree_digest(safe / ".codex"),
+            ".agents": adapter_common._tree_digest(safe / ".agents"),
+            ".codex": adapter_common._tree_digest(safe / ".codex"),
         }
-        prepared = adapters.PreparedTrial(
+        prepared = adapter_common.PreparedTrial(
             command=[sys.executable, "-c", "from pathlib import Path; Path('artifact.txt').write_text('ok')"],
             cwd=safe, environment=dict(os.environ), host="codex", mode="project",
             attempt_dir=safe, trace_path=safe / "trace.jsonl", result_path=None,
@@ -3961,10 +4007,10 @@ class AdapterExecutionTests(unittest.TestCase):
         (changed / ".agents/SKILL.md").write_text("skill\n", encoding="utf-8")
         (changed / ".codex/control.txt").write_text("control\n", encoding="utf-8")
         protected = {
-            ".agents": adapters._tree_digest(changed / ".agents"),
-            ".codex": adapters._tree_digest(changed / ".codex"),
+            ".agents": adapter_common._tree_digest(changed / ".agents"),
+            ".codex": adapter_common._tree_digest(changed / ".codex"),
         }
-        tampered = adapters.PreparedTrial(
+        tampered = adapter_common.PreparedTrial(
             command=[sys.executable, "-c", "from pathlib import Path; Path('.agents/SKILL.md').write_text('changed')"],
             cwd=changed, environment=dict(os.environ), host="codex", mode="project",
             attempt_dir=changed, trace_path=changed / "trace.jsonl", result_path=None,
@@ -3991,7 +4037,7 @@ class AdapterExecutionTests(unittest.TestCase):
             encoding="utf-8",
         )
         source_bytes = source.read_bytes()
-        prepared = adapters.PreparedTrial(
+        prepared = adapter_common.PreparedTrial(
             command=[], cwd=plugin, environment={}, host="claude", mode="plugin",
             attempt_dir=plugin, trace_path=None, result_path=None, artifact_root=None,
             runtime_identity={
@@ -4009,7 +4055,7 @@ class AdapterExecutionTests(unittest.TestCase):
                         },
                     },
                 },
-                "staged_tree_sha256": adapters._tree_digest(plugin),
+                "staged_tree_sha256": adapter_common._tree_digest(plugin),
             },
         )
 
@@ -4028,7 +4074,7 @@ class AdapterExecutionTests(unittest.TestCase):
             "sys.stdout.buffer.write(b'{\"type\":\"item.completed\"}\\n'); "
             "sys.stderr.buffer.write(b'judge-note')"
         )
-        prepared = adapters.PreparedTrial(
+        prepared = adapter_common.PreparedTrial(
             command=[sys.executable, "-c", script], cwd=self.temp,
             environment=dict(os.environ), host="codex", mode="judge",
             attempt_dir=self.temp, trace_path=self.temp / "judge-trace.jsonl",
@@ -4058,7 +4104,7 @@ class AdapterExecutionTests(unittest.TestCase):
             "import json, sys; payload=sys.stdin.buffer.read(); "
             "print(json.dumps({'type':'item.completed','bytes':len(payload)}))"
         )
-        prepared = adapters.PreparedTrial(
+        prepared = adapter_common.PreparedTrial(
             command=[sys.executable, "-c", script, "-"], cwd=self.temp,
             environment=dict(os.environ), host="codex", mode="judge",
             attempt_dir=self.temp, trace_path=self.temp / "judge-trace.jsonl",
@@ -4108,7 +4154,7 @@ class AdapterExecutionTests(unittest.TestCase):
             }]}}],
         }
         script = "from pathlib import Path; Path(" + repr(str(result_path)) + ").write_text(" + repr(json.dumps(payload)) + "); raise SystemExit(1)"
-        prepared = adapters.PreparedTrial(
+        prepared = adapter_common.PreparedTrial(
             command=[sys.executable, "-c", script], cwd=self.temp, environment=dict(os.environ),
             host="claude", mode="plugin", attempt_dir=self.temp, trace_path=None,
             result_path=result_path, artifact_root=None,
@@ -4132,7 +4178,7 @@ class AdapterExecutionTests(unittest.TestCase):
         retained.chmod(0o500)
         sealed.chmod(0o000)
         prepared = self.capture_prepared(self.temp / "missing-attempt", ["missing/result.json"])
-        captured = adapters._capture_claude_artifacts(prepared, retained.resolve())
+        captured = claude_adapter._capture_claude_artifacts(prepared, retained.resolve())
         self.assertEqual(captured, (prepared.attempt_dir / "captured-artifacts").resolve())
         self.assertEqual(list(captured.rglob("*")), [])
         self.assertEqual(stat.S_IMODE(retained.stat().st_mode), 0o500)
@@ -4154,15 +4200,15 @@ class AdapterExecutionTests(unittest.TestCase):
                     declared = ["result.json"]
                 else:
                     (workspace / "result.json").write_bytes(
-                        b"x" * (adapters._ARTIFACT_FILE_LIMIT + 1)
+                        b"x" * (claude_adapter._ARTIFACT_FILE_LIMIT + 1)
                     )
                     declared = ["result.json"]
                 sealed = retained / "sealed"
                 retained.chmod(0o500)
                 sealed.chmod(0o000)
                 prepared = self.capture_prepared(self.temp / f"{label}-attempt", declared)
-                with self.assertRaises((ValueError, adapters.NativeAdapterError)):
-                    adapters._capture_claude_artifacts(prepared, retained.resolve())
+                with self.assertRaises((ValueError, adapter_common.NativeAdapterError)):
+                    claude_adapter._capture_claude_artifacts(prepared, retained.resolve())
                 self.assertFalse((prepared.attempt_dir / "captured-artifacts").exists())
                 self.assertEqual(stat.S_IMODE(retained.stat().st_mode), 0o500)
                 self.assertEqual(stat.S_IMODE(sealed.stat().st_mode), 0o000)
@@ -4177,7 +4223,7 @@ class AdapterExecutionTests(unittest.TestCase):
         retained.chmod(0o500)
         sealed.chmod(0o000)
         prepared = self.capture_prepared(self.temp / "replacement-attempt", ["receipt.json"])
-        real_chmod_no_follow = adapters._chmod_no_follow
+        real_chmod_no_follow = claude_adapter._chmod_no_follow
         replaced = False
 
         def replace_before_transition(path, mode, directory_fd):
@@ -4189,9 +4235,9 @@ class AdapterExecutionTests(unittest.TestCase):
             return real_chmod_no_follow(path, mode, directory_fd)
 
         try:
-            with mock.patch.object(adapters, "_chmod_no_follow", side_effect=replace_before_transition), \
-                    self.assertRaises(adapters.NativeAdapterError):
-                adapters._capture_claude_artifacts(prepared, retained.resolve())
+            with mock.patch.object(claude_adapter, "_chmod_no_follow", side_effect=replace_before_transition), \
+                    self.assertRaises(adapter_common.NativeAdapterError):
+                claude_adapter._capture_claude_artifacts(prepared, retained.resolve())
             self.assertTrue(replaced)
             self.assertEqual(stat.S_IMODE(unrelated.stat().st_mode), 0o755)
             self.assertEqual(stat.S_IMODE(retained.stat().st_mode), 0o500)
@@ -4206,15 +4252,15 @@ class AdapterExecutionTests(unittest.TestCase):
 
     def test_claude_artifact_capture_fails_closed_without_descriptor_primitives(self) -> None:
         prepared = self.capture_prepared(self.temp / "unsupported-attempt", ["receipt.json"])
-        with mock.patch.object(adapters, "_descriptor_capture_supported", return_value=False), \
-                self.assertRaisesRegex(adapters.NativeAdapterError, "Unix descriptor primitives"):
-            adapters._capture_claude_artifacts(prepared, self.temp)
+        with mock.patch.object(claude_adapter, "_descriptor_capture_supported", return_value=False), \
+                self.assertRaisesRegex(adapter_common.NativeAdapterError, "Unix descriptor primitives"):
+            claude_adapter._capture_claude_artifacts(prepared, self.temp)
         self.assertFalse((prepared.attempt_dir / "captured-artifacts").exists())
 
     def test_pre_cancelled_execution_never_spawns(self) -> None:
         stop = threading.Event()
         stop.set()
-        prepared = adapters.PreparedTrial(
+        prepared = adapter_common.PreparedTrial(
             command=["/missing"], cwd=self.temp, environment={}, host="codex", mode="project",
             attempt_dir=self.temp, trace_path=self.temp / "trace", result_path=None,
             artifact_root=self.temp, runtime_identity={"digest": "c" * 64},
@@ -4227,7 +4273,7 @@ class AdapterExecutionTests(unittest.TestCase):
     def test_timeout_and_malformed_framework_output_return_typed_invalid_evidence(self) -> None:
         timeout_dir = self.temp / "timeout"
         timeout_dir.mkdir()
-        codex = adapters.PreparedTrial(
+        codex = adapter_common.PreparedTrial(
             command=[sys.executable, "-c", "import time; print('partial', flush=True); time.sleep(10)"],
             cwd=timeout_dir, environment=dict(os.environ), host="codex", mode="project",
             attempt_dir=timeout_dir, trace_path=timeout_dir / "timed-out.jsonl", result_path=None,
@@ -4244,7 +4290,7 @@ class AdapterExecutionTests(unittest.TestCase):
         malformed_dir.mkdir()
         result_path = malformed_dir / "malformed-result.json"
         script = "from pathlib import Path; Path(" + repr(str(result_path)) + ").write_text('{}')"
-        claude = adapters.PreparedTrial(
+        claude = adapter_common.PreparedTrial(
             command=[sys.executable, "-c", script], cwd=malformed_dir, environment=dict(os.environ),
             host="claude", mode="plugin", attempt_dir=malformed_dir,
             trace_path=malformed_dir / "malformed-trace.jsonl", result_path=result_path,
@@ -4257,7 +4303,7 @@ class AdapterExecutionTests(unittest.TestCase):
 
         invalid_bytes_dir = self.temp / "invalid-bytes"
         invalid_bytes_dir.mkdir()
-        invalid_bytes = adapters.PreparedTrial(
+        invalid_bytes = adapter_common.PreparedTrial(
             command=[sys.executable, "-c", "import sys; sys.stdout.buffer.write(b'\\xff')"],
             cwd=invalid_bytes_dir, environment=dict(os.environ), host="codex", mode="project",
             attempt_dir=invalid_bytes_dir, trace_path=invalid_bytes_dir / "invalid-bytes.jsonl", result_path=None,
@@ -4272,13 +4318,13 @@ class AdapterExecutionTests(unittest.TestCase):
     def test_failed_claude_process_does_not_require_retained_upstream_workspace(self) -> None:
         failed = self.temp / "failed-claude"
         failed.mkdir()
-        prepared = adapters.PreparedTrial(
+        prepared = adapter_common.PreparedTrial(
             command=[sys.executable, "-c", "raise SystemExit(1)"],
             cwd=failed, environment=dict(os.environ), host="claude", mode="plugin",
             attempt_dir=failed, trace_path=None, result_path=None, artifact_root=None,
             runtime_identity={"digest": "0" * 64},
         )
-        with mock.patch.object(adapters, "_verify_retained_claude_upstream") as verify:
+        with mock.patch.object(claude_adapter, "_verify_retained_claude_upstream") as verify:
             evidence = adapters.execute_prepared(prepared, 10)
         self.assertEqual(evidence.exit_code, 1)
         verify.assert_not_called()
@@ -4305,12 +4351,14 @@ STAGED_MODULES = (
 
 class AdapterScaffoldTests(unittest.TestCase):
     def test_adapters_embed_no_python_program_as_a_string(self) -> None:
-        tree = ast.parse(Path(adapters.__file__).read_text(encoding="utf-8"))
+        modules = (adapter_common, adapters, claude_adapter, codex_adapter)
         embedded = []
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Constant) and isinstance(node.value, str) \
-                    and "import native_eval" in node.value:
-                embedded.append(node.lineno)
+        for module in modules:
+            tree = ast.parse(Path(module.__file__).read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Constant) and isinstance(node.value, str) \
+                        and "import native_eval" in node.value:
+                    embedded.append((module.__name__, node.lineno))
         self.assertEqual(embedded, [])
 
 
