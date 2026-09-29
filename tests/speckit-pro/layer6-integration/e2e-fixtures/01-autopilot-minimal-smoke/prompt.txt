@@ -4,7 +4,7 @@ spec located at:
 
   tests/speckit-pro/layer6-integration/e2e-fixtures/01-autopilot-minimal-smoke/sample-spec.md
 
-Treat that file as the input feature spec. This is an L7 integration
+Treat that file as the input feature spec. This is a Layer 6 integration
 smoke test, not a full autopilot run. Stop after the Plan phase (G3)
 completes. Do NOT proceed to Tasks, Implement, Analyze, or Validate.
 
