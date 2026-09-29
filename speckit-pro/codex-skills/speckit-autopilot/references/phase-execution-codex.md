@@ -862,11 +862,9 @@ for phase in PHASES starting from first_pending:
        b. Otherwise reserve the gate's localized repair in the same ledger;
           a repair that edits only planning documents uses `gate_remediation`
           (see below)
-       c. If still failing and gate-failure == "stop": STOP. A selected formal
-          failure always stops and names the Plan resume point.
-       d. If gate-failure == "skip-and-log" and the failure is not a selected
-          formal failure: log the failed verdict unchanged and continue without
-          rewriting requirement provenance
+       c. If still failing, defer per the Failure Escalation Protocol. A
+          selected formal failure defers and names the Plan resume point. Log
+          the failed verdict unchanged and never rewrite requirement provenance
     9. Update workflow file with results and print the current checklist summary
    10. If auto-commit == "per-phase":
        For phases 1–6: run: git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json && git commit
@@ -2857,7 +2855,10 @@ whose refreshed preflight disposition is `operator_action_required`.
      - Run each of `ready_commands` to mark the whole stack ready for review.
        The run never merges.
      - The run marks the thread goal complete.
-     - Make one consolidated operator request with `request_user_input` whose text is
+     - Print the final report as plain text on `outcome=complete` with nothing
+       deferred, and ask no question; ask only on `human_stop` or deferred human
+       UAT. For `outcome=complete_with_deferred`, make one consolidated operator
+       request with `request_user_input` whose text is
        `end_of_run_request`, and print the same request as plain text in the
        final message too, even when `request_user_input` returns, because the question UI can fail to render in a
        thread. In an unattended run, or when `request_user_input` is absent, the

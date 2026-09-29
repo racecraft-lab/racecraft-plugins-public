@@ -908,6 +908,101 @@ class GateTaskEvidenceLoopGuidanceTests(unittest.TestCase):
             self.assertIn("gate_task_loops", text)
 
 
+GATE_DEFER_PHRASE = "run the repair loop within its allowance, then defer per the Failure Escalation Protocol"
+
+
+class GateFailureDeferSourceContractTests(unittest.TestCase):
+    """A gate failure repairs, then defers; it never stops for a human (issue 828)."""
+
+    def gate_validation(self) -> str:
+        return _flat(CLAUDE_AUTOPILOT_SKILL.parent / "references" / "gate-validation.md")
+
+    def test_every_gate_failure_line_defers_instead_of_stopping(self) -> None:
+        text = self.gate_validation()
+        bounds = (("G0", "### G1"), ("G2", "### G3"), ("G3", "### G4"), ("G4", "### G5"),
+                  ("G5", "#### Post-G5"), ("G6", "### G7"), ("G7", "## Gate Summary Table"))
+        for gate_id, next_heading in bounds:
+            self.assertIn(GATE_DEFER_PHRASE, _section(text, f"### {gate_id} ", next_heading), gate_id)
+        for stale in ("Immediate STOP", "STOP. Present", "→ STOP", "The default `stop` path", "present to human"):
+            self.assertNotIn(stale, text)
+
+    def test_skip_and_log_is_not_a_gate_failure_option(self) -> None:
+        text = self.gate_validation()
+        g3 = _section(text, "### G3 ", "### G4 ")
+        self.assertNotIn("skip-and-log", g3)
+        self.assertNotIn("configured `gate-failure` behavior", g3)
+
+    def test_gate_failure_default_is_defer_on_both_hosts(self) -> None:
+        claude = _flat(CLAUDE_AUTOPILOT_SKILL.parent / "references" / "prerequisites.md")
+        codex = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "prerequisites-codex.md")
+        readme = _flat(REPO_ROOT / "speckit-pro" / "README.md")
+        for text in (claude, codex):
+            self.assertIn("`gate-failure` (default: `defer`)", text)
+            self.assertNotIn("`gate-failure` (default: `stop`)", text)
+        self.assertIn("gate-failure: defer", readme)
+        self.assertNotIn("gate-failure: stop", readme)
+
+    def test_codex_phase_seven_defers_a_persistent_gate_failure(self) -> None:
+        phase = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "phase-execution-codex.md")
+        self.assertNotIn('gate-failure == "stop"', phase)
+        self.assertNotIn('gate-failure == "skip-and-log"', phase)
+        self.assertIn("If still failing, defer per the Failure Escalation Protocol", phase)
+        self.assertIn("A selected formal failure defers and names the Plan resume point", phase)
+
+    def test_claude_phase_execution_defers_instead_of_following_a_stop_path(self) -> None:
+        phase = _flat(CLAUDE_AUTOPILOT_SKILL.parent / "references" / "phase-execution.md")
+        self.assertIn("follows the Failure Escalation Protocol and defers", phase)
+        self.assertNotIn("configured gate-failure/escalation path", phase)
+
+
+CLEAN_FINISH_QUESTION = "Print the final report as plain text on `outcome=complete`"
+BLOCKER_PHRASE = "return a blocker for consensus or deferral"
+
+
+class CleanFinishAndStopWordingSourceContractTests(unittest.TestCase):
+    """Finish asks only on a human stop; agents return blockers, never stop (issue 836)."""
+
+    def test_clean_complete_run_prints_plain_text_without_a_question(self) -> None:
+        for skill in (CLAUDE_AUTOPILOT_SKILL, CODEX_AUTOPILOT_SKILL):
+            text = _flat(skill)
+            self.assertIn(CLEAN_FINISH_QUESTION, text)
+            self.assertIn("ask only on `human_stop` or deferred human UAT", text)
+            self.assertNotIn("Either way, make one consolidated", text)
+            self.assertNotIn("Either way, make the one consolidated", text)
+        codex_phase = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "phase-execution-codex.md")
+        self.assertIn(CLEAN_FINISH_QUESTION, codex_phase)
+        self.assertIn("ask only on `human_stop` or deferred human UAT", codex_phase)
+
+    def test_claude_executors_return_a_blocker_instead_of_escalating(self) -> None:
+        agents = REPO_ROOT / "speckit-pro" / "agents"
+        for name in ("implement-executor", "analyze-executor", "clarify-executor", "checklist-executor", "phase-executor"):
+            text = _flat(agents / f"{name}.md")
+            self.assertIn(BLOCKER_PHRASE, text)
+            for stale in ("orchestrator surface", "orchestrator escalate", "orchestrator fail the gate"):
+                self.assertNotIn(stale, text)
+
+    def test_codex_executors_return_a_blocker_instead_of_deciding(self) -> None:
+        agents = REPO_ROOT / "speckit-pro" / "codex-agents"
+        for name in ("implement-executor", "analyze-executor", "clarify-executor", "checklist-executor", "phase-executor"):
+            text = _flat(agents / f"{name}.toml")
+            self.assertIn(BLOCKER_PHRASE, text)
+            self.assertNotIn("let the orchestrator", text)
+
+    def test_codex_ambiguity_routes_to_clarify_consensus(self) -> None:
+        skill = _flat(CODEX_AUTOPILOT_SKILL)
+        self.assertNotIn("Fail the gate, surface the ambiguity, and stop", skill)
+        self.assertIn("Route the ambiguity to Clarify consensus, and defer it when consensus cannot settle it", skill)
+        toml = _flat(REPO_ROOT / "speckit-pro" / "codex-agents" / "phase-executor.toml")
+        self.assertIn(BLOCKER_PHRASE, toml)
+        self.assertNotIn("surface the condition to the orchestrator", toml)
+
+    def test_model_check_warns_and_routes_to_the_strongest_tier(self) -> None:
+        text = _flat(CLAUDE_AUTOPILOT_SKILL)
+        self.assertNotIn("small-tier", text)
+        self.assertNotIn("stop and ask the operator to switch", text)
+        self.assertIn("warn the operator once and route gate and consensus dispatches to the strongest available tier", text)
+
+
 PLUGIN_DRIFT_HEADING = "Plugin Update Mid-Run: Record, Re-resolve, Continue"
 
 
@@ -2369,6 +2464,8 @@ def build_suite() -> unittest.TestSuite:
         BlockedActionDeferralSourceContractTests,
         FailureClassApprovalSourceContractTests,
         AmbiguousTaskWordingSourceContractTests,
+        GateFailureDeferSourceContractTests,
+        CleanFinishAndStopWordingSourceContractTests,
         GateTaskEvidenceLoopGuidanceTests,
         MidRunPluginDriftSourceContractTests,
         StandingPolicyPreflightSourceContractTests,
