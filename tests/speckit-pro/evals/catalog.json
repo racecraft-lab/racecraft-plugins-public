@@ -16,7 +16,7 @@
       "prompt": "run the autopilot workflow at docs/ai/specs/SPEC-009-workflow.md",
       "fixtures": [
         {
-          "source": "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/SPEC-009-workflow.md",
+          "source": "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/docs/ai/specs/SPEC-009-workflow.md",
           "destination": "docs/ai/specs/SPEC-009-workflow.md"
         }
       ],
@@ -293,7 +293,12 @@
         }
       ],
       "prompt": "fix the TypeScript build error in src/tools/primitives/tasks.ts — Zod schema discriminated-union issue",
-      "fixtures": [],
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/src/tools/primitives/tasks.ts",
+          "destination": "src/tools/primitives/tasks.ts"
+        }
+      ],
       "hosts": {
         "claude": {
           "skill": "speckit-pro:speckit-install",
@@ -1900,7 +1905,12 @@
         }
       ],
       "prompt": "fix the TypeScript build error in src/tools/primitives/tasks.ts. the Zod schema is failing because I'm using z.union instead of z.discriminatedUnion",
-      "fixtures": [],
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/src/tools/primitives/tasks.ts",
+          "destination": "src/tools/primitives/tasks.ts"
+        }
+      ],
       "hosts": {
         "claude": {
           "skill": "speckit-pro:grill-me",
@@ -2059,7 +2069,12 @@
         }
       ],
       "prompt": "I already have a PRD at docs/prd.md — help me decompose it into a technical roadmap and track dependencies between specs",
-      "fixtures": [],
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/docs/prd.md",
+          "destination": "docs/prd.md"
+        }
+      ],
       "hosts": {
         "claude": {
           "skill": "speckit-pro:speckit-prd",
@@ -3162,7 +3177,7 @@
       "prompt": "run the fully populated workflow at docs/ai/specs/SPEC-009-workflow.md through all 7 phases",
       "fixtures": [
         {
-          "source": "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/SPEC-009-workflow.md",
+          "source": "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/docs/ai/specs/SPEC-009-workflow.md",
           "destination": "docs/ai/specs/SPEC-009-workflow.md"
         }
       ],
@@ -4148,7 +4163,12 @@
         }
       ],
       "prompt": "run autopilot on the SPEC-027 workflow at docs/ai/specs/SPEC-027-workflow.md — all phase prompts are filled in",
-      "fixtures": [],
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/docs/ai/specs/SPEC-027-workflow.md",
+          "destination": "docs/ai/specs/SPEC-027-workflow.md"
+        }
+      ],
       "hosts": {
         "claude": {
           "skill": "speckit-pro:speckit-prd",
@@ -4763,7 +4783,12 @@
         }
       ],
       "prompt": "fix the TypeScript build error in src/tools/primitives/tasks.ts",
-      "fixtures": [],
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/src/tools/primitives/tasks.ts",
+          "destination": "src/tools/primitives/tasks.ts"
+        }
+      ],
       "hosts": {
         "claude": {
           "skill": "speckit-pro:speckit-upgrade",
@@ -5471,7 +5496,12 @@
         }
       ],
       "prompt": "fix the TypeScript build error in src/tools/primitives/tasks.ts — the Zod schema is using z.union instead of z.discriminatedUnion",
-      "fixtures": [],
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/src/tools/primitives/tasks.ts",
+          "destination": "src/tools/primitives/tasks.ts"
+        }
+      ],
       "hosts": {
         "claude": {
           "skill": "speckit-pro:speckit-prd",

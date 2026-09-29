@@ -19,6 +19,7 @@
   "hosts": {
     "claude": {
       "cli_version": "2.1.269",
+      "pending_runner_cli_version": "2.1.270",
       "platforms": ["darwin", "linux"],
       "interface": "claude --restricted --setting-sources '' -p --output-format stream-json --verbose",
       "observation_scope": "claude-native-skill-tool",

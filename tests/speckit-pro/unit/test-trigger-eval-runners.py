@@ -3735,6 +3735,32 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             manifest = json.loads(path.read_bytes())
             with self.subTest(draft=path.name):
                 self.assertEqual(manifest["pins"], expected)
+    def test_measurement_record_matches_the_runner_pins(self):
+        """The qualification record must name what each runner launches.
+
+        A runner pin that moves past the recorded build is allowed only while
+        the record says so through ``pending_runner_cli_version``, so a silent
+        drift fails here instead of leaving a stale "qualified" claim.
+        """
+        record = json.loads((LAYER2 / "measurement-capabilities.json").read_bytes())
+        claude = import_script(CLAUDE_RUNNER, "layer2_record_pin_claude")
+        codex = import_script(CODEX_ENGINE, "layer2_record_pin_codex")
+        params = record["canonical_parameters"]
+        self.assertEqual(params["runs_per_query"], claude.RUNS_PER_QUERY)
+        self.assertEqual(params["trigger_threshold"], claude.TRIGGER_THRESHOLD)
+        self.assertEqual(params["claude"]["model"], claude.DEFAULT_MODEL)
+        self.assertEqual(params["codex"]["model"], codex.DEFAULT_MODEL)
+        self.assertEqual(params["codex"]["reasoning_effort"], codex.DEFAULT_REASONING_EFFORT)
+        for host, pin, suffix in (
+            ("claude", claude.PINNED_CLAUDE_VERSION, " (Claude Code)"),
+            ("codex", codex.PINNED_CODEX_VERSION, ""),
+        ):
+            with self.subTest(host=host):
+                pinned = pin.removesuffix(suffix).removeprefix("codex-cli ")
+                entry = record["hosts"][host]
+                if entry["cli_version"] != pinned:
+                    self.assertEqual(entry.get("pending_runner_cli_version"), pinned)
+
 
 class CodexRelativeSkillBodyReadTests(unittest.TestCase):
     def test_relative_skill_body_read_requires_the_matched_skill_path(self) -> None:

@@ -564,6 +564,21 @@ class CampaignDraftBindingTests(unittest.TestCase):
                     self.assertEqual(draft[field], plan[field], field)
                 self.assertEqual(draft["launch_budget_requested"], plan["launch_count"])
 
+    def test_committed_campaign_drafts_bind_the_current_fixture(self):
+        """A draft names the codex workspace fixture it was planned against.
+
+        The observer and catalog identities move with every library or skill
+        edit, so a draft is rebound to them at freeze time. The fixture moves
+        only when a fixture file does, so a stale fixture identity means a
+        fixture edit skipped the rebind and is checked on every run.
+        """
+        current = comparison.snapshot_identities(comparison.measurement_snapshot())["fixture"]
+        drafts = sorted((ROOT / "layer2-trigger" / "campaign-drafts").glob("*.draft.json"))
+        self.assertTrue(drafts, "no committed campaign drafts found")
+        for path in drafts:
+            with self.subTest(draft=path.name):
+                self.assertEqual(json.loads(path.read_bytes())["identities"]["fixture"], current)
+
 
 if __name__ == "__main__":
     suite = unittest.TestSuite([
