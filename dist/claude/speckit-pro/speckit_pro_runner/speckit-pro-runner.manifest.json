@@ -380,6 +380,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/host_parity.py",
+        "display": "speckit_pro_runner/host_parity.py"
+      },
+      "sha256": "a0b1ee06bb39dae7dfdc6226dbccb460d0397f4eaa5c35afcdd98cdf8779289e"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/mcp_protocol.py",
         "display": "speckit_pro_runner/mcp_protocol.py"
       },
