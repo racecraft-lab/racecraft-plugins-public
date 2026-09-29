@@ -14,7 +14,7 @@ The fixture asserts:
 - No forbidden spawns (subagents do not spawn other Agents)
 - The parent-owned serial tail keeps reviewer-ready packet ordering after
   the parallel group: final backstop before packet generation, fresh
-  `validate-pr-packet.sh` before every `gh pr create --base --head --title
+  `validate-pr-packet-read-only` before every `gh pr create --base --head --title
   --body-file`, and no post-create repair fallback for invalid packets
 
 This replay fixture does not qualify live host behavior.

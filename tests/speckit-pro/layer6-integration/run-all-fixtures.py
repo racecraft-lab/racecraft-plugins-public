@@ -23,6 +23,10 @@ RUNNERS = {
 }
 
 
+# Class 4 grounding fixtures have no live capture, so they always replay.
+REPLAY_ONLY_CLASSES = frozenset({"4"})
+
+
 def parse_args(argv: list[str]) -> tuple[str, str]:
     mode = "--replay"
     selected = "all"
@@ -47,7 +51,7 @@ def run_class(class_id: str, mode: str) -> bool:
     print(f"  Layer 6 - Class {class_id}")
     print("=" * 66)
     completed = subprocess.run(
-        [sys.executable, str(RUNNERS[class_id]), mode],
+        [sys.executable, str(RUNNERS[class_id]), "--replay" if class_id in REPLAY_ONLY_CLASSES else mode],
         text=True,
         capture_output=True,
         shell=False,

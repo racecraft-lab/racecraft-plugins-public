@@ -292,7 +292,7 @@ running this workflow on other repositories.
 - `speckit-pro/speckit_pro_runner/helpers/read_only.py` — the gap counter, the spec-index walk, and `estimate_spec_size`.
 - `speckit-pro/skills/speckit-autopilot/SKILL.md` and `references/post-implementation.md` — the Post list and its audit prose.
 - `speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md` — team formation.
-- `tests/speckit-pro/layer1-structural/validate-spec-lifecycle-contracts.py` — the fixture-root spec-index contract.
+- `tests/speckit-pro/layer1-structural/validate-spec-index-helper-contract.py` — the fixture-root spec-index contract.
 
 **Done When:**
 
