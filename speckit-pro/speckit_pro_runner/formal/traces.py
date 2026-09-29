@@ -12,10 +12,10 @@ import uuid
 from typing import Any
 
 from . import apalache, itf, tlc
-from .catalog import CATALOG_PATH, FormalError, bounded_integer, confined, digest, operator, read_json
+from ..strict_input import require_fields
 from .native_config import trace_configuration
-from .process import run_process
-from .selection import require_fields
+from .primitives import CATALOG_PATH, FormalError, atomic_record, bounded_integer, confined, digest, operator, read_json
+from .process import checker_command, run_process
 
 TRACE_PATH = ".specify/formal-traces"
 
@@ -119,7 +119,6 @@ def write_trace(root: Path, model_id: str, path: str, trace: dict[str, Any], bef
     metadata = trace.get("#meta", {})
     if not isinstance(metadata, dict):
         raise FormalError("malformed_trace", "ITF trace metadata must be an object")
-    from .evidence import atomic_record
     ignored = confined(root, TRACE_PATH)
     ignored.mkdir(parents=True, exist_ok=True)
     (ignored / ".gitignore").write_text("*\n", encoding="utf-8")
@@ -171,7 +170,6 @@ def remaining(deadline: float) -> int:
 def native_module(root: Path, item: dict[str, Any], model: dict[str, Any], snapshot: Path, run: Path, deadline: float) -> Path:
     if "compiler" not in item:
         return snapshot / model["module"]
-    from .engine import checker_command
     target = snapshot / Path(model["module"]).parent / "SpecKitConverted.tla"
     argv = checker_command(root, item["tool"], str(run / "tmp")) + [f"--config-file={run / 'settings.json'}", f"--out-dir={run / 'converted'}", "parse", f"--output={target}", model["module"]]
     result = run_process(argv, snapshot, run / "conversion.log", remaining(deadline), model["budget"]["output_bytes"])
@@ -208,7 +206,6 @@ def declarative_ir(value: Any, depth: int = 0) -> Any:
 
 
 def apalache_query(root: Path, item: dict[str, Any], module: Path, run: Path, deadline: float) -> Path:
-    from .engine import checker_command
     target = module.with_suffix(".json")
     argv = checker_command(root, item["tool"], str(run / "tmp")) + [f"--config-file={run / 'settings.json'}", f"--out-dir={run / 'parsed'}", "typecheck", f"--output={target}", str(module)]
     result = run_process(argv, module.parent, run / (module.stem + "-parse.log"), remaining(deadline), item["model"]["budget"]["output_bytes"])
@@ -252,7 +249,6 @@ def trace_verdict(result: dict[str, Any], model: dict[str, Any], output: Path, r
 
 
 def check_one(root: Path, item: dict[str, Any], model: dict[str, Any], source: Path, trace: dict[str, Any], run: Path, deadline: float) -> dict[str, Any]:
-    from .engine import checker_command
     prefix = "SpecKitTrace" + uuid.uuid4().hex[:12]
     module = source.parent / (prefix + ".tla")
     config = source.parent / (prefix + ".cfg")
