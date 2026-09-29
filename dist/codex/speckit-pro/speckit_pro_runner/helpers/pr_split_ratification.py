@@ -186,53 +186,58 @@ def _findings(
     return [{"code": code, "detail": "; ".join(found[code])} for code in FINDING_ORDER if code in found]
 
 
+def _invalid_input_response(entry: Any, request: Any, error: _InvalidInput) -> dict[str, Any]:
+    """Incomplete evidence is repaired by the orchestrator and retried, never ratified."""
+    return response(
+        "input_error",
+        request_id=request.request_id,
+        diagnostics=[
+            diagnostic(
+                "invalid_input",
+                str(error),
+                remediation_summary="The split evidence is incomplete, so regenerate the split evidence from the layer plan.",
+                remediation_actions=[
+                    "Pass the approved groups in order with their scope, the increments in order with their "
+                    + "group, scope, and path counts, the active requirement, story, and task IDs, and the "
+                    + "per-PR path budget.",
+                    "Retry the request. Record owner_ratification=pending until the helper ratifies the split.",
+                ],
+            )
+        ],
+        data={
+            "helper_id": entry.helper_id,
+            "writes_state": False,
+            "repair": {**REPAIR, "action": "Regenerate the split evidence from the layer plan and retry"},
+        },
+    )
+
+
+def _pending_outcome(findings: list[dict[str, str]]) -> dict[str, Any]:
+    """A size-only finding is re-sliced by the orchestrator; a scope change goes to the operator."""
+    codes = [finding["code"] for finding in findings]
+    blockers = ["owner_ratification=pending", "ratification_blockers=" + ",".join(codes)]
+    if set(codes) <= SIZE_ONLY:
+        repair = {
+            **REPAIR,
+            "action": "Re-slice the over-cap increment, or commit a typed reviewability exception "
+            + "when it cannot split further, then rerun",
+        }
+        return {"decision": "reslice_required", "record": blockers, "repair": repair,
+                "reason": "the split leaves an increment over the path cap: " + ", ".join(codes)}
+    return {"decision": "operator_required", "record": blockers, "stop_reason": "scope_changing_pr_split",
+            "reason": "the split changes approved delivery: " + ", ".join(codes)}
+
+
 def run_pr_split_ratification_helper(entry: Any, request: Any) -> dict[str, Any]:
     """Runner helper entry point: a pure decision over request inputs."""
     try:
         groups, increments, active, budget = _parse(request.inputs)
     except _InvalidInput as error:
-        return response(
-            "input_error",
-            request_id=request.request_id,
-            diagnostics=[
-                diagnostic(
-                    "invalid_input",
-                    str(error),
-                    remediation_summary="The split evidence is incomplete, so regenerate the split evidence from the layer plan.",
-                    remediation_actions=[
-                        "Pass the approved groups in order with their scope, the increments in order with their "
-                        + "group, scope, and path counts, the active requirement, story, and task IDs, and the "
-                        + "per-PR path budget.",
-                        "Retry the request. Record owner_ratification=pending until the helper ratifies the split.",
-                    ],
-                )
-            ],
-            data={
-                "helper_id": entry.helper_id,
-                "writes_state": False,
-                "repair": {**REPAIR, "action": "Regenerate the split evidence from the layer plan and retry"},
-            },
-        )
+        return _invalid_input_response(entry, request, error)
     findings = _findings(groups, increments, active, budget)
-    extra: dict[str, Any] = {}
     if findings:
-        codes = [finding["code"] for finding in findings]
-        ratification, ratified_by = "pending", None
-        record = ["owner_ratification=pending", "ratification_blockers=" + ",".join(codes)]
-        if set(codes) <= SIZE_ONLY:
-            decision = "reslice_required"
-            reason = "the split leaves an increment over the path cap: " + ", ".join(codes)
-            extra["repair"] = {
-                **REPAIR,
-                "action": "Re-slice the over-cap increment, or commit a typed reviewability exception "
-                + "when it cannot split further, then rerun",
-            }
-        else:
-            decision = "operator_required"
-            reason = "the split changes approved delivery: " + ", ".join(codes)
-            extra["stop_reason"] = "scope_changing_pr_split"
+        outcome, ratification, ratified_by = _pending_outcome(findings), "pending", None
     else:
-        decision, ratification, ratified_by = "autopilot_ratified", "ratified", "autopilot"
         reason = (
             f"budget-driven split of {len(groups)} approved groups into {len(increments)} increments keeps the "
             f"approved order, each group's scope, and all {len(active)} active requirements, stories, and tasks; "
@@ -240,6 +245,8 @@ def run_pr_split_ratification_helper(entry: Any, request: Any) -> dict[str, Any]
             f"{budget['total_paths']} total paths"
         )
         record = ["owner_ratification=ratified", "ratified_by=autopilot", f"ratification_reason={reason}"]
+        outcome = {"decision": "autopilot_ratified", "reason": reason, "record": record}
+        ratification, ratified_by = "ratified", "autopilot"
     return response(
         "ok",
         request_id=request.request_id,
@@ -247,12 +254,9 @@ def run_pr_split_ratification_helper(entry: Any, request: Any) -> dict[str, Any]
             "helper_id": entry.helper_id,
             "operation": entry.operation,
             "writes_state": False,
-            "decision": decision,
             "owner_ratification": ratification,
             "ratified_by": ratified_by,
-            "reason": reason,
             "findings": findings,
-            "record": record,
-            **extra,
+            **outcome,
         },
     )

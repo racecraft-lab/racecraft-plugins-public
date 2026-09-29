@@ -899,6 +899,50 @@ def _run_coverage_guard(workflow: Path, state: Path) -> dict:
     return _stdout_json(result, "validate-autopilot-phase-coverage.py")
 
 
+def _derive_quality_tool_answers(read: Callable[[str], str]) -> dict:
+    """Step 0.11: a recorded answer wins, else the install hint, else skip (spec)."""
+    recorded = {
+        cells[0]: cells[4] for cells in (
+            [cell.strip() for cell in line.strip().strip("|").split("|")]
+            for line in read("scenario-inputs/workflow.md").splitlines() if line.startswith("| ")
+        ) if len(cells) == 7 and cells[0].isupper() and cells[4]
+    }
+    outcomes: dict[str, str] = {}
+    installs: list[str] = []
+    for slot in json.loads(read("scenario-inputs/quality-slots.json"))["slots"]:
+        if slot["slot"] in recorded:
+            outcomes[slot["slot"]] = recorded[slot["slot"]]
+            continue
+        installs.append(slot["install"])
+        installed = slot["install_result"]["tool_present_after"]
+        outcomes[slot["slot"]] = "install" if installed else "skip (spec)"
+    return {
+        # Step 0.11: "the run never asks", so a missing tool defaults to its install hint.
+        "question_offered": False,
+        "install_commands_run": sorted(installs),
+        "outcomes": outcomes,
+        "decisions_for_you": sorted(slot for slot, outcome in outcomes.items() if outcome == "skip (spec)"),
+    }
+
+
+def _derive_red_baseline_answers(read: Callable[[str], str]) -> dict:
+    """Step 0.9: a failing baseline goes to the implement-executor within its allowance."""
+    attempts = json.loads(read("scenario-inputs/baseline-attempts.json"))
+    failing = re.search(r"^\| Baseline test suite \| failed \| `([^`]+)`", read("scenario-inputs/workflow.md"), re.M)
+    assert failing and failing.group(1) == attempts["failing_check"], "workflow and attempts disagree"
+    spent = attempts["repair_attempts"] >= attempts["repair_allowance"]
+    return {
+        "repair_allowance_spent": spent,
+        # Step 0.9: a failing check goes to the implement-executor; Phase 1 starts once it
+        # passes or the failure is deferred with its evidence.
+        "owner": "implement-executor",
+        "next_action": "defer" if spent else "repair",
+        "rerun_command": attempts["failing_check"],
+        "phase_one_starts": spent,
+        "question_offered": False,
+    }
+
+
 def _derive_stop_policy_answers(scenario: str, read: Callable[[str], str]) -> dict:
     """Derive the graded fields of the stop-policy orchestration cases from their fixtures."""
     if scenario == "gate-failure-defers":
@@ -939,43 +983,9 @@ def _derive_stop_policy_answers(scenario: str, read: Callable[[str], str]) -> di
             "second_exception_refused": "refused" in steps["second-exception"],
         }
     if scenario == "missing-quality-tool-install-hint":
-        recorded = {
-            cells[0]: cells[4] for cells in (
-                [cell.strip() for cell in line.strip().strip("|").split("|")]
-                for line in read("scenario-inputs/workflow.md").splitlines() if line.startswith("| ")
-            ) if len(cells) == 7 and cells[0].isupper() and cells[4]
-        }
-        outcomes: dict[str, str] = {}
-        installs: list[str] = []
-        for slot in json.loads(read("scenario-inputs/quality-slots.json"))["slots"]:
-            if slot["slot"] in recorded:
-                outcomes[slot["slot"]] = recorded[slot["slot"]]
-                continue
-            installs.append(slot["install"])
-            installed = slot["install_result"]["tool_present_after"]
-            outcomes[slot["slot"]] = "install" if installed else "skip (spec)"
-        return {
-            # Step 0.11: "the run never asks", so a missing tool defaults to its install hint.
-            "question_offered": False,
-            "install_commands_run": sorted(installs),
-            "outcomes": outcomes,
-            "decisions_for_you": sorted(slot for slot, outcome in outcomes.items() if outcome == "skip (spec)"),
-        }
+        return _derive_quality_tool_answers(read)
     if scenario == "red-baseline-repaired-by-implement-executor":
-        attempts = json.loads(read("scenario-inputs/baseline-attempts.json"))
-        failing = re.search(r"^\| Baseline test suite \| failed \| `([^`]+)`", read("scenario-inputs/workflow.md"), re.M)
-        assert failing and failing.group(1) == attempts["failing_check"], "workflow and attempts disagree"
-        spent = attempts["repair_attempts"] >= attempts["repair_allowance"]
-        return {
-            "repair_allowance_spent": spent,
-            # Step 0.9: a failing check goes to the implement-executor; Phase 1 starts once it
-            # passes or the failure is deferred with its evidence.
-            "owner": "implement-executor",
-            "next_action": "defer" if spent else "repair",
-            "rerun_command": attempts["failing_check"],
-            "phase_one_starts": spent,
-            "question_offered": False,
-        }
+        return _derive_red_baseline_answers(read)
     if scenario == "blocked-action-defers":
         record = json.loads(read("scenario-inputs/blocked-record.json"))
         open_tasks = {

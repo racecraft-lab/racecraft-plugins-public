@@ -18,7 +18,9 @@ from speckit_pro_runner.helpers.registry import dispatch_helper
 from test_result import run_counted
 
 
-class StackManagerTests(unittest.TestCase):
+class StackManagerTestCase(unittest.TestCase):
+    """Shared staging for the manager selection and recovery tests."""
+
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
@@ -67,6 +69,9 @@ class StackManagerTests(unittest.TestCase):
         return dispatch_helper(SimpleNamespace(helper_id="detect-stack-manager-plan", operation="detect-stack-manager-plan",
                                               request_id="manager-test", mode="dry_run", inputs={**self.inputs, **changes}))
 
+
+
+class StackManagerTests(StackManagerTestCase):
     def test_selected_manager_links_verified_urls_and_preserves_packet_creation(self):
         with patch.object(stack_manager, "probe", side_effect=self.probe):
             result = self.request()
@@ -157,6 +162,9 @@ class StackManagerTests(unittest.TestCase):
         self.assertEqual("gh-stack", decision["recovery"]["selected_manager"])
         self.assertEqual(previous["topology"]["post_mutation"], decision["recovery"]["observed_post_failure_topology"])
 
+
+
+class StackManagerRecoveryTests(StackManagerTestCase):
     def partial_mutation_path(self):
         with patch.object(stack_manager, "probe", side_effect=self.probe):
             previous = self.request()["data"]["decision"]
@@ -212,4 +220,7 @@ class StackManagerTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    sys.exit(run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(StackManagerTests), label="test-stack-manager-plan"))
+    loader = unittest.defaultTestLoader
+    suite = unittest.TestSuite([loader.loadTestsFromTestCase(StackManagerTests),
+                                loader.loadTestsFromTestCase(StackManagerRecoveryTests)])
+    sys.exit(run_counted(suite, label="test-stack-manager-plan"))
