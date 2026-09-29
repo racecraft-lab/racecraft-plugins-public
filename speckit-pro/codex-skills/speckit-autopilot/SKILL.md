@@ -736,17 +736,22 @@ passing, with no operator event. `execution_control.disposition=defer`
 and not a stop: it defers one blocked unit whose
 correction made no measurable progress and whose allowance is spent, and the
 run keeps executing independent work.
-When every runnable item has finished, the read-only `finalize-run` runner
-helper decides the end under §Blocked Actions Mid-Run: Fall Back or Defer, Never
-Stop. Human UAT is the only gate a run may defer. With every non-UAT gate passed
-at every PR head and only human UAT left, the run finalizes: mark the stack ready for review
-(never merge), open the top PR body with its `Deferred / not verified` section,
-and mark the thread goal complete. When deferred items remain beyond human UAT
-(a failed gate, a ledger `deferred` entry, or an unresolved task), the run makes
-one human stop instead and the stack stays in draft. Either way, make the one
-consolidated `request_user_input` request and print the same question as plain
-text in the final message, listing every fallback taken and every deferred item,
-including each entry of the ledger's `deferred` list.
+When every runnable item has finished, whether or not deferred items remain, the
+read-only `finalize-run` runner helper decides the end under §Blocked Actions Mid-Run: Fall Back or Defer, Never
+Stop. Human UAT is the only gate a run may defer, and every required
+gate must be green at every PR head as the runner's own verification record shows
+it. With every required gate green, the run finalizes: mark the stack ready for
+review (never merge), open the top PR body with its `Deferred / not verified`
+section, and mark the thread goal complete. Human UAT, a ledger `deferred` unit
+that failed every escalation tier, and an unresolved task never keep the stack in
+draft: they reach the owner as items in the end-of-run request, the units and
+tasks under "Decisions for you". A failed unit climbs two escalation tiers first
+(a fresh agent guided by a consensus diagnosis, then the strongest model at max
+effort), and only a required gate still red, missing, or blocked by a harness
+error after that is one human stop that keeps the stack in draft. The run never
+pauses to ask: print `end_of_run_request` as plain text in the final message. It
+is the handoff, listing every fallback taken and every deferred item, including
+each entry of the ledger's `deferred` list.
 If the audit finds incomplete Post work, set the first
 incomplete item to `in_progress` in both state stores and continue the
 autopilot loop instead of summarizing. `Post: Retrospective` is the final
