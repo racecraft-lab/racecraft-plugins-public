@@ -1,0 +1,494 @@
+{
+  "speckit-pro/agents/analyze-executor.md": {
+    "verdict": [
+      "autopilot-and-agents-004"
+    ],
+    "checks_run": [
+      "ripwire . --grep=analyze-executor.md",
+      "ripwire . --grep=capability-discovery.md"
+    ]
+  },
+  "speckit-pro/agents/checklist-executor.md": {
+    "verdict": [
+      "autopilot-and-agents-004"
+    ],
+    "checks_run": [
+      "ripwire . --grep=checklist-executor.md",
+      "ripwire . --grep=capability-discovery.md"
+    ]
+  },
+  "speckit-pro/agents/clarify-executor.md": {
+    "verdict": [
+      "autopilot-and-agents-004"
+    ],
+    "checks_run": [
+      "ripwire . --grep=clarify-executor.md",
+      "ripwire . --grep=capability-discovery.md"
+    ]
+  },
+  "speckit-pro/agents/codebase-analyst.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=codebase-analyst.md",
+      "ripwire . --grep=capability-discovery.md"
+    ]
+  },
+  "speckit-pro/agents/consensus-synthesizer.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=consensus-synthesizer.md",
+      "ripwire . --grep=capability-discovery.md"
+    ]
+  },
+  "speckit-pro/agents/domain-researcher.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=domain-researcher.md",
+      "ripwire . --grep=capability-discovery.md"
+    ]
+  },
+  "speckit-pro/agents/implement-executor.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=implement-executor.md",
+      "ripwire . --grep=capability-discovery.md"
+    ]
+  },
+  "speckit-pro/agents/phase-executor.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=phase-executor.md",
+      "ripwire . --grep=capability-discovery.md"
+    ]
+  },
+  "speckit-pro/agents/spec-context-analyst.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=spec-context-analyst.md",
+      "ripwire . --grep=capability-discovery.md"
+    ]
+  },
+  "speckit-pro/codex-agents/analyze-executor.toml": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=analyze-executor.toml",
+      "ripwire . --grep=capability-discovery.md"
+    ]
+  },
+  "speckit-pro/codex-agents/autopilot-fast-helper.toml": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=autopilot-fast-helper.toml",
+      "ripwire . --grep=capability-discovery.md"
+    ]
+  },
+  "speckit-pro/codex-agents/checklist-executor.toml": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=checklist-executor.toml",
+      "ripwire . --grep=capability-discovery.md"
+    ]
+  },
+  "speckit-pro/codex-agents/clarify-executor.toml": {
+    "verdict": [
+      "autopilot-and-agents-004"
+    ],
+    "checks_run": [
+      "ripwire . --grep=clarify-executor.toml",
+      "ripwire . --grep=capability-discovery.md"
+    ]
+  },
+  "speckit-pro/codex-agents/codebase-analyst.toml": {
+    "verdict": [
+      "autopilot-and-agents-003"
+    ],
+    "checks_run": [
+      "ripwire . --grep=codebase-analyst.toml",
+      "ripwire . --grep=capability-discovery.md"
+    ]
+  },
+  "speckit-pro/codex-agents/consensus-synthesizer.toml": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=consensus-synthesizer.toml",
+      "ripwire . --grep=capability-discovery.md"
+    ]
+  },
+  "speckit-pro/codex-agents/domain-researcher.toml": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=domain-researcher.toml",
+      "ripwire . --grep=capability-discovery.md"
+    ]
+  },
+  "speckit-pro/codex-agents/implement-executor.toml": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=implement-executor.toml",
+      "ripwire . --grep=capability-discovery.md"
+    ]
+  },
+  "speckit-pro/codex-agents/phase-executor.toml": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=phase-executor.toml",
+      "ripwire . --grep=capability-discovery.md"
+    ]
+  },
+  "speckit-pro/codex-agents/spec-context-analyst.toml": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=spec-context-analyst.toml",
+      "ripwire . --grep=capability-discovery.md"
+    ]
+  },
+  "speckit-pro/codex-skills/speckit-autopilot/SKILL.md": {
+    "verdict": [
+      "autopilot-and-agents-001",
+      "autopilot-and-agents-002",
+      "autopilot-and-agents-009"
+    ],
+    "checks_run": [
+      "ripwire . --grep=SKILL.md"
+    ]
+  },
+  "speckit-pro/codex-skills/speckit-autopilot/agents/openai.yaml": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=openai.yaml"
+    ]
+  },
+  "speckit-pro/codex-skills/speckit-autopilot/references/error-recovery-codex.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=error-recovery-codex.md"
+    ]
+  },
+  "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md": {
+    "verdict": [
+      "autopilot-and-agents-001"
+    ],
+    "checks_run": [
+      "ripwire . --grep=phase-execution-codex.md"
+    ]
+  },
+  "speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=post-implementation-codex.md"
+    ]
+  },
+  "speckit-pro/codex-skills/speckit-autopilot/references/prerequisites-codex.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=prerequisites-codex.md"
+    ]
+  },
+  "speckit-pro/codex-skills/speckit-autopilot/references/preview-prompts/observer.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=observer.md"
+    ]
+  },
+  "speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md": {
+    "verdict": [
+      "autopilot-and-agents-009"
+    ],
+    "checks_run": [
+      "ripwire . --grep=task-list-canonical-codex.md"
+    ]
+  },
+  "speckit-pro/codex-skills/speckit-autopilot/references/workflow-file-protocol-codex.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=workflow-file-protocol-codex.md"
+    ]
+  },
+  "speckit-pro/scripts/agent-memory-ignore.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=agent-memory-ignore.py"
+    ]
+  },
+  "speckit-pro/skills/speckit-autopilot/SKILL.md": {
+    "verdict": [
+      "autopilot-and-agents-002"
+    ],
+    "checks_run": [
+      "ripwire . --grep=SKILL.md"
+    ]
+  },
+  "speckit-pro/skills/speckit-autopilot/contracts/autopilot-state-status.schema.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=autopilot-state-status.schema.json"
+    ]
+  },
+  "speckit-pro/skills/speckit-autopilot/contracts/changed-file-manifest.schema.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=changed-file-manifest.schema.json"
+    ]
+  },
+  "speckit-pro/skills/speckit-autopilot/contracts/marker-checkpoint.schema.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=marker-checkpoint.schema.json"
+    ]
+  },
+  "speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=pr-marker-plan.schema.json"
+    ]
+  },
+  "speckit-pro/skills/speckit-autopilot/contracts/verification-report.schema.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=verification-report.schema.json"
+    ]
+  },
+  "speckit-pro/skills/speckit-autopilot/references/capability-discovery.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=capability-discovery.md"
+    ]
+  },
+  "speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md": {
+    "verdict": [
+      "autopilot-and-agents-004"
+    ],
+    "checks_run": [
+      "ripwire . --grep=consensus-protocol.md"
+    ]
+  },
+  "speckit-pro/skills/speckit-autopilot/references/error-recovery.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=error-recovery.md"
+    ]
+  },
+  "speckit-pro/skills/speckit-autopilot/references/execution-efficiency.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=execution-efficiency.md"
+    ]
+  },
+  "speckit-pro/skills/speckit-autopilot/references/gate-validation.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=gate-validation.md"
+    ]
+  },
+  "speckit-pro/skills/speckit-autopilot/references/hardener-delegation.md": {
+    "verdict": [
+      "autopilot-and-agents-001"
+    ],
+    "checks_run": [
+      "ripwire . --grep=hardener-delegation.md"
+    ]
+  },
+  "speckit-pro/skills/speckit-autopilot/references/phase-execution.md": {
+    "verdict": [
+      "autopilot-and-agents-001",
+      "autopilot-and-agents-002"
+    ],
+    "checks_run": [
+      "ripwire . --grep=phase-execution.md"
+    ]
+  },
+  "speckit-pro/skills/speckit-autopilot/references/plugin-limitations.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=plugin-limitations.md"
+    ]
+  },
+  "speckit-pro/skills/speckit-autopilot/references/post-implementation.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=post-implementation.md"
+    ]
+  },
+  "speckit-pro/skills/speckit-autopilot/references/prerequisites.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=prerequisites.md"
+    ]
+  },
+  "speckit-pro/skills/speckit-autopilot/references/subagent-memory-policy.md": {
+    "verdict": [
+      "autopilot-and-agents-010"
+    ],
+    "checks_run": [
+      "ripwire . --grep=subagent-memory-policy.md"
+    ]
+  },
+  "speckit-pro/skills/speckit-autopilot/references/task-list-canonical.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=task-list-canonical.md"
+    ]
+  },
+  "speckit-pro/skills/speckit-autopilot/references/tdd-protocol.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=tdd-protocol.md"
+    ]
+  },
+  "speckit-pro/skills/speckit-autopilot/references/token-discipline.md": {
+    "verdict": [
+      "autopilot-and-agents-011"
+    ],
+    "checks_run": [
+      "ripwire . --grep=token-discipline.md"
+    ]
+  },
+  "speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=workflow-file-protocol.md"
+    ]
+  },
+  "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py": {
+    "verdict": [
+      "autopilot-and-agents-005",
+      "autopilot-and-agents-007",
+      "autopilot-and-agents-008"
+    ],
+    "checks_run": [
+      "ripwire . --grep=validate-autopilot-phase-coverage.py",
+      "ripwire . --callers=validate_projection_integrity",
+      "ripwire . --callers=json_schema_type_matches"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/agent_inventory.json": {
+    "verdict": [
+      "autopilot-and-agents-010"
+    ],
+    "checks_run": [
+      "ripwire . --grep=agent_inventory.json",
+      "ripwire . --grep=CLAUDE_REQUIRED_AGENT_NAMES"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/agent_inventory.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=agent_inventory.py",
+      "ripwire . --grep=CLAUDE_REQUIRED_AGENT_NAMES"
+    ]
+  },
+  "speckit-pro/speckit_pro_runner/agent_materialization.py": {
+    "verdict": [
+      "autopilot-and-agents-006"
+    ],
+    "checks_run": [
+      "ripwire . --grep=agent_materialization.py",
+      "ripwire . --callers=canonical_bytes"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/autopilot-stage/workflow.md": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=workflow.md"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/mutation-helpers/contracts/autopilot-phase-coverage-report.schema.json": {
+    "verdict": [
+      "autopilot-and-agents-005"
+    ],
+    "checks_run": [
+      "ripwire . --grep=autopilot-phase-coverage-report.schema.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/parse-consensus-categories.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=parse-consensus-categories.json"
+    ]
+  },
+  "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/resolve-autopilot-stage.json": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=resolve-autopilot-stage.json"
+    ]
+  },
+  "tests/speckit-pro/unit/test-agent-inventory.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-agent-inventory.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-agent-materialization.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-agent-materialization.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-agent-memory-ignore.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-agent-memory-ignore.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-agent-terminal-contracts.py": {
+    "verdict": [
+      "autopilot-and-agents-003"
+    ],
+    "checks_run": [
+      "ripwire . --grep=test-agent-terminal-contracts.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py": {
+    "verdict": [
+      "autopilot-and-agents-002",
+      "autopilot-and-agents-012"
+    ],
+    "checks_run": [
+      "ripwire . --grep=test-autopilot-bookkeeping-guard.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-autopilot-execution-contract.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-autopilot-execution-contract.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-autopilot-permission-mode-guidance.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-autopilot-permission-mode-guidance.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-autopilot-phase-coverage.py": {
+    "verdict": [
+      "autopilot-and-agents-005"
+    ],
+    "checks_run": [
+      "ripwire . --grep=test-autopilot-phase-coverage.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-autopilot-stage-resolution.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-autopilot-stage-resolution.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-consensus-analyst-shared-prose.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-consensus-analyst-shared-prose.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-consensus-routing-helpers.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-consensus-routing-helpers.py"
+    ]
+  },
+  "tests/speckit-pro/unit/test-post-implementation-reference.py": {
+    "verdict": "clean",
+    "checks_run": [
+      "ripwire . --grep=test-post-implementation-reference.py"
+    ]
+  }
+}

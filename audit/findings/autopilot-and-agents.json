@@ -1,0 +1,188 @@
+[
+  {
+    "id": "autopilot-and-agents-001",
+    "lane": "autopilot-and-agents",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md:1503",
+      "speckit-pro/skills/speckit-autopilot/references/phase-execution.md:3123",
+      "speckit-pro/skills/speckit-autopilot/references/hardener-delegation.md:8",
+      "speckit-pro/codex-skills/speckit-autopilot/SKILL.md:815"
+    ],
+    "ripwire_command": "ripwire . --grep=Hardener",
+    "summary": "The Claude Phase 7 reference runs the once-per-spec mutation hardener between the MUTATION run and its block decision. The Codex phase reference has no Final Verification step and never tells the orchestrator to run it, yet the Codex SKILL.md lists hardener-delegation.md as applicable and hardener-delegation.md anchors on 'Step 4 of Phase 7', a step the Codex reference lacks.",
+    "proposed_fix": "Add a Codex Final Verification step (quality-gate order, hardener trigger, Hardener line) to phase-execution-codex.md, or state in SKILL.md and hardener-delegation.md that Codex does not run the hardener.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "autopilot-and-agents-002",
+    "lane": "autopilot-and-agents",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/skills/speckit-autopilot/SKILL.md:66-73",
+      "speckit-pro/skills/speckit-autopilot/references/phase-execution.md:2783",
+      "speckit-pro/codex-skills/speckit-autopilot/SKILL.md:103",
+      "tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py:678"
+    ],
+    "ripwire_command": "ripwire . --grep=\"Never Yield\"",
+    "summary": "Claude states that a status summary is not a stopping point and that a turn must not end with tasks pending and nothing dispatched. Codex has no equivalent rule, and the bookkeeping-guard test asserts the rule only for the Claude side.",
+    "proposed_fix": "Add a Codex counterpart phrased for the wait_agent loop and assert it in the same test.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "autopilot-and-agents-003",
+    "lane": "autopilot-and-agents",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/codex-agents/codebase-analyst.toml:10",
+      "speckit-pro/codex-agents/codebase-analyst.toml:69",
+      "speckit-pro/skills/speckit-autopilot/references/grounding.md:19",
+      "tests/speckit-pro/unit/test-agent-terminal-contracts.py:184"
+    ],
+    "ripwire_command": "ripwire . --grep=\"Grounding contract: mirrors\"",
+    "summary": "Every Codex reader agent declares that it 'mirrors' grounding.md and capability-discovery.md, but inlines only the evidence-note line and an abstain sentence. G1 (ground every claim), G3 (mark inference, no high confidence without grounding) and the Claude 'Read Reference dir' directive are absent. No test compares the mirror to its source; the terminal-contract test only forbids other speckit-pro/ paths.",
+    "proposed_fix": "Inline G1 to G5 (or generate the TOML section from grounding.md) and add a test that the Codex text carries each rule.",
+    "in_flight_status": null
+  },
+  {
+    "id": "autopilot-and-agents-004",
+    "lane": "autopilot-and-agents",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/agents/clarify-executor.md:80-82",
+      "speckit-pro/agents/checklist-executor.md:82-84",
+      "speckit-pro/agents/analyze-executor.md:84-86",
+      "speckit-pro/codex-agents/clarify-executor.toml:66-68",
+      "speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md:351",
+      "speckit-pro/speckit_pro_runner/helpers/read_only.py:4981"
+    ],
+    "ripwire_command": "ripwire . --grep=CONSENSUS_SECURITY_KEYWORDS",
+    "summary": "The security keyword list exists in the runner (15 words) and consensus-protocol.md (15) but six executor copies list 13 and omit 'authentication' and 'authorization'. No test compares the copies.",
+    "proposed_fix": "Point executors at the helper or the protocol list, or add a test deriving all copies from CONSENSUS_SECURITY_KEYWORDS.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "autopilot-and-agents-005",
+    "lane": "autopilot-and-agents",
+    "severity": "major",
+    "kind": "coherence",
+    "files": [
+      "tests/speckit-pro/unit/fixtures/mutation-helpers/contracts/autopilot-phase-coverage-report.schema.json:5",
+      "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py:5165",
+      "tests/speckit-pro/unit/test-autopilot-phase-coverage.py:3657"
+    ],
+    "ripwire_command": "ripwire . --grep=autopilot-phase-coverage-report",
+    "summary": "The report schema sets additionalProperties false and names 14 fields, but build_report emits 19 further *_errors keys (workflow_authority_errors, autonomy_boundary_errors, state_privacy_errors and others). A real report fails its own schema. The only test reads two schema keys and never validates a report against it.",
+    "proposed_fix": "Add the missing keys (or drop additionalProperties) and validate a real build_report output against the schema in the test.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "autopilot-and-agents-006",
+    "lane": "autopilot-and-agents",
+    "severity": "major",
+    "kind": "cohesion",
+    "files": [
+      "speckit-pro/speckit_pro_runner/agent_materialization.py:53",
+      "speckit-pro/speckit_pro_runner/helpers/install.py:2453",
+      "speckit-pro/speckit_pro_runner/task_results.py:11",
+      "speckit-pro/speckit_pro_runner/verification_records.py:32",
+      "speckit-pro/speckit_pro_runner/failing_checks.py:18"
+    ],
+    "ripwire_command": "ripwire . --callers=canonical_bytes",
+    "summary": "The canonical-JSON byte encoder lives in the agent-materialization module, and task_results, verification_records and failing_checks import it from there for unrelated hashing. install.py re-implements the identical encoder as route_policy_canonical_bytes.",
+    "proposed_fix": "Move canonical_bytes to a small shared runner module and reuse it in install.py.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "autopilot-and-agents-007",
+    "lane": "autopilot-and-agents",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py:1398",
+      "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py:1406",
+      "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py:1423",
+      "speckit-pro/speckit_pro_runner/helpers/read_only.py:7004",
+      "speckit-pro/speckit_pro_runner/helpers/read_only.py:7016",
+      "speckit-pro/speckit_pro_runner/helpers/read_only.py:7030"
+    ],
+    "ripwire_command": "ripwire . --callers=json_schema_type_matches",
+    "summary": "The shipped validator carries verbatim copies of three JSON-schema helpers that also live in the runner's read_only.py. The two copies can drift, and the validator's docstring calls it a Codex-only script although both hosts run it.",
+    "proposed_fix": "Share one stdlib module under plugin scripts/lib (per the shared-lib rule) or record why the copy is intentional and add a drift test.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "autopilot-and-agents-008",
+    "lane": "autopilot-and-agents",
+    "severity": "major",
+    "kind": "cohesion",
+    "files": [
+      "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py:2543-4409",
+      "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py:5165"
+    ],
+    "ripwire_command": "ripwire . --callers=validate_projection_integrity",
+    "summary": "validate_projection_integrity is one function of about 1,860 lines inside a 5,334-line script that also does schema validation, git history checks, path sandboxing, privacy scanning and autonomy authorization. It is one caller (build_report) and untestable in parts.",
+    "proposed_fix": "Split the function by checkpoint kind and move schema, git and path helpers into separate modules.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "autopilot-and-agents-009",
+    "lane": "autopilot-and-agents",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md:108",
+      "speckit-pro/codex-skills/speckit-autopilot/SKILL.md:567"
+    ],
+    "ripwire_command": "ripwire . --grep=\"SKILL.md:662\"",
+    "summary": "The reference cites the coverage script at 'SKILL.md:662', but line 662 of either SKILL.md is unrelated (script commands are at Codex SKILL.md:567 and 617). The line pointer is stale.",
+    "proposed_fix": "Cite the section name instead of a line number.",
+    "in_flight_status": null
+  },
+  {
+    "id": "autopilot-and-agents-010",
+    "lane": "autopilot-and-agents",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/skills/speckit-autopilot/references/subagent-memory-policy.md:8-16",
+      "speckit-pro/speckit_pro_runner/agent_inventory.json:1"
+    ],
+    "ripwire_command": "ripwire . --grep=subagent-memory-policy",
+    "summary": "The memory scope matrix omits formal-model-author and artifact-preview-observer, which the inventory lists with memory none. The matrix and the inventory are two sources for one contract and nothing compares them.",
+    "proposed_fix": "Add the two roles or derive the matrix from the inventory and test it.",
+    "in_flight_status": "still-open"
+  },
+  {
+    "id": "autopilot-and-agents-011",
+    "lane": "autopilot-and-agents",
+    "severity": "minor",
+    "kind": "coherence",
+    "files": [
+      "speckit-pro/skills/speckit-autopilot/references/token-discipline.md:31"
+    ],
+    "ripwire_command": "ripwire . --grep=contribute-and-release",
+    "summary": "A shipped plugin reference links to docs-site/src/content/docs/contribute-and-release.md by a four-level relative path. That file is outside the plugin payload, so the link is dead in an installed copy.",
+    "proposed_fix": "Link the published docs URL or drop the link.",
+    "in_flight_status": null
+  },
+  {
+    "id": "autopilot-and-agents-012",
+    "lane": "autopilot-and-agents",
+    "severity": "minor",
+    "kind": "cohesion",
+    "files": [
+      "tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py:2",
+      "tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py:616",
+      "tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py:981"
+    ],
+    "ripwire_command": "ripwire . --for=\"autopilot bookkeeping guard tests\"",
+    "summary": "The module docstring scopes it to the status-evidence rule, but 2,405 lines also hold prose-contract classes for blocked-action deferral, run finalization, failure classes, ambiguous wording, plugin drift and standing-policy preflight. It mixes six feature contracts under one misleading name.",
+    "proposed_fix": "Split the source-contract classes into per-feature test files.",
+    "in_flight_status": "still-open"
+  }
+]
