@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from .formal.selection import next_fence, require_fields, require_text, unique_object
+from .strict_input import next_fence, require_fields, require_text, unique_object
 
 HEADING = "## Artifact Review Handoff"
 GALLERY = Path(__file__).resolve().parents[1] / "artifact-gallery"

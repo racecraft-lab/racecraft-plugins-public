@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from .agent_materialization import canonical_bytes
-from .formal.selection import require_text as text_field, unique_object
+from .strict_input import require_text as text_field, unique_object
 from .task_execution import fingerprints
 
 SCHEMA = "task-results.v1"
