@@ -11,6 +11,11 @@ import tempfile
 from pathlib import Path
 from typing import Any, TextIO
 
+TEST_LIB = Path(__file__).resolve().parents[1] / "lib"
+if str(TEST_LIB) not in sys.path:
+    sys.path.insert(0, str(TEST_LIB))
+
+from privacy_patterns import redact_private_text  # noqa: E402
 
 FIELD_REPLACEMENTS = {
     "cwd": "<scrubbed>",
@@ -49,8 +54,9 @@ FIELD_REPLACEMENTS = {
 }
 
 
+# Telemetry-field and path-collapsing rules local to transcripts. The shared privacy
+# patterns (UUIDs, temp paths, emails, home paths) come from redact_private_text.
 STRING_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
-    (re.compile(r"[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}"), "<scrubbed-uuid>"),
     (re.compile(r'"session_id":"[^"]+"'), '"session_id":"<scrubbed-session>"'),
     (re.compile(r'"sessionId":"[^"]+"'), '"sessionId":"<scrubbed-session>"'),
     (re.compile(r'"requestId":"[^"]+"'), '"requestId":"<scrubbed>"'),
@@ -75,7 +81,6 @@ STRING_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r'"plugins":\[[^\]]*\]'), '"plugins":"<scrubbed>"'),
     (re.compile(r'"memory_paths":\{[^}]*\}'), '"memory_paths":"<scrubbed>"'),
     (re.compile(r'<TMP>-[^\s"]+'), "<TMP>"),
-    (re.compile(r'/private/var/folders/[^\s"]+'), "<TMP>"),
     (re.compile(r'[A-Za-z]:\\Users\\[^\s"]+', re.IGNORECASE), "<HOME>"),
     (re.compile(r'/Users/[^/\s"]+'), "<HOME>"),
     (re.compile(r'/home/[^/\s"]+'), "<HOME>"),
@@ -96,6 +101,7 @@ def scrub_string(value: str, extra_pattern: re.Pattern[str] | None) -> str:
         return "<scrubbed-transcript-dump>"
     for pattern, replacement in STRING_REPLACEMENTS:
         value = pattern.sub(replacement, value)
+    value = redact_private_text(value)
     if extra_pattern is not None:
         value = extra_pattern.sub("<USER>", value)
     return value

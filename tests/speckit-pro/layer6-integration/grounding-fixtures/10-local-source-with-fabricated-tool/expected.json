@@ -1,0 +1,9 @@
+{
+  "fixture_id": "10-local-source-with-fabricated-tool",
+  "purpose": "NEGATIVE CONTROL. One answer carries a valid local-file note and a second note that cites a tool with no tool_use. A local source must not launder the fabricated tool citation, so the verdict is ungrounded.",
+  "expect_grounding_verdict": "ungrounded",
+  "must_not_invoke_tools": [
+    "mcp__context7__get-library-docs"
+  ],
+  "expect_citation_count": 2
+}

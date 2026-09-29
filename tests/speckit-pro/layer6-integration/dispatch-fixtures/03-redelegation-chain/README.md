@@ -2,7 +2,7 @@
 
 ## What this fixture proves
 
-This is the core L7 test: the orchestrator must hand off to a subagent,
+This is the core Layer 6 test: the orchestrator must hand off to a subagent,
 **regain control when that subagent returns**, then dispatch a different
 subagent based on what was returned. Single-hop tests cannot prove this.
 
@@ -23,3 +23,8 @@ failure modes.
 
 For a live capture, `prompt.txt` names the committed `sample-spec.md` next to
 this README; it is the required fixture input.
+
+The sample spec avoids every consensus security keyword on purpose. A keyword
+such as `password` widens any tagged item to all three analysts and raises the
+bar to unanimity (`consensus-protocol.md` §Security Keywords), which would
+contradict the `[codebase, domain]` routing this fixture asserts.

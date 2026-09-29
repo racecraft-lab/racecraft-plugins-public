@@ -1,6 +1,6 @@
-# SPEC-FIXTURE-TASKS — Trivial feature for L7 Tasks-phase smoke
+# SPEC-FIXTURE-TASKS — Trivial feature for Layer 6 Tasks-phase smoke
 
-> L7 fixture spec for the Tasks-phase dispatch test. Plan-phase output
+> Layer 6 fixture spec for the Tasks-phase dispatch test. Plan-phase output
 > is inlined below to keep the fixture self-contained.
 
 ## Feature
