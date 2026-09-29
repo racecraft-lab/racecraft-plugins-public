@@ -195,7 +195,6 @@ ack dead-code:new-symbol c2bceb9f958fbb5c 0 cid=b9ec67ccbba6a1d5 unittest discov
 ack dead-code:new-symbol c3367d154b8a2860 0 cid=23a77f04e56db5a6 Referenced only as values in the _SEPARATE_DERIVATIONS dispatch table (test-native-functional-catalog.py:893-894), which the dead-code scan does not follow
 ack dead-code:new-symbol c45ad21c46e19ed8 0 cid=4e4fc8f46f2f6b5c unittest discovers these test methods through loadTestsFromTestCase in main(); no direct caller is expected
 ack dead-code:new-symbol c47a29425e44651f 0 cid=f928711b9bc4a135 unittest discovers these test methods through loadTestsFromTestCase in main(); no direct caller is expected
-ack dead-code:new-symbol c4b2e03e972e55ef 0 cid=5f28495dde80931b unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol c51e4fdd5ced61d2 0 cid=ceac60beea2ff436 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol c5beaa018b817e7b 0 cid=36c8ce081a61af9a unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol c61f98bf48150fe9 0 cid=ecacdd9a1b3fc717 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
