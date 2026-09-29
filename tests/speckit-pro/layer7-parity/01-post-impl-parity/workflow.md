@@ -73,11 +73,13 @@ before PR creation.
 
 ## Notes
 
-This file is the test input for `tests/layer7-parity/01-post-impl-parity/`.
+This file is the test input for `tests/speckit-pro/layer7-parity/01-post-impl-parity/`.
 It is NOT a real spec — it's the smallest viable workflow that exercises
 the post-impl parallel group + serial tail plus ordered multi-PR emission.
 
-The `--from-phase post` flag (or equivalent) skips phases 1-7. Both
+All seven Workflow Overview rows read Complete, so autopilot resolves the stage
+from that table and starts at the Post-Implementation phase without any
+`--from-phase` value (the flag accepts only `specify` through `implement`). Both
 Path A (teams) and Path B (parallel subagents) dispatch the same Doctor /
 Code Review / Verify-chain tracks, then complete Integration Suite,
 Reviewability Diff Gate, UAT Runbook Generation, PR Body

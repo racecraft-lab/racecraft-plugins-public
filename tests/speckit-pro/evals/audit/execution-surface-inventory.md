@@ -2,6 +2,9 @@
 
 ## Scope and snapshot
 
+This is a dated snapshot. The counts below describe the tree when it was
+captured, and the suite manifest has grown since.
+
 Static inventory captured at `2026-09-15T17:54:21Z` for the test tree,
 repository-owned scripts, five relevant workflows, and `docs-site/package.json`.
 It excludes vendored/generated content, `node_modules`, and historical specs. The

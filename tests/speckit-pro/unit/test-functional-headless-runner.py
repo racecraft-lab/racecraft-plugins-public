@@ -1425,11 +1425,31 @@ class HeadlessCaseCatalogContractTests(unittest.TestCase):
                 self.load_with(mutate)
 
 
+class RunCaseTests(unittest.TestCase):
+    """One case runs in ``run_case``, which returns its manifest; ``main`` only wraps it."""
+
+    def test_run_case_returns_the_manifest_and_writes_it_even_on_setup_failure(self) -> None:
+        runner = import_runner()
+        with tempfile.TemporaryDirectory() as temporary:
+            evidence = Path(temporary) / "evidence"
+            evidence.mkdir()
+            args = runner.parser().parse_args([
+                "--host", "codex", "--skill", "speckit-coach", "--eval-id", "1", "--source-commit", "0" * 40,
+                "--source-tree", "0" * 40, "--model", "m", "--reasoning", "low", "--cli", "/nonexistent/codex",
+                "--evidence-dir", str(evidence),
+            ])
+            manifest, exit_code = runner.run_case(args, REPO_ROOT, evidence)
+            self.assertEqual((manifest["status"], exit_code), ("setup_error", 1))
+            self.assertEqual(json.loads((evidence / "manifest.json").read_text())["status"], "setup_error")
+            self.assertTrue((evidence / "sha256.txt").is_file())
+
+
 def main() -> int:
     suite = unittest.TestSuite([
         unittest.defaultTestLoader.loadTestsFromTestCase(FunctionalHeadlessRunnerTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(SharedCodexIsolationTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(HeadlessCaseCatalogContractTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(RunCaseTests),
     ])
     return run_counted(suite, label="test-functional-headless-runner")
 
