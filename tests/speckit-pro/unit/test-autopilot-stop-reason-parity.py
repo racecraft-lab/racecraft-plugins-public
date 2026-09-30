@@ -19,18 +19,24 @@ REPO_ROOT = TEST_DIR.parents[2]
 sys.path.insert(0, str(TEST_DIR.parent / "lib"))
 sys.path.insert(0, str(REPO_ROOT / "speckit-pro"))
 
+from host_skill_views import host_skill_root  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
-CLAUDE_SKILL = REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot"
-CODEX_SKILL = REPO_ROOT / "speckit-pro" / "codex-skills" / "speckit-autopilot"
-REFERENCE = CLAUDE_SKILL / "references" / "stop-policy.md"
+# One shared source renders each host's view; guidance is read per host.
+HOST_SKILLS = {host: host_skill_root(host) / "speckit-autopilot" for host in ("claude", "codex")}
+REFERENCE = REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot" / "references" / "stop-policy.md"
 MARKER = re.compile(r"`stop_reason:([^`\s]+)`")
 CLASSES = {"authority", "exhausted", "harm_halt"}
 
 
 def _guidance_files() -> list[Path]:
-    files = sorted(CLAUDE_SKILL.rglob("*.md")) + sorted(CODEX_SKILL.rglob("*.md"))
+    files = [path for skill in HOST_SKILLS.values() for path in sorted(skill.rglob("*.md"))]
     return [path for path in files if path.is_file()]
+
+
+def _label(path: Path) -> str:
+    """Name a file for a failure message; rendered views live outside the repository."""
+    return path.relative_to(REPO_ROOT).as_posix() if path.is_relative_to(REPO_ROOT) else path.as_posix()
 
 
 def _eval_files() -> list[Path]:
@@ -65,7 +71,7 @@ class StopReasonParityTests(unittest.TestCase):
                 self.assertIn(
                     reason,
                     known,
-                    f"{path.relative_to(REPO_ROOT)} names stop reason {reason!r} "
+                    f"{_label(path)} names stop reason {reason!r} "
                     "outside the runner set",
                 )
 
@@ -96,14 +102,10 @@ class StopReasonParityTests(unittest.TestCase):
             )
 
     def test_both_autopilot_skills_link_the_shared_reference(self) -> None:
-        links = {
-            CLAUDE_SKILL: "(./references/stop-policy.md)",
-            CODEX_SKILL: "(../../skills/speckit-autopilot/references/stop-policy.md)",
-        }
-        for skill, link in links.items():
+        for host, skill in HOST_SKILLS.items():
             text = (skill / "SKILL.md").read_text(encoding="utf-8")
             self.assertGreaterEqual(
-                text.count(link), 2, f"{skill.parent.parent.name} skill must link it "
+                text.count("(./references/stop-policy.md)"), 2, f"{host} skill must link it "
                 "where stop behavior is introduced and in its references list"
             )
 

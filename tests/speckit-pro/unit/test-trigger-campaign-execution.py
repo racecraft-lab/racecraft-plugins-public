@@ -28,9 +28,13 @@ import trigger_campaign as accounting
 from trigger_campaign import CampaignLedger
 import trigger_comparison as comparison
 from test_result import run_counted
+from foreign_pid import foreign_pid
 
 
 from script_loader import load_script  # noqa: E402
+
+# A fake runner pid that is never this test process's pid or group.
+FAKE_RUNNER_PID = foreign_pid(12345)
 
 
 def fixture_module():
@@ -438,7 +442,7 @@ def terminal_reconciliation_fixture(root, *, cleanup_failed=True):
     (directory / "runner.stdout").write_bytes(b"retained runner output\n")
     (directory / "runner.stderr").write_bytes(b"")
     (directory / "launch.json").write_text(json.dumps({
-        "pid": 12345,
+        "pid": FAKE_RUNNER_PID,
         "command": execution.native_command(case, request, "baseline", directory),
         "started_at": 1000.0,
     }))
@@ -508,7 +512,7 @@ def assert_preflight_rejected(test, root, request, message=None):
 
 
 class FakeChild:
-    pid = 12345
+    pid = FAKE_RUNNER_PID
     returncode = None
 
     def poll(self):
