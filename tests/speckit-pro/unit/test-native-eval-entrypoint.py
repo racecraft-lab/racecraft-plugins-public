@@ -15,6 +15,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 
 from script_loader import load_script  # noqa: E402
+import native_eval_judge  # noqa: E402
 from test_result import run_counted  # noqa: E402
 import uuid
 
@@ -142,9 +143,9 @@ class NativeEvalEntrypointTests(unittest.TestCase):
 
     def test_native_judge_pins_runtime_and_returns_only_verified_native_result(self) -> None:
         prepare, raw = self.judge_fixture()
-        with mock.patch.object(self.module, "prepare_judge", side_effect=prepare) as stage, \
-                mock.patch.object(self.module, "judge_runtime_compatibility_identity", return_value={"pin": "one"}), \
-                mock.patch.object(self.module, "execute_prepared", return_value=raw) as execute:
+        with mock.patch.object(native_eval_judge, "prepare_judge", side_effect=prepare) as stage, \
+                mock.patch.object(native_eval_judge, "judge_runtime_compatibility_identity", return_value={"pin": "one"}), \
+                mock.patch.object(native_eval_judge, "execute_prepared", return_value=raw) as execute:
             judge = self.module.NativeJudge("pinned-model")
             self.assertEqual(judge({}, self.temp, "pinned-model"), '{"result":true}')
             self.assertEqual(judge.runtime_identity["native"], {"pin": "one"})
@@ -153,9 +154,9 @@ class NativeEvalEntrypointTests(unittest.TestCase):
 
     def test_native_judge_rejects_changed_runtime_before_launch(self) -> None:
         prepare, raw = self.judge_fixture()
-        with mock.patch.object(self.module, "prepare_judge", side_effect=prepare), \
-                mock.patch.object(self.module, "judge_runtime_compatibility_identity", side_effect=[{"pin": "one"}, {"pin": "two"}]), \
-                mock.patch.object(self.module, "execute_prepared", return_value=raw) as execute:
+        with mock.patch.object(native_eval_judge, "prepare_judge", side_effect=prepare), \
+                mock.patch.object(native_eval_judge, "judge_runtime_compatibility_identity", side_effect=[{"pin": "one"}, {"pin": "two"}]), \
+                mock.patch.object(native_eval_judge, "execute_prepared", return_value=raw) as execute:
             judge = self.module.NativeJudge("pinned-model")
             with self.assertRaisesRegex(ValueError, "runtime changed"):
                 judge({}, self.temp, "pinned-model")
@@ -173,9 +174,9 @@ class NativeEvalEntrypointTests(unittest.TestCase):
                 destination = self.temp / str(index)
                 destination.mkdir()
                 prepare, raw = self.judge_fixture(**control)
-                with mock.patch.object(self.module, "prepare_judge", side_effect=prepare), \
-                        mock.patch.object(self.module, "judge_runtime_compatibility_identity", return_value={"pin": "one"}), \
-                        mock.patch.object(self.module, "execute_prepared", return_value=raw):
+                with mock.patch.object(native_eval_judge, "prepare_judge", side_effect=prepare), \
+                        mock.patch.object(native_eval_judge, "judge_runtime_compatibility_identity", return_value={"pin": "one"}), \
+                        mock.patch.object(native_eval_judge, "execute_prepared", return_value=raw):
                     judge = self.module.NativeJudge("pinned-model")
                     with self.assertRaises(ValueError):
                         judge({}, destination, "pinned-model")
