@@ -20,26 +20,23 @@ from __future__ import annotations
 import json
 import os
 import shutil
-import stat
 import subprocess
-import sys
 import tempfile
 from pathlib import Path
 from typing import Any
 
 from . import author_broker
-from .sweep_launcher import (
-    CODEX_DISABLED_FEATURES,
+from .codex_launch import (
     LauncherViolation,
-    _toml_array,
-    _toml_inline_table,
-    _toml_string,
-    _toml_string_map,
-    _trusted_executable,
+    CodexBroker,
+    CodexRuntimes,
+    codex_broker_command,
     codex_executable,
     python_executable,
-    verify_codex_boundary,
+    trusted_executable,
+    trusted_prompt_resource,
 )
+from .sweep_launcher import verify_codex_boundary
 
 PROMPT_RELATIVE = Path("speckit-autopilot/references/preview-prompts/observer.md")
 OUTPUT_SCHEMA_NAME = "preview-verdict-output.schema.json"
@@ -56,23 +53,7 @@ TRUSTED_CONTEXT = (
 
 def codex_preview_prompt_resource(plugin_root: Path) -> Path:
     """Resolve the observer prompt from exactly one supported plugin layout."""
-    candidates = (
-        plugin_root / "codex-skills" / PROMPT_RELATIVE,
-        plugin_root / "skills" / PROMPT_RELATIVE,
-    )
-    regular: list[Path] = []
-    for candidate in candidates:
-        try:
-            info = candidate.lstat()
-        except FileNotFoundError:
-            continue
-        except OSError as exc:
-            raise LauncherViolation("trusted Codex preview prompt cannot be attested") from exc
-        if stat.S_ISREG(info.st_mode):
-            regular.append(candidate)
-    if len(regular) != 1:
-        raise LauncherViolation("trusted Codex preview prompt layout is unavailable or ambiguous")
-    return regular[0]
+    return trusted_prompt_resource(plugin_root, PROMPT_RELATIVE, "preview")
 
 
 def output_schema_path(plugin_root: Path) -> Path:
@@ -103,75 +84,29 @@ def codex_preview_command(
     """Build the isolated invocation: one broker tool, no network, no repository."""
     if not isinstance(capability, str) or not capability:
         raise LauncherViolation("preview capability is required")
-    codex_runtime = codex_executable()
-    python_runtime = python_executable()
-    codex_runtime_root = codex_runtime.parent.parent
-    python_runtime_root = Path(sys.base_prefix).resolve(strict=True)
-    isolated_runtime_root = runtime_root.resolve(strict=False)
-    # The repository is deliberately absent: the broker already holds the
-    # artifact path and rehashes it, so the observer never needs to read it.
-    filesystem = {
-        ":minimal": "read",
-        str(codex_runtime_root): "read",
-        str(python_runtime_root): "read",
-        str(isolated_runtime_root): "read",
-    }
-    # The capability is minted in this process and redeemed in the broker Codex
-    # starts, so the redeeming broker is told the session root outright rather
-    # than inferring it from a TMPDIR it may not inherit.
-    broker_env = {
-        "PYTHONPATH": str(plugin_root),
-        author_broker.STATE_ROOT_VARIABLE: str(author_broker._state_root() if state_root is None else state_root),
-    }
     prompt_resource = codex_preview_prompt_resource(plugin_root)
     try:
         trusted_prompt = prompt_resource.read_text(encoding="utf-8")
     except OSError as exc:
         raise LauncherViolation("trusted Codex preview prompt resource is unavailable") from exc
-    command = [
-        str(codex_runtime),
-        "exec",
-        "--ignore-user-config",
-        "--ignore-rules",
-        "--ephemeral",
-        "--strict-config",
-        "--skip-git-repo-check",
-        "--color",
-        "never",
-        "--json",
-        "--output-schema",
-        str(output_schema_path(plugin_root)),
-        "-C",
-        str(isolated_runtime_root),
-        "-c",
-        'default_permissions="author-broker-only"',
-        "-c",
-        f"permissions.author-broker-only.filesystem={_toml_string_map(filesystem)}",
-        "-c",
-        "permissions.author-broker-only.network.enabled=false",
-        "-c",
-        'web_search="disabled"',
-        "-c",
-        f"mcp_servers.author-broker.command={_toml_string(str(python_runtime))}",
-        "-c",
-        f"mcp_servers.author-broker.args={_toml_array(['-m', 'speckit_pro_runner.author_broker'])}",
-        "-c",
-        f"mcp_servers.author-broker.env={_toml_inline_table(broker_env)}",
-        "-c",
-        "mcp_servers.author-broker.enabled=true",
-        "-c",
-        "mcp_servers.author-broker.required=true",
-        "-c",
-        f"mcp_servers.author-broker.enabled_tools={_toml_array(list(OBSERVER_TOOL_NAMES))}",
-        "-c",
-        'mcp_servers.author-broker.default_tools_approval_mode="approve"',
-    ]
-    for feature in CODEX_DISABLED_FEATURES:
-        command.extend(("--disable", feature))
-    if output_path is not None:
-        command.extend(("--output-last-message", str(output_path)))
-    command.append(trusted_prompt + TRUSTED_CONTEXT + capability + "\n")
-    return command
+    # The repository is deliberately absent from the profile: the broker already
+    # holds the artifact path and rehashes it, so the observer never reads it.
+    # The capability is minted in this process and redeemed in the broker Codex
+    # starts, so the redeeming broker is told the session root outright rather
+    # than inferring it from a TMPDIR it may not inherit.
+    broker = CodexBroker(
+        server="author-broker",
+        module="speckit_pro_runner.author_broker",
+        env={
+            "PYTHONPATH": str(plugin_root),
+            author_broker.STATE_ROOT_VARIABLE: str(author_broker.state_root() if state_root is None else state_root),
+        },
+        tools=OBSERVER_TOOL_NAMES,
+        output_schema=output_schema_path(plugin_root),
+    )
+    runtimes = CodexRuntimes(codex=codex_executable(), python=python_executable())
+    prompt = trusted_prompt + TRUSTED_CONTEXT + capability + "\n"
+    return codex_broker_command(broker, runtimes, runtime_root, prompt, output_path)
 
 
 def run_codex_preview(
@@ -203,11 +138,11 @@ def run_codex_preview(
                 output_path=output_path,
             )
             candidate = shutil.which("codex")
-            executable = _trusted_executable(candidate, "Codex")
+            executable = trusted_executable(candidate, "Codex")
             if executable != Path(command[0]):
                 raise LauncherViolation("Codex runtime changed after boundary attestation")
             candidate = shutil.which("codex", path=str(executable.parent))
-            if _trusted_executable(candidate, "Codex") != executable:
+            if trusted_executable(candidate, "Codex") != executable:
                 raise LauncherViolation("Codex runtime changed after boundary attestation")
             try:
                 completed = subprocess.run(

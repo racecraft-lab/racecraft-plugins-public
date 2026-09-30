@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import json
 import os
-import sys
 from pathlib import Path
 from typing import Any
 
-from .mcp_protocol import negotiate_protocol_version
+from .mcp_protocol import ToolServer, serve
+from .mcp_protocol import handle_message as mcp_handle_message
 from .sweep_isolation import (
     ARTIFACT_ALLOWLIST,
     BROKER_TOOL_NAMES,
@@ -41,6 +40,7 @@ def _broker_error_code(exc: Exception) -> str:
         ("fields do not match", "schema_fields"),
         ("evidence citation", "evidence_path"),
         ("perspective does not match", "perspective_mismatch"),
+        ("edit anchor must match", "anchor_ambiguous"),
         ("synthesis", "synthesis_consistency"),
     )
     for marker, code in markers:
@@ -262,79 +262,33 @@ def call_tool(name: str, arguments: Any) -> Any:
     return session.submit_result(stage, supplied["result"], perspective=perspective)
 
 
-def _response(request_id: Any, result: Any) -> dict[str, Any]:
-    return {"jsonrpc": "2.0", "id": request_id, "result": result}
+def _reported_error_code(exc: Exception) -> str | None:
+    """Map a boundary violation to its code and count it; anything else is fatal."""
+    if not isinstance(exc, (IsolationViolation, ReceiptViolation, SchemaViolation)):
+        return None
+    code = _broker_error_code(exc)
+    capability = os.environ.get("SPECKIT_SWEEP_CAPABILITY")
+    state_root_value = os.environ.get("SPECKIT_SWEEP_STATE_ROOT")
+    try:
+        session, _binding = SweepSession.from_capability(
+            capability or "", state_root=Path(state_root_value) if state_root_value else None
+        )
+        session.record_broker_error(code)
+    except (IsolationViolation, ReceiptViolation, SchemaViolation, OSError):
+        # Error telemetry is best-effort and must not alter the broker error response.
+        pass
+    return code
 
 
-def _error(request_id: Any, code: int, message: str) -> dict[str, Any]:
-    return {"jsonrpc": "2.0", "id": request_id, "error": {"code": code, "message": message}}
+SERVER = ToolServer(SERVER_INFO, TOOLS, call_tool, _reported_error_code)
 
 
 def handle_message(message: Any) -> dict[str, Any] | None:
-    if not isinstance(message, dict) or message.get("jsonrpc") != "2.0":
-        return _error(None, -32600, "invalid request")
-    request_id = message.get("id")
-    method = message.get("method")
-    if method == "notifications/initialized":
-        return None
-    if method == "initialize":
-        return _response(
-            request_id,
-            {
-                "protocolVersion": negotiate_protocol_version(message.get("params")),
-                "capabilities": {"tools": {"listChanged": False}},
-                "serverInfo": SERVER_INFO,
-            },
-        )
-    if method == "ping":
-        return _response(request_id, {})
-    if method == "tools/list":
-        return _response(request_id, {"tools": list(TOOLS)})
-    if method == "tools/call":
-        params = message.get("params")
-        if not isinstance(params, dict):
-            return _error(request_id, -32602, "invalid tool parameters")
-        try:
-            result = call_tool(params.get("name"), params.get("arguments", {}))
-        except (IsolationViolation, ReceiptViolation, SchemaViolation) as exc:
-            code = _broker_error_code(exc)
-            capability = os.environ.get("SPECKIT_SWEEP_CAPABILITY")
-            state_root_value = os.environ.get("SPECKIT_SWEEP_STATE_ROOT")
-            try:
-                session, _binding = SweepSession.from_capability(
-                    capability or "", state_root=Path(state_root_value) if state_root_value else None
-                )
-                session.record_broker_error(code)
-            except (IsolationViolation, ReceiptViolation, SchemaViolation, OSError):
-                # Error telemetry is best-effort and must not alter the broker error response.
-                pass
-            return _response(
-                request_id,
-                {
-                    "isError": True,
-                    "content": [{"type": "text", "text": f"broker_error:{code}"}],
-                    "structuredContent": {"error_code": code},
-                },
-            )
-        text = result if isinstance(result, str) else json.dumps(result, sort_keys=True, separators=(",", ":"))
-        return _response(request_id, {"content": [{"type": "text", "text": text}]})
-    return _error(request_id, -32601, "method not found")
+    return mcp_handle_message(SERVER, message)
 
 
 def main() -> int:
-    if sys.version_info < (3, 11):
-        print("feedback sweep broker requires Python 3.11 or newer", file=sys.stderr)
-        return 2
-    for raw_line in sys.stdin.buffer:
-        try:
-            message = json.loads(raw_line)
-            reply = handle_message(message)
-        except (UnicodeDecodeError, json.JSONDecodeError):
-            reply = _error(None, -32700, "parse error")
-        if reply is not None:
-            sys.stdout.write(json.dumps(reply, separators=(",", ":")) + "\n")
-            sys.stdout.flush()
-    return 0
+    return serve(handle_message, label="feedback sweep broker")
 
 
 if __name__ == "__main__":

@@ -18,6 +18,7 @@ sys.path.insert(0, str(ROOT / "speckit-pro"))
 sys.path.insert(0, str(ROOT / "tests/speckit-pro/lib"))
 
 from speckit_pro_runner import author_broker
+from speckit_pro_runner.private_state import write_private_json
 from test_result import run_counted
 
 
@@ -29,7 +30,7 @@ class BrokerFixture(unittest.TestCase):
         self.addCleanup(self.state_temp.cleanup)
         self.root = Path(self.repo_temp.name).resolve()
         self.state_root = Path(self.state_temp.name).resolve()
-        patcher = unittest.mock.patch.object(author_broker, "_state_root", return_value=self.state_root)
+        patcher = unittest.mock.patch.object(author_broker, "state_root", return_value=self.state_root)
         patcher.start()
         self.addCleanup(patcher.stop)
 
@@ -264,7 +265,7 @@ class PreviewBrokerProvenanceTests(BrokerFixture):
                 state = author_broker._read_state(self.state_root, session["session_id"])
                 anchor = state["created_at"] if shift < 0 else datetime.now(timezone.utc).timestamp()
                 state["preview_submission"]["observed_at"] = datetime.fromtimestamp(anchor + shift, timezone.utc).isoformat()
-                author_broker._write_state(self.state_root / session["session_id"] / "state.json", state)
+                write_private_json(self.state_root / session["session_id"] / "state.json", state)
                 with self.assertRaisesRegex(author_broker.BrokerViolation, "observation time is implausible"):
                     author_broker.close_session(capability=session["capability"])
                 self.assertFalse((self.state_root / session["session_id"]).exists())
@@ -435,7 +436,7 @@ class PreviewLauncherTests(PreviewLauncherFixture):
         command = self.command()
         broker_env = next(c for c in command if c.startswith("mcp_servers.author-broker.env="))
         self.assertIn(author_broker.STATE_ROOT_VARIABLE, broker_env)
-        self.assertIn(str(author_broker._state_root()), broker_env)
+        self.assertIn(str(author_broker.state_root()), broker_env)
 
     def test_operation_is_registered_for_the_parent_to_invoke(self) -> None:
         from speckit_pro_runner.helpers.registry import HELPERS
@@ -478,11 +479,11 @@ class PreviewReadbackTests(PreviewLauncherFixture):
                     )
                     return unittest.mock.Mock(returncode=0)
 
-                with unittest.mock.patch.object(author_broker, "_state_root", return_value=state_root), \
+                with unittest.mock.patch.object(author_broker, "state_root", return_value=state_root), \
                         unittest.mock.patch.object(self.launcher, "verify_preview_boundary"), \
                         unittest.mock.patch.object(self.launcher, "codex_preview_command", side_effect=command), \
                         unittest.mock.patch.object(self.launcher.shutil, "which", return_value=str(codex_runtime)), \
-                        unittest.mock.patch.object(self.launcher, "_trusted_executable", return_value=codex_runtime), \
+                        unittest.mock.patch.object(self.launcher, "trusted_executable", return_value=codex_runtime), \
                         unittest.mock.patch.object(self.launcher.subprocess, "run", side_effect=run):
                     if close_fails:
                         with unittest.mock.patch.object(author_broker, "close_session", side_effect=author_broker.BrokerViolation("cleanup failed")):

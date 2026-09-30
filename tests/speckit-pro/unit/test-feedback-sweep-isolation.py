@@ -8,6 +8,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import secrets
 import subprocess
 import sys
@@ -856,7 +857,7 @@ class SurfaceConfinementTests(unittest.TestCase):
             patch.object(sweep_launcher.shutil, "which", return_value="/trusted/claude"),
             patch.object(
                 sweep_launcher,
-                "_trusted_executable",
+                "trusted_executable",
                 return_value=Path("/trusted/claude"),
             ),
             patch.object(sweep_launcher.subprocess, "run", return_value=completed),
@@ -880,7 +881,7 @@ class SurfaceConfinementTests(unittest.TestCase):
                 "which",
                 side_effect=(alias, str(resolved)),
             ) as which,
-            patch.object(sweep_launcher, "_trusted_executable", return_value=resolved),
+            patch.object(sweep_launcher, "trusted_executable", return_value=resolved),
             patch.object(sweep_launcher.subprocess, "run", return_value=completed) as run,
         ):
             self.assertEqual((0, 149, 0), sweep_launcher._codex_version())
@@ -937,7 +938,7 @@ class SurfaceConfinementTests(unittest.TestCase):
 
     def test_broker_refuses_unsupported_python_before_reading_stdio(self) -> None:
         stderr = io.StringIO()
-        with patch.object(sweep_broker.sys, "version_info", (3, 10)), \
+        with patch.object(sys, "version_info", (3, 10)), \
                 contextlib.redirect_stderr(stderr):
             self.assertEqual(2, sweep_broker.main())
         self.assertEqual(
@@ -957,7 +958,7 @@ class SurfaceConfinementTests(unittest.TestCase):
             ), patch.object(
                 sweep_launcher, "python_executable", return_value=python_runtime
             ), patch.object(
-                sweep_launcher.sys, "base_prefix", str(python_runtime_root)
+                sys, "base_prefix", str(python_runtime_root)
             ):
                 command = sweep_launcher.codex_command(
                     plugin_root=PLUGIN_ROOT,
@@ -1016,28 +1017,22 @@ class SurfaceConfinementTests(unittest.TestCase):
         )
         for tool_name in sweep_isolation.BROKER_TOOL_NAMES:
             self.assertIn(json.dumps(tool_name), enabled_tools)
-        self.assertIn(
-            "cannot construct or guess the receipt",
-            sweep_launcher.CODEX_STAGE_PROMPTS["classifier"],
-        )
-        self.assertIn(
-            "must call the broker tools",
-            sweep_launcher.CODEX_STAGE_PROMPTS["classifier"].casefold(),
-        )
         for stage, required_tools in {
             "classifier": ("review_comment", "submit_result"),
             "perspective": ("review_comment", "consensus_inputs", "submit_result"),
             "synthesis": ("consensus_inputs", "submit_result"),
         }.items():
-            for tool_name in required_tools:
-                self.assertIn(
-                    f"mcp__sweep-broker__{tool_name}",
-                    sweep_launcher.CODEX_STAGE_PROMPTS[stage],
-                )
-            self.assertIn(
-                "one top-level result field",
-                sweep_launcher.CODEX_STAGE_PROMPTS[stage].casefold(),
-            )
+            prompt = " ".join(codex_stage_prompt(stage).split()).casefold()
+            with self.subTest(stage=stage):
+                for phrase in (
+                    "cannot construct or guess the receipt",
+                    "must call the broker tools",
+                    "one top-level `result` field",
+                    "do not produce analysis or a final response before",
+                    f"trusted invocation context: stage={stage}",
+                    *(f"mcp__sweep-broker__{tool_name}" for tool_name in required_tools),
+                ):
+                    self.assertIn(phrase, prompt)
 
     def test_codex_event_projection_exposes_only_broker_tool_status(self) -> None:
         events = "\n".join(
@@ -2059,6 +2054,109 @@ class WorkflowAndEvalContractTests(unittest.TestCase):
             (REPO_ROOT / "tests/speckit-pro/suite-manifest.json").read_text(encoding="utf-8")
         )
         self.assertNotIn(script.name, json.dumps(manifest, sort_keys=True))
+
+
+class AnchorUniquenessTests(SweepSessionCase):
+    """validate_result refuses an anchor the snapshot does not match exactly once."""
+
+    def validated(self, anchor: str) -> dict[str, object]:
+        snapshot = sweep_isolation.GitSnapshot.capture(self.fixture.root)
+        edit = {"file": "plan.md", "anchor": anchor, "replacement": "new text"}
+        return sweep_isolation.validate_result("synthesis", self.synthesis(edit=edit), perspective=None, snapshot=snapshot)
+
+    def test_an_ambiguous_or_absent_anchor_is_refused_before_a_receipt(self) -> None:
+        self.fixture.write("specs/002-other/plan.md", "# Plan\nold text\n")
+        self.fixture.commit()
+        for anchor in ("old text", "not in the plan"):
+            with self.subTest(anchor=anchor), self.assertRaises(sweep_isolation.SchemaViolation) as caught:
+                self.validated(anchor)
+            self.assertEqual("anchor_ambiguous", sweep_broker._broker_error_code(caught.exception))
+
+    def test_a_unique_anchor_is_accepted(self) -> None:
+        self.assertEqual("old text", self.validated("old text")["edit"]["anchor"])
+
+    def test_the_refusal_is_a_declared_broker_error_code(self) -> None:
+        self.assertIn("anchor_ambiguous", sweep_isolation.BROKER_ERROR_CODES)
+
+    def test_codex_trace_allows_a_bounded_retry_after_an_anchor_refusal(self) -> None:
+        def call(tool: str, *, failed_with: str | None = None) -> str:
+            item = {"type": "mcp_tool_call", "server": "sweep-broker", "tool": tool, "arguments": {}}
+            if failed_with is None:
+                item.update(result={"content": []}, error=None, status="completed")
+            else:
+                item.update(
+                    result={"isError": True, "content": [{"type": "text", "text": f"broker_error:{failed_with}"}]},
+                    error={"message": "failed"},
+                    status="failed",
+                )
+            return json.dumps({"type": "item.completed", "item": item})
+
+        retried = "\n".join((call("consensus_inputs"), call("submit_result", failed_with="anchor_ambiguous"),
+                             call("submit_result")))
+        sweep_launcher.verify_codex_event_trace(retried, stage="synthesis")
+        for label, trace in (
+            ("other failure", "\n".join((call("consensus_inputs"), call("submit_result", failed_with="schema_fields"),
+                                         call("submit_result")))),
+            ("no success", "\n".join((call("consensus_inputs"), call("submit_result", failed_with="anchor_ambiguous")))),
+            ("unbounded retries", "\n".join((call("consensus_inputs"),
+                                              *[call("submit_result", failed_with="anchor_ambiguous")] * 3,
+                                              call("submit_result")))),
+        ):
+            with self.subTest(case=label), self.assertRaises(sweep_launcher.LauncherViolation):
+                sweep_launcher.verify_codex_event_trace(trace, stage="synthesis")
+
+
+class BrokerCohesionTests(unittest.TestCase):
+    """Each broker contract has one authoritative statement."""
+
+    def test_the_hook_receipt_and_capability_patterns_match_the_session_store(self) -> None:
+        hook = load_script("sweep_hook_patterns", PLUGIN_ROOT / "scripts/sweep-isolation-hook.py")
+
+        self.assertEqual(language_of(sweep_isolation.RECEIPT_RE.pattern), language_of(hook.RECEIPT_RE.pattern))
+        self.assertEqual(language_of(sweep_isolation.CAPABILITY_RE.pattern), language_of(hook.CAPABILITY_RE.pattern))
+        self.assertEqual(sweep_isolation.HOOK_VERSION, hook.HOOK_VERSION)
+        self.assertNotEqual(language_of(sweep_isolation.RECEIPT_RE.pattern), language_of(hook.RECEIPT_RE.pattern) + "x")
+
+    def test_the_claude_receipt_schema_is_the_shipped_codex_schema(self) -> None:
+        shipped = json.loads(
+            (PLUGIN_ROOT / "speckit_pro_runner/contracts/sweep-receipt-output.schema.json").read_text(encoding="utf-8")
+        )
+        claude = sweep_launcher.CLAUDE_RECEIPT_OUTPUT_SCHEMA
+        self.assertEqual({key: value for key, value in shipped.items() if key != "$schema"}, claude)
+        self.assertEqual(
+            language_of(sweep_isolation.RECEIPT_RE.pattern), claude["properties"]["receipt"]["pattern"]
+        )
+        source = (PLUGIN_ROOT / "speckit_pro_runner/sweep_launcher.py").read_text(encoding="utf-8")
+        self.assertFalse("sweep-result:v1:" in source, "sweep_launcher.py restates the receipt pattern")
+
+    def test_stage_instructions_live_only_in_the_prompt_markdown(self) -> None:
+        self.assertFalse(hasattr(sweep_launcher, "CODEX_STAGE_PROMPTS"))
+        self.assertEqual(("classifier", "perspective", "synthesis"), sweep_isolation.STAGES)
+
+    def test_brokers_share_one_stdio_loop(self) -> None:
+        for name in ("sweep_broker", "research_broker", "author_broker"):
+            source = (PLUGIN_ROOT / f"speckit_pro_runner/{name}.py").read_text(encoding="utf-8")
+            with self.subTest(broker=name):
+                self.assertFalse("sys.stdin" in source or '"tools/list"' in source, f"{name} keeps its own stdio loop")
+
+
+def codex_stage_prompt(stage: str) -> str:
+    """The full trusted prompt the launcher hands the isolated Codex process."""
+    with patch.object(sweep_launcher, "codex_executable", return_value=REPO_ROOT.parent / "rt" / "bin" / "codex"), \
+            patch.object(sweep_launcher, "python_executable", return_value=REPO_ROOT.parent / "rt" / "bin" / "python3"):
+        return sweep_launcher.codex_command(
+            plugin_root=PLUGIN_ROOT,
+            repo_root=REPO_ROOT,
+            runtime_root=REPO_ROOT.parent / "isolated-sweep-runtime",
+            capability=f"sweep-cap:v1:{'a' * 32}:{'b' * 64}",
+            stage=stage,
+            perspective="codebase" if stage == "perspective" else None,
+        )[-1]
+
+
+def language_of(pattern: str) -> str:
+    """A regular expression's matched language, ignoring capture groups."""
+    return re.sub(r"[()]", "", pattern)
 
 
 if __name__ == "__main__":
