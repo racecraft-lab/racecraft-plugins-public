@@ -6423,7 +6423,7 @@
     {
       "id": "functional.speckit-autopilot.case-4",
       "layer": "functional",
-      "capability": "Explains the 3 consensus modes and their voting behavior: conservative requires unanimity, moderate uses 2/3 majority (default), aggressive auto-accepts single-agent answers.",
+      "capability": "Explains that autopilot consensus has no selectable mode: one rule set applies to every run, where a 2/3 analyst majority applies an answer, a security item applies only on 3/3 agreement, and an all-disagree item goes to the Round 3 tiebreak; the project settings file configures only gate-failure and auto-commit.",
       "timeout_seconds": 300,
       "resource_class": "ordinary",
       "requirements": [
@@ -6433,23 +6433,23 @@
         },
         {
           "id": "legacy-01",
-          "description": "Names or describes the 3 consensus modes: conservative, moderate, and aggressive"
+          "description": "States that autopilot consensus has no conservative, moderate, or aggressive mode to choose; one rule set applies to every run"
         },
         {
           "id": "legacy-02",
-          "description": "Explains that moderate is the default mode"
+          "description": "Explains that a 2/3 analyst majority applies an answer automatically"
         },
         {
           "id": "legacy-03",
-          "description": "Describes how conservative mode differs (requires unanimity or higher threshold)"
+          "description": "Explains that a security item applies only on 3/3 agreement"
         },
         {
           "id": "legacy-04",
-          "description": "Describes the project-local aggressive-mode threshold without claiming that it removes required perspectives or permits single-analyst consensus"
+          "description": "Explains that an all-disagree item goes to the Round 3 tiebreak instead of stopping or asking a human"
         },
         {
           "id": "legacy-05",
-          "description": "Explains how to configure the supported consensus mode through the project-local workflow configuration used by this run"
+          "description": "Does not invent a consensus-mode setting or invocation flag for changing the rule on a run"
         }
       ],
       "prompt": "Use {{skill}} to address this bounded request. I heard the autopilot has different consensus modes — conservative, moderate, and aggressive. What do these modes control? Which is the default? And how do I change the mode for a specific workflow run?",
@@ -6488,31 +6488,31 @@
           "id": "legacy-01-semantic",
           "requirement": "legacy-01",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Names or describes the 3 consensus modes: conservative, moderate, and aggressive FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: States that autopilot consensus has no conservative, moderate, or aggressive mode to choose; one rule set applies to every run FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "legacy-02-semantic",
           "requirement": "legacy-02",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Explains that moderate is the default mode FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Explains that a 2/3 analyst majority applies an answer automatically FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "legacy-03-semantic",
           "requirement": "legacy-03",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Describes how conservative mode differs (requires unanimity or higher threshold) FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Explains that a security item applies only on 3/3 agreement FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "legacy-04-semantic",
           "requirement": "legacy-04",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Describes the project-local aggressive-mode threshold without claiming that it removes required perspectives or permits single-analyst consensus FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Explains that an all-disagree item goes to the Round 3 tiebreak instead of stopping or asking a human FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "legacy-05-semantic",
           "requirement": "legacy-05",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Explains how to configure the supported consensus mode through the project-local workflow configuration used by this run FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Does not invent a consensus-mode setting or invocation flag for changing the rule on a run FAIL if omitted, contradicted, or merely claimed without required evidence."
         }
       ],
       "native_differences": [

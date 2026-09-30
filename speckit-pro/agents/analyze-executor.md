@@ -130,7 +130,8 @@ parent's G6 gate do that.
      research, no clear precedent, multiple valid approaches)
    - Findings containing security keywords (auth, token,
      secret, encryption, PII, credential, permission,
-     password, session, cookie, jwt, api-key, access-control)
+     password, authentication, authorization, session, cookie,
+     jwt, api-key, access-control)
 
    **Tag every unresolved finding with a category prefix in
    square brackets** so the orchestrator can route consensus

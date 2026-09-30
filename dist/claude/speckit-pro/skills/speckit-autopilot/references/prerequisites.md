@@ -294,10 +294,10 @@ Before dispatching any memory-enabled Claude agent in the bound workflow worktre
 
 Read `.claude/speckit-pro.local.md` if it exists, otherwise
 `.codex/speckit-pro.local.md` (the order `resolve-confidence-mode` checks).
-Parse YAML frontmatter for: `consensus-mode` (default: `moderate`),
-`gate-failure` (default: `defer`), `auto-commit` (default:
-`per-phase`), `security-keywords` (default: the list in the
-Security Keywords section of `consensus-protocol.md`).
+Parse YAML frontmatter for: `gate-failure` (default: `defer`) and
+`auto-commit` (default: `per-phase`). Consensus has no setting: one rule
+set and the fixed Security Keywords list in `consensus-protocol.md` apply to
+every run.
 If the file doesn't exist, use all defaults.
 
 ### Versioned subagent-runtime record
