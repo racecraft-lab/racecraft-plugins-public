@@ -28,15 +28,16 @@ REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO / "tests/speckit-pro/lib")]
 from host_skill_views import host_skill_root  # noqa: E402
 from test_result import run_counted  # noqa: E402
+from host_skill_views import host_skill_root  # noqa: E402
 
 SKILL_ROOTS = {
     "claude": REPO / "speckit-pro/skills",
     "codex": REPO / "speckit-pro/codex-skills",
 }
 AUTOPILOT_DIRS = {host: host_skill_root(host) / "speckit-autopilot" for host in ("claude", "codex")}
+# The cleanup skill is one shared source; each host reads its rendered view.
 CLEANUP_SKILLS = {
-    "claude": REPO / "speckit-pro/skills/speckit-archive-cleanup/SKILL.md",
-    "codex": REPO / "speckit-pro/codex-skills/speckit-archive-cleanup/SKILL.md",
+    host: host_skill_root(host) / "speckit-archive-cleanup/SKILL.md" for host in ("claude", "codex")
 }
 VENDORED_COMMAND = REPO / ".specify/extensions/archive/commands/archive.md"
 REGISTRY = REPO / "speckit-pro/speckit_pro_runner/helpers/registry.py"

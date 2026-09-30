@@ -50,9 +50,8 @@ from speckit_pro_runner.helpers.registry import HELPERS, MUTATION_HELPERS  # noq
 
 SHIPPED_RUNTIME_CONTRACTS = (
     PLUGIN_ROOT / "skills" / "speckit-upgrade" / "SKILL.md",
-    PLUGIN_ROOT / "codex-skills" / "speckit-upgrade" / "SKILL.md",
     PLUGIN_ROOT / "skills" / "speckit-scaffold-spec" / "SKILL.md",
-    PLUGIN_ROOT / "codex-skills" / "speckit-scaffold-spec" / "SKILL.md",
+    codex_skill_dir("speckit-scaffold-spec") / "SKILL.md",
     # The autopilot's shared sources carry both hosts' text.
     PLUGIN_ROOT / "skills" / "speckit-autopilot" / "SKILL.md",
     PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "phase-execution.md",
@@ -346,13 +345,13 @@ def runtime_contract_parity_violations() -> list[str]:
         (
             "upgrade",
             PLUGIN_ROOT / "skills" / "speckit-upgrade" / "SKILL.md",
-            PLUGIN_ROOT / "codex-skills" / "speckit-upgrade" / "SKILL.md",
+            codex_skill_dir("speckit-upgrade") / "SKILL.md",
             ("migrate-structure", "relocate-process-artifacts", "promotion_status=deferred", "no authoritative request"),
         ),
         (
             "scaffold",
             PLUGIN_ROOT / "skills" / "speckit-scaffold-spec" / "SKILL.md",
-            PLUGIN_ROOT / "codex-skills" / "speckit-scaffold-spec" / "SKILL.md",
+            codex_skill_dir("speckit-scaffold-spec") / "SKILL.md",
             ("relocate-process-artifacts", "deferred", "unavailable"),
         ),
         (
@@ -652,7 +651,7 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
         self.assertIn("It is not a fallback for a broken or unexecuted command path", normalized)
 
     def test_codex_autopilot_worktree_handoff_contract(self) -> None:
-        scaffold = (PLUGIN_ROOT / "codex-skills/speckit-scaffold-spec/SKILL.md").read_text(encoding="utf-8")
+        scaffold = (codex_skill_dir("speckit-scaffold-spec") / "SKILL.md").read_text(encoding="utf-8")
         autopilot = autopilot_view("codex", "SKILL.md").read_text(encoding="utf-8")
         prerequisites = autopilot_view("codex", "references/prerequisites.md").read_text(encoding="utf-8")
         phase_execution = autopilot_view("codex", "references/phase-execution.md").read_text(encoding="utf-8")

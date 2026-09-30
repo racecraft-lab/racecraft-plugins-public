@@ -41,7 +41,8 @@ from speckit_pro_runner.host_parity import (  # noqa: E402
     split_frontmatter,
     unexplained_blocks,
 )
-from speckit_pro_runner.host_skills import codex_skill_overlay_errors  # noqa: E402
+from speckit_pro_runner.host_skills import UNMERGED_CODEX_OVERLAYS, codex_skill_overlay_errors  # noqa: E402
+from host_skill_views import host_skill_root  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
@@ -343,10 +344,11 @@ class HostSkillSourceTests(unittest.TestCase):
             root = Path(temporary)
             shutil.copytree(PLUGIN_ROOT / "codex-skills", root / "codex-skills")
             (root / "codex-skills" / "grill-me" / "SKILL.md").write_text("---\nname: grill-me\n---\n", encoding="utf-8")
-            (root / "codex-skills" / "speckit-upgrade" / "SKILL.md").unlink()
+            listed = min(UNMERGED_CODEX_OVERLAYS)
+            (root / "codex-skills" / listed).unlink()
             self.assertEqual(codex_skill_overlay_errors(root), [
                 "codex-skills/grill-me/SKILL.md overlays a shared skill file; merge it into skills/ as host blocks",
-                "codex-skills/speckit-upgrade/SKILL.md is listed as an unmerged overlay but does not exist",
+                f"codex-skills/{listed} is listed as an unmerged overlay but does not exist",
             ])
 
     def test_grill_me_sends_setup_alone_to_scaffold_spec_on_both_hosts(self) -> None:
@@ -376,14 +378,82 @@ class HostSkillSourceTests(unittest.TestCase):
                                "| Spec | Name | DC | Specify |"):
                     self.assertIn(phrase, text)
 
-    def test_scaffold_stops_on_complete_and_reuses_in_progress_on_both_hosts(self) -> None:
-        # Scaffold-spec keeps its Codex overlay, so each host's own file is read.
-        for relative in ("skills/speckit-scaffold-spec/SKILL.md", "codex-skills/speckit-scaffold-spec/SKILL.md"):
-            with self.subTest(file=relative):
-                text = " ".join((PLUGIN_ROOT / relative).read_text(encoding="utf-8").split())
-                self.assertRegex(text, r"(?i)complete, warn the user and stop")
-                self.assertRegex(text, r"(?i)in progress, (?:prefer )?reus\w+ (?:the |its )?existing worktree branch")
 
+class MergedSkillViewTests(unittest.TestCase):
+    """A merged skill's reconciled text reaches both hosts' rendered copies."""
+
+    def assert_both_views(self, skill: str, present: tuple[str, ...] = (), absent: tuple[str, ...] = ()) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(skill=skill, host=host):
+                path = host_skill_root(host) / skill / "SKILL.md"
+                text = " ".join(path.read_text(encoding="utf-8").split())
+                for phrase in present:
+                    self.assertIn(phrase, text)
+                for phrase in absent:
+                    self.assertNotIn(phrase, text)
+
+    def test_scaffold_follows_the_runner_on_both_hosts(self) -> None:
+        # The two copies disagreed; each phrase is the runner's behavior. The
+        # placement helper returns the disposition, so there is no reuse
+        # question, and a missing preset stops setup, so none is staged.
+        self.assert_both_views("speckit-scaffold-spec", present=(
+            "Invoke the read-only `resolve-workflow-binding` runner helper",
+            "Module and Interface Deltas, Terms, Verification Gates",
+            "`git -C <absolute-worktree-root> push -u <remote> <spec-branch>`",
+            "If the roadmap marks the spec complete, warn the user and STOP.",
+            "reuse its existing worktree branch rather than creating a second setup",
+        ), absent=("reuse-or-recreate question", ".specify/presets/.registry"))
+
+    def test_resolve_pr_follows_one_procedure_on_both_hosts(self) -> None:
+        # Both hosts ship the lockfile and unpushed-commit hooks.
+        self.assert_both_views("speckit-resolve-pr", present=(
+            "denies a shell command that uses a different manager",
+            "the plugin's Stop hook blocks ending the turn with unpushed commits",
+            "Do not overwrite unrelated dirty worktree changes.",
+            "Never reply “fixed” on a thread while the branch is still broken.",
+            "If GitHub tooling is unavailable",
+        ))
+        # phase-executor runs one SDD phase and no remediation; Codex has no general-purpose role.
+        codex = (host_skill_root("codex") / "speckit-resolve-pr" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("built-in `default` subagent", " ".join(codex.split()))
+        self.assertNotIn("phase-executor", codex)
+        self.assertNotIn("general-purpose", codex)
+
+
+# Statements that read differently on the two hosts before the install, upgrade
+# and archive-cleanup overlays merged: (skill, text each host must state, text
+# neither may state). `{sigil}` is the host's skill-name prefix.
+SETUP_SKILL_DRIFT = (
+    # autopilot-state-status.schema.json retires the spelling "completed archived".
+    ("speckit-archive-cleanup", ("`completed_archived`",), ("completed archived",)),
+    # find_specify checks PATH, then ~/.local/bin; setup checks read bash scripts.
+    ("speckit-install", ("`~/.local/bin/specify`",
+                         "`specify init --here --integration <first-key> --script sh`"), ("on macOS/Linux",)),
+    # research_preflight warns on every environment-only key.
+    ("speckit-install", ("A key held only in an environment variable is a warning",), ()),
+    ("speckit-upgrade", ("A key held only in an environment variable is a warning",), ()),
+    ("speckit-upgrade", ("`speckit.<single-word>.md`", "Show the exact deletion list"),
+     ("exactly those matching `speckit.*.md`",)),
+    ("speckit-upgrade", ("use `{sigil}speckit-install <new-key>` instead",),
+     ("treat that as an add-integration request",)),
+    ("speckit-upgrade", ("does not run it",), ("Invoke `uv tool install specify-cli --force",)),
+)
+
+
+class SetupSkillDriftTests(unittest.TestCase):
+    """Install, upgrade and archive cleanup state the runner's behavior on both hosts."""
+
+    def test_each_reconciled_statement_reads_the_same_on_both_hosts(self) -> None:
+        for host, sigil in (("claude", "/speckit-pro:"), ("codex", "$")):
+            for skill, present, absent in SETUP_SKILL_DRIFT:
+                path = host_skill_root(host) / skill / "SKILL.md"
+                text = " ".join(path.read_text(encoding="utf-8").split())
+                for phrase in present:
+                    with self.subTest(host=host, skill=skill, present=phrase):
+                        self.assertIn(phrase.format(sigil=sigil), text)
+                for phrase in absent:
+                    with self.subTest(host=host, skill=skill, absent=phrase):
+                        self.assertNotIn(phrase, text)
 
 POST_ROW = re.compile(r'^\s*"(Post: [^"]+)"', re.M)
 CODEX_ONLY_POST_ROWS = ["Post: Final Reviewability Backstop", "Post: PR Packet/Body Generation"]
@@ -565,6 +635,8 @@ def main() -> int:
             CodexAgentGeneratorTests,
             CodexAgentPolicyHookTests,
             HostSkillSourceTests,
+            MergedSkillViewTests,
+            SetupSkillDriftTests,
             PostPlanParityTests,
         )
     )

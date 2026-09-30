@@ -27,11 +27,6 @@ CODEX_ONLY_SKILL_FILE = re.compile(
 # removes its entry; a new overlay, or an entry whose file is gone, fails the
 # artifact refresh.
 UNMERGED_CODEX_OVERLAYS = frozenset({
-    "speckit-archive-cleanup/SKILL.md",
-    "speckit-install/SKILL.md",
-    "speckit-resolve-pr/SKILL.md",
-    "speckit-scaffold-spec/SKILL.md",
-    "speckit-upgrade/SKILL.md",
 })
 CODEX_SKILL_GUARD = "## Codex Skill-Selection Guard"
 
