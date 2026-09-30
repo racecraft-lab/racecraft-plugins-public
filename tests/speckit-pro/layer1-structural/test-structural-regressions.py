@@ -17,6 +17,7 @@ for path in (LIB_DIR, LAYER1_DIR):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 import agent_roster  # noqa: E402
+from host_skill_views import host_skill_root  # noqa: E402
 from script_loader import load_script  # noqa: E402
 import structural_helpers  # noqa: E402
 from test_result import run_counted  # noqa: E402
@@ -209,7 +210,7 @@ class RosterDerivationTests(unittest.TestCase):
     def test_skill_rosters_equal_the_discovered_directories(self) -> None:
         plugin = REPO_ROOT / "speckit-pro"
         claude = sorted(p.parent.name for p in (plugin / "skills").glob("*/SKILL.md"))
-        codex = sorted(p.parent.name for p in (plugin / "codex-skills").glob("*/SKILL.md"))
+        codex = sorted(p.parent.name for p in host_skill_root("codex").glob("*/SKILL.md"))
         self.assertTrue(claude and codex)
         self.assertEqual(claude, sorted(skills.validate_skills_SKILLS))
         self.assertEqual(codex, sorted(skills.validate_codex_skills_SKILLS))
@@ -271,13 +272,13 @@ class CodexSkillRosterTests(unittest.TestCase):
             for tree in ("skills", "codex-skills"):
                 shutil.copytree(plugin / tree, copy / tree, ignore=shutil.ignore_patterns("references", "agents", "scripts"))
             self.assertEqual([], metadata.codex_skill_gaps(copy))
-            shutil.rmtree(copy / "codex-skills" / "speckit-install")
-            self.assertEqual(["codex-skills/speckit-install/SKILL.md is missing"], metadata.codex_skill_gaps(copy))
+            shutil.rmtree(copy / "codex-skills" / "install")
+            self.assertEqual(["Codex skill install/SKILL.md is missing"], metadata.codex_skill_gaps(copy))
             shutil.rmtree(copy / "skills" / "speckit-upgrade")
             (copy / "codex-skills" / "stray").mkdir()
             (copy / "codex-skills" / "stray" / "SKILL.md").write_text("---\nname: stray\n---\n", encoding="utf-8")
             self.assertEqual(
-                ["codex-skills/speckit-install/SKILL.md is missing", "codex-skills/speckit-upgrade/ is not a required skill", "codex-skills/stray/ is not a required skill"],
+                ["Codex skill install/SKILL.md is missing", "Codex skill speckit-upgrade/ is not a required skill", "Codex skill stray/ is not a required skill"],
                 metadata.codex_skill_gaps(copy),
             )
 

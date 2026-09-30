@@ -4109,7 +4109,7 @@
     },
     {
       "id": "claude:ubiquitous-language:3",
-      "requirement": "Runs ${CLAUDE_PLUGIN_ROOT}/scripts/ubiquitous-language-lint.py with --base origin/main, reports the JSON summary and each unmapped identifier with a suggested term or rename, and states that the lint is advisory and exit",
+      "requirement": "Runs resolved_python ${CLAUDE_PLUGIN_ROOT}/scripts/ubiquitous-language-lint.py with --base origin/main, reports the JSON summary and each unmapped identifier with a suggested term or rename, and states that the lint is advisory and exit",
       "detail_count": 3,
       "disposition": "replace",
       "coverage": "authored-native-file-grounded-unqualified",

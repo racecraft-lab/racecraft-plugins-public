@@ -52,7 +52,7 @@ uncertainty and do not invent a definition.
    Preserve existing rows and their order on an update; append new terms;
    never delete a row without saying which identifiers lose their mapping.
 5. **Lint, advisory only.** Run
-   `${CLAUDE_PLUGIN_ROOT}/scripts/ubiquitous-language-lint.py --base <base>`
+   `resolved_python ${CLAUDE_PLUGIN_ROOT}/scripts/ubiquitous-language-lint.py --base <base>`
    (default base `origin/main`). It prints a JSON report of declared
    identifiers in the diff that map to no term. Report the summary and the
    unmapped identifiers to the user; suggest a term or a rename for each. The

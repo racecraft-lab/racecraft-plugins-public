@@ -62,15 +62,6 @@ def selection_stub(marker: str) -> str:
     )
 
 
-def find_skill_source(plugin_root: Path, skill: str, families: tuple[str, ...]) -> Path:
-    """The first ``<family>/<skill>/SKILL.md`` under the plugin root, in family order."""
-    for family in families:
-        path = plugin_root / family / skill / "SKILL.md"
-        if path.is_file():
-            return path
-    raise ValueError(f"skill not found for requested skill {skill!r}")
-
-
 def source_description_lines(source: Path) -> list[str]:
     """Return the source YAML description field without rewriting its value."""
     text = source.read_text(encoding="utf-8")

@@ -35,19 +35,36 @@ Use the smallest relevant reference; do not load the whole library.
 | Track one spec through phases or understand scaffold-created workflow files | [Workflow template](./templates/workflow-template.md). For scaffold creation, population, inputs, or output locations, also read the [live scaffold skill](../speckit-scaffold-spec/SKILL.md) as a reference only; do not execute or invoke it. Keep artifacts, gates, and decisions current. |
 | Explain the roadmap home note | [Roadmap-MOC guide](./references/roadmap-moc-guide.md). The curated zone is author-owned; the generated index is regenerated, not hand-edited. |
 | Explain or configure presets, extensions, hooks, catalogs, or upgrade recovery | [Presets and extensions guide](./references/presets-extensions-guide.md). Discover and inspect first; confirm before any mutation. |
-| Explain autonomous execution, consensus, remediation, review loops, or configuration | Read [the live autopilot skill](../speckit-autopilot/SKILL.md) as a reference only; explain its current contract without executing or invoking it. |
+| Explain autonomous execution, consensus, remediation, review loops, or configuration | Read [the live autopilot skill](../speckit-autopilot/SKILL.md) as a reference only; explain its current contract without executing or invoking it. When the user asks to run an existing workflow, use the bounded autopilot hand-off below. |
 | Scope a raw brief interactively | Route to `/speckit-pro:grill-me`; do not conduct its interview here. |
 | Scaffold a roadmap item, inspect status, or resolve a review | Route respectively to `/speckit-pro:speckit-scaffold-spec`, `/speckit-pro:speckit-status`, or `/speckit-pro:speckit-resolve-pr`. |
 | Archive merged-spec records or clean up archived specs | Route to `/speckit-pro:speckit-archive-cleanup`; do not copy or execute its cleanup workflow here. |
 
-When an execution request belongs to autopilot, the redirect is a bounded
-operator handoff, not merely a command name. Briefly explain that autopilot owns
-the durable phase task list, native subagent lifecycle, gate checks, workflow
-and state updates, and operator-visible progress. Give the exact autopilot
-invocation and required workflow/stage input. Set the expectation that it
-continues through the selected stage until completion or a real gate/capability
-stop; at a stop it preserves evidence and reports the exact action required to
-resume. Do not imply that Coach will run, monitor, or resume that lifecycle.
+## Bounded autopilot hand-off
+
+Coach never executes or invokes autopilot. When an execution request belongs to
+autopilot, the redirect is a bounded operator handoff, not merely a command
+name. Briefly explain that autopilot owns the durable phase task list, native
+subagent lifecycle, gate checks, workflow and state updates, and
+operator-visible progress. When the user supplies the workflow path, return one
+explicit command bounded to the requested stage:
+
+```text
+/speckit-pro:speckit-autopilot <workflow-file> --stage plan|implement|full
+```
+
+Use `--stage full` only when the user asks for the full workflow; use
+`--stage plan` or `--stage implement` only for that requested boundary. Preserve
+the supplied workflow path exactly, and do not invent a path or broaden the
+stage. Set the expectation that autopilot continues through the selected stage
+until completion or a real gate/capability stop, owning its own preflight,
+phase gates, durable state, and fail-closed stops; at a stop it preserves
+evidence and reports the exact action required to resume. Do not imply that
+Coach will run, monitor, or resume that lifecycle. If no workflow path exists,
+route to
+`/speckit-pro:speckit-scaffold-spec`;
+if the path or requested stage is ambiguous, ask for that missing input instead
+of executing anything.
 
 ## Keep adjacent contracts distinct
 

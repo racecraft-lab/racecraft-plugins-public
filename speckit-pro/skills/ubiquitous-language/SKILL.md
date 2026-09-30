@@ -1,9 +1,14 @@
 ---
 name: ubiquitous-language
+<!-- host:claude: Claude names skills as /speckit-pro:NAME and reads Claude-only frontmatter keys -->
 description: "Build or refresh the repository's ubiquitous-language terms document, a committed Markdown table of domain terms (term, meaning here, identifiers) that humans and agents read before designing. Use when the user asks to define domain terms, create or update a glossary or ubiquitous language, pin what a term means in this codebase, reconcile names between the spec and the code, or invokes /speckit-pro:ubiquitous-language. Also runs the advisory identifier lint on a diff. Not for scoping interviews, PRD authoring, or general SDD coaching."
 argument-hint: "optional: a domain area, a spec path, or 'lint <base>'"
 user-invocable: true
 license: MIT
+<!-- /host -->
+<!-- host:codex: Codex names skills as $NAME -->
+description: "Build or refresh the repository's ubiquitous-language terms document, a committed Markdown table of domain terms (term, meaning here, identifiers) that humans and agents read before designing. Use when the user asks to define domain terms, create or update a glossary or ubiquitous language, pin what a term means in this codebase, reconcile names between the spec and the code, or invokes $ubiquitous-language. Also runs the advisory identifier lint on a diff. Not for scoping interviews, PRD authoring, or general SDD coaching."
+<!-- /host -->
 ---
 
 # Ubiquitous Language
@@ -12,20 +17,23 @@ Write and maintain `docs/ai/specs/ubiquitous-language.md`: one table of the
 domain terms this repository uses, what each means here, and the code
 identifiers that carry it. Grill Me and PRD authoring read it when present, so
 a term is pinned once and reused instead of re-derived in every interview.
+<!-- host:codex: Codex names plugin skills with a dollar sign -->
+In Codex, use `$skill-name` syntax for plugin skills.
+<!-- /host -->
 
 ## Ground recommendations
 
 Inspect the tools and skills actually available. Follow the shared
+<!-- host:claude: Claude resolves plugin files through CLAUDE_PLUGIN_ROOT -->
 [capability-discovery](${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/capability-discovery.md)
 and [grounding](${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/grounding.md) contracts.
+<!-- /host -->
+<!-- host:codex: Codex has no plugin-root variable, so it links relative to this skill -->
+[capability-discovery](../speckit-autopilot/references/capability-discovery.md)
+and [grounding](../speckit-autopilot/references/grounding.md) contracts.
+<!-- /host -->
 A term's meaning comes from the code and documents that use it; disclose
 uncertainty and do not invent a definition.
-
-## Codex Skill-Selection Guard
-
-If Codex loaded this Claude variant, stop and follow
-[`../../codex-skills/ubiquitous-language/SKILL.md`](../../codex-skills/ubiquitous-language/SKILL.md)
-as the active skill. The payload builder removes this guard from Claude installs.
 
 ## Workflow
 
@@ -42,8 +50,17 @@ as the active skill. The payload builder removes this guard from Claude installs
    in this repository in one sentence, and the identifiers that carry it.
    Where the codebase disagrees with itself, propose one term and list the
    other spellings under Identifiers so the lint maps them. Ask the user about
+<!-- host:claude: Claude asks through AskUserQuestion -->
    a genuinely ambiguous term with `AskUserQuestion`, one term at a time, with
    your recommendation first; do not ask about terms the evidence settles.
+<!-- /host -->
+<!-- host:codex: Codex asks through request_user_input, with a chat fallback -->
+   a genuinely ambiguous term one at a time, recommendation first: prefer
+   `request_user_input`; in an already active user chat with no picker, ask
+   the one question in free text. Never use this fallback in background, CI,
+   autopilot, or subagent execution. Do not ask about terms the evidence
+   settles.
+<!-- /host -->
 4. **Write the document** only after the user confirms the proposal. Keep the
    format exactly:
 
@@ -58,7 +75,12 @@ as the active skill. The payload builder removes this guard from Claude installs
    Preserve existing rows and their order on an update; append new terms;
    never delete a row without saying which identifiers lose their mapping.
 5. **Lint, advisory only.** Run
-   `${CLAUDE_PLUGIN_ROOT}/scripts/ubiquitous-language-lint.py --base <base>`
+<!-- host:claude: Claude resolves plugin files through CLAUDE_PLUGIN_ROOT -->
+   `resolved_python ${CLAUDE_PLUGIN_ROOT}/scripts/ubiquitous-language-lint.py --base <base>`
+<!-- /host -->
+<!-- host:codex: Codex has no plugin-root variable and names the root in prose -->
+   `resolved_python <plugin-root>/scripts/ubiquitous-language-lint.py --base <base>`
+<!-- /host -->
    (default base `origin/main`). It prints a JSON report of declared
    identifiers in the diff that map to no term. Report the summary and the
    unmapped identifiers to the user; suggest a term or a rename for each. The
@@ -70,6 +92,12 @@ as the active skill. The payload builder removes this guard from Claude installs
 - A short report: terms added, changed, or kept; unmapped identifiers from
   the lint with a suggestion each.
 
+<!-- host:claude: Claude names skills with a slash -->
 This skill does not conduct a scoping interview (`/speckit-pro:grill-me`),
 author a PRD (`/speckit-pro:speckit-prd`), or explain SDD
 (`/speckit-pro:speckit-coach`).
+<!-- /host -->
+<!-- host:codex: Codex names skills with a dollar sign -->
+This skill does not conduct a scoping interview (`$grill-me`), author a PRD
+(`$speckit-prd`), or explain SDD (`$speckit-coach`).
+<!-- /host -->

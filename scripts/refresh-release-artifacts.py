@@ -103,6 +103,13 @@ def refresh_release_artifacts(repo_root: Path) -> int:
     from speckit_pro_runner.agent_inventory import load_agent_inventory
     from speckit_pro_runner.codex_agent_generator import refresh_codex_agents
     from speckit_pro_runner.gates import payloads
+    from speckit_pro_runner.host_skills import codex_skill_overlay_errors
+
+    overlay_errors = codex_skill_overlay_errors(runner_root)
+    if overlay_errors:
+        for error in overlay_errors:
+            print(f"::error::{error}", file=sys.stderr)
+        return 1
 
     changed: list[str] = []
 
