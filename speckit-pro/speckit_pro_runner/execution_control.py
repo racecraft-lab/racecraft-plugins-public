@@ -346,11 +346,11 @@ def _validate_corrective_state(value: dict[str, Any]) -> None:
     """One allowance's counters, reservations, dispatches, and operator records."""
     _validate_corrective_counters(value)
     exception_reservation = _validate_corrective_exception(value)
-    granted = {"increment": _validate_unit_allowances(value, "increment_allowances", "increment", INCREMENT_REVIEW_ROUNDS),
-               "test_fix": _validate_unit_allowances(value, "test_fix_allowances", "test_fix", TEST_FIX_ROUNDS),
+    granted = {"increment": _validate_round_allowances(value, _INCREMENT_ALLOWANCE),
+               "test_fix": _validate_round_allowances(value, _TEST_FIX_ALLOWANCE),
                "metadata_correction": _validate_metadata_corrections(value)}
     _validate_deferrals(value)
-    granted["gate"] = _validate_gate_allowances(value)
+    granted["gate"] = _validate_round_allowances(value, _GATE_ALLOWANCE)
     granted["escalation"] = _validate_escalations(value)
     families = [item.get("family") for item in value["reservations"].values() if isinstance(item, dict)]
     if len(families) != len(value["reservations"]) or len(set(families)) != len(families):
@@ -519,6 +519,8 @@ class _RoundAllowance(NamedTuple):
     limit: int
     refusals: tuple[str, str, str]
     unit_valid: Callable[[Any], bool]
+    exhausted: str = ""
+    note: tuple[str, str] = ("", "")
 
 
 def _round_record_ok(record: Any, limit: int) -> bool:
@@ -544,13 +546,6 @@ def _validate_round_allowances(ledger: dict[str, Any], spec: _RoundAllowance) ->
             if not isinstance(item, dict) or item.get(spec.marker) != unit:
                 raise ValueError(spec.refusals[2])
     return allowances
-
-
-def _validate_unit_allowances(ledger: dict[str, Any], key: str, marker: str, limit: int) -> dict[str, Any]:
-    """Each increment's rounds under one allowance match its own recorded, unreserved corrective dispatches."""
-    refusals = (f"invalid {key}", f"{key} rounds disagree with the ledger", f"{key} lists a dispatch it does not own")
-    return _validate_round_allowances(ledger, _RoundAllowance(
-        key, marker, limit, refusals, lambda unit: bool(require_text(unit, "increment tdd_unit"))))
 
 
 def _canonical_repo_path(value: Any) -> bool:
@@ -607,15 +602,28 @@ def _validate_edit_records(item: dict[str, Any]) -> None:
         raise ValueError("invalid changed-path record")
 
 
+def _increment_unit(unit: Any) -> bool:
+    return bool(require_text(unit, "increment tdd_unit"))
+
+
+def _unit_refusals(key: str) -> tuple[str, str, str]:
+    return f"invalid {key}", f"{key} rounds disagree with the ledger", f"{key} lists a dispatch it does not own"
+
+
+# The round-counted corrective allowances: an increment's review rounds and a gate's remediation
+# rounds each drive validation, reservation, and deferral checks from one spec.
+_INCREMENT_ALLOWANCE = _RoundAllowance(
+    "increment_allowances", "increment", INCREMENT_REVIEW_ROUNDS, _unit_refusals("increment_allowances"),
+    _increment_unit, "increment_review_allowance_exhausted", ("review_allowance", "increment"))
+# A test fix spends its single round through its own reservation path; only its record check is shared.
+_TEST_FIX_ALLOWANCE = _RoundAllowance(
+    "test_fix_allowances", "test_fix", TEST_FIX_ROUNDS, _unit_refusals("test_fix_allowances"), _increment_unit)
 _GATE_ALLOWANCE = _RoundAllowance(
     "gate_allowances", "gate", GATE_REMEDIATION_ROUNDS,
     ("invalid gate remediation allowances", "gate remediation rounds disagree with the ledger",
-     "gate remediation allowance lists a dispatch it does not own"), REMEDIATION_GATES.__contains__)
-
-
-def _validate_gate_allowances(ledger: dict[str, Any]) -> dict[str, Any]:
-    """Each gate's remediation rounds match its own recorded, unreserved corrective dispatches."""
-    return _validate_round_allowances(ledger, _GATE_ALLOWANCE)
+     "gate remediation allowance lists a dispatch it does not own"), REMEDIATION_GATES.__contains__,
+    "gate_remediation_allowance_exhausted", ("remediation_allowance", "gate"))
+_ROUND_ALLOWANCES = {spec.exhausted: spec for spec in (_INCREMENT_ALLOWANCE, _GATE_ALLOWANCE)}
 
 
 def _validate_metadata_corrections(ledger: dict[str, Any]) -> dict[str, list[str]]:
@@ -871,10 +879,9 @@ def _allowance_spent(ledger: dict[str, Any], reason: str, unit: str) -> bool:
     """True when the ledger itself shows the allowance a deferral names as spent."""
     if reason in {"failure_family_budget_exhausted", "corrective_run_budget_exhausted"}:
         return _corrective_refusal(ledger, unit) == reason
-    if reason == "increment_review_allowance_exhausted":
-        return ledger.get("increment_allowances", {}).get(unit, {}).get("rounds") == INCREMENT_REVIEW_ROUNDS
-    if reason == "gate_remediation_allowance_exhausted":
-        return ledger.get("gate_allowances", {}).get(unit, {}).get("rounds") == GATE_REMEDIATION_ROUNDS
+    if reason in _ROUND_ALLOWANCES:
+        spec = _ROUND_ALLOWANCES[reason]
+        return bool(ledger.get(spec.key, {}).get(unit, {}).get("rounds") == spec.limit)
     if reason == "failure_class_allowance_exhausted":
         approved = ledger.get("corrective_exception", {}).get("failure_class")
         return (isinstance(approved, dict) and approved.get("test_file") == unit
@@ -1464,12 +1471,13 @@ class _RemediationRequest(NamedTuple):
     subject_ok: Callable[[Any], bool] | None = None
 
 
+_ONE_REMEDIATION_REFUSAL = "a corrective dispatch names review_remediation or gate_remediation, never both"
 _REVIEW_REMEDIATION = _RemediationRequest(
-    "review_remediation", "tdd_unit", "review_remediation requires exactly tdd_unit and a paths array of strings")
+    "review_remediation", "tdd_unit", "review_remediation requires exactly tdd_unit and a paths array of strings",
+    ("gate_remediation",), _ONE_REMEDIATION_REFUSAL)
 _GATE_REMEDIATION = _RemediationRequest(
     "gate_remediation", "gate", "gate_remediation requires exactly a gate from G2 to G7 and a paths array of strings",
-    ("review_remediation",), "a corrective dispatch names review_remediation or gate_remediation, never both",
-    REMEDIATION_GATES.__contains__)
+    ("review_remediation",), _ONE_REMEDIATION_REFUSAL, REMEDIATION_GATES.__contains__)
 _TEST_FIX_REQUEST = _RemediationRequest(
     "test_fix", "tdd_unit", "test_fix requires exactly tdd_unit and a paths array of strings",
     ("review_remediation", "gate_remediation", "metadata_only"),
@@ -1911,32 +1919,19 @@ def _reserve_test_fix(ledger: dict[str, Any], dispatch_id: str, request: dict[st
     return {"reservation_id": None, "dispatch_id": dispatch_id, "test_fix_allowance": "increment"}
 
 
-def _reserve_gate_remediation(ledger: dict[str, Any], dispatch_id: str, gate: str, now: float) -> dict[str, Any]:
-    """Spend one of the gate's own remediation rounds; never touches the run-wide counter."""
-    allowances = ledger.get("gate_allowances", {})
-    record = allowances.get(gate, {"rounds": 0, "dispatch_ids": []})
-    if record["rounds"] >= GATE_REMEDIATION_ROUNDS:
-        return {**_defer(ledger, dispatch_id, "gate_remediation_allowance_exhausted", gate, now),
-                "remediation_allowance": "gate"}
-    ledger["gate_allowances"] = {**allowances, gate: {"rounds": record["rounds"] + 1,
-                                                      "dispatch_ids": [*record["dispatch_ids"], dispatch_id]}}
-    ledger["dispatches"][dispatch_id] = {"kind": "corrective", "outcome": "reserved", "reserved_at": now,
-                                         "reservation_id": None, "reconciliations": 0, "gate": gate}
-    return {"reservation_id": None, "dispatch_id": dispatch_id, "remediation_allowance": "gate"}
-
-
-def _reserve_increment_review(ledger: dict[str, Any], dispatch_id: str, unit: str, now: float) -> dict[str, Any]:
-    """Spend one of the increment's own review rounds; never touches the run-wide counter."""
-    allowances = ledger.get("increment_allowances", {})
+def _reserve_round(ledger: dict[str, Any], dispatch_id: str, unit: str, now: float,
+                   spec: _RoundAllowance) -> dict[str, Any]:
+    """Spend one of the unit's own rounds under `spec`; never touches the run-wide counter."""
+    allowances = ledger.get(spec.key, {})
     record = allowances.get(unit, {"rounds": 0, "dispatch_ids": []})
-    if record["rounds"] >= INCREMENT_REVIEW_ROUNDS:
-        return {**_defer(ledger, dispatch_id, "increment_review_allowance_exhausted", unit, now),
-                "review_allowance": "increment"}
-    ledger["increment_allowances"] = {**allowances, unit: {"rounds": record["rounds"] + 1,
-                                                           "dispatch_ids": [*record["dispatch_ids"], dispatch_id]}}
+    note = {spec.note[0]: spec.note[1]}
+    if record["rounds"] >= spec.limit:
+        return {**_defer(ledger, dispatch_id, spec.exhausted, unit, now), **note}
+    ledger[spec.key] = {**allowances, unit: {"rounds": record["rounds"] + 1,
+                                             "dispatch_ids": [*record["dispatch_ids"], dispatch_id]}}
     ledger["dispatches"][dispatch_id] = {"kind": "corrective", "outcome": "reserved", "reserved_at": now,
-                                         "reservation_id": None, "reconciliations": 0, "increment": unit}
-    return {"reservation_id": None, "dispatch_id": dispatch_id, "review_allowance": "increment"}
+                                         "reservation_id": None, "reconciliations": 0, spec.marker: unit}
+    return {"reservation_id": None, "dispatch_id": dispatch_id, **note}
 
 
 class _Reserve(NamedTuple):
@@ -1972,12 +1967,12 @@ def _reserve_allowance(ctx: _Reserve, requests: _ReserveRequests) -> tuple[dict[
     if requests.review is not None:
         ineligible = _increment_ineligibility(root, spec, requests.review)
         if ineligible is None:
-            return _reserve_increment_review(ledger, dispatch_id, requests.review["tdd_unit"], now), note
+            return _reserve_round(ledger, dispatch_id, requests.review["tdd_unit"], now, _INCREMENT_ALLOWANCE), note
         note = {"review_allowance": "run_wide", "increment_ineligible": ineligible}
     if requests.gate is not None:
         ineligible = _gate_ineligibility(root, spec, ledger, requests.gate["paths"])
         if ineligible is None:
-            return _reserve_gate_remediation(ledger, dispatch_id, requests.gate["gate"], now), note
+            return _reserve_round(ledger, dispatch_id, requests.gate["gate"], now, _GATE_ALLOWANCE), note
         note = {"remediation_allowance": "run_wide", "gate_ineligible": ineligible}
     if requests.test_fix is not None:
         ineligible, snapshot = _test_fix_ineligibility(root, spec, ledger, requests.test_fix)

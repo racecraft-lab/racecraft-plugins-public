@@ -2349,6 +2349,20 @@ class CorrectionProgressGuidanceTests(unittest.TestCase):
                 self.assertIn("`disposition=defer`", section)
 
 
+class RemediationRequestExclusivityTests(unittest.TestCase):
+    """A corrective dispatch names a review or a gate remediation, and either parser refuses both."""
+
+    def test_each_remediation_parser_refuses_the_other_request_kind(self):
+        from speckit_pro_runner.execution_control import _gate_remediation, _review_remediation
+
+        inputs = {"kind": "corrective", "spec_file": "feature/spec.md",
+                  "review_remediation": {"tdd_unit": "U1", "paths": ["src/a.py"]},
+                  "gate_remediation": {"gate": "G2", "paths": ["feature/plan.md"]}}
+        for parser in (_review_remediation, _gate_remediation):
+            with self.subTest(parser=parser.__name__), self.assertRaisesRegex(ValueError, "never both"):
+                parser(inputs)
+
+
 class GateRemediationAllowanceTests(_ExecutionControlFixture, unittest.TestCase):
     """A planning gate's documentation-only remediation draws on that gate's own bound."""
 
@@ -4224,6 +4238,7 @@ if __name__ == "__main__":
                                             FailingCheckFingerprintTests, MoreTestRunnerFingerprintTests,
                                             CorrectionProgressTests, UntaggedFailureFamilyTests,
                                             CorrectionProgressGuidanceTests, GateRemediationAllowanceTests,
+                                            RemediationRequestExclusivityTests,
                                             MetadataOnlyCorrectionTests, IncrementTestFixAllowanceTests, IncrementTestFixEditTests,
                                             IncrementTestFixRecordTests, IncrementTestFixRequestTests,
                                             WorkflowIdentityTests, SelfIgnoringByproductDirectoryTests, VerificationTests,
