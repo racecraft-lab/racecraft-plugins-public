@@ -116,14 +116,14 @@ def qualify_tools(root: Path, skill: Any, decision: dict[str, Any]) -> bool:
         fallback(decision, "The gh-stack skill is unavailable", "missing")
         return False
     if path.resolve() not in TRUSTED_SKILL_PATHS:
-        fallback(decision, "The gh-stack skill is outside its trusted installation roots", "missing")
+        fallback(decision, "The gh-stack skill is outside its trusted installation roots", "untrusted_skill")
         return False
     if hashlib.sha256(path.read_bytes()).hexdigest() != SKILL_SHA256:
-        fallback(decision, "The installed gh-stack skill differs from its pinned identity", "missing")
+        fallback(decision, "The installed gh-stack skill differs from its pinned identity", "skill_mismatch")
         return False
     text = path.read_text(encoding="utf-8")
     if not text.startswith("---\n") or not re.search(r"(?m)^name:\s*gh-stack\s*$", text.split("---", 2)[1]):
-        fallback(decision, "The supplied skill is not a gh-stack skill", "missing")
+        fallback(decision, "The supplied skill is not a gh-stack skill", "skill_mismatch")
         return False
     capability.update(skill_available=True, skill_path=str(path.resolve()), skill_sha256=hashlib.sha256(text.encode()).hexdigest())
     version = probe(root, ["gh", "stack", "--version"])
@@ -226,6 +226,7 @@ def reverified_retry(root: Path, repository: str, remote: str, skill: Any, block
     """Re-plan the existing-PR link after a partial mutation once read-only proof matches the recorded PRs.
 
     The retry reuses the recorded PR identities, never recreates a PR, and never switches managers.
+    It keeps the prior mutation boundary and recovery record, so the attempted mutation stays on record.
     Anything the proof cannot confirm leaves the recovery record blocked.
     """
     keys = ("review_order", "slice_id", "branch", "base_branch", "pr_url")
@@ -238,7 +239,8 @@ def reverified_retry(root: Path, repository: str, remote: str, skill: Any, block
         return None
     if decision["selected_manager"] != "gh-stack" or decision["operation"] != "link":
         return None
-    decision.update(reason="Existing PRs re-verified after a partial mutation; retry the existing-PR link", fallback_allowed=False)
+    decision.update(reason="Existing PRs re-verified after a partial mutation; retry the existing-PR link", fallback_allowed=False,
+                    mutation_boundary=blocked["mutation_boundary"], recovery=blocked["recovery"])
     return decision
 
 
@@ -258,7 +260,8 @@ def detect(inputs: dict[str, Any]) -> dict[str, Any]:
             retry = reverified_retry(root, repository, remote, inputs.get("skill_path"), recovery) if inputs.get("reverify_recovery") is True else None
             return retry or recovery
     if preference == "explicit-gh":
-        return fallback(initial_decision(topology_inputs(inputs["topology"])), "Operator selected current packet-owned PR management")
+        return fallback(initial_decision(topology_inputs(inputs["topology"])), "Operator selected current packet-owned PR management",
+                        "operator_preference")
     return select_manager(root, repository, remote, inputs.get("skill_path"), inputs["topology"])
 
 
