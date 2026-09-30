@@ -18,7 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 TEST_ROOT = REPO_ROOT / "tests" / "speckit-pro"
 sys.path.insert(0, str(TEST_ROOT / "lib"))
 
-import native_eval_adapters  # noqa: E402
+import native_eval_adapter_common  # noqa: E402
 from native_eval_fixture_setup import materialize_workspace  # noqa: E402
 from native_eval_grading import grade_observation  # noqa: E402
 from native_eval_runner_result import (  # noqa: E402
@@ -216,7 +216,7 @@ class NativeEvalRunnerResultTests(unittest.TestCase):
             value = native_case()
             value["fixtures"] = [{"source": "request.json", "destination": REQUEST_PATH}]
             self.assertEqual(
-                native_eval_adapters._fixture_read_witnesses(value, plan),
+                native_eval_adapter_common._fixture_read_witnesses(value, plan),
                 {REQUEST_PATH: {
                     "bytes": len(payload), "sha256": hashlib.sha256(payload).hexdigest(),
                 }},

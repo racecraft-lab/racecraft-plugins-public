@@ -21,7 +21,7 @@ from native_eval_dispatch_context import (  # noqa: E402
     MAX_JSON_DEPTH,
     MAX_MESSAGE_BYTES,
     MAX_PRECEDING_JSON_BYTES,
-    decode_sealed_plan_repair_message,
+    decode_sealed_plan_repair_payload,
     qualify_native_dispatch_context,
 )
 from test_result import run_counted  # noqa: E402
@@ -219,11 +219,10 @@ class SealedPlanRepairMessageTests(unittest.TestCase):
     def test_decodes_hash_bound_executor_message(self) -> None:
         envelope, executor_message = self._build_envelope()
         transport = json.dumps(envelope, separators=(",", ":"))
-        self.assertEqual(decode_sealed_plan_repair_message(transport), executor_message)
+        executor = decode_sealed_plan_repair_payload(transport)["executor_message"]
+        self.assertEqual(executor, executor_message)
         proof = qualify_native_dispatch_context(
-            decode_sealed_plan_repair_message(transport) or "",
-            {"original-plan": PROMPT, "architecture": ARCHITECTURE},
-            G3,
+            executor, {"original-plan": PROMPT, "architecture": ARCHITECTURE}, G3,
         )
         self.assertEqual(proof["observed_context_ids"], ["architecture", "original-plan"])
         self.assertTrue(proof["complete_preceding_json_found"])
@@ -240,7 +239,7 @@ class SealedPlanRepairMessageTests(unittest.TestCase):
                 candidate = json.loads(json.dumps(envelope))
                 mutate(candidate)
                 self.assertIsNone(
-                    decode_sealed_plan_repair_message(
+                    decode_sealed_plan_repair_payload(
                         json.dumps(candidate, separators=(",", ":")),
                     )
                 )
