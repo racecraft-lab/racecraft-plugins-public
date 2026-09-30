@@ -8,7 +8,6 @@ import re
 import shutil
 import sys
 import tempfile
-from collections.abc import Iterable
 from pathlib import Path, PurePosixPath
 from typing import Any
 

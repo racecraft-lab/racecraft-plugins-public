@@ -6,7 +6,9 @@ from __future__ import annotations
 
 import copy
 import json
+import shutil
 import subprocess
+import tempfile
 import sys
 import tomllib
 import unittest
@@ -37,6 +39,7 @@ from speckit_pro_runner.host_parity import (  # noqa: E402
     split_frontmatter,
     unexplained_blocks,
 )
+from speckit_pro_runner.host_skills import codex_skill_overlay_errors  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
@@ -317,6 +320,53 @@ class CodexAgentGeneratorTests(unittest.TestCase):
                 self.assertEqual(unexplained_blocks(source.read_text(encoding="utf-8")), [])
 
 
+class HostSkillSourceTests(unittest.TestCase):
+    """Shared skill files carry both hosts' text; each host reads its own view."""
+
+    @staticmethod
+    def view(relative: str, host: str) -> str:
+        return " ".join(emit_host((PLUGIN_ROOT / relative).read_text(encoding="utf-8"), host).split())
+
+    def test_every_host_block_in_a_shared_skill_file_states_its_reason(self) -> None:
+        sources = [path for path in sorted((PLUGIN_ROOT / "skills").rglob("*.md"))
+                   if "<!-- host:" in path.read_text(encoding="utf-8")]
+        self.assertGreaterEqual(len(sources), 4, "no merged skill file found; the scan would pass on nothing")
+        for source in sources:
+            with self.subTest(file=source.relative_to(PLUGIN_ROOT).as_posix()):
+                self.assertEqual(unexplained_blocks(source.read_text(encoding="utf-8")), [])
+
+    def test_codex_skills_holds_only_codex_only_files_and_listed_overlays(self) -> None:
+        self.assertEqual(codex_skill_overlay_errors(PLUGIN_ROOT), [])
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            shutil.copytree(PLUGIN_ROOT / "codex-skills", root / "codex-skills")
+            (root / "codex-skills" / "grill-me" / "SKILL.md").write_text("---\nname: grill-me\n---\n", encoding="utf-8")
+            (root / "codex-skills" / "speckit-status" / "SKILL.md").unlink()
+            self.assertEqual(codex_skill_overlay_errors(root), [
+                "codex-skills/grill-me/SKILL.md overlays a shared skill file; merge it into skills/ as host blocks",
+                "codex-skills/speckit-status/SKILL.md is listed as an unmerged overlay but does not exist",
+            ])
+
+    def test_grill_me_sends_setup_alone_to_scaffold_spec_on_both_hosts(self) -> None:
+        for host, sigil in (("claude", "/speckit-pro:"), ("codex", "$")):
+            with self.subTest(host=host):
+                fields, _ = split_frontmatter(emit_host(
+                    (PLUGIN_ROOT / "skills/grill-me/SKILL.md").read_text(encoding="utf-8"), host))
+                self.assertIn(
+                    f"SPEC setup, worktree creation, and workflow population belong to {sigil}speckit-scaffold-spec; "
+                    "a setup request alone is not an interview delegation.",
+                    fields["description"],
+                )
+
+    def test_ubiquitous_language_runs_the_lint_script_on_both_hosts(self) -> None:
+        for host, command in (
+            ("claude", "`resolved_python ${CLAUDE_PLUGIN_ROOT}/scripts/ubiquitous-language-lint.py --base <base>`"),
+            ("codex", "`resolved_python <plugin-root>/scripts/ubiquitous-language-lint.py --base <base>`"),
+        ):
+            with self.subTest(host=host):
+                self.assertIn(command, self.view("skills/ubiquitous-language/SKILL.md", host))
+
+
 HOOK_SCRIPT = PLUGIN_ROOT / "scripts" / "codex-agent-policy-hook.py"
 
 
@@ -400,6 +450,7 @@ def main() -> int:
             PairingManifestTests,
             CodexAgentGeneratorTests,
             CodexAgentPolicyHookTests,
+            HostSkillSourceTests,
         )
     )
     return run_counted(suite, label="test-host-parity-generator")
