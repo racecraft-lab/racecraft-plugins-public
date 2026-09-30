@@ -360,13 +360,46 @@ class UnitRosterTests(unittest.TestCase):
         self.assertEqual(sorted(discovered - registered), [])
 
 
-LOADER_CALL = "spec_from" + "_file_location"
+LOADER_CALL = "spec_from_file_location"
 LOADER_HOME = LIB_DIR / "script_loader.py"
 
 
+def _is_patch_target(node: ast.AST, parent: ast.AST | None) -> bool:
+    """True for the loader name passed as the attribute of ``mock.patch.object(module, "name", ...)``.
+
+    A test may patch the importlib entry point to prove code does not load scripts. That
+    is the one allowed mention; it does not load anything.
+    """
+    return (
+        isinstance(node, ast.Constant) and node.value == LOADER_CALL
+        and isinstance(parent, ast.Call) and len(parent.args) >= 2 and parent.args[1] is node
+        and isinstance(parent.func, ast.Attribute) and parent.func.attr == "object"
+        and isinstance(parent.func.value, (ast.Name, ast.Attribute))
+        and getattr(parent.func.value, "attr", getattr(parent.func.value, "id", "")) == "patch"
+    )
+
+
+def mentions_private_loader(source: str) -> bool:
+    """True when ``source`` repeats the importlib file-loader call, other than as a patch target."""
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return LOADER_CALL in source
+    parents = {child: node for node in ast.walk(tree) for child in ast.iter_child_nodes(node)}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Attribute) and node.attr == LOADER_CALL:
+            return True
+        if isinstance(node, ast.Name) and node.id == LOADER_CALL:
+            return True
+        if isinstance(node, ast.Constant) and isinstance(node.value, str) and LOADER_CALL in node.value:
+            if not _is_patch_target(node, parents.get(node)):
+                return True
+    return False
+
+
 def files_with_private_loader(paths) -> list[str]:
-    """Return the paths whose text repeats the importlib file-loader call."""
-    return [str(p) for p in paths if LOADER_CALL in p.read_text(encoding="utf-8")]
+    """Return the paths whose source repeats the importlib file-loader call."""
+    return [str(p) for p in paths if mentions_private_loader(p.read_text(encoding="utf-8"))]
 
 
 class ScriptLoaderTests(unittest.TestCase):
@@ -378,13 +411,20 @@ class ScriptLoaderTests(unittest.TestCase):
         ]
         self.assertEqual([], copies)
 
-    def test_private_loader_detection_finds_a_copy(self) -> None:
-        with tempfile.TemporaryDirectory() as raw:
-            copy = Path(raw) / "copy.py"
-            copy.write_text(f"importlib.util.{LOADER_CALL}('x', p)\n", encoding="utf-8")
-            clean = Path(raw) / "clean.py"
-            clean.write_text("from script_loader import load_script\n", encoding="utf-8")
-            self.assertEqual([str(copy)], files_with_private_loader([copy, clean]))
+    def test_private_loader_detection_finds_a_copy_but_allows_a_patch_target(self) -> None:
+        patch_target = f"with mock.patch.object(importlib.util, {LOADER_CALL!r}, side_effect=AssertionError):\n    pass\n"
+        cases = {
+            "call": (f"importlib.util.{LOADER_CALL}('x', p)\n", True),
+            "child process source": (f"code = \"importlib.util.{LOADER_CALL}('x', p)\"\n", True),
+            "patch target": (patch_target, False),
+            "patch target beside a copy": (patch_target + f"spec = importlib.util.{LOADER_CALL}('x', p)\n", True),
+            "other patch target": (f"with mock.patch.object(os, {LOADER_CALL!r}):\n    pass\n", False),
+            "string outside patch": (f"NAME = {LOADER_CALL!r}\n", True),
+            "clean": ("from script_loader import load_script\n", False),
+        }
+        for label, (source, expected) in cases.items():
+            with self.subTest(case=label):
+                self.assertEqual(expected, mentions_private_loader(source))
 
 
 class UnitSuiteCompletenessTests(unittest.TestCase):
