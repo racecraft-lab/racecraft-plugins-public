@@ -64,5 +64,15 @@
         "else": { "not": { "required": ["rule"] } }
       }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "scope": { "properties": { "kind": { "const": "pr" } }, "required": ["kind"] } }, "required": ["scope"] },
+      "then": { "properties": { "scope": { "required": ["base", "touched"], "properties": { "touched": { "minItems": 1 } } } } }
+    },
+    {
+      "if": { "properties": { "scope": { "properties": { "kind": { "const": "repository" } }, "required": ["kind"] } }, "required": ["scope"] },
+      "then": { "properties": { "scope": { "properties": { "base": false, "touched": false } } } }
+    }
+  ]
 }
