@@ -42,19 +42,15 @@ PR_PACKET_SCHEMA = (
 # Shipped runbooks that tell an operator what to do with the confidence-gate
 # JSON on the exit-2 path. All three describe the same loop, so they have to
 # agree on which field the loop reads first.
-CONFIDENCE_GATE_RUNBOOKS = (
-    PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "gate-validation.md",
-    PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "phase-execution.md",
-    PLUGIN_ROOT
-    / "codex-skills"
-    / "speckit-autopilot"
-    / "references"
-    / "phase-execution-codex.md",
-)
-
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "tests" / "speckit-pro" / "lib"))
+from host_skill_views import host_skill_root  # noqa: E402
+
+CONFIDENCE_GATE_RUNBOOKS = (
+    PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "gate-validation.md",
+    *(host_skill_root(host) / "speckit-autopilot" / "references" / "phase-execution.md" for host in ("claude", "codex")),
+)
 import runner_invocation  # noqa: E402
 from runner_invocation import assert_runner_response, command_stdin_fixture  # noqa: E402
 

@@ -551,21 +551,24 @@ class ContractTests(unittest.TestCase):
 class VerificationVerbSourceTests(unittest.TestCase):
     """The Tasks guidance and both hosts' routing prose name the scheduler's one verb list."""
 
+    # (file, host view): the shared phase guide as each host receives it.
     SURFACES = (
-        "speckit-pro/skills/speckit-coach/templates/workflow-template.md",
-        "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
-        "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
+        ("speckit-pro/skills/speckit-coach/templates/workflow-template.md", None),
+        ("speckit-pro/skills/speckit-autopilot/references/phase-execution.md", "claude"),
+        ("speckit-pro/skills/speckit-autopilot/references/phase-execution.md", "codex"),
     )
 
     def test_every_surface_names_exactly_the_scheduler_verbs(self) -> None:
+        from guide_text import guide_text
+
         rendered = ", ".join(f"`{verb}`" for verb in PHASE7_VERIFY_KEYWORDS)
-        for relative in self.SURFACES:
-            with self.subTest(surface=relative):
-                text = " ".join((REPO_ROOT / relative).read_text(encoding="utf-8").split())
+        for relative, host in self.SURFACES:
+            with self.subTest(surface=relative, host=host):
+                text = guide_text(relative.removeprefix("speckit-pro/"), host)
                 self.assertTrue(rendered in text, f"{relative} must name {rendered}")
 
     def test_the_tasks_prompt_carries_the_verb_rule(self) -> None:
-        text = (REPO_ROOT / self.SURFACES[0]).read_text(encoding="utf-8")
+        text = (REPO_ROOT / self.SURFACES[0][0]).read_text(encoding="utf-8")
         prompt = text[text.index("### Tasks Prompt"):text.index("### Tasks Results")]
         self.assertIn("check-only task", prompt)
         self.assertIn("`Implement`, `Add`, or `Create`", prompt)

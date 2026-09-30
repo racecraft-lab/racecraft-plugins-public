@@ -18,6 +18,7 @@ TEST_ROOT = REPO_ROOT / "tests" / "speckit-pro"
 sys.path.insert(0, str(REPO_ROOT / "speckit-pro"))
 sys.path.insert(0, str(TEST_ROOT / "lib"))
 
+from guide_text import host_source  # noqa: E402
 from native_eval_catalog import load_catalog  # noqa: E402
 from native_eval_fixture_setup import materialize_workspace  # noqa: E402
 from speckit_pro_runner.helpers.read_only import atomicity_route  # noqa: E402
@@ -101,13 +102,13 @@ class AtomicityAdditiveRoutingTests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout)["status"], "ok")
-        for path in (
-            "speckit-pro/skills/speckit-autopilot/SKILL.md",
-            "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
-            "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
+        for path, host in (
+            ("skills/speckit-autopilot/SKILL.md", "claude"),
+            ("skills/speckit-autopilot/SKILL.md", "codex"),
+            ("skills/speckit-autopilot/references/phase-execution.md", "claude"),
         ):
-            with self.subTest(path=path):
-                guidance = (REPO_ROOT / path).read_text()
+            with self.subTest(path=path, host=host):
+                guidance = host_source(path, host)
                 self.assertIn("inputs.feature_dir", guidance)
                 self.assertIn("inputs.workflow_file", guidance)
 

@@ -107,9 +107,9 @@ agent.
    "Unresolved for consensus" section of your summary:
    - Your research sources disagree (conflicting answers)
    - You have low confidence in the answer you gave
-   - The question contains security keywords (auth, token,
-     secret, encryption, PII, credential, permission,
-     password, session, cookie, jwt, api-key, access-control)
+   - The question contains security keywords (auth, token, secret,
+     encryption, PII, credential, permission, password, authentication,
+     authorization, session, cookie, jwt, api-key, access-control)
 
    **Tag every unresolved item with a category prefix in square
    brackets** so the orchestrator can route consensus to only the

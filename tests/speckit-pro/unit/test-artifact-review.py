@@ -20,7 +20,7 @@ sys.path.insert(0, str(ROOT / "tests/speckit-pro/lib"))
 
 from speckit_pro_runner import artifact_review
 from speckit_pro_runner.helpers.read_only import resolve_autopilot_stage, trusted_bytes
-from guide_text import guide_text
+from guide_text import guide_text, host_source
 from test_result import run_counted
 
 
@@ -290,9 +290,8 @@ class ArtifactReviewTests(unittest.TestCase):
             self.assertEqual(self.coverage["artifact_review_errors"](self.root / "workflow.md", self.workflow()), {"artifact_review_errors": []})
 
     def test_both_parents_reference_the_shared_delivery_and_resume_contract(self) -> None:
-        for directory, suffix in (("skills", ""), ("codex-skills", "-codex")):
-            path = ROOT / f"speckit-pro/{directory}/speckit-autopilot/references/phase-execution{suffix}.md"
-            text = path.read_text()
+        for host in ("claude", "codex"):
+            text = host_source("skills/speckit-autopilot/references/phase-execution.md", host)
             self.assertIn("artifact-review.md", text)
             self.assertLess(text.index("Take a separate bookkeeping commit"), text.index("The parent dispatches `artifact-preview-observer`"))
             self.assertIn("preview-only resume", text)

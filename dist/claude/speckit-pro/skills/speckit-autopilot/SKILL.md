@@ -34,8 +34,9 @@ PowerShell-specific command-language requirement for installed workflows.
 
 This skill handles autonomous workflow EXECUTION. For methodology
 questions, SDD philosophy, comparisons, design rationale, deep dives, or
-learning how SpecKit works, redirect to `/speckit-pro:speckit-coach` when the
-user is asking for explanation rather than execution. Do not redirect a real
+learning how SpecKit works, redirect the user to
+`/speckit-pro:speckit-coach`
+when the user is asking for explanation rather than execution. Do not redirect a real
 implementation request merely because it asks for detailed progress or uses
 the word "implement": when the user supplies or identifies a populated
 workflow and asks to run, resume, or implement it, this remains an autopilot
@@ -43,7 +44,7 @@ execution request.
 
 You are an **orchestrator** for SpecKit workflows: read prompts from
 the workflow file and delegate each phase to a **subagent** that runs
-the `/speckit-*` command. You never run the commands yourself — you
+the phase's SpecKit command. You never run the commands yourself — you
 spawn, collect results, validate gates, and advance. Your context
 window auto-compacts, which is not a stopping point: complete every
 phase in the **resolved stage's** range (`AUTOPILOT_STAGE`, set at Step
@@ -62,13 +63,16 @@ stage short of its terminal step. See
 
 ## Architectural Constraint — Main Agent Is The Orchestrator
 
-This skill loads into the **main session agent** when the user invokes
-`/speckit-pro:speckit-autopilot`. Current Claude Code can nest subagents, but
-this workflow deliberately keeps one orchestration owner: the main session.
-EVERY workflow dispatch decision — parallel subagents vs sequential vs Agent
-Team, model routing, and lifecycle sequencing — happens HERE. Phase executors
-are terminal workers; they don't dispatch workflow phases, branch on
-`AGENT_TEAMS_AVAILABLE`, or create teams.
+This skill loads into the **main session agent**, which owns all phase and
+lifecycle dispatch. EVERY workflow dispatch decision — parallel subagents vs
+sequential, model routing, and lifecycle sequencing — happens HERE. Phase
+executors are terminal workers; they don't dispatch workflow phases or
+orchestrate later phases. **If this skill is ever loaded inside a subagent
+context**, it MUST refuse and surface the violation rather than orchestrate.
+
+Current Claude Code can nest subagents, but this workflow deliberately keeps
+one orchestration owner: the main session. Phase executors don't branch on
+`AGENT_TEAMS_AVAILABLE` or create teams.
 
 Runtime enforcement is two-tier (Layer 5 verifies both): the
 hyper-focused single-purpose workers (the consensus analysts,
@@ -78,8 +82,7 @@ on their one job; the open workhorse executors (phase-, analyze-,
 checklist-, implement-executor) keep the operator's full surface —
 including orchestration tools — and the invariant there is carried by
 this skill owning all PHASE dispatch plus each executor's
-terminal-worker prompt, never by a capability block. **If this skill is ever loaded inside a subagent
-context**, it MUST refuse rather than orchestrate. Full invariant +
+terminal-worker prompt, never by a capability block. Full invariant +
 implications for new workstreams in
 [`references/agent-teams-integration.md`](./references/agent-teams-integration.md)
 §Single orchestrator invariant.
@@ -118,7 +121,8 @@ change it. The bundled subagents carry their own pins: judgment roles
 ship at a measured high effort (`high`, `xhigh`, or `max` on Claude;
 `xhigh` or `max` on Codex), and bounded rule-applying
 roles that only apply rules to inputs already in their prompt ship at
-the documented default. A pin sets that worker's effort regardless of
+the documented default.
+A pin sets that worker's effort regardless of
 the session and never refuses to run.
 The operator owns the session setting; the plugin does not veto it.
 
@@ -126,8 +130,9 @@ The operator owns the session setting; the plugin does not veto it.
 
 At kickoff/resume, read [Bounded Execution and Verification](./references/execution-efficiency.md).
 Initialize/recover its durable execution-control ledger before phase dispatch.
-It owns task metadata, native batching, proof reuse, and the shared repair
-ceilings across every phase, nested worker, and Post step. A run has no
+It owns task metadata, native batching, proof reuse, the shared repair
+ceilings, and the honest checkpoint rules across every phase, nested worker,
+and Post step. Agent replacement never resets budgets. A run has no
 wall-clock limit.
 
 When a bounded request supplies an exact native command together with an
@@ -173,18 +178,26 @@ not issue a second invocation to obtain a file, exit code, stdout, or stderr.
 
 <hard_constraints>
 
-**Do not invoke `grill-me` from any autopilot phase or agent — ever.**
+**Do not invoke `grill-me` from any autopilot phase, subagent, or consensus step — ever.**
 
 `grill-me` is human-in-the-loop only — it uses `AskUserQuestion` to
 interview a real user one question at a time. Autopilot may run
 unattended, with no user available; calling it would block indefinitely or produce
 low-value automated output that defeats its purpose.
 
-Autopilot's Clarify phase uses `/speckit-clarify` with the multi-agent
-consensus protocol. If a phase encounters ambiguity consensus can't
-resolve, fail the gate and surface to the user. `grill-me` belongs to
-pre-workflow human alignment via `/speckit-pro:speckit-scaffold-spec` or
-`/speckit-pro:grill-me` only.
+If a phase encounters ambiguity that feels like it needs grill-me, the correct
+response is one of:
+
+- Run `/speckit-clarify` (Phase 2) with the multi-agent consensus protocol —
+  that is autopilot's only clarification mechanism.
+- Route the ambiguity to Clarify consensus, and defer it when consensus cannot settle it. Pre-workflow interviews
+  belong in `/speckit-pro:speckit-scaffold-spec` or `/speckit-pro:grill-me`, not autopilot.
+
+This rule applies to: the orchestrator, every phase subagent
+(`phase-executor`, `clarify-executor`, `checklist-executor`,
+`analyze-executor`, `implement-executor`), every consensus analyst
+(`codebase-analyst`, `spec-context-analyst`, `domain-researcher`), and
+`consensus-synthesizer`.
 
 </hard_constraints>
 
@@ -202,6 +215,11 @@ Treat async-launch metadata as launch acknowledgement only; collect the
 actual terminal summary through the native result handling before validating
 the gate or advancing the phase. The foreground request is not a host-level
 guarantee.
+
+**Why:** If you invoke a skill directly in your own context, the command's
+completion behavior causes your loop to output plain text and terminate.
+With subagents, the command runs in an isolated context and its completion
+is harmless — the result returns to you and your loop continues.
 
 **Third-party skills:** the same hazard applies when capability discovery
 selects an *installed* skill you invoke via `Skill()` — its completion text
@@ -238,18 +256,29 @@ not bundled agent ids — the `PROJECT_IMPLEMENTATION_AGENT` variable (resolved 
 a host-project agent, with `speckit-pro:phase-executor` as its fallback value)
 and `orchestrator-direct` (the orchestrator acting directly, not a subagent).
 
-### 3. Task list first
+### 3. Canonical plan first
+
+The canonical execution order is:
+
+```text
+PHASES = [specify, clarify, plan, checklist, tasks, analyze, implement]
+```
 
 Before executing any phase, create a granular task list using
 TaskCreate. The task list drives the loop — after each subagent
-returns, check it to know what's next. See Step 1.1 for the
-full naming pattern and rules.
+returns, check it to know what's next.
+The plan accounts for every phase in that list plus prerequisites and
+post-implementation verification. Execution starts and stops within the stage
+resolved at Step 0.6c; phases outside that stage stay visible but are not
+started. `--from-phase` changes the starting index only within the resolved
+stage. It does not remove plan entries from the visible plan or
+`autopilot-state.json`. See Step 1.1 for the full naming pattern and rules.
 
 ### 4. Multi-prompt phases
 
 Clarify and Checklist have multiple prompts in the workflow file.
-Spawn a **separate subagent for each prompt** and run the two-layer
-resolution (Rule 6) after each one BEFORE spawning the next — later
+Spawn a **separate subagent for each prompt**, consume its result, and run the
+two-layer resolution (Rule 6) after each one BEFORE spawning the next — later
 sessions/domains may depend on earlier resolved items. Do not batch
 all sessions and check for markers only at the end.
 
@@ -261,7 +290,8 @@ Checklist) live in
 ### 5. Clarify — executor returns questions to parent
 
 The `clarify-executor` is read-only. It does not invoke
-`/speckit-clarify`, does not wait on a user, and does not edit
+`/speckit-clarify`,
+does not wait on a user, and does not edit
 artifacts. It inspects the workflow prompt, feature spec, and repo
 evidence, then returns a `Clarify Question Set` containing up to 5
 prioritized questions, recommended answers, evidence, and suggested
@@ -285,11 +315,12 @@ result, then apply accepted artifact edits serially and run gates in the parent.
 The parent MUST NOT synthesize directly or silently replace a missing, failed,
 or malformed synthesizer result. Such a result authorizes no edit and cannot
 mark consensus complete. Append the Consensus Resolution Log only from a valid
-consumed result. Follow the mandatory Round 2, stop,
+consumed result.
+Follow the mandatory Round 2, Round 3 tiebreak, stop,
 re-evaluation, and Phase 6 confidence-emit contracts in
 [`references/consensus-protocol.md`](./references/consensus-protocol.md)
-§Category-Routed Dispatch, §Batched Dispatch, §Phase-Specific Consensus Flows,
-and §Logging.
+§Category-Routed Dispatch, §Batched Dispatch, §Round 3 Tiebreak,
+§Phase-Specific Consensus Flows, and §Logging.
 
 ### 6a. Plan ambiguity uses provenance, not consensus
 
@@ -354,9 +385,15 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
    ```
    Record `on_feature_branch`, `PROJECT_COMMANDS` (including the
    quality-gate slots and their `gates` metadata, per
-   `references/prerequisites.md` Step 0.11),
-   `PRESET_CONVENTIONS`, and MCP availability into the workflow file. Pass `PROJECT_COMMANDS`
-   and `PRESET_CONVENTIONS` to every subagent prompt.
+   `references/prerequisites.md` Step 0.11, and the missing-tool default: the
+   recorded install hint, then `skip (spec)`),
+   `PRESET_CONVENTIONS`, and MCP availability into the workflow file. Pass
+   `WORKFLOW_ROOT`, `PROJECT_COMMANDS`, and `PRESET_CONVENTIONS` to every
+   subagent prompt. If any check fails, report the error message from the
+   script's JSON output and route the failure to its owner for repair: the
+   orchestrator repairs a fixable environment check, and the implement-executor
+   repairs a failing project check. Run the repair loop within its allowance,
+   then defer per the Failure Escalation Protocol.
 4. **Constitution validation** — for each principle in
    `.specify/memory/constitution.md`, run the appropriate
    PROJECT_COMMANDS check (typecheck/test/build/lint); update the
@@ -368,15 +405,16 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
    `PROJECT_IMPLEMENTATION_AGENT` (fallback: `speckit-pro:phase-executor`). Also
    check CLAUDE.md for an explicit agent reference.
 6. **Load settings + Claude subagent runtime record** — read
-   `.claude/speckit-pro.local.md` (`consensus-mode`, `gate-failure`,
-   `auto-commit`, `security-keywords`), observe the bounded Claude CLI/runtime
+   `.claude/speckit-pro.local.md` (`gate-failure`, `auto-commit`), observe the bounded Claude CLI/runtime
    inputs, and call runner helper `resolve-claude-subagent-runtime`. Persist its
    record and take `AGENT_TEAMS_AVAILABLE`, `SUBAGENT_WAVE_SIZE`, and resume
    behavior from it (see prerequisites.md §Step 0.6).
 6b. **Resolve pre-Implement confidence gate mode** — run runner helper
    `resolve-confidence-mode` with the invocation argv to resolve
    the mode for G6.5 (precedence: `--strict` / `--advisory` flag
-   in argv > `confidence_gate_mode` in local config > default
+   in argv > `confidence_gate_mode` in `.claude/speckit-pro.local.md`
+   or `.codex/speckit-pro.local.md` (the helper checks both default
+   paths, and `.claude/` wins when both exist) > default
    `advisory`). If the script exits 2 (both flags passed), STOP
    the autopilot before Phase 0 with the conflict message — fail
    fast on usage errors. Record the resolved value as
@@ -528,14 +566,17 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
      relaxed to satisfy this resume path.
 7. **Capability enumeration, grounding & feed-down** — you are the only
    component that discovers openly. Before relying on any capability, enumerate
-   what this session actually exposes: surface deferred MCP tools with
-   `ToolSearch`, and treat the available-skills list as the installed-skill
-   registry. Select best-fit per
+   what this session actually exposes:
+   surface deferred MCP tools with `ToolSearch`, and treat the available-skills
+   list as the installed-skill registry.
+   Select best-fit per
    [`references/capability-discovery.md`](./references/capability-discovery.md) —
    do not assume a fixed set; the user may have installed anything. Your phase
    and consensus subagents inherit the operator's full installed surface and
    follow the same directive — read-only roles select only read/research
-   capabilities (their mutation built-ins are denied). Still pass the
+   capabilities, and the roles that read untrusted input pin closed allowlists.
+   The Step 0.8 capability coverage check is informational: agents have
+   fallbacks. Still pass the
    discovered evidence and capability context a subagent needs directly in its
    prompt: shared context beats re-discovery. Ground your OWN output
    (gate decisions, consensus synthesis, generated PR bodies) per
@@ -559,42 +600,56 @@ Read the workflow file and apply
 `AUTOPILOT_STAGE`, start at the first non-terminal row (`Complete` and
 `Skipped` variants are terminal), and accept `--from-phase` only within that
 stage. If no candidate row remains, execute the stage's terminal instruction
-and STOP; do not scan into a later stage.
+and STOP; do not scan into a later stage. For `implement` and `full`, rebuild
+and finish incomplete canonical Post work before reporting completion.
 
-### 1.1 Create Progress Task List
+### 1.1 Create Progress Plan
 
-After parsing the workflow state, create a **granular** task list. For
-multi-prompt phases (Clarify, Checklist), create one task per
-prompt/session. **Every Clarify session, every Checklist domain, and
-the Analyze phase MUST have a paired Consensus task** immediately
+After parsing the workflow state, create a **granular** progress plan.
+Create it as the visible task list with TaskCreate, and mirror the same items
+into `<workflow directory>/autopilot-state.json`.
+The initial plan must include every canonical phase family even when its
+detailed items will be discovered later. For multi-prompt phases (Clarify,
+Checklist), create one item per prompt/session when known; otherwise create the
+phase discovery placeholder. **Every Clarify session, every Checklist domain,
+and the Analyze phase MUST have a paired Consensus task** immediately
 after. A zero-unresolved Clarify or Checklist task may be skipped; the Analyze
 task still dispatches the synthesizer once for the final five-criterion
-confidence block.
+confidence block, including a clean pass with zero findings, so the block is
+emitted and persisted exactly once for that Analyze pass. **Never omit
+consensus items.**
 
 The full **11-entry Post-Implementation task list** and the task
 naming pattern live in
 [`references/task-list-canonical.md`](./references/task-list-canonical.md).
-Every entry there MUST appear in the visible progress panel before
+Every entry there MUST appear in the visible progress plan before
 Phase 1 starts — when an extension is absent, the task still appears
-marked `skipped: <ext-name> not installed`.
+marked `skipped: <ext-name> not installed`; never silently drop the item.
 
-**Verify completeness before starting Phase 1**: count the prescribed
-entries (every Phase, every Consensus, every `Post:`) and ADD any
-missing before advancing.
+**Phase family coverage is mandatory.** Before any subagent is spawned, verify
+that the plan includes at least one item whose name starts with each of these
+exact prefixes: `Archive Sweep:`, `Phase 0:`, `Phase 1:`, `Phase 2:`,
+`Phase 3:`, `Phase 4:`, `Phase 5:`, `Phase 6:`, `Phase 6.5:`, `Phase 7:`,
+`Post:`. Count the prescribed entries (every Phase, every Consensus, every
+`Post:`). If any is missing from the visible plan or `autopilot-state.json`,
+repair both stores, print the corrected checklist summary, and repeat this
+coverage audit before advancing. A complete workflow plan is required even
+when `--from-phase` starts execution in the middle of the workflow.
 
 **Then run the deterministic coverage guard and repair on a nonzero exit.**
-This is the same guard the Codex variant runs, so both distributions share
-one enforcement path instead of two prose descriptions of one:
+Both hosts run the same guard, so both distributions share one enforcement
+path instead of two prose descriptions of one:
 
 ```text
 Command("<resolved_python> '<plugin-root>/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py' --workflow <workflow-file-path> --state <workflow-directory>/autopilot-state.json --rule status-evidence")
 ```
 
-`--rule status-evidence` gates the **exit code** on the seven workflow/state
+`--rule status-evidence` gates the **exit code** on the nine workflow/state
 status-evidence checks (`workflow_status_evidence_errors`,
 `state_status_errors`, `autonomy_boundary_errors`, `stage_mirror_errors`,
 `workflow_authority_errors`, `state_privacy_errors`,
-`marker_evidence_privacy_errors`) and
+`marker_evidence_privacy_errors`, `formal_checkpoint_errors`,
+`artifact_review_errors`) and
 the three current-run state-plan invariants (`in_progress_errors`,
 `duplicate_state_steps`, `state_order_errors`). The full report is still
 printed; structural coverage checks and every advisory key are visible but
@@ -609,12 +664,27 @@ failing gated key, correct the file the key names. Run the repair loop within it
 advance to Phase 1 only on exit 0.
 
 `<resolved_python>` is the Python 3.11+ interpreter resolved by the
-Installed Runtime Contract; `<plugin-root>` is the directory that owns
-`skills/speckit-autopilot/`. Exit 0 is required to advance; exit 1 reports
-the failing checks as JSON on stdout; exit 2 is an input error. The guard
-also fails when a Workflow Overview status row contradicts a gate verdict
-recorded elsewhere in the same file, which is what keeps the status table
-honest across compactions and manual phase runs.
+Installed Runtime Contract, not a hardcoded interpreter name; `<plugin-root>`
+is the directory that owns `skills/speckit-autopilot/`. Exit 0 is required to
+advance; exit 1 reports the failing checks as JSON on stdout; exit 2 is an
+input error. The guard also fails when a Workflow Overview status row
+contradicts a gate verdict recorded elsewhere in the same file, which is what
+keeps the status table honest across compactions and manual phase runs.
+
+### 1.2 Validate Plan State Before Phase 1
+
+Before Phase 1 starts, validate all of the following or repair it through the owning agent:
+
+- The visible task list matches the workflow-derived checklist
+- `autopilot-state.json` exists and contains the same ordered step list
+- Exactly one plan item is `in_progress`
+- Every canonical phase family prefix from Phase 0 through Phase 7 plus
+  Phase 6.5 and Post appears in both the visible plan and
+  `autopilot-state.json`, with the Archive Sweep item recorded before Phase 0
+- `validate-autopilot-phase-coverage.py` exits 0 for the workflow/state pair
+- Every Clarify session, Checklist domain, and Analyze phase has its
+  mandatory Consensus item
+- The checklist summary was printed so progress is visible to the user
 
 ## Step 2: Main Execution Loop
 
@@ -718,9 +788,30 @@ for phase in PHASES starting from first_pending:
 **Full per-phase prompts, dispatch templates, gate validation
 details, hook events, and the dispatcher-agent table:**
 see [`references/phase-execution.md`](./references/phase-execution.md).
+Before performing the post-G5 steps (8 through 8e), read
+[`references/phase-execution.md`](./references/phase-execution.md)
+§Phase 5: Tasks for the authoritative placeholder, reviewability, marker
+state, and no-side-effect boundaries.
+
+**Plan-phase reviewability budget (advisory):** After the Plan phase
+(G3 pass, `plan.md` exists), the parent runs
+runner helper `estimate-reviewable-loc`, capturing
+the exit code so a non-zero exit can never abort the run. Branch on the
+JSON `status` (`pass` / `over_budget` / `not_estimated`) or the exit
+code, recording the outcome to the workflow file and
+`autopilot-state.json`. This is preventive sizing and **advisory only**
+— no outcome blocks, prompts mid-autonomous-run, or crashes the run
+(hard blocking and re-slicing are a separate step). Full status branch in
+[`references/phase-execution.md`](./references/phase-execution.md).
+
+Once autopilot is running, human input is for exceptional cases only. Once Phase 7 runs, one
+blocked action never stops the run: take the task's own fallback, or defer that
+task and keep executing independent work, then ask once at the end. Follow
+§Blocked Actions Mid-Run: Fall Back or Defer, Never Stop in
+[`references/phase-execution.md`](./references/phase-execution.md#blocked-actions-mid-run-fall-back-or-defer-never-stop).
 
 After all 7 phases pass G7, execute the post-implementation task list.
-The 12 tasks, detailed prompts, and extension routing live in
+The Post tasks, detailed prompts, and extension routing live in
 [`references/post-implementation.md`](./references/post-implementation.md);
 the canonical name list is in
 [`references/task-list-canonical.md`](./references/task-list-canonical.md).
@@ -736,7 +827,8 @@ and mark its task `skipped: <ext> not installed` — do NOT fail the
 autopilot. Recommend `specify extension add <name>` in the warning.
 
 **Dynamic task updates:** If consensus reveals new questions or
-remediation adds loops, create additional tasks via TaskCreate.
+remediation adds loops, add the items to the visible plan and
+`autopilot-state.json`.
 
 ### Phase Dispatch
 
@@ -745,17 +837,21 @@ Before each corresponding dispatch, read the mandatory
 §Subagent Delegation, §Phase-by-Phase Execution, and §Phase 7 Step 3. They own
 the exact workflow-prompt envelope, preset/project-command feed-down,
 branch-aware prefixes, Clarify and Checklist sequencing, namespaced agent
-routing, validated capability batches, TDD injection, and localized repair. Rule 6 and the
-consensus reference own resolution between prompts. Do not reconstruct those
-contracts from this entrypoint.
+routing, validated capability batches, TDD injection, and localized repair. Pass
+the exact workflow prompt plus `WORKFLOW_ROOT`, `PRESET_CONVENTIONS`, and
+`PROJECT_COMMANDS` already resolved above. When already on the feature branch,
+tell Specify to use that branch and existing spec directory rather than create
+another. Rule 6 and the consensus reference own resolution between prompts. Do
+not reconstruct those contracts from this entrypoint.
 
 ## Step 3: Post-Implementation
 
 After Phase 7 passes G7, read and execute
 [`references/post-implementation.md`](./references/post-implementation.md)
-in canonical order. It owns the parallel group, integration suite, mandatory
-UAT runbook, current reviewability evidence and continuation,
-packet dry-run/apply and validation, single- versus split-PR emission, review
+in canonical order. It owns the parallel group, full integration suite,
+mandatory UAT runbook, current reviewability evidence and continuation,
+packet dry-run/apply and current read-only/persisted validation,
+packet-owned base/head/title/body, single- versus split-PR emission, review
 remediation, retrospective, and final summary. Do not start PR side effects
 without the reference's current evidence and packet contracts, and never report
 completion while its continuation or canonical Post work remains incomplete.
@@ -770,21 +866,55 @@ continue only after it has consumed all three terminal worker reports.
 Before any final user-facing response, re-read `autopilot-state.json` and the
 workflow file, reconcile both with the native visible progress plan, and audit
 the complete canonical Post list. A completion response is forbidden while
-any `Post:` item is pending, in progress, or missing. For the first Post
+any `Post:` item is pending, in progress, or missing.
+For the first Post
 parallel group, mark Doctor, Code Review, Verify Implementation, Verify Tasks
 Phantom Check, and Integration Suite in progress before dispatching the three
-workers. Later serial items advance one at a time. Completion requires every
-Post item to be completed or explicitly skipped **and** the created PR URL to
-be known; otherwise continue the loop or report an honest incomplete
-checkpoint, never a completion summary. When every runnable item has finished
-and deferred items remain under §Blocked Actions Mid-Run: Fall Back or Defer,
-Never Stop in
-[`phase-execution.md`](./references/phase-execution.md#blocked-actions-mid-run-fall-back-or-defer-never-stop),
-the read-only `finalize-run` runner helper decides the end. Human UAT is the
+workers. Later serial items advance one at a time.
+Exception: `execution_control.disposition=checkpoint_required` permits an
+honest checkpoint response stating the run is **not complete**, remaining Post
+work, consumed budget, unknown effects, and the operator decision required.
+An unknown dispatch outcome alone is not that decision: settle it with
+`execution-control action=reconcile-unit` (a read-only reconciler over the
+unit's owned paths, runner-classified from git state) and keep dispatching
+independent units; pass `tdd_units` on each implementation reserve.
+A `checkpoint_required` whose `reasons` is only `unknown_dispatch_blocks_unit`
+is not a stop: run `reconcile-unit` for each id in `blocked_by`. On
+`unit_classification_mismatch`, re-inspect the owned paths and call once more
+with the class the paths show; never cycle the three values. Read
+`unknown_dispatch_ids` from `status` before each wave so a blocked unit is
+seldom reserved.
+
+Issue capped approvals yourself when the runner proves them, instead of asking
+the operator. Pass `agent_authorized: true` and no `native_observation` to
+`authorize-corrective-retry` (a lost worker's failed corrective dispatch with
+a recorded native failure event; one per run), to `begin-replan-epoch` (a
+deferral is open, the spec is unchanged, the Tasks rerun changed the plan or
+task fingerprints the stage epoch recorded, and every dispatch is settled; two
+per run), or to `authorize-corrective-continuation` with `spec_file` (the
+metadata-only proof holds). A refusal means the proof does not hold or the cap
+is spent; only then does the request go to the operator. Scope changes and
+forged events stay operator-only.
+Keep pending rows and current status; never mark them completed to stop.
+A failing gate or test is remediated, not deferred: keep remediating while
+each round converges, dispatching each diagnosed fix through the executor and
+rerunning verification. The ledger admits every correction whose predecessor
+shrank the runner-recorded failing set, or moved it with every earlier failure
+passing, with no operator event. `execution_control.disposition=defer`
+(`disposition=defer` in the ledger response) is the non-convergence fallback
+and not a stop: it defers one blocked unit whose
+correction made no measurable progress and whose allowance is spent, and the
+run keeps executing independent work.
+When every runnable item has finished, whether or not deferred items remain, the
+read-only `finalize-run` runner helper decides the end under §Blocked Actions
+Mid-Run: Fall Back or Defer, Never Stop in
+[`phase-execution.md`](./references/phase-execution.md#blocked-actions-mid-run-fall-back-or-defer-never-stop).
+Human UAT is the
 only gate a run may defer, and every required gate must be green at every PR
 head as the runner's own verification record shows it. With every required gate
 green, the run finalizes: mark the stack ready for review (never merge) and open
-the top PR body with its `Deferred / not verified` section. Human UAT, a ledger
+the top PR body with its `Deferred / not verified` section.
+Human UAT, a ledger
 `deferred` unit that failed every escalation tier, and an unresolved task never
 keep the stack in draft: they reach the owner as items in the end-of-run
 request, the units and tasks under "Decisions for you". A failed unit climbs two
@@ -794,6 +924,23 @@ blocked by a harness error after that is one human stop, and the stack stays in 
 Print the final report as plain text on `outcome=complete` with nothing deferred, and ask no question.
 Otherwise print `end_of_run_request` as plain text in the final message. It is the handoff, listing every fallback taken and every
 deferred item, including each entry of the ledger's `deferred` list.
+If the audit finds incomplete Post work, set the first
+incomplete item to `in_progress` in both state stores and continue the
+autopilot loop instead of summarizing. `Post: Retrospective` is the final
+Post item; it must be completed or explicitly skipped before the
+autopilot can report completion.
+
+The same audit must reconcile every started native command, tool, and agent
+with its terminal result. Give each final local gate one owner, run each gate
+once as a separately attributable foreground command, and wait on that exact
+native handle before starting the next gate. Never launch an overlapping copy
+of pending work. If time or budget prevents terminal reconciliation, preserve
+the unresolved identities and report an incomplete checkpoint instead of a
+completion response.
+
+Only after every Post item is completed or explicitly skipped, and the
+PR URL is known, the autopilot is DONE. Report the final summary with
+PR URL.
 
 ## Workflow File Update Protocol
 
@@ -835,7 +982,7 @@ directions; do not infer a broader precedence rule.
   runner proves it against the committed baseline and spends no cycle. Never
   reset or bypass the ledger otherwise; `checkpoint_required` and ledger integrity errors still stop.
 - **Consensus cannot agree** (Round 2 all-disagree, a security item without
-  3/3, an analyst that fails its retry, or conservative mode): run the Round 3
+  3/3, or an analyst that fails its retry): run the Round 3
   agent tiebreak, a fresh analyst plus a max-effort `consensus-tiebreaker`,
   record the most conservative option that satisfies the spec as an assumption
   with the dissent logged, and continue. Only a choice that changes product
@@ -856,7 +1003,7 @@ in [`references/error-recovery.md`](./references/error-recovery.md).
 - [Stop Policy](./references/stop-policy.md) — The one contract for when a run may involve a human; stop reasons and their classes
 - [Prerequisites](./references/prerequisites.md) — Archive Sweep + Step 0.x environment, settings, constitution, agent detection, command/preset discovery
 - [Phase Execution](./references/phase-execution.md) — Per-phase prompt construction, dispatch templates, branch-aware/Clarify/Multi-prompt prefixes
-- [Consensus Protocol](./references/consensus-protocol.md) — Category-routed dispatch, Round 1/2, per-phase flows, Logging schema
+- [Consensus Protocol](./references/consensus-protocol.md) — Category-routed dispatch, Round 1/2/3, per-phase flows, Logging schema
 - [Gate Validation](./references/gate-validation.md) — Programmatic gate checks (G0–G7), auto-fix loops, escalation
 - [Post-Implementation](./references/post-implementation.md) — 11-task post-impl sequence (incl. UAT runbook), integration suite, PR creation, review loop
 - [Task List Canonical](./references/task-list-canonical.md) — Task naming pattern + canonical post-implementation entries
@@ -865,7 +1012,7 @@ in [`references/error-recovery.md`](./references/error-recovery.md).
 - [Error Recovery](./references/error-recovery.md) — Resume, common issues, context-window management
 - [TDD Protocol](./references/tdd-protocol.md) — Red-green-refactor rules injected into implementation agent prompts
 - [Plugin Limitations](./references/plugin-limitations.md) — permissionMode/hooks/mcpServers caveats and capability fallback behavior
-- [Agent Teams Integration](./references/agent-teams-integration.md) — Use-site map (current + planned), capability detection, lifecycle policy
+- [Agent Teams Integration](./references/agent-teams-integration.md) — Use-site map of current sites, capability detection, lifecycle policy
 - [Token Discipline](./references/token-discipline.md) — Opt-in compressed vocabulary for inter-agent transcripts (off by default; never applied to PR bodies, logs, or artifacts)
 
 Active runner operations are named at their use sites and in the targeted

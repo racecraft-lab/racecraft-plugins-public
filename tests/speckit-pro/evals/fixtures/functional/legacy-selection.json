@@ -5834,7 +5834,7 @@
             "Lists pre-create PR workflow contract validation via runner helper validate-pr-workflow-contract with packet title and changed-file evidence",
             "Lists PR creation with gh pr create --base --head --title --body-file using packet target/title/body values",
             "Lists the parent-session review remediation loop",
-            "States final-reviewability-backstop and detect-stack-manager-plan are not active installed helper calls, so current evidence and explicit gh fallback behavior apply",
+            "States final-reviewability-backstop is deferred, so current committed reviewability evidence is required before PR side effects, and that the orchestrator runs detect-stack-manager-plan in dry_run per stack-manager.md before any stack mutation",
             "States packet emission or validation failures block before PR creation; no post-create auto-repair fallback is used"
           ]
         }

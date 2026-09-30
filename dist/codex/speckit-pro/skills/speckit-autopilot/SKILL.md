@@ -20,20 +20,6 @@ description: >
 
 # SpecKit Autopilot — Autonomous Execution Engine
 
-At kickoff/resume, read [Bounded Execution and Verification](references/execution-efficiency.md).
-Initialize/recover its execution-control ledger before dispatch. Its metadata,
-native batching, proof-reuse, shared repair ceilings, and honest checkpoint
-rules govern every phase and Post step; agent replacement never resets budgets.
-
-When a bounded request supplies an exact native command together with an
-invocation count or order, that command is the authority. Execute each listed
-command exactly once and in order, with no interpreter preflight, shell
-variable, wrapper, replay, capture redirection, or substituted command unless
-the request explicitly permits it. Consume the direct native result; do not
-rerun a helper merely to make its output easier to parse. The native tool result
-is the captured result: preserve that direct response for later artifacts. Do
-not issue a second invocation to obtain a file, exit code, stdout, or stderr.
-
 ## Installed Runtime Contract
 
 Installed Claude and Codex surfaces resolve Python 3.11 or newer, invoke
@@ -46,39 +32,45 @@ PowerShell-specific command-language requirement for installed workflows.
 
 This skill handles autonomous workflow EXECUTION. For methodology
 questions, SDD philosophy, comparisons, design rationale, deep dives, or
-learning how SpecKit works, redirect the user to `$speckit-coach` when the
-user is asking for explanation rather than execution. Do not redirect a real
+learning how SpecKit works, redirect the user to
+`$speckit-coach`
+when the user is asking for explanation rather than execution. Do not redirect a real
 implementation request merely because it asks for detailed progress or uses
 the word "implement": when the user supplies or identifies a populated
 workflow and asks to run, resume, or implement it, this remains an autopilot
 execution request.
 
-You are an **orchestrator** for SpecKit workflows. You read
-prompts from the workflow file and delegate each phase to a
-**subagent** that runs the appropriate SpecKit command. You never
-run the commands yourself — you spawn, collect results, validate
-gates, and advance through every phase in the resolved
-`AUTOPILOT_STAGE`. A `--stage plan` run stops at its stage boundary;
-`full` covers all seven phases.
+You are an **orchestrator** for SpecKit workflows: read prompts from
+the workflow file and delegate each phase to a **subagent** that runs
+the phase's SpecKit command. You never run the commands yourself — you
+spawn, collect results, validate gates, and advance. Your context
+window auto-compacts, which is not a stopping point: complete every
+phase in the **resolved stage's** range (`AUTOPILOT_STAGE`, set at Step
+0.6c). A `--stage plan` run finishes its work after the confidence gate.
+A `full` run completes all 7 phases.
 
 When a run may involve a human, and which reasons count, is set by the shared
-[Autopilot Stop Policy](references/stop-policy.md).
+[Autopilot Stop Policy](./references/stop-policy.md).
 
 **Neither is a status summary a stopping point.** Reporting progress to the
 operator is not a step in the workflow: when a phase still has work, the next
 `spawn_agent` or `wait_agent` call goes in the same turn as the report. Ending a
 turn with no agent in flight and tasks still pending leaves nothing to resume
-the run, which stops the stage short of its terminal step. See
-[Phase Execution §Never Yield With Nothing In Flight](./references/phase-execution-codex.md#never-yield-with-nothing-in-flight).
+the run, which stops the
+stage short of its terminal step. See
+[Phase Execution §Never Yield With Nothing In Flight](./references/phase-execution.md#never-yield-with-nothing-in-flight).
 
 ## Architectural Constraint — Main Agent Is The Orchestrator
 
-This skill loads into the **main Codex session agent**, which owns all phase
-and lifecycle dispatch. Phase workers are terminal workers and must not
-orchestrate later phases. **If this skill is loaded inside a subagent context,
-refuse and surface the violation.** Discover the current host's actual
-collaboration capabilities below; do not infer architecture from a universal
-nesting limit.
+This skill loads into the **main session agent**, which owns all phase and
+lifecycle dispatch. EVERY workflow dispatch decision — parallel subagents vs
+sequential, model routing, and lifecycle sequencing — happens HERE. Phase
+executors are terminal workers; they don't dispatch workflow phases or
+orchestrate later phases. **If this skill is ever loaded inside a subagent
+context**, it MUST refuse and surface the violation rather than orchestrate.
+
+Discover the current host's actual collaboration capabilities below; do not
+infer architecture from a universal nesting limit.
 
 ## Codex Runtime Contract
 
@@ -161,8 +153,9 @@ Bind the workflow to actual Codex primitives:
 - Use the current surface's exposed read, search, command, and edit equivalents
   for workflow parsing, validation, and artifact mutation.
 - Persist orchestration state to `autopilot-state.json` in the same directory
-  as the workflow file. Resume reads that file first, then reconciles with the
-  workflow file.
+  as the workflow file. It mirrors the active run: on resume, read it and
+  reconcile it with the workflow file, which wins for the Workflow Overview and
+  `Stage` (Step 0.6e and the Workflow File Update Protocol below).
 - This skill owns `./agents/openai.yaml` as Codex skill metadata for UI
   appearance and invocation policy. Optional research/context capabilities are
   discovered at runtime, so the sidecar MUST NOT declare Tavily, Context7, or
@@ -184,42 +177,64 @@ any phase work, at setup or run start, if any required SpecKit Pro subagent is
 missing, STOP and instruct the user to run `$install` from the SpecKit Pro
 plugin, then restart Codex. After phase work has begun, a plugin update or agent
 refresh is never a stop: follow §Plugin Update Mid-Run: Record, Re-resolve,
-Continue in [phase-execution-codex.md](./references/phase-execution-codex.md).
+Continue in [phase-execution.md](./references/phase-execution.md).
 
 ## Prerequisites — Model
 
-The autopilot orchestrator makes gate decisions, coordinates the named
-`consensus-synthesizer`, and manages a 7-phase workflow. It consumes the
-synthesizer's actual result and never substitutes parent-authored synthesis.
-Running on a weak model produces poor orchestration decisions that cascade
+The orchestrator makes gate decisions, coordinates consensus synthesis, and
+manages a 7-phase workflow. After every analyst round it dispatches the named
+synthesizer (`speckit-pro:consensus-synthesizer` on Claude Code,
+`consensus-synthesizer` on Codex), awaits it, and consumes its actual returned
+result. The parent never substitutes its own synthesis. In both hosts, the
+parent owns artifact application and gates. Weak-model orchestration cascades
 into expensive rework.
 
 **Before executing any step**, verify:
 
-1. **Model check:** You MUST be running on the highest-capability Codex model
-   tier available. Prefer `gpt-6-sol` when it is available
-   in the Codex model picker; `gpt-6-astra` is also acceptable. If the
-   session is explicitly on a mini, fast, Luna, or otherwise reduced-capability
-   tier, STOP and instruct the user to relaunch the autopilot on a stronger
-   model. `$install` owns bundled-agent installation and fallback configuration.
+1. **Model:** run on the highest-capability Codex model tier available. Prefer
+   `gpt-6-sol` when it is available in the Codex model picker; `gpt-6-astra`
+   is also acceptable. If the session is on a mini, fast, Luna, or otherwise
+   reduced-capability tier, warn the operator once and route gate and consensus
+   dispatches to the strongest available tier. `$install` owns bundled-agent
+   installation and fallback configuration.
 
-**Reasoning effort is inherited, never checked.** Run at whatever
-`model_reasoning_effort` the session already has and do not stop, warn,
-or ask the operator to relaunch. Bundled subagents keep their declared effort;
-the optional `autopilot-fast-helper` is pinned to low effort on gpt-6-luna
-for latency-sensitive prep. Those pins only constrain worker effort and never
-refuse to run. The operator owns the session setting; the plugin does not veto
-it.
+**Reasoning effort is inherited, never checked.** Run at whatever the
+operator has set for the session and do not stop, warn, or ask them to
+change it. The bundled subagents carry their own pins: judgment roles
+ship at a measured high effort (`high`, `xhigh`, or `max` on Claude;
+`xhigh` or `max` on Codex), and bounded rule-applying
+roles that only apply rules to inputs already in their prompt ship at
+the documented default.
+The optional `autopilot-fast-helper` is pinned to low effort on gpt-6-luna
+for latency-sensitive prep.
+A pin sets that worker's effort regardless of
+the session and never refuses to run.
+The operator owns the session setting; the plugin does not veto it.
 
-The model check above is non-negotiable.
+## Execution Rules
 
-## Critical: Execution Rules
+At kickoff/resume, read [Bounded Execution and Verification](./references/execution-efficiency.md).
+Initialize/recover its durable execution-control ledger before phase dispatch.
+It owns task metadata, native batching, proof reuse, the shared repair
+ceilings, and the honest checkpoint rules across every phase, nested worker,
+and Post step. Agent replacement never resets budgets. A run has no
+wall-clock limit.
 
-These rules are non-negotiable. Follow them exactly.
+When a bounded request supplies an exact native command together with an
+invocation count or order, that command is the authority. Execute each listed
+command exactly once and in order, with no interpreter preflight, shell
+variable, wrapper, replay, capture redirection, or substituted command unless
+the request explicitly permits it. Consume the direct native result; do not
+rerun a helper merely to make its output easier to parse. The native tool result
+is the captured result: preserve that direct response for later artifacts. Do
+not issue a second invocation to obtain a file, exit code, stdout, or stderr.
 
 ### 0. Forbidden skill invocations
 
-**Never invoke `$grill-me` from any phase, subagent, or consensus step.**
+<hard_constraints>
+
+**Do not invoke `grill-me` from any autopilot phase, subagent, or consensus step — ever.**
+
 Grill-me is a strictly human-in-the-loop, pre-workflow scoping interview. Its
 runtime guard probes for `request_user_input` then a TTY before asking any
 question; if invoked from autopilot's autonomous loop it will refuse and write
@@ -239,24 +254,9 @@ This rule applies to: the orchestrator, every phase subagent
 (`codebase-analyst`, `spec-context-analyst`, `domain-researcher`), and
 `consensus-synthesizer`.
 
-### 1. Canonical plan and stage-bounded execution
+</hard_constraints>
 
-The canonical execution order is:
-
-```text
-PHASES = [specify, clarify, plan, checklist, tasks, analyze, implement]
-```
-
-Before phase work starts, the parent session MUST create a durable progress
-plan that accounts for every phase in that list plus prerequisites and
-post-implementation verification. Execution starts and stops within the stage
-resolved at Step 0.6c; phases outside that stage stay visible but are not
-started.
-
-`--from-phase` changes the starting index only within the resolved stage. It
-does not remove plan entries from `update_plan` or `autopilot-state.json`.
-
-### 2. Subagent per phase
+### 1. Subagent per phase
 
 For each phase, spawn a **foreground subagent** with `spawn_agent`,
 wait for it with `wait_agent`, and keep orchestration in the parent.
@@ -272,9 +272,10 @@ $-invoke, its completion text can likewise end the loop. Capture the skill's
 result as durable state/evidence and continue; never treat a third-party skill's
 completion text as your own terminal output.
 
-### 3. Use phase-specific executor agents
+### 2. Use phase-specific executor agents
 
-Each phase type has its own specialized executor agent:
+Each phase type has its own specialized executor agent. All noise
+stays in the subagent's context; the parent receives only a summary.
 
 | Phase | Agent | Why specialized |
 | ----- | ----- | --------------- |
@@ -312,17 +313,41 @@ Workflow prompt:
 Each agent runs the command (and any post-execution work like gap
 remediation) in isolation and returns a structured summary.
 
+### 3. Canonical plan first
+
+The canonical execution order is:
+
+```text
+PHASES = [specify, clarify, plan, checklist, tasks, analyze, implement]
+```
+
+Before phase work starts, the parent session MUST create a durable progress
+plan with `update_plan` and `autopilot-state.json`.
+The plan accounts for every phase in that list plus prerequisites and
+post-implementation verification. Execution starts and stops within the stage
+resolved at Step 0.6c; phases outside that stage stay visible but are not
+started. `--from-phase` changes the starting index only within the resolved
+stage. It does not remove plan entries from the visible plan or
+`autopilot-state.json`. See Step 1.1 for the full naming pattern and rules.
+
 ### 4. Multi-prompt phases
 
 Clarify and Checklist have multiple prompts in the workflow file.
-Spawn a **separate subagent for each prompt**, consume its result, and complete
-Rule 6 resolution before starting the next prompt. Follow the per-phase flow in
-[`references/phase-execution-codex.md`](./references/phase-execution-codex.md).
+Spawn a **separate subagent for each prompt**, consume its result, and run the
+two-layer resolution (Rule 6) after each one BEFORE spawning the next — later
+sessions/domains may depend on earlier resolved items. Do not batch
+all sessions and check for markers only at the end.
+
+Per-phase flow templates (per-session for Clarify, per-domain for
+Checklist) live in
+[`references/phase-execution.md`](./references/phase-execution.md)
+§Main Execution Loop.
 
 ### 5. Clarify — executor returns questions to parent
 
 The `clarify-executor` is read-only. It does not invoke
-`$speckit-clarify`, does not wait on a user, and does not edit
+`$speckit-clarify`,
+does not wait on a user, and does not edit
 artifacts. It inspects the workflow prompt, feature spec, and repo
 evidence, then returns a `Clarify Question Set` containing up to 5
 prioritized questions, recommended answers, evidence, and suggested
@@ -338,33 +363,30 @@ items via consensus if needed (see Rule 6).
 After EACH Clarify, Checklist, or Analyze executor returns, complete consensus
 before the next prompt. The parent applies accepted Clarify edits; all three
 executors surface remaining items with category tags. For every such item,
-call `parse-consensus-categories`, dispatch exactly the returned analysts in
-host-bounded waves, and consume their actual results. After every analyst round,
-dispatch the installed `consensus-synthesizer`, await it, validate and consume
-its actual result, then apply accepted artifact edits serially and append the
-Consensus Resolution Log. The parent MUST NOT synthesize directly or silently
-replace a missing, failed, or malformed synthesizer result. Such a result
-authorizes no edit and cannot mark consensus complete. Follow the mandatory
-Codex dispatch form `spawn_agent` with
+call `parse-consensus-categories`, dispatch exactly the routed analysts in
+host-bounded batches, and consume their actual results. After every analyst
+round — including a round with one or two analysts — dispatch the runtime's
+named `consensus-synthesizer`, await it, validate and consume its actual returned
+result, then apply accepted artifact edits serially and run gates in the parent.
+The parent MUST NOT synthesize directly or silently replace a missing, failed,
+or malformed synthesizer result. Such a result authorizes no edit and cannot
+mark consensus complete. Append the Consensus Resolution Log only from a valid
+consumed result.
+Follow the mandatory Codex dispatch form `spawn_agent` with
 `agent_type="consensus-synthesizer"`.
 A default or general-purpose worker is not the named synthesizer; its result is
-invalid. Follow the mandatory
-Round 2, Round 3 tiebreak, re-evaluation, and Phase 6 confidence-emit contracts in
-[`consensus-protocol.md`](references/consensus-protocol.md)
+invalid.
+Follow the mandatory Round 2, Round 3 tiebreak, stop,
+re-evaluation, and Phase 6 confidence-emit contracts in
+[`references/consensus-protocol.md`](./references/consensus-protocol.md)
 §Category-Routed Dispatch, §Batched Dispatch, §Round 3 Tiebreak,
-§Phase-Specific Consensus Flows, and §Logging. Consensus that cannot agree (a
-Round 2 all-disagree, a security item without 3/3, an analyst that fails its
-retry, or conservative mode) runs the Round 3 agent tiebreak, a fresh analyst
-plus a max-effort `consensus-tiebreaker`, and records the most conservative
-option that satisfies the spec as an assumption with the dissent logged. It
-never asks and never stops the run; only a product-scope choice the spec and
-roadmap do not settle waits for the one end-of-run request.
+§Phase-Specific Consensus Flows, and §Logging.
 
 ### 6a. Plan ambiguity uses provenance, not consensus
 
 If G3 fails because Plan contains unresolved requirement wording, the parent
 orchestrator MUST follow
-[`gate-validation.md`](references/gate-validation.md)
+[`references/gate-validation.md`](./references/gate-validation.md)
 §Plan ambiguity provenance repair before escalation. Trace the wording to its
 original source, assign the required provenance class, write the conditional
 Plan Ambiguity Repair Log, and give the same Plan executor at most 2 repairs,
@@ -392,210 +414,337 @@ Guardrails:
 
 This helper is a latency optimization, not a dependency.
 
-You run in the **main session** and keep all phase and lifecycle dispatch there.
-
 ## Input
 
 You receive a workflow file path and optional arguments:
 
 ```text
-path/to/workflow-file.md [--from-phase specify|clarify|plan|checklist|tasks|analyze|implement] [--spec SPEC-ID] [--strict | --advisory] [--stage plan|implement|full]
+path/to/workflow-file.md [--from-phase specify|clarify|plan|checklist|tasks|analyze|implement] [--spec SPEC-ID] [--stage plan|implement|full] [--strict | --advisory]
 ```
 
-`--stage` selects which range of phases this invocation runs, and Step 0.6c
-resolves it when omitted. Argument order is presentation only — every
-argument is read by name. Stage-bounded execution is specified in
-[phase-execution-codex.md](./references/phase-execution-codex.md#stage-bounded-execution).
+`--stage` selects which range of phases this invocation runs; omit it and
+Step 0.6c resolves the stage from the workflow file's own status table.
+Argument order is presentation only — every argument is read by name.
+
+Before anything else, run the Step -2 run-start authorization in
+[`references/prerequisites.md`](./references/prerequisites.md#step--2-run-start-authorization):
+before Archive Sweep and any phase work, probe each egress class, an external
+workflow root, and the private autonomy-record write, and make the one
+run-start request ([run-start grants](./references/stop-policy.md#run-start-grants)).
 
 Before Step -1, use the `resolve-workflow-binding` runner helper exactly as
-specified in `prerequisites-codex.md`. That reference owns the executable-root
+specified in `prerequisites.md`. That reference owns the executable-root
 invariant and fail-closed recovery.
-
-`--strict` and `--advisory` override the pre-Implement confidence
-gate (G6.5) mode for this invocation. They beat
-`confidence_gate_mode` in `.claude/speckit-pro.local.md` (or
-`.codex/speckit-pro.local.md`). Passing both is a usage error;
-STOP before Phase 0 with the conflict message from
-the runner helper operation `resolve-confidence-mode`. See [Gate Validation §G6.5](references/gate-validation.md#g65--pre-implement-confidence-gate-between-analyze-and-implement)
-and the precedence rule documented there.
 
 ## Step -1 + Step 0: Pre-flight (Archive Sweep + Prerequisites)
 
-See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full pre-flight sequence:
+Run the pre-flight sequence before any phase work. A failure goes to the owning agent for repair; only an exhausted repair defers.
 
-- **Step -2: Run-Start Authorization** — before Archive Sweep and any phase work, probe each egress class, an external workflow root, and the private autonomy-record write, and make the one run-start request ([prerequisites-codex.md](./references/prerequisites-codex.md#step--2-run-start-authorization); [run-start grants](references/stop-policy.md#run-start-grants))
-- **Step -1: Archive Sweep Startup** — list merged prior specs with helper
-  `list-archive-candidates`, then execute the installed archive extension's
-  project-local command contract directly in Codex once per `archive_order`
-  entry (`archive command: specs/<merged-spec-dir> --spec-only --plan-only --changelog-only`, which keeps
-  agent context files out of scope; none on `main` or a protected branch), use the Codex-native worktree binding for path
-  prerequisites, and fail closed on a broken installed extension
-- **Step 0.0: Use Runner Operations** — invoke `speckit_pro_runner` helper IDs with one JSON request on stdin
-- **Step 0.1–0.7: Environment Checks** — `check-prerequisites` JSON parsing, branch detection
-- **Step 0.6: Load Settings** — `consensus-mode`, `gate-failure`, `auto-commit`, `security-keywords`
-- **Step 0.6b: Resolve Pre-Implement Confidence Gate Mode** — run helper
-  operation `resolve-confidence-mode` to resolve
-  `CONFIDENCE_GATE_MODE` for G6.5. Precedence: `--strict`/`--advisory`
-  flag > `confidence_gate_mode` in `.claude/speckit-pro.local.md`
-  (or `.codex/speckit-pro.local.md` — the script checks both
-  default paths, with `.claude/` winning when both exist) > default
-  `advisory`. If the script exits 2 (both flags passed), STOP
-  before Phase 0 with the conflict message. **Do not re-run the
-  script at G6.5; the gate reads `CONFIDENCE_GATE_MODE` directly.**
-- **Step 0.6c: Resolve The Stage** — run helper operation
-  `resolve-autopilot-stage` with the invocation argv and the workflow
-  file path. Record `stage` as `AUTOPILOT_STAGE` and keep `source`,
-  `basis`, `recorded_stage`, `planning_complete`, and
-  `confidence_gate_status` for the phase loop. The committed
-  `autopilot-state.json` stores only those decision fields: never the raw
-  envelope, its `argv`, an absolute path, or an external task or session id,
-  such as a delegation `task_id` (a digest or short redacted reference is
-  fine). The Step 1.1 guard fails on them as `state_privacy_errors`. Store a
-  native or operator event id, such as an approval event id, as
-  `sha256:<digest>`: the hex SHA-256 of the raw value. The same rule covers
-  every external task, session, thread, or event id cited in a committed record
-  (marker checkpoints, verification reports, the workflow file, implementation
-  notes, and PR bodies): write it as `sha256:<digest>` or omit it. The guard
-  fails on a raw id in marker checkpoint or verification evidence as
-  `marker_evidence_privacy_errors`, naming the file and field; those records are
-  bound by their checkpoint digests, so write the digest before the checkpoint
-  is recorded. Keep optional `artifact_review` for
+1. **Use runner helper operation IDs**. Invoke read-only helper behavior through
+   `resolved_python -m speckit_pro_runner` with one JSON request on stdin; do not rely on
+   plugin-local script files.
+2. **Archive Sweep** — list merged prior specs with helper
+   `list-archive-candidates`, then execute the installed archive extension's
+   project-local command contract directly in Codex once per `archive_order`
+   entry (`archive command: specs/<merged-spec-dir> --spec-only --plan-only --changelog-only`, which keeps
+   agent context files out of scope; none on `main` or a protected branch), use the Codex-native worktree binding for path
+   prerequisites, and fail closed on a broken installed extension: defer the
+   Archive Sweep with the exact failed path or operation and continue to Phase 0.
+3. **Run prereq helper operations** and parse the JSON output of each:
+   ```text
+   helper_id=check-prerequisites operation=check-prerequisites mode=read_only
+   helper_id=detect-commands operation=detect-commands mode=read_only
+   helper_id=detect-presets operation=detect-presets mode=read_only
+   ```
+   Record `on_feature_branch`, `PROJECT_COMMANDS` (including the
+   quality-gate slots and their `gates` metadata, per
+   `references/prerequisites.md` Step 0.11, and the missing-tool default: the
+   recorded install hint, then `skip (spec)`),
+   `PRESET_CONVENTIONS`, and MCP availability into the workflow file. Pass
+   `WORKFLOW_ROOT`, `PROJECT_COMMANDS`, and `PRESET_CONVENTIONS` to every
+   subagent prompt. If any check fails, report the error message from the
+   script's JSON output and route the failure to its owner for repair: the
+   orchestrator repairs a fixable environment check, and the implement-executor
+   repairs a failing project check. Run the repair loop within its allowance,
+   then defer per the Failure Escalation Protocol.
+4. **Constitution validation** — for each principle in
+   `.specify/memory/constitution.md`, run the appropriate
+   PROJECT_COMMANDS check (typecheck/test/build/lint); update the
+   workflow's Prerequisites table. On a failure, route each failing check to the implement-executor,
+   which repairs it (a red baseline included); run the repair loop within its allowance, then defer per the Failure Escalation Protocol
+   with `stop_reason:all_tiers_failed` only when repair fails.
+5. **Codex agent availability and implementation agent detection** — run the
+   promoted `install-codex-agents` helper in `dry_run` mode against the selected
+   project or user destination and its installed model and Luna fallback
+   choice. This check runs at setup or run start, before any phase work. If any
+   required file is missing or stale, STOP and instruct the user to run
+   `$install`, approve the expected local write, and restart Codex. Do not apply
+   the repair inside autopilot: Codex fixes its list of custom agents when the
+   session starts. Once phase work has begun, a stale or refreshed agent file is
+   recorded, never a stop: see §Plugin Update Mid-Run: Record, Re-resolve,
+   Continue. Then discover `PROJECT_IMPLEMENTATION_AGENT` from `.codex/agents/`.
+6. **Load settings** — read `gate-failure` and `auto-commit` from
+   `.claude/speckit-pro.local.md` or
+   `.codex/speckit-pro.local.md` (see prerequisites.md §Step 0.6).
+6b. **Resolve pre-Implement confidence gate mode** — run runner helper
+   `resolve-confidence-mode` with the invocation argv to resolve
+   the mode for G6.5 (precedence: `--strict` / `--advisory` flag
+   in argv > `confidence_gate_mode` in `.claude/speckit-pro.local.md`
+   or `.codex/speckit-pro.local.md` (the helper checks both default
+   paths, and `.claude/` wins when both exist) > default
+   `advisory`). If the script exits 2 (both flags passed), STOP
+   the autopilot before Phase 0 with the conflict message — fail
+   fast on usage errors. Record the resolved value as
+   `CONFIDENCE_GATE_MODE` for use at G6.5. **Do not re-run the
+   resolver at G6.5; G6.5 reads `CONFIDENCE_GATE_MODE` directly.**
+   See [Gate Validation §G6.5](./references/gate-validation.md#g65--pre-implement-confidence-gate-between-analyze-and-implement).
+6c. **Resolve the stage** — run runner helper `resolve-autopilot-stage`
+   with the invocation argv and the workflow file path. It returns one
+   JSON envelope; record `stage` as `AUTOPILOT_STAGE` and keep `source`,
+   `basis`, `recorded_stage`, `planning_complete`, and
+   `confidence_gate_status` for the phase loop. The committed
+   `autopilot-state.json` stores only those decision fields: never the raw
+   envelope, its `argv`, an absolute path, or an external task or session id,
+   such as a delegation `task_id` (a digest or short redacted reference is fine). The Step 1.1 guard fails on
+   them as `state_privacy_errors`. Store a native or operator event id, such as
+   an approval event id, as `sha256:<digest>`: the hex SHA-256 of the raw value.
+   The same rule covers every external task, session, thread, or event id cited in a committed record
+   (marker checkpoints, verification reports, the workflow file, implementation notes, and PR bodies):
+   write it as `sha256:<digest>` or omit it. The guard fails on a raw id in marker checkpoint or
+   verification evidence as `marker_evidence_privacy_errors`, naming the file and field; those records
+   are bound by their checkpoint digests, so write the digest before the checkpoint is recorded. Keep optional `artifact_review` for
    terminal-step routing and print its unresolved preview dispositions. A pending
    handoff can auto-resolve `plan` even when `planning_complete` is true; explicit
    stages still win and started implementation is never routed backward. An explicit `--stage`
-  always wins; with none given the stage is resolved from the workflow
-  file's `## Workflow Overview` table. Open CRITICAL/HIGH rows in its
-  Analysis Results table also keep planning incomplete, even when every row
-  reads Complete. If the operation exits 2, STOP
-  before Phase 0 with that one-line message — the same fail-fast shape
-  0.6b uses. **Print the resolved stage and its basis before any phase
-  work begins.**
-  - **Corroborate the `Draft PR` row.** Read the row first; when absent, send no
-    `pr_observation`. When present, take exactly **one** read-only observation,
-    scoped to the head branch. `--state all` separates a closed pull request from
-    an absent one. The trigger is the row's presence, not the stage.
+   always wins; with none given the stage is resolved from the workflow
+   file's `## Workflow Overview` table. If the operation exits 2
+   (unrecognised stage, `--stage` repeated with different values,
+   `--from-phase` outside an explicitly named stage's range, `--stage`
+   with no value, or an unreadable/unparseable workflow file), STOP the
+   autopilot before Phase 0 with that one-line message — the same
+   fail-fast shape 0.6b uses. **Print the resolved stage and its basis
+   before any phase work begins** — before Phase 0, before the Step 1
+   coverage guard, and before the first subagent dispatch. Emit one line,
+   `Stage: <stage> (<source>) — <basis>`, using the envelope's `basis`
+   verbatim. For an auto-detected stage that basis names the first
+   non-terminal planning phase and its status, which is the row the operator
+   has to act on; `plan` after a strict-mode gate stop reads
+   `the first non-terminal planning phase is Confidence Gate, which is
+   ⚠️ Blocked` rather than an unexplained stage token.
+   Open CRITICAL/HIGH rows in the workflow's Analysis Results table also keep
+   planning incomplete, even when every row reads Complete; the basis then names
+   the open-finding count.
+   If Step 0.6d reclaimed the slot, append
+   `reclaimed the state slot from <prior workflow file> (prior status:
+   <prior_run_note>)` to the same report. A `prior_run_note` of
+   `in_progress` is the only available signal that a second run may still be
+   live — the state file records no pid, heartbeat, or lease — so it is
+   **reported, never blocking**. The stage bounds which phases this
+   run may start: see
+   [Phase Execution §Stage-Bounded Phase Selection](./references/phase-execution.md#stage-bounded-phase-selection).
+   - **Corroborate the recorded draft pull request — one read-only observation
+     per run, taken only when the workflow file's `Draft PR` row is present.**
+     Read the row first. When it is absent, take no observation at all and send
+     no `pr_observation`. When it is present, take exactly one observation,
+     scoped to the feature's head branch:
 
-    ```text
-    gh pr list --head <branch> --state all --json number,url,state,isDraft,headRefName
-    ```
+     ```text
+     gh pr list --head <branch> --state all --json number,url,state,isDraft,headRefName
+     ```
 
-  - **Send it as `inputs.pr_observation`; the helper classifies.** Set `ok` to
-    the JSON literal `true` — never `1`, never `"true"` — only when the query
-    exited zero *and* parsed, carrying the array in `pull_requests`; otherwise
-    `ok: false` with a `reason`. **You observe; the helper never runs the tool or
-    touches the network.** Anything less yields `skipped`: an unreachable query
-    is not evidence a pull request is gone.
-  - **Print `corroboration.status` beside the `Stage:` line every run**; all six
-    print:
+     `--state all` is load-bearing: returning pull requests in every state is
+     what makes a closed one distinguishable from an absent one.
+     That observation is Step 0.6c's own — one at this step per run, not a
+     cap on every corroboration read a run may take. The create-or-refresh
+     terminal step and the Phase 7 feedback sweep's description refresh each
+     take their own later live read.
+   - **The trigger is the row's presence, not the stage.** Any invocation
+     carrying a `Draft PR` row takes this observation — including one whose
+     stage came from an explicit `--stage` argument, and one that resolves a
+     stage other than `plan`. A run with no emission terminal step still reports
+     the status and still records a discrepancy durably.
+   - **Pass the result to `resolve-autopilot-stage` as `inputs.pr_observation`,
+     and let the helper classify it.** Set `ok` to the JSON literal `true` —
+     never `1`, never `"true"` — only when the query exited zero *and* its output
+     parsed, and carry the parsed array in `pull_requests`. Otherwise send
+     `ok: false` with a short `reason`. **You take the observation; the helper
+     never does.** It never runs the tool and never touches the network, which
+     is what keeps classification deterministic and offline-testable. Anything
+     short of `ok: true` with a parseable array yields `skipped`, because a tool
+     that was absent, unauthenticated, rate-limited, or unparseable is not
+     evidence that a recorded pull request is gone.
+   - **Print one line beside the `Stage:` line this step already prints, on
+     every run**, naming `corroboration.status` from the envelope. The object is
+     always present, so all six statuses print — `match`, `no_record`,
+     `skipped`, `pr_closed`, `pr_missing`, `identity_mismatch` — and a run that
+     could not check stays distinguishable from one that checked and agreed:
 
-    ```text
-    Draft PR: pr_closed — #438 recorded, closed (merged: false)
-    ```
+     ```text
+     Stage: plan (argv) — explicit --stage plan
+     Draft PR: match — #438 recorded, #438 observed
+     ```
 
-  - **Record that line durably only for `pr_closed`, `pr_missing`, and
-    `identity_mismatch`**, in the **same edit turn as the `Stage` row** so one
-    commit carries both.
-  - **It reports; it never decides** — never changes the stage, blocks
-    resolution, or stops the run. Consequences belong to the terminal step, in
-    [phase-execution-codex.md](./references/phase-execution-codex.md).
-- **Step 0.8: Capability Coverage Check** — informational research/context advisory (agents have fallbacks)
-- **Step 0.8b: Capability Enumeration, Grounding & Feed-down** — you are the only component that discovers openly. Enumerate the tools and installed skills this session actually exposes and select best-fit per the capability-discovery directive (references/capability-discovery.md); assume no fixed set — the user may have installed anything. Most subagents inherit that surface and follow the directive; read-only roles select read/research only, and the two untrusted-input consumers pin closed allowlists. Still pass the discovered evidence a subagent needs directly in each prompt: shared context beats re-discovery. Ground your OWN output (gate decisions, consensus synthesis, PR bodies) per the grounding contract (references/grounding.md): cite a real tool/skill/file result for every external fact, and abstain when none grounds it.
-- **Step 0.8c: Resumed Autonomy Boundary Preflight** — when `plan.md` and
-  `tasks.md` already exist and the resolved stage can enter Implement, validate
-  the durable `autonomy_boundary` record (a public receipt of a private
-  record kept outside the repository) before the first Phase 7 dispatch.
-  Missing or stale evidence re-enters the full Phase 6.5 Autonomy Boundary
-  Preflight. Exact explicit user authorization remains valid while its recorded
-  action scope and execution boundary still match and no later instruction
-  revokes or narrows it; an older run outcome alone grants nothing. When a
-  persisted `autonomy_boundary` receipt exists, at any stage, probe it against
-  the live boundary before the Step 1.1 coverage guard; a new thread's writable
-  roots make it stale, so rerun the preflight up front, as
-  [prerequisites-codex.md](./references/prerequisites-codex.md) describes. A
-  covered inventory asks no question, including a planning-to-implementation
-  stage change.
-- **Step 0.9: Constitution Validation** — principle checks against current codebase; route each failing check to the implement-executor, which repairs it (a red baseline included)
-- **Step 0.10: Codex Agent Availability Check** — Run the promoted
-  `install-codex-agents` helper in `dry_run` mode against the selected project or
-  user destination and its installed model and Luna fallback choice. This check
-  runs at setup or run start, before any phase work. If any required file is
-  missing or stale, STOP and instruct the user to run `$install`, approve the
-  expected local write, and restart Codex. Do not apply the repair inside
-  autopilot: Codex fixes its list of custom agents when the session starts. Once
-  phase work has begun, a stale or refreshed agent file is recorded, never a
-  stop: see §Plugin Update Mid-Run: Record, Re-resolve, Continue.
-- **Step 0.10b: Implementation Agent Detection** — discover `PROJECT_IMPLEMENTATION_AGENT` from `.codex/agents/`
-- **Step 0.11: Project Command Discovery** — runner helper `detect-commands` → `PROJECT_COMMANDS`, including the quality-gate slots and the missing-tool default (the recorded install hint, then `skip (spec)`)
-- **Step 0.12: Preset and Extension Detection** — runner helper `detect-presets` → `PRESET_CONVENTIONS`
+     ```text
+     Draft PR: skipped — gh not authenticated
+     Draft PR: pr_closed — #438 recorded, closed (merged: false)
+     ```
+   - **Record that same line durably in this step's workflow-file record for the
+     three discrepancy statuses only** — `pr_closed`, `pr_missing`, and
+     `identity_mismatch`. Write it in the **same edit turn as the `Stage` row**
+     so it lands in the same commit, the write cadence `Stage` already follows.
+     `match`, `no_record`, and `skipped` write nothing durable, and the scaffold
+     workflow template ships no placeholder line.
+   - **Corroboration reports; it never decides.** It never changes the resolved
+     stage, never blocks stage resolution, and never stops the run. It is
+     computed after the stage is decided and only ever appended to the envelope.
+     Every consequence of a discrepancy belongs to the terminal step, in
+     [Phase Execution](./references/phase-execution.md).
+6d. **Reclaim the state slot if it names another workflow** — `autopilot-state.json`
+   holds exactly one run. When this invocation targets a workflow file the state
+   file does not currently name, **re-initialise the slot from the target
+   workflow file before continuing**: rewrite `workflow_file`, `spec_id`,
+   `feature_dir`, `branch`, `status`, `stage`, and `plan`. Reclaiming is normal
+   operation — one slot, many specs — and is **not** an error.
+   - **This runs before the Step 1 coverage guard, not after.** The guard's
+     workflow-identity check fails a run whose state names a different
+     specification, so ordering re-initialisation after the guard would turn
+     every legitimate reclaim into a guard halt — the run stops at Step 1.1
+     before the slot is rewritten. Reclaiming first rewrites `workflow_file`
+     from the target, and the guard then compares two references that agree.
+   - The trigger is **unscoped by stage**. Any stage can be the one that finds a
+     foreign slot, and the ordering holds for all of them.
+   - Record the reclaimed run's `status` **verbatim** in `prior_run_note` before
+     overwriting it, so `in_progress` stays distinguishable from `completed` or
+     `completed_archived`. Surface it in the Step 0.6c report.
+   - **It MUST NOT block.** The state file carries no liveness evidence — no pid,
+     no heartbeat, no lease — so `in_progress` cannot distinguish a live run from
+     one abandoned to a crash or a closed terminal. Blocking on it would strand
+     every run that followed an interrupted one. Report it and proceed.
+6e. **Preserve the prerequisite test-count baseline; do not recompute it** — if
+   the workflow file already records a G0 test-count baseline, **keep it.** The
+   count is a diagnostic, not a test-growth acceptance requirement (see
+   [Gate Validation §G7](./references/gate-validation.md#g7--after-implement)).
+   Recapturing it after planning loses the original health evidence. Require
+   meaningful behavioral coverage instead of adding tests to increase a count.
+   - If a newly observed count differs from the recorded baseline, record it as a
+     **non-blocking drift diagnostic** naming both numbers. Do **not** replace the
+     baseline with it. Drift means the tree moved underneath the spec, which the
+     operator should see; it is not grounds to stop.
+   - **Resume protocol (both distributions).** A run that resumes in a fresh
+     session, or in a different working copy, reconstructs its context from the
+     **workflow file**, which is durable and survives archiving of `specs/<id>/`:
+     the `## Workflow Overview` status table, the `Stage` row, the recorded
+     `Confidence Gate` verdict, and the G0 baseline. `autopilot-state.json` is a
+     mirror of the active run and may be absent, stale, or naming another spec —
+     each is recoverable, and none is an error. A **missing** state file is
+     rebuilt from the workflow file; a state file naming **another** workflow is
+     reclaimed per Step 0.6d. The one carve-out is the pull-request marker plan,
+     which keeps its own stricter stop-rather-than-infer rule and is **not**
+     relaxed to satisfy this resume path.
+7. **Capability enumeration, grounding & feed-down** — you are the only
+   component that discovers openly. Before relying on any capability, enumerate
+   what this session actually exposes:
+   the tools and installed skills this session exposes.
+   Select best-fit per
+   [`references/capability-discovery.md`](./references/capability-discovery.md) —
+   do not assume a fixed set; the user may have installed anything. Your phase
+   and consensus subagents inherit the operator's full installed surface and
+   follow the same directive — read-only roles select only read/research
+   capabilities, and the roles that read untrusted input pin closed allowlists.
+   The Step 0.8 capability coverage check is informational: agents have
+   fallbacks. Still pass the
+   discovered evidence and capability context a subagent needs directly in its
+   prompt: shared context beats re-discovery. Ground your OWN output
+   (gate decisions, consensus synthesis, generated PR bodies) per
+   [`references/grounding.md`](./references/grounding.md): every external fact
+   you assert must cite a real tool/skill/file result, and you abstain when
+   nothing grounds it.
+8. **Resumed Autonomy Boundary Preflight** — when `plan.md` and
+   `tasks.md` already exist and the resolved stage can enter Implement, validate
+   the durable `autonomy_boundary` record (a public receipt of a private
+   record kept outside the repository) before the first Phase 7 dispatch.
+   Missing or stale evidence re-enters the full Phase 6.5 Autonomy Boundary
+   Preflight. Exact explicit user authorization remains valid while its recorded
+   action scope and execution boundary still match and no later instruction
+   revokes or narrows it; an older run outcome alone grants nothing. When a
+   persisted `autonomy_boundary` receipt exists, at any stage, probe it against
+   the live boundary before the Step 1.1 coverage guard; a new thread's writable
+   roots make it stale, so rerun the preflight up front, as
+   [prerequisites.md](./references/prerequisites.md) describes. A
+   covered inventory asks no question, including a planning-to-implementation
+   stage change.
 
-If any check fails, report the error message from the script's JSON output and route the failure to its owner for repair: the orchestrator repairs a fixable environment check, and the implement-executor repairs a failing project check. Run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
-Pass `WORKFLOW_ROOT`, `PROJECT_COMMANDS`, and `PRESET_CONVENTIONS` to every
-subagent prompt.
+**Full per-step details, JSON schemas, capability fallback behavior, and
+failure-escalation rules:** see [`references/prerequisites.md`](./references/prerequisites.md).
 
 ## Step 1: Parse Workflow State
 
 Read the workflow file and apply
-[`phase-execution-codex.md`](./references/phase-execution-codex.md)
-§Stage-Bounded Execution. Filter Workflow Overview rows to
+[`references/phase-execution.md`](./references/phase-execution.md)
+§Stage-Bounded Phase Selection. Filter Workflow Overview rows to
 `AUTOPILOT_STAGE`, start at the first non-terminal row (`Complete` and
 `Skipped` variants are terminal), and accept `--from-phase` only within that
-stage. If no candidate remains, run the stage's terminal step and STOP; for
-`implement` and `full`, rebuild and finish incomplete canonical Post work
-before reporting completion.
+stage. If no candidate row remains, execute the stage's terminal instruction
+and STOP; do not scan into a later stage. For `implement` and `full`, rebuild
+and finish incomplete canonical Post work before reporting completion.
 
-### 1.1 Create Durable Progress Plan
+### 1.1 Create Progress Plan
 
-After parsing the workflow state, create a **granular** progress plan
-and immediately materialize it in TWO places:
+After parsing the workflow state, create a **granular** progress plan.
+Materialize it in TWO places:
 
 1. `update_plan` with the full checklist
 2. `<workflow directory>/autopilot-state.json` with the same items
 
-Do both before Phase 1 or STOP. The initial plan must include every
-canonical phase family even when its detailed items will be discovered
-later. For multi-prompt phases (Clarify, Checklist), create one item
-per prompt/session when known; otherwise create the phase discovery
-placeholder.
+Do both before Phase 1 or STOP.
+The initial plan must include every canonical phase family even when its
+detailed items will be discovered later. For multi-prompt phases (Clarify,
+Checklist), create one item per prompt/session when known; otherwise create the
+phase discovery placeholder. **Every Clarify session, every Checklist domain,
+and the Analyze phase MUST have a paired Consensus task** immediately
+after. A zero-unresolved Clarify or Checklist task may be skipped; the Analyze
+task still dispatches the synthesizer once for the final five-criterion
+confidence block, including a clean pass with zero findings, so the block is
+emitted and persisted exactly once for that Analyze pass. **Never omit
+consensus items.**
 
 **Item naming + combined post-impl list (13 mandatory rows including
 `Post: Doctor Extension Check` ... `Post: Retrospective` as the FINAL
 STEP) + reference `autopilot-state.json` schema:** see
-[task-list-canonical-codex.md](./references/task-list-canonical-codex.md).
-Mark missing extensions as `skipped: <ext-name> not installed`; never
-silently drop the item.
+[task-list-canonical.md](./references/task-list-canonical.md).
+Every entry there MUST appear in the visible progress plan before
+Phase 1 starts — when an extension is absent, the task still appears
+marked `skipped: <ext-name> not installed`; never silently drop the item.
 
-**CRITICAL — phase family coverage is mandatory:**
-
-Before any subagent is spawned, verify that the plan includes at least
-one item whose name starts with each of these exact prefixes:
-`Archive Sweep:`, `Phase 0:`, `Phase 1:`, `Phase 2:`, `Phase 3:`,
-`Phase 4:`, `Phase 5:`, `Phase 6:`, `Phase 6.5:`, `Phase 7:`,
-`Post:`.
-
-If any prefix is missing from `update_plan` or `autopilot-state.json`,
-STOP, repair both stores, print the corrected checklist summary, and
-repeat this coverage audit. A complete workflow plan is required even
+**Phase family coverage is mandatory.** Before any subagent is spawned, verify
+that the plan includes at least one item whose name starts with each of these
+exact prefixes: `Archive Sweep:`, `Phase 0:`, `Phase 1:`, `Phase 2:`,
+`Phase 3:`, `Phase 4:`, `Phase 5:`, `Phase 6:`, `Phase 6.5:`, `Phase 7:`,
+`Post:`. Count the prescribed entries (every Phase, every Consensus, every
+`Post:`). If any is missing from the visible plan or `autopilot-state.json`,
+repair both stores, print the corrected checklist summary, and repeat this
+coverage audit before advancing. A complete workflow plan is required even
 when `--from-phase` starts execution in the middle of the workflow.
 
-After writing or repairing `autopilot-state.json`, run the deterministic
-coverage guard and repair on a nonzero exit:
+**Then run the deterministic coverage guard and repair on a nonzero exit.**
+Both hosts run the same guard, so both distributions share one enforcement
+path instead of two prose descriptions of one:
 
 ```text
 resolved_python "<plugin-root>/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py" --workflow "$WORKFLOW_FILE" --state "$WORKFLOW_DIR/autopilot-state.json" --require-autonomy-boundary --current-execution-environment "<live-execution-environment>" --current-sandbox-mode "<live-sandbox-mode>" --current-approval-reviewer "<live-approval-reviewer>" --current-writable-root "<live-writable-root>" --rule status-evidence
 ```
 
-`resolved_python` is the Python 3.11+ interpreter resolved by the installed
-runtime contract, not a hardcoded interpreter name; `<plugin-root>` is the
-directory that owns `skills/speckit-autopilot/`. `--rule status-evidence`
-gates the exit code on the seven workflow/state status-evidence checks
-(`workflow_status_evidence_errors`, `state_status_errors`,
-`autonomy_boundary_errors`, `stage_mirror_errors`,
+`--rule status-evidence` gates the **exit code** on the nine workflow/state
+status-evidence checks (`workflow_status_evidence_errors`,
+`state_status_errors`, `autonomy_boundary_errors`, `stage_mirror_errors`,
 `workflow_authority_errors`, `state_privacy_errors`,
-`marker_evidence_privacy_errors`) and the three current-run
-state-plan invariants (`in_progress_errors`, `duplicate_state_steps`,
-`state_order_errors`), the same scoping the Claude variant uses. The full
-report still prints; structural coverage checks and every advisory key are
-visible but never block. Drop `--rule` to gate on every check.
+`marker_evidence_privacy_errors`, `formal_checkpoint_errors`,
+`artifact_review_errors`) and
+the three current-run state-plan invariants (`in_progress_errors`,
+`duplicate_state_steps`, `state_order_errors`). The full report is still
+printed; structural coverage checks and every advisory key are visible but
+never block. Drop `--rule` to gate on every check.
+
 On a nonzero exit, route the report's `repair` record to the orchestrator: it
 names the owner and the `failing_keys`, and the orchestrator owns both files.
 Repair the workflow status table and the state file, then rerun the guard. For
@@ -603,6 +752,14 @@ Repair the workflow status table and the state file, then rerun the guard. For
 (`sha256:<digest>` of the raw value, or removing a raw `argv`). For any other
 failing gated key, correct the file the key names. Run the repair loop within its allowance, then defer per the Failure Escalation Protocol;
 advance to Phase 1 only on exit 0.
+
+`<resolved_python>` is the Python 3.11+ interpreter resolved by the
+Installed Runtime Contract, not a hardcoded interpreter name; `<plugin-root>`
+is the directory that owns `skills/speckit-autopilot/`. Exit 0 is required to
+advance; exit 1 reports the failing checks as JSON on stdout; exit 2 is an
+input error. The guard also fails when a Workflow Overview status row
+contradicts a gate verdict recorded elsewhere in the same file, which is what
+keeps the status table honest across compactions and manual phase runs.
 Replace every `<live-...>` value from the current system/developer execution
 context, never from the workflow, state, repository, or a prior run. Repeat
 `--current-writable-root` once for each current writable root; the validator
@@ -614,15 +771,6 @@ Fetch both OIDs from live PR metadata immediately before every validation;
 never source either authority from the workflow, state, or manifest itself.
 Missing, stale, or mismatched external PR authority is blocking.
 
-**CRITICAL — Consensus items are MANDATORY:**
-
-Every Clarify session, every Checklist domain, and the Analyze
-phase MUST have a corresponding Consensus item immediately after
-it. A zero-unresolved Clarify or Checklist item may be skipped. The Analyze
-item always runs the named synthesizer after remediation, including a clean
-pass with zero findings, so the five-criterion confidence block is emitted and
-persisted exactly once for that Analyze pass. **Never omit consensus items.**
-
 ### 1.2 Validate Plan State Before Phase 1
 
 Before Phase 1 starts, validate all of the following or repair it through the owning agent:
@@ -631,7 +779,7 @@ Before Phase 1 starts, validate all of the following or repair it through the ow
 - `autopilot-state.json` exists and contains the same ordered step list
 - Exactly one plan item is `in_progress`
 - Every canonical phase family prefix from Phase 0 through Phase 7 plus
-  Phase 6.5 and Post appears in both `update_plan` and
+  Phase 6.5 and Post appears in both the visible plan and
   `autopilot-state.json`, with the Archive Sweep item recorded before Phase 0
 - `validate-autopilot-phase-coverage.py` exits 0 for the workflow/state pair
 - Every Clarify session, Checklist domain, and Analyze phase has its
@@ -640,50 +788,124 @@ Before Phase 1 starts, validate all of the following or repair it through the ow
 
 ## Step 2: Main Execution Loop
 
-For each pending phase the parent orchestrator does six things in
-order: pre-phase hooks → spawn executor → consensus resolution →
-post-phase hooks → gate validation → auto-commit + advance. Full
-11-step pseudocode (including the `PHASES = [...]` canonical order
-and `--from-phase` semantics) lives in
-[phase-execution-codex.md §Main Execution Loop](./references/phase-execution-codex.md#main-execution-loop).
+For each pending phase, spawn a subagent, collect the result, validate
+the gate, advance. Every step is a tool call.
+
+```text
+PHASES = [specify, clarify, plan, checklist, tasks, analyze, implement]
+
+for phase in PHASES starting from first_pending:
+    0. Re-run the Step 1.1 coverage guard against the workflow file and
+       autopilot-state.json. Exit 0 is required; on nonzero, repair the plan
+       and the workflow status table, then repeat before executing this phase.
+    1. update_plan and autopilot-state.json: phase item → in_progress
+    2. Run before_<phase> hooks from .specify/extensions.yml
+    3. For each workflow prompt in this phase:
+         spawn_agent(agent_type="<phase executor>", message=...) then wait_agent
+    4. Run consensus (Clarify/Checklist/Analyze only) — see Rule 6
+    5. Run after_<phase> hooks
+    6. Validate the gate (G1-G7): run runner helper
+       `helper_id=validate-gate operation=validate-gate mode=read_only`
+       with `gate=G<N>`, `feature_dir=<feature-dir>`, and
+       `workflow_file=<workflow-file>`, then branch on the JSON `pass` field
+       On FAIL: reserve a corrective cycle through execution-control;
+       honor its shared family/spec budget and checkpoint disposition
+    7. Update workflow file; auto-commit if configured
+         phases 1-6: git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json && git commit
+         phase 7:    git add -A && git commit
+    7b. After Plan (G3 pass, plan.md exists), run the plan-phase
+        reviewability budget with runner helper `estimate-reviewable-loc`,
+        guarded against errexit. Branch on JSON `status`
+        (pass / over_budget / not_estimated) or the exit code.
+        ADVISORY — never blocks, prompts mid-autonomous-run, or
+        crashes the run.
+    8. After Tasks (G5 pass), apply the tasks-phase reviewability
+       boundary. Runner helper `reviewability-gate` supports setup mode
+       only on the installed runner — tasks mode is deferred, so do not
+       invoke it as an active helper. Record the deferred-mode
+       diagnostics (helper ID, requested mode, deferral reason) in the
+       workflow file, then continue on the fallback evidence chain: the
+       setup-mode gate result recorded at scaffold, the plan-phase
+       `estimate-reviewable-loc` verdict from step 7b, and any
+       ratified split decision (autopilot or operator) in the workflow file.
+       When the per-PR path budget forces a split of the approved PR
+       order, run runner helper `ratify-pr-split` before asking anyone
+       and record its `data.record` (see Budget-driven split
+       ratification in `references/phase-execution.md`).
+       In that committed evidence, `pass`, `warn`, honored exception,
+       and valid current size-only `block` are marker-planning inputs.
+       A valid current size-only block continues into marker planning
+       and marker emission; it is not a manual re-slicing stop.
+       Preserve correctness stops for malformed/stale marker state,
+       failed verification, invalid packet, unsafe output, unusable
+       gate evidence, invalid JSON, missing status/mode, stale
+       fingerprints, and non-size safety findings.
+    8c. After Tasks (G5 pass), run runner helper `atomicity-route`
+        with both `inputs.feature_dir` and the actual bound
+        `inputs.workflow_file` (the complete request is in
+        `references/phase-execution.md`)
+        and record the emitted JSON decision into the workflow
+        file's "## Atomicity Route" section. READ-ONLY + ADVISORY —
+        the script writes nothing and never blocks; the SKILL is
+        what records it.
+        The workflow path excludes that exact workflow file and its
+        sibling `autopilot-state.json` from change classification.
+        For an existing generated workflow with the old positional
+        instruction, replace only that instruction; preserve phase
+        status and operator-authored content.
+        The Phase 7 placeholder is invalid after G5. Parse `tasks.md` and
+        replace that placeholder in both the native visible progress plan and
+        `autopilot-state.json` with concrete task-group items and task IDs;
+        Analyze and Implement remain blocked until both stores are repaired.
+    8d. After recording the atomicity route, run the layer planner only
+        when route is exactly `split-PR`, and always before Analyze or
+        Implement can continue:
+        - non-split routes: record `layer_plan.status=skipped` in
+          `autopilot-state.json` and the workflow "## Layer Plan" section,
+          then continue with route context.
+        - split route: run helper operation `plan-layers-feature-dir` for
+          `<feature-dir>` and capture stdout, stderr, and exit code.
+        - exit 0: parse stdout as the full versioned layer-plan envelope,
+          persist it under `layer_plan` in `autopilot-state.json`, write a
+          concise workflow "## Layer Plan" summary, carry warnings into the
+          implementation context, then continue.
+        - exit 1 (`invalid_plan`): hold implementation and route the planner's `repair` record to the phase-executor, which fixes
+          `tasks.md` from the planner diagnostics in stdout/stderr. Then rerun `plan-layers-feature-dir`;
+          run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
+        - exit 2 (`input_error`): hold implementation and route by `repair.owner`. A missing `tasks.md`
+          (`tasks_file_missing`) reruns the Tasks phase through the phase-executor; a bad feature
+          directory or permission is corrected by the orchestrator. Rerun the planner, and defer the
+          same way when repair fails. Analyze and Implement do not begin before the planner exits 0.
+        This wires NO PR emission or branch creation; the multi-PR emission
+        phase owns those effects.
+    8e. Persist marker planning state when reviewability evidence requires it:
+        top-level `pr_marker_plan` in `autopilot-state.json`, mirrored
+        workflow evidence, and repo-relative evidence paths. Do not treat
+        `tasks.md` as authoritative marker state.
+    9. Advance
+```
+
+**Full per-phase prompts, dispatch templates, gate validation
+details, hook events, and the dispatcher-agent table:**
+see [`references/phase-execution.md`](./references/phase-execution.md).
+Before performing the post-G5 steps (8 through 8e), read
+[`references/phase-execution.md`](./references/phase-execution.md)
+§Phase 5: Tasks for the authoritative placeholder, reviewability, marker
+state, and no-side-effect boundaries.
 
 **Plan-phase reviewability budget (advisory):** After the Plan phase
 (G3 pass, `plan.md` exists), the parent runs
-runner helper `estimate-reviewable-loc` via `exec_command`, capturing
+runner helper `estimate-reviewable-loc`, capturing
 the exit code so a non-zero exit can never abort the run. Branch on the
 JSON `status` (`pass` / `over_budget` / `not_estimated`) or the exit
 code, recording the outcome to the workflow file and
 `autopilot-state.json`. This is preventive sizing and **advisory only**
 — no outcome blocks, prompts mid-autonomous-run, or crashes the run
 (hard blocking and re-slicing are a separate step). Full status branch in
-[phase-execution-codex.md §Phase 3: Plan — Reviewability Budget](./references/phase-execution-codex.md#phase-3-plan--reviewability-budget-advisory).
-
-After G5, reconcile the Phase 7 placeholder against `tasks.md` in both state
-stores, then apply the tasks-phase reviewability fallback without invoking the
-deferred tasks mode of `reviewability-gate`. Persist any required marker-plan
-state, record the read-only `atomicity-route` with both
-`inputs.feature_dir` and the actual bound `inputs.workflow_file`, and run
-`plan-layers-feature-dir` if and only if the route is `split-PR`. Persist the
-route and the full versioned layer-plan envelope to the workflow and
-`autopilot-state.json`; for a non-split route record the layer plan as skipped.
-The workflow input excludes that exact workflow file and its sibling
-`autopilot-state.json` from change classification. For an existing generated
-workflow with the old positional instruction, replace only that instruction;
-preserve phase status and operator-authored content.
-Exit 1 is `invalid_plan`: hold implementation and route the planner's `repair` record to the phase-executor, which fixes
-`tasks.md` from the planner diagnostics; then rerun `plan-layers-feature-dir`, and
-run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
-Exit 2 is `input_error`: hold implementation and route by `repair.owner`. A missing `tasks.md`
-(`tasks_file_missing`) reruns the Tasks phase through the phase-executor; a bad feature directory or
-permission is corrected by the orchestrator. Rerun the planner, and defer the same way when repair
-fails. Analyze or Implement must not begin before the planner exits 0.
-Before performing it, read
-[`phase-execution-codex.md`](./references/phase-execution-codex.md)
-§Phase 7: Implement for the authoritative placeholder, reviewability, marker
-state, and no-side-effect boundaries.
+[`references/phase-execution.md`](./references/phase-execution.md).
 
 Before the confidence gate, stage-boundary commit, or first Phase 7 dispatch,
-run the same reference's **Autonomy Boundary Preflight**. It inventories
+run the phase reference's **Autonomy Boundary Preflight**. It inventories
 predictable writes beyond current writable roots, privileged commands,
 interactive authentication, externally visible side effects, and data egress
 to a model service or other third party (including live model evaluations);
@@ -709,38 +931,58 @@ Once autopilot is running, human input is for exceptional cases only. Once Phase
 blocked action never stops the run: take the task's own fallback, or defer that
 task and keep executing independent work, then ask once at the end. Follow
 §Blocked Actions Mid-Run: Fall Back or Defer, Never Stop in
-[`phase-execution-codex.md`](./references/phase-execution-codex.md#blocked-actions-mid-run-fall-back-or-defer-never-stop).
+[`references/phase-execution.md`](./references/phase-execution.md#blocked-actions-mid-run-fall-back-or-defer-never-stop).
 
-The marker planning step must preserve correctness stops for malformed or stale state,
-failed verification, invalid packets, unsafe output, unusable gate evidence,
-and non-size safety findings.
+After all 7 phases pass G7, execute the post-implementation task list.
+The Post tasks, detailed prompts, and extension routing live in
+[`references/post-implementation.md`](./references/post-implementation.md);
+the canonical name list is in
+[`references/task-list-canonical.md`](./references/task-list-canonical.md).
 
-**Dynamic updates:** If consensus reveals new questions or
-remediation adds loops, add additional items to your checklist.
+**Use `spawn_agent` subagents for ALL post-implementation tasks — never invoke
+the skill directly in the parent.** Rule 1 applies: a direct skill call runs
+the command in YOUR context, and its completion text can end the loop before
+later tasks run.
+
+**Extension availability**: Step 0.12 records which extensions are
+installed in `.registry`. If an extension is missing, log a warning
+and mark its task `skipped: <ext> not installed` — do NOT fail the
+autopilot. Recommend `specify extension add <name>` in the warning.
+
+**Dynamic task updates:** If consensus reveals new questions or
+remediation adds loops, add the items to the visible plan and
+`autopilot-state.json`.
 
 ### Phase Dispatch
 
 Before each corresponding dispatch, read the mandatory
-[`phase-execution-codex.md`](./references/phase-execution-codex.md) sections
-§Agent Mapping, §Main Execution Loop, and §Phase 7: Implement. Pass the exact
-workflow prompt plus `WORKFLOW_ROOT`, `PRESET_CONVENTIONS`, and
+[`references/phase-execution.md`](./references/phase-execution.md) sections
+§Agent Mapping, §Main Execution Loop, §Phase 5: Tasks, and §Phase 7: Implement. They own
+the exact workflow-prompt envelope, preset/project-command feed-down,
+branch-aware prefixes, Clarify and Checklist sequencing, namespaced agent
+routing, validated capability batches, TDD injection, and localized repair. Pass
+the exact workflow prompt plus `WORKFLOW_ROOT`, `PRESET_CONVENTIONS`, and
 `PROJECT_COMMANDS` already resolved above. When already on the feature branch,
 tell Specify to use that branch and existing spec directory rather than create
-another. The reference owns agent routing, per-prompt result handling,
-metadata-aware batches, TDD injection, and localized repair; do not reconstruct those
-algorithms from this entrypoint.
+another. Rule 6 and the consensus reference own resolution between prompts. Do
+not reconstruct those contracts from this entrypoint.
 
 ## Step 3: Post-Implementation
 
 After Phase 7 passes G7, read and execute
-[`post-implementation-codex.md`](./references/post-implementation-codex.md)
+[`references/post-implementation.md`](./references/post-implementation.md)
 in canonical order. It owns the parallel group, full integration suite,
-mandatory UAT runbook, current reviewability evidence and
-continuation, packet dry-run/apply and current read-only/persisted validation,
+mandatory UAT runbook, current reviewability evidence and continuation,
+packet dry-run/apply and current read-only/persisted validation,
 packet-owned base/head/title/body, single- versus split-PR emission, review
 remediation, retrospective, and final summary. Do not start PR side effects
-with invalid or stale evidence, and never report completion while continuation
-or canonical Post work remains incomplete.
+without the reference's current evidence and packet contracts, and never report
+completion while its continuation or canonical Post work remains incomplete.
+
+The first Post action is to resolve the host-native subagent launcher and
+dispatch exactly three workers for the Doctor, Code Review, and Verify tracks.
+The parent MUST NOT perform any track-owned Task 10-14 action itself. It may
+continue only after it has consumed all three terminal worker reports.
 
 ### 3.4 Pre-final completion audit
 
@@ -748,6 +990,10 @@ Before sending any final user-facing response, re-read
 `autopilot-state.json` and the workflow file, reconcile them with
 `update_plan`, and audit the canonical Post list. A completion response is
 forbidden if any `Post:` item is `pending`, `in_progress`, or missing.
+For the first Post
+parallel group, mark Doctor, Code Review, Verify Implementation, Verify Tasks
+Phantom Check, and Integration Suite in progress before dispatching the three
+workers. Later serial items advance one at a time.
 Exception: `execution_control.disposition=checkpoint_required` permits an
 honest checkpoint response stating the run is **not complete**, remaining Post
 work, consumed budget, unknown effects, and the operator decision required.
@@ -783,22 +1029,25 @@ and not a stop: it defers one blocked unit whose
 correction made no measurable progress and whose allowance is spent, and the
 run keeps executing independent work.
 When every runnable item has finished, whether or not deferred items remain, the
-read-only `finalize-run` runner helper decides the end under §Blocked Actions Mid-Run: Fall Back or Defer, Never
-Stop. Human UAT is the only gate a run may defer, and every required
-gate must be green at every PR head as the runner's own verification record shows
-it. With every required gate green, the run finalizes: mark the stack ready for
-review (never merge), open the top PR body with its `Deferred / not verified`
-section, and mark the thread goal complete. Human UAT, a ledger `deferred` unit
-that failed every escalation tier, and an unresolved task never keep the stack in
-draft: they reach the owner as items in the end-of-run request, the units and
-tasks under "Decisions for you". A failed unit climbs two escalation tiers first
-(a fresh agent guided by a consensus diagnosis, then the strongest model at max
-effort), and only a required gate still red, missing, or blocked by a harness
-error after that is one human stop, and the stack stays in draft. The run never pauses to ask.
+read-only `finalize-run` runner helper decides the end under §Blocked Actions
+Mid-Run: Fall Back or Defer, Never Stop in
+[`phase-execution.md`](./references/phase-execution.md#blocked-actions-mid-run-fall-back-or-defer-never-stop).
+Human UAT is the
+only gate a run may defer, and every required gate must be green at every PR
+head as the runner's own verification record shows it. With every required gate
+green, the run finalizes: mark the stack ready for review (never merge) and open
+the top PR body with its `Deferred / not verified` section.
+Mark the thread goal complete.
+Human UAT, a ledger
+`deferred` unit that failed every escalation tier, and an unresolved task never
+keep the stack in draft: they reach the owner as items in the end-of-run
+request, the units and tasks under "Decisions for you". A failed unit climbs two
+escalation tiers first (a fresh agent guided by a consensus diagnosis, then the
+strongest model at max effort), and only a required gate still red, missing, or
+blocked by a harness error after that is one human stop, and the stack stays in draft. The run never pauses to ask.
 Print the final report as plain text on `outcome=complete` with nothing deferred, and ask no question.
-Otherwise print `end_of_run_request` as plain text in the final message. It
-is the handoff, listing every fallback taken and every deferred item, including
-each entry of the ledger's `deferred` list.
+Otherwise print `end_of_run_request` as plain text in the final message. It is the handoff, listing every fallback taken and every
+deferred item, including each entry of the ledger's `deferred` list.
 If the audit finds incomplete Post work, set the first
 incomplete item to `in_progress` in both state stores and continue the
 autopilot loop instead of summarizing. `Post: Retrospective` is the final
@@ -817,62 +1066,77 @@ Only after every Post item is completed or explicitly skipped, and the
 PR URL is known, the autopilot is DONE. Report the final summary with
 PR URL.
 
-## Workflow File Update Protocol + Error Recovery
+## Workflow File Update Protocol
 
-- **Per-phase workflow-file section updates** (Specify Results table,
-  Clarify Results, Plan Results, Checklist Results + Addressing Gaps,
-  Tasks Results, Analysis Results, Implementation Progress + Post-Impl
-  Checklist + Success Criteria) — see
-  [workflow-file-protocol-codex.md](./references/workflow-file-protocol-codex.md).
-  Also: Constitution Validation table after Specify (initial) + Implement
-  (final), and Consensus Resolution Log entries when consensus was used.
-- **Resume protocol** (`autopilot-state.json` reconciliation, missing-state
-  reconstruction, `--from-phase` semantics), **common issues** (subagent
-  retry, gate failure, consensus all-disagree, MCP unavailable), and
-  **context window management** — see
-  [error-recovery-codex.md](./references/error-recovery-codex.md).
+After every phase, apply
+[`references/workflow-file-protocol.md`](./references/workflow-file-protocol.md)
+to update the durable workflow status/results, constitution evidence, and any
+Consensus Resolution Log rows. Workflow Overview and `Stage` are
+workflow-file-wins and repair their one-run state mirrors. Only active
+`workflow_file` and `pr_marker_plan.status` are state-authoritative and repair
+the workflow in the opposite direction. The coverage guard enforces these
+directions; do not infer a broader precedence rule.
+
+## Error Recovery
+
+- **Resume:** `$speckit-autopilot workflow.md --from-phase
+  <next-pending-phase>` — the workflow file persists all state.
+- **A gate or test fails: keep remediating while each round converges.**
+  Diagnose the failure with the consensus agents, dispatch the fix through the
+  executor, and rerun verification. While each correction shrinks the
+  runner-recorded failing set, or moves it with every earlier failure passing,
+  the ledger admits the next correction in that family with no operator event
+  and no count limit (see
+  [`execution-efficiency.md`](./references/execution-efficiency.md)).
+- **Non-convergence: defer and continue.** When a correction makes no
+  measurable progress (the same, a larger, an earlier, or an unparsed failing
+  set) or a spec change breaks the chain, the fixed allowances apply, and an
+  exhausted one returns `disposition=defer`: the ledger refuses that dispatch
+  and records the blocked unit in its `deferred` list. Record the deferred item with the
+  exact gate output, keep executing every independent task, increment, and
+  gate, and list it in the one end-of-run consolidated request. It is never a
+  mid-run question and never a stop; no phase or nested worker has an
+  independent retry budget. `authorize-corrective-exception` (one
+  operator-approved application correction; a class-scoped exception covers
+  later same-class fixes through `reserve-class-correction`) and
+  `begin-replan-epoch` are end-of-run tools that act on the operator's answer
+  to that request. An explicit `--stage implement` opens the implement stage's
+  own allowance through `begin-stage-epoch`. A task-verb fix that only
+  reroutes a task to verification reserves with `metadata_only: true`; the
+  runner proves it against the committed baseline and spends no cycle. Never
+  reset or bypass the ledger otherwise; `checkpoint_required` and ledger integrity errors still stop.
+- **Consensus cannot agree** (Round 2 all-disagree, a security item without
+  3/3, or an analyst that fails its retry): run the Round 3
+  agent tiebreak, a fresh analyst plus a max-effort `consensus-tiebreaker`,
+  record the most conservative option that satisfies the spec as an assumption
+  with the dissent logged, and continue. Only a choice that changes product
+  scope the spec and roadmap do not settle is deferred to the one end-of-run
+  request; nothing stops the run and nothing asks mid-run. See
+  [consensus-protocol.md §Round 3 Tiebreak](./references/consensus-protocol.md#round-3-tiebreak).
+- **Research/context capability unavailable:** use the next acceptable
+  evidence path, record any confidence impact, and escalate only when no
+  acceptable evidence path remains or a true gate fails.
+- **Context window pressure:** keep subagent summaries concise; the
+  workflow file is the durable record (re-read after compaction).
+
+Full details, additional failure modes, and recovery playbooks live
+in [`references/error-recovery.md`](./references/error-recovery.md).
 
 ## References
 
-**Codex-specific (lifted from this SKILL.md body):**
-- [Prerequisites for Codex](./references/prerequisites-codex.md) — Step -1
-  Archive Sweep + Step 0.0-0.12 (scripts path, env checks, settings,
-  MCP, constitution, Codex agent availability, implementation agent
-  detection, command discovery, preset detection)
-- [Canonical Task List for Codex](./references/task-list-canonical-codex.md) —
-  Step 1.1 checklist naming pattern, 13 mandatory Post rows, item-naming
-  rules, reference `autopilot-state.json` schema
-- [Phase Execution for Codex](./references/phase-execution-codex.md) —
-  PHASES order, agent mapping, main execution loop (11-step per-phase
-  pseudocode), Phase 7 implement detail, PR body generation, coverage audit
-- [Post-Implementation for Codex](./references/post-implementation-codex.md) —
-  Items 10-19 table plus supporting-row mapping, parallel group dispatch (Doctor/Code Review/Verify-chain),
-  extension availability rules
-- [Workflow File Update Protocol for Codex](./references/workflow-file-protocol-codex.md) —
-  Per-phase section updates + Constitution + Consensus Log +
-  `workflow_file` state authority
-- [Error Recovery for Codex](./references/error-recovery-codex.md) — Resume
-  protocol, common issues, context window management
-
-**Shared CC references (still applicable to Codex):**
-- [Stop Policy](references/stop-policy.md) — The one contract for when a run may involve a human.
-- [Consensus Protocol](references/consensus-protocol.md) —
-  Multi-agent resolution rules and flows
-- [Gate Validation](references/gate-validation.md) —
-  Programmatic gate checks and remediation loops
-- [TDD Protocol](references/tdd-protocol.md) —
-  Red-green-refactor rules injected into implementation agent prompts
-- [Plugin Limitations](references/plugin-limitations.md) —
-  permissionMode, hooks, mcpServers restrictions for plugin agents;
-  research/context capability coverage and fallback behavior
-- [Hardener Delegation](references/hardener-delegation.md) —
-  once-per-spec tests-only mutation hardening loop with gateway delegation,
-  candidate inspection, primary-model fallback, stop rule, and record. Codex
-  runs it inside Post item 14 (Integration Suite), between the MUTATION run
-  and its block decision, not in a Phase 7 Final Verification step
-- [Token Discipline](references/token-discipline.md) —
-  Opt-in compressed vocabulary for inter-agent transcripts
-  (off by default; never applied to PR bodies, logs, or artifacts)
+- [Stop Policy](./references/stop-policy.md) — The one contract for when a run may involve a human; stop reasons and their classes
+- [Prerequisites](./references/prerequisites.md) — Archive Sweep + Step 0.x environment, settings, constitution, agent detection, command/preset discovery
+- [Phase Execution](./references/phase-execution.md) — Per-phase prompt construction, dispatch templates, branch-aware/Clarify/Multi-prompt prefixes
+- [Consensus Protocol](./references/consensus-protocol.md) — Category-routed dispatch, Round 1/2/3, per-phase flows, Logging schema
+- [Gate Validation](./references/gate-validation.md) — Programmatic gate checks (G0–G7), auto-fix loops, escalation
+- [Post-Implementation](./references/post-implementation.md) — Post items plus supporting-row mapping, parallel group dispatch (Doctor/Code Review/Verify-chain), extension availability rules
+- [Task List Canonical](./references/task-list-canonical.md) — checklist naming pattern, 13 mandatory Post rows, item-naming rules, reference `autopilot-state.json` schema
+- [Hardener Delegation](./references/hardener-delegation.md) — Once-per-spec tests-only mutation hardening loop with gateway delegation, candidate inspection, primary-model fallback, stop rule, and record. Codex runs it inside Post item 14 (Integration Suite), between the MUTATION run and its block decision, not in a Phase 7 Final Verification step
+- [Workflow File Protocol](./references/workflow-file-protocol.md) — Per-phase update table + `workflow_file` state authority (branch order, verdicts) + Consensus Resolution Log column schema
+- [Error Recovery](./references/error-recovery.md) — Resume, common issues, context-window management
+- [TDD Protocol](./references/tdd-protocol.md) — Red-green-refactor rules injected into implementation agent prompts
+- [Plugin Limitations](./references/plugin-limitations.md) — permissionMode/hooks/mcpServers caveats and capability fallback behavior
+- [Token Discipline](./references/token-discipline.md) — Opt-in compressed vocabulary for inter-agent transcripts (off by default; never applied to PR bodies, logs, or artifacts)
 
 Active runner operations are named at their use sites and in the targeted
 references above; the runner registry is their deterministic authority.

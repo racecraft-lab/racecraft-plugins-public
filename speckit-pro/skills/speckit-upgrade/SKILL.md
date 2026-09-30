@@ -1,29 +1,57 @@
 ---
 name: speckit-upgrade
+<!-- host:claude: Claude reads a trigger-phrase description and Claude-only frontmatter keys -->
 description: "Upgrades or migrates an existing SpecKit installation safely with backup-and-restore for locally-modified files. Preserves the project constitution and template overrides. Supports upgrading one or both integrations (Claude Code, Codex CLI) and offering missing curated community extensions and presets. Use when the user asks to execute an upgrade or migration, including \"upgrade speckit\", \"update speckit\", \"refresh speckit\", \"new speckit version\", \"latest speckit\", \"upgrade specify cli\", \"safe speckit upgrade\", \"speckit migration to skills\", or \"preserve my constitution during upgrade\". Not for pre-upgrade project, template, or preset repair (use /speckit-pro:speckit-coach). Hands off to /speckit-pro:speckit-install if .specify/ is missing."
 argument-hint: "(optional) integration keys to upgrade, e.g. 'claude', 'codex', or omit for all"
 user-invocable: true
 allowed-tools: Read Edit Write
 license: MIT
+<!-- /host -->
+<!-- host:codex: Codex keeps its own selection description -->
+description: "Upgrade or migrate an existing SpecKit installation safely. Use when the operator asks to execute an upgrade or migration: 'upgrade speckit', 'update speckit', 'specify integration upgrade', 'speckit migration to skills', 'safely upgrade spec-kit', 'bump speckit version', '$speckit-upgrade', or moving an existing .specify/ installation to the current spec-kit release. Preserves customizations (constitution.md, template overrides) via backup-and-restore. Supports upgrading one or both integrations (Claude Code, Codex CLI). Hands off to $speckit-install when .specify/ is missing. Not for pre-upgrade project, template, or preset repair (use $speckit-coach), installing speckit for the first time (use $speckit-install), scaffolding a new spec ($speckit-scaffold-spec), or installing this plugin's bundled Codex subagents ($install)."
+<!-- /host -->
 ---
 
 # SpecKit Upgrade
 
-## Codex Skill-Selection Guard
+Upgrade an existing SpecKit install in the current repository safely.
+Preserves `.specify/memory/constitution.md` and any other
+locally-modified files via backup-then-force-then-restore. Supports
+upgrading one or both integrations (`claude`, `codex`).
 
-If this file is loaded in Codex, the runtime selected the Claude Code
-variant from `skills/` instead of the Codex variant from `codex-skills/`.
-Do not follow the Claude-oriented instructions below in Codex. Immediately
-read and follow `../../codex-skills/speckit-upgrade/SKILL.md` from this plugin
-root, treat that document as the active skill, and report that the fallback
-guard was triggered.
+<!-- host:claude: Claude names skills with a slash -->
+If `.specify/` is missing, hands off to `/speckit-pro:speckit-install`
+<!-- /host -->
+<!-- host:codex: Codex names skills with a dollar sign -->
+If `.specify/` is missing, hands off to `$speckit-install`
+<!-- /host -->
+— upgrade only operates on existing installs.
 
-Upgrade an existing SpecKit install safely. Preserves
-`.specify/memory/constitution.md` and any other locally-modified
-files via backup-then-force-then-restore. Supports upgrading one or both
-integrations.
+This skill is **mutation-heavy** (it modifies files in `.specify/`,
+`.claude/`, `.codex/`, `.agents/skills/`, and writes backups to `/tmp/`). It
+runs only on explicit operator request and never auto-fires from other
+skills.
 
-If `.specify/` is missing, hands off to `/speckit-pro:speckit-install`.
+## Scope Boundaries — Not For
+
+<!-- host:claude: Claude names skills with a slash -->
+- Initial install (no `.specify/` directory yet). That is
+  `/speckit-pro:speckit-install`. This skill hands off to it.
+- Scaffolding a new spec from the technical roadmap. That is
+  `/speckit-pro:speckit-scaffold-spec`.
+<!-- /host -->
+<!-- host:codex: Codex names skills with a dollar sign and ships an agent install skill -->
+- Initial install (no `.specify/` directory yet). That is
+  `$speckit-install`. This skill hands off to it.
+- Scaffolding a new spec from the technical roadmap. That is
+  `$speckit-scaffold-spec`.
+- Installing this plugin's own bundled Codex subagent TOML files
+  into `~/.codex/agents/`. That is `$install`.
+<!-- /host -->
+- Upgrading the SpecKit CLI binary itself (`specify` package). The
+  operator runs that with `uv tool install --force`; this skill
+  detects when it's out of date and recommends the command, but
+  does not run it.
 
 ## Repository Structure Migration Guidance
 
@@ -41,10 +69,18 @@ deferred and unavailable. Do not recommend or auto-run either operation.
 ## Invocation
 
 ```text
+<!-- host:claude: Claude names skills with a slash -->
 /speckit-pro:speckit-upgrade                    # upgrade all installed integrations
 /speckit-pro:speckit-upgrade claude             # upgrade claude only
 /speckit-pro:speckit-upgrade codex              # upgrade codex only
 /speckit-pro:speckit-upgrade claude codex       # both, explicit
+<!-- /host -->
+<!-- host:codex: Codex names skills with a dollar sign -->
+$speckit-upgrade                    # upgrade all installed integrations
+$speckit-upgrade claude             # upgrade claude only
+$speckit-upgrade codex              # upgrade codex only
+$speckit-upgrade claude codex       # both, explicit
+<!-- /host -->
 ```
 
 ## What to Do
@@ -54,7 +90,12 @@ deferred and unavailable. Do not recommend or auto-run either operation.
 Use a filesystem directory check for `.specify/` and record the state
 as PRESENT or ABSENT.
 
+<!-- host:claude: Claude names skills with a slash -->
 If `.specify/` is **ABSENT**: STOP and invoke `/speckit-pro:speckit-install`
+<!-- /host -->
+<!-- host:codex: Codex names skills with a dollar sign -->
+If `.specify/` is **ABSENT**: STOP and invoke `$speckit-install`
+<!-- /host -->
 — upgrade only operates on existing installs.
 
 If **PRESENT**: continue.
@@ -66,28 +107,33 @@ Use argv-only execution to capture the `specify` version, run
 stdout, stderr, and exit status for each command in the report.
 
 Surface to the operator:
+
 - Current CLI version (e.g. `specify 0.6.1`).
 - Whether `specify self check` reports a newer release available.
 - Each installed integration with its current status.
 
-If the CLI itself is outdated, recommend running:
-
-Invoke `uv tool install specify-cli --force --from
-git+https://github.com/github/spec-kit.git` with argv-only execution.
-
-Wait for the operator to confirm they've upgraded the CLI (or want
-to proceed with the current version) before continuing.
+If the CLI itself is outdated, recommend that the operator run
+`uv tool install specify-cli --force --from
+git+https://github.com/github/spec-kit.git` and then re-invoke this
+skill. This skill does not run it. Ask the operator to either upgrade
+the CLI first or confirm they want to proceed with the current CLI
+version, and wait for the answer before continuing.
 
 ### 3. Resolve which integrations to upgrade
 
-If the operator passed integration keys, use those. Otherwise: ask.
+If the operator passed integration keys, use those. Otherwise ask:
 
 > Which integrations should I upgrade?
-> - `<key1>` (currently installed)
-> - `<key2>` (currently installed)
+> - `<each-installed-key>` (currently installed)
 > - `all` to upgrade everything that's installed
-> - Or specify a different integration key not currently installed
->   (treat that as an add-integration request, not an upgrade)
+>
+> If you want to ADD a new integration (e.g., add `codex` to a
+<!-- host:claude: Claude names skills with a slash -->
+> `claude`-only repo), use `/speckit-pro:speckit-install <new-key>` instead.
+<!-- /host -->
+<!-- host:codex: Codex names skills with a dollar sign -->
+> `claude`-only repo), use `$speckit-install <new-key>` instead.
+<!-- /host -->
 
 ### 4. Snapshot the repo state for safety
 
@@ -135,13 +181,20 @@ request on stdin:
 {"schema_version":"1.0","request_id":"upgrade-setup-contract","helper_id":"check-prerequisites","operation":"check-prerequisites","mode":"read_only","inputs":{"workflow_file":""}}
 ```
 
-Parse `data.stdout.text` as JSON. Its `setup_contract` check must pass (the missing workflow file fails
-a separate check; ignore that one here). A failing `setup_contract`
-names each skill that still calls an option its script rejects. Its
-`template_resolution` check must pass too: SpecKit parses preset
-manifests with PyYAML from the first `python3` on `PATH`, and a
-`uv tool` or `pipx` install keeps PyYAML in its own environment. If it
-fails, show its message; installing packages is the operator's call.
+Parse `data.stdout.text` as JSON. Its `setup_contract` check must pass
+(the missing workflow file fails a separate check; ignore that one
+here). A failing `setup_contract` names each skill that still calls an
+option its script rejects. Its `template_resolution` check must pass
+too: SpecKit parses preset manifests with PyYAML from the first
+`python3` on `PATH`, and a `uv tool` or `pipx` install keeps PyYAML in
+its own environment.
+<!-- host:codex: Codex runs commands in a non-interactive login shell -->
+Codex runs commands in a non-interactive login shell, which does not
+read `~/.zshrc`, so a Python set up only there (for example by pyenv)
+is not the one SpecKit finds.
+<!-- /host -->
+If the check fails, show its message; installing packages or editing
+shell startup files is the operator's call.
 
 #### 5b. If blocked: parse the block message, back up, force, restore
 
@@ -168,66 +221,81 @@ If `force-and-restore`, invoke
 `specify integration upgrade <key> --force --script sh` with
 argv-only execution.
 
-Then for each previously-modified file, surface the differences
-between the freshly-templated version and the backup, and ask
-whether to restore (one-by-one or all-at-once):
+Then for each previously-modified file, compare the backup copy with
+the freshly-templated file using a diff tool, show the operator the
+result, and ask whether to restore (file-by-file or all-at-once):
 
-Use a diff tool to compare the backup copy with the current file and
-show the operator the result.
-
-Constitution.md is the most-common case — almost always restore the
-backup verbatim. Templates, scripts, and gate validators are case-
-by-case (the CLI's new versions usually have fixes/features the
-operator wants).
+- `constitution.md` — almost always restore the backup verbatim. This
+  is the operator's project content.
+- Templates, scripts, and gate validators — case-by-case. The CLI's
+  new versions usually carry fixes/features the operator wants.
 
 ### 6. Deduplicate legacy commands when both forms are present
 
-When the upgraded project has the `claude` integration, use the resolved Python 3.11+ interpreter to run `<resolved_python> "${CLAUDE_PLUGIN_ROOT}/scripts/agent-memory-ignore.py" --mode apply --repo-root "<repository-root>"`. Preserve and commit any `.gitignore` change before clean-worktree-gated helpers. Report tracked memory or overriding nested ignore rules separately; an ignore rule does not untrack files, and this command never deletes memory.
+When the upgraded project has the `claude` integration, use the resolved Python 3.11+ interpreter to run
+<!-- host:claude: Claude resolves plugin files through CLAUDE_PLUGIN_ROOT -->
+`<resolved_python> "${CLAUDE_PLUGIN_ROOT}/scripts/agent-memory-ignore.py" --mode apply --repo-root "<repository-root>"`
+<!-- /host -->
+<!-- host:codex: Codex has no plugin-root variable and names the root in prose -->
+`<resolved_python> <plugin-root>/scripts/agent-memory-ignore.py --mode apply --repo-root <repository-root>`
+<!-- /host -->
+with argv-only execution. Preserve and commit any `.gitignore` change before
+clean-worktree-gated helpers. Report tracked memory or overriding nested ignore
+rules separately; an ignore rule does not untrack files, and this command never
+deletes memory.
 
-After upgrading, the new `.claude/skills/speckit-*/` and
-`.agents/skills/speckit-*/` directories may now exist alongside the
-old `.claude/commands/speckit.*.md` and `.codex/prompts/speckit.*.md`
-files (if the prior install was in legacy mode). A repo may also
-carry Codex skills in the legacy `.codex/skills/speckit-*/` location.
+After upgrading, the new skills directories may now exist alongside
+the legacy slash-command files (if the prior install was in legacy
+mode). Use filesystem glob checks to detect legacy command/prompt
+entries and current skills entries for Claude and Codex:
 
-Use filesystem glob checks to detect legacy `.claude/commands/`
-entries and current `.claude/skills/` entries.
+- Claude: legacy `.claude/commands/speckit.*.md`; skills
+  `.claude/skills/speckit-*/`.
+- Codex: legacy `.codex/prompts/speckit.*.md`; skills
+  `.agents/skills/speckit-*/` (primary) or `.codex/skills/speckit-*/`
+  (legacy). Either skills path counts as the skills form.
 
-If BOTH exist:
+If BOTH legacy and skills paths exist for an integration:
 
-> Both legacy slash-commands and skills are installed for Claude. The legacy
-> commands still work but create duplicate triggers. Options:
-> 1. `dedupe` — delete the legacy `.claude/commands/speckit.*.md`
->    files. Recommended unless you have downstream tooling that
->    references the slash-command names.
+> Both legacy slash-commands and skills are installed for `<integration>`.
+> The legacy slash-commands still work but create duplicate triggers. Options:
+>
+> 1. `dedupe` — delete the legacy `<path>/speckit.*.md` files that
+>    SpecKit manages. Recommended unless downstream tooling references
+>    the slash-command names.
 > 2. `keep-both` — leave the duplicates in place.
 
-If the operator chooses `dedupe`, delete only the SpecKit-managed
-ones (`speckit.constitution.md`, `speckit.specify.md`, etc.) — not
-the extension commands (`speckit.speckit-utils.doctor.md`, etc.) and
-not any commands without the `speckit.` prefix.
-
-Do the symmetric check for Codex:
-
-Use filesystem glob checks to detect legacy `.codex/prompts/`
-entries and current Codex skills entries. Check both skills paths:
-`.agents/skills/speckit-*/` (primary) and `.codex/skills/speckit-*/`
-(legacy). Either one counts as the skills form.
+On `dedupe`, delete only files matching `speckit.<single-word>.md`
+(e.g. `speckit.constitution.md`, `speckit.specify.md`,
+`speckit.plan.md`). Files like `speckit.speckit-utils.doctor.md`
+and any non-`speckit.` files MUST be preserved — those are
+extension commands or unrelated. Show the exact deletion list
+before deleting anything so the operator can confirm.
 
 ### 7. Verify
 
 Invoke `specify check` and `specify integration list` with argv-only
 execution. Preserve stdout, stderr, and exit status.
 
-Confirm each upgraded integration shows `installed` and is on the
+Confirm each upgraded integration shows `installed` and reports the
 new manifest. Report any verification mismatch — do not silently
 continue.
 
 #### Research screening check
 
+<!-- host:claude: Claude installs typesafe-jev as a speckit-pro plugin dependency -->
 speckit-pro requires the typesafe-jev plugin, and Claude Code installs it
 with speckit-pro. Run runner helper `research-broker-preflight` in
 `read_only` mode with empty `inputs`.
+<!-- /host -->
+<!-- host:codex: Codex has no plugin dependency mechanism -->
+speckit-pro requires the typesafe-jev plugin, and Codex has no plugin
+dependency mechanism. Run `codex plugin list` with argv-only execution. If
+`typesafe-jev` is absent, print `codex plugin add
+typesafe-jev@racecraft-plugins-public`, tell the user to restart Codex, and
+stop this step. Otherwise run runner helper `research-broker-preflight` in
+`read_only` mode with empty `inputs`.
+<!-- /host -->
 
 Report `data.screening_mode` and each `data.warnings[].message` and
 `data.errors[].message`. The helper never reads a key value.
@@ -239,6 +307,37 @@ Report `data.screening_mode` and each `data.warnings[].message` and
   Tavily key in `~/.config/speckit-pro/tavily.key` (mode 0600).
 - `expected_failure` means a credential or binary is configured but broken.
   Report the fix it names. Do not roll back the SpecKit install for it.
+- A key held only in an environment variable is a warning: the broker runs
+  as an MCP server, which may not see it. Prefer the key files.
+
+<!-- host:codex: only Codex has an automatic approval reviewer -->
+#### Autopilot review policy check
+
+Codex's automatic approval reviewer needs a standing policy so that a ratified
+autopilot plan's ordinary actions run without a per-run question: feature-branch
+pushes, the plan's pull requests and review replies, public documentation
+research, and offline audits on a worker on this machine. Read the
+`auto_review.extra_policy` string from the user-level `~/.codex/config.toml`,
+if one exists; read that file, never write it. Run runner helper
+`render-egress-authorization` in `read_only` mode with `scope=standing`, the
+repository's GitHub `owner/name`, its default branch, and that string as
+`installed_extra_policy`.
+
+- When `data.installed` is true, report the standing policy as installed.
+- Otherwise print `data.extra_policy_fragment` unchanged as the install text,
+  and tell the operator to review it and install it once. It needs Codex 0.158
+  or later. TOML allows one `[auto_review]` table, so merge it into an existing
+  `extra_policy` string. It is an `extra_policy` fragment, never
+  `auto_review.policy`, which replaces the default reviewer policy.
+- Tell the operator that a reviewer session persists for its thread, even
+  after an app restart: a new or changed policy reaches only threads started
+  after the change, so start the autopilot in a new thread after installing it.
+- This skill never writes the fragment into `~/.codex`, the repository's
+  `.codex/`, or `AGENTS.md`: the reviewer trusts `AGENTS.md`, and a branch
+  could rewrite it.
+- A missing policy is a warning, not a failure. The autopilot asks for it once,
+  at run start, before Phase 1, and the run starts on the operator's reply.
+<!-- /host -->
 
 ### 8. Offer missing curated extensions and presets
 
@@ -247,8 +346,13 @@ and presets. See
 [presets-extensions-guide.md → The curated set](../speckit-coach/references/presets-extensions-guide.md)
 for the full list.
 
-Compare `.specify/extensions/` and `.specify/presets/` against the entries
-in `${CLAUDE_PLUGIN_ROOT}/scripts/curated-set.json`.
+Compare `.specify/extensions/` and `.specify/presets/` against the entries in
+<!-- host:claude: Claude resolves plugin files through CLAUDE_PLUGIN_ROOT -->
+`${CLAUDE_PLUGIN_ROOT}/scripts/curated-set.json`.
+<!-- /host -->
+<!-- host:codex: Codex has no plugin-root variable and names the root in prose -->
+`<plugin-root>/scripts/curated-set.json`.
+<!-- /host -->
 
 - If every entry is present: report "Curated extensions and presets already
   installed." Continue to Step 9.
@@ -268,10 +372,10 @@ Return a concise upgrade summary:
 ## SpecKit Upgrade Complete
 
 **CLI version:** specify <X.Y.Z>
-**Backup:** /tmp/specify-upgrade-backup-<STAMP>/
+**Backup:** /tmp/specify-upgrade-backup-<STAMP>/ (preserved)
 **Integrations upgraded:**
-- claude → from manifest <oldhash> to <newhash> (N modified files restored)
-- codex  → from manifest <oldhash> to <newhash> (no modified files)
+- claude → manifest <oldhash> → <newhash> (N modified files restored)
+- codex  → manifest <oldhash> → <newhash> (clean upgrade, no blocks)
 **Slash-commands deduped:** Yes (claude) / No-changes (codex)
 
 **Customizations preserved:**
@@ -280,10 +384,15 @@ Return a concise upgrade summary:
 - SpecKit prerequisite helper restored from backup
 
 **Next steps:**
-1. Restart your coding-agent process so the upgraded skills load.
-2. Skim the upgrade summary above — if you preferred the old
-   version of any file, restore from $BACKUP.
+1. Restart your coding-agent process (Claude Code or Codex CLI) so the
+   upgraded skills load.
+2. Skim the summary above — if you preferred the old version of
+   any file, restore from $BACKUP/.
+3. Run `specify check` independently to confirm health.
 ```
+
+Do not continue into any other workflow in the same skill. Upgrade
+ends here.
 
 ## Hard Constraints
 
@@ -294,25 +403,37 @@ Return a concise upgrade summary:
   `force-and-restore` and the backup exists.
 - Never delete files from `.claude/commands/` or `.codex/prompts/`
   without explicit operator confirmation in Step 6.
-- Never delete non-SpecKit-managed files (extension commands,
-  custom commands without the `speckit.` prefix).
-- Never modify `.specify/memory/constitution.md` mid-flight. Either
-  restore the operator's backup verbatim or leave the freshly-
-  templated version in place if the operator says so.
+- Never delete non-SpecKit-managed files. SpecKit-managed legacy
+  command files are the `speckit.<single-word>.md` files; extension
+  commands such as `speckit.speckit-utils.doctor.md` and custom
+  commands without the `speckit.` prefix must be preserved.
+- Never modify `.specify/memory/constitution.md` mid-flight without
+  explicit operator instruction. Either restore the operator's backup
+  verbatim or leave the freshly-templated version in place if the
+  operator says so.
+- Never touch this plugin's own files (`.claude-plugin/`,
+  `codex-skills/`, the plugin's `commands/`).
 - If `specify integration upgrade` fails for reasons other than
   the diff-aware block (e.g., network failure, missing source
-  bundle), STOP and report the exact error. The operator can re-run
-  after fixing the underlying issue.
+  bundle), STOP and report the exact error. Do not retry silently.
+  The operator can re-run after fixing the underlying issue.
 
 ## Failure Handling
 
 STOP and report — do not improvise — when:
 
-- The CLI itself is missing (hand off to `/speckit-pro:speckit-install`).
+- The CLI itself is missing (uncommon for upgrade, but possible; hand
+<!-- host:claude: Claude names skills with a slash -->
+  off to `/speckit-pro:speckit-install`).
+<!-- /host -->
+<!-- host:codex: Codex names skills with a dollar sign -->
+  off to `$speckit-install`).
+<!-- /host -->
 - A `specify integration upgrade` call fails for non-diff reasons.
-- The backup directory could not be created (filesystem full, etc.).
+- The backup directory could not be created (filesystem full,
+  permission denied, etc.).
 - The operator declines all three options in Step 5b for a blocked
-  upgrade. Their choice stands.
+  upgrade. Their choice stands; do not retry.
 - A restore step fails mid-flight. Report which files succeeded,
   which did not, and where the backup is.
 

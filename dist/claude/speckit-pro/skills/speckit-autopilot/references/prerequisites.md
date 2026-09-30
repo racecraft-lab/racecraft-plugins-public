@@ -7,12 +7,12 @@ The autopilot's pre-flight sequence. Run these before Step 1 (Parse Workflow Sta
 - [Step -2: Run-Start Permission Probe](#step--2-run-start-permission-probe) — settle the runner and `git status` prompts once, before any phase work
 - [Workflow Worktree Binding](#workflow-worktree-binding) — verify Claude's live checkout after `/cd`
 - [Step -1: Archive Sweep Startup](#step--1-archive-sweep-startup) — archive previously merged specs before workflow execution
-- [Step 0.0: Resolve Script Paths](#step-00-resolve-script-paths) — extract `SKILL_SCRIPTS` from the skill header (plugin path)
+- [Step 0.0: Resolve Script Paths](#step-00-resolve-script-paths) — locate the plugin's `SKILL_SCRIPTS` directory
 - [Step 0.0b: Claude Agent Package Completeness](#step-00b-claude-agent-package-completeness) — verify bundled plugin agents are present
 - [Step 0.0c: Research Broker Preflight](#step-00c-research-broker-preflight) — record the research screening mode (`jev` or `sanitizer-only`)
 - [Step 0.1–0.7: Environment Checks](#step-01-07-environment-checks) — `check-prerequisites` JSON parsing, branch detection
 - [Step 0.6: Load Settings and Resolve Claude Runtime](#step-06-load-settings--resolve-claude-runtime) — local settings plus one versioned subagent-runtime record
-- [Step 0.8: Capability Coverage & Plugin Limitation Check](#step-08-capability-coverage--plugin-limitation-check) — informational research/context advisory + plugin-agent caveats
+- [Step 0.8: Capability Coverage & Plugin Limitation Check](#step-08-capability-coverage--plugin-limitation-check) — informational research/context advisory
 - [Step 0.9: Constitution Validation](#step-09-constitution-validation) — principle checks against current codebase
 - [Step 0.10: Implementation Agent Detection](#step-010-implementation-agent-detection) — discover `PROJECT_IMPLEMENTATION_AGENT`
 - [Step 0.11: Project Command Discovery](#step-011-project-command-discovery) — `detect-commands` → `PROJECT_COMMANDS`
@@ -143,8 +143,8 @@ to archive previously merged specs.
    cleanup mode (`apply` on a feature branch, `dry_run` otherwise), and
    `safeToApplyCleanup=false` (the sweep never passes `--apply-cleanup`, so it
    never removes spec folders).
-7. Add an `Archive Sweep: previously merged specs archived` task before Phase 0
-   in the visible task list.
+7. Add the canonical `Archive Sweep: previously merged specs dry-run/apply
+   eligibility` task before Phase 0 in the visible task list.
 
 If the archive extension is missing, record `archive_extension_installed=false`,
 keep cleanup disabled, and continue only after warning that the project should
@@ -255,8 +255,8 @@ The helper never reads a key value. Write `data.screening_mode` and every
 - `ok` with no warnings: research runs in `jev` mode.
 - `ok` with warnings: continue. A missing Jev key or binary means
   `sanitizer-only` mode. A missing Tavily key means `research_search` returns
-  `search_unavailable` while `docs_query` still works. Show each warning
-  message to the user once.
+  `search_unavailable` while `docs_query` still works.
+  Show each warning message to the user once.
 - `expected_failure`: a credential or binary is configured but broken. Report
   each `data.errors[].message` and continue. The broker drops every affected
   result and reports it, so research evidence may be thin until it is fixed.
@@ -292,11 +292,12 @@ Before dispatching any memory-enabled Claude agent in the bound workflow worktre
 
 ### Settings file
 
-Read `.claude/speckit-pro.local.md` if it exists. Parse YAML
-frontmatter for: `consensus-mode` (default: `moderate`),
-`gate-failure` (default: `defer`), `auto-commit` (default:
-`per-phase`), `security-keywords` (default: the list in the
-Security Keywords section of `consensus-protocol.md`).
+Read `.claude/speckit-pro.local.md` if it exists, otherwise
+`.codex/speckit-pro.local.md` (the order `resolve-confidence-mode` checks).
+Parse YAML frontmatter for: `gate-failure` (default: `defer`) and
+`auto-commit` (default: `per-phase`). Consensus has no setting: one rule
+set and the fixed Security Keywords list in `consensus-protocol.md` apply to
+every run.
 If the file doesn't exist, use all defaults.
 
 ### Versioned subagent-runtime record
@@ -384,10 +385,11 @@ Read the workflow file's Prerequisites table. If already
    check (typecheck, test suite, build, lint). For code
    review items (KISS, YAGNI, SOLID), mark `Verified` —
    these are validated during implementation.
-3. Run every populated quality-gate slot from Step 0.11 with an
-   empty `{paths}` (only `DEPENDENCY_RULES` and an opted-in
-   `DEPENDENCY_AUDIT` do real work here) and record the baseline
-   in the Quality Gates table
+3. Record the G0 baseline for every populated quality-gate slot
+   per the Step 0.11 rule: `COMPLEXITY` on the whole tracked
+   source tree (a measurement; only exit 2 blocks), `MUTATION`
+   as `deferred`, `DEPENDENCY_RULES` as a real blocking run,
+   `DEPENDENCY_AUDIT` as a real blocking run only when opted in
 4. Update the workflow file's table with results and baselines
 5. If any check or populated blocking gate fails, route the failing check to the implement-executor, which repairs it
    (a red baseline included). Rerun the check, and
@@ -425,6 +427,7 @@ implementation agent (e.g., "my-project-developer" or
 Before application command discovery, run the selected-model preflight from
 [formal checkpoints](./formal-methods.md#selection-and-preflight) at WORKFLOW_ROOT.
 It is independent of app language and catalog/tool presence does not activate it.
+An absent legacy selection activates nothing.
 New-model authoring may be pending; missing existing files or tool setup blocks
 with a resumable diagnostic. Do not install a checker implicitly.
 
@@ -575,7 +578,9 @@ then `skip (spec)`. Record the outcome in the Quality Gates table before continu
 
 ### Workflow guards
 
-Two plugin hooks enforce rules the orchestrator must also honor by hand:
+Two plugin hooks enforce rules the orchestrator must also honor by hand. Each
+hook fails open, below Python 3.11 included, so a broken guard never locks the
+operator out.
 
 - **Lockfile package manager** (`PreToolUse` on the shell tool): when exactly one
   JavaScript lockfile kind exists, a command that invokes another

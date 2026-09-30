@@ -159,7 +159,6 @@ def scaffold_case() -> dict[str, object]:
             "tests/speckit-pro/layer3-functional/codex-evals/speckit-scaffold-spec-evals.json#eval-7",
             "tests/speckit-pro/evals/fixtures/functional/legacy-selection.json#functional.speckit-scaffold-spec.case-7",
             "speckit-pro/skills/speckit-scaffold-spec/SKILL.md#4",
-            "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md#4",
         ],
     }
 

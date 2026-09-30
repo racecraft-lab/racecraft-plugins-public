@@ -21,7 +21,6 @@ from guide_text import assert_guides_say
 from autopilot_bookkeeping_support import (
     CLAUDE_AUTOPILOT_SKILL,
     CODEX_AUTOPILOT_SKILL,
-    CODEX_SKILL_DIR,
     PHRASES,
     SKILL_DIR,
     _assert_absent,
@@ -48,7 +47,7 @@ class CleanFinishAndStopWordingSourceContractTests(unittest.TestCase):
             text = _flat(skill)
             _assert_phrases(self, text, (CLEAN_FINISH_QUESTION, "The run never pauses to ask."))
             _assert_absent(self, text, ("Either way, make one consolidated", "Either way, make the one consolidated"))
-        codex_phase = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "phase-execution-codex.md")
+        codex_phase = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "phase-execution.md")
         _assert_phrases(self, codex_phase, (CLEAN_FINISH_QUESTION, "The run never pauses to ask"))
 
     def test_executors_return_a_blocker_instead_of_escalating_or_deciding(self) -> None:
@@ -67,12 +66,12 @@ class CleanFinishAndStopWordingSourceContractTests(unittest.TestCase):
 
 # (file, phrases the file carries, phrases it no longer carries)
 SINGLE_FILE_PINS = (
-    (SKILL_DIR + "references/phase-execution.md",
+    ((SKILL_DIR + "references/phase-execution.md", "claude"),
      ("follows the Failure Escalation Protocol and defers",), ("configured gate-failure/escalation path",)),
-    (SKILL_DIR + "SKILL.md",
+    ((SKILL_DIR + "SKILL.md", "claude"),
      ("warn the operator once and route gate and consensus dispatches to the strongest available tier",),
      ("small-tier", "stop and ask the operator to switch")),
-    (CODEX_SKILL_DIR + "SKILL.md",
+    ((SKILL_DIR + "SKILL.md", "codex"),
      ("Route the ambiguity to Clarify consensus, and defer it when consensus cannot settle it",),
      ("Fail the gate, surface the ambiguity, and stop",)),
     ("codex-agents/phase-executor.toml",

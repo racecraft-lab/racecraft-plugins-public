@@ -18,6 +18,7 @@ sys.path.insert(0, str(ROOT / "speckit-pro"))
 sys.path.insert(0, str(ROOT / "tests/speckit-pro/lib"))
 
 from speckit_pro_runner import author_broker
+from speckit_pro_runner.private_state import write_private_json
 from test_result import run_counted
 
 
@@ -29,7 +30,7 @@ class BrokerFixture(unittest.TestCase):
         self.addCleanup(self.state_temp.cleanup)
         self.root = Path(self.repo_temp.name).resolve()
         self.state_root = Path(self.state_temp.name).resolve()
-        patcher = unittest.mock.patch.object(author_broker, "_state_root", return_value=self.state_root)
+        patcher = unittest.mock.patch.object(author_broker, "state_root", return_value=self.state_root)
         patcher.start()
         self.addCleanup(patcher.stop)
 
@@ -264,7 +265,7 @@ class PreviewBrokerProvenanceTests(BrokerFixture):
                 state = author_broker._read_state(self.state_root, session["session_id"])
                 anchor = state["created_at"] if shift < 0 else datetime.now(timezone.utc).timestamp()
                 state["preview_submission"]["observed_at"] = datetime.fromtimestamp(anchor + shift, timezone.utc).isoformat()
-                author_broker._write_state(self.state_root / session["session_id"] / "state.json", state)
+                write_private_json(self.state_root / session["session_id"] / "state.json", state)
                 with self.assertRaisesRegex(author_broker.BrokerViolation, "observation time is implausible"):
                     author_broker.close_session(capability=session["capability"])
                 self.assertFalse((self.state_root / session["session_id"]).exists())
@@ -435,7 +436,7 @@ class PreviewLauncherTests(PreviewLauncherFixture):
         command = self.command()
         broker_env = next(c for c in command if c.startswith("mcp_servers.author-broker.env="))
         self.assertIn(author_broker.STATE_ROOT_VARIABLE, broker_env)
-        self.assertIn(str(author_broker._state_root()), broker_env)
+        self.assertIn(str(author_broker.state_root()), broker_env)
 
     def test_operation_is_registered_for_the_parent_to_invoke(self) -> None:
         from speckit_pro_runner.helpers.registry import HELPERS
@@ -478,11 +479,11 @@ class PreviewReadbackTests(PreviewLauncherFixture):
                     )
                     return unittest.mock.Mock(returncode=0)
 
-                with unittest.mock.patch.object(author_broker, "_state_root", return_value=state_root), \
+                with unittest.mock.patch.object(author_broker, "state_root", return_value=state_root), \
                         unittest.mock.patch.object(self.launcher, "verify_preview_boundary"), \
                         unittest.mock.patch.object(self.launcher, "codex_preview_command", side_effect=command), \
                         unittest.mock.patch.object(self.launcher.shutil, "which", return_value=str(codex_runtime)), \
-                        unittest.mock.patch.object(self.launcher, "_trusted_executable", return_value=codex_runtime), \
+                        unittest.mock.patch.object(self.launcher, "trusted_executable", return_value=codex_runtime), \
                         unittest.mock.patch.object(self.launcher.subprocess, "run", side_effect=run):
                     if close_fails:
                         with unittest.mock.patch.object(author_broker, "close_session", side_effect=author_broker.BrokerViolation("cleanup failed")):
@@ -506,11 +507,80 @@ class PreviewReadbackTests(PreviewLauncherFixture):
                                 artifact_path="artifacts/plan.html", expected_sha256=digest,
                             )
 
+class BrokerErrorCodeTests(BrokerFixture):
+    """Each broker error code is reachable and names the failure it reports."""
+
+    def call(self, name: str, arguments: dict) -> str:
+        """The error code the broker reports for one failing tool call."""
+        try:
+            author_broker.call_tool(name, arguments)
+        except Exception as exc:  # noqa: BLE001 - the broker maps every failure to a code
+            return author_broker._error_code(exc)
+        raise self.failureException(f"{name} unexpectedly succeeded")
+
+    def formal_session(self) -> dict:
+        (self.root / "formal").mkdir(exist_ok=True)
+        return author_broker.create_formal_session(
+            repo_root=str(self.root), workflow_file="workflow.md", model_id="counter",
+            permitted_paths=["formal/Counter.tla"],
+        )
+
+    def code_for(self, code: str) -> str:
+        if code == "schema_validation":
+            return self.call("create_formal_session", {"repo_root": ""})
+        if code == "receipt_violation":
+            return self.call("close_session", {"capability": "author-cap:v1:not-a-capability"})
+        if code == "unsupported_kind":
+            return self.call("submit_preview_verdict", {"capability": self.formal_session()["capability"], "verdict": "verified"})
+        if code == "path_violation":
+            capability = self.formal_session()["capability"]
+            return self.call("write_formal_file", {"capability": capability, "target": "formal/Other.tla", "content": "x"})
+        if code == "content_too_large":
+            capability = self.formal_session()["capability"]
+            content = "x" * (author_broker.MAX_CONTENT_BYTES + 1)
+            return self.call("write_formal_file", {"capability": capability, "target": "formal/Counter.tla", "content": content})
+        artifact, _, session = self.preview_session()
+        artifact.write_bytes(b"<html><body>changed</body></html>\n")
+        return self.call("submit_preview_verdict", {"capability": session["capability"], "verdict": "verified"})
+
+    def test_every_declared_code_is_reported_for_its_own_failure(self) -> None:
+        reported = {code: self.code_for(code) for code in author_broker.BROKER_ERROR_CODES}
+        self.assertEqual(reported, {code: code for code in author_broker.BROKER_ERROR_CODES})
+
+    def test_a_changed_preview_artifact_is_a_preview_mismatch(self) -> None:
+        self.assertEqual(self.code_for("preview_mismatch"), "preview_mismatch")
+
+    def test_a_violation_cannot_carry_an_undeclared_code(self) -> None:
+        self.assertRaisesRegex(ValueError, "undeclared", author_broker.BrokerViolation, "message", code="not_a_code")
+
+
+class PreviewStepReferenceTests(unittest.TestCase):
+    """Every pointer to the observer dispatch names its step in the terminal sequence."""
+
+    def test_step_pointers_match_the_numbered_sequence(self) -> None:
+        import re
+
+        reference = (ROOT / "speckit-pro/skills/speckit-autopilot/references/phase-execution.md").read_text(encoding="utf-8")
+        launcher = (ROOT / "speckit-pro/speckit_pro_runner/preview_launcher.py").read_text(encoding="utf-8")
+        match = re.search(r"^(\d+)\. The parent dispatches `artifact-preview-observer`", reference, re.MULTILINE)
+        self.assertIsNotNone(match)
+        step = int(match.group(1))
+        for pointer, text in (
+            (f"Dispatch step {step} through the runner", reference),
+            (f"Steps {step}–{step + 1} cannot treat publication", reference),
+            (f"phase-execution step {step} dispatches", " ".join(launcher.split())),
+        ):
+            with self.subTest(pointer=pointer):
+                self.assertTrue(pointer in text, f"missing pointer: {pointer}")
+
+
 if __name__ == "__main__":
     suite = unittest.TestSuite([
         unittest.defaultTestLoader.loadTestsFromTestCase(AuthorBrokerTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(PreviewBrokerProvenanceTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(PreviewLauncherTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(PreviewReadbackTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(BrokerErrorCodeTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(PreviewStepReferenceTests),
     ])
     raise SystemExit(run_counted(suite, label="test-author-broker"))

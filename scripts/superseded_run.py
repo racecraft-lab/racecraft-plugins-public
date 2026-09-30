@@ -1,16 +1,18 @@
-"""Tell whether a cancelled pull-request run was replaced by a newer run of the same commit.
+"""Tell whether a cancelled pull-request run was replaced by another run of the same commit.
 
 GitHub often delivers two ``pull_request`` events for one head commit (for
 example two ``synchronize`` events when a stack push moves a branch and its
-base). The workflow concurrency group then cancels the older run, and its
-``if: always()`` verdict job reports failure beside the newer run's verdict.
+base). The workflow concurrency group then cancels one of the two runs, and its
+``if: always()`` verdict job reports failure beside the other run's verdict.
 The commit's status rollup stays red until someone reruns the cancelled run.
+Runs created in the same second carry no reliable order: the cancelled one may
+have the higher run id.
 
-A verdict job may report the older run as superseded, instead of failed, only
-when this module finds a newer run of the same workflow for the same head
-commit. That newer run reports the real verdict on the same commit. Every
-missing input or API error means "not superseded", so the verdict fails
-closed exactly as before.
+A verdict job may report a cancelled run as superseded, instead of failed, only
+when this module finds another run of the same workflow for the same head
+commit that was not itself cancelled. That run reports the real verdict on the
+same commit. Every missing input or API error means "not superseded", so the
+verdict fails closed exactly as before.
 """
 
 from __future__ import annotations
@@ -58,8 +60,13 @@ def event_head_sha(event_path: str) -> str:
     return head_sha if isinstance(head_sha, str) else ""
 
 
-def newer_run_id(env: Mapping[str, str], fetch: Fetch | None = None) -> int | None:
-    """Return the id of a newer run of this workflow for the same head commit, else None."""
+def sibling_run_id(env: Mapping[str, str], fetch: Fetch | None = None) -> int | None:
+    """Return the id of another, not cancelled run of this workflow for the same head commit, else None.
+
+    Run ids do not order same-second runs: GitHub may cancel either of two runs
+    created together, so any live or finished sibling that was not itself
+    cancelled reports the verdict.
+    """
     if env.get("GITHUB_EVENT_NAME") != "pull_request":
         return None
     repository = env.get("GITHUB_REPOSITORY", "")
@@ -82,25 +89,26 @@ def newer_run_id(env: Mapping[str, str], fetch: Fetch | None = None) -> int | No
             f"/repos/{repository}/actions/workflows/{workflow_id}/runs"
             f"?head_sha={head_sha}&event=pull_request&per_page=100"
         )
-        newer = [
+        siblings = [
             run["id"] for run in listing["workflow_runs"]
-            if type(run.get("id")) is int and run["id"] > run_id
+            if type(run.get("id")) is int and run["id"] != run_id
             and run.get("head_sha") == head_sha
             and run.get("workflow_id") == workflow_id
             and run.get("event") == "pull_request"
+            and run.get("conclusion") != "cancelled"
         ]
     except (urllib.error.URLError, OSError, ValueError, KeyError, TypeError):
         return None
-    return min(newer) if newer else None
+    return max(siblings) if siblings else None
 
 
 def superseded_notice(env: Mapping[str, str] | None = None, fetch: Fetch | None = None) -> str | None:
-    """Return a notice naming the newer run when this run was superseded, else None."""
+    """Return a notice naming the sibling run when this run was superseded, else None."""
     values = os.environ if env is None else env
-    newer = newer_run_id(values, fetch)
-    if newer is None:
+    sibling = sibling_run_id(values, fetch)
+    if sibling is None:
         return None
     return (
-        f"This run was cancelled and superseded by run {newer} for the same head commit; "
+        f"This run was cancelled and superseded by run {sibling} for the same head commit; "
         "that run reports the verdict."
     )

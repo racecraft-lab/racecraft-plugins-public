@@ -25,6 +25,7 @@ from typing import Any, Iterator
 
 from .atomic_write import snapshot_write_target, write_bytes_atomic
 from .cli_probe import probe
+from .private_state import ensure_private_directory, write_private_json
 from .sweep_export import (
     SWEEP_SELF_REPLY_PREFIX,
     SWEEP_TRUSTED_ASSOCIATIONS,
@@ -65,6 +66,8 @@ HEX_OBJECT_RE = re.compile(r"^[0-9a-f]{40}(?:[0-9a-f]{24})?$")
 ARTIFACT_ALLOWLIST = ("spec.md", "plan.md", "tasks.md")
 CLASS_VALUES = ("amended", "answered", "deferred", "no action")
 PERSPECTIVES = ("codebase", "spec-context", "domain")
+# The three model-call stages, in the order a comment moves through them.
+STAGES = ("classifier", "perspective", "synthesis")
 # Round 3 tiebreak: one more synthesis call by a fresh analyst, only after a first
 # synthesis returned human_review. Its own values keep it apart from round one.
 TIEBREAK_AGREEMENT = "tiebreak"
@@ -87,6 +90,7 @@ BROKER_ERROR_CODES = (
     "evidence_path",
     "perspective_mismatch",
     "synthesis_consistency",
+    "anchor_ambiguous",
     "receipt_violation",
     "isolation_violation",
     "schema_validation",
@@ -719,36 +723,7 @@ def capture_github_session(
 
 
 def _ensure_private_directory(path: Path) -> None:
-    path.mkdir(mode=0o700, parents=True, exist_ok=True)
-    info = path.lstat()
-    if stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode):
-        raise ReceiptViolation("private session root is unsafe")
-    uid = getattr(os, "getuid", lambda: info.st_uid)()
-    if info.st_uid != uid:
-        raise ReceiptViolation("private session root has the wrong owner")
-    if stat.S_IMODE(info.st_mode) & 0o077:
-        os.chmod(path, 0o700)
-
-
-def _write_private_json(path: Path, payload: dict[str, Any]) -> None:
-    encoded = (json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
-    temporary = path.with_name(f".{path.name}.{secrets.token_hex(8)}.tmp")
-    fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600)
-    try:
-        with os.fdopen(fd, "wb") as handle:
-            fd = -1
-            handle.write(encoded)
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(temporary, path)
-    finally:
-        if fd >= 0:
-            os.close(fd)
-        try:
-            temporary.unlink()
-        except FileNotFoundError:
-            # Atomic replacement may have already removed the temporary path.
-            pass
+    ensure_private_directory(path, label="private session root", violation=ReceiptViolation)
 
 
 def _safe_session_path(state_root: Path, session_id: str) -> Path:
@@ -872,7 +847,7 @@ class SweepSession:
             "accepted": {"classifier": {}, "perspective": {}, "synthesis": {}},
         }
         try:
-            _write_private_json(session_path / "state.json", state)
+            write_private_json(session_path / "state.json", state)
             lock_fd = os.open(session_path / "state.lock", os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
             os.close(lock_fd)
         except OSError:
@@ -947,7 +922,7 @@ class SweepSession:
                     os.close(state_fd)
             self._validate_state(state)
             yield state
-            _write_private_json(self.state_path, state)
+            write_private_json(self.state_path, state)
         finally:
             try:
                 fcntl.flock(fd, fcntl.LOCK_UN)
@@ -1104,7 +1079,7 @@ class SweepSession:
         perspective: str | None = None,
     ) -> str:
         """Mint one opaque model-call capability bound to closed private context."""
-        if stage not in {"classifier", "perspective", "synthesis"}:
+        if stage not in STAGES:
             raise SchemaViolation("capability stage is unknown")
         if stage == "perspective":
             if perspective not in PERSPECTIVES:
@@ -1280,7 +1255,7 @@ class SweepSession:
             }
             return RECEIPT_PREFIX + digest
 
-    def _consume_result(self, receipt: str, *, expected_stage: str) -> dict[str, Any]:
+    def consume_result(self, receipt: str, *, expected_stage: str) -> dict[str, Any]:
         match = RECEIPT_RE.fullmatch(receipt) if isinstance(receipt, str) else None
         if match is None:
             raise ReceiptViolation("result is not an exact sweep receipt")
@@ -1307,7 +1282,7 @@ class SweepSession:
             return json.loads(json.dumps(result))
 
     def accept_receipt(self, receipt: str, *, expected_stage: str) -> dict[str, Any]:
-        result = self._consume_result(receipt, expected_stage=expected_stage)
+        result = self.consume_result(receipt, expected_stage=expected_stage)
         payload = result["payload"]
         if expected_stage == "classifier":
             return {
@@ -1392,6 +1367,33 @@ def is_tiebreak_result(payload: dict[str, Any]) -> bool:
     return payload.get("agreement") == TIEBREAK_AGREEMENT or payload.get("basis") == TIEBREAK_SCOPE_BASIS
 
 
+def _anchor_count(snapshot: GitSnapshot, file_name: str, anchor: str) -> int:
+    """How often ``anchor`` occurs across every snapshot file named ``file_name``.
+
+    The session does not know which feature directory an edit will land in, so
+    an anchor counts as unique only when it occurs once across all of them.
+    Apply time still requires exactly one match in the target file.
+    """
+    return sum(
+        snapshot.entry(row["path"]).content.decode("utf-8").count(anchor)
+        for row in snapshot.list()
+        if PurePosixPath(row["path"]).name == file_name
+    )
+
+
+def _validated_edit(value: Any, snapshot: GitSnapshot) -> dict[str, Any]:
+    """One resolved synthesis edit: an allowed artifact, a unique anchor, a bounded replacement."""
+    edit = _require_exact_keys(value, {"file", "anchor", "replacement"}, "edit")
+    if edit["file"] not in ARTIFACT_ALLOWLIST:
+        raise SchemaViolation("synthesis edit targets a non-artifact path")
+    _bounded_nonempty(edit["anchor"], MAX_ANCHOR_BYTES, "anchor")
+    if _anchor_count(snapshot, edit["file"], edit["anchor"]) != 1:
+        raise SchemaViolation("edit anchor must match the snapshot exactly once")
+    if not isinstance(edit["replacement"], str) or len(edit["replacement"].encode("utf-8")) > MAX_REPLACEMENT_BYTES:
+        raise SchemaViolation("replacement is not text or exceeds its bound")
+    return edit
+
+
 def validate_result(
     stage: str,
     payload: Any,
@@ -1455,13 +1457,7 @@ def validate_result(
             return record
         if record["agreement"] not in {"3/3", "2/3", TIEBREAK_AGREEMENT} or record["basis"] is not None:
             raise SchemaViolation("resolved synthesis fields are inconsistent")
-        edit = _require_exact_keys(record["edit"], {"file", "anchor", "replacement"}, "edit")
-        if edit["file"] not in ARTIFACT_ALLOWLIST:
-            raise SchemaViolation("synthesis edit targets a non-artifact path")
-        _bounded_nonempty(edit["anchor"], MAX_ANCHOR_BYTES, "anchor")
-        if not isinstance(edit["replacement"], str) or len(edit["replacement"].encode("utf-8")) > MAX_REPLACEMENT_BYTES:
-            raise SchemaViolation("replacement is not text or exceeds its bound")
-        record["edit"] = edit
+        record["edit"] = _validated_edit(record["edit"], snapshot)
         return record
     raise SchemaViolation("result stage is unknown")
 
@@ -1532,7 +1528,7 @@ def apply_synthesis_receipt(
     session_head = session.head()
     if current_head(root) != session_head:
         raise MutationViolation("repository HEAD changed before mutation")
-    result = session._consume_result(receipt, expected_stage="synthesis")
+    result = session.consume_result(receipt, expected_stage="synthesis")
     payload = result["payload"]
     if result["head"] != session_head:
         raise MutationViolation("receipt head does not match the sweep session")

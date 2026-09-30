@@ -10,11 +10,13 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
 PLUGIN = ROOT / "speckit-pro"
-SHARED = PLUGIN / "skills/speckit-autopilot"
-CODEX = PLUGIN / "codex-skills/speckit-autopilot"
 LIB_DIR = ROOT / "tests/speckit-pro/lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
+from host_skill_views import host_skill_root  # noqa: E402
+# Each host's autopilot skill as it ships, rendered from the one shared source.
+SHARED = host_skill_root("claude") / "speckit-autopilot"
+CODEX = host_skill_root("codex") / "speckit-autopilot"
 from script_loader import load_script  # noqa: E402
 from test_result import run_counted  # noqa: E402
 if str(PLUGIN) not in sys.path:
@@ -43,7 +45,7 @@ class LiveCanaryRegressionTests(unittest.TestCase):
         self.assertIn("actual call is rejected", runtime)
 
     def test_codex_pre_final_audit_drains_separately_attributable_gate_runs(self):
-        post = (CODEX / "references/post-implementation-codex.md").read_text()
+        post = (CODEX / "references/post-implementation.md").read_text()
         audit = " ".join(post.split("- **Pre-final completion audit:**", 1)[1].split(
             "## PR Packet Validation Workflow", 1
         )[0].split())
@@ -97,11 +99,11 @@ class ExecutionContractTests(unittest.TestCase):
 
         guide = (PLUGIN / "skills/speckit-coach/references/checklist-domains-guide.md").read_text()
         template = (PLUGIN / "skills/speckit-coach/templates/workflow-template.md").read_text()
-        in_guide = set(re.findall(r"^\|[^|\n]+\| \*\*([a-z-]+)\*\* \|", guide, re.M))
-        in_template = set(re.findall(r"^\|[^|\n]+\| \*\*([a-z-]+)\*\* \|", template, re.M))
-        self.assertTrue({"privacy", "supply-chain"} <= in_guide, in_guide)
-        # The template's signal table is the guide's list minus the edge domains it leaves to the coach.
-        self.assertEqual(in_template, in_guide - {"integration", "mobile-ux", "reliability"})
+        row = r"^\|[^|\n]+\| \*\*([a-z-]+)\*\* \|"
+        # The guide is the one domain list (all 15); the template keeps no copy and points to it.
+        self.assertEqual(15, len(set(re.findall(row, guide, re.M))))
+        self.assertEqual([], re.findall(row, template, re.M))
+        self.assertIn("references/checklist-domains-guide.md", template)
 
     def test_quality_gates_table_has_a_row_per_discovered_slot(self):
         from speckit_pro_runner.gate_discovery import SLOTS
@@ -125,7 +127,7 @@ class ExecutionContractTests(unittest.TestCase):
 
     def test_unknown_results_do_not_authorize_relaunch(self):
         for path in (SHARED / "references/error-recovery.md",
-                     CODEX / "references/error-recovery-codex.md"):
+                     CODEX / "references/error-recovery.md"):
             text = " ".join(path.read_text().split())
             self.assertNotIn("make one fresh retry", text)
             self.assertNotIn("Re-spawn with the", text)
@@ -143,7 +145,7 @@ class ExecutionContractTests(unittest.TestCase):
         claude = " ".join((SHARED / "references/phase-execution.md").read_text().split())
         plan = claude.split("### Phase 3: Plan", 1)[1].split("**Gate:** G3", 1)[0]
         self.assertIn(rule, plan)
-        codex = " ".join((CODEX / "references/phase-execution-codex.md").read_text().split())
+        codex = " ".join((CODEX / "references/phase-execution.md").read_text().split())
         loop = codex.split("7. Validate gate directly in the main session:", 1)[1].split(
             "8. If gate fails:", 1)[0]
         self.assertIn(rule, loop)
@@ -255,7 +257,7 @@ class NativeRequestContractTests(unittest.TestCase):
 
     def test_both_native_dispatches_use_persisted_task_results(self):
         for path in (SHARED / "references/phase-execution.md",
-                     CODEX / "references/phase-execution-codex.md"):
+                     CODEX / "references/phase-execution.md"):
             phase = " ".join(path.read_text().split())
             with self.subTest(path=path):
                 for call in ("task-results", "action=start", "action=record", "action=inspect"):
@@ -288,7 +290,7 @@ class NativeRequestContractTests(unittest.TestCase):
                 self.assertTrue(boundary in policy, f"missing Docker boundary: {boundary}")
         for path in (SHARED / "references/gate-validation.md",
                      SHARED / "references/post-implementation.md",
-                     CODEX / "references/post-implementation-codex.md"):
+                     CODEX / "references/post-implementation.md"):
             gate = " ".join(path.read_text().split())
             with self.subTest(gate=path.name):
                 self.assertTrue("revalidate current inputs" in gate, f"{path.name}: missing current-input validation")
@@ -332,7 +334,7 @@ class ImplementChecklistGateTests(unittest.TestCase):
 
     PHASE_EXECUTION = (
         SHARED / "references/phase-execution.md",
-        CODEX / "references/phase-execution-codex.md",
+        CODEX / "references/phase-execution.md",
     )
 
     def test_both_hosts_record_the_gate_before_the_first_dispatch(self):
@@ -365,7 +367,7 @@ class ImplementChecklistGateTests(unittest.TestCase):
 
     def test_workflow_protocol_lists_the_record_on_both_hosts(self):
         for path in (SHARED / "references/workflow-file-protocol.md",
-                     CODEX / "references/workflow-file-protocol-codex.md"):
+                     CODEX / "references/workflow-file-protocol.md"):
             with self.subTest(host=path.name):
                 row = next(line for line in path.read_text().splitlines()
                            if line.startswith("| **Implement** |"))
@@ -373,7 +375,7 @@ class ImplementChecklistGateTests(unittest.TestCase):
 
     def test_pr_body_tells_the_reviewer_the_boxes_are_theirs(self):
         for path in (SHARED / "references/post-implementation.md",
-                     CODEX / "references/post-implementation-codex.md"):
+                     CODEX / "references/post-implementation.md"):
             with self.subTest(host=path.name):
                 text = _flat(path)
                 self.assertIn("`how_to_review`", text)

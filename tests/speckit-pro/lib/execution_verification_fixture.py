@@ -30,6 +30,12 @@ def bun_output(failing, passing):
     return "tests/sample.test.ts:\n" + "\n".join(lines) + "\n"
 
 
+def make_directory(path, mode=0o755):
+    """Create a directory with an exact mode; mkdir(mode=) is masked by the umask."""
+    path.mkdir()
+    path.chmod(mode)
+
+
 class VerificationFixture:
     """Temporary consumer repo with a reservable verification command."""
 
@@ -37,7 +43,7 @@ class VerificationFixture:
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        (self.root / "feature").mkdir()
+        make_directory(self.root / "feature")
         commands = {"UNIT_TEST": f"{sys.executable} check.py"}
         (self.root / "feature/workflow.md").write_text("## PROJECT_COMMANDS\n```json\n" + json.dumps(commands) + "\n```\n")
         (self.root / "check.py").write_text("print('verified')\n")

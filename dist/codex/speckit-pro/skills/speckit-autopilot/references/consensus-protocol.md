@@ -321,7 +321,7 @@ continues; the parent must never replace it with parent-authored synthesis.
 
 ## Consensus Rules
 
-### Moderate Mode (Default)
+One rule set applies to every run; no setting changes it.
 
 | Scenario | Action |
 |----------|--------|
@@ -332,25 +332,9 @@ continues; the parent must never replace it with parent-authored synthesis.
 | **Keyword-only item** (every routed analyst returns `security_relevant: false`) | Use the ordinary rules above: a 2/3 majority applies. |
 | **Non-security route** (`Security Route: none`) | Use the item's own rule: a `security_relevant: true` answer does not raise the bar, so two disagreeing Round 1 analysts still escape to Round 2 and a 2/3 majority applies at N = 3. |
 
-### Conservative Mode
-
-Same as moderate, but:
-- Requires 3/3 agreement for auto-answer
-- 2/3 agreement flags `[ROUND_3_TIEBREAK]`, and the Round 3 tiebreak starts with the majority as its recommendation
-- Any disagreement flags `[ROUND_3_TIEBREAK]` and starts the Round 3 tiebreak
-
-### Aggressive Mode
-
-Same as moderate, but:
-- 2/3 agreement auto-answers (same as moderate)
-- Even all-disagree attempts to synthesize best answer and proceed
-- Only a security item without 3/3 agreement starts the Round 3 tiebreak
-  (a keyword-only item that every analyst marks `security_relevant: false`
-  is not a security item)
-
 ## Security Keywords
 
-These keywords in the question, gap, or finding text route the item to all three analysts. The item's bar rises to **unanimous agreement**, in every consensus mode, unless every routed analyst returns `security_relevant: false`:
+These keywords in the question, gap, or finding text route the item to all three analysts. The item's bar rises to **unanimous agreement** unless every routed analyst returns `security_relevant: false`:
 
 ```
 auth, token, secret, encryption, PII, credential, permission, password,
@@ -374,12 +358,11 @@ When a security keyword is detected:
 
 Consensus that cannot agree is resolved by agents, never by a question or a
 stop. A synthesizer result flagged `[ROUND_3_TIEBREAK]` is the Round 3
-trigger; it asks no human. Four situations raise it:
+trigger; it asks no human. Three situations raise it:
 
 - a Round 2 all-disagree (or a Round-1 escape that Round 2 cannot resolve),
-- a security item without 3/3 agreement,
-- an analyst that fails its retry (see below), and
-- conservative mode, where a 2/3 agreement or any disagreement is not enough.
+- a security item without 3/3 agreement, and
+- an analyst that fails its retry (see below).
 
 The parent orchestrator, never an executor, analyst, or synthesizer, runs
 Round 3 after the batch's other edits are applied. An interactive run and an
@@ -799,4 +782,4 @@ sweep rows or to phase rows without either being excluded from the rate.
 - `both-agree` — Round 1, two-analyst, agreement
 - `3/3`, `2/3` — Round 2, classic agreement counts
 - `escape-hatch` — Round 1 escaped to Round 2 (count this in the 10% trigger metric)
-- `[ROUND 3]` — the item took the Round 3 tiebreak (Round 2 all-disagree, a security item without 3/3, a failed analyst, or conservative mode). The Resolution cell reads `assumption: <chosen option>; dissent: <positions not chosen>`, or adds `scope deferred` when the synthesizer flagged `[SCOPE_DEFERRED]`. Count it in the 10% trigger metric like an escape
+- `[ROUND 3]` — the item took the Round 3 tiebreak (Round 2 all-disagree, a security item without 3/3, or a failed analyst). The Resolution cell reads `assumption: <chosen option>; dissent: <positions not chosen>`, or adds `scope deferred` when the synthesizer flagged `[SCOPE_DEFERRED]`. Count it in the 10% trigger metric like an escape

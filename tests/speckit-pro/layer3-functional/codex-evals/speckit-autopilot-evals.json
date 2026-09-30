@@ -40,13 +40,13 @@
     {
       "id": 4,
       "prompt": "I heard the autopilot has different consensus modes — conservative, moderate, and aggressive. What do these modes control? Which is the default? And how do I change the mode for a specific workflow run?",
-      "expected_output": "Explains the 3 consensus modes and their voting behavior: conservative requires unanimity, moderate uses 2/3 majority (default), aggressive auto-accepts single-agent answers.",
+      "expected_output": "Explains that autopilot consensus has no selectable mode: one rule set applies to every run, where a 2/3 analyst majority applies an answer, a security item applies only on 3/3 agreement, and an all-disagree item goes to the Round 3 tiebreak; the project settings file configures only gate-failure and auto-commit.",
       "expectations": [
-        "Names or describes the 3 consensus modes: conservative, moderate, and aggressive",
-        "Explains that moderate is the default mode",
-        "Describes how conservative mode differs (requires unanimity or higher threshold)",
-        "Describes how aggressive mode differs (auto-accepts with lower agreement threshold)",
-        "Explains how to configure the consensus mode in the workflow file or autopilot invocation"
+        "States that autopilot consensus has no conservative, moderate, or aggressive mode to choose; one rule set applies to every run",
+        "Explains that a 2/3 analyst majority applies an answer automatically",
+        "Explains that a security item applies only on 3/3 agreement",
+        "Explains that an all-disagree item goes to the Round 3 tiebreak instead of stopping or asking a human",
+        "Does not invent a consensus-mode setting or invocation flag for changing the rule on a run"
       ]
     },
     {
@@ -81,7 +81,7 @@
     {
       "id": 7,
       "prompt": "What happens during the post-implementation phase of the autopilot after all 7 SDD phases complete? List the specific steps in order, including which ones use extensions and which are built-in.",
-      "expected_output": "Lists all 13 Codex Post plan items in order, identifies the parallel group and serial tail, and distinguishes extension-backed items from built-in work. It states that generate-uat-skeleton is active, final-reviewability-backstop is deferred, detect-stack-manager-plan is out of scope, and pr-packet-output plus validate-pr-packet-write are active packet-preparation helpers. Before PR creation it generates and authors the feature-local UAT runbook, emits or refreshes the feature-local packet, validates it with validate-pr-packet-read-only using data.stdout_json in memory/state, checkpoints packet/body artifacts so validate-pr-packet-write can rerun current validation from a clean worktree and persist it, validates title/scope with validate-pr-workflow-contract, and fails closed only if packet emission or validation fails.",
+      "expected_output": "Lists all 13 Codex Post plan items in order, identifies the parallel group and serial tail, and distinguishes extension-backed items from built-in work. It states that generate-uat-skeleton is active, final-reviewability-backstop is deferred, the orchestrator runs detect-stack-manager-plan in dry_run per stack-manager.md before any stack mutation, and pr-packet-output plus validate-pr-packet-write are active packet-preparation helpers. Before PR creation it generates and authors the feature-local UAT runbook, emits or refreshes the feature-local packet, validates it with validate-pr-packet-read-only using data.stdout_json in memory/state, checkpoints packet/body artifacts so validate-pr-packet-write can rerun current validation from a clean worktree and persist it, validates title/scope with validate-pr-workflow-contract, and fails closed only if packet emission or validation fails.",
       "expectations": [
         "Lists all 13 canonical Codex Post items from Doctor Extension Check through Retrospective without collapsing supporting rows",
         "Identifies Doctor, Verify Implementation, Verify Tasks Phantom Check, and Retrospective as extension-backed items and keeps Code Review plus Integration Suite built in",
@@ -93,7 +93,7 @@
         "Lists pre-create PR workflow contract validation via runner helper validate-pr-workflow-contract with packet title and changed-file evidence",
         "Lists PR creation with gh pr create --base --head --title --body-file using packet target/title/body values",
         "Lists the parent-session review remediation loop",
-        "States final-reviewability-backstop and detect-stack-manager-plan are not active installed helper calls, so current evidence and explicit gh fallback behavior apply",
+        "States final-reviewability-backstop is deferred, so current committed reviewability evidence is required before PR side effects, and that the orchestrator runs detect-stack-manager-plan in dry_run per stack-manager.md before any stack mutation",
         "States packet emission or validation failures block before PR creation; no post-create auto-repair fallback is used"
       ]
     },

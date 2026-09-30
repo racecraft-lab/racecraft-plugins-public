@@ -324,7 +324,6 @@ def is_direct_python_gate_dispatch(content: str) -> bool:
         " sed ",
         " awk ",
         "$(",
-        "scripts/build-plugin-payloads",
         "scripts/sync-marketplace-versions",
         "tests/speckit-pro/run-all",
         "tests/speckit-pro/check-toolchain",
@@ -413,7 +412,6 @@ def is_docs_or_workflow_tooling(content: str) -> bool:
     )
     plugin_markers = (
         "tests/speckit-pro/run-all",
-        "scripts/build-plugin-payloads",
         "scripts/sync-marketplace-versions",
         ".claude-plugin/plugin.json",
     )
