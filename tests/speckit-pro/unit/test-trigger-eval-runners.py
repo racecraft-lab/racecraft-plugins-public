@@ -55,6 +55,10 @@ import trigger_claude_observer as claude_observer  # noqa: E402
 import trigger_codex_observer as codex_observer  # noqa: E402
 import trigger_evidence as evidence_records  # noqa: E402
 import trigger_process  # noqa: E402
+from foreign_pid import foreign_pid  # noqa: E402
+
+# A fake child pid that is never this test process's pid or group.
+FAKE_CHILD_PID = foreign_pid(43210)
 
 
 from script_loader import load_script  # noqa: E402
@@ -272,7 +276,7 @@ class FakePopen:
         self.stdout_value = stdout
         self.stderr_value = stderr
         self.returncode = returncode
-        self.pid = 43210
+        self.pid = FAKE_CHILD_PID
         self.communicate_calls = 0
         self.timeout = False
 
@@ -304,8 +308,8 @@ def successful_process_evidence(
     return {
         "provider_exit_code": 0, "timed_out": False, "interrupted_by_signal": None,
         "cleanup_verified": True, "cleanup_error": None, "cleanup_scope": "owned-process-group",
-        "unexpected_descendants": False, "child_pid": 43210, "child_pgid": 43210,
-        "cleanup_observations": [{"pgid": 43210, "errno": 3, "elapsed_seconds": 0.01}],
+        "unexpected_descendants": False, "child_pid": FAKE_CHILD_PID, "child_pgid": FAKE_CHILD_PID,
+        "cleanup_observations": [{"pgid": FAKE_CHILD_PID, "errno": 3, "elapsed_seconds": 0.01}],
         "process_error": None,
         "launch_contract": {
             "config_isolated": True,
