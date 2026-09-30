@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import contextlib
 import hashlib
 import json
 import os
@@ -14,6 +15,8 @@ import subprocess
 import sys
 import tempfile
 from typing import Any, Mapping
+
+import native_eval_strict_json as strict_json
 
 
 SCHEMA_VERSION = "native-eval-fixtures/v1"
@@ -42,17 +45,12 @@ def _relative_path(value: object, label: str) -> PurePosixPath:
     return path
 
 
-def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-    _require(len(pairs) == len({key for key, _value in pairs}), "fixture plan contains a duplicate JSON key")
-    return dict(pairs)
-
-
 def load_plan(path: str | Path) -> dict[str, Any]:
     """Read a strict fixture plan without accepting duplicate object keys."""
     plan_path = Path(path)
     try:
-        value = json.loads(plan_path.read_text(encoding="utf-8"), object_pairs_hook=_unique_object)
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        value = strict_json.loads(plan_path.read_bytes(), error=ValueError)
+    except (OSError, ValueError) as exc:
         raise ValueError(f"fixture plan could not be read: {exc}") from exc
     _require(isinstance(value, dict), "fixture plan must be an object")
     source_root = value.get("source_root")
@@ -78,27 +76,24 @@ def _safe_parent(workspace: Path, destination: PurePosixPath) -> Path:
 
 def _source_root_and_workspace(plan: Mapping[str, object], workspace: str | Path) -> tuple[Path, Path]:
     source_root_value = plan["source_root"]
-    _require(isinstance(source_root_value, str) and Path(source_root_value).is_absolute(),
-             "fixture source_root must be absolute")
+    _require(isinstance(source_root_value, str), "fixture source_root must be absolute")
+    return _resolved_directory(Path(source_root_value), "fixture source_root"), workspace_directory(workspace)
+
+
+def _resolved_directory(path: Path, label: str, *, allow_symlink: bool = True) -> Path:
+    """Resolve an absolute path to an existing directory, optionally refusing a symlink."""
+    _require(path.is_absolute(), f"{label} must be absolute")
+    _require(allow_symlink or not path.is_symlink(), f"{label} must not be a symlink")
     try:
-        source_root = Path(source_root_value).resolve(strict=True)
+        resolved = path.resolve(strict=True)
     except OSError as exc:
-        raise ValueError("fixture source_root is unavailable") from exc
-    _require(source_root.is_dir(), "fixture source_root must be a directory")
+        raise ValueError(f"{label} is unavailable") from exc
+    _require(resolved.is_dir(), f"{label} must be a directory")
+    return resolved
 
-    return source_root, _workspace_directory(workspace)
 
-
-def _workspace_directory(workspace: str | Path) -> Path:
-    target = Path(workspace)
-    _require(target.is_absolute(), "fixture workspace must be absolute")
-    _require(not target.is_symlink(), "fixture workspace must not be a symlink")
-    try:
-        target = target.resolve(strict=True)
-    except OSError as exc:
-        raise ValueError("fixture workspace is unavailable") from exc
-    _require(target.is_dir(), "fixture workspace must be a directory")
-    return target
+def workspace_directory(workspace: str | Path) -> Path:
+    return _resolved_directory(Path(workspace), "fixture workspace", allow_symlink=False)
 
 
 def _fixture_records(
@@ -438,7 +433,7 @@ def _regular_git_control_bytes(workspace: Path) -> tuple[bytes, bytes]:
 
 def snapshot_git_repository_controls(workspace: str | Path) -> dict[str, object]:
     """Capture the stable regular-file controls before a Git inspection."""
-    config, info_exclude = _regular_git_control_bytes(_workspace_directory(workspace))
+    config, info_exclude = _regular_git_control_bytes(workspace_directory(workspace))
     return {
         "schema_version": GIT_CONTROLS_SCHEMA_VERSION,
         "git_dir_marker": ".git",
@@ -478,7 +473,7 @@ def _validate_git_controls(workspace: Path, controls: object) -> str:
 
 def inspect_git_repository(workspace: str | Path, controls: object) -> dict[str, object]:
     """Validate a sealed Git workspace after validating its local configuration."""
-    target = _workspace_directory(workspace)
+    target = workspace_directory(workspace)
     git = _validate_git_controls(target, controls)
     with tempfile.TemporaryDirectory(prefix="native-eval-git-inspect-") as temporary:
         config = Path(temporary) / "config"
@@ -638,7 +633,7 @@ def _receipt_path(value: str, workspace: Path) -> Path:
     return resolved_candidate
 
 
-def _write_receipt(path: Path, result: dict[str, object]) -> None:
+def write_receipt(path: Path, result: dict[str, object]) -> None:
     encoded = json.dumps(result, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
     if hasattr(os, "O_NOFOLLOW"):
@@ -652,11 +647,9 @@ def _write_receipt(path: Path, result: dict[str, object]) -> None:
             stream.write(encoded)
             stream.flush()
             os.fsync(stream.fileno())
-    except Exception:
-        try:
+    except BaseException:
+        with contextlib.suppress(OSError):
             path.unlink()
-        except OSError:
-            pass
         raise
 
 
@@ -674,11 +667,11 @@ def main(argv: list[str] | None = None) -> int:
         _require(receipt_value is None, "fixture receipt path is only supported for v2 plans")
         print(json.dumps({"schema_version": SCHEMA_VERSION, "copied": populate_workspace(plan, Path.cwd())}, separators=(",", ":")))
     else:
-        workspace = _workspace_directory(Path.cwd())
+        workspace = workspace_directory(Path.cwd())
         receipt = _receipt_path(receipt_value, workspace) if receipt_value is not None else None
         result = {"schema_version": GIT_SCHEMA_VERSION, **materialize_workspace(plan, workspace)}
         if receipt is not None:
-            _write_receipt(receipt, result)
+            write_receipt(receipt, result)
         print(json.dumps(result, separators=(",", ":")))
     return 0
 
@@ -690,5 +683,5 @@ if __name__ == "__main__":
 __all__ = (
     "GIT_CONTROLS_SCHEMA_VERSION", "GIT_FIXTURE_RECIPE", "GIT_SCHEMA_VERSION", "SCHEMA_VERSION",
     "git_runtime_identity", "inspect_git_repository", "load_plan", "main", "materialize_workspace", "populate_workspace",
-    "snapshot_git_repository_controls",
+    "snapshot_git_repository_controls", "workspace_directory", "write_receipt",
 )

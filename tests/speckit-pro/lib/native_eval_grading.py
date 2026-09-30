@@ -10,7 +10,8 @@ import re
 import shlex
 from typing import Any
 
-from native_eval_catalog import NATIVE_SYNTHESIS_MECHANISMS, _is_json_value, _unique_object
+import native_eval_strict_json as strict_json
+from native_eval_catalog import NATIVE_SYNTHESIS_MECHANISMS, _is_json_value
 from native_eval_capture import file_accesses, file_search_results
 from native_eval_catalog import _validate_file_search_check
 from native_eval_git_grading import grade_final_state as _native_git_final_state
@@ -178,26 +179,6 @@ def _file_exists(check: dict[str, Any], observation: dict[str, Any]) -> tuple[st
     return ("pass", "artifact presence matched") if actual is expected else ("fail", "artifact presence did not match")
 
 
-def _strict_equal(left: object, right: object) -> bool:
-    if type(left) is not type(right):
-        return False
-    if isinstance(left, dict):
-        return left.keys() == right.keys() and all(_strict_equal(left[key], right[key]) for key in left)
-    if isinstance(left, list):
-        return len(left) == len(right) and all(_strict_equal(a, b) for a, b in zip(left, right, strict=True))
-    return left == right
-
-
-def _strict_json(text: str) -> object:
-    return json.loads(
-        text,
-        object_pairs_hook=_unique_object,
-        parse_constant=lambda token: (_ for _ in ()).throw(
-            ValueError(f"invalid constant {token}")
-        ),
-    )
-
-
 def _stage_relative_path(actual: object, expected: object, observation: dict[str, Any]) -> bool:
     if not isinstance(actual, str) or not _canonical_path(expected):
         return False
@@ -232,7 +213,7 @@ def _structured_ids(actual: object) -> list[str] | None:
 def _response_equivalent(
     actual: object, expected: object, observation: dict[str, Any],
 ) -> bool:
-    if _strict_equal(actual, expected):
+    if strict_json.strict_equal(actual, expected):
         return True
     if _stage_relative_path(actual, expected, observation):
         return True
@@ -250,8 +231,8 @@ def _json_field(check: dict[str, Any], observation: dict[str, Any]) -> tuple[str
     if path not in observation["artifacts"]:
         return "fail", f"required JSON artifact is missing: {path}"
     try:
-        value = _strict_json(observation["artifacts"][path])
-    except (json.JSONDecodeError, ValueError, RecursionError) as exc:
+        value = strict_json.loads(observation["artifacts"][path], error=ValueError)
+    except ValueError as exc:
         return "fail", f"artifact is not strict JSON: {exc}"
     try:
         for part in check["field_path"]:
@@ -265,9 +246,9 @@ def _json_field(check: dict[str, Any], observation: dict[str, Any]) -> tuple[str
                 value = value[part]
     except (KeyError, IndexError, TypeError):
         return "fail", "declared JSON field is absent"
-    if _strict_equal(value, check["expected"]):
+    if strict_json.strict_equal(value, check["expected"]):
         return "pass", "JSON field matched with strict type equality"
-    if any(_strict_equal(value, alternative) for alternative in check.get("alternatives", [])):
+    if any(strict_json.strict_equal(value, alternative) for alternative in check.get("alternatives", [])):
         return "pass", "JSON field matched an explicitly accepted value with strict type equality"
     return "fail", "JSON field value or type did not match"
 
@@ -290,8 +271,8 @@ def _response_json_field(
             or not all(_is_json_value(value) for value in expected_by_host.values()):
         return "invalid", "catalog response JSON field check is malformed"
     try:
-        value = _strict_json(observation["final_text"])
-    except (json.JSONDecodeError, ValueError, RecursionError) as exc:
+        value = strict_json.loads(observation["final_text"], error=ValueError)
+    except ValueError as exc:
         return "fail", f"final response is not strict JSON: {exc}"
     try:
         for part in field_path:
