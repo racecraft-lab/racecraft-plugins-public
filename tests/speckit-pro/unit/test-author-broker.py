@@ -516,7 +516,7 @@ class BrokerErrorCodeTests(BrokerFixture):
             author_broker.call_tool(name, arguments)
         except Exception as exc:  # noqa: BLE001 - the broker maps every failure to a code
             return author_broker._error_code(exc)
-        self.fail(f"{name} unexpectedly succeeded")
+        raise self.failureException(f"{name} unexpectedly succeeded")
 
     def formal_session(self) -> dict:
         (self.root / "formal").mkdir(exist_ok=True)

@@ -251,7 +251,7 @@ class GalleryGuidanceTests(unittest.TestCase):
 
     def test_contract_names_the_suite_that_enforces_each_rule(self) -> None:
         text = " ".join(read(GALLERY / "SPA-CONTRACT.md").split())
-        self.assertFalse("repository tests validate the contracts below" in text)
+        self.assertNotIn("repository tests validate the contracts below", text)
         for clause in ("tests/speckit-pro/unit/test-artifact-gallery.py", "pnpm --dir docs-site validate:gallery"):
             with self.subTest(clause=clause):
                 self.assertTrue(clause in text, f"SPA-CONTRACT.md does not name {clause}")
