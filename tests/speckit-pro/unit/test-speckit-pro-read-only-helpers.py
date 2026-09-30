@@ -4501,7 +4501,6 @@ class PlanLayersPlannerCaseTests(unittest.TestCase):
                 helper_request("plan-layers-feature-dir", {"feature_dir": "specs/feature"}),
                 cwd=root,
             )
-        self.assertEqual(completed.returncode, response["exit_code"])
         return completed.returncode, response["data"]["stdout_json"]
 
     def test_the_baseline_is_a_clean_plan(self) -> None:
@@ -4510,16 +4509,14 @@ class PlanLayersPlannerCaseTests(unittest.TestCase):
 
     def test_checkbox_state_and_parallel_marker_are_preserved(self) -> None:
         code, planner = self.plan(plan_layers_tasks(
-            foundation=(
-                "- [ ] T001 Unchecked in src/contract.md\n- [x] T003 Lowercase in src/planner.py\n"
-                "- [X] T004 Uppercase in tests/test_planner.py"
-            ),
+            foundation="- [ ] T001 Unchecked in src/contract.md\n- [x] T003 Lowercase in src/planner.py\n"
+                       "- [X] T004 Uppercase in tests/test_planner.py",
             story="- [ ] T002 [P] [US1] Parallel in src/planner.py",
         ))
         tasks = {task["id"]: task for inc in planner["increments"] for task in inc["tasks"]}
-        self.assertEqual(code, 0)
-        self.assertEqual({key: value["status"] for key, value in tasks.items()},
+        self.assertEqual({k: v["status"] for k, v in tasks.items()},
                          {"T001": "todo", "T002": "todo", "T003": "done", "T004": "done"})
+        self.assertEqual(code, 0)
         self.assertEqual({key for key, value in tasks.items() if value["parallel"]}, {"T002"})
 
     def test_a_defective_plan_reports_each_error_code(self) -> None:

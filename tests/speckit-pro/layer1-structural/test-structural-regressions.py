@@ -303,13 +303,13 @@ class TomlFieldTests(unittest.TestCase):
             structural_helpers.toml_string_field('name = "a\nmodel = ', "name")
 
     def test_no_layer_script_defines_its_own_toml_string_extractor(self) -> None:
-        for script in (LAYER1_DIR / "validate-agent-contracts.py",
-                       REPO_ROOT / "tests" / "speckit-pro" / "layer5-tool-scoping" / "validate-tool-scoping.py"):
-            with self.subTest(script=script.name):
-                source = script.read_text(encoding="utf-8")
-                self.assertIn("toml_string_field", source)
-                self.assertNotIn("def _extract_toml_string", source)
-                self.assertNotIn("def _toml_field", source)
+        layer5 = REPO_ROOT / "tests" / "speckit-pro" / "layer5-tool-scoping" / "validate-tool-scoping.py"
+        texts = {path.name: path.read_text(encoding="utf-8")
+                 for path in (LAYER1_DIR / "validate-agent-contracts.py", layer5)}
+        own = [name for name, text in texts.items()
+               if "def _extract_toml_string" in text or "def _toml_field" in text]
+        self.assertEqual([], own)
+        self.assertTrue(all("toml_string_field" in text for text in texts.values()))
 
 
 def main() -> int:
