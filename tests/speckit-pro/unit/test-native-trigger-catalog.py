@@ -2,6 +2,7 @@
 """Executable accounting and sensitivity checks for the native trigger catalog."""
 from __future__ import annotations
 
+import copy
 import json
 from pathlib import Path
 import sys
@@ -68,6 +69,31 @@ class NativeTriggerCatalogTests(unittest.TestCase):
             path.parent.name for path in (PLUGIN_ROOT / "skills").glob("*/SKILL.md")
         }
 
+    def audited_source_counts(self, audit: dict[str, object]) -> tuple[int, int]:
+        """Check the audit's recorded source counts against its rows; return (supported, blocked)."""
+        rows = audit["source_cases"]
+        blocked = sum(1 for row in rows if row["counterpart_status"] == "blocked")
+        supported = len(rows) - blocked
+        self.assertEqual(audit["counts"]["source_cases"], len(rows))
+        self.assertEqual(audit["counts"]["supported_source_cases"], supported)
+        self.assertEqual(audit["counts"]["blocked_source_cases"], blocked)
+        self.assertEqual(audit["counts"]["blocked_requirements"], len(audit["unresolved_requirements"]))
+        return supported, blocked
+
+    def test_expected_counts_follow_the_audit_file(self) -> None:
+        self.audited_source_counts(self.audit)
+        moved = copy.deepcopy(self.audit)
+        next(row for row in moved["source_cases"]
+             if row["counterpart_status"] != "blocked")["counterpart_status"] = "blocked"
+        with self.assertRaises(AssertionError):
+            self.audited_source_counts(moved)
+        moved["counts"]["supported_source_cases"] -= 1
+        moved["counts"]["blocked_source_cases"] += 1
+        self.assertEqual(self.audited_source_counts(moved), (
+            self.audit["counts"]["supported_source_cases"] - 1,
+            self.audit["counts"]["blocked_source_cases"] + 1,
+        ))
+
     def selection(self, case: dict[str, object]) -> tuple[str, list[str]]:
         self.assertEqual(len(case["checks"]), 1, case["id"])
         check = case["checks"][0]
@@ -97,9 +123,7 @@ class NativeTriggerCatalogTests(unittest.TestCase):
         matrix = self.audit["coverage_matrix"]
         gaps = self.audit["unresolved_requirements"]
         self.assertEqual(len(self.cases), counts["proposed_canonical_cases"])
-        self.assertEqual(counts["supported_source_cases"], 209)
-        self.assertEqual(counts["blocked_source_cases"], 8)
-        self.assertEqual(counts["blocked_requirements"], 5)
+        supported, blocked = self.audited_source_counts(self.audit)
         self.assertEqual(len(matrix), counts["proposed_canonical_cases"])
         self.assertEqual(len(gaps), counts["blocked_requirements"])
 
@@ -120,14 +144,14 @@ class NativeTriggerCatalogTests(unittest.TestCase):
             for source_id in gap[key]
         }
         source_rows = {row["case_id"]: row for row in self.audit["source_cases"]}
-        self.assertEqual(len(gap_sources), 8)
+        self.assertEqual(len(gap_sources), blocked)
         self.assertTrue(all(source_rows[item]["counterpart_status"] == "blocked" for item in gap_sources))
         self.assertTrue(all(gap["gap_id"] == "native-agent-availability-bootstrap" for gap in gaps))
         self.assertTrue(all(gap["status"] == "moved-to-functional-integration-gap" for gap in gaps))
         self.assertTrue(all(gap["expected_activations"] == ["install"] for gap in gaps))
 
         catalog_sources = {ref.partition("#")[2] for case in self.cases for ref in case["provenance"]}
-        self.assertEqual(len(catalog_sources), 209)
+        self.assertEqual(len(catalog_sources), supported)
         self.assertTrue(gap_sources.isdisjoint(catalog_sources))
         self.assertNotIn("install", {
             skill for case in self.cases for skill in case["checks"][0]["expected"]
@@ -166,7 +190,7 @@ class NativeTriggerCatalogTests(unittest.TestCase):
                     self.assertEqual(expected, [target], reference)
                 else:
                     self.assertNotIn(target, expected, reference)
-        self.assertEqual(len(referenced), 209)
+        self.assertEqual(len(referenced), self.audited_source_counts(self.audit)[0])
         self.assertEqual(installer_adaptations, 3)
         self.assertEqual(merged_sibling_evidence, 2)
 
@@ -257,7 +281,6 @@ class NativeTriggerCatalogTests(unittest.TestCase):
                     self.assertIn(fixture["destination"], case["prompt"], case["id"])
 
         self.assertEqual(counts, self.audit["counts"]["canonical_coverage_kinds"])
-        self.assertEqual(counts, {"positive_self": 51, "sibling_route": 45, "contextual_none": 13})
         self.assertEqual(templated, 11)
         self.assertEqual(fixture_cases, 16)
 

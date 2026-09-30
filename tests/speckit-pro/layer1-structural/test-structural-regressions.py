@@ -283,12 +283,42 @@ class CodexSkillRosterTests(unittest.TestCase):
             )
 
 
+class TomlFieldTests(unittest.TestCase):
+    """One reader serves the layer 1 and layer 5 agent checks; no layer keeps its own."""
+
+    def test_reads_a_top_level_string_in_any_valid_spacing(self) -> None:
+        for line in ('model = "gpt-6-sol"', 'model="gpt-6-sol"', '  model  =  "gpt-6-sol"  '):
+            with self.subTest(line=line):
+                self.assertEqual("gpt-6-sol", structural_helpers.toml_string_field(line + "\n", "model"))
+
+    def test_absent_non_string_and_table_scoped_fields_read_as_empty(self) -> None:
+        text = 'name = "a"\nmodel = 5\n[profile]\nsandbox_mode = "read-only"\n'
+        self.assertEqual("a", structural_helpers.toml_string_field(text, "name"))
+        for field in ("model", "sandbox_mode", "missing"):
+            with self.subTest(field=field):
+                self.assertEqual("", structural_helpers.toml_string_field(text, field))
+
+    def test_malformed_toml_fails_closed(self) -> None:
+        with self.assertRaises(ValueError):
+            structural_helpers.toml_string_field('name = "a\nmodel = ', "name")
+
+    def test_no_layer_script_defines_its_own_toml_string_extractor(self) -> None:
+        for script in (LAYER1_DIR / "validate-agent-contracts.py",
+                       REPO_ROOT / "tests" / "speckit-pro" / "layer5-tool-scoping" / "validate-tool-scoping.py"):
+            with self.subTest(script=script.name):
+                source = script.read_text(encoding="utf-8")
+                self.assertIn("toml_string_field", source)
+                self.assertNotIn("def _extract_toml_string", source)
+                self.assertNotIn("def _toml_field", source)
+
+
 def main() -> int:
     suite = unittest.TestSuite()
     suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(StructuralRegressionTests))
     suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(CodexAgentRegressionTests))
     suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(RosterDerivationTests))
     suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(CodexSkillRosterTests))
+    suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(TomlFieldTests))
     return run_counted(suite, label="test-structural-regressions")
 
 

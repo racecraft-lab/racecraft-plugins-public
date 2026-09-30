@@ -36,6 +36,7 @@ from agent_roster import codex_sandbox_policy  # noqa: E402
 from structural_helpers import developer_instructions  # noqa: E402
 from structural_helpers import frontmatter as _frontmatter  # noqa: E402
 from structural_helpers import frontmatter_field  # noqa: E402
+from structural_helpers import toml_string_field  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 AGENTS_DIR = PLUGIN_ROOT / "agents"
@@ -143,17 +144,12 @@ def _toml_prose(path: Path) -> str:
     return developer_instructions(_read(path))
 
 
+def toml_string_field_of(path: Path, field: str) -> str:
+    return toml_string_field(_read(path), field)
+
+
 def _yaml_field(path: Path, field: str) -> str:
     return frontmatter_field(_frontmatter(_read(path).splitlines()), field)
-
-
-def _toml_field(path: Path, field: str) -> str:
-    pattern = re.compile(rf'^[ \t]*{re.escape(field)}[ \t]*=[ \t]*"([^"]*)"[ \t]*$')
-    for line in _read(path).splitlines():
-        match = pattern.match(line)
-        if match:
-            return match.group(1)
-    return ""
 
 
 def _disallowed_tools(path: Path) -> list[str]:
@@ -339,7 +335,7 @@ class ValidateToolScoping(unittest.TestCase):
                 continue
 
             with self.subTest(msg=f"codex {agent}: sandbox_mode is {expected_sandbox}"):
-                self.assertEqual(expected_sandbox, _toml_field(agent_file, "sandbox_mode"), f"{agent} must be {expected_sandbox}")
+                self.assertEqual(expected_sandbox, toml_string_field_of(agent_file, "sandbox_mode"), f"{agent} must be {expected_sandbox}")
 
     def test_codex_agent_sandbox_mode_scoping_rejects_missing_directory(self) -> None:
         module = sys.modules[__name__]
@@ -434,7 +430,7 @@ class ValidateToolScoping(unittest.TestCase):
                 with self.subTest(msg=f"carve-out: codex {agent} sandbox_mode is read-only"):
                     self.assertEqual(
                         "read-only",
-                        _toml_field(codex_file, "sandbox_mode"),
+                        toml_string_field_of(codex_file, "sandbox_mode"),
                         f"{agent} must be read-only - sandbox_mode is the only Codex lever, and it bounds the filesystem rather than the tool set",
                     )
 
