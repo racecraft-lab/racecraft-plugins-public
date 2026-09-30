@@ -28,7 +28,7 @@
       "files": [
         {
           "path": "tests/speckit-pro/run-all.sh",
-          "content": "#!/usr/bin/env bash\nbash tests/speckit-pro/layer1-structural/validate-plugin.sh\njq -r '.status' tests/speckit-pro/evidence.json\ngit bash --login\nwsl.exe true\npwsh -File helper.ps1\ncat results.json | grep status | sed 's/pass/ok/' | awk '{print $1}'\nversion=$(jq -r '.version' package.json)\npython3 - <<'PY'\nimport os\nimport subprocess\nos.system('echo unsafe')\nsubprocess.run('bash scripts/build-plugin-payloads.sh', shell=True)\nsubprocess.check_output('jq -r .version package.json')\nPY\n"
+          "content": "#!/usr/bin/env bash\nbash tests/speckit-pro/layer1-structural/validate-plugin.sh\njq -r '.status' tests/speckit-pro/evidence.json\ngit bash --login\nwsl.exe true\npwsh -File helper.ps1\ncat results.json | grep status | sed 's/pass/ok/' | awk '{print $1}'\nversion=$(jq -r '.version' package.json)\npython3 - <<'PY'\nimport os\nimport subprocess\nos.system('echo unsafe')\nsubprocess.run('bash scripts/build-example.sh', shell=True)\nsubprocess.check_output('jq -r .version package.json')\nPY\n"
         }
       ]
     },
@@ -82,7 +82,7 @@
       "files": [
         {
           "path": ".github/workflows/release.yml",
-          "content": "jobs:\n  release:\n    steps:\n      - name: Release plugin logic\n        run: |\n          set -euo pipefail\n          for manifest in */.claude-plugin/plugin.json; do\n            jq -r '.version' \"$manifest\"\n          done\n          bash scripts/build-plugin-payloads.sh\n"
+          "content": "jobs:\n  release:\n    steps:\n      - name: Release plugin logic\n        run: |\n          set -euo pipefail\n          for manifest in */.claude-plugin/plugin.json; do\n            jq -r '.version' \"$manifest\"\n          done\n          bash scripts/build-example.sh\n"
         }
       ]
     },
