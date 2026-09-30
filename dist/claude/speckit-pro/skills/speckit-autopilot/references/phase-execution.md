@@ -1,5 +1,6 @@
 # Phase Execution Reference
 
+
 ## Contents
 
 - [SpecKit Infrastructure](#speckit-infrastructure) — commands, scripts, templates, constitution
@@ -92,6 +93,7 @@ a "skip branch creation" prefix in its prompt. Do NOT use
 `export SPECIFY_FEATURE` — env vars do not persist across
 tool invocations.
 
+
 ## Stage-Bounded Phase Selection
 
 `AUTOPILOT_STAGE` is resolved once at Step 0.6c. It bounds which phases this
@@ -102,6 +104,7 @@ invocation may run:
 | `plan` | Specify, Clarify, Plan, Checklist, Tasks, Analyze | G6.5 confidence gate, then the stage-boundary commit |
 | `implement` | Implement, then the post-implementation steps | `Post: Retrospective` |
 | `full` | All seven phases end to end | `Post: Retrospective` |
+
 
 **A resolved stage MUST NOT start a phase outside its own range.** Apply the
 range *before* the SKILL.md Step 1 scan picks a row, not after:
@@ -184,6 +187,35 @@ Emit that sentence on **every** implementation-stage run past a non-terminal
 verdict, flag or no flag. Naming the implementation stage explicitly remains
 sufficient to proceed — the operator is not blocked, and no confirmation is
 required. Crossing *silently* is the only thing forbidden.
+
+### Resume Protocol
+
+Resuming is the same protocol on both distributions, because both read the same
+durable store through the same Step 0.6c operation.
+
+**The `Stage` entry is workflow-file-wins.** The `Stage` row in the workflow
+file's `### Basic Information` table is the authoritative durable store of the
+resolved stage; `autopilot-state.json.stage` mirrors it for the active run only
+and is never authoritative. On disagreement the workflow file wins and the
+mirror is repaired from it. Absence on either side is legal — it means no run
+yet, and resolves through Step 0.6c auto-detection. A two-sided disagreement is
+reported by the Step 1.1 coverage guard as `stage_mirror_errors`, which is
+registered in the `status-evidence` rule and so fails the guard rather than
+merely printing.
+
+Three resume forms, in order of preference:
+
+- **Bare re-invocation** — pass the workflow file and nothing else. Step 0.6c
+  re-resolves the stage from the workflow file's own status table and prints the
+  basis. After a plan-stage boundary this re-resolves `plan` whenever the
+  `Confidence Gate` row is non-terminal, so a refused boundary is never crossed
+  by accident.
+- **`--stage implement`** — the explicit crossing. Required after a strict-mode
+  stop, and it reports the recorded verdict it is proceeding past rather than
+  re-running the gate.
+- **`--from-phase <phase>`** — moves the starting point within the resolved
+  stage's range. The older `--from-phase implement` form keeps working and is
+  not rejected against an auto-detected stage.
 
 ## Phase-by-Phase Execution
 
@@ -399,6 +431,7 @@ capture the structured response instead of letting a failed helper response
 abort the run:
 
 ```text
+plan = "specs/<feature>/plan.md"
 resolved_python -m speckit_pro_runner < request.json
 
 request.json:
@@ -457,6 +490,45 @@ compact evidence live outside specs/. Exclude raw checker output.
 **Commit:**
 `git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json && git commit -m "feat(SPEC-XXX): complete plan phase"`
 
+### G3 Plan ambiguity branch
+
+The parent orchestrator, not the Plan executor or consensus agents, classifies
+the disputed wording before retrying. Follow
+[`gate-validation.md`](./gate-validation.md)
+§Plan ambiguity provenance repair exactly. Give the same `phase-executor` the
+complete original Plan prompt within that same corrective reservation, plus
+literal trusted context blocks containing the direct source evidence and a
+`Plan Repair Context` containing the complete immediately preceding actual G3
+runner response envelope without summary or field omission (including its exact
+G3 JSON), disputed wording, provenance class, prior repair result, and attempt number. Append every attempt
+and revalidation result to the workflow's Plan Ambiguity Repair Log. If
+provenance is unresolved, record why repair cannot safely proceed; never turn
+downstream agent agreement into human ratification.
+
+The executor message itself must contain those exact bytes. A file path, an
+instruction for the executor to read the file, an excerpt, or a paraphrase is
+not a trusted-context block. Before dispatch, verify locally that the complete
+original prompt, every required source-evidence block, and the complete parsed
+G3 response object are literal substrings of the message. If any block is
+missing, repair the message before dispatch rather than asking the executor to
+recover the context independently.
+
+Construct that message with the registered read-only
+`render-plan-repair-context` runner helper. First persist the complete actual
+G3 response envelope in the request's declared attempts file. Then invoke the
+helper request and pass its complete successful response envelope unchanged as
+the `phase-executor` child message. The executor treats only the envelope's
+hash-bound `data.stdout_json.executor_message` as its instruction. This sealed
+transport avoids a second model-authored copy while preserving every source
+byte and the complete G3 object. Do not manually summarize, reconstruct,
+extract, or splice the helper output. If the helper rejects its bounded inputs
+or retained evidence, stop before dispatch and repair the request or evidence.
+
+The parent, never the executor, runs the authoritative G3 command before the
+first repair and after every completed executor return. Preserve the strict
+order `parent G3 -> executor dispatch and return -> parent G3 rerun`; the
+executor must not produce or substitute the G3 evidence it receives.
+
 ### Phase 4: Checklist
 
 Spawn a **separate subagent for each checklist domain**,
@@ -510,6 +582,7 @@ domain runs.
 
 ### Phase 5: Tasks
 
+
 Before dispatching Tasks for an enabled formal selection, reconcile and renew
 the `planning` checkpoint per [Selected formal checkpoints](formal-methods.md#later-planning-implementation-and-closeout).
 Include the selected properties' implementation obligations and declared scope.
@@ -525,22 +598,19 @@ and lists it under `gate_task_loops` (see [G5](gate-validation.md#g5--after-task
 Split each listed task: a candidate check now, with the reconciliation against
 actual evidence attached to the emission step. Then rerun G5.
 
-**Post-G5 reviewability capture (guarded):**
-After G5 passes, run the task reviewability gate without letting
-the script's compatibility exit code abort the run:
-
-```text
-code=0
-out=<command output> || code=$?
-```
-
-Parse stdout as JSON and record stdout, stderr, exit code, gate
-status/mode/exit/evidence path, and a repo-relative evidence path in the
-workflow file. If the result is `pass`, `warn`, or an honored typed exception,
-continue normally. If the result is a valid current size-only `status=block`
-for `mode=tasks`, continue into marker planning and later marker emission; it is
-not a manual re-slicing stop and MUST NOT ask the operator to rewrite task
-boundaries solely for size.
+**Post-G5 reviewability capture:**
+After G5 passes, apply the tasks-phase reviewability boundary.
+Runner helper `reviewability-gate`
+supports setup mode only on the installed runner — tasks mode is deferred, so
+do not invoke it as an active helper. Record the deferred-mode diagnostics
+(helper ID, requested mode, deferral reason) in the workflow file, then
+evaluate the fallback evidence chain: the setup-mode gate result recorded at
+scaffold, the plan-phase `estimate-reviewable-loc` verdict, and any
+ratified split decision (autopilot or operator) in the workflow file. If that committed
+evidence shows `pass`, `warn`, or an honored typed exception, continue. If it
+shows a valid current size-only `status=block`, continue into marker
+planning and later marker emission; it is not a manual re-slicing stop and
+MUST NOT ask the operator to rewrite task boundaries solely for size.
 
 Correctness stops remain blocking: malformed/stale marker state, failed
 verification, invalid packet, unsafe output, unusable gate evidence, invalid
@@ -659,7 +729,7 @@ signals[], hints[], warnings[]}` or an error and writes no file.
 
 Then record the four surfaced fields (`route`, `releasable`,
 `signals`, `warnings`) into the workflow file's `## Atomicity Route`
-section via the orchestrator's own `Edit`. Route values:
+section with the orchestrator's own file edit. Route values:
 `split-PR` (proven additive multi-seam), `one-navigable-PR` (default /
 abstain, guarded cutover, or modify-heavy), `single-atomic-PR`
 (hard-atomic or release-held cutover), `branch-by-abstraction`
@@ -778,7 +848,8 @@ emit on the workflow file (see
 provides the data; the gate script reads it and decides whether
 to proceed, surface a remediation hint, or stop.
 
-```
+
+```text
 1. Read mode from `CONFIDENCE_GATE_MODE` (set at Step 0.6b — see
    [Prerequisites](./prerequisites.md) and the SKILL.md orchestration
    summary). Do not re-run `resolve-confidence-mode` here —
@@ -804,7 +875,8 @@ to proceed, surface a remediation hint, or stop.
    - exit 0 (PASS): TaskUpdate G6.5 → completed; advance to Phase 7.
    - exit 1 (NO_DATA): log a warning, surface to operator that the
      synthesizer skipped its confidence emit (treat as a plugin
-     regression report). TaskUpdate G6.5 → completed with a
+     regression report).
+     TaskUpdate G6.5 → completed with a
      `no_data: true` note. Advance to Phase 7.
    - exit 2 (FAIL):
        a. Read JSON `deductions_applied` first. When it is true,
@@ -919,6 +991,7 @@ does not end at the boundary commit above. It runs this sequence, in this order:
 9. Validate and commit/push the workflow-only preview evidence.
 ```
 
+
 **Read the [Artifact Review Handoff contract](./artifact-review.md) before this sequence.**
 It defines the durable record, preview evidence, current-task binding, and
 preview-only resume. Publication through step 6 remains fail-open for generation
@@ -972,6 +1045,7 @@ only recovery path.
 
 #### Artifact generation: the `artifact-author` dispatch
 
+
 Step 1 is one dispatch of the `speckit-pro:artifact-author` subagent. The
 orchestrator hands it the feature's planning record and the shipped gallery, and
 it returns one outcome per page it wrote or could not write:
@@ -999,6 +1073,7 @@ Agent(
   """
 )
 ```
+
 
 **Selection lives inside the agent and is driven by the manifest.** The
 orchestrator names no page list of its own. The agent reads `manifest.json`
@@ -1168,7 +1243,11 @@ creation and is not re-derived at the later ready flip:
 scope is **lowercase**. Validate the exact string through the release-readiness
 gate's `validate-pr-title` operation before creating. The packet schema alone
 would also accept an uppercase ticket-style scope; the release-readiness shape
-would not, so the lowercase form is the binding one. Draft-mode title validation
+would not, so the lowercase form is the binding one. Do **not** substitute the
+`validate-pr-workflow-contract` operation, which the ready pull request's
+packet check runs later: its scope rule upper-cases `prsg-`, `spec-`, `doc-`,
+and `xplat-` slugs, so on those spec families it would demand an uppercase
+scope that this lowercase requirement can never satisfy. Draft-mode title validation
 checks the conventional shape only — it does not ask the description to reference
 verification or evidence a draft has not produced.
 
@@ -1440,7 +1519,8 @@ so routing happens here.
 
 **A declared pre-PR command runs as a pre-PR gate.** A command the root
 `AGENTS.md` or `CLAUDE.md` names for every PR, such as a dependency audit,
-runs before each PR like any other gate. On Codex the Phase 6.5 preflight
+runs before each PR like any other gate.
+On Codex the Phase 6.5 preflight
 collects its egress authorization at run start through
 `check-gate-preflight-coverage`. Claude Code has no approval reviewer, so it has
 no egress inventory. Its Step -2 run-start permission probe settles the runner
@@ -2263,6 +2343,7 @@ the committed planning record and runs this sequence:
 9. When the `Draft PR` cell actually changed, take the record commit.
 ```
 
+
 **Step 0 is a security boundary.** It keeps every broader agent and generated
 artifact consumer out of the run that received model-produced amendment text.
 
@@ -3019,6 +3100,12 @@ correctness stops in this reference are unchanged and still stop the run:
 unknown side effects the runner cannot classify with `reconcile-unit`, an
 execution-control `checkpoint_required` disposition, a ledger or clock error,
 invalid or stale state, and a failed gate whose repair is out of scope.
+An unknown dispatch
+outcome blocks only its own unit: pass `tdd_units` on each implementation
+reserve, run a read-only reconciler over the unit's owned paths, and settle it
+with `execution-control action=reconcile-unit`; `no_effect` allows a new
+dispatch with no operator event, and `partial` or `complete` need a
+`kind=verification` dispatch (`verifies_dispatch_id`) first.
 A `checkpoint_required` whose `reasons` is only `unknown_dispatch_blocks_unit`
 is not a stop: run `reconcile-unit` for each id in `blocked_by`. On
 `unit_classification_mismatch`, re-inspect the owned paths and call once more
@@ -3039,7 +3126,8 @@ fixed allowances, and then the ledger returns
 `disposition=defer`, refuses that dispatch, and records the blocked failure
 family, increment, gate, or failure class in its `deferred` list. Defer that work
 under rule 2, name the task or gate it blocks, and keep executing every
-independent task, increment, gate, and Post check. Mid-run that only moves the run on to other units. At the end of the run an
+independent task, increment, gate, and Post check.
+Mid-run that only moves the run on to other units. At the end of the run an
 unresolved ledger deferral first climbs the escalation tiers in rule 3: tier 2, a fresh agent with a
 different approach guided by a consensus diagnosis, then tier 3, the strongest model at max effort with the
 full failure history, capped at 3 per run. Only a unit that failed every tier, or met the cap, is
