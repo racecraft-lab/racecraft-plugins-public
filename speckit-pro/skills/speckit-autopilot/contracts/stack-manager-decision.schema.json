@@ -20,12 +20,8 @@
     "schema_version": {
       "const": "stack-manager-decision.v1"
     },
-    "phase": {
-      "enum": ["emission", "restack"]
-    },
-    "operation": {
-      "enum": ["detect", "link", "sync", "restack"]
-    },
+    "phase": { "description": "restack is reserved for the deferred restack executor.", "enum": ["emission", "restack"] },
+    "operation": { "description": "sync and restack are reserved for the deferred restack executor.", "enum": ["detect", "link", "sync", "restack"] },
     "selected_manager": {
       "enum": ["gh-stack", "explicit-gh", "blocked"]
     },
@@ -166,10 +162,10 @@
         "required": ["selected_manager"]
       },
       "then": {
+        "if": { "properties": { "mutation_boundary": { "properties": { "status": { "enum": ["partial_mutation", "partial_mutation_unknown"] } } } } },
+        "then": { "required": ["recovery"], "properties": { "fallback_allowed": { "const": false }, "recovery": { "type": "object" } } },
+        "else": { "properties": { "fallback_allowed": { "const": true } } },
         "properties": {
-          "fallback_allowed": {
-            "const": true
-          },
           "gh_stack": {
             "properties": {
               "available": { "const": true },
@@ -339,15 +335,8 @@
           "type": "boolean"
         },
         "support_status": {
-          "enum": [
-            "supported",
-            "missing",
-            "unsupported_version",
-            "private_preview_unavailable",
-            "ambiguous",
-            "read_only_proof_failed",
-            "topology_incompatible"
-          ]
+          "enum": ["supported", "missing", "untrusted_skill", "skill_mismatch", "operator_preference", "unsupported_version",
+                   "ambiguous", "read_only_proof_failed", "topology_incompatible"]
         },
         "invocation": {
           "type": "array",

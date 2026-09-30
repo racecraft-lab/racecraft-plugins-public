@@ -43,3 +43,6 @@ speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256                  merge=
 docs/ai/specs/*-MOC.md                                                    merge=generated
 specs/*/SPEC-MOC.md                                                       merge=generated
 docs/ai/specs/.process/autopilot-state.json                               merge=generated
+
+# Byte-exact copy whose SHA-256 is the gh-stack skill pin; never normalize its line endings.
+tests/speckit-pro/unit/fixtures/stack-manager/gh-stack-SKILL.md -text
