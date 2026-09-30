@@ -4492,11 +4492,10 @@ class PlanLayersPlannerCaseTests(unittest.TestCase):
 
     def plan(self, tasks_md: str) -> tuple[int, dict[str, object]]:
         with helper_project() as root:
-            for relative in PLAN_LAYERS_FILES:
+            files = {**{name: "x\n" for name in PLAN_LAYERS_FILES}, "specs/feature/tasks.md": tasks_md}
+            for relative, text in files.items():
                 (root / relative).parent.mkdir(parents=True, exist_ok=True)
-                (root / relative).write_text("x\n", encoding="utf-8")
-            (root / "specs" / "feature").mkdir(parents=True)
-            (root / "specs" / "feature" / "tasks.md").write_text(tasks_md, encoding="utf-8")
+                (root / relative).write_text(text, encoding="utf-8")
             completed, response, _ = run_runner(
                 helper_request("plan-layers-feature-dir", {"feature_dir": "specs/feature"}),
                 cwd=root,
