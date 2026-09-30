@@ -10,8 +10,7 @@
         "Asks exactly one question per turn with the AI's recommendation first, labeled '(Recommended)', and a one-line rationale",
         "Walks the feature-breakdown branch explicitly and derives the SPEC catalog from it (one SPEC per feature)",
         "Writes a lean PRD to docs/prd-saved-searches.md with sections Problem, Goals/Non-goals, Acceptance Criteria grouped by feature (AC-N.*), Migration Path, Module and Interface Deltas, Constraints, Open Questions, SPEC Catalog Crosswalk, Success Criteria",
-        "Writes a technical roadmap to docs/ai/specs/saved-searches-technical-roadmap.md whose SPEC catalog is 1:1 with the PRD features (same count, names, and SPEC IDs), with a Source PRD reference",
-        "Also writes the roadmap-MOC home note docs/ai/specs/saved-searches-roadmap-MOC.md, the third required artifact, linked to and from the technical roadmap",
+        "Writes a technical roadmap to docs/ai/specs/saved-searches-technical-roadmap.md whose SPEC catalog is 1:1 with the PRD features (same count, names, and SPEC IDs), with a Source PRD reference, and writes the roadmap-MOC home note docs/ai/specs/saved-searches-roadmap-MOC.md as the third required artifact",
         "Confirms the dependency graph / execution order with the user before finalizing the roadmap",
         "Recommends the next step ($speckit-status or $speckit-scaffold-spec SPEC-001), and does NOT create a worktree, workflow file, or spec.md"
       ]
