@@ -16,7 +16,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from .execution_control import is_runner_byproduct
-from .verification_records import MAX_BYTES, MAX_FILES, digest, sha, tree_digest
+from .verification_evidence import MAX_BYTES, MAX_FILES, digest, sha, tree_digest
 
 COMMON_INPUTS = ("objects", "refs", "info", "packed-refs", "config")
 PRIVATE_INPUTS = ("HEAD", "index", "ORIG_HEAD", "FETCH_HEAD", "config.worktree")

@@ -819,8 +819,31 @@ class DockerImageTests(unittest.TestCase):
         client.call.assert_not_called()
 
 
+class DockerPlatformTests(unittest.TestCase):
+    """Docker verification names its one supported platform once, and the guidance says so."""
+
+    PLUGIN = Path(__file__).resolve().parents[3] / "speckit-pro"
+
+    def test_every_docker_module_uses_the_one_platform_constant(self):
+        import speckit_pro_runner.verification_docker as policy
+
+        self.assertEqual(policy.PLATFORM, "linux/arm64")
+        self.assertIn(f"--platform={policy.PLATFORM}", policy.container_options("sha256:" + "a" * 64, "b" * 32))
+        for name in ("verification_docker.py", "verification_docker_image.py", "verification_docker_runtime.py"):
+            source = (self.PLUGIN / "speckit_pro_runner" / name).read_text(encoding="utf-8")
+            literals = [line for line in source.splitlines() if "arm64" in line and "PLATFORM = " not in line]
+            with self.subTest(module=name):
+                self.assertEqual([line for line in literals if '"arm64"' in line or "linux/arm64" in line], [])
+
+    def test_the_guidance_states_the_arm64_only_limit(self):
+        guidance = " ".join((self.PLUGIN / "skills/speckit-autopilot/references/execution-efficiency.md")
+                            .read_text(encoding="utf-8").split())
+        self.assertIn("runs only against a Linux/arm64 Docker daemon", guidance)
+        self.assertIn("amd64", guidance)
+
+
 if __name__ == "__main__":
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                                for case in (DockerInputTests, DockerPolicyTests, DockerEntrypointTests, DockerRuntimeTests,
-                                            DockerReadbackTests, DockerImageTests))
+                                            DockerReadbackTests, DockerImageTests, DockerPlatformTests))
     raise SystemExit(run_counted(suite, label="test-verification-docker"))
