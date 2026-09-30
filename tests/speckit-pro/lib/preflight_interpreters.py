@@ -66,7 +66,10 @@ def _classify(payload: dict[str, Any], expected_architecture: str) -> dict[str, 
     numbers = [payload.get(part) for part in ("major", "minor", "micro")]
     major, minor = numbers[0], numbers[1]
     all_ints = all(type(item) is int for item in numbers)
-    version_supported = all_ints and (major > 3 or (major == 3 and minor >= 11))
+    version_supported = (
+        all_ints and isinstance(major, int) and isinstance(minor, int)
+        and (major > 3 or (major == 3 and minor >= 11))
+    )
     architectures = resolve_architectures(
         str(payload.get("machine") or ""),
         str(payload.get("processor_architecture") or ""),
@@ -93,6 +96,28 @@ def _classify(payload: dict[str, Any], expected_architecture: str) -> dict[str, 
     }
 
 
+def _run_probe(candidate: str, cwd: Path) -> subprocess.CompletedProcess[str]:
+    """Run one probe with a literal argv per candidate.
+
+    The repository Bash-confinement guard accepts only subprocess argv it can
+    resolve statically, so each supported candidate spells out its own command.
+    """
+    if candidate == "py -V:3":
+        argv = ["py", "-V:3", "-c", INTERPRETER_PROBE_CODE]
+    elif candidate == "py -3":
+        argv = ["py", "-3", "-c", INTERPRETER_PROBE_CODE]
+    elif candidate == "python":
+        argv = ["python", "-c", INTERPRETER_PROBE_CODE]
+    elif candidate == "python3":
+        argv = ["python3", "-c", INTERPRETER_PROBE_CODE]
+    else:
+        raise ValueError(f"unsupported interpreter candidate: {candidate}")
+    return subprocess.run(
+        argv, cwd=cwd, capture_output=True, text=True, check=False, shell=False,
+        timeout=PROBE_TIMEOUT_SECONDS,
+    )
+
+
 def probe_interpreter(
     candidate: str, expected_architecture: str, evidence_dir: Path, *, cwd: Path,
 ) -> dict[str, Any]:
@@ -111,11 +136,7 @@ def probe_interpreter(
         _write_probe_files(evidence_dir, slug, "", f"{launcher} was not found on PATH\n", 127)
         return record
     try:
-        completed = subprocess.run(
-            [*candidate.split(), "-c", INTERPRETER_PROBE_CODE],
-            cwd=cwd, capture_output=True, text=True, check=False, shell=False,
-            timeout=PROBE_TIMEOUT_SECONDS,
-        )
+        completed = _run_probe(candidate, cwd)
     except (OSError, subprocess.TimeoutExpired) as exc:
         _write_probe_files(evidence_dir, slug, "", f"{type(exc).__name__}: {exc}\n", 124)
         return {**record, "exit_code": 124, "status": "probe_error", "error_type": type(exc).__name__}
