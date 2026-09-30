@@ -37,15 +37,20 @@ skills = load_module("validate_skill_contracts", "validate-skill-contracts.py")
 metadata = load_module("validate_plugin_metadata", "validate-plugin-metadata.py")
 
 
-def run_codex_agent_validator(codex_agents_dir: Path) -> unittest.TestResult:
-    original = agents.CODEX_AGENTS_DIR
-    agents.CODEX_AGENTS_DIR = codex_agents_dir
+def run_with_override(module, attribute: str, value: Path, case: type[unittest.TestCase], method: str) -> unittest.TestResult:
+    """Run one validator test with a module-level path pointed at ``value``."""
+    original = getattr(module, attribute)
+    setattr(module, attribute, value)
     try:
         result = unittest.TestResult()
-        agents.ValidateCodexAgents("test_codex_agents").run(result)
+        case(method).run(result)
         return result
     finally:
-        agents.CODEX_AGENTS_DIR = original
+        setattr(module, attribute, original)
+
+
+def run_codex_agent_validator(codex_agents_dir: Path) -> unittest.TestResult:
+    return run_with_override(agents, "CODEX_AGENTS_DIR", codex_agents_dir, agents.ValidateCodexAgents, "test_codex_agents")
 
 
 def write_valid_agent_instruction_tree(root: Path) -> None:
@@ -317,14 +322,7 @@ class PayloadValidatorTests(unittest.TestCase):
     """The payload contract validator passes a sound plugin and fails a broken one."""
 
     def run_validator(self, source: Path) -> unittest.TestResult:
-        original = payloads.SOURCE_ROOT
-        payloads.SOURCE_ROOT = source
-        try:
-            result = unittest.TestResult()
-            payloads.ValidatePluginPayload("test_payload").run(result)
-            return result
-        finally:
-            payloads.SOURCE_ROOT = original
+        return run_with_override(payloads, "SOURCE_ROOT", source, payloads.ValidatePluginPayload, "test_payload")
 
     def test_a_nested_skill_entrypoint_fails_the_payload_contract(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

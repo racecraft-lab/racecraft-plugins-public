@@ -1,4 +1,4 @@
-"""Evidence file writers shared by the container preflight dispatcher and its probes."""
+"""Evidence file writers shared by the preflight scripts and live smoke runners."""
 
 from __future__ import annotations
 

@@ -36,6 +36,13 @@ def run_refresh(repo_root: Path) -> subprocess.CompletedProcess[str]:
     """Run the one full release refresh, the only payload build path, inside an isolated copy."""
     return subprocess.run([sys.executable, '-B', str(repo_root / 'scripts' / REFRESH.name)], cwd=repo_root, text=True, capture_output=True, shell=False, check=False)
 
+def copy_refresh_inputs(work: Path) -> None:
+    """Copy what the full refresh reads into an empty directory: itself, the plugin source and registries."""
+    for relative in ('scripts/' + REFRESH.name, 'LICENSE', *MARKETPLACE_FILES):
+        (work / relative).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(REPO_ROOT / relative, work / relative)
+    shutil.copytree(SOURCE_ROOT, work / 'speckit-pro', ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
+
 def _display_path(path: Path) -> str:
     try:
         return path.relative_to(REPO_ROOT).as_posix()
@@ -127,13 +134,7 @@ class ValidatePluginPayload(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory(prefix='payload-builder-consumer-')
         self.addCleanup(temporary.cleanup)
         self.work = Path(temporary.name).resolve()
-        (self.work / 'scripts').mkdir()
-        shutil.copy2(REFRESH, self.work / 'scripts' / REFRESH.name)
-        shutil.copy2(REPO_ROOT / 'LICENSE', self.work / 'LICENSE')
-        for marketplace in MARKETPLACE_FILES:
-            (self.work / marketplace).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(REPO_ROOT / marketplace, self.work / marketplace)
-        shutil.copytree(SOURCE_ROOT, self.work / 'speckit-pro', ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
+        copy_refresh_inputs(self.work)
 
     def test_payload(self) -> None:
         claude_payload = self.work / 'dist' / 'claude' / 'speckit-pro'

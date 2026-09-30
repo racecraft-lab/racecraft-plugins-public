@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from preflight_architecture import resolve_architectures
-from preflight_evidence import write_json, write_text
+from evidence_files import write_json, write_text
 
 # Candidate launcher command -> evidence file slug. Order is probe order.
 INTERPRETER_SLUGS = {

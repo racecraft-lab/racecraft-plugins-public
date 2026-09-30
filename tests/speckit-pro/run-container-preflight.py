@@ -15,8 +15,8 @@ from typing import Any, Callable
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
 from preflight_architecture import architecture_family as _architecture_family  # noqa: E402
-from preflight_evidence import write_json as _write_json  # noqa: E402
-from preflight_evidence import write_text as _write_text  # noqa: E402
+from evidence_files import write_json as _write_json  # noqa: E402
+from evidence_files import write_text as _write_text  # noqa: E402
 from preflight_interpreters import (  # noqa: E402
     INTERPRETER_CANDIDATES,
     probe_interpreters,
@@ -490,9 +490,7 @@ def _windows_smoke() -> int:
         raise PreflightError(f"unsupported Windows role: {role}")
     evidence_dir = _evidence_dir()
     evidence_dir.mkdir(parents=True, exist_ok=True)
-    selected_record, probe_records = probe_interpreters(
-        WINDOWS_ROLE_ARCHITECTURES[role], evidence_dir, cwd=REPO_ROOT,
-    )
+    selected_record, probe_records = probe_interpreters(WINDOWS_ROLE_ARCHITECTURES[role], evidence_dir, cwd=REPO_ROOT)
     if selected_record is None:
         _write_json(
             evidence_dir / "summary.json",

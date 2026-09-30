@@ -33,6 +33,8 @@ PACKAGED_PLUGIN_ROOTS = {
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
 
+sys.path.insert(0, str(REPO_ROOT / "tests" / "speckit-pro" / "lib"))
+from evidence_files import write_text as _write  # noqa: E402
 from speckit_pro_runner import sweep_isolation, sweep_launcher  # noqa: E402
 
 
@@ -122,11 +124,6 @@ def _git(repo: Path, *args: str) -> str:
     if completed.returncode != 0:
         raise SmokeFailure("Git fixture operation failed")
     return completed.stdout.strip()
-
-
-def _write(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
 
 
 def _tracked_digest(repo: Path) -> str:

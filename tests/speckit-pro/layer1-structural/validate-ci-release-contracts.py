@@ -578,10 +578,8 @@ class ValidatePrChecksSentinel(unittest.TestCase):
                 self.assertNotIn('specifyCommand', block)
             candidates = ('"py -V:3"', '"py -3"', '"python"', '"python3"')
             probe_content = INTERPRETER_PROBE_FILE.read_text(encoding='utf-8')
-            candidate_positions = [probe_content.index(candidate) for candidate in candidates]
-            self.assertEqual(candidate_positions, sorted(candidate_positions))
-            self.assertIn('interpreter-probes.json', probe_content)
-            self.assertIn('architecture_emulated', probe_content)
+            self.assertEqual([probe_content.index(candidate) for candidate in candidates], sorted(probe_content.index(candidate) for candidate in candidates))
+            self.assertTrue(all((expected in probe_content for expected in ('interpreter-probes.json', 'architecture_emulated'))))
             self.assertIn('child_env["PREFLIGHT_INTERPRETER_CANDIDATE"] = selected', dispatch_content)
             for expected in ('run-hosted-windows-preflight.py', '"--pipx-version"', '"--spec-kit-version"', '"--spec-kit-ref"'):
                 self.assertIn(expected, dispatch_content)
