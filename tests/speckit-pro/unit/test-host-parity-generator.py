@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import copy
 import sys
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -18,6 +19,10 @@ for import_root in (PLUGIN_ROOT, LIB_DIR):
         sys.path.insert(0, str(import_root))
 
 from speckit_pro_runner.agent_inventory import AGENT_INVENTORY  # noqa: E402
+from speckit_pro_runner.codex_agent_generator import (  # noqa: E402
+    generated_codex_agents,
+    render_codex_agent,
+)
 from speckit_pro_runner.host_parity import (  # noqa: E402
     HostParityError,
     derive_codex_enforcement,
@@ -25,6 +30,7 @@ from speckit_pro_runner.host_parity import (  # noqa: E402
     emit_host,
     pairing_manifest,
     split_frontmatter,
+    unexplained_blocks,
 )
 from test_result import run_counted  # noqa: E402
 
@@ -43,15 +49,17 @@ class HostBlockTests(unittest.TestCase):
         with self.assertRaisesRegex(HostParityError, reason):
             emit_host(text, host)
 
-    def test_balanced_blocks_keep_the_target_host_and_strip_the_other(self) -> None:
-        text = SHARED + CODEX_BLOCK + CLAUDE_BLOCK + "Tail.\n"
-        self.assertEqual(emit_host(text, "codex"), "Shared line.\nCodex only.\nTail.\n")
-        self.assertEqual(emit_host(text, "claude"), "Shared line.\nClaude only.\nTail.\n")
+    # (source, Codex view, Claude view)
+    VIEWS = (
+        (SHARED + CODEX_BLOCK + CLAUDE_BLOCK + "Tail.\n",
+         "Shared line.\nCodex only.\nTail.\n", "Shared line.\nClaude only.\nTail.\n"),
+        ("One.\n\nTwo.\n", "One.\n\nTwo.\n", "One.\n\nTwo.\n"),
+        ("<!-- host:codex: Codex runs exec_command -->\nCodex only.\n<!-- /host -->\n", "Codex only.\n", ""),
+    )
 
-    def test_text_without_markers_is_unchanged_for_both_hosts(self) -> None:
-        text = "One.\n\nTwo.\n"
-        self.assertEqual(emit_host(text, "codex"), text)
-        self.assertEqual(emit_host(text, "claude"), text)
+    def test_each_host_keeps_its_own_blocks_and_no_marker_or_reason(self) -> None:
+        views = [(emit_host(text, "codex"), emit_host(text, "claude")) for text, *_ in self.VIEWS]
+        self.assertEqual(views, [(codex, claude) for _, codex, claude in self.VIEWS])
 
     def test_nested_block_fails_closed(self) -> None:
         self.assert_rejected(
@@ -87,6 +95,16 @@ class HostBlockTests(unittest.TestCase):
     def test_error_names_the_line_number(self) -> None:
         self.assert_rejected("ok\n<!-- /host -->\n", "line 2")
 
+    def test_unexplained_blocks_lists_open_markers_without_a_reason(self) -> None:
+        text = (
+            "<!-- host:codex: why -->\nx\n<!-- /host -->\n"
+            "<!-- host:claude -->\ny\n<!-- /host -->\n"
+        )
+        self.assertEqual(unexplained_blocks(text), [4])
+
+    def test_a_blank_reason_fails_closed(self) -> None:
+        self.assert_rejected("<!-- host:codex:   -->\nz\n<!-- /host -->\n", "line 1")
+
 
 class FrontmatterTests(unittest.TestCase):
     def test_folded_description_does_not_leak_into_other_keys(self) -> None:
@@ -96,6 +114,10 @@ class FrontmatterTests(unittest.TestCase):
         self.assertEqual(fields["tools"], "Read, Grep")
         self.assertEqual(fields["name"], "a")
         self.assertEqual(body, "# Body\n")
+
+    def test_folded_value_is_joined_like_yaml_folds_it(self) -> None:
+        fields, _ = split_frontmatter(agent("name: a\ndescription: >\n  First line\n  second line.\ntools: Read\n"))
+        self.assertEqual(fields["description"], "First line second line.")
 
     def test_missing_closing_fence_fails_closed(self) -> None:
         with self.assertRaisesRegex(HostParityError, "frontmatter"):
@@ -236,6 +258,59 @@ class PairingManifestTests(unittest.TestCase):
             pairing_manifest(inventory)
 
 
+CODEX_RECORD = {"model": "gpt-6-sol", "effort": "xhigh", "sandbox": "read-only"}
+TRICKY_BODY = (
+    "\n# Probe\n\nShared rule with a \\d regex and a \"\"\" fence.\n"
+    "<!-- host:claude: Claude only -->\nClaude text.\n<!-- /host -->\n"
+    "<!-- host:codex: Codex only -->\nCodex text ends in a quote\"\n<!-- /host -->\n"
+)
+
+
+def probe_agent(tools: str = "Read, Grep") -> str:
+    return agent(f"name: probe\ndescription: >\n  Probe agent\n  for tests.\ntools: {tools}\n", TRICKY_BODY)
+
+
+class CodexAgentGeneratorTests(unittest.TestCase):
+    def test_rendered_file_parses_back_to_the_codex_view_of_the_source(self) -> None:
+        text = render_codex_agent("probe", probe_agent(), CODEX_RECORD, "agents/probe.md")
+        parsed = tomllib.loads(text)
+        self.assertEqual(parsed["developer_instructions"], emit_host(TRICKY_BODY.lstrip("\n"), "codex"))
+        self.assertNotIn("Claude text.", parsed["developer_instructions"])
+        self.assertEqual(parsed["description"], "Probe agent for tests.")
+        self.assertEqual(
+            (parsed["name"], parsed["model"], parsed["model_reasoning_effort"], parsed["sandbox_mode"]),
+            ("probe", "gpt-6-sol", "xhigh", "read-only"),
+        )
+        self.assertTrue(text.startswith("# Generated from agents/probe.md"))
+
+    def test_inventory_sandbox_must_match_the_derived_sandbox(self) -> None:
+        record = dict(CODEX_RECORD, sandbox="workspace-write")
+        with self.assertRaisesRegex(HostParityError, "probe: inventory codex.sandbox"):
+            render_codex_agent("probe", probe_agent(), record, "agents/probe.md")
+
+    def test_a_name_mismatch_or_missing_description_fails_closed(self) -> None:
+        with self.assertRaisesRegex(HostParityError, "is not 'other'"):
+            render_codex_agent("other", probe_agent(), CODEX_RECORD, "agents/probe.md")
+        with self.assertRaisesRegex(HostParityError, "no description"):
+            render_codex_agent("probe", agent("name: probe\ntools: Read\n"), CODEX_RECORD, "agents/probe.md")
+
+    def test_committed_codex_agents_equal_their_generated_text(self) -> None:
+        generated = generated_codex_agents(PLUGIN_ROOT, AGENT_INVENTORY)
+        self.assertEqual(
+            set(generated),
+            {role.codex_source for role in pairing_manifest(AGENT_INVENTORY).paired.values()},
+        )
+        for relative, text in generated.items():
+            with self.subTest(file=relative):
+                self.assertEqual((PLUGIN_ROOT / relative).read_text(encoding="utf-8"), text)
+
+    def test_every_host_block_in_a_paired_agent_states_its_reason(self) -> None:
+        for role in pairing_manifest(AGENT_INVENTORY).paired.values():
+            source = PLUGIN_ROOT / role.claude_source
+            with self.subTest(agent=role.name):
+                self.assertEqual(unexplained_blocks(source.read_text(encoding="utf-8")), [])
+
+
 def main() -> int:
     loader = unittest.defaultTestLoader
     suite = unittest.TestSuite(
@@ -247,6 +322,7 @@ def main() -> int:
             BrokerAllowlistTests,
             HookPolicyTests,
             PairingManifestTests,
+            CodexAgentGeneratorTests,
         )
     )
     return run_counted(suite, label="test-host-parity-generator")

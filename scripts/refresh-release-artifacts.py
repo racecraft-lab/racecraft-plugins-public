@@ -7,7 +7,8 @@ them from the current source tree so a release PR is self-consistent before
 merge:
 
 1. Recompute the runner trust metadata (manifest sha256 entries + ``.sha256``).
-2. Rebuild the Claude and Codex install payloads.
+2. Regenerate each paired role's Codex agent TOML from its Claude agent, then
+   rebuild the Claude and Codex install payloads.
 3. Sync the marketplace registries to the source plugin versions.
 
 The refresh is idempotent: a second run on the same source makes no further
@@ -41,6 +42,17 @@ MARKETPLACES = (
     (".agents/plugins/marketplace.json", ".codex-plugin/plugin.json"),
 )
 
+PLUGIN_SOURCE_ROOT = Path(__file__).resolve().parents[1] / "speckit-pro"
+sys.path.insert(0, str(PLUGIN_SOURCE_ROOT))
+from speckit_pro_runner.agent_inventory import AGENT_INVENTORY  # noqa: E402
+from speckit_pro_runner.host_parity import pairing_manifest  # noqa: E402
+
+# Codex agents generated from a Claude twin; a Codex-only agent stays authored.
+GENERATED_CODEX_AGENTS = tuple(
+    sorted(f"speckit-pro/{role.codex_source}" for role in pairing_manifest(AGENT_INVENTORY).paired.values())
+)
+
+
 CHECK_WORKTREE_PATHS = (
     "dist",
     ".claude-plugin/marketplace.json",
@@ -48,6 +60,7 @@ CHECK_WORKTREE_PATHS = (
     "docs-site/src/content/docs/reference",
     RUNNER_MANIFEST_FILE,
     RUNNER_CHECKSUM_FILE,
+    *GENERATED_CODEX_AGENTS,
 )
 CHECK_COPY_IGNORES = {
     ".git",
@@ -79,6 +92,8 @@ def refresh_release_artifacts(repo_root: Path) -> int:
     runner_root = repo_root / "speckit-pro"
     sys.path.insert(0, str(runner_root))
 
+    from speckit_pro_runner.agent_inventory import load_agent_inventory
+    from speckit_pro_runner.codex_agent_generator import refresh_codex_agents
     from speckit_pro_runner.gates import payloads
 
     changed: list[str] = []
@@ -86,7 +101,8 @@ def refresh_release_artifacts(repo_root: Path) -> int:
     # 1. Runner trust metadata (manifest sha256 entries + .sha256 companion).
     changed += refresh_runner_trust_metadata(repo_root)
 
-    # 2. Rebuild Claude and Codex payloads.
+    # 2. Generated Codex agents first: the Codex payload copies codex-agents/.
+    changed += refresh_codex_agents(runner_root, load_agent_inventory())
     payloads.build_installed_plugin_payloads(repo_root, repo_root / "dist")
 
     # 3. Sync marketplace versions to the source plugin versions.

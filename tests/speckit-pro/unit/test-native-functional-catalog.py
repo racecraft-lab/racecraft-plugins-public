@@ -188,7 +188,7 @@ ORCHESTRATION_REQUIRING_TEXT = {
         ("speckit-pro/agents/phase-executor.md",
          "Use a subagent only when the loaded command directs one"),
         ("speckit-pro/agents/phase-executor.md",
-         "After the Skill loads, execute its steps."),
+         "After the skill loads, execute its steps."),
         ("speckit-pro/codex-agents/phase-executor.toml",
          "Use `spawn_agent` only when the loaded skill directs it"),
         ("speckit-pro/codex-agents/phase-executor.toml",

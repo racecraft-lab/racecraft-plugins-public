@@ -556,6 +556,14 @@ validate_capability_resolution_DIRECTIVE_MARKER = 'capability-discovery.md'
 validate_capability_resolution_GROUNDING_MARKER = 'grounding.md'
 validate_capability_resolution_PATH_TOKEN_RE = re.compile('speckit-pro/[A-Za-z0-9._/-]*capability-discovery\\.md')
 validate_capability_resolution_GROUNDING_TOKEN_RE = re.compile('speckit-pro/[A-Za-z0-9._/-]*grounding\\.md')
+CONTRACT_REFERENCES = 'skills/speckit-autopilot/references'
+# One sentence per agent-facing grounding rule, quoted verbatim from grounding.md.
+GROUNDING_RULE_SENTENCES = (
+    ('G1', 'A claim with no invoked-capability result behind it must not be asserted as fact.'),
+    ('G2', 'When no available capability can ground a needed claim, say so instead of asserting it.'),
+    ('G3', 'never assign `high` confidence to a claim that is not grounded in an invoked result.'),
+    ('G4', 'each external claim names the capability result and a locator (URL, `file:line`, command, or returned record)'),
+)
 
 def validate_capability_resolution__rel(path: Path) -> str:
     return path.relative_to(REPO_ROOT).as_posix()
@@ -591,37 +599,31 @@ class ValidateCapabilityResolution(unittest.TestCase):
                 with self.subTest(msg=f"claude: in-scope agent '{agent_name}' reads the contracts from its `Reference dir:` line"):
                     self.assertIn("prompt's `Reference dir:` line", ' '.join(text.split()), f'no Reference dir directive in {validate_capability_resolution__rel(agent_file)}')
                 continue
-            directive_tokens = sorted(set(validate_capability_resolution_PATH_TOKEN_RE.findall(text)))
-            for token in directive_tokens:
-                if token not in found_tokens:
-                    found_tokens.append(token)
-            with self.subTest(msg=f"{runtime}: extracted directive path token(s) from in-scope agent '{agent_name}'"):
-                self.assertTrue(directive_tokens, f'agent references {validate_capability_resolution_DIRECTIVE_MARKER} but no path token matched in {validate_capability_resolution__rel(agent_file)}')
-            if validate_capability_resolution_GROUNDING_MARKER in text:
-                grounding_tokens = sorted(set(validate_capability_resolution_GROUNDING_TOKEN_RE.findall(text)))
-                for token in grounding_tokens:
-                    if token not in found_tokens:
-                        found_tokens.append(token)
-                with self.subTest(msg=f"{runtime}: extracted grounding path token(s) from in-scope agent '{agent_name}'"):
-                    self.assertTrue(grounding_tokens, f'agent references {validate_capability_resolution_GROUNDING_MARKER} but no path token matched in {validate_capability_resolution__rel(agent_file)}')
+            # An installed Codex agent cannot read the plugin's references, so it
+            # carries the grounding rules inline, word for word from grounding.md.
+            flat = ' '.join(text.split())
+            found_tokens.append(f'codex:{agent_name}')
+            with self.subTest(msg=f"codex: in-scope agent '{agent_name}' names no repo-relative contract path"):
+                self.assertFalse(validate_capability_resolution_PATH_TOKEN_RE.findall(text) or validate_capability_resolution_GROUNDING_TOKEN_RE.findall(text), f'repo-relative contract path in {validate_capability_resolution__rel(agent_file)}')
+            for rule, sentence in GROUNDING_RULE_SENTENCES:
+                with self.subTest(msg=f"codex: in-scope agent '{agent_name}' carries grounding rule {rule}"):
+                    self.assertIn(sentence, flat, f'{rule} missing from {validate_capability_resolution__rel(agent_file)}')
 
     def test_target_resolution(self) -> None:
-        found_tokens: list[str] = []
-        self._collect_runtime('claude', validate_capability_resolution_AGENTS_DIR, 'md', found_tokens)
-        self._collect_runtime('codex', validate_capability_resolution_CODEX_AGENTS_DIR, 'toml', found_tokens)
-        with self.subTest(msg='at least one directive path token was collected from the inventory'):
-            self.assertTrue(found_tokens, 'no directive path tokens collected — refusing to report success on zero work')
-        if not found_tokens:
-            return
-        with self.subTest(msg=f'built Claude payload tree exists ({validate_capability_resolution__rel(validate_capability_resolution_DIST_CLAUDE)})'):
-            self.assertTrue(validate_capability_resolution_DIST_CLAUDE.is_dir(), f'missing built tree: {validate_capability_resolution__rel(validate_capability_resolution_DIST_CLAUDE)}')
-        with self.subTest(msg=f'built Codex payload tree exists ({validate_capability_resolution__rel(validate_capability_resolution_DIST_CODEX)})'):
-            self.assertTrue(validate_capability_resolution_DIST_CODEX.is_dir(), f'missing built tree: {validate_capability_resolution__rel(validate_capability_resolution_DIST_CODEX)}')
-        for token in found_tokens:
-            with self.subTest(msg=f'resolves under dist/claude: {token}'):
-                self.assertTrue((validate_capability_resolution_DIST_CLAUDE / token).is_file(), f'absent in built Claude tree: dist/claude/{token}')
-            with self.subTest(msg=f'resolves under dist/codex: {token}'):
-                self.assertTrue((validate_capability_resolution_DIST_CODEX / token).is_file(), f'absent in built Codex tree: dist/codex/{token}')
+        checked: list[str] = []
+        self._collect_runtime('claude', validate_capability_resolution_AGENTS_DIR, 'md', checked)
+        self._collect_runtime('codex', validate_capability_resolution_CODEX_AGENTS_DIR, 'toml', checked)
+        with self.subTest(msg='at least one Codex agent carries the inline grounding rules'):
+            self.assertTrue(checked, 'no in-scope Codex agent checked — refusing to report success on zero work')
+        grounding = ' '.join((PLUGIN_ROOT / CONTRACT_REFERENCES / 'grounding.md').read_text(encoding='utf-8').split())
+        for rule, sentence in GROUNDING_RULE_SENTENCES:
+            with self.subTest(msg=f'grounding.md states rule {rule} as the agents quote it'):
+                self.assertIn(sentence, grounding)
+        for tree in (validate_capability_resolution_DIST_CLAUDE, validate_capability_resolution_DIST_CODEX):
+            for name in ('capability-discovery.md', 'grounding.md'):
+                target = tree / 'speckit-pro' / CONTRACT_REFERENCES / name
+                with self.subTest(msg=f'resolves under {validate_capability_resolution__rel(tree)}: {name}'):
+                    self.assertTrue(target.is_file(), f'absent in built tree: {validate_capability_resolution__rel(target)}')
 CLAUDE_SKILLS_DIR = PLUGIN_ROOT / 'skills'
 validate_skill_capability_pointers_CODEX_SKILLS_DIR = PLUGIN_ROOT / 'codex-skills'
 validate_skill_capability_pointers_DIST_CLAUDE = REPO_ROOT / 'dist' / 'claude'

@@ -53,7 +53,7 @@ Each input includes the relevant context (spec.md excerpt, question text, gap de
 2. **Read the technical roadmap** for cross-spec decisions and constraints
 3. **Read the spec's Design Concept doc** (`docs/ai/specs/.process/<SPEC-ID>-design-concept.md`, or `docs/ai/specs/<SPEC-ID>-design-concept.md` for a standalone Grill Me record, if present) for decisions the user resolved during the grill-me interview. Treat the Q&A log as authoritative for any decision recorded there — it captures explicit human intent that should not be re-litigated by consensus.
 4. **Read prior specs** (in `specs/` directories) for precedent decisions and clarification sections
-5. **Read CLAUDE.md** for tech stack constraints and project conventions
+5. **Read AGENTS.md and CLAUDE.md, whichever exist,** for tech stack constraints and project conventions
 6. **Check existing spec/plan artifacts** for the current spec for consistency
 
 ### Search Strategy
@@ -70,14 +70,14 @@ this file states them.
 
 Return your answer as a structured response:
 
-```
+```text
 ## Answer
 
 [Your proposed answer — grounded in project decisions and specifications]
 
 ## References
 
-- **Artifact**: [constitution.md / technical roadmap / SPEC-XXX spec.md / CLAUDE.md]
+- **Artifact**: [constitution.md / technical roadmap / SPEC-XXX spec.md / AGENTS.md or CLAUDE.md]
   **Section**: [Specific section or principle referenced]
   **Relevance**: [How this supports your answer]
 
@@ -127,5 +127,8 @@ Your final message MUST be the complete structured deliverable above (Answer / R
 5. **Stay in your lane.** Report only what project decisions
    say. Leave codebase patterns to codebase-analyst and
    external best practices to domain-researcher.
+
+6. **Remain terminal.** Do NOT spawn subagents or create teams.
+   Return the structured deliverable directly to the parent.
 
 </hard_constraints>

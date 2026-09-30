@@ -507,6 +507,38 @@ class ValidatePayloadConformance(unittest.TestCase):
             self.assert_toml_agent('codex-agent', path)
         self.assert_hooks_json('codex', CODEX_ROOT / 'codex-hooks.json')
 
+HOST_MARKER_RE = re.compile(r'<!--\s*/?\s*host\b')
+HOST_MARKER_SUFFIXES = frozenset({'.md', '.toml', '.json', '.yaml', '.yml', '.html', '.txt'})
+
+
+def host_marker_lines(root: Path) -> list[str]:
+    """Every shipped prose or config line that still carries a host marker."""
+    found: list[str] = []
+    for path in sorted(p for p in root.rglob('*') if p.is_file() and p.suffix in HOST_MARKER_SUFFIXES):
+        for number, line in enumerate(path.read_text(encoding='utf-8', errors='replace').splitlines(), start=1):
+            if HOST_MARKER_RE.search(line):
+                found.append(f'{path.relative_to(root).as_posix()}:{number}')
+    return found
+
+
+class ValidateHostMarkersStripped(unittest.TestCase):
+    """Each payload carries its host's text only, never a marker line."""
+
+    def test_payloads_carry_no_host_marker(self) -> None:
+        for host in ('claude', 'codex'):
+            root = REPO_ROOT / 'dist' / host / 'speckit-pro'
+            with self.subTest(host=host):
+                self.assertTrue(root.is_dir(), f'missing payload {root}')
+                self.assertEqual([], host_marker_lines(root))
+
+    def test_scan_reports_a_marker_left_in_a_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / 'agents').mkdir()
+            (root / 'agents' / 'probe.md').write_text('ok\n<!-- host:codex: x -->\nleak\n<!-- /host -->\n', encoding='utf-8')
+            self.assertEqual(['agents/probe.md:2', 'agents/probe.md:4'], host_marker_lines(root))
+
+
 def main() -> int:
     suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])
     return run_counted(suite, label="validate-payload-contracts")

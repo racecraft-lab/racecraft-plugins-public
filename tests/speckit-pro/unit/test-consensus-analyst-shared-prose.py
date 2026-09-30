@@ -50,6 +50,7 @@ LIB_DIR = TEST_DIR.parent / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
 
+from guide_text import host_source  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
@@ -89,7 +90,7 @@ SECTION_TRIPLE_RE = re.compile(r"\(Answer / \w+ / Confidence\)")
 
 
 def _claude_body(name: str) -> str:
-    return (CLAUDE_AGENTS_DIR / f"{name}.md").read_text(encoding="utf-8")
+    return host_source(f"agents/{name}.md", "claude")
 
 
 def _codex_body(name: str) -> str:
