@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import native_eval_strict_json as strict_json
+
 
 SCHEMA_VERSION = "native-eval-toolchain/v1"
 CLAUDE_PLUGIN_SCHEMA_VERSION = "native-eval-toolchain/claude-plugin-v1"
@@ -400,8 +402,8 @@ def _specify_distribution_receipt(site_packages: Path) -> dict[str, Any]:
     direct_url_bytes = _read_regular_file(direct_url_path, "Specify distribution direct_url.json")
     try:
         metadata_text = metadata.decode("utf-8")
-        direct_url = json.loads(direct_url_bytes.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        direct_url = strict_json.loads(direct_url_bytes, error=ValueError)
+    except (UnicodeDecodeError, ValueError) as error:
         raise NativeToolchainError("Specify distribution metadata is malformed") from error
     name = next((line[6:].strip() for line in metadata_text.splitlines() if line.startswith("Name: ")), None)
     version = next((line[9:].strip() for line in metadata_text.splitlines() if line.startswith("Version: ")), None)
