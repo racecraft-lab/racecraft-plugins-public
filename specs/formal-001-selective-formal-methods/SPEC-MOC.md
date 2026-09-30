@@ -2,7 +2,7 @@
 up: "[Formal check decision](../../docs/ai/specs/formal-check-decision.md)"
 related:
   - "[Acceptance](acceptance.md)"
-status: "in-progress"
+status: "in_progress"
 rank: 1
 spec_id: "FORMAL-001"
 structureVersion: 1

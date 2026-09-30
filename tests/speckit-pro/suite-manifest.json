@@ -200,7 +200,8 @@
         { "path": "tests/speckit-pro/unit/test-consensus-synthesizer-regressions.py", "label": "test-consensus-synthesizer-regressions" },
         { "path": "tests/speckit-pro/unit/test-native-eval-fixture-setup.py", "label": "test-native-eval-fixture-setup" },
         { "path": "tests/speckit-pro/unit/test-functional-eval-expectations.py", "label": "test-functional-eval-expectations" },
-        { "path": "tests/speckit-pro/unit/test-eval-fixture-references.py", "label": "test-eval-fixture-references" }
+        { "path": "tests/speckit-pro/unit/test-eval-fixture-references.py", "label": "test-eval-fixture-references" },
+        { "path": "tests/speckit-pro/unit/test-lifecycle-skill-contracts.py", "label": "test-lifecycle-skill-contracts" }
       ]
     },
     {
