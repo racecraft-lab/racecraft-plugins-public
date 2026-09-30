@@ -315,7 +315,7 @@ repository's GitHub `owner/name`, its default branch, and that string as
 
 speckit-pro maintains a manual recommendation catalog of community extensions
 and presets. The full list is in
-`speckit-pro/skills/speckit-coach/references/presets-extensions-guide.md`
+`../../skills/speckit-coach/references/presets-extensions-guide.md`
 (section: "The curated set").
 
 Compare `.specify/extensions/` and `.specify/presets/` against the
