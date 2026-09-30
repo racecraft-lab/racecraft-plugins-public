@@ -494,7 +494,7 @@ class ValidatePrChecksSentinel(unittest.TestCase):
             self.assertIn('PREFLIGHT_ROLE: linux-arm64-required', block)
             self.assertIn('shell: python', block)
             self.assertIn(CONTAINER_DISPATCH, block)
-            self.assertIn('"verdict": "pass" if passed else "fail"', dispatch_content)
+            self.assertIn('"verdict": "pass" if passed else "superseded" if superseded else "fail"', dispatch_content)
         with self.subTest(msg='Windows availability is configured on an Ubuntu control job'):
             block = _job_block(content, 'windows-availability')
             self.assertIn('runs-on: ubuntu-latest', block)
@@ -1239,6 +1239,23 @@ class ValidateWorkflowStatusEvidence(unittest.TestCase):
             self.assertEqual([pattern.pattern for pattern in GATE_RECORD_PATTERNS], [pattern.pattern for pattern in module.GATE_RECORD_PATTERNS], 'CI gate-record matcher drifted from the shipped validator')
             self.assertEqual(GATE_LINE_PREFIX.pattern, module.GATE_LINE_PREFIX_RE.pattern, 'CI line-prefix stripper drifted from the shipped validator')
             self.assertEqual(HTML_COMMENT.pattern, module.HTML_COMMENT_RE.pattern, 'CI HTML-comment handling drifted from the shipped validator')
+
+class ValidateSupersededRunVerdicts(unittest.TestCase):
+    """Required verdicts pass a cancelled run only when a same-commit run supersedes it."""
+
+    def test_verdict_jobs_can_read_runs_and_ask_for_a_successor(self) -> None:
+        jobs = [(validate_pr_checks_sentinel_WORKFLOW_FILE, 'validate-plugins')]
+        jobs += [(CONTAINER_WORKFLOW_FILE, job_id) for job_id in ('linux-amd64', 'linux-arm64')]
+        for path, job_id in jobs:
+            with self.subTest(job=job_id):
+                content = path.read_text(encoding='utf-8')
+                self.assertEqual({'contents': 'read', 'actions': 'read'}, _job_permissions(content, job_id))
+                self.assertIn('GITHUB_TOKEN: ${{ github.token }}', _job_block(content, job_id))
+        results = RESULTS_HELPER_FILE.read_text(encoding='utf-8')
+        self.assertIn('notice = superseded() if "cancelled" in results else None', results)
+        sentinel = CONTAINER_DISPATCH_HELPER_FILE.read_text(encoding='utf-8')
+        self.assertIn('if not passed and "cancelled" in {changes_result, heavy_result}:', sentinel)
+        self.assertIn('return 0 if passed or superseded else 1', sentinel)
 
 # yaml_syntax_sane is shared by both workflow owners and regression tests.
 
