@@ -202,7 +202,7 @@ must not rewrite their provenance.
 G4 counts only `[Gap]` markers, by design. Unticked checklist items are
 reviewer-owned, so they do not fail G4. They are deferred to PR review, and
 Phase 7 setup records that decision as the Implement Checklist Gate (see
-phase-execution.md, or phase-execution-codex.md on Codex).
+phase-execution.md).
 
 **Auto-Fix:** This is the **Checklist Gap Remediation Loop**.
 Runs after each domain subagent returns (not batched — see

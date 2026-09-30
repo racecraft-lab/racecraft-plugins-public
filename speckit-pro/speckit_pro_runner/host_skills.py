@@ -28,13 +28,6 @@ CODEX_ONLY_SKILL_FILE = re.compile(
 # artifact refresh.
 UNMERGED_CODEX_OVERLAYS = frozenset({
     "speckit-archive-cleanup/SKILL.md",
-    "speckit-autopilot/SKILL.md",
-    "speckit-autopilot/references/error-recovery-codex.md",
-    "speckit-autopilot/references/phase-execution-codex.md",
-    "speckit-autopilot/references/post-implementation-codex.md",
-    "speckit-autopilot/references/prerequisites-codex.md",
-    "speckit-autopilot/references/task-list-canonical-codex.md",
-    "speckit-autopilot/references/workflow-file-protocol-codex.md",
     "speckit-install/SKILL.md",
     "speckit-resolve-pr/SKILL.md",
     "speckit-scaffold-spec/SKILL.md",
