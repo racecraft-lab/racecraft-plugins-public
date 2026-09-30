@@ -21,6 +21,11 @@ stdin, read one JSON response from stdout, and surface stderr diagnostics.
 Do not add a shell fallback, `jq` parsing path, Git Bash, WSL, or
 PowerShell-specific command-language requirement for installed workflows.
 
+The frontmatter `allowed-tools` pre-approves only `Read`, `Glob` and `Grep`.
+The runner helper calls below (`generate-spec-index-check`, `o5-topology`) are
+not pre-approved: they follow the session's permissions and may prompt. If a
+call is denied, say so and continue the dashboard without that section.
+
 Show the full project roadmap: completed specs, in-progress
 specs, specs that haven't started yet, and a recommendation for
 what to work on next. Also surface archive extension installation and
@@ -45,6 +50,8 @@ Workflow files:    **/*-workflow.md  (active/completed specs with phase detail)
 Technical roadmaps: **/*technical-roadmap*.md  OR  **/*-roadmap.md
 Design concepts:   **/*-design-concept.md  (grill-me output per spec)
 Also check:        docs/ai/specs/*-workflow.md
+                   docs/ai/specs/.process/*-workflow.md
+                   docs/ai/specs/.process/*-design-concept.md
                    docs/ai/specs/*-design-concept.md
                    docs/ai/*roadmap*.md
 Archive state:     .specify/extensions.yml
