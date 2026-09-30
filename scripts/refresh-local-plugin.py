@@ -28,11 +28,12 @@ DRY_RUN = False
 
 USAGE = """Usage: scripts/refresh-local-plugin.py [options]
 
-Rebuild generated plugin payloads and refresh the local Claude Code and Codex
+Refresh the release artifacts (runner trust metadata, generated plugin
+payloads, marketplace versions) and refresh the local Claude Code and Codex
 installed-plugin caches for maintainer dogfooding.
 
 Default:
-  Rebuild dist payloads, validate the Claude payload, refresh both the Claude
+  Refresh release artifacts, validate the Claude payload, refresh both the Claude
   Code and Codex installed-plugin caches, and print the recommended Claude Code
   local-development command:
 
@@ -46,7 +47,7 @@ Options:
   --no-claude-install  Skip Claude Code's installed-plugin cache refresh.
   --launch-claude      Launch Claude Code with --plugin-dir for this session.
   --scope SCOPE        Claude install scope: user, project, or local. Default: user.
-  --no-build           Skip payload rebuild.
+  --no-build           Skip the release artifact refresh.
   --no-validate        Skip Claude payload validation.
   --dry-run            Print commands without running them.
   -h, --help           Show this help.
@@ -204,8 +205,8 @@ def parse_args(argv: list[str]) -> None:
 
 
 def validate_layout() -> None:
-    if not (REPO_ROOT / "scripts" / "build-plugin-payloads.py").is_file():
-        die(f"payload builder not found: {REPO_ROOT / 'scripts' / 'build-plugin-payloads.py'}")
+    if not (REPO_ROOT / "scripts" / "refresh-release-artifacts.py").is_file():
+        die(f"artifact refresh script not found: {REPO_ROOT / 'scripts' / 'refresh-release-artifacts.py'}")
 
     if not RUN_BUILD and not DRY_RUN:
         if not claude_payload_dir().is_dir():
@@ -215,8 +216,8 @@ def validate_layout() -> None:
 
 
 def build_payloads() -> None:
-    print("==> Building generated Claude and Codex payloads ...")
-    run_in_repo([sys.executable, "scripts/build-plugin-payloads.py"])
+    print("==> Refreshing runner trust metadata, payloads, and marketplace versions ...")
+    run_in_repo([sys.executable, "scripts/refresh-release-artifacts.py"])
 
 
 def validate_claude_payload() -> None:

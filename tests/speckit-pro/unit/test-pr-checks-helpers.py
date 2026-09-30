@@ -330,6 +330,21 @@ class DocsClassificationHelperTests(unittest.TestCase):
         )
 
 
+class DeployDocsTriggerTests(unittest.TestCase):
+    def test_deploy_trigger_paths_are_classified_as_docs_affecting(self) -> None:
+        workflow = (REPO_ROOT / ".github" / "workflows" / "deploy-docs.yml").read_text(encoding="utf-8")
+        block = workflow.split("    paths:\n", 1)[1].split("  workflow_dispatch:", 1)[0]
+        entries = [line.strip()[2:].strip('"') for line in block.splitlines() if line.strip().startswith("- ")]
+        self.assertGreater(len(entries), 10)
+        for entry in entries:
+            sample = entry.removeprefix("!").replace("**", "sample")
+            with self.subTest(entry=entry):
+                # The classifier is the stricter list: a path the deploy trigger
+                # excludes (fixtures, parity) still needs PR docs validation,
+                # because the generated test reference lists those files.
+                self.assertTrue(DOCS.classify_changed_files([sample]).should_validate_docs, sample)
+
+
 class WorkflowResultsHelperTests(unittest.TestCase):
     def test_success_and_skipped_results_pass(self) -> None:
         self.assertEqual(
@@ -560,6 +575,7 @@ def build_suite() -> unittest.TestSuite:
     for test_case in (
         ActionlintHelperTests,
         DocsClassificationHelperTests,
+        DeployDocsTriggerTests,
         WorkflowResultsHelperTests,
         PluginMatrixHelperTests,
         GoModuleHelperTests,
