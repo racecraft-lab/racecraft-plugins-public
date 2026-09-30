@@ -39,8 +39,8 @@ a cross-host `{{skill}}` prompt or a fictional “host-native installer” label
 The source [`install` description](../../../../speckit-pro/codex-skills/install/SKILL.md)
 specifically installs or refreshes bundled Codex TOML agents, verifies them,
 and reports the restart requirement. The Codex
-[`speckit-install`](../../../../speckit-pro/codex-skills/speckit-install/SKILL.md) and
-[`speckit-upgrade`](../../../../speckit-pro/codex-skills/speckit-upgrade/SKILL.md)
+[`speckit-install`](../../../../speckit-pro/skills/speckit-install/SKILL.md) and
+[`speckit-upgrade`](../../../../speckit-pro/skills/speckit-upgrade/SKILL.md)
 descriptions explicitly exclude this work and route it to `$install`. Their
 Claude counterparts describe SpecKit CLI/project installation and upgrade, not
 plugin-agent installation.

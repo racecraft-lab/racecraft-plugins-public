@@ -40,7 +40,8 @@ from speckit_pro_runner.host_parity import (  # noqa: E402
     split_frontmatter,
     unexplained_blocks,
 )
-from speckit_pro_runner.host_skills import codex_skill_overlay_errors  # noqa: E402
+from speckit_pro_runner.host_skills import UNMERGED_CODEX_OVERLAYS, codex_skill_overlay_errors  # noqa: E402
+from host_skill_views import host_skill_root  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
@@ -342,10 +343,11 @@ class HostSkillSourceTests(unittest.TestCase):
             root = Path(temporary)
             shutil.copytree(PLUGIN_ROOT / "codex-skills", root / "codex-skills")
             (root / "codex-skills" / "grill-me" / "SKILL.md").write_text("---\nname: grill-me\n---\n", encoding="utf-8")
-            (root / "codex-skills" / "speckit-upgrade" / "SKILL.md").unlink()
+            listed = min(UNMERGED_CODEX_OVERLAYS)
+            (root / "codex-skills" / listed).unlink()
             self.assertEqual(codex_skill_overlay_errors(root), [
                 "codex-skills/grill-me/SKILL.md overlays a shared skill file; merge it into skills/ as host blocks",
-                "codex-skills/speckit-upgrade/SKILL.md is listed as an unmerged overlay but does not exist",
+                f"codex-skills/{listed} is listed as an unmerged overlay but does not exist",
             ])
 
     def test_grill_me_sends_setup_alone_to_scaffold_spec_on_both_hosts(self) -> None:
@@ -382,6 +384,68 @@ class HostSkillSourceTests(unittest.TestCase):
                 text = " ".join((PLUGIN_ROOT / relative).read_text(encoding="utf-8").split())
                 self.assertRegex(text, r"(?i)complete, warn the user and stop")
                 self.assertRegex(text, r"(?i)in progress, (?:prefer )?reus\w+ (?:the |its )?existing worktree branch")
+
+
+class SetupSkillDriftTests(unittest.TestCase):
+    """Install, upgrade and archive cleanup state the runner's behavior on both hosts.
+
+    Each case read differently on the two hosts before their overlays merged.
+    """
+
+    SIGILS = (("claude", "/speckit-pro:"), ("codex", "$"))
+
+    @staticmethod
+    def view(skill: str, host: str) -> str:
+        return " ".join((host_skill_root(host) / skill / "SKILL.md").read_text(encoding="utf-8").split())
+
+    def test_archive_cleanup_writes_the_schema_run_status(self) -> None:
+        # autopilot-state-status.schema.json retires the spelling "completed archived".
+        for host, _ in self.SIGILS:
+            with self.subTest(host=host):
+                text = self.view("speckit-archive-cleanup", host)
+                self.assertIn("`completed_archived`", text)
+                self.assertNotIn("completed archived", text)
+
+    def test_install_looks_for_specify_where_the_runner_does(self) -> None:
+        for host, _ in self.SIGILS:
+            with self.subTest(host=host):
+                self.assertIn("`~/.local/bin/specify`", self.view("speckit-install", host))
+
+    def test_install_always_passes_script_sh(self) -> None:
+        for host, _ in self.SIGILS:
+            with self.subTest(host=host):
+                text = self.view("speckit-install", host)
+                self.assertIn("`specify init --here --integration <first-key> --script sh`", text)
+                self.assertNotIn("on macOS/Linux", text)
+
+    def test_setup_skills_report_an_environment_only_key(self) -> None:
+        for skill in ("speckit-install", "speckit-upgrade"):
+            for host, _ in self.SIGILS:
+                with self.subTest(skill=skill, host=host):
+                    self.assertIn("A key held only in an environment variable is a warning",
+                                  self.view(skill, host))
+
+    def test_upgrade_dedupe_deletes_only_single_word_speckit_commands(self) -> None:
+        for host, _ in self.SIGILS:
+            with self.subTest(host=host):
+                text = self.view("speckit-upgrade", host)
+                self.assertIn("`speckit.<single-word>.md`", text)
+                self.assertIn("Show the exact deletion list", text)
+                self.assertNotIn("exactly those matching `speckit.*.md`", text)
+
+    def test_upgrade_sends_a_new_integration_to_install(self) -> None:
+        for host, sigil in self.SIGILS:
+            with self.subTest(host=host):
+                text = self.view("speckit-upgrade", host)
+                self.assertIn(f"use `{sigil}speckit-install <new-key>` instead", text)
+                self.assertNotIn("treat that as an add-integration request", text)
+
+    def test_upgrade_recommends_the_cli_upgrade_and_never_runs_it(self) -> None:
+        for host, _ in self.SIGILS:
+            with self.subTest(host=host):
+                text = self.view("speckit-upgrade", host)
+                self.assertIn("does not run it", text)
+                self.assertNotIn("Invoke `uv tool install specify-cli --force", text)
 
 
 POST_ROW = re.compile(r'^\s*"(Post: [^"]+)"', re.M)
@@ -510,6 +574,7 @@ def main() -> int:
             CodexAgentGeneratorTests,
             CodexAgentPolicyHookTests,
             HostSkillSourceTests,
+            SetupSkillDriftTests,
             PostPlanParityTests,
         )
     )

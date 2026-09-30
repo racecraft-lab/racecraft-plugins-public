@@ -31,6 +31,7 @@ from autopilot_bookkeeping_support import (
     _flat,
 )  # noqa: E402
 from test_result import run_counted  # noqa: E402
+from host_skill_views import host_skill_root  # noqa: E402
 
 
 class _ClaudeGuides(_CodexGuides):
@@ -78,7 +79,7 @@ class StandingPolicyPreflightSourceContractTests(_CodexGuides):
         _assert_phrases(self, self.preflight, (phrase, "even after an app restart"))
         for setup in ("speckit-install", "speckit-upgrade"):
             with self.subTest(setup=setup):
-                self.assertIn(phrase, _flat(CODEX_AUTOPILOT_SKILL.parents[1] / setup / "SKILL.md"))
+                self.assertIn(phrase, _flat(host_skill_root("codex") / setup / "SKILL.md"))
 
     def test_ratified_boundary_file_edit_is_deferred_not_a_start_blocker(self) -> None:
         for phrase in PHRASES["StandingPolicyPreflightSourceContractTests.test_ratified_boundary_file_edit_is_deferred_not_a_start_blocker#1"]:
@@ -91,7 +92,7 @@ class StandingPolicyPreflightSourceContractTests(_CodexGuides):
             _assert_absent(self, text, ("setup gap", "The run still proceeds"))
         for setup in ("speckit-install", "speckit-upgrade"):
             with self.subTest(setup=setup):
-                text = _flat(CODEX_AUTOPILOT_SKILL.parents[1] / setup / "SKILL.md")
+                text = _flat(host_skill_root("codex") / setup / "SKILL.md")
                 _assert_phrases(self, text, PHRASES["StandingPolicyPreflightSourceContractTests.test_missing_standing_policy_is_the_single_up_front_ask_not_a_setup_gap#2"])
 
 
