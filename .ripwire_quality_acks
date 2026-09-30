@@ -182,6 +182,7 @@ ack dead-code:new-symbol 27f6e0d146d24775 0 cid=d01d8d80e4112664 unittest discov
 ack dead-code:new-symbol 2824ea886ef88b8b 0 cid=f1380c4b0422b091 dead-code: unittest discovers test_ methods by name; verbosity: suite-manifest.json must list each registered test file, one line
 ack dead-code:new-symbol 288eacf6026b7d10 0 cid=df9476386f0abcf7 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 290ac5c6ff89ad67 0 cid=331fb21b8e0c10ae unittest discovers and runs test_ methods by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol 2a6db0c5104ec90b 0 cid=c4471234255dd2a7 unittest discovers test_ methods through loadTestsFromModule, so they have no static caller
 ack dead-code:new-symbol 2ac3792c6dad1398 0 cid=bf561f9075c0db90 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 2b8ea8ed359d638a 0 cid=4cd14647fb27c15b unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 2bc7266034358a7d 0 cid=6db0680f23cdd978 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
