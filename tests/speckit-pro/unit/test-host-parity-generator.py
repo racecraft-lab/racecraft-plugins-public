@@ -635,6 +635,7 @@ def main() -> int:
             MergedSkillViewTests,
             SetupSkillDriftTests,
             PostPlanParityTests,
+            AutopilotHostAgreementTests,
         )
     )
     return run_counted(suite, label="test-host-parity-generator")

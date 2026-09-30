@@ -1671,7 +1671,7 @@ class GateFoundationTests(unittest.TestCase):
         )
         final_case = next(case for case in cases["cases"] if case["case_id"] == "final-current-implementation")
         self.assertLessEqual(
-            {"speckit-pro", "scripts/build-plugin-payloads.py", "dist/claude/speckit-pro", "dist/codex/speckit-pro", "README.md"},
+            {"speckit-pro", "scripts/refresh-release-artifacts.py", "dist/claude/speckit-pro", "dist/codex/speckit-pro", "README.md"},
             set(final_case["scan_roots"]),
         )
         self.assertNotIn("installed_cache_proof", final_case)
