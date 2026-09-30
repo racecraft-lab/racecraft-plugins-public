@@ -454,15 +454,25 @@ class SupersededRunLookupTests(unittest.TestCase):
         self.env = {"GITHUB_EVENT_NAME": "pull_request", "GITHUB_REPOSITORY": "owner/repo",
                     "GITHUB_RUN_ID": "100", "GITHUB_EVENT_PATH": str(self.event)}
 
-    def test_newer_run_of_the_same_workflow_and_commit_supersedes(self) -> None:
+    def test_another_run_of_the_same_workflow_and_commit_supersedes(self) -> None:
         fetch, requested = fetch_with([run_row(100), run_row(104), run_row(102)])
-        self.assertEqual(102, SUPERSEDED.newer_run_id(self.env, fetch))
+        self.assertEqual(104, SUPERSEDED.sibling_run_id(self.env, fetch))
         self.assertEqual(2, len(requested))
-        self.assertIn("superseded by run 102 for the same head commit",
+        self.assertIn("superseded by run 104 for the same head commit",
                       SUPERSEDED.superseded_notice(self.env, fetch))
-        rows = [run_row(99), run_row(101, head_sha="b" * 40), run_row(102, workflow_id=8),
+        rows = [run_row(100), run_row(101, head_sha="b" * 40), run_row(102, workflow_id=8),
                 run_row(103, event="workflow_dispatch"), run_row("104")]
-        self.assertIsNone(SUPERSEDED.newer_run_id(self.env, fetch_with(rows)[0]))
+        self.assertIsNone(SUPERSEDED.sibling_run_id(self.env, fetch_with(rows)[0]))
+
+    def test_an_older_numbered_live_sibling_supersedes_a_cancelled_run(self) -> None:
+        # GitHub can cancel the higher-numbered of two runs created in the same
+        # second; the surviving sibling reports the verdict either way.
+        for sibling in (run_row(98, status="in_progress", conclusion=None),
+                        run_row(98, status="completed", conclusion="success")):
+            with self.subTest(sibling=sibling):
+                self.assertEqual(98, SUPERSEDED.sibling_run_id(self.env, fetch_with([sibling, run_row(100)])[0]))
+        cancelled = run_row(98, status="completed", conclusion="cancelled")
+        self.assertIsNone(SUPERSEDED.sibling_run_id(self.env, fetch_with([cancelled, run_row(100)])[0]))
 
     def test_missing_inputs_never_reach_the_api(self) -> None:
         def fetch(path: str) -> dict:
@@ -472,12 +482,12 @@ class SupersededRunLookupTests(unittest.TestCase):
                  ("GITHUB_RUN_ID", "abc"), ("GITHUB_EVENT_PATH", str(self.event) + ".missing")]
         for key, value in cases:
             with self.subTest(key=key, value=value):
-                self.assertIsNone(SUPERSEDED.newer_run_id({**self.env, key: value}, fetch))
+                self.assertIsNone(SUPERSEDED.sibling_run_id({**self.env, key: value}, fetch))
         for payload in ({"pull_request": {"head": {"sha": "not-a-sha"}}}, {"pull_request": None}, []):
             with self.subTest(payload=payload):
                 self.event.write_text(json.dumps(payload), encoding="utf-8")
-                self.assertIsNone(SUPERSEDED.newer_run_id(self.env, fetch))
-        self.assertIsNone(SUPERSEDED.newer_run_id(self.env))
+                self.assertIsNone(SUPERSEDED.sibling_run_id(self.env, fetch))
+        self.assertIsNone(SUPERSEDED.sibling_run_id(self.env))
 
     def test_api_errors_and_mismatched_runs_fail_closed(self) -> None:
         def broken(error: Exception):
@@ -487,7 +497,7 @@ class SupersededRunLookupTests(unittest.TestCase):
 
         for error in (OSError("offline"), ValueError("bad json"), KeyError("id")):
             with self.subTest(error=type(error).__name__):
-                self.assertIsNone(SUPERSEDED.newer_run_id(self.env, broken(error)))
+                self.assertIsNone(SUPERSEDED.sibling_run_id(self.env, broken(error)))
         for current in (
             {"id": 100, "workflow_id": 9, "head_sha": "b" * 40},
             {"id": 101, "workflow_id": 9, "head_sha": HEAD_SHA},
@@ -496,13 +506,13 @@ class SupersededRunLookupTests(unittest.TestCase):
         ):
             with self.subTest(current=current):
                 fetch, _requested = fetch_with([run_row(105)], current)
-                self.assertIsNone(SUPERSEDED.newer_run_id(self.env, fetch))
+                self.assertIsNone(SUPERSEDED.sibling_run_id(self.env, fetch))
         fetch = fetch_with([])[0]
         self.assertIsNone(SUPERSEDED.superseded_notice(self.env, fetch))
 
 
 class SupersededVerdictTests(unittest.TestCase):
-    def test_main_passes_a_cancelled_run_only_when_a_newer_run_supersedes_it(self) -> None:
+    def test_main_passes_a_cancelled_run_only_when_a_sibling_run_supersedes_it(self) -> None:
         results = {"DETECT_RESULT": "success", "ARTIFACT_RESULT": "success", "GO_RESULT": "success"}
         cases = (
             ("cancelled", "superseded by run 7", 0),
