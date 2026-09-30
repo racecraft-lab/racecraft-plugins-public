@@ -23,6 +23,7 @@ from __future__ import annotations
 import re
 import sys
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -120,7 +121,7 @@ CODEX_SANDBOX_POLICY = {
     "consensus-synthesizer": "read-only",
     "consensus-tiebreaker": "read-only",
     "domain-researcher": "read-only",
-    "formal-model-author": "workspace-write",
+    "formal-model-author": "read-only",
     "implement-executor": "workspace-write",
     "phase-executor": "workspace-write",
     "spec-context-analyst": "read-only",
@@ -486,9 +487,20 @@ class ValidateToolScoping(unittest.TestCase):
                     self.assertNotIn(tool, declared)
 
             codex_file = CODEX_AGENTS_DIR / f"{agent}.toml"
+            with self.subTest(msg=f"carve-out: codex {agent} exists"):
+                self.assertTrue(codex_file.is_file(), f"{codex_file} is missing")
             if codex_file.is_file():
-                with self.subTest(msg=f"carve-out: codex {agent} sandbox_mode is workspace-write"):
-                    self.assertEqual("workspace-write", _toml_field(codex_file, "sandbox_mode"))
+                with self.subTest(msg=f"carve-out: codex {agent} sandbox_mode is read-only"):
+                    self.assertEqual("read-only", _toml_field(codex_file, "sandbox_mode"))
+                instructions = " ".join(
+                    tomllib.loads(codex_file.read_text(encoding="utf-8"))["developer_instructions"].split()
+                )
+                for phrase in (
+                    "a parent-minted formal-author capability",
+                    "Use only the author-broker write tool for every file change",
+                ):
+                    with self.subTest(msg=f"carve-out: codex {agent} writes only through the author broker", phrase=phrase):
+                        self.assertIn(phrase, instructions)
 
     def test_no_tool_observers_pin_exact_tool_allowlists(self) -> None:
         with self.subTest(msg="no-tool observer roster is exactly the artifact preview observer"):

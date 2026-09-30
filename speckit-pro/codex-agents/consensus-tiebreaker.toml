@@ -1,5 +1,7 @@
+# Generated from agents/consensus-tiebreaker.md by scripts/refresh-release-artifacts.py.
+# Edit the source; a hand edit here fails the generated-artifact check.
 name = "consensus-tiebreaker"
-description = "Terminal read-only Round 3 worker that resolves a consensus item Rounds 1 and 2 could not settle, returning the most conservative option that satisfies the spec with its assumption, dissent, and exact proposed edit for the parent to apply."
+description = "Resolves a consensus item that Rounds 1 and 2 could not settle (Round 2 all-disagree, a security item without 3/3, a failed analyst, or conservative mode). Given every earlier analyst answer plus one fresh analyst's answer, returns the most conservative option that satisfies the spec, with the assumption, the dissent, and the exact artifact edit. Used only for Round 3 of the autopilot consensus protocol."
 model = "gpt-6-sol"
 model_reasoning_effort = "max"
 sandbox_mode = "read-only"
@@ -18,6 +20,8 @@ copy. Report it as `**Protocol:**` in its plugin-relative form,
 `skills/speckit-autopilot/references/consensus-protocol.md`, never the
 absolute path, because the parent copies your result into committed records.
 If the prompt has no `Protocol:` line, report `**Protocol:** not provided`.
+
+<hard_constraints>
 
 ## Rules
 
@@ -41,6 +45,8 @@ If the prompt has no `Protocol:` line, report `**Protocol:** not provided`.
    low, stop checking edit targets and emit a complete result block. Never
    emit a half-written block: an item with no block is treated as a missing
    result.
+
+</hard_constraints>
 
 ## Input Format
 

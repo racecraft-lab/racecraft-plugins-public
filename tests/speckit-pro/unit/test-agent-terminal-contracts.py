@@ -15,6 +15,7 @@ LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
 
+from guide_text import host_source  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
@@ -63,8 +64,7 @@ def claude_max_turns(name: str) -> int:
 
 
 def claude_body(name: str) -> str:
-    text = (CLAUDE_DIR / f"{name}.md").read_text(encoding="utf-8")
-    return text.split("\n---\n", 1)[1]
+    return host_source(f"agents/{name}.md", "claude").split("\n---\n", 1)[1]
 
 
 def codex_policy(name: str) -> dict:
@@ -176,13 +176,8 @@ class AgentTerminalContractTests(unittest.TestCase):
             with self.subTest(claude_agent=agent_file.stem):
                 self.assertNotIn("speckit-pro/", agent_file.read_text(encoding="utf-8"))
         for agent_file in sorted(CODEX_DIR.glob("*.toml")):
-            # Codex agents may name a repository path only in the mirror note.
-            lines = agent_file.read_text(encoding="utf-8").splitlines()
             with self.subTest(codex_agent=agent_file.stem):
-                self.assertEqual(
-                    [],
-                    [line for line in lines if "speckit-pro/" in line and "mirrors speckit-pro/skills/" not in line],
-                )
+                self.assertNotIn("speckit-pro/", agent_file.read_text(encoding="utf-8"))
         codex_formal = codex_policy("formal-model-author")["developer_instructions"]
         self.assertNotIn("Use capability-first discovery in `speckit-pro/skills/", codex_formal)
         self.assertNotIn("Ground each claim using `speckit-pro/skills/", codex_formal)
@@ -220,14 +215,16 @@ class AgentTerminalContractTests(unittest.TestCase):
         policy = codex_policy("consensus-synthesizer")
         instructions = policy["developer_instructions"]
         self.assertEqual(policy["sandbox_mode"], "read-only")
-        for phrase in (
-            "without editing artifacts, spawning agents, conducting interviews, using",
-            "or gathering new evidence",
-            "Add no analysis, arguments, or evidence beyond",
-            "The parent alone owns workflow state",
-        ):
-            with self.subTest(phrase=phrase):
-                self.assertIn(phrase, instructions)
+        for host, text in (("codex", instructions), ("claude", claude_body("consensus-synthesizer"))):
+            flat = " ".join(text.split())
+            for phrase in (
+                "without editing artifacts, spawning agents, conducting interviews, using",
+                "or gathering new evidence",
+                "Add no analysis, arguments, or evidence beyond",
+                "The parent alone owns workflow state",
+            ):
+                with self.subTest(host=host, phrase=phrase):
+                    self.assertIn(phrase, flat)
 
 
 def main() -> int:

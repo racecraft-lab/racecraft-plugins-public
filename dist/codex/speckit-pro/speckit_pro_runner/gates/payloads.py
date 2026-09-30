@@ -8,11 +8,13 @@ import re
 import shutil
 import sys
 import tempfile
+from collections.abc import Iterable
 from pathlib import Path, PurePosixPath
 from typing import Any
 
 from .. import RUNNER_VERSION
 from ..envelope import diagnostic, is_diagnostic, response
+from ..host_parity import emit_host
 from ..path_utils import find_repo_root, is_relative_to, sha256_file, sha256_text
 from ..runtime import runner_source_files
 from .gate_response import gate_base_data
@@ -319,6 +321,7 @@ def build_installed_plugin_payloads(repo_root: Path, dist_root: Path) -> None:
     copy_optional_installed_plugin(repo_root / "LICENSE", claude / "LICENSE")
     for skill_file in claude.glob("skills/*/SKILL.md"):
         strip_codex_guard(skill_file)
+    emit_host_payload_files(claude.glob("agents/*.md"), "claude")
     remove_payload_shell_scripts_installed_plugin(claude)
 
     reset_payload_dir(codex, dist_root)
@@ -382,6 +385,15 @@ def remove_payload_shell_scripts_installed_plugin(root: Path) -> None:
             # Best-effort cleanup: directories may still contain files or may
             # have changed while the payload tree was being scanned.
             pass
+
+
+def emit_host_payload_files(paths: Iterable[Path], host: str) -> None:
+    """Rewrite each copied source as `host` sees it, without the other host's blocks."""
+    for path in paths:
+        text = path.read_text(encoding="utf-8")
+        emitted = emit_host(text, host)
+        if emitted != text:
+            path.write_text(emitted, encoding="utf-8")
 
 
 def strip_codex_guard(skill_file: Path) -> None:

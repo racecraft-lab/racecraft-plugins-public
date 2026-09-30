@@ -2,12 +2,14 @@
 
 One authored text serves both hosts. Host-specific lines sit in blocks:
 
-    <!-- host:codex -->
+    <!-- host:codex: why Codex needs its own text -->
     Codex-only text.
     <!-- /host -->
 
-`emit_host` keeps the target host's blocks and drops the other host's. Each
-marker must sit alone on its line. Markers count everywhere, including inside
+The reason after the second colon is optional in the grammar;
+`unexplained_blocks` lists the open markers that lack one, so a check can
+require a reason for every divergence. `emit_host` keeps the target host's
+blocks and drops the other host's. Each marker must sit alone on its line. Markers count everywhere, including inside
 fenced code, so an example of the syntax cannot appear verbatim in a source.
 Any unbalanced, nested, unknown-host, or inline marker fails closed.
 
@@ -38,7 +40,7 @@ HOSTS = ("claude", "codex")
 MUTATION_TOOLS = frozenset({"Write", "Edit", "MultiEdit"})
 BROKER_TOOL = re.compile(r"mcp__plugin_speckit-pro_(?P<server>[a-z0-9-]+)__(?P<tool>[a-z0-9_]+)")
 
-_OPEN = re.compile(r"<!-- host:(?P<host>[^ ]*) -->")
+_OPEN = re.compile(r"<!-- host:(?P<host>[^ :]*)(?:: (?P<reason>[^<>]*[^<>\s]))? -->")
 _CLOSE = "<!-- /host -->"
 _MARKER_HINT = re.compile(r"<!--\s*/?\s*host\b")
 _LIST_ITEM = re.compile(r"[^,\s][^,]*")
@@ -90,26 +92,45 @@ def emit_host(text: str, host: str) -> str:
     return "".join(kept)
 
 
+def unexplained_blocks(text: str) -> list[int]:
+    """Return the line numbers of open markers that give no reason."""
+    emit_host(text, HOSTS[0])
+    return [
+        number
+        for number, line in enumerate(text.splitlines(), start=1)
+        if (opened := _OPEN.fullmatch(line.strip())) and opened.group("reason") is None
+    ]
+
+
 def split_frontmatter(text: str) -> tuple[dict[str, str], str]:
     """Split a `---` fenced frontmatter into top-level scalar fields and body.
 
-    Indented continuation lines (a folded `description: >`) belong to the key
-    above them and are never read as keys.
+    Indented continuation lines belong to the key above them and are never
+    read as keys. A folded `key: >` value is joined with single spaces, as
+    YAML folds it; any other block value keeps its raw indicator.
     """
     lines = text.splitlines(keepends=True)
     if not lines or lines[0].rstrip("\r\n") != "---":
         raise HostParityError("frontmatter must open with a --- line")
     fields: dict[str, str] = {}
+    folded: dict[str, list[str]] = {}
+    key = ""
     for index, line in enumerate(lines[1:], start=1):
         bare = line.rstrip("\r\n")
         if bare == "---":
+            fields.update({name: " ".join(parts) for name, parts in folded.items()})
             return fields, "".join(lines[index + 1 :])
         if not bare.strip() or bare[0] in " \t":
+            if key in folded and bare.strip():
+                folded[key].append(bare.strip())
             continue
         match = _FRONTMATTER_KEY.fullmatch(bare)
         if match is None:
             raise HostParityError(f"frontmatter line {index + 1} is not a key: {bare!r}")
-        fields[match.group("key")] = (match.group("value") or "").strip()
+        key = match.group("key")
+        fields[key] = (match.group("value") or "").strip()
+        if fields[key] == ">":
+            folded[key] = []
     raise HostParityError("frontmatter has no closing --- line")
 
 

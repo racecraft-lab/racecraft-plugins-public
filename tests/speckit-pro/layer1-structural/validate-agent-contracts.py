@@ -350,7 +350,10 @@ class ValidateCodexAgents(unittest.TestCase):
                 self.assertNotIn('YOU ARE THE USER', instructions)
             with self.subTest(msg='clarify-executor: does not invoke interactive clarify skill'):
                 self.assertNotIn('Run `$speckit-clarify`', instructions)
-        elif agent in ('phase-executor', 'checklist-executor', 'analyze-executor', 'formal-model-author'):
+        elif agent == 'formal-model-author':
+            with self.subTest(msg='formal-model-author: uses xhigh GPT-6 Sol read-only profile; it writes only through the author broker'):
+                self.assertTrue(model_val == 'gpt-6-sol' and effort_val == 'xhigh' and (sandbox_val == 'read-only'), f'expected gpt-6-sol / xhigh / read-only, got {model_val} / {effort_val} / {sandbox_val}')
+        elif agent in ('phase-executor', 'checklist-executor', 'analyze-executor'):
             with self.subTest(msg=f'{agent}: uses xhigh GPT-6 Sol executor profile'):
                 self.assertTrue(model_val == 'gpt-6-sol' and effort_val == 'xhigh' and (sandbox_val == 'workspace-write'), f'expected gpt-6-sol / xhigh / workspace-write, got {model_val} / {effort_val} / {sandbox_val}')
         elif agent == 'implement-executor':

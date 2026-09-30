@@ -31,7 +31,7 @@
         "value": "speckit_pro_runner/agent_inventory.json",
         "display": "speckit_pro_runner/agent_inventory.json"
       },
-      "sha256": "46d22bc94a55f6924c36b9c0481d57de45075c10314071d72fc369d6a73591af"
+      "sha256": "5d42793d8b22be731ba3a41d20bd4594dfd7157eec6a4a6409f5bc182d16d6a5"
     },
     {
       "path": {
@@ -72,6 +72,14 @@
         "display": "speckit_pro_runner/author_broker.py"
       },
       "sha256": "0232adc6a03f7a1cc5abcb139f8fa42bae1790fe904185491fd6429a9493b92d"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/codex_agent_generator.py",
+        "display": "speckit_pro_runner/codex_agent_generator.py"
+      },
+      "sha256": "7851d968b42c54e05bf5080f9bf9786fddac76ca7159bc00ea8da280a03e6b7a"
     },
     {
       "path": {
@@ -431,7 +439,7 @@
         "value": "speckit_pro_runner/gates/payloads.py",
         "display": "speckit_pro_runner/gates/payloads.py"
       },
-      "sha256": "408a0c08b07b1ee59372adc702b35b014831cca326a031777dc284ec6f503f72"
+      "sha256": "ad44af1cd8c93223278fb3855a33db2e9a53b359b7117ed659205e9bd560de02"
     },
     {
       "path": {
@@ -591,7 +599,7 @@
         "value": "speckit_pro_runner/host_parity.py",
         "display": "speckit_pro_runner/host_parity.py"
       },
-      "sha256": "81454233d4c06f1fff031a721e4206a319ccc0b2cadf995f2462d47f9effed83"
+      "sha256": "9d8fcf4a506b212ada758387e2f6e3ea66cb1a629aad2a3f0d3fbd2d25ce2138"
     },
     {
       "path": {

@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+import sys
 import unittest
 from collections.abc import Iterable
 from pathlib import Path
 from typing import NamedTuple
 
 PLUGIN_ROOT = Path(__file__).resolve().parents[3] / "speckit-pro"
+if str(PLUGIN_ROOT) not in sys.path:
+    sys.path.insert(0, str(PLUGIN_ROOT))
+
+from speckit_pro_runner.host_parity import emit_host  # noqa: E402
 PHASE_EXECUTION_GUIDES = ("skills/speckit-autopilot/references/phase-execution.md",
                           "codex-skills/speckit-autopilot/references/phase-execution-codex.md")
 EXECUTION_EFFICIENCY_GUIDE = "skills/speckit-autopilot/references/execution-efficiency.md"
@@ -16,6 +21,11 @@ EXECUTION_EFFICIENCY_GUIDE = "skills/speckit-autopilot/references/execution-effi
 def guide_text(relative: str) -> str:
     """One shipped plugin file with its whitespace collapsed, so a phrase matches across wrapped lines."""
     return " ".join((PLUGIN_ROOT / relative).read_text(encoding="utf-8").split())
+
+
+def host_source(relative: str, host: str) -> str:
+    """One authored plugin file as `host` receives it, without the other host's blocks."""
+    return emit_host((PLUGIN_ROOT / relative).read_text(encoding="utf-8"), host)
 
 
 def assert_guides_say(test: unittest.TestCase, guides: Iterable[str], present: Iterable[str],
