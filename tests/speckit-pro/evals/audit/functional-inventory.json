@@ -1618,7 +1618,7 @@
     },
     {
       "id": "claude:speckit-autopilot:26",
-      "requirement": "Explains that the SPEC-704 feature-local packet must be emitted or refreshed with a docs(SPEC-704): title and pass validate-pr-packet-read-only through current data.stdout_json plus validate-pr-workflow-contract before g",
+      "requirement": "Explains that the SPEC-704 feature-local packet must be emitted or refreshed with a docs(spec-704): title and pass validate-pr-packet-read-only through current data.stdout_json plus validate-pr-workflow-contract before g",
       "detail_count": 11,
       "disposition": "replace",
       "coverage": "authored-native-semantic",
@@ -1638,7 +1638,7 @@
     },
     {
       "id": "codex:speckit-autopilot:33",
-      "requirement": "Explains that the SPEC-704 feature-local packet must be emitted or refreshed with a docs(SPEC-704): title and pass validate-pr-packet-read-only through current data.stdout_json plus validate-pr-workflow-contract before g",
+      "requirement": "Explains that the SPEC-704 feature-local packet must be emitted or refreshed with a docs(spec-704): title and pass validate-pr-packet-read-only through current data.stdout_json plus validate-pr-workflow-contract before g",
       "detail_count": 11,
       "disposition": "replace",
       "coverage": "authored-native-semantic",

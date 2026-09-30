@@ -13,6 +13,7 @@ the shared two-key query shape the runners parse.
 from __future__ import annotations
 
 import json
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -27,6 +28,11 @@ PLATFORMS = (
     ("codex", PLUGIN_ROOT / "codex-skills", LAYER2 / "codex-evals"),
 )
 MINIMUM_QUERIES_PER_LABEL = 3
+CODEX_WORKSPACE = LAYER2 / "fixtures" / "codex-workspace"
+NATIVE_CATALOG = TESTS_ROOT / "evals" / "catalog.json"
+FILE_TOKEN = re.compile(
+    r"(?<![\w:/.-])((?:[\w.-]+/)*[\w.-]+\.(?:md|txt|json|ya?ml|toml|py|sh|js|ts))\b"
+)
 
 SHARED_LIB = TESTS_ROOT / "lib"
 if str(SHARED_LIB) not in sys.path:
@@ -119,8 +125,58 @@ class TriggerEvalCoverageTests(unittest.TestCase):
         self.assertEqual(violations, [])
 
 
+class TriggerQueryFileBackingTests(unittest.TestCase):
+    """A query that names a file must find it, or a read of it fails the trial."""
+
+    def test_codex_eval_queries_name_only_files_the_workspace_fixture_holds(self) -> None:
+        missing: list[str] = []
+        for path in sorted((LAYER2 / "codex-evals").glob("*-trigger.json")):
+            for index, item in enumerate(json.loads(path.read_text(encoding="utf-8"))):
+                for token in FILE_TOKEN.findall(item["query"]):
+                    if not (CODEX_WORKSPACE / token).is_file():
+                        missing.append(f"{path.name}[{index}]: {token}")
+        self.assertEqual(missing, [])
+
+    def test_native_trigger_cases_stage_every_file_their_prompt_names(self) -> None:
+        catalog = json.loads(NATIVE_CATALOG.read_text(encoding="utf-8"))
+        missing: list[str] = []
+        for case in catalog["cases"]:
+            if case["layer"] != "trigger":
+                continue
+            staged = {fixture["destination"] for fixture in case["fixtures"]}
+            missing.extend(
+                f"{case['id']}: {token}"
+                for token in FILE_TOKEN.findall(case["prompt"])
+                if token not in staged
+            )
+        self.assertEqual(missing, [])
+
+    def test_native_trigger_fixture_sources_exist(self) -> None:
+        catalog = json.loads(NATIVE_CATALOG.read_text(encoding="utf-8"))
+        absent = sorted(
+            {
+                fixture["source"]
+                for case in catalog["cases"]
+                if case["layer"] == "trigger"
+                for fixture in case["fixtures"]
+                if not (REPO_ROOT / fixture["source"]).is_file()
+            }
+        )
+        self.assertEqual(absent, [])
+
+    def test_file_token_pattern_finds_paths_and_skips_prose_and_qualified_names(self) -> None:
+        text = "run docs/ai/specs/SPEC-009-workflow.md then speckit-pro:foo and e.g. now"
+        self.assertEqual(FILE_TOKEN.findall(text), ["docs/ai/specs/SPEC-009-workflow.md"])
+        self.assertEqual(FILE_TOKEN.findall("fix src/tools/primitives/tasks.ts now"), ["src/tools/primitives/tasks.ts"])
+
+
 def main() -> int:
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(TriggerEvalCoverageTests)
+    suite = unittest.TestSuite(
+        [
+            unittest.defaultTestLoader.loadTestsFromTestCase(TriggerEvalCoverageTests),
+            unittest.defaultTestLoader.loadTestsFromTestCase(TriggerQueryFileBackingTests),
+        ]
+    )
     return run_counted(suite, label="test-trigger-eval-coverage")
 
 
