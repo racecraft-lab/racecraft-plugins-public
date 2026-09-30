@@ -1,6 +1,6 @@
 <!-- speckit-pro-review-packet-source: tests/speckit-pro/unit/fixtures/pr-packet/valid-single.json -->
 
-# feat(FEATURE-001): Add reviewer-ready PR packets
+# feat(feature-001): Add reviewer-ready PR packets
 
 ## Summary
 

@@ -57,6 +57,7 @@ from ..agent_materialization import canonical_bytes
 from ..envelope import diagnostic, response
 from ..execution_control import (ESCALATION_TIER3_CAP, confined_path, escalation_key, escalation_progress,
                                  failed_verification, finalize_observation_key, require_text, validate_ledger)
+from ..pr_contract import DEFERRED_ITEM_FIELDS, require_one_line
 from ..stop_policy import ALL_TIERS_FAILED, AUTHORITY, EXHAUSTED, TIER3_CAP_REACHED, stop_class
 from ..sweep_isolation import HEX_OBJECT_RE
 
@@ -71,7 +72,6 @@ HARNESS_RETRY_BUDGET = 3
 HARNESS_ENVIRONMENT_ATTEMPTS = 1
 ENVIRONMENT_CHANGES = ("fresh_worktree", "cleared_caches")
 DEFERRAL_FIELDS = ("unit", "reason", "finish")
-UAT_FIELDS = ("item", "reason", "finish")
 UNIT_LABELS = {"failure_family": "Failure family", "failure_class": "Failure class",
                "increment": "Increment", "gate": "Gate"}
 REASON_TEXT = {
@@ -152,7 +152,7 @@ def _records(value: Any, name: str, fields: tuple[str, ...]) -> list[dict[str, s
     for index, raw in enumerate(value):
         if not isinstance(raw, dict) or set(raw) != set(fields):
             raise ValueError(f"{name}[{index}] must have exactly {', '.join(fields)}")
-        records.append({field: _text(raw[field], f"{name}[{index}].{field}") for field in fields})
+        records.append({field: require_one_line(_text(raw[field], f"{name}[{index}].{field}"), f"{name}[{index}].{field}") for field in fields})
     return records
 
 
@@ -460,7 +460,7 @@ def finalize_run(root: Path, inputs: dict[str, Any]) -> dict[str, Any]:
     unresolved = _records(inputs.get("unresolved_deferrals", []), "unresolved_deferrals", DEFERRAL_FIELDS)
     decisions += [{**item, "evidence": "Recorded as a deferred task by the orchestrator.", "class": AUTHORITY}
                   for item in unresolved]
-    human_uat = _records(inputs.get("human_uat", []), "human_uat", UAT_FIELDS)
+    human_uat = _records(inputs.get("human_uat", []), "human_uat", DEFERRED_ITEM_FIELDS)
     prs = _pull_requests(inputs.get("pull_requests"))
     gates = _gates(root, ledger, inputs.get("gates"), {pr["head_sha"] for pr in prs})
     numbers = {pr["head_sha"]: pr["number"] for pr in prs}

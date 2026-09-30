@@ -1,3 +1,3 @@
-# SPEC-019 workflow
+# SPEC-027 workflow
 
 Status: populated and approved for autonomous execution.
