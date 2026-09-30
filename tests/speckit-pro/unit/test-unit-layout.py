@@ -276,6 +276,23 @@ class UnitLayoutTests(unittest.TestCase):
             )
 
 
+class UnitRosterTests(unittest.TestCase):
+    def test_every_unit_test_script_is_registered_in_the_unit_layer(self) -> None:
+        manifest = json.loads(
+            (TEST_ROOT / "suite-manifest.json").read_text(encoding="utf-8")
+        )
+        layer = next(item for item in manifest["layers"] if item["id"] == "4")
+        registered = {script["path"] for script in layer["scripts"]}
+        discovered = {
+            path.relative_to(REPO_ROOT).as_posix()
+            for path in UNIT_ROOT.glob("test-*.py")
+        }
+        self.assertEqual(sorted(discovered - registered), [])
+
+
 if __name__ == "__main__":
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(UnitLayoutTests)
+    suite = unittest.TestSuite(
+        unittest.defaultTestLoader.loadTestsFromTestCase(case)
+        for case in (UnitLayoutTests, UnitRosterTests)
+    )
     raise SystemExit(run_counted(suite, label="test-unit-layout"))
