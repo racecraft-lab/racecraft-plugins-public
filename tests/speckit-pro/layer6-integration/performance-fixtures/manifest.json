@@ -678,6 +678,10 @@
       "sha256": "40f095234273dc9391559ccb16b0db08d74bf4832e6722eb06c0ee52699fef59"
     },
     {
+      "file": "draft-pr-emission/HISTORICAL-NOTES.md",
+      "sha256": "571bf8b9f11a883a36920a4818734d50078e1af0e65c5d6dc8464e7de30fae6c"
+    },
+    {
       "file": "troubleshooting-security/kickoff.md",
       "sha256": "795dac3f08230198fde124a4e61048ee9ff15419643a1c4f99f7b1bc0c13ff9a"
     },
