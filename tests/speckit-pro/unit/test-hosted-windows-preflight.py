@@ -615,40 +615,34 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
             result = json.loads((evidence_dir / "result.json").read_text(encoding="utf-8"))
         return return_code, result
 
-    def test_required_sentinel_writes_stable_verdict_evidence(self) -> None:
-        return_code, result = self.run_sentinel("linux-arm64-required", "false", "skipped")
-        self.assertEqual(return_code, 0)
-        self.assertEqual(result["verdict"], "pass")
-        self.assertEqual(result["heavy_result"], "skipped")
-
-    def test_required_sentinel_passes_a_cancelled_run_only_when_superseded(self) -> None:
+    def test_required_sentinel_writes_stable_verdicts_and_passes_only_superseded_cancellations(self) -> None:
+        real_lookup = object()
+        # (run_preflight, heavy_result, supersession answer, exit code, verdict, lookups)
         cases = (
-            ("cancelled", "superseded by run 7", 0, "superseded", ["asked"]),
-            ("cancelled", None, 1, "fail", ["asked"]),
-            ("failure", "superseded by run 7", 1, "fail", []),
+            ("false", "skipped", "superseded by run 7", 0, "pass", []),
+            ("true", "cancelled", "superseded by run 7", 0, "superseded", ["asked"]),
+            ("true", "cancelled", None, 1, "fail", ["asked"]),
+            ("true", "failure", "superseded by run 7", 1, "fail", []),
+            # No pull_request context: the real lookup never reaches the API.
+            ("true", "cancelled", real_lookup, 1, "fail", []),
         )
-        for heavy_result, notice, expected_code, expected_verdict, expected_calls in cases:
+        for run_preflight, heavy_result, notice, expected_code, expected_verdict, expected_calls in cases:
             with self.subTest(heavy_result=heavy_result, notice=notice):
                 calls: list[str] = []
 
-                def superseded(notice: str | None = notice) -> str | None:
+                def superseded(notice: object = notice) -> object:
                     calls.append("asked")
                     return notice
 
+                patches = {} if notice is real_lookup else {"_superseded_notice": superseded}
                 return_code, result = self.run_sentinel(
-                    "linux-amd64-required", "true", heavy_result, _superseded_notice=superseded,
+                    "linux-amd64-required", run_preflight, heavy_result, **patches,
                 )
                 self.assertEqual(return_code, expected_code)
                 self.assertEqual(result["verdict"], expected_verdict)
-                self.assertEqual(result["superseded"], notice if expected_code == 0 else None)
+                self.assertEqual(result["heavy_result"], heavy_result)
+                self.assertEqual(result["superseded"], notice if expected_verdict == "superseded" else None)
                 self.assertEqual(calls, expected_calls)
-
-    def test_required_sentinel_supersession_fails_closed_without_pull_request_context(self) -> None:
-        # No pull_request context in the environment, so the real lookup never
-        # reaches the API and the cancelled run keeps failing.
-        return_code, result = self.run_sentinel("linux-arm64-required", "true", "cancelled")
-        self.assertEqual(return_code, 1)
-        self.assertEqual(result["verdict"], "fail")
 
     def test_linux_dispatch_checks_native_architecture_and_runs_exact_gate_requests(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
