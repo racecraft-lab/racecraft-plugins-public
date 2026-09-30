@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import copy
 import hashlib
-import json
 from pathlib import Path, PurePosixPath
 import tempfile
 from typing import Any, Mapping
@@ -67,8 +66,7 @@ _PROJECTION_SCHEMA = "native-judge-evidence/v1"
 _REQUEST_CHAR_LIMIT = 900_000
 
 
-def _canonical_json(value: object) -> bytes:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8")
+_canonical_json = strict_json.canonical_bytes
 
 
 def _semantic_checks(case: object) -> list[dict[str, str]]:

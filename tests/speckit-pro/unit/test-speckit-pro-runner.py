@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import importlib
 import json
@@ -26,8 +27,7 @@ sys.path.insert(0, str(REPO_ROOT / "tests" / "speckit-pro" / "lib"))
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 from runner_invocation import assert_runner_response, run_runner  # noqa: E402
 from speckit_pro_runner import envelope, runtime  # noqa: E402
-from speckit_pro_runner.gates import payloads, release  # noqa: E402
-from speckit_pro_runner.helpers import install  # noqa: E402
+from speckit_pro_runner.gates import payloads, release, runner_invocation  # noqa: E402
 
 FIXTURE_FILE = Path(__file__).resolve().parent / "fixtures" / "speckit-pro-runner" / "contract-fixtures.json"
 RELEASE_FIXTURES = Path(__file__).resolve().parent / "fixtures" / "installed-plugin-release"
@@ -35,7 +35,6 @@ RELEASE_FIXTURES = Path(__file__).resolve().parent / "fixtures" / "installed-plu
 
 RUNTIME_LOADED_JSON = (
     "gate_discovery_table.json",
-    "install_inventory.json",
     "contracts/task-results.schema.json",
 )
 
@@ -151,11 +150,8 @@ class RunnerFoundationTests(unittest.TestCase):
     def test_runner_subprocess_executables_are_statically_bash_free(self) -> None:
         from speckit_pro_runner.gates.active_path_guard import repo_bash_python_findings
 
-        paths = [
-            PLUGIN_ROOT / "speckit_pro_runner" / "gates" / "suite.py",
-            PLUGIN_ROOT / "speckit_pro_runner" / "helpers" / "install.py",
-            PLUGIN_ROOT / "speckit_pro_runner" / "runtime.py",
-        ]
+        paths = [PLUGIN_ROOT / "speckit_pro_runner" / name
+                 for name in ("cli_probe.py", "gates/suite.py", "gates/runner_invocation.py", "helpers/install.py", "runtime.py")]
         findings = [
             (path.relative_to(REPO_ROOT).as_posix(), finding.line, finding.pattern)
             for path in paths
@@ -510,6 +506,34 @@ class PayloadRequiredSourceTests(unittest.TestCase):
                     payloads.build_installed_plugin_payloads(repo_root, Path(tmp) / "dist")
 
 
+class RunnerLayeringTests(unittest.TestCase):
+    """Core runner modules import no helper or gate module, at module level or inside a function."""
+
+    SHARED_MODULES = ("atomic_write", "sweep_export", "task_partition", "trusted_io", "workflow_stage")
+
+    def test_core_modules_never_import_helpers_or_gates(self) -> None:
+        offenders = []
+        for path in sorted(RUNNER_DIR.glob("*.py")):
+            if path.name in {"runtime.py", "__main__.py"}:
+                continue  # the composition root wires helpers and gates together
+            for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+                if isinstance(node, ast.ImportFrom) and node.level == 1 and node.module:
+                    if node.module.split(".")[0] in {"helpers", "gates"}:
+                        offenders.append(f"{path.name}:{node.lineno}: from .{node.module}")
+        self.assertEqual(offenders, [])
+
+    def test_helper_modules_reexport_the_shared_primitives_they_used_to_define(self) -> None:
+        for module_name in self.SHARED_MODULES:
+            shared = importlib.import_module(f"speckit_pro_runner.{module_name}")
+            for helper_name in ("read_only", "mutation"):
+                helper = importlib.import_module(f"speckit_pro_runner.helpers.{helper_name}")
+                for name, value in vars(shared).items():
+                    if name.startswith("__") or not hasattr(helper, name):
+                        continue
+                    with self.subTest(module=module_name, helper=helper_name, name=name):
+                        self.assertIs(getattr(helper, name), value)
+
+
 class RunnerInvocationVocabularyTests(unittest.TestCase):
     def test_operation_enum_matches_the_envelope(self) -> None:
         vocabulary = sorted(envelope.SUPPORTED_RUNNER_OPERATIONS)
@@ -525,7 +549,7 @@ class RunnerInvocationVocabularyTests(unittest.TestCase):
         cases = json.loads((RELEASE_FIXTURES / "runner-invocation-cases.json").read_text(encoding="utf-8"))["cases"]
         for case in (item for item in cases if "candidate_results" in item):
             with self.subTest(case_id=case["case_id"]):
-                record, _diagnostics = install.runner_invocation_record(case, None, REPO_ROOT)
+                record, _diagnostics = runner_invocation.runner_invocation_record(case, None, REPO_ROOT)
                 self.assertEqual(record["runner_request"]["operation"], record["operation"])
                 self.assertIn(record["operation"], envelope.SUPPORTED_RUNNER_OPERATIONS)
 
@@ -539,6 +563,7 @@ if __name__ == "__main__":
             RunnerTrustRosterTests,
             PayloadRequiredSourceTests,
             RunnerInvocationVocabularyTests,
+            RunnerLayeringTests,
         )
     )
     result = unittest.TextTestRunner(verbosity=1).run(suite)

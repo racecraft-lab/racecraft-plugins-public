@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any, Mapping
 
+from .canonical_json import canonical_bytes
+
 
 MATERIALIZATION_SCHEMA_VERSION = "agent-materialization.v1"
 MATERIALIZER_VERSION = "agent-materializer.v1"
@@ -48,16 +50,6 @@ class AgentMaterialization:
 
 class AgentMaterializationError(ValueError):
     """Raised when a source policy cannot be safely materialized."""
-
-
-def canonical_bytes(value: Any) -> bytes:
-    return json.dumps(
-        value,
-        sort_keys=True,
-        separators=(",", ":"),
-        ensure_ascii=False,
-        allow_nan=False,
-    ).encode("utf-8")
 
 
 def digest(value: Any) -> str:
