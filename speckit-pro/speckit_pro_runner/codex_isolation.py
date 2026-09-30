@@ -14,6 +14,7 @@ import shutil
 import stat
 import sys
 from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
 
 
@@ -84,12 +85,10 @@ def toml_array(values: Sequence[str]) -> str:
     return "[" + ",".join(toml_string(value) for value in values) + "]"
 
 
-def toml_inline_table(values: dict[str, str]) -> str:
-    return "{" + ",".join(f"{key}={toml_string(value)}" for key, value in values.items()) + "}"
-
-
-def toml_string_map(values: dict[str, str]) -> str:
-    return "{" + ",".join(f"{toml_string(key)}={toml_string(value)}" for key, value in values.items()) + "}"
+def toml_table(values: dict[str, str], *, quote_keys: bool = False) -> str:
+    """One TOML inline table; ``quote_keys`` for keys such as paths that are not bare words."""
+    key = toml_string if quote_keys else str
+    return "{" + ",".join(f"{key(name)}={toml_string(value)}" for name, value in values.items()) + "}"
 
 
 def trusted_prompt_resource(plugin_root: Path, relative: Path, label: str) -> Path:
@@ -113,35 +112,71 @@ def trusted_prompt_resource(plugin_root: Path, relative: Path, label: str) -> Pa
     return regular[0]
 
 
+@dataclass(frozen=True)
+class CodexBroker:
+    """The one MCP broker an isolated Codex process may reach, and its result schema."""
+
+    server: str
+    module: str
+    env: dict[str, str]
+    tools: Sequence[str]
+    output_schema: Path
+
+
+@dataclass(frozen=True)
+class CodexRuntimes:
+    """The attested Codex CLI and the interpreter that runs the broker."""
+
+    codex: Path
+    python: Path
+
+
+def _permission_args(profile: str, runtimes: CodexRuntimes, runtime_root: Path) -> list[str]:
+    """A profile that reads only the two runtimes and the empty runtime directory, offline."""
+    filesystem = {
+        ":minimal": "read",
+        str(runtimes.codex.parent.parent): "read",
+        str(Path(sys.base_prefix).resolve(strict=True)): "read",
+        str(runtime_root): "read",
+    }
+    return [
+        "-c",
+        f'default_permissions="{profile}"',
+        "-c",
+        f"permissions.{profile}.filesystem={toml_table(filesystem, quote_keys=True)}",
+        "-c",
+        f"permissions.{profile}.network.enabled=false",
+        "-c",
+        'web_search="disabled"',
+    ]
+
+
+def _broker_args(broker: CodexBroker, python_runtime: Path) -> list[str]:
+    """Register the one required broker and approve exactly its tools."""
+    prefix = f"mcp_servers.{broker.server}"
+    settings = (
+        f"command={toml_string(str(python_runtime))}",
+        f"args={toml_array(['-m', broker.module])}",
+        f"env={toml_table(broker.env)}",
+        "enabled=true",
+        "required=true",
+        f"enabled_tools={toml_array(broker.tools)}",
+        'default_tools_approval_mode="approve"',
+    )
+    return [argument for setting in settings for argument in ("-c", f"{prefix}.{setting}")]
+
+
 def codex_broker_command(
-    *,
-    codex_runtime: Path,
-    python_runtime: Path,
+    broker: CodexBroker,
+    runtimes: CodexRuntimes,
     runtime_root: Path,
-    server: str,
-    broker_module: str,
-    broker_env: dict[str, str],
-    enabled_tools: Sequence[str],
-    output_schema: Path,
     prompt: str,
     output_path: Path | None = None,
 ) -> list[str]:
-    """Build one user-config-free ``codex exec`` that reaches only ``server``.
-
-    The permission profile reads only the Codex and Python runtimes and the
-    empty runtime directory, disables the network, and approves exactly the
-    ``enabled_tools`` of the one broker.
-    """
-    profile = f"{server}-only"
+    """Build one user-config-free ``codex exec`` that reaches only ``broker``."""
     isolated_runtime_root = runtime_root.resolve(strict=False)
-    filesystem = {
-        ":minimal": "read",
-        str(codex_runtime.parent.parent): "read",
-        str(Path(sys.base_prefix).resolve(strict=True)): "read",
-        str(isolated_runtime_root): "read",
-    }
     command = [
-        str(codex_runtime),
+        str(runtimes.codex),
         "exec",
         "--ignore-user-config",
         "--ignore-rules",
@@ -152,31 +187,11 @@ def codex_broker_command(
         "never",
         "--json",
         "--output-schema",
-        str(output_schema),
+        str(broker.output_schema),
         "-C",
         str(isolated_runtime_root),
-        "-c",
-        f'default_permissions="{profile}"',
-        "-c",
-        f"permissions.{profile}.filesystem={toml_string_map(filesystem)}",
-        "-c",
-        f"permissions.{profile}.network.enabled=false",
-        "-c",
-        'web_search="disabled"',
-        "-c",
-        f"mcp_servers.{server}.command={toml_string(str(python_runtime))}",
-        "-c",
-        f"mcp_servers.{server}.args={toml_array(['-m', broker_module])}",
-        "-c",
-        f"mcp_servers.{server}.env={toml_inline_table(broker_env)}",
-        "-c",
-        f"mcp_servers.{server}.enabled=true",
-        "-c",
-        f"mcp_servers.{server}.required=true",
-        "-c",
-        f"mcp_servers.{server}.enabled_tools={toml_array(enabled_tools)}",
-        "-c",
-        f'mcp_servers.{server}.default_tools_approval_mode="approve"',
+        *_permission_args(f"{broker.server}-only", runtimes, isolated_runtime_root),
+        *_broker_args(broker, runtimes.python),
     ]
     for feature in CODEX_DISABLED_FEATURES:
         command.extend(("--disable", feature))

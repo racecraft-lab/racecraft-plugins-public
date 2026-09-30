@@ -8,6 +8,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import secrets
 import subprocess
 import sys
@@ -1021,7 +1022,7 @@ class SurfaceConfinementTests(unittest.TestCase):
             "perspective": ("review_comment", "consensus_inputs", "submit_result"),
             "synthesis": ("consensus_inputs", "submit_result"),
         }.items():
-            prompt = " ".join(self.codex_stage_prompt(stage).split()).casefold()
+            prompt = " ".join(codex_stage_prompt(stage).split()).casefold()
             with self.subTest(stage=stage):
                 for phrase in (
                     "cannot construct or guess the receipt",
@@ -1032,19 +1033,6 @@ class SurfaceConfinementTests(unittest.TestCase):
                     *(f"mcp__sweep-broker__{tool_name}" for tool_name in required_tools),
                 ):
                     self.assertIn(phrase, prompt)
-
-    def codex_stage_prompt(self, stage: str) -> str:
-        """The full trusted prompt the launcher hands the isolated Codex process."""
-        with patch.object(sweep_launcher, "codex_executable", return_value=REPO_ROOT.parent / "rt" / "bin" / "codex"), \
-                patch.object(sweep_launcher, "python_executable", return_value=REPO_ROOT.parent / "rt" / "bin" / "python3"):
-            return sweep_launcher.codex_command(
-                plugin_root=PLUGIN_ROOT,
-                repo_root=REPO_ROOT,
-                runtime_root=REPO_ROOT.parent / "isolated-sweep-runtime",
-                capability=f"sweep-cap:v1:{'a' * 32}:{'b' * 64}",
-                stage=stage,
-                perspective="codebase" if stage == "perspective" else None,
-            )[-1]
 
     def test_codex_event_projection_exposes_only_broker_tool_status(self) -> None:
         events = "\n".join(
@@ -2068,36 +2056,24 @@ class WorkflowAndEvalContractTests(unittest.TestCase):
         self.assertNotIn(script.name, json.dumps(manifest, sort_keys=True))
 
 
-class AnchorUniquenessTests(unittest.TestCase):
+class AnchorUniquenessTests(SweepSessionCase):
     """validate_result refuses an anchor the snapshot does not match exactly once."""
 
-    def setUp(self) -> None:
-        self.fixture = GitFixture()
-        self.addCleanup(self.fixture.close)
-        self.fixture.write("specs/001-safe/plan.md", "# Plan\nold text\nold text\nunique line\n")
-        self.fixture.commit()
-        self.snapshot = sweep_isolation.GitSnapshot.capture(self.fixture.root)
-
-    def record(self, anchor: str) -> dict[str, object]:
-        return {
-            "comment_id": "RC_kwDO123",
-            "outcome": "resolved",
-            "agreement": "3/3",
-            "basis": None,
-            "edit": {"file": "plan.md", "anchor": anchor, "replacement": "new text"},
-        }
+    def validated(self, anchor: str) -> dict[str, object]:
+        snapshot = sweep_isolation.GitSnapshot.capture(self.fixture.root)
+        edit = {"file": "plan.md", "anchor": anchor, "replacement": "new text"}
+        return sweep_isolation.validate_result("synthesis", self.synthesis(edit=edit), perspective=None, snapshot=snapshot)
 
     def test_an_ambiguous_or_absent_anchor_is_refused_before_a_receipt(self) -> None:
+        self.fixture.write("specs/002-other/plan.md", "# Plan\nold text\n")
+        self.fixture.commit()
         for anchor in ("old text", "not in the plan"):
             with self.subTest(anchor=anchor), self.assertRaises(sweep_isolation.SchemaViolation) as caught:
-                sweep_isolation.validate_result("synthesis", self.record(anchor), perspective=None, snapshot=self.snapshot)
+                self.validated(anchor)
             self.assertEqual("anchor_ambiguous", sweep_broker._broker_error_code(caught.exception))
 
     def test_a_unique_anchor_is_accepted(self) -> None:
-        record = sweep_isolation.validate_result(
-            "synthesis", self.record("unique line"), perspective=None, snapshot=self.snapshot
-        )
-        self.assertEqual("unique line", record["edit"]["anchor"])
+        self.assertEqual("old text", self.validated("old text")["edit"]["anchor"])
 
     def test_the_refusal_is_a_declared_broker_error_code(self) -> None:
         self.assertIn("anchor_ambiguous", sweep_isolation.BROKER_ERROR_CODES)
@@ -2136,13 +2112,10 @@ class BrokerCohesionTests(unittest.TestCase):
     def test_the_hook_receipt_and_capability_patterns_match_the_session_store(self) -> None:
         hook = load_script("sweep_hook_patterns", PLUGIN_ROOT / "scripts/sweep-isolation-hook.py")
 
-        def language(pattern: str) -> str:
-            return pattern.replace("(", "").replace(")", "")
-
-        self.assertEqual(language(sweep_isolation.RECEIPT_RE.pattern), language(hook.RECEIPT_RE.pattern))
-        self.assertEqual(language(sweep_isolation.CAPABILITY_RE.pattern), language(hook.CAPABILITY_RE.pattern))
+        self.assertEqual(language_of(sweep_isolation.RECEIPT_RE.pattern), language_of(hook.RECEIPT_RE.pattern))
+        self.assertEqual(language_of(sweep_isolation.CAPABILITY_RE.pattern), language_of(hook.CAPABILITY_RE.pattern))
         self.assertEqual(sweep_isolation.HOOK_VERSION, hook.HOOK_VERSION)
-        self.assertNotEqual(language(sweep_isolation.RECEIPT_RE.pattern), language(hook.RECEIPT_RE.pattern) + "x")
+        self.assertNotEqual(language_of(sweep_isolation.RECEIPT_RE.pattern), language_of(hook.RECEIPT_RE.pattern) + "x")
 
     def test_the_claude_receipt_schema_is_the_shipped_codex_schema(self) -> None:
         shipped = json.loads(
@@ -2167,9 +2140,23 @@ class BrokerCohesionTests(unittest.TestCase):
                 self.assertFalse("sys.stdin" in source or '"tools/list"' in source, f"{name} keeps its own stdio loop")
 
 
+def codex_stage_prompt(stage: str) -> str:
+    """The full trusted prompt the launcher hands the isolated Codex process."""
+    with patch.object(sweep_launcher, "codex_executable", return_value=REPO_ROOT.parent / "rt" / "bin" / "codex"), \
+            patch.object(sweep_launcher, "python_executable", return_value=REPO_ROOT.parent / "rt" / "bin" / "python3"):
+        return sweep_launcher.codex_command(
+            plugin_root=PLUGIN_ROOT,
+            repo_root=REPO_ROOT,
+            runtime_root=REPO_ROOT.parent / "isolated-sweep-runtime",
+            capability=f"sweep-cap:v1:{'a' * 32}:{'b' * 64}",
+            stage=stage,
+            perspective="codebase" if stage == "perspective" else None,
+        )[-1]
+
+
 def language_of(pattern: str) -> str:
     """A regular expression's matched language, ignoring capture groups."""
-    return pattern.replace("(", "").replace(")", "")
+    return re.sub(r"[()]", "", pattern)
 
 
 if __name__ == "__main__":
