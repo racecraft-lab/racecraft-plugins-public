@@ -878,6 +878,24 @@ def _sorted_subdirs(directory: Path) -> list[Path]:
 
 class ValidateCodexParity(unittest.TestCase):
 
+    def _assert_agent_generated(self, agent_name: str, generated: dict[str, str]) -> None:
+        """The committed Codex agent equals the text generated from its Claude source."""
+        relative = f'codex-agents/{agent_name}.toml'
+        committed = validate_codex_parity_CODEX_AGENTS_DIR / f'{agent_name}.toml'
+        with self.subTest(msg=f'{relative} equals the text generated from agents/{agent_name}.md'):
+            self.assertIn(relative, generated, f'agents/{agent_name}.md is paired but generates no Codex agent')
+            self.assertTrue(committed.is_file(), f'file not found: {committed}')
+            self.assertEqual(committed.read_text(encoding='utf-8'), generated.get(relative), f'{relative} drifted from agents/{agent_name}.md; run python3 scripts/refresh-release-artifacts.py')
+
+    def _assert_payload_skill_built(self, skill_name: str) -> None:
+        """Each host's committed payload skill equals a fresh build from source."""
+        for host in ('claude', 'codex'):
+            shipped = REPO_ROOT / 'dist' / host / 'speckit-pro' / 'skills' / skill_name
+            built = _fresh_payloads() / host / 'speckit-pro' / 'skills' / skill_name
+            with self.subTest(msg=f'{host} payload skills/{skill_name}/ equals a fresh build from source'):
+                self.assertTrue((built / 'SKILL.md').is_file(), f'{host} builds no SKILL.md for {skill_name}')
+                self.assertEqual(_tree(shipped), _tree(built), f'{host} payload skills/{skill_name}/ drifted from its source; run python3 scripts/refresh-release-artifacts.py')
+
     def test_codex_parity(self) -> None:
         with self.subTest(msg='both plugin.json files exist'):
             self.assertTrue(CC_PLUGIN.is_file() and CODEX_PLUGIN.is_file(), f'missing one or both plugin.json files (CC: {CC_PLUGIN}, Codex: {CODEX_PLUGIN})')
@@ -901,12 +919,7 @@ class ValidateCodexParity(unittest.TestCase):
                 agent_name = cc_agent_file.name[:-len('.md')]
                 if agent_name in CC_ONLY_AGENTS:
                     continue
-                relative = f'codex-agents/{agent_name}.toml'
-                committed = validate_codex_parity_CODEX_AGENTS_DIR / f'{agent_name}.toml'
-                with self.subTest(msg=f'{relative} equals the text generated from agents/{agent_name}.md'):
-                    self.assertIn(relative, generated, f'agents/{agent_name}.md is paired but generates no Codex agent')
-                    self.assertTrue(committed.is_file(), f'file not found: {committed}')
-                    self.assertEqual(committed.read_text(encoding='utf-8'), generated.get(relative), f'{relative} drifted from agents/{agent_name}.md; run python3 scripts/refresh-release-artifacts.py')
+                self._assert_agent_generated(agent_name, generated)
             for agent_name, resource_name in (('sweep-analyst', 'analyst.md'), ('sweep-classifier', 'classifier.md')):
                 resource = validate_codex_parity_CODEX_SKILLS_DIR / 'speckit-autopilot' / 'references' / 'sweep-prompts' / resource_name
                 with self.subTest(msg=f'codex trusted launcher resource exists for {agent_name}'):
@@ -926,12 +939,7 @@ class ValidateCodexParity(unittest.TestCase):
                 skill_name = skill_dir.name
                 with self.subTest(msg=f'skills/{skill_name}/SKILL.md exists'):
                     self.assertTrue((validate_codex_parity_SKILLS_DIR / skill_name / 'SKILL.md').is_file(), f"file not found: {validate_codex_parity_SKILLS_DIR / skill_name / 'SKILL.md'}")
-                for host in ('claude', 'codex'):
-                    shipped = REPO_ROOT / 'dist' / host / 'speckit-pro' / 'skills' / skill_name
-                    built = _fresh_payloads() / host / 'speckit-pro' / 'skills' / skill_name
-                    with self.subTest(msg=f'{host} payload skills/{skill_name}/ equals a fresh build from source'):
-                        self.assertTrue((built / 'SKILL.md').is_file(), f'{host} builds no SKILL.md for {skill_name}')
-                        self.assertEqual(_tree(shipped), _tree(built), f'{host} payload skills/{skill_name}/ drifted from its source; run python3 scripts/refresh-release-artifacts.py')
+                self._assert_payload_skill_built(skill_name)
         else:
             with self.subTest(msg='skills/ and codex-skills/ directories exist'):
                 self.fail(f'one or both skills directories missing (CC: {validate_codex_parity_SKILLS_DIR}, Codex: {validate_codex_parity_CODEX_SKILLS_DIR})')
