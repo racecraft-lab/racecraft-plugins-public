@@ -52,12 +52,10 @@ SHIPPED_RUNTIME_CONTRACTS = (
     PLUGIN_ROOT / "skills" / "speckit-upgrade" / "SKILL.md",
     PLUGIN_ROOT / "skills" / "speckit-scaffold-spec" / "SKILL.md",
     codex_skill_dir("speckit-scaffold-spec") / "SKILL.md",
+    # The autopilot's shared sources carry both hosts' text.
     PLUGIN_ROOT / "skills" / "speckit-autopilot" / "SKILL.md",
-    PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "SKILL.md",
     PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "phase-execution.md",
-    PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "references" / "phase-execution-codex.md",
     PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "post-implementation.md",
-    PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "references" / "post-implementation-codex.md",
 )
 EXPECTED_DEFERRED_HELPERS = frozenset(
     {
@@ -156,7 +154,13 @@ CURRENT_INVENTORY = [
 LIB_DIR = TESTS_ROOT / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
+from host_skill_views import host_skill_root  # noqa: E402
 from test_result import run_counted  # noqa: E402
+
+
+def autopilot_view(host: str, relative: str) -> Path:
+    """One autopilot file as `host` receives it."""
+    return host_skill_root(host) / "speckit-autopilot" / relative
 
 
 def merged_output(result: subprocess.CompletedProcess[str]) -> str:
@@ -352,20 +356,20 @@ def runtime_contract_parity_violations() -> list[str]:
         ),
         (
             "autopilot",
-            PLUGIN_ROOT / "skills" / "speckit-autopilot" / "SKILL.md",
-            PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "SKILL.md",
+            autopilot_view("claude", "SKILL.md"),
+            autopilot_view("codex", "SKILL.md"),
             (),
         ),
         (
             "phase execution",
-            PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "phase-execution.md",
-            PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "references" / "phase-execution-codex.md",
+            autopilot_view("claude", "references/phase-execution.md"),
+            autopilot_view("codex", "references/phase-execution.md"),
             (PACKET_PATH_CONTRACT, "relocate-process-artifacts", "data.stdout_json", "writes_state=false", "output_path", "sections"),
         ),
         (
             "post implementation",
-            PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "post-implementation.md",
-            PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "references" / "post-implementation-codex.md",
+            autopilot_view("claude", "references/post-implementation.md"),
+            autopilot_view("codex", "references/post-implementation.md"),
             (
                 PACKET_PATH_CONTRACT,
                 "pr-packet-output",
@@ -415,19 +419,10 @@ def runtime_contract_parity_violations() -> list[str]:
 
 
 def autopilot_entrypoint_post_contract_violations(bodies: dict[str, str]) -> list[str]:
-    reference_names = {
-        "Claude": "post-implementation.md",
-        "Codex": "post-implementation-codex.md",
-    }
-    reference_labels = {
-        "Claude": "references/post-implementation.md",
-        "Codex": "post-implementation-codex.md",
-    }
+    reference, label = "post-implementation.md", "references/post-implementation.md"
     violations: list[str] = []
     for surface, raw_body in bodies.items():
         body = re.sub(r"\s+", " ", raw_body.casefold())
-        reference = reference_names[surface]
-        label = reference_labels[surface]
         mandatory_read = re.escape(
             f"after phase 7 passes g7, read and execute [`{label}`](./references/{reference}) in canonical order."
         )
@@ -642,9 +637,7 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
             self.assertNotIn("Traceback", stderr.getvalue())
 
     def test_codex_archive_sweep_execution_contract(self) -> None:
-        prerequisites = (
-            PLUGIN_ROOT / "codex-skills/speckit-autopilot/references/prerequisites-codex.md"
-        ).read_text(encoding="utf-8")
+        prerequisites = autopilot_view("codex", "references/prerequisites.md").read_text(encoding="utf-8")
         normalized = " ".join(prerequisites.split())
 
         self.assertIn("use its project-local command contract as the Codex invocation path", normalized)
@@ -659,13 +652,9 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
 
     def test_codex_autopilot_worktree_handoff_contract(self) -> None:
         scaffold = (codex_skill_dir("speckit-scaffold-spec") / "SKILL.md").read_text(encoding="utf-8")
-        autopilot = (PLUGIN_ROOT / "codex-skills/speckit-autopilot/SKILL.md").read_text(encoding="utf-8")
-        prerequisites = (
-            PLUGIN_ROOT / "codex-skills/speckit-autopilot/references/prerequisites-codex.md"
-        ).read_text(encoding="utf-8")
-        phase_execution = (
-            PLUGIN_ROOT / "codex-skills/speckit-autopilot/references/phase-execution-codex.md"
-        ).read_text(encoding="utf-8")
+        autopilot = autopilot_view("codex", "SKILL.md").read_text(encoding="utf-8")
+        prerequisites = autopilot_view("codex", "references/prerequisites.md").read_text(encoding="utf-8")
+        phase_execution = autopilot_view("codex", "references/phase-execution.md").read_text(encoding="utf-8")
         phase_execution_normalized = " ".join(phase_execution.split())
 
         normalized_prerequisites = " ".join(prerequisites.split())
@@ -716,10 +705,8 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
         self.assertIn("Never mutate the parent checkout as a fallback", prerequisites)
 
     def test_post_implementation_outcome_negative_canaries(self) -> None:
-        claude = (PLUGIN_ROOT / "skills/speckit-autopilot/references/post-implementation.md").read_text(encoding="utf-8")
-        codex = (PLUGIN_ROOT / "codex-skills/speckit-autopilot/references/post-implementation-codex.md").read_text(
-            encoding="utf-8"
-        )
+        claude = autopilot_view("claude", "references/post-implementation.md").read_text(encoding="utf-8")
+        codex = autopilot_view("codex", "references/post-implementation.md").read_text(encoding="utf-8")
         self.assertEqual(post_implementation_outcome_violations({"Claude": claude, "Codex": codex}), [])
 
         canaries = {

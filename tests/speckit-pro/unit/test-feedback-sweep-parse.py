@@ -918,12 +918,8 @@ class FeedbackSweepBehaviorTest(unittest.TestCase):
         self.assertIn("specs/*/.process/feedback-sweep/", root_ignore)
 
     def test_active_sweep_docs_are_a_no_false_positive_compatibility_population(self) -> None:
-        paths = (
-            PLUGIN_ROOT / "skills/speckit-autopilot/references/phase-execution.md",
-            PLUGIN_ROOT
-            / "codex-skills/speckit-autopilot/references/phase-execution-codex.md",
-        )
-        for path in paths:
+        # The shared source carries both hosts' text.
+        for path in (PLUGIN_ROOT / "skills/speckit-autopilot/references/phase-execution.md",):
             lines = path.read_text(encoding="utf-8").splitlines()
             for start in range(0, len(lines), 20):
                 sent = lines[start : start + 20]

@@ -9,26 +9,17 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-CLAUDE_REF = (
-    REPO_ROOT
-    / "speckit-pro"
-    / "skills"
-    / "speckit-autopilot"
-    / "references"
-    / "post-implementation.md"
-)
-CODEX_REF = (
-    REPO_ROOT
-    / "speckit-pro"
-    / "codex-skills"
-    / "speckit-autopilot"
-    / "references"
-    / "post-implementation-codex.md"
-)
 LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
+from host_skill_views import host_skill_root  # noqa: E402
 from test_result import run_counted  # noqa: E402
+
+# The shared post-implementation reference as each host receives it.
+CLAUDE_REF, CODEX_REF = (
+    host_skill_root(host) / "speckit-autopilot" / "references" / "post-implementation.md"
+    for host in ("claude", "codex")
+)
 
 
 CONTRACT_CHECKS = (

@@ -31,12 +31,11 @@ LIB_DIR = TEST_DIR.parent / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
 
-from guide_text import assert_guides_say
+from guide_text import assert_guides_say, host_guides
 import privacy_patterns
 from autopilot_bookkeeping_support import (
     CLAUDE_AUTOPILOT_SKILL,
     CODEX_AUTOPILOT_SKILL,
-    CODEX_SKILL_DIR,
     PHRASES,
     SKILL_DIR,
     VALIDATOR,
@@ -62,6 +61,8 @@ BLOCKING_STATUS_EVIDENCE_KEYS = (
     "workflow_authority_errors",
     "state_privacy_errors",
     "marker_evidence_privacy_errors",
+    "formal_checkpoint_errors",
+    "artifact_review_errors",
 )
 
 
@@ -343,10 +344,10 @@ class StateStatusSchemaTests(unittest.TestCase):
         self.assertEqual(validator.validate_state_status({})["state_status_errors"], [])
 
 
-SKILL_GUIDES = (SKILL_DIR + "SKILL.md", CODEX_SKILL_DIR + "SKILL.md")
+SKILL_GUIDES = host_guides(SKILL_DIR + "SKILL.md")
 
 
-PHASE_GUIDES = (SKILL_DIR + "references/phase-execution.md", CODEX_SKILL_DIR + "references/phase-execution-codex.md")
+PHASE_GUIDES = host_guides(SKILL_DIR + "references/phase-execution.md")
 
 
 class RuleScopingTests(unittest.TestCase):
@@ -457,6 +458,8 @@ class StatusEvidenceSourceGuidanceTests(unittest.TestCase):
                 _assert_phrases(self, folded, PHRASES["StatusEvidenceSourceGuidanceTests.test_source_guidance_names_every_gated_key_and_the_nonblocking_rest#1"])
                 for key in BLOCKING_STATUS_EVIDENCE_KEYS + BLOCKING_STATE_INVARIANT_KEYS:
                     self.assertIn(key, guidance)
+        self.assertEqual(BLOCKING_STATUS_EVIDENCE_KEYS + BLOCKING_STATE_INVARIANT_KEYS,
+                         validator.RULE_PROBLEM_KEYS["status-evidence"])
 
 
 class TrackedPathEnumerationTests(unittest.TestCase):

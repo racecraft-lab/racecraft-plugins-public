@@ -140,12 +140,12 @@ class GatePreflightCoverageTests(unittest.TestCase):
                 gate_preflight_coverage({"gates": GATES, "inventory_actions": INVENTORY}, root)
 
     def test_both_hosts_collect_declared_pre_pr_commands_at_run_start(self) -> None:
-        codex = " ".join((PLUGIN_ROOT / "codex-skills/speckit-autopilot/references/phase-execution-codex.md")
-                         .read_text(encoding="utf-8").split())
+        from guide_text import guide_text
+
+        codex = guide_text("skills/speckit-autopilot/references/phase-execution.md", "codex")
         for phrase in ("`declared_commands`", "declared pre-PR command", "copy its `target` verbatim"):
             self.assertIn(phrase, codex)
-        claude = " ".join((PLUGIN_ROOT / "skills/speckit-autopilot/references/phase-execution.md")
-                          .read_text(encoding="utf-8").split())
+        claude = guide_text("skills/speckit-autopilot/references/phase-execution.md", "claude")
         for phrase in ("declared pre-PR command", "`check-gate-preflight-coverage`"):
             self.assertIn(phrase, claude)
 

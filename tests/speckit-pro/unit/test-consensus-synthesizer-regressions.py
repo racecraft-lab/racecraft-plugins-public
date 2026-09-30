@@ -16,6 +16,7 @@ if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
 
 from guide_text import guide_text  # noqa: E402
+from host_skill_views import host_skill_root  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 PHRASES = json.loads(
@@ -30,16 +31,11 @@ PROTOCOL = (
     REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot" / "references"
     / "consensus-protocol.md"
 )
-AUTOPILOT_SKILLS = (
-    REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot" / "SKILL.md",
-    REPO_ROOT / "speckit-pro" / "codex-skills" / "speckit-autopilot" / "SKILL.md",
-)
+# The autopilot skill as each host receives it, rendered from the shared source.
+AUTOPILOT_SKILLS = tuple(host_skill_root(host) / "speckit-autopilot" / "SKILL.md" for host in ("claude", "codex"))
 CODEX_AUTOPILOT = AUTOPILOT_SKILLS[1]
-REFERENCES = REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot" / "references"
-CODEX_PHASE_EXECUTION = (
-    REPO_ROOT / "speckit-pro" / "codex-skills" / "speckit-autopilot" / "references"
-    / "phase-execution-codex.md"
-)
+REFERENCES = AUTOPILOT_SKILLS[0].parent / "references"
+CODEX_PHASE_EXECUTION = CODEX_AUTOPILOT.parent / "references" / "phase-execution.md"
 ACTIVE_PROTOCOL = "<plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md"
 ACTIVE_REFERENCES = "Reference dir: <plugin_root>/skills/speckit-autopilot/references/"
 TIEBREAKER_CLAUDE = REPO_ROOT / "speckit-pro" / "agents" / "consensus-tiebreaker.md"
@@ -318,7 +314,7 @@ class Round3TiebreakHostTests(unittest.TestCase):
         codex_refs = CODEX_AUTOPILOT.parent / "references"
         codex_files = (
             CODEX_AUTOPILOT,
-            codex_refs / "error-recovery-codex.md",
+            codex_refs / "error-recovery.md",
             CODEX_PHASE_EXECUTION,
         )
         for host, paths in (("claude", claude_files), ("codex", codex_files)):

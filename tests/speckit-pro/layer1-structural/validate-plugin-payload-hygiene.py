@@ -52,7 +52,7 @@ RESOLVED_TOKEN = 'resolved_python'
 COVERAGE_SCRIPT = 'validate-autopilot-phase-coverage.py'
 COVERAGE_RULE_FLAG = '--rule status-evidence'
 COVERAGE_FLAGS = ('--workflow', '--state')
-PLATFORM_ROOTS = {'Claude': 'speckit-pro/skills/', 'Codex': 'speckit-pro/codex-skills/'}
+PLATFORM_HOSTS = {'Claude': 'claude', 'Codex': 'codex'}
 POSITIVE_CASES = ('python3 "runner helper validate-autopilot-phase-coverage.py" --workflow "$WORKFLOW_FILE"', 'python3 -m json.tool docs/ai/specs/.process/autopilot-state.json', 'python3 tests/speckit-pro/run-all.py', '- `python -m venv .venv`', 'Run python3.11 scripts/build.py to regenerate', 'py -3 scripts/build.py')
 NEGATIVE_CASES = ('resolved_python -m speckit_pro_runner < request.json', 'resolved_python "<plugin-root>/skills/speckit-autopilot/scripts/validate.py" --rule x', '`[resolved_python, "-m", "speckit_pro_runner"]`, send one JSON request on', 'Keep repository-owned tooling on Python 3.11+ standard library.', 'resolve Python 3.11 or newer, invoke', '#!/usr/bin/env python3', 'the interpreter at /usr/bin/python3 is not guaranteed', '`resolved_python` is the Python 3.11+ interpreter resolved by the installed')
 
@@ -89,13 +89,21 @@ def coverage_invocations() -> list[tuple[str, int, str]]:
                 found.append((display, number, line))
     return found
 
+def host_coverage_invocations(host: str) -> list[str]:
+    """Guard invocation lines in the skill tree `host` loads (host blocks rendered)."""
+    from host_skill_views import host_skill_root
+
+    return [line for path in sorted(host_skill_root(host).rglob('*.md'))
+            for line in path.read_text(encoding='utf-8').splitlines()
+            if COVERAGE_SCRIPT in line and any((flag in line for flag in COVERAGE_FLAGS))]
+
 def coverage_invocation_errors() -> list[str]:
     """Every discovered guard invocation must be resolvable and identically scoped."""
     invocations = coverage_invocations()
     errors: list[str] = []
-    for platform, root in sorted(PLATFORM_ROOTS.items()):
-        if not any((display.startswith(root) for display, _, _ in invocations)):
-            errors.append(f'no {COVERAGE_SCRIPT} invocation found under {root} — the {platform} distribution would run no coverage guard at all')
+    for platform, host in sorted(PLATFORM_HOSTS.items()):
+        if not host_coverage_invocations(host):
+            errors.append(f'no {COVERAGE_SCRIPT} invocation found in the {platform} skill view, so the {platform} distribution would run no coverage guard at all')
     for display, number, line in invocations:
         if RESOLVED_TOKEN not in line:
             errors.append(f'{display}:{number}: guard invocation does not name {RESOLVED_TOKEN!r}, so it names an interpreter the Installed Runtime Contract cannot resolve')

@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 from execution_verification_fixture import VerificationFixture, bun_output, unittest_output
 from git_fixture import commit_baseline, git
 from guide_text import (EXECUTION_EFFICIENCY_GUIDE, PHASE_EXECUTION_GUIDES, PLUGIN_ROOT, GuidePhrases,
-                        assert_guides_document, assert_guides_say, guide_text)
+                        assert_guides_document, assert_guides_say, guide_text, guide_view)
 from test_result import run_counted
 from speckit_pro_runner.execution_control import (durable_json, execution_control, record_failing_checks)
 from speckit_pro_runner.failing_checks import fingerprint as failing_check_fingerprint
@@ -1550,16 +1550,16 @@ class DeferOnExhaustedAllowanceGuidanceTests(unittest.TestCase):
         self.assertIn("On exhaustion retain the failing MUTATION result and defer", hardener)
 
     def test_both_hosts_turn_an_exhausted_budget_into_a_deferral(self):
-        pairs = (("skills/speckit-autopilot/SKILL.md", "## Error Recovery", "## References"),
-                 ("skills/speckit-autopilot/references/error-recovery.md", "## Common Issues", "## Context Window"),
-                 ("codex-skills/speckit-autopilot/references/error-recovery-codex.md", "## Common Issues", None),
-                 ("skills/speckit-autopilot/references/phase-execution.md",
+        pairs = ((("skills/speckit-autopilot/SKILL.md", "claude"), "## Error Recovery", "## References"),
+                 (("skills/speckit-autopilot/references/error-recovery.md", "claude"), "## Common Issues", "## Context Window"),
+                 (("skills/speckit-autopilot/references/error-recovery.md", "codex"), "## Common Issues", None),
+                 (("skills/speckit-autopilot/references/phase-execution.md", "claude"),
                   "#### Blocked Actions Mid-Run", "#### Append Contract"),
-                 ("codex-skills/speckit-autopilot/references/phase-execution-codex.md",
+                 (("skills/speckit-autopilot/references/phase-execution.md", "codex"),
                   "### Blocked Actions Mid-Run", "## PR Packet and Body Boundary"))
         for relative, start, end in pairs:
             with self.subTest(host=relative):
-                text = guide_text(relative)
+                text = guide_view(relative)
                 section = text.split(start, 1)[1]
                 section = section.split(end, 1)[0] if end else section
                 self.assertIn("`disposition=defer`", section)
@@ -1576,12 +1576,12 @@ class DeferOnExhaustedAllowanceGuidanceTests(unittest.TestCase):
         self.assertIn("a serial plan never stops mid-run on a deferral", shared)
         self.assertIn("tracked follow-up", shared)
         for relative, start, end in (
-                ("skills/speckit-autopilot/references/phase-execution.md",
+                (("skills/speckit-autopilot/references/phase-execution.md", "claude"),
                  "#### Blocked Actions Mid-Run", "#### Repeated Gate Failures"),
-                ("codex-skills/speckit-autopilot/references/phase-execution-codex.md",
+                (("skills/speckit-autopilot/references/phase-execution.md", "codex"),
                  "### Blocked Actions Mid-Run", "### Repeated Gate Failures")):
             with self.subTest(host=relative):
-                text = guide_text(relative)
+                text = guide_view(relative)
                 section = text.split(start, 1)[1].split(end, 1)[0]
                 for phrase in ("a serial plan never stops mid-run on a deferral", "`finalize-run`",
                                "the only stop is a required gate that is still not green"):
@@ -1594,15 +1594,15 @@ class DeferOnExhaustedAllowanceGuidanceTests(unittest.TestCase):
                 self.assertNotIn("keep its dependents deferred", review)
 
     def test_codex_audit_and_both_hosts_keep_the_true_stops(self):
-        audit = guide_text("codex-skills/speckit-autopilot/SKILL.md").split("### 3.4 Pre-final completion audit", 1)[1]
+        audit = guide_text("skills/speckit-autopilot/SKILL.md", "codex").split("### 3.4 Pre-final completion audit", 1)[1]
         self.assertIn("`execution_control.disposition=defer`", audit)
         for relative, start, end in (
-                ("skills/speckit-autopilot/references/phase-execution.md",
+                (("skills/speckit-autopilot/references/phase-execution.md", "claude"),
                  "#### Blocked Actions Mid-Run", "#### Repeated Gate Failures"),
-                ("codex-skills/speckit-autopilot/references/phase-execution-codex.md",
+                (("skills/speckit-autopilot/references/phase-execution.md", "codex"),
                  "### Blocked Actions Mid-Run", "### Repeated Gate Failures")):
             with self.subTest(host=relative):
-                section = guide_text(relative).split(start, 1)[1].split(end, 1)[0]
+                section = guide_view(relative).split(start, 1)[1].split(end, 1)[0]
                 for phrase in ("unknown side effects", "`checkpoint_required`", "a ledger or clock error",
                                "invalid or stale state"):
                     self.assertIn(phrase, section)
@@ -1621,8 +1621,8 @@ class DeferralListingGuidanceTests(unittest.TestCase):
                           ("the ledger's `deferred` list is not empty",))
 
 
-ERROR_RECOVERY_GUIDES = ("skills/speckit-autopilot/SKILL.md", "skills/speckit-autopilot/references/error-recovery.md",
-                         "codex-skills/speckit-autopilot/references/error-recovery-codex.md")
+ERROR_RECOVERY_GUIDES = (("skills/speckit-autopilot/SKILL.md", "claude"), ("skills/speckit-autopilot/references/error-recovery.md", "claude"),
+                         ("skills/speckit-autopilot/references/error-recovery.md", "codex"))
 ALLOWANCE_GUIDES = {
     "stage": (GuidePhrases(("`begin-stage-epoch`", "`autopilot_args`", "`stage-transition:implement`",
                             "`stage_epoch_opened=false`"), ("stage changes, a reclaimed state mirror",)),
@@ -2315,17 +2315,17 @@ class CorrectionProgressGuidanceTests(unittest.TestCase):
             self.assertIn(phrase, text)
 
     def test_both_hosts_remediate_while_converging_and_defer_only_on_non_convergence(self):
-        pairs = (("skills/speckit-autopilot/SKILL.md", "## Error Recovery", "## References"),
-                 ("codex-skills/speckit-autopilot/SKILL.md", "### 3.4 Pre-final completion audit", None),
-                 ("skills/speckit-autopilot/references/error-recovery.md", "## Common Issues", "## Context Window"),
-                 ("codex-skills/speckit-autopilot/references/error-recovery-codex.md", "## Common Issues", None),
-                 ("skills/speckit-autopilot/references/phase-execution.md",
+        pairs = ((("skills/speckit-autopilot/SKILL.md", "claude"), "## Error Recovery", "## References"),
+                 (("skills/speckit-autopilot/SKILL.md", "codex"), "### 3.4 Pre-final completion audit", None),
+                 (("skills/speckit-autopilot/references/error-recovery.md", "claude"), "## Common Issues", "## Context Window"),
+                 (("skills/speckit-autopilot/references/error-recovery.md", "codex"), "## Common Issues", None),
+                 (("skills/speckit-autopilot/references/phase-execution.md", "claude"),
                   "#### Blocked Actions Mid-Run", "#### Append Contract"),
-                 ("codex-skills/speckit-autopilot/references/phase-execution-codex.md",
+                 (("skills/speckit-autopilot/references/phase-execution.md", "codex"),
                   "### Blocked Actions Mid-Run", "## PR Packet and Body Boundary"))
         for relative, start, end in pairs:
             with self.subTest(host=relative):
-                section = guide_text(relative).split(start, 1)[1]
+                section = guide_view(relative).split(start, 1)[1]
                 section = section.split(end, 1)[0] if end else section
                 self.assertIn("keep remediating while each round converges", section.lower())
                 self.assertIn("non-convergence", section.lower())
@@ -3537,11 +3537,11 @@ class UnknownDispatchGuidanceTests(unittest.TestCase):
     """Both hosts tell the lead to reconcile an unknown outcome per unit instead of asking the operator (issue 831)."""
 
     GUIDANCE = ("skills/speckit-autopilot/references/execution-efficiency.md",
-                "skills/speckit-autopilot/references/error-recovery.md",
-                "skills/speckit-autopilot/references/phase-execution.md",
-                "codex-skills/speckit-autopilot/SKILL.md",
-                "codex-skills/speckit-autopilot/references/phase-execution-codex.md",
-                "codex-skills/speckit-autopilot/references/error-recovery-codex.md")
+                ("skills/speckit-autopilot/references/error-recovery.md", "claude"),
+                ("skills/speckit-autopilot/references/phase-execution.md", "claude"),
+                ("skills/speckit-autopilot/SKILL.md", "codex"),
+                ("skills/speckit-autopilot/references/phase-execution.md", "codex"),
+                ("skills/speckit-autopilot/references/error-recovery.md", "codex"))
 
     def test_every_host_guide_names_the_unit_scoped_reconciliation(self):
         assert_guides_say(self, self.GUIDANCE, ("reconcile-unit",),

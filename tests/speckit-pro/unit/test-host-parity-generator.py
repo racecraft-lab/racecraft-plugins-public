@@ -23,6 +23,7 @@ for import_root in (PLUGIN_ROOT, LIB_DIR):
     if str(import_root) not in sys.path:
         sys.path.insert(0, str(import_root))
 
+from guide_text import host_source  # noqa: E402
 from speckit_pro_runner.agent_inventory import AGENT_INVENTORY  # noqa: E402
 from speckit_pro_runner.codex_agent_generator import (  # noqa: E402
     generated_codex_files,
@@ -40,7 +41,7 @@ from speckit_pro_runner.host_parity import (  # noqa: E402
     split_frontmatter,
     unexplained_blocks,
 )
-from speckit_pro_runner.host_skills import UNMERGED_CODEX_OVERLAYS, codex_skill_overlay_errors  # noqa: E402
+from speckit_pro_runner.host_skills import codex_skill_overlay_errors  # noqa: E402
 from host_skill_views import host_skill_root  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
@@ -337,17 +338,14 @@ class HostSkillSourceTests(unittest.TestCase):
             with self.subTest(file=source.relative_to(PLUGIN_ROOT).as_posix()):
                 self.assertEqual(unexplained_blocks(source.read_text(encoding="utf-8")), [])
 
-    def test_codex_skills_holds_only_codex_only_files_and_listed_overlays(self) -> None:
+    def test_codex_skills_holds_only_codex_only_files(self) -> None:
         self.assertEqual(codex_skill_overlay_errors(PLUGIN_ROOT), [])
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             shutil.copytree(PLUGIN_ROOT / "codex-skills", root / "codex-skills")
             (root / "codex-skills" / "grill-me" / "SKILL.md").write_text("---\nname: grill-me\n---\n", encoding="utf-8")
-            listed = min(UNMERGED_CODEX_OVERLAYS)
-            (root / "codex-skills" / listed).unlink()
             self.assertEqual(codex_skill_overlay_errors(root), [
                 "codex-skills/grill-me/SKILL.md overlays a shared skill file; merge it into skills/ as host blocks",
-                f"codex-skills/{listed} is listed as an unmerged overlay but does not exist",
             ])
 
     def test_grill_me_sends_setup_alone_to_scaffold_spec_on_both_hosts(self) -> None:
@@ -458,9 +456,9 @@ POST_ROW = re.compile(r'^\s*"(Post: [^"]+)"', re.M)
 CODEX_ONLY_POST_ROWS = ["Post: Final Reviewability Backstop", "Post: PR Packet/Body Generation"]
 
 
-def canonical_post_rows(relative: str) -> list[str]:
-    """The Post rows of a canonical task list: the first fenced list that names Retrospective."""
-    text = (PLUGIN_ROOT / relative).read_text(encoding="utf-8")
+def canonical_post_rows(host: str) -> list[str]:
+    """`host`'s Post rows: the first fenced list in its canonical task list that names Retrospective."""
+    text = host_source("skills/speckit-autopilot/references/task-list-canonical.md", host)
     fence = next(block for block in text.split("```")[1::2] if '"Post: Retrospective"' in block)
     return POST_ROW.findall(fence)
 
@@ -468,8 +466,8 @@ def canonical_post_rows(relative: str) -> list[str]:
 class PostPlanParityTests(unittest.TestCase):
     """Both hosts' Post plans differ only by Codex's two visible supporting rows."""
 
-    claude = canonical_post_rows("skills/speckit-autopilot/references/task-list-canonical.md")
-    codex = canonical_post_rows("codex-skills/speckit-autopilot/references/task-list-canonical-codex.md")
+    claude = canonical_post_rows("claude")
+    codex = canonical_post_rows("codex")
 
     def test_codex_list_is_the_claude_list_plus_two_rows_after_uat(self) -> None:
         self.assertEqual(len(self.claude), 11)
@@ -477,11 +475,11 @@ class PostPlanParityTests(unittest.TestCase):
         self.assertEqual(self.codex, self.claude[:at] + CODEX_ONLY_POST_ROWS + self.claude[at:])
 
     def test_every_stated_codex_row_count_matches_the_list(self) -> None:
-        skill = (PLUGIN_ROOT / "codex-skills/speckit-autopilot/SKILL.md").read_text(encoding="utf-8")
+        skill = host_source("skills/speckit-autopilot/SKILL.md", "codex")
         evals = (REPO_ROOT / "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json").read_text(encoding="utf-8")
         counts = [int(n) for n in re.findall(r"(\d+) mandatory (?:Post )?rows", skill)]
         counts += [int(n) for n in re.findall(r"keeps all (\d+) Post items", evals)]
-        reference = (PLUGIN_ROOT / "codex-skills/speckit-autopilot/references/task-list-canonical-codex.md").read_text(encoding="utf-8")
+        reference = host_source("skills/speckit-autopilot/references/task-list-canonical.md", "codex")
         counts += [int(n) for n in re.findall(r"(\d+)-row combined", reference)]
         self.assertGreaterEqual(len(counts), 4, "no stated count found; the check would pass on nothing")
         self.assertEqual(set(counts), {len(self.codex)})
@@ -494,6 +492,60 @@ class PostPlanParityTests(unittest.TestCase):
                 self.assertIn(f"| Canonical {len(rows)}-item closeout |", view)
                 checklist = view.split("## Post-Implementation Checklist", 1)[1].split("\n## ", 1)[0]
                 self.assertEqual(re.findall(r"^\| (Post: [^|]+?) \|", checklist, re.M), rows)
+
+
+def shipped_autopilot_text(host: str, relative: str) -> str:
+    """One autopilot file as `host` loads it, whitespace-collapsed."""
+    from host_skill_views import host_skill_root
+
+    return " ".join((host_skill_root(host) / "speckit-autopilot" / relative).read_text(encoding="utf-8").split())
+
+
+# (case, autopilot file, phrases both hosts carry, phrases neither host carries).
+# Each pin is a behavior the two copies once disagreed on; the runner settled it.
+AUTOPILOT_AGREEMENT = (
+    # stop_policy.STOP_REASONS has no model-tier reason, so a weak tier warns and routes.
+    ("a weak model tier warns and routes instead of stopping", "SKILL.md",
+     ("warn the operator once and route gate and consensus dispatches to the strongest available tier",),
+     ("STOP and instruct the user to relaunch", "stop and ask the operator to switch")),
+    # Ambiguity is a failed gate's business: consensus, then the Failure Escalation Protocol's deferral.
+    ("ambiguity goes to Clarify consensus and defers", "SKILL.md",
+     ("Route the ambiguity to Clarify consensus, and defer it when consensus cannot settle it",),
+     ("fail the gate and surface to the user",)),
+    # run_finalization.finalize_run returns outcome=complete when nothing is deferred.
+    ("finalize-run decides every end, deferred items or not", "SKILL.md",
+     ("When every runnable item has finished, whether or not deferred items remain",),
+     ("has finished and deferred items remain",)),
+    # The coverage guard's workflow_authority_errors fails a state that names another workflow.
+    ("a foreign state slot is reclaimed before the coverage guard", "SKILL.md",
+     ("Reclaim the state slot if it names another workflow", "This runs before the Step 1 coverage guard"), ()),
+    # The coverage guard's RULE_PROBLEM_KEYS["status-evidence"] gates nine checks, not seven.
+    ("the scoped guard names every gated status-evidence check", "SKILL.md",
+     ("nine workflow/state status-evidence checks", "`formal_checkpoint_errors`", "`artifact_review_errors`"),
+     ("seven workflow/state status-evidence checks",)),
+    # read_only.resolve-confidence-mode reads .claude then .codex settings on either host.
+    ("settings resolve in the helper's order", "references/prerequisites.md",
+     ("Read `.claude/speckit-pro.local.md` if it exists, otherwise `.codex/speckit-pro.local.md`",),
+     ("or the equivalent Codex project config",)),
+    # stop_policy has no reason for a mid-run agent choice, so a tie never asks the user.
+    ("a tied implementation agent is picked, never asked", "references/prerequisites.md",
+     ("pick the one with the most specific description 6. If no matches",),
+     ("specific description (or ask the user)",)),
+)
+
+
+class AutopilotHostAgreementTests(unittest.TestCase):
+    """Behavior the runner owns reads the same on both hosts' shipped autopilot."""
+
+    def test_both_hosts_state_the_runner_behavior(self) -> None:
+        for case, relative, present, absent in AUTOPILOT_AGREEMENT:
+            for host in ("claude", "codex"):
+                with self.subTest(case=case, host=host):
+                    text = shipped_autopilot_text(host, relative)
+                    for phrase in present:
+                        self.assertIn(phrase, text)
+                    for phrase in absent:
+                        self.assertNotIn(phrase, text)
 
 
 HOOK_SCRIPT = PLUGIN_ROOT / "scripts" / "codex-agent-policy-hook.py"
@@ -583,6 +635,7 @@ def main() -> int:
             MergedSkillViewTests,
             SetupSkillDriftTests,
             PostPlanParityTests,
+            AutopilotHostAgreementTests,
         )
     )
     return run_counted(suite, label="test-host-parity-generator")
