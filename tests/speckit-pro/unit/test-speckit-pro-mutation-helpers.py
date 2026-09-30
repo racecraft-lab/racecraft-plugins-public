@@ -9363,8 +9363,35 @@ This line must not be copied.
             self.assertEqual(request["operation"], record["operation"])
             self.assertIn(request["mode"], record["modes"])
 
+
+class GeneratedTitleScopeTests(unittest.TestCase):
+    """The packet normalizer builds only titles the PR-title gate accepts."""
+
+    def test_generated_title_rejects_a_scope_the_title_gate_rejects(self) -> None:
+        for scope in ("PRSG-998", "FEATURE-001", "Demo", "demo scope", "demo_scope"):
+            with self.subTest(scope=scope):
+                title = pr_emission.normalize_generated_title(
+                    {"title_type": "feat", "title_scope": scope, "title_description": "add a demo feature"}
+                )
+                self.assertEqual(title["diagnostic"]["details"]["field"], "title_scope")
+        supplied = pr_emission.normalize_generated_title(
+            {
+                "generated_title": {
+                    "value": "feat(FEATURE-001): Add a demo feature",
+                    "type": "feat",
+                    "scope": "FEATURE-001",
+                    "description": "Add a demo feature",
+                    "source_evidence": {"kind": "workflow", "source": "autopilot-state", "summary": "the run state"},
+                    "rejected_candidates": [],
+                }
+            }
+        )
+        self.assertEqual(supplied["diagnostic"]["details"]["field"], "generated_title")
+
+
 if __name__ == "__main__":
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(MutationHelperTests)
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
+                               for case in (MutationHelperTests, GeneratedTitleScopeTests))
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     total = result.testsRun
     failed = len(result.failures) + len(result.errors)
