@@ -22,8 +22,8 @@ proposed content before it is written.
 
 | Field | Meaning |
 |---|---|
-| `thresholds.complexity` | Maximum cyclomatic complexity per changed function (integer, at least 1). |
-| `thresholds.crap` | Maximum CRAP score per changed function (number above 0). CRAP is `cc² × (1 − coverage)³ + cc`, so a well-tested complex function still passes. |
+| `thresholds.complexity` | Maximum cyclomatic complexity per function in each changed file (integer, at least 1). |
+| `thresholds.crap` | Maximum CRAP score per function in each changed file (number above 0). CRAP is `cc² × (1 − coverage)³ + cc`, so a well-tested complex function still passes. |
 | `thresholds.mutation_score_floor` | Minimum mutation score in percent. cosmic-ray receives `100 − floor` as its survival ceiling; for StrykerJS the slot chains `scripts/mutation-score.py`, which reads `reports/mutation/mutation.json` and fails below the floor, because Stryker's default `thresholds.break` is `null` and never fails a run. |
 | `skips` | Permanent skips keyed by slot with a reason. A skipped slot is `N/A` in every workflow without asking. Optional. |
 | `enforce` | Opt-in slots this repository runs. A listed slot runs and blocks; an unlisted one never runs. Only `DEPENDENCY_AUDIT` is opt-in today. Optional. |
