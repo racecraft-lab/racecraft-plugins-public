@@ -1053,7 +1053,7 @@ class DeferredSectionInPrBodyTests(unittest.TestCase):
     ]
 
     def render(self, **overrides: object) -> dict[str, object]:
-        from speckit_pro_runner.helpers.pr_emission import normalize_packet_input
+        from speckit_pro_runner.helpers.pr_packet import normalize_packet_input
 
         return normalize_packet_input(SimpleNamespace(inputs=_packet_inputs(**overrides)))
 

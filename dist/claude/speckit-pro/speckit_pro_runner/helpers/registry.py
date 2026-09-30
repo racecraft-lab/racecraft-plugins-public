@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -16,10 +17,13 @@ from .egress_authorization import run_egress_authorization_helper
 from .gate_preflight_coverage import run_gate_preflight_coverage_helper
 from .run_finalization import run_run_finalization_helper
 from .mutation import empty_mutation, run_mutation_helper, run_spec_index_write, run_sweep_apply_result
-from .pr_emission import run_pr_emission_helper
+from .pr_emission import generate_pr_body, plan_commands
+from .pr_packet import generate_pr_packet, validate_pr_packet_write
 from .pr_split_ratification import run_pr_split_ratification_helper
 from .promotion import promotion_record
 from .read_only import registry_report, run_registered_helper
+from .stack_manager import run_stack_manager_helper
+from .uat_skeleton import generate_uat_skeleton
 
 
 @dataclass(frozen=True)
@@ -785,22 +789,49 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
     if entry.helper_id in {"doctor-preflight", "doctor-repair", "install-codex-agents"}:
         return run_install_helper(entry, request)
 
-    if entry.helper_id in {
-        "generate-pr-body",
-        "generate-uat-skeleton",
-        "final-reviewability-backstop",
-        "pr-packet-output",
-        "validate-pr-workflow-contract-write",
-        "multi-pr-emission",
-        "restack",
-        "relocate-process-artifacts",
-        "plan-layers-marker-plan",
-        "validate-pr-packet-write",
-        "detect-stack-manager-plan",
-    }:
+    if entry.helper_id in PR_EMISSION_HANDLERS or entry.helper_id in UNWIRED_PR_EMISSION_IDS:
         return run_pr_emission_helper(entry, request)
 
     return run_mutation_helper(entry, request)
+
+
+# The one table that routes a PR-emission helper id to its handler.
+PR_EMISSION_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
+    "generate-pr-body": generate_pr_body,
+    "generate-uat-skeleton": generate_uat_skeleton,
+    "pr-packet-output": generate_pr_packet,
+    "validate-pr-packet-write": validate_pr_packet_write,
+    "multi-pr-emission": plan_commands,
+    "restack": plan_commands,
+    "detect-stack-manager-plan": run_stack_manager_helper,
+}
+# Routed as PR emission, but deferred: promoting one needs a handler in the table above first.
+UNWIRED_PR_EMISSION_IDS = frozenset({
+    "final-reviewability-backstop",
+    "validate-pr-workflow-contract-write",
+    "relocate-process-artifacts",
+    "plan-layers-marker-plan",
+})
+
+
+def run_pr_emission_helper(entry: MutationEntry, request: Any) -> dict[str, Any]:
+    handler = PR_EMISSION_HANDLERS.get(entry.helper_id)
+    if handler is None:
+        return response(
+            "internal_failure",
+            request_id=request.request_id,
+            diagnostics=[
+                diagnostic(
+                    "helper_not_wired",
+                    "the registry routes this helper to PR emission, but no handler is registered for it",
+                    details={"helper_id": entry.helper_id},
+                    remediation_summary="Add the helper to PR_EMISSION_HANDLERS before promoting it.",
+                    remediation_actions=["Register a handler in helpers/registry.py.", "Retry the request."],
+                )
+            ],
+        )
+    return handler(entry, request)
+
 
 
 def blocked_promotion_response(entry: MutationEntry, request: Any) -> dict[str, Any]:
