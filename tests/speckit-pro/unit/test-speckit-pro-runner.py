@@ -183,7 +183,7 @@ class RunnerFoundationTests(unittest.TestCase):
         from speckit_pro_runner.gates.active_path_guard import repo_bash_python_findings
 
         paths = [PLUGIN_ROOT / "speckit_pro_runner" / name
-                 for name in ("gates/suite.py", "gates/runner_invocation.py", "helpers/install.py", "runtime.py")]
+                 for name in ("cli_probe.py", "gates/suite.py", "gates/runner_invocation.py", "helpers/install.py", "runtime.py")]
         findings = [
             (path.relative_to(REPO_ROOT).as_posix(), finding.line, finding.pattern)
             for path in paths
