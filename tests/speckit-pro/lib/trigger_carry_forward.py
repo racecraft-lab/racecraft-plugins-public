@@ -149,7 +149,7 @@ def _normalized_reference(value: object, label: str) -> tuple[PurePosixPath, str
 
 _SHIPPED_FILE_IDENTITY = runpy.run_path(str(
     Path(__file__).resolve().parents[3]
-    / "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py"
+    / "speckit-pro/skills/speckit-autopilot/scripts/lib/phase_coverage_repo_files.py"
 ))["_stable_file_identity"]
 
 
