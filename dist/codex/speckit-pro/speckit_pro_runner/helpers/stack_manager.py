@@ -6,12 +6,12 @@ import hashlib
 import json
 from pathlib import Path
 import re
-import subprocess
 from typing import Any
 
+from .. import cli_probe
+from ..cli_probe import BRANCH
 from ..envelope import diagnostic, response
 
-BRANCH = re.compile(r"(?!-)(?!.*\.\.)(?!.*//)[A-Za-z0-9._/-]{1,255}\Z")
 REPOSITORY = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\Z")
 QUALIFIED_VERSION = "0.1.1"
 SKILL_SHA256 = "f90eec41187457b44640f3d85d2b6069dc702c898b923c79759e7858597d62f7"
@@ -24,18 +24,12 @@ TRUSTED_SKILL_PARENTS = (
 TRUSTED_SKILL_PATHS = tuple(parent / "gh-stack/SKILL.md" for parent in TRUSTED_SKILL_PARENTS)
 
 
+PROBE_TIMEOUT_SECONDS = 20
+
+
 def probe(root: Path, argv: list[str]) -> dict[str, Any]:
     """Only invoke the two named CLIs; callers supply fixed read-only operations."""
-    try:
-        if argv[0] == "git":
-            result = subprocess.run(["git", *argv[1:]], cwd=root, capture_output=True, text=True, timeout=20, stdin=subprocess.DEVNULL, shell=False)
-        elif argv[0] == "gh":
-            result = subprocess.run(["gh", *argv[1:]], cwd=root, capture_output=True, text=True, timeout=20, stdin=subprocess.DEVNULL, shell=False)
-        else:
-            raise ValueError("unknown manager probe")
-        return {"argv": argv, "exit_status": result.returncode, "stdout_tail": result.stdout.strip(), "stderr_tail": result.stderr[-2048:].strip()}
-    except (OSError, subprocess.SubprocessError) as exc:
-        return {"argv": argv, "exit_status": None, "stdout_tail": "", "stderr_tail": str(exc)}
+    return cli_probe.probe(root, argv, allowed=("git", "gh"), timeout=PROBE_TIMEOUT_SECONDS)
 
 
 def topology_inputs(value: Any) -> list[dict[str, Any]]:

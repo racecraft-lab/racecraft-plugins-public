@@ -18,7 +18,7 @@ import xml.etree.ElementTree as ElementTree
 from collections.abc import Callable
 from typing import Any
 
-from .agent_materialization import canonical_bytes
+from .canonical_json import canonical_bytes
 
 # The most identifiers one fingerprint keeps. A larger failing set is unparsed;
 # a larger passing set is dropped, which only withholds disjoint-move progress.

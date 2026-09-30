@@ -8,7 +8,7 @@ from contextlib import nullcontext
 from pathlib import Path
 from typing import Any
 
-from .agent_materialization import canonical_bytes
+from .canonical_json import canonical_bytes
 from .atomic_write import snapshot_write_target, write_file_atomic
 from .strict_input import require_text as text_field, unique_object
 from .task_execution import fingerprints

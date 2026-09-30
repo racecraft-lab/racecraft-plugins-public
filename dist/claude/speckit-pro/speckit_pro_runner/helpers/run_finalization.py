@@ -53,7 +53,7 @@ import shlex
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from ..agent_materialization import canonical_bytes
+from ..canonical_json import canonical_bytes
 from ..envelope import diagnostic, response
 from ..execution_control import (ESCALATION_TIER3_CAP, confined_path, escalation_key, escalation_progress,
                                  failed_verification, finalize_observation_key, require_text, validate_ledger)

@@ -24,6 +24,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Iterator
 
 from .atomic_write import snapshot_write_target, write_bytes_atomic
+from .cli_probe import probe
 from .sweep_export import (
     SWEEP_SELF_REPLY_PREFIX,
     SWEEP_TRUSTED_ASSOCIATIONS,
@@ -43,6 +44,8 @@ MAX_SEARCH_LITERAL_BYTES = 512
 MAX_SEARCH_RESULTS = 50
 MAX_SEARCH_LINE_BYTES = 1_024
 MAX_COMMENT_BYTES = 8_192
+MAX_GH_OUTPUT_BYTES = 16 * 1024 * 1024
+GH_TIMEOUT_SECONDS = 60
 MAX_SESSION_COMMENTS = 1_024
 MAX_SESSION_COMMENT_BYTES = 8 * 1024 * 1024
 MAX_REASON_BYTES = 512
@@ -440,25 +443,12 @@ def default_state_root() -> Path:
 
 
 def _run_gh(args: list[str], repo_root: Path) -> str:
-    executable = shutil.which("gh")
-    if executable is None:
+    if shutil.which("gh") is None:
         raise CaptureViolation("GitHub CLI is unavailable")
-    try:
-        completed = subprocess.run(
-            [executable, "api", *args],
-            cwd=repo_root,
-            env=os.environ.copy(),
-            text=True,
-            capture_output=True,
-            check=False,
-            timeout=60,
-            shell=False,
-        )
-    except (OSError, subprocess.TimeoutExpired) as exc:
-        raise CaptureViolation("GitHub observation failed") from exc
-    if completed.returncode != 0 or len(completed.stdout.encode("utf-8")) > 16 * 1024 * 1024:
+    result = probe(repo_root, ["gh", "api", *args], allowed=("gh",), timeout=GH_TIMEOUT_SECONDS)
+    if result["exit_status"] != 0 or len(result["stdout_tail"].encode("utf-8")) > MAX_GH_OUTPUT_BYTES:
         raise CaptureViolation("GitHub observation failed")
-    return completed.stdout
+    return str(result["stdout_tail"])
 
 
 def _run_gh_json(args: list[str], repo_root: Path) -> Any:

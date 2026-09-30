@@ -22,7 +22,8 @@ from typing import Any
 from ..agent_materialization import materialize_agent_policy
 from ..agent_inventory import AGENT_INVENTORY, CODEX_OPTIONAL_AGENT_NAMES, CODEX_REQUIRED_AGENT_NAMES
 from ..envelope import diagnostic, is_diagnostic, response
-from ..path_utils import resolves_to_current_python, sha256_text
+from ..canonical_json import canonical_bytes
+from ..path_utils import parse_version_tuple, resolves_to_current_python, sha256_text
 from .mutation import empty_mutation, operation_record, run_mutation_helper, validate_target_path
 from .read_only import find_repo_root, is_relative_to, repo_relative, resolve_input_path
 
@@ -2450,12 +2451,8 @@ def codex_plugin_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
-def route_policy_canonical_bytes(value: Any) -> bytes:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8")
-
-
 def route_policy_digest(value: Any) -> str:
-    return f"sha256:{hashlib.sha256(route_policy_canonical_bytes(value)).hexdigest()}"
+    return f"sha256:{hashlib.sha256(canonical_bytes(value)).hexdigest()}"
 
 
 def invalid_route_policy_manifest(reason: str, *, details: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -5137,7 +5134,7 @@ def resolve_python_interpreter(platform_name: str, case: dict[str, Any], cache_r
         if version_text is None:
             failure_messages.append(f"{candidate}: version unavailable")
             continue
-        if parse_version(version_text) < MINIMUM_PYTHON:
+        if parse_version_tuple(version_text) < MINIMUM_PYTHON:
             failure_messages.append(f"{candidate}: Python {version_text} is below 3.11")
             continue
         resolved = str(record.get("resolved_executable") or candidate.split()[0])
@@ -5537,18 +5534,6 @@ def host_platform() -> str:
     if system == "darwin":
         return "macos"
     return "linux"
-
-
-def parse_version(version: str) -> tuple[int, int, int]:
-    parts: list[int] = []
-    for part in version.split(".")[:3]:
-        try:
-            parts.append(int(part))
-        except ValueError:
-            parts.append(0)
-    while len(parts) < 3:
-        parts.append(0)
-    return tuple(parts)  # type: ignore[return-value]
 
 
 def normalize_enum(value: Any, allowed: set[str], fallback: str) -> str:
