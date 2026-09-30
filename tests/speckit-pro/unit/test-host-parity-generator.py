@@ -341,10 +341,10 @@ class HostSkillSourceTests(unittest.TestCase):
             root = Path(temporary)
             shutil.copytree(PLUGIN_ROOT / "codex-skills", root / "codex-skills")
             (root / "codex-skills" / "grill-me" / "SKILL.md").write_text("---\nname: grill-me\n---\n", encoding="utf-8")
-            (root / "codex-skills" / "speckit-status" / "SKILL.md").unlink()
+            (root / "codex-skills" / "speckit-upgrade" / "SKILL.md").unlink()
             self.assertEqual(codex_skill_overlay_errors(root), [
                 "codex-skills/grill-me/SKILL.md overlays a shared skill file; merge it into skills/ as host blocks",
-                "codex-skills/speckit-status/SKILL.md is listed as an unmerged overlay but does not exist",
+                "codex-skills/speckit-upgrade/SKILL.md is listed as an unmerged overlay but does not exist",
             ])
 
     def test_grill_me_sends_setup_alone_to_scaffold_spec_on_both_hosts(self) -> None:
@@ -365,6 +365,22 @@ class HostSkillSourceTests(unittest.TestCase):
         ):
             with self.subTest(host=host):
                 self.assertIn(command, self.view("skills/ubiquitous-language/SKILL.md", host))
+
+    def test_status_reads_worktrees_and_design_concepts_on_both_hosts(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                text = self.view("skills/speckit-status/SKILL.md", host)
+                for phrase in ("`git worktree list --porcelain`", "**/*-design-concept.md",
+                               "| Spec | Name | DC | Specify |"):
+                    self.assertIn(phrase, text)
+
+    def test_scaffold_stops_on_complete_and_reuses_in_progress_on_both_hosts(self) -> None:
+        # Scaffold-spec keeps its Codex overlay, so each host's own file is read.
+        for relative in ("skills/speckit-scaffold-spec/SKILL.md", "codex-skills/speckit-scaffold-spec/SKILL.md"):
+            with self.subTest(file=relative):
+                text = " ".join((PLUGIN_ROOT / relative).read_text(encoding="utf-8").split())
+                self.assertRegex(text, r"(?i)complete, warn the user and stop")
+                self.assertRegex(text, r"(?i)in progress, (?:prefer )?reus\w+ (?:the |its )?existing worktree branch")
 
 
 HOOK_SCRIPT = PLUGIN_ROOT / "scripts" / "codex-agent-policy-hook.py"

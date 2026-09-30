@@ -183,8 +183,10 @@ Extract:
 - **Dependencies** (what it depends on, what depends on it)
 - **Scope description** (the full scope text from the
   technical roadmap — this drives the workflow prompts)
-- **Status** (must be ⏳ Pending — if already In Progress
-  or Complete, warn the user)
+- **Status** (⏳ Pending proceeds. If the roadmap marks the spec
+  complete, warn the user and STOP. If it marks the spec in progress,
+  reuse its existing worktree branch rather than creating a second setup;
+  the placement helper in step 3 returns `disposition=reuse` for it)
 
 If the SPEC-ID is not found, STOP: "SPEC-ID not found in
 technical roadmap. Available specs: <list pending specs>."

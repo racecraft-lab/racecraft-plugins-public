@@ -274,7 +274,6 @@ async function buildSkillsPage() {
   }
   return page('skills', 'Skills Reference', 'Claude Code and Codex skill surfaces, invocations, prerequisites, expected artifacts, and source citations.', records, [
     await citation('speckit-pro/skills/speckit-status/SKILL.md'),
-    await citation('speckit-pro/codex-skills/speckit-status/SKILL.md'),
   ]);
 }
 async function buildAgentsPage() {
