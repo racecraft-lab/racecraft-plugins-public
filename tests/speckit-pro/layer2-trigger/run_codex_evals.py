@@ -45,6 +45,7 @@ if str(SHARED_LIB) not in sys.path:
     sys.path.insert(0, str(SHARED_LIB))
 import codex_isolation  # noqa: E402
 import trigger_process as processes  # noqa: E402
+import host_skill_views  # noqa: E402
 import trigger_evidence as evidence_records  # noqa: E402
 import trigger_comparison as experiment_evidence  # noqa: E402
 from trigger_codex_observer import (  # noqa: E402
@@ -97,7 +98,7 @@ def find_eval_file(skill: str) -> pathlib.Path:
 
 def find_skill_source(skill: str) -> pathlib.Path:
     try:
-        return evidence_records.find_skill_source(PLUGIN_ROOT, skill, ("codex-skills",))
+        return host_skill_views.rendered_skill_source("codex", skill, PLUGIN_ROOT)
     except ValueError as exc:
         sys.exit(f"ERROR: codex {exc}")
 

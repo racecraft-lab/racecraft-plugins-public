@@ -58,17 +58,17 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 #### Source Facts
 
-- grill-me has a Claude Code skill source and a Codex skill source in the checked-in plugin tree. Source refs: `speckit-pro/skills/grill-me/SKILL.md`, `speckit-pro/codex-skills/grill-me/SKILL.md`.
+- grill-me has a Claude Code skill source and a Codex skill source in the checked-in plugin tree. Source refs: `dist/claude/speckit-pro/skills/grill-me/SKILL.md`, `dist/codex/speckit-pro/skills/grill-me/SKILL.md`.
 
 #### Sources
 
-- [speckit-pro/skills/grill-me/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/grill-me/SKILL.md)
-- [speckit-pro/codex-skills/grill-me/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/codex-skills/grill-me/SKILL.md)
+- [dist/claude/speckit-pro/skills/grill-me/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/dist/claude/speckit-pro/skills/grill-me/SKILL.md)
+- [dist/codex/speckit-pro/skills/grill-me/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/dist/codex/speckit-pro/skills/grill-me/SKILL.md)
 
 #### Inferred Notes
 
 - Both runtime variants exist, so use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
-  - Based on: `speckit-pro/skills/grill-me/SKILL.md`, `speckit-pro/codex-skills/grill-me/SKILL.md`
+  - Based on: `dist/claude/speckit-pro/skills/grill-me/SKILL.md`, `dist/codex/speckit-pro/skills/grill-me/SKILL.md`
 
 ### Install
 
@@ -93,16 +93,16 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 #### Source Facts
 
-- install has no Claude Code skill source and a Codex skill source in the checked-in plugin tree. Source refs: `speckit-pro/codex-skills/install/SKILL.md`.
+- install has no Claude Code skill source and a Codex skill source in the checked-in plugin tree. Source refs: `dist/codex/speckit-pro/skills/install/SKILL.md`.
 
 #### Sources
 
-- [speckit-pro/codex-skills/install/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/codex-skills/install/SKILL.md)
+- [dist/codex/speckit-pro/skills/install/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/dist/codex/speckit-pro/skills/install/SKILL.md)
 
 #### Inferred Notes
 
 - This skill is present only in the Codex source tree; do not assume a parallel runtime surface exists unless a matching source file is added.
-  - Based on: `speckit-pro/codex-skills/install/SKILL.md`
+  - Based on: `dist/codex/speckit-pro/skills/install/SKILL.md`
 
 ### Speckit Archive Cleanup
 
@@ -127,17 +127,17 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 #### Source Facts
 
-- speckit-archive-cleanup has a Claude Code skill source and a Codex skill source in the checked-in plugin tree. Source refs: `speckit-pro/skills/speckit-archive-cleanup/SKILL.md`, `speckit-pro/codex-skills/speckit-archive-cleanup/SKILL.md`.
+- speckit-archive-cleanup has a Claude Code skill source and a Codex skill source in the checked-in plugin tree. Source refs: `dist/claude/speckit-pro/skills/speckit-archive-cleanup/SKILL.md`, `dist/codex/speckit-pro/skills/speckit-archive-cleanup/SKILL.md`.
 
 #### Sources
 
-- [speckit-pro/skills/speckit-archive-cleanup/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-archive-cleanup/SKILL.md)
-- [speckit-pro/codex-skills/speckit-archive-cleanup/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/codex-skills/speckit-archive-cleanup/SKILL.md)
+- [dist/claude/speckit-pro/skills/speckit-archive-cleanup/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/dist/claude/speckit-pro/skills/speckit-archive-cleanup/SKILL.md)
+- [dist/codex/speckit-pro/skills/speckit-archive-cleanup/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/dist/codex/speckit-pro/skills/speckit-archive-cleanup/SKILL.md)
 
 #### Inferred Notes
 
 - Both runtime variants exist, so use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
-  - Based on: `speckit-pro/skills/speckit-archive-cleanup/SKILL.md`, `speckit-pro/codex-skills/speckit-archive-cleanup/SKILL.md`
+  - Based on: `dist/claude/speckit-pro/skills/speckit-archive-cleanup/SKILL.md`, `dist/codex/speckit-pro/skills/speckit-archive-cleanup/SKILL.md`
 
 ### Speckit Autopilot
 
@@ -162,17 +162,17 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 #### Source Facts
 
-- speckit-autopilot has a Claude Code skill source and a Codex skill source in the checked-in plugin tree. Source refs: `speckit-pro/skills/speckit-autopilot/SKILL.md`, `speckit-pro/codex-skills/speckit-autopilot/SKILL.md`.
+- speckit-autopilot has a Claude Code skill source and a Codex skill source in the checked-in plugin tree. Source refs: `dist/claude/speckit-pro/skills/speckit-autopilot/SKILL.md`, `dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md`.
 
 #### Sources
 
-- [speckit-pro/skills/speckit-autopilot/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/SKILL.md)
-- [speckit-pro/codex-skills/speckit-autopilot/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/codex-skills/speckit-autopilot/SKILL.md)
+- [dist/claude/speckit-pro/skills/speckit-autopilot/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/dist/claude/speckit-pro/skills/speckit-autopilot/SKILL.md)
+- [dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md)
 
 #### Inferred Notes
 
 - Both runtime variants exist, so use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
-  - Based on: `speckit-pro/skills/speckit-autopilot/SKILL.md`, `speckit-pro/codex-skills/speckit-autopilot/SKILL.md`
+  - Based on: `dist/claude/speckit-pro/skills/speckit-autopilot/SKILL.md`, `dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md`
 
 ### Speckit Coach
 
@@ -197,17 +197,17 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 #### Source Facts
 
-- speckit-coach has a Claude Code skill source and a Codex skill source in the checked-in plugin tree. Source refs: `speckit-pro/skills/speckit-coach/SKILL.md`, `speckit-pro/codex-skills/speckit-coach/SKILL.md`.
+- speckit-coach has a Claude Code skill source and a Codex skill source in the checked-in plugin tree. Source refs: `dist/claude/speckit-pro/skills/speckit-coach/SKILL.md`, `dist/codex/speckit-pro/skills/speckit-coach/SKILL.md`.
 
 #### Sources
 
-- [speckit-pro/skills/speckit-coach/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-coach/SKILL.md)
-- [speckit-pro/codex-skills/speckit-coach/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/codex-skills/speckit-coach/SKILL.md)
+- [dist/claude/speckit-pro/skills/speckit-coach/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/dist/claude/speckit-pro/skills/speckit-coach/SKILL.md)
+- [dist/codex/speckit-pro/skills/speckit-coach/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/dist/codex/speckit-pro/skills/speckit-coach/SKILL.md)
 
 #### Inferred Notes
 
 - Both runtime variants exist, so use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
-  - Based on: `speckit-pro/skills/speckit-coach/SKILL.md`, `speckit-pro/codex-skills/speckit-coach/SKILL.md`
+  - Based on: `dist/claude/speckit-pro/skills/speckit-coach/SKILL.md`, `dist/codex/speckit-pro/skills/speckit-coach/SKILL.md`
 
 ### Speckit Install
 
@@ -232,17 +232,17 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 #### Source Facts
 
-- speckit-install has a Claude Code skill source and a Codex skill source in the checked-in plugin tree. Source refs: `speckit-pro/skills/speckit-install/SKILL.md`, `speckit-pro/codex-skills/speckit-install/SKILL.md`.
+- speckit-install has a Claude Code skill source and a Codex skill source in the checked-in plugin tree. Source refs: `dist/claude/speckit-pro/skills/speckit-install/SKILL.md`, `dist/codex/speckit-pro/skills/speckit-install/SKILL.md`.
 
 #### Sources
 
-- [speckit-pro/skills/speckit-install/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-install/SKILL.md)
-- [speckit-pro/codex-skills/speckit-install/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/codex-skills/speckit-install/SKILL.md)
+- [dist/claude/speckit-pro/skills/speckit-install/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/dist/claude/speckit-pro/skills/speckit-install/SKILL.md)
+- [dist/codex/speckit-pro/skills/speckit-install/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/dist/codex/speckit-pro/skills/speckit-install/SKILL.md)
 
 #### Inferred Notes
 
 - Both runtime variants exist, so use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
-  - Based on: `speckit-pro/skills/speckit-install/SKILL.md`, `speckit-pro/codex-skills/speckit-install/SKILL.md`
+  - Based on: `dist/claude/speckit-pro/skills/speckit-install/SKILL.md`, `dist/codex/speckit-pro/skills/speckit-install/SKILL.md`
 
 ### Speckit Prd
 
@@ -267,17 +267,17 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 #### Source Facts
 
-- speckit-prd has a Claude Code skill source and a Codex skill source in the checked-in plugin tree. Source refs: `speckit-pro/skills/speckit-prd/SKILL.md`, `speckit-pro/codex-skills/speckit-prd/SKILL.md`.
+- speckit-prd has a Claude Code skill source and a Codex skill source in the checked-in plugin tree. Source refs: `dist/claude/speckit-pro/skills/speckit-prd/SKILL.md`, `dist/codex/speckit-pro/skills/speckit-prd/SKILL.md`.
 
 #### Sources
 
-- [speckit-pro/skills/speckit-prd/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-prd/SKILL.md)
-- [speckit-pro/codex-skills/speckit-prd/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/codex-skills/speckit-prd/SKILL.md)
+- [dist/claude/speckit-pro/skills/speckit-prd/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/dist/claude/speckit-pro/skills/speckit-prd/SKILL.md)
+- [dist/codex/speckit-pro/skills/speckit-prd/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/dist/codex/speckit-pro/skills/speckit-prd/SKILL.md)
 
 #### Inferred Notes
 
 - Both runtime variants exist, so use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
-  - Based on: `speckit-pro/skills/speckit-prd/SKILL.md`, `speckit-pro/codex-skills/speckit-prd/SKILL.md`
+  - Based on: `dist/claude/speckit-pro/skills/speckit-prd/SKILL.md`, `dist/codex/speckit-pro/skills/speckit-prd/SKILL.md`
 
 ### Speckit Resolve Pr
 
@@ -302,17 +302,17 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 #### Source Facts
 
-- speckit-resolve-pr has a Claude Code skill source and a Codex skill source in the checked-in plugin tree. Source refs: `speckit-pro/skills/speckit-resolve-pr/SKILL.md`, `speckit-pro/codex-skills/speckit-resolve-pr/SKILL.md`.
+- speckit-resolve-pr has a Claude Code skill source and a Codex skill source in the checked-in plugin tree. Source refs: `dist/claude/speckit-pro/skills/speckit-resolve-pr/SKILL.md`, `dist/codex/speckit-pro/skills/speckit-resolve-pr/SKILL.md`.
 
 #### Sources
 
-- [speckit-pro/skills/speckit-resolve-pr/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-resolve-pr/SKILL.md)
-- [speckit-pro/codex-skills/speckit-resolve-pr/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/codex-skills/speckit-resolve-pr/SKILL.md)
+- [dist/claude/speckit-pro/skills/speckit-resolve-pr/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/dist/claude/speckit-pro/skills/speckit-resolve-pr/SKILL.md)
+- [dist/codex/speckit-pro/skills/speckit-resolve-pr/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/dist/codex/speckit-pro/skills/speckit-resolve-pr/SKILL.md)
 
 #### Inferred Notes
 
 - Both runtime variants exist, so use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
-  - Based on: `speckit-pro/skills/speckit-resolve-pr/SKILL.md`, `speckit-pro/codex-skills/speckit-resolve-pr/SKILL.md`
+  - Based on: `dist/claude/speckit-pro/skills/speckit-resolve-pr/SKILL.md`, `dist/codex/speckit-pro/skills/speckit-resolve-pr/SKILL.md`
 
 ### Speckit Scaffold Spec
 
@@ -337,17 +337,17 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 #### Source Facts
 
-- speckit-scaffold-spec has a Claude Code skill source and a Codex skill source in the checked-in plugin tree. Source refs: `speckit-pro/skills/speckit-scaffold-spec/SKILL.md`, `speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md`.
+- speckit-scaffold-spec has a Claude Code skill source and a Codex skill source in the checked-in plugin tree. Source refs: `dist/claude/speckit-pro/skills/speckit-scaffold-spec/SKILL.md`, `dist/codex/speckit-pro/skills/speckit-scaffold-spec/SKILL.md`.
 
 #### Sources
 
-- [speckit-pro/skills/speckit-scaffold-spec/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-scaffold-spec/SKILL.md)
-- [speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md)
+- [dist/claude/speckit-pro/skills/speckit-scaffold-spec/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/dist/claude/speckit-pro/skills/speckit-scaffold-spec/SKILL.md)
+- [dist/codex/speckit-pro/skills/speckit-scaffold-spec/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/dist/codex/speckit-pro/skills/speckit-scaffold-spec/SKILL.md)
 
 #### Inferred Notes
 
 - Both runtime variants exist, so use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
-  - Based on: `speckit-pro/skills/speckit-scaffold-spec/SKILL.md`, `speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md`
+  - Based on: `dist/claude/speckit-pro/skills/speckit-scaffold-spec/SKILL.md`, `dist/codex/speckit-pro/skills/speckit-scaffold-spec/SKILL.md`
 
 ### Speckit Status
 
@@ -371,17 +371,17 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 #### Source Facts
 
-- speckit-status has a Claude Code skill source and a Codex skill source in the checked-in plugin tree. Source refs: `speckit-pro/skills/speckit-status/SKILL.md`, `speckit-pro/codex-skills/speckit-status/SKILL.md`.
+- speckit-status has a Claude Code skill source and a Codex skill source in the checked-in plugin tree. Source refs: `dist/claude/speckit-pro/skills/speckit-status/SKILL.md`, `dist/codex/speckit-pro/skills/speckit-status/SKILL.md`.
 
 #### Sources
 
-- [speckit-pro/skills/speckit-status/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-status/SKILL.md)
-- [speckit-pro/codex-skills/speckit-status/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/codex-skills/speckit-status/SKILL.md)
+- [dist/claude/speckit-pro/skills/speckit-status/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/dist/claude/speckit-pro/skills/speckit-status/SKILL.md)
+- [dist/codex/speckit-pro/skills/speckit-status/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/dist/codex/speckit-pro/skills/speckit-status/SKILL.md)
 
 #### Inferred Notes
 
 - Both runtime variants exist, so use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
-  - Based on: `speckit-pro/skills/speckit-status/SKILL.md`, `speckit-pro/codex-skills/speckit-status/SKILL.md`
+  - Based on: `dist/claude/speckit-pro/skills/speckit-status/SKILL.md`, `dist/codex/speckit-pro/skills/speckit-status/SKILL.md`
 
 ### Speckit Upgrade
 
@@ -406,17 +406,17 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 #### Source Facts
 
-- speckit-upgrade has a Claude Code skill source and a Codex skill source in the checked-in plugin tree. Source refs: `speckit-pro/skills/speckit-upgrade/SKILL.md`, `speckit-pro/codex-skills/speckit-upgrade/SKILL.md`.
+- speckit-upgrade has a Claude Code skill source and a Codex skill source in the checked-in plugin tree. Source refs: `dist/claude/speckit-pro/skills/speckit-upgrade/SKILL.md`, `dist/codex/speckit-pro/skills/speckit-upgrade/SKILL.md`.
 
 #### Sources
 
-- [speckit-pro/skills/speckit-upgrade/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-upgrade/SKILL.md)
-- [speckit-pro/codex-skills/speckit-upgrade/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/codex-skills/speckit-upgrade/SKILL.md)
+- [dist/claude/speckit-pro/skills/speckit-upgrade/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/dist/claude/speckit-pro/skills/speckit-upgrade/SKILL.md)
+- [dist/codex/speckit-pro/skills/speckit-upgrade/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/dist/codex/speckit-pro/skills/speckit-upgrade/SKILL.md)
 
 #### Inferred Notes
 
 - Both runtime variants exist, so use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
-  - Based on: `speckit-pro/skills/speckit-upgrade/SKILL.md`, `speckit-pro/codex-skills/speckit-upgrade/SKILL.md`
+  - Based on: `dist/claude/speckit-pro/skills/speckit-upgrade/SKILL.md`, `dist/codex/speckit-pro/skills/speckit-upgrade/SKILL.md`
 
 ### Ubiquitous Language
 
@@ -441,14 +441,14 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 #### Source Facts
 
-- ubiquitous-language has a Claude Code skill source and a Codex skill source in the checked-in plugin tree. Source refs: `speckit-pro/skills/ubiquitous-language/SKILL.md`, `speckit-pro/codex-skills/ubiquitous-language/SKILL.md`.
+- ubiquitous-language has a Claude Code skill source and a Codex skill source in the checked-in plugin tree. Source refs: `dist/claude/speckit-pro/skills/ubiquitous-language/SKILL.md`, `dist/codex/speckit-pro/skills/ubiquitous-language/SKILL.md`.
 
 #### Sources
 
-- [speckit-pro/skills/ubiquitous-language/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/ubiquitous-language/SKILL.md)
-- [speckit-pro/codex-skills/ubiquitous-language/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/codex-skills/ubiquitous-language/SKILL.md)
+- [dist/claude/speckit-pro/skills/ubiquitous-language/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/dist/claude/speckit-pro/skills/ubiquitous-language/SKILL.md)
+- [dist/codex/speckit-pro/skills/ubiquitous-language/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/dist/codex/speckit-pro/skills/ubiquitous-language/SKILL.md)
 
 #### Inferred Notes
 
 - Both runtime variants exist, so use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
-  - Based on: `speckit-pro/skills/ubiquitous-language/SKILL.md`, `speckit-pro/codex-skills/ubiquitous-language/SKILL.md`
+  - Based on: `dist/claude/speckit-pro/skills/ubiquitous-language/SKILL.md`, `dist/codex/speckit-pro/skills/ubiquitous-language/SKILL.md`

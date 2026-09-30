@@ -31,8 +31,11 @@ def main(argv: list[str]) -> int:
             eprint(name)
         return 1
 
+    # A Codex overlay wins; a merged skill's Codex text lives in skills/ as host blocks.
     skill_path = PLUGIN_ROOT / f"codex-skills/{skill}"
-    if not skill_path.is_dir():
+    if not (skill_path / "SKILL.md").is_file():
+        skill_path = PLUGIN_ROOT / f"skills/{skill}"
+    if not (skill_path / "SKILL.md").is_file():
         eprint(f"ERROR: Codex skill not found: {skill_path}")
         return 1
 

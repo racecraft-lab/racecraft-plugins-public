@@ -447,7 +447,7 @@
         "value": "speckit_pro_runner/gates/payloads.py",
         "display": "speckit_pro_runner/gates/payloads.py"
       },
-      "sha256": "ad44af1cd8c93223278fb3855a33db2e9a53b359b7117ed659205e9bd560de02"
+      "sha256": "b19b072666ffe205b180722bd164c99f632f38e3e3d0a2f6d367f299e055fc82"
     },
     {
       "path": {
@@ -608,6 +608,14 @@
         "display": "speckit_pro_runner/host_parity.py"
       },
       "sha256": "38b6102d90cd05e3e8f9b37eb0914bdabe27345e494659cb084cca69311393d4"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/host_skills.py",
+        "display": "speckit_pro_runner/host_skills.py"
+      },
+      "sha256": "d2e1d9bfffa59124e070611d8fbcf7e4cceffa57e8773f5bfc543e3eb1519ec3"
     },
     {
       "path": {

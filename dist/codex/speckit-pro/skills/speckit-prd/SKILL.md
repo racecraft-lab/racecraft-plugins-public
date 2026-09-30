@@ -29,12 +29,14 @@ only in the already active user chat. Ask exactly one question, list the
 recommended choice first plus 1-2 mutually exclusive alternatives, and wait for
 the user's direct reply.
 
-In `codex exec`, background automation, CI, autopilot, or subagent execution,
-never use the fallback and never fabricate intent. A caller that explicitly
-requested a draft may receive only a best-effort PRD from supplied material,
-with every unvalidated decision in Open Questions and a clear "interactive pass
-required" status. Do not claim it is roadmap-ready and do not create or update
-its roadmap or roadmap-MOC.
+If no live user can answer because the skill was invoked in
+`codex exec`,
+a background, automation, CI, autopilot, or subagent context, never use a
+free-text fallback and do not fabricate intent. A caller that
+explicitly requested a draft may receive only a best-effort PRD from supplied
+material, with every unvalidated decision in Open Questions and a clear
+"interactive pass required" status. Do not claim the PRD is roadmap-ready and
+do not create or update its roadmap or roadmap-MOC.
 
 ## Workflow
 
@@ -65,5 +67,5 @@ slicing/estimation, MOC, index, and verification rules. Report created or update
 
 This skill does not scope an existing roadmap entry (`$grill-me`), prepare a
 worktree or workflow (`$speckit-scaffold-spec`), or teach SDD methodology
-(`$speckit-coach`). If the PRD already exists and the user wants only a new
-roadmap, hand off to the Coach roadmap workflow.
+(`$speckit-coach`). If the PRD already exists and
+the user wants only a new roadmap, hand off to the Coach roadmap workflow.

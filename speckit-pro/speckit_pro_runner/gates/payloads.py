@@ -14,7 +14,7 @@ from typing import Any
 
 from .. import RUNNER_VERSION
 from ..envelope import diagnostic, is_diagnostic, response
-from ..host_parity import emit_host
+from ..host_skills import emit_host_files, render_host_skills
 from ..path_utils import find_repo_root, is_relative_to, sha256_file, sha256_text
 from ..runtime import runner_source_files
 from .gate_response import gate_base_data
@@ -26,8 +26,8 @@ INSTALL_INVENTORY = Path("speckit-pro") / "speckit_pro_runner" / "install_invent
 INSTALLED_PLUGIN_FIXTURE_BOUNDARY = Path("tests") / "speckit-pro" / "unit" / "fixtures" / "installed-plugin-release"
 DEFAULT_INSTALLED_PLUGIN_PAYLOAD_CASES = INSTALLED_PLUGIN_FIXTURE_BOUNDARY / "payload-completeness-cases.json"
 # A payload cannot work without these; a missing source fails the build.
-CLAUDE_REQUIRED_PAYLOAD_PATHS = (".claude-plugin", "agents", "hooks", "skills", "speckit_pro_runner")
-# The Codex payload also requires skills/ and codex-skills/, copied below.
+CLAUDE_REQUIRED_PAYLOAD_PATHS = (".claude-plugin", "agents", "hooks", "speckit_pro_runner")
+# Both payloads also require skills/, and Codex codex-skills/, rendered below.
 CODEX_REQUIRED_PAYLOAD_PATHS = (".codex-plugin", "codex-agents", "speckit_pro_runner")
 PROHIBITED_SCRIPT_SUFFIXES = (".sh", ".bash", ".zsh", ".ps1", ".bat", ".cmd")
 PAYLOAD_INPUT_FIELDS = {
@@ -319,9 +319,8 @@ def build_installed_plugin_payloads(repo_root: Path, dist_root: Path) -> None:
     ]:
         copy_optional_installed_plugin(source / name, claude / name)
     copy_optional_installed_plugin(repo_root / "LICENSE", claude / "LICENSE")
-    for skill_file in claude.glob("skills/*/SKILL.md"):
-        strip_codex_guard(skill_file)
-    emit_host_payload_files(claude.glob("agents/*.md"), "claude")
+    render_payload_skills(source, "claude", claude / "skills")
+    emit_host_files(claude.glob("agents/*.md"), "claude")
     remove_payload_shell_scripts_installed_plugin(claude)
 
     reset_payload_dir(codex, dist_root)
@@ -336,8 +335,7 @@ def build_installed_plugin_payloads(repo_root: Path, dist_root: Path) -> None:
     ]:
         copy_optional_installed_plugin(source / name, codex / name)
     copy_optional_installed_plugin(repo_root / "LICENSE", codex / "LICENSE")
-    copy_required_installed_plugin(source / "skills", codex / "skills")
-    copy_required_installed_plugin(source / "codex-skills", codex / "skills")
+    render_payload_skills(source, "codex", codex / "skills")
     rewrite_codex_manifest_installed_plugin(codex)
     for text_file in codex.rglob("*"):
         if text_file.is_file():
@@ -387,29 +385,11 @@ def remove_payload_shell_scripts_installed_plugin(root: Path) -> None:
             pass
 
 
-def emit_host_payload_files(paths: Iterable[Path], host: str) -> None:
-    """Rewrite each copied source as `host` sees it, without the other host's blocks."""
-    for path in paths:
-        text = path.read_text(encoding="utf-8")
-        emitted = emit_host(text, host)
-        if emitted != text:
-            path.write_text(emitted, encoding="utf-8")
-
-
-def strip_codex_guard(skill_file: Path) -> None:
-    text = skill_file.read_text(encoding="utf-8")
-    lines = text.splitlines(keepends=True)
-    output: list[str] = []
-    i = 0
-    while i < len(lines):
-        if lines[i].rstrip("\n") == "## Codex Skill-Selection Guard":
-            i += 1
-            while i < len(lines) and not lines[i].startswith("## "):
-                i += 1
-            continue
-        output.append(lines[i])
-        i += 1
-    skill_file.write_text("".join(output), encoding="utf-8")
+def render_payload_skills(source: Path, host: str, destination: Path) -> None:
+    for required in ("skills", "codex-skills") if host == "codex" else ("skills",):
+        if not (source / required).exists():
+            raise FileNotFoundError(f"required source path missing: {source / required}")
+    render_host_skills(source, host, destination)
 
 
 def rewrite_codex_manifest_installed_plugin(codex_root: Path) -> None:

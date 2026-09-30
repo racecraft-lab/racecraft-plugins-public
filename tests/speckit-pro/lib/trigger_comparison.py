@@ -11,6 +11,7 @@ from pathlib import Path
 import re
 import sqlite3
 
+import host_skill_views
 import native_eval_strict_json as strict_json
 import trigger_claude_observer as claude_observer
 import trigger_codex_observer as codex_observer
@@ -19,7 +20,6 @@ from trigger_campaign_pins import FRESH_LAUNCH_CEILING
 from trigger_inventory import canonical_sha256, validate_inventory
 
 ROOT = Path(__file__).resolve().parents[1]
-_SOURCE_FAMILIES = {"claude": ("skills", "codex-skills"), "codex": ("codex-skills",)}
 _DIGEST = re.compile(r"[0-9a-f]{64}")
 
 
@@ -157,7 +157,7 @@ def _target_binding(context: dict, case: dict) -> None:
     _require(isinstance(target, str) and re.fullmatch(re.escape(case["skill"]) + r"-eval-[0-9a-f]+", target) is not None, "native target does not identify the declared source skill")
     if case["host"] == "claude":
         _require(context["expected_skill"] == f"{context['plugin_name']}:{target}", "native target plugin mismatch")
-    source = evidence.find_skill_source(ROOT.parents[1] / "speckit-pro", case["skill"], _SOURCE_FAMILIES[case["host"]])
+    source = host_skill_views.rendered_skill_source(case["host"], case["skill"], ROOT.parents[1] / "speckit-pro")
     sources = {path.name: path / "SKILL.md" for path in evidence.sibling_skill_dirs(source)}
     sources[target] = source
     sources[evidence.NO_SPECKIT_SKILL_NAME] = None

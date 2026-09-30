@@ -15,6 +15,7 @@ AUDIT_PATH = TEST_ROOT / "evals" / "audit" / "trigger-inventory.json"
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 sys.path.insert(0, str(TEST_ROOT / "lib"))
 
+import host_skill_views  # noqa: E402
 from native_eval_catalog import load_catalog  # noqa: E402
 from native_eval_grading import grade_observation  # noqa: E402
 from native_eval_trigger import stage_trigger_catalog  # noqa: E402
@@ -170,10 +171,7 @@ class NativeTriggerCatalogTests(unittest.TestCase):
         self.assertEqual(merged_sibling_evidence, 2)
 
     def test_cases_stage_exact_native_targets_and_complete_sibling_catalogs(self) -> None:
-        source_roots = {
-            "claude": PLUGIN_ROOT / "skills",
-            "codex": PLUGIN_ROOT / "codex-skills",
-        }
+        source_roots = {host: host_skill_views.host_skill_root(host) for host in ("claude", "codex")}
         rosters = {
             host: {path.parent.name for path in root.glob("*/SKILL.md")}
             for host, root in source_roots.items()
