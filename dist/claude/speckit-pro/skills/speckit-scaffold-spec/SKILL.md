@@ -21,6 +21,22 @@ PowerShell-specific command-language requirement for installed workflows.
 
 Before researching or recommending, enumerate the tools and skills your session actually exposes — do not assume a fixed set; the user may have installed anything — and select the best fit per `${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/capability-discovery.md`. Ground every external fact you assert in a real tool, skill, or file result per `${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/grounding.md`, and abstain when nothing grounds it.
 
+Prepare a spec from the technical roadmap for autonomous execution.
+Creates the worktree, branch, and workflow file — ready for
+`/speckit-pro:speckit-autopilot`.
+
+## Scope
+
+This skill owns the mutation-heavy bootstrap step: identify the roadmap entry,
+create or reuse the correct worktree branch, generate the workflow file, and
+leave the repository in a state where the autopilot can start immediately.
+
+If the user is still figuring out how to decompose a feature, write a
+technical roadmap, or understand the SDD process, redirect them to
+`/speckit-pro:speckit-coach`.
+Do not invent roadmap data or phase prompts from vague requirements when the
+roadmap entry does not exist.
+
 ## Artifact tiering (CONTRACT vs EXHAUST)
 
 speckit-pro artifacts are tiered. **CONTRACT** artifacts (`spec.md`, `plan.md`,
@@ -101,6 +117,39 @@ does not block the remaining scaffold workflow, but it must be recorded.
 /speckit-pro:speckit-scaffold-spec SPEC-008
 ```
 
+## Input
+
+Accept:
+
+- a required `SPEC-ID` such as `SPEC-009`
+- an optional technical roadmap path if the user already knows it
+- an optional worktree root override if the repository uses a nonstandard
+  location
+
+If the request does not include a SPEC-ID, stop and ask for it. Everything
+else should be derived from the repository.
+
+## Hard Constraints
+
+- Never commit or push `main`.
+- Re-read the active branch immediately before every commit and push; if it is
+  `main`, stop before the mutation.
+- Detect the actual git remote name before pushing.
+- Create or reuse a dedicated worktree branch for the spec.
+- After the worktree exists, perform all file edits inside the worktree, not in
+  the main checkout.
+- Use the shared workflow template shipped with this plugin at
+  `skills/speckit-coach/templates/workflow-template.md` relative to the
+  speckit-pro plugin root directory.
+- Do not leave placeholder tokens such as `SPEC_ID`, `SPEC_NAME`, or empty
+  phase prompts in the generated workflow.
+- Never run the autopilot at the end. Setup stops once the workflow is ready,
+  committed, and pushed, and prints the hand-off Step 9 defines. The operator
+  runs it.
+- Always run the Grill Me interview before writing the workflow file. The
+  Design Concept doc is a required setup output, not optional. Setup must not
+  attempt to fabricate design-concept content if grill-me aborts.
+
 ## Canonical Scaffold Identity
 
 Derive one deterministic `<branch-name>` from the roadmap's spec number and
@@ -133,27 +182,30 @@ retry.
 
 Check for the official SpecKit CLI before parsing or mutating the repository:
 
-Use command execution to confirm the official `specify` CLI is available after
-including common user-local binary directories on PATH.
+Use command execution to confirm `command -v specify` finds the official
+`specify` CLI after including common user-local binary directories
+(`$HOME/.local/bin`, `/opt/homebrew/bin`, `/usr/local/bin`) on PATH.
 
 If missing and `uv` exists, install it:
 
 Run `uv tool install specify-cli --from git+https://github.com/github/spec-kit.git`.
 
 If `uv` is unavailable or install fails, STOP and tell the operator to install
-SpecKit with that command. Do not run `specify init --here --force`
-automatically; recommend it only when `.specify/` is absent and the operator
-explicitly approves project initialization.
+SpecKit with that command. Do not continue with setup without the `specify`
+command. Do not run `specify init --here --force` automatically: project
+initialization and forced refreshes can overwrite managed files. Recommend it
+only when `.specify/` is absent and the operator explicitly approves project
+initialization.
 
 ### 1. Find the Technical Roadmap
 
-```text
-Glob("**/*technical*roadmap*" or "**/*technical-roadmap*")
-Also check: docs/ai/*roadmap*.md, docs/ai/specs/*roadmap*.md
-```
+Use the roadmap path the user supplied. Otherwise search before asking where
+it lives: files matching `**/*technical*roadmap*` or `**/*technical-roadmap*`,
+plus `docs/ai/*roadmap*.md` and `docs/ai/specs/*roadmap*.md`.
 
 If no technical roadmap found, STOP: "No technical roadmap found. Create
-one with `/speckit-pro:speckit-coach help me create a technical roadmap`."
+one with
+`/speckit-pro:speckit-coach help me create a technical roadmap`."
 
 ### 2. Find the Spec in the Technical Roadmap
 
@@ -187,8 +239,9 @@ Run runner helper reviewability-gate in setup mode for <technical-roadmap-path>
 with spec_id <SPEC-ID>.
 ```
 
-If it returns an unexcepted `block`, STOP and split the spec first. Warnings
-may proceed only when the workflow records the scope budget and split decision.
+If it returns an unexcepted `block`, STOP and split the spec first. Tell the
+user which threshold requires decomposition. Warnings may proceed only when the
+workflow records the scope budget and split decision.
 
 ### 3. Create Git Worktree
 
@@ -207,7 +260,8 @@ deterministic single-segment `branch_name` and, only when the user supplied
 one, `worktree_root_override`. Require `placement_status=resolved` and
 `relation=same` or `relation=descendant`. On `conflict`, `invalid`, or
 `relation=external`, report the returned `problems[]` and canonical path, then
-STOP before mutation.
+STOP before mutation. An explicit override is not permission to escape the
+current task workspace.
 
 This ordering is invariant: the first resolver result comes before
 `git worktree add`, artifact writes, or roadmap mutation. Only after that
@@ -217,8 +271,9 @@ Grill Me. Neither bootstrap nor Grill Me may begin unless that second check
 confirms the registered worktree described below.
 
 Without an override, require the helper's exact
-`TASK_ROOT/.worktrees/<branch-name>` result. Never derive placement from the
-primary checkout, `git rev-parse --git-common-dir`, or the first
+`TASK_ROOT/.worktrees/<branch-name>` result, where `TASK_ROOT` is the canonical
+current task checkout. Never derive worktree placement from
+`git rev-parse --git-common-dir`, the primary checkout, or the first
 `git worktree list` record. Use the returned absolute `worktree_root`
 unchanged.
 
@@ -234,11 +289,14 @@ the helper's disposition:
    worktree using the local branch, the single remote tracking branch, or a new
    branch as the observed state requires. Never commit or push `main` while
    recovering or reusing a remote branch.
-3. Verify the active branch inside the returned worktree before any push. It
+3. Never substitute a different path because branch creation or remote lookup
+   is inconvenient; rerun the resolver if live state changes.
+4. Verify the active branch inside the returned worktree before any push. It
    must equal the helper's `branch_name` and must not be `main`.
 
-Re-run `resolve-scaffold-worktree-placement` after worktree creation and again
-immediately before bootstrap or Grill Me on both create and reuse paths.
+Re-run `resolve-scaffold-worktree-placement` after
+worktree creation and again before bootstrap or Grill Me on both create and
+reuse paths.
 Require `placement_status=resolved`, `disposition=reuse`, the identical
 canonical `task_root`, `worktree_root`, and `branch_name`, plus
 `relation=same` or `relation=descendant`. STOP before bootstrap or Grill Me if
@@ -285,7 +343,7 @@ tooling.
 
 <hard_constraints>
 
-**This step is mandatory.** Every `/scaffold-spec` invocation runs the
+**This step is mandatory.** Every scaffold invocation runs the
 blind-spot pass FROM the worktree, immediately before the grill-me interview.
 There is no skip flag, no skip argument, and no documented path that reaches
 the interview without attempting the pass.
@@ -358,8 +416,8 @@ Each `Depends On` spec whose artifacts are not in the working tree is chased
 into git history rather than reported absent — an archive sweep removes the
 files, not the history.
 
-**The dispatch block, carried verbatim.** It is byte-identical on both platform
-variants, because the shipped `codebase-analyst` description frames the agent
+**The dispatch block, carried verbatim.** It is one text for both hosts,
+because the shipped `codebase-analyst` description frames the agent
 for autopilot consensus resolution rather than for this technique, so this block
 carries the whole framing. Send it first, then the appended material above it.
 Do not paraphrase it, and do not normalise the one-word `blindspot pass` or the
@@ -515,24 +573,26 @@ continue/abort prompt** between the two.
 
 <hard_constraints>
 
-**This step is mandatory.** Every `/scaffold-spec` invocation runs grill-me before
+**This step is mandatory.** Every scaffold invocation runs grill-me before
 the workflow file is written. There is no `--no-grill` flag and no skip
 path — the interview is what makes the workflow prompts good enough for
 autonomous execution.
 
 **Grill-me is human-in-the-loop only.** It uses `AskUserQuestion` to
 interview the user. If you are running this command in a non-interactive
-context (CI, background agent, automation), abort the entire `/scaffold-spec`
+context (CI, background agent, automation), abort the entire scaffold
 invocation — do not attempt to skip grilling.
 
 </hard_constraints>
 
-```text
-1. Create the .process/ docs directory in the WORKTREE for the design concept
-   (created when absent so the first exhaust artifact lands correctly):
-   Create `<worktree_root>/docs/ai/specs/.process/` if absent.
+1. Create the `.process/` docs directory in the WORKTREE for the design
+   concept (created when absent so the first exhaust artifact lands
+   correctly): `<worktree_root>/docs/ai/specs/.process/`.
 
-2. Invoke the grill-me skill with the spec scope as input:
+2. Invoke the grill-me skill from inside the worktree in setup mode, with the
+   spec scope as input:
+
+   ```text
    Skill("grill-me", args: {
      mode: "setup",
      spec_id: "SPEC-<ID>",
@@ -541,28 +601,32 @@ invocation — do not attempt to skip grilling.
              BLIND-SPOT PASS FINDINGS block appended below it>,
      output_path: "<worktree_root>/docs/ai/specs/.process/SPEC-<ID>-design-concept.md"
    })
+   ```
 
-3. The skill walks the design tree using AskUserQuestion (one question
-   at a time, with the AI's recommendation marked as the first option).
-   It returns when the user reaches a natural stop, hits the soft cap
-   at 30 questions and chooses to wrap up, or selects "End interview".
+3. The skill walks the design tree one question at a time, with the AI's
+   recommendation marked as the first option, and surfaces the key answers
+   (Goals, Non-goals, major design decisions) back to this skill. It returns
+   when the user reaches a natural stop, hits the soft cap at 30 questions and
+   chooses to wrap up, or selects "End interview". If grill-me aborts (no
+   interactive runtime), stop setup and report the condition.
+   Do not synthesize design-concept content yourself.
 
-4. Verify the design concept doc exists:
-   Read("<worktree_root>/docs/ai/specs/.process/SPEC-<ID>-design-concept.md")
-   Must contain Goals, Non-goals, Module and Interface Deltas, Terms,
-   Verification Gates, Design Tree (Q&A log), and Open Questions.
-   Must also carry the `**Blind-spot pass:**` key in its header blockquote.
+4. Read `<worktree_root>/docs/ai/specs/.process/SPEC-<ID>-design-concept.md`
+   — `<ID>` being the roadmap identity in full, including whatever namespace
+   prefix it carries. Reading a path the run never wrote would report the key
+   absent and repair a file that does not exist. The doc must contain Goals,
+   Non-goals, Module and Interface Deltas, Terms, Verification Gates, Design
+   Tree (Q&A log), and Open Questions. It must also carry the
+   `**Blind-spot pass:**` key in its header blockquote.
 
-5. Repair that key when it is absent:
-   The interview is the writer of first resort, but the request is one sentence
-   inside a prose block handed to another skill, so verify rather than assume.
-   If the key is missing, Edit the Step 3.6 header line into the existing header
-   blockquote from the values already held at the moment the status line was
-   rendered — the outcome, the `<reason>` clause, and N and M for the `ran`
-   outcome. Nothing is derived a second time.
-   Read to check and Edit to repair. No new section and no separate findings
-   artifact.
-```
+5. Repair that key when it is absent. The interview is the writer of first
+   resort, but the request is one sentence inside a prose block handed to
+   another skill, so verify rather than assume. If the key is missing, edit
+   the Step 3.6 header line into the existing header blockquote from the values
+   already held at the moment the status line was rendered — the outcome, the
+   `<reason>` clause, and N and M for the `ran` outcome. Nothing is derived a
+   second time. Read to check and edit to repair. No new section and no
+   separate findings artifact.
 
 When the interview does not return, nothing is owed. The run stops when no
 interactive runtime is available, so no design concept exists to carry a record
@@ -571,8 +635,9 @@ the run does not continue, so there is no later reader to serve.
 
 The labelled block is the **only** channel the pass uses into the interview, and
 it travels in all three Step 3.6 outcomes — carrying only its status line in the
-degraded two. Do not add a new interview argument and do not change what the
-interview produces. The `scope` argument already exists; this appends to it.
+degraded two. Do not add a new interview argument, do not change what the
+interview produces, and never edit any file under the grill-me skill. The
+`scope` input already exists; this appends to it.
 
 The Q&A log and Goals/Non-goals from this doc drive the next step's
 workflow prompts. Pass the doc path forward.
@@ -581,24 +646,24 @@ workflow prompts. Pass the doc path forward.
 
 All file operations happen in the worktree directory.
 
-```text
 0. Require the generic `speckit-pro-reviewability` preset to already exist in
    the worktree. If the preset is absent, STOP and report the missing
    prerequisite.
 
-   Verify resolution from the worktree:
-   From `<worktree_root>/`, run
+   Verify resolution from `<worktree_root>/` with
    `specify preset resolve spec-template`,
    `specify preset resolve plan-template`, and
-   `specify preset resolve tasks-template`.
+   `specify preset resolve tasks-template`. Each command should resolve to
+   `.specify/presets/speckit-pro-reviewability/` or to a project-specific
+   higher-priority override that intentionally includes the reviewability
+   sections.
 
-1. Read the workflow template from the plugin:
-   Read("${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/templates/workflow-template.md")
+1. Read the shared workflow template from the plugin. Do not author a new
+   template from scratch.
+   Read `${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/templates/workflow-template.md`.
 
-2. Write the template to the WORKTREE:
-   Write("<worktree_root>/docs/ai/specs/.process/SPEC-<ID>-workflow.md",
-         content: <template content from step 1>)
-```
+2. Write the template content to the WORKTREE at
+   `<worktree_root>/docs/ai/specs/.process/SPEC-<ID>-workflow.md`.
 
 ### 5.5. Write the SPEC-MOC Marker (IN the Worktree)
 
@@ -617,12 +682,12 @@ namespace-matches the directory.
    Create `<worktree_root>/specs/<branch-name>/` if absent.
 
 2. Read the spec-MOC template from the plugin:
-   Read("${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/templates/spec-moc-template.md")
+   ${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/templates/spec-moc-template.md
 
 3. Token-substitute the template (same {{TOKEN}} mechanism as the workflow
-   template) and write it to the contract directory:
-   Write("<worktree_root>/specs/<branch-name>/SPEC-MOC.md",
-         content: <template with the tokens below substituted>)
+   template) and write it to the contract directory at
+   <worktree_root>/specs/<branch-name>/SPEC-MOC.md, with the tokens below
+   substituted:
 
    | Token | Replace With |
    | ----- | ------------ |
@@ -683,12 +748,12 @@ with read-only formal-doctor against WORKFLOW_ROOT after population.
 
 - **Clarify Prompts:** Use the design concept's Open Questions section
   to seed the autopilot's clarify session focuses. Anything still open
-  after the grill-me interview is exactly what `/speckit-clarify` should
+  after the grill-me interview is exactly what the Clarify phase should
   be told to dig into. Generate session focuses from the unresolved
   branches and the spec's main surfaces, one focus per open
   behavior area.
 
-- **Plan Prompt:** Combine the tech stack from CLAUDE.md, the
+- **Plan Prompt:** Combine the tech stack from CLAUDE.md / AGENTS.md, the
   constitution, the roadmap scope description, AND the
   architecture / data-model / constraint decisions extracted from
   the design concept doc's Q&A log. Quote the user's chosen answer
@@ -726,6 +791,11 @@ with read-only formal-doctor against WORKFLOW_ROOT after population.
   Verification Gates section verbatim so PROJECT_COMMANDS discovery
   and the TDD executors target the checks the interview agreed on.
 
+The prompts should be strong enough that the autopilot can execute without the
+user hand-editing obvious missing context. If a critical detail cannot be
+derived from the roadmap or the design concept, stop and report the gap rather
+than filling it with fiction.
+
 ### 7. Commit and Verify (IN the Worktree)
 
 All commits happen on the worktree branch (see hard constraints).
@@ -742,8 +812,8 @@ equal the resolver's `branch_name` and must not be `main`; otherwise STOP.
    `specs/<branch-name>/SPEC-MOC.md`, then commit with
    `chore(SPEC-XXX): add design concept and workflow for autopilot`.
 
-2. Push the WORKTREE BRANCH:
-   From `<worktree_root>/`, run `git push`.
+2. Push the WORKTREE BRANCH to the detected remote:
+   From `<worktree_root>/`, run `git push -u <remote> <branch-name>`.
 
    If the push fails or the remote rejects it, STOP and report the failure
    instead of continuing as though the scaffold succeeded. The failure report
@@ -775,6 +845,7 @@ Report:
 **Worktree:** .worktrees/009-search-database/
 **Design Concept:** .worktrees/009-search-database/docs/ai/specs/.process/SPEC-009-design-concept.md
 **Workflow:** .worktrees/009-search-database/docs/ai/specs/.process/SPEC-009-workflow.md
+**Worktree root:** <absolute path from `git rev-parse --show-toplevel` run inside the worktree>
 **Remote:** Pushed to <remote>/009-search-database
 **Bootstrap:** <commands run, documented health check, or "no documented bootstrap">
 
@@ -788,14 +859,19 @@ autopilot will execute. Verify the phase prompts have enough context
 for autonomous execution.
 ```
 
+Never hand off only the inner workflow path from the parent checkout. The
+absolute workflow path identifies the generated spec worktree; autopilot binds
+all execution there and never treats main, a detached checkout, or the parent
+checkout as its mutation root.
+
 ### 8. Update Technical Roadmap Status (IN the Worktree)
 
 Update the technical roadmap's Progress Tracking table IN THE
 WORKTREE (not on main) to mark the spec as `🔄 In Progress`:
 
 ```text
-1. Edit the technical roadmap found in Step 1, using the WORKTREE path:
-   Edit("<worktree_root>/<roadmap-path-from-step-1>")
+1. Edit the technical roadmap found in Step 1 at its WORKTREE path,
+   `<worktree_root>/<roadmap-path-from-step-1>`.
 
 2. Commit IN THE WORKTREE:
    Re-read the active branch first and STOP if it differs from the resolver's
@@ -827,12 +903,17 @@ hand-off — one is always printed. They select its form and decide whether a
 warning travels with it.
 
 ```text
-1. Resolve the generated worktree with `git -C <absolute-worktree-root>
-   rev-parse --show-toplevel`; require the canonical result to equal that root,
-   and require the canonical absolute workflow file to be a readable regular
-   file contained by it.
-2. Confirm `git -C <absolute-worktree-root> status --porcelain` is clean.
+1. Invoke the read-only `resolve-workflow-binding` runner helper with the
+   canonical absolute generated workflow path. Require `binding_status=resolved`,
+   the generated worktree as `workflow_root`, and `relation=descendant` (or
+   `same` only when scaffold was already running from that worktree).
+2. Confirm `git status --porcelain` is clean in the returned `workflow_root`.
 ```
+
+Step 1 uses the same authoritative helper as autopilot. The absolute path is
+required even when the same relative path exists in the parent checkout: a
+stale parent copy must not win resolution and redirect planning commits to
+main.
 
 The absolute root and canonical absolute workflow path are deliberately passed
 separately. `/cd` changes Claude Code's live session directory and reloads
@@ -849,8 +930,8 @@ so a last-commit test would fail on every correct run.
 
 | Check result | Effect on the hand-off |
 | ------------ | ---------------------- |
-| Step 1 passes | print the two-command same-session hand-off below |
-| Step 1 fails | report the invalid generated worktree/path and retain the existing reopen/new-task recovery; never invite autopilot from the parent checkout |
+| Step 1 passes | print the same-session hand-off below |
+| Step 1 fails | report the helper's `binding_status` and `problems[]`, and print the recovery: reopen in a new session or task rooted at the generated worktree; never invite autopilot from the parent checkout |
 | Step 2 fails | add one line naming the uncommitted changes as something to resolve first |
 
 **Print one line before asking.** The question and both option labels name
@@ -863,7 +944,8 @@ the budget below.
 
 **Then ask exactly one confirmation, structured.** It records whether the
 operator is continuing now. It does not decide whether anything runs, because
-nothing does. Use `AskUserQuestion`:
+nothing does.
+Use `AskUserQuestion`:
 
 ```text
 Question: Scaffold is complete and pushed. Are you continuing into planning now?
@@ -878,9 +960,9 @@ closing report frames it. Never fall back to parsing a free-text reply. When the
 session exposes no structured confirmation mechanism, skip the question and
 print the report — the hand-off does not depend on it.
 
-**The budget counts what this step adds**: exactly one confirmation. Step 3's
-reuse-or-recreate question and Step 3.5's bootstrap approval are pre-existing,
-are not counted, and are not removed.
+**The budget counts what this step adds**: exactly one confirmation. Step 3.5's
+bootstrap approval and the grill-me questions are pre-existing, are not counted,
+and are not removed.
 
 **The hand-off has exactly two commands, in this order:**
 
@@ -904,8 +986,8 @@ the retry ambiguous. Never pass a state file, branch name, feature directory,
 or environment variable to autopilot across the boundary.
 
 **Nothing is rolled back on any path.** Everything scaffold owns is committed and
-pushed before this step runs, so the operator who stops here defers the two
-hand-off commands and loses no work.
+pushed before this step runs, so the operator who stops here defers the
+hand-off and loses no work.
 
 ### 10. Closing Report
 
@@ -931,7 +1013,7 @@ The report is **printed, not written to a file.**
 - <repo-relative path>     (one line each; only paths that exist)
 
 **Next step:**
-<two-command hand-off block>
+<hand-off block>
 ```
 
 **The heading is one fixed string, `## Ready for Planning`**, on all three
@@ -940,9 +1022,11 @@ endings.
 **Fixed, conditional, and derived.** The heading and the draft-PR line are
 fixed, except that the draft-PR line is conditional on a URL existing. The
 outcome line, the artifact index, and the next step are **derived** — each has
-its own rule below. `<two-command hand-off block>` is the Step 9 `/cd` command
-followed by the absolute-workflow autopilot command. It remains one report element even
-though it is rendered on two lines.
+its own rule below. `<hand-off block>` is the Step 9 hand-off in the form its
+check selected.
+On Claude Code it is the `/cd` command followed by the absolute-workflow
+autopilot command. It remains one report element even though it is rendered on
+two lines.
 
 **The set-aside findings count MUST NOT appear here.** The list is closed at
 four elements; that count lives in the design concept's header record and in the
@@ -1006,7 +1090,31 @@ The pushed branch name is the one candidate that is not a path: it is listed
 from the branch Step 7 pushed and needs no read, so the test above never
 applies to it.
 
-**The next step is the Step 9 two-command hand-off**, in the form that step's
+**The next step is the Step 9 hand-off**, in the form that step's
 check selected. Scaffold names
 the planning hand-off as the operator's next action, never as its own action,
 and never asks a second confirmation to offer it.
+
+## Failure Handling
+
+Stop instead of improvising when any of the following are true:
+
+- no technical roadmap exists
+- the SPEC-ID is not in the roadmap
+- the branch or worktree state is ambiguous and cannot be safely reused
+- git push fails
+- the workflow still contains unresolved placeholders after population; name
+  each placeholder that remains
+- grill-me aborts because no interactive runtime is available. Scaffolding is
+  HITL-gated by design.
+
+If scaffolding partially succeeds before a failure, report exactly what was created
+and what remains unfinished so the user can resume without duplicating work.
+For a push failure, preserve and report the existing absolute worktree root,
+spec branch, workflow path, local commit SHA, detected remote, and failed push
+diagnostic. Do not recreate the branch or worktree, repeat completed scaffold
+mutations, or claim the remote branch exists. After the remote problem is
+fixed, retry the same failed push from that same worktree with
+`git -C <absolute-worktree-root> push -u <remote> <spec-branch>`, then resume at
+the first unfinished scaffold step. The hand-off remains blocked until the
+same-worktree retry succeeds and the branch is verified on the detected remote.

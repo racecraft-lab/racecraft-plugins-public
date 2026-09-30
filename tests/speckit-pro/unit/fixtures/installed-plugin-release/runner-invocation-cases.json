@@ -19,7 +19,7 @@
       "case_id": "windows-py-3-fallback",
       "product": "codex",
       "platform": "windows",
-      "surface_path": "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
+      "surface_path": "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
       "cache_root": "C:/fixture-home/.codex/plugins/speckit-pro",
       "candidate_results": [
         {

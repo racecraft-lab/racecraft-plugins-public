@@ -39,7 +39,7 @@ class BlockedActionDeferralSourceContractTests(unittest.TestCase):
         _assert_phrases(self, section, (*PHRASES["BlockedActionDeferralSourceContractTests.assert_deferral_rules#1"], ask_tool))
 
     def test_codex_phase_seven_defers_a_blocked_action_and_continues(self) -> None:
-        phase = _codex_reference("phase-execution-codex.md")
+        phase = _codex_reference("phase-execution.md")
         section = _section_after(
             self, phase, "## Phase 7: Implement", f"### {BLOCKED_ACTION_HEADING}", "## PR Packet and Body Boundary"
         )
@@ -52,8 +52,8 @@ class BlockedActionDeferralSourceContractTests(unittest.TestCase):
 
     def test_codex_entrypoint_and_post_audit_allow_an_honest_deferred_end(self) -> None:
         skill = _flat(CODEX_AUTOPILOT_SKILL)
-        post = _codex_reference("post-implementation-codex.md")
-        recovery = _codex_reference("error-recovery-codex.md")
+        post = _codex_reference("post-implementation.md")
+        recovery = _codex_reference("error-recovery.md")
         self.assertIn(BLOCKED_ACTION_HEADING, skill)
         audit = _section(skill, "### 3.4 Pre-final completion audit", "Only after every Post item")
         _assert_phrases(self, audit, ("deferred items remain", "plain text in the final message"))
@@ -108,7 +108,7 @@ class GateFailureDeferSourceContractTests(unittest.TestCase):
 
     def test_gate_failure_default_is_defer_on_both_hosts(self) -> None:
         claude = _flat(CLAUDE_AUTOPILOT_SKILL.parent / "references" / "prerequisites.md")
-        codex = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "prerequisites-codex.md")
+        codex = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "prerequisites.md")
         readme = _flat(REPO_ROOT / "speckit-pro" / "README.md")
         for text in (claude, codex):
             self.assertIn("`gate-failure` (default: `defer`)", text)
@@ -117,7 +117,7 @@ class GateFailureDeferSourceContractTests(unittest.TestCase):
         self.assertNotIn("gate-failure: stop", readme)
 
     def test_codex_phase_seven_defers_a_persistent_gate_failure(self) -> None:
-        phase = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "phase-execution-codex.md")
+        phase = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "phase-execution.md")
         _assert_absent(self, phase, ('gate-failure == "stop"', 'gate-failure == "skip-and-log"'))
         _assert_phrases(self, phase, (
             "If still failing, defer per the Failure Escalation Protocol",
@@ -131,7 +131,7 @@ class NeverYieldSourceContractTests(unittest.TestCase):
     def test_both_hosts_forbid_ending_a_turn_on_a_status_summary(self) -> None:
         for host, skill, phase in (
             ("claude", _flat(CLAUDE_AUTOPILOT_SKILL), _claude_reference("phase-execution.md")),
-            ("codex", _flat(CODEX_AUTOPILOT_SKILL), _codex_reference("phase-execution-codex.md")),
+            ("codex", _flat(CODEX_AUTOPILOT_SKILL), _codex_reference("phase-execution.md")),
         ):
             with self.subTest(host=host):
                 self.assertIn("Neither is a status summary a stopping point.", skill)

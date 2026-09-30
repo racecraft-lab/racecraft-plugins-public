@@ -181,7 +181,7 @@ ORCHESTRATION_REQUIRING_TEXT = {
         ("speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
          "Executors resolve project skills and paths against the bound `<WORKFLOW_ROOT>`, "
          "never the checkout that launched the run"),
-        ("speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
+        ("speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
          "Never infer the execution root from the task's default checkout."),
     ),
     "functional.speckit-autopilot.plan-research-dispatch": (
@@ -195,7 +195,7 @@ ORCHESTRATION_REQUIRING_TEXT = {
          "After the skill loads, execute its steps."),
         ("speckit-pro/skills/speckit-autopilot/references/error-recovery.md",
          "**MCP tool unavailable:** Skip research that depends on it."),
-        ("speckit-pro/codex-skills/speckit-autopilot/references/error-recovery-codex.md",
+        ("speckit-pro/skills/speckit-autopilot/references/error-recovery.md",
          "**MCP tool unavailable:** Skip research that depends on it."),
         ("speckit-pro/skills/speckit-autopilot/references/capability-discovery.md",
          "use the fallback rule below and state the gap"),
@@ -206,10 +206,10 @@ ORCHESTRATION_REQUIRING_TEXT = {
          "executor's recommendation or later consensus."),
         ("speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md",
          "label its source `human answer`"),
-        ("speckit-pro/codex-skills/speckit-autopilot/references/workflow-file-protocol-codex.md",
+        ("speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md",
          "Clarify Results must preserve each accepted human answer separately from the "
          "executor's recommendation or later consensus."),
-        ("speckit-pro/codex-skills/speckit-autopilot/references/workflow-file-protocol-codex.md",
+        ("speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md",
          "label its source `human answer`"),
     ),
     "functional.speckit-autopilot.progress-projection-mid-run": (
@@ -218,27 +218,24 @@ ORCHESTRATION_REQUIRING_TEXT = {
         ("speckit-pro/skills/speckit-autopilot/SKILL.md",
          "Exit 0 is required; on nonzero, repair the plan and the workflow status table, "
          "then repeat before executing this phase."),
-        ("speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md",
+        ("speckit-pro/skills/speckit-autopilot/references/task-list-canonical.md",
          "do NOT collapse them"),
-        ("speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
+        ("speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
          "If Archive Sweep or any canonical phase family is missing, STOP and repair the "
          "plan before executing this phase."),
     ),
     "functional.speckit-autopilot.rescope-reconciliation": (
         ("speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
          RESCOPE_RECONCILIATION_RULE),
-        ("speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
+        ("speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
          RESCOPE_RECONCILIATION_RULE),
     ),
 }
 GATE_VALIDATION = "speckit-pro/skills/speckit-autopilot/references/gate-validation.md"
 PHASE_EXECUTION = "speckit-pro/skills/speckit-autopilot/references/phase-execution.md"
-PHASE_EXECUTION_CODEX = "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md"
 EXECUTION_EFFICIENCY = "speckit-pro/skills/speckit-autopilot/references/execution-efficiency.md"
 AUTOPILOT_SKILL = "speckit-pro/skills/speckit-autopilot/SKILL.md"
-AUTOPILOT_SKILL_CODEX = "speckit-pro/codex-skills/speckit-autopilot/SKILL.md"
 PREREQUISITES = "speckit-pro/skills/speckit-autopilot/references/prerequisites.md"
-PREREQUISITES_CODEX = "speckit-pro/codex-skills/speckit-autopilot/references/prerequisites-codex.md"
 # Stop-policy cases: staged from the recorded fixtures below, graded on derived answers.
 CORRECTIVE_FIXTURE_ROOT = "tests/speckit-pro/evals/fixtures/functional/corrective-authorization/"
 ORCHESTRATION_REQUIRING_TEXT.update({
@@ -254,9 +251,9 @@ ORCHESTRATION_REQUIRING_TEXT.update({
          "The runner admits it without `begin-replan-epoch` and without an operator event"),
         (PHASE_EXECUTION,
          "It allows one test fix per increment and never draws on the run-wide corrective budget."),
-        (PHASE_EXECUTION_CODEX,
+        (PHASE_EXECUTION,
          "The runner admits it without `begin-replan-epoch` and without an operator event"),
-        (PHASE_EXECUTION_CODEX,
+        (PHASE_EXECUTION,
          "It allows one test fix per increment and never draws on the run-wide corrective budget."),
     ),
     "functional.speckit-autopilot.resolved-deferral-leaves-request": (
@@ -267,22 +264,22 @@ ORCHESTRATION_REQUIRING_TEXT.update({
     "functional.speckit-autopilot.missing-quality-tool-install-hint": (
         (PREREQUISITES, "default to the recorded install hint, then `skip (spec)`"),
         (PREREQUISITES, "the run never asks"),
-        (PREREQUISITES_CODEX, "default to the recorded install hint, then `skip (spec)`"),
-        (PREREQUISITES_CODEX, "the run never asks"),
+        (PREREQUISITES, "default to the recorded install hint, then `skip (spec)`"),
+        (PREREQUISITES, "the run never asks"),
     ),
     "functional.speckit-autopilot.red-baseline-repaired-by-implement-executor": (
         (PREREQUISITES, "route the failing check to the implement-executor"),
         (PREREQUISITES, "Phase 1 starts once the check passes, or once the failure is deferred with its evidence"),
-        (PREREQUISITES_CODEX, "route the failing check to the implement-executor"),
-        (PREREQUISITES_CODEX, "Phase 1 starts once the check passes, or once the failure is deferred with its evidence"),
+        (PREREQUISITES, "route the failing check to the implement-executor"),
+        (PREREQUISITES, "Phase 1 starts once the check passes, or once the failure is deferred with its evidence"),
     ),
     "functional.speckit-autopilot.blocked-action-defers": (
         (PHASE_EXECUTION, "With no defined fallback, defer that task."),
         (PHASE_EXECUTION, "mark deferred every task and Post item that depends on it"),
         (PHASE_EXECUTION, "Never ask the operator from inside the task"),
-        (PHASE_EXECUTION_CODEX, "With no defined fallback, defer that task."),
-        (PHASE_EXECUTION_CODEX, "mark deferred every task and Post item that depends on it"),
-        (PHASE_EXECUTION_CODEX, "Never ask the operator from inside the task"),
+        (PHASE_EXECUTION, "With no defined fallback, defer that task."),
+        (PHASE_EXECUTION, "mark deferred every task and Post item that depends on it"),
+        (PHASE_EXECUTION, "Never ask the operator from inside the task"),
     ),
 })
 DEFERRED_DECISION_RULE = (
@@ -291,12 +288,12 @@ DEFERRED_DECISION_RULE = (
 )
 ORCHESTRATION_REQUIRING_TEXT["functional.speckit-autopilot.deferred-decision-ready-stack"] = (
     ("speckit-pro/skills/speckit-autopilot/references/phase-execution.md", DEFERRED_DECISION_RULE),
-    ("speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md", DEFERRED_DECISION_RULE),
+    ("speckit-pro/skills/speckit-autopilot/references/phase-execution.md", DEFERRED_DECISION_RULE),
 )
 ORCHESTRATION_REQUIRING_TEXT["functional.speckit-autopilot.run-start-grant"] = (
     ("speckit-pro/skills/speckit-autopilot/references/stop-policy.md",
      "Nothing that inventory could have known is discovered mid-run."),
-    ("speckit-pro/codex-skills/speckit-autopilot/references/prerequisites-codex.md",
+    ("speckit-pro/skills/speckit-autopilot/references/prerequisites.md",
      "no permission or egress prompt can stop the run midway"),
     ("speckit-pro/skills/speckit-autopilot/references/prerequisites.md",
      "print the allow rules for the probe that failed, once, and stop before any phase work"),
@@ -311,10 +308,8 @@ SCAFFOLD_REVIEWABILITY_REQUIRING_TEXT = (
      "Run runner helper reviewability-gate in setup mode for <technical-roadmap-path> with spec_id <SPEC-ID>."),
     ("speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
      "If it returns an unexcepted `block`, STOP and split the spec first."),
-    ("speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
-     "Run runner helper reviewability-gate in setup mode for <technical-roadmap-path> with spec_id <SPEC-ID>."),
-    ("speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
-     "If the gate returns `block` without a ratified split exception, stop setup"),
+    ("speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
+     "Tell the user which threshold requires decomposition."),
     ("speckit-pro/skills/speckit-autopilot/references/gate-validation.md",
      "The gate then reads only that `### <SPEC-ID>:` section"),
     ("speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md",
@@ -353,7 +348,7 @@ FINALIZE_PLAIN_TEXT = "Print the final report as plain text on `outcome=complete
 RUNNER_CASES = {
     "functional.speckit-autopilot.clean-finish-no-question": {
         "request": "scenario-inputs/finalize-request.json", "destinations": FINALIZE_DESTINATIONS,
-        "citations": ((AUTOPILOT_SKILL, FINALIZE_PLAIN_TEXT), (AUTOPILOT_SKILL_CODEX, FINALIZE_PLAIN_TEXT),
+        "citations": ((AUTOPILOT_SKILL, FINALIZE_PLAIN_TEXT), (AUTOPILOT_SKILL, FINALIZE_PLAIN_TEXT),
                       (AUTOPILOT_SKILL, "mark the stack ready for review (never merge)")),
         "failure": {"deferred_digest": "sha256:" + "0" * 64, "outcome": "human_stop", "mark_ready": False,
                     "ready_commands": [], "operator_question_required": True},
@@ -361,7 +356,7 @@ RUNNER_CASES = {
     },
     "functional.speckit-autopilot.red-required-gate-stays-draft": {
         "request": "scenario-inputs/finalize-request.json", "destinations": FINALIZE_DESTINATIONS,
-        "citations": ((AUTOPILOT_SKILL, "the stack stays in draft"), (AUTOPILOT_SKILL_CODEX, "the stack stays in draft")),
+        "citations": ((AUTOPILOT_SKILL, "the stack stays in draft"), (AUTOPILOT_SKILL, "the stack stays in draft")),
         "failure": {"deferred_digest": "sha256:" + "0" * 64, "outcome": "complete", "mark_ready": True,
                     "stack_state": "ready",
                     "ready_commands": ["gh pr ready 101", "gh pr ready 102", "gh pr ready 103"],
@@ -372,8 +367,8 @@ RUNNER_CASES = {
         "request": "scenario-inputs/ratify-request.json",
         "destinations": {"scenario-inputs/ratify-request.json"},
         "citations": ((PHASE_EXECUTION, "`decision=reslice_required`"),
-                      (PHASE_EXECUTION_CODEX, "`decision=reslice_required`"),
-                      (PHASE_EXECUTION, "follow `data.repair`"), (PHASE_EXECUTION_CODEX, "follow `data.repair`")),
+                      (PHASE_EXECUTION, "`decision=reslice_required`"),
+                      (PHASE_EXECUTION, "follow `data.repair`"), (PHASE_EXECUTION, "follow `data.repair`")),
         "failure": {"decision": "operator_required", "owner_ratification": "ratified", "ratified_by": "autopilot",
                     "repair_owner": None, "repair_retry": None,
                     "operator_stop_reason": "scope_changing_pr_split"},
@@ -382,8 +377,8 @@ RUNNER_CASES = {
     "functional.speckit-autopilot.codex-run-start-grant": {
         "request": "scenario-inputs/render-egress-request.json",
         "destinations": {"scenario-inputs/render-egress-request.json"},
-        "citations": ((PHASE_EXECUTION_CODEX, "Show its output unchanged; do not write the text by hand."),
-                      (PHASE_EXECUTION_CODEX,
+        "citations": ((PHASE_EXECUTION, "Show its output unchanged; do not write the text by hand."),
+                      (PHASE_EXECUTION,
                        "Uncovered plan-derived data egress: the preflight asks for it as a chat reply.")),
         "failure": {"action_ids": ["live-skill-eval"], "delivery_channel": "goal_edit",
                     "authorization_message_sha256": "sha256:" + "0" * 64},
@@ -1386,12 +1381,11 @@ class NativeFunctionalCatalogTests(_FunctionalCatalogFixture, unittest.TestCase)
         self.assertIn("Output only raw JSON", case["prompt"])
         self.assertIn("no diagnostic prefix", case["prompt"])
         sequence = next(check for check in case["checks"] if check["id"] == "native-sequence")
-        sources = {
-            "claude": "speckit-pro/skills/speckit-autopilot/references/task-list-canonical.md",
-            "codex": "speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md",
-        }
-        for host, source in sources.items():
-            names = re.findall(r'^  "(Post: [^"<]+)"', (REPO_ROOT / source).read_text(), re.MULTILINE)
+        from guide_text import host_source
+
+        for host in ("claude", "codex"):
+            source = host_source("skills/speckit-autopilot/references/task-list-canonical.md", host)
+            names = re.findall(r'^  "(Post: [^"<]+)"', source, re.MULTILINE)
             self.assertEqual(sequence["expected_by_host"][host], names)
         for case_id in NATIVE_RESPONSE_IDS:
             native_case = self.cases[case_id]

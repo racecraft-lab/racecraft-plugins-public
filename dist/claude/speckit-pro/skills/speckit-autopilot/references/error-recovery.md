@@ -18,6 +18,18 @@ The autopilot reads prior artifacts and recovers the same execution-control
 ledger per [Bounded Execution](./execution-efficiency.md), then continues only
 when its disposition permits. Resume and agent replacement never reset budget.
 
+**Resume protocol:**
+
+1. Re-read the workflow file, then `autopilot-state.json` next to it
+2. Rebuild the visible task list from the canonical plan
+3. Verify artifact status and prompt content against the workflow file
+4. If the state file is missing, reconstruct it from the workflow file, then
+   continue from the requested phase
+5. If all seven SDD phases are complete but any canonical `Post:` item is
+   missing, `pending`, or `in_progress`, resume at the first incomplete Post
+   item. Do not summarize completion from a `Phase 7: Implement Complete`
+   state.
+
 ## Common Issues
 
 - **Subagent returns an empty/incomplete summary:** Reserve the one read-only
@@ -26,10 +38,13 @@ when its disposition permits. Resume and agent replacement never reset budget.
   already-produced result, not continuing writes. An unknown outcome blocks
   only its own unit: spawn a read-only reconciler over the unit's owned paths
   and settle it with `execution-control action=reconcile-unit` (see
-  [Bounded Execution](./execution-efficiency.md)). `no_effect` allows a new
-  dispatch of that unit with no operator event; `partial` and `complete` need
-  a verification dispatch first. Never use a direct-command fallback. Proven
-  partial results retain completed tasks; only unfinished work may be reserved.
+  [Bounded Execution](./execution-efficiency.md)). The reconciler reports
+  `no_effect`, `partial`, or `complete`, and the runner verifies the class from
+  git state under the unit's owned paths. `no_effect` allows a new dispatch of
+  that unit with no operator event; `partial` and `complete` need a
+  `kind=verification` dispatch (`verifies_dispatch_id`) before the unit is
+  released. Never use a direct-command fallback. Proven partial results retain
+  completed tasks; only unfinished work may be reserved.
 - **A parallel wave exceeds capacity:** Dispatch deterministic waves of at most
   `SUBAGENT_WAVE_SIZE`, preserving task order in the final result regardless of
   completion order. The resolver reserves one slot for recovery. An invalid
@@ -41,21 +56,24 @@ when its disposition permits. Resume and agent replacement never reset budget.
   or moved it with every earlier failure passing. On non-convergence (no
   measurable progress, a return to an earlier failing set, unparsed output, or
   a spec change) the shared one-cycle-per-family/two-cycle-per-spec
-  reservation limits apply. An exhausted allowance returns `disposition=defer`:
-  record the deferral with the gate output, keep executing every independent
-  task, increment, and gate, and list it in the one end-of-run consolidated
-  request. It is never a mid-run question. `authorize-corrective-exception`
-  and `begin-replan-epoch` are end-of-run tools that act on the operator's
-  answer to that request. Before that request, use the agent-issued paths in
-  [Bounded Execution](./execution-efficiency.md): `agent_authorized: true` on
-  `authorize-corrective-retry`, `begin-replan-epoch`, or
-  `authorize-corrective-continuation`, each capped and runner-proved. An explicit `--stage implement` opens the implement
-  stage's own allowance through `begin-stage-epoch`
-  ([Bounded Execution](./execution-efficiency.md)). A task-verb fix that only
-  reroutes a task to verification reserves with `metadata_only: true`; the
-  runner proves it against the committed baseline and spends no cycle.
-  Repeated failures with one signature in one test file are one class: one
-  approval covers its follow-ups through `reserve-class-correction`. See
+  reservation limits apply to every nested worker. An exhausted allowance
+  returns `disposition=defer`: record the deferral with the exact gate output,
+  keep executing every independent task, increment, and gate, and list it in
+  the one end-of-run consolidated request. It is never a mid-run question.
+  `authorize-corrective-exception` (one operator-approved application
+  correction) and `begin-replan-epoch` are end-of-run tools that act on the
+  operator's answer to that request. Before that request, use the agent-issued
+  paths in [Bounded Execution](./execution-efficiency.md): `agent_authorized:
+  true` on `authorize-corrective-retry`, `begin-replan-epoch`, or
+  `authorize-corrective-continuation`, each capped and runner-proved. An
+  explicit `--stage implement` opens the implement stage's own allowance
+  through `begin-stage-epoch`. A task-verb fix that only reroutes a task to
+  verification reserves with `metadata_only: true`; the runner proves it
+  against the committed baseline and spends no cycle. Never reset or bypass
+  the ledger otherwise; `checkpoint_required` and ledger integrity errors
+  still stop. Repeated failures with one signature in one test file are one
+  class: one approval covers its follow-ups through `reserve-class-correction`.
+  See
   [Repeated Gate Failures: Diagnose One Class, Approve It Once](./phase-execution.md#repeated-gate-failures-diagnose-one-class-approve-it-once).
 - **Consensus agents cannot agree:** The synthesizer flags
   `[ROUND_3_TIEBREAK]`, which starts the Round 3 tiebreak: a fresh analyst

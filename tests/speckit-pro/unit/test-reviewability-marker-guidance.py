@@ -17,24 +17,25 @@ LIB_DIR = TEST_DIR.parent / "lib"
 sys.path.insert(0, str(LIB_DIR))
 
 from guide_text import emit_host  # noqa: E402
+from host_skill_views import host_skill_root  # noqa: E402
 from test_result import run_counted  # noqa: E402
+
+CLAUDE_AUTOPILOT = host_skill_root("claude") / "speckit-autopilot"
+CODEX_AUTOPILOT = host_skill_root("codex") / "speckit-autopilot"
 
 
 SOURCE_PATHS = {
     "claude_coach": REPO_ROOT / "speckit-pro/skills/speckit-coach/SKILL.md",
-    "claude_skill": REPO_ROOT / "speckit-pro/skills/speckit-autopilot/SKILL.md",
+    "claude_skill": CLAUDE_AUTOPILOT / "SKILL.md",
     "claude_gate": REPO_ROOT / "speckit-pro/skills/speckit-autopilot/references/gate-validation.md",
-    "claude_phase": REPO_ROOT / "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
-    "claude_post": REPO_ROOT / "speckit-pro/skills/speckit-autopilot/references/post-implementation.md",
-    "claude_workflow": REPO_ROOT
-    / "speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md",
-    "codex_skill": REPO_ROOT / "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
-    "codex_phase": REPO_ROOT
-    / "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
-    "codex_post": REPO_ROOT
-    / "speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md",
+    "claude_phase": CLAUDE_AUTOPILOT / "references/phase-execution.md",
+    "claude_post": CLAUDE_AUTOPILOT / "references/post-implementation.md",
+    "claude_workflow": CLAUDE_AUTOPILOT / "references/workflow-file-protocol.md",
+    "codex_skill": CODEX_AUTOPILOT / "SKILL.md",
+    "codex_phase": CODEX_AUTOPILOT / "references/phase-execution.md",
+    "codex_post": CODEX_AUTOPILOT / "references/post-implementation.md",
     "claude_scaffold": REPO_ROOT / "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
-    "codex_scaffold": REPO_ROOT / "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
+    "codex_scaffold": REPO_ROOT / "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
     "codex_coach": REPO_ROOT / "speckit-pro/skills/speckit-coach/SKILL.md",
     "claude_evals": REPO_ROOT
     / "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
@@ -340,7 +341,7 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         bodies = {name: path.read_text(encoding="utf-8") for name, path in SOURCE_PATHS.items()}
         # Shared skills carry host blocks; each host key reads its own view.
-        for name in ("claude_coach", "codex_coach"):
+        for name in ("claude_coach", "codex_coach", "claude_scaffold", "codex_scaffold"):
             bodies[name] = emit_host(bodies[name], name.split("_")[0])
         bodies["claude_combined"] = "\n".join(
             bodies[name] for name in ("claude_skill", "claude_gate", "claude_phase", "claude_post", "claude_workflow")

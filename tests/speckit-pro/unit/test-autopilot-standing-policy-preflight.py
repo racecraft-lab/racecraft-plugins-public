@@ -31,6 +31,7 @@ from autopilot_bookkeeping_support import (
     _flat,
 )  # noqa: E402
 from test_result import run_counted  # noqa: E402
+from host_skill_views import host_skill_root  # noqa: E402
 
 
 class _ClaudeGuides(_CodexGuides):
@@ -44,7 +45,7 @@ class StandingPolicyPreflightSourceContractTests(_CodexGuides):
 
     SECTIONS = {
         "preflight": ("phase", "### Autonomy Boundary Preflight", "1. Read mode from `CONFIDENCE_GATE_MODE`"),
-        "resume": ("prerequisites", "### 0.8c Resumed Autonomy Boundary Preflight", "### 0.9"),
+        "resume": ("prerequisites", "## Step 0.8c: Resumed Autonomy Boundary Preflight", "## Step 0.9"),
     }
 
     def test_covered_inventory_asks_no_question_including_a_stage_change(self) -> None:
@@ -78,7 +79,7 @@ class StandingPolicyPreflightSourceContractTests(_CodexGuides):
         _assert_phrases(self, self.preflight, (phrase, "even after an app restart"))
         for setup in ("speckit-install", "speckit-upgrade"):
             with self.subTest(setup=setup):
-                self.assertIn(phrase, _flat(CODEX_AUTOPILOT_SKILL.parents[1] / setup / "SKILL.md"))
+                self.assertIn(phrase, _flat(host_skill_root("codex") / setup / "SKILL.md"))
 
     def test_ratified_boundary_file_edit_is_deferred_not_a_start_blocker(self) -> None:
         for phrase in PHRASES["StandingPolicyPreflightSourceContractTests.test_ratified_boundary_file_edit_is_deferred_not_a_start_blocker#1"]:
@@ -91,7 +92,7 @@ class StandingPolicyPreflightSourceContractTests(_CodexGuides):
             _assert_absent(self, text, ("setup gap", "The run still proceeds"))
         for setup in ("speckit-install", "speckit-upgrade"):
             with self.subTest(setup=setup):
-                text = _flat(CODEX_AUTOPILOT_SKILL.parents[1] / setup / "SKILL.md")
+                text = _flat(host_skill_root("codex") / setup / "SKILL.md")
                 _assert_phrases(self, text, PHRASES["StandingPolicyPreflightSourceContractTests.test_missing_standing_policy_is_the_single_up_front_ask_not_a_setup_gap#2"])
 
 
@@ -106,8 +107,8 @@ class CodexRunStartAuthorizationSourceContractTests(_CodexGuides):
 
     def test_step_runs_before_archive_sweep_and_on_every_resume(self) -> None:
         _assert_phrases(self, self.step, PHRASES["CodexRunStartAuthorizationSourceContractTests.test_step_runs_before_archive_sweep_and_on_every_resume#1"])
-        self.assertLess(self.skill.index("**Step -2: Run-Start Authorization**"),
-                        self.skill.index("**Step -1: Archive Sweep Startup**"))
+        self.assertLess(self.skill.index("run the Step -2 run-start authorization"),
+                        self.skill.index("**Archive Sweep**"))
 
     def test_policy_classes_derive_from_the_gate_coverage_output(self) -> None:
         _assert_phrases(self, self.step, PHRASES["CodexRunStartAuthorizationSourceContractTests.test_policy_classes_derive_from_the_gate_coverage_output#1"])
@@ -128,7 +129,7 @@ class CodexRunStartAuthorizationSourceContractTests(_CodexGuides):
             "a correctly installed policy reads as missing",
         ))
         self.assertIn("rerun the standing check with Step -2's `derived_classes`",
-                      _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "prerequisites-codex.md"))
+                      _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "prerequisites.md"))
         _assert_phrases(self, self.step, (
             "A base class's probe sends no repository content",
             "A derived class's probe is its gate command run once",

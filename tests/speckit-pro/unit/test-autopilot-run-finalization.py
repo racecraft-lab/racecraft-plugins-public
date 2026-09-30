@@ -66,12 +66,12 @@ class RunFinalizationSourceContractTests(unittest.TestCase):
 
     def test_codex_finalizes_a_deferred_run_and_completes_the_goal(self) -> None:
         references = CODEX_AUTOPILOT_SKILL.parent / "references"
-        phase = _flat(references / "phase-execution-codex.md")
+        phase = _flat(references / "phase-execution.md")
         section = _section(phase, f"### {BLOCKED_ACTION_HEADING}", "### Repeated Gate Failures")
         self.assert_finalization_rules(section)
         self.assertIn("marks the thread goal complete", section)
         self.assertIn("never set the thread goal blocked for it mid-run", phase)
-        recovery = _flat(references / "error-recovery-codex.md")
+        recovery = _flat(references / "error-recovery.md")
         self.assertIn("never sets the thread goal blocked mid-run", recovery)
         self.assertNotIn("never sets the thread goal blocked.", recovery)
         hardener = _flat(CLAUDE_AUTOPILOT_SKILL.parent / "references" / "hardener-delegation.md")
@@ -86,7 +86,7 @@ class RunFinalizationSourceContractTests(unittest.TestCase):
         self.assertIn("`finalize-run`", audit)
         for phrase in self.STALE:
             self.assertNotIn(phrase, skill)
-        post = _flat(references / "post-implementation-codex.md")
+        post = _flat(references / "post-implementation.md")
         _assert_phrases(self, post, ("`finalize-run`", "`deferred_items`"))
         self.assertIn("every PR head", audit)
         for phrase in self.STACK_PER_HEAD:

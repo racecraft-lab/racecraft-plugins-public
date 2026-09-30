@@ -8992,12 +8992,11 @@ This line must not be copied.
         self.assertEqual(title["description"], "add a demo feature")
 
     def test_documented_draft_packet_requests_execute_and_validate(self) -> None:
-        docs = [
-            PLUGIN_ROOT / "skills/speckit-autopilot/references/phase-execution.md",
-            PLUGIN_ROOT / "codex-skills/speckit-autopilot/references/phase-execution-codex.md",
-        ]
-        for doc_path in docs:
-            with self.subTest(doc=doc_path.name):
+        from host_skill_views import host_skill_root
+
+        for host in ("claude", "codex"):
+            doc_path = host_skill_root(host) / "speckit-autopilot/references/phase-execution.md"
+            with self.subTest(host=host):
                 document = doc_path.read_text(encoding="utf-8")
                 marker = document.index('"request_id": "example-draft-packet"')
                 start = document.rfind("```json\n", 0, marker) + len("```json\n")

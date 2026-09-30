@@ -55,7 +55,7 @@ class AmbiguousTaskWordingSourceContractTests(unittest.TestCase):
         self.assert_recorded_decision_rule(section)
 
     def test_codex_phase_seven_applies_a_recorded_decision_to_ambiguous_wording(self) -> None:
-        phase = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "phase-execution-codex.md")
+        phase = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "phase-execution.md")
         section = _section(phase, f"### {AMBIGUOUS_WORDING_HEADING}", "## PR Packet and Body Boundary")
         self.assertLess(phase.index(f"### {BLOCKED_ACTION_HEADING}"), phase.index(section))
         self.assert_recorded_decision_rule(section)
@@ -73,7 +73,7 @@ class GateTaskEvidenceLoopGuidanceTests(unittest.TestCase):
             _flat(CLAUDE_AUTOPILOT_SKILL.parent / "references" / "phase-execution.md"),
             "### Phase 5: Tasks", "### Phase 6: Analyze",
         )
-        codex = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "phase-execution-codex.md")
+        codex = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "phase-execution.md")
         for text in (prompt, g5, claude, codex):
             _assert_phrases(self, text, ("candidate check", "emission step"))
         for text in (g5, claude, codex):

@@ -1,5 +1,6 @@
 ---
 name: speckit-autopilot
+<!-- host:claude: Claude reads a trigger-phrase description and Claude-only frontmatter keys -->
 description: >
   Autonomous SpecKit workflow executor. Reads a populated workflow file
   and executes all 7 SDD phases (specify → clarify → plan → checklist →
@@ -11,10 +12,30 @@ user-invocable: true
 disable-model-invocation: true
 allowed-tools: Read Edit Write Glob Grep Skill Agent ToolSearch
 license: MIT
+<!-- /host -->
+<!-- host:codex: Codex keeps its own selection description and names skills with a dollar sign -->
+description: >
+  Autonomous SpecKit workflow executor. Reads a populated workflow
+  file and runs all 7 SDD phases (specify → clarify → plan →
+  checklist → tasks → analyze → implement) with programmatic gate
+  validation, multi-agent consensus resolution, and auto-commits.
+  Use when the user says "run autopilot", "execute workflow",
+  "autonomous speckit", "autonomous execution", "kick off autopilot",
+  "start the autonomous pipeline", "drive it through all the SDD
+  phases", "run the whole thing autonomously", "full end-to-end
+  speckit run", or hands over a populated SPEC-NNN-workflow.md file
+  for end-to-end execution. Requires SpecKit CLI installed,
+  constitution created, and a populated workflow file. Not for SDD
+  methodology questions ($speckit-coach), pre-spec scoping
+  ($grill-me), new-spec setup ($speckit-scaffold-spec), status
+  checks ($speckit-status), or PR comment resolution
+  ($speckit-resolve-pr).
+<!-- /host -->
 ---
 
 # SpecKit Autopilot — Autonomous Execution Engine
 
+<!-- host:claude: Claude loads an invoked skill through the Skill tool, which a redundant call can reinvoke -->
 ## Explicit Invocation Boundary
 
 When `/speckit-pro:speckit-autopilot` loads this file, the skill is already
@@ -22,6 +43,7 @@ active. Do not invoke the `Skill` tool for `speckit-pro:speckit-autopilot`
 again; start with these instructions. A rejected redundant `Skill` call is not
 a prerequisite failure and does not authorize stopping the workflow.
 
+<!-- /host -->
 ## Installed Runtime Contract
 
 Installed Claude and Codex surfaces resolve Python 3.11 or newer, invoke
@@ -30,27 +52,18 @@ stdin, read one JSON response from stdout, and surface stderr diagnostics.
 Do not add a shell fallback, `jq` parsing path, Git Bash, WSL, or
 PowerShell-specific command-language requirement for installed workflows.
 
-## Codex Skill-Selection Guard
-
-If this file is loaded in Codex, the runtime selected the Claude Code
-variant from `skills/` instead of the Codex variant from `codex-skills/`.
-Do not follow the Claude-oriented instructions below in Codex. Immediately
-read and follow `../../codex-skills/speckit-autopilot/SKILL.md` from this
-plugin root, treat that document as the active skill, and report that the
-fallback guard was triggered.
-
-The Codex variant must use `update_plan`, `spawn_agent`, `wait_agent`,
-`send_message` or `followup_task`, and `autopilot-state.json`. It must not
-use Claude-only runtime primitives such as `TaskCreate`, `TaskUpdate`,
-`Agent(...)`, or `/speckit-*` slash-command
-orchestration.
-
 ## Scope
 
 This skill handles autonomous workflow EXECUTION. For methodology
 questions, SDD philosophy, comparisons, design rationale, deep dives, or
-learning how SpecKit works, redirect to `/speckit-pro:speckit-coach` when the
-user is asking for explanation rather than execution. Do not redirect a real
+learning how SpecKit works, redirect the user to
+<!-- host:claude: Claude names skills with a slash -->
+`/speckit-pro:speckit-coach`
+<!-- /host -->
+<!-- host:codex: Codex names skills with a dollar sign -->
+`$speckit-coach`
+<!-- /host -->
+when the user is asking for explanation rather than execution. Do not redirect a real
 implementation request merely because it asks for detailed progress or uses
 the word "implement": when the user supplies or identifies a populated
 workflow and asks to run, resume, or implement it, this remains an autopilot
@@ -58,7 +71,7 @@ execution request.
 
 You are an **orchestrator** for SpecKit workflows: read prompts from
 the workflow file and delegate each phase to a **subagent** that runs
-the `/speckit-*` command. You never run the commands yourself — you
+the phase's SpecKit command. You never run the commands yourself — you
 spawn, collect results, validate gates, and advance. Your context
 window auto-compacts, which is not a stopping point: complete every
 phase in the **resolved stage's** range (`AUTOPILOT_STAGE`, set at Step
@@ -70,20 +83,31 @@ When a run may involve a human, and which reasons count, is set by the shared
 
 **Neither is a status summary a stopping point.** Reporting progress to the
 operator is not a step in the workflow: when a phase still has work, the next
+<!-- host:claude: Claude dispatches through its native subagent tool -->
 dispatch goes in the same turn as the report. Ending a turn with no dispatch
 running and tasks still pending leaves nothing to wake the run, which stops the
+<!-- /host -->
+<!-- host:codex: Codex dispatches and collects agents with spawn_agent and wait_agent -->
+`spawn_agent` or `wait_agent` call goes in the same turn as the report. Ending a
+turn with no agent in flight and tasks still pending leaves nothing to resume
+the run, which stops the
+<!-- /host -->
 stage short of its terminal step. See
 [Phase Execution §Never Yield With Nothing In Flight](./references/phase-execution.md#never-yield-with-nothing-in-flight).
 
 ## Architectural Constraint — Main Agent Is The Orchestrator
 
-This skill loads into the **main session agent** when the user invokes
-`/speckit-pro:speckit-autopilot`. Current Claude Code can nest subagents, but
-this workflow deliberately keeps one orchestration owner: the main session.
-EVERY workflow dispatch decision — parallel subagents vs sequential vs Agent
-Team, model routing, and lifecycle sequencing — happens HERE. Phase executors
-are terminal workers; they don't dispatch workflow phases, branch on
-`AGENT_TEAMS_AVAILABLE`, or create teams.
+This skill loads into the **main session agent**, which owns all phase and
+lifecycle dispatch. EVERY workflow dispatch decision — parallel subagents vs
+sequential, model routing, and lifecycle sequencing — happens HERE. Phase
+executors are terminal workers; they don't dispatch workflow phases or
+orchestrate later phases. **If this skill is ever loaded inside a subagent
+context**, it MUST refuse and surface the violation rather than orchestrate.
+
+<!-- host:claude: Claude agent frontmatter and Agent Teams carry this invariant -->
+Current Claude Code can nest subagents, but this workflow deliberately keeps
+one orchestration owner: the main session. Phase executors don't branch on
+`AGENT_TEAMS_AVAILABLE` or create teams.
 
 Runtime enforcement is two-tier (Layer 5 verifies both): the
 hyper-focused single-purpose workers (the consensus analysts,
@@ -93,8 +117,7 @@ on their one job; the open workhorse executors (phase-, analyze-,
 checklist-, implement-executor) keep the operator's full surface —
 including orchestration tools — and the invariant there is carried by
 this skill owning all PHASE dispatch plus each executor's
-terminal-worker prompt, never by a capability block. **If this skill is ever loaded inside a subagent
-context**, it MUST refuse rather than orchestrate. Full invariant +
+terminal-worker prompt, never by a capability block. Full invariant +
 implications for new workstreams in
 [`references/agent-teams-integration.md`](./references/agent-teams-integration.md)
 §Single orchestrator invariant.
@@ -111,6 +134,118 @@ the Step -2 run-start permission probe checks them once, before any phase work,
 and stops with the exact allow rule if a call prompts or is denied. See the
 plugin agent caveat in Step 0 and
 [`references/plugin-limitations.md`](./references/plugin-limitations.md).
+<!-- /host -->
+<!-- host:codex: Codex exposes collaboration actions that vary by surface -->
+Discover the current host's actual collaboration capabilities below; do not
+infer architecture from a universal nesting limit.
+
+## Codex Runtime Contract
+
+This Codex variant is a concrete tool contract, not advisory prose.
+Bind the workflow to actual Codex primitives:
+
+- `update_plan` is REQUIRED before Phase 1 and after every phase transition.
+  Invoke it directly; do not infer that it is unavailable from tool summaries,
+  prompt prose, or runtime metadata. STOP only if the actual call is rejected,
+  fails, or is skipped.
+- Discover the callable collaboration actions before dispatch and select the
+  semantic equivalents that the current Codex surface actually exposes.
+  `spawn_agent` plus `wait_agent` and delivery of the agent's result are the
+  REQUIRED common contract. Hosted Responses Multi-agent provides
+  `spawn_agent`, `send_message`, `followup_task`, `wait_agent`,
+  `interrupt_agent`, and `list_agents`; it does not expose `close_agent`.
+  Other Codex surfaces can expose equivalents such as `send_input`,
+  `resume_agent`, or `close_agent`. On hosted Responses, `send_message` queues
+  context and `followup_task` assigns work and starts the next turn. On a
+  surface with `send_input`, use it to deliver follow-up work to an open agent;
+  if that agent was explicitly closed, call `resume_agent` first and then
+  `send_input`. Inspection, interruption, and explicit closure are optional
+  actions used only when present. Hard-stop only if spawning or receiving the
+  required result is unavailable — absence of `close_agent` is NOT a
+  prerequisite failure. See the official [Responses Multi-agent action
+  contract](https://developers.openai.com/api/docs/guides/responses-multi-agent#how-multi-agent-works)
+  and [Codex subagent orchestration
+  guidance](https://learn.chatgpt.com/docs/agent-configuration/subagents#orchestration-and-thread-controls),
+  plus the local [configuration
+  reference](https://learn.chatgpt.com/docs/config-file/config-reference#configtoml).
+- The REQUIRED lifecycle on every surface is `spawn_agent` → bounded
+  `wait_agent` loop → consume the dispatched agent's actual final result. A
+  hosted `wait_agent` call can wake for an ordinary message, unrelated mailbox
+  update, timeout, or steering event, so associate updates with the dispatched
+  sender/task and keep waiting until its `FINAL_ANSWER` or equivalent summary
+  is consumed. A terminal status is corroboration or recovery evidence only;
+  it never replaces the required result. If an agent is terminal without a
+  delivered result, use its one read-only reconciliation to drain the mailbox
+  and inspect effects; checkpoint if unknown, never automatically re-spawn.
+- Every custom-agent dispatch MUST pass
+  `agent_type="<installed-agent-name>"` to `spawn_agent`. Never omit
+  `agent_type` or accept a `default` or general-purpose worker as equivalent to
+  the installed role.
+- When `close_agent` is exposed, call it promptly after consuming the result.
+  Cleanup policy is best-effort: if the surface reports the agent already gone,
+  log it and continue without retry-looping. When `close_agent` is absent,
+  consume the result and leave the inspectable thread to the host; optionally
+  reuse it with the available follow-up action.
+- On resume, never assume an older agent still exists. If `list_agents` is
+  available, match returned current-tree entries to the workflow target and
+  current incomplete plan item's canonical task name/prompt; manage or reuse
+  only agents confirmed present and owned by this autopilot run. Without
+  inspection, treat prior-session effects as unknown and checkpoint; never
+  treat a stale reference as permission to spawn fresh.
+  Apply explicit closure only to run-owned agents confirmed present, including
+  a reconciled agent that was spawned before the interruption.
+- Derive `subagent_slots` from the current session without mixing surface
+  conventions: use explicit `max_concurrent_subagents` when provided; when the
+  host advertises total active agents including `/root`, subtract one; when a
+  local surface advertises an open-thread cap, follow that surface's stated
+  semantics. If no count is exposed, set `subagent_slots = 1` as the safe
+  fallback. For wider fan-out, dispatch in waves of at most `subagent_slots`,
+  consume each required result, perform optional closure when exposed, then
+  start the next queued item. Never hard-code one surface's default as
+  another surface's cap.
+- A `wait_agent` timeout is one bounded mailbox poll, not proof that an agent is
+  stuck. Continue bounded waits and inspect status/progress when possible. Use
+  `interrupt_agent` only after a separate execution deadline or confirmed
+  no-progress condition, and only to cancel a still-running turn; it preserves
+  context and is not closure. Reconcile the interrupted item's retained result
+  and effects; unknown outcomes checkpoint, never authorize replacement work.
+- Before reporting the run complete, use `list_agents` when exposed; otherwise
+  audit the tracked dispatch IDs and consumed results. Every required dispatch
+  must have a consumed result. Close remaining current-run threads best-effort
+  only when `close_agent` is exposed. Hosted completed threads are host-managed
+  and do not block completion.
+- `autopilot-fast-helper` is OPTIONAL. Only the main autopilot may invoke it,
+  and only for tiny text-only compression, triage, or query-drafting work.
+  Never route edits, gate decisions, or consensus votes through it.
+- Use the current surface's exposed read, search, command, and edit equivalents
+  for workflow parsing, validation, and artifact mutation.
+- Persist orchestration state to `autopilot-state.json` in the same directory
+  as the workflow file. It mirrors the active run: on resume, read it and
+  reconcile it with the workflow file, which wins for the Workflow Overview and
+  `Stage` (Step 0.6e and the Workflow File Update Protocol below).
+- This skill owns `./agents/openai.yaml` as Codex skill metadata for UI
+  appearance and invocation policy. Optional research/context capabilities are
+  discovered at runtime, so the sidecar MUST NOT declare Tavily, Context7, or
+  any other optional capability as a required tool dependency. Do not treat
+  that sidecar as a custom-agent manifest.
+- SpecKit Pro also ships bundled custom-agent templates under
+  `../../codex-agents/`. Those bundled TOML files are package assets, not
+  runtime registrations.
+- Custom executor and consensus agents must be installed as real Codex
+  subagents under `.codex/agents/` (project scope) or `~/.codex/agents/`
+  (user scope). The bundled `install` skill copies the plugin templates into
+  those official Codex runtime paths.
+
+Do not translate this skill into Claude-only primitives such as legacy
+task-list tools or legacy Claude agent/shell placeholders. Do not read the
+bundled TOML templates and inline them as ad hoc prompts. Validate that the
+required custom subagents are installed, then spawn them by agent name. Before
+any phase work, at setup or run start, if any required SpecKit Pro subagent is
+missing, STOP and instruct the user to run `$install` from the SpecKit Pro
+plugin, then restart Codex. After phase work has begun, a plugin update or agent
+refresh is never a stop: follow §Plugin Update Mid-Run: Record, Re-resolve,
+Continue in [phase-execution.md](./references/phase-execution.md).
+<!-- /host -->
 
 ## Prerequisites — Model
 
@@ -124,8 +259,18 @@ into expensive rework.
 
 **Before executing any step**, verify:
 
+<!-- host:claude: Claude model tiers are named by the operator's session -->
 1. **Model:** run on the operator's strongest available tier. If the
    session does not report the strongest tier, warn the operator once and route gate and consensus dispatches to the strongest available tier.
+<!-- /host -->
+<!-- host:codex: Codex names its model tiers -->
+1. **Model:** run on the highest-capability Codex model tier available. Prefer
+   `gpt-6-sol` when it is available in the Codex model picker; `gpt-6-astra`
+   is also acceptable. If the session is on a mini, fast, Luna, or otherwise
+   reduced-capability tier, warn the operator once and route gate and consensus
+   dispatches to the strongest available tier. `$install` owns bundled-agent
+   installation and fallback configuration.
+<!-- /host -->
 
 **Reasoning effort is inherited, never checked.** Run at whatever the
 operator has set for the session and do not stop, warn, or ask them to
@@ -133,7 +278,12 @@ change it. The bundled subagents carry their own pins: judgment roles
 ship at a measured high effort (`high`, `xhigh`, or `max` on Claude;
 `xhigh` or `max` on Codex), and bounded rule-applying
 roles that only apply rules to inputs already in their prompt ship at
-the documented default. A pin sets that worker's effort regardless of
+the documented default.
+<!-- host:codex: only Codex ships the optional Luna helper -->
+The optional `autopilot-fast-helper` is pinned to low effort on gpt-6-luna
+for latency-sensitive prep.
+<!-- /host -->
+A pin sets that worker's effort regardless of
 the session and never refuses to run.
 The operator owns the session setting; the plugin does not veto it.
 
@@ -141,8 +291,9 @@ The operator owns the session setting; the plugin does not veto it.
 
 At kickoff/resume, read [Bounded Execution and Verification](./references/execution-efficiency.md).
 Initialize/recover its durable execution-control ledger before phase dispatch.
-It owns task metadata, native batching, proof reuse, and the shared repair
-ceilings across every phase, nested worker, and Post step. A run has no
+It owns task metadata, native batching, proof reuse, the shared repair
+ceilings, and the honest checkpoint rules across every phase, nested worker,
+and Post step. Agent replacement never resets budgets. A run has no
 wall-clock limit.
 
 When a bounded request supplies an exact native command together with an
@@ -154,6 +305,7 @@ rerun a helper merely to make its output easier to parse. The native tool result
 is the captured result: preserve that direct response for later artifacts. Do
 not issue a second invocation to obtain a file, exit code, stdout, or stderr.
 
+<!-- host:claude: Claude discovers its native worker actions from the active tool surface -->
 ### Claude native worker lifecycle
 
 - Discover the current native worker, follow-up, wait/result, inspection,
@@ -184,27 +336,53 @@ not issue a second invocation to obtain a file, exit code, stdout, or stderr.
   worker to the host. Before completion, audit every tracked worker and consume
   every required final report.
 
+<!-- /host -->
 ### 0. Forbidden skill invocations
 
 <hard_constraints>
 
-**Do not invoke `grill-me` from any autopilot phase or agent — ever.**
+**Do not invoke `grill-me` from any autopilot phase, subagent, or consensus step — ever.**
 
+<!-- host:claude: Claude grill-me interviews through AskUserQuestion -->
 `grill-me` is human-in-the-loop only — it uses `AskUserQuestion` to
 interview a real user one question at a time. Autopilot may run
 unattended, with no user available; calling it would block indefinitely or produce
 low-value automated output that defeats its purpose.
+<!-- /host -->
+<!-- host:codex: Codex grill-me probes request_user_input and a TTY -->
+Grill-me is a strictly human-in-the-loop, pre-workflow scoping interview. Its
+runtime guard probes for `request_user_input` then a TTY before asking any
+question; if invoked from autopilot's autonomous loop it will refuse and write
+nothing — but the autopilot must not even attempt the call.
+<!-- /host -->
 
-Autopilot's Clarify phase uses `/speckit-clarify` with the multi-agent
-consensus protocol. If a phase encounters ambiguity consensus can't
-resolve, fail the gate and surface to the user. `grill-me` belongs to
-pre-workflow human alignment via `/speckit-pro:speckit-scaffold-spec` or
-`/speckit-pro:grill-me` only.
+If a phase encounters ambiguity that feels like it needs grill-me, the correct
+response is one of:
+
+<!-- host:claude: Claude names skills with a slash -->
+- Run `/speckit-clarify` (Phase 2) with the multi-agent consensus protocol —
+  that is autopilot's only clarification mechanism.
+- Route the ambiguity to Clarify consensus, and defer it when consensus cannot settle it. Pre-workflow interviews
+  belong in `/speckit-pro:speckit-scaffold-spec` or `/speckit-pro:grill-me`, not autopilot.
+<!-- /host -->
+<!-- host:codex: Codex names skills with a dollar sign -->
+- Run the `$speckit-clarify` skill (Phase 2) with the multi-agent consensus
+  protocol — that is autopilot's only clarification mechanism.
+- Route the ambiguity to Clarify consensus, and defer it when consensus cannot settle it. Pre-workflow interviews
+  belong in `$speckit-scaffold-spec`, not autopilot.
+<!-- /host -->
+
+This rule applies to: the orchestrator, every phase subagent
+(`phase-executor`, `clarify-executor`, `checklist-executor`,
+`analyze-executor`, `implement-executor`), every consensus analyst
+(`codebase-analyst`, `spec-context-analyst`, `domain-researcher`), and
+`consensus-synthesizer`.
 
 </hard_constraints>
 
 ### 1. Subagent per phase
 
+<!-- host:claude: Claude launches subagents with its Agent or Task tool -->
 For each phase, spawn a **foreground subagent** via the native subagent tool
 (`Agent` when exposed, otherwise its renamed `Task` equivalent) with
 `run_in_background: false`. `TaskCreate`, `TaskUpdate`, and `TaskList` are
@@ -217,18 +395,38 @@ Treat async-launch metadata as launch acknowledgement only; collect the
 actual terminal summary through the native result handling before validating
 the gate or advancing the phase. The foreground request is not a host-level
 guarantee.
+<!-- /host -->
+<!-- host:codex: Codex launches and collects subagents with spawn_agent and wait_agent -->
+For each phase, spawn a **foreground subagent** with `spawn_agent`,
+wait for it with `wait_agent`, and keep orchestration in the parent.
+The subagent runs the SpecKit command and returns a summary.
+<!-- /host -->
 
+**Why:** If you invoke a skill directly in your own context, the command's
+completion behavior causes your loop to output plain text and terminate.
+With subagents, the command runs in an isolated context and its completion
+is harmless — the result returns to you and your loop continues.
+
+<!-- host:claude: Claude invokes an installed skill through Skill() -->
 **Third-party skills:** the same hazard applies when capability discovery
 selects an *installed* skill you invoke via `Skill()` — its completion text
 can end your loop. Capture the skill's result as evidence and continue with a
 follow-up tool call; never treat a third-party skill's completion text as your
 own terminal output.
+<!-- /host -->
+<!-- host:codex: Codex invokes an installed skill with a dollar sign -->
+**Third-party skills:** when capability discovery selects an installed skill you
+$-invoke, its completion text can likewise end the loop. Capture the skill's
+result as durable state/evidence and continue; never treat a third-party skill's
+completion text as your own terminal output.
+<!-- /host -->
 
 ### 2. Use phase-specific executor agents
 
 Each phase type has its own specialized executor agent. All noise
 stays in the subagent's context; the parent receives only a summary.
 
+<!-- host:claude: Claude resolves bundled agents by their speckit-pro: namespaced id -->
 | Phase | Agent | Why specialized |
 | ----- | ----- | --------------- |
 | Specify, Plan, Tasks | `speckit-pro:phase-executor` | Heavy reasoning (Specify, Plan); mechanical for Tasks. Single skill invocation, single summary. |
@@ -252,31 +450,97 @@ prefix: `general-purpose` (a built-in agent), and entries in the tables that are
 not bundled agent ids — the `PROJECT_IMPLEMENTATION_AGENT` variable (resolved to
 a host-project agent, with `speckit-pro:phase-executor` as its fallback value)
 and `orchestrator-direct` (the orchestrator acting directly, not a subagent).
+<!-- /host -->
+<!-- host:codex: Codex resolves installed agents by their bare name from .codex/agents -->
+| Phase | Agent | Why specialized |
+| ----- | ----- | --------------- |
+| Specify, Plan, Tasks | `phase-executor` | Heavy reasoning (Specify, Plan); mechanical for Tasks. Single skill invocation, single summary. |
+| Clarify | `clarify-executor` | Read-only question set; parent answers and edits |
+| Checklist | `checklist-executor` | Must run checklist AND remediate gaps with research |
+| Analyze | `analyze-executor` | Resolve required defects at every severity using relevant evidence and the shared repair reservation |
+| Implement | `implement-executor` | Strict TDD with validated capability batches of up to four sequential tasks; parallel waves must respect metadata ownership/dependencies and derived `subagent_slots`. Consume each actual per-task result before marking completion. Legacy workflows use singleton execution. |
+| Read-only consensus | analyst agents | Read-heavy code/spec/domain analysis |
 
-### 3. Task list first
+Concrete Codex mapping:
 
+- `./agents/openai.yaml` is skill metadata only. It does not register custom
+  agents for Codex.
+- Resolve the installed agent from `.codex/agents/<agent>.toml` first, then
+  `~/.codex/agents/<agent>.toml`
+- If the installed agent is missing at setup or run start, STOP and tell the
+  user to run `$install`, then restart Codex. Mid-run, follow §Plugin Update
+  Mid-Run: Record, Re-resolve, Continue instead
+- Build the phase prompt in the parent session
+- Call `spawn_agent` with `agent_type="<installed-agent-name>"` plus the
+  workflow prompt
+- Call `wait_agent` for completion
+- Persist the returned summary into the workflow file and `autopilot-state.json`
+
+Spawn each agent with phase-specific prefix where needed, followed by:
+
+```text
+Workflow prompt:
+---
+<paste the exact prompt from the workflow file>
+---
+```
+
+Each agent runs the command (and any post-execution work like gap
+remediation) in isolation and returns a structured summary.
+<!-- /host -->
+
+### 3. Canonical plan first
+
+The canonical execution order is:
+
+```text
+PHASES = [specify, clarify, plan, checklist, tasks, analyze, implement]
+```
+
+<!-- host:claude: Claude's visible progress plan is its task list -->
 Before executing any phase, create a granular task list using
 TaskCreate. The task list drives the loop — after each subagent
-returns, check it to know what's next. See Step 1.1 for the
-full naming pattern and rules.
+returns, check it to know what's next.
+<!-- /host -->
+<!-- host:codex: Codex's visible progress plan is update_plan mirrored into autopilot-state.json -->
+Before phase work starts, the parent session MUST create a durable progress
+plan with `update_plan` and `autopilot-state.json`.
+<!-- /host -->
+The plan accounts for every phase in that list plus prerequisites and
+post-implementation verification. Execution starts and stops within the stage
+resolved at Step 0.6c; phases outside that stage stay visible but are not
+started. `--from-phase` changes the starting index only within the resolved
+stage. It does not remove plan entries from the visible plan or
+`autopilot-state.json`. See Step 1.1 for the full naming pattern and rules.
 
 ### 4. Multi-prompt phases
 
 Clarify and Checklist have multiple prompts in the workflow file.
-Spawn a **separate subagent for each prompt** and run the two-layer
-resolution (Rule 6) after each one BEFORE spawning the next — later
+Spawn a **separate subagent for each prompt**, consume its result, and run the
+two-layer resolution (Rule 6) after each one BEFORE spawning the next — later
 sessions/domains may depend on earlier resolved items. Do not batch
 all sessions and check for markers only at the end.
 
 Per-phase flow templates (per-session for Clarify, per-domain for
 Checklist) live in
 [`references/phase-execution.md`](./references/phase-execution.md)
+<!-- host:claude: the Claude phase reference groups the flows per phase -->
 §Phase-by-Phase Execution.
+<!-- /host -->
+<!-- host:codex: the Codex phase reference keeps the flows in its main loop -->
+§Main Execution Loop.
+<!-- /host -->
 
 ### 5. Clarify — executor returns questions to parent
 
 The `clarify-executor` is read-only. It does not invoke
-`/speckit-clarify`, does not wait on a user, and does not edit
+<!-- host:claude: Claude names skills with a slash -->
+`/speckit-clarify`,
+<!-- /host -->
+<!-- host:codex: Codex names skills with a dollar sign -->
+`$speckit-clarify`,
+<!-- /host -->
+does not wait on a user, and does not edit
 artifacts. It inspects the workflow prompt, feature spec, and repo
 evidence, then returns a `Clarify Question Set` containing up to 5
 prioritized questions, recommended answers, evidence, and suggested
@@ -300,11 +564,18 @@ result, then apply accepted artifact edits serially and run gates in the parent.
 The parent MUST NOT synthesize directly or silently replace a missing, failed,
 or malformed synthesizer result. Such a result authorizes no edit and cannot
 mark consensus complete. Append the Consensus Resolution Log only from a valid
-consumed result. Follow the mandatory Round 2, stop,
+consumed result.
+<!-- host:codex: Codex dispatches the installed synthesizer by agent_type -->
+Follow the mandatory Codex dispatch form `spawn_agent` with
+`agent_type="consensus-synthesizer"`.
+A default or general-purpose worker is not the named synthesizer; its result is
+invalid.
+<!-- /host -->
+Follow the mandatory Round 2, Round 3 tiebreak, stop,
 re-evaluation, and Phase 6 confidence-emit contracts in
 [`references/consensus-protocol.md`](./references/consensus-protocol.md)
-§Category-Routed Dispatch, §Batched Dispatch, §Phase-Specific Consensus Flows,
-and §Logging.
+§Category-Routed Dispatch, §Batched Dispatch, §Round 3 Tiebreak,
+§Phase-Specific Consensus Flows, and §Logging.
 
 ### 6a. Plan ambiguity uses provenance, not consensus
 
@@ -317,6 +588,29 @@ Plan Ambiguity Repair Log, and give the same Plan executor at most 2 repairs,
 re-running G3 after each. This is separate from Rule 6 consensus: repeated
 agent agreement cannot make an inferred premise user-ratified.
 
+<!-- host:codex: only Codex ships the optional Luna helper -->
+### 7. Optional Luna helper is advisory only
+
+The main autopilot may optionally spawn `autopilot-fast-helper`
+for one of these narrow tasks:
+
+- compress a long executor result into a compact brief
+- triage an unresolved item into `codebase`, `spec-context`,
+  `domain-research`, or `mixed`
+- draft short search queries for a stronger agent to execute
+
+Guardrails:
+
+- Only the parent orchestrator may call this helper
+- Executor or consensus subagents must never spawn it
+- Use it only for text-only prep work before a real decision
+- Never use it to edit artifacts, vote in consensus, or decide gates
+- If the helper spawn fails because `gpt-6-luna` is unavailable,
+  log the failure briefly and continue without it
+
+This helper is a latency optimization, not a dependency.
+
+<!-- /host -->
 ## Input
 
 You receive a workflow file path and optional arguments:
@@ -329,6 +623,7 @@ path/to/workflow-file.md [--from-phase specify|clarify|plan|checklist|tasks|anal
 Step 0.6c resolves the stage from the workflow file's own status table.
 Argument order is presentation only — every argument is read by name.
 
+<!-- host:claude: Claude settles the session's permission settings with one probe -->
 Before anything else, run the Step -2 run-start permission probe in
 [`references/prerequisites.md`](./references/prerequisites.md#step--2-run-start-permission-probe):
 one no-op runner request and one `git status`. If either prompts or is denied,
@@ -340,6 +635,18 @@ only for `binding_status=resolved` with `relation=same`. If scaffold was run
 from a parent checkout, follow the printed `/cd <absolute-worktree-root>` and
 then retry the relative autopilot command. Never run Archive Sweep or mutate
 the workflow's worktree from the parent checkout.
+<!-- /host -->
+<!-- host:codex: Codex binds each command's workdir to the workflow root and settles egress in a run-start authorization -->
+Before anything else, run the Step -2 run-start authorization in
+[`references/prerequisites.md`](./references/prerequisites.md#step--2-run-start-authorization):
+before Archive Sweep and any phase work, probe each egress class, an external
+workflow root, and the private autonomy-record write, and make the one
+run-start request ([run-start grants](./references/stop-policy.md#run-start-grants)).
+
+Before Step -1, use the `resolve-workflow-binding` runner helper exactly as
+specified in `prerequisites.md`. That reference owns the executable-root
+invariant and fail-closed recovery.
+<!-- /host -->
 
 ## Step -1 + Step 0: Pre-flight (Archive Sweep + Prerequisites)
 
@@ -348,6 +655,7 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
 1. **Use runner helper operation IDs**. Invoke read-only helper behavior through
    `resolved_python -m speckit_pro_runner` with one JSON request on stdin; do not rely on
    plugin-local script files.
+<!-- host:claude: Claude runs the archive extension's generated slash command -->
 2. **Archive Sweep** — run helper `list-archive-candidates` with the current
    spec directory, then on feature/spec branches run
    `/speckit-archive-run specs/<merged-spec-dir> --spec-only --plan-only --changelog-only` once per
@@ -361,6 +669,16 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
    repair/install guidance under "Decisions for you". A failed archive run is
    retried once, then deferred the same way. Never silently treat a missing
    archive command as an absent extension.
+<!-- /host -->
+<!-- host:codex: Codex executes the archive extension's project-local command contract directly -->
+2. **Archive Sweep** — list merged prior specs with helper
+   `list-archive-candidates`, then execute the installed archive extension's
+   project-local command contract directly in Codex once per `archive_order`
+   entry (`archive command: specs/<merged-spec-dir> --spec-only --plan-only --changelog-only`, which keeps
+   agent context files out of scope; none on `main` or a protected branch), use the Codex-native worktree binding for path
+   prerequisites, and fail closed on a broken installed extension: defer the
+   Archive Sweep with the exact failed path or operation and continue to Phase 0.
+<!-- /host -->
 3. **Run prereq helper operations** and parse the JSON output of each:
    ```text
    helper_id=check-prerequisites operation=check-prerequisites mode=read_only
@@ -369,15 +687,22 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
    ```
    Record `on_feature_branch`, `PROJECT_COMMANDS` (including the
    quality-gate slots and their `gates` metadata, per
-   `references/prerequisites.md` Step 0.11),
-   `PRESET_CONVENTIONS`, and MCP availability into the workflow file. Pass `PROJECT_COMMANDS`
-   and `PRESET_CONVENTIONS` to every subagent prompt.
+   `references/prerequisites.md` Step 0.11, and the missing-tool default: the
+   recorded install hint, then `skip (spec)`),
+   `PRESET_CONVENTIONS`, and MCP availability into the workflow file. Pass
+   `WORKFLOW_ROOT`, `PROJECT_COMMANDS`, and `PRESET_CONVENTIONS` to every
+   subagent prompt. If any check fails, report the error message from the
+   script's JSON output and route the failure to its owner for repair: the
+   orchestrator repairs a fixable environment check, and the implement-executor
+   repairs a failing project check. Run the repair loop within its allowance,
+   then defer per the Failure Escalation Protocol.
 4. **Constitution validation** — for each principle in
    `.specify/memory/constitution.md`, run the appropriate
    PROJECT_COMMANDS check (typecheck/test/build/lint); update the
    workflow's Prerequisites table. On a failure, route each failing check to the implement-executor,
    which repairs it (a red baseline included); run the repair loop within its allowance, then defer per the Failure Escalation Protocol
    with `stop_reason:all_tiers_failed` only when repair fails.
+<!-- host:claude: Claude discovers project agents under .claude/agents and CLAUDE.md -->
 5. **Implementation agent detection** — Glob `.claude/agents/*.md`,
    match descriptions against implementation keywords; set
    `PROJECT_IMPLEMENTATION_AGENT` (fallback: `speckit-pro:phase-executor`). Also
@@ -388,10 +713,28 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
    inputs, and call runner helper `resolve-claude-subagent-runtime`. Persist its
    record and take `AGENT_TEAMS_AVAILABLE`, `SUBAGENT_WAVE_SIZE`, and resume
    behavior from it (see prerequisites.md §Step 0.6).
+<!-- /host -->
+<!-- host:codex: Codex discovers installed agents under .codex/agents and reads Codex settings -->
+5. **Codex agent availability and implementation agent detection** — run the
+   promoted `install-codex-agents` helper in `dry_run` mode against the selected
+   project or user destination and its installed model and Luna fallback
+   choice. This check runs at setup or run start, before any phase work. If any
+   required file is missing or stale, STOP and instruct the user to run
+   `$install`, approve the expected local write, and restart Codex. Do not apply
+   the repair inside autopilot: Codex fixes its list of custom agents when the
+   session starts. Once phase work has begun, a stale or refreshed agent file is
+   recorded, never a stop: see §Plugin Update Mid-Run: Record, Re-resolve,
+   Continue. Then discover `PROJECT_IMPLEMENTATION_AGENT` from `.codex/agents/`.
+6. **Load settings** — read `consensus-mode`, `gate-failure`, `auto-commit`,
+   and `security-keywords` from `.claude/speckit-pro.local.md` or
+   `.codex/speckit-pro.local.md` (see prerequisites.md §Step 0.6).
+<!-- /host -->
 6b. **Resolve pre-Implement confidence gate mode** — run runner helper
    `resolve-confidence-mode` with the invocation argv to resolve
    the mode for G6.5 (precedence: `--strict` / `--advisory` flag
-   in argv > `confidence_gate_mode` in local config > default
+   in argv > `confidence_gate_mode` in `.claude/speckit-pro.local.md`
+   or `.codex/speckit-pro.local.md` (the helper checks both default
+   paths, and `.claude/` wins when both exist) > default
    `advisory`). If the script exits 2 (both flags passed), STOP
    the autopilot before Phase 0 with the conflict message — fail
    fast on usage errors. Record the resolved value as
@@ -543,26 +886,52 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
      relaxed to satisfy this resume path.
 7. **Capability enumeration, grounding & feed-down** — you are the only
    component that discovers openly. Before relying on any capability, enumerate
-   what this session actually exposes: surface deferred MCP tools with
-   `ToolSearch`, and treat the available-skills list as the installed-skill
-   registry. Select best-fit per
+   what this session actually exposes:
+<!-- host:claude: Claude surfaces deferred MCP tools with ToolSearch -->
+   surface deferred MCP tools with `ToolSearch`, and treat the available-skills
+   list as the installed-skill registry.
+<!-- /host -->
+<!-- host:codex: Codex lists its tools and installed skills directly -->
+   the tools and installed skills this session exposes.
+<!-- /host -->
+   Select best-fit per
    [`references/capability-discovery.md`](./references/capability-discovery.md) —
    do not assume a fixed set; the user may have installed anything. Your phase
    and consensus subagents inherit the operator's full installed surface and
    follow the same directive — read-only roles select only read/research
-   capabilities (their mutation built-ins are denied). Still pass the
+   capabilities, and the roles that read untrusted input pin closed allowlists.
+   The Step 0.8 capability coverage check is informational: agents have
+   fallbacks. Still pass the
    discovered evidence and capability context a subagent needs directly in its
    prompt: shared context beats re-discovery. Ground your OWN output
    (gate decisions, consensus synthesis, generated PR bodies) per
    [`references/grounding.md`](./references/grounding.md): every external fact
    you assert must cite a real tool/skill/file result, and you abstain when
    nothing grounds it.
+<!-- host:codex: only Codex records a Phase 6.5 autonomy boundary for its sandbox -->
+8. **Resumed Autonomy Boundary Preflight** — when `plan.md` and
+   `tasks.md` already exist and the resolved stage can enter Implement, validate
+   the durable `autonomy_boundary` record (a public receipt of a private
+   record kept outside the repository) before the first Phase 7 dispatch.
+   Missing or stale evidence re-enters the full Phase 6.5 Autonomy Boundary
+   Preflight. Exact explicit user authorization remains valid while its recorded
+   action scope and execution boundary still match and no later instruction
+   revokes or narrows it; an older run outcome alone grants nothing. When a
+   persisted `autonomy_boundary` receipt exists, at any stage, probe it against
+   the live boundary before the Step 1.1 coverage guard; a new thread's writable
+   roots make it stale, so rerun the preflight up front, as
+   [prerequisites.md](./references/prerequisites.md) describes. A
+   covered inventory asks no question, including a planning-to-implementation
+   stage change.
+<!-- /host -->
 
+<!-- host:claude: Claude plugin agents ignore these frontmatter keys -->
 **Plugin agent caveat:** `permissionMode`, `hooks`, and `mcpServers`
 frontmatter are silently ignored on plugin agents. Run the parent
 session in `acceptEdits` or `bypassPermissions` for smooth execution.
 See `references/plugin-limitations.md`.
 
+<!-- /host -->
 **Full per-step details, JSON schemas, capability fallback behavior, and
 failure-escalation rules:** see [`references/prerequisites.md`](./references/prerequisites.md).
 
@@ -574,42 +943,81 @@ Read the workflow file and apply
 `AUTOPILOT_STAGE`, start at the first non-terminal row (`Complete` and
 `Skipped` variants are terminal), and accept `--from-phase` only within that
 stage. If no candidate row remains, execute the stage's terminal instruction
-and STOP; do not scan into a later stage.
+and STOP; do not scan into a later stage. For `implement` and `full`, rebuild
+and finish incomplete canonical Post work before reporting completion.
 
-### 1.1 Create Progress Task List
+### 1.1 Create Progress Plan
 
-After parsing the workflow state, create a **granular** task list. For
-multi-prompt phases (Clarify, Checklist), create one task per
-prompt/session. **Every Clarify session, every Checklist domain, and
-the Analyze phase MUST have a paired Consensus task** immediately
+After parsing the workflow state, create a **granular** progress plan.
+<!-- host:claude: Claude's visible progress plan is its task list -->
+Create it as the visible task list with TaskCreate, and mirror the same items
+into `<workflow directory>/autopilot-state.json`.
+<!-- /host -->
+<!-- host:codex: Codex's visible progress plan is update_plan -->
+Materialize it in TWO places:
+
+1. `update_plan` with the full checklist
+2. `<workflow directory>/autopilot-state.json` with the same items
+
+Do both before Phase 1 or STOP.
+<!-- /host -->
+The initial plan must include every canonical phase family even when its
+detailed items will be discovered later. For multi-prompt phases (Clarify,
+Checklist), create one item per prompt/session when known; otherwise create the
+phase discovery placeholder. **Every Clarify session, every Checklist domain,
+and the Analyze phase MUST have a paired Consensus task** immediately
 after. A zero-unresolved Clarify or Checklist task may be skipped; the Analyze
 task still dispatches the synthesizer once for the final five-criterion
-confidence block.
+confidence block, including a clean pass with zero findings, so the block is
+emitted and persisted exactly once for that Analyze pass. **Never omit
+consensus items.**
 
+<!-- host:claude: Claude shows 11 Post rows -->
 The full **11-entry Post-Implementation task list** and the task
 naming pattern live in
 [`references/task-list-canonical.md`](./references/task-list-canonical.md).
-Every entry there MUST appear in the visible progress panel before
+<!-- /host -->
+<!-- host:codex: Codex shows 13 Post rows, two of them supporting rows after UAT -->
+**Item naming + combined post-impl list (13 mandatory rows including
+`Post: Doctor Extension Check` ... `Post: Retrospective` as the FINAL
+STEP) + reference `autopilot-state.json` schema:** see
+[task-list-canonical.md](./references/task-list-canonical.md).
+<!-- /host -->
+Every entry there MUST appear in the visible progress plan before
 Phase 1 starts — when an extension is absent, the task still appears
-marked `skipped: <ext-name> not installed`.
+marked `skipped: <ext-name> not installed`; never silently drop the item.
 
-**Verify completeness before starting Phase 1**: count the prescribed
-entries (every Phase, every Consensus, every `Post:`) and ADD any
-missing before advancing.
+**Phase family coverage is mandatory.** Before any subagent is spawned, verify
+that the plan includes at least one item whose name starts with each of these
+exact prefixes: `Archive Sweep:`, `Phase 0:`, `Phase 1:`, `Phase 2:`,
+`Phase 3:`, `Phase 4:`, `Phase 5:`, `Phase 6:`, `Phase 6.5:`, `Phase 7:`,
+`Post:`. Count the prescribed entries (every Phase, every Consensus, every
+`Post:`). If any is missing from the visible plan or `autopilot-state.json`,
+repair both stores, print the corrected checklist summary, and repeat this
+coverage audit before advancing. A complete workflow plan is required even
+when `--from-phase` starts execution in the middle of the workflow.
 
 **Then run the deterministic coverage guard and repair on a nonzero exit.**
-This is the same guard the Codex variant runs, so both distributions share
-one enforcement path instead of two prose descriptions of one:
+Both hosts run the same guard, so both distributions share one enforcement
+path instead of two prose descriptions of one:
 
+<!-- host:claude: Claude records no Phase 6.5 autonomy boundary -->
 ```text
 Command("<resolved_python> '<plugin-root>/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py' --workflow <workflow-file-path> --state <workflow-directory>/autopilot-state.json --rule status-evidence")
 ```
+<!-- /host -->
+<!-- host:codex: Codex requires its Phase 6.5 autonomy boundary against the live sandbox -->
+```text
+resolved_python "<plugin-root>/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py" --workflow "$WORKFLOW_FILE" --state "$WORKFLOW_DIR/autopilot-state.json" --require-autonomy-boundary --current-execution-environment "<live-execution-environment>" --current-sandbox-mode "<live-sandbox-mode>" --current-approval-reviewer "<live-approval-reviewer>" --current-writable-root "<live-writable-root>" --rule status-evidence
+```
+<!-- /host -->
 
-`--rule status-evidence` gates the **exit code** on the seven workflow/state
+`--rule status-evidence` gates the **exit code** on the nine workflow/state
 status-evidence checks (`workflow_status_evidence_errors`,
 `state_status_errors`, `autonomy_boundary_errors`, `stage_mirror_errors`,
 `workflow_authority_errors`, `state_privacy_errors`,
-`marker_evidence_privacy_errors`) and
+`marker_evidence_privacy_errors`, `formal_checkpoint_errors`,
+`artifact_review_errors`) and
 the three current-run state-plan invariants (`in_progress_errors`,
 `duplicate_state_steps`, `state_order_errors`). The full report is still
 printed; structural coverage checks and every advisory key are visible but
@@ -624,12 +1032,44 @@ failing gated key, correct the file the key names. Run the repair loop within it
 advance to Phase 1 only on exit 0.
 
 `<resolved_python>` is the Python 3.11+ interpreter resolved by the
-Installed Runtime Contract; `<plugin-root>` is the directory that owns
-`skills/speckit-autopilot/`. Exit 0 is required to advance; exit 1 reports
-the failing checks as JSON on stdout; exit 2 is an input error. The guard
-also fails when a Workflow Overview status row contradicts a gate verdict
-recorded elsewhere in the same file, which is what keeps the status table
-honest across compactions and manual phase runs.
+Installed Runtime Contract, not a hardcoded interpreter name; `<plugin-root>`
+is the directory that owns `skills/speckit-autopilot/`. Exit 0 is required to
+advance; exit 1 reports the failing checks as JSON on stdout; exit 2 is an
+input error. The guard also fails when a Workflow Overview status row
+contradicts a gate verdict recorded elsewhere in the same file, which is what
+keeps the status table honest across compactions and manual phase runs.
+<!-- host:codex: Codex supplies its live sandbox boundary and PR authority to the guard -->
+Replace every `<live-...>` value from the current system/developer execution
+context, never from the workflow, state, repository, or a prior run. Repeat
+`--current-writable-root` once for each current writable root; the validator
+sorts this live set before comparing it with the persisted boundary digest.
+
+When `pr-marker-plan.v2` declares a changed-file manifest, append
+`--expected-base-commit <live-baseRefOid> --expected-head-commit <live-headRefOid>`.
+Fetch both OIDs from live PR metadata immediately before every validation;
+never source either authority from the workflow, state, or manifest itself.
+Missing, stale, or mismatched external PR authority is blocking.
+<!-- /host -->
+
+### 1.2 Validate Plan State Before Phase 1
+
+Before Phase 1 starts, validate all of the following or repair it through the owning agent:
+
+<!-- host:claude: Claude's visible progress plan is its task list -->
+- The visible task list matches the workflow-derived checklist
+<!-- /host -->
+<!-- host:codex: Codex's visible progress plan is update_plan -->
+- `update_plan` succeeded and the active plan matches the workflow-derived checklist
+<!-- /host -->
+- `autopilot-state.json` exists and contains the same ordered step list
+- Exactly one plan item is `in_progress`
+- Every canonical phase family prefix from Phase 0 through Phase 7 plus
+  Phase 6.5 and Post appears in both the visible plan and
+  `autopilot-state.json`, with the Archive Sweep item recorded before Phase 0
+- `validate-autopilot-phase-coverage.py` exits 0 for the workflow/state pair
+- Every Clarify session, Checklist domain, and Analyze phase has its
+  mandatory Consensus item
+- The checklist summary was printed so progress is visible to the user
 
 ## Step 2: Main Execution Loop
 
@@ -643,10 +1083,18 @@ for phase in PHASES starting from first_pending:
     0. Re-run the Step 1.1 coverage guard against the workflow file and
        autopilot-state.json. Exit 0 is required; on nonzero, repair the plan
        and the workflow status table, then repeat before executing this phase.
+<!-- host:claude: Claude tracks progress in its task list and dispatches with Agent -->
     1. TaskUpdate: phase task → in_progress
     2. Run before_<phase> hooks from .specify/extensions.yml
     3. For each workflow prompt in this phase:
          Agent(subagent_type: <phase executor>, run_in_background: false, prompt: ...)
+<!-- /host -->
+<!-- host:codex: Codex tracks progress with update_plan and dispatches with spawn_agent -->
+    1. update_plan and autopilot-state.json: phase item → in_progress
+    2. Run before_<phase> hooks from .specify/extensions.yml
+    3. For each workflow prompt in this phase:
+         spawn_agent(agent_type="<phase executor>", message=...) then wait_agent
+<!-- /host -->
     4. Run consensus (Clarify/Checklist/Analyze only) — see Rule 6
     5. Run after_<phase> hooks
     6. Validate the gate (G1-G7): run runner helper
@@ -733,17 +1181,71 @@ for phase in PHASES starting from first_pending:
 **Full per-phase prompts, dispatch templates, gate validation
 details, hook events, and the dispatcher-agent table:**
 see [`references/phase-execution.md`](./references/phase-execution.md).
+Before performing the post-G5 steps (8 through 8e), read
+[`references/phase-execution.md`](./references/phase-execution.md)
+§Phase 5: Tasks for the authoritative placeholder, reviewability, marker
+state, and no-side-effect boundaries.
+
+**Plan-phase reviewability budget (advisory):** After the Plan phase
+(G3 pass, `plan.md` exists), the parent runs
+runner helper `estimate-reviewable-loc`, capturing
+the exit code so a non-zero exit can never abort the run. Branch on the
+JSON `status` (`pass` / `over_budget` / `not_estimated`) or the exit
+code, recording the outcome to the workflow file and
+`autopilot-state.json`. This is preventive sizing and **advisory only**
+— no outcome blocks, prompts mid-autonomous-run, or crashes the run
+(hard blocking and re-slicing are a separate step). Full status branch in
+[`references/phase-execution.md`](./references/phase-execution.md).
+
+<!-- host:codex: only Codex records a Phase 6.5 autonomy boundary for its sandbox -->
+Before the confidence gate, stage-boundary commit, or first Phase 7 dispatch,
+run the phase reference's **Autonomy Boundary Preflight**. It inventories
+predictable writes beyond current writable roots, privileged commands,
+interactive authentication, externally visible side effects, and data egress
+to a model service or other third party (including live model evaluations);
+proves each
+is runnable or already authorized; and records the result durably. The
+operator's invocation and the ratified plan authorize the ordinary actions in
+the repository's standing policy, which the operator installs once at setup
+(runner helper `render-egress-authorization` with `scope=standing`). Before
+Phase 1, the Step -2 run-start authorization derives the policy classes from
+`check-gate-preflight-coverage`, probes each egress class, an external workflow
+root, and the private autonomy-record write, and makes a missing standing
+policy the one up-front ask. When every action is covered, the preflight asks
+no question. An uncovered action the ratified plan newly names, including a
+boundary-file edit, is deferred to the one end-of-run request, never an
+up-front question that stops the run. For uncovered plan-derived data egress,
+the preflight shows a paste-ready authorization message and asks the operator
+to send it as a normal chat message, never as a goal edit, without waiting for
+it; the end-of-run request repeats it with a proposed `auto_review.extra_policy`
+fragment, both rendered by the same helper. The plugin never writes either one.
+Bypassing a reviewer veto stays human authority (`stop_reason:veto_bypass`).
+
+<!-- /host -->
+Once autopilot is running, human input is for exceptional cases only. Once Phase 7 runs, one
+blocked action never stops the run: take the task's own fallback, or defer that
+task and keep executing independent work, then ask once at the end. Follow
+§Blocked Actions Mid-Run: Fall Back or Defer, Never Stop in
+[`references/phase-execution.md`](./references/phase-execution.md#blocked-actions-mid-run-fall-back-or-defer-never-stop).
 
 After all 7 phases pass G7, execute the post-implementation task list.
-The 12 tasks, detailed prompts, and extension routing live in
+The Post tasks, detailed prompts, and extension routing live in
 [`references/post-implementation.md`](./references/post-implementation.md);
 the canonical name list is in
 [`references/task-list-canonical.md`](./references/task-list-canonical.md).
 
+<!-- host:claude: Claude's Skill tool loads a command into the orchestrator's own context -->
 **⚠️ Use `Agent()` subagents for ALL post-implementation tasks — NEVER
 `Skill()` directly.** Rule 1 applies: a `Skill()` call loads the
 command into YOUR context and the command's completion text can kill
 the agent loop, preventing subsequent tasks from running.
+<!-- /host -->
+<!-- host:codex: Codex dispatches Post work with spawn_agent -->
+**Use `spawn_agent` subagents for ALL post-implementation tasks — never invoke
+the skill directly in the parent.** Rule 1 applies: a direct skill call runs
+the command in YOUR context, and its completion text can end the loop before
+later tasks run.
+<!-- /host -->
 
 **Extension availability**: Step 0.12 records which extensions are
 installed in `.registry`. If an extension is missing, log a warning
@@ -751,26 +1253,36 @@ and mark its task `skipped: <ext> not installed` — do NOT fail the
 autopilot. Recommend `specify extension add <name>` in the warning.
 
 **Dynamic task updates:** If consensus reveals new questions or
-remediation adds loops, create additional tasks via TaskCreate.
+remediation adds loops, add the items to the visible plan and
+`autopilot-state.json`.
 
 ### Phase Dispatch
 
 Before each corresponding dispatch, read the mandatory
 [`references/phase-execution.md`](./references/phase-execution.md) sections
+<!-- host:claude: the Claude phase reference names its dispatch sections this way -->
 §Subagent Delegation, §Phase-by-Phase Execution, and §Phase 7 Step 3. They own
+<!-- /host -->
+<!-- host:codex: the Codex phase reference names its dispatch sections this way -->
+§Agent Mapping, §Main Execution Loop, §Phase 5: Tasks, and §Phase 7: Implement. They own
+<!-- /host -->
 the exact workflow-prompt envelope, preset/project-command feed-down,
 branch-aware prefixes, Clarify and Checklist sequencing, namespaced agent
-routing, validated capability batches, TDD injection, and localized repair. Rule 6 and the
-consensus reference own resolution between prompts. Do not reconstruct those
-contracts from this entrypoint.
+routing, validated capability batches, TDD injection, and localized repair. Pass
+the exact workflow prompt plus `WORKFLOW_ROOT`, `PRESET_CONVENTIONS`, and
+`PROJECT_COMMANDS` already resolved above. When already on the feature branch,
+tell Specify to use that branch and existing spec directory rather than create
+another. Rule 6 and the consensus reference own resolution between prompts. Do
+not reconstruct those contracts from this entrypoint.
 
 ## Step 3: Post-Implementation
 
 After Phase 7 passes G7, read and execute
 [`references/post-implementation.md`](./references/post-implementation.md)
-in canonical order. It owns the parallel group, integration suite, mandatory
-UAT runbook, current reviewability evidence and continuation,
-packet dry-run/apply and validation, single- versus split-PR emission, review
+in canonical order. It owns the parallel group, full integration suite,
+mandatory UAT runbook, current reviewability evidence and continuation,
+packet dry-run/apply and current read-only/persisted validation,
+packet-owned base/head/title/body, single- versus split-PR emission, review
 remediation, retrospective, and final summary. Do not start PR side effects
 without the reference's current evidence and packet contracts, and never report
 completion while its continuation or canonical Post work remains incomplete.
@@ -782,24 +1294,69 @@ continue only after it has consumed all three terminal worker reports.
 
 ### 3.4 Pre-final completion audit
 
+<!-- host:claude: Claude's visible progress plan is its task list -->
 Before any final user-facing response, re-read `autopilot-state.json` and the
 workflow file, reconcile both with the native visible progress plan, and audit
 the complete canonical Post list. A completion response is forbidden while
-any `Post:` item is pending, in progress, or missing. For the first Post
+any `Post:` item is pending, in progress, or missing.
+<!-- /host -->
+<!-- host:codex: Codex's visible progress plan is update_plan -->
+Before sending any final user-facing response, re-read
+`autopilot-state.json` and the workflow file, reconcile them with
+`update_plan`, and audit the canonical Post list. A completion response is
+forbidden if any `Post:` item is `pending`, `in_progress`, or missing.
+<!-- /host -->
+For the first Post
 parallel group, mark Doctor, Code Review, Verify Implementation, Verify Tasks
 Phantom Check, and Integration Suite in progress before dispatching the three
-workers. Later serial items advance one at a time. Completion requires every
-Post item to be completed or explicitly skipped **and** the created PR URL to
-be known; otherwise continue the loop or report an honest incomplete
-checkpoint, never a completion summary. When every runnable item has finished
-and deferred items remain under §Blocked Actions Mid-Run: Fall Back or Defer,
-Never Stop in
-[`phase-execution.md`](./references/phase-execution.md#blocked-actions-mid-run-fall-back-or-defer-never-stop),
-the read-only `finalize-run` runner helper decides the end. Human UAT is the
+workers. Later serial items advance one at a time.
+Exception: `execution_control.disposition=checkpoint_required` permits an
+honest checkpoint response stating the run is **not complete**, remaining Post
+work, consumed budget, unknown effects, and the operator decision required.
+An unknown dispatch outcome alone is not that decision: settle it with
+`execution-control action=reconcile-unit` (a read-only reconciler over the
+unit's owned paths, runner-classified from git state) and keep dispatching
+independent units; pass `tdd_units` on each implementation reserve.
+A `checkpoint_required` whose `reasons` is only `unknown_dispatch_blocks_unit`
+is not a stop: run `reconcile-unit` for each id in `blocked_by`. On
+`unit_classification_mismatch`, re-inspect the owned paths and call once more
+with the class the paths show; never cycle the three values. Read
+`unknown_dispatch_ids` from `status` before each wave so a blocked unit is
+seldom reserved.
+
+Issue capped approvals yourself when the runner proves them, instead of asking
+the operator. Pass `agent_authorized: true` and no `native_observation` to
+`authorize-corrective-retry` (a lost worker's failed corrective dispatch with
+a recorded native failure event; one per run), to `begin-replan-epoch` (a
+deferral is open, the spec is unchanged, the Tasks rerun changed the plan or
+task fingerprints the stage epoch recorded, and every dispatch is settled; two
+per run), or to `authorize-corrective-continuation` with `spec_file` (the
+metadata-only proof holds). A refusal means the proof does not hold or the cap
+is spent; only then does the request go to the operator. Scope changes and
+forged events stay operator-only.
+Keep pending rows and current status; never mark them completed to stop.
+A failing gate or test is remediated, not deferred: keep remediating while
+each round converges, dispatching each diagnosed fix through the executor and
+rerunning verification. The ledger admits every correction whose predecessor
+shrank the runner-recorded failing set, or moved it with every earlier failure
+passing, with no operator event. `execution_control.disposition=defer`
+(`disposition=defer` in the ledger response) is the non-convergence fallback
+and not a stop: it defers one blocked unit whose
+correction made no measurable progress and whose allowance is spent, and the
+run keeps executing independent work.
+When every runnable item has finished, whether or not deferred items remain, the
+read-only `finalize-run` runner helper decides the end under §Blocked Actions
+Mid-Run: Fall Back or Defer, Never Stop in
+[`phase-execution.md`](./references/phase-execution.md#blocked-actions-mid-run-fall-back-or-defer-never-stop).
+Human UAT is the
 only gate a run may defer, and every required gate must be green at every PR
 head as the runner's own verification record shows it. With every required gate
 green, the run finalizes: mark the stack ready for review (never merge) and open
-the top PR body with its `Deferred / not verified` section. Human UAT, a ledger
+the top PR body with its `Deferred / not verified` section.
+<!-- host:codex: a Codex thread carries a goal the run marks complete -->
+Mark the thread goal complete.
+<!-- /host -->
+Human UAT, a ledger
 `deferred` unit that failed every escalation tier, and an unresolved task never
 keep the stack in draft: they reach the owner as items in the end-of-run
 request, the units and tasks under "Decisions for you". A failed unit climbs two
@@ -809,6 +1366,23 @@ blocked by a harness error after that is one human stop, and the stack stays in 
 Print the final report as plain text on `outcome=complete` with nothing deferred, and ask no question.
 Otherwise print `end_of_run_request` as plain text in the final message. It is the handoff, listing every fallback taken and every
 deferred item, including each entry of the ledger's `deferred` list.
+If the audit finds incomplete Post work, set the first
+incomplete item to `in_progress` in both state stores and continue the
+autopilot loop instead of summarizing. `Post: Retrospective` is the final
+Post item; it must be completed or explicitly skipped before the
+autopilot can report completion.
+
+The same audit must reconcile every started native command, tool, and agent
+with its terminal result. Give each final local gate one owner, run each gate
+once as a separately attributable foreground command, and wait on that exact
+native handle before starting the next gate. Never launch an overlapping copy
+of pending work. If time or budget prevents terminal reconciliation, preserve
+the unresolved identities and report an incomplete checkpoint instead of a
+completion response.
+
+Only after every Post item is completed or explicitly skipped, and the
+PR URL is known, the autopilot is DONE. Report the final summary with
+PR URL.
 
 ## Workflow File Update Protocol
 
@@ -823,8 +1397,14 @@ directions; do not infer a broader precedence rule.
 
 ## Error Recovery
 
+<!-- host:claude: Claude names skills with a slash -->
 - **Resume:** `/speckit-pro:speckit-autopilot workflow.md --from-phase
   <next-pending-phase>` — the workflow file persists all state.
+<!-- /host -->
+<!-- host:codex: Codex names skills with a dollar sign -->
+- **Resume:** `$speckit-autopilot workflow.md --from-phase
+  <next-pending-phase>` — the workflow file persists all state.
+<!-- /host -->
 - **A gate or test fails: keep remediating while each round converges.**
   Diagnose the failure with the consensus agents, dispatch the fix through the
   executor, and rerun verification. While each correction shrinks the
@@ -871,16 +1451,29 @@ in [`references/error-recovery.md`](./references/error-recovery.md).
 - [Stop Policy](./references/stop-policy.md) — The one contract for when a run may involve a human; stop reasons and their classes
 - [Prerequisites](./references/prerequisites.md) — Archive Sweep + Step 0.x environment, settings, constitution, agent detection, command/preset discovery
 - [Phase Execution](./references/phase-execution.md) — Per-phase prompt construction, dispatch templates, branch-aware/Clarify/Multi-prompt prefixes
-- [Consensus Protocol](./references/consensus-protocol.md) — Category-routed dispatch, Round 1/2, per-phase flows, Logging schema
+- [Consensus Protocol](./references/consensus-protocol.md) — Category-routed dispatch, Round 1/2/3, per-phase flows, Logging schema
 - [Gate Validation](./references/gate-validation.md) — Programmatic gate checks (G0–G7), auto-fix loops, escalation
+<!-- host:claude: Claude shows 11 Post rows -->
 - [Post-Implementation](./references/post-implementation.md) — 11-task post-impl sequence (incl. UAT runbook), integration suite, PR creation, review loop
 - [Task List Canonical](./references/task-list-canonical.md) — Task naming pattern + canonical post-implementation entries
+<!-- /host -->
+<!-- host:codex: Codex shows 13 Post rows -->
+- [Post-Implementation](./references/post-implementation.md) — Post items plus supporting-row mapping, parallel group dispatch (Doctor/Code Review/Verify-chain), extension availability rules
+- [Task List Canonical](./references/task-list-canonical.md) — checklist naming pattern, 13 mandatory Post rows, item-naming rules, reference `autopilot-state.json` schema
+<!-- /host -->
+<!-- host:claude: Claude runs the hardener in Phase 7 Final Verification -->
 - [Hardener Delegation](./references/hardener-delegation.md) — Once-per-spec tests-only mutation hardening loop: gateway delegation with candidate inspection, primary-model fallback, stop rule, record
+<!-- /host -->
+<!-- host:codex: Codex runs the hardener inside Post item 14 -->
+- [Hardener Delegation](./references/hardener-delegation.md) — Once-per-spec tests-only mutation hardening loop with gateway delegation, candidate inspection, primary-model fallback, stop rule, and record. Codex runs it inside Post item 14 (Integration Suite), between the MUTATION run and its block decision, not in a Phase 7 Final Verification step
+<!-- /host -->
 - [Workflow File Protocol](./references/workflow-file-protocol.md) — Per-phase update table + `workflow_file` state authority (branch order, verdicts) + Consensus Resolution Log column schema
 - [Error Recovery](./references/error-recovery.md) — Resume, common issues, context-window management
 - [TDD Protocol](./references/tdd-protocol.md) — Red-green-refactor rules injected into implementation agent prompts
 - [Plugin Limitations](./references/plugin-limitations.md) — permissionMode/hooks/mcpServers caveats and capability fallback behavior
+<!-- host:claude: Agent Teams exist only on Claude Code -->
 - [Agent Teams Integration](./references/agent-teams-integration.md) — Use-site map (current + planned), capability detection, lifecycle policy
+<!-- /host -->
 - [Token Discipline](./references/token-discipline.md) — Opt-in compressed vocabulary for inter-agent transcripts (off by default; never applied to PR bodies, logs, or artifacts)
 
 Active runner operations are named at their use sites and in the targeted
