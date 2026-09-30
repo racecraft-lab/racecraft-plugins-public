@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
+import io
 import json
 import os
 import sys
@@ -613,6 +615,68 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
         self.assertEqual(return_code, 0)
         self.assertEqual(result["verdict"], "pass")
         self.assertEqual(result["heavy_result"], "skipped")
+
+    def test_required_sentinel_passes_a_cancelled_run_only_when_superseded(self) -> None:
+        cases = (
+            ("cancelled", "superseded by run 7", 0, "superseded", ["asked"]),
+            ("cancelled", None, 1, "fail", ["asked"]),
+            ("failure", "superseded by run 7", 1, "fail", []),
+        )
+        for heavy_result, notice, expected_code, expected_verdict, expected_calls in cases:
+            with self.subTest(heavy_result=heavy_result, notice=notice), tempfile.TemporaryDirectory() as temporary:
+                evidence_dir = Path(temporary) / "evidence"
+                environment = {
+                    "EVIDENCE_DIR": str(evidence_dir),
+                    "PREFLIGHT_ROLE": "linux-amd64-required",
+                    "CHANGES_RESULT": "success",
+                    "RUN_PREFLIGHT": "true",
+                    "PREFLIGHT_RESULT": heavy_result,
+                }
+                calls: list[str] = []
+
+                def superseded(notice: str | None = notice) -> str | None:
+                    calls.append("asked")
+                    return notice
+
+                with (
+                    mock.patch.dict(os.environ, environment, clear=True),
+                    mock.patch.object(
+                        dispatch_helper.platform,
+                        "python_version",
+                        return_value=dispatch_helper.HOSTED_PYTHON_VERSION,
+                    ),
+                    mock.patch.object(dispatch_helper, "_superseded_notice", side_effect=superseded),
+                    contextlib.redirect_stdout(io.StringIO()),
+                ):
+                    return_code = dispatch_helper._sentinel()
+                result = json.loads((evidence_dir / "result.json").read_text(encoding="utf-8"))
+                self.assertEqual(return_code, expected_code)
+                self.assertEqual(result["verdict"], expected_verdict)
+                self.assertEqual(result["superseded"], notice if expected_code == 0 else None)
+                self.assertEqual(calls, expected_calls)
+
+    def test_required_sentinel_supersession_fails_closed_without_pull_request_context(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            evidence_dir = Path(temporary) / "evidence"
+            environment = {
+                "EVIDENCE_DIR": str(evidence_dir),
+                "PREFLIGHT_ROLE": "linux-arm64-required",
+                "CHANGES_RESULT": "success",
+                "RUN_PREFLIGHT": "true",
+                "PREFLIGHT_RESULT": "cancelled",
+            }
+            with (
+                mock.patch.dict(os.environ, environment, clear=True),
+                mock.patch.object(
+                    dispatch_helper.platform,
+                    "python_version",
+                    return_value=dispatch_helper.HOSTED_PYTHON_VERSION,
+                ),
+            ):
+                return_code = dispatch_helper._sentinel()
+            result = json.loads((evidence_dir / "result.json").read_text(encoding="utf-8"))
+        self.assertEqual(return_code, 1)
+        self.assertEqual(result["verdict"], "fail")
 
     def test_linux_dispatch_checks_native_architecture_and_runs_exact_gate_requests(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

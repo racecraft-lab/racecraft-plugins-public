@@ -42,6 +42,7 @@ RESULTS = load_script("pr_checks_results", "check-pr-workflow-results.py")
 MATRIX = load_script("pr_checks_matrix", "emit-plugin-matrix.py")
 GO_MODULE = load_script("pr_checks_go_module", "check-go-module.py")
 LINT = load_script("pr_checks_python_lint", "run-python-lint.py")
+SUPERSEDED = load_script("pr_checks_superseded_run", "superseded_run.py")
 
 
 def make_archive(files: dict[str, bytes]) -> bytes:
@@ -414,12 +415,123 @@ class WorkflowResultsHelperTests(unittest.TestCase):
             ),
             contextlib.redirect_stderr(stderr),
         ):
-            return_code = RESULTS.main([])
+            return_code = RESULTS.main([], superseded=lambda: None)
         self.assertEqual(1, return_code)
         self.assertEqual(
             "::error::Plugin tests failed or were cancelled (result: cancelled).\n",
             stderr.getvalue(),
         )
+
+    def test_main_passes_a_cancelled_run_only_when_a_newer_run_supersedes_it(self) -> None:
+        results = {"DETECT_RESULT": "success", "ARTIFACT_RESULT": "success", "GO_RESULT": "success"}
+        cases = (
+            ("cancelled", "superseded by run 7", 0),
+            ("cancelled", None, 1),
+            ("failure", "superseded by run 7", 1),
+        )
+        for test_result, notice, expected in cases:
+            with self.subTest(test_result=test_result, notice=notice):
+                stdout, stderr = io.StringIO(), io.StringIO()
+                calls: list[str] = []
+
+                def superseded(notice: str | None = notice) -> str | None:
+                    calls.append("asked")
+                    return notice
+
+                with (
+                    mock.patch.dict(os.environ, {**results, "TEST_RESULT": test_result}),
+                    contextlib.redirect_stdout(stdout),
+                    contextlib.redirect_stderr(stderr),
+                ):
+                    self.assertEqual(expected, RESULTS.main([], superseded=superseded))
+                self.assertEqual(calls, ["asked"] if test_result == "cancelled" else [])
+                if expected == 0:
+                    self.assertEqual("::notice::superseded by run 7\n", stdout.getvalue())
+                else:
+                    self.assertIn("::error::Plugin tests failed", stderr.getvalue())
+
+
+class SupersededRunTests(unittest.TestCase):
+    SHA = "a" * 40
+    ENV = {
+        "GITHUB_EVENT_NAME": "pull_request",
+        "GITHUB_REPOSITORY": "owner/repo",
+        "GITHUB_RUN_ID": "100",
+        "PR_HEAD_SHA": "a" * 40,
+    }
+
+    def fetch_with(self, runs: list[dict], current: dict | None = None):
+        requested: list[str] = []
+        current = current or {"id": 100, "workflow_id": 9, "head_sha": self.SHA}
+
+        def fetch(path: str) -> dict:
+            requested.append(path)
+            if path == "/repos/owner/repo/actions/runs/100":
+                return current
+            if path == f"/repos/owner/repo/actions/workflows/9/runs?head_sha={self.SHA}&event=pull_request&per_page=100":
+                return {"workflow_runs": runs}
+            raise AssertionError(f"unexpected path {path}")
+
+        return fetch, requested
+
+    @staticmethod
+    def run_row(run_id: int, **overrides: object) -> dict:
+        return {"id": run_id, "head_sha": "a" * 40, "workflow_id": 9, "event": "pull_request", **overrides}
+
+    def test_newer_run_of_the_same_workflow_and_commit_supersedes(self) -> None:
+        fetch, requested = self.fetch_with([self.run_row(100), self.run_row(104), self.run_row(102)])
+        self.assertEqual(102, SUPERSEDED.newer_run_id(self.ENV, fetch))
+        self.assertEqual(2, len(requested))
+        notice = SUPERSEDED.superseded_notice(self.ENV, fetch)
+        self.assertIn("superseded by run 102 for the same head commit", notice)
+
+    def test_older_or_unrelated_runs_do_not_supersede(self) -> None:
+        rows = [
+            self.run_row(99),
+            self.run_row(100),
+            self.run_row(101, head_sha="b" * 40),
+            self.run_row(102, workflow_id=8),
+            self.run_row(103, event="workflow_dispatch"),
+            self.run_row("104"),
+        ]
+        fetch, _requested = self.fetch_with(rows)
+        self.assertIsNone(SUPERSEDED.newer_run_id(self.ENV, fetch))
+
+    def test_missing_inputs_never_reach_the_api(self) -> None:
+        def fetch(path: str) -> dict:
+            raise AssertionError("API must not be called")
+
+        for key, value in (
+            ("GITHUB_EVENT_NAME", "workflow_dispatch"),
+            ("GITHUB_REPOSITORY", ""),
+            ("GITHUB_RUN_ID", "abc"),
+            ("PR_HEAD_SHA", ""),
+            ("PR_HEAD_SHA", "not-a-sha"),
+        ):
+            with self.subTest(key=key, value=value):
+                self.assertIsNone(SUPERSEDED.newer_run_id({**self.ENV, key: value}, fetch))
+        self.assertIsNone(SUPERSEDED.newer_run_id(self.ENV))
+
+    def test_api_errors_and_mismatched_runs_fail_closed(self) -> None:
+        def broken(error: Exception):
+            def fetch(path: str) -> dict:
+                raise error
+            return fetch
+
+        for error in (OSError("offline"), ValueError("bad json"), KeyError("id")):
+            with self.subTest(error=type(error).__name__):
+                self.assertIsNone(SUPERSEDED.newer_run_id(self.ENV, broken(error)))
+        for current in (
+            {"id": 100, "workflow_id": 9, "head_sha": "b" * 40},
+            {"id": 101, "workflow_id": 9, "head_sha": self.SHA},
+            {"id": 100, "workflow_id": "9", "head_sha": self.SHA},
+            {"id": 100, "head_sha": self.SHA},
+        ):
+            with self.subTest(current=current):
+                fetch, _requested = self.fetch_with([self.run_row(105)], current)
+                self.assertIsNone(SUPERSEDED.newer_run_id(self.ENV, fetch))
+        fetch = self.fetch_with([])[0]
+        self.assertIsNone(SUPERSEDED.superseded_notice(self.ENV, fetch))
 
 
 class PythonLintHelperTests(unittest.TestCase):
@@ -577,6 +689,7 @@ def build_suite() -> unittest.TestSuite:
         DocsClassificationHelperTests,
         DeployDocsTriggerTests,
         WorkflowResultsHelperTests,
+        SupersededRunTests,
         PluginMatrixHelperTests,
         GoModuleHelperTests,
     ):

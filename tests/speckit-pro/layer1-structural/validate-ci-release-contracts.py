@@ -357,6 +357,9 @@ class ValidatePrChecksSentinel(unittest.TestCase):
                 self.assertIn(executable, {'python', 'python3', 'node', 'pnpm', 'corepack'}, f'run command is not a thin Python/Node/pnpm dispatch: {command}')
             sentinel_block = _job_block(content, 'validate-plugins')
             self.assertRegex(sentinel_block, '(?m)^    permissions:\\n      contents: read$')
+            self.assertEqual({'contents': 'read', 'actions': 'read'}, _job_permissions(content, 'validate-plugins'))
+            self.assertIn('PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}', sentinel_block)
+            self.assertIn('GITHUB_TOKEN: ${{ github.token }}', sentinel_block)
             self.assertIn('persist-credentials: false', sentinel_block)
             actionlint_content = helper_contents[ACTIONLINT_HELPER_FILE]
             self.assertNotIn('extractall(', actionlint_content)
@@ -494,7 +497,15 @@ class ValidatePrChecksSentinel(unittest.TestCase):
             self.assertIn('PREFLIGHT_ROLE: linux-arm64-required', block)
             self.assertIn('shell: python', block)
             self.assertIn(CONTAINER_DISPATCH, block)
-            self.assertIn('"verdict": "pass" if passed else "fail"', dispatch_content)
+            self.assertIn('"verdict": "pass" if passed else "superseded" if superseded else "fail"', dispatch_content)
+        with self.subTest(msg='Linux sentinels pass a cancelled run only when a same-commit run supersedes it'):
+            self.assertIn('if not passed and "cancelled" in {changes_result, heavy_result}:', dispatch_content)
+            self.assertIn('return 0 if passed or superseded else 1', dispatch_content)
+            for job_id in ('linux-amd64', 'linux-arm64'):
+                block = _job_block(content, job_id)
+                self.assertEqual({'contents': 'read', 'actions': 'read'}, _job_permissions(content, job_id))
+                self.assertIn('PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}', block)
+                self.assertIn('GITHUB_TOKEN: ${{ github.token }}', block)
         with self.subTest(msg='Windows availability is configured on an Ubuntu control job'):
             block = _job_block(content, 'windows-availability')
             self.assertIn('runs-on: ubuntu-latest', block)

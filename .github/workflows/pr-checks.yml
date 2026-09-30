@@ -364,6 +364,8 @@ jobs:
     needs: [detect, test, artifact-consistency, go]
     permissions:
       contents: read
+      # Read this commit's workflow runs to tell a superseded run from a failed one.
+      actions: read
 
     steps:
       - name: Checkout repository
@@ -377,4 +379,6 @@ jobs:
           TEST_RESULT: ${{ needs.test.result }}
           ARTIFACT_RESULT: ${{ needs.artifact-consistency.result }}
           GO_RESULT: ${{ needs.go.result }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: python3 scripts/check-pr-workflow-results.py
