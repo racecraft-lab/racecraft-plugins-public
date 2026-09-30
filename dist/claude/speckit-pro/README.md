@@ -260,7 +260,6 @@ Create `.claude/speckit-pro.local.md` for per-project settings:
 
 ```yaml
 ---
-consensus-mode: moderate    # conservative | moderate | aggressive
 gate-failure: defer         # defer
 auto-commit: per-phase      # per-phase | batch | none
 ---
@@ -268,7 +267,6 @@ auto-commit: per-phase      # per-phase | batch | none
 
 | Setting | Options | Default | What it controls |
 |---|---|---|---|
-| `consensus-mode` | `conservative`, `moderate`, `aggressive` | `moderate` | How much agreement is needed before the workflow applies an answer automatically. |
 | `gate-failure` | `defer` | `defer` | What happens when a phase gate still fails after auto-fix attempts: the autopilot defers it and lists it in the end-of-run request. |
 | `auto-commit` | `per-phase`, `batch`, `none` | `per-phase` | When workflow artifacts are committed. |
 

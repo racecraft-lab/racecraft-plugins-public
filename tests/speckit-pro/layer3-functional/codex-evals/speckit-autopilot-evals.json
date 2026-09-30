@@ -40,13 +40,13 @@
     {
       "id": 4,
       "prompt": "I heard the autopilot has different consensus modes — conservative, moderate, and aggressive. What do these modes control? Which is the default? And how do I change the mode for a specific workflow run?",
-      "expected_output": "Explains the 3 consensus modes and their voting behavior: conservative requires unanimity, moderate uses 2/3 majority (default), aggressive auto-accepts single-agent answers.",
+      "expected_output": "Explains that autopilot consensus has no selectable mode: one rule set applies to every run, where a 2/3 analyst majority applies an answer, a security item applies only on 3/3 agreement, and an all-disagree item goes to the Round 3 tiebreak; the project settings file configures only gate-failure and auto-commit.",
       "expectations": [
-        "Names or describes the 3 consensus modes: conservative, moderate, and aggressive",
-        "Explains that moderate is the default mode",
-        "Describes how conservative mode differs (requires unanimity or higher threshold)",
-        "Describes how aggressive mode differs (auto-accepts with lower agreement threshold)",
-        "Explains how to configure the consensus mode in the workflow file or autopilot invocation"
+        "States that autopilot consensus has no conservative, moderate, or aggressive mode to choose; one rule set applies to every run",
+        "Explains that a 2/3 analyst majority applies an answer automatically",
+        "Explains that a security item applies only on 3/3 agreement",
+        "Explains that an all-disagree item goes to the Round 3 tiebreak instead of stopping or asking a human",
+        "Does not invent a consensus-mode setting or invocation flag for changing the rule on a run"
       ]
     },
     {

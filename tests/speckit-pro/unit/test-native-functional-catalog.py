@@ -111,7 +111,6 @@ RETIRED_LEGACY_REQUIREMENTS = {
 }
 AMENDED_LEGACY_DESCRIPTION_IDS = {
     "functional.speckit-autopilot.case-3",
-    "functional.speckit-autopilot.case-4",
     "functional.speckit-autopilot.case-5",
     "functional.speckit-autopilot.case-8",
     "functional.speckit-autopilot.case-10",

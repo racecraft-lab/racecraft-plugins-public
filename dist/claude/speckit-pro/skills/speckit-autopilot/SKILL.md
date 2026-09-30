@@ -405,8 +405,7 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
    `PROJECT_IMPLEMENTATION_AGENT` (fallback: `speckit-pro:phase-executor`). Also
    check CLAUDE.md for an explicit agent reference.
 6. **Load settings + Claude subagent runtime record** — read
-   `.claude/speckit-pro.local.md` (`consensus-mode`, `gate-failure`,
-   `auto-commit`, `security-keywords`), observe the bounded Claude CLI/runtime
+   `.claude/speckit-pro.local.md` (`gate-failure`, `auto-commit`), observe the bounded Claude CLI/runtime
    inputs, and call runner helper `resolve-claude-subagent-runtime`. Persist its
    record and take `AGENT_TEAMS_AVAILABLE`, `SUBAGENT_WAVE_SIZE`, and resume
    behavior from it (see prerequisites.md §Step 0.6).
@@ -983,7 +982,7 @@ directions; do not infer a broader precedence rule.
   runner proves it against the committed baseline and spends no cycle. Never
   reset or bypass the ledger otherwise; `checkpoint_required` and ledger integrity errors still stop.
 - **Consensus cannot agree** (Round 2 all-disagree, a security item without
-  3/3, an analyst that fails its retry, or conservative mode): run the Round 3
+  3/3, or an analyst that fails its retry): run the Round 3
   agent tiebreak, a fresh analyst plus a max-effort `consensus-tiebreaker`,
   record the most conservative option that satisfies the spec as an assumption
   with the dissent logged, and continue. Only a choice that changes product

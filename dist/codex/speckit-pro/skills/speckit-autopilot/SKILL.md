@@ -483,8 +483,8 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
    session starts. Once phase work has begun, a stale or refreshed agent file is
    recorded, never a stop: see §Plugin Update Mid-Run: Record, Re-resolve,
    Continue. Then discover `PROJECT_IMPLEMENTATION_AGENT` from `.codex/agents/`.
-6. **Load settings** — read `consensus-mode`, `gate-failure`, `auto-commit`,
-   and `security-keywords` from `.claude/speckit-pro.local.md` or
+6. **Load settings** — read `gate-failure` and `auto-commit` from
+   `.claude/speckit-pro.local.md` or
    `.codex/speckit-pro.local.md` (see prerequisites.md §Step 0.6).
 6b. **Resolve pre-Implement confidence gate mode** — run runner helper
    `resolve-confidence-mode` with the invocation argv to resolve
@@ -1106,7 +1106,7 @@ directions; do not infer a broader precedence rule.
   runner proves it against the committed baseline and spends no cycle. Never
   reset or bypass the ledger otherwise; `checkpoint_required` and ledger integrity errors still stop.
 - **Consensus cannot agree** (Round 2 all-disagree, a security item without
-  3/3, an analyst that fails its retry, or conservative mode): run the Round 3
+  3/3, or an analyst that fails its retry): run the Round 3
   agent tiebreak, a fresh analyst plus a max-effort `consensus-tiebreaker`,
   record the most conservative option that satisfies the spec as an assumption
   with the dissent logged, and continue. Only a choice that changes product
