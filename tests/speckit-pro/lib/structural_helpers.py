@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import tomllib
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -149,6 +150,18 @@ def frontmatter_field(frontmatter_text: str, key: str) -> str:
         if line.startswith(f"{key}:"):
             value = re.sub(rf"^{re.escape(key)}:[ \t]*", "", line)
             return value.replace('"', "").replace("'", "")
+    return ""
+
+
+def toml_string_field(toml_text: str, field: str) -> str:
+    """Top-level string value of ``field`` in a TOML document; "" when absent or not a string.
+
+    Malformed TOML raises ``tomllib.TOMLDecodeError`` (a ``ValueError``), so a broken agent
+    file fails the check instead of reading as an empty field.
+    """
+    document = tomllib.loads(toml_text)
+    if field in document and isinstance(document[field], str):
+        return document[field]
     return ""
 
 

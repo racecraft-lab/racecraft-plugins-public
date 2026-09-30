@@ -628,7 +628,8 @@ def _restore_artifacts(case: Mapping[str, object], observation: dict[str, Any],
     manifest_ref = refs.get("artifact_manifest")
     if not isinstance(manifest_ref, Mapping):
         raise ValueError("stored capture omitted its artifact manifest")
-    manifest = json.loads(_stored_evidence(attempt, manifest_ref).read_text(encoding="utf-8"))
+    manifest = strict_json.loads(
+        _stored_evidence(attempt, manifest_ref).read_bytes(), error=ValueError)
     entries = manifest.get("entries") if isinstance(manifest, Mapping) \
         and manifest.get("schema") == "native-artifact-manifest/v1" else None
     if not isinstance(entries, list) or not all(isinstance(entry, Mapping) for entry in entries):
@@ -693,8 +694,8 @@ def _native_error_text(raw: object) -> tuple[str, str] | None:
     native_errors = []
     for line in trace.splitlines():
         try:
-            event = json.loads(line)
-        except (json.JSONDecodeError, TypeError):
+            event = strict_json.loads(line, error=ValueError)
+        except ValueError:
             continue
         if isinstance(event, dict) and event.get("type") == "error":
             native_errors.append(str(event.get("message", event.get("error", "native error"))))
@@ -1022,7 +1023,7 @@ def _rollout_timeline(raw_by_thread: Mapping[str, bytes], identities: set[str],
     exact = True
     for thread_id, raw in raw_by_thread.items():
         for index, line in enumerate(raw.splitlines()):
-            record = json.loads(line)
+            record = strict_json.loads(line, error=ValueError)
             payload = record.get("payload") if isinstance(record, dict) else None
             item = payload.get("item") if isinstance(payload, dict) \
                 and payload.get("type") == "item_completed" \
@@ -1101,7 +1102,7 @@ def _rebind_codex_root_tool_ids(
                  if call.get("name") in supported and call.get("parent_id") is None]
     native: list[tuple[str, str, object]] = []
     for line in raw_root.splitlines():
-        record = json.loads(line)
+        record = strict_json.loads(line, error=ValueError)
         payload = record.get("payload") if isinstance(record, dict) else None
         item = payload.get("item") if isinstance(payload, dict) \
             and payload.get("type") == "item_completed" \

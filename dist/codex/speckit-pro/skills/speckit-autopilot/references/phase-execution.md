@@ -1166,9 +1166,9 @@ creation and is not re-derived at the later ready flip:
 
 `type` is one of `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, and the
 scope is **lowercase**. Validate the exact string through the release-readiness
-gate's `validate-pr-title` operation before creating. The packet schema alone
-would also accept an uppercase ticket-style scope; the release-readiness shape
-would not, so the lowercase form is the binding one. Draft-mode title validation
+gate's `validate-pr-title` operation before creating. The packet schema and the
+release-readiness shape both reject an uppercase scope, so the lowercase form is
+the only valid one. Draft-mode title validation
 checks the conventional shape only — it does not ask the description to reference
 verification or evidence a draft has not produced.
 
