@@ -1,18 +1,24 @@
-"""Pure shared semantic-judge request and response contracts.
+"""Shared semantic-judge request and response contracts, and the native judge callback.
 
 The judge projection removes known native transport labels.  It is not a claim
 of statistical blindness: semantically necessary prose, commands, and action
-differences can still identify a host indirectly.
+differences can still identify a host indirectly.  ``NativeJudge`` is the one
+pinned native callback that runs a request through the Codex adapter.
 """
 from __future__ import annotations
 
 import copy
 import hashlib
 import json
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
+import tempfile
 from typing import Any, Mapping
 
-from native_eval_catalog import _unique_object
+import native_eval_strict_json as strict_json
+from native_eval_adapters import (
+    execute_prepared, judge_runtime_compatibility_identity, prepare_judge,
+)
+from native_eval_capture import normalize_trace
 from native_eval_grading import grade_observation
 
 
@@ -343,13 +349,7 @@ def validate_judge_response(case: dict[str, Any], request: dict[str, object], ra
     references = _request_references(request, checks)
     if not isinstance(raw_json, str):
         raise ValueError("judge response must be JSON text")
-    try:
-        response = json.loads(
-            raw_json, object_pairs_hook=_unique_object,
-            parse_constant=lambda token: (_ for _ in ()).throw(ValueError(f"invalid constant {token}")),
-        )
-    except (ValueError, json.JSONDecodeError) as exc:
-        raise ValueError(f"judge response is not strict JSON: {exc}") from exc
+    response = strict_json.loads(raw_json, error=ValueError, label="judge response is not strict JSON")
     expected = {check["id"] for check in checks}
     if not isinstance(response, dict) or set(response) != expected:
         raise ValueError("judge response ids must exactly match semantic checks")
@@ -363,3 +363,46 @@ def validate_judge_response(case: dict[str, Any], request: dict[str, object], ra
             raise ValueError(f"judge response verdict {check_id} has invalid evidence references")
         verdicts[check_id] = {"passed": verdict["passed"], "evidence": list(evidence)}
     return verdicts
+
+
+class NativeJudge:
+    """One pinned native judge callback, scheduled by the shared Codex pool."""
+
+    def __init__(self, model: str):
+        self.model = model
+        probe_case = {"requirements": [{"id": "probe"}], "checks": [
+            {"id": "probe", "requirement": "probe", "type": "semantic", "rubric": "Check the supplied evidence."}
+        ]}
+        probe_observation = {"completed": True, "error": None, "final_text": "probe",
+                             "activations": [], "tool_calls": [], "artifacts": {}, "usage": {}}
+        request = build_judge_request(probe_case, probe_observation)
+        with tempfile.TemporaryDirectory(prefix="native-judge-preflight-") as root:
+            prepared = prepare_judge(request, attempt_dir=Path(root) / "probe", model=model)
+            self._compatibility = judge_runtime_compatibility_identity(prepared)
+        self.runtime_identity = {
+            "native": self._compatibility,
+            "executor_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        }
+
+    def __call__(self, request: dict[str, object], grade_dir: Path, model: str) -> str:
+        if model != self.model:
+            raise ValueError("semantic judge model changed after admission")
+        prepared = prepare_judge(request, attempt_dir=grade_dir / "native", model=model)
+        if judge_runtime_compatibility_identity(prepared) != self._compatibility:
+            raise ValueError("semantic judge runtime changed after admission")
+        raw = execute_prepared(prepared, timeout=120)
+        process = raw.process_evidence
+        if raw.exit_code != 0 or raw.timed_out or process.get("cleanup_verified") is not True \
+                or process.get("cleanup_error") is not None or process.get("unexpected_descendants") is True:
+            raise ValueError("semantic judge native process failed or cleanup is unverified")
+        observation = normalize_trace("codex", raw.raw_trace)
+        if observation["tool_calls"]:
+            raise ValueError("semantic judge performed a prohibited tool call")
+        result_path = prepared.result_path
+        if result_path is None or not result_path.is_file() or result_path.is_symlink() \
+                or result_path.stat().st_size > 1024 * 1024:
+            raise ValueError("semantic judge structured result is unavailable or unsafe")
+        result = result_path.read_text(encoding="utf-8")
+        if result.strip() != observation["final_text"].strip():
+            raise ValueError("semantic judge result differs from native terminal evidence")
+        return result

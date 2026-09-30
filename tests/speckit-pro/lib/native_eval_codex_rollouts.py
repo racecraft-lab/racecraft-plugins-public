@@ -17,7 +17,8 @@ import re
 import stat
 from typing import Any, Mapping
 
-from native_eval_catalog import _is_json_value, _unique_object
+import native_eval_strict_json as strict_json
+from native_eval_catalog import _is_json_value
 from trigger_evidence import write_json_once
 
 
@@ -118,15 +119,8 @@ def _nonempty(value: object, label: str) -> str:
     return value
 
 
-def _reject_constant(value: str) -> None:
-    raise ValueError(f"non-JSON constant: {value}")
-
-
 def _loads(value: str, label: str) -> Any:
-    try:
-        result = json.loads(value, object_pairs_hook=_unique_object, parse_constant=_reject_constant)
-    except (TypeError, ValueError) as exc:
-        raise NativeRolloutInvalid(f"malformed {label}: {exc}") from exc
+    result = strict_json.loads(value, error=NativeRolloutInvalid, label=f"malformed {label}")
     _require(_is_json_value(result), f"malformed {label}")
     return result
 
