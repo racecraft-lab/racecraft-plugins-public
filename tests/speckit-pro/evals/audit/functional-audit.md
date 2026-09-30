@@ -196,6 +196,10 @@ mandatory but be verified separately through the real interactive native
 clients, an explicit exception to the non-interactive-runner-only migration.
 Until that decision and actual evidence exist, all thirteen remain held.
 
+## Intentional gap: legacy Claude corpus
+
+The legacy Claude functional directory (`layer3-functional/evals/`) has no `speckit-status`, `speckit-resolve-pr` or `speckit-archive-cleanup` file, and only one of the five Codex `speckit-upgrade` and two of the three Codex `speckit-install` cases. This gap is intentional. `missing_counterpart_ids.claude` in `functional-inventory.json` lists each missing row. Porting them as host-specific Claude files would fork the corpus that the paired native catalog replaces. Status (seven cases) and resolve-pr (five of six) are authored as paired catalog cases that run on both hosts. The upgrade and install rows stay pending under the writable upgrade, writable install and cross-client install capability gaps below, and a new Claude-only legacy file is not their remediation. `speckit-archive-cleanup` has no Codex legacy file either, so it is not a counterpart gap.
+
 ## Pending canonical gaps
 
 | Gap | Canonical behaviors | Required remediation |
