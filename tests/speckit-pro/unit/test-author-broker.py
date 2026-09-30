@@ -510,10 +510,12 @@ class BrokerErrorCodeTests(BrokerFixture):
     """Each broker error code is reachable and names the failure it reports."""
 
     def call(self, name: str, arguments: dict) -> str:
-        reply = author_broker.handle_message(
-            {"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": name, "arguments": arguments}}
-        )
-        return reply["result"]["structuredContent"]["error_code"]
+        """The error code the broker reports for one failing tool call."""
+        try:
+            author_broker.call_tool(name, arguments)
+        except Exception as exc:  # noqa: BLE001 - the broker maps every failure to a code
+            return author_broker._error_code(exc)
+        self.fail(f"{name} unexpectedly succeeded")
 
     def formal_session(self) -> dict:
         (self.root / "formal").mkdir(exist_ok=True)
@@ -541,16 +543,14 @@ class BrokerErrorCodeTests(BrokerFixture):
         return self.call("submit_preview_verdict", {"capability": session["capability"], "verdict": "verified"})
 
     def test_every_declared_code_is_reported_for_its_own_failure(self) -> None:
-        for code in author_broker.BROKER_ERROR_CODES:
-            with self.subTest(code=code):
-                self.assertEqual(self.code_for(code), code)
+        reported = {code: self.code_for(code) for code in author_broker.BROKER_ERROR_CODES}
+        self.assertEqual(reported, {code: code for code in author_broker.BROKER_ERROR_CODES})
 
     def test_a_changed_preview_artifact_is_a_preview_mismatch(self) -> None:
         self.assertEqual(self.code_for("preview_mismatch"), "preview_mismatch")
 
     def test_a_violation_cannot_carry_an_undeclared_code(self) -> None:
-        with self.assertRaises(ValueError):
-            author_broker.BrokerViolation("message", code="not_a_code")
+        self.assertRaisesRegex(ValueError, "undeclared", author_broker.BrokerViolation, "message", code="not_a_code")
 
 
 class PreviewStepReferenceTests(unittest.TestCase):

@@ -197,6 +197,10 @@ class ArtifactGalleryTests(unittest.TestCase):
         self.assertIn("template ids", catalog_errors(remaining, remaining_files))
         self.assertIn("canonical blocks", document_errors(document.replace("worker-src 'none'; ", "", 1), entry))
 
+
+class TemplateMarkupContractTests(unittest.TestCase):
+    """Shipped template markup keeps the SPA-CONTRACT.md security and slot rules."""
+
     def test_shipped_templates_keep_the_markup_contract(self) -> None:
         for path in sorted(TEMPLATES.glob("*.html")):
             with self.subTest(template=path.name):
@@ -234,6 +238,10 @@ class ArtifactGalleryTests(unittest.TestCase):
             with self.subTest(case=label):
                 self.assertIn(expected, contract_errors(mutated))
 
+
+class GalleryGuidanceTests(unittest.TestCase):
+    """The author prompts, contract, and UAT template describe what ships."""
+
     def test_author_prompts_and_contract_skip_planned_entries(self) -> None:
         for path in ("agents/artifact-author.md", "codex-agents/artifact-author.toml",
                      "skills/speckit-autopilot/references/phase-execution.md", "artifact-gallery/SPA-CONTRACT.md"):
@@ -258,6 +266,5 @@ class ArtifactGalleryTests(unittest.TestCase):
         self.assertEqual(1, len(re.findall(r"^# ", body, re.MULTILINE)))
         self.assertNotIn("## UAT Runbook", comment)
 
-
 if __name__ == "__main__":
-    raise SystemExit(run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(ArtifactGalleryTests), label="test-artifact-gallery"))
+    raise SystemExit(run_counted(unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__]), label="test-artifact-gallery"))
