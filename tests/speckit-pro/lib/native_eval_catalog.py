@@ -10,6 +10,7 @@ from pathlib import Path, PurePosixPath
 import re
 from typing import Any, Iterable
 
+import native_eval_strict_json as strict_json
 from native_eval_git_grading import CHECK_FIELDS as NATIVE_GIT_FINAL_STATE_FIELDS
 from native_eval_git_grading import validate_check as validate_native_git_final_state_check
 from native_eval_pairing import compile_pair_plan
@@ -722,20 +723,13 @@ def _validate_case(case: object, repo_root: Path) -> None:
     _unique_text_list(case["provenance"], f"case {case_id} provenance", nonempty=True)
 
 
-def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-    _require(len(pairs) == len({key for key, _value in pairs}), "duplicate JSON key")
-    return dict(pairs)
-
-
 def load_catalog(path: str | Path, repo_root: str | Path) -> dict[str, Any]:
     """Load strict JSON and return it only after full catalog validation."""
     try:
-        catalog = json.loads(
-            Path(path).read_text(encoding="utf-8"),
-            object_pairs_hook=_unique_object,
-            parse_constant=lambda token: (_ for _ in ()).throw(ValueError(f"invalid constant {token}")),
+        catalog = strict_json.loads(
+            Path(path).read_bytes(), error=ValueError, label="could not load native evaluation catalog",
         )
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+    except OSError as exc:
         raise ValueError(f"could not load native evaluation catalog: {exc}") from exc
     return validate_catalog(catalog, repo_root)
 
