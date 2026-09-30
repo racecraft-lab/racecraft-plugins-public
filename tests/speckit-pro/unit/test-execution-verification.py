@@ -133,7 +133,8 @@ class VerificationTests(VerificationFixture, unittest.TestCase):
         self.assertIn("input_snapshot_changed", self.validate(result, observed)["reasons"])
 
     def test_materialized_snapshot_preserves_empty_directories_and_executable_bits(self):
-        (self.root / "empty-directory").mkdir(mode=0o750)
+        (self.root / "empty-directory").mkdir()
+        (self.root / "empty-directory").chmod(0o750)
         (self.root / "fixture.txt").chmod(0o754)
         (self.root / "check.py").write_text(
             "from pathlib import Path\n"
@@ -146,6 +147,7 @@ class VerificationTests(VerificationFixture, unittest.TestCase):
         self.assertTrue(result["record"]["snapshot_unchanged"])
 
     def test_snapshot_directory_mode_mutation_is_detected(self):
+        (self.root / "feature").chmod(0o755)
         (self.root / "check.py").write_text("from pathlib import Path\nPath('feature').chmod(0o700)\n")
         result, _ = self.produce()
         self.assertFalse(result["record"]["snapshot_unchanged"])
