@@ -154,9 +154,9 @@ infer.
 
 ### 4. Initialize the repository
 
-Every `specify` call passes `--script sh`, the script flavor whose
-`.specify/scripts/bash/` scripts the runner's setup-contract check
-reads, and which avoids the CLI's script prompt.
+Every `specify` call passes `--script sh`, the script flavor the
+runner's setup-contract check reads, and which avoids the CLI's script
+prompt.
 
 For a **fresh install** (Step 2 said ABSENT):
 
