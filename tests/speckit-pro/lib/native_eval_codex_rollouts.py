@@ -245,8 +245,10 @@ def _running_session_id(output: object) -> int | None:
     sessions = []
     for block in output:
         try:
-            value = json.loads(block["text"])
-        except json.JSONDecodeError:
+            value = strict_json.loads(block["text"], error=NativeRolloutInvalid)
+        except NativeRolloutInvalid:
+            # Text that is not strict JSON, duplicate keys included, is plain
+            # output, never a running-session record.
             continue
         if isinstance(value, dict) and set(value) == {
             "chunk_id", "wall_time_seconds", "session_id",
