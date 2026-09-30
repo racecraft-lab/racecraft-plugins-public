@@ -11,12 +11,9 @@ from pathlib import Path
 import re
 import sqlite3
 
-<<<<<<< HEAD
+import native_eval_strict_json as strict_json
 import trigger_claude_observer as claude_observer
 import trigger_codex_observer as codex_observer
-=======
-import native_eval_strict_json as strict_json
->>>>>>> fix/speckit-pro-layer3-runner-and-scorer
 import trigger_evidence as evidence
 from trigger_campaign_pins import FRESH_LAUNCH_CEILING
 from trigger_inventory import canonical_sha256, validate_inventory
