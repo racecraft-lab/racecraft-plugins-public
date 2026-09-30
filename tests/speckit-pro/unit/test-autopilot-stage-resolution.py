@@ -18,9 +18,7 @@ Python 3.11+ standard library only.
 
 from __future__ import annotations
 
-import importlib.util
 import json
-import os
 import subprocess
 import sys
 import tempfile
@@ -36,6 +34,7 @@ if str(LIB_DIR) not in sys.path:
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
 
+from runner_invocation import run_runner as invoke_runner, runner_env  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 from speckit_pro_runner.helpers import read_only  # noqa: E402
@@ -907,6 +906,9 @@ CORROBORATION_TRIGGER_CASES = (
 )
 
 
+from script_loader import load_script  # noqa: E402
+
+
 def overview_table(rows: tuple[tuple[str, str], ...]) -> str:
     lines = [
         "## Workflow Overview",
@@ -1027,12 +1029,7 @@ def resolve_envelope(
     return json.loads(result["stdout"])
 
 
-def runner_env() -> dict[str, str]:
-    env = os.environ.copy()
-    existing = env.get("PYTHONPATH")
-    env["PYTHONPATH"] = str(PLUGIN_ROOT) if not existing else f"{PLUGIN_ROOT}{os.pathsep}{existing}"
-    env["PYTHONDONTWRITEBYTECODE"] = "1"
-    return env
+NO_BYTECODE = {"PYTHONDONTWRITEBYTECODE": "1"}
 
 
 def run_runner(inputs: dict[str, object]) -> dict[str, object]:
@@ -1045,28 +1042,12 @@ def run_runner(inputs: dict[str, object]) -> dict[str, object]:
         "mode": "read_only",
         "inputs": inputs,
     }
-    completed = subprocess.run(
-        [sys.executable, "-m", "speckit_pro_runner"],
-        input=json.dumps(request),
-        cwd=REPO_ROOT,
-        env=runner_env(),
-        text=True,
-        capture_output=True,
-        shell=False,
-        check=False,
-    )
-    return json.loads(completed.stdout)
+    return invoke_runner(request, extra_env=NO_BYTECODE)[1]
 
 
 def load_coverage_validator():
     """Import the shipped phase-coverage validator so vocabulary locks read real bytes."""
-    spec = importlib.util.spec_from_file_location(
-        "speckit_autopilot_phase_coverage_stage_lock", COVERAGE_VALIDATOR
-    )
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_script("speckit_autopilot_phase_coverage_stage_lock", COVERAGE_VALIDATOR)
 
 
 class StageVocabularyAndArgvTests(unittest.TestCase):
@@ -1684,7 +1665,7 @@ class OpenAnalysisFindingTests(unittest.TestCase):
                     }
                     completed = subprocess.run(
                         [sys.executable, "-m", "speckit_pro_runner"],
-                        input=json.dumps(request), cwd=root, env=runner_env(),
+                        input=json.dumps(request), cwd=root, env=runner_env(NO_BYTECODE),
                         text=True, capture_output=True, check=False,
                     )
                     envelopes[helper_id] = (completed.returncode, json.loads(completed.stdout))

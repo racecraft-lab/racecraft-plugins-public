@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import contextlib
-import importlib.util
 import io
 import os
 import sys
@@ -21,14 +20,11 @@ if str(LIB_DIR) not in sys.path:
 from test_result import run_counted  # noqa: E402
 
 
+from script_loader import load_script  # noqa: E402
+
+
 def load_helper():  # type: ignore[no-untyped-def]
-    spec = importlib.util.spec_from_file_location("docs_artifact", SCRIPT)
-    if spec is None or spec.loader is None:
-        raise AssertionError(f"unable to load docs artifact helper: {SCRIPT}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_script("docs_artifact", SCRIPT)
 
 
 DOCS_ARTIFACT = load_helper()

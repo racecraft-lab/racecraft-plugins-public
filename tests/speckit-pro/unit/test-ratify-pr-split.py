@@ -29,7 +29,6 @@ for entry in (PLUGIN_ROOT, REPO_ROOT / "tests" / "speckit-pro" / "lib"):
 from test_result import run_counted  # noqa: E402
 
 HELPER_ID = "ratify-pr-split"
-FIXTURES = REPO_ROOT / "tests/speckit-pro/unit/fixtures/pr-split-ratification"
 FIXTURE_REQUEST = (
     REPO_ROOT / "tests/speckit-pro/unit/fixtures/read-only-helpers/requests" / f"{HELPER_ID}.json"
 )
@@ -39,8 +38,31 @@ CLAUDE_SKILL = PLUGIN_ROOT / "skills/speckit-autopilot/SKILL.md"
 CLAUDE_GATES = PLUGIN_ROOT / "skills/speckit-autopilot/references/gate-validation.md"
 
 
+def _drop_requirement(inputs: dict[str, object]) -> None:
+    """Increment B-1 no longer carries FR-002, so the split drops approved scope."""
+    for increment in inputs["increments"]:  # type: ignore[attr-defined]
+        if increment["increment_id"] == "B-1":
+            increment["scope"] = [item for item in increment["scope"] if item != "FR-002"]
+
+
+def _reorder_groups(inputs: dict[str, object]) -> None:
+    """Increment C1b-1 lands before C1a-1, so the split reorders approved groups."""
+    increments = inputs["increments"]
+    positions = {item["increment_id"]: index for index, item in enumerate(increments)}  # type: ignore[attr-defined]
+    first, second = positions["C1a-1"], positions["C1b-1"]
+    increments[first], increments[second] = increments[second], increments[first]  # type: ignore[index]
+
+
+VARIANTS = {"preserving-split": None, "dropped-requirement": _drop_requirement, "reordered-groups": _reorder_groups}
+
+
 def _fixture(name: str) -> dict[str, object]:
-    return json.loads((FIXTURES / f"{name}.json").read_text(encoding="utf-8"))["inputs"]
+    """The request fixture's inputs, the one source of the ratified split, with the named variant applied."""
+    inputs = json.loads(FIXTURE_REQUEST.read_text(encoding="utf-8"))["inputs"]
+    mutate = VARIANTS[name]
+    if mutate is not None:
+        mutate(inputs)
+    return inputs
 
 
 def _run(inputs: object) -> dict[str, object]:

@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import importlib.util
 import io
 import hashlib
 import json
@@ -22,14 +21,12 @@ from unittest import mock
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
+from script_loader import load_script  # noqa: E402
+
+
 def load_module(name: str, path: Path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"unable to load {path}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_script(name, path)
 
 
 resolver = load_module("resolve_release_prs", REPO_ROOT / "scripts" / "resolve_release_prs.py")

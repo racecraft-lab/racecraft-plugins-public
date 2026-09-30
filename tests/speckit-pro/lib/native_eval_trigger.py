@@ -8,14 +8,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import hashlib
-import importlib.util
 import json
 from pathlib import Path
 import re
 import stat
-import sys
 from typing import Any, Mapping
 
+from script_loader import load_script
+import trigger_codex_observer as codex_observer
 from trigger_evidence import description_override
 
 
@@ -92,12 +92,8 @@ def _helpers(host: str) -> object:
         return cached
     filename = "run-trigger-evals.py" if host == "claude" else "run_codex_evals.py"
     path = Path(__file__).resolve().parents[1] / "layer2-trigger" / filename
-    name = f"native_eval_trigger_{host}_helpers"
-    spec = importlib.util.spec_from_file_location(name, path)
-    _require(spec is not None and spec.loader is not None, f"{host} trigger helpers are unavailable")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
+    _require(path.is_file(), f"{host} trigger helpers are unavailable")
+    module = load_script(f"native_eval_trigger_{host}_helpers", path)
     _HELPERS[host] = module
     return module
 
@@ -397,8 +393,8 @@ def _qualify_claude(stage: TriggerStage, calls: list[Mapping[str, object]]) -> t
     return selected, []
 
 
-def _codex_markers(stage: TriggerStage, text: str, helpers: object) -> tuple[str | None, str | None]:
-    emitted = helpers.MARKER_PATTERN.findall(text)
+def _codex_markers(stage: TriggerStage, text: str) -> tuple[str | None, str | None]:
+    emitted = codex_observer.MARKER_PATTERN.findall(text)
     unknown = sorted(set(emitted) - set(stage.skill_markers))
     _require(not unknown, "Codex returned an unknown or stale trial marker")
     _require(len(emitted) <= 1, "Codex returned repeated or conflicting trial markers")
@@ -411,7 +407,7 @@ def _codex_markers(stage: TriggerStage, text: str, helpers: object) -> tuple[str
 
 
 def _qualify_codex(
-    stage: TriggerStage, text: str, calls: list[Mapping[str, object]], helpers: object,
+    stage: TriggerStage, text: str, calls: list[Mapping[str, object]],
 ) -> tuple[list[str], list[str]]:
     reads: list[str] = []
     for call in calls:
@@ -421,11 +417,11 @@ def _qualify_codex(
         command = inputs.get("command")
         _require(isinstance(command, str) and bool(command) and isinstance(output, str),
                  "Codex skill read is malformed or truncated")
-        match = helpers._codex_body_read_match(command, output, stage.witnesses)
+        match = codex_observer.codex_body_read_match(command, output, stage.witnesses)
         _require(match is not None, "Codex command was not an exact staged skill-file read")
         reads.append(match[0])
     _require(len(reads) <= 1, "Codex read multiple or conflicting staged skill files")
-    _marker, marked_skill = _codex_markers(stage, text, helpers)
+    _marker, marked_skill = _codex_markers(stage, text)
     if marked_skill is None:
         _require(not reads, "Codex skill-file read was not paired with a fresh trial marker")
         return [], []
@@ -460,9 +456,7 @@ def qualify_trigger_observation(stage: TriggerStage, observation: Mapping[str, o
         qualified, consulted = _qualify_claude(stage, calls)
         method = "completed-native-skill-call"
     else:
-        qualified, consulted = _qualify_codex(
-            stage, str(observation["final_text"]), calls, _helpers("codex"),
-        )
+        qualified, consulted = _qualify_codex(stage, str(observation["final_text"]), calls)
         method = "successful-skill-file-read-plus-trial-marker"
     _require(captured == qualified, "captured activations disagree with qualified native trigger evidence")
     canonical = [name for name in qualified if name != _NO_SKILL_NAME]

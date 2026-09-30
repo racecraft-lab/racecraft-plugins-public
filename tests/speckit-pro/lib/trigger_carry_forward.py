@@ -14,6 +14,7 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import re
+import runpy
 import sqlite3
 import stat
 import subprocess
@@ -22,6 +23,12 @@ from typing import Callable
 
 import native_eval_strict_json as strict_json
 import trigger_comparison as comparison
+from trigger_campaign_pins import (
+    BEHAVIOR_FAILURES, CARRIED_CASES, CARRIED_DISTINCT_GROUPS, CARRIED_TRIALS, EXPECTED_ACCOUNTING,
+    EXPECTED_RAW_SHA256, EXPECTED_TERMINAL_TRIAL_SHA256, FRESH_CASES, FRESH_LAUNCH_CEILING,
+    FRESH_PAIRS, HISTORICAL_CHARGED_LAUNCHES, LOGICAL_FULL_TRIALS, OLD_OBSERVER_SHA256,
+    PARTIAL_CASE_ID, PARTIAL_EXPERIMENT_SHA256, TERMINAL_INVALID_TRIALS, TERMINAL_RESERVED_CASES,
+)
 
 
 SCHEMA_VERSION = "trigger-case-carry-forward/v1"
@@ -32,39 +39,6 @@ MULTI_SOURCE_INDEX_SCHEMA_VERSION = "trigger-evidence-index/v3"
 DUAL_REPLAY_SCHEMA_VERSION = "trigger-dual-replay/v1"
 OBSERVER_REPLAY_SCHEMA_VERSION = "trigger-observer-replay/v1"
 COMPATIBILITY_SCHEMA_VERSION = "codex-relative-skill-read/v1"
-OLD_OBSERVER_SHA256 = "c5faa93ab3c25340e38933b69ba1968835a501ff78a4344354f5c36e45470a72"
-PARTIAL_EXPERIMENT_SHA256 = "959b2740ff161e155f5d1f5d645944a7f603d614479a92b3c056c29bafb96f51"
-BEHAVIOR_FAILURES = frozenset({
-    "l2-1b43ca2d753dec02b20c5e17",
-    "l2-d714c484e5bbf90475418772",
-})
-PARTIAL_CASE_ID = "l2-f714040c928fadaabb26eab2"
-EXPECTED_RAW_SHA256 = {
-    "manifest": "32189f6581d6b78b1910305755b3107421fb13f3d6c9f7faf5c8b7bb8f36a98b",
-    "approval": "54b0c442743c6d53bd6615795692239f44f464fc598d78d4fb155a7e68c98afb",
-    "ledger": "933372dd5118219b83d79f537049e9a46345d626f651342fb4b934105103cddc",
-    "interrupted_ledger": "432a3afbf6cdc39723e49f047c70ed66e3fe9a8f24dfacd3388cba54b8e04c5a",
-    "terminal_evidence": "913c1b9063ce98d49f43a119115b9dc4b069aa8d22a0ff50f168d6e444979f17",
-    "terminal_review": "7170f3429f8c81c2d34f545e6d48f0ae43392c0d2de368a6a881fc0d1f2b215a",
-    "cohort": "3f2bcbf40d4424da12764d23843d40d177006a5d21db3da386a50216acd2cdc8",
-    "partial_index": "3b4282e2d4df37bf69c15aff00d56f693ede851f3b4fd19dc0b11ab01c2eb6d5",
-    "source_stability_review": "e079e1dc4b7aa86c1abc7291cb2e45194a60e4ce9cdf04a7f6b44e56ec65a201",
-    "compatibility_review": "10fadc231a41c23298802aab8f847745bd00b19652ce07bbad7b43ab1c5337bb",
-    "terminal_cleanup": "161a9e8ace4f9116a9ee9f5d48af3f77a8001bb23c534fab7d1a90dfa28fa49a",
-    "terminal_launch": "772151829c4aa62686545046b92600897d2d1fd731bb67a674aa58d2f411afdf",
-}
-EXPECTED_TERMINAL_TRIAL_SHA256 = [
-    "6faec4e8785907fa491a07a68375a8ec3c421c6bc0a0413591b92485daecf42b",
-    "ce6895049987bb7414cecbd8a219a7fd4c6c8521bc52cd8448642822380e2a9a",
-    "832f2926c955b73bef82d8d168c8a1947e516d10ff081ef2172bedf8190a6621",
-]
-EXPECTED_ACCOUNTING = {
-    "logical_full_trials": 1302,
-    "carried_trials": 411,
-    "fresh_launch_ceiling": 891,
-    "historical_charged_launches": 414,
-    "maximum_total_charged_attempts": 1305,
-}
 PROJECTION_FIELDS = (
     "selected",
     "selected_skill",
@@ -102,8 +76,8 @@ class CarryForwardPlan:
     carried_case_ids: tuple[str, ...]
     fresh_case_ids: tuple[str, ...]
     carried_models: dict[str, frozenset]
-    fresh_launch_ceiling: int = 891
-    historical_charged_launches: int = 414
+    fresh_launch_ceiling: int = FRESH_LAUNCH_CEILING
+    historical_charged_launches: int = HISTORICAL_CHARGED_LAUNCHES
 
 
 @dataclass(frozen=True)
@@ -173,10 +147,15 @@ def _normalized_reference(value: object, label: str) -> tuple[PurePosixPath, str
     return relative, digest
 
 
+_SHIPPED_FILE_IDENTITY = runpy.run_path(str(
+    Path(__file__).resolve().parents[3]
+    / "speckit-pro/skills/speckit-autopilot/scripts/lib/phase_coverage_repo_files.py"
+))["_stable_file_identity"]
+
+
 def _file_identity(value: os.stat_result) -> tuple[int, ...]:
-    return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns,
-            value.st_ctime_ns, stat.S_IFMT(value.st_mode), stat.S_IMODE(value.st_mode),
-            value.st_nlink, value.st_uid)
+    """The shipped stat identity plus the owner, which external evidence must also keep."""
+    return (*_SHIPPED_FILE_IDENTITY(value), value.st_uid)
 
 
 def _directory_identity(value: os.stat_result) -> tuple[int, ...]:
@@ -684,10 +663,10 @@ def _validate_terminal_ledger(snapshot: object, old_manifest: dict) -> tuple[tup
     fields = {"schema_version", "launch_budget", "reserved_launches", "unknown_launches", "launches"}
     comparison._require(isinstance(snapshot, dict) and set(snapshot) == fields
                         and snapshot["schema_version"] == "trigger-campaign-ledger/v1"
-                        and type(snapshot["launch_budget"]) is int and snapshot["launch_budget"] == 1302
-                        and type(snapshot["reserved_launches"]) is int and snapshot["reserved_launches"] == 414
+                        and type(snapshot["launch_budget"]) is int and snapshot["launch_budget"] == LOGICAL_FULL_TRIALS
+                        and type(snapshot["reserved_launches"]) is int and snapshot["reserved_launches"] == HISTORICAL_CHARGED_LAUNCHES
                         and type(snapshot["unknown_launches"]) is int and snapshot["unknown_launches"] == 0
-                        and isinstance(snapshot["launches"], list) and len(snapshot["launches"]) == 414,
+                        and isinstance(snapshot["launches"], list) and len(snapshot["launches"]) == HISTORICAL_CHARGED_LAUNCHES,
                         "terminal interrupted-ledger snapshot is malformed")
     expected_row_fields = {"arm", "case_id", "trial_number", "status", "reserved_at", "completed_at"}
     by_case: dict[tuple[str, str], list[dict]] = {}
@@ -710,15 +689,15 @@ def _validate_terminal_ledger(snapshot: object, old_manifest: dict) -> tuple[tup
                 and {row["status"] for row in rows} == {"complete"}}
     invalid = {identity for identity, rows in by_case.items()
                if {row["status"] for row in rows} == {"invalid"}}
-    comparison._require(len(complete) == 137 and len(invalid) == 1
+    comparison._require(len(complete) == CARRIED_CASES and len(invalid) == 1
                         and invalid == {("serial:baseline", PARTIAL_CASE_ID)}
-                        and sum(row["status"] == "complete" for row in snapshot["launches"]) == 411
-                        and sum(row["status"] == "invalid" for row in snapshot["launches"]) == 3,
-                        "terminal interrupted-ledger is not the reviewed 411-complete/3-invalid state")
+                        and sum(row["status"] == "complete" for row in snapshot["launches"]) == CARRIED_TRIALS
+                        and sum(row["status"] == "invalid" for row in snapshot["launches"]) == TERMINAL_INVALID_TRIALS,
+                        f"terminal interrupted-ledger is not the reviewed {CARRIED_TRIALS}-complete/{TERMINAL_INVALID_TRIALS}-invalid state")
     roster = [row["case_id"] for row in old_manifest["roster"]]
     complete_ids = {case_id for _arm, case_id in complete}
     ordered = tuple(case_id for case_id in roster if case_id in complete_ids)
-    comparison._require(len(ordered) == 137 and set(ordered) == complete_ids,
+    comparison._require(len(ordered) == CARRIED_CASES and set(ordered) == complete_ids,
                         "terminal complete cohort is not contained in the full predecessor roster")
     trials = frozenset(("baseline", case_id, trial) for case_id in ordered for trial in (1, 2, 3))
     return ordered, trials
@@ -814,7 +793,7 @@ def _validate_dual_replay(value: object, old_manifest: dict, new_manifest: dict,
                         and value["schema_version"] == DUAL_REPLAY_SCHEMA_VERSION
                         and value["source_index_sha256"] == EXPECTED_RAW_SHA256["partial_index"]
                         and value["equality_projection"] == list(PROJECTION_FIELDS)
-                        and isinstance(value["trials"], list) and len(value["trials"]) == 411,
+                        and isinstance(value["trials"], list) and len(value["trials"]) == CARRIED_TRIALS,
                         "dual-replay artifact is malformed")
     _validate_closure(value["original_closure"], old_manifest["identities"]["observer"], current=False)
     _validate_closure(value["current_closure"], new_manifest["identities"]["observer"],
@@ -846,7 +825,7 @@ def _validate_dual_replay(value: object, old_manifest: dict, new_manifest: dict,
                             "old/current typed replay projection disagrees with retained evidence")
         host = records[identity]["host"]
         models.setdefault(host, set()).add(item["current"]["resolved_model"])
-    comparison._require(seen == carried_trials, "dual-replay artifact is not the exact 411-trial map")
+    comparison._require(seen == carried_trials, f"dual-replay artifact is not the exact {CARRIED_TRIALS}-trial map")
     return {host: frozenset(values) for host, values in models.items()}
 
 
@@ -863,8 +842,8 @@ def _validate_evidence(source_root: Path, source_index: dict, partial_manifest: 
     comparison._require(index_ids == carried_ids, "partial evidence summary order differs from ledger-derived cohort")
     trials = source_index.get("trials")
     cleanup = source_index.get("cleanup")
-    comparison._require(isinstance(trials, list) and len(trials) == 411
-                        and isinstance(cleanup, list) and len(cleanup) == 137,
+    comparison._require(isinstance(trials, list) and len(trials) == CARRIED_TRIALS
+                        and isinstance(cleanup, list) and len(cleanup) == CARRIED_CASES,
                         "predecessor partial index cardinality changed")
     cache: dict[tuple[str, str], bytes] = {}
 
@@ -973,16 +952,16 @@ def _validate_cohort_file(value: object, old_manifest: dict, source_index: dict,
                           carried_ids: tuple[str, ...]) -> None:
     comparison._require(isinstance(value, dict)
                         and value.get("schema_version") == "trigger-case-carry-forward-cohort/v1-draft"
-                        and value.get("cohort", {}).get("case_count") == 137
-                        and value.get("cohort", {}).get("trial_count") == 411
+                        and value.get("cohort", {}).get("case_count") == CARRIED_CASES
+                        and value.get("cohort", {}).get("trial_count") == CARRIED_TRIALS
                         and value.get("cohort", {}).get("behavior_pass_cases") == 135
                         and value.get("cohort", {}).get("behavior_fail_cases") == 2
                         and tuple(value.get("cohort", {}).get("case_ids_in_original_roster_order", [])) == carried_ids
-                        and value.get("remaining", {}).get("fresh_launch_ceiling") == 891
+                        and value.get("remaining", {}).get("fresh_launch_ceiling") == FRESH_LAUNCH_CEILING
                         and value.get("source_observer_sha256") == OLD_OBSERVER_SHA256,
                         "frozen cohort file differs from the ledger-derived complete cohort")
     rows = value["cohort"].get("cases")
-    comparison._require(isinstance(rows, list) and len(rows) == 137
+    comparison._require(isinstance(rows, list) and len(rows) == CARRIED_CASES
                         and tuple(row.get("case_id") for row in rows) == carried_ids,
                         "frozen cohort case roster changed")
     manifest_cases = {row["case_id"]: row for row in old_manifest["roster"]}
@@ -1018,7 +997,7 @@ def _validate_terminal_snapshot(value: object, source_root: Path, ledger_snapsho
                         and value.get("terminal_exit_code") == 2
                         and value.get("output_root") == str(source_root)
                         and value.get("ledger_sha256") == EXPECTED_RAW_SHA256["ledger"]
-                        and isinstance(value.get("cases"), list) and len(value["cases"]) == 138,
+                        and isinstance(value.get("cases"), list) and len(value["cases"]) == TERMINAL_RESERVED_CASES,
                         "terminal campaign evidence snapshot changed")
     ledger_rows = {(row["arm"], row["case_id"], row["trial_number"]): row["status"]
                    for row in ledger_snapshot["launches"]}
@@ -1039,7 +1018,7 @@ def _validate_terminal_snapshot(value: object, source_root: Path, ledger_snapsho
             comparison._require(set(trial) == {"trial", "status"}
                                 and ledger_rows.get((case["arm"], case["case_id"], trial["trial"])) == trial["status"],
                                 "terminal evidence snapshot differs from interrupted ledger")
-    comparison._require(len(seen) == 138, "terminal evidence snapshot omitted a reserved case")
+    comparison._require(len(seen) == TERMINAL_RESERVED_CASES, "terminal evidence snapshot omitted a reserved case")
 
 
 def _case_tree_bytes(source_root: Path, case: dict) -> dict[str, bytes]:
@@ -1202,10 +1181,10 @@ def _validate_ownership_inventory(source_root: Path, terminal_evidence: dict,
                                 "terminal child process-group ownership fingerprint is malformed")
             inventory["groups"].append({"pgid": pgid,
                                         "completed_at": execution["finished_at"]})
-    comparison._require(len(inventory["runners"]) == 138
-                        and len(inventory["groups"]) == 414
-                        and len({row["pgid"] for row in inventory["groups"][:-3]}) == 410
-                        and len(set(inventory["workspaces"])) == 138,
+    comparison._require(len(inventory["runners"]) == TERMINAL_RESERVED_CASES
+                        and len(inventory["groups"]) == HISTORICAL_CHARGED_LAUNCHES
+                        and len({row["pgid"] for row in inventory["groups"][:-TERMINAL_INVALID_TRIALS]}) == CARRIED_DISTINCT_GROUPS
+                        and len(set(inventory["workspaces"])) == TERMINAL_RESERVED_CASES,
                         "terminal ownership inventory cardinality changed")
     comparison._require(_ownership_is_absent(inventory, _current_process_snapshot()),
                         "a predecessor-owned runner or child process group may still be live")
@@ -1671,7 +1650,7 @@ def validate_carry_forward(value: object, manifest: dict, manifest_digest: str,
     old_approval = _json(raw_approval, "predecessor approval")
     comparison.validate_experiment(old_manifest)
     from trigger_campaign import validate_approval
-    validate_approval(old_approval, comparison.json_digest(old_manifest), 1302)
+    validate_approval(old_approval, comparison.json_digest(old_manifest), LOGICAL_FULL_TRIALS)
     comparison._require(old_manifest["qualification_scope"] == "full"
                         and old_manifest["arms"] == ["baseline", "candidate"]
                         and old_manifest["trials"] == 3 and len(old_manifest["roster"]) == 217
@@ -1704,8 +1683,8 @@ def validate_carry_forward(value: object, manifest: dict, manifest_digest: str,
                         and set(cohort) == {"arm", "case_ids", "case_count", "trial_count"}
                         and cohort["arm"] == "baseline"
                         and cohort["case_ids"] == list(carried_ids)
-                        and type(cohort["case_count"]) is int and cohort["case_count"] == 137
-                        and type(cohort["trial_count"]) is int and cohort["trial_count"] == 411,
+                        and type(cohort["case_count"]) is int and cohort["case_count"] == CARRIED_CASES
+                        and type(cohort["trial_count"]) is int and cohort["trial_count"] == CARRIED_TRIALS,
                         "caller cohort differs from the exact ledger-derived cohort")
     comparison._require(value["accounting"] == EXPECTED_ACCOUNTING
                         and all(type(value["accounting"][key]) is int for key in EXPECTED_ACCOUNTING),
@@ -1720,12 +1699,12 @@ def validate_carry_forward(value: object, manifest: dict, manifest_digest: str,
     fresh = frozenset({*(('baseline', case_id) for case_id in fresh_ids),
                        *(('candidate', case_id) for case_id in all_cases)})
     fresh_trials = frozenset((arm, case_id, trial) for arm, case_id in fresh for trial in (1, 2, 3))
-    comparison._require(len(fresh_ids) == 80 and len(fresh) == 297 and len(fresh_trials) == 891
+    comparison._require(len(fresh_ids) == FRESH_CASES and len(fresh) == FRESH_PAIRS and len(fresh_trials) == FRESH_LAUNCH_CEILING
                         and carried_trials.isdisjoint(fresh_trials)
                         and carried_trials | fresh_trials
                         == frozenset((arm, case_id, trial) for arm in manifest["arms"]
                                      for case_id in all_cases for trial in (1, 2, 3)),
-                        "ledger-derived carried and fresh identities do not form the exact 1302-trial union")
+                        f"ledger-derived carried and fresh identities do not form the exact {LOGICAL_FULL_TRIALS}-trial union")
     return CarryForwardPlan(value, comparison.json_digest(value), source_root, review_root, old_manifest,
                             partial_manifest, source_index, carried, carried_trials, fresh, fresh_trials,
                             carried_ids, fresh_ids, carried_models)
@@ -2186,8 +2165,8 @@ def source_aware_union(index: dict, manifest: dict, expected_arm: str) -> tuple[
                         "source-aware index roots are malformed")
     full_ids = [row["case_id"] for row in manifest["roster"]]
     carried_ids, fresh_ids = carried["case_ids"], fresh["case_ids"]
-    comparison._require(len(carried_ids) == 137 and len(fresh_ids) == 80
-                        and len(set(carried_ids)) == 137 and len(set(fresh_ids)) == 80
+    comparison._require(len(carried_ids) == CARRIED_CASES and len(fresh_ids) == FRESH_CASES
+                        and len(set(carried_ids)) == CARRIED_CASES and len(set(fresh_ids)) == FRESH_CASES
                         and set(carried_ids).isdisjoint(fresh_ids)
                         and [case_id for case_id in full_ids if case_id in set(carried_ids)] == carried_ids
                         and [case_id for case_id in full_ids if case_id in set(fresh_ids)] == fresh_ids

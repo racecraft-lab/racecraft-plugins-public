@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import contextlib
 import hashlib
-import importlib.util
 import io
 import subprocess
 import sys
@@ -30,14 +29,11 @@ if str(LIB_DIR) not in sys.path:
 from test_result import run_counted  # noqa: E402
 
 
+from script_loader import load_script  # noqa: E402
+
+
 def load_module(module_name: str, path: Path) -> ModuleType:
-    spec = importlib.util.spec_from_file_location(module_name, path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"unable to load {path}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[module_name] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_script(module_name, path)
 
 
 BUILD = load_module("build_typesafe_jev_release", REPO_ROOT / "scripts" / "build-typesafe-jev-release.py")

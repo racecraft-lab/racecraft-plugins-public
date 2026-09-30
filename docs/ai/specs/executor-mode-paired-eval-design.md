@@ -15,7 +15,7 @@ every task the autopilot dispatches.
 | Mode | Name | Rule |
 | --- | --- | --- |
 | `strict` | Strict red-green-refactor | The shipped protocol. Write the failing test, prove it fails, write the minimum code, refactor. Every task. |
-| `function_first` | Function-then-test with a mutation floor | Write the function, then its tests. The task passes only if the diff's mutation score clears the repository floor from `.specify/quality-gates.json`. |
+| `function_first` | Function-then-test with a mutation floor | Write the function, then its tests. The task passes only if the diff's mutation score clears the repository mutation floor. The scorer reads no config file; the caller passes the floor (`thresholds.mutation_score_floor` in `.specify/quality-gates.json`) with `--mutation-floor`. |
 | `boundary` | Strict at module boundaries, function-first inside | Classify each task from the plan's Module and Interface Deltas section. A task whose files carry a `new` or `changed` public interface runs `strict`; every other task runs `function_first`. |
 
 ### Classification for `boundary`
@@ -84,14 +84,27 @@ A mode **beats** the shipped `strict` on the roster when both hold:
 
 1. `mutation_score` is not worse: the median difference is at or above
    `-mutation_tolerance` points (default 2) and no task drops below the
-   repository floor.
+   floor passed with `--mutation-floor`. Without that flag the floor rule
+   is skipped, so pass it for every real run.
 2. At least one of `wall_seconds`, `review_findings`, or `gate_iterations`
    improves with sign-test p at or below `alpha` (default 0.05), and none of
    the other two gets worse at the same alpha.
 
+A mode **loses** when the mutation median drops by more than
+`mutation_tolerance`, when any task falls below the floor, or when any of the
+other three metrics gets worse at `alpha`. A mode that neither beats nor
+loses is `inconclusive`.
+
 The scorer prints the verdict per mode and exits 0 on a decision either
-way; a roster too small to reach `alpha` on any metric is reported as
-`inconclusive`, still exit 0. Exit 1 is reserved for malformed input.
+way (`beats`, `loses` or `inconclusive`). A roster too small to reach `alpha`
+on any metric is `inconclusive`, still exit 0. Exit 1 is reserved for
+malformed input: an unreadable catalog or result, a result that is not a JSON
+object, or two result documents for the same case, mode and seed.
+
+A run set with fewer distinct seeds than the catalog's `repeats` for any
+(case, mode) still scores. The scorer lists each gap as a `shortfall` in the
+report and prints a `shortfall:` line, so a short or missing run never scores
+silently.
 
 ## What lands when the eval decides
 
@@ -109,7 +122,7 @@ way; a roster too small to reach `alpha` on any metric is reported as
   frozen roster and the mode definitions, validated by the scorer.
 - `tests/speckit-pro/layer3-functional/executor-modes/score-executor-modes.py`:
   stdlib scorer. `--catalog`, `--results <dir>`, `--report <file>`,
-  `--alpha`, `--mutation-tolerance`. Classifies boundary tasks from the
+  `--alpha`, `--mutation-tolerance`, `--mutation-floor`. Classifies boundary tasks from the
   catalog's deltas, pairs results, computes the tables and verdicts.
 - `tests/speckit-pro/unit/test-executor-mode-scorer.py`: locks the
   classifier, the pairing, the sign test, and the verdict rule against
