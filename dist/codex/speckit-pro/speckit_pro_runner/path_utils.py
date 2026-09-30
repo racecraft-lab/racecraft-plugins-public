@@ -25,6 +25,19 @@ def is_relative_to(path: Path, root: Path) -> bool:
         return False
 
 
+def parse_version_tuple(version: str) -> tuple[int, int, int]:
+    """The first three dotted parts as integers; a missing or non-numeric part reads as 0."""
+    parts = []
+    for part in version.split(".")[:3]:
+        try:
+            parts.append(int(part))
+        except ValueError:
+            parts.append(0)
+    while len(parts) < 3:
+        parts.append(0)
+    return tuple(parts)  # type: ignore[return-value]
+
+
 def sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as fh:

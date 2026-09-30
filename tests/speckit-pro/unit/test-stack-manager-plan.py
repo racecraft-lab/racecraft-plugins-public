@@ -5,6 +5,7 @@ import copy
 import hashlib
 import json
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 from types import SimpleNamespace
@@ -13,7 +14,7 @@ from unittest.mock import patch
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO / "speckit-pro"), str(REPO / "tests/speckit-pro/lib")]
-from speckit_pro_runner.helpers import stack_manager
+from speckit_pro_runner.helpers import archive_sweep, stack_manager
 from speckit_pro_runner.helpers.registry import dispatch_helper
 from test_result import run_counted
 
@@ -219,8 +220,45 @@ class StackManagerRecoveryTests(StackManagerTestCase):
         self.assertEqual("blocked", decision["selected_manager"])
 
 
+class BoundedProbeTests(unittest.TestCase):
+    """Both helpers share one gh/git probe: fixed argv, a per-caller allowlist and timeout, one record shape."""
+
+    KEYS = {"argv", "exit_status", "stdout_tail", "stderr_tail"}
+
+    def run_probe(self, module, argv, run):
+        with tempfile.TemporaryDirectory() as root, patch("subprocess.run", side_effect=run) as call:
+            return module.probe(Path(root), argv), call
+
+    def test_an_unlisted_cli_is_reported_and_never_started(self):
+        for module, argv in ((stack_manager, ["curl", "https://example.invalid"]), (archive_sweep, ["git", "status"])):
+            with self.subTest(module=module.__name__):
+                record, call = self.run_probe(module, argv, AssertionError("must not run"))
+                self.assertEqual(set(record), self.KEYS)
+                self.assertEqual((record["exit_status"], record["stdout_tail"]), (None, ""))
+                self.assertIn("may run here", record["stderr_tail"])
+                call.assert_not_called()
+
+    def test_a_timeout_is_reported_with_the_callers_own_limit(self):
+        for module, limit in ((stack_manager, 20), (archive_sweep, 30)):
+            with self.subTest(module=module.__name__):
+                record, call = self.run_probe(module, ["gh", "api", "user"], subprocess.TimeoutExpired("gh", limit))
+                self.assertEqual(set(record), self.KEYS)
+                self.assertEqual(record["exit_status"], None)
+                self.assertIn("timed out", record["stderr_tail"])
+                self.assertEqual(call.call_args.kwargs["timeout"], limit)
+                self.assertEqual(call.call_args.args[0], ["gh", "api", "user"])
+
+    def test_a_finished_run_keeps_the_exit_status_and_trims_the_output(self):
+        done = subprocess.CompletedProcess(["git"], 1, stdout=" out \n", stderr="x" * 5000)
+        record, call = self.run_probe(stack_manager, ["git", "rev-parse", "HEAD"], [done])
+        self.assertEqual(record, {"argv": ["git", "rev-parse", "HEAD"], "exit_status": 1, "stdout_tail": "out",
+                                  "stderr_tail": "x" * 2048})
+        self.assertFalse(call.call_args.kwargs["shell"])
+
+
 if __name__ == "__main__":
     loader = unittest.defaultTestLoader
     suite = unittest.TestSuite([loader.loadTestsFromTestCase(StackManagerTests),
-                                loader.loadTestsFromTestCase(StackManagerRecoveryTests)])
+                                loader.loadTestsFromTestCase(StackManagerRecoveryTests),
+                                loader.loadTestsFromTestCase(BoundedProbeTests)])
     sys.exit(run_counted(suite, label="test-stack-manager-plan"))

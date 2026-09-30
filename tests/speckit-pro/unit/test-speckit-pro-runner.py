@@ -152,11 +152,8 @@ class RunnerFoundationTests(unittest.TestCase):
     def test_runner_subprocess_executables_are_statically_bash_free(self) -> None:
         from speckit_pro_runner.gates.active_path_guard import repo_bash_python_findings
 
-        paths = [
-            PLUGIN_ROOT / "speckit_pro_runner" / "gates" / "suite.py",
-            PLUGIN_ROOT / "speckit_pro_runner" / "helpers" / "install.py",
-            PLUGIN_ROOT / "speckit_pro_runner" / "runtime.py",
-        ]
+        paths = [PLUGIN_ROOT / "speckit_pro_runner" / name
+                 for name in ("cli_probe.py", "gates/suite.py", "helpers/install.py", "runtime.py")]
         findings = [
             (path.relative_to(REPO_ROOT).as_posix(), finding.line, finding.pattern)
             for path in paths

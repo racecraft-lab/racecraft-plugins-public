@@ -29,7 +29,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from .agent_materialization import canonical_bytes
+from .canonical_json import canonical_bytes
 from .execution_control import (confined_path, default_ledger_directory, durable_json, evidence_directory, execution_control,
                                 record_failing_checks, require_text, worktree_evidence)
 from .failing_checks import fingerprint as failing_check_fingerprint

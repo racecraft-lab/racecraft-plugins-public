@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import math
 from pathlib import Path, PurePosixPath
 import re
@@ -69,9 +68,7 @@ def _json_value(value: object) -> bool:
 
 def _canonical(value: object, label: str) -> bytes:
     _require(_json_value(value), f"{label} must be a strict JSON value")
-    return json.dumps(
-        value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False,
-    ).encode("utf-8")
+    return strict_json.canonical_bytes(value)
 
 
 def _contract_path(repo_root: Path, value: object, label: str) -> tuple[str, Path]:
