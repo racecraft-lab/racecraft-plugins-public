@@ -24,7 +24,6 @@ from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
 from speckit_pro_runner.agent_inventory import AGENT_INVENTORY
 from speckit_pro_runner.codex_agent_generator import generated_codex_files
 from speckit_pro_runner.gates.payloads import build_installed_plugin_payloads
-from speckit_pro_runner.host_skills import UNMERGED_CODEX_OVERLAYS
 import agent_roster
 from host_skill_views import host_skill_root
 from structural_helpers import body as _body
@@ -283,12 +282,6 @@ class ValidateSkills(unittest.TestCase):
                     self.assertTrue((skill_dir / 'references').is_dir(), f"references directory not found at {skill_dir / 'references'}")
 validate_codex_skills_CODEX_SKILLS_DIR = CODEX_VIEW
 validate_codex_skills_SKILLS = tuple(discover_skill_names(validate_codex_skills_CODEX_SKILLS_DIR))
-# Only a skill whose Codex SKILL.md is still a separate overlay keeps the guard;
-# a merged skill's Codex text is already in its shared file.
-COLLISION_GUARD_SKILLS = tuple(sorted(
-    skill for skill in ('speckit-archive-cleanup', 'speckit-autopilot', 'speckit-coach', 'grill-me', 'speckit-prd', 'ubiquitous-language')
-    if f'{skill}/SKILL.md' in UNMERGED_CODEX_OVERLAYS
-))
 CC_ONLY_KEYS = ('user-invocable', 'disable-model-invocation', 'license', 'argument-hint')
 CLAUDE_ONLY_RUNTIME_RE = re.compile('TaskCreate|TaskUpdate|Agent\\(|Bash\\(|Opus-class|Opus 4\\.6|/model opus|/effort max|/speckit[.:]|run /<command>|general-purpose agent')
 ALLOW_IMPLICIT_RE = re.compile('^[ \\t]*allow_implicit_invocation:[ \\t]*(true|false)[ \\t]*$')
@@ -311,20 +304,14 @@ def _source_artifact_exists(skill: str) -> bool:
 
 class ValidateCodexSkills(unittest.TestCase):
 
-    def test_codex_skill_selection_collision_guards(self) -> None:
-        for skill in COLLISION_GUARD_SKILLS:
-            shared_skill_file = PLUGIN_ROOT / 'skills' / skill / 'SKILL.md'
-            codex_skill_file = validate_codex_skills_CODEX_SKILLS_DIR / skill / 'SKILL.md'
-            both_exist = shared_skill_file.is_file() and codex_skill_file.is_file()
-            with self.subTest(msg=f'{skill}: shared and Codex variants both exist'):
-                self.assertTrue(both_exist, f'expected both {shared_skill_file} and {codex_skill_file}')
-            if not both_exist:
-                continue
-            shared_content = shared_skill_file.read_text(encoding='utf-8')
-            with self.subTest(msg=f'{skill}: shared variant redirects when selected by Codex'):
-                self.assertIn('Codex Skill-Selection Guard', shared_content)
-            with self.subTest(msg=f'{skill}: shared guard names the Codex variant path'):
-                self.assertIn(f'../../codex-skills/{skill}/SKILL.md', shared_content)
+    def test_no_shared_skill_redirects_codex_to_an_overlay(self) -> None:
+        # Every shared skill renders its Codex text from host blocks, so none
+        # may point Codex at a separate overlay copy.
+        shared = sorted((PLUGIN_ROOT / 'skills').glob('*/SKILL.md'))
+        self.assertGreaterEqual(len(shared), 10, 'no shared skills found; the check would pass on nothing')
+        for skill_file in shared:
+            with self.subTest(msg=f'{skill_file.parent.name}: no Codex Skill-Selection Guard'):
+                self.assertNotIn('Codex Skill-Selection Guard', skill_file.read_text(encoding='utf-8'))
 
     def test_codex_skills(self) -> None:
         for skill in validate_codex_skills_SKILLS:

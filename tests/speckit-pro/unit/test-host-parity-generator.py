@@ -41,7 +41,7 @@ from speckit_pro_runner.host_parity import (  # noqa: E402
     split_frontmatter,
     unexplained_blocks,
 )
-from speckit_pro_runner.host_skills import UNMERGED_CODEX_OVERLAYS, codex_skill_overlay_errors  # noqa: E402
+from speckit_pro_runner.host_skills import codex_skill_overlay_errors  # noqa: E402
 from host_skill_views import host_skill_root  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
@@ -338,17 +338,14 @@ class HostSkillSourceTests(unittest.TestCase):
             with self.subTest(file=source.relative_to(PLUGIN_ROOT).as_posix()):
                 self.assertEqual(unexplained_blocks(source.read_text(encoding="utf-8")), [])
 
-    def test_codex_skills_holds_only_codex_only_files_and_listed_overlays(self) -> None:
+    def test_codex_skills_holds_only_codex_only_files(self) -> None:
         self.assertEqual(codex_skill_overlay_errors(PLUGIN_ROOT), [])
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             shutil.copytree(PLUGIN_ROOT / "codex-skills", root / "codex-skills")
             (root / "codex-skills" / "grill-me" / "SKILL.md").write_text("---\nname: grill-me\n---\n", encoding="utf-8")
-            listed = min(UNMERGED_CODEX_OVERLAYS)
-            (root / "codex-skills" / listed).unlink()
             self.assertEqual(codex_skill_overlay_errors(root), [
                 "codex-skills/grill-me/SKILL.md overlays a shared skill file; merge it into skills/ as host blocks",
-                f"codex-skills/{listed} is listed as an unmerged overlay but does not exist",
             ])
 
     def test_grill_me_sends_setup_alone_to_scaffold_spec_on_both_hosts(self) -> None:
