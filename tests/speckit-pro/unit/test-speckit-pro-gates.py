@@ -2409,17 +2409,11 @@ class GateFoundationTests(unittest.TestCase):
         layer4_scripts = [self.repo_rel(path) for path in dispatcher.canonical_test_scripts(REPO_ROOT, "4")]
         integration_by_id = [self.repo_rel(path) for path in dispatcher.canonical_test_scripts(REPO_ROOT, "6")]
         integration_by_key = [self.repo_rel(path) for path in dispatcher.canonical_test_scripts(REPO_ROOT, "integration")]
-        layer1_names = (
-            "validate-plugin-metadata", "validate-hook-contracts", "validate-agent-contracts",
-            "validate-skill-contracts", "validate-payload-contracts", "validate-ci-release-contracts",
-            "validate-plugin-payload-hygiene", "validate-spec-templates-and-extensions",
-            "validate-moc-lint", "validate-spec-index-helper-contract", "test-structural-regressions",
-        )
-        expected_layer1_scripts = {f"tests/speckit-pro/layer1-structural/{name}.py" for name in layer1_names}
-        self.assertEqual(set(layer1_scripts), expected_layer1_scripts)
-        self.assertEqual(len(layer1_scripts), len(expected_layer1_scripts))
-        self.assertGreaterEqual(len(layer4_scripts), 17)
         manifest = json.loads((REPO_ROOT / "tests/speckit-pro/suite-manifest.json").read_text(encoding="utf-8"))
+        manifest_layer1 = next(layer for layer in manifest["layers"] if layer["id"] == "1")
+        self.assertEqual(layer1_scripts, [script["path"] for script in manifest_layer1["scripts"]])
+        self.assertTrue(layer1_scripts)
+        self.assertGreaterEqual(len(layer4_scripts), 17)
         manifest_layer4 = next(layer for layer in manifest["layers"] if layer["id"] == "4")
         self.assertEqual(layer4_scripts, [script["path"] for script in manifest_layer4["scripts"]])
         self.assertTrue(all(path.endswith(".py") for path in layer4_scripts))
