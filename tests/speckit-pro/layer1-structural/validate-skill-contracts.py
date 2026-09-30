@@ -1029,6 +1029,34 @@ class ValidateStopPolicyReference(unittest.TestCase):
                 self.assertIn(link, _read(path))
                 self.assertTrue((path.parent / link.strip('()')).resolve().is_file())
 
+class ValidatePayloadLinksStayInside(unittest.TestCase):
+    """A shipped skill or agent never links a file outside the installed plugin.
+
+    The repository resolves `../../../../docs-site/...`, but an installed plugin
+    holds only its payload, so such a link is dead for every reader of the
+    installed copy.
+    """
+
+    LINK_RE = re.compile(r'\]\(([^)\s]+)\)')
+    FENCE_RE = re.compile(r'```.*?```', re.DOTALL)
+
+    def test_relative_links_resolve_inside_each_payload(self) -> None:
+        checked = 0
+        for host in ('claude', 'codex'):
+            root = (REPO_ROOT / 'dist' / host / 'speckit-pro').resolve()
+            for folder in ('skills', 'agents'):
+                for path in sorted((root / folder).rglob('*.md')):
+                    text = self.FENCE_RE.sub('', path.read_text(encoding='utf-8', errors='replace'))
+                    for target in self.LINK_RE.findall(text):
+                        relative = target.split('#', 1)[0]
+                        if not relative or re.match(r'^[a-z][a-z0-9+.-]*:', relative) or relative.startswith(('$', '<', '{')):
+                            continue
+                        checked += 1
+                        resolved = (path.parent / relative).resolve()
+                        with self.subTest(msg=f'{host}: {path.relative_to(root)} -> {target}'):
+                            self.assertTrue(resolved.is_relative_to(root), f'{target} leaves the installed {host} payload')
+        self.assertTrue(checked, 'no payload links checked - refusing to pass vacuously')
+
 def main() -> int:
     suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])
     return run_counted(suite, label="validate-skill-contracts")

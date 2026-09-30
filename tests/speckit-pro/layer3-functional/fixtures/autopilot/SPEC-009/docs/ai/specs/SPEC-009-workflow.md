@@ -21,7 +21,7 @@ run trace. No phase, gate, provider, or foreground result below is claimed.
 | Analyze | `/speckit-analyze` | ⏳ Pending | cross-artifact consistency and confidence emit |
 | Confidence Gate | G6.5 | ⏳ Pending | pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | no implementation is authorized by setup |
-| Post | Post-Implementation | ⏳ Pending | canonical 12-item closeout |
+| Post | Post-Implementation | ⏳ Pending | canonical 11-item closeout |
 
 ### Basic Information
 
