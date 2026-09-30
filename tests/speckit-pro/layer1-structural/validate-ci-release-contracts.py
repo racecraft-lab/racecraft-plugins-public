@@ -188,6 +188,7 @@ PR_METADATA_WORKFLOW_FILE = REPO_ROOT / '.github' / 'workflows' / 'pr-metadata.y
 MAIN_ARTIFACT_WORKFLOW_FILE = REPO_ROOT / '.github' / 'workflows' / 'main-artifact-check.yml'
 SCORECARD_WORKFLOW_FILE = REPO_ROOT / '.github' / 'workflows' / 'scorecard.yml'
 ACTIONLINT_HELPER_FILE = REPO_ROOT / 'scripts' / 'install-actionlint.py'
+PINNED_ARCHIVE_HELPER_FILE = REPO_ROOT / 'scripts' / 'pinned_archive.py'
 DOCS_CLASSIFIER_FILE = REPO_ROOT / 'scripts' / 'classify-docs-validation.py'
 RESULTS_HELPER_FILE = REPO_ROOT / 'scripts' / 'check-pr-workflow-results.py'
 MATRIX_HELPER_FILE = REPO_ROOT / 'scripts' / 'emit-plugin-matrix.py'
@@ -247,7 +248,7 @@ class ValidatePrChecksSentinel(unittest.TestCase):
         with self.subTest(msg='pr-checks.yml exists'):
             self.assertTrue(validate_pr_checks_sentinel_WORKFLOW_FILE.is_file(), f'file not found: {validate_pr_checks_sentinel_WORKFLOW_FILE}')
         content = validate_pr_checks_sentinel_WORKFLOW_FILE.read_text(encoding='utf-8') if validate_pr_checks_sentinel_WORKFLOW_FILE.is_file() else ''
-        helper_files = (ACTIONLINT_HELPER_FILE, DOCS_CLASSIFIER_FILE, RESULTS_HELPER_FILE, MATRIX_HELPER_FILE)
+        helper_files = (ACTIONLINT_HELPER_FILE, PINNED_ARCHIVE_HELPER_FILE, DOCS_CLASSIFIER_FILE, RESULTS_HELPER_FILE, MATRIX_HELPER_FILE)
         helper_contents = {path: path.read_text(encoding='utf-8') if path.is_file() else '' for path in helper_files}
         metadata_content = PR_METADATA_WORKFLOW_FILE.read_text(encoding='utf-8') if PR_METADATA_WORKFLOW_FILE.is_file() else ''
         sources = {'workflow': content, 'metadata': metadata_content, 'combined': '\n'.join((content, *helper_contents.values()))}
@@ -359,7 +360,8 @@ class ValidatePrChecksSentinel(unittest.TestCase):
             sentinel_block = _job_block(content, 'validate-plugins')
             self.assertRegex(sentinel_block, '(?m)^    permissions:\\n      contents: read$')
             self.assertIn('persist-credentials: false', sentinel_block)
-            actionlint_content = helper_contents[ACTIONLINT_HELPER_FILE]
+            # install-actionlint.py extracts through the shared pinned_archive.py helper.
+            actionlint_content = helper_contents[ACTIONLINT_HELPER_FILE] + helper_contents[PINNED_ARCHIVE_HELPER_FILE]
             self.assertNotIn('extractall(', actionlint_content)
             self.assertNotIn('archive.extract(', actionlint_content)
             self.assertIn('archive.extractfile(member)', actionlint_content)

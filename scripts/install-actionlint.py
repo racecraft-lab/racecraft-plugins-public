@@ -4,167 +4,27 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
-import hmac
 import os
-import re
-import stat
 import subprocess
 import sys
-import tarfile
 import tempfile
-import urllib.error
-import urllib.request
 from collections.abc import Callable, Sequence
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from typing import BinaryIO
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import pinned_archive as _pinned  # noqa: E402
+from pinned_archive import DOWNLOAD_TIMEOUT_SECONDS, verify_sha256  # noqa: E402,F401
 
 
 ACTIONLINT_MEMBER = "actionlint"
-DOWNLOAD_TIMEOUT_SECONDS = 30
-MAX_ARCHIVE_BYTES = 64 * 1024 * 1024
-MAX_BINARY_BYTES = 64 * 1024 * 1024
 
-
-class ActionlintError(RuntimeError):
-    """Raised when actionlint cannot be installed or executed safely."""
-
-
-def _validated_version(version: str) -> str:
-    if re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version) is None:
-        raise ActionlintError(f"invalid actionlint version: {version!r}")
-    return version
-
-
-def _validated_sha256(expected_sha256: str) -> str:
-    if re.fullmatch(r"[0-9a-f]{64}", expected_sha256) is None:
-        raise ActionlintError("ACTIONLINT_SHA256 must be exactly 64 lowercase hexadecimal characters")
-    return expected_sha256
-
-
-def _required_environment(name: str) -> str:
-    value = os.environ.get(name, "")
-    if not value:
-        raise ActionlintError(f"required environment variable is not set: {name}")
-    return value
-
-
-def _download_archive(
-    url: str,
-    destination: Path,
-    *,
-    opener: Callable[..., BinaryIO] | None = None,
-) -> None:
-    request = urllib.request.Request(
-        url,
-        headers={"User-Agent": "racecraft-pr-checks-actionlint-installer"},
-    )
-    open_url = opener or urllib.request.urlopen
-    total = 0
-    try:
-        with open_url(request, timeout=DOWNLOAD_TIMEOUT_SECONDS) as response:
-            with destination.open("wb") as output:
-                while chunk := response.read(1024 * 1024):
-                    total += len(chunk)
-                    if total > MAX_ARCHIVE_BYTES:
-                        raise ActionlintError(
-                            f"actionlint archive exceeds {MAX_ARCHIVE_BYTES} bytes"
-                        )
-                    output.write(chunk)
-    except ActionlintError:
-        raise
-    except (OSError, urllib.error.URLError) as error:
-        raise ActionlintError(f"unable to download actionlint archive: {error}") from error
-
-    if total == 0:
-        raise ActionlintError("downloaded actionlint archive is empty")
-
-
-def verify_sha256(archive_path: Path, expected_sha256: str) -> None:
-    expected = _validated_sha256(expected_sha256)
-    digest = hashlib.sha256()
-    try:
-        with archive_path.open("rb") as archive:
-            while chunk := archive.read(1024 * 1024):
-                digest.update(chunk)
-    except OSError as error:
-        raise ActionlintError(f"unable to read actionlint archive: {error}") from error
-
-    actual = digest.hexdigest()
-    if not hmac.compare_digest(actual, expected):
-        raise ActionlintError(
-            f"actionlint checksum mismatch: expected {expected}, got {actual}"
-        )
-
-
-def _member_name_is_safe(name: str) -> bool:
-    if not name or "\x00" in name or "\\" in name:
-        return False
-    path = PurePosixPath(name)
-    return not path.is_absolute() and ".." not in path.parts
+# Raised when actionlint cannot be installed or executed safely.
+ActionlintError = _pinned.PinnedArchiveError
 
 
 def extract_actionlint(archive_path: Path, destination: Path) -> None:
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    temporary_destination = destination.with_name(f".{destination.name}.tmp")
-    temporary_destination.unlink(missing_ok=True)
-
-    try:
-        with tarfile.open(archive_path, mode="r:gz") as archive:
-            members = archive.getmembers()
-            unsafe_members = [
-                member.name
-                for member in members
-                if not _member_name_is_safe(member.name)
-                or member.issym()
-                or member.islnk()
-                or member.isdev()
-            ]
-            if unsafe_members:
-                raise ActionlintError(
-                    f"actionlint archive contains unsafe members: {unsafe_members}"
-                )
-
-            matches = [member for member in members if member.name == ACTIONLINT_MEMBER]
-            if len(matches) != 1:
-                raise ActionlintError(
-                    "actionlint archive must contain exactly one top-level actionlint member"
-                )
-
-            member = matches[0]
-            if not member.isreg() or member.size <= 0 or member.size > MAX_BINARY_BYTES:
-                raise ActionlintError("actionlint archive member is not a safe regular file")
-
-            extracted = archive.extractfile(member)
-            if extracted is None:
-                raise ActionlintError("unable to read actionlint archive member")
-
-            written = 0
-            with extracted, temporary_destination.open("xb") as output:
-                while chunk := extracted.read(1024 * 1024):
-                    written += len(chunk)
-                    if written > member.size or written > MAX_BINARY_BYTES:
-                        raise ActionlintError("actionlint archive member exceeds its declared size")
-                    output.write(chunk)
-            if written != member.size:
-                raise ActionlintError("actionlint archive member is truncated")
-
-        temporary_destination.chmod(
-            stat.S_IRUSR
-            | stat.S_IWUSR
-            | stat.S_IXUSR
-            | stat.S_IRGRP
-            | stat.S_IXGRP
-            | stat.S_IROTH
-            | stat.S_IXOTH
-        )
-        temporary_destination.replace(destination)
-    except ActionlintError:
-        temporary_destination.unlink(missing_ok=True)
-        raise
-    except (OSError, tarfile.TarError) as error:
-        temporary_destination.unlink(missing_ok=True)
-        raise ActionlintError(f"unable to extract actionlint archive: {error}") from error
+    _pinned.extract_member(archive_path, ACTIONLINT_MEMBER, destination, label="actionlint")
 
 
 def install_actionlint(
@@ -174,8 +34,8 @@ def install_actionlint(
     *,
     opener: Callable[..., BinaryIO] | None = None,
 ) -> Path:
-    pinned_version = _validated_version(version)
-    pinned_sha256 = _validated_sha256(expected_sha256)
+    pinned_version = _pinned.validated_version(version, label="actionlint")
+    pinned_sha256 = _pinned.validated_sha256(expected_sha256, label="actionlint")
     archive_name = f"actionlint_{pinned_version}_linux_amd64.tar.gz"
     download_url = (
         "https://github.com/rhysd/actionlint/releases/download/"
@@ -189,7 +49,7 @@ def install_actionlint(
         dir=install_directory,
     ) as temporary_directory:
         archive_path = Path(temporary_directory) / archive_name
-        _download_archive(download_url, archive_path, opener=opener)
+        _pinned.download_archive(download_url, archive_path, label="actionlint", opener=opener)
         verify_sha256(archive_path, pinned_sha256)
         extract_actionlint(archive_path, destination)
     return destination
@@ -261,11 +121,11 @@ def _build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     try:
-        runner_temp = Path(_required_environment("RUNNER_TEMP"))
+        runner_temp = Path(_pinned.required_environment("RUNNER_TEMP"))
         if args.command == "install":
             installed = install_actionlint(
-                _required_environment("ACTIONLINT_VERSION"),
-                _required_environment("ACTIONLINT_SHA256"),
+                _pinned.required_environment("ACTIONLINT_VERSION"),
+                _pinned.required_environment("ACTIONLINT_SHA256"),
                 runner_temp,
             )
             print(f"Installed actionlint at {installed}")
