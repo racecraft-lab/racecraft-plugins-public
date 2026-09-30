@@ -1,4 +1,0 @@
-# Verification evidence
-
-Legacy verification record for SPEC-911.
-

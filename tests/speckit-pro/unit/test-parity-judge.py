@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import importlib.util
 import sys
 import unittest
 from pathlib import Path
@@ -34,12 +33,11 @@ CURRENT_INVENTORY = [
 ]
 
 
+from script_loader import load_script  # noqa: E402
+
+
 def import_judge():
-    spec = importlib.util.spec_from_file_location("l7_judge", JUDGE)
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(module)
-    return module
+    return load_script("l7_judge", JUDGE)
 
 
 class Layer7JudgeTests(unittest.TestCase):

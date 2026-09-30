@@ -9,7 +9,7 @@ Coach the user through the official SpecKit CLI and complementary SpecKit Pro wo
 
 ## Start with the project that exists
 
-- Use `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md` for capability selection and `speckit-pro/skills/speckit-autopilot/references/grounding.md` for external-fact grounding.
+- Use `../speckit-autopilot/references/capability-discovery.md` for capability selection and `../speckit-autopilot/references/grounding.md` for external-fact grounding.
 - Discover the session's available tools and skills before recommending an external action. Ground external claims in an observed result; say when the available evidence is insufficient.
 - Inspect `.specify/presets/*/preset.yml` and `.specify/extensions/*/extension.yml` when present. Read the installed configuration before advising, so the advice reflects the project's actual constraints.
 - Treat mutable actions as user-controlled. Explain the intended change and request confirmation before installing, removing, enabling, disabling, or configuring extensions.

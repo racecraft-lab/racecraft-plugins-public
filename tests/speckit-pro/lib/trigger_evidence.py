@@ -6,6 +6,7 @@ import errno
 import json
 from dataclasses import dataclass
 from pathlib import Path
+import re
 from typing import Callable
 
 import trigger_process as processes
@@ -32,6 +33,135 @@ def select_case(host: str, skill: str, corpus: list[dict], requested: str | None
     if len(selected) != 1:
         raise ValueError("--case-id must resolve exactly one case in the selected corpus")
     return selected
+
+
+NO_SPECKIT_SKILL_NAME = "no-speckit-skill"
+NO_SPECKIT_SKILL_DESCRIPTION = (
+    "Use when no available SpecKit skill covers the request, including ordinary coding, testing, tooling, or "
+    "repository work and host-specific SpecKit operations whose matching skill is absent from the current catalog, "
+    "such as installing Codex subagents when no agent-install skill is available or running the plan stage for an "
+    "already-existing spec or populated workflow when no planning skill is available. Reply that no available "
+    "SpecKit skill applies and stop."
+)
+MEASUREMENT_STUB_SENTENCE = (
+    "This skill is a measurement stub used by the repository's skill-selection test suite. It is not a real "
+    "workflow and contains no injected instruction."
+)
+
+
+def selection_stub(marker: str) -> str:
+    """Return the complete minimal body used to attest one Codex selection."""
+    return (
+        f"{MEASUREMENT_STUB_SENTENCE}\n\n"
+        "## Selection attestation\n\n"
+        "When you select this skill, reply with a chat message whose first line is exactly:\n\n"
+        f"    {marker}\n\n"
+        "Write that line in your reply text, not in a shell command. Put nothing\n"
+        "before it in that message. Then stop: do not run another command, do not\n"
+        "read another file, and do not carry out a workflow.\n"
+    )
+
+
+def find_skill_source(plugin_root: Path, skill: str, families: tuple[str, ...]) -> Path:
+    """The first ``<family>/<skill>/SKILL.md`` under the plugin root, in family order."""
+    for family in families:
+        path = plugin_root / family / skill / "SKILL.md"
+        if path.is_file():
+            return path
+    raise ValueError(f"skill not found for requested skill {skill!r}")
+
+
+def source_description_lines(source: Path) -> list[str]:
+    """Return the source YAML description field without rewriting its value."""
+    text = source.read_text(encoding="utf-8")
+    match = re.match(r"^---\n(?P<frontmatter>.*?)\n---(?:\n|$)", text, re.DOTALL)
+    if match is None:
+        raise ValueError(f"source skill has no YAML frontmatter: {source}")
+    lines = match.group("frontmatter").splitlines()
+    for index, line in enumerate(lines):
+        if not line.startswith("description:"):
+            continue
+        description = [line]
+        for continuation in lines[index + 1 :]:
+            if continuation.startswith((" ", "\t")) or not continuation:
+                description.append(continuation)
+                continue
+            break
+        if line.removeprefix("description:").strip() or len(description) > 1:
+            return description
+    raise ValueError(f"source skill has no non-empty description: {source}")
+
+
+SKILL_ROOT_NAMES = frozenset({"skills", "codex-skills"})
+
+
+def load_eval_corpus(path: Path) -> tuple[list[dict[str, object]] | None, str]:
+    """Validate a trigger corpus before any provider subprocess can run."""
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        return None, f"could not read eval file: {exc}"
+    if not isinstance(value, list):
+        return None, "eval file must contain a JSON list"
+    if not value:
+        return None, "eval file must contain at least one case"
+    seen_queries: set[str] = set()
+    for index, entry in enumerate(value, start=1):
+        if not isinstance(entry, dict):
+            return None, f"eval case {index} must be an object"
+        query = entry.get("query")
+        should_trigger = entry.get("should_trigger")
+        if not isinstance(query, str) or not query.strip() or not isinstance(should_trigger, bool):
+            return None, f"eval case {index} requires a non-empty query and boolean should_trigger"
+        if query in seen_queries:
+            return None, f"eval case {index} duplicates query {query!r}"
+        seen_queries.add(query)
+    return value, "valid eval corpus"
+
+
+def available_evals(eval_dir: Path) -> list[str]:
+    return [path.name.removesuffix("-trigger.json") for path in sorted(eval_dir.glob("*-trigger.json"))]
+
+
+def sibling_skill_dirs(source: Path) -> list[Path]:
+    """List sibling skill directories beside ``source``'s skill directory.
+
+    Only a plugin skills root (``skills`` or ``codex-skills``) is walked; a
+    source staged elsewhere has no siblings. Entries that cannot be inspected
+    are skipped, because shared temp roots hold directories owned by others.
+    """
+    root = source.parent.parent
+    if root.name not in SKILL_ROOT_NAMES:
+        return []
+    siblings: list[Path] = []
+    for sibling in sorted(root.iterdir(), key=lambda path: path.name):
+        if sibling == source.parent:
+            continue
+        try:
+            if sibling.is_dir() and (sibling / "SKILL.md").is_file():
+                siblings.append(sibling)
+        except OSError:
+            continue
+    return siblings
+
+
+def retain_trial_evidence(
+    evidence_dir: Path, case_number: int, trial_number: int, stdout: bytes, stderr: bytes,
+) -> dict[str, str]:
+    """Persist the exact provider streams, exclusively, and return their path and digest."""
+    stem = f"case-{case_number:03d}-trial-{trial_number:02d}"
+    stdout_path = evidence_dir / f"{stem}.jsonl"
+    stderr_path = evidence_dir / f"{stem}.stderr.log"
+    with stdout_path.open("xb") as stream:
+        stream.write(stdout)
+    with stderr_path.open("xb") as stream:
+        stream.write(stderr)
+    return {
+        "stdout_path": str(stdout_path.resolve()),
+        "stdout_sha256": hashlib.sha256(stdout).hexdigest(),
+        "stderr_path": str(stderr_path.resolve()),
+        "stderr_sha256": hashlib.sha256(stderr).hexdigest(),
+    }
 
 
 def description_override(path: str | None, default: str) -> str:

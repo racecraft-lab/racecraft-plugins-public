@@ -11,6 +11,7 @@ import re
 import sqlite3
 import time
 
+from trigger_campaign_pins import ARM_COUNT, FRESH_LAUNCH_CEILING, LOGICAL_CASES, LOGICAL_FULL_TRIALS, TRIALS_PER_CASE
 from trigger_comparison import _require, json_digest, validate_experiment
 
 
@@ -188,8 +189,8 @@ def _validate_campaign_exercise(
     _require(json_digest(manifest) == manifest_digest, "standing campaign review does not bind the exact manifest")
     _require(manifest.get("qualification_scope") == "full" and manifest.get("arms") == ["baseline", "candidate"]
              and manifest.get("trials") == 3 and manifest.get("threshold") == 0.5
-             and len(cases) == 217 and {case["host"] for case in cases.values()} == {"claude", "codex"},
-             "standing campaign is not the closed 217-case dual-host full qualification")
+             and len(cases) == LOGICAL_CASES and {case["host"] for case in cases.values()} == {"claude", "codex"},
+             f"standing campaign is not the closed {LOGICAL_CASES}-case dual-host full qualification")
     schedule = value["schedule"]
     _require(isinstance(schedule, dict) and set(schedule) == {"name", "workers"}
              and schedule["name"] == "serial" and type(schedule["workers"]) is int and schedule["workers"] == 1,
@@ -199,8 +200,8 @@ def _validate_campaign_exercise(
              and type(value["trial_count"]) is int and value["trial_count"] == manifest["trials"]
              and type(value["arm_count"]) is int and value["arm_count"] == len(manifest["arms"])
              and type(value["launch_count"]) is int and value["launch_count"] == expected_launches
-             and type(budget) is int and budget == 1302 and expected_launches == budget,
-             "standing campaign launch arithmetic must be exactly 217 x 3 x 2 = 1302")
+             and type(budget) is int and budget == LOGICAL_FULL_TRIALS and expected_launches == budget,
+             f"standing campaign launch arithmetic must be exactly {LOGICAL_CASES} x {TRIALS_PER_CASE} x {ARM_COUNT} = {LOGICAL_FULL_TRIALS}")
 
     predecessor_digest = _validate_predecessor(value["predecessor"], manifest, manifest_digest, budget)
     continuity = value["continuity"]
@@ -270,7 +271,7 @@ def _validate_carry_forward_approval(
               "carry_forward_review"}
     _require(set(record) == fields, "carry-forward approval record is malformed")
     _require(record["manifest_sha256"] == manifest_digest
-             and type(record["launch_budget"]) is int and record["launch_budget"] == budget == 891,
+             and type(record["launch_budget"]) is int and record["launch_budget"] == budget == FRESH_LAUNCH_CEILING,
              "carry-forward approval does not bind the exact manifest and fresh ceiling")
     plan_digest, standing_reviewed_at = _validate_standing_authority(record["standing_authority"])
     review = record["carry_forward_review"]

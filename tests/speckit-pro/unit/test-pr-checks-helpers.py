@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import contextlib
 import hashlib
-import importlib.util
 import io
 import json
 import os
@@ -29,15 +28,12 @@ if str(LIB_DIR) not in sys.path:
 from test_result import run_counted  # noqa: E402
 
 
+from script_loader import load_script as load_module_from_path  # noqa: E402
+
+
 def load_script(module_name: str, script_name: str) -> ModuleType:
     script_path = REPO_ROOT / "scripts" / script_name
-    spec = importlib.util.spec_from_file_location(module_name, script_path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"unable to load helper: {script_path}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[module_name] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_module_from_path(module_name, script_path)
 
 
 ACTIONLINT = load_script("pr_checks_install_actionlint", "install-actionlint.py")
@@ -222,7 +218,7 @@ class DocsClassificationHelperTests(unittest.TestCase):
     def test_full_mode_for_docs_contract(self) -> None:
         for file_path in (
             ".github/workflows/pr-checks.yml",
-            "scripts/classify-docs-validation.py",
+            "scripts/changed_files.py", "scripts/classify-docs-validation.py",
             "scripts/docs-artifact.py",
         ):
             with self.subTest(file_path=file_path):
@@ -302,7 +298,7 @@ class DocsClassificationHelperTests(unittest.TestCase):
                 stderr="",
             )
         )
-        with mock.patch.object(DOCS.subprocess, "run", runner):
+        with mock.patch.object(DOCS._changed_files.subprocess, "run", runner):
             changed_files = DOCS.changed_files_for_base(
                 "main",
                 repo_root=REPO_ROOT,
@@ -493,7 +489,7 @@ class GoModuleHelperTests(unittest.TestCase):
             ["typesafe-jev/cmd/evaluate/main.go"],
             ["typesafe-jev/go.mod"],
             ["README.md", "scripts/check-go-module.py"],
-            [".github/workflows/pr-checks.yml"],
+            ["scripts/changed_files.py"], [".github/workflows/pr-checks.yml"],
         ):
             with self.subTest(changed=changed):
                 self.assertTrue(GO_MODULE.go_module_changed(changed))

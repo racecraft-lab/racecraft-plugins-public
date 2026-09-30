@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-import os
 import re
 import sys
 import unittest
@@ -17,7 +16,9 @@ for _import_root in (LIB_DIR, PLUGIN_ROOT):
         sys.path.insert(0, str(_import_root))
 
 from structural_helpers import body as _body
+from structural_helpers import developer_instructions as _extract_developer_instructions
 from structural_helpers import frontmatter as _frontmatter
+from structural_helpers import frontmatter_field as _field
 from test_result import run_counted
 from speckit_pro_runner.agent_inventory import (
     AGENT_INVENTORY,
@@ -27,89 +28,6 @@ from speckit_pro_runner.agent_inventory import (
     inventory_source_errors,
 )
 
-EXPECTED_AGENT_DIRS = (Path('.'), Path('speckit-pro'), Path('tests/speckit-pro'), Path('docs-site'))
-GEMINI_WRAPPER = '@./AGENTS.md\n'
-COPILOT_POINTER = '# Copilot Instructions\n\nFollow the repository agent contract in `AGENTS.md`. Do not maintain separate\nCopilot-specific project rules here.\n'
-AGENT_CONTEXT_BUDGET_BYTES = 32768
-SKIP_DIR_NAMES = {'.git', '.mypy_cache', '.pytest_cache', '.specify', '.worktrees', 'dist', 'node_modules'}
-SKIP_PREFIXES = (
-    Path('.native-eval-output'),
-    Path('docs-site/src/content/docs/reference'),
-)
-INSTRUCTION_NAMES = {'AGENTS.md', 'CLAUDE.md', 'GEMINI.md'}
-FORBIDDEN_AGENT_PHRASES = ('<!-- SPECKIT START -->', '<!-- SPECKIT END -->', 'Auto-generated from feature plans', '## Active Technologies', '## Recent Changes', '### Test Layers')
-
-def _display(path: Path) -> str:
-    text = path.as_posix()
-    return '.' if text == '.' else text
-
-def _is_skipped(rel_dir: Path) -> bool:
-    return any((rel_dir == prefix or prefix in rel_dir.parents for prefix in SKIP_PREFIXES))
-
-def find_instruction_files(repo_root: Path) -> dict[str, list[Path]]:
-    files = {name: [] for name in INSTRUCTION_NAMES}
-    for dirpath, dirnames, filenames in os.walk(repo_root):
-        current = Path(dirpath)
-        rel_dir = current.relative_to(repo_root)
-        if _is_skipped(rel_dir):
-            dirnames[:] = []
-            continue
-        dirnames[:] = [name for name in dirnames if name not in SKIP_DIR_NAMES]
-        for filename in filenames:
-            if filename in files:
-                files[filename].append((current / filename).relative_to(repo_root))
-    for matches in files.values():
-        matches.sort()
-    return files
-
-def _read(repo_root: Path, rel_path: Path) -> str:
-    return (repo_root / rel_path).read_text(encoding='utf-8')
-
-def collect_errors(repo_root: Path) -> list[str]:
-    errors: list[str] = []
-    expected_dirs = set(EXPECTED_AGENT_DIRS)
-    files = find_instruction_files(repo_root)
-    agent_dirs = {path.parent for path in files['AGENTS.md']}
-    if agent_dirs != expected_dirs:
-        expected = ', '.join((_display(path / 'AGENTS.md') for path in sorted(expected_dirs)))
-        actual = ', '.join((_display(path) for path in files['AGENTS.md'])) or '<none>'
-        errors.append(f'AGENTS.md files must be exactly [{expected}], got [{actual}]')
-    for directory in sorted(expected_dirs):
-        agents = directory / 'AGENTS.md'
-        gemini = directory / 'GEMINI.md'
-        if not (repo_root / agents).is_file():
-            continue
-        if not (repo_root / gemini).is_file():
-            errors.append(f'missing Gemini wrapper: {_display(gemini)}')
-        elif _read(repo_root, gemini) != GEMINI_WRAPPER:
-            errors.append(f'{_display(gemini)} must contain only {GEMINI_WRAPPER.strip()!r}')
-    extras = sorted(set(files['GEMINI.md']) - {directory / 'GEMINI.md' for directory in expected_dirs})
-    if extras:
-        errors.append(f"unexpected GEMINI.md files: {', '.join((_display(path) for path in extras))}")
-    for path in files['CLAUDE.md']:
-        errors.append(f'{_display(path)} must not exist: Claude Code reads AGENTS.md directly')
-    total_bytes = 0
-    for path in files['AGENTS.md']:
-        text = _read(repo_root, path)
-        total_bytes += len(text.encode('utf-8'))
-        for phrase in FORBIDDEN_AGENT_PHRASES:
-            if phrase in text:
-                errors.append(f'{_display(path)} contains stale agent-context exhaust: {phrase}')
-    if total_bytes > AGENT_CONTEXT_BUDGET_BYTES:
-        errors.append(f'AGENTS.md context is {total_bytes} bytes, above {AGENT_CONTEXT_BUDGET_BYTES}')
-    copilot = repo_root / '.github' / 'copilot-instructions.md'
-    if not copilot.is_file():
-        errors.append('missing .github/copilot-instructions.md')
-    elif copilot.read_text(encoding='utf-8') != COPILOT_POINTER:
-        errors.append('.github/copilot-instructions.md must only point to AGENTS.md')
-    return errors
-
-class ValidateAgentInstructions(unittest.TestCase):
-
-    def test_agent_instruction_files_do_not_drift(self) -> None:
-        errors = collect_errors(REPO_ROOT)
-        with self.subTest(msg='agent instruction files have canonical wrapper shape'):
-            self.assertFalse(errors, '\n'.join(errors))
 AGENTS_DIR = PLUGIN_ROOT / 'agents'
 validate_agents_AGENTS = CLAUDE_REQUIRED_AGENT_NAMES
 PLUGIN_AGENT_FIELDS = {'name', 'description', 'model', 'effort', 'maxTurns', 'tools', 'disallowedTools', 'skills', 'memory', 'background', 'isolation', 'color'}
@@ -121,14 +39,6 @@ MEMORY_POLICY = {
 }
 NAME_RE = re.compile('^[a-zA-Z0-9][a-zA-Z0-9-]{2,49}$')
 validate_agents_MODEL_RE = re.compile('^(opus|sonnet|haiku|inherit)$')
-
-def _field(frontmatter: str, key: str) -> str:
-    """First ``key: value`` in the frontmatter, quote-stripped (mirrors sed/tr)."""
-    for line in frontmatter.split('\n'):
-        if line.startswith(f'{key}:'):
-            value = re.sub(f'^{key}:[ \\t]*', '', line)
-            return value.replace('"', '').replace("'", '')
-    return ''
 
 def validate_agents__nonblank(text: str) -> str:
     return '\n'.join((line for line in text.split('\n') if line.strip()))
@@ -231,20 +141,6 @@ def _extract_toml_string(text: str, field: str) -> str:
     match = re.search(f'^{re.escape(field)} = "([^"]*)"$', text, re.MULTILINE)
     return match.group(1) if match else ''
 
-def _extract_developer_instructions(text: str) -> str:
-    '''Lines between ``developer_instructions = """`` and the closing ``"""``.'''
-    out: list[str] = []
-    capture = False
-    for line in text.split('\n'):
-        if not capture and line.startswith('developer_instructions = """'):
-            capture = True
-            continue
-        if capture and line == '"""':
-            break
-        if capture:
-            out.append(line)
-    return '\n'.join(out)
-
 def validate_codex_agents__nonblank(text: str) -> str:
     return '\n'.join((line for line in text.split('\n') if line.strip()))
 
@@ -330,41 +226,22 @@ class ValidateCodexAgents(unittest.TestCase):
             else:
                 with self.subTest(msg='autopilot-fast-helper: intentionally Codex-only'):
                     self.assertFalse((CC_AGENTS_DIR / 'autopilot-fast-helper.md').is_file(), 'autopilot-fast-helper should remain Codex-only; do not add a Claude twin')
-            self._check_profile(agent, model_val, effort_val, sandbox_val, instructions)
+            self._check_profile(agent, instructions)
         with self.subTest(msg='codex-agents/openai.yaml removed'):
             self.assertFalse((CODEX_AGENTS_DIR / 'openai.yaml').is_file(), 'openai.yaml must be removed')
         with self.subTest(msg='codex-agents directory contains TOML files only'):
             non_toml = [p for p in CODEX_AGENTS_DIR.iterdir() if p.is_file() and p.suffix != '.toml']
             self.assertEqual(0, len(non_toml), 'only standalone TOML custom-agent files are allowed')
 
-    def _check_profile(self, agent: str, model_val: str, effort_val: str, sandbox_val: str, instructions: str) -> None:
-        if agent == 'autopilot-fast-helper':
-            with self.subTest(msg='autopilot-fast-helper: uses Luna low-effort read-only advisory profile'):
-                self.assertTrue(model_val == 'gpt-6-luna' and effort_val == 'low' and (sandbox_val == 'read-only'), f'expected gpt-6-luna / low / read-only, got {model_val} / {effort_val} / {sandbox_val}')
-        elif agent == 'clarify-executor':
-            with self.subTest(msg='clarify-executor: uses xhigh GPT-6 Sol read-only question-prep profile'):
-                self.assertTrue(model_val == 'gpt-6-sol' and effort_val == 'xhigh' and (sandbox_val == 'read-only'), f'expected gpt-6-sol / xhigh / read-only, got {model_val} / {effort_val} / {sandbox_val}')
+    def _check_profile(self, agent: str, instructions: str) -> None:
+        """Profile values come from the inventory; only role prose is pinned here."""
+        if agent == 'clarify-executor':
             with self.subTest(msg='clarify-executor: returns questions to parent'):
                 self.assertIn('## Clarify Question Set', instructions)
             with self.subTest(msg='clarify-executor: does not claim to be the user'):
                 self.assertNotIn('YOU ARE THE USER', instructions)
             with self.subTest(msg='clarify-executor: does not invoke interactive clarify skill'):
                 self.assertNotIn('Run `$speckit-clarify`', instructions)
-        elif agent in ('phase-executor', 'checklist-executor', 'analyze-executor', 'formal-model-author'):
-            with self.subTest(msg=f'{agent}: uses xhigh GPT-6 Sol executor profile'):
-                self.assertTrue(model_val == 'gpt-6-sol' and effort_val == 'xhigh' and (sandbox_val == 'workspace-write'), f'expected gpt-6-sol / xhigh / workspace-write, got {model_val} / {effort_val} / {sandbox_val}')
-        elif agent == 'implement-executor':
-            with self.subTest(msg='implement-executor: uses xhigh GPT-6 Sol TDD profile'):
-                self.assertTrue(model_val == 'gpt-6-sol' and effort_val == 'xhigh' and (sandbox_val == 'workspace-write'), f'expected gpt-6-sol / xhigh / workspace-write, got {model_val} / {effort_val} / {sandbox_val}')
-        elif agent in CONSENSUS_ANALYST_ROLES:
-            with self.subTest(msg=f'{agent}: uses max-effort GPT-6 Luna in a read-only sandbox'):
-                self.assertTrue(model_val == 'gpt-6-luna' and effort_val == 'max' and (sandbox_val == 'read-only'), f'expected gpt-6-luna / max / read-only, got {model_val} / {effort_val} / {sandbox_val}')
-        elif agent == 'consensus-synthesizer':
-            with self.subTest(msg='consensus-synthesizer: uses medium-effort GPT-6 Sol read-only synthesis profile'):
-                self.assertTrue(model_val == 'gpt-6-sol' and effort_val == 'medium' and (sandbox_val == 'read-only'), f'expected gpt-6-sol / medium / read-only, got {model_val} / {effort_val} / {sandbox_val}')
-
-AGENT_INSTRUCTION_DIRS = EXPECTED_AGENT_DIRS
-collect_agent_instruction_errors = collect_errors
 
 def main() -> int:
     suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])

@@ -322,8 +322,8 @@ def generate(old_revision: str, current_revision: str, source_root: Path,
                             str(safe_index), str(results / f"{name}.json"), namespace, str(expected)], check=True)
         original = json.loads((results / "original.json").read_bytes())
         current = json.loads((results / "current.json").read_bytes())
-        if len(original["trials"]) != 411 or len(current["trials"]) != 411:
-            raise ValueError("dual replay did not produce the exact 411-trial cohort")
+        if len(original["trials"]) != carry.CARRIED_TRIALS or len(current["trials"]) != carry.CARRIED_TRIALS:
+            raise ValueError(f"dual replay did not produce the exact {carry.CARRIED_TRIALS}-trial cohort")
         trials = []
         for old, new in zip(original["trials"], current["trials"], strict=True):
             identity_fields = {key: old[key] for key in (

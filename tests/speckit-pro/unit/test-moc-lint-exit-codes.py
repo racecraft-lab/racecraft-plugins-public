@@ -20,6 +20,7 @@ LIFECYCLE = (
     / "layer1-structural"
     / "validate-moc-lint.py"
 )
+LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 ORPHAN_MODE = "--moc-orphan"
 STALE_MODE = "--moc-stale"
 STALE_RUNTIME_SYMLINK = (
@@ -150,15 +151,13 @@ def make_legacy_spec(root: Path, name: str) -> Path:
 def force_stale_mode_b_internal_error() -> subprocess.CompletedProcess[str]:
     code = textwrap.dedent(
         f"""\
-        import importlib.util
         import pathlib
         import sys
 
         module_path = pathlib.Path({str(LIFECYCLE)!r})
-        spec = importlib.util.spec_from_file_location("validate_moc_stale_index_forced", module_path)
-        module = importlib.util.module_from_spec(spec)
-        assert spec.loader is not None
-        spec.loader.exec_module(module)
+        sys.path.insert(0, {str(LIB_DIR)!r})
+        from script_loader import load_script
+        module = load_script("validate_moc_stale_index_forced", module_path)
 
         def boom(*_args, **_kwargs):
             raise RuntimeError("forced run_counted failure")
@@ -180,16 +179,14 @@ def force_stale_mode_b_internal_error() -> subprocess.CompletedProcess[str]:
 def force_orphan_scan_root_internal_error(root: Path) -> subprocess.CompletedProcess[str]:
     code = textwrap.dedent(
         f"""\
-        import importlib.util
         import pathlib
         import sys
 
         module_path = pathlib.Path({str(LIFECYCLE)!r})
         scan_root = pathlib.Path({str(root)!r})
-        spec = importlib.util.spec_from_file_location("validate_moc_orphan_forced", module_path)
-        module = importlib.util.module_from_spec(spec)
-        assert spec.loader is not None
-        spec.loader.exec_module(module)
+        sys.path.insert(0, {str(LIB_DIR)!r})
+        from script_loader import load_script
+        module = load_script("validate_moc_orphan_forced", module_path)
 
         def boom(_root):
             raise PermissionError("forced unreadable root")
@@ -211,16 +208,14 @@ def force_orphan_scan_root_internal_error(root: Path) -> subprocess.CompletedPro
 def force_stale_scan_root_internal_error(root: Path) -> subprocess.CompletedProcess[str]:
     code = textwrap.dedent(
         f"""\
-        import importlib.util
         import pathlib
         import sys
 
         module_path = pathlib.Path({str(LIFECYCLE)!r})
         scan_root = pathlib.Path({str(root)!r})
-        spec = importlib.util.spec_from_file_location("validate_moc_stale_index_forced_root", module_path)
-        module = importlib.util.module_from_spec(spec)
-        assert spec.loader is not None
-        spec.loader.exec_module(module)
+        sys.path.insert(0, {str(LIB_DIR)!r})
+        from script_loader import load_script
+        module = load_script("validate_moc_stale_index_forced_root", module_path)
 
         def boom(_root, *, emit=False):
             raise PermissionError("forced unreadable root")
@@ -246,7 +241,6 @@ def force_unreadable_marker(mode: str, root: Path) -> subprocess.CompletedProces
         entrypoint = "module.run_moc_stale([str(scan_root)])"
     code = textwrap.dedent(
         f"""\
-        import importlib.util
         import os
         import pathlib
         import sys
@@ -254,10 +248,9 @@ def force_unreadable_marker(mode: str, root: Path) -> subprocess.CompletedProces
         module_path = pathlib.Path({str(LIFECYCLE)!r})
         scan_root = pathlib.Path({str(root)!r})
         marker = scan_root / "unreadable-spec" / "SPEC-MOC.md"
-        spec = importlib.util.spec_from_file_location("forced_unreadable_marker", module_path)
-        module = importlib.util.module_from_spec(spec)
-        assert spec.loader is not None
-        spec.loader.exec_module(module)
+        sys.path.insert(0, {str(LIB_DIR)!r})
+        from script_loader import load_script
+        module = load_script("forced_unreadable_marker", module_path)
 
         real_access = module.os.access
 
