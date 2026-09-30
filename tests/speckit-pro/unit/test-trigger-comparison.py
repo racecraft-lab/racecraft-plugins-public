@@ -445,7 +445,7 @@ class ReplayObserverImportTests(unittest.TestCase):
     def test_replay_does_not_load_the_runner_scripts(self):
         for host, context in self.CONTEXTS.items():
             with self.subTest(host=host), mock.patch.object(
-                importlib.util, "spec_from" + "_file_location", side_effect=AssertionError("replay loaded a runner script")
+                importlib.util, "spec_from_file_location", side_effect=AssertionError("replay loaded a runner script")
             ):
                 self.assertFalse(comparison.replay(b"", context)["valid"])
 
