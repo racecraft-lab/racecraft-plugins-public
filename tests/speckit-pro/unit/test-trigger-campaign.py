@@ -7,6 +7,7 @@ import copy
 import hashlib
 import json
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -565,11 +566,46 @@ class CampaignDraftBindingTests(unittest.TestCase):
                 self.assertEqual(draft["launch_budget_requested"], plan["launch_count"])
 
 
+class DraftIdentityTests(unittest.TestCase):
+    def test_committed_campaign_drafts_bind_the_current_identities(self):
+        """A draft names the observer, catalog and fixture it was planned against.
+
+        A library, skill or fixture edit changes those digests. This fails until
+        ``compare-trigger-evals.py rebind`` refreshes each draft, so a stale draft
+        cannot be used unnoticed.
+        """
+        current = comparison.snapshot_identities(comparison.measurement_snapshot())
+        drafts = sorted((ROOT / "layer2-trigger" / "campaign-drafts").glob("*.draft.json"))
+        self.assertTrue(drafts, "no committed campaign drafts found")
+        for path in drafts:
+            with self.subTest(draft=path.name):
+                self.assertEqual(json.loads(path.read_bytes())["identities"], current)
+
+    def test_rebind_refreshes_a_stale_draft_and_only_its_identities(self):
+        source = ROOT / "layer2-trigger" / "campaign-drafts" / "issue-573-pilot.draft.json"
+        script = ROOT / "layer2-trigger" / "compare-trigger-evals.py"
+        with tempfile.TemporaryDirectory() as temporary:
+            draft = Path(temporary) / "stale.draft.json"
+            stale = json.loads(source.read_bytes())
+            stale["identities"]["observer"] = "0" * 64
+            draft.write_text(json.dumps(stale, indent=2) + "\n")
+            args = [sys.executable, str(script)]
+            inventory = ["--manifest", str(draft), "--inventory", str(ROOT / "layer2-trigger" / "case-inventory.json")]
+            before = json.loads(subprocess.run([*args, "validate", *inventory], capture_output=True, text=True, check=True).stdout)
+            subprocess.run([*args, "rebind", "--manifest", str(draft)], capture_output=True, text=True, check=True)
+            after = json.loads(subprocess.run([*args, "validate", *inventory], capture_output=True, text=True, check=True).stdout)
+            rebound = json.loads(draft.read_bytes())
+        self.assertEqual((before["identities_current"], after["identities_current"]), (False, True))
+        self.assertEqual({key: value for key, value in rebound.items() if key != "identities"},
+                         {key: value for key, value in stale.items() if key != "identities"})
+
+
 if __name__ == "__main__":
     suite = unittest.TestSuite([
         unittest.defaultTestLoader.loadTestsFromTestCase(CampaignTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(MultiGenerationApprovalTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(CarryForwardTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(CampaignDraftBindingTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(DraftIdentityTests),
     ])
     raise SystemExit(run_counted(suite, label="test-trigger-campaign"))

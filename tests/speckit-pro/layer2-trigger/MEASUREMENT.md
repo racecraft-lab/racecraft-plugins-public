@@ -113,7 +113,8 @@ or granting shared temporary-directory writes. Before provider launch, the
 runner copies a repository-owned fixture containing the local input files named
 by file-backed eval queries into that disposable repository. This keeps those
 queries realistic without exposing the source checkout or weakening failed-command
-rejection. Network access remains disabled.
+rejection. A unit test fails when a query names a file the fixture does not hold.
+Network access remains disabled.
 The per-trial launch contract attests each of these environment boundaries. On
 qualified POSIX hosts, fd 0 is a fresh pseudo-terminal so the positional query
 is the only prompt input. This bypasses Codex's documented non-terminal stdin
@@ -192,7 +193,10 @@ and rejects every reported retry or error event.
 The record counts nine provider invocations. One Claude canary on 2026-09-11
 validated the Claude selection path under Claude Code 2.1.269, the build the
 record still names. The runner has since moved to 2.1.270 (#582), and no live
-run has requalified that build; the Codex model change did not recheck Claude.
+run has requalified that build; the record carries that build under
+`pending_runner_pins`, and a unit test fails when a runner pin, model,
+trial count, or threshold differs from the record without that marker. The Codex
+model change did not recheck Claude.
 On 2026-09-24, one Codex 0.153.3 transport probe served `gpt-6-sol` but emitted
 an `error` item for missing model metadata, which this contract rejects, so the
 pin moved to 0.156.1, the first build that ships that metadata. One 0.156.1

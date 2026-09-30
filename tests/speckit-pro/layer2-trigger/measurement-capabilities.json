@@ -15,6 +15,9 @@
       "reasoning_effort": "low"
     }
   },
+  "pending_runner_pins": {
+    "claude": "2.1.270"
+  },
   "qualification_rule": "Every requested case and trial must complete, remain canonically valid, and carry a qualified observation under the pinned preflight and launch contract",
   "hosts": {
     "claude": {

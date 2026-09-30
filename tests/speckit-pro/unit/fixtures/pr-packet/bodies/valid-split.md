@@ -1,6 +1,6 @@
 <!-- speckit-pro-review-packet-source: tests/speckit-pro/unit/fixtures/pr-packet/valid-split.json -->
 
-# feat(FEATURE-001): Validate reviewer packet slices
+# feat(feature-001): Validate reviewer packet slices
 
 ## Summary
 
