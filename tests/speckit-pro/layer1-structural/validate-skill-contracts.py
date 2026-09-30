@@ -1040,21 +1040,26 @@ class ValidatePayloadLinksStayInside(unittest.TestCase):
     LINK_RE = re.compile(r'\]\(([^)\s]+)\)')
     FENCE_RE = re.compile(r'```.*?```', re.DOTALL)
 
+    SKIP_RE = re.compile(r'^(?:[a-z][a-z0-9+.-]*:|[$<{])')
+
+    def payload_links(self, root: Path) -> list[tuple[Path, str]]:
+        """Every relative link in the payload's skill and agent Markdown."""
+        links = []
+        for path in sorted([*(root / 'skills').rglob('*.md'), *(root / 'agents').rglob('*.md')]):
+            text = self.FENCE_RE.sub('', path.read_text(encoding='utf-8', errors='replace'))
+            links.extend((path, target) for target in self.LINK_RE.findall(text))
+        return [(path, target) for path, target in links
+                if target.split('#', 1)[0] and not self.SKIP_RE.match(target)]
+
     def test_relative_links_resolve_inside_each_payload(self) -> None:
         checked = 0
         for host in ('claude', 'codex'):
             root = (REPO_ROOT / 'dist' / host / 'speckit-pro').resolve()
-            for folder in ('skills', 'agents'):
-                for path in sorted((root / folder).rglob('*.md')):
-                    text = self.FENCE_RE.sub('', path.read_text(encoding='utf-8', errors='replace'))
-                    for target in self.LINK_RE.findall(text):
-                        relative = target.split('#', 1)[0]
-                        if not relative or re.match(r'^[a-z][a-z0-9+.-]*:', relative) or relative.startswith(('$', '<', '{')):
-                            continue
-                        checked += 1
-                        resolved = (path.parent / relative).resolve()
-                        with self.subTest(msg=f'{host}: {path.relative_to(root)} -> {target}'):
-                            self.assertTrue(resolved.is_relative_to(root), f'{target} leaves the installed {host} payload')
+            for path, target in self.payload_links(root):
+                checked += 1
+                resolved = (path.parent / target.split('#', 1)[0]).resolve()
+                with self.subTest(msg=f'{host}: {path.relative_to(root)} -> {target}'):
+                    self.assertTrue(resolved.is_relative_to(root), f'{target} leaves the installed {host} payload')
         self.assertTrue(checked, 'no payload links checked - refusing to pass vacuously')
 
 def main() -> int:
