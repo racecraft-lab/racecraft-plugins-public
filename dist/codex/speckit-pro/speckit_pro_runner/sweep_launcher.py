@@ -14,9 +14,11 @@ import time
 from pathlib import Path
 from typing import Any
 
-from .codex_isolation import (
+from .codex_launch import (
     CODEX_DISABLED_FEATURES,
     LauncherViolation,
+    CodexBroker,
+    CodexRuntimes,
     codex_broker_command,
     codex_executable,
     python_executable,
@@ -146,22 +148,19 @@ def codex_command(
         + (f"; perspective={perspective}" if perspective is not None else "")
         + ". The broker process already holds the opaque model-call capability.\n"
     )
-    return codex_broker_command(
-        codex_runtime=codex_executable(),
-        python_runtime=python_executable(),
-        runtime_root=runtime_root,
+    broker = CodexBroker(
         server="sweep-broker",
-        broker_module="speckit_pro_runner.sweep_broker",
-        broker_env={
+        module="speckit_pro_runner.sweep_broker",
+        env={
             "PYTHONPATH": str(plugin_root),
             "SPECKIT_SWEEP_CAPABILITY": capability,
             "SPECKIT_SWEEP_STATE_ROOT": str(default_state_root() if state_root is None else state_root),
         },
-        enabled_tools=BROKER_TOOL_NAMES,
+        tools=BROKER_TOOL_NAMES,
         output_schema=plugin_root / "speckit_pro_runner" / "contracts" / "sweep-receipt-output.schema.json",
-        prompt=trusted_prompt + trusted_context,
-        output_path=output_path,
     )
+    runtimes = CodexRuntimes(codex=codex_executable(), python=python_executable())
+    return codex_broker_command(broker, runtimes, runtime_root, trusted_prompt + trusted_context, output_path)
 
 
 def codex_event_projection(output: str) -> dict[str, Any]:

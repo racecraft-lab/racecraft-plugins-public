@@ -403,19 +403,6 @@ class GitSnapshot:
             "text": selected,
         }
 
-    def anchor_count(self, file_name: str, anchor: str) -> int:
-        """How often ``anchor`` occurs across every snapshot file named ``file_name``.
-
-        The session does not know which feature directory an edit will land in,
-        so an anchor counts as unique only when it occurs once across all of
-        them. Apply time still requires exactly one match in the target file.
-        """
-        return sum(
-            entry.content.decode("utf-8").count(anchor)
-            for entry in self._entries.values()
-            if PurePosixPath(entry.path).name == file_name
-        )
-
     def search(
         self,
         literal: str,
@@ -1269,7 +1256,6 @@ class SweepSession:
             return RECEIPT_PREFIX + digest
 
     def consume_result(self, receipt: str, *, expected_stage: str) -> dict[str, Any]:
-        """Mark one receipt used and return its full private record."""
         match = RECEIPT_RE.fullmatch(receipt) if isinstance(receipt, str) else None
         if match is None:
             raise ReceiptViolation("result is not an exact sweep receipt")
@@ -1381,6 +1367,33 @@ def is_tiebreak_result(payload: dict[str, Any]) -> bool:
     return payload.get("agreement") == TIEBREAK_AGREEMENT or payload.get("basis") == TIEBREAK_SCOPE_BASIS
 
 
+def _anchor_count(snapshot: GitSnapshot, file_name: str, anchor: str) -> int:
+    """How often ``anchor`` occurs across every snapshot file named ``file_name``.
+
+    The session does not know which feature directory an edit will land in, so
+    an anchor counts as unique only when it occurs once across all of them.
+    Apply time still requires exactly one match in the target file.
+    """
+    return sum(
+        snapshot.entry(row["path"]).content.decode("utf-8").count(anchor)
+        for row in snapshot.list()
+        if PurePosixPath(row["path"]).name == file_name
+    )
+
+
+def _validated_edit(value: Any, snapshot: GitSnapshot) -> dict[str, Any]:
+    """One resolved synthesis edit: an allowed artifact, a unique anchor, a bounded replacement."""
+    edit = _require_exact_keys(value, {"file", "anchor", "replacement"}, "edit")
+    if edit["file"] not in ARTIFACT_ALLOWLIST:
+        raise SchemaViolation("synthesis edit targets a non-artifact path")
+    _bounded_nonempty(edit["anchor"], MAX_ANCHOR_BYTES, "anchor")
+    if _anchor_count(snapshot, edit["file"], edit["anchor"]) != 1:
+        raise SchemaViolation("edit anchor must match the snapshot exactly once")
+    if not isinstance(edit["replacement"], str) or len(edit["replacement"].encode("utf-8")) > MAX_REPLACEMENT_BYTES:
+        raise SchemaViolation("replacement is not text or exceeds its bound")
+    return edit
+
+
 def validate_result(
     stage: str,
     payload: Any,
@@ -1444,15 +1457,7 @@ def validate_result(
             return record
         if record["agreement"] not in {"3/3", "2/3", TIEBREAK_AGREEMENT} or record["basis"] is not None:
             raise SchemaViolation("resolved synthesis fields are inconsistent")
-        edit = _require_exact_keys(record["edit"], {"file", "anchor", "replacement"}, "edit")
-        if edit["file"] not in ARTIFACT_ALLOWLIST:
-            raise SchemaViolation("synthesis edit targets a non-artifact path")
-        _bounded_nonempty(edit["anchor"], MAX_ANCHOR_BYTES, "anchor")
-        if snapshot.anchor_count(edit["file"], edit["anchor"]) != 1:
-            raise SchemaViolation("edit anchor must match the snapshot exactly once")
-        if not isinstance(edit["replacement"], str) or len(edit["replacement"].encode("utf-8")) > MAX_REPLACEMENT_BYTES:
-            raise SchemaViolation("replacement is not text or exceeds its bound")
-        record["edit"] = edit
+        record["edit"] = _validated_edit(record["edit"], snapshot)
         return record
     raise SchemaViolation("result stage is unknown")
 

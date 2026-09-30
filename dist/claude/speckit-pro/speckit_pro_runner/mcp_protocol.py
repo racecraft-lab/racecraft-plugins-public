@@ -45,59 +45,56 @@ class ToolServer:
     error_code: Callable[[Exception], str | None]
 
 
-def _response(request_id: Any, result: Any) -> dict[str, Any]:
-    return {"jsonrpc": "2.0", "id": request_id, "result": result}
-
-
-def _error(request_id: Any, code: int, message: str) -> dict[str, Any]:
-    return {"jsonrpc": "2.0", "id": request_id, "error": {"code": code, "message": message}}
+def _envelope(request_id: Any, **member: Any) -> dict[str, Any]:
+    """A JSON-RPC 2.0 reply carrying one ``result`` or ``error`` member."""
+    return {"jsonrpc": "2.0", "id": request_id, **member}
 
 
 def _tool_call(server: ToolServer, request_id: Any, params: Any) -> dict[str, Any]:
     if not isinstance(params, dict):
-        return _error(request_id, -32602, "invalid tool parameters")
+        return _envelope(request_id, error={"code": -32602, "message": "invalid tool parameters"})
     try:
         result = server.call_tool(params.get("name"), params.get("arguments", {}))
     except Exception as exc:  # noqa: BLE001 - the broker's mapper decides; None re-raises
         code = server.error_code(exc)
         if code is None:
             raise
-        return _response(
+        return _envelope(
             request_id,
-            {
+            result={
                 "isError": True,
                 "content": [{"type": "text", "text": f"broker_error:{code}"}],
                 "structuredContent": {"error_code": code},
             },
         )
     text = result if isinstance(result, str) else json.dumps(result, sort_keys=True, separators=(",", ":"))
-    return _response(request_id, {"content": [{"type": "text", "text": text}]})
+    return _envelope(request_id, result={"content": [{"type": "text", "text": text}]})
 
 
 def handle_message(server: ToolServer, message: Any) -> dict[str, Any] | None:
     """Answer one JSON-RPC message; a notification returns ``None``."""
     if not isinstance(message, dict) or message.get("jsonrpc") != "2.0":
-        return _error(None, -32600, "invalid request")
+        return _envelope(None, error={"code": -32600, "message": "invalid request"})
     request_id = message.get("id")
     method = message.get("method")
     if method == "notifications/initialized":
         return None
     if method == "initialize":
-        return _response(
+        return _envelope(
             request_id,
-            {
+            result={
                 "protocolVersion": negotiate_protocol_version(message.get("params")),
                 "capabilities": {"tools": {"listChanged": False}},
                 "serverInfo": dict(server.server_info),
             },
         )
     if method == "ping":
-        return _response(request_id, {})
+        return _envelope(request_id, result={})
     if method == "tools/list":
-        return _response(request_id, {"tools": list(server.tools)})
+        return _envelope(request_id, result={"tools": list(server.tools)})
     if method == "tools/call":
         return _tool_call(server, request_id, message.get("params"))
-    return _error(request_id, -32601, "method not found")
+    return _envelope(request_id, error={"code": -32601, "message": "method not found"})
 
 
 def serve(handle: Callable[[Any], dict[str, Any] | None], *, label: str) -> int:
@@ -109,7 +106,7 @@ def serve(handle: Callable[[Any], dict[str, Any] | None], *, label: str) -> int:
         try:
             reply = handle(json.loads(raw_line))
         except (UnicodeDecodeError, json.JSONDecodeError):
-            reply = _error(None, -32700, "parse error")
+            reply = _envelope(None, error={"code": -32700, "message": "parse error"})
         if reply is not None:
             sys.stdout.write(json.dumps(reply, separators=(",", ":")) + "\n")
             sys.stdout.flush()

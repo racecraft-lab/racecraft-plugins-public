@@ -26,8 +26,10 @@ from pathlib import Path
 from typing import Any
 
 from . import author_broker
-from .codex_isolation import (
+from .codex_launch import (
     LauncherViolation,
+    CodexBroker,
+    CodexRuntimes,
     codex_broker_command,
     codex_executable,
     python_executable,
@@ -92,21 +94,19 @@ def codex_preview_command(
     # The capability is minted in this process and redeemed in the broker Codex
     # starts, so the redeeming broker is told the session root outright rather
     # than inferring it from a TMPDIR it may not inherit.
-    return codex_broker_command(
-        codex_runtime=codex_executable(),
-        python_runtime=python_executable(),
-        runtime_root=runtime_root,
+    broker = CodexBroker(
         server="author-broker",
-        broker_module="speckit_pro_runner.author_broker",
-        broker_env={
+        module="speckit_pro_runner.author_broker",
+        env={
             "PYTHONPATH": str(plugin_root),
             author_broker.STATE_ROOT_VARIABLE: str(author_broker.state_root() if state_root is None else state_root),
         },
-        enabled_tools=OBSERVER_TOOL_NAMES,
+        tools=OBSERVER_TOOL_NAMES,
         output_schema=output_schema_path(plugin_root),
-        prompt=trusted_prompt + TRUSTED_CONTEXT + capability + "\n",
-        output_path=output_path,
     )
+    runtimes = CodexRuntimes(codex=codex_executable(), python=python_executable())
+    prompt = trusted_prompt + TRUSTED_CONTEXT + capability + "\n"
+    return codex_broker_command(broker, runtimes, runtime_root, prompt, output_path)
 
 
 def run_codex_preview(

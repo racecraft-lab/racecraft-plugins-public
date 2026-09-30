@@ -14,7 +14,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from .codex_isolation import (
+from .codex_launch import (
     CODEX_DISABLED_FEATURES,
     LauncherViolation,
     CodexBroker,
