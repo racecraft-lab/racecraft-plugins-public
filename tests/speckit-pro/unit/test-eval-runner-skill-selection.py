@@ -50,7 +50,6 @@ from speckit_pro_runner.helpers.registry import HELPERS, MUTATION_HELPERS  # noq
 
 SHIPPED_RUNTIME_CONTRACTS = (
     PLUGIN_ROOT / "skills" / "speckit-upgrade" / "SKILL.md",
-    PLUGIN_ROOT / "codex-skills" / "speckit-upgrade" / "SKILL.md",
     PLUGIN_ROOT / "skills" / "speckit-scaffold-spec" / "SKILL.md",
     PLUGIN_ROOT / "codex-skills" / "speckit-scaffold-spec" / "SKILL.md",
     PLUGIN_ROOT / "skills" / "speckit-autopilot" / "SKILL.md",
@@ -342,7 +341,7 @@ def runtime_contract_parity_violations() -> list[str]:
         (
             "upgrade",
             PLUGIN_ROOT / "skills" / "speckit-upgrade" / "SKILL.md",
-            PLUGIN_ROOT / "codex-skills" / "speckit-upgrade" / "SKILL.md",
+            codex_skill_dir("speckit-upgrade") / "SKILL.md",
             ("migrate-structure", "relocate-process-artifacts", "promotion_status=deferred", "no authoritative request"),
         ),
         (

@@ -40,7 +40,8 @@ from speckit_pro_runner.host_parity import (  # noqa: E402
     split_frontmatter,
     unexplained_blocks,
 )
-from speckit_pro_runner.host_skills import codex_skill_overlay_errors  # noqa: E402
+from speckit_pro_runner.host_skills import UNMERGED_CODEX_OVERLAYS, codex_skill_overlay_errors  # noqa: E402
+from host_skill_views import host_skill_root  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
@@ -342,10 +343,11 @@ class HostSkillSourceTests(unittest.TestCase):
             root = Path(temporary)
             shutil.copytree(PLUGIN_ROOT / "codex-skills", root / "codex-skills")
             (root / "codex-skills" / "grill-me" / "SKILL.md").write_text("---\nname: grill-me\n---\n", encoding="utf-8")
-            (root / "codex-skills" / "speckit-upgrade" / "SKILL.md").unlink()
+            listed = min(UNMERGED_CODEX_OVERLAYS)
+            (root / "codex-skills" / listed).unlink()
             self.assertEqual(codex_skill_overlay_errors(root), [
                 "codex-skills/grill-me/SKILL.md overlays a shared skill file; merge it into skills/ as host blocks",
-                "codex-skills/speckit-upgrade/SKILL.md is listed as an unmerged overlay but does not exist",
+                f"codex-skills/{listed} is listed as an unmerged overlay but does not exist",
             ])
 
     def test_grill_me_sends_setup_alone_to_scaffold_spec_on_both_hosts(self) -> None:
@@ -383,6 +385,41 @@ class HostSkillSourceTests(unittest.TestCase):
                 self.assertRegex(text, r"(?i)complete, warn the user and stop")
                 self.assertRegex(text, r"(?i)in progress, (?:prefer )?reus\w+ (?:the |its )?existing worktree branch")
 
+
+# Statements that read differently on the two hosts before the install, upgrade
+# and archive-cleanup overlays merged: (skill, text each host must state, text
+# neither may state). `{sigil}` is the host's skill-name prefix.
+SETUP_SKILL_DRIFT = (
+    # autopilot-state-status.schema.json retires the spelling "completed archived".
+    ("speckit-archive-cleanup", ("`completed_archived`",), ("completed archived",)),
+    # find_specify checks PATH, then ~/.local/bin; setup checks read bash scripts.
+    ("speckit-install", ("`~/.local/bin/specify`",
+                         "`specify init --here --integration <first-key> --script sh`"), ("on macOS/Linux",)),
+    # research_preflight warns on every environment-only key.
+    ("speckit-install", ("A key held only in an environment variable is a warning",), ()),
+    ("speckit-upgrade", ("A key held only in an environment variable is a warning",), ()),
+    ("speckit-upgrade", ("`speckit.<single-word>.md`", "Show the exact deletion list"),
+     ("exactly those matching `speckit.*.md`",)),
+    ("speckit-upgrade", ("use `{sigil}speckit-install <new-key>` instead",),
+     ("treat that as an add-integration request",)),
+    ("speckit-upgrade", ("does not run it",), ("Invoke `uv tool install specify-cli --force",)),
+)
+
+
+class SetupSkillDriftTests(unittest.TestCase):
+    """Install, upgrade and archive cleanup state the runner's behavior on both hosts."""
+
+    def test_each_reconciled_statement_reads_the_same_on_both_hosts(self) -> None:
+        for host, sigil in (("claude", "/speckit-pro:"), ("codex", "$")):
+            for skill, present, absent in SETUP_SKILL_DRIFT:
+                path = host_skill_root(host) / skill / "SKILL.md"
+                text = " ".join(path.read_text(encoding="utf-8").split())
+                for phrase in present:
+                    with self.subTest(host=host, skill=skill, present=phrase):
+                        self.assertIn(phrase.format(sigil=sigil), text)
+                for phrase in absent:
+                    with self.subTest(host=host, skill=skill, absent=phrase):
+                        self.assertNotIn(phrase, text)
 
 POST_ROW = re.compile(r'^\s*"(Post: [^"]+)"', re.M)
 CODEX_ONLY_POST_ROWS = ["Post: Final Reviewability Backstop", "Post: PR Packet/Body Generation"]
@@ -510,6 +547,7 @@ def main() -> int:
             CodexAgentGeneratorTests,
             CodexAgentPolicyHookTests,
             HostSkillSourceTests,
+            SetupSkillDriftTests,
             PostPlanParityTests,
         )
     )

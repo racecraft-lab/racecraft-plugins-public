@@ -280,11 +280,10 @@ class CodexSkillRosterTests(unittest.TestCase):
             self.assertEqual([], metadata.codex_skill_gaps(copy))
             shutil.rmtree(copy / "codex-skills" / "install")
             self.assertEqual(["Codex skill install/SKILL.md is missing"], metadata.codex_skill_gaps(copy))
-            shutil.rmtree(copy / "skills" / "speckit-upgrade")
             (copy / "codex-skills" / "stray").mkdir()
             (copy / "codex-skills" / "stray" / "SKILL.md").write_text("---\nname: stray\n---\n", encoding="utf-8")
             self.assertEqual(
-                ["Codex skill install/SKILL.md is missing", "Codex skill speckit-upgrade/ is not a required skill", "Codex skill stray/ is not a required skill"],
+                ["Codex skill install/SKILL.md is missing", "Codex skill stray/ is not a required skill"],
                 metadata.codex_skill_gaps(copy),
             )
 
