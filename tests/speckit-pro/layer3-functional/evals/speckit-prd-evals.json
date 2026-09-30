@@ -4,13 +4,13 @@
     {
       "id": 1,
       "prompt": "I have a raw idea: 'Add saved searches with email alerts to our app — users save a query and get notified when new results match.' Write a lean PRD and the technical roadmap so I can scaffold specs from it. Interview me one question at a time with your recommended answer first.",
-      "expected_output": "Runs a collaborative interview via AskUserQuestion covering problem, users, goals, non-goals, feature breakdown, sequencing, acceptance criteria, constraints, and open questions. Each question has the AI's recommendation as the first option marked (Recommended). Then writes docs/prd-saved-searches.md (lean PRD) and docs/ai/specs/saved-searches-technical-roadmap.md (SPEC catalog), with every PRD feature mapping 1:1 to one SPEC.",
+      "expected_output": "Runs a collaborative interview via AskUserQuestion covering problem, users, goals, non-goals, feature breakdown, sequencing, acceptance criteria, constraints, and open questions. Each question has the AI's recommendation as the first option marked (Recommended). Then writes docs/prd-saved-searches.md (lean PRD) and docs/ai/specs/saved-searches-technical-roadmap.md (SPEC catalog), plus the roadmap-MOC home note docs/ai/specs/saved-searches-roadmap-MOC.md, with every PRD feature mapping 1:1 to one SPEC.",
       "expectations": [
         "Uses AskUserQuestion and asks exactly one question per turn — no batched multi-question prompts",
         "Every question presents the AI's recommendation as the first option, suffixed '(Recommended)', with a one-line rationale",
         "Walks the feature-breakdown branch explicitly and derives the SPEC catalog from it (one SPEC per feature)",
-        "Writes a lean PRD to docs/prd-saved-searches.md with sections Problem, Goals/Non-goals, Acceptance Criteria grouped by feature (AC-N.*), Migration Path, Constraints, Open Questions, Success Criteria",
-        "Writes a technical roadmap to docs/ai/specs/saved-searches-technical-roadmap.md whose SPEC catalog is 1:1 with the PRD features (same count, names, and SPEC IDs), with a Source PRD reference back to the PRD",
+        "Writes a lean PRD to docs/prd-saved-searches.md with sections Problem, Goals/Non-goals, Acceptance Criteria grouped by feature (AC-N.*), Migration Path, Module and Interface Deltas, Constraints, Open Questions, SPEC Catalog Crosswalk, Success Criteria",
+        "Writes a technical roadmap to docs/ai/specs/saved-searches-technical-roadmap.md whose SPEC catalog is 1:1 with the PRD features (same count, names, and SPEC IDs), with a Source PRD reference back to the PRD, and writes the roadmap-MOC home note docs/ai/specs/saved-searches-roadmap-MOC.md as the third required artifact",
         "Confirms the dependency graph / execution order with the user before finalizing the roadmap",
         "Recommends the next step (speckit-status or speckit-scaffold-spec SPEC-001), and does NOT itself create a worktree, workflow file, or spec.md"
       ]
@@ -33,7 +33,7 @@
       "expectations": [
         "Flags that one or more candidate features are too large for a single reviewable SPEC and splits them into smaller features during the interview",
         "Keeps each SPEC within a stated reviewability budget; no single SPEC bundles all of subscriptions + invoicing + payments",
-        "The final §3 features, §7 SPEC Catalog Crosswalk, and roadmap catalog agree on count, names, and IDs",
+        "The final §3 features, §8 SPEC Catalog Crosswalk, and roadmap catalog agree on count, names, and IDs",
         "Records significant scoping decisions (what was split and why) in the PRD or roadmap"
       ]
     },
