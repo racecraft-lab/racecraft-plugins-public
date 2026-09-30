@@ -1434,6 +1434,32 @@ class RefreshReleaseArtifactsCheckTests(unittest.TestCase):
         self.assertEqual(before, after)
 
 
+class ReleasePrFallbackTests(unittest.TestCase):
+    def test_fallback_title_names_the_release_component(self) -> None:
+        for component in ("speckit-pro", "typesafe-jev"):
+            branch = f"release-please--branches--main--components--{component}"
+            expected = f"chore(release): release {component}"
+            with self.subTest(component=component):
+                (release_pr,) = dispatch.parse_release_prs(json.dumps([{"headBranchName": branch, "number": 7}]))
+                self.assertEqual(expected, release_pr["title"])
+                normalized = resolver.normalize_release_pr({"headBranchName": branch, "number": 7}, "main", strict=True)
+                self.assertEqual(expected, normalized["title"])
+
+    def test_dispatch_rejects_a_missing_title_it_cannot_derive_a_component_for(self) -> None:
+        with self.assertRaises(dispatch.DispatchError):
+            dispatch.parse_release_prs(json.dumps([{"headBranchName": "release/main", "number": 7}]))
+
+    def test_dispatch_passes_base_ref_through(self) -> None:
+        branch = "release-please--branches--stable--components--typesafe-jev"
+        release_prs = json.dumps([{"headBranchName": branch, "number": 9, "title": "release"}])
+        run = mock.Mock()
+        self.assertEqual(0, dispatch.main({"BASE_REF": "stable", "RELEASE_PRS": release_prs}, run=run))
+        dispatched = [call.args[0] for call in run.call_args_list]
+        self.assertTrue(all("base_ref=stable" in argv for argv in dispatched if "pr-checks.yml" in argv))
+        self.assertFalse(any("base_ref=main" in argv for argv in dispatched))
+        self.assertEqual(2, len(dispatched))
+
+
 if __name__ == "__main__":
     suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])
     result = unittest.TextTestRunner(verbosity=1).run(suite)

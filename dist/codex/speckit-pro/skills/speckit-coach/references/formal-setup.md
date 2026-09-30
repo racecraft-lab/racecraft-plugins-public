@@ -28,7 +28,8 @@ Selected Quint still uses `npm ci` and registry access for its locked packages.
 
 Copy the counter's model, native configuration, and example catalog to
 `formal/counter` and `.specify/formal-methods.json`. Replace the catalog's tool
-entry with the setup result, then record explicit workflow selection. Keep the
+entry with the setup result (the shipped example catalogs already match it),
+then record explicit workflow selection. Keep the
 catalog, model, config, and compact checkpoint records in version control;
 tools, generated traces, and raw checker output are ignored. Follow the
 [counter walkthrough](formal-methods-guide.md#first-useful-check) to obtain a

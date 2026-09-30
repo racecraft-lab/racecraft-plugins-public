@@ -13,6 +13,9 @@ import tempfile
 from pathlib import Path
 from typing import Any, Callable
 
+sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
+from preflight_architecture import architecture_family as _architecture_family  # noqa: E402
+from preflight_architecture import resolve_architectures  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 HOSTED_PYTHON_VERSION = "3.13.14"
@@ -34,7 +37,7 @@ WINDOWS_HELPER = REPO_ROOT / "tests" / "speckit-pro" / "run-hosted-windows-prefl
 RUNNER_TIMEOUT_SECONDS = 1800
 WINDOWS_TIMEOUT_SECONDS = 3600
 WINDOWS_ROLE_ARCHITECTURES = {
-    "windows-x64": "amd64",
+    "windows-x64": "x64",
     "windows-arm64": "arm64",
 }
 INTERPRETER_CANDIDATES = (
@@ -62,7 +65,7 @@ HEAVY_PATH_PREFIXES = (
     ".github/workflows/",
 )
 LINUX_ROLE_ARCHITECTURES = {
-    "linux-amd64": "amd64",
+    "linux-amd64": "x64",
     "linux-arm64": "arm64",
 }
 LINUX_REQUESTS = (
@@ -147,15 +150,6 @@ def _require_python_version(expected: str) -> None:
         raise PreflightError(
             f"expected Python {expected}, found {actual} at {sys.executable}"
         )
-
-
-def _architecture_family(value: str) -> str:
-    normalized = value.strip().lower().replace("-", "_")
-    if normalized in {"amd64", "x64", "x86_64"}:
-        return "amd64"
-    if normalized in {"aarch64", "arm64"}:
-        return "arm64"
-    return ""
 
 
 def _run_git(
@@ -615,18 +609,16 @@ def _probe_interpreter(
         and type(micro) is int
         and (major > 3 or (major == 3 and minor >= 11))
     )
-    machine = str(payload.get("machine") or "")
-    process_architecture = str(
-        payload.get("processor_architecture") or machine
+    architectures = resolve_architectures(
+        str(payload.get("machine") or ""),
+        str(payload.get("processor_architecture") or ""),
+        str(payload.get("processor_architew6432") or ""),
     )
-    native_architecture = str(
-        payload.get("processor_architew6432") or machine
-    )
-    process_family = _architecture_family(process_architecture)
-    native_family = _architecture_family(native_architecture)
-    architecture_emulated = bool(
-        process_family and native_family and process_family != native_family
-    )
+    process_architecture = architectures.process
+    native_architecture = architectures.native
+    process_family = architectures.process_family
+    native_family = architectures.native_family
+    architecture_emulated = architectures.emulated
     architecture_supported = all(
         (
             process_family == expected_architecture,

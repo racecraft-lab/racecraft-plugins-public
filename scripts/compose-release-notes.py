@@ -28,19 +28,19 @@ import release_note_policy as _release_note_policy  # noqa: E402
 CompositionError = _release_note_policy.CompositionError
 CONVENTIONAL_PREFIX_RE = _release_note_policy.CONVENTIONAL_PREFIX_RE
 DiscoveredCommit = _release_note_policy.DiscoveredCommit
+FAILURE_OUTCOME = _release_note_policy.FAILURE_OUTCOME
 SKIP_LABEL = _release_note_policy.SKIP_LABEL
+SNAPSHOT_KEYS = _release_note_policy.SNAPSHOT_KEYS
+SNAPSHOT_SCHEMA_VERSION = _release_note_policy.SNAPSHOT_SCHEMA_VERSION
 TRAILING_PR_RE = _release_note_policy.TRAILING_PR_RE
-_label_names = _release_note_policy._label_names
-_validation_inputs_from_environment = _release_note_policy._validation_inputs_from_environment
 extract_release_note = _release_note_policy.extract_release_note
+label_names = _release_note_policy.label_names
 sanitize_fallback_subject = _release_note_policy.sanitize_fallback_subject
 sanitize_release_note = _release_note_policy.sanitize_release_note
 validate_release_note = _release_note_policy.validate_release_note
 MAX_COMPARE_COMMITS = 250
-SNAPSHOT_SCHEMA_VERSION = 1
 APPENDIX_HEADING = "## Commit appendix"
 HIGHLIGHTS_HEADING = "## Highlights"
-FAILURE_OUTCOME = "release_note_composition_failed"
 VALIDATION_FAILURE_OUTCOME = "release_note_validation_failed"
 VALIDATION_PASS_OUTCOME = "release_note_validation_passed"
 SNAPSHOT_MARKER_PREFIX = "<!-- release-note-composer-snapshot:v1 "
@@ -353,7 +353,7 @@ def compose_release_body(
         pr = pulls.get(commit.pr_number)
         if not isinstance(pr, Mapping):
             raise CompositionError(f"unable to resolve pull request #{commit.pr_number}")
-        skipped = SKIP_LABEL in _label_names(pr)
+        skipped = SKIP_LABEL in label_names(pr)
         body_value = pr.get("body")
         if body_value is None:
             body_value = ""
@@ -444,7 +444,7 @@ def capture_release_input_snapshot(
             raise CompositionError(f"pull request #{commit.pr_number} body is not text")
         pulls[str(commit.pr_number)] = {
             "body": body,
-            "labels": sorted(_label_names(pr)),
+            "labels": sorted(label_names(pr)),
         }
 
     link = _header_value(headers, "Link").strip()
@@ -489,17 +489,7 @@ def load_release_input_snapshot(
         if digest != expected_sha256:
             raise CompositionError("release input snapshot digest verification failed")
 
-    expected_keys = {
-        "compare",
-        "compare_headers",
-        "previous_tag",
-        "pulls",
-        "release_body",
-        "repository",
-        "schema_version",
-        "tag",
-    }
-    if set(value) != expected_keys or value.get("schema_version") != SNAPSHOT_SCHEMA_VERSION:
+    if set(value) != SNAPSHOT_KEYS or value.get("schema_version") != SNAPSHOT_SCHEMA_VERSION:
         raise CompositionError("release input snapshot schema is invalid")
 
     repository = value.get("repository")
@@ -630,6 +620,24 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def validation_inputs_from_environment() -> tuple[str, str, set[str], bool]:
+    title = os.environ.get("PR_TITLE", "")
+    if not title.strip():
+        raise CompositionError("PR_TITLE is required for --validate-pr")
+    body = os.environ.get("PR_BODY", "")
+    raw_labels = os.environ.get("PR_LABELS_JSON", "[]")
+    try:
+        labels_value = json.loads(raw_labels)
+    except json.JSONDecodeError as error:
+        raise CompositionError("PR_LABELS_JSON must be a JSON array") from error
+    if not isinstance(labels_value, list) or not all(isinstance(label, str) for label in labels_value):
+        raise CompositionError("PR_LABELS_JSON must be a JSON array of strings")
+    draft_value = os.environ.get("PR_DRAFT", "false").strip().lower()
+    if draft_value not in {"true", "false"}:
+        raise CompositionError("PR_DRAFT must be true or false")
+    return title, body, set(labels_value), draft_value == "true"
+
+
 def run(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
@@ -644,7 +652,7 @@ def run(argv: Sequence[str] | None = None) -> int:
                 or args.tag
             ):
                 raise CompositionError("--validate-pr cannot be combined with composition arguments")
-            title, body, labels, draft = _validation_inputs_from_environment()
+            title, body, labels, draft = validation_inputs_from_environment()
             valid, reason = validate_release_note(title, body, labels, draft=draft)
             result = {"outcome": VALIDATION_PASS_OUTCOME if valid else VALIDATION_FAILURE_OUTCOME, "reason": reason}
             stream = sys.stdout if valid else sys.stderr
