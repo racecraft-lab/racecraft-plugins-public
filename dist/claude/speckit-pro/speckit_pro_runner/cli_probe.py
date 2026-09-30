@@ -11,6 +11,7 @@ from typing import Any
 # A branch name that could be read as an option, or that git would reject, is never passed to a CLI.
 BRANCH = re.compile(r"(?!-)(?!.*\.\.)(?!.*//)[A-Za-z0-9._/-]{1,255}\Z")
 STDERR_TAIL_CHARS = 2048
+CLIS = ("gh", "git")
 
 
 def probe(root: Path, argv: list[str], *, allowed: Collection[str], timeout: float) -> dict[str, Any]:
@@ -20,17 +21,15 @@ def probe(root: Path, argv: list[str], *, allowed: Collection[str], timeout: flo
     allowed, cannot start, or exceeds `timeout` seconds.
     """
     try:
-        if not argv or argv[0] not in allowed:
+        if not argv or argv[0] not in allowed or argv[0] not in CLIS:
             raise ValueError(f"only {', '.join(sorted(allowed))} may run here")
-        result = subprocess.run(
-            [argv[0], *argv[1:]],
-            cwd=root,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            stdin=subprocess.DEVNULL,
-            shell=False,
-        )
+        # Each executable is a literal, so the repository Bash-confinement guard can prove it Bash-free.
+        options: dict[str, Any] = {"cwd": root, "capture_output": True, "text": True, "timeout": timeout,
+                                   "stdin": subprocess.DEVNULL, "shell": False}
+        if argv[0] == "gh":
+            result = subprocess.run(["gh", *argv[1:]], **options)
+        else:
+            result = subprocess.run(["git", *argv[1:]], **options)
         return {
             "argv": argv,
             "exit_status": result.returncode,
