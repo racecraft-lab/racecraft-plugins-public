@@ -329,7 +329,7 @@ class WorkflowStatusEvidenceTests(unittest.TestCase):
 class StateStatusSchemaTests(unittest.TestCase):
     def test_retired_spelling_is_rejected(self) -> None:
         errors = validator.validate_state_status({"status": "complete_pr_open"})["state_status_errors"]
-        self.assertTrue(any("enum" in e for e in errors), errors)
+        self.assertTrue(any("allowed values" in e for e in errors), errors)
 
     def test_current_spellings_are_accepted(self) -> None:
         for status in ("in_progress", "completed", "completed_pr_open", "completed_archived"):

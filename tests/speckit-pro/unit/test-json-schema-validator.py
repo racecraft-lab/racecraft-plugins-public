@@ -13,7 +13,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 sys.path[:0] = [str(PLUGIN_ROOT), str(REPO_ROOT / "tests/speckit-pro/lib")]
 
-from speckit_pro_runner.helpers.read_only import (  # noqa: E402
+from speckit_pro_runner.json_schema import (  # noqa: E402
     ANNOTATION_SCHEMA_KEYWORDS,
     ASSERTED_SCHEMA_KEYWORDS,
     json_schema_failures,

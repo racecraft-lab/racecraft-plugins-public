@@ -25,12 +25,12 @@
         "complexity": {
           "type": "integer",
           "minimum": 1,
-          "description": "Maximum cyclomatic complexity per changed function."
+          "description": "Maximum cyclomatic complexity per function in each changed file."
         },
         "crap": {
           "type": "number",
           "exclusiveMinimum": 0,
-          "description": "Maximum CRAP score per changed function."
+          "description": "Maximum CRAP score per function in each changed file."
         },
         "mutation_score_floor": {
           "type": "number",
