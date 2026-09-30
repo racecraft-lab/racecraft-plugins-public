@@ -422,34 +422,6 @@ class WorkflowResultsHelperTests(unittest.TestCase):
             stderr.getvalue(),
         )
 
-    def test_main_passes_a_cancelled_run_only_when_a_newer_run_supersedes_it(self) -> None:
-        results = {"DETECT_RESULT": "success", "ARTIFACT_RESULT": "success", "GO_RESULT": "success"}
-        cases = (
-            ("cancelled", "superseded by run 7", 0),
-            ("cancelled", None, 1),
-            ("failure", "superseded by run 7", 1),
-        )
-        for test_result, notice, expected in cases:
-            with self.subTest(test_result=test_result, notice=notice):
-                stdout, stderr = io.StringIO(), io.StringIO()
-                calls: list[str] = []
-
-                def superseded(notice: str | None = notice) -> str | None:
-                    calls.append("asked")
-                    return notice
-
-                with (
-                    mock.patch.dict(os.environ, {**results, "TEST_RESULT": test_result}),
-                    contextlib.redirect_stdout(stdout),
-                    contextlib.redirect_stderr(stderr),
-                ):
-                    self.assertEqual(expected, RESULTS.main([], superseded=superseded))
-                self.assertEqual(calls, ["asked"] if test_result == "cancelled" else [])
-                if expected == 0:
-                    self.assertEqual("::notice::superseded by run 7\n", stdout.getvalue())
-                else:
-                    self.assertIn("::error::Plugin tests failed", stderr.getvalue())
-
 
 class SupersededRunTests(unittest.TestCase):
     SHA = "a" * 40
@@ -511,6 +483,34 @@ class SupersededRunTests(unittest.TestCase):
             with self.subTest(key=key, value=value):
                 self.assertIsNone(SUPERSEDED.newer_run_id({**self.ENV, key: value}, fetch))
         self.assertIsNone(SUPERSEDED.newer_run_id(self.ENV))
+
+    def test_main_passes_a_cancelled_run_only_when_a_newer_run_supersedes_it(self) -> None:
+        results = {"DETECT_RESULT": "success", "ARTIFACT_RESULT": "success", "GO_RESULT": "success"}
+        cases = (
+            ("cancelled", "superseded by run 7", 0),
+            ("cancelled", None, 1),
+            ("failure", "superseded by run 7", 1),
+        )
+        for test_result, notice, expected in cases:
+            with self.subTest(test_result=test_result, notice=notice):
+                stdout, stderr = io.StringIO(), io.StringIO()
+                calls: list[str] = []
+
+                def superseded(notice: str | None = notice) -> str | None:
+                    calls.append("asked")
+                    return notice
+
+                with (
+                    mock.patch.dict(os.environ, {**results, "TEST_RESULT": test_result}),
+                    contextlib.redirect_stdout(stdout),
+                    contextlib.redirect_stderr(stderr),
+                ):
+                    self.assertEqual(expected, RESULTS.main([], superseded=superseded))
+                self.assertEqual(calls, ["asked"] if test_result == "cancelled" else [])
+                if expected == 0:
+                    self.assertEqual("::notice::superseded by run 7\n", stdout.getvalue())
+                else:
+                    self.assertIn("::error::Plugin tests failed", stderr.getvalue())
 
     def test_api_errors_and_mismatched_runs_fail_closed(self) -> None:
         def broken(error: Exception):

@@ -589,29 +589,34 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
             ],
         )
 
-    def test_required_sentinel_writes_stable_verdict_evidence(self) -> None:
+    def run_sentinel(
+        self, role: str, run_preflight: str, heavy_result: str, **patches: object,
+    ) -> tuple[int, dict[str, object]]:
         with tempfile.TemporaryDirectory() as temporary:
             evidence_dir = Path(temporary) / "evidence"
             environment = {
                 "EVIDENCE_DIR": str(evidence_dir),
-                "PREFLIGHT_ROLE": "linux-arm64-required",
+                "PREFLIGHT_ROLE": role,
                 "CHANGES_RESULT": "success",
-                "RUN_PREFLIGHT": "false",
-                "PREFLIGHT_RESULT": "skipped",
+                "RUN_PREFLIGHT": run_preflight,
+                "PREFLIGHT_RESULT": heavy_result,
             }
-            with (
-                mock.patch.dict(os.environ, environment, clear=True),
-                mock.patch.object(
+            with contextlib.ExitStack() as stack:
+                stack.enter_context(mock.patch.dict(os.environ, environment, clear=True))
+                stack.enter_context(mock.patch.object(
                     dispatch_helper.platform,
                     "python_version",
                     return_value=dispatch_helper.HOSTED_PYTHON_VERSION,
-                ),
-            ):
+                ))
+                for name, side_effect in patches.items():
+                    stack.enter_context(mock.patch.object(dispatch_helper, name, side_effect=side_effect))
+                stack.enter_context(contextlib.redirect_stdout(io.StringIO()))
                 return_code = dispatch_helper._sentinel()
-            result = json.loads(
-                (evidence_dir / "result.json").read_text(encoding="utf-8")
-            )
+            result = json.loads((evidence_dir / "result.json").read_text(encoding="utf-8"))
+        return return_code, result
 
+    def test_required_sentinel_writes_stable_verdict_evidence(self) -> None:
+        return_code, result = self.run_sentinel("linux-arm64-required", "false", "skipped")
         self.assertEqual(return_code, 0)
         self.assertEqual(result["verdict"], "pass")
         self.assertEqual(result["heavy_result"], "skipped")
@@ -623,58 +628,25 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
             ("failure", "superseded by run 7", 1, "fail", []),
         )
         for heavy_result, notice, expected_code, expected_verdict, expected_calls in cases:
-            with self.subTest(heavy_result=heavy_result, notice=notice), tempfile.TemporaryDirectory() as temporary:
-                evidence_dir = Path(temporary) / "evidence"
-                environment = {
-                    "EVIDENCE_DIR": str(evidence_dir),
-                    "PREFLIGHT_ROLE": "linux-amd64-required",
-                    "CHANGES_RESULT": "success",
-                    "RUN_PREFLIGHT": "true",
-                    "PREFLIGHT_RESULT": heavy_result,
-                }
+            with self.subTest(heavy_result=heavy_result, notice=notice):
                 calls: list[str] = []
 
                 def superseded(notice: str | None = notice) -> str | None:
                     calls.append("asked")
                     return notice
 
-                with (
-                    mock.patch.dict(os.environ, environment, clear=True),
-                    mock.patch.object(
-                        dispatch_helper.platform,
-                        "python_version",
-                        return_value=dispatch_helper.HOSTED_PYTHON_VERSION,
-                    ),
-                    mock.patch.object(dispatch_helper, "_superseded_notice", side_effect=superseded),
-                    contextlib.redirect_stdout(io.StringIO()),
-                ):
-                    return_code = dispatch_helper._sentinel()
-                result = json.loads((evidence_dir / "result.json").read_text(encoding="utf-8"))
+                return_code, result = self.run_sentinel(
+                    "linux-amd64-required", "true", heavy_result, _superseded_notice=superseded,
+                )
                 self.assertEqual(return_code, expected_code)
                 self.assertEqual(result["verdict"], expected_verdict)
                 self.assertEqual(result["superseded"], notice if expected_code == 0 else None)
                 self.assertEqual(calls, expected_calls)
 
     def test_required_sentinel_supersession_fails_closed_without_pull_request_context(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            evidence_dir = Path(temporary) / "evidence"
-            environment = {
-                "EVIDENCE_DIR": str(evidence_dir),
-                "PREFLIGHT_ROLE": "linux-arm64-required",
-                "CHANGES_RESULT": "success",
-                "RUN_PREFLIGHT": "true",
-                "PREFLIGHT_RESULT": "cancelled",
-            }
-            with (
-                mock.patch.dict(os.environ, environment, clear=True),
-                mock.patch.object(
-                    dispatch_helper.platform,
-                    "python_version",
-                    return_value=dispatch_helper.HOSTED_PYTHON_VERSION,
-                ),
-            ):
-                return_code = dispatch_helper._sentinel()
-            result = json.loads((evidence_dir / "result.json").read_text(encoding="utf-8"))
+        # No pull_request context in the environment, so the real lookup never
+        # reaches the API and the cancelled run keeps failing.
+        return_code, result = self.run_sentinel("linux-arm64-required", "true", "cancelled")
         self.assertEqual(return_code, 1)
         self.assertEqual(result["verdict"], "fail")
 
