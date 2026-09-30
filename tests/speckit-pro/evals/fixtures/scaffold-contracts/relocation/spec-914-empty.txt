@@ -1,4 +1,0 @@
-# SPEC-914 legacy candidate
-
-This candidate intentionally has no PROCESS artifacts.
-

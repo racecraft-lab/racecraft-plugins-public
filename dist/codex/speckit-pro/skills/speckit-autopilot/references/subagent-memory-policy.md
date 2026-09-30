@@ -11,10 +11,11 @@ authoritative and always override memory.
 | `implement-executor` | `local` | Reuses verified code locations, conventions, and recurring repository gotchas without committing runtime notes |
 | `codebase-analyst` | `local` | Reuses source-verified code locations and conventions; exact-client UAT proved memory-only writes and fresh-session value |
 | `spec-context-analyst` | `local` | Reuses artifact-verified principles and precedents; exact-client UAT proved memory-only writes and fresh-session value |
-| `phase-executor`, `clarify-executor`, `checklist-executor`, `analyze-executor` | none | Current planning artifacts are authoritative |
+| `phase-executor`, `clarify-executor`, `checklist-executor`, `analyze-executor`, `formal-model-author` | none | Current planning artifacts are authoritative |
 | `domain-researcher` | none | External facts drift |
-| `consensus-synthesizer`, `artifact-author`, `uat-runbook-author` | none | Deterministic current inputs should decide the result |
+| `consensus-synthesizer`, `consensus-tiebreaker`, `artifact-author`, `uat-runbook-author` | none | Deterministic current inputs should decide the result |
 | `sweep-classifier`, `sweep-analyst` | none | Reviewer/model text is attacker-influenced and must never persist |
+| `artifact-preview-observer` | none | Rendered page bytes and text are untrusted and must never persist |
 
 ## Curation contract
 
