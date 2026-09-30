@@ -17,7 +17,7 @@ import math
 import re
 from typing import Mapping
 
-from native_eval_catalog import _unique_object
+import native_eval_strict_json as strict_json
 
 
 MAX_MESSAGE_BYTES = 256 * 1024
@@ -102,33 +102,11 @@ def _preceding(value: object) -> object:
     return value
 
 
-def _reject_constant(value: str) -> None:
-    raise ValueError(f"non-finite JSON number: {value}")
-
-
-def _json_equal(left: object, right: object) -> bool:
-    if type(left) is not type(right):
-        return False
-    if type(left) is dict:
-        if left.keys() != right.keys():  # type: ignore[union-attr]
-            return False
-        return all(_json_equal(left[key], right[key]) for key in left)  # type: ignore[index,union-attr]
-    if type(left) is list:
-        return len(left) == len(right) and all(  # type: ignore[arg-type]
-            _json_equal(left_item, right_item)
-            for left_item, right_item in zip(left, right, strict=True)  # type: ignore[arg-type]
-        )
-    return left == right
-
-
 def _contains_complete_json(message: str, expected: object) -> bool:
     starts = [index for index, character in enumerate(message) if character in "{["]
     _require(len(starts) <= MAX_JSON_CANDIDATES,
              "dispatch message exceeds the JSON candidate bound")
-    decoder = json.JSONDecoder(
-        object_pairs_hook=_unique_object,
-        parse_constant=_reject_constant,
-    )
+    decoder = strict_json.decoder()
     for start in starts:
         try:
             candidate, _end = decoder.raw_decode(message, start)
@@ -142,7 +120,7 @@ def _contains_complete_json(message: str, expected: object) -> bool:
             if "depth bound" in str(exc):
                 raise
             continue
-        if _json_equal(candidate, expected):
+        if strict_json.strict_equal(candidate, expected):
             return True
     return False
 
@@ -190,12 +168,8 @@ def decode_sealed_plan_repair_payload(message: str) -> dict[str, object] | None:
     if len(encoded_transport) > MAX_MESSAGE_BYTES:
         return None
     try:
-        envelope = json.loads(
-            message,
-            object_pairs_hook=_unique_object,
-            parse_constant=_reject_constant,
-        )
-    except (json.JSONDecodeError, ValueError, RecursionError):
+        envelope = strict_json.loads(message, error=ValueError)
+    except ValueError:
         return None
     if not isinstance(envelope, dict) \
             or envelope.get("schema_version") != "1.0" \
@@ -253,12 +227,8 @@ def decode_sealed_plan_repair_payload(message: str) -> dict[str, object] | None:
         return None
     try:
         stdout_bytes = stdout["text"].encode("utf-8", errors="strict")
-        stdout_json = json.loads(
-            stdout["text"],
-            object_pairs_hook=_unique_object,
-            parse_constant=_reject_constant,
-        )
-    except (UnicodeError, json.JSONDecodeError, ValueError, RecursionError):
+        stdout_json = strict_json.loads(stdout["text"], error=ValueError)
+    except ValueError:
         return None
     if len(stdout_bytes) != stdout["byte_count"] or stdout_json != rendered:
         return None
@@ -266,12 +236,6 @@ def decode_sealed_plan_repair_payload(message: str) -> dict[str, object] | None:
     if executor_message.count(marker) != 1:
         return None
     return rendered
-
-
-def decode_sealed_plan_repair_message(message: str) -> str | None:
-    """Decode the executor message from a validated renderer response."""
-    payload = decode_sealed_plan_repair_payload(message)
-    return payload["executor_message"] if payload is not None else None
 
 
 __all__ = [
@@ -285,6 +249,5 @@ __all__ = [
     "MAX_PRECEDING_JSON_BYTES",
     "contains_complete_json_value",
     "decode_sealed_plan_repair_payload",
-    "decode_sealed_plan_repair_message",
     "qualify_native_dispatch_context",
 ]
