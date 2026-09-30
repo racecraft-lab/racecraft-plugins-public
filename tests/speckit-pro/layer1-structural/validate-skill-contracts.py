@@ -4,10 +4,13 @@
 from __future__ import annotations
 
 from pathlib import Path
+import atexit
 import json
 import os
 import re
+import shutil
 import sys
+import tempfile
 import unittest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -18,6 +21,9 @@ for _import_root in (LIB_DIR, PLUGIN_ROOT):
         sys.path.insert(0, str(_import_root))
 
 from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
+from speckit_pro_runner.agent_inventory import AGENT_INVENTORY
+from speckit_pro_runner.codex_agent_generator import generated_codex_files
+from speckit_pro_runner.gates.payloads import build_installed_plugin_payloads
 from speckit_pro_runner.host_skills import UNMERGED_CODEX_OVERLAYS
 import agent_roster
 from host_skill_views import host_skill_root
@@ -849,10 +855,46 @@ def _json_field(path: Path, key: str) -> str:
 def _sorted_files(directory: Path, suffix: str) -> list[Path]:
     return sorted((p for p in directory.glob(f'*{suffix}') if p.is_file()), key=lambda p: p.name)
 
+def _tree(root: Path) -> dict[str, bytes]:
+    """Every file under ``root`` by relative path; empty when ``root`` is missing."""
+    if not root.is_dir():
+        return {}
+    return {p.relative_to(root).as_posix(): p.read_bytes() for p in sorted(root.rglob('*'))
+            if p.is_file() and '__pycache__' not in p.parts and p.suffix != '.pyc'}
+
+_FRESH_PAYLOADS: list[Path] = []
+
+def _fresh_payloads() -> Path:
+    """Both payloads built from the current source into a temp root, once per process."""
+    if not _FRESH_PAYLOADS:
+        root = Path(tempfile.mkdtemp(prefix='speckit-payload-parity-')).resolve()
+        atexit.register(shutil.rmtree, root, ignore_errors=True)
+        build_installed_plugin_payloads(REPO_ROOT, root)
+        _FRESH_PAYLOADS.append(root)
+    return _FRESH_PAYLOADS[0]
+
 def _sorted_subdirs(directory: Path) -> list[Path]:
     return sorted((p for p in directory.iterdir() if p.is_dir()), key=lambda p: p.name)
 
 class ValidateCodexParity(unittest.TestCase):
+
+    def _assert_agent_generated(self, agent_name: str, generated: dict[str, str]) -> None:
+        """The committed Codex agent equals the text generated from its Claude source."""
+        relative = f'codex-agents/{agent_name}.toml'
+        committed = validate_codex_parity_CODEX_AGENTS_DIR / f'{agent_name}.toml'
+        with self.subTest(msg=f'{relative} equals the text generated from agents/{agent_name}.md'):
+            self.assertIn(relative, generated, f'agents/{agent_name}.md is paired but generates no Codex agent')
+            self.assertTrue(committed.is_file(), f'file not found: {committed}')
+            self.assertEqual(committed.read_text(encoding='utf-8'), generated.get(relative), f'{relative} drifted from agents/{agent_name}.md; run python3 scripts/refresh-release-artifacts.py')
+
+    def _assert_payload_skill_built(self, skill_name: str) -> None:
+        """Each host's committed payload skill equals a fresh build from source."""
+        for host in ('claude', 'codex'):
+            shipped = REPO_ROOT / 'dist' / host / 'speckit-pro' / 'skills' / skill_name
+            built = _fresh_payloads() / host / 'speckit-pro' / 'skills' / skill_name
+            with self.subTest(msg=f'{host} payload skills/{skill_name}/ equals a fresh build from source'):
+                self.assertTrue((built / 'SKILL.md').is_file(), f'{host} builds no SKILL.md for {skill_name}')
+                self.assertEqual(_tree(shipped), _tree(built), f'{host} payload skills/{skill_name}/ drifted from its source; run python3 scripts/refresh-release-artifacts.py')
 
     def test_codex_parity(self) -> None:
         with self.subTest(msg='both plugin.json files exist'):
@@ -872,12 +914,12 @@ class ValidateCodexParity(unittest.TestCase):
             with self.subTest(msg=f'CC and Codex marketplace names match ({cc_marketplace_name})'):
                 self.assertEqual(cc_marketplace_name, codex_marketplace_name, f'marketplace names must match: CC={cc_marketplace_name}, Codex={codex_marketplace_name}')
         if validate_codex_parity_AGENTS_DIR.is_dir() and validate_codex_parity_CODEX_AGENTS_DIR.is_dir():
+            generated = generated_codex_files(PLUGIN_ROOT, AGENT_INVENTORY)
             for cc_agent_file in _sorted_files(validate_codex_parity_AGENTS_DIR, '.md'):
                 agent_name = cc_agent_file.name[:-len('.md')]
                 if agent_name in CC_ONLY_AGENTS:
                     continue
-                with self.subTest(msg=f'codex-agents/{agent_name}.toml exists for CC agent'):
-                    self.assertTrue((validate_codex_parity_CODEX_AGENTS_DIR / f'{agent_name}.toml').is_file(), f"file not found: {validate_codex_parity_CODEX_AGENTS_DIR / (agent_name + '.toml')}")
+                self._assert_agent_generated(agent_name, generated)
             for agent_name, resource_name in (('sweep-analyst', 'analyst.md'), ('sweep-classifier', 'classifier.md')):
                 resource = validate_codex_parity_CODEX_SKILLS_DIR / 'speckit-autopilot' / 'references' / 'sweep-prompts' / resource_name
                 with self.subTest(msg=f'codex trusted launcher resource exists for {agent_name}'):
@@ -897,8 +939,7 @@ class ValidateCodexParity(unittest.TestCase):
                 skill_name = skill_dir.name
                 with self.subTest(msg=f'skills/{skill_name}/SKILL.md exists'):
                     self.assertTrue((validate_codex_parity_SKILLS_DIR / skill_name / 'SKILL.md').is_file(), f"file not found: {validate_codex_parity_SKILLS_DIR / skill_name / 'SKILL.md'}")
-                with self.subTest(msg=f'codex-skills/{skill_name}/SKILL.md exists for CC skill'):
-                    self.assertTrue((validate_codex_parity_CODEX_SKILLS_DIR / skill_name / 'SKILL.md').is_file(), f"file not found: {validate_codex_parity_CODEX_SKILLS_DIR / skill_name / 'SKILL.md'}")
+                self._assert_payload_skill_built(skill_name)
         else:
             with self.subTest(msg='skills/ and codex-skills/ directories exist'):
                 self.fail(f'one or both skills directories missing (CC: {validate_codex_parity_SKILLS_DIR}, Codex: {validate_codex_parity_CODEX_SKILLS_DIR})')
