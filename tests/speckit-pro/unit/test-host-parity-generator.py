@@ -386,67 +386,40 @@ class HostSkillSourceTests(unittest.TestCase):
                 self.assertRegex(text, r"(?i)in progress, (?:prefer )?reus\w+ (?:the |its )?existing worktree branch")
 
 
+# Statements that read differently on the two hosts before the install, upgrade
+# and archive-cleanup overlays merged: (skill, text each host must state, text
+# neither may state). `{sigil}` is the host's skill-name prefix.
+SETUP_SKILL_DRIFT = (
+    # autopilot-state-status.schema.json retires the spelling "completed archived".
+    ("speckit-archive-cleanup", ("`completed_archived`",), ("completed archived",)),
+    # find_specify checks PATH, then ~/.local/bin; setup checks read bash scripts.
+    ("speckit-install", ("`~/.local/bin/specify`",
+                         "`specify init --here --integration <first-key> --script sh`"), ("on macOS/Linux",)),
+    # research_preflight warns on every environment-only key.
+    ("speckit-install", ("A key held only in an environment variable is a warning",), ()),
+    ("speckit-upgrade", ("A key held only in an environment variable is a warning",), ()),
+    ("speckit-upgrade", ("`speckit.<single-word>.md`", "Show the exact deletion list"),
+     ("exactly those matching `speckit.*.md`",)),
+    ("speckit-upgrade", ("use `{sigil}speckit-install <new-key>` instead",),
+     ("treat that as an add-integration request",)),
+    ("speckit-upgrade", ("does not run it",), ("Invoke `uv tool install specify-cli --force",)),
+)
+
+
 class SetupSkillDriftTests(unittest.TestCase):
-    """Install, upgrade and archive cleanup state the runner's behavior on both hosts.
+    """Install, upgrade and archive cleanup state the runner's behavior on both hosts."""
 
-    Each case read differently on the two hosts before their overlays merged.
-    """
-
-    SIGILS = (("claude", "/speckit-pro:"), ("codex", "$"))
-
-    @staticmethod
-    def view(skill: str, host: str) -> str:
-        return " ".join((host_skill_root(host) / skill / "SKILL.md").read_text(encoding="utf-8").split())
-
-    def test_archive_cleanup_writes_the_schema_run_status(self) -> None:
-        # autopilot-state-status.schema.json retires the spelling "completed archived".
-        for host, _ in self.SIGILS:
-            with self.subTest(host=host):
-                text = self.view("speckit-archive-cleanup", host)
-                self.assertIn("`completed_archived`", text)
-                self.assertNotIn("completed archived", text)
-
-    def test_install_looks_for_specify_where_the_runner_does(self) -> None:
-        for host, _ in self.SIGILS:
-            with self.subTest(host=host):
-                self.assertIn("`~/.local/bin/specify`", self.view("speckit-install", host))
-
-    def test_install_always_passes_script_sh(self) -> None:
-        for host, _ in self.SIGILS:
-            with self.subTest(host=host):
-                text = self.view("speckit-install", host)
-                self.assertIn("`specify init --here --integration <first-key> --script sh`", text)
-                self.assertNotIn("on macOS/Linux", text)
-
-    def test_setup_skills_report_an_environment_only_key(self) -> None:
-        for skill in ("speckit-install", "speckit-upgrade"):
-            for host, _ in self.SIGILS:
-                with self.subTest(skill=skill, host=host):
-                    self.assertIn("A key held only in an environment variable is a warning",
-                                  self.view(skill, host))
-
-    def test_upgrade_dedupe_deletes_only_single_word_speckit_commands(self) -> None:
-        for host, _ in self.SIGILS:
-            with self.subTest(host=host):
-                text = self.view("speckit-upgrade", host)
-                self.assertIn("`speckit.<single-word>.md`", text)
-                self.assertIn("Show the exact deletion list", text)
-                self.assertNotIn("exactly those matching `speckit.*.md`", text)
-
-    def test_upgrade_sends_a_new_integration_to_install(self) -> None:
-        for host, sigil in self.SIGILS:
-            with self.subTest(host=host):
-                text = self.view("speckit-upgrade", host)
-                self.assertIn(f"use `{sigil}speckit-install <new-key>` instead", text)
-                self.assertNotIn("treat that as an add-integration request", text)
-
-    def test_upgrade_recommends_the_cli_upgrade_and_never_runs_it(self) -> None:
-        for host, _ in self.SIGILS:
-            with self.subTest(host=host):
-                text = self.view("speckit-upgrade", host)
-                self.assertIn("does not run it", text)
-                self.assertNotIn("Invoke `uv tool install specify-cli --force", text)
-
+    def test_each_reconciled_statement_reads_the_same_on_both_hosts(self) -> None:
+        for host, sigil in (("claude", "/speckit-pro:"), ("codex", "$")):
+            for skill, present, absent in SETUP_SKILL_DRIFT:
+                path = host_skill_root(host) / skill / "SKILL.md"
+                text = " ".join(path.read_text(encoding="utf-8").split())
+                for phrase in present:
+                    with self.subTest(host=host, skill=skill, present=phrase):
+                        self.assertIn(phrase.format(sigil=sigil), text)
+                for phrase in absent:
+                    with self.subTest(host=host, skill=skill, absent=phrase):
+                        self.assertNotIn(phrase, text)
 
 POST_ROW = re.compile(r'^\s*"(Post: [^"]+)"', re.M)
 CODEX_ONLY_POST_ROWS = ["Post: Final Reviewability Backstop", "Post: PR Packet/Body Generation"]
