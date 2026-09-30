@@ -790,10 +790,56 @@ class SkillNameTests(unittest.TestCase):
         self.assertIn("/speckit-pro:speckit-autopilot", paths[0].read_text(encoding="utf-8"))
 
 
+class Layer7FixtureTruthTests(unittest.TestCase):
+    """Parity fixtures must describe what the shipped plugin does.
+
+    A fixture that pins a false contract makes CI reward the wrong answer, and
+    an environment toggle nothing reads makes its two paths identical.
+    """
+
+    def test_env_files_toggle_only_variables_shipped_code_reads(self) -> None:
+        plugin = REPO_ROOT / "speckit-pro"
+        shipped = "\n".join(
+            path.read_text(encoding="utf-8")
+            for folder in ("skills", "agents", "speckit_pro_runner")
+            for path in (plugin / folder).rglob("*")
+            if path.suffix in {".md", ".py"}
+        )
+        env_files = sorted(LAYER7.glob("*/env-*.json"))
+        self.assertTrue(env_files)
+        for env_file in env_files:
+            environment = json.loads(env_file.read_text(encoding="utf-8"))["environment"]
+            for name in [*environment["set"], *environment["unset"]]:
+                with self.subTest(fixture=env_file.parent.name, file=env_file.name, variable=name):
+                    self.assertTrue(name in shipped, f"{env_file.parent.name}/{env_file.name} sets {name}, which nothing reads")
+
+    def test_stack_manager_fixture_pins_the_shipped_dry_run_call(self) -> None:
+        sys.path.insert(0, str(REPO_ROOT / "speckit-pro"))
+        from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
+
+        fixture = LAYER7 / "04-stack-manager-guidance"
+        invariants = json.loads((fixture / "expected-equivalence.json").read_text(encoding="utf-8"))["required_invariants"]
+        reference = (REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot" / "references" / "stack-manager.md").read_text(
+            encoding="utf-8"
+        )
+        helper = invariants["registered_stack_manager_helper_id"]
+        shipped_call = "dry_run" in MUTATION_HELPERS[helper].modes and f"`{helper}` in `dry_run` mode" in reference
+        self.assertTrue(shipped_call)
+        self.assertIs(invariants["active_stack_manager_helper_call"], shipped_call)
+        self.assertNotIn("out_of_scope", (fixture / "workflow.md").read_text(encoding="utf-8"))
+
+
 if __name__ == "__main__":
     loader = unittest.defaultTestLoader
     suite = unittest.TestSuite(
         loader.loadTestsFromTestCase(case)
-        for case in (Layer7RunnerTests, Layer7ContractTests, Layer7LiveGuardTests, Layer7LiveSkipTests, SkillNameTests)
+        for case in (
+            Layer7RunnerTests,
+            Layer7ContractTests,
+            Layer7LiveGuardTests,
+            Layer7LiveSkipTests,
+            SkillNameTests,
+            Layer7FixtureTruthTests,
+        )
     )
     raise SystemExit(run_counted(suite, label="test-parity-runner"))
