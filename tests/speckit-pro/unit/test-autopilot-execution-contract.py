@@ -99,11 +99,11 @@ class ExecutionContractTests(unittest.TestCase):
 
         guide = (PLUGIN / "skills/speckit-coach/references/checklist-domains-guide.md").read_text()
         template = (PLUGIN / "skills/speckit-coach/templates/workflow-template.md").read_text()
-        in_guide = set(re.findall(r"^\|[^|\n]+\| \*\*([a-z-]+)\*\* \|", guide, re.M))
-        in_template = set(re.findall(r"^\|[^|\n]+\| \*\*([a-z-]+)\*\* \|", template, re.M))
-        self.assertTrue({"privacy", "supply-chain"} <= in_guide, in_guide)
-        # The template's signal table is the guide's list minus the edge domains it leaves to the coach.
-        self.assertEqual(in_template, in_guide - {"integration", "mobile-ux", "reliability"})
+        row = r"^\|[^|\n]+\| \*\*([a-z-]+)\*\* \|"
+        # The guide is the one domain list (all 15); the template keeps no copy and points to it.
+        self.assertEqual(15, len(set(re.findall(row, guide, re.M))))
+        self.assertEqual([], re.findall(row, template, re.M))
+        self.assertIn("references/checklist-domains-guide.md", template)
 
     def test_quality_gates_table_has_a_row_per_discovered_slot(self):
         from speckit_pro_runner.gate_discovery import SLOTS

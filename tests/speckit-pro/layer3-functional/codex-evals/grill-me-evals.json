@@ -54,11 +54,11 @@
     },
     {
       "id": 5,
-      "prompt": "You are being invoked by $speckit-scaffold-spec for SPEC-009 'Search & Database'. Setup has already created the registered worktree at .worktrees/009-search-database/ and is calling you with mode=setup, spec_id=SPEC-009, scope loaded from fixtures/grill/SPEC-009-scope.md, output_path=.worktrees/009-search-database/docs/ai/specs/SPEC-009-design-concept.md. Run the interview and write the design concept to the supplied path.",
+      "prompt": "You are being invoked by $speckit-scaffold-spec for SPEC-009 'Search & Database'. Setup has already created the registered worktree at .worktrees/009-search-database/ and is calling you with mode=setup, spec_id=SPEC-009, scope loaded from fixtures/grill/SPEC-009-scope.md, output_path=.worktrees/009-search-database/docs/ai/specs/.process/SPEC-009-design-concept.md. Run the interview and write the design concept to the supplied path.",
       "expected_output": "Detects setup-mode invocation, runs the interview against the supplied scope, writes the design concept to the worktree path provided (NOT the standalone default path), and returns the path plus a summary of key decisions to the calling $speckit-scaffold-spec so it can enrich the workflow file.",
       "expectations": [
         "Frontmatter of the produced doc has mode: 'setup' and spec_id: 'SPEC-009'",
-        "Output file is written to .worktrees/009-search-database/docs/ai/specs/SPEC-009-design-concept.md, NOT to docs/ai/specs/<slug>-design-concept.md",
+        "Output file is written to .worktrees/009-search-database/docs/ai/specs/.process/SPEC-009-design-concept.md, NOT to docs/ai/specs/<slug>-design-concept.md",
         "Return summary surfaces Goals, Non-goals, and the major design decisions so $speckit-scaffold-spec can enrich the workflow file's Specify and Clarify Prompts",
         "Does NOT write or modify the workflow file itself — that's $speckit-scaffold-spec's job"
       ]
