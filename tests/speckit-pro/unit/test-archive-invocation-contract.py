@@ -28,7 +28,6 @@ REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO / "tests/speckit-pro/lib")]
 from host_skill_views import host_skill_root  # noqa: E402
 from test_result import run_counted  # noqa: E402
-from host_skill_views import host_skill_root  # noqa: E402
 
 SKILL_ROOTS = {
     "claude": REPO / "speckit-pro/skills",

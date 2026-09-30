@@ -17,7 +17,7 @@
         },
         {
           "path": ".github/workflows/release.yml",
-          "content": "steps:\n  - run: |\n      scripts/build-plugin-payloads.sh | jq .\n"
+          "content": "steps:\n  - run: |\n      scripts/build-example.sh | jq .\n"
         },
         {
           "path": "speckit-pro/codex-agents/openai.yaml",
