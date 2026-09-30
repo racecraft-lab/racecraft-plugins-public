@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 import shutil
 import subprocess
 import tempfile
@@ -383,6 +384,48 @@ class HostSkillSourceTests(unittest.TestCase):
                 self.assertRegex(text, r"(?i)in progress, (?:prefer )?reus\w+ (?:the |its )?existing worktree branch")
 
 
+POST_ROW = re.compile(r'^\s*"(Post: [^"]+)"', re.M)
+CODEX_ONLY_POST_ROWS = ["Post: Final Reviewability Backstop", "Post: PR Packet/Body Generation"]
+
+
+def canonical_post_rows(relative: str) -> list[str]:
+    """The Post rows of a canonical task list: the first fenced list that names Retrospective."""
+    text = (PLUGIN_ROOT / relative).read_text(encoding="utf-8")
+    fence = next(block for block in text.split("```")[1::2] if '"Post: Retrospective"' in block)
+    return POST_ROW.findall(fence)
+
+
+class PostPlanParityTests(unittest.TestCase):
+    """Both hosts' Post plans differ only by Codex's two visible supporting rows."""
+
+    claude = canonical_post_rows("skills/speckit-autopilot/references/task-list-canonical.md")
+    codex = canonical_post_rows("codex-skills/speckit-autopilot/references/task-list-canonical-codex.md")
+
+    def test_codex_list_is_the_claude_list_plus_two_rows_after_uat(self) -> None:
+        self.assertEqual(len(self.claude), 11)
+        at = self.claude.index("Post: UAT Runbook Generation") + 1
+        self.assertEqual(self.codex, self.claude[:at] + CODEX_ONLY_POST_ROWS + self.claude[at:])
+
+    def test_every_stated_codex_row_count_matches_the_list(self) -> None:
+        skill = (PLUGIN_ROOT / "codex-skills/speckit-autopilot/SKILL.md").read_text(encoding="utf-8")
+        evals = (REPO_ROOT / "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json").read_text(encoding="utf-8")
+        counts = [int(n) for n in re.findall(r"(\d+) mandatory (?:Post )?rows", skill)]
+        counts += [int(n) for n in re.findall(r"keeps all (\d+) Post items", evals)]
+        reference = (PLUGIN_ROOT / "codex-skills/speckit-autopilot/references/task-list-canonical-codex.md").read_text(encoding="utf-8")
+        counts += [int(n) for n in re.findall(r"(\d+)-row combined", reference)]
+        self.assertGreaterEqual(len(counts), 4, "no stated count found; the check would pass on nothing")
+        self.assertEqual(set(counts), {len(self.codex)})
+
+    def test_workflow_template_carries_each_hosts_post_rows(self) -> None:
+        source = (PLUGIN_ROOT / "skills/speckit-coach/templates/workflow-template.md").read_text(encoding="utf-8")
+        for host, rows in (("claude", self.claude), ("codex", self.codex)):
+            with self.subTest(host=host):
+                view = emit_host(source, host)
+                self.assertIn(f"| Canonical {len(rows)}-item closeout |", view)
+                checklist = view.split("## Post-Implementation Checklist", 1)[1].split("\n## ", 1)[0]
+                self.assertEqual(re.findall(r"^\| (Post: [^|]+?) \|", checklist, re.M), rows)
+
+
 HOOK_SCRIPT = PLUGIN_ROOT / "scripts" / "codex-agent-policy-hook.py"
 
 
@@ -467,6 +510,7 @@ def main() -> int:
             CodexAgentGeneratorTests,
             CodexAgentPolicyHookTests,
             HostSkillSourceTests,
+            PostPlanParityTests,
         )
     )
     return run_counted(suite, label="test-host-parity-generator")

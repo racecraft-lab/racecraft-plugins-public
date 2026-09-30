@@ -8,7 +8,7 @@ list, Codex-specific persistence primitives.
 ## Contents
 
 - [Checklist Naming Pattern](#checklist-naming-pattern) — exact item-name templates parsed from the workflow file
-- [Canonical Post-Implementation Item List](#canonical-post-implementation-item-list) — 14-row combined durable Post plan + missing-extension behavior
+- [Canonical Post-Implementation Item List](#canonical-post-implementation-item-list) — 13-row combined durable Post plan + missing-extension behavior
 - [Out-Of-Stage Entries](#out-of-stage-entries) — how a staged run marks entries outside the resolved stage
 - [Item Naming Rules](#item-naming-rules) — same names across both stores, completed-then-in_progress sequencing
 - [Reference `autopilot-state.json` Schema](#reference-autopilot-statejson-schema) — full example JSON document
@@ -46,7 +46,10 @@ extension is missing, still create the item but mark it
 
 This is the combined Codex plan: the numbered 10-19 gates from
 `post-implementation-codex.md` plus the three mandatory supporting tasks that
-remain independently visible for resume safety. `Final Reviewability Backstop`
+remain independently visible for resume safety. It is Claude's 11-row list plus
+`Final Reviewability Backstop` and `PR Packet/Body Generation`, which Claude runs
+inside its PR Body Generation and PR Creation rows; both hosts run the same
+steps. `Final Reviewability Backstop`
 owns the diff-gate/UAT boundary, and `PR Packet/Body Generation`
 owns the body-generation boundary; the supporting rows are evidence-producing
 steps, not substitutes for those numbered gates.
