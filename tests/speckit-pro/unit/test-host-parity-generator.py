@@ -376,46 +376,44 @@ class HostSkillSourceTests(unittest.TestCase):
                                "| Spec | Name | DC | Specify |"):
                     self.assertIn(phrase, text)
 
-    @staticmethod
-    def rendered(skill: str, host: str) -> str:
-        """`skill`'s SKILL.md exactly as `host` loads it, whitespace collapsed."""
-        path = host_skill_root(host) / skill / "SKILL.md"
-        return " ".join(path.read_text(encoding="utf-8").split())
 
-    def test_scaffold_stops_on_complete_and_reuses_in_progress_on_both_hosts(self) -> None:
+class MergedSkillViewTests(unittest.TestCase):
+    """A merged skill's reconciled text reaches both hosts' rendered copies."""
+
+    def assert_both_views(self, skill: str, present: tuple[str, ...] = (), absent: tuple[str, ...] = ()) -> None:
         for host in ("claude", "codex"):
-            with self.subTest(host=host):
-                text = self.rendered("speckit-scaffold-spec", host)
-                self.assertRegex(text, r"(?i)complete, warn the user and stop")
-                self.assertRegex(text, r"(?i)in progress, (?:prefer )?reus\w+ (?:the |its )?existing worktree branch")
+            with self.subTest(skill=skill, host=host):
+                path = host_skill_root(host) / skill / "SKILL.md"
+                text = " ".join(path.read_text(encoding="utf-8").split())
+                for phrase in present:
+                    self.assertIn(phrase, text)
+                for phrase in absent:
+                    self.assertNotIn(phrase, text)
 
     def test_scaffold_follows_the_runner_on_both_hosts(self) -> None:
-        # The two copies disagreed; each assertion is the runner's behavior.
-        for host in ("claude", "codex"):
-            with self.subTest(host=host):
-                text = self.rendered("speckit-scaffold-spec", host)
-                # The hand-off check uses the same binding helper autopilot uses.
-                self.assertIn("Invoke the read-only `resolve-workflow-binding` runner helper", text)
-                # The placement helper returns the disposition; there is no reuse question.
-                self.assertNotIn("reuse-or-recreate question", text)
-                # A missing preset stops setup, so scaffold never stages preset files.
-                self.assertNotIn(".specify/presets/.registry", text)
-                self.assertIn("Module and Interface Deltas, Terms, Verification Gates", text)
-                self.assertIn("`git -C <absolute-worktree-root> push -u <remote> <spec-branch>`", text)
+        # The two copies disagreed; each phrase is the runner's behavior. The
+        # placement helper returns the disposition, so there is no reuse
+        # question, and a missing preset stops setup, so none is staged.
+        self.assert_both_views("speckit-scaffold-spec", present=(
+            "Invoke the read-only `resolve-workflow-binding` runner helper",
+            "Module and Interface Deltas, Terms, Verification Gates",
+            "`git -C <absolute-worktree-root> push -u <remote> <spec-branch>`",
+            "If the roadmap marks the spec complete, warn the user and STOP.",
+            "reuse its existing worktree branch rather than creating a second setup",
+        ), absent=("reuse-or-recreate question", ".specify/presets/.registry"))
 
     def test_resolve_pr_follows_one_procedure_on_both_hosts(self) -> None:
-        for host in ("claude", "codex"):
-            with self.subTest(host=host):
-                text = self.rendered("speckit-resolve-pr", host)
-                # Both hosts ship the lockfile and unpushed-commit hooks.
-                self.assertIn("denies a shell command that uses a different manager", text)
-                self.assertIn("the plugin's Stop hook blocks ending the turn with unpushed commits", text)
-                self.assertIn("Do not overwrite unrelated dirty worktree changes.", text)
-                self.assertIn("Never reply “fixed” on a thread while the branch is still broken.", text)
-                self.assertIn("If GitHub tooling is unavailable", text)
-        codex = self.rendered("speckit-resolve-pr", "codex")
+        # Both hosts ship the lockfile and unpushed-commit hooks.
+        self.assert_both_views("speckit-resolve-pr", present=(
+            "denies a shell command that uses a different manager",
+            "the plugin's Stop hook blocks ending the turn with unpushed commits",
+            "Do not overwrite unrelated dirty worktree changes.",
+            "Never reply “fixed” on a thread while the branch is still broken.",
+            "If GitHub tooling is unavailable",
+        ))
         # phase-executor runs one SDD phase and no remediation; Codex has no general-purpose role.
-        self.assertIn("built-in `default` subagent", codex)
+        codex = (host_skill_root("codex") / "speckit-resolve-pr" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("built-in `default` subagent", " ".join(codex.split()))
         self.assertNotIn("phase-executor", codex)
         self.assertNotIn("general-purpose", codex)
 
@@ -546,6 +544,7 @@ def main() -> int:
             CodexAgentGeneratorTests,
             CodexAgentPolicyHookTests,
             HostSkillSourceTests,
+            MergedSkillViewTests,
             PostPlanParityTests,
         )
     )
