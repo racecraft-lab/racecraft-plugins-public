@@ -3,8 +3,7 @@
   "mode": "teams",
   "environment": {
     "set": {
-      "SPECKIT_AGENT_TEAMS": "true",
-      "SPECKIT_PRSG_014_STACK_MANAGER": "teams"
+      "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
     },
     "unset": []
   }

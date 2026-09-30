@@ -48,7 +48,7 @@
   ],
   "required_invariants": {
     "registered_stack_manager_helper_id": "detect-stack-manager-plan",
-    "active_stack_manager_helper_call": false,
+    "active_stack_manager_helper_call": true,
     "shared_stack_manager_contract": "speckit-pro/skills/speckit-autopilot/contracts/stack-manager-decision.schema.json",
     "codex_duplicate_helper_or_schema": false,
     "fallback_before_mutation": true,
