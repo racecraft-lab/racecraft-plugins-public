@@ -291,22 +291,7 @@ Use these markers in spec.md for traceability through later phases:
 
 ### Step 1: Analyze Spec for Recommended Domains
 
-Before running any checklists, read `spec.md` and `plan.md` and identify which domains apply. Look for these signals:
-
-| Signal in Your Spec/Plan | Recommended Domain |
-|---|---|
-| API endpoints, REST routes, request/response models | **api-contracts** |
-| User-facing UI, components, forms, layouts | **ux** |
-| Keyboard navigation, screen readers, WCAG, ARIA | **accessibility** |
-| Auth, tokens, secrets, input validation, user roles | **security** |
-| Response time budgets, caching, query performance | **performance** |
-| Database schemas, migrations, data validation | **data-integrity** |
-| LLM prompts, model calls, embeddings, token limits | **llm-integration** |
-| SSE, WebSocket, streaming, real-time events | **streaming-protocol** |
-| Error handling, retries, fallbacks, degradation | **error-handling** |
-| State lifecycle, sessions, caching, persistence | **state-management** |
-| Personal data (PII), consent, retention, deletion | **privacy** |
-| New third-party packages or dependency upgrades | **supply-chain** |
+Before running any checklists, read `spec.md` and `plan.md` and identify which domains apply. Match them against the signal table in the speckit-coach skill's `references/checklist-domains-guide.md`. That guide is the single list of checklist domains; do not keep a second copy here.
 
 **Target: 2-4 domains.** Prioritize domains where the spec has the most complexity or risk.
 
