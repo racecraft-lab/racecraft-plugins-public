@@ -21,6 +21,10 @@ from .verification_docker_entrypoint import validate_argv
 IMAGE_REFERENCE = re.compile(r"[a-z0-9][a-z0-9._/:-]{0,240}@sha256:[0-9a-f]{64}")
 IMAGE_ID = re.compile(r"sha256:[0-9a-f]{64}")
 EXECUTION_ID = re.compile(r"[0-9a-f]{32}")
+# The one platform Docker verification supports: the image build, the container, the
+# base-image and daemon checks, and the in-container filter all assume Linux/arm64.
+PLATFORM = "linux/arm64"
+PLATFORM_OS, PLATFORM_ARCHITECTURE = PLATFORM.split("/")
 MAX_SNAPSHOT_ENTRIES = 50000
 MAX_SNAPSHOT_BYTES = 512 * 1024 * 1024
 OUTPUT_TMPFS = "rw,nosuid,nodev,noexec,size=16777216,uid=65532,gid=65532,mode=0700"
@@ -61,7 +65,7 @@ def validate_base_image(info: dict[str, Any], reference: str) -> str:
     image_id, digests = info.get("Id"), info.get("RepoDigests")
     if not isinstance(image_id, str) or IMAGE_ID.fullmatch(image_id) is None or not isinstance(digests, list) or reference not in digests:
         raise ValueError("the inspected local image does not match the requested digest")
-    if info.get("Os") != "linux" or info.get("Architecture") != "arm64":
+    if info.get("Os") != PLATFORM_OS or info.get("Architecture") != PLATFORM_ARCHITECTURE:
         raise ValueError("the tested verification policy requires Linux/arm64")
     config = info.get("Config")
     if not isinstance(config, dict) or config.get("OnBuild") not in (None, []) or config.get("Volumes") not in (None, {}):
@@ -123,7 +127,7 @@ def container_options(image_id: str, execution_id: str, *, qualified: bool = Fal
         raise ValueError("invalid verification execution identity")
     # Reap orphaned descendants without asking the checked workload to act as PID 1.
     # https://docs.docker.com/reference/cli/docker/container/run/#specify-an-init-process
-    options = ["create", "--pull=never", "--platform=linux/arm64"]
+    options = ["create", "--pull=never", f"--platform={PLATFORM}"]
     if qualified:
         options.extend(["--runtime=runc", "--hostname=speckit-verifier", "--dns=127.0.0.1",
                         "--dns-search=.", "--dns-option=ndots:0"])
