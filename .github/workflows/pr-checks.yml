@@ -353,8 +353,7 @@ jobs:
         run: python3 scripts/check-go-module.py check
 
   # ───────────────────────────────────────────────────────────────────
-  # Job 9: Sentinel aggregator — provides stable check name for branch
-  #         protection. Passes if test matrix passed or was skipped.
+  # Job 9: Sentinel aggregator, the stable required check (check-pr-workflow-results.py).
   # ───────────────────────────────────────────────────────────────────
   validate-plugins:
     name: validate-plugins
@@ -364,7 +363,7 @@ jobs:
     needs: [detect, test, artifact-consistency, go]
     permissions:
       contents: read
-
+      actions: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -377,4 +376,5 @@ jobs:
           TEST_RESULT: ${{ needs.test.result }}
           ARTIFACT_RESULT: ${{ needs.artifact-consistency.result }}
           GO_RESULT: ${{ needs.go.result }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: python3 scripts/check-pr-workflow-results.py

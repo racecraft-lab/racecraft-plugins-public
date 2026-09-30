@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
+from evidence_files import write_json as _write_json  # noqa: E402
 from preflight_architecture import architecture_family as _architecture_family  # noqa: E402
 from preflight_architecture import resolve_architectures  # noqa: E402
 
@@ -53,14 +54,6 @@ SPECIFY_VERSION_CODE = (
     "import sys; from specify_cli import main; "
     "sys.argv = ['specify', 'version']; raise SystemExit(main())"
 )
-
-
-def _write_json(path: Path, payload: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(payload, ensure_ascii=True, separators=(",", ":")) + "\n",
-        encoding="utf-8",
-    )
 
 
 def _read_text(path: Path) -> str:

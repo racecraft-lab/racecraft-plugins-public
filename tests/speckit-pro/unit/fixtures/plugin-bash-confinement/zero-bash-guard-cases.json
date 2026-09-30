@@ -221,7 +221,7 @@
       "case_id": "missing-required-scan-root",
       "scan_roots": [
         "speckit-pro",
-        "scripts/build-plugin-payloads.py",
+        "scripts/refresh-release-artifacts.py",
         "dist/claude/speckit-pro",
         "README.md"
       ],
@@ -257,7 +257,7 @@
       "case_id": "final-current-implementation",
       "scan_roots": [
         "speckit-pro",
-        "scripts/build-plugin-payloads.py",
+        "scripts/refresh-release-artifacts.py",
         "dist/claude/speckit-pro",
         "dist/codex/speckit-pro",
         "README.md"
