@@ -53,6 +53,12 @@ NATIVE_CODEX_SANDBOX_PROBES = (
 )
 
 
+def make_directory(path: Path, mode: int) -> None:
+    """Create a directory with an exact mode; mkdir(mode=) is masked by the umask."""
+    path.mkdir(parents=True)
+    path.chmod(mode)
+
+
 def native_case(root: Path) -> dict[str, object]:
     source = root / "tests" / "speckit-pro" / "fixtures" / "input.txt"
     source.parent.mkdir(parents=True, exist_ok=True)
@@ -2332,10 +2338,7 @@ class AdapterPreparationTests(unittest.TestCase):
     @unittest.skipUnless(os.name == "posix", "requires POSIX ownership and mode semantics")
     def test_protected_python_rejects_writable_binary_and_command_directory(self) -> None:
         runtime_directory = self.temp / "protected-python" / "bin"
-        runtime_directory.mkdir(parents=True)
-        # mkdir(mode=...) and parents are masked by the umask; set modes explicitly.
-        runtime_directory.parent.chmod(0o755)
-        runtime_directory.chmod(0o755)
+        make_directory(runtime_directory, 0o755)
         executable = runtime_directory / "python3.11"
         shutil.copyfile(Path(sys.executable).resolve(strict=True), executable)
         executable.chmod(0o755)
@@ -4180,8 +4183,7 @@ class AdapterExecutionTests(unittest.TestCase):
         sealed = retained / "sealed"
         moved = retained / "sealed-original"
         unrelated = self.temp / "unrelated-target"
-        unrelated.mkdir()
-        unrelated.chmod(0o755)
+        make_directory(unrelated, 0o755)
         retained.chmod(0o500)
         sealed.chmod(0o000)
         prepared = self.capture_prepared(self.temp / "replacement-attempt", ["receipt.json"])

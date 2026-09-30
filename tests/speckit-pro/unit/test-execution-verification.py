@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "speckit-pro"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
-from execution_verification_fixture import VerificationFixture, unittest_output
+from execution_verification_fixture import VerificationFixture, make_directory, unittest_output
 from test_result import run_counted
 from speckit_pro_runner.execution_control import execution_control, ignore_owned_directory, is_runner_byproduct
 from speckit_pro_runner.verification_records import (digest, execute_verification, project_command,
@@ -133,8 +133,7 @@ class VerificationTests(VerificationFixture, unittest.TestCase):
         self.assertIn("input_snapshot_changed", self.validate(result, observed)["reasons"])
 
     def test_materialized_snapshot_preserves_empty_directories_and_executable_bits(self):
-        (self.root / "empty-directory").mkdir()
-        (self.root / "empty-directory").chmod(0o750)
+        make_directory(self.root / "empty-directory", 0o750)
         (self.root / "fixture.txt").chmod(0o754)
         (self.root / "check.py").write_text(
             "from pathlib import Path\n"
@@ -147,7 +146,6 @@ class VerificationTests(VerificationFixture, unittest.TestCase):
         self.assertTrue(result["record"]["snapshot_unchanged"])
 
     def test_snapshot_directory_mode_mutation_is_detected(self):
-        (self.root / "feature").chmod(0o755)
         (self.root / "check.py").write_text("from pathlib import Path\nPath('feature').chmod(0o700)\n")
         result, _ = self.produce()
         self.assertFalse(result["record"]["snapshot_unchanged"])
