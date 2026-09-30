@@ -159,8 +159,10 @@ def toml_string_field(toml_text: str, field: str) -> str:
     Malformed TOML raises ``tomllib.TOMLDecodeError`` (a ``ValueError``), so a broken agent
     file fails the check instead of reading as an empty field.
     """
-    value = tomllib.loads(toml_text).get(field)
-    return value if isinstance(value, str) else ""
+    document = tomllib.loads(toml_text)
+    if field in document and isinstance(document[field], str):
+        return document[field]
+    return ""
 
 
 def developer_instructions(toml_text: str) -> str:

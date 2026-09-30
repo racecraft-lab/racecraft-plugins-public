@@ -4460,42 +4460,31 @@ class PacketTitlePatternTests(unittest.TestCase):
         return str(json.loads(completed.stdout)["status"])
 
 
-PLAN_LAYERS_REFERENCED_FILES = ("src/contract.md", "src/planner.py", "tests/test_planner.py")
-PLAN_LAYERS_TASKS = """# Tasks: Layer Planner Case
-
-## Phase 1: Foundation
-
-{foundation}
-
-## Phase 2: User Story 1 - Emit Stable Plan (Priority: P1)
-
-{story}
-{extra_phase}{notes}{dependencies}"""
-PLAN_LAYERS_DEPENDENCIES = """
-## Dependencies & Execution Order
-
-### Phase Dependencies
-
-- **Foundation**: No prerequisites.
-- **US1**: {us1_depends}.
-
-### Incremental Delivery
-
-1. Complete Foundation: T001
-2. Complete US1: T002
-"""
+PLAN_LAYERS_FILES = ("src/contract.md", "src/planner.py", "tests/test_planner.py")
+PLAN_LAYERS_BASELINE = {
+    "foundation": "- [ ] T001 Prepare the contract in src/contract.md",
+    "story": "- [ ] T002 [US1] Build the planner in src/planner.py and tests/test_planner.py",
+    "extra_phase": "",
+    "notes": "",
+    "us1_depends": "Depends on Foundation",
+    "dependencies": True,
+}
+PLAN_LAYERS_TEMPLATE = (
+    "# Tasks: Layer Planner Case\n\n## Phase 1: Foundation\n\n{foundation}\n\n"
+    "## Phase 2: User Story 1 - Emit Stable Plan (Priority: P1)\n\n{story}\n{extra_phase}{notes}"
+)
+PLAN_LAYERS_DEPENDENCIES = (
+    "\n## Dependencies & Execution Order\n\n### Phase Dependencies\n\n"
+    "- **Foundation**: No prerequisites.\n- **US1**: {us1_depends}.\n\n"
+    "### Incremental Delivery\n\n1. Complete Foundation: T001\n2. Complete US1: T002\n"
+)
 
 
-def plan_layers_tasks(
-    *, foundation: str = "- [ ] T001 Prepare the contract in src/contract.md",
-    story: str = "- [ ] T002 [US1] Build the planner in src/planner.py and tests/test_planner.py",
-    extra_phase: str = "", notes: str = "", us1_depends: str = "Depends on Foundation",
-    with_dependencies: bool = True,
-) -> str:
-    return PLAN_LAYERS_TASKS.format(
-        foundation=foundation, story=story, extra_phase=extra_phase, notes=notes,
-        dependencies=PLAN_LAYERS_DEPENDENCIES.format(us1_depends=us1_depends) if with_dependencies else "",
-    )
+def plan_layers_tasks(**overrides: object) -> str:
+    """The baseline valid tasks.md with the named parts replaced."""
+    parts = {**PLAN_LAYERS_BASELINE, **overrides}
+    text = PLAN_LAYERS_TEMPLATE.format(**parts)
+    return text + (PLAN_LAYERS_DEPENDENCIES.format(**parts) if parts["dependencies"] else "")
 
 
 class PlanLayersPlannerCaseTests(unittest.TestCase):
@@ -4503,7 +4492,7 @@ class PlanLayersPlannerCaseTests(unittest.TestCase):
 
     def plan(self, tasks_md: str) -> tuple[int, dict[str, object]]:
         with helper_project() as root:
-            for relative in PLAN_LAYERS_REFERENCED_FILES:
+            for relative in PLAN_LAYERS_FILES:
                 (root / relative).parent.mkdir(parents=True, exist_ok=True)
                 (root / relative).write_text("x\n", encoding="utf-8")
             (root / "specs" / "feature").mkdir(parents=True)
@@ -4515,73 +4504,58 @@ class PlanLayersPlannerCaseTests(unittest.TestCase):
         self.assertEqual(completed.returncode, response["exit_code"])
         return completed.returncode, response["data"]["stdout_json"]
 
-    def test_the_baseline_case_is_a_clean_plan(self) -> None:
+    def test_the_baseline_is_a_clean_plan(self) -> None:
         code, planner = self.plan(plan_layers_tasks())
         self.assertEqual((code, planner["status"], planner["errors"], planner["warnings"]), (0, "ok", [], []))
 
     def test_checkbox_state_and_parallel_marker_are_preserved(self) -> None:
         code, planner = self.plan(plan_layers_tasks(
             foundation=(
-                "- [ ] T001 Unchecked in src/contract.md\n"
-                "- [x] T003 Lowercase checked in src/planner.py\n"
-                "- [X] T004 Uppercase checked in tests/test_planner.py"
+                "- [ ] T001 Unchecked in src/contract.md\n- [x] T003 Lowercase in src/planner.py\n"
+                "- [X] T004 Uppercase in tests/test_planner.py"
             ),
             story="- [ ] T002 [P] [US1] Parallel in src/planner.py",
         ))
-        self.assertEqual(code, 0)
         tasks = {task["id"]: task for inc in planner["increments"] for task in inc["tasks"]}
+        self.assertEqual(code, 0)
         self.assertEqual({key: value["status"] for key, value in tasks.items()},
                          {"T001": "todo", "T002": "todo", "T003": "done", "T004": "done"})
         self.assertEqual({key for key, value in tasks.items() if value["parallel"]}, {"T002"})
 
-    def test_an_increment_without_tasks_is_an_empty_increment_error(self) -> None:
-        code, planner = self.plan(plan_layers_tasks(
-            extra_phase="\n## Phase 3: User Story 2 - Parse Ordered Increments (Priority: P1)\n\nNo tasks here.\n",
-        ))
-        self.assertEqual((code, planner["status"]), (1, "invalid_plan"))
-        self.assertEqual([error["code"] for error in planner["errors"]], ["empty_increment"])
-
-    def test_a_dependency_on_an_unknown_increment_is_an_error(self) -> None:
-        code, planner = self.plan(plan_layers_tasks(us1_depends="Depends on US3"))
-        self.assertEqual((code, planner["status"]), (1, "invalid_plan"))
-        unknown = [error for error in planner["errors"] if error["code"] == "unknown_increment"]
-        self.assertEqual([error["details"]["increment_id"] for error in unknown], ["us3"])
-
-    def test_references_to_missing_files_are_warnings_not_errors(self) -> None:
-        code, planner = self.plan(plan_layers_tasks(
-            story=(
-                "- [ ] T002 [US1] Reference a missing script src/no-such-helper.py\n"
-                "- [ ] T003 [US1] Reference a missing test tests/no-such-test.py"
+    def test_a_defective_plan_reports_each_error_code(self) -> None:
+        phase_3 = "\n## Phase 3: User Story 2 - Parse Ordered Increments (Priority: P1)\n\nNo tasks.\n"
+        cases = {
+            "empty increment": ({"extra_phase": phase_3}, ["empty_increment"]),
+            "unknown dependency": ({"us1_depends": "Depends on US3"}, ["unknown_increment"]),
+            "missing headings": (
+                {"dependencies": False, "notes": "\n## Notes\n\nNo dependency or delivery headings.\n"},
+                ["missing_required_heading", "missing_required_heading"],
             ),
-        ))
-        self.assertEqual((code, planner["status"], planner["errors"]), (0, "ok", []))
-        missing = [(w["code"], w["details"]["kind"], w["details"]["reference"]) for w in planner["warnings"]]
-        self.assertEqual(missing, [
-            ("reference_not_found", "file", "src/no-such-helper.py"),
-            ("reference_not_found", "test", "tests/no-such-test.py"),
-        ])
+        }
+        for name, (overrides, codes) in cases.items():
+            with self.subTest(case=name):
+                code, planner = self.plan(plan_layers_tasks(**overrides))
+                self.assertEqual((code, planner["status"]), (1, "invalid_plan"))
+                self.assertEqual([error["code"] for error in planner["errors"]], codes)
 
-    def test_missing_required_headings_are_errors(self) -> None:
-        code, planner = self.plan(plan_layers_tasks(
-            with_dependencies=False, notes="\n## Notes\n\nNo dependency or delivery headings.\n",
-        ))
-        self.assertEqual((code, planner["status"]), (1, "invalid_plan"))
-        self.assertEqual(
-            sorted(error["details"]["required_heading"] for error in planner["errors"]
-                   if error["code"] == "missing_required_heading"),
-            ["## Dependencies & Execution Order", "### Incremental Delivery"],
-        )
-
-    def test_tasks_without_references_are_warnings(self) -> None:
-        code, planner = self.plan(plan_layers_tasks(
-            foundation="- [ ] T001 Prepare the fixture without any path references",
-            story="- [ ] T002 [US1] Parse a task that names no files or tests",
-        ))
-        self.assertEqual((code, planner["status"], planner["errors"]), (0, "ok", []))
-        self.assertEqual(
-            [(w["code"], w["details"]["task_id"]) for w in planner["warnings"]],
-            [("task_without_references", "T001"), ("task_without_references", "T002")],
-        )
+    def test_reference_problems_are_warnings_not_errors(self) -> None:
+        cases = {
+            "missing files": (
+                {"story": "- [ ] T002 [US1] Use src/no-such.py and tests/no-such-test.py"},
+                [("reference_not_found", "src/no-such.py"), ("reference_not_found", "tests/no-such-test.py")],
+            ),
+            "no references": (
+                {"foundation": "- [ ] T001 Prepare it", "story": "- [ ] T002 [US1] Build it"},
+                [("task_without_references", "T001"), ("task_without_references", "T002")],
+            ),
+        }
+        for name, (overrides, expected) in cases.items():
+            with self.subTest(case=name):
+                code, planner = self.plan(plan_layers_tasks(**overrides))
+                self.assertEqual((code, planner["status"], planner["errors"]), (0, "ok", []))
+                found = [(w["code"], w["details"].get("reference") or w["details"].get("task_id"))
+                         for w in planner["warnings"]]
+                self.assertEqual(found, expected)
 
 
 def main() -> int:

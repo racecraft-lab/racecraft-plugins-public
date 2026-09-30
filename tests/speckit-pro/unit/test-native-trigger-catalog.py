@@ -59,6 +59,36 @@ def observation(activations: list[str]) -> dict[str, object]:
     }
 
 
+def audited_source_counts(audit: dict[str, object]) -> tuple[int, int]:
+    """Return (supported, blocked) source cases from the audit rows; raise if its recorded counts differ."""
+    rows = audit["source_cases"]
+    blocked = sum(1 for row in rows if row["counterpart_status"] == "blocked")
+    expected = {
+        "source_cases": len(rows),
+        "supported_source_cases": len(rows) - blocked,
+        "blocked_source_cases": blocked,
+        "blocked_requirements": len(audit["unresolved_requirements"]),
+    }
+    recorded = {key: audit["counts"][key] for key in expected}
+    if recorded != expected:
+        raise AssertionError(f"audit records {recorded} but its rows give {expected}")
+    return expected["supported_source_cases"], blocked
+
+
+class AuditCountDerivationTests(unittest.TestCase):
+    def test_expected_counts_follow_the_audit_file(self) -> None:
+        audit = json.loads(AUDIT_PATH.read_text(encoding="utf-8"))
+        supported, blocked = audited_source_counts(audit)
+        moved = copy.deepcopy(audit)
+        next(row for row in moved["source_cases"]
+             if row["counterpart_status"] != "blocked")["counterpart_status"] = "blocked"
+        with self.assertRaises(AssertionError):
+            audited_source_counts(moved)
+        moved["counts"]["supported_source_cases"] -= 1
+        moved["counts"]["blocked_source_cases"] += 1
+        self.assertEqual(audited_source_counts(moved), (supported - 1, blocked + 1))
+
+
 class NativeTriggerCatalogTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -68,31 +98,6 @@ class NativeTriggerCatalogTests(unittest.TestCase):
         cls.shared_skills = {
             path.parent.name for path in (PLUGIN_ROOT / "skills").glob("*/SKILL.md")
         }
-
-    def audited_source_counts(self, audit: dict[str, object]) -> tuple[int, int]:
-        """Check the audit's recorded source counts against its rows; return (supported, blocked)."""
-        rows = audit["source_cases"]
-        blocked = sum(1 for row in rows if row["counterpart_status"] == "blocked")
-        supported = len(rows) - blocked
-        self.assertEqual(audit["counts"]["source_cases"], len(rows))
-        self.assertEqual(audit["counts"]["supported_source_cases"], supported)
-        self.assertEqual(audit["counts"]["blocked_source_cases"], blocked)
-        self.assertEqual(audit["counts"]["blocked_requirements"], len(audit["unresolved_requirements"]))
-        return supported, blocked
-
-    def test_expected_counts_follow_the_audit_file(self) -> None:
-        self.audited_source_counts(self.audit)
-        moved = copy.deepcopy(self.audit)
-        next(row for row in moved["source_cases"]
-             if row["counterpart_status"] != "blocked")["counterpart_status"] = "blocked"
-        with self.assertRaises(AssertionError):
-            self.audited_source_counts(moved)
-        moved["counts"]["supported_source_cases"] -= 1
-        moved["counts"]["blocked_source_cases"] += 1
-        self.assertEqual(self.audited_source_counts(moved), (
-            self.audit["counts"]["supported_source_cases"] - 1,
-            self.audit["counts"]["blocked_source_cases"] + 1,
-        ))
 
     def selection(self, case: dict[str, object]) -> tuple[str, list[str]]:
         self.assertEqual(len(case["checks"]), 1, case["id"])
@@ -123,7 +128,7 @@ class NativeTriggerCatalogTests(unittest.TestCase):
         matrix = self.audit["coverage_matrix"]
         gaps = self.audit["unresolved_requirements"]
         self.assertEqual(len(self.cases), counts["proposed_canonical_cases"])
-        supported, blocked = self.audited_source_counts(self.audit)
+        supported, blocked = audited_source_counts(self.audit)
         self.assertEqual(len(matrix), counts["proposed_canonical_cases"])
         self.assertEqual(len(gaps), counts["blocked_requirements"])
 
@@ -190,7 +195,7 @@ class NativeTriggerCatalogTests(unittest.TestCase):
                     self.assertEqual(expected, [target], reference)
                 else:
                     self.assertNotIn(target, expected, reference)
-        self.assertEqual(len(referenced), self.audited_source_counts(self.audit)[0])
+        self.assertEqual(len(referenced), audited_source_counts(self.audit)[0])
         self.assertEqual(installer_adaptations, 3)
         self.assertEqual(merged_sibling_evidence, 2)
 
@@ -287,6 +292,6 @@ class NativeTriggerCatalogTests(unittest.TestCase):
 
 if __name__ == "__main__":
     raise SystemExit(run_counted(
-        unittest.defaultTestLoader.loadTestsFromTestCase(NativeTriggerCatalogTests),
+        unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__]),
         label="test-native-trigger-catalog",
     ))

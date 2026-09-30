@@ -88,17 +88,14 @@ selected behavior; never enroll another story or model. Never invoke Grill Me.
    `skills/speckit-coach/references/quint/quint-lang/OVERVIEW.md`,
    `skills/speckit-coach/references/quint/quint-modeling/OVERVIEW.md`, and
    `skills/speckit-coach/references/quint/witness-and-trace.md`; start from the coach's
-   `skills/speckit-coach/references/quint-guide.md`. Preserve SpecKit's approved
-   requirement authority.
-   Author the selected `.qnt` inputs, matching native configuration, and pinned
-   compiler catalog entry; never run Quint's backend-managing verify/TLA+
-   compilation or install its plugin. The parent's runner owns JSON compilation
-   and actual Apalache checking. For selected implementation traces, declare the
-   reviewed ITF action/state projection, atomic capture points, adapter tests,
-   and implementation input scope using
-   `skills/speckit-coach/references/implementation-traces.md`.
-   Include these obligations for Tasks; simulated model traces alone cannot
-   satisfy conformance.
+   `skills/speckit-coach/references/quint-guide.md`. Preserve SpecKit's approved requirement
+   authority. Author the selected `.qnt` inputs, matching native configuration, and pinned compiler
+   catalog entry; never run Quint's backend-managing verify/TLA+ compilation or install its plugin.
+   The parent's runner owns JSON compilation and actual Apalache checking. For selected
+   implementation traces, declare the reviewed ITF action/state projection, atomic capture points,
+   adapter tests, and implementation input scope using
+   `skills/speckit-coach/references/implementation-traces.md`. Include these obligations for Tasks;
+   simulated model traces alone cannot satisfy conformance.
 6. Return the permitted paths changed, property-to-requirement mapping, assumptions,
    expected checks, and unresolved questions. The parent runs `formal-doctor` and
    `formal-check`, owns gate decisions, records evidence, and commits the result.
