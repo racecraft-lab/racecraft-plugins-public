@@ -3,6 +3,21 @@
 Date: 2026-09-06. Status: decided for Python and TypeScript; installs follow
 the operator's go after this record is reviewed.
 
+**Superseded in part.** The code and the coach guide now hold the current
+values. Where this record differs, read `speckit_pro_runner/gate_discovery.py`
+(slots, languages, default thresholds), `speckit_pro_runner/gate_discovery_table.json`
+(tools and commands), `speckit_pro_runner/quality_gates.py` (the thresholds file
+and the `recommend` command), and
+`skills/speckit-coach/references/quality-gates-guide.md`. The differences are:
+
+| Topic | This record's original text | Current |
+| --- | --- | --- |
+| Raw complexity ceiling | 8, with Bob's 6 as the no-code fallback | 10 (NIST SP 500-235) is both the default and the no-code fallback |
+| Scope of the ceilings | Functions changed in the diff | Every function in each changed file |
+| Slots | Three | A fourth, opt-in `DEPENDENCY_AUDIT`, with Python, TypeScript, Go, and Rust rows |
+| TypeScript complexity | ESLint plus c8 | ESLint with Vitest, Jest, or c8 coverage; oxlint with Bun `lcov.info` for a project with a `bun.lock` |
+| Gate wiring | "The next layer" | Shipped |
+
 This record picks one tool per deterministic gate per language for the three
 PROJECT_COMMANDS slots the "Quality Gauntlet" memo adds: COMPLEXITY, MUTATION,
 DEPENDENCY_RULES. It also defines the discovery table that populates those
@@ -12,13 +27,13 @@ below was read from the tool's official documentation or source on
 and again in the first-install checklist at the end.
 
 Scope of this record: decisions and contracts only. No autopilot reference,
-agent, or runner helper changes. The gate wiring is the next layer.
+agent, or runner helper changes. Gate wiring was the next layer and has shipped; see the note above.
 
 ## Summary of picks
 
 | Gate | Python | TypeScript |
 | --- | --- | --- |
-| COMPLEXITY (CRAP) | radon + coverage.py, joined by a plugin script | ESLint `complexity` + Istanbul-shape coverage (c8, or the Vitest/Jest reporter), joined by the same script |
+| COMPLEXITY (CRAP) | radon + coverage.py, joined by a plugin script | ESLint `complexity` + Istanbul-shape coverage (c8, or the Vitest/Jest reporter), or oxlint + Bun `lcov.info` for a Bun project, joined by the same script |
 | MUTATION | cosmic-ray | StrykerJS |
 | DEPENDENCY_RULES | import-linter | dependency-cruiser |
 
@@ -103,16 +118,18 @@ therefore kept separate:
 
 | Language | Raw complexity ceiling | CRAP ceiling |
 | --- | --- | --- |
-| python | 8 | 30 |
-| typescript | 8 | 30 |
+| python | 8 (shipped: 10) | 30 |
+| typescript | 8 (shipped: 10) | 30 |
 
-- Raw complexity 8 is Bob's upper agent threshold, applied to the functions
-  changed in the diff. A strict ceiling that fails the first PR touching an
-  over-limit function is an intended ratchet.
+- Raw complexity 8 was Bob's upper agent threshold. The shipped default is 10,
+  NIST SP 500-235's ceiling. The gates judge every function in each changed
+  file, not only the changed lines. A strict ceiling that fails the first PR
+  touching an over-limit function is an intended ratchet.
 - CRAP 30 (Savoia) stays separate so it catches complex code that lacks tests
   instead of degenerating to a second complexity check.
-- Bob's 6 remains the coached no-code fallback for raw complexity only, in
-  the thresholds file layer, when a repository has no code to measure.
+- The coached no-code fallback for raw complexity is 10 with
+  `basis.method: nist-235`, in the thresholds file layer, when a repository has
+  no code to measure. Bob's 6 is not used.
 
 `.specify/quality-gates.json` is authoritative (schema at
 `speckit_pro_runner/contracts/quality-gates.schema.json`, validator and
@@ -128,7 +145,7 @@ unbounded, and `DEPENDENCY_RULES` runs for real and blocks. An empty
 The
 coach flow in `skills/speckit-coach/references/quality-gates-guide.md`
 recommends the ceiling that lets about 90 percent of existing functions pass
-and falls back to Bob's 6 when nothing can be measured.
+and falls back to 10 when nothing can be measured.
 
 ## MUTATION
 
@@ -256,8 +273,8 @@ Row fields:
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `language` | `python` or `typescript` | Closed enum. New languages are new enum values plus rows. |
-| `slot` | `COMPLEXITY`, `MUTATION`, or `DEPENDENCY_RULES` | Closed enum. `FORMAL_CHECK` joins in the wiring layer that follows the [formal check decision record](./formal-check-decision.md). |
+| `language` | `python`, `typescript`, `go`, or `rust` | Closed enum. New languages are new enum values plus rows. |
+| `slot` | `COMPLEXITY`, `MUTATION`, `DEPENDENCY_RULES`, or the opt-in `DEPENDENCY_AUDIT` | Closed enum. `FORMAL_CHECK` joins in the wiring layer that follows the [formal check decision record](./formal-check-decision.md). |
 | `signal` | object `{ "kind": "file", "path": "<repo-relative path>" }` | Detection evidence. A row matches when the file exists. One kind for now; new kinds are schema changes. |
 | `tool` | string | Human name used in the missing-tool prompt and the Prerequisites table. |
 | `install` | string | Exact install command. Needed by the "install" answer in the missing-tool prompt. |

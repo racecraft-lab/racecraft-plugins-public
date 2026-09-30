@@ -35,9 +35,11 @@ CATEGORIES = ("outside_writable_roots", "privileged_command", "interactive_authe
 ALLOWED_INPUTS = frozenset({"repo_root", "gates", "inventory_actions", "writable_roots", "write_paths"})
 # Root agent instruction files, read in this order; the first file to declare a command is its source.
 INSTRUCTION_FILES = ("AGENTS.md", "CLAUDE.md")
-# Dependency audits send dependency metadata to a registry or advisory service.
-EGRESS_COMMAND = re.compile(r"(?:(?:npm|pnpm|bun)\s+audit|yarn\s+(?:npm\s+)?audit|pip-audit|cargo\s+audit"
-                            r"|bundle(?:\s+|-)audit)(?:\s.*)?")
+# Dependency audits send dependency metadata to a registry or advisory service. The discovery
+# table wraps some in `env -i NAME=value ...`, so an optional `env` prefix does not hide one.
+EGRESS_COMMAND = re.compile(r"(?:env\s+(?:-i\s+)?(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*)?"
+                            r"(?:(?:npm|pnpm|bun)\s+audit|yarn\s+(?:npm\s+)?audit|pip-audit"
+                            r"|cargo(?:\s+|-)audit|bundle(?:\s+|-)audit|govulncheck)(?:\s.*)?")
 GIT_TIMEOUT_SECONDS = 30
 RECORD_GATE = "run-start: private autonomy record"
 ROOT_GATE = "run-start: workflow root"

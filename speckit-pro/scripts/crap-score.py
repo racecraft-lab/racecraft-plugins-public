@@ -18,6 +18,9 @@ produces coverage data is never launched from this script: the discovery
 table's slot command runs it first, so no operator-supplied executable is
 ever spawned from plugin Python.
 
+The script checks every function in the paths it is given. The gate passes each
+changed source file, so an older function in a changed file counts too.
+
 Exit 0 when every checked function is within both ceilings, 1 on any
 violation, 2 when a tool is missing or its output cannot be parsed. At least
 one path is required: an empty list is a usage error (exit 2), never a pass.
