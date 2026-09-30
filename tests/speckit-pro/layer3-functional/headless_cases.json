@@ -1451,6 +1451,21 @@
     },
     {
       "host": "claude",
+      "skill": "speckit-scaffold-spec",
+      "invocation": "/speckit-pro:speckit-scaffold-spec",
+      "eval_file": "evals/speckit-scaffold-spec-evals.json",
+      "eval_id": 3,
+      "fixture_root": "tests/speckit-pro/layer3-functional/fixtures/headless/coach-installed-project",
+      "fixture_note": "Use this frozen project as local context for the explanatory request.",
+      "allowed_tools": [
+        "Skill",
+        "Read",
+        "Glob",
+        "Grep"
+      ]
+    },
+    {
+      "host": "claude",
       "skill": "speckit-upgrade",
       "invocation": "/speckit-pro:speckit-upgrade",
       "eval_file": "evals/speckit-upgrade-evals.json",

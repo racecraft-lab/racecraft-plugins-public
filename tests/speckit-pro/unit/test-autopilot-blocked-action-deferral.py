@@ -125,6 +125,25 @@ class GateFailureDeferSourceContractTests(unittest.TestCase):
         ))
 
 
+class NeverYieldSourceContractTests(unittest.TestCase):
+    """A status summary never ends a turn with work pending, on either host."""
+
+    def test_both_hosts_forbid_ending_a_turn_on_a_status_summary(self) -> None:
+        for host, skill, phase in (
+            ("claude", _flat(CLAUDE_AUTOPILOT_SKILL), _claude_reference("phase-execution.md")),
+            ("codex", _flat(CODEX_AUTOPILOT_SKILL), _codex_reference("phase-execution-codex.md")),
+        ):
+            with self.subTest(host=host):
+                self.assertIn("Neither is a status summary a stopping point.", skill)
+                self.assertIn("#never-yield-with-nothing-in-flight", skill)
+                never_yield = _section(phase, "Never Yield With Nothing In Flight", BLOCKED_ACTION_HEADING)
+                _assert_phrases(self, never_yield, (
+                    "Do not end the turn on a status summary",
+                    "A summary is not a step.",
+                    "A blocked action is not a stop condition",
+                ))
+
+
 if __name__ == "__main__":
     suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])
     raise SystemExit(run_counted(suite, label="test-autopilot-blocked-action-deferral"))

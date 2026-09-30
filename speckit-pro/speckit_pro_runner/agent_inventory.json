@@ -41,7 +41,7 @@
       "category": "shared",
       "exception_reason": null,
       "claude_code": {"implementation": "plugin_agent", "source": "agents/formal-model-author.md", "install_status": "required", "order": 5, "model": "opus", "effort": "max", "sandbox": "tool-policy", "memory": "none"},
-      "codex": {"implementation": "custom_agent", "source": "codex-agents/formal-model-author.toml", "install_status": "required", "order": 6, "model": "gpt-6-sol", "effort": "xhigh", "sandbox": "workspace-write", "memory": "none"}
+      "codex": {"implementation": "custom_agent", "source": "codex-agents/formal-model-author.toml", "install_status": "required", "order": 6, "model": "gpt-6-sol", "effort": "xhigh", "sandbox": "read-only", "memory": "none"}
     },
     {
       "name": "codebase-analyst",

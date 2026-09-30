@@ -65,7 +65,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 ### Analyze Executor
 
-- **Purpose:** Execution-focused remediation agent for the Analyze phase.
+- **Purpose:** Executes /speckit-analyze and remediates ALL findings at every severity level (CRITICAL, HIGH, MEDIUM, LOW).
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro analyze-executor agent
 - **Claude Code:** plugin agent (required)
@@ -89,7 +89,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 ### Artifact Author
 
-- **Purpose:** Fills the shipped HTML artifact-gallery templates for a feature and writes the finished pages into the feature's artifacts/ directory.
+- **Purpose:** Fills the shipped HTML artifact-gallery templates for a feature and writes the finished pages into the feature's `artifacts/` directory.
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro artifact-author agent
 - **Claude Code:** plugin agent (required)
@@ -160,7 +160,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 ### Checklist Executor
 
-- **Purpose:** Execution-focused remediation agent for a single Checklist domain.
+- **Purpose:** Executes a single /speckit-checklist domain and remediates any [Gap] markers found.
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro checklist-executor agent
 - **Claude Code:** plugin agent (required)
@@ -184,7 +184,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 ### Clarify Executor
 
-- **Purpose:** Read-only Clarify question-preparation agent for the autonomous SpecKit workflow.
+- **Purpose:** Prepares a single Clarify question set for the autopilot workflow.
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro clarify-executor agent
 - **Claude Code:** plugin agent (required)
@@ -208,7 +208,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 ### Codebase Analyst
 
-- **Purpose:** Read-only consensus agent that answers from the perspective of existing code patterns, file-level evidence, and established repository conventions.
+- **Purpose:** Analyzes the existing codebase to resolve questions from the perspective of established code patterns and conventions.
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro codebase-analyst agent
 - **Claude Code:** plugin agent (required)
@@ -232,7 +232,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 ### Consensus Synthesizer
 
-- **Purpose:** Terminal read-only consensus worker that synthesizes one to three analyst responses, applies the agreement and security rules, and returns exact proposed edits for the parent orchestrator to accept or reject.
+- **Purpose:** Synthesizes outputs from the three consensus analysts (codebase-analyst, spec-context-analyst, domain-researcher) into a single actionable answer with confidence assessment.
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro consensus-synthesizer agent
 - **Claude Code:** plugin agent (required)
@@ -256,7 +256,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 ### Consensus Tiebreaker
 
-- **Purpose:** Terminal read-only Round 3 worker that resolves a consensus item Rounds 1 and 2 could not settle, returning the most conservative option that satisfies the spec with its assumption, dissent, and exact proposed edit fo...
+- **Purpose:** Resolves a consensus item that Rounds 1 and 2 could not settle (Round 2 all-disagree, a security item without 3/3, a failed analyst, or conservative mode).
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro consensus-tiebreaker agent
 - **Claude Code:** plugin agent (required)
@@ -280,7 +280,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 ### Domain Researcher
 
-- **Purpose:** Read-only consensus agent that answers from official documentation, standards, and industry best practices with explicit citations.
+- **Purpose:** Researches industry best practices and official documentation to resolve questions with evidence-based recommendations.
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro domain-researcher agent
 - **Claude Code:** plugin agent (required)
@@ -304,7 +304,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 ### Formal Model Author
 
-- **Purpose:** Authors or reconciles one explicitly selected formal model after Plan, within supplied output paths.
+- **Purpose:** Authors or reconciles one explicitly selected formal model after Plan.
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro formal-model-author agent
 - **Claude Code:** plugin agent (required)
@@ -328,7 +328,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 ### Implement Executor
 
-- **Purpose:** Implementation-focused executor for one task or a bounded batch of up to four SpecKit tasks.
+- **Purpose:** Executes one task or a bounded batch of up to four tasks using strict TDD red-green-refactor.
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro implement-executor agent
 - **Claude Code:** plugin agent (required)
@@ -352,7 +352,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 ### Phase Executor
 
-- **Purpose:** Phase execution worker for the SpecKit Specify, Plan, and Tasks commands.
+- **Purpose:** Executes a single SpecKit phase by running its speckit-* command as a loaded skill.
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro phase-executor agent
 - **Claude Code:** plugin agent (required)
@@ -376,7 +376,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 ### Spec Context Analyst
 
-- **Purpose:** Read-only consensus agent that answers from project constitutions, roadmaps, prior specs, and other internal decision records.
+- **Purpose:** Analyzes project constitution, technical roadmap, and prior spec artifacts to resolve questions from the perspective of established project decisions and principles.
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro spec-context-analyst agent
 - **Claude Code:** plugin agent (required)

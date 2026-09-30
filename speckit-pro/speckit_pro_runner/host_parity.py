@@ -2,12 +2,14 @@
 
 One authored text serves both hosts. Host-specific lines sit in blocks:
 
-    <!-- host:codex -->
+    <!-- host:codex: why Codex needs its own text -->
     Codex-only text.
     <!-- /host -->
 
-`emit_host` keeps the target host's blocks and drops the other host's. Each
-marker must sit alone on its line. Markers count everywhere, including inside
+The reason after the second colon is optional in the grammar;
+`unexplained_blocks` lists the open markers that lack one, so a check can
+require a reason for every divergence. `emit_host` keeps the target host's
+blocks and drops the other host's. Each marker must sit alone on its line. Markers count everywhere, including inside
 fenced code, so an example of the syntax cannot appear verbatim in a source.
 Any unbalanced, nested, unknown-host, or inline marker fails closed.
 
@@ -27,6 +29,7 @@ Codex limits. The live probe under
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from typing import Any
@@ -38,7 +41,7 @@ HOSTS = ("claude", "codex")
 MUTATION_TOOLS = frozenset({"Write", "Edit", "MultiEdit"})
 BROKER_TOOL = re.compile(r"mcp__plugin_speckit-pro_(?P<server>[a-z0-9-]+)__(?P<tool>[a-z0-9_]+)")
 
-_OPEN = re.compile(r"<!-- host:(?P<host>[^ ]*) -->")
+_OPEN = re.compile(r"<!-- host:(?P<host>[^ :]*)(?:: (?P<reason>[^<>]*[^<>\s]))? -->")
 _CLOSE = "<!-- /host -->"
 _MARKER_HINT = re.compile(r"<!--\s*/?\s*host\b")
 _LIST_ITEM = re.compile(r"[^,\s][^,]*")
@@ -90,27 +93,51 @@ def emit_host(text: str, host: str) -> str:
     return "".join(kept)
 
 
+def unexplained_blocks(text: str) -> list[int]:
+    """Return the line numbers of open markers that give no reason."""
+    emit_host(text, HOSTS[0])
+    return [
+        number
+        for number, line in enumerate(text.splitlines(), start=1)
+        if (opened := _OPEN.fullmatch(line.strip())) and opened.group("reason") is None
+    ]
+
+
 def split_frontmatter(text: str) -> tuple[dict[str, str], str]:
     """Split a `---` fenced frontmatter into top-level scalar fields and body.
 
-    Indented continuation lines (a folded `description: >`) belong to the key
-    above them and are never read as keys.
+    Indented continuation lines belong to the key above them and are never
+    read as keys. A folded `key: >` value is joined with single spaces, as
+    YAML folds it; any other block value keeps its raw indicator.
     """
     lines = text.splitlines(keepends=True)
     if not lines or lines[0].rstrip("\r\n") != "---":
         raise HostParityError("frontmatter must open with a --- line")
-    fields: dict[str, str] = {}
     for index, line in enumerate(lines[1:], start=1):
+        if line.rstrip("\r\n") == "---":
+            return _frontmatter_fields(lines[1:index]), "".join(lines[index + 1 :])
+    raise HostParityError("frontmatter has no closing --- line")
+
+
+def _frontmatter_fields(lines: list[str]) -> dict[str, str]:
+    fields: dict[str, str] = {}
+    folded: dict[str, list[str]] = {}
+    key = ""
+    for number, line in enumerate(lines, start=2):
         bare = line.rstrip("\r\n")
-        if bare == "---":
-            return fields, "".join(lines[index + 1 :])
         if not bare.strip() or bare[0] in " \t":
+            if key in folded and bare.strip():
+                folded[key].append(bare.strip())
             continue
         match = _FRONTMATTER_KEY.fullmatch(bare)
         if match is None:
-            raise HostParityError(f"frontmatter line {index + 1} is not a key: {bare!r}")
-        fields[match.group("key")] = (match.group("value") or "").strip()
-    raise HostParityError("frontmatter has no closing --- line")
+            raise HostParityError(f"frontmatter line {number} is not a key: {bare!r}")
+        key = match.group("key")
+        fields[key] = (match.group("value") or "").strip()
+        if fields[key] == ">":
+            folded[key] = []
+    fields.update({name: " ".join(parts) for name, parts in folded.items()})
+    return fields
 
 
 def _tool_list(value: str) -> list[str]:
@@ -157,6 +184,8 @@ def derive_codex_enforcement(fields: dict[str, str]) -> CodexEnforcement:
 
 
 FILE_EDIT_TOOL = "apply_patch"
+# Plugin-relative path of the generated per-role policy the hook applies.
+CODEX_HOOK_POLICY_FILE = "speckit_pro_runner/codex_agent_policy.json"
 
 
 def codex_mcp_tool_name(server: str, tool: str) -> str:
@@ -182,6 +211,40 @@ class CodexHookPolicy:
         if tool_name.startswith("mcp__") and self.allowed_mcp_tools is not None:
             return tool_name not in self.allowed_mcp_tools
         return False
+
+
+def _policy_entry(name: str, entry: Any) -> CodexHookPolicy:
+    if not isinstance(entry, dict) or not isinstance(entry.get("deny_file_edits"), bool):
+        raise HostParityError(f"codex agent policy for {name!r} is malformed")
+    allowed = entry.get("allowed_mcp_tools")
+    if allowed is not None and not (isinstance(allowed, list) and all(isinstance(tool, str) for tool in allowed)):
+        raise HostParityError(f"codex agent policy for {name!r} has a malformed MCP allowlist")
+    return CodexHookPolicy(name, entry["deny_file_edits"], None if allowed is None else tuple(allowed))
+
+
+def load_codex_hook_policies(text: str) -> dict[str, CodexHookPolicy]:
+    """Parse the generated policy file; fail closed on any shape it does not know."""
+    document = json.loads(text)
+    if not isinstance(document, dict) or document.get("schema_version") != 1 or not isinstance(document.get("roles"), dict):
+        raise HostParityError("codex agent policy has an unknown shape")
+    return {name: _policy_entry(name, entry) for name, entry in document["roles"].items()}
+
+
+def codex_hook_denial(payload: dict[str, Any], policies: dict[str, CodexHookPolicy]) -> str | None:
+    """The deny reason for one `PreToolUse` payload, or None to let the call run.
+
+    Only a spawned agent's payload carries `agent_type`; the parent's never
+    does, so the parent's own calls always pass.
+    """
+    agent_type = payload.get("agent_type")
+    tool_name = payload.get("tool_name")
+    policy = policies.get(agent_type) if isinstance(agent_type, str) else None
+    if policy is None or not isinstance(tool_name, str) or not policy.denies(agent_type, tool_name):
+        return None
+    # Codex appends its own period and the call details after the reason.
+    if tool_name == FILE_EDIT_TOOL:
+        return f"{agent_type} is read-only on Codex: it may not edit files with {FILE_EDIT_TOOL}"
+    return f"{agent_type} may call only its allowlisted MCP tools; {tool_name} is not one of them"
 
 
 def derive_codex_hook_policy(agent_type: str, enforcement: CodexEnforcement) -> CodexHookPolicy:

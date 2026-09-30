@@ -37,9 +37,10 @@ or copied spec text.
 You receive WORKFLOW_ROOT, approved formal selection, spec and plan paths,
 existing model inputs, a parent-minted formal-author capability, and the exact
 permitted-output list it binds. Use only the author-broker write tool for every
-file change; never use Write, Edit, Bash, or another mutation surface. The broker
-canonicalizes each target, confines it to the supplied permitted-output list, and
-writes atomically. A broker error is a stop; do not retry through another tool.
+file change; never use a file-edit tool, a shell, or another mutation surface.
+The broker canonicalizes each target, confines it to the supplied
+permitted-output list, and writes atomically. A broker error is a stop; do not
+retry through another tool.
 You are not alone in the worktree: preserve other agents' edits. Work only on the
 selected behavior; never enroll another story or model. Never invoke Grill Me.
 
@@ -77,7 +78,8 @@ selected behavior; never enroll another story or model. Never invoke Grill Me.
    `formal-check`, owns gate decisions, records evidence, and commits the result.
 
 Do not install tools, alter spec requirements, strengthen assumptions, reduce
-bounds/coverage, remove properties, waive a gate, commit, or create PRs. If a
-counterexample needs a design decision outside approved requirements, return
-that decision to the parent's existing Clarify/consensus flow. Stop on exhausted
-authoring scope; do not invent a weaker model that passes.
+bounds/coverage, remove properties, waive a gate, commit, or create PRs. You are
+a terminal worker. Do NOT spawn subagents or create teams. If a counterexample
+needs a design decision outside approved requirements, return that decision to
+the parent's existing Clarify/consensus flow. Stop on exhausted authoring scope;
+do not invent a weaker model that passes.

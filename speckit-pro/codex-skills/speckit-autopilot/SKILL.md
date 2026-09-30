@@ -64,6 +64,13 @@ gates, and advance through every phase in the resolved
 When a run may involve a human, and which reasons count, is set by the shared
 [Autopilot Stop Policy](../../skills/speckit-autopilot/references/stop-policy.md).
 
+**Neither is a status summary a stopping point.** Reporting progress to the
+operator is not a step in the workflow: when a phase still has work, the next
+`spawn_agent` or `wait_agent` call goes in the same turn as the report. Ending a
+turn with no agent in flight and tasks still pending leaves nothing to resume
+the run, which stops the stage short of its terminal step. See
+[Phase Execution §Never Yield With Nothing In Flight](./references/phase-execution-codex.md#never-yield-with-nothing-in-flight).
+
 ## Architectural Constraint — Main Agent Is The Orchestrator
 
 This skill loads into the **main Codex session agent**, which owns all phase
@@ -550,7 +557,7 @@ later. For multi-prompt phases (Clarify, Checklist), create one item
 per prompt/session when known; otherwise create the phase discovery
 placeholder.
 
-**Item naming + combined post-impl list (14 mandatory rows including
+**Item naming + combined post-impl list (13 mandatory rows including
 `Post: Doctor Extension Check` ... `Post: Retrospective` as the FINAL
 STEP) + reference `autopilot-state.json` schema:** see
 [task-list-canonical-codex.md](./references/task-list-canonical-codex.md).
@@ -833,7 +840,7 @@ PR URL.
   MCP, constitution, Codex agent availability, implementation agent
   detection, command discovery, preset detection)
 - [Canonical Task List for Codex](./references/task-list-canonical-codex.md) —
-  Step 1.1 checklist naming pattern, 14 mandatory Post rows, item-naming
+  Step 1.1 checklist naming pattern, 13 mandatory Post rows, item-naming
   rules, reference `autopilot-state.json` schema
 - [Phase Execution for Codex](./references/phase-execution-codex.md) —
   PHASES order, agent mapping, main execution loop (11-step per-phase
@@ -860,7 +867,9 @@ PR URL.
   research/context capability coverage and fallback behavior
 - [Hardener Delegation](../../skills/speckit-autopilot/references/hardener-delegation.md) —
   once-per-spec tests-only mutation hardening loop with gateway delegation,
-  candidate inspection, primary-model fallback, stop rule, and record
+  candidate inspection, primary-model fallback, stop rule, and record. Codex
+  runs it inside Post item 14 (Integration Suite), between the MUTATION run
+  and its block decision, not in a Phase 7 Final Verification step
 - [Token Discipline](../../skills/speckit-autopilot/references/token-discipline.md) —
   Opt-in compressed vocabulary for inter-agent transcripts
   (off by default; never applied to PR bodies, logs, or artifacts)

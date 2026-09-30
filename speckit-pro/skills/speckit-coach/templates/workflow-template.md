@@ -40,7 +40,12 @@ captured during scoping.
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
+<!-- host:claude: Claude's canonical Post plan has 11 rows -->
 | Post | Post-Implementation | ⏳ Pending | Canonical 11-item closeout |
+<!-- /host -->
+<!-- host:codex: Codex's canonical Post plan adds two visible supporting rows, 13 in all -->
+| Post | Post-Implementation | ⏳ Pending | Canonical 13-item closeout |
+<!-- /host -->
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
@@ -585,6 +590,10 @@ The canonical closeout. Every row must reach Complete or an explicit
 | Post: Integration Suite | ⏳ Pending | |
 | Post: Reviewability Diff Gate | ⏳ Pending | |
 | Post: UAT Runbook Generation | ⏳ Pending | |
+<!-- host:codex: Codex keeps the final backstop and packet generation as visible Post rows -->
+| Post: Final Reviewability Backstop | ⏳ Pending | |
+| Post: PR Packet/Body Generation | ⏳ Pending | |
+<!-- /host -->
 | Post: PR Body Generation | ⏳ Pending | |
 | Post: PR Creation | ⏳ Pending | |
 | Post: Review Remediation | ⏳ Pending | |

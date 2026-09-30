@@ -23,6 +23,12 @@ limit, but a project `PreToolUse` hook can enforce both for one agent type.
   `research_search` call, while the parent's shell write in the same run
   succeeded. The Codex hooks guide lists `agent_type` only for
   `SubagentStart`, so this field is observed, not documented.
+- **Shipped plugin hook: enforces per role (hook slice rerun).** Installed
+  from this repository's `dist/codex` payload, the plugin's own
+  `codex-agent-policy-hook.py` denied a `domain-researcher` agent's
+  `apply_patch` and its sweep-broker call, let its research-broker call
+  through, and let the parent's `apply_patch` run. A plugin hook therefore
+  sees `agent_type` the same way a project hook does.
 - **Hook inside the agent file: ignored.** An inline `[[hooks.PreToolUse]]`
   table in the agent file never ran; the child's write and `research_search`
   both succeeded.
@@ -107,6 +113,30 @@ The hook log (`hook_log` in the excerpts) shows the payload keys. The parent's
 `transcript_path` and `turn_id`. The child's payloads hold the same keys plus
 `agent_id` and `agent_type`.
 
+## Plugin hook case (`hook-plugin`, rerun for the hook slice)
+
+Run on 2026-09-29 with `codex-cli 0.156.0` and `gpt-6-luna`, after
+`scripts/refresh-release-artifacts.py` built the payload. The case makes a
+throwaway `CODEX_HOME` holding only a copy of the operator's `auth.json` and a
+two-line config (`sandbox_mode = "workspace-write"`, `approval_policy =
+"on-request"`), adds this checkout as a local marketplace, installs
+`speckit-pro` from `dist/codex/speckit-pro`, and deletes the home after the
+run. The operator's own config was not read or written. The project holds one
+agent file named `domain-researcher`, so its calls take that role's generated
+policy: read-only, with only `research_search` and `docs_query` allowed.
+
+| Call | Made by | Result |
+| --- | --- | --- |
+| `apply_patch` adds `parent-patch.txt` | parent | ran; the file exists |
+| `apply_patch` adds `child-patch.txt` | `domain-researcher` | denied: "Command blocked by PreToolUse hook: domain-researcher is read-only on Codex: it may not edit files with apply_patch"; no file |
+| `mcp__sweep_broker__snapshot_list` | `domain-researcher` | denied: "Tool call blocked by PreToolUse hook: domain-researcher may call only its allowlisted MCP tools; mcp__sweep_broker__snapshot_list is not one of them" |
+| `mcp__research_broker__docs_query` | `domain-researcher` | not blocked by the hook; Codex then refused it with "MCP tool call requires approval, but approval policy is never", because `codex exec` runs without an approver |
+
+The `hook_denials` excerpt lists the two router errors Codex logged; no other
+call was blocked by the hook. The two slice-1 project-hook cases were not
+rerun: they persist a trust entry in the operator's own Codex config, and this
+case covers the same `agent_type` question through the hook that ships.
+
 ## Consequence for the generator
 
 - `sandbox_mode` is derived and emitted only as an advisory key
@@ -114,8 +144,9 @@ The hook log (`hook_log` in the excerpts) shows the payload keys. The parent's
 - No `enabled_tools` key is emitted.
 - `derive_codex_hook_policy` states the per-role hook policy that this probe
   shows Codex enforces: deny `apply_patch` for read-only roles, and deny
-  every MCP tool outside a role's broker allowlist. It is a library function
-  in this slice; no shipped hook changes.
+  every MCP tool outside a role's broker allowlist. The artifact refresh
+  writes it to `speckit_pro_runner/codex_agent_policy.json`, and the plugin's
+  `PreToolUse` hook `scripts/codex-agent-policy-hook.py` applies it.
 - A read-only role's shell writes stay a prose rule.
 
 ## Files

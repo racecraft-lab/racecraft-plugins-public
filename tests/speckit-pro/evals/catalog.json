@@ -19163,7 +19163,7 @@
         },
         {
           "id": "dispatch",
-          "description": "The Plan executor follows the loaded speckit-plan command's research-agent dispatch step for Technical Context unknowns; its own direct research-broker calls do not replace that dispatch (phase-executor.md: \"Use a subagent only when the loaded command directs one\" and Rule 2, \"After the Skill loads, execute its steps\"; phase-executor.toml: \"Use `spawn_agent` only when the loaded skill directs it\" and Rule 2)."
+          "description": "The Plan executor follows the loaded speckit-plan command's research-agent dispatch step for Technical Context unknowns; its own direct research-broker calls do not replace that dispatch (phase-executor.md: \"Use a subagent only when the loaded command directs one\" and Rule 2, \"After the skill loads, execute its steps\"; phase-executor.toml: \"Use `spawn_agent` only when the loaded skill directs it\" and Rule 2)."
         },
         {
           "id": "gap-record",

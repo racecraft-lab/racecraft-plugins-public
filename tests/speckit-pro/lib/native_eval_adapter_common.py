@@ -20,6 +20,7 @@ import subprocess
 from typing import Any, Mapping, Sequence
 import uuid
 
+import host_skill_views
 import native_eval_fixture_setup as fixture_setup
 import native_eval_pairing
 import native_eval_runner_result
@@ -683,9 +684,8 @@ def _stage_trigger(
 ) -> tuple[str, native_eval_trigger.TriggerStage | None]:
     if case.get("layer") != "trigger":
         return prompt, None
-    source_name = "skills" if host == "claude" else "codex-skills"
     stage = native_eval_trigger.stage_trigger_catalog(
-        host, repo / "speckit-pro" / source_name, stage_root,
+        host, host_skill_views.host_skill_root(host, repo / "speckit-pro"), stage_root,
         str(host_settings["skill"]), trial_identity,
     )
     rendered = prompt.replace("{{skill}}", stage.native_target)

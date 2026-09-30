@@ -8,6 +8,7 @@ import json
 import os
 import re
 import sys
+import tempfile
 import unittest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -23,6 +24,7 @@ from structural_helpers import field_exists as _field_exists
 from structural_helpers import nested as _nested
 from structural_helpers import source_path
 from test_result import run_counted
+from speckit_pro_runner.host_skills import render_host_skills
 
 PLUGIN_JSON = PLUGIN_ROOT / '.claude-plugin' / 'plugin.json'
 KEBAB_RE = re.compile('^[a-z][a-z0-9]*(-[a-z0-9]+)*$')
@@ -79,10 +81,17 @@ def required_codex_skills(plugin_root: Path) -> tuple[str, ...]:
 
 
 def codex_skill_gaps(plugin_root: Path) -> list[str]:
-    """Required Codex skills that hold no SKILL.md, and Codex skills nothing requires."""
+    """Required Codex skills that Codex would load no SKILL.md for, and Codex skills nothing requires.
+
+    Codex loads the shared skills/ tree overlaid by codex-skills/, so the roster
+    is read from that rendered tree.
+    """
     required = set(required_codex_skills(plugin_root))
-    present = set(discover_skill_names(plugin_root / 'codex-skills'))
-    return [f'codex-skills/{name}/SKILL.md is missing' for name in sorted(required - present)] + [f'codex-skills/{name}/ is not a required skill' for name in sorted(present - required)]
+    with tempfile.TemporaryDirectory() as temporary:
+        view = Path(temporary) / 'skills'
+        render_host_skills(plugin_root, 'codex', view)
+        present = set(discover_skill_names(view))
+    return [f'Codex skill {name}/SKILL.md is missing' for name in sorted(required - present)] + [f'Codex skill {name}/ is not a required skill' for name in sorted(present - required)]
 
 
 REQUIRED_SKILLS = required_codex_skills(PLUGIN_ROOT)
@@ -137,10 +146,8 @@ class ValidateCodexPlugin(unittest.TestCase):
         with self.subTest(msg='codex-skills/ holds exactly the skills skills/ ships plus the Codex-only skills'):
             self.assertEqual([], codex_skill_gaps(PLUGIN_ROOT))
         for skill in REQUIRED_SKILLS:
-            with self.subTest(msg=f'codex-skills/{skill}/ directory exists'):
+            with self.subTest(msg=f'codex-skills/{skill}/ directory exists for its Codex sidecar'):
                 self.assertTrue((PLUGIN_ROOT / 'codex-skills' / skill).is_dir(), f'codex-skills/{skill}/ directory not found')
-            with self.subTest(msg=f'codex-skills/{skill}/SKILL.md exists'):
-                self.assertTrue((PLUGIN_ROOT / 'codex-skills' / skill / 'SKILL.md').is_file(), f'file not found: codex-skills/{skill}/SKILL.md')
 MARKETPLACE_JSON = REPO_ROOT / '.agents' / 'plugins' / 'marketplace.json'
 
 class ValidateCodexMarketplace(unittest.TestCase):

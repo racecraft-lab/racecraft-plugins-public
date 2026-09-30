@@ -63,7 +63,7 @@ documents.
 
 Return your answer as a structured response:
 
-```
+```text
 ## Answer
 
 [Your proposed answer — backed by external evidence and best practices]
@@ -115,5 +115,8 @@ Your final message MUST be the complete structured deliverable above (Answer / C
 4. **Stay in your lane.** Report only what external sources
    say. Leave codebase patterns to codebase-analyst and
    project decisions to spec-context-analyst.
+
+5. **Remain terminal.** Do NOT spawn subagents or create teams.
+   Return the structured deliverable directly to the parent.
 
 </hard_constraints>

@@ -14,7 +14,12 @@ Exactly once per spec, and only when all of these hold:
 
 - `MUTATION` is `populated` in the Quality Gates table (not `unconfigured`,
   `skipped`, or `N/A`).
+<!-- host:claude: Claude runs the MUTATION slot in Phase 7 Final Verification -->
 - The MUTATION run in Step 4 of Phase 7 produced a report.
+<!-- /host -->
+<!-- host:codex: Codex runs the MUTATION slot in Post item 14, Integration Suite -->
+- The MUTATION run in Post item 14 (Integration Suite) produced a report.
+<!-- /host -->
 - The Quality Gates table's `Hardener` line is still `not run`. A resumed run
   that finds any other value does not fire again; it reads the recorded
   outcome and continues.
@@ -26,7 +31,12 @@ workflow file; by default a passing score records `not needed` and skips.
 
 ## Inputs, always the same three
 
+<!-- host:claude: Claude runs the MUTATION slot in Phase 7 Final Verification -->
 1. **Mutation report**: the tool's output from the Step 4 run (cosmic-ray's
+<!-- /host -->
+<!-- host:codex: Codex runs the MUTATION slot in Post item 14, Integration Suite -->
+1. **Mutation report**: the tool's output from the Post item 14 run (cosmic-ray's
+<!-- /host -->
    `cr-report`/`cr-rate` text or StrykerJS's `reports/mutation/mutation.json`),
    pasted into the task, not referenced by path, so the worker never has to
    discover it.

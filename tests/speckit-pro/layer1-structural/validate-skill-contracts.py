@@ -4,10 +4,13 @@
 from __future__ import annotations
 
 from pathlib import Path
+import atexit
 import json
 import os
 import re
+import shutil
 import sys
+import tempfile
 import unittest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -18,14 +21,22 @@ for _import_root in (LIB_DIR, PLUGIN_ROOT):
         sys.path.insert(0, str(_import_root))
 
 from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
+from speckit_pro_runner.agent_inventory import AGENT_INVENTORY
+from speckit_pro_runner.codex_agent_generator import generated_codex_files
+from speckit_pro_runner.gates.payloads import build_installed_plugin_payloads
+from speckit_pro_runner.host_skills import UNMERGED_CODEX_OVERLAYS
 import agent_roster
+from host_skill_views import host_skill_root
 from structural_helpers import body as _body
 from structural_helpers import discover_skill_names
 from structural_helpers import frontmatter as _frontmatter
 from structural_helpers import frontmatter_field as _field
 from test_result import run_counted
 
-validate_skills_SKILLS_DIR = PLUGIN_ROOT / 'skills'
+# Shared skill sources carry host blocks; each host's checks read its rendered view.
+CLAUDE_VIEW = host_skill_root('claude')
+CODEX_VIEW = host_skill_root('codex')
+validate_skills_SKILLS_DIR = CLAUDE_VIEW
 validate_skills_SKILLS = tuple(discover_skill_names(validate_skills_SKILLS_DIR))
 SKILLS_REQUIRING_REFERENCES = frozenset({'speckit-autopilot', 'speckit-coach'})
 ALLOWED_KEYS = frozenset({'name', 'description', 'license', 'allowed-tools', 'metadata', 'compatibility', 'user-invocable', 'disable-model-invocation', 'argument-hint'})
@@ -54,10 +65,10 @@ class ValidateSkills(unittest.TestCase):
             ),
             (
                 'Codex source',
-                PLUGIN_ROOT / 'codex-skills/speckit-autopilot/SKILL.md',
+                CODEX_VIEW / 'speckit-autopilot/SKILL.md',
                 PLUGIN_ROOT / 'skills/speckit-autopilot/references/gate-validation.md',
-                PLUGIN_ROOT / 'codex-skills/speckit-autopilot/references/phase-execution-codex.md',
-                PLUGIN_ROOT / 'codex-skills/speckit-autopilot/references/workflow-file-protocol-codex.md',
+                CODEX_VIEW / 'speckit-autopilot/references/phase-execution-codex.md',
+                CODEX_VIEW / 'speckit-autopilot/references/workflow-file-protocol-codex.md',
             ),
             (
                 'Claude payload',
@@ -104,8 +115,8 @@ class ValidateSkills(unittest.TestCase):
 
     def test_coach_workflow_explanation_reads_host_scaffold_authority(self) -> None:
         for label, skills_root, template_root in (
-            ('Claude source', PLUGIN_ROOT / 'skills', PLUGIN_ROOT / 'skills'),
-            ('Codex source', PLUGIN_ROOT / 'codex-skills', PLUGIN_ROOT / 'skills'),
+            ('Claude source', CLAUDE_VIEW, CLAUDE_VIEW),
+            ('Codex source', CODEX_VIEW, CODEX_VIEW),
             ('Claude payload', REPO_ROOT / 'dist/claude/speckit-pro/skills', REPO_ROOT / 'dist/claude/speckit-pro/skills'),
             ('Codex payload', REPO_ROOT / 'dist/codex/speckit-pro/skills', REPO_ROOT / 'dist/codex/speckit-pro/skills'),
         ):
@@ -127,9 +138,9 @@ class ValidateSkills(unittest.TestCase):
                 self.assertRegex(route, r'read .*speckit-scaffold-spec/SKILL\.md\) as a reference only; do not execute or invoke it')
 
     def test_coach_descriptions_preserve_sdd_scope_and_execution_boundary(self) -> None:
-        for host in ('skills', 'codex-skills'):
+        for host, view in (('claude', CLAUDE_VIEW), ('codex', CODEX_VIEW)):
             with self.subTest(host=host):
-                source = (PLUGIN_ROOT / host / 'speckit-coach' / 'SKILL.md').read_text(encoding='utf-8')
+                source = (view / 'speckit-coach' / 'SKILL.md').read_text(encoding='utf-8')
                 description = _description_value(_frontmatter(source.splitlines()))
                 for purpose in ('SDD methodology', 'command and gate guidance',
                                 'technical-roadmap and workflow design', 'roadmap-MOC',
@@ -210,7 +221,7 @@ class ValidateSkills(unittest.TestCase):
                     for needle in ('once per spec', 'delegate_health', 'delegate_task', 'delegate_status', 'delegate_candidate', 'delegate_apply', 'route: "auto"', 'webPolicy: "disabled"', 'Allowed writes: tests only', 'Fallback path (primary model)'):
                         self.assertIn(needle, hardener_text, f'expected hardener-delegation.md to state {needle!r}')
                     phase_exec = (skill_dir / 'references' / 'phase-execution.md').read_text(encoding='utf-8')
-                    codex_post = (PLUGIN_ROOT / 'codex-skills' / 'speckit-autopilot' / 'references' / 'post-implementation-codex.md').read_text(encoding='utf-8')
+                    codex_post = (CODEX_VIEW / 'speckit-autopilot' / 'references' / 'post-implementation-codex.md').read_text(encoding='utf-8')
                     self.assertIn('hardener-delegation.md', phase_exec, 'expected Phase 7 Step 4 to point at the hardener reference')
                     self.assertIn('hardener-delegation.md', codex_post, 'expected the Codex integration-suite row to point at the hardener reference')
                 with self.subTest(msg='speckit-autopilot: delegation guidance uses the gateway delegate_* tools and never hard-codes the local route'):
@@ -220,7 +231,7 @@ class ValidateSkills(unittest.TestCase):
                     offenders = [f'{p.relative_to(PLUGIN_ROOT)}:{n}: {m.group(0)}' for p in shipped for n, line in enumerate(p.read_text(encoding='utf-8').splitlines(), 1) for m in retired.finditer(line)]
                     self.assertEqual([], offenders, 'retired qwen_* tool names or a hard-coded local delegation route in shipped text')
                 with self.subTest(msg='speckit-autopilot: Codex autonomy preflight inventories delegation at the gateway route=auto destination'):
-                    codex_phase = (PLUGIN_ROOT / 'codex-skills' / 'speckit-autopilot' / 'references' / 'phase-execution-codex.md').read_text(encoding='utf-8')
+                    codex_phase = (CODEX_VIEW / 'speckit-autopilot' / 'references' / 'phase-execution-codex.md').read_text(encoding='utf-8')
                     start = codex_phase.find('### Autonomy Boundary Preflight')
                     self.assertNotEqual(-1, start, 'expected the Autonomy Boundary Preflight section')
                     end = codex_phase.find('\n### ', start + 1)
@@ -230,7 +241,7 @@ class ValidateSkills(unittest.TestCase):
                     self.assertTrue(any('route=auto' in para and 'data egress' in para for para in delegation), 'expected planned delegation to be inventoried as one data-egress action naming route=auto')
             if skill in ('grill-me', 'speckit-prd'):
                 with self.subTest(msg=f'{skill}: reads the ubiquitous-language terms document when present'):
-                    codex_content = (PLUGIN_ROOT / 'codex-skills' / skill / 'SKILL.md').read_text(encoding='utf-8')
+                    codex_content = (CODEX_VIEW / skill / 'SKILL.md').read_text(encoding='utf-8')
                     for label, text in (('Claude', content), ('Codex', codex_content)):
                         self.assertIn('docs/ai/specs/ubiquitous-language.md', text, f'expected the {label} {skill} skill to read the terms document when present')
             if skill == 'speckit-prd':
@@ -270,9 +281,14 @@ class ValidateSkills(unittest.TestCase):
             if skill in SKILLS_REQUIRING_REFERENCES:
                 with self.subTest(msg=f'{skill}: references directory exists if required'):
                     self.assertTrue((skill_dir / 'references').is_dir(), f"references directory not found at {skill_dir / 'references'}")
-validate_codex_skills_CODEX_SKILLS_DIR = PLUGIN_ROOT / 'codex-skills'
+validate_codex_skills_CODEX_SKILLS_DIR = CODEX_VIEW
 validate_codex_skills_SKILLS = tuple(discover_skill_names(validate_codex_skills_CODEX_SKILLS_DIR))
-COLLISION_GUARD_SKILLS = ('speckit-archive-cleanup', 'speckit-autopilot', 'speckit-coach', 'grill-me', 'speckit-prd', 'ubiquitous-language')
+# Only a skill whose Codex SKILL.md is still a separate overlay keeps the guard;
+# a merged skill's Codex text is already in its shared file.
+COLLISION_GUARD_SKILLS = tuple(sorted(
+    skill for skill in ('speckit-archive-cleanup', 'speckit-autopilot', 'speckit-coach', 'grill-me', 'speckit-prd', 'ubiquitous-language')
+    if f'{skill}/SKILL.md' in UNMERGED_CODEX_OVERLAYS
+))
 CC_ONLY_KEYS = ('user-invocable', 'disable-model-invocation', 'license', 'argument-hint')
 CLAUDE_ONLY_RUNTIME_RE = re.compile('TaskCreate|TaskUpdate|Agent\\(|Bash\\(|Opus-class|Opus 4\\.6|/model opus|/effort max|/speckit[.:]|run /<command>|general-purpose agent')
 ALLOW_IMPLICIT_RE = re.compile('^[ \\t]*allow_implicit_invocation:[ \\t]*(true|false)[ \\t]*$')
@@ -556,6 +572,14 @@ validate_capability_resolution_DIRECTIVE_MARKER = 'capability-discovery.md'
 validate_capability_resolution_GROUNDING_MARKER = 'grounding.md'
 validate_capability_resolution_PATH_TOKEN_RE = re.compile('speckit-pro/[A-Za-z0-9._/-]*capability-discovery\\.md')
 validate_capability_resolution_GROUNDING_TOKEN_RE = re.compile('speckit-pro/[A-Za-z0-9._/-]*grounding\\.md')
+CONTRACT_REFERENCES = 'skills/speckit-autopilot/references'
+# One sentence per agent-facing grounding rule, quoted verbatim from grounding.md.
+GROUNDING_RULE_SENTENCES = (
+    ('G1', 'A claim with no invoked-capability result behind it must not be asserted as fact.'),
+    ('G2', 'When no available capability can ground a needed claim, say so instead of asserting it.'),
+    ('G3', 'never assign `high` confidence to a claim that is not grounded in an invoked result.'),
+    ('G4', 'each external claim names the capability result and a locator (URL, `file:line`, command, or returned record)'),
+)
 
 def validate_capability_resolution__rel(path: Path) -> str:
     return path.relative_to(REPO_ROOT).as_posix()
@@ -591,39 +615,33 @@ class ValidateCapabilityResolution(unittest.TestCase):
                 with self.subTest(msg=f"claude: in-scope agent '{agent_name}' reads the contracts from its `Reference dir:` line"):
                     self.assertIn("prompt's `Reference dir:` line", ' '.join(text.split()), f'no Reference dir directive in {validate_capability_resolution__rel(agent_file)}')
                 continue
-            directive_tokens = sorted(set(validate_capability_resolution_PATH_TOKEN_RE.findall(text)))
-            for token in directive_tokens:
-                if token not in found_tokens:
-                    found_tokens.append(token)
-            with self.subTest(msg=f"{runtime}: extracted directive path token(s) from in-scope agent '{agent_name}'"):
-                self.assertTrue(directive_tokens, f'agent references {validate_capability_resolution_DIRECTIVE_MARKER} but no path token matched in {validate_capability_resolution__rel(agent_file)}')
-            if validate_capability_resolution_GROUNDING_MARKER in text:
-                grounding_tokens = sorted(set(validate_capability_resolution_GROUNDING_TOKEN_RE.findall(text)))
-                for token in grounding_tokens:
-                    if token not in found_tokens:
-                        found_tokens.append(token)
-                with self.subTest(msg=f"{runtime}: extracted grounding path token(s) from in-scope agent '{agent_name}'"):
-                    self.assertTrue(grounding_tokens, f'agent references {validate_capability_resolution_GROUNDING_MARKER} but no path token matched in {validate_capability_resolution__rel(agent_file)}')
+            # An installed Codex agent cannot read the plugin's references, so it
+            # carries the grounding rules inline, word for word from grounding.md.
+            flat = ' '.join(text.split())
+            found_tokens.append(f'codex:{agent_name}')
+            with self.subTest(msg=f"codex: in-scope agent '{agent_name}' names no repo-relative contract path"):
+                self.assertFalse(validate_capability_resolution_PATH_TOKEN_RE.findall(text) or validate_capability_resolution_GROUNDING_TOKEN_RE.findall(text), f'repo-relative contract path in {validate_capability_resolution__rel(agent_file)}')
+            for rule, sentence in GROUNDING_RULE_SENTENCES:
+                with self.subTest(msg=f"codex: in-scope agent '{agent_name}' carries grounding rule {rule}"):
+                    self.assertIn(sentence, flat, f'{rule} missing from {validate_capability_resolution__rel(agent_file)}')
 
     def test_target_resolution(self) -> None:
-        found_tokens: list[str] = []
-        self._collect_runtime('claude', validate_capability_resolution_AGENTS_DIR, 'md', found_tokens)
-        self._collect_runtime('codex', validate_capability_resolution_CODEX_AGENTS_DIR, 'toml', found_tokens)
-        with self.subTest(msg='at least one directive path token was collected from the inventory'):
-            self.assertTrue(found_tokens, 'no directive path tokens collected — refusing to report success on zero work')
-        if not found_tokens:
-            return
-        with self.subTest(msg=f'built Claude payload tree exists ({validate_capability_resolution__rel(validate_capability_resolution_DIST_CLAUDE)})'):
-            self.assertTrue(validate_capability_resolution_DIST_CLAUDE.is_dir(), f'missing built tree: {validate_capability_resolution__rel(validate_capability_resolution_DIST_CLAUDE)}')
-        with self.subTest(msg=f'built Codex payload tree exists ({validate_capability_resolution__rel(validate_capability_resolution_DIST_CODEX)})'):
-            self.assertTrue(validate_capability_resolution_DIST_CODEX.is_dir(), f'missing built tree: {validate_capability_resolution__rel(validate_capability_resolution_DIST_CODEX)}')
-        for token in found_tokens:
-            with self.subTest(msg=f'resolves under dist/claude: {token}'):
-                self.assertTrue((validate_capability_resolution_DIST_CLAUDE / token).is_file(), f'absent in built Claude tree: dist/claude/{token}')
-            with self.subTest(msg=f'resolves under dist/codex: {token}'):
-                self.assertTrue((validate_capability_resolution_DIST_CODEX / token).is_file(), f'absent in built Codex tree: dist/codex/{token}')
-CLAUDE_SKILLS_DIR = PLUGIN_ROOT / 'skills'
-validate_skill_capability_pointers_CODEX_SKILLS_DIR = PLUGIN_ROOT / 'codex-skills'
+        checked: list[str] = []
+        self._collect_runtime('claude', validate_capability_resolution_AGENTS_DIR, 'md', checked)
+        self._collect_runtime('codex', validate_capability_resolution_CODEX_AGENTS_DIR, 'toml', checked)
+        with self.subTest(msg='at least one Codex agent carries the inline grounding rules'):
+            self.assertTrue(checked, 'no in-scope Codex agent checked — refusing to report success on zero work')
+        grounding = ' '.join((PLUGIN_ROOT / CONTRACT_REFERENCES / 'grounding.md').read_text(encoding='utf-8').split())
+        for rule, sentence in GROUNDING_RULE_SENTENCES:
+            with self.subTest(msg=f'grounding.md states rule {rule} as the agents quote it'):
+                self.assertIn(sentence, grounding)
+        for tree in (validate_capability_resolution_DIST_CLAUDE, validate_capability_resolution_DIST_CODEX):
+            for name in ('capability-discovery.md', 'grounding.md'):
+                target = tree / 'speckit-pro' / CONTRACT_REFERENCES / name
+                with self.subTest(msg=f'resolves under {validate_capability_resolution__rel(tree)}: {name}'):
+                    self.assertTrue(target.is_file(), f'absent in built tree: {validate_capability_resolution__rel(target)}')
+CLAUDE_SKILLS_DIR = CLAUDE_VIEW
+validate_skill_capability_pointers_CODEX_SKILLS_DIR = CODEX_VIEW
 validate_skill_capability_pointers_DIST_CLAUDE = REPO_ROOT / 'dist' / 'claude'
 validate_skill_capability_pointers_DIST_CODEX = REPO_ROOT / 'dist' / 'codex'
 validate_skill_capability_pointers_DIRECTIVE_MARKER = 'capability-discovery.md'
@@ -634,16 +652,24 @@ validate_skill_capability_pointers_PATH_TOKEN_RE = re.compile('(?:\\$\\{CLAUDE_P
 validate_skill_capability_pointers_GROUNDING_TOKEN_RE = re.compile('(?:\\$\\{CLAUDE_PLUGIN_ROOT\\}/|(?:\\.\\./)+)[A-Za-z0-9._/-]*grounding\\.md')
 validate_skill_capability_pointers_PAYLOAD_LINK_RES = (re.compile('(?:\\.\\./)*(?:[A-Za-z0-9._-]+/)+capability-discovery\\.md'), re.compile('(?:\\.\\./)*(?:[A-Za-z0-9._-]+/)+grounding\\.md'))
 
-def _payload_relative(token: str) -> str:
-    """Normalize either pointer form to a path under a built payload tree."""
+def _payload_relative(token: str, skill_file: Path) -> str:
+    """Normalize either pointer form to a path under a built payload tree.
+
+    A relative token resolves from the skill file inside its rendered view,
+    which is named skills/ as in each payload.
+    """
     if token.startswith(PLUGIN_ROOT_VAR):
         return PLUGIN_ROOT_PREFIX + token[len(PLUGIN_ROOT_VAR):]
-    return PLUGIN_ROOT_PREFIX + token.replace('../', '')
+    view = skill_file.parent.parent
+    return PLUGIN_ROOT_PREFIX + (skill_file.parent / token).resolve().relative_to(view.parent).as_posix()
 EXCLUSIONS = frozenset({'speckit-install', 'install', 'speckit-upgrade', 'speckit-status', 'speckit-archive-cleanup'})
 HOST_SKILL = 'speckit-autopilot'
 
 def validate_skill_capability_pointers__rel(path: Path) -> str:
-    return path.relative_to(REPO_ROOT).as_posix()
+    for base, label in ((REPO_ROOT, ''), (CLAUDE_VIEW.parent, 'claude view:'), (CODEX_VIEW.parent, 'codex view:')):
+        if path.is_relative_to(base):
+            return label + path.relative_to(base).as_posix()
+    return path.as_posix()
 
 def _display_path(path: Path) -> str:
     try:
@@ -665,8 +691,8 @@ PRD_WORKFLOW_TARGETS = (
     ('roadmap-MOC template', Path('skills/speckit-coach/templates/roadmap-moc-template.md')),
 )
 PRD_WORKFLOW_CASES = (
-    ('Claude source', PLUGIN_ROOT / 'skills/speckit-prd/SKILL.md', PLUGIN_ROOT),
-    ('Codex source', PLUGIN_ROOT / 'codex-skills/speckit-prd/SKILL.md', PLUGIN_ROOT),
+    ('Claude source', CLAUDE_VIEW / 'speckit-prd/SKILL.md', CLAUDE_VIEW.parent),
+    ('Codex source', CODEX_VIEW / 'speckit-prd/SKILL.md', CODEX_VIEW.parent),
     ('Claude payload', REPO_ROOT / 'dist/claude/speckit-pro/skills/speckit-prd/SKILL.md', REPO_ROOT / 'dist/claude/speckit-pro'),
     ('Codex payload', REPO_ROOT / 'dist/codex/speckit-pro/skills/speckit-prd/SKILL.md', REPO_ROOT / 'dist/codex/speckit-pro'),
 )
@@ -724,7 +750,7 @@ class ValidateSkillCapabilityPointers(unittest.TestCase):
                 self.fail(f"in-scope skill '{skill}' ({runtime}) does not reference {marker} (add the pointer, or record it in EXCLUSIONS with a reason - do NOT widen EXCLUSIONS to silence it)")
         matches = _unique_matches(pattern, text)
         for token in matches:
-            payload_token = _payload_relative(token)
+            payload_token = _payload_relative(token, skill_file)
             if not self._token_seen(payload_token):
                 self.found_tokens.append(payload_token)
         with self.subTest(msg=f"{runtime} skill '{skill}' {marker} reference yields a repo-root-relative path token"):
@@ -811,8 +837,8 @@ CC_MARKETPLACE = REPO_ROOT / '.claude-plugin' / 'marketplace.json'
 CODEX_MARKETPLACE = REPO_ROOT / '.agents' / 'plugins' / 'marketplace.json'
 validate_codex_parity_AGENTS_DIR = PLUGIN_ROOT / 'agents'
 validate_codex_parity_CODEX_AGENTS_DIR = PLUGIN_ROOT / 'codex-agents'
-validate_codex_parity_SKILLS_DIR = PLUGIN_ROOT / 'skills'
-validate_codex_parity_CODEX_SKILLS_DIR = PLUGIN_ROOT / 'codex-skills'
+validate_codex_parity_SKILLS_DIR = CLAUDE_VIEW
+validate_codex_parity_CODEX_SKILLS_DIR = CODEX_VIEW
 CC_ONLY_AGENTS = agent_roster.claude_only_roles()
 CODEX_ONLY_AGENTS = agent_roster.codex_only_roles()
 REF_RE = re.compile('\\.\\./\\.\\./skills/[^)\\s`]+\\.md')
@@ -829,10 +855,46 @@ def _json_field(path: Path, key: str) -> str:
 def _sorted_files(directory: Path, suffix: str) -> list[Path]:
     return sorted((p for p in directory.glob(f'*{suffix}') if p.is_file()), key=lambda p: p.name)
 
+def _tree(root: Path) -> dict[str, bytes]:
+    """Every file under ``root`` by relative path; empty when ``root`` is missing."""
+    if not root.is_dir():
+        return {}
+    return {p.relative_to(root).as_posix(): p.read_bytes() for p in sorted(root.rglob('*'))
+            if p.is_file() and '__pycache__' not in p.parts and p.suffix != '.pyc'}
+
+_FRESH_PAYLOADS: list[Path] = []
+
+def _fresh_payloads() -> Path:
+    """Both payloads built from the current source into a temp root, once per process."""
+    if not _FRESH_PAYLOADS:
+        root = Path(tempfile.mkdtemp(prefix='speckit-payload-parity-')).resolve()
+        atexit.register(shutil.rmtree, root, ignore_errors=True)
+        build_installed_plugin_payloads(REPO_ROOT, root)
+        _FRESH_PAYLOADS.append(root)
+    return _FRESH_PAYLOADS[0]
+
 def _sorted_subdirs(directory: Path) -> list[Path]:
     return sorted((p for p in directory.iterdir() if p.is_dir()), key=lambda p: p.name)
 
 class ValidateCodexParity(unittest.TestCase):
+
+    def _assert_agent_generated(self, agent_name: str, generated: dict[str, str]) -> None:
+        """The committed Codex agent equals the text generated from its Claude source."""
+        relative = f'codex-agents/{agent_name}.toml'
+        committed = validate_codex_parity_CODEX_AGENTS_DIR / f'{agent_name}.toml'
+        with self.subTest(msg=f'{relative} equals the text generated from agents/{agent_name}.md'):
+            self.assertIn(relative, generated, f'agents/{agent_name}.md is paired but generates no Codex agent')
+            self.assertTrue(committed.is_file(), f'file not found: {committed}')
+            self.assertEqual(committed.read_text(encoding='utf-8'), generated.get(relative), f'{relative} drifted from agents/{agent_name}.md; run python3 scripts/refresh-release-artifacts.py')
+
+    def _assert_payload_skill_built(self, skill_name: str) -> None:
+        """Each host's committed payload skill equals a fresh build from source."""
+        for host in ('claude', 'codex'):
+            shipped = REPO_ROOT / 'dist' / host / 'speckit-pro' / 'skills' / skill_name
+            built = _fresh_payloads() / host / 'speckit-pro' / 'skills' / skill_name
+            with self.subTest(msg=f'{host} payload skills/{skill_name}/ equals a fresh build from source'):
+                self.assertTrue((built / 'SKILL.md').is_file(), f'{host} builds no SKILL.md for {skill_name}')
+                self.assertEqual(_tree(shipped), _tree(built), f'{host} payload skills/{skill_name}/ drifted from its source; run python3 scripts/refresh-release-artifacts.py')
 
     def test_codex_parity(self) -> None:
         with self.subTest(msg='both plugin.json files exist'):
@@ -852,12 +914,12 @@ class ValidateCodexParity(unittest.TestCase):
             with self.subTest(msg=f'CC and Codex marketplace names match ({cc_marketplace_name})'):
                 self.assertEqual(cc_marketplace_name, codex_marketplace_name, f'marketplace names must match: CC={cc_marketplace_name}, Codex={codex_marketplace_name}')
         if validate_codex_parity_AGENTS_DIR.is_dir() and validate_codex_parity_CODEX_AGENTS_DIR.is_dir():
+            generated = generated_codex_files(PLUGIN_ROOT, AGENT_INVENTORY)
             for cc_agent_file in _sorted_files(validate_codex_parity_AGENTS_DIR, '.md'):
                 agent_name = cc_agent_file.name[:-len('.md')]
                 if agent_name in CC_ONLY_AGENTS:
                     continue
-                with self.subTest(msg=f'codex-agents/{agent_name}.toml exists for CC agent'):
-                    self.assertTrue((validate_codex_parity_CODEX_AGENTS_DIR / f'{agent_name}.toml').is_file(), f"file not found: {validate_codex_parity_CODEX_AGENTS_DIR / (agent_name + '.toml')}")
+                self._assert_agent_generated(agent_name, generated)
             for agent_name, resource_name in (('sweep-analyst', 'analyst.md'), ('sweep-classifier', 'classifier.md')):
                 resource = validate_codex_parity_CODEX_SKILLS_DIR / 'speckit-autopilot' / 'references' / 'sweep-prompts' / resource_name
                 with self.subTest(msg=f'codex trusted launcher resource exists for {agent_name}'):
@@ -877,8 +939,7 @@ class ValidateCodexParity(unittest.TestCase):
                 skill_name = skill_dir.name
                 with self.subTest(msg=f'skills/{skill_name}/SKILL.md exists'):
                     self.assertTrue((validate_codex_parity_SKILLS_DIR / skill_name / 'SKILL.md').is_file(), f"file not found: {validate_codex_parity_SKILLS_DIR / skill_name / 'SKILL.md'}")
-                with self.subTest(msg=f'codex-skills/{skill_name}/SKILL.md exists for CC skill'):
-                    self.assertTrue((validate_codex_parity_CODEX_SKILLS_DIR / skill_name / 'SKILL.md').is_file(), f"file not found: {validate_codex_parity_CODEX_SKILLS_DIR / skill_name / 'SKILL.md'}")
+                self._assert_payload_skill_built(skill_name)
         else:
             with self.subTest(msg='skills/ and codex-skills/ directories exist'):
                 self.fail(f'one or both skills directories missing (CC: {validate_codex_parity_SKILLS_DIR}, Codex: {validate_codex_parity_CODEX_SKILLS_DIR})')
@@ -917,8 +978,8 @@ CODEX_SKILLS_LEGACY = '.codex/skills/'
 
 def _mirrors(skill: str) -> tuple[tuple[str, str], ...]:
     return tuple(
-        (f'{surface}/{skill}', (PLUGIN_ROOT / surface / skill / 'SKILL.md').read_text(encoding='utf-8'))
-        for surface in ('skills', 'codex-skills')
+        (f'{host}/{skill}', (view / skill / 'SKILL.md').read_text(encoding='utf-8'))
+        for host, view in (('claude', CLAUDE_VIEW), ('codex', CODEX_VIEW))
     )
 
 

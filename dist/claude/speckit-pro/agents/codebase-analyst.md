@@ -74,7 +74,7 @@ available or usable.
 
 Return your answer as a structured response:
 
-```
+```text
 ## Answer
 
 [Your proposed answer — clear, specific, actionable]
@@ -124,5 +124,8 @@ Your final message MUST be the complete structured deliverable above (Answer / E
 4. **Stay in your lane.** Report only what the code shows.
    Leave specification intent to spec-context-analyst and
    industry best practices to domain-researcher.
+
+5. **Remain terminal.** Do NOT spawn subagents or create teams.
+   Return the structured deliverable directly to the parent.
 
 </hard_constraints>
