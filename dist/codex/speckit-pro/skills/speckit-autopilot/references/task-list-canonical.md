@@ -48,6 +48,13 @@ Parsed from the workflow file:
   "Post: Retrospective"                 ← retrospective ext (FINAL STEP)
 ```
 
+Codex shows the same 11 rows plus two supporting rows after
+`Post: UAT Runbook Generation`: `Post: Final Reviewability Backstop` and
+`Post: PR Packet/Body Generation`. Claude runs that work inside
+`Post: PR Body Generation` and `Post: PR Creation`
+([post-implementation.md §3.2](./post-implementation.md#32-pr-creation)).
+The difference is in plan visibility only; both hosts run the same steps.
+
 ## Extension Detection Rule
 
 For each extension-dependent task: check `.specify/extensions.yml`

@@ -40,11 +40,16 @@ These files follow the official Codex subagent format: one standalone
 TOML file per custom agent, with required `name`, `description`, and
 `developer_instructions` fields plus Codex config such as `sandbox_mode`.
 
-Operator note: on Codex, `sandbox_mode = "read-only"` does **not** sandbox
-MCP server processes. The agent TOML cannot restrict tools, so to keep a
-read-only agent provably unable to cause writes via MCP, the operator must
-curate write-capable MCP servers OUT at the profile/config level (`enabled =
-false`, or `enabled_tools`/`disabled_tools`).
+Operator note: an agent file's `sandbox_mode` is advisory; a spawned agent
+keeps the parent's sandbox. Once you trust the plugin's hooks, its
+`PreToolUse` agent-policy hook denies a read-only agent's `apply_patch` edits
+and a broker-only agent's calls to MCP tools outside its allowlist. A hook
+cannot tell a shell write from a shell read, so a read-only agent's shell
+writes stay a rule of its instructions, and a read-only agent without a
+broker allowlist can still reach any MCP server you enable. To keep such an
+agent provably unable to write through MCP, curate write-capable MCP servers
+OUT at the profile/config level (`enabled = false`, or
+`enabled_tools`/`disabled_tools`).
 
 The runner-owned policy defines each bundled agent's model and reasoning effort.
 An explicit route manifest materializes its selected model-and-effort tuple.

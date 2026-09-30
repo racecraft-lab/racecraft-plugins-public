@@ -16,6 +16,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 TEST_ROOT = REPO_ROOT / "tests" / "speckit-pro"
 sys.path.insert(0, str(TEST_ROOT / "lib"))
 
+from host_skill_views import host_skill_root  # noqa: E402
 from native_eval_catalog import validate_catalog  # noqa: E402
 from native_eval_fixture_setup import materialize_workspace, snapshot_git_repository_controls  # noqa: E402
 from native_eval_git_observation import (  # noqa: E402
@@ -198,10 +199,7 @@ def observation(response: dict[str, object], artifacts: dict[str, str] | None = 
 
 
 def _skill_variants(skill_name: str) -> list[str]:
-    roots = (
-        REPO_ROOT / "speckit-pro" / "skills",
-        REPO_ROOT / "speckit-pro" / "codex-skills",
-    )
+    roots = (host_skill_root("claude"), host_skill_root("codex"))
     return [(root / skill_name / "SKILL.md").read_text(encoding="utf-8") for root in roots]
 
 

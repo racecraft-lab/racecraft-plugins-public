@@ -15,6 +15,7 @@ LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
 
+from guide_text import guide_text  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 PHRASES = json.loads(
@@ -65,6 +66,20 @@ def instructions() -> str:
     return tomllib.loads(SYNTHESIZER.read_text(encoding="utf-8"))["developer_instructions"]
 
 
+def synthesizer_texts() -> tuple[tuple[str, str], ...]:
+    """The synthesizer contract as each host receives it, whitespace collapsed."""
+    return (
+        ("codex", " ".join(instructions().split())),
+        ("claude", guide_text("agents/consensus-synthesizer.md", "claude")),
+    )
+
+
+def assert_both_hosts_say(test: unittest.TestCase, phrase_key: str) -> None:
+    for host, flat in synthesizer_texts():
+        with test.subTest(host=host):
+            assert_contains(test, flat, PHRASES[f"ConsensusSynthesizerRegressionTests.{phrase_key}#1"])
+
+
 def assert_contains(test: unittest.TestCase, text: str, phrases: tuple[str, ...]) -> None:
     for phrase in phrases:
         with test.subTest(phrase=phrase):
@@ -82,9 +97,7 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
         ))
 
     def test_all_agreement_branches_are_explicit_and_fail_closed(self) -> None:
-        text = instructions()
-        flat = " ".join(text.split())
-        assert_contains(self, flat, PHRASES["ConsensusSynthesizerRegressionTests.test_all_agreement_branches_are_explicit_and_fail_closed#1"])
+        assert_both_hosts_say(self, "test_all_agreement_branches_are_explicit_and_fail_closed")
 
     def test_keyword_only_route_uses_the_items_own_rule_when_no_analyst_flags_security(self) -> None:
         # A keyword such as `tokens` meaning LLM usage counts must not force
@@ -210,13 +223,17 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
         )
 
     def test_escape_phrases_and_security_override_are_complete(self) -> None:
-        text = instructions()
-        assert_contains(self, text, PHRASES["ConsensusSynthesizerRegressionTests.test_escape_phrases_and_security_override_are_complete#1"])
+        assert_both_hosts_say(self, "test_escape_phrases_and_security_override_are_complete")
 
     def test_result_contract_preserves_evidence_dissent_and_exact_edits(self) -> None:
-        text = instructions()
-        assert_contains(self, text, PHRASES["ConsensusSynthesizerRegressionTests.test_result_contract_preserves_evidence_dissent_and_exact_edits#1"])
-        self.assertIn("Omit the complete `Artifact Edit` block whenever `Flags` is not `None`.", text)
+        # The parent applies an edit only when Flags is None, so any flag,
+        # including a routing violation, leaves no edit to apply.
+        assert_both_hosts_say(self, "test_result_contract_preserves_evidence_dissent_and_exact_edits")
+        for host, flat in synthesizer_texts():
+            with self.subTest(host=host):
+                self.assertIn("Omit the complete `Artifact Edit` block whenever `Flags` is not `None`", flat)
+        protocol = " ".join(PROTOCOL.read_text(encoding="utf-8").split())
+        self.assertIn("IF Flags = None AND", protocol)
 
     def test_missing_failed_or_malformed_synthesis_cannot_apply_or_complete(self) -> None:
         required = (
@@ -234,19 +251,20 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
         assert_contains(self, protocol_flat, PHRASES["ConsensusSynthesizerRegressionTests.test_missing_failed_or_malformed_synthesis_cannot_apply_or_complete#1"])
 
     def test_analyze_confidence_is_one_five_criterion_block_even_with_zero_findings(self) -> None:
-        text = instructions()
-        self.assertIn("including a\nclean pass with zero findings", text)
-        self.assertIn("append exactly one block", text)
-        self.assertIn("never emit it more than once in an Analyze pass", text)
-        for label in (
-            "Task understanding",
-            "Approach clarity",
-            "Requirements alignment",
-            "Risk assessment",
-            "Completeness",
-        ):
-            with self.subTest(label=label):
-                self.assertEqual(text.count(f"- {label}: 0.XX"), 1)
+        # confidence-gate reads the last block, so a second one silently wins.
+        for host, flat in synthesizer_texts():
+            with self.subTest(host=host):
+                self.assertIn("including a clean pass with zero findings", flat)
+                self.assertIn("append exactly one block", flat)
+                self.assertIn("never emit it more than once in an Analyze pass", flat)
+                for label in (
+                    "Task understanding",
+                    "Approach clarity",
+                    "Requirements alignment",
+                    "Risk assessment",
+                    "Completeness",
+                ):
+                    self.assertEqual(flat.count(f"- {label}: 0.XX"), 1, label)
 
         protocol = PROTOCOL.read_text(encoding="utf-8")
         self.assertIn("even when there were zero findings", protocol)

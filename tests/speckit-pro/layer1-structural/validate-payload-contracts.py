@@ -25,6 +25,7 @@ for _import_root in (LIB_DIR, PLUGIN_ROOT):
         sys.path.insert(0, str(_import_root))
 
 from test_result import run_counted
+from host_skill_views import host_skill_root
 
 SOURCE_ROOT = REPO_ROOT / 'speckit-pro'
 BUILDER = REPO_ROOT / 'scripts' / 'build-plugin-payloads.py'
@@ -171,7 +172,7 @@ class ValidatePluginPayload(unittest.TestCase):
         with self.subTest(msg='Claude payload keeps the Claude skill set'):
             self.assertEqual(count_skill_entrypoints(SOURCE_ROOT / 'skills'), count_skill_entrypoints(claude_payload / 'skills'), 'Claude skill count')
         with self.subTest(msg='Codex payload keeps exactly the Codex skill set'):
-            self.assertEqual(skill_entrypoint_set(SOURCE_ROOT / 'codex-skills'), skill_entrypoint_set(codex_payload / 'skills'), 'Codex skill entrypoints')
+            self.assertEqual(skill_entrypoint_set(host_skill_root('codex')), skill_entrypoint_set(codex_payload / 'skills'), 'Codex skill entrypoints')
         with self.subTest(msg='Codex payload manifest exposes skills at ./skills/'):
             codex_manifest = load_json_file(codex_payload / '.codex-plugin' / 'plugin.json')
             self.assertEqual('./skills/', codex_manifest['skills'], 'Codex manifest skills')
@@ -273,7 +274,10 @@ class ValidatePayloadCompleteness(unittest.TestCase):
                 self.assertTrue(dist_ok, f"built skill '{skill_name}' SKILL.md is not readable at {_rel(dist_file)}")
             if not dist_ok:
                 continue
-            src_text = src_file.read_text(encoding='utf-8', errors='replace')
+            # Compare against the source as Claude renders it: host blocks for
+            # Codex are dropped, so the raw source is longer by design.
+            view_file = host_skill_root('claude') / skill_name / 'SKILL.md'
+            src_text = view_file.read_text(encoding='utf-8', errors='replace')
             anchor = last_non_guard_heading(src_text)
             with self.subTest(msg=f'[{skill_name}] source has a non-guard level-2 heading to anchor on'):
                 self.assertNotEqual('', anchor, f"source SKILL.md for '{skill_name}' has no non-guard '## ' heading — cannot anchor completeness")
@@ -282,7 +286,7 @@ class ValidatePayloadCompleteness(unittest.TestCase):
             dist_text = dist_file.read_text(encoding='utf-8', errors='replace')
             with self.subTest(msg=f"[{skill_name}] last non-guard source heading survives in built body: '{anchor}'"):
                 self.assertIn(anchor, dist_text, f"built '{skill_name}' SKILL.md is missing the last non-guard source heading ('{anchor}') — body truncated")
-            src_lines = src_file.read_bytes().count(b'\n')
+            src_lines = view_file.read_bytes().count(b'\n')
             dist_lines = dist_file.read_bytes().count(b'\n')
             guard_lines = guard_section_lines(src_text)
             expected = src_lines - guard_lines
@@ -506,6 +510,38 @@ class ValidatePayloadConformance(unittest.TestCase):
         for path in codex_agents:
             self.assert_toml_agent('codex-agent', path)
         self.assert_hooks_json('codex', CODEX_ROOT / 'codex-hooks.json')
+
+HOST_MARKER_RE = re.compile(r'<!--\s*/?\s*host\b')
+HOST_MARKER_SUFFIXES = frozenset({'.md', '.toml', '.json', '.yaml', '.yml', '.html', '.txt'})
+
+
+def host_marker_lines(root: Path) -> list[str]:
+    """Every shipped prose or config line that still carries a host marker."""
+    found: list[str] = []
+    for path in sorted(p for p in root.rglob('*') if p.is_file() and p.suffix in HOST_MARKER_SUFFIXES):
+        for number, line in enumerate(path.read_text(encoding='utf-8', errors='replace').splitlines(), start=1):
+            if HOST_MARKER_RE.search(line):
+                found.append(f'{path.relative_to(root).as_posix()}:{number}')
+    return found
+
+
+class ValidateHostMarkersStripped(unittest.TestCase):
+    """Each payload carries its host's text only, never a marker line."""
+
+    def test_payloads_carry_no_host_marker(self) -> None:
+        for host in ('claude', 'codex'):
+            root = REPO_ROOT / 'dist' / host / 'speckit-pro'
+            with self.subTest(host=host):
+                self.assertTrue(root.is_dir(), f'missing payload {root}')
+                self.assertEqual([], host_marker_lines(root))
+
+    def test_scan_reports_a_marker_left_in_a_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / 'agents').mkdir()
+            (root / 'agents' / 'probe.md').write_text('ok\n<!-- host:codex: x -->\nleak\n<!-- /host -->\n', encoding='utf-8')
+            self.assertEqual(['agents/probe.md:2', 'agents/probe.md:4'], host_marker_lines(root))
+
 
 def main() -> int:
     suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])

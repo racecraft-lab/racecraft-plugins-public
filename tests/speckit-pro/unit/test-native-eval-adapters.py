@@ -28,6 +28,7 @@ TEST_ROOT = REPO_ROOT / "tests" / "speckit-pro"
 sys.path.insert(0, str(TEST_ROOT / "lib"))
 
 import agent_roster  # noqa: E402
+import host_skill_views  # noqa: E402
 import native_eval_adapter_common as adapter_common  # noqa: E402
 import native_eval_adapters as adapters  # noqa: E402
 import native_eval_claude_adapter as claude_adapter  # noqa: E402
@@ -3204,9 +3205,7 @@ class AdapterPreparationTests(unittest.TestCase):
                         )
                     launch.assert_not_called()
                     self.assertIsNotNone(prepared.trigger_stage)
-                    source_root = REPO_ROOT / "speckit-pro" / (
-                        "skills" if host == "claude" else "codex-skills"
-                    )
+                    source_root = host_skill_views.host_skill_root(host, REPO_ROOT / "speckit-pro")
                     expected_catalog = {
                         path.parent.name for path in source_root.glob("*/SKILL.md")
                     }

@@ -15,6 +15,16 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "matcher": "apply_patch|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${PLUGIN_ROOT}/scripts/codex-agent-policy-hook.py agent-policy-v1",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "Stop": [

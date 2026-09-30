@@ -16,6 +16,7 @@ REPO_ROOT = TEST_DIR.parents[2]
 LIB_DIR = TEST_DIR.parent / "lib"
 sys.path.insert(0, str(LIB_DIR))
 
+from guide_text import emit_host  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
@@ -34,7 +35,7 @@ SOURCE_PATHS = {
     / "speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md",
     "claude_scaffold": REPO_ROOT / "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
     "codex_scaffold": REPO_ROOT / "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
-    "codex_coach": REPO_ROOT / "speckit-pro/codex-skills/speckit-coach/SKILL.md",
+    "codex_coach": REPO_ROOT / "speckit-pro/skills/speckit-coach/SKILL.md",
     "claude_evals": REPO_ROOT
     / "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
     "codex_evals": REPO_ROOT
@@ -338,6 +339,9 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         bodies = {name: path.read_text(encoding="utf-8") for name, path in SOURCE_PATHS.items()}
+        # Shared skills carry host blocks; each host key reads its own view.
+        for name in ("claude_coach", "codex_coach"):
+            bodies[name] = emit_host(bodies[name], name.split("_")[0])
         bodies["claude_combined"] = "\n".join(
             bodies[name] for name in ("claude_skill", "claude_gate", "claude_phase", "claude_post", "claude_workflow")
         )

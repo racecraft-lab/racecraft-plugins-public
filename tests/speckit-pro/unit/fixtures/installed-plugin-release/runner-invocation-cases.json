@@ -54,7 +54,7 @@
       "case_id": "linux-python-fallback",
       "product": "codex",
       "platform": "linux",
-      "surface_path": "speckit-pro/codex-skills/speckit-status/SKILL.md",
+      "surface_path": "speckit-pro/skills/speckit-status/SKILL.md",
       "cache_root": "/fixture-home/.codex/plugins/speckit-pro",
       "candidate_results": [
         {
@@ -74,7 +74,7 @@
     {
       "case_id": "live-host-runtime-info",
       "product": "codex",
-      "surface_path": "speckit-pro/codex-skills/speckit-status/SKILL.md",
+      "surface_path": "speckit-pro/skills/speckit-status/SKILL.md",
       "cache_root": "dist/codex/speckit-pro"
     },
     {

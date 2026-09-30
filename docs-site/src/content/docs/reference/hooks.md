@@ -66,9 +66,10 @@ Runtime hook configuration surfaces and source boundaries.
 #### Source Facts
 
 - Hook events: UserPromptSubmit, PreToolUse, Stop. Source refs: `speckit-pro/codex-hooks.json`.
-- 2 command handlers are declared. Source refs: `speckit-pro/codex-hooks.json`.
+- 3 command handlers are declared. Source refs: `speckit-pro/codex-hooks.json`.
 - UserPromptSubmit declares no command handlers and executes no command. Source refs: `speckit-pro/codex-hooks.json`.
 - PreToolUse (matcher `Bash`) runs `workflow-guard-hook.py lockfile`. Source refs: `speckit-pro/codex-hooks.json`.
+- PreToolUse (matcher `apply_patch|mcp__.*`) runs `codex-agent-policy-hook.py agent-policy-v1`. Source refs: `speckit-pro/codex-hooks.json`.
 - Stop runs `workflow-guard-hook.py unpushed`. Source refs: `speckit-pro/codex-hooks.json`.
 
 #### Sources

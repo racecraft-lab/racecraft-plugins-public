@@ -55,7 +55,7 @@ ALIASES = {
     "spawns the author": "invokes the author",
     "same phase-executor": "same native Plan executor",
     "canonical Codex Post": "canonical native-client Post",
-    "Runs ${CLAUDE_PLUGIN_ROOT}/scripts/ubiquitous-language-lint.py":
+    "Runs resolved_python ${CLAUDE_PLUGIN_ROOT}/scripts/ubiquitous-language-lint.py":
         "Runs the host-runtime ubiquitous-language-lint.py",
     "Runs resolved_python <plugin-root>/scripts/ubiquitous-language-lint.py":
         "Runs the host-runtime ubiquitous-language-lint.py",
@@ -188,7 +188,7 @@ ORCHESTRATION_REQUIRING_TEXT = {
         ("speckit-pro/agents/phase-executor.md",
          "Use a subagent only when the loaded command directs one"),
         ("speckit-pro/agents/phase-executor.md",
-         "After the Skill loads, execute its steps."),
+         "After the skill loads, execute its steps."),
         ("speckit-pro/codex-agents/phase-executor.toml",
          "Use `spawn_agent` only when the loaded skill directs it"),
         ("speckit-pro/codex-agents/phase-executor.toml",

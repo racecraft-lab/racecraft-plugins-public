@@ -222,12 +222,14 @@ function skillPrerequisites(name) {
 }
 async function buildSkillsPage() {
   const claudeSkills = new Map();
-  for (const file of await listFiles('speckit-pro/skills', (rel) => rel.endsWith('/SKILL.md'))) {
+  // Shared skill sources carry host blocks, so each host's skill is read from
+  // its generated payload, which holds only that host's text.
+  for (const file of await listFiles('dist/claude/speckit-pro/skills', (rel) => rel.endsWith('/SKILL.md'))) {
     const skill = await parseSkill(file);
     claudeSkills.set(skill.name, skill);
   }
   const codexSkills = new Map();
-  for (const file of await listFiles('speckit-pro/codex-skills', (rel) => rel.endsWith('/SKILL.md'))) {
+  for (const file of await listFiles('dist/codex/speckit-pro/skills', (rel) => rel.endsWith('/SKILL.md'))) {
     const skill = await parseSkill(file);
     codexSkills.set(skill.name, skill);
   }
@@ -272,7 +274,6 @@ async function buildSkillsPage() {
   }
   return page('skills', 'Skills Reference', 'Claude Code and Codex skill surfaces, invocations, prerequisites, expected artifacts, and source citations.', records, [
     await citation('speckit-pro/skills/speckit-status/SKILL.md'),
-    await citation('speckit-pro/codex-skills/speckit-status/SKILL.md'),
   ]);
 }
 async function buildAgentsPage() {

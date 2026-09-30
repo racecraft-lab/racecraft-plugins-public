@@ -205,6 +205,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                 ("codex", "speckit-autopilot", 112),
                 ("claude", "speckit-scaffold-spec", 1),
                 ("claude", "speckit-scaffold-spec", 2),
+                ("claude", "speckit-scaffold-spec", 3),
                 ("claude", "speckit-upgrade", 1),
                 ("codex", "speckit-resolve-pr", 2),
                 ("codex", "speckit-resolve-pr", 3),

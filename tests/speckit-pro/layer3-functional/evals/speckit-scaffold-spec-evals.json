@@ -29,6 +29,17 @@
         "States that the operator explicitly sends both commands in the same Claude Code session",
         "Does not invoke /cd or autopilot from scaffold itself"
       ]
+    },
+    {
+      "id": 3,
+      "prompt": "SPEC-007 is already marked as In Progress in the roadmap and its worktree branch exists. Should scaffold create a second worktree or reuse the existing one? And what if the roadmap marks the spec Complete instead?",
+      "expected_output": "Reuses the existing worktree and branch for the in-progress spec instead of creating duplicates, and stops with a warning when the roadmap marks the spec complete.",
+      "expectations": [
+        "Mentions detecting that the spec is already in progress",
+        "States that the existing worktree or branch should be reused",
+        "Does not create a duplicate branch or worktree",
+        "States that a complete spec stops setup with a warning"
+      ]
     }
   ]
 }

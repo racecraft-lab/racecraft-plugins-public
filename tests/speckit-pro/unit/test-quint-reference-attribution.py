@@ -31,6 +31,7 @@ LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
 
+from guide_text import host_source  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 EXPECTED_COMMIT = "cc75369f741af7d490936f82002c2d28e3b3d78d"
@@ -441,19 +442,15 @@ class QuintProgressiveDisclosureTests(unittest.TestCase):
                 self.assertTrue(self._resolve(readme, target).is_file(), f"dangling link {target}")
 
     def test_both_coach_surfaces_route_to_the_quint_guide(self) -> None:
-        surfaces = {
-            REPO_ROOT / "speckit-pro" / "skills" / "speckit-coach" / "SKILL.md":
-                "./references/quint-guide.md",
-            REPO_ROOT / "speckit-pro" / "codex-skills" / "speckit-coach" / "SKILL.md":
-                "../../skills/speckit-coach/references/quint-guide.md",
-        }
-        for surface, expected in surfaces.items():
-            with self.subTest(surface=surface.name):
-                text = surface.read_text(encoding="utf-8")
+        surface = REPO_ROOT / "speckit-pro" / "skills" / "speckit-coach" / "SKILL.md"
+        expected = "./references/quint-guide.md"
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                text = host_source("skills/speckit-coach/SKILL.md", host)
                 self.assertIn(expected, text, "the coach must route to the Quint guidance")
                 self.assertTrue(
                     self._resolve(surface, expected).is_file(),
-                    f"{surface.name} routes to a missing file",
+                    f"{host} coach routes to a missing file",
                 )
                 self.assertLess(
                     len(text.split()),

@@ -1,23 +1,28 @@
 ---
 name: speckit-coach
 description: Coach developers through Spec-Driven Development and SpecKit Pro. Use for SDD methodology, SpecKit command and gate guidance, technical-roadmap and workflow design, roadmap-MOC guidance, checklist selection, SpecKit project repair, selective formal-methods guidance and model/checker selection, SpecKit consensus protocol and voting rules, or SpecKit preset and extension discovery and configuration. Not for running autopilot, conducting grill-me, or unrelated coding (including MCP tool implementation). Formal-check execution and autopilot resume belong to speckit-autopilot.
+<!-- host:claude: these frontmatter keys are Claude Code extensions -->
 argument-hint: "e.g. 'walk me through SDD', 'which checklist domains fit this spec?', 'repair this speckit-pro project', 'create a technical roadmap'"
 user-invocable: true
 license: MIT
+<!-- /host -->
 ---
 
 # SpecKit Coach
 
 Coach the user through the official SpecKit CLI and complementary SpecKit Pro workflows. This skill provides guidance and bounded project repair; it does not replace SpecKit or run an autonomous workflow itself.
-
-## Codex Skill-Selection Guard
-
-If Codex selected this Claude-oriented entrypoint, immediately read and follow
-`../../codex-skills/speckit-coach/SKILL.md`. Do not follow the Claude-oriented instructions below in Codex; report that the fallback guard was triggered.
+<!-- host:codex: Codex names plugin skills with a dollar sign -->
+In Codex, use `$skill-name` syntax for plugin skills rather than legacy custom slash-command syntax.
+<!-- /host -->
 
 ## Start with the project that exists
 
+<!-- host:claude: Claude resolves plugin files through CLAUDE_PLUGIN_ROOT -->
 - Use `${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/capability-discovery.md` for capability selection and `${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/grounding.md` for external-fact grounding.
+<!-- /host -->
+<!-- host:codex: Codex has no plugin-root variable, so it links relative to this skill -->
+- Use `../speckit-autopilot/references/capability-discovery.md` for capability selection and `../speckit-autopilot/references/grounding.md` for external-fact grounding.
+<!-- /host -->
 - Discover the session's available tools and skills before recommending an external action. Ground external claims in an observed result; say when the available evidence is insufficient.
 - Inspect `.specify/presets/*/preset.yml` and `.specify/extensions/*/extension.yml` when present. Read the installed configuration before advising, so the advice reflects the project's actual constraints.
 - Treat mutable actions as user-controlled. Explain the intended change and request confirmation before installing, removing, enabling, disabling, or configuring extensions.
@@ -36,23 +41,62 @@ Use the smallest relevant reference; do not load the whole library.
 | Design a constitution | [Constitution guide](./references/constitution-guide.md). |
 | Create or repair `.specify/quality-gates.json`, pick gate thresholds, or record a permanent gate skip | [Quality gates guide](./references/quality-gates-guide.md). Measure the existing code before proposing a ceiling; write the file only after the operator confirms. |
 | Design a multi-spec roadmap or split a feature | Read the complete [technical-roadmap template](./templates/technical-roadmap-template.md) and [slicing heuristics](./references/slicing-heuristics.md), then instantiate the template without dropping required sections. `## Progress Tracking` is mandatory: scaffold and status use it as the shared lifecycle record. Derive independently executable vertical slices with observable outcomes and explicit real dependencies; review the graph before writing. |
+<!-- host:claude: Claude names skills with a slash -->
 | Create a PRD and roadmap from an unformed idea | Route to `/speckit-pro:speckit-prd`; use its PRD and roadmap templates. |
+<!-- /host -->
+<!-- host:codex: Codex names skills with a dollar sign -->
+| Create a PRD and roadmap from an unformed idea | Route to `$speckit-prd`; use its PRD and roadmap templates. |
+<!-- /host -->
 | Track one spec through phases or understand scaffold-created workflow files | [Workflow template](./templates/workflow-template.md). For scaffold creation, population, inputs, or output locations, also read the [live scaffold skill](../speckit-scaffold-spec/SKILL.md) as a reference only; do not execute or invoke it. Keep artifacts, gates, and decisions current. |
 | Explain the roadmap home note | [Roadmap-MOC guide](./references/roadmap-moc-guide.md). The curated zone is author-owned; the generated index is regenerated, not hand-edited. |
 | Explain or configure presets, extensions, hooks, catalogs, or upgrade recovery | [Presets and extensions guide](./references/presets-extensions-guide.md). Discover and inspect first; confirm before any mutation. |
-| Explain autonomous execution, consensus, remediation, review loops, or configuration | Read [the live autopilot skill](../speckit-autopilot/SKILL.md) as a reference only; explain its current contract without executing or invoking it. |
+| Explain autonomous execution, consensus, remediation, review loops, or configuration | Read [the live autopilot skill](../speckit-autopilot/SKILL.md) as a reference only; explain its current contract without executing or invoking it. When the user asks to run an existing workflow, use the bounded autopilot hand-off below. |
+<!-- host:claude: Claude names skills with a slash -->
 | Scope a raw brief interactively | Route to `/speckit-pro:grill-me`; do not conduct its interview here. |
 | Scaffold a roadmap item, inspect status, or resolve a review | Route respectively to `/speckit-pro:speckit-scaffold-spec`, `/speckit-pro:speckit-status`, or `/speckit-pro:speckit-resolve-pr`. |
 | Archive merged-spec records or clean up archived specs | Route to `/speckit-pro:speckit-archive-cleanup`; do not copy or execute its cleanup workflow here. |
+<!-- /host -->
+<!-- host:codex: Codex names skills with a dollar sign and ships an agent install skill -->
+| Scope a raw brief interactively | Route to `$grill-me`; do not conduct its interview here. |
+| Scaffold a roadmap item, inspect status, resolve a review, or repair Codex agents | Route respectively to `$speckit-scaffold-spec`, `$speckit-status`, `$speckit-resolve-pr`, or the SpecKit Pro `install` skill. |
+| Archive merged-spec records or clean up archived specs | Route to `$speckit-archive-cleanup`; do not copy or execute its cleanup workflow here. |
+<!-- /host -->
 
-When an execution request belongs to autopilot, the redirect is a bounded
-operator handoff, not merely a command name. Briefly explain that autopilot owns
-the durable phase task list, native subagent lifecycle, gate checks, workflow
-and state updates, and operator-visible progress. Give the exact autopilot
-invocation and required workflow/stage input. Set the expectation that it
-continues through the selected stage until completion or a real gate/capability
-stop; at a stop it preserves evidence and reports the exact action required to
-resume. Do not imply that Coach will run, monitor, or resume that lifecycle.
+## Bounded autopilot hand-off
+
+Coach never executes or invokes autopilot. When an execution request belongs to
+autopilot, the redirect is a bounded operator handoff, not merely a command
+name. Briefly explain that autopilot owns the durable phase task list, native
+subagent lifecycle, gate checks, workflow and state updates, and
+operator-visible progress. When the user supplies the workflow path, return one
+explicit command bounded to the requested stage:
+
+```text
+<!-- host:claude: Claude names skills with a slash -->
+/speckit-pro:speckit-autopilot <workflow-file> --stage plan|implement|full
+<!-- /host -->
+<!-- host:codex: Codex names skills with a dollar sign -->
+$speckit-autopilot <workflow-file> --stage plan|implement|full
+<!-- /host -->
+```
+
+Use `--stage full` only when the user asks for the full workflow; use
+`--stage plan` or `--stage implement` only for that requested boundary. Preserve
+the supplied workflow path exactly, and do not invent a path or broaden the
+stage. Set the expectation that autopilot continues through the selected stage
+until completion or a real gate/capability stop, owning its own preflight,
+phase gates, durable state, and fail-closed stops; at a stop it preserves
+evidence and reports the exact action required to resume. Do not imply that
+Coach will run, monitor, or resume that lifecycle. If no workflow path exists,
+route to
+<!-- host:claude: Claude names skills with a slash -->
+`/speckit-pro:speckit-scaffold-spec`;
+<!-- /host -->
+<!-- host:codex: Codex names skills with a dollar sign -->
+`$speckit-scaffold-spec`;
+<!-- /host -->
+if the path or requested stage is ambiguous, ask for that missing input instead
+of executing anything.
 
 ## Keep adjacent contracts distinct
 
