@@ -18,8 +18,8 @@ import sys
 
 from .mcp_protocol import negotiate_protocol_version
 from .artifact_review import OBSERVATION_CLOCK_SKEW
-from .helpers.mutation import validate_target_path, write_file_atomic
-from .helpers.read_only import repo_relative, resolve_input_path
+from .atomic_write import validate_target_path, write_file_atomic
+from .trusted_io import repo_relative, resolve_input_path
 
 SERVER_INFO = {"name": "speckit-pro-author-broker", "version": "1.0.0"}
 SESSION_VERSION = 1

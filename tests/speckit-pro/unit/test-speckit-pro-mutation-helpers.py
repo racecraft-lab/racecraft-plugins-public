@@ -368,6 +368,7 @@ from runner_invocation import assert_runner_response, command_stdin_fixture, run
 
 from speckit_pro_runner.envelope import RunnerRequest
 from speckit_pro_runner.agent_materialization import materialize_agent_policy
+from speckit_pro_runner import atomic_write
 from speckit_pro_runner.helpers import install, mutation, pr_packet, registry, uat_skeleton
 
 
@@ -619,7 +620,7 @@ class MutationHelperTests(unittest.TestCase):
         return fail_write
 
     def test_install_subprocess_dispatch_preserves_selected_python_candidate(self) -> None:
-        from speckit_pro_runner.helpers import install
+        from speckit_pro_runner.gates import runner_invocation
 
         cases = [
             ("py -V:3", ["py", "-3", "-m", "speckit_pro_runner"], ["py", "-3", "-m", "speckit_pro_runner"]),
@@ -630,8 +631,8 @@ class MutationHelperTests(unittest.TestCase):
 
         for selected_candidate, argv, expected_argv in cases:
             with self.subTest(selected_candidate=selected_candidate):
-                with patch.object(install.subprocess, "run", return_value=completed) as mocked_run:
-                    result = install.run_python_runner_subprocess(
+                with patch.object(runner_invocation.subprocess, "run", return_value=completed) as mocked_run:
+                    result = runner_invocation.run_python_runner_subprocess(
                         argv,
                         selected_candidate=selected_candidate,
                         input_text="{}",
@@ -8495,7 +8496,7 @@ This line must not be copied.
             self.run_git(git_root, "add", "target.md")
             self.run_git(git_root, "commit", "--quiet", "-m", "target")
             calls = 0
-            real_ensure = mutation.ensure_safe_write_target_fd
+            real_ensure = atomic_write.ensure_safe_write_target_fd
 
             def swap_before_final_guard(parent_fd: int, name: str) -> None:
                 nonlocal calls
@@ -8523,7 +8524,7 @@ This line must not be copied.
             old_cwd = Path.cwd()
             os.chdir(git_root)
             try:
-                with patch.object(mutation, "ensure_safe_write_target_fd", side_effect=swap_before_final_guard):
+                with patch.object(atomic_write, "ensure_safe_write_target_fd", side_effect=swap_before_final_guard):
                     response = mutation.run_mutation_helper(registry.MUTATION_HELPERS["mutation-foundation"], request)
             finally:
                 os.chdir(old_cwd)

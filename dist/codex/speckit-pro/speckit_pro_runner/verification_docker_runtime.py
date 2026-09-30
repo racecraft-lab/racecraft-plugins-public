@@ -21,7 +21,7 @@ import subprocess
 import time
 from typing import Any, BinaryIO
 
-from .verification_docker import container_options, container_reasons, validate_location
+from .verification_docker import PLATFORM_ARCHITECTURE, PLATFORM_OS, container_options, container_reasons, validate_location
 from .verification_docker_entrypoint import INJECTED_FILE_SHA256, RUNTIME_PREFIX
 from .verification_docker_readback import MAX_ARCHIVE_BYTES, SnapshotReadback
 
@@ -174,7 +174,8 @@ class DockerClient:
                     "DefaultRuntime", "Runtimes", "InitBinary")
         if any(selected_info.get(key) in (None, "", [], {}) for key in required):
             raise ValueError("Docker daemon/runtime identity is incomplete")
-        if selected_info["OSType"] != "linux" or selected_info["Architecture"] not in {"aarch64", "arm64"}:
+        # A daemon reports the kernel's name for the architecture, so aarch64 is the same platform.
+        if selected_info["OSType"] != PLATFORM_OS or selected_info["Architecture"] not in {"aarch64", PLATFORM_ARCHITECTURE}:
             raise ValueError("Docker daemon must report Linux/arm64")
         return {"schema_version": "docker-engine-binding/v2",
                 "cli": {"path": str(self.executable), "sha256": self.executable_sha256},

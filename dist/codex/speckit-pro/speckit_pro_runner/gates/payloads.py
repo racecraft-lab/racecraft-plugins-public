@@ -15,6 +15,7 @@ from typing import Any
 from .. import RUNNER_VERSION
 from ..envelope import diagnostic, is_diagnostic, response
 from ..host_skills import emit_host_files, render_host_skills
+from ..install_inventory import read_install_inventory
 from ..path_utils import find_repo_root, is_relative_to, sha256_file, sha256_text
 from ..runtime import runner_source_files
 from .gate_response import gate_base_data
@@ -22,7 +23,6 @@ from .gate_response import gate_base_data
 FIXTURE_BOUNDARY = Path("tests") / "speckit-pro" / "unit" / "fixtures" / "runner-gates"
 DEFAULT_PAYLOAD_CASES = FIXTURE_BOUNDARY / "payload-evidence-cases.json"
 DEFAULT_INSTALL_CASES = FIXTURE_BOUNDARY / "install-verification-cases.json"
-INSTALL_INVENTORY = Path("speckit-pro") / "speckit_pro_runner" / "install_inventory.json"
 INSTALLED_PLUGIN_FIXTURE_BOUNDARY = Path("tests") / "speckit-pro" / "unit" / "fixtures" / "installed-plugin-release"
 DEFAULT_INSTALLED_PLUGIN_PAYLOAD_CASES = INSTALLED_PLUGIN_FIXTURE_BOUNDARY / "payload-completeness-cases.json"
 # A payload cannot work without these; a missing source fails the build.
@@ -883,28 +883,11 @@ def install_root_from_case(case: dict[str, Any], repo_root: Path) -> Path | dict
     )
 
 
-def load_install_inventory(repo_root: Path, case: dict[str, Any]) -> list[dict[str, str]]:
-    inventory_path = repo_root / INSTALL_INVENTORY
-    try:
-        document = json.loads(inventory_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        return diagnostic(
-            "malformed_inventory",
-            "install inventory could not be loaded",
-            details={"path": INSTALL_INVENTORY.as_posix(), "error": type(exc).__name__},
-        )
-    files = document.get("files")
-    if not isinstance(files, list):
-        return diagnostic("malformed_inventory", "install inventory files must be an array")
-    normalized: list[dict[str, str]] = []
-    for item in files:
-        if not isinstance(item, dict):
-            continue
-        path = normalize_posix_path(str(item.get("path", "")))
-        content = str(item.get("content", ""))
-        digest = str(item.get("sha256", "skip"))
-        normalized.append({"path": path, "content": normalized_content(content, case), "sha256": digest})
-    return normalized
+def load_install_inventory(repo_root: Path, case: dict[str, Any]) -> list[dict[str, str]] | dict[str, Any]:
+    inventory = read_install_inventory(repo_root)
+    if is_diagnostic(inventory):
+        return inventory
+    return [{**record, "content": normalized_content(record["content"], case)} for record in inventory["files"]]
 
 
 def normalized_content(content: str, case: dict[str, Any]) -> str:

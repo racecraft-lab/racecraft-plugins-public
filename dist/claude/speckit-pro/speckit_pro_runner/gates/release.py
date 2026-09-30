@@ -179,8 +179,7 @@ def installed_release_readiness(entry: Any, request: Any, repo_root: Path) -> di
 
 
 def live_installed_release_gate_evidence(repo_root: Path) -> dict[str, Any]:
-    from . import active_path_guard, payloads as payload_gate
-    from ..helpers import install as install_helper
+    from . import active_path_guard, payloads as payload_gate, runner_invocation
 
     evidence: dict[str, Any] = {"checks": [], "payload_results": [], "runner_invocations": []}
 
@@ -290,7 +289,7 @@ def live_installed_release_gate_evidence(repo_root: Path) -> dict[str, Any]:
     if isinstance(payload_results, list):
         evidence["payload_results"].extend(item for item in payload_results if isinstance(item, dict))
 
-    runner_case = install_helper.runner_invocation_case(
+    runner_case = runner_invocation.runner_invocation_case(
         repo_root,
         {
             "case_file": "tests/speckit-pro/unit/fixtures/installed-plugin-release/runner-invocation-cases.json",
@@ -308,7 +307,7 @@ def live_installed_release_gate_evidence(repo_root: Path) -> dict[str, Any]:
             )
         )
     else:
-        runner_record, _diagnostics = install_helper.runner_invocation_record(
+        runner_record, _diagnostics = runner_invocation.runner_invocation_record(
             runner_case,
             "installed-release-readiness:runner-invocation",
             repo_root,

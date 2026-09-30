@@ -75,7 +75,7 @@ class GitSnapshotTests(unittest.TestCase):
              patch.object(verification_records.os, "fdopen", return_value=Stream()), \
              patch.object(verification_records.os, "fstat", return_value=info), \
              self.assertRaisesRegex(ValueError, "changed while being read"):
-            verification_records._read_bounded_regular(self.root / "record", 4, "verification record")
+            verification_records.read_bounded_regular(self.root / "record", 4, "verification record")
         self.assertEqual(requested, [5])
 
     def test_plain_repository_preserves_real_index_objects_and_configuration(self):
@@ -338,8 +338,8 @@ class GitSnapshotTests(unittest.TestCase):
                 return engine
 
         observation = {"native_event_id": "retained-real-tool-event", **produced["observation_material"]}
-        with patch("speckit_pro_runner.verification_docker_runtime.DockerClient", ValidationClient), \
-             patch("speckit_pro_runner.verification_docker_image.inspect_image", return_value=base):
+        with patch("speckit_pro_runner.verification_docker_workflow.DockerClient", ValidationClient), \
+             patch("speckit_pro_runner.verification_docker_workflow.inspect_image", return_value=base):
             result = validate_execution_record(self.root, {"workflow_file": workflow, "command_id": "UNIT_TEST",
                                                            "record_path": produced["record_path"],
                                                            "native_observation": observation})
@@ -354,7 +354,7 @@ class GitSnapshotTests(unittest.TestCase):
         for _ in range(10_000):
             deeply_nested_record = "[" + deeply_nested_record + "]"
         record_path.write_text(deeply_nested_record)
-        with patch("speckit_pro_runner.verification_docker_runtime.DockerClient",
+        with patch("speckit_pro_runner.verification_docker_workflow.DockerClient",
                    side_effect=AssertionError("deep record reached Docker")) as docker:
             rejected = validate_execution_record(self.root, {"workflow_file": "workflow.md", "command_id": "UNIT_TEST",
                                                               "record_path": produced["record_path"],
@@ -368,15 +368,15 @@ class GitSnapshotTests(unittest.TestCase):
         swapped_observation = json.loads(json.dumps(observation))
         swapped_observation["docker_qualification"]["record_sha256"] = docker_workflow.sha(swapped_body)
         read_descriptions = []
-        original_reader = verification_records._read_bounded_regular
+        original_reader = verification_records.read_bounded_regular
         def read_then_swap(path, limit, description):
             body = original_reader(path, limit, description)
             read_descriptions.append(description)
             if description == "verification record":
                 record_path.write_bytes(swapped_body)
             return body
-        with patch.object(verification_records, "_read_bounded_regular", side_effect=read_then_swap), \
-             patch("speckit_pro_runner.verification_docker_runtime.DockerClient",
+        with patch.object(verification_records, "read_bounded_regular", side_effect=read_then_swap), \
+             patch("speckit_pro_runner.verification_docker_workflow.DockerClient",
                    side_effect=AssertionError("swapped record reached Docker")) as docker:
             rejected = validate_execution_record(self.root, {"workflow_file": "workflow.md", "command_id": "UNIT_TEST",
                                                               "record_path": produced["record_path"],
@@ -394,13 +394,13 @@ class GitSnapshotTests(unittest.TestCase):
 
         validation = {"workflow_file": "workflow.md", "command_id": "UNIT_TEST",
                       "record_path": produced["record_path"], "native_observation": observation}
-        with patch("speckit_pro_runner.verification_docker_runtime.DockerClient", ValidationClient), \
-             patch("speckit_pro_runner.verification_docker_image.inspect_image", return_value=base):
+        with patch("speckit_pro_runner.verification_docker_workflow.DockerClient", ValidationClient), \
+             patch("speckit_pro_runner.verification_docker_workflow.inspect_image", return_value=base):
             first = validate_execution_record(self.root, validation)
             second = validate_execution_record(self.root, validation)
         self.assertTrue(first["reusable"], first["reasons"])
         self.assertTrue(second["reusable"], second["reasons"])
-        with patch("speckit_pro_runner.verification_docker_runtime.DockerClient", side_effect=AssertionError("untrusted observation reached Docker")) as docker:
+        with patch("speckit_pro_runner.verification_docker_workflow.DockerClient", side_effect=AssertionError("untrusted observation reached Docker")) as docker:
             self.assertFalse(validate_execution_record(self.root, {**validation, "native_observation": None})["reusable"])
             wrong = json.loads(json.dumps(observation))
             wrong["docker_qualification"]["execution_closure_sha256"] = "0" * 64
@@ -410,7 +410,7 @@ class GitSnapshotTests(unittest.TestCase):
 
         stdout = self.root / produced["record"]["output_directory"] / "stdout"
         stdout.write_bytes(b"changed")
-        with patch("speckit_pro_runner.verification_docker_runtime.DockerClient", side_effect=AssertionError("tampered evidence reached Docker")) as docker:
+        with patch("speckit_pro_runner.verification_docker_workflow.DockerClient", side_effect=AssertionError("tampered evidence reached Docker")) as docker:
             changed = validate_execution_record(self.root, validation)
         self.assertIn("retained_docker_output_changed", changed["reasons"])
         docker.assert_not_called()
@@ -421,7 +421,7 @@ class GitSnapshotTests(unittest.TestCase):
         for _ in range(1000):
             deeply_nested = "[" + deeply_nested + "]"
         evidence_path.write_text(deeply_nested)
-        with patch("speckit_pro_runner.verification_docker_runtime.DockerClient",
+        with patch("speckit_pro_runner.verification_docker_workflow.DockerClient",
                    side_effect=AssertionError("deep evidence reached Docker")) as docker:
             changed = validate_execution_record(self.root, validation)
         self.assertTrue(any(reason.startswith("unverifiable_docker_record") for reason in changed["reasons"]))
@@ -429,14 +429,14 @@ class GitSnapshotTests(unittest.TestCase):
         malformed = json.loads(evidence_body)
         malformed["result"]["input_readback"] = []
         evidence_path.write_text(json.dumps(malformed))
-        with patch("speckit_pro_runner.verification_docker_runtime.DockerClient",
+        with patch("speckit_pro_runner.verification_docker_workflow.DockerClient",
                    side_effect=AssertionError("malformed evidence reached Docker")) as docker:
             changed = validate_execution_record(self.root, validation)
         self.assertIn("docker_readback_receipt_disagrees_with_evidence", changed["reasons"])
         docker.assert_not_called()
         evidence_path.write_bytes(evidence_body)
         (self.root / "tracked.txt").write_text("changed after qualification\n")
-        with patch("speckit_pro_runner.verification_docker_runtime.DockerClient", side_effect=AssertionError("stale input reached Docker")) as docker:
+        with patch("speckit_pro_runner.verification_docker_workflow.DockerClient", side_effect=AssertionError("stale input reached Docker")) as docker:
             changed = validate_execution_record(self.root, validation)
         self.assertIn("docker_current_input_closure_changed", changed["reasons"])
         docker.assert_not_called()
