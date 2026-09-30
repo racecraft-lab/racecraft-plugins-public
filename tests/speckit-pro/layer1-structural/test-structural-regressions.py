@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import sys
 import tempfile
@@ -312,6 +313,61 @@ class TomlFieldTests(unittest.TestCase):
         self.assertTrue(all("toml_string_field" in text for text in texts.values()))
 
 
+class PayloadValidatorTests(unittest.TestCase):
+    """The payload contract validator passes a sound plugin and fails a broken one."""
+
+    def run_validator(self, source: Path) -> unittest.TestResult:
+        original = payloads.SOURCE_ROOT
+        payloads.SOURCE_ROOT = source
+        try:
+            result = unittest.TestResult()
+            payloads.ValidatePluginPayload("test_payload").run(result)
+            return result
+        finally:
+            payloads.SOURCE_ROOT = original
+
+    def test_a_nested_skill_entrypoint_fails_the_payload_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "speckit-pro"
+            shutil.copytree(payloads.SOURCE_ROOT, source, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+            self.assertTrue(self.run_validator(source).wasSuccessful())
+            nested = source / "skills" / "speckit-coach" / "nested"
+            nested.mkdir()
+            (nested / "SKILL.md").write_text("---\nname: nested\n---\n", encoding="utf-8")
+            broken = self.run_validator(source)
+        self.assertFalse(broken.wasSuccessful())
+        self.assertIn("nested Codex SKILL.md count", "".join(message for _, message in broken.failures))
+
+
+class RetiredPayloadBuilderTests(unittest.TestCase):
+    """The full release refresh is the one payload build path; its former standalone script is gone."""
+
+    RETIRED = "build-plugin-payloads"
+    # Dated records of past work that name the script as it was then.
+    HISTORICAL = (
+        "docs/", ".specify/memory/",
+        "tests/speckit-pro/layer6-integration/performance-fixtures/",
+        "tests/speckit-pro/evals/audit/unit-remaining-support-audit.json",
+        "tests/speckit-pro/unit/fixtures/plan-layers/repository-bash-confinement-plan/",
+    )
+    # specs/ is archived feature material that tests must never open (tests/speckit-pro/AGENTS.md).
+    SKIPPED_DIRECTORIES = {".git", ".worktrees", "node_modules", "__pycache__", ".astro", ".mypy_cache", "specs"}
+
+    def test_the_standalone_builder_is_deleted_and_unreferenced(self) -> None:
+        self.assertFalse(list((REPO_ROOT / "scripts").glob(f"{self.RETIRED}*")))
+        live = []
+        for root, directories, files in os.walk(REPO_ROOT):
+            directories[:] = [name for name in directories if name not in self.SKIPPED_DIRECTORIES]
+            for name in files:
+                path = Path(root) / name
+                relative = path.relative_to(REPO_ROOT).as_posix()
+                if relative.startswith(self.HISTORICAL) or relative == Path(__file__).relative_to(REPO_ROOT).as_posix():
+                    continue
+                if self.RETIRED in path.read_text(encoding="utf-8", errors="ignore"):
+                    live.append(relative)
+        self.assertEqual([], live)
+
+
 def main() -> int:
     suite = unittest.TestSuite()
     suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(StructuralRegressionTests))
@@ -319,6 +375,8 @@ def main() -> int:
     suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(RosterDerivationTests))
     suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(CodexSkillRosterTests))
     suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(TomlFieldTests))
+    suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(PayloadValidatorTests))
+    suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(RetiredPayloadBuilderTests))
     return run_counted(suite, label="test-structural-regressions")
 
 

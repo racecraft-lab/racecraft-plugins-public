@@ -194,6 +194,7 @@ MATRIX_HELPER_FILE = REPO_ROOT / 'scripts' / 'emit-plugin-matrix.py'
 CONTAINER_WORKFLOW_FILE = REPO_ROOT / '.github' / 'workflows' / 'container-preflight.yml'
 WINDOWS_PREFLIGHT_HELPER_FILE = REPO_ROOT / 'tests' / 'speckit-pro' / 'run-hosted-windows-preflight.py'
 CONTAINER_DISPATCH_HELPER_FILE = REPO_ROOT / 'tests' / 'speckit-pro' / 'run-container-preflight.py'
+INTERPRETER_PROBE_FILE = REPO_ROOT / 'tests' / 'speckit-pro' / 'lib' / 'preflight_interpreters.py'
 WORKFLOWS_DIR = REPO_ROOT / '.github' / 'workflows'
 validate_pr_checks_sentinel_CHECKOUT_PIN_RE = re.compile('uses: actions/checkout@[0-9a-f]{40}')
 UPLOAD_ARTIFACT_PIN = 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a'
@@ -576,10 +577,11 @@ class ValidatePrChecksSentinel(unittest.TestCase):
                 self.assertNotIn('operation = "preflight"', block)
                 self.assertNotIn('specifyCommand', block)
             candidates = ('"py -V:3"', '"py -3"', '"python"', '"python3"')
-            candidate_positions = [dispatch_content.index(candidate) for candidate in candidates]
+            probe_content = INTERPRETER_PROBE_FILE.read_text(encoding='utf-8')
+            candidate_positions = [probe_content.index(candidate) for candidate in candidates]
             self.assertEqual(candidate_positions, sorted(candidate_positions))
-            self.assertIn('interpreter-probes.json', dispatch_content)
-            self.assertIn('architecture_emulated', dispatch_content)
+            self.assertIn('interpreter-probes.json', probe_content)
+            self.assertIn('architecture_emulated', probe_content)
             self.assertIn('child_env["PREFLIGHT_INTERPRETER_CANDIDATE"] = selected', dispatch_content)
             for expected in ('run-hosted-windows-preflight.py', '"--pipx-version"', '"--spec-kit-version"', '"--spec-kit-ref"'):
                 self.assertIn(expected, dispatch_content)

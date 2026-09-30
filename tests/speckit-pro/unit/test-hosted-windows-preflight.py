@@ -746,89 +746,6 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
         self.assertEqual(run_mock.call_args.kwargs["cwd"], repo_root)
         self.assertFalse(run_mock.call_args.kwargs["shell"])
 
-    def test_windows_interpreter_probes_are_ordered_and_select_active_native_python(self) -> None:
-        commands: list[list[str]] = []
-
-        def run_probe(command: list[str], **_kwargs: object) -> SimpleNamespace:
-            commands.append(command)
-            if command[:2] == ["py", "-V:3"]:
-                version = (3, 13, 14)
-                process_architecture = "AMD64"
-                native_architecture = "ARM64"
-            elif command[:2] == ["py", "-3"]:
-                version = (3, 10, 14)
-                process_architecture = "ARM64"
-                native_architecture = "ARM64"
-            elif command[0] == "python":
-                version = (3, 13, 14)
-                process_architecture = "ARM64"
-                native_architecture = "ARM64"
-            else:
-                version = (3, 12, 11)
-                process_architecture = "ARM64"
-                native_architecture = "ARM64"
-            stdout = json.dumps(
-                {
-                    "major": version[0],
-                    "minor": version[1],
-                    "micro": version[2],
-                    "executable": f"C:/Python/{command[0]}.exe",
-                    "machine": "ARM64",
-                    "processor_architecture": process_architecture,
-                    "processor_architew6432": native_architecture,
-                },
-                separators=(",", ":"),
-            )
-            return SimpleNamespace(returncode=0, stdout=stdout, stderr="")
-
-        with tempfile.TemporaryDirectory() as temporary:
-            evidence_dir = Path(temporary) / "evidence"
-            with (
-                mock.patch.object(
-                    dispatch_helper.shutil,
-                    "which",
-                    side_effect=lambda name: f"C:/Windows/{name}.exe",
-                ),
-                mock.patch.object(
-                    dispatch_helper.subprocess,
-                    "run",
-                    side_effect=run_probe,
-                ),
-                mock.patch.object(
-                    dispatch_helper.sys,
-                    "executable",
-                    "C:/Python/python.exe",
-                ),
-            ):
-                selected, records = dispatch_helper._probe_interpreters(
-                    "windows-arm64",
-                    evidence_dir,
-                )
-            aggregate = json.loads(
-                (evidence_dir / "interpreter-probes.json").read_text(
-                    encoding="utf-8"
-                )
-            )
-
-        self.assertIsNotNone(selected)
-        assert selected is not None
-        self.assertEqual(selected["candidate"], "python")
-        self.assertEqual(selected["interpreter"], "C:/Python/python.exe")
-        self.assertEqual(
-            [record["candidate"] for record in records],
-            list(dispatch_helper.INTERPRETER_CANDIDATES),
-        )
-        self.assertEqual(
-            [command[:2] for command in commands],
-            [["py", "-V:3"], ["py", "-3"], ["python", "-c"], ["python3", "-c"]],
-        )
-        self.assertFalse(records[0]["supported"])
-        self.assertTrue(records[0]["architecture_emulated"])
-        self.assertFalse(records[1]["supported"])
-        self.assertTrue(records[2]["selected"])
-        self.assertTrue(records[3]["supported"])
-        self.assertEqual(aggregate, records)
-
     def test_windows_smoke_fails_closed_when_no_direct_interpreter_is_available(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             evidence_dir = Path(temporary) / "evidence"
@@ -892,7 +809,7 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
                 ),
                 mock.patch.object(
                     dispatch_helper,
-                    "_probe_interpreters",
+                    "probe_interpreters",
                     return_value=(probe_records[0], probe_records),
                 ),
                 mock.patch.object(
@@ -970,8 +887,6 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
         self.assertIn('[sys.executable, "-m", "speckit_pro_runner"]', content)
         self.assertIn("shell=False", content)
         self.assertNotIn("shell=True", content)
-        for candidate in dispatch_helper.INTERPRETER_CANDIDATES:
-            self.assertIn(f'"{candidate}"', content)
         for name, request, _ in dispatch_helper.LINUX_REQUESTS:
             self.assertIn(name, content)
             self.assertTrue((REPO_ROOT / request).is_file())
