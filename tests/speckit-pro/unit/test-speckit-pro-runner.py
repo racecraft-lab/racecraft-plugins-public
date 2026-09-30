@@ -27,8 +27,7 @@ sys.path.insert(0, str(REPO_ROOT / "tests" / "speckit-pro" / "lib"))
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 from runner_invocation import assert_runner_response, run_runner  # noqa: E402
 from speckit_pro_runner import envelope, runtime  # noqa: E402
-from speckit_pro_runner.gates import payloads, release  # noqa: E402
-from speckit_pro_runner.helpers import install  # noqa: E402
+from speckit_pro_runner.gates import payloads, release, runner_invocation  # noqa: E402
 
 FIXTURE_FILE = Path(__file__).resolve().parent / "fixtures" / "speckit-pro-runner" / "contract-fixtures.json"
 RELEASE_FIXTURES = Path(__file__).resolve().parent / "fixtures" / "installed-plugin-release"
@@ -36,7 +35,6 @@ RELEASE_FIXTURES = Path(__file__).resolve().parent / "fixtures" / "installed-plu
 
 RUNTIME_LOADED_JSON = (
     "gate_discovery_table.json",
-    "install_inventory.json",
     "contracts/task-results.schema.json",
 )
 
@@ -153,7 +151,7 @@ class RunnerFoundationTests(unittest.TestCase):
         from speckit_pro_runner.gates.active_path_guard import repo_bash_python_findings
 
         paths = [PLUGIN_ROOT / "speckit_pro_runner" / name
-                 for name in ("cli_probe.py", "gates/suite.py", "helpers/install.py", "runtime.py")]
+                 for name in ("cli_probe.py", "gates/suite.py", "gates/runner_invocation.py", "helpers/install.py", "runtime.py")]
         findings = [
             (path.relative_to(REPO_ROOT).as_posix(), finding.line, finding.pattern)
             for path in paths
@@ -551,7 +549,7 @@ class RunnerInvocationVocabularyTests(unittest.TestCase):
         cases = json.loads((RELEASE_FIXTURES / "runner-invocation-cases.json").read_text(encoding="utf-8"))["cases"]
         for case in (item for item in cases if "candidate_results" in item):
             with self.subTest(case_id=case["case_id"]):
-                record, _diagnostics = install.runner_invocation_record(case, None, REPO_ROOT)
+                record, _diagnostics = runner_invocation.runner_invocation_record(case, None, REPO_ROOT)
                 self.assertEqual(record["runner_request"]["operation"], record["operation"])
                 self.assertIn(record["operation"], envelope.SUPPORTED_RUNNER_OPERATIONS)
 
