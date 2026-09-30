@@ -19,8 +19,6 @@ own failure patterns.
 
 ### 2. Make the simplest change that solves the task
 
-- Do not add features, flags, abstractions, or helper layers for hypothetical
-  future callers.
 - Prefer existing repo patterns and source-of-truth files over new conventions.
 - If a change feels larger than the request, shrink it or explain why the size is
   necessary.
