@@ -79,7 +79,7 @@
         "value": "speckit_pro_runner/author_broker.py",
         "display": "speckit_pro_runner/author_broker.py"
       },
-      "sha256": "eb9ff54d9dbe0fd80209473cad9b159e65181b9db33f0ffa7559b1f53ee69330"
+      "sha256": "fc7ea56d3ad72994fe3a6db7c905e3fa712e0fd1aa0e74bde1249eac71298a59"
     },
     {
       "path": {
@@ -112,6 +112,14 @@
         "display": "speckit_pro_runner/codex_agent_policy.json"
       },
       "sha256": "f3e60824b2470b2f1e55ac786d7dbd3816c67f1a346b7ed2200469582183ab7f"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/codex_launch.py",
+        "display": "speckit_pro_runner/codex_launch.py"
+      },
+      "sha256": "9504b7daaef99f787aaf8f8f577431fbc9313f06bee96336435a25b5a700268e"
     },
     {
       "path": {
@@ -407,7 +415,7 @@
         "value": "speckit_pro_runner/gates/active_path_guard/common.py",
         "display": "speckit_pro_runner/gates/active_path_guard/common.py"
       },
-      "sha256": "4bb333eef2b44ba4d5405091a66dddeb393927272307ff5241b8eaa009a7a968"
+      "sha256": "376283537c4fe27a6268aeb02c1df56e239d018a71109d2884a9b41e3a50780e"
     },
     {
       "path": {
@@ -455,7 +463,7 @@
         "value": "speckit_pro_runner/gates/active_path_guard/zero_bash.py",
         "display": "speckit_pro_runner/gates/active_path_guard/zero_bash.py"
       },
-      "sha256": "7b9288093615e9e55ba1d9341827e297ad6bc0722eb1864d47bbdb05edf4dc4a"
+      "sha256": "6e9615c32d93773c1a3f76a2d72dbdfbbb1fb7e359183995c00b6b0141911619"
     },
     {
       "path": {
@@ -687,7 +695,7 @@
         "value": "speckit_pro_runner/host_skills.py",
         "display": "speckit_pro_runner/host_skills.py"
       },
-      "sha256": "2d99f9c01ed3235fefd74bbc1b8df51457362bab72d970383e16970e075ab93b"
+      "sha256": "b77130b0f31dec61e6e5169666277de3686f5dd0f7b4252e76e5a825bd940fdc"
     },
     {
       "path": {
@@ -711,7 +719,7 @@
         "value": "speckit_pro_runner/mcp_protocol.py",
         "display": "speckit_pro_runner/mcp_protocol.py"
       },
-      "sha256": "d3023a753d1956f35b6e7a6a90b8bf3e10d8c01a82ea19d9a15a17bccb3a662f"
+      "sha256": "8457ef12a2820addacd878bb199d26af43aa4a7577e1f8479f100146edfaf538"
     },
     {
       "path": {
@@ -735,7 +743,15 @@
         "value": "speckit_pro_runner/preview_launcher.py",
         "display": "speckit_pro_runner/preview_launcher.py"
       },
-      "sha256": "8bc57fd90cc1c9be1755146178ec35c5ac23d3a4d25959a05099333d893ba98f"
+      "sha256": "9420735eeff1e18a213b9f12db20a465fc7cbe4769b9c436328493b2c9c6b7da"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/private_state.py",
+        "display": "speckit_pro_runner/private_state.py"
+      },
+      "sha256": "0638d77ff196971c66ccbe2753898de00903169f0496a69690c6976f1d3d8ee4"
     },
     {
       "path": {
@@ -751,7 +767,7 @@
         "value": "speckit_pro_runner/research_broker.py",
         "display": "speckit_pro_runner/research_broker.py"
       },
-      "sha256": "078e67c3513be09d3fe7d5330719fea3c7d22888ddf76aac082a8f15b303ead8"
+      "sha256": "c08e9234c67f4abc4f89cec84b021beba34653578a3e3c0c4b6b6bca341fd1c5"
     },
     {
       "path": {
@@ -791,7 +807,7 @@
         "value": "speckit_pro_runner/sweep_broker.py",
         "display": "speckit_pro_runner/sweep_broker.py"
       },
-      "sha256": "6a5f1d68442da227eee6f7ee5dfb7457a34446b801398334815f47f52141f5bc"
+      "sha256": "29dd388f050d2351302789269d86dd8eecc7d4bb40069decc29e551a235a34d8"
     },
     {
       "path": {
@@ -807,7 +823,7 @@
         "value": "speckit_pro_runner/sweep_isolation.py",
         "display": "speckit_pro_runner/sweep_isolation.py"
       },
-      "sha256": "ff5d97a0d37d708423b6b68fed2e317985d8a5ecade4e6a00bef13dc3708cc9e"
+      "sha256": "4a5f4f491825287610dfdf5dd89a370ebe97d7d62ff9146b59158831d3cb4d32"
     },
     {
       "path": {
@@ -815,7 +831,7 @@
         "value": "speckit_pro_runner/sweep_launcher.py",
         "display": "speckit_pro_runner/sweep_launcher.py"
       },
-      "sha256": "c69ba1d29d02ced7bf07661f63ef9162f54929e49327db89525b3940c181fbed"
+      "sha256": "38ab0dd991512a93505baf54c9df02a0f96ee80a3685d4f15afabd13bc934c7b"
     },
     {
       "path": {
