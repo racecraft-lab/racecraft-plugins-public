@@ -647,7 +647,7 @@ class MutationHelperTests(unittest.TestCase):
         return fail_write
 
     def test_install_subprocess_dispatch_preserves_selected_python_candidate(self) -> None:
-        from speckit_pro_runner.helpers import install
+        from speckit_pro_runner.gates import runner_invocation
 
         cases = [
             ("py -V:3", ["py", "-3", "-m", "speckit_pro_runner"], ["py", "-3", "-m", "speckit_pro_runner"]),
@@ -658,8 +658,8 @@ class MutationHelperTests(unittest.TestCase):
 
         for selected_candidate, argv, expected_argv in cases:
             with self.subTest(selected_candidate=selected_candidate):
-                with patch.object(install.subprocess, "run", return_value=completed) as mocked_run:
-                    result = install.run_python_runner_subprocess(
+                with patch.object(runner_invocation.subprocess, "run", return_value=completed) as mocked_run:
+                    result = runner_invocation.run_python_runner_subprocess(
                         argv,
                         selected_candidate=selected_candidate,
                         input_text="{}",

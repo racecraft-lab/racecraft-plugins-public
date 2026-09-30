@@ -722,22 +722,22 @@ class GateFoundationTests(unittest.TestCase):
             "object",
         )
 
-        from speckit_pro_runner.helpers import install as install_helper
+        from speckit_pro_runner.gates import runner_invocation
 
         self.assertEqual(
-            install_helper.invocation_prefix_for_candidate("windows", "py -V:3", "C:/Python312/python.exe"),
+            runner_invocation.invocation_prefix_for_candidate("windows", "py -V:3", "C:/Python312/python.exe"),
             ["C:/Python312/python.exe"],
         )
         self.assertEqual(
-            install_helper.invocation_prefix_for_candidate("windows", "py -V:3", "C:/Windows/py.exe"),
+            runner_invocation.invocation_prefix_for_candidate("windows", "py -V:3", "C:/Windows/py.exe"),
             ["C:/Windows/py.exe", "-3"],
         )
         self.assertEqual(
-            install_helper.invocation_prefix_for_live_probe("py -V:3", "C:/Python312/python.exe"),
+            runner_invocation.invocation_prefix_for_live_probe("py -V:3", "C:/Python312/python.exe"),
             ["py", "-3"],
         )
-        self.assertTrue(install_helper.allowed_python_executable("linux", "/usr/bin/python3.11"))
-        resolution, diagnostics = install_helper.resolve_python_interpreter(
+        self.assertTrue(runner_invocation.allowed_python_executable("linux", "/usr/bin/python3.11"))
+        resolution, diagnostics = runner_invocation.resolve_python_interpreter(
             "linux",
             {"candidate_results": [{"candidate": "bash", "returncode": 0, "version": "3.11.8", "resolved_executable": "bash"}]},
             "dist/codex/speckit-pro",
@@ -746,7 +746,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(resolution["failure_code"], "python_runtime_unavailable")
         self.assertEqual([diag["code"] for diag in diagnostics], ["python_runtime_unavailable"])
         self.assertIn("unsupported Python candidate", resolution["diagnostic"])
-        resolution, diagnostics = install_helper.resolve_python_interpreter(
+        resolution, diagnostics = runner_invocation.resolve_python_interpreter(
             "linux",
             {
                 "candidate_results": [
@@ -764,7 +764,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(resolution["failure_code"], "python_runtime_unavailable")
         self.assertEqual([diag["code"] for diag in diagnostics], ["python_runtime_unavailable"])
         self.assertIn("unsupported resolved executable", resolution["diagnostic"])
-        resolution, diagnostics = install_helper.resolve_python_interpreter(
+        resolution, diagnostics = runner_invocation.resolve_python_interpreter(
             "linux",
             {
                 "candidate_results": [
@@ -785,10 +785,10 @@ class GateFoundationTests(unittest.TestCase):
         self.assertIn("unsupported invocation prefix", resolution["diagnostic"])
         for prefix in [["python3", "-c"], ["python3", "bash"], ["python3", "-m"], ["py"], ["py", "-c"]]:
             with self.subTest(prefix=prefix):
-                self.assertFalse(install_helper.allowed_python_invocation_prefix("linux", prefix))
-        self.assertFalse(install_helper.allowed_python_invocation_prefix("windows", ["py", "-c"]))
-        self.assertTrue(install_helper.allowed_python_invocation_prefix("windows", ["py", "-3"]))
-        self.assertTrue(install_helper.allowed_python_invocation_prefix("linux", ["python3"]))
+                self.assertFalse(runner_invocation.allowed_python_invocation_prefix("linux", prefix))
+        self.assertFalse(runner_invocation.allowed_python_invocation_prefix("windows", ["py", "-c"]))
+        self.assertTrue(runner_invocation.allowed_python_invocation_prefix("windows", ["py", "-3"]))
+        self.assertTrue(runner_invocation.allowed_python_invocation_prefix("linux", ["python3"]))
         for payload_root in [
             REPO_ROOT / "dist" / "claude" / "speckit-pro",
             REPO_ROOT / "dist" / "codex" / "speckit-pro",
@@ -894,7 +894,7 @@ class GateFoundationTests(unittest.TestCase):
             self.assertEqual(runner_runtime.runtime_context(installed_root), "installed_payload")
         self.assertEqual(runner_runtime.runtime_context(PLUGIN_ROOT), "source_checkout")
 
-        runner_response, execution_diag = install_helper.execute_runner_runtime_info(
+        runner_response, execution_diag = runner_invocation.execute_runner_runtime_info(
             [sys.executable, "-m", "speckit_pro_runner"],
             record["runner_request"],
             REPO_ROOT,
@@ -925,7 +925,7 @@ class GateFoundationTests(unittest.TestCase):
                 "}}}))\n",
                 encoding="utf-8",
             )
-            runner_response, execution_diag = install_helper.execute_runner_runtime_info(
+            runner_response, execution_diag = runner_invocation.execute_runner_runtime_info(
                 [sys.executable, "-m", "speckit_pro_runner"],
                 record["runner_request"],
                 REPO_ROOT,
@@ -940,7 +940,7 @@ class GateFoundationTests(unittest.TestCase):
             package.mkdir(parents=True)
             (package / "__init__.py").write_text("", encoding="utf-8")
             (package / "__main__.py").write_text("print('[]')\n", encoding="utf-8")
-            runner_response, execution_diag = install_helper.execute_runner_runtime_info(
+            runner_response, execution_diag = runner_invocation.execute_runner_runtime_info(
                 [sys.executable, "-m", "speckit_pro_runner"],
                 record["runner_request"],
                 REPO_ROOT,
@@ -3105,8 +3105,45 @@ class GateFoundationTests(unittest.TestCase):
                                 "suite.py must not pass a command string to subprocess",
                             )
 
+class InstallInventoryLoaderTests(unittest.TestCase):
+    """The verify-install gate reads the install inventory through the doctor helpers' validated loader."""
+
+    # The committed location and the one before the inventory moved to the test fixtures.
+    INVENTORY_PATHS = ("tests/speckit-pro/unit/fixtures/install-inventory/install_inventory.json",
+                       "speckit-pro/speckit_pro_runner/install_inventory.json")
+
+    def inventory_root(self, path: str) -> Path:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+        for relative in self.INVENTORY_PATHS:
+            (root / relative).parent.mkdir(parents=True, exist_ok=True)
+            (root / relative).write_text(json.dumps({"files": [{"path": path, "content": "x", "sha256": "skip"}]}),
+                                         encoding="utf-8")
+        return root
+
+    def test_the_payload_gate_refuses_a_path_that_leaves_the_install_root(self) -> None:
+        from speckit_pro_runner.gates import payloads
+
+        for path in ("../escape.md", "/absolute.md", "agents/../../escape.md"):
+            with self.subTest(path=path):
+                result = payloads.load_install_inventory(self.inventory_root(path), {})
+                self.assertIsInstance(result, dict)
+                self.assertEqual(result["code"], "malformed_inventory")
+                self.assertIn("without traversal", result["message"])
+
+    def test_the_payload_gate_loads_the_committed_fixture_inventory(self) -> None:
+        from speckit_pro_runner.gates import payloads
+
+        records = payloads.load_install_inventory(REPO_ROOT, {})
+        self.assertIsInstance(records, list)
+        self.assertEqual([record["path"] for record in records],
+                         [record["path"] for record in json.loads((REPO_ROOT / self.INVENTORY_PATHS[0]).read_text())["files"]])
+
+
 if __name__ == "__main__":
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(GateFoundationTests)
+    suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(InstallInventoryLoaderTests))
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     total = result.testsRun
     failed = len(result.failures) + len(result.errors)
