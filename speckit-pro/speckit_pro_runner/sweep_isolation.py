@@ -23,6 +23,16 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any, Iterator
 
+from .atomic_write import snapshot_write_target, write_bytes_atomic
+from .sweep_export import (
+    SWEEP_SELF_REPLY_PREFIX,
+    SWEEP_TRUSTED_ASSOCIATIONS,
+    sweep_analyst_payload,
+    sweep_cut_utf8,
+    sweep_export_record,
+    sweep_logged_comment_ids,
+)
+
 
 MAX_BLOB_BYTES = 256 * 1024
 MAX_SNAPSHOT_BYTES = 16 * 1024 * 1024
@@ -429,16 +439,6 @@ def default_state_root() -> Path:
     return Path(tempfile.gettempdir()) / f"speckit-pro-feedback-sweep-{uid}"
 
 
-def _bounded_comment_body(body: str) -> tuple[str, bool]:
-    raw = body.encode("utf-8")
-    if len(raw) <= MAX_COMMENT_BYTES:
-        return body, False
-    end = MAX_COMMENT_BYTES
-    while end > 0 and (raw[end] & 0xC0) == 0x80:
-        end -= 1
-    return raw[:end].decode("utf-8"), True
-
-
 def _run_gh(args: list[str], repo_root: Path) -> str:
     executable = shutil.which("gh")
     if executable is None:
@@ -509,7 +509,7 @@ def _review_comment_record(node: Any) -> dict[str, Any]:
     body = node.get("body")
     if not isinstance(body, str):
         raise CaptureViolation("review thread comment has no body")
-    bounded, truncated = _bounded_comment_body(body)
+    bounded, truncated = sweep_cut_utf8(body, MAX_COMMENT_BYTES)
     return {
         "id": node.get("id"),
         "surface": "review_thread",
@@ -623,7 +623,7 @@ def read_github_comments(
             if not isinstance(node, dict) or not isinstance(node.get("body"), str):
                 raise CaptureViolation("pull-request conversation comment is malformed")
             user = node.get("user")
-            bounded, truncated = _bounded_comment_body(node["body"])
+            bounded, truncated = sweep_cut_utf8(node["body"], MAX_COMMENT_BYTES)
             conversation_comments.append(
                 {
                     "id": node.get("node_id"),
@@ -661,13 +661,6 @@ def capture_session_from_comments(
     """Filter one complete private observation before creating a model session."""
     if not isinstance(self_login, str) or not self_login.strip():
         raise CaptureViolation("authenticated GitHub login is required")
-    from .helpers.read_only import (
-        SWEEP_SELF_REPLY_PREFIX,
-        SWEEP_TRUSTED_ASSOCIATIONS,
-        sweep_export_record,
-        sweep_logged_comment_ids,
-    )
-
     snapshot = GitSnapshot.capture(repo_root)
     logged, unreadable_row = sweep_logged_comment_ids(_workflow_text(snapshot, workflow_file))
     if unreadable_row is not None:
@@ -1195,8 +1188,6 @@ class SweepSession:
         with self._locked_state() as state:
             self._assert_live_head(state)
             comment = self._comment(state, comment_id)
-            from .helpers.read_only import sweep_analyst_payload, sweep_export_record
-
             normalized = comment["body"].replace("\r\n", "\n").replace("\r", "\n")
             export = sweep_export_record(normalized)
             matched_lines = [] if export is None else export["matched_lines"]
@@ -1602,8 +1593,6 @@ def apply_synthesis_receipt(
         if current_head(root) != result["head"]:
             raise MutationViolation("repository HEAD changed during mutation validation")
         try:
-            from .helpers.mutation import snapshot_write_target, write_bytes_atomic
-
             expected = snapshot_write_target(target, root)
             if expected.get("digest") != live_digest:
                 raise MutationViolation("artifact changed during mutation validation")

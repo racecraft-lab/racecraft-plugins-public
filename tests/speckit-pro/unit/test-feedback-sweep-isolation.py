@@ -1313,7 +1313,7 @@ class SurfaceConfinementTests(unittest.TestCase):
         self.assertIn("sweep-apply-result", registry.MUTATION_HELPERS)
         entry = registry.MUTATION_HELPERS["sweep-apply-result"]
         self.assertEqual(("dry_run", "apply"), entry.modes)
-        implementation = (PLUGIN_ROOT / "speckit_pro_runner/helpers/read_only.py").read_text(
+        implementation = (PLUGIN_ROOT / "speckit_pro_runner/helpers/feedback_sweep.py").read_text(
             encoding="utf-8"
         )
         self.assertIn('"launch_claude"', implementation)
@@ -1321,7 +1321,7 @@ class SurfaceConfinementTests(unittest.TestCase):
     def test_runner_exposes_a_bounded_private_session_close_surface(self) -> None:
         source = read_only.sweep_isolation_session.__doc__ or ""
         self.assertIn("private", source)
-        implementation = (PLUGIN_ROOT / "speckit_pro_runner/helpers/read_only.py").read_text(
+        implementation = (PLUGIN_ROOT / "speckit_pro_runner/helpers/feedback_sweep.py").read_text(
             encoding="utf-8"
         )
         self.assertIn('"close"', implementation)
