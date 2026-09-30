@@ -23,6 +23,7 @@ for import_root in (PLUGIN_ROOT, LIB_DIR):
     if str(import_root) not in sys.path:
         sys.path.insert(0, str(import_root))
 
+from guide_text import host_source  # noqa: E402
 from speckit_pro_runner.agent_inventory import AGENT_INVENTORY  # noqa: E402
 from speckit_pro_runner.codex_agent_generator import (  # noqa: E402
     generated_codex_files,
@@ -388,14 +389,9 @@ POST_ROW = re.compile(r'^\s*"(Post: [^"]+)"', re.M)
 CODEX_ONLY_POST_ROWS = ["Post: Final Reviewability Backstop", "Post: PR Packet/Body Generation"]
 
 
-def host_view(relative: str, host: str) -> str:
-    """One shared plugin file as `host` receives it."""
-    return emit_host((PLUGIN_ROOT / relative).read_text(encoding="utf-8"), host)
-
-
 def canonical_post_rows(host: str) -> list[str]:
     """`host`'s Post rows: the first fenced list in its canonical task list that names Retrospective."""
-    text = host_view("skills/speckit-autopilot/references/task-list-canonical.md", host)
+    text = host_source("skills/speckit-autopilot/references/task-list-canonical.md", host)
     fence = next(block for block in text.split("```")[1::2] if '"Post: Retrospective"' in block)
     return POST_ROW.findall(fence)
 
@@ -412,11 +408,11 @@ class PostPlanParityTests(unittest.TestCase):
         self.assertEqual(self.codex, self.claude[:at] + CODEX_ONLY_POST_ROWS + self.claude[at:])
 
     def test_every_stated_codex_row_count_matches_the_list(self) -> None:
-        skill = host_view("skills/speckit-autopilot/SKILL.md", "codex")
+        skill = host_source("skills/speckit-autopilot/SKILL.md", "codex")
         evals = (REPO_ROOT / "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json").read_text(encoding="utf-8")
         counts = [int(n) for n in re.findall(r"(\d+) mandatory (?:Post )?rows", skill)]
         counts += [int(n) for n in re.findall(r"keeps all (\d+) Post items", evals)]
-        reference = host_view("skills/speckit-autopilot/references/task-list-canonical.md", "codex")
+        reference = host_source("skills/speckit-autopilot/references/task-list-canonical.md", "codex")
         counts += [int(n) for n in re.findall(r"(\d+)-row combined", reference)]
         self.assertGreaterEqual(len(counts), 4, "no stated count found; the check would pass on nothing")
         self.assertEqual(set(counts), {len(self.codex)})

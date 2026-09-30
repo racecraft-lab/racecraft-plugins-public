@@ -45,6 +45,7 @@ for entry in (PLUGIN_ROOT, REPO_ROOT / "tests" / "speckit-pro" / "lib"):
     if str(entry) not in sys.path:
         sys.path.insert(0, str(entry))
 
+from host_skill_views import host_skill_root  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 from speckit_pro_runner.execution_control import execution_control, record_failing_checks  # noqa: E402
@@ -423,8 +424,6 @@ class FinalizeRunTests(_LedgerFixture, unittest.TestCase):
         from speckit_pro_runner.helpers.run_finalization import HARNESS_RETRY_BUDGET
 
         words = {2: "two", 3: "three", 4: "four", 5: "five"}
-        from host_skill_views import host_skill_root
-
         for host in ("claude", "codex"):
             reference = host_skill_root(host) / "speckit-autopilot/references/phase-execution.md"
             with self.subTest(host=host):

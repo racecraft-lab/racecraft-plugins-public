@@ -18,6 +18,7 @@ TEST_ROOT = REPO_ROOT / "tests" / "speckit-pro"
 sys.path.insert(0, str(REPO_ROOT / "speckit-pro"))
 sys.path.insert(0, str(TEST_ROOT / "lib"))
 
+from guide_text import host_source  # noqa: E402
 from native_eval_catalog import load_catalog  # noqa: E402
 from native_eval_fixture_setup import materialize_workspace  # noqa: E402
 from speckit_pro_runner.helpers.read_only import atomicity_route  # noqa: E402
@@ -101,8 +102,6 @@ class AtomicityAdditiveRoutingTests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout)["status"], "ok")
-        from guide_text import host_source
-
         for path, host in (
             ("skills/speckit-autopilot/SKILL.md", "claude"),
             ("skills/speckit-autopilot/SKILL.md", "codex"),

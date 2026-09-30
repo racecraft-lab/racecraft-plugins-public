@@ -364,14 +364,10 @@ class ImplementationNotesRecordTests(unittest.TestCase):
         cls.bodies = {}
         cls.labels = {}
         for key, (relative_path, heading) in TARGETS.items():
-            host = HOST_VIEWS.get(key)
-            if (relative_path, host) not in raw:
-                raw[relative_path, host] = (
-                    (REPO_ROOT / relative_path).read_text(encoding="utf-8") if host is None
-                    else host_source(relative_path.removeprefix("speckit-pro/"), host)
-                )
-            source = raw[relative_path, host]
-            text = source if heading is None else _section(source, heading)
+            view = (relative_path, HOST_VIEWS.get(key))
+            if view not in raw:
+                raw[view] = host_source(relative_path.removeprefix("speckit-pro/"), view[1])
+            text = raw[view] if heading is None else _section(raw[view], heading)
             cls.bodies[key] = _normalize(text)
             cls.labels[key] = relative_path if heading is None else f"{relative_path} §{heading}"
 
