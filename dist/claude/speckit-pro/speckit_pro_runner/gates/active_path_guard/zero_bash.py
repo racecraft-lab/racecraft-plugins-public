@@ -55,7 +55,7 @@ PLUGIN_BASH_CONFINEMENT_ALLOWLIST = "tests/speckit-pro/unit/fixtures/plugin-bash
 PLUGIN_BASH_CONFINEMENT_REQUIRED_SCAN_ROOTS = frozenset(
     {
         "speckit-pro",
-        "scripts/build-plugin-payloads.py",
+        "scripts/refresh-release-artifacts.py",
         "dist/claude/speckit-pro",
         "dist/codex/speckit-pro",
         "README.md",

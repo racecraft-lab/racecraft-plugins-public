@@ -15,7 +15,12 @@ from typing import Any, Callable
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
 from preflight_architecture import architecture_family as _architecture_family  # noqa: E402
-from preflight_architecture import resolve_architectures  # noqa: E402
+from evidence_files import write_json as _write_json  # noqa: E402
+from preflight_interpreters import (  # noqa: E402
+    INTERPRETER_CANDIDATES,
+    probe_interpreters,
+    same_executable,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 HOSTED_PYTHON_VERSION = "3.13.14"
@@ -40,25 +45,6 @@ WINDOWS_ROLE_ARCHITECTURES = {
     "windows-x64": "x64",
     "windows-arm64": "arm64",
 }
-INTERPRETER_CANDIDATES = (
-    "py -V:3",
-    "py -3",
-    "python",
-    "python3",
-)
-INTERPRETER_PROBE_CODE = (
-    "import json,os,platform,sys;"
-    "print(json.dumps({"
-    "'major':sys.version_info.major,"
-    "'minor':sys.version_info.minor,"
-    "'micro':sys.version_info.micro,"
-    "'executable':sys.executable,"
-    "'machine':platform.machine(),"
-    "'processor_architecture':os.environ.get('PROCESSOR_ARCHITECTURE',''),"
-    "'processor_architew6432':os.environ.get('PROCESSOR_ARCHITEW6432','')"
-    "},separators=(',',':')))"
-)
-
 HEAVY_PATH_PREFIXES = (
     "speckit-pro/speckit_pro_runner/",
     "tests/speckit-pro/",
@@ -109,15 +95,6 @@ LINUX_REQUESTS = (
 
 class PreflightError(RuntimeError):
     """A fail-closed preflight dispatch error."""
-
-
-def _write_json(path: Path, payload: Any) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(payload, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
-        + "\n",
-        encoding="utf-8",
-    )
 
 
 def _write_text(path: Path, value: str) -> None:
@@ -493,198 +470,12 @@ def _windows_availability() -> int:
     return 0
 
 
-def _interpreter_slug(candidate: str) -> str:
-    return {
-        "py -V:3": "py-V-3",
-        "py -3": "py-3",
-        "python": "python",
-        "python3": "python3",
-    }[candidate]
-
-
-def _probe_interpreter(
-    candidate: str,
-    expected_architecture: str,
-    evidence_dir: Path,
-) -> dict[str, Any]:
-    slug = _interpreter_slug(candidate)
-    executable_name = "py" if candidate.startswith("py ") else candidate
-    executable_path = shutil.which(executable_name)
-    record: dict[str, Any] = {
-        "candidate": candidate,
-        "command": executable_path or "",
-        "exit_code": 127,
-        "supported": False,
-        "selected": False,
-        "status": "missing",
-    }
-    stdout_path = evidence_dir / f"probe-{slug}.json"
-    stderr_path = evidence_dir / f"probe-{slug}.stderr.txt"
-    exit_path = evidence_dir / f"probe-{slug}.exit-code.txt"
-    if executable_path is None:
-        _write_text(stdout_path, "")
-        _write_text(stderr_path, f"{executable_name} was not found on PATH\n")
-        _write_text(exit_path, "127\n")
-        return record
-
-    try:
-        if candidate == "py -V:3":
-            completed = subprocess.run(
-                ["py", "-V:3", "-c", INTERPRETER_PROBE_CODE],
-                cwd=REPO_ROOT,
-                capture_output=True,
-                text=True,
-                check=False,
-                shell=False,
-                timeout=120,
-            )
-        elif candidate == "py -3":
-            completed = subprocess.run(
-                ["py", "-3", "-c", INTERPRETER_PROBE_CODE],
-                cwd=REPO_ROOT,
-                capture_output=True,
-                text=True,
-                check=False,
-                shell=False,
-                timeout=120,
-            )
-        elif candidate == "python":
-            completed = subprocess.run(
-                ["python", "-c", INTERPRETER_PROBE_CODE],
-                cwd=REPO_ROOT,
-                capture_output=True,
-                text=True,
-                check=False,
-                shell=False,
-                timeout=120,
-            )
-        elif candidate == "python3":
-            completed = subprocess.run(
-                ["python3", "-c", INTERPRETER_PROBE_CODE],
-                cwd=REPO_ROOT,
-                capture_output=True,
-                text=True,
-                check=False,
-                shell=False,
-                timeout=120,
-            )
-        else:
-            raise PreflightError(f"unsupported interpreter candidate: {candidate}")
-    except (OSError, subprocess.TimeoutExpired) as exc:
-        _write_text(stdout_path, "")
-        _write_text(stderr_path, f"{type(exc).__name__}: {exc}\n")
-        _write_text(exit_path, "124\n")
-        record.update(
-            {
-                "exit_code": 124,
-                "status": "probe_error",
-                "error_type": type(exc).__name__,
-            }
-        )
-        return record
-
-    _write_text(stdout_path, completed.stdout)
-    _write_text(stderr_path, completed.stderr)
-    _write_text(exit_path, f"{completed.returncode}\n")
-    record["exit_code"] = completed.returncode
-    if completed.returncode != 0:
-        record["status"] = "probe_failed"
-        return record
-
-    try:
-        payload = json.loads(completed.stdout)
-    except (TypeError, json.JSONDecodeError):
-        record["status"] = "invalid_probe"
-        return record
-    if not isinstance(payload, dict):
-        record["status"] = "invalid_probe"
-        return record
-
-    major = payload.get("major")
-    minor = payload.get("minor")
-    micro = payload.get("micro")
-    version_supported = (
-        type(major) is int
-        and type(minor) is int
-        and type(micro) is int
-        and (major > 3 or (major == 3 and minor >= 11))
-    )
-    architectures = resolve_architectures(
-        str(payload.get("machine") or ""),
-        str(payload.get("processor_architecture") or ""),
-        str(payload.get("processor_architew6432") or ""),
-    )
-    process_architecture = architectures.process
-    native_architecture = architectures.native
-    process_family = architectures.process_family
-    native_family = architectures.native_family
-    architecture_emulated = architectures.emulated
-    architecture_supported = all(
-        (
-            process_family == expected_architecture,
-            native_family == expected_architecture,
-            not architecture_emulated,
-        )
-    )
-    interpreter = str(payload.get("executable") or "")
-    supported = version_supported and architecture_supported and bool(interpreter)
-    record.update(
-        {
-            "status": "supported" if supported else "rejected",
-            "supported": supported,
-            "version": (
-                f"{major}.{minor}.{micro}"
-                if all(type(item) is int for item in (major, minor, micro))
-                else ""
-            ),
-            "interpreter": interpreter,
-            "architecture": process_architecture,
-            "architecture_family": process_family,
-            "native_architecture": native_architecture,
-            "native_architecture_family": native_family,
-            "architecture_family_expected": expected_architecture,
-            "architecture_emulated": architecture_emulated,
-        }
-    )
-    return record
-
-
-def _probe_interpreters(
-    role: str,
-    evidence_dir: Path,
-) -> tuple[dict[str, Any] | None, list[dict[str, Any]]]:
-    expected_architecture = WINDOWS_ROLE_ARCHITECTURES[role]
-    records = [
-        _probe_interpreter(candidate, expected_architecture, evidence_dir)
-        for candidate in INTERPRETER_CANDIDATES
-    ]
-    selected = next(
-        (
-            record
-            for record in records
-            if record["supported"]
-            and _same_executable(str(record["interpreter"]), sys.executable)
-        ),
-        None,
-    )
-    for record in records:
-        record["selected"] = record is selected
-    _write_json(evidence_dir / "interpreter-probes.json", records)
-    return selected, records
-
-
-def _same_executable(left: str, right: str) -> bool:
-    return os.path.normcase(os.path.abspath(left)) == os.path.normcase(
-        os.path.abspath(right)
-    )
-
-
 def _run_selected_windows_helper(
     interpreter: str,
     arguments: list[str],
     child_env: dict[str, str],
 ) -> subprocess.CompletedProcess[Any]:
-    if not _same_executable(interpreter, sys.executable):
+    if not same_executable(interpreter, sys.executable):
         raise PreflightError("probed interpreter does not match the active Python")
     return subprocess.run(
         [sys.executable, *arguments],
@@ -703,7 +494,7 @@ def _windows_smoke() -> int:
         raise PreflightError(f"unsupported Windows role: {role}")
     evidence_dir = _evidence_dir()
     evidence_dir.mkdir(parents=True, exist_ok=True)
-    selected_record, probe_records = _probe_interpreters(role, evidence_dir)
+    selected_record, probe_records = probe_interpreters(WINDOWS_ROLE_ARCHITECTURES[role], evidence_dir, cwd=REPO_ROOT)
     if selected_record is None:
         _write_json(
             evidence_dir / "summary.json",
