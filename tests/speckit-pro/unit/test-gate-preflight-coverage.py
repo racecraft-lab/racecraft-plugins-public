@@ -251,6 +251,32 @@ class WritableRootCoverageTests(unittest.TestCase):
         self.assertTrue(data["private_record_dir"].endswith("speckit-pro/autonomy-boundary"))
 
 
+DISCOVERY_TABLE = PLUGIN_ROOT / "speckit_pro_runner" / "gate_discovery_table.json"
+# Spellings beyond the table: the hyphenated tool names, and commands that only look like audits.
+EXTRA_EGRESS_CASES = {
+    "cargo-audit --deny warnings": True,
+    "bundle-audit check": True,
+    "govulncheck ./...": True,
+    "npm test": False,
+    "go vet ./...": False,
+    "cargo build": False,
+    "echo govulncheck": False,
+}
+
+
+class EgressAuditCommandTests(unittest.TestCase):
+    def test_egress_pattern_matches_every_shipped_audit_and_nothing_else(self) -> None:
+        from speckit_pro_runner.helpers.gate_preflight_coverage import EGRESS_COMMAND
+
+        rows = json.loads(DISCOVERY_TABLE.read_text(encoding="utf-8"))["rows"]
+        audits = [" ".join(row["command"].split()) for row in rows if row["slot"] == "DEPENDENCY_AUDIT"]
+        self.assertTrue(audits)
+        cases = {**dict.fromkeys(audits, True), **EXTRA_EGRESS_CASES}
+        for command, expected in cases.items():
+            with self.subTest(command=command):
+                self.assertEqual(EGRESS_COMMAND.fullmatch(command) is not None, expected)
+
+
 if __name__ == "__main__":
     suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])
     raise SystemExit(run_counted(suite, label="test-gate-preflight-coverage"))

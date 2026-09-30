@@ -17,7 +17,6 @@ guard the validator locates the private record by the state's
 from __future__ import annotations
 
 import copy
-import importlib.util
 import json
 import shutil
 import subprocess
@@ -33,24 +32,14 @@ FIXTURE_ROOT = TEST_ROOT / "evals" / "fixtures" / "functional" / "autonomy-bound
 sys.path.insert(0, str(TEST_ROOT / "lib"))
 
 from test_result import run_counted  # noqa: E402
+from autonomy_boundary_fixture import (  # noqa: E402
+    AUTONOMY_RUN_ID as RUN_ID,
+    autonomy_public_receipt,
+    digest,
+    write_autonomy_private_record,
+)
 
-
-def _load_coverage_tests() -> object:
-    """Reuse the receipt projection and validator loader instead of copying them."""
-    path = TEST_ROOT / "unit" / "test-autopilot-phase-coverage.py"
-    spec = importlib.util.spec_from_file_location("autopilot_phase_coverage_builders", path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError("could not load the phase-coverage test builders")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-BUILDERS = _load_coverage_tests()
-VALIDATOR = BUILDERS.VALIDATOR
-canonical_sha256 = BUILDERS.VALIDATOR_MODULE._canonical_json_sha256
-sha256_bytes = BUILDERS.VALIDATOR_MODULE._sha256_bytes
-RUN_ID = BUILDERS.AUTONOMY_RUN_ID
+VALIDATOR = REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot" / "scripts" / "validate-autopilot-phase-coverage.py"
 EXECUTION_FIELDS = ("execution_environment", "sandbox_mode", "approval_reviewer", "writable_roots")
 ACTION_FIELDS = ("category", "command_or_tool", "target", "effect", "execution_boundary_sha256")
 
@@ -86,20 +75,20 @@ class AutonomyBoundaryReceiptReplayTests(unittest.TestCase):
             path = token.split(":", 1)[1]
             content = (root / path).read_bytes()
             record["planning_fingerprints"][label] = {
-                "path": path, "sha256": sha256_bytes(content), "size_bytes": len(content)}
+                "path": path, "sha256": digest(content), "size_bytes": len(content)}
         execution = record["execution_boundary"]
         execution["writable_roots"] = sorted(execution["writable_roots"])
-        execution["sha256"] = canonical_sha256({key: execution[key] for key in EXECUTION_FIELDS})
+        execution["sha256"] = digest({key: execution[key] for key in EXECUTION_FIELDS})
         for action in record["actions"]:
             action["execution_boundary_sha256"] = execution["sha256"]
-            action["scope_sha256"] = canonical_sha256({key: action[key] for key in ACTION_FIELDS})
+            action["scope_sha256"] = digest({key: action[key] for key in ACTION_FIELDS})
             action["authorization"]["scope_sha256"] = action["scope_sha256"]
         return record
 
     def replay(self, case: dict, tamper: dict) -> tuple[bool, int, list[str]]:
         root = self.stage()
         record = self.private_record(root)
-        receipt = BUILDERS.autonomy_public_receipt(record)
+        receipt = autonomy_public_receipt(record)
         if case["private_record"] == "tampered":
             changed = copy.deepcopy(record)
             *parents, leaf = tamper["private_record_field"]
@@ -110,7 +99,7 @@ class AutonomyBoundaryReceiptReplayTests(unittest.TestCase):
             record = changed
         elif case["private_record"] == "receipt-rewritten":
             receipt["private_record_sha256"] = "sha256:" + "0" * 64
-        private_path = BUILDERS.write_autonomy_private_record(root, record, RUN_ID)
+        private_path = write_autonomy_private_record(root, record, RUN_ID)
         if case["private_record"] == "missing":
             private_path.unlink()
         elif case["private_record"] == "unreadable":
@@ -133,7 +122,7 @@ class AutonomyBoundaryReceiptReplayTests(unittest.TestCase):
             stored = json.loads(private_path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             stored = None
-        matches = stored is not None and canonical_sha256(stored) == receipt["private_record_sha256"]
+        matches = stored is not None and digest(stored) == receipt["private_record_sha256"]
         if case["private_record"] in ("unlocatable", "symlinked"):
             matches = False
         command = [sys.executable, str(VALIDATOR), "--workflow", str(root / "workflow.md"),
