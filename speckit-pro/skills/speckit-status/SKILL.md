@@ -30,7 +30,9 @@ stdin, read one JSON response from stdout, and surface stderr diagnostics.
 Do not add a shell fallback, `jq` parsing path, Git Bash, WSL, or
 PowerShell-specific command-language requirement for installed workflows.
 
+<!-- host:claude: allowed-tools frontmatter exists only in the Claude rendering -->
 The frontmatter `allowed-tools` pre-approves only `Read`, `Glob` and `Grep`.
+<!-- /host -->
 The runner helper calls below (`generate-spec-index-check`, `o5-topology`) are
 not pre-approved: they follow the session's permissions and may prompt. If a
 call is denied, say so and continue the dashboard without that section.
