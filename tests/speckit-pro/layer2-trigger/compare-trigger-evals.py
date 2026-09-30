@@ -12,10 +12,23 @@ import trigger_comparison as comparison
 from trigger_evidence import write_json_once
 
 
+def rebind_identities(path: Path) -> dict:
+    """Replace each identity digest in a draft with the current one, changing nothing else."""
+    text = path.read_text(encoding="utf-8")
+    current = comparison.snapshot_identities(comparison.measurement_snapshot())
+    for key, old in json.loads(text)["identities"].items():
+        comparison._require(text.count(old) == 1, f"{key} identity digest is not unique in the draft")
+        text = text.replace(old, current[key])
+    path.write_text(text, encoding="utf-8")
+    return {"rebound": True, "identities": current}
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("snapshot", help="Print current public observer/catalog/fixture identities")
+    rebind = commands.add_parser("rebind", help="Rewrite a draft manifest's identities to the current tree, in place")
+    rebind.add_argument("--manifest", type=Path, required=True)
     validate = commands.add_parser("validate", help="Validate a draft manifest and pinned inventory without providers")
     validate.add_argument("--manifest", type=Path, required=True)
     validate.add_argument("--inventory", type=Path, required=True)
@@ -36,6 +49,8 @@ def main(argv=None) -> int:
         if args.command == "snapshot":
             snapshot = comparison.measurement_snapshot()
             result = {"identities": comparison.snapshot_identities(snapshot), "input_snapshot": snapshot}
+        elif args.command == "rebind":
+            result = rebind_identities(args.manifest)
         elif args.command == "validate":
             manifest = comparison.read_json(args.manifest)
             cases = comparison.validate_inventory_binding(manifest, comparison.read_json(args.inventory))

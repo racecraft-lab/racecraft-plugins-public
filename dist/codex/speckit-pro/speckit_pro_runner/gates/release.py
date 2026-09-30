@@ -12,6 +12,7 @@ from typing import Any
 
 from ..envelope import SUPPORTED_RUNNER_OPERATIONS, diagnostic, is_diagnostic, response
 from ..path_utils import find_repo_root
+from ..pr_contract import GATE_TITLE_PATTERN
 from .gate_response import gate_base_data
 
 INSTALLED_RELEASE_CHECK_IDS = {
@@ -106,7 +107,7 @@ def run_release_gate(entry: Any, request: Any) -> dict[str, Any]:
     title = os.environ.get(title_env, "")
     check = check_record(
         "validate-pr-title",
-        re.match(r"^(feat|fix|chore|docs|test|refactor)\([a-z0-9-]+\): .+", title) is not None,
+        re.match(GATE_TITLE_PATTERN, title) is not None,
         [title or "missing title"],
     )
     status = "ok" if check["status"] == "pass" else "expected_failure"
