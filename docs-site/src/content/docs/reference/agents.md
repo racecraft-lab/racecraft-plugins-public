@@ -352,7 +352,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 ### Phase Executor
 
-- **Purpose:** Executes a single SpecKit phase by running the /speckit-* command via the Skill tool.
+- **Purpose:** Executes a single SpecKit phase by running its speckit-* command as a loaded skill.
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro phase-executor agent
 - **Claude Code:** plugin agent (required)

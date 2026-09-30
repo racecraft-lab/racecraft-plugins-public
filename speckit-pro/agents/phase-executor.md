@@ -1,8 +1,8 @@
 ---
 name: phase-executor
 description: >
-  Executes a single SpecKit phase by running the /speckit-* command
-  via the Skill tool. Use when the autopilot needs to run Specify,
+  Executes a single SpecKit phase by running its speckit-* command
+  as a loaded skill. Use when the autopilot needs to run Specify,
   Plan, or Tasks. Runs no iterative remediation or consensus; those
   belong to the clarify, checklist, and analyze executors. Returns a
   concise summary of files created, metrics, markers found, and errors.
