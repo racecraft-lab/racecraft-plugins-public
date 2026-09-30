@@ -15,8 +15,11 @@ sys.path.insert(0, str(TEST_ROOT / "lib"))
 import native_eval_adapter_common as adapter_common  # noqa: E402
 import native_eval_claude_adapter as claude_adapter  # noqa: E402
 import native_eval_codex_adapter as codex_adapter  # noqa: E402
+import native_eval_codex_rollouts as rollouts  # noqa: E402
+import native_eval_execution as execution  # noqa: E402
 import native_eval_fixture_setup as fixture_setup  # noqa: E402
 import native_eval_store as store  # noqa: E402
+import native_eval_toolchain as toolchain  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 CONSTANTS = ("NaN", "Infinity", "-Infinity")
@@ -118,6 +121,54 @@ class NonFiniteConstantTests(unittest.TestCase):
                     os.chmod(payload, 0o600)
                     with self.assertRaisesRegex(error, pattern):
                         read(root, payload)
+
+
+class DuplicateKeyTests(unittest.TestCase):
+    """Evidence the eval reads back is strict: a duplicate key is the only defect."""
+
+    DUPLICATE = '{"type":"error","type":"other"}'
+
+    def test_stored_artifact_manifest_rejects_a_duplicate_key(self) -> None:
+        attempt = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
+        (attempt / "manifest.json").write_text(
+            '{"schema":"native-artifact-manifest/v1","entries":[],"entries":[]}', encoding="utf-8")
+        case = {"checks": [{"type": "file_exists", "path": "out.txt"}]}
+        refs = {"artifact_manifest": {"path": "manifest.json"}}
+        with self.assertRaisesRegex(ValueError, "duplicate JSON key"):
+            execution._restore_artifacts(case, {}, refs, attempt, attempt)
+
+    def test_native_error_scan_skips_a_line_with_a_duplicate_key(self) -> None:
+        trace = '{"type":"error","message":"rate limit","message":"fine"}'
+        raw = types.SimpleNamespace(stderr="", raw_trace=trace)
+        self.assertIsNone(execution._native_error_text(raw))
+        ok = types.SimpleNamespace(stderr="", raw_trace='{"type":"error","message":"rate limit"}')
+        self.assertEqual(execution._native_error_text(ok), ("rate limit", "native_error"))
+
+    def test_rollout_records_reject_a_duplicate_key(self) -> None:
+        with self.assertRaisesRegex(ValueError, "duplicate JSON key"):
+            execution._rollout_timeline({"root": self.DUPLICATE.encode()}, set(), "root")
+        with self.assertRaisesRegex(ValueError, "duplicate JSON key"):
+            execution._rebind_codex_root_tool_ids([], self.DUPLICATE.encode(), "root", "/work")
+
+    def test_running_session_response_ignores_a_duplicate_key_object(self) -> None:
+        session = ('{"chunk_id":"c","wall_time_seconds":1,"session_id":7,'
+                   '"original_token_count":1,"output":"x"}')
+        output = [{"type": "input_text", "text": session}]
+        self.assertEqual(rollouts._running_session_id(output), 7)
+        duplicate = session.replace('"session_id":7,', '"session_id":7,"session_id":8,')
+        self.assertIsNone(rollouts._running_session_id(
+            [{"type": "input_text", "text": duplicate}]))
+
+    def test_distribution_direct_url_rejects_a_duplicate_key(self) -> None:
+        site = Path(self.enterContext(tempfile.TemporaryDirectory())) / "site-packages"
+        root = site / "specify_cli-1.0.dist-info"
+        root.mkdir(parents=True, mode=0o700)
+        (root / "METADATA").write_text("Name: specify-cli\nVersion: 1.0\n", encoding="utf-8")
+        (root / "direct_url.json").write_text('{"url":"a","url":"b"}', encoding="utf-8")
+        for path in (site, root, root / "METADATA", root / "direct_url.json"):
+            os.chmod(path, 0o700 if path.is_dir() else 0o600)
+        with self.assertRaisesRegex(toolchain.NativeToolchainError, "metadata is malformed"):
+            toolchain._specify_distribution_receipt(site)
 
 
 if __name__ == "__main__":
