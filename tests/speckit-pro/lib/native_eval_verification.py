@@ -8,6 +8,8 @@ from pathlib import PurePosixPath
 import re
 from typing import Any, Callable, Mapping
 
+import native_eval_strict_json as strict_json
+
 
 CHECK_FIELDS = frozenset({"workflow_file", "command_id", "pointer_path", "reusable"})
 POINTER_SCHEMA = "native-eval-verification-pointer/v1"
@@ -40,6 +42,11 @@ _COMMAND_ID = re.compile(r"[A-Z][A-Z0-9_]*")
 
 class VerificationError(ValueError):
     """Raised when native verification evidence cannot be authenticated."""
+
+
+_RECEIPT_BINDING = strict_json.ReceiptBinding(
+    "controller_verification", RECEIPT_SCHEMA, RECEIPT_AUTHORITY, VerificationError,
+)
 
 
 def _need(condition: bool, message: str) -> None:
@@ -76,18 +83,6 @@ def verification_checks(case: Mapping[str, object]) -> list[Mapping[str, object]
             and check.get("type") == "native_verification_pointer"]
 
 
-def pointer_artifacts(case: Mapping[str, object]) -> tuple[str, ...]:
-    """Return the configured subject-emission pointers that must be captured."""
-
-    result = []
-    for check in verification_checks(case):
-        validate_check(check, "native_verification_pointer check")
-        path = str(check["pointer_path"])
-        if path not in result:
-            result.append(path)
-    return tuple(result)
-
-
 def _evidence_directory(workflow_file: str) -> PurePosixPath:
     """Mirror the runner: a workflow already in `.process` keeps evidence in `verification/`."""
 
@@ -107,70 +102,17 @@ def record_directories(case: Mapping[str, object]) -> tuple[str, ...]:
     return tuple(result)
 
 
-def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-    value: dict[str, Any] = {}
-    for key, item in pairs:
-        if key in value:
-            raise VerificationError(f"duplicate JSON key: {key}")
-        value[key] = item
-    return value
-
-
 def _loads(text: str | bytes, label: str) -> Any:
-    try:
-        return json.loads(
-            text, object_pairs_hook=_unique_object,
-            parse_constant=lambda token: (_ for _ in ()).throw(
-                VerificationError(f"invalid JSON constant: {token}")),
-        )
-    except (UnicodeError, json.JSONDecodeError, VerificationError, RecursionError) as exc:
-        raise VerificationError(f"{label} is malformed JSON") from exc
-
-
-def _strict_equal(left: object, right: object) -> bool:
-    if type(left) is not type(right):
-        return False
-    if isinstance(left, dict):
-        return left.keys() == right.keys() and all(
-            _strict_equal(left[key], right[key]) for key in left
-        )
-    if isinstance(left, list):
-        return len(left) == len(right) and all(
-            _strict_equal(a, b) for a, b in zip(left, right, strict=True)
-        )
-    return left == right
-
-
-def _output_text(output: object) -> str:
-    if isinstance(output, str):
-        return output
-    _need(isinstance(output, list) and all(
-        isinstance(item, Mapping) and item.get("type") == "text"
-        and isinstance(item.get("text"), str) for item in output
-    ), "native verification output is malformed")
-    return "".join(str(item["text"]) for item in output)
+    return strict_json.loads(text, error=VerificationError, label=f"{label} is malformed JSON")
 
 
 def _json_stream(output: object) -> list[object]:
-    text = _output_text(output)
-    decoder = json.JSONDecoder(
-        object_pairs_hook=_unique_object,
-        parse_constant=lambda token: (_ for _ in ()).throw(
-            VerificationError(f"invalid JSON constant: {token}")),
+    text = strict_json.output_text(
+        output, error=VerificationError, message="native verification output is malformed",
     )
-    values: list[object] = []
-    position = 0
-    try:
-        while position < len(text):
-            while position < len(text) and text[position].isspace():
-                position += 1
-            if position == len(text):
-                break
-            value, position = decoder.raw_decode(text, position)
-            values.append(value)
-    except (json.JSONDecodeError, VerificationError, RecursionError) as exc:
-        raise VerificationError("native verification output is truncated or malformed") from exc
-    return values
+    return strict_json.stream(
+        text, error=VerificationError, label="native verification output is truncated or malformed",
+    )
 
 
 def parse_runner_result(output: object) -> dict[str, Any]:
@@ -221,9 +163,7 @@ def parse_runner_result(output: object) -> dict[str, Any]:
     record_path = data.get("record_path")
     expected_path = (_evidence_directory(workflow) / f"{execution_id}.json").as_posix()
     _need(record_path == expected_path, "native verification record path is inconsistent")
-    encoded = json.dumps(
-        response, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False,
-    ).encode("utf-8")
+    encoded = strict_json.canonical_bytes(response)
     return {
         "response_sha256": hashlib.sha256(encoded).hexdigest(),
         "response_bytes": len(encoded), "record_path": record_path,
@@ -264,7 +204,7 @@ def bind_result(
     _need(isinstance(record_bytes, bytes) and bool(record_bytes),
           "native verification record bytes are missing")
     record = _loads(record_bytes, "native verification record")
-    _need(_strict_equal(record, result["record"]),
+    _need(strict_json.strict_equal(record, result["record"]),
           "native verification response is not bound to current record bytes")
     return {
         "check_id": check.get("id"),
@@ -288,13 +228,7 @@ def bind_result(
 
 
 def attach_receipt(observation: dict[str, Any], rows: list[Mapping[str, object]]) -> None:
-    metadata = observation.get("native_metadata")
-    _need(isinstance(metadata, dict) and "controller_verification" not in metadata,
-          "native verification observation metadata is malformed")
-    metadata["controller_verification"] = {
-        "schema": RECEIPT_SCHEMA, "authority": RECEIPT_AUTHORITY,
-        "checks": [dict(row) for row in rows],
-    }
+    strict_json.attach_receipt(observation, rows, _RECEIPT_BINDING)
 
 
 def _check_identity(check: Mapping[str, object]) -> dict[str, object]:
@@ -391,10 +325,7 @@ def absence_bytes(
 ) -> bytes:
     """Return the canonical append-only bytes retained for one absence marker."""
 
-    return json.dumps(
-        absence_marker(check, identity), sort_keys=True, separators=(",", ":"),
-        ensure_ascii=False, allow_nan=False,
-    ).encode("utf-8") + b"\n"
+    return strict_json.canonical_bytes(absence_marker(check, identity)) + b"\n"
 
 
 def _absence(value: object, check: Mapping[str, object]) -> Mapping[str, object]:
@@ -437,7 +368,7 @@ def _absence(value: object, check: Mapping[str, object]) -> Mapping[str, object]
               and type(trace.get("runner_invocation_count")) is int
               and trace["runner_invocation_count"] == 0,
               "controller verification absence trace identity is malformed")
-    _need(_strict_equal(value.get("check"), _check_identity(check)),
+    _need(strict_json.strict_equal(value.get("check"), _check_identity(check)),
           "controller verification absence does not match its pointer check")
     return value
 
@@ -552,7 +483,7 @@ def grade_pointer(
             "snapshot_sha256", "reusable", "isolation_mode",
         )},
     }
-    if not _strict_equal(pointer, expected_pointer):
+    if not strict_json.strict_equal(pointer, expected_pointer):
         mismatches.append("pointer binding")
     if mismatches:
         return "fail", "native verification differed at: " + ", ".join(mismatches)
@@ -562,6 +493,6 @@ def grade_pointer(
 __all__ = (
     "ABSENCE_KIND", "ABSENCE_SCHEMA", "CHECK_FIELDS", "ROOT_TRACE_SCHEMA",
     "VerificationError", "absence_bytes", "absence_marker", "absence_row",
-    "attach_receipt", "bind_result", "grade_pointer", "pointer_artifacts",
+    "attach_receipt", "bind_result", "grade_pointer",
     "record_directories", "validate_check", "verification_checks",
 )

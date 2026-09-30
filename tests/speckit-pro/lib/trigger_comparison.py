@@ -11,8 +11,12 @@ from pathlib import Path
 import re
 import sqlite3
 
+<<<<<<< HEAD
 import trigger_claude_observer as claude_observer
 import trigger_codex_observer as codex_observer
+=======
+import native_eval_strict_json as strict_json
+>>>>>>> fix/speckit-pro-layer3-runner-and-scorer
 import trigger_evidence as evidence
 from trigger_campaign_pins import FRESH_LAUNCH_CEILING
 from trigger_inventory import canonical_sha256, validate_inventory
@@ -27,17 +31,8 @@ def json_digest(value: object) -> str:
     return canonical_sha256(value)
 
 
-def _unique_pairs(pairs):
-    result = {}
-    for key, value in pairs:
-        if key in result:
-            raise ValueError(f"duplicate JSON key: {key}")
-        result[key] = value
-    return result
-
-
 def read_json(path: Path):
-    return json.loads(path.read_bytes(), object_pairs_hook=_unique_pairs)
+    return strict_json.loads(path.read_bytes(), error=ValueError)
 
 
 def _require(condition: bool, message: str) -> None:
@@ -127,7 +122,7 @@ def read_artifact(root: Path, reference: dict) -> bytes:
 
 
 def _artifact_json(root: Path, reference: dict, artifact_reader=read_artifact):
-    return json.loads(artifact_reader(root, reference), object_pairs_hook=_unique_pairs)
+    return strict_json.loads(artifact_reader(root, reference), error=ValueError)
 
 
 def replay(stdout: bytes, context: dict) -> dict:
