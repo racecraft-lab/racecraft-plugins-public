@@ -4,12 +4,14 @@
 from __future__ import annotations
 
 import os
-import subprocess
 import sys
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import changed_files as _changed_files  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -113,7 +115,7 @@ def classify_changed_files(changed_files: Iterable[str]) -> DocsClassification:
                 ".github/workflows/pr-checks.yml",
                 ".github/workflows/deploy-docs.yml",
                 ".github/workflows/release.yml",
-                "scripts/classify-docs-validation.py",
+                "scripts/changed_files.py", "scripts/classify-docs-validation.py",
                 "scripts/docs-artifact.py",
             }
         ):
@@ -131,26 +133,7 @@ def changed_files_for_base(
     *,
     repo_root: Path = REPO_ROOT,
 ) -> tuple[str, ...]:
-    if not base_ref:
-        raise DocsValidationError("BASE_REF is not set")
-    try:
-        completed = subprocess.run(
-            ["git", "diff", "--name-only", f"origin/{base_ref}...HEAD"],
-            cwd=repo_root,
-            text=True,
-            capture_output=True,
-            check=True,
-            shell=False,
-        )
-    except subprocess.CalledProcessError as error:
-        detail = (error.stderr or "").strip()
-        suffix = f": {detail}" if detail else ""
-        raise DocsValidationError(
-            f"git changed-file detection failed with exit code {error.returncode}{suffix}"
-        ) from error
-    except OSError as error:
-        raise DocsValidationError(f"unable to run git changed-file detection: {error}") from error
-    return tuple(completed.stdout.splitlines())
+    return _changed_files.changed_files_for_base(base_ref, repo_root=repo_root, error=DocsValidationError)
 
 
 def append_github_output(output_path: Path, fields: Mapping[str, str]) -> None:

@@ -17,10 +17,12 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "lib"))
+import native_eval_trigger
 import trigger_comparison as comparison
 import trigger_carry_forward as carry
 import trigger_campaign as campaign
 import trigger_evidence as evidence
+from script_loader import load_script
 from test_result import run_counted
 
 
@@ -318,9 +320,7 @@ def minimal_manifest():
 
 
 def evidence_fixture(root, host="claude", entry_override=None, selected_pattern=(True, True, True)):
-    spec = importlib.util.spec_from_file_location("trigger_fixture_source", ROOT / "unit/test-trigger-eval-runners.py")
-    helper = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(helper)
+    helper = load_script("trigger_fixture_source", ROOT / "unit/test-trigger-eval-runners.py")
     manifest = minimal_manifest()
     snapshot = comparison.measurement_snapshot()
     manifest["identities"] = comparison.snapshot_identities(snapshot)
@@ -395,7 +395,7 @@ def evidence_fixture(root, host="claude", entry_override=None, selected_pattern=
 
 
 def native_fixture(helper, root, host, entry, model, arm, selected_pattern):
-    parser = comparison._parser(host)
+    parser = native_eval_trigger._helpers(host)
     target = f"{entry['skill']}-eval-0123456789ab"
     source = parser.find_skill_source(entry["skill"])
     workspace = (root / "removed").resolve()
@@ -430,9 +430,30 @@ def native_fixture(helper, root, host, entry, model, arm, selected_pattern):
     return context, streams, preflight, catalog
 
 
+class ReplayObserverImportTests(unittest.TestCase):
+    """Replay parses recorded streams through the observers, never by loading a runner script."""
+
+    CONTEXTS = {
+        "codex": {"host": "codex", "target_skill": "x-eval-1", "witnesses": {}, "requested_model": "m"},
+        "claude": {"host": "claude", "plugin_name": "p", "plugin_root": "/nonexistent", "expected_skill": "p:x",
+                   "nonce": "n", "requested_model": "m", "sibling_skills": []},
+    }
+
+    def test_the_comparator_has_no_runner_script_loader(self):
+        self.assertFalse(hasattr(comparison, "_parser"))
+
+    def test_replay_does_not_load_the_runner_scripts(self):
+        for host, context in self.CONTEXTS.items():
+            with self.subTest(host=host), mock.patch.object(
+                importlib.util, "spec_from_file_location", side_effect=AssertionError("replay loaded a runner script")
+            ):
+                self.assertFalse(comparison.replay(b"", context)["valid"])
+
+
 if __name__ == "__main__":
     suite = unittest.TestSuite([
         unittest.defaultTestLoader.loadTestsFromTestCase(MultiGenerationComparisonTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(ComparisonTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(ReplayObserverImportTests),
     ])
     raise SystemExit(run_counted(suite, label="test-trigger-comparison"))

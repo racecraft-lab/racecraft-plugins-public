@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Deterministic checks for the paired native execution policy boundaries."""
 from pathlib import Path
-import importlib.util
 import json
 import re
 import sys
@@ -16,6 +15,7 @@ CODEX = PLUGIN / "codex-skills/speckit-autopilot"
 LIB_DIR = ROOT / "tests/speckit-pro/lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
+from script_loader import load_script  # noqa: E402
 from test_result import run_counted  # noqa: E402
 if str(PLUGIN) not in sys.path:
     sys.path.insert(0, str(PLUGIN))
@@ -173,13 +173,10 @@ class ExecutionContractTests(unittest.TestCase):
 class ExecutionMirrorTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        spec = importlib.util.spec_from_file_location(
+        cls.validator = load_script(
             "execution_contract_status_validator",
             SHARED / "scripts/validate-autopilot-phase-coverage.py",
         )
-        cls.validator = importlib.util.module_from_spec(spec)
-        sys.modules[spec.name] = cls.validator
-        spec.loader.exec_module(cls.validator)
 
     def test_state_mirror_accepts_actual_ledger_result_without_new_status(self):
         with tempfile.TemporaryDirectory() as temporary:

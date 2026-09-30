@@ -11,21 +11,20 @@ in that module and are borrowed here, not copied.
 from __future__ import annotations
 
 import copy
-import importlib.util
 import json
+import sys
 import unittest
 from pathlib import Path
 from types import ModuleType
 
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
+from script_loader import load_script  # noqa: E402
+
+
 def load_gate_tests() -> ModuleType:
     path = Path(__file__).resolve().parent / "test-speckit-pro-gates.py"
-    spec = importlib.util.spec_from_file_location("speckit_pro_gate_tests", path)
-    if spec is None or spec.loader is None:
-        raise ImportError(f"cannot load gate tests from {path}")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load_script("speckit_pro_gate_tests", path)
 
 
 GATES = load_gate_tests()
