@@ -98,7 +98,7 @@ class ValidateCodexHooks(unittest.TestCase):
             self.assertEqual('true', 'true' if ok else 'false', 'hook entry must have hooks array')
         with self.subTest(msg='Only the version-pinned workflow guard commands are executable'):
             declared = _declared_hook_commands(data)
-            self.assertEqual(['command=${PLUGIN_ROOT}/scripts/workflow-guard-hook.py lockfile workflow-guard-v1', 'command=${PLUGIN_ROOT}/scripts/workflow-guard-hook.py unpushed workflow-guard-v1'], declared, f'Codex hooks may carry a command only when the script self-checks the interpreter version and fails open below the Installed Runtime Contract floor (Python 3.11); a static manifest cannot resolve the interpreter, so the script must degrade to the prose rules on an old one. Found: {declared}')
+            self.assertEqual(['command=${PLUGIN_ROOT}/scripts/workflow-guard-hook.py lockfile workflow-guard-v1', 'command=${PLUGIN_ROOT}/scripts/codex-agent-policy-hook.py agent-policy-v1', 'command=${PLUGIN_ROOT}/scripts/workflow-guard-hook.py unpushed workflow-guard-v1'], declared, f'Codex hooks may carry a command only when the script self-checks the interpreter version and fails open below the Installed Runtime Contract floor (Python 3.11); a static manifest cannot resolve the interpreter, so the script must degrade to the prose rules on an old one. Found: {declared}')
         with self.subTest(msg='Every Codex hook script self-checks the interpreter and fails open below 3.11'):
             for command in _declared_hook_commands(data):
                 script = command.removeprefix('command=${PLUGIN_ROOT}/').split(' ', 1)[0]

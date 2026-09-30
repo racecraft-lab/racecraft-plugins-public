@@ -1,0 +1,65 @@
+{
+  "generated_from": "agents/*.md by scripts/refresh-release-artifacts.py",
+  "schema_version": 1,
+  "roles": {
+    "analyze-executor": {
+      "deny_file_edits": false,
+      "allowed_mcp_tools": null
+    },
+    "artifact-author": {
+      "deny_file_edits": false,
+      "allowed_mcp_tools": null
+    },
+    "checklist-executor": {
+      "deny_file_edits": false,
+      "allowed_mcp_tools": null
+    },
+    "clarify-executor": {
+      "deny_file_edits": true,
+      "allowed_mcp_tools": null
+    },
+    "codebase-analyst": {
+      "deny_file_edits": true,
+      "allowed_mcp_tools": null
+    },
+    "consensus-synthesizer": {
+      "deny_file_edits": true,
+      "allowed_mcp_tools": null
+    },
+    "consensus-tiebreaker": {
+      "deny_file_edits": true,
+      "allowed_mcp_tools": null
+    },
+    "domain-researcher": {
+      "deny_file_edits": true,
+      "allowed_mcp_tools": [
+        "mcp__research_broker__docs_query",
+        "mcp__research_broker__research_search"
+      ]
+    },
+    "formal-model-author": {
+      "deny_file_edits": true,
+      "allowed_mcp_tools": [
+        "mcp__author_broker__write_formal_file",
+        "mcp__research_broker__docs_query",
+        "mcp__research_broker__research_search"
+      ]
+    },
+    "implement-executor": {
+      "deny_file_edits": false,
+      "allowed_mcp_tools": null
+    },
+    "phase-executor": {
+      "deny_file_edits": false,
+      "allowed_mcp_tools": null
+    },
+    "spec-context-analyst": {
+      "deny_file_edits": true,
+      "allowed_mcp_tools": null
+    },
+    "uat-runbook-author": {
+      "deny_file_edits": false,
+      "allowed_mcp_tools": null
+    }
+  }
+}

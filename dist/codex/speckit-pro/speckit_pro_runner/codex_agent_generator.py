@@ -10,19 +10,25 @@ file takes:
 - `developer_instructions` from the Claude body as Codex sees it
   (`emit_host(body, "codex")`).
 
+It also writes `speckit_pro_runner/codex_agent_policy.json`, each paired
+role's `PreToolUse` policy, which `scripts/codex-agent-policy-hook.py` applies.
+
 `scripts/refresh-release-artifacts.py` writes the files; its `--check` mode
 fails when a committed file differs from what this module renders.
 """
 
 from __future__ import annotations
 
+import json
 import tomllib
 from pathlib import Path
 from typing import Any
 
 from .host_parity import (
+    CODEX_HOOK_POLICY_FILE,
     HostParityError,
     derive_codex_enforcement,
+    derive_codex_hook_policy,
     emit_host,
     pairing_manifest,
     split_frontmatter,
@@ -80,23 +86,42 @@ def render_codex_agent(name: str, claude_text: str, codex_record: dict[str, Any]
     return text
 
 
-def generated_codex_agents(plugin_root: Path, inventory: dict[str, Any]) -> dict[str, str]:
-    """Map each paired role's Codex source path to its rendered file text."""
+def render_codex_hook_policy(sources: dict[str, str]) -> str:
+    """Render the per-role hook policy from each paired role's Claude source text."""
+    roles = {}
+    for name, claude_text in sorted(sources.items()):
+        fields, _ = split_frontmatter(claude_text)
+        policy = derive_codex_hook_policy(name, derive_codex_enforcement(fields))
+        roles[name] = {
+            "deny_file_edits": policy.deny_file_edits,
+            "allowed_mcp_tools": None if policy.allowed_mcp_tools is None else list(policy.allowed_mcp_tools),
+        }
+    document = {
+        "generated_from": "agents/*.md by scripts/refresh-release-artifacts.py",
+        "schema_version": 1,
+        "roles": roles,
+    }
+    return json.dumps(document, indent=2) + "\n"
+
+
+def generated_codex_files(plugin_root: Path, inventory: dict[str, Any]) -> dict[str, str]:
+    """Map each generated Codex file's plugin-relative path to its rendered text."""
     records = {role["name"]: role["codex"] for role in inventory["roles"]}
     rendered: dict[str, str] = {}
+    sources: dict[str, str] = {}
     for name, role in sorted(pairing_manifest(inventory).paired.items()):
-        source = plugin_root / role.claude_source
-        claude_text = source.read_text(encoding="utf-8")
+        sources[name] = (plugin_root / role.claude_source).read_text(encoding="utf-8")
         rendered[role.codex_source] = render_codex_agent(
-            name, claude_text, records[name], role.claude_source
+            name, sources[name], records[name], role.claude_source
         )
+    rendered[CODEX_HOOK_POLICY_FILE] = render_codex_hook_policy(sources)
     return rendered
 
 
 def refresh_codex_agents(plugin_root: Path, inventory: dict[str, Any]) -> list[str]:
-    """Write every generated Codex agent file; return the paths that changed."""
+    """Write every generated Codex file; return the paths that changed."""
     changed: list[str] = []
-    for relative, text in generated_codex_agents(plugin_root, inventory).items():
+    for relative, text in generated_codex_files(plugin_root, inventory).items():
         target = plugin_root / relative
         if target.is_file() and target.read_text(encoding="utf-8") == text:
             continue

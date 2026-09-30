@@ -29,6 +29,7 @@ Codex limits. The live probe under
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from typing import Any
@@ -183,6 +184,8 @@ def derive_codex_enforcement(fields: dict[str, str]) -> CodexEnforcement:
 
 
 FILE_EDIT_TOOL = "apply_patch"
+# Plugin-relative path of the generated per-role policy the hook applies.
+CODEX_HOOK_POLICY_FILE = "speckit_pro_runner/codex_agent_policy.json"
 
 
 def codex_mcp_tool_name(server: str, tool: str) -> str:
@@ -208,6 +211,40 @@ class CodexHookPolicy:
         if tool_name.startswith("mcp__") and self.allowed_mcp_tools is not None:
             return tool_name not in self.allowed_mcp_tools
         return False
+
+
+def _policy_entry(name: str, entry: Any) -> CodexHookPolicy:
+    if not isinstance(entry, dict) or not isinstance(entry.get("deny_file_edits"), bool):
+        raise HostParityError(f"codex agent policy for {name!r} is malformed")
+    allowed = entry.get("allowed_mcp_tools")
+    if allowed is not None and not (isinstance(allowed, list) and all(isinstance(tool, str) for tool in allowed)):
+        raise HostParityError(f"codex agent policy for {name!r} has a malformed MCP allowlist")
+    return CodexHookPolicy(name, entry["deny_file_edits"], None if allowed is None else tuple(allowed))
+
+
+def load_codex_hook_policies(text: str) -> dict[str, CodexHookPolicy]:
+    """Parse the generated policy file; fail closed on any shape it does not know."""
+    document = json.loads(text)
+    if not isinstance(document, dict) or document.get("schema_version") != 1 or not isinstance(document.get("roles"), dict):
+        raise HostParityError("codex agent policy has an unknown shape")
+    return {name: _policy_entry(name, entry) for name, entry in document["roles"].items()}
+
+
+def codex_hook_denial(payload: dict[str, Any], policies: dict[str, CodexHookPolicy]) -> str | None:
+    """The deny reason for one `PreToolUse` payload, or None to let the call run.
+
+    Only a spawned agent's payload carries `agent_type`; the parent's never
+    does, so the parent's own calls always pass.
+    """
+    agent_type = payload.get("agent_type")
+    tool_name = payload.get("tool_name")
+    policy = policies.get(agent_type) if isinstance(agent_type, str) else None
+    if policy is None or not isinstance(tool_name, str) or not policy.denies(agent_type, tool_name):
+        return None
+    # Codex appends its own period and the call details after the reason.
+    if tool_name == FILE_EDIT_TOOL:
+        return f"{agent_type} is read-only on Codex: it may not edit files with {FILE_EDIT_TOOL}"
+    return f"{agent_type} may call only its allowlisted MCP tools; {tool_name} is not one of them"
 
 
 def derive_codex_hook_policy(agent_type: str, enforcement: CodexEnforcement) -> CodexHookPolicy:

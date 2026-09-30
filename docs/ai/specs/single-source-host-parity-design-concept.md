@@ -265,6 +265,11 @@ Evidence: `tests/speckit-pro/fixtures/codex-enforcement-probe/evidence.md`.
   `SubagentStart`; `PreToolUse` carries it in practice (observed in 0.156.0).
   **Suggested next step:** the slice that ships the hook reruns
   `run-hook-probe.py` against the current Codex release before it merges.
+  **Result (hook slice):** the new `hook-plugin` case installed the shipped
+  plugin hook in a throwaway Codex home under `codex-cli 0.156.0`. The
+  plugin-layer `PreToolUse` payload carried `agent_type`, and the hook denied
+  one role's `apply_patch` and out-of-allowlist MCP call while the parent's
+  edit ran.
 
 ## Recommended Next Step
 
