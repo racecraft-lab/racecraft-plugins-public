@@ -14,11 +14,12 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any
-import sys
 
-from .mcp_protocol import negotiate_protocol_version
+from .mcp_protocol import ToolServer, serve
+from .mcp_protocol import handle_message as mcp_handle_message
 from .artifact_review import OBSERVATION_CLOCK_SKEW
 from .atomic_write import validate_target_path, write_file_atomic
+from .private_state import ensure_private_directory, write_private_json
 from .trusted_io import repo_relative, resolve_input_path
 
 SERVER_INFO = {"name": "speckit-pro-author-broker", "version": "1.0.0"}
@@ -57,7 +58,7 @@ class BrokerViolation(ValueError):
 STATE_ROOT_VARIABLE = "SPECKIT_AUTHOR_BROKER_STATE_ROOT"
 
 
-def _state_root() -> Path:
+def state_root() -> Path:
     """Resolve the private session root, honouring an explicit launcher override.
 
     A capability is minted in one process and redeemed in another. When an
@@ -74,36 +75,7 @@ def _state_root() -> Path:
 
 
 def _ensure_private_root(root: Path) -> None:
-    root.mkdir(mode=0o700, parents=True, exist_ok=True)
-    info = root.lstat()
-    if stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode):
-        raise BrokerViolation("private author broker root is unsafe")
-    uid = getattr(os, "getuid", lambda: info.st_uid)()
-    if info.st_uid != uid:
-        raise BrokerViolation("private author broker root has the wrong owner")
-    if stat.S_IMODE(info.st_mode) & 0o077:
-        os.chmod(root, 0o700)
-
-
-def _write_state(path: Path, state: dict[str, Any]) -> None:
-    encoded = (json.dumps(state, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
-    temporary = path.with_name(f".{path.name}.{secrets.token_hex(8)}.tmp")
-    fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600)
-    try:
-        with os.fdopen(fd, "wb") as handle:
-            fd = -1
-            handle.write(encoded)
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(temporary, path)
-    finally:
-        if fd >= 0:
-            os.close(fd)
-        try:
-            temporary.unlink()
-        except FileNotFoundError:
-            # Atomic replacement may have already removed the temporary path.
-            pass
+    ensure_private_directory(root, label="private author broker root", violation=BrokerViolation)
 
 
 def _safe_session_path(root: Path, session_id: str) -> Path:
@@ -189,7 +161,7 @@ def _resolve_capability(capability: str) -> dict[str, Any]:
     match = CAPABILITY_RE.fullmatch(capability) if isinstance(capability, str) else None
     if match is None:
         raise BrokerViolation("author broker capability is malformed", code="receipt_violation")
-    state = _read_state(_state_root(), match.group(1))
+    state = _read_state(state_root(), match.group(1))
     expected = _mint_capability(state)
     if not hmac.compare_digest(expected, capability):
         raise BrokerViolation("author broker capability is invalid", code="receipt_violation")
@@ -212,12 +184,12 @@ def create_formal_session(
     if not root.is_dir():
         raise BrokerViolation("repo_root must be a directory")
     canonical = _canonical_paths(root, permitted_paths)
-    state_root = _state_root()
-    _ensure_private_root(state_root)
+    private_root = state_root()
+    _ensure_private_root(private_root)
     session_id = secrets.token_hex(16)
-    session_path = state_root / session_id
+    session_path = private_root / session_id
     session_path.mkdir(mode=0o700)
-    _safe_session_path(state_root, session_id)
+    _safe_session_path(private_root, session_id)
     state = {
         "version": SESSION_VERSION,
         "session_id": session_id,
@@ -231,7 +203,7 @@ def create_formal_session(
         "created_at": time.time(),
         "expires_at": time.time() + ttl_seconds,
     }
-    _write_state(session_path / "state.json", state)
+    write_private_json(session_path / "state.json", state)
     return {"session_id": session_id, "capability": _mint_capability(state), "permitted_paths": list(canonical)}
 
 
@@ -254,12 +226,12 @@ def create_preview_session(
         raise BrokerViolation("artifact path is not a regular file", code="path_violation")
     if _hash_file(artifact) != expected_sha256:
         raise BrokerViolation("artifact bytes do not match expected_sha256", code="preview_mismatch")
-    state_root = _state_root()
-    _ensure_private_root(state_root)
+    private_root = state_root()
+    _ensure_private_root(private_root)
     session_id = secrets.token_hex(16)
-    session_path = state_root / session_id
+    session_path = private_root / session_id
     session_path.mkdir(mode=0o700)
-    _safe_session_path(state_root, session_id)
+    _safe_session_path(private_root, session_id)
     state = {
         "version": SESSION_VERSION,
         "session_id": session_id,
@@ -272,7 +244,7 @@ def create_preview_session(
         "created_at": time.time(),
         "expires_at": time.time() + ttl_seconds,
     }
-    _write_state(session_path / "state.json", state)
+    write_private_json(session_path / "state.json", state)
     return {"session_id": session_id, "capability": _mint_capability(state), "artifact_sha256": expected_sha256}
 
 
@@ -313,7 +285,7 @@ def submit_preview_verdict(*, capability: str, verdict: str) -> dict[str, Any]:
         raise BrokerViolation("preview artifact changed after session creation", code="preview_mismatch") from exc
     if digest != state["expected_sha256"]:
         raise BrokerViolation("preview artifact changed after session creation", code="preview_mismatch")
-    session_path = _safe_session_path(_state_root(), state["session_id"])
+    session_path = _safe_session_path(state_root(), state["session_id"])
     claim = session_path / "preview-submitted"
     try:
         fd = os.open(claim, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600)
@@ -328,7 +300,7 @@ def submit_preview_verdict(*, capability: str, verdict: str) -> dict[str, Any]:
         "observed_at": datetime.now(timezone.utc).isoformat(),
     }
     try:
-        _write_state(session_path / "state.json", state)
+        write_private_json(session_path / "state.json", state)
     except OSError as exc:
         raise BrokerViolation("preview verdict could not be recorded") from exc
     return {"verdict": verdict, "artifact_sha256": digest}
@@ -348,7 +320,7 @@ def _implausible_observation_time(observed_at: Any, created_at: Any) -> bool:
 
 def close_session(*, capability: str) -> dict[str, Any]:
     state = _resolve_capability(capability)
-    session_path = _safe_session_path(_state_root(), state["session_id"])
+    session_path = _safe_session_path(state_root(), state["session_id"])
     observation = state.get("preview_submission") if state["kind"] == "preview" else None
     artifact_changed = False
     implausible_time = False
@@ -451,55 +423,15 @@ def _error_code(exc: Exception) -> str:
     return exc.code if isinstance(exc, BrokerViolation) else "schema_validation"
 
 
-def _response(request_id: Any, result: Any) -> dict[str, Any]:
-    return {"jsonrpc": "2.0", "id": request_id, "result": result}
-
-
-def _error(request_id: Any, code: int, message: str) -> dict[str, Any]:
-    return {"jsonrpc": "2.0", "id": request_id, "error": {"code": code, "message": message}}
+SERVER = ToolServer(SERVER_INFO, TOOLS, call_tool, _error_code)
 
 
 def handle_message(message: Any) -> dict[str, Any] | None:
-    if not isinstance(message, dict) or message.get("jsonrpc") != "2.0":
-        return _error(None, -32600, "invalid request")
-    request_id = message.get("id")
-    method = message.get("method")
-    if method == "notifications/initialized":
-        return None
-    if method == "initialize":
-        return _response(request_id, {"protocolVersion": negotiate_protocol_version(message.get("params")), "capabilities": {"tools": {"listChanged": False}}, "serverInfo": SERVER_INFO})
-    if method == "ping":
-        return _response(request_id, {})
-    if method == "tools/list":
-        return _response(request_id, {"tools": list(TOOLS)})
-    if method == "tools/call":
-        params = message.get("params")
-        if not isinstance(params, dict):
-            return _error(request_id, -32602, "invalid tool parameters")
-        try:
-            result = call_tool(params.get("name"), params.get("arguments", {}))
-        except Exception as exc:  # noqa: BLE001 - boundary: any failure becomes an explicit error
-            code = _error_code(exc)
-            return _response(request_id, {"isError": True, "content": [{"type": "text", "text": f"broker_error:{code}"}], "structuredContent": {"error_code": code}})
-        text = result if isinstance(result, str) else json.dumps(result, sort_keys=True, separators=(",", ":"))
-        return _response(request_id, {"content": [{"type": "text", "text": text}]})
-    return _error(request_id, -32601, "method not found")
+    return mcp_handle_message(SERVER, message)
 
 
 def main() -> int:
-    if sys.version_info < (3, 11):
-        print("author broker requires Python 3.11 or newer", file=sys.stderr)
-        return 2
-    for raw_line in sys.stdin.buffer:
-        try:
-            message = json.loads(raw_line)
-            reply = handle_message(message)
-        except (UnicodeDecodeError, json.JSONDecodeError):
-            reply = _error(None, -32700, "parse error")
-        if reply is not None:
-            sys.stdout.write(json.dumps(reply, separators=(",", ":")) + "\n")
-            sys.stdout.flush()
-    return 0
+    return serve(handle_message, label="author broker")
 
 
 if __name__ == "__main__":

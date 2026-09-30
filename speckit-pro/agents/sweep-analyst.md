@@ -114,7 +114,10 @@ in place of the round-one ones:
 - `anchor` is non-empty, at most 512 bytes, and matches the snapshot exactly
   once. `replacement` is at most 8192 bytes and may be empty.
 
-Call `submit_result` exactly once with the applicable object.
+Call `submit_result` exactly once with the applicable object. The one
+exception: the broker refuses an anchor that does not match the snapshot
+exactly once with `broker_error:anchor_ambiguous`, and then you may resubmit
+with a longer excerpt, at most twice.
 
 ## Final output
 

@@ -9,17 +9,26 @@ import re
 import shutil
 import stat
 import subprocess
-import sys
 import tempfile
 import time
 from pathlib import Path
 from typing import Any
 
+from .codex_isolation import (
+    CODEX_DISABLED_FEATURES,
+    LauncherViolation,
+    codex_broker_command,
+    codex_executable,
+    python_executable,
+    trusted_executable,
+    trusted_prompt_resource,
+)
 from .sweep_isolation import (
     BROKER_ERROR_CODES,
     BROKER_TOOL_NAMES,
     HOOK_VERSION,
     RECEIPT_RE,
+    STAGES,
     SweepSession,
     default_state_root,
 )
@@ -27,155 +36,33 @@ from .sweep_isolation import (
 
 MINIMUM_CODEX_VERSION = (0, 138, 0)
 MINIMUM_CLAUDE_VERSION = (2, 1, 245)
-CODEX_DISABLED_FEATURES = (
-    "apps",
-    "browser_use",
-    "browser_use_external",
-    "computer_use",
-    "goals",
-    "hooks",
-    "image_generation",
-    "in_app_browser",
-    "memories",
-    "multi_agent",
-    "plugins",
-    "recommended_plugins",
-    "shell_tool",
-    "skill_search",
-    "tool_suggest",
-    "unified_exec",
-    "view_image",
-    "workspace_dependencies",
-)
-CODEX_STAGE_PROMPTS = {
-    "classifier": (
-        "You must call the broker tools. Your first action must be "
-        "mcp__sweep-broker__review_comment with an empty object. "
-        "Do not produce analysis or a final response before that call. You cannot construct or guess "
-        "the receipt. Classify that configured comment, then call "
-        "mcp__sweep-broker__submit_result exactly once with one top-level result field: "
-        '{"result":{"comment_id":"...","class":"...","target":null,"reason":"..."}}. '
-        "Copy only the exact receipt returned by "
-        "mcp__sweep-broker__submit_result into the receipt field. If a broker call fails, do not emit "
-        "a receipt-shaped value."
-    ),
-    "perspective": (
-        "Your first action must be mcp__sweep-broker__review_comment with an empty object, followed by "
-        "mcp__sweep-broker__consensus_inputs with an empty object. Do not produce analysis or a final "
-        "response before those calls. You cannot construct or guess the receipt. Analyze the configured "
-        "perspective, then call mcp__sweep-broker__submit_result exactly once with one top-level result "
-        'field: {"result":{"comment_id":"...","perspective":"...","finding":"...",'
-        '"evidence":[],"escape_hatch":false}}. Copy only its exact '
-        "returned receipt into the receipt field. If a broker call fails, do not emit a receipt-shaped value."
-    ),
-    "synthesis": (
-        "Your first action must be mcp__sweep-broker__consensus_inputs with an empty object. Do not "
-        "produce analysis or a final response before that call. You cannot construct or guess the receipt. "
-        "Synthesize the accepted perspectives, then call mcp__sweep-broker__submit_result exactly once "
-        'with one top-level result field: {"result":{"comment_id":"...","outcome":"...",'
-        '"agreement":null,"basis":"...","edit":null}}. '
-        "Copy only its exact returned receipt into the receipt field. If a broker call fails, do not emit "
-        "a receipt-shaped value."
-    ),
-}
 CODEX_VERSION_RE = re.compile(r"(?:codex-cli\s+)?([0-9]+)\.([0-9]+)\.([0-9]+)")
 CLAUDE_VERSION_RE = re.compile(r"([0-9]+)\.([0-9]+)\.([0-9]+)(?:\s+\(Claude Code\))?")
 CLAUDE_BROKER_TOOLS = tuple(
     f"mcp__plugin_speckit-pro_sweep-broker__{name}" for name in BROKER_TOOL_NAMES
 )
+RECEIPT_SCHEMA_PATH = Path(__file__).resolve().parent / "contracts" / "sweep-receipt-output.schema.json"
+# Both hosts validate the receipt against the one shipped schema. Claude takes the
+# schema body inline, so the meta-schema key stays in the file.
 CLAUDE_RECEIPT_OUTPUT_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "receipt": {
-            "type": "string",
-            "pattern": r"^sweep-result:v1:[0-9a-f]{64}$",
-        }
-    },
-    "required": ["receipt"],
-    "additionalProperties": False,
+    key: value
+    for key, value in json.loads(RECEIPT_SCHEMA_PATH.read_text(encoding="utf-8")).items()
+    if key != "$schema"
 }
-
-
-class LauncherViolation(RuntimeError):
-    """An isolated model process or security prerequisite failed closed."""
-
-
-def _trusted_executable(candidate: str | None, label: str) -> Path:
-    if not candidate:
-        raise LauncherViolation(f"{label} is unavailable")
-    candidate_path = Path(candidate)
-    if not candidate_path.is_absolute():
-        raise LauncherViolation(f"{label} runtime path must be absolute")
-    try:
-        resolved = candidate_path.resolve(strict=True)
-        info = resolved.stat()
-    except OSError as exc:
-        raise LauncherViolation(f"{label} runtime path cannot be attested") from exc
-    if (
-        not resolved.is_absolute()
-        or not stat.S_ISREG(info.st_mode)
-        or not os.access(resolved, os.X_OK)
-        or stat.S_IMODE(info.st_mode) & 0o022
-    ):
-        raise LauncherViolation(f"{label} runtime path is unsafe")
-    return resolved
-
-
-def codex_executable() -> Path:
-    """Resolve the exact CLI binary admitted by the isolated profile."""
-    return _trusted_executable(shutil.which("codex"), "Codex")
 
 
 def claude_executable() -> Path:
     """Resolve the exact Claude CLI used for the isolated sweep launcher."""
-    return _trusted_executable(shutil.which("claude"), "Claude Code")
-
-
-def python_executable() -> Path:
-    """Resolve the exact interpreter used for the packaged broker."""
-    return _trusted_executable(sys.executable, "Python")
-
-
-def _toml_string(value: str) -> str:
-    return json.dumps(value)
-
-
-def _toml_array(values: list[str]) -> str:
-    return "[" + ",".join(_toml_string(value) for value in values) + "]"
-
-
-def _toml_inline_table(values: dict[str, str]) -> str:
-    return "{" + ",".join(f"{key}={_toml_string(value)}" for key, value in values.items()) + "}"
-
-
-def _toml_string_map(values: dict[str, str]) -> str:
-    return "{" + ",".join(
-        f"{_toml_string(key)}={_toml_string(value)}" for key, value in values.items()
-    ) + "}"
+    return trusted_executable(shutil.which("claude"), "Claude Code")
 
 
 def codex_prompt_resource(plugin_root: Path, name: str) -> Path:
     """Resolve one trusted prompt from exactly one supported plugin layout."""
     if name not in {"classifier", "analyst"}:
         raise LauncherViolation("unknown Codex sweep prompt")
-    relative = Path("speckit-autopilot/references/sweep-prompts") / f"{name}.md"
-    candidates = (
-        plugin_root / "codex-skills" / relative,
-        plugin_root / "skills" / relative,
+    return trusted_prompt_resource(
+        plugin_root, Path("speckit-autopilot/references/sweep-prompts") / f"{name}.md", "sweep"
     )
-    regular: list[Path] = []
-    for candidate in candidates:
-        try:
-            info = candidate.lstat()
-        except FileNotFoundError:
-            continue
-        except OSError as exc:
-            raise LauncherViolation("trusted Codex sweep prompt cannot be attested") from exc
-        if stat.S_ISREG(info.st_mode):
-            regular.append(candidate)
-    if len(regular) != 1:
-        raise LauncherViolation("trusted Codex sweep prompt layout is unavailable or ambiguous")
-    return regular[0]
 
 
 def claude_command(
@@ -186,7 +73,7 @@ def claude_command(
     max_budget_usd: str | None = None,
 ) -> list[str]:
     """Build one user-config-free Claude process with only Agent and broker tools."""
-    if stage not in CODEX_STAGE_PROMPTS:
+    if stage not in STAGES:
         raise LauncherViolation("unknown Claude sweep stage")
     if stage == "perspective" and perspective not in {"codebase", "spec-context", "domain"}:
         raise LauncherViolation("Claude perspective stage requires a closed perspective")
@@ -239,30 +126,12 @@ def codex_command(
     state_root: Path | None = None,
     output_path: Path | None = None,
 ) -> list[str]:
-    if stage not in CODEX_STAGE_PROMPTS:
+    if stage not in STAGES:
         raise LauncherViolation("unknown Codex sweep stage")
     if stage == "perspective" and perspective not in {"codebase", "spec-context", "domain"}:
         raise LauncherViolation("Codex perspective stage requires a closed perspective")
     if stage != "perspective" and perspective is not None:
         raise LauncherViolation("perspective is only valid on the perspective stage")
-    schema = plugin_root / "speckit_pro_runner" / "contracts" / "sweep-receipt-output.schema.json"
-    codex_runtime = codex_executable()
-    python_runtime = python_executable()
-    codex_runtime_root = codex_runtime.parent.parent
-    python_runtime_root = Path(sys.base_prefix).resolve(strict=True)
-    isolated_runtime_root = runtime_root.resolve(strict=False)
-    filesystem = {
-        ":minimal": "read",
-        str(codex_runtime_root): "read",
-        str(python_runtime_root): "read",
-        str(isolated_runtime_root): "read",
-    }
-    broker_args = ["-m", "speckit_pro_runner.sweep_broker"]
-    broker_env = {
-        "PYTHONPATH": str(plugin_root),
-        "SPECKIT_SWEEP_CAPABILITY": capability,
-        "SPECKIT_SWEEP_STATE_ROOT": str(default_state_root() if state_root is None else state_root),
-    }
     prompt_resource = codex_prompt_resource(
         plugin_root, "classifier" if stage == "classifier" else "analyst"
     )
@@ -270,56 +139,29 @@ def codex_command(
         trusted_prompt = prompt_resource.read_text(encoding="utf-8")
     except OSError as exc:
         raise LauncherViolation("trusted Codex sweep prompt resource is unavailable") from exc
+    # The stage instructions live in the prompt Markdown; the launcher adds only
+    # the trusted invocation context the prompt cannot know.
     trusted_context = (
         f"\n\nTrusted invocation context: stage={stage}"
         + (f"; perspective={perspective}" if perspective is not None else "")
         + ". The broker process already holds the opaque model-call capability.\n"
-        + CODEX_STAGE_PROMPTS[stage]
     )
-    command = [
-        str(codex_runtime),
-        "exec",
-        "--ignore-user-config",
-        "--ignore-rules",
-        "--ephemeral",
-        "--strict-config",
-        "--skip-git-repo-check",
-        "--color",
-        "never",
-        "--json",
-        "--output-schema",
-        str(schema),
-        "-C",
-        str(isolated_runtime_root),
-        "-c",
-        'default_permissions="sweep-broker-only"',
-        "-c",
-        f"permissions.sweep-broker-only.filesystem={_toml_string_map(filesystem)}",
-        "-c",
-        "permissions.sweep-broker-only.network.enabled=false",
-        "-c",
-        "web_search=\"disabled\"",
-        "-c",
-        f"mcp_servers.sweep-broker.command={_toml_string(str(python_runtime))}",
-        "-c",
-        f"mcp_servers.sweep-broker.args={_toml_array(broker_args)}",
-        "-c",
-        f"mcp_servers.sweep-broker.env={_toml_inline_table(broker_env)}",
-        "-c",
-        "mcp_servers.sweep-broker.enabled=true",
-        "-c",
-        "mcp_servers.sweep-broker.required=true",
-        "-c",
-        f"mcp_servers.sweep-broker.enabled_tools={_toml_array(list(BROKER_TOOL_NAMES))}",
-        "-c",
-        'mcp_servers.sweep-broker.default_tools_approval_mode="approve"',
-    ]
-    for feature in CODEX_DISABLED_FEATURES:
-        command.extend(("--disable", feature))
-    if output_path is not None:
-        command.extend(("--output-last-message", str(output_path)))
-    command.append(trusted_prompt + trusted_context)
-    return command
+    return codex_broker_command(
+        codex_runtime=codex_executable(),
+        python_runtime=python_executable(),
+        runtime_root=runtime_root,
+        server="sweep-broker",
+        broker_module="speckit_pro_runner.sweep_broker",
+        broker_env={
+            "PYTHONPATH": str(plugin_root),
+            "SPECKIT_SWEEP_CAPABILITY": capability,
+            "SPECKIT_SWEEP_STATE_ROOT": str(default_state_root() if state_root is None else state_root),
+        },
+        enabled_tools=BROKER_TOOL_NAMES,
+        output_schema=plugin_root / "speckit_pro_runner" / "contracts" / "sweep-receipt-output.schema.json",
+        prompt=trusted_prompt + trusted_context,
+        output_path=output_path,
+    )
 
 
 def codex_event_projection(output: str) -> dict[str, Any]:
@@ -412,6 +254,31 @@ def _codex_broker_error_code(item: dict[str, Any]) -> str:
     return "unclassified"
 
 
+# A synthesis may resubmit after the broker refuses an ambiguous anchor, so the
+# analyst can pick a longer excerpt instead of losing the whole call.
+RETRYABLE_SUBMIT_CODES = frozenset({"anchor_ambiguous"})
+MAX_SUBMIT_RETRIES = 2
+
+
+def _submit_retries(projection: dict[str, Any], stage: str) -> int:
+    """How many refused submissions the trace may carry, or -1 when any failure is unsafe."""
+    calls = projection["broker_calls"]
+    refused = calls.get("submit_result", {}).get("failed", 0)
+    codes = projection["error_codes"]
+    if any(counts["failed"] for tool, counts in calls.items() if tool != "submit_result"):
+        return -1
+    if refused == 0:
+        return 0 if not codes else -1
+    if (
+        stage != "synthesis"
+        or refused > MAX_SUBMIT_RETRIES
+        or not set(codes) <= RETRYABLE_SUBMIT_CODES
+        or sum(codes.values()) != refused
+    ):
+        return -1
+    return refused
+
+
 def verify_codex_event_trace(output: str, *, stage: str) -> dict[str, Any]:
     """Require one clean, stage-complete broker trace without exposing content."""
     required_by_stage = {
@@ -423,24 +290,21 @@ def verify_codex_event_trace(output: str, *, stage: str) -> dict[str, Any]:
         raise LauncherViolation("unknown Codex sweep stage")
     projection = codex_event_projection(output)
     calls = projection["broker_calls"]
-    if (
-        projection["jsonl"] is not True
-        or projection["unexpected_tools"] != 0
-        or projection["error_codes"]
-        or any(counts["failed"] != 0 for counts in calls.values())
-    ):
+    retries = _submit_retries(projection, stage)
+    if projection["jsonl"] is not True or projection["unexpected_tools"] != 0 or retries < 0:
         raise LauncherViolation("isolated Codex sweep emitted an unsafe tool trace")
     for tool in required_by_stage[stage]:
-        if calls.get(tool) != {"completed": 1, "failed": 0}:
+        refused = retries if tool == "submit_result" else 0
+        if calls.get(tool) != {"completed": 1 + refused, "failed": refused}:
             raise LauncherViolation("isolated Codex sweep omitted or repeated a required broker call")
     return projection
 
 
 def _codex_version() -> tuple[int, int, int]:
     candidate = shutil.which("codex")
-    executable = _trusted_executable(candidate, "Codex")
+    executable = trusted_executable(candidate, "Codex")
     candidate = shutil.which("codex", path=str(executable.parent))
-    if _trusted_executable(candidate, "Codex") != executable:
+    if trusted_executable(candidate, "Codex") != executable:
         raise LauncherViolation("Codex runtime changed after boundary attestation")
     try:
         completed = subprocess.run(
@@ -461,9 +325,9 @@ def _codex_version() -> tuple[int, int, int]:
 
 def _verify_codex_features() -> None:
     candidate = shutil.which("codex")
-    executable = _trusted_executable(candidate, "Codex")
+    executable = trusted_executable(candidate, "Codex")
     candidate = shutil.which("codex", path=str(executable.parent))
-    if _trusted_executable(candidate, "Codex") != executable:
+    if trusted_executable(candidate, "Codex") != executable:
         raise LauncherViolation("Codex runtime changed after boundary attestation")
     try:
         completed = subprocess.run(
@@ -489,9 +353,9 @@ def verify_codex_boundary(plugin_root: Path | None = None) -> tuple[int, int, in
         raise LauncherViolation("Codex permission profiles require Codex 0.138.0 or newer")
     _verify_codex_features()
     candidate = shutil.which("codex")
-    executable = _trusted_executable(candidate, "Codex")
+    executable = trusted_executable(candidate, "Codex")
     candidate = shutil.which("codex", path=str(executable.parent))
-    if _trusted_executable(candidate, "Codex") != executable:
+    if trusted_executable(candidate, "Codex") != executable:
         raise LauncherViolation("Codex runtime changed after boundary attestation")
     try:
         completed = subprocess.run(
@@ -560,11 +424,11 @@ def run_codex_sweep(
             output_path=output_path,
         )
         candidate = shutil.which("codex")
-        executable = _trusted_executable(candidate, "Codex")
+        executable = trusted_executable(candidate, "Codex")
         if executable != Path(command[0]):
             raise LauncherViolation("Codex runtime changed after boundary attestation")
         candidate = shutil.which("codex", path=str(executable.parent))
-        if _trusted_executable(candidate, "Codex") != executable:
+        if trusted_executable(candidate, "Codex") != executable:
             raise LauncherViolation("Codex runtime changed after boundary attestation")
         arguments = [candidate, *command[1:]]
         try:
@@ -601,7 +465,7 @@ def run_codex_sweep(
 
 def _claude_version() -> tuple[int, int, int]:
     candidate = shutil.which("claude")
-    _trusted_executable(candidate, "Claude Code")
+    trusted_executable(candidate, "Claude Code")
     try:
         completed = subprocess.run(
             [candidate, "--version"],
@@ -703,7 +567,7 @@ def verify_claude_boundary(repo_root: Path, plugin_root: Path) -> tuple[int, int
     if version < MINIMUM_CLAUDE_VERSION:
         raise LauncherViolation("Claude sweep isolation requires Claude Code 2.1.245 or newer")
     candidate = shutil.which("claude")
-    _trusted_executable(candidate, "Claude Code")
+    trusted_executable(candidate, "Claude Code")
     try:
         completed = subprocess.run(
             [candidate, "--help"],
@@ -745,7 +609,7 @@ def _run_claude_process(
 ) -> subprocess.CompletedProcess[str]:
     """Run only the isolated Claude child; kept narrow for deterministic tests."""
     candidate = shutil.which("claude")
-    executable = _trusted_executable(candidate, "Claude Code")
+    executable = trusted_executable(candidate, "Claude Code")
     if executable != Path(command[0]):
         raise LauncherViolation("Claude runtime changed after boundary attestation")
     arguments = [candidate, *command[1:]]
