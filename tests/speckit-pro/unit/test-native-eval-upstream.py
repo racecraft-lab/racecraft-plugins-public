@@ -250,7 +250,7 @@ class NativeEvalUpstreamTests(unittest.TestCase):
             )
 
         manifest.write_text(valid.replace('"version": "1.0.1"', '"version": NaN', 1), encoding="utf-8")
-        with self.assertRaisesRegex(upstream.UpstreamStageError, "nonstandard JSON constant"):
+        with self.assertRaisesRegex(upstream.UpstreamStageError, "invalid JSON constant"):
             upstream.verify_staged_payloads(
                 prepared.runtime_identity, lambda relative: (destination / relative).read_bytes(),
             )

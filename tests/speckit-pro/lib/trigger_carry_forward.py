@@ -20,6 +20,7 @@ import subprocess
 from types import SimpleNamespace
 from typing import Callable
 
+import native_eval_strict_json as strict_json
 import trigger_comparison as comparison
 
 
@@ -153,20 +154,8 @@ class MultiGenerationPlan:
     maximum_total_charged_attempts: int
 
 
-def _unique_pairs(pairs):
-    result = {}
-    for key, value in pairs:
-        if key in result:
-            raise ValueError(f"duplicate JSON key: {key}")
-        result[key] = value
-    return result
-
-
 def _json(payload: bytes, label: str):
-    try:
-        return json.loads(payload, object_pairs_hook=_unique_pairs)
-    except (json.JSONDecodeError, UnicodeError):
-        raise ValueError(f"{label} is not strict JSON") from None
+    return strict_json.loads(payload, error=ValueError, label=f"{label} is not strict JSON")
 
 
 def _normalized_reference(value: object, label: str) -> tuple[PurePosixPath, str]:

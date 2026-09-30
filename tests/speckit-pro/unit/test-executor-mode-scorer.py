@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import importlib.util
 import json
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -119,8 +118,7 @@ class ScorerWorkdir(unittest.TestCase):
 
     def setUp(self) -> None:
         self.scorer = load_scorer()
-        self.directory = Path(tempfile.mkdtemp(prefix="scorer-contract-"))
-        self.addCleanup(shutil.rmtree, self.directory, ignore_errors=True)
+        self.directory = Path(self.enterContext(tempfile.TemporaryDirectory(prefix="scorer-contract-")))
 
 
 class ScorerResultContractTests(ScorerWorkdir):

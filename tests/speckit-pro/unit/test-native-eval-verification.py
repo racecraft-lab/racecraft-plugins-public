@@ -18,7 +18,8 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 TEST_ROOT = REPO_ROOT / "tests" / "speckit-pro"
 sys.path.insert(0, str(TEST_ROOT / "lib"))
 
-import native_eval_adapters  # noqa: E402
+import native_eval_adapter_common  # noqa: E402
+import native_eval_claude_adapter  # noqa: E402
 from native_eval_grading import grade_observation  # noqa: E402
 from native_eval_verification import (  # noqa: E402
     ABSENCE_KIND,
@@ -160,7 +161,7 @@ def bound(*, value=None, reusable=False) -> tuple[dict[str, object], bytes]:
 class NativeEvalVerificationTests(unittest.TestCase):
     def test_adapter_declares_pointer_and_dynamic_record_directory(self) -> None:
         self.assertEqual(
-            native_eval_adapters._declared_artifacts(native_case(), REPO_ROOT),
+            native_eval_adapter_common._declared_artifacts(native_case(), REPO_ROOT),
             (POINTER_PATH,),
         )
         self.assertEqual(record_directories(native_case()), (".process/verification",))
@@ -199,7 +200,7 @@ class NativeEvalVerificationTests(unittest.TestCase):
             pointer_path.write_bytes(pointer_bytes)
             workspace_fd = os.open(workspace, os.O_RDONLY)
             try:
-                captured = native_eval_adapters._write_artifact_capture(
+                captured = native_eval_claude_adapter._write_artifact_capture(
                     SimpleNamespace(attempt_dir=attempt), workspace_fd,
                     (POINTER_PATH,), (".process/verification",),
                 )
