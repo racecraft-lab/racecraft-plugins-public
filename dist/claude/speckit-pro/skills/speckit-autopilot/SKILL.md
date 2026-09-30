@@ -1012,7 +1012,7 @@ in [`references/error-recovery.md`](./references/error-recovery.md).
 - [Error Recovery](./references/error-recovery.md) — Resume, common issues, context-window management
 - [TDD Protocol](./references/tdd-protocol.md) — Red-green-refactor rules injected into implementation agent prompts
 - [Plugin Limitations](./references/plugin-limitations.md) — permissionMode/hooks/mcpServers caveats and capability fallback behavior
-- [Agent Teams Integration](./references/agent-teams-integration.md) — Use-site map (current + planned), capability detection, lifecycle policy
+- [Agent Teams Integration](./references/agent-teams-integration.md) — Use-site map of current sites, capability detection, lifecycle policy
 - [Token Discipline](./references/token-discipline.md) — Opt-in compressed vocabulary for inter-agent transcripts (off by default; never applied to PR bodies, logs, or artifacts)
 
 Active runner operations are named at their use sites and in the targeted
