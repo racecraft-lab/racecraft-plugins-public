@@ -26,15 +26,17 @@ for entry in (PLUGIN_ROOT, REPO_ROOT / "tests" / "speckit-pro" / "lib"):
     if str(entry) not in sys.path:
         sys.path.insert(0, str(entry))
 
+from host_skill_views import host_skill_root  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 HELPER_ID = "ratify-pr-split"
 FIXTURE_REQUEST = (
     REPO_ROOT / "tests/speckit-pro/unit/fixtures/read-only-helpers/requests" / f"{HELPER_ID}.json"
 )
-CLAUDE_PHASE = PLUGIN_ROOT / "skills/speckit-autopilot/references/phase-execution.md"
-CODEX_PHASE = PLUGIN_ROOT / "codex-skills/speckit-autopilot/references/phase-execution-codex.md"
-CLAUDE_SKILL = PLUGIN_ROOT / "skills/speckit-autopilot/SKILL.md"
+CLAUDE_PHASE, CODEX_PHASE = (
+    host_skill_root(host) / "speckit-autopilot/references/phase-execution.md" for host in ("claude", "codex")
+)
+CLAUDE_SKILL = host_skill_root("claude") / "speckit-autopilot/SKILL.md"
 CLAUDE_GATES = PLUGIN_ROOT / "skills/speckit-autopilot/references/gate-validation.md"
 
 

@@ -1,6 +1,6 @@
 """Build Phase 6.5 autonomy-boundary records and receipts for tests.
 
-The digests follow the documented canonical form (`phase-execution-codex.md`,
+The digests follow the documented canonical form (`phase-execution.md`,
 Phase 6.5): canonical JSON sorts keys, uses `,` and `:` without whitespace,
 preserves Unicode, and rejects non-finite numbers, and the digest is the
 lowercase hexadecimal SHA-256 of its UTF-8 bytes behind a `sha256:` prefix. The

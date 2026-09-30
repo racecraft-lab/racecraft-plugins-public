@@ -1848,14 +1848,12 @@ class CaptureAndHookTests(unittest.TestCase):
 
 class WorkflowAndEvalContractTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.claude_reference = (
-            PLUGIN_ROOT
-            / "skills/speckit-autopilot/references/phase-execution.md"
-        ).read_text(encoding="utf-8")
-        self.codex_reference = (
-            PLUGIN_ROOT
-            / "codex-skills/speckit-autopilot/references/phase-execution-codex.md"
-        ).read_text(encoding="utf-8")
+        from host_skill_views import host_skill_root
+
+        self.claude_reference, self.codex_reference = (
+            (host_skill_root(host) / "speckit-autopilot/references/phase-execution.md").read_text(encoding="utf-8")
+            for host in ("claude", "codex")
+        )
         self.classifier_prompts = {
             "claude": (PLUGIN_ROOT / "agents/sweep-classifier.md").read_text(
                 encoding="utf-8"

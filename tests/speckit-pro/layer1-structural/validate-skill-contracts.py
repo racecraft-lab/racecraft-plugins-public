@@ -67,8 +67,8 @@ class ValidateSkills(unittest.TestCase):
                 'Codex source',
                 CODEX_VIEW / 'speckit-autopilot/SKILL.md',
                 PLUGIN_ROOT / 'skills/speckit-autopilot/references/gate-validation.md',
-                CODEX_VIEW / 'speckit-autopilot/references/phase-execution-codex.md',
-                CODEX_VIEW / 'speckit-autopilot/references/workflow-file-protocol-codex.md',
+                CODEX_VIEW / 'speckit-autopilot/references/phase-execution.md',
+                CODEX_VIEW / 'speckit-autopilot/references/workflow-file-protocol.md',
             ),
             (
                 'Claude payload',
@@ -81,8 +81,8 @@ class ValidateSkills(unittest.TestCase):
                 'Codex payload',
                 REPO_ROOT / 'dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md',
                 REPO_ROOT / 'dist/codex/speckit-pro/skills/speckit-autopilot/references/gate-validation.md',
-                REPO_ROOT / 'dist/codex/speckit-pro/skills/speckit-autopilot/references/phase-execution-codex.md',
-                REPO_ROOT / 'dist/codex/speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol-codex.md',
+                REPO_ROOT / 'dist/codex/speckit-pro/skills/speckit-autopilot/references/phase-execution.md',
+                REPO_ROOT / 'dist/codex/speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md',
             ),
         )
         log_header = '| Attempt | Disputed wording | Source evidence | Provenance class | Repair action | G3 result | Remaining escalation reason |'
@@ -221,7 +221,7 @@ class ValidateSkills(unittest.TestCase):
                     for needle in ('once per spec', 'delegate_health', 'delegate_task', 'delegate_status', 'delegate_candidate', 'delegate_apply', 'route: "auto"', 'webPolicy: "disabled"', 'Allowed writes: tests only', 'Fallback path (primary model)'):
                         self.assertIn(needle, hardener_text, f'expected hardener-delegation.md to state {needle!r}')
                     phase_exec = (skill_dir / 'references' / 'phase-execution.md').read_text(encoding='utf-8')
-                    codex_post = (CODEX_VIEW / 'speckit-autopilot' / 'references' / 'post-implementation-codex.md').read_text(encoding='utf-8')
+                    codex_post = (CODEX_VIEW / 'speckit-autopilot' / 'references' / 'post-implementation.md').read_text(encoding='utf-8')
                     self.assertIn('hardener-delegation.md', phase_exec, 'expected Phase 7 Step 4 to point at the hardener reference')
                     self.assertIn('hardener-delegation.md', codex_post, 'expected the Codex integration-suite row to point at the hardener reference')
                 with self.subTest(msg='speckit-autopilot: delegation guidance uses the gateway delegate_* tools and never hard-codes the local route'):
@@ -231,7 +231,7 @@ class ValidateSkills(unittest.TestCase):
                     offenders = [f'{p.relative_to(PLUGIN_ROOT)}:{n}: {m.group(0)}' for p in shipped for n, line in enumerate(p.read_text(encoding='utf-8').splitlines(), 1) for m in retired.finditer(line)]
                     self.assertEqual([], offenders, 'retired qwen_* tool names or a hard-coded local delegation route in shipped text')
                 with self.subTest(msg='speckit-autopilot: Codex autonomy preflight inventories delegation at the gateway route=auto destination'):
-                    codex_phase = (CODEX_VIEW / 'speckit-autopilot' / 'references' / 'phase-execution-codex.md').read_text(encoding='utf-8')
+                    codex_phase = (CODEX_VIEW / 'speckit-autopilot' / 'references' / 'phase-execution.md').read_text(encoding='utf-8')
                     start = codex_phase.find('### Autonomy Boundary Preflight')
                     self.assertNotEqual(-1, start, 'expected the Autonomy Boundary Preflight section')
                     end = codex_phase.find('\n### ', start + 1)
@@ -390,9 +390,9 @@ class ValidateCodexSkills(unittest.TestCase):
                     self.assertTrue('install-codex-agents' in body and 'dry_run' in body and ('apply' in body) and ('verified' in body) and (entry.promotion_status == 'golden_only') and bool(entry.authoritative_command), 'expected a promoted, fixture-backed install-codex-agents dry-run/apply contract')
 
     def _check_autopilot_skill(self, skill_dir: Path, body: str) -> None:
-        phase_execution = _read(skill_dir / 'references' / 'phase-execution-codex.md')
-        post_implementation = _read(skill_dir / 'references' / 'post-implementation-codex.md')
-        error_recovery = _read(skill_dir / 'references' / 'error-recovery-codex.md')
+        phase_execution = _read(skill_dir / 'references' / 'phase-execution.md')
+        post_implementation = _read(skill_dir / 'references' / 'post-implementation.md')
+        error_recovery = _read(skill_dir / 'references' / 'error-recovery.md')
         runtime_doc = f"{body}\n{phase_execution}\n{post_implementation}\n{error_recovery}"
         with self.subTest(msg='speckit-autopilot: requires update_plan as the progress contract'):
             self.assertIn('update_plan', runtime_doc)
@@ -430,12 +430,12 @@ class ValidateCodexSkills(unittest.TestCase):
         with self.subTest(msg='speckit-autopilot: validates a single in_progress item before phase execution'):
             self.assertIn('Exactly one plan item is `in_progress`', body)
         with self.subTest(msg='speckit-autopilot: requires all canonical phase families before execution'):
-            self.assertTrue('phase family coverage is mandatory' in runtime_doc and 'Phase 7: Implement - Pending task decomposition' in runtime_doc and ('Post: Doctor Extension Check' in runtime_doc) and ('Post: Retrospective' in runtime_doc), 'expected all-phase coverage, Phase 7 placeholder, and the canonical Post item list (Doctor Extension Check -> Retrospective) in the Codex autopilot skill')
+            self.assertTrue('Phase family coverage is mandatory' in runtime_doc and 'Phase 7: Implement - Pending task decomposition' in runtime_doc and ('Post: Doctor Extension Check' in runtime_doc) and ('Post: Retrospective' in runtime_doc), 'expected all-phase coverage, Phase 7 placeholder, and the canonical Post item list (Doctor Extension Check -> Retrospective) in the Codex autopilot skill')
         with self.subTest(msg='speckit-autopilot: documents canonical PHASES order'):
             self.assertIn('PHASES = [specify, clarify, plan, checklist, tasks, analyze, implement]', runtime_doc)
         with self.subTest(msg='speckit-autopilot: prevents from-phase from dropping later phases'):
             self.assertTrue(
-                'Read the workflow file and apply\n[`phase-execution-codex.md`](./references/phase-execution-codex.md)\n§Stage-Bounded Execution.' in body
+                'Read the workflow file and apply\n[`references/phase-execution.md`](./references/phase-execution.md)\n§Stage-Bounded Phase Selection.' in body
                 and '`--from-phase` changes the first phase to execute, not the required plan\ncoverage.' in phase_execution
                 and 'all seven SDD phases, and Post before any subagent is spawned.' in phase_execution
                 and 'a value outside an explicitly named stage\'s range is rejected at Step\n0.6c before any phase work begins.' in phase_execution,
@@ -443,7 +443,7 @@ class ValidateCodexSkills(unittest.TestCase):
             )
         with self.subTest(msg='speckit-autopilot: requires concrete Phase 7 tasks after G5'):
             self.assertTrue(
-                'Before performing it, read\n[`phase-execution-codex.md`](./references/phase-execution-codex.md)\n§Phase 7: Implement' in body
+                'Before performing the post-G5 steps (8 through 8e), read\n[`references/phase-execution.md`](./references/phase-execution.md)\n§Phase 5: Tasks' in body
                 and 'After G5 passes, the placeholder is invalid.' in phase_execution
                 and '- no `Phase 7: Implement - Pending task decomposition` item remains' in phase_execution
                 and '- each concrete item names one or more task IDs parsed from `tasks.md`' in phase_execution
@@ -452,7 +452,7 @@ class ValidateCodexSkills(unittest.TestCase):
             )
         with self.subTest(msg='speckit-autopilot: resumes into Post before reporting complete'):
             self.assertTrue(
-                'After Phase 7 passes G7, read and execute\n[`post-implementation-codex.md`](./references/post-implementation-codex.md)\nin canonical order.' in body
+                'After Phase 7 passes G7, read and execute\n[`references/post-implementation.md`](./references/post-implementation.md)\nin canonical order.' in body
                 and 'all seven SDD phases being complete is not sufficient to stop.' in post_implementation
                 and 'continue with the first incomplete Post item.' in post_implementation
                 and 'resume at the first incomplete Post\n   item. Do not summarize completion from a `Phase 7: Implement Complete`\n   state.' in error_recovery,
@@ -474,10 +474,10 @@ class ValidateCodexSkills(unittest.TestCase):
         with self.subTest(msg='speckit-autopilot: validates installed Codex subagent paths'):
             self.assertTrue('.codex/agents/' in body and '~/.codex/agents/' in body, 'expected both project and user Codex subagent paths in the autopilot skill')
         with self.subTest(msg='speckit-autopilot: fails closed to the install skill when subagents are missing'):
-            prerequisites = _read(skill_dir / 'references' / 'prerequisites-codex.md')
+            prerequisites = _read(skill_dir / 'references' / 'prerequisites.md')
             self.assertTrue('$install' in body and '$install' in prerequisites and ('install-codex-agents' in prerequisites) and ('dry_run' in prerequisites) and ('validate-agent-install' not in prerequisites) and ('--autoheal' not in prerequisites), 'expected read-only installer dry-run preflight and install/restart fail-closed guidance')
         with self.subTest(msg='speckit-autopilot: explicit external workflow binds to its registered worktree'):
-            prerequisites = _read(skill_dir / 'references' / 'prerequisites-codex.md')
+            prerequisites = _read(skill_dir / 'references' / 'prerequisites.md')
             self.assertTrue('explicitly supplied the absolute workflow path' in prerequisites and 'relation=external' in prerequisites and 'registered worktree' in prerequisites and 'real sandbox denial' in prerequisites and ('Open a new Codex task rooted at <workflow_root>' not in prerequisites), 'expected explicit registered-worktree binding with permission failures reported at the actual operation')
         with self.subTest(msg='speckit-autopilot: documents the optional Luna helper'):
             self.assertIn('autopilot-fast-helper', body)
@@ -490,19 +490,19 @@ class ValidateCodexSkills(unittest.TestCase):
         with self.subTest(msg='speckit-autopilot: excludes Claude-only runtime primitives'):
             self.assertIsNone(CLAUDE_ONLY_RUNTIME_RE.search(runtime_doc), 'found Claude-only primitive or runtime guidance in Codex autopilot skill')
         with self.subTest(msg='speckit-autopilot: Codex-specific references exist'):
-            self.assertTrue((skill_dir / 'references' / 'phase-execution-codex.md').is_file())
+            self.assertTrue((skill_dir / 'references' / 'phase-execution.md').is_file())
         with self.subTest(msg='speckit-autopilot: Codex post-implementation reference exists'):
-            self.assertTrue((skill_dir / 'references' / 'post-implementation-codex.md').is_file())
+            self.assertTrue((skill_dir / 'references' / 'post-implementation.md').is_file())
         with self.subTest(msg='speckit-autopilot: Codex SKILL.md names the plan-phase estimator helper'):
             self.assertIn('estimate-reviewable-loc', body)
         with self.subTest(msg='speckit-autopilot: Codex SKILL.md carries the three-value status vocab'):
             self.assertIn('`pass` / `over_budget` / `not_estimated`', body)
-        phase_exec = _read(skill_dir / 'references' / 'phase-execution-codex.md')
-        with self.subTest(msg='speckit-autopilot: phase-execution-codex.md names the plan-phase estimator helper'):
+        phase_exec = _read(skill_dir / 'references' / 'phase-execution.md')
+        with self.subTest(msg='speckit-autopilot: Codex phase-execution.md names the plan-phase estimator helper'):
             self.assertIn('estimate-reviewable-loc', phase_exec)
-        with self.subTest(msg='speckit-autopilot: phase-execution-codex.md documents the over_budget status'):
+        with self.subTest(msg='speckit-autopilot: Codex phase-execution.md documents the over_budget status'):
             self.assertIn('over_budget', phase_exec)
-        with self.subTest(msg='speckit-autopilot: phase-execution-codex.md documents the not_estimated status'):
+        with self.subTest(msg='speckit-autopilot: Codex phase-execution.md documents the not_estimated status'):
             self.assertIn('not_estimated', phase_exec)
 
     def _check_allow_implicit_invocation_policy(self, skill: str, skill_dir: Path) -> None:
@@ -1025,7 +1025,7 @@ class ValidateStopPolicyReference(unittest.TestCase):
 
     LINKS = (
         ('Claude', 'skills/speckit-autopilot/SKILL.md', '(./references/stop-policy.md)'),
-        ('Codex', 'codex-skills/speckit-autopilot/SKILL.md', '(../../skills/speckit-autopilot/references/stop-policy.md)'),
+        ('Codex', 'skills/speckit-autopilot/SKILL.md', '(./references/stop-policy.md)'),
     )
 
     def test_shared_reference_exists_in_source_and_both_payloads(self) -> None:

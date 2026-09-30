@@ -13,8 +13,10 @@ if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
 
 from speckit_pro_runner.host_parity import emit_host  # noqa: E402
-PHASE_EXECUTION_GUIDES = ("skills/speckit-autopilot/references/phase-execution.md",
-                          "codex-skills/speckit-autopilot/references/phase-execution-codex.md")
+# A guide is a plugin-relative path, or a (path, host) pair naming the host whose view is read.
+Guide = str | tuple[str, str]
+PHASE_EXECUTION = "skills/speckit-autopilot/references/phase-execution.md"
+PHASE_EXECUTION_GUIDES: tuple[Guide, ...] = ((PHASE_EXECUTION, "claude"), (PHASE_EXECUTION, "codex"))
 EXECUTION_EFFICIENCY_GUIDE = "skills/speckit-autopilot/references/execution-efficiency.md"
 
 
@@ -29,13 +31,24 @@ def guide_text(relative: str, host: str | None = None) -> str:
     return " ".join(host_source(relative, host).split())
 
 
-def assert_guides_say(test: unittest.TestCase, guides: Iterable[str], present: Iterable[str],
+def guide_view(guide: Guide) -> str:
+    """`guide_text` for a plain path or a (path, host) pair."""
+    return guide_text(guide) if isinstance(guide, str) else guide_text(*guide)
+
+
+def host_guides(relative: str) -> tuple[Guide, Guide]:
+    """One shared file as each host receives it."""
+    return ((relative, "claude"), (relative, "codex"))
+
+
+def assert_guides_say(test: unittest.TestCase, guides: Iterable[Guide], present: Iterable[str],
                       absent: Iterable[str] = ()) -> None:
     """Each guide carries every `present` phrase and none of the `absent` ones."""
     present, absent = tuple(present), tuple(absent)
-    for relative in guides:
-        with test.subTest(guide=relative):
-            text = guide_text(relative)
+    for guide in guides:
+        relative, host = (guide, None) if isinstance(guide, str) else guide
+        with test.subTest(guide=relative, host=host):
+            text = guide_text(relative, host)
             for phrase in present:
                 test.assertIn(phrase, text)
             for phrase in absent:
@@ -50,7 +63,7 @@ class GuidePhrases(NamedTuple):
 
 
 def assert_guides_document(test: unittest.TestCase, shared: GuidePhrases, host: GuidePhrases,
-                           hosts: Iterable[str] = PHASE_EXECUTION_GUIDES) -> None:
+                           hosts: Iterable[Guide] = PHASE_EXECUTION_GUIDES) -> None:
     """The shared execution-efficiency guide and each host guide carry the phrases that document one allowance."""
     assert_guides_say(test, (EXECUTION_EFFICIENCY_GUIDE,), *shared)
     assert_guides_say(test, hosts, *host)

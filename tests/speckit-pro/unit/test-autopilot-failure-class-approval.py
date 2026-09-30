@@ -38,10 +38,10 @@ class FailureClassApprovalSourceContractTests(unittest.TestCase):
             self.assertIn(phrase, section)
 
     def test_codex_phase_execution_states_the_class_rule(self) -> None:
-        phase = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "phase-execution-codex.md")
+        phase = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "phase-execution.md")
         section = _section(phase, f"### {FAILURE_CLASS_HEADING}", "## PR Packet and Body Boundary")
         self.assert_class_rules(section)
-        recovery = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "error-recovery-codex.md")
+        recovery = _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "error-recovery.md")
         _assert_phrases(self, recovery, (FAILURE_CLASS_HEADING, "`reserve-class-correction`"))
 
     def test_claude_phase_execution_states_the_class_rule(self) -> None:

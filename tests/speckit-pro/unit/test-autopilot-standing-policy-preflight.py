@@ -44,7 +44,7 @@ class StandingPolicyPreflightSourceContractTests(_CodexGuides):
 
     SECTIONS = {
         "preflight": ("phase", "### Autonomy Boundary Preflight", "1. Read mode from `CONFIDENCE_GATE_MODE`"),
-        "resume": ("prerequisites", "### 0.8c Resumed Autonomy Boundary Preflight", "### 0.9"),
+        "resume": ("prerequisites", "## Step 0.8c: Resumed Autonomy Boundary Preflight", "## Step 0.9"),
     }
 
     def test_covered_inventory_asks_no_question_including_a_stage_change(self) -> None:
@@ -106,8 +106,8 @@ class CodexRunStartAuthorizationSourceContractTests(_CodexGuides):
 
     def test_step_runs_before_archive_sweep_and_on_every_resume(self) -> None:
         _assert_phrases(self, self.step, PHRASES["CodexRunStartAuthorizationSourceContractTests.test_step_runs_before_archive_sweep_and_on_every_resume#1"])
-        self.assertLess(self.skill.index("**Step -2: Run-Start Authorization**"),
-                        self.skill.index("**Step -1: Archive Sweep Startup**"))
+        self.assertLess(self.skill.index("run the Step -2 run-start authorization"),
+                        self.skill.index("**Archive Sweep**"))
 
     def test_policy_classes_derive_from_the_gate_coverage_output(self) -> None:
         _assert_phrases(self, self.step, PHRASES["CodexRunStartAuthorizationSourceContractTests.test_policy_classes_derive_from_the_gate_coverage_output#1"])
@@ -128,7 +128,7 @@ class CodexRunStartAuthorizationSourceContractTests(_CodexGuides):
             "a correctly installed policy reads as missing",
         ))
         self.assertIn("rerun the standing check with Step -2's `derived_classes`",
-                      _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "prerequisites-codex.md"))
+                      _flat(CODEX_AUTOPILOT_SKILL.parent / "references" / "prerequisites.md"))
         _assert_phrases(self, self.step, (
             "A base class's probe sends no repository content",
             "A derived class's probe is its gate command run once",

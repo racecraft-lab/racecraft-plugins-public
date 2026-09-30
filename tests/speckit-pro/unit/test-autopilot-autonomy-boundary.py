@@ -52,7 +52,7 @@ class AutonomyBoundarySourceContractTests(_CodexGuides):
     SECTIONS = {
         "preflight": ("phase", "### Autonomy Boundary Preflight", "1. Read mode from `CONFIDENCE_GATE_MODE`"),
         "inventory": ("phase", "### Autonomy Boundary Preflight", "For each action, record its category"),
-        "resume": ("prerequisites", "### 0.8c Resumed Autonomy Boundary Preflight", "### 0.9"),
+        "resume": ("prerequisites", "## Step 0.8c: Resumed Autonomy Boundary Preflight", "## Step 0.9"),
     }
 
     def test_source_contract_places_preflight_before_every_phase_seven_entry(self) -> None:

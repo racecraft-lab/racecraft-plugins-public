@@ -16,21 +16,17 @@ from pathlib import Path
 TEST_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(TEST_DIR.parent / "lib"))
 
-from guide_text import assert_guides_say  # noqa: E402
+from guide_text import assert_guides_say, host_guides  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 CLAUDE = "skills/speckit-autopilot/"
-CODEX = "codex-skills/speckit-autopilot/"
 REPAIR_THEN_DEFER = "run the repair loop within its allowance, then defer per the Failure Escalation Protocol"
 
-CLAUDE_SKILL = CLAUDE + "SKILL.md"
-CODEX_SKILL = CODEX + "SKILL.md"
-CLAUDE_PHASE = CLAUDE + "references/phase-execution.md"
-CODEX_PHASE = CODEX + "references/phase-execution-codex.md"
-CLAUDE_POST = CLAUDE + "references/post-implementation.md"
-CODEX_POST = CODEX + "references/post-implementation-codex.md"
-CLAUDE_PREREQ = CLAUDE + "references/prerequisites.md"
-CODEX_PREREQ = CODEX + "references/prerequisites-codex.md"
+# The autopilot's shared files, as each host receives them.
+CLAUDE_SKILL, CODEX_SKILL = host_guides(CLAUDE + "SKILL.md")
+CLAUDE_PHASE, CODEX_PHASE = host_guides(CLAUDE + "references/phase-execution.md")
+CLAUDE_POST, CODEX_POST = host_guides(CLAUDE + "references/post-implementation.md")
+CLAUDE_PREREQ, CODEX_PREREQ = host_guides(CLAUDE + "references/prerequisites.md")
 GATES = CLAUDE + "references/gate-validation.md"
 EFFICIENCY = CLAUDE + "references/execution-efficiency.md"
 STACK_MANAGER = CLAUDE + "references/stack-manager.md"

@@ -11,6 +11,7 @@ TEST_DIR = LIB_DIR.parent / "unit"
 REPO_ROOT = TEST_DIR.parents[2]
 
 from guide_text import guide_text
+from host_skill_views import host_skill_root
 from script_loader import load_script
 
 PHRASES = json.loads(
@@ -24,10 +25,11 @@ SKILL_SCRIPTS = REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot" / "sc
 VALIDATOR = SKILL_SCRIPTS / "validate-autopilot-phase-coverage.py"
 
 
-CLAUDE_AUTOPILOT_SKILL = REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot" / "SKILL.md"
+# Each host's autopilot skill as it ships: the shared source rendered without the other host's blocks.
+CLAUDE_AUTOPILOT_SKILL = host_skill_root("claude") / "speckit-autopilot" / "SKILL.md"
 
 
-CODEX_AUTOPILOT_SKILL = REPO_ROOT / "speckit-pro" / "codex-skills" / "speckit-autopilot" / "SKILL.md"
+CODEX_AUTOPILOT_SKILL = host_skill_root("codex") / "speckit-autopilot" / "SKILL.md"
 
 
 def _load(path: Path, name: str):
@@ -137,8 +139,8 @@ class _CodexGuides(unittest.TestCase):
     """The Codex skill, phase guide, and prerequisites, whitespace-flattened for phrase checks."""
 
     HOST_SKILL = CODEX_AUTOPILOT_SKILL
-    PREREQUISITES = "prerequisites-codex.md"
-    PHASE = "phase-execution-codex.md"
+    PREREQUISITES = "prerequisites.md"
+    PHASE = "phase-execution.md"
     # attribute -> (guide attribute, start heading, end heading)
     SECTIONS: dict[str, tuple[str, str, str]] = {}
     # attribute -> extra guide, relative to the plugin root
@@ -191,4 +193,4 @@ BLOCKED_ACTION_HEADING = "Blocked Actions Mid-Run: Fall Back or Defer, Never Sto
 SKILL_DIR = "skills/speckit-autopilot/"
 
 
-CODEX_SKILL_DIR = "codex-skills/speckit-autopilot/"
+AUTOPILOT_SKILL = SKILL_DIR + "SKILL.md"

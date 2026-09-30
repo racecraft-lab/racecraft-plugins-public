@@ -26,16 +26,14 @@ import unittest
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO / "tests/speckit-pro/lib")]
+from host_skill_views import host_skill_root  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 SKILL_ROOTS = {
     "claude": REPO / "speckit-pro/skills",
     "codex": REPO / "speckit-pro/codex-skills",
 }
-AUTOPILOT_DIRS = {
-    "claude": REPO / "speckit-pro/skills/speckit-autopilot",
-    "codex": REPO / "speckit-pro/codex-skills/speckit-autopilot",
-}
+AUTOPILOT_DIRS = {host: host_skill_root(host) / "speckit-autopilot" for host in ("claude", "codex")}
 CLEANUP_SKILLS = {
     "claude": REPO / "speckit-pro/skills/speckit-archive-cleanup/SKILL.md",
     "codex": REPO / "speckit-pro/codex-skills/speckit-archive-cleanup/SKILL.md",
@@ -95,10 +93,12 @@ def writes_agent_context(arguments: str) -> bool:
 
 def prescribed_invocations(root: Path) -> list[tuple[str, int, str]]:
     found: list[tuple[str, int, str]] = []
+    base = root if root.is_dir() else root.parent
     for path in sorted(root.rglob("*.md")) if root.is_dir() else [root]:
+        label = f"{base.name}/{path.relative_to(base).as_posix()}"
         for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
             for match in INVOCATION.finditer(line):
-                found.append((path.relative_to(REPO).as_posix(), number, match.group(1).strip()))
+                found.append((label, number, match.group(1).strip()))
     return found
 
 

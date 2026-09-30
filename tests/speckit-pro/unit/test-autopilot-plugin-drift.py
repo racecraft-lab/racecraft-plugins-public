@@ -43,7 +43,7 @@ class MidRunPluginDriftSourceContractTests(unittest.TestCase):
 
     def test_codex_phase_seven_records_drift_and_continues(self) -> None:
         section = _section_after(
-            self, _codex_reference("phase-execution-codex.md"), f"### {BLOCKED_ACTION_HEADING}",
+            self, _codex_reference("phase-execution.md"), f"### {BLOCKED_ACTION_HEADING}",
             f"### {PLUGIN_DRIFT_HEADING}", "## PR Packet and Body Boundary",
         )
         self.assert_drift_rules(section)
@@ -53,8 +53,8 @@ class MidRunPluginDriftSourceContractTests(unittest.TestCase):
 
     def test_codex_restart_rule_is_scoped_to_setup_or_run_start(self) -> None:
         skill = _flat(CODEX_AUTOPILOT_SKILL)
-        prerequisites = _codex_reference("prerequisites-codex.md")
-        recovery = _codex_reference("error-recovery-codex.md")
+        prerequisites = _codex_reference("prerequisites.md")
+        recovery = _codex_reference("error-recovery.md")
         for text in (skill, prerequisites):
             _assert_absent(self, text, (
                 "cannot reload changed custom agents safely",
@@ -62,8 +62,8 @@ class MidRunPluginDriftSourceContractTests(unittest.TestCase):
             ))
         guard = _section(skill, "Do not translate this skill into Claude-only", "## Prerequisites — Model")
         mapping = _section(skill, "Concrete Codex mapping:", "Spawn each agent with")
-        availability = _section(skill, "**Step 0.10: Codex Agent Availability Check**", "**Step 0.10b")
-        preflight = _section(prerequisites, "### 0.10 Codex Agent Availability Check", "### 0.10b")
+        availability = _section(skill, "**Codex agent availability and implementation agent detection**", "**Load settings**")
+        preflight = _section(prerequisites, "## Step 0.10: Codex Agent Availability Check", "## Step 0.10b")
         for text in (guard, mapping, availability, preflight):
             _assert_phrases(self, text, ("at setup or run start", PLUGIN_DRIFT_HEADING))
         self.assertIn("next `spawn_agent`", preflight)

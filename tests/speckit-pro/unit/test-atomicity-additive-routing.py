@@ -101,13 +101,15 @@ class AtomicityAdditiveRoutingTests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout)["status"], "ok")
-        for path in (
-            "speckit-pro/skills/speckit-autopilot/SKILL.md",
-            "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
-            "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
+        from guide_text import host_source
+
+        for path, host in (
+            ("skills/speckit-autopilot/SKILL.md", "claude"),
+            ("skills/speckit-autopilot/SKILL.md", "codex"),
+            ("skills/speckit-autopilot/references/phase-execution.md", "claude"),
         ):
-            with self.subTest(path=path):
-                guidance = (REPO_ROOT / path).read_text()
+            with self.subTest(path=path, host=host):
+                guidance = host_source(path, host)
                 self.assertIn("inputs.feature_dir", guidance)
                 self.assertIn("inputs.workflow_file", guidance)
 
