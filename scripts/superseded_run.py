@@ -48,12 +48,22 @@ def github_fetch(token: str, api_url: str, timeout: float = 15.0) -> Fetch:
     return fetch
 
 
+def event_head_sha(event_path: str) -> str:
+    """Return the pull request head commit from the Actions event payload, or ""."""
+    try:
+        with open(event_path, encoding="utf-8") as handle:
+            head_sha = json.load(handle)["pull_request"]["head"]["sha"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return ""
+    return head_sha if isinstance(head_sha, str) else ""
+
+
 def newer_run_id(env: Mapping[str, str], fetch: Fetch | None = None) -> int | None:
     """Return the id of a newer run of this workflow for the same head commit, else None."""
     if env.get("GITHUB_EVENT_NAME") != "pull_request":
         return None
     repository = env.get("GITHUB_REPOSITORY", "")
-    head_sha = env.get("PR_HEAD_SHA", "")
+    head_sha = event_head_sha(env.get("GITHUB_EVENT_PATH", ""))
     raw_run_id = env.get("GITHUB_RUN_ID", "")
     if not (_REPOSITORY.fullmatch(repository) and _SHA.fullmatch(head_sha) and raw_run_id.isdigit()):
         return None

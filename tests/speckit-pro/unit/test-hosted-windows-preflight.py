@@ -589,61 +589,6 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
             ],
         )
 
-    def run_sentinel(
-        self, role: str, run_preflight: str, heavy_result: str, **patches: object,
-    ) -> tuple[int, dict[str, object]]:
-        with tempfile.TemporaryDirectory() as temporary:
-            evidence_dir = Path(temporary) / "evidence"
-            environment = {
-                "EVIDENCE_DIR": str(evidence_dir),
-                "PREFLIGHT_ROLE": role,
-                "CHANGES_RESULT": "success",
-                "RUN_PREFLIGHT": run_preflight,
-                "PREFLIGHT_RESULT": heavy_result,
-            }
-            with contextlib.ExitStack() as stack:
-                stack.enter_context(mock.patch.dict(os.environ, environment, clear=True))
-                stack.enter_context(mock.patch.object(
-                    dispatch_helper.platform,
-                    "python_version",
-                    return_value=dispatch_helper.HOSTED_PYTHON_VERSION,
-                ))
-                for name, side_effect in patches.items():
-                    stack.enter_context(mock.patch.object(dispatch_helper, name, side_effect=side_effect))
-                stack.enter_context(contextlib.redirect_stdout(io.StringIO()))
-                return_code = dispatch_helper._sentinel()
-            result = json.loads((evidence_dir / "result.json").read_text(encoding="utf-8"))
-        return return_code, result
-
-    def test_required_sentinel_writes_stable_verdicts_and_passes_only_superseded_cancellations(self) -> None:
-        real_lookup = object()
-        # (run_preflight, heavy_result, supersession answer, exit code, verdict, lookups)
-        cases = (
-            ("false", "skipped", "superseded by run 7", 0, "pass", []),
-            ("true", "cancelled", "superseded by run 7", 0, "superseded", ["asked"]),
-            ("true", "cancelled", None, 1, "fail", ["asked"]),
-            ("true", "failure", "superseded by run 7", 1, "fail", []),
-            # No pull_request context: the real lookup never reaches the API.
-            ("true", "cancelled", real_lookup, 1, "fail", []),
-        )
-        for run_preflight, heavy_result, notice, expected_code, expected_verdict, expected_calls in cases:
-            with self.subTest(heavy_result=heavy_result, notice=notice):
-                calls: list[str] = []
-
-                def superseded(notice: object = notice) -> object:
-                    calls.append("asked")
-                    return notice
-
-                patches = {} if notice is real_lookup else {"_superseded_notice": superseded}
-                return_code, result = self.run_sentinel(
-                    "linux-amd64-required", run_preflight, heavy_result, **patches,
-                )
-                self.assertEqual(return_code, expected_code)
-                self.assertEqual(result["verdict"], expected_verdict)
-                self.assertEqual(result["heavy_result"], heavy_result)
-                self.assertEqual(result["superseded"], notice if expected_verdict == "superseded" else None)
-                self.assertEqual(calls, expected_calls)
-
     def test_linux_dispatch_checks_native_architecture_and_runs_exact_gate_requests(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             evidence_dir = Path(temporary) / "evidence"
@@ -1007,6 +952,65 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
             self.assertTrue((REPO_ROOT / request).is_file())
 
 
+class RequiredSentinelVerdictTests(unittest.TestCase):
+    """The Linux required-check sentinels write stable verdict evidence."""
+
+    def run_sentinel(
+        self, role: str, run_preflight: str, heavy_result: str, **patches: object,
+    ) -> tuple[int, dict[str, object]]:
+        with tempfile.TemporaryDirectory() as temporary:
+            evidence_dir = Path(temporary) / "evidence"
+            environment = {
+                "EVIDENCE_DIR": str(evidence_dir),
+                "PREFLIGHT_ROLE": role,
+                "CHANGES_RESULT": "success",
+                "RUN_PREFLIGHT": run_preflight,
+                "PREFLIGHT_RESULT": heavy_result,
+            }
+            with contextlib.ExitStack() as stack:
+                stack.enter_context(mock.patch.dict(os.environ, environment, clear=True))
+                stack.enter_context(mock.patch.object(
+                    dispatch_helper.platform,
+                    "python_version",
+                    return_value=dispatch_helper.HOSTED_PYTHON_VERSION,
+                ))
+                for name, side_effect in patches.items():
+                    stack.enter_context(mock.patch.object(dispatch_helper, name, side_effect=side_effect))
+                stack.enter_context(contextlib.redirect_stdout(io.StringIO()))
+                return_code = dispatch_helper._sentinel()
+            result = json.loads((evidence_dir / "result.json").read_text(encoding="utf-8"))
+        return return_code, result
+
+    def test_required_sentinel_writes_stable_verdicts_and_passes_only_superseded_cancellations(self) -> None:
+        real_lookup = object()
+        # (run_preflight, heavy_result, supersession answer, exit code, verdict, lookups)
+        cases = (
+            ("false", "skipped", "superseded by run 7", 0, "pass", []),
+            ("true", "cancelled", "superseded by run 7", 0, "superseded", ["asked"]),
+            ("true", "cancelled", None, 1, "fail", ["asked"]),
+            ("true", "failure", "superseded by run 7", 1, "fail", []),
+            # No pull_request context: the real lookup never reaches the API.
+            ("true", "cancelled", real_lookup, 1, "fail", []),
+        )
+        for run_preflight, heavy_result, notice, expected_code, expected_verdict, expected_calls in cases:
+            with self.subTest(heavy_result=heavy_result, notice=notice):
+                calls: list[str] = []
+
+                def superseded(notice: object = notice) -> object:
+                    calls.append("asked")
+                    return notice
+
+                patches = {} if notice is real_lookup else {"_superseded_notice": superseded}
+                return_code, result = self.run_sentinel(
+                    "linux-amd64-required", run_preflight, heavy_result, **patches,
+                )
+                self.assertEqual(return_code, expected_code)
+                self.assertEqual(result["verdict"], expected_verdict)
+                self.assertEqual(result["heavy_result"], heavy_result)
+                self.assertEqual(result["superseded"], notice if expected_verdict == "superseded" else None)
+                self.assertEqual(calls, expected_calls)
+
+
 class PreflightContractTests(unittest.TestCase):
     def test_preflight_scripts_share_one_architecture_vocabulary(self) -> None:
         for machine in ("AMD64", "x64", "x86_64", "ARM64", "aarch64", "riscv64", ""):
@@ -1033,6 +1037,9 @@ def main() -> int:
             ),
             unittest.defaultTestLoader.loadTestsFromTestCase(
                 ContainerPreflightDispatchTests
+            ),
+            unittest.defaultTestLoader.loadTestsFromTestCase(
+                RequiredSentinelVerdictTests
             ),
             unittest.defaultTestLoader.loadTestsFromTestCase(
                 PreflightContractTests
