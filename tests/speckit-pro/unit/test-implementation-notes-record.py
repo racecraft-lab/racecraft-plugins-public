@@ -360,14 +360,11 @@ class ImplementationNotesRecordTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        raw: dict[tuple[str, str | None], str] = {}
         cls.bodies = {}
         cls.labels = {}
         for key, (relative_path, heading) in TARGETS.items():
-            view = (relative_path, HOST_VIEWS.get(key))
-            if view not in raw:
-                raw[view] = host_source(relative_path.removeprefix("speckit-pro/"), view[1])
-            text = raw[view] if heading is None else _section(raw[view], heading)
+            source = host_source(relative_path.removeprefix("speckit-pro/"), HOST_VIEWS.get(key))
+            text = source if heading is None else _section(source, heading)
             cls.bodies[key] = _normalize(text)
             cls.labels[key] = relative_path if heading is None else f"{relative_path} §{heading}"
 
