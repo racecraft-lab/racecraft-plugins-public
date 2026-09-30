@@ -1,3 +1,0 @@
-structureVersion: 1
-title: SPEC-913 MOC
-

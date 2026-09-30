@@ -1,1 +1,10 @@
-{"estimated_loc":800,"suggested_slices":2,"status":"warn"}
+{
+  "inputs": {
+    "files": "20"
+  },
+  "expected": {
+    "estimated_loc": 800,
+    "suggested_slices": 2,
+    "status": "warn"
+  }
+}

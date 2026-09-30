@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import importlib.util
 import io
 import json
 import os
@@ -21,6 +20,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[3]
 PLUGIN = ROOT / "speckit-pro"
 sys.path.insert(0, str(ROOT / "tests/speckit-pro/lib"))
+from script_loader import load_script
 from test_result import run_counted
 
 sys.path.insert(0, str(PLUGIN))
@@ -28,9 +28,7 @@ from speckit_pro_runner.formal import catalog, pins, quint
 from speckit_pro_runner.helpers.read_only import json_schema_failures
 
 SCRIPTS = "skills/speckit-coach/scripts"
-spec = importlib.util.spec_from_file_location("formal_setup", PLUGIN / SCRIPTS / "setup-formal-tools.py")
-setup = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(setup)
+setup = load_script("formal_setup", PLUGIN / SCRIPTS / "setup-formal-tools.py")
 CACHE: Path | None = None
 SCHEMA_PATH = PLUGIN / "speckit_pro_runner/contracts/formal-methods.schema.json"
 EXAMPLES = PLUGIN / "skills/speckit-coach/examples/formal"

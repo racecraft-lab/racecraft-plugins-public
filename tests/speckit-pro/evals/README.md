@@ -247,6 +247,11 @@ there are no legacy selector aliases. Layers 1, 4, and 5 remain structural,
 unit, and tool-scoping validation respectively and are not native-evaluation
 selectors.
 
+`run-native-evals.py` is a separate command line. Its selectors reuse the layer
+numbers, but the manifest layers do not dispatch it. Manifest layers 2 and 3
+dispatch the legacy trigger and functional runners, and layers 6 and 7 dispatch
+the deterministic fixture runners. `run-all.py` never calls `run-native-evals.py`.
+
 | Layer | Meaning | Native entrypoint status |
 | --- | --- | --- |
 | 1 | Structural validation | Deterministic suite, not selected here |

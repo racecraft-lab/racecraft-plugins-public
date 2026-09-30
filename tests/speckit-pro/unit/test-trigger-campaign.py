@@ -7,6 +7,7 @@ import copy
 import hashlib
 import json
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -14,6 +15,9 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "lib"))
 import trigger_campaign as campaign
+import trigger_approval_fixtures as approvals
+import trigger_campaign_pins as pins
+import trigger_carry_forward as carry
 import trigger_comparison as comparison
 from test_result import run_counted
 from trigger_inventory import load_inventory, plan_inventory
@@ -25,24 +29,12 @@ def approval(digest="a" * 64, budget=6):
                 "content": f"Approve trigger campaign {digest} with launch budget {budget}."}}
 
 
+CONVERSATION = approvals.RetainedConversation(
+    "retained-session-123", "assistant-message-123", "user-message-456", (100, 101))
+
+
 def contextual_approval(digest="a" * 64, budget=6, response="approved"):
-    session = "retained-session-123"
-    request_id = "assistant-message-123"
-    response_id = "user-message-456"
-    request = f"Approve trigger campaign {digest} with launch budget {budget}."
-
-    def observation(role, message_id, timestamp, ordinal, content):
-        return {"role": role, "message_id": message_id, "session_id": session,
-                "timestamp": timestamp, "source_ordinal": ordinal, "content": content,
-                "content_sha256": hashlib.sha256(content.encode()).hexdigest(),
-                "source_line_sha256": hashlib.sha256(f"retained:{message_id}:{content}".encode()).hexdigest()}
-
-    return {"schema_version": "trigger-campaign-approval/v2", "manifest_sha256": digest,
-            "launch_budget": budget, "recorder_observation": {
-                "observer": "trusted-orchestrator", "session_id": session,
-                "adjacent_user_visible_message_ids": [request_id, response_id],
-                "request": observation("assistant", request_id, "2026-09-14T16:00:00.000Z", 100, request),
-                "response": observation("user", response_id, "2026-09-14T16:00:01.000Z", 101, response)}}
+    return CONVERSATION.contextual_approval(digest, budget, response)
 
 
 def full_manifest(output):
@@ -64,15 +56,12 @@ def full_manifest(output):
 
 
 def standing_approval(manifest, *, grant=None, quota=None, latest="approved"):
-    session = "retained-session-123"
+    session = CONVERSATION.session
     grant = grant or "Listen I APPROVE EVERYTHING that blocks or could block this goal from being achieved."
     quota = quota or "just run until the quota is run out"
 
     def observation(message_id, timestamp, ordinal, content):
-        return {"role": "user", "message_id": message_id, "session_id": session,
-                "timestamp": timestamp, "source_ordinal": ordinal, "content": content,
-                "content_sha256": hashlib.sha256(content.encode()).hexdigest(),
-                "source_line_sha256": hashlib.sha256(f"retained:{message_id}:{content}".encode()).hexdigest()}
+        return CONVERSATION.observation("user", message_id, (timestamp, ordinal), content)
 
     digest = campaign.json_digest(manifest)
     grant_observation = observation("user-grant-123", "2026-09-12T23:05:29.095Z", 6605, grant)
@@ -565,11 +554,77 @@ class CampaignDraftBindingTests(unittest.TestCase):
                 self.assertEqual(draft["launch_budget_requested"], plan["launch_count"])
 
 
+class DraftIdentityTests(unittest.TestCase):
+    def test_committed_campaign_drafts_bind_the_current_identities(self):
+        """A draft names the observer, catalog and fixture it was planned against.
+
+        A library, skill or fixture edit changes those digests. This fails until
+        ``compare-trigger-evals.py rebind`` refreshes each draft, so a stale draft
+        cannot be used unnoticed.
+        """
+        current = comparison.snapshot_identities(comparison.measurement_snapshot())
+        drafts = sorted((ROOT / "layer2-trigger" / "campaign-drafts").glob("*.draft.json"))
+        self.assertTrue(drafts, "no committed campaign drafts found")
+        for path in drafts:
+            with self.subTest(draft=path.name):
+                self.assertEqual(json.loads(path.read_bytes())["identities"], current)
+
+    def test_rebind_refreshes_a_stale_draft_and_only_its_identities(self):
+        source = ROOT / "layer2-trigger" / "campaign-drafts" / "issue-573-pilot.draft.json"
+        script = ROOT / "layer2-trigger" / "compare-trigger-evals.py"
+        with tempfile.TemporaryDirectory() as temporary:
+            draft = Path(temporary) / "stale.draft.json"
+            stale = json.loads(source.read_bytes())
+            stale["identities"]["observer"] = "0" * 64
+            draft.write_text(json.dumps(stale, indent=2) + "\n")
+            args = [sys.executable, str(script)]
+            inventory = ["--manifest", str(draft), "--inventory", str(ROOT / "layer2-trigger" / "case-inventory.json")]
+            before = json.loads(subprocess.run([*args, "validate", *inventory], capture_output=True, text=True, check=True).stdout)
+            subprocess.run([*args, "rebind", "--manifest", str(draft)], capture_output=True, text=True, check=True)
+            after = json.loads(subprocess.run([*args, "validate", *inventory], capture_output=True, text=True, check=True).stdout)
+            rebound = json.loads(draft.read_bytes())
+        self.assertEqual((before["identities_current"], after["identities_current"]), (False, True))
+        self.assertEqual({key: value for key, value in rebound.items() if key != "identities"},
+                         {key: value for key, value in stale.items() if key != "identities"})
+
+
+class CampaignPinsTests(unittest.TestCase):
+    """Reviewed campaign pins live in one data module and every count derives from it."""
+
+    def test_derived_counts_match_the_reviewed_arithmetic(self):
+        self.assertEqual(
+            (pins.LOGICAL_FULL_TRIALS, pins.CARRIED_TRIALS, pins.FRESH_LAUNCH_CEILING,
+             pins.FRESH_PAIRS, pins.MAXIMUM_TOTAL_CHARGED_ATTEMPTS),
+            (1302, 411, 891, 297, 1305),
+        )
+        self.assertEqual(pins.EXPECTED_ACCOUNTING["maximum_total_charged_attempts"], 1305)
+
+    def test_file_identity_extends_the_shipped_validator_identity_with_the_owner(self):
+        status = Path(__file__).stat()
+        identity = carry._file_identity(status)
+        self.assertEqual(identity[:-1], carry._SHIPPED_FILE_IDENTITY(status))
+        self.assertEqual(identity[-1], status.st_uid)
+
+    def test_pinned_digests_and_ids_are_defined_nowhere_else(self):
+        owned = [*pins.EXPECTED_RAW_SHA256.values(), *pins.EXPECTED_TERMINAL_TRIAL_SHA256,
+                 pins.OLD_OBSERVER_SHA256, pins.PARTIAL_EXPERIMENT_SHA256, pins.PARTIAL_CASE_ID,
+                 *pins.BEHAVIOR_FAILURES]
+        modules = [*(ROOT / "lib").glob("*.py"), *(ROOT / "layer2-trigger").glob("*.py")]
+        offenders = sorted(
+            f"{path.name}: {value[:12]}"
+            for path in modules if path.name != "trigger_campaign_pins.py"
+            for value in owned if value in path.read_text(encoding="utf-8")
+        )
+        self.assertEqual(offenders, [])
+
+
 if __name__ == "__main__":
     suite = unittest.TestSuite([
         unittest.defaultTestLoader.loadTestsFromTestCase(CampaignTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(MultiGenerationApprovalTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(CarryForwardTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(CampaignDraftBindingTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(CampaignPinsTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(DraftIdentityTests),
     ])
     raise SystemExit(run_counted(suite, label="test-trigger-campaign"))

@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import importlib.util
 import shutil
 import sys
 import tempfile
@@ -17,22 +16,23 @@ LAYER1_DIR = REPO_ROOT / "tests" / "speckit-pro" / "layer1-structural"
 for path in (LIB_DIR, LAYER1_DIR):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
+import agent_roster  # noqa: E402
+from script_loader import load_script  # noqa: E402
+import structural_helpers  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
 def load_module(name: str, filename: str):
     path = LAYER1_DIR / filename
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    assert spec.loader is not None
-    spec.loader.exec_module(module)
-    return module
+    return load_script(name, path)
 
 
 ci_release = load_module("validate_ci_release_contracts", "validate-ci-release-contracts.py")
 payloads = load_module("validate_payload_contracts", "validate-payload-contracts.py")
 agents = load_module("validate_agent_contracts", "validate-agent-contracts.py")
+instructions = load_module("validate_instruction_files", "validate-instruction-files.py")
+skills = load_module("validate_skill_contracts", "validate-skill-contracts.py")
+metadata = load_module("validate_plugin_metadata", "validate-plugin-metadata.py")
 
 
 def run_codex_agent_validator(codex_agents_dir: Path) -> unittest.TestResult:
@@ -47,14 +47,14 @@ def run_codex_agent_validator(codex_agents_dir: Path) -> unittest.TestResult:
 
 
 def write_valid_agent_instruction_tree(root: Path) -> None:
-    for directory in agents.AGENT_INSTRUCTION_DIRS:
+    for directory in instructions.EXPECTED_AGENT_DIRS:
         target = root / directory
         target.mkdir(parents=True, exist_ok=True)
         (target / "AGENTS.md").write_text("# Rules\n\nKeep this short.\n", encoding="utf-8")
-        (target / "GEMINI.md").write_text(agents.GEMINI_WRAPPER, encoding="utf-8")
+        (target / "GEMINI.md").write_text(instructions.GEMINI_WRAPPER, encoding="utf-8")
     copilot = root / ".github" / "copilot-instructions.md"
     copilot.parent.mkdir(parents=True, exist_ok=True)
-    copilot.write_text(agents.COPILOT_POINTER, encoding="utf-8")
+    copilot.write_text(instructions.COPILOT_POINTER, encoding="utf-8")
 
 
 class StructuralRegressionTests(unittest.TestCase):
@@ -79,15 +79,15 @@ class StructuralRegressionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             write_valid_agent_instruction_tree(root)
-            self.assertEqual([], agents.collect_agent_instruction_errors(root))
+            self.assertEqual([], instructions.collect_errors(root))
 
     def test_agent_instruction_validator_rejects_claude_drift(self) -> None:
-        for directory in agents.AGENT_INSTRUCTION_DIRS:
+        for directory in instructions.EXPECTED_AGENT_DIRS:
             with self.subTest(directory=directory.as_posix()), tempfile.TemporaryDirectory() as temporary:
                 root = Path(temporary)
                 write_valid_agent_instruction_tree(root)
                 (root / directory / "CLAUDE.md").write_text("@./AGENTS.md\n", encoding="utf-8")
-                errors = "\n".join(agents.collect_agent_instruction_errors(root))
+                errors = "\n".join(instructions.collect_errors(root))
                 self.assertIn(f"{(directory / 'CLAUDE.md').as_posix()} must not exist", errors)
 
     def test_agent_instruction_validator_rejects_unexpected_agent_scope(self) -> None:
@@ -97,7 +97,7 @@ class StructuralRegressionTests(unittest.TestCase):
             extra = root / "docs" / "AGENTS.md"
             extra.parent.mkdir(parents=True)
             extra.write_text("# Extra\n", encoding="utf-8")
-            errors = agents.collect_agent_instruction_errors(root)
+            errors = instructions.collect_errors(root)
             self.assertIn("docs/AGENTS.md", "\n".join(errors))
 
     def test_agent_instruction_validator_ignores_only_root_native_eval_output(self) -> None:
@@ -106,14 +106,14 @@ class StructuralRegressionTests(unittest.TestCase):
             write_valid_agent_instruction_tree(root)
             retained = root / ".native-eval-output" / "attempts" / "staging" / "plugin"
             retained.mkdir(parents=True)
-            for name in agents.INSTRUCTION_NAMES:
+            for name in instructions.INSTRUCTION_NAMES:
                 (retained / name).write_text("retained native evidence\n", encoding="utf-8")
-            self.assertEqual([], agents.collect_agent_instruction_errors(root))
+            self.assertEqual([], instructions.collect_errors(root))
 
             authored = root / "authored" / ".native-eval-output" / "AGENTS.md"
             authored.parent.mkdir(parents=True)
             authored.write_text("# Unexpected authored scope\n", encoding="utf-8")
-            errors = agents.collect_agent_instruction_errors(root)
+            errors = instructions.collect_errors(root)
             self.assertIn("authored/.native-eval-output/AGENTS.md", "\n".join(errors))
 
 
@@ -203,10 +203,91 @@ class CodexAgentRegressionTests(unittest.TestCase):
             self.assertEqual([], result.errors)
 
 
+class RosterDerivationTests(unittest.TestCase):
+    """Rosters come from the skill directories and the agent inventory, never a hand list."""
+
+    def test_skill_rosters_equal_the_discovered_directories(self) -> None:
+        plugin = REPO_ROOT / "speckit-pro"
+        claude = sorted(p.parent.name for p in (plugin / "skills").glob("*/SKILL.md"))
+        codex = sorted(p.parent.name for p in (plugin / "codex-skills").glob("*/SKILL.md"))
+        self.assertTrue(claude and codex)
+        self.assertEqual(claude, sorted(skills.validate_skills_SKILLS))
+        self.assertEqual(codex, sorted(skills.validate_codex_skills_SKILLS))
+        self.assertEqual(codex, sorted(metadata.REQUIRED_SKILLS))
+        self.assertEqual([], metadata.codex_skill_gaps(plugin))
+
+    def test_discovery_finds_a_new_skill_without_editing_a_list(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for name in ("alpha", "beta"):
+                (root / name).mkdir()
+                (root / name / "SKILL.md").write_text("---\nname: x\n---\n", encoding="utf-8")
+            (root / "not-a-skill").mkdir()
+            self.assertEqual(["alpha", "beta"], structural_helpers.discover_skill_names(root))
+            (root / "gamma").mkdir()
+            (root / "gamma" / "SKILL.md").write_text("---\nname: x\n---\n", encoding="utf-8")
+            self.assertEqual(["alpha", "beta", "gamma"], structural_helpers.discover_skill_names(root))
+
+    def test_agent_facts_follow_a_new_inventory_role(self) -> None:
+        shapes = (
+            ("shared-role", "plugin_agent", "custom_agent", "workspace-write"),
+            ("claude-only-role", "plugin_agent", "isolated_prompt_role", "isolated-launcher"),
+            ("codex-only-role", "none", "custom_agent", "read-only"),
+        )
+        inventory = {"roles": [
+            {"name": name, "claude_code": {"implementation": cc}, "codex": {"implementation": cx, "sandbox": sandbox}}
+            for name, cc, cx, sandbox in shapes
+        ]}
+        self.assertEqual(
+            {"shared-role": "workspace-write", "codex-only-role": "read-only"},
+            agent_roster.codex_sandbox_policy(inventory),
+        )
+        self.assertEqual(frozenset({"claude-only-role"}), agent_roster.claude_only_roles(inventory))
+        self.assertEqual(frozenset({"codex-only-role"}), agent_roster.codex_only_roles(inventory))
+        self.assertIn("claude-only-role", agent_roster.capability_exempt_roles("claude", inventory))
+        self.assertNotIn("codex-only-role", agent_roster.capability_exempt_roles("claude", inventory))
+        self.assertIn("codex-only-role", agent_roster.capability_exempt_roles("codex", inventory))
+        self.assertNotIn("shared-role", agent_roster.capability_exempt_roles("codex", inventory))
+
+    def test_shipped_agent_facts_match_the_shipped_inventory(self) -> None:
+        self.assertEqual(
+            {"artifact-preview-observer", "sweep-analyst", "sweep-classifier"},
+            set(agent_roster.claude_only_roles()),
+        )
+        self.assertEqual({"autopilot-fast-helper"}, set(agent_roster.codex_only_roles()))
+        self.assertEqual(
+            sorted(agent_roster.codex_sandbox_policy()),
+            sorted(path.stem for path in (REPO_ROOT / "speckit-pro" / "codex-agents").glob("*.toml")),
+        )
+
+
+class CodexSkillRosterTests(unittest.TestCase):
+    """The Codex skill roster is read from skills/, so a dropped Codex skill is a gap."""
+
+    def test_a_dropped_codex_skill_is_a_gap_in_a_copy_of_the_plugin(self) -> None:
+        plugin = REPO_ROOT / "speckit-pro"
+        with tempfile.TemporaryDirectory() as temporary:
+            copy = Path(temporary)
+            for tree in ("skills", "codex-skills"):
+                shutil.copytree(plugin / tree, copy / tree, ignore=shutil.ignore_patterns("references", "agents", "scripts"))
+            self.assertEqual([], metadata.codex_skill_gaps(copy))
+            shutil.rmtree(copy / "codex-skills" / "speckit-install")
+            self.assertEqual(["codex-skills/speckit-install/SKILL.md is missing"], metadata.codex_skill_gaps(copy))
+            shutil.rmtree(copy / "skills" / "speckit-upgrade")
+            (copy / "codex-skills" / "stray").mkdir()
+            (copy / "codex-skills" / "stray" / "SKILL.md").write_text("---\nname: stray\n---\n", encoding="utf-8")
+            self.assertEqual(
+                ["codex-skills/speckit-install/SKILL.md is missing", "codex-skills/speckit-upgrade/ is not a required skill", "codex-skills/stray/ is not a required skill"],
+                metadata.codex_skill_gaps(copy),
+            )
+
+
 def main() -> int:
     suite = unittest.TestSuite()
     suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(StructuralRegressionTests))
     suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(CodexAgentRegressionTests))
+    suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(RosterDerivationTests))
+    suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(CodexSkillRosterTests))
     return run_counted(suite, label="test-structural-regressions")
 
 

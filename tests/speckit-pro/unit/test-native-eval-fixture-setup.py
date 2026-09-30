@@ -14,6 +14,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "tests" / "speckit-pro" / "lib"))
 
 from native_eval_fixture_setup import _apply_feature_deletions, materialize_workspace  # noqa: E402
+from test_result import run_counted  # noqa: E402
 
 
 class NativeEvalFixtureSetupTests(unittest.TestCase):
@@ -94,4 +95,7 @@ class NativeEvalFixtureSetupTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    raise SystemExit(run_counted(
+        unittest.defaultTestLoader.loadTestsFromTestCase(NativeEvalFixtureSetupTests),
+        label="test-native-eval-fixture-setup",
+    ))

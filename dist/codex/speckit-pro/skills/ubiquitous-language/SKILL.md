@@ -14,8 +14,8 @@ Codex, use `$skill-name` syntax for plugin skills.
 ## Ground recommendations
 
 Inspect the tools and skills actually available. Follow the shared
-[capability-discovery](speckit-pro/skills/speckit-autopilot/references/capability-discovery.md)
-and [grounding](speckit-pro/skills/speckit-autopilot/references/grounding.md) contracts.
+[capability-discovery](../speckit-autopilot/references/capability-discovery.md)
+and [grounding](../speckit-autopilot/references/grounding.md) contracts.
 A term's meaning comes from the code and documents that use it; disclose
 uncertainty and do not invent a definition.
 

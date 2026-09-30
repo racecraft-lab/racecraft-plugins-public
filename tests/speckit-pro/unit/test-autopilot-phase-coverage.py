@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import hashlib
-import importlib.util
 import json
 import shutil
 import subprocess
@@ -23,6 +22,7 @@ if str(PLUGIN_ROOT) not in sys.path:
 from speckit_pro_runner.json_schema import json_schema_failures, resolve_local_schema_reference  # noqa: E402
 
 sys.path.insert(0, str(REPO_ROOT / "tests" / "speckit-pro" / "lib"))
+from script_loader import load_script  # noqa: E402
 from autonomy_boundary_fixture import (  # noqa: E402
     autonomy_execution_control,
     autonomy_private_record,
@@ -87,16 +87,7 @@ def commit_test_repo(root: Path, message: str) -> None:
 
 
 def load_validator_module() -> object:
-    spec = importlib.util.spec_from_file_location(
-        "speckit_autopilot_phase_coverage_validator",
-        VALIDATOR,
-    )
-    if spec is None or spec.loader is None:
-        raise RuntimeError("could not load autopilot phase coverage validator")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_script("speckit_autopilot_phase_coverage_validator", VALIDATOR)
 
 
 VALIDATOR_MODULE = load_validator_module()
@@ -106,12 +97,7 @@ import phase_coverage_repo_files  # noqa: E402  (the validator puts its lib dire
 def load_privacy_scan_module() -> object:
     """Reuse the Layer-4 privacy patterns instead of copying their regexes."""
     path = REPO_ROOT / "tests" / "speckit-pro" / "unit" / "test-privacy-scan.py"
-    spec = importlib.util.spec_from_file_location("speckit_privacy_scan_patterns", path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError("could not load the privacy scan module")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load_script("speckit_privacy_scan_patterns", path)
 
 
 POST_STEPS = [

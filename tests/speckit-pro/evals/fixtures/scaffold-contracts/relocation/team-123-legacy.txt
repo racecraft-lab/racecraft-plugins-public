@@ -1,4 +1,0 @@
-# Team legacy namespace
-
-Out of the Speckit namespace.
-
