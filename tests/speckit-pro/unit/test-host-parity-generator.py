@@ -359,6 +359,14 @@ class CodexAgentPolicyHookTests(unittest.TestCase):
             )
         self.assertEqual(decisions, [denied for *_, denied in self.CALLS])
 
+    def test_a_large_patch_is_still_denied(self) -> None:
+        # A size bound that failed open would let a read-only role write by
+        # sending a big patch.
+        payload = {"agent_type": "clarify-executor", "tool_name": "apply_patch",
+                   "tool_input": {"command": "x" * 200_000}}
+        completed = run_hook(payload)
+        self.assertEqual(json.loads(completed.stdout)["hookSpecificOutput"]["permissionDecision"], "deny")
+
     def test_the_hook_fails_open_on_input_it_cannot_read(self) -> None:
         for payload in ("not json", "[1, 2]"):
             with self.subTest(payload=payload):

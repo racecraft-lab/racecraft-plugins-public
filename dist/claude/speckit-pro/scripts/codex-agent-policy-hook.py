@@ -28,7 +28,6 @@ import sys
 from pathlib import Path
 
 HOOK_VERSION = "agent-policy-v1"
-MAX_PAYLOAD = 64 * 1024
 PLUGIN_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -47,10 +46,9 @@ def main(argv: list[str]) -> int:
             load_codex_hook_policies,
         )
 
-        raw = sys.stdin.buffer.read(MAX_PAYLOAD + 1)
-        if len(raw) > MAX_PAYLOAD:
-            raise ValueError("hook input exceeds the bound")
-        payload = json.loads(raw or b"{}")
+        # Read the whole payload: a size bound that failed open would let a
+        # read-only role write by sending a large patch.
+        payload = json.loads(sys.stdin.buffer.read() or b"{}")
         if not isinstance(payload, dict):
             raise ValueError("hook input must be an object")
         policies = load_codex_hook_policies((PLUGIN_ROOT / CODEX_HOOK_POLICY_FILE).read_text(encoding="utf-8"))
