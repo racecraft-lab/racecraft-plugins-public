@@ -38,7 +38,6 @@ UNMERGED_CODEX_OVERLAYS = frozenset({
     "speckit-install/SKILL.md",
     "speckit-resolve-pr/SKILL.md",
     "speckit-scaffold-spec/SKILL.md",
-    "speckit-status/SKILL.md",
     "speckit-upgrade/SKILL.md",
 })
 CODEX_SKILL_GUARD = "## Codex Skill-Selection Guard"

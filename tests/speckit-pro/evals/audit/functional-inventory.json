@@ -10,15 +10,15 @@
   },
   "counts": {
     "defined": {
-      "claude": 84,
+      "claude": 85,
       "codex": 127,
-      "total": 211
+      "total": 212
     },
     "canonical": 127,
     "headless": {
-      "claude": 55,
+      "claude": 56,
       "codex": 87,
-      "total": 142
+      "total": 143
     },
     "omitted_from_headless": {
       "claude": 29,
@@ -124,7 +124,7 @@
       "host": "claude",
       "path": "tests/speckit-pro/layer3-functional/evals/speckit-scaffold-spec-evals.json",
       "skill": "speckit-scaffold-spec",
-      "count": 2
+      "count": 3
     },
     {
       "host": "claude",

@@ -31,7 +31,6 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 ## Page Sources
 
 - [speckit-pro/skills/speckit-status/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-status/SKILL.md)
-- [speckit-pro/codex-skills/speckit-status/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/codex-skills/speckit-status/SKILL.md)
 
 ## Records
 
