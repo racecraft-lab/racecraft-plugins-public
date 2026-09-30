@@ -262,7 +262,7 @@ class NativeTriggerCatalogTests(unittest.TestCase):
         self.assertEqual(counts, self.audit["counts"]["canonical_coverage_kinds"])
         self.assertEqual(counts, {"positive_self": 51, "sibling_route": 45, "contextual_none": 13})
         self.assertEqual(templated, 11)
-        self.assertEqual(fixture_cases, 10)
+        self.assertEqual(fixture_cases, 16)
 
 
 if __name__ == "__main__":
