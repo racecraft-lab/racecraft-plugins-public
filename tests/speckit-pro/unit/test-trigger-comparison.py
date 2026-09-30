@@ -22,6 +22,7 @@ import trigger_comparison as comparison
 import trigger_carry_forward as carry
 import trigger_campaign as campaign
 import trigger_evidence as evidence
+from script_loader import load_script
 from test_result import run_counted
 
 
@@ -319,9 +320,7 @@ def minimal_manifest():
 
 
 def evidence_fixture(root, host="claude", entry_override=None, selected_pattern=(True, True, True)):
-    spec = importlib.util.spec_from_file_location("trigger_fixture_source", ROOT / "unit/test-trigger-eval-runners.py")
-    helper = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(helper)
+    helper = load_script("trigger_fixture_source", ROOT / "unit/test-trigger-eval-runners.py")
     manifest = minimal_manifest()
     snapshot = comparison.measurement_snapshot()
     manifest["identities"] = comparison.snapshot_identities(snapshot)

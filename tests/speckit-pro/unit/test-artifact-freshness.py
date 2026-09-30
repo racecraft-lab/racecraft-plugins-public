@@ -47,8 +47,6 @@ Run it directly:
 from __future__ import annotations
 
 import json
-import os
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -60,6 +58,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 LIB_DIR = Path(__file__).resolve().parent.parent / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
+from runner_invocation import run_runner as invoke_runner  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
@@ -151,13 +150,6 @@ def case_names() -> list[str]:
     return sorted(cases())
 
 
-def runner_env() -> dict[str, str]:
-    env = os.environ.copy()
-    existing = env.get("PYTHONPATH")
-    env["PYTHONPATH"] = str(PLUGIN_ROOT) if not existing else f"{PLUGIN_ROOT}{os.pathsep}{existing}"
-    return env
-
-
 def helper_request(name: str, inputs: dict[str, Any]) -> dict[str, Any]:
     return {
         "schema_version": "1.0",
@@ -170,21 +162,12 @@ def helper_request(name: str, inputs: dict[str, Any]) -> dict[str, Any]:
 
 
 def run_runner(request: dict[str, Any], *, root: Path = REPO_ROOT) -> dict[str, Any]:
-    completed = subprocess.run(
-        [sys.executable, "-m", "speckit_pro_runner"],
-        input=json.dumps(request),
-        text=True,
-        capture_output=True,
-        cwd=root,
-        env=runner_env(),
-        shell=False,
-        check=False,
-    )
+    completed, response, _ = invoke_runner(request, cwd=root)
     if not completed.stdout.strip():
         raise AssertionError(
             f"runner returned no response document; stderr was: {completed.stderr[:2000]}"
         )
-    return json.loads(completed.stdout)
+    return response
 
 
 @contextmanager

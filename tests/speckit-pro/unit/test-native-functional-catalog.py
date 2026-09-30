@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import copy
 from collections.abc import Callable
-import importlib.util
 import json
 import os
 from pathlib import Path
@@ -31,6 +30,7 @@ from native_eval_dispatch_context import qualify_native_dispatch_context  # noqa
 from native_eval_fixture_setup import materialize_workspace  # noqa: E402
 from native_eval_grading import grade_observation  # noqa: E402
 from git_fixture import git  # noqa: E402
+from script_loader import load_script  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
@@ -1861,11 +1861,7 @@ class NativeFunctionalCatalogTests(_FunctionalCatalogFixture, unittest.TestCase)
     def test_registered_worktree_ambiguity_case_matches_accepted_factory_and_legacy(self) -> None:
         case_id = "functional.speckit-autopilot.case-107"
         source = TEST_ROOT / "unit" / "test-native-worktree-migration.py"
-        spec = importlib.util.spec_from_file_location("native_worktree_migration_contract", source)
-        self.assertIsNotNone(spec)
-        self.assertIsNotNone(spec.loader)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+        module = load_script("native_worktree_migration_contract", source)
         self.assertEqual(self.cases[case_id], module.ambiguity_case())
 
         record = next(row for row in self.selection["selected"] if row["case_id"] == case_id)

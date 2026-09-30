@@ -23,11 +23,16 @@ from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import changed_files as _changed_files  # noqa: E402
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MODULE_DIR = "typesafe-jev"
 # A change to the module, to this wrapper, or to the workflow that runs it can
 # change the Go result, so each one runs the Go job.
-TRIGGER_PATHS = frozenset({"scripts/check-go-module.py", ".github/workflows/pr-checks.yml"})
+TRIGGER_PATHS = frozenset(
+    {"scripts/check-go-module.py", "scripts/changed_files.py", ".github/workflows/pr-checks.yml"}
+)
 RELEASE_TARGETS = (
     ("darwin", "amd64"),
     ("darwin", "arm64"),
@@ -48,26 +53,7 @@ def go_module_changed(changed_files: Iterable[str]) -> bool:
 
 
 def changed_files_for_base(base_ref: str, *, repo_root: Path = REPO_ROOT) -> tuple[str, ...]:
-    if not base_ref:
-        raise GoModuleCheckError("BASE_REF is not set")
-    try:
-        completed = subprocess.run(
-            ["git", "diff", "--name-only", f"origin/{base_ref}...HEAD"],
-            cwd=repo_root,
-            text=True,
-            capture_output=True,
-            check=True,
-            shell=False,
-        )
-    except subprocess.CalledProcessError as error:
-        detail = (error.stderr or "").strip()
-        suffix = f": {detail}" if detail else ""
-        raise GoModuleCheckError(
-            f"git changed-file detection failed with exit code {error.returncode}{suffix}"
-        ) from error
-    except OSError as error:
-        raise GoModuleCheckError(f"unable to run git changed-file detection: {error}") from error
-    return tuple(completed.stdout.splitlines())
+    return _changed_files.changed_files_for_base(base_ref, repo_root=repo_root, error=GoModuleCheckError)
 
 
 def append_github_output(output_path: Path, fields: Mapping[str, str]) -> None:

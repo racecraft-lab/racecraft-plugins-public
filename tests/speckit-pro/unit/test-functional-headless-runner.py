@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import errno
-import importlib.util
 import io
 import json
 import os
@@ -30,14 +29,11 @@ if str(SHARED_LIB) not in sys.path:
 from test_result import run_counted  # noqa: E402
 
 
+from script_loader import load_script  # noqa: E402
+
+
 def import_runner():
-    spec = importlib.util.spec_from_file_location("functional_headless_runner", RUNNER_PATH)
-    if spec is None or spec.loader is None:
-        raise AssertionError(f"cannot import {RUNNER_PATH}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_script("functional_headless_runner", RUNNER_PATH)
 
 
 def actor_environment(root: Path) -> dict[str, str]:
@@ -1069,9 +1065,9 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                 self.assertFalse(cli.resolve().is_relative_to(root.resolve()))
                 supervisor = root / "supervisor.py"
                 supervisor.write_text(
-                    "import importlib.util,json,os,signal,sys\nfrom pathlib import Path\n"
-                    f"spec=importlib.util.spec_from_file_location('signal_witness_collector', {str(RUNNER_PATH)!r})\n"
-                    "runner=importlib.util.module_from_spec(spec)\nsys.modules[spec.name]=runner\nspec.loader.exec_module(runner)\n"
+                    "import json,os,signal,sys\nfrom pathlib import Path\n"
+                    f"sys.path.insert(0,{str(SHARED_LIB)!r})\nfrom script_loader import load_script\n"
+                    f"runner=load_script('signal_witness_collector', Path({str(RUNNER_PATH)!r}))\n"
                     f"runner.shutil.which=lambda host:{str(cli)!r}\n"
                     "before={s:signal.getsignal(s) for s in (signal.SIGTERM,signal.SIGHUP)}\n"
                     f"result=runner.capture_process('claude',[{str(cli)!r},{str(ready)!r}],b'',Path({str(root / 'evidence')!r}),Path({str(root)!r}),os.environ.copy(),30)\n"
@@ -1364,11 +1360,7 @@ class SharedCodexIsolationTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.runner = import_runner()
         engine_path = TESTS_ROOT / "layer2-trigger" / "run_codex_evals.py"
-        spec = importlib.util.spec_from_file_location("layer2_codex_engine_for_layer3", engine_path)
-        assert spec is not None and spec.loader is not None
-        cls.engine = importlib.util.module_from_spec(spec)
-        sys.modules[spec.name] = cls.engine
-        spec.loader.exec_module(cls.engine)
+        cls.engine = load_script("layer2_codex_engine_for_layer3", engine_path)
 
     def test_skill_and_server_overrides_match_layer2(self) -> None:
         skills = (Path("/x/a/SKILL.md"), Path("/x/b/SKILL.md"))

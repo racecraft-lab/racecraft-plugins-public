@@ -15,7 +15,6 @@ The hyphenated ``run-all.py`` is loaded via importlib. Prints the house
 from __future__ import annotations
 
 import contextlib
-import importlib.util
 import io
 import sys
 import tempfile
@@ -29,17 +28,14 @@ if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
 
 import test_result  # noqa: E402
+from script_loader import load_script  # noqa: E402
 
 
 def _load_run_all():
     path = REPO_ROOT / "tests" / "speckit-pro" / "run-all.py"
-    spec = importlib.util.spec_from_file_location("run_all", path)
-    module = importlib.util.module_from_spec(spec)
-    # Register before exec so the @dataclass in run-all.py can resolve its
-    # string annotations (from __future__ import annotations) via sys.modules.
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+    # load_script registers the module before exec so the @dataclass in run-all.py
+    # can resolve its string annotations (from __future__ import annotations).
+    return load_script("run_all", path)
 
 
 run_all = _load_run_all()

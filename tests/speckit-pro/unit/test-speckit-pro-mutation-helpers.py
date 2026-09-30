@@ -362,6 +362,8 @@ def install_windows_rename_name(rename_info_buffer: object, byte_length: int) ->
 
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
+sys.path.insert(0, str(REPO_ROOT / "tests" / "speckit-pro" / "lib"))
+from runner_invocation import assert_runner_response, command_stdin_fixture, run_runner  # noqa: E402
 
 
 from speckit_pro_runner.envelope import RunnerRequest
@@ -369,11 +371,20 @@ from speckit_pro_runner.agent_materialization import materialize_agent_policy
 from speckit_pro_runner.helpers import install, mutation, pr_packet, registry, uat_skeleton
 
 
-def runner_env() -> dict[str, str]:
-    env = os.environ.copy()
-    existing = env.get("PYTHONPATH")
-    env["PYTHONPATH"] = str(PLUGIN_ROOT) if not existing else f"{PLUGIN_ROOT}{os.pathsep}{existing}"
-    return env
+def move_after_copy_open_hook(real_open: object, destination: Path, moved: Path) -> object:
+    """An ``os.open`` stand-in that swaps ``destination`` for a fresh directory after the first dir_fd create."""
+    injected = False
+
+    def move_after_copy_open(path: object, flags: int, *args: object, **kwargs: object) -> int:
+        nonlocal injected
+        descriptor = real_open(path, flags, *args, **kwargs)
+        if kwargs.get("dir_fd") is not None and flags & os.O_CREAT and not injected:
+            injected = True
+            destination.rename(moved)
+            destination.mkdir()
+        return descriptor
+
+    return move_after_copy_open
 
 
 def helper_request(
@@ -391,39 +402,6 @@ def helper_request(
         "mode": mode,
         "inputs": inputs or {},
     }
-
-
-def run_runner(
-    request: object,
-    *,
-    cwd: Path = REPO_ROOT,
-    env_overrides: dict[str, str] | None = None,
-) -> tuple[subprocess.CompletedProcess[str], dict[str, object], list[dict[str, object]]]:
-    env = runner_env()
-    if env_overrides:
-        env.update(env_overrides)
-    completed = subprocess.run(
-        [sys.executable, "-m", "speckit_pro_runner"],
-        input=json.dumps(request) if not isinstance(request, str) else request,
-        text=True,
-        capture_output=True,
-        cwd=cwd,
-        env=env,
-        shell=False,
-        check=False,
-    )
-    response = json.loads(completed.stdout) if completed.stdout.strip() else {}
-    stderr_records = [json.loads(line) for line in completed.stderr.splitlines() if line.strip()]
-    return completed, response, stderr_records
-
-
-def command_stdin_fixture(command: str) -> Path:
-    if "<" not in command:
-        raise AssertionError(f"authoritative_command must include a stdin fixture: {command}")
-    stdin_path = command.split("<", 1)[1].strip()
-    if not stdin_path or any(char.isspace() for char in stdin_path):
-        raise AssertionError(f"authoritative_command must use one stdin fixture path: {command}")
-    return REPO_ROOT / stdin_path
 
 
 def canonical_json_bytes(value: object) -> bytes:
@@ -612,12 +590,7 @@ def bind_required_primary_probe(manifest: dict[str, object]) -> None:
 
 class MutationHelperTests(unittest.TestCase):
     def assert_response(self, response: dict[str, object], status: str, exit_code: int) -> None:
-        self.assertEqual(response["schema_version"], "1.0")
-        self.assertEqual(response["status"], status)
-        self.assertEqual(response["exit_code"], exit_code)
-        self.assertIsNone(response["legacy_exit_code"])
-        self.assertIsInstance(response["diagnostics"], list)
-        self.assertIsInstance(response["data"], dict)
+        assert_runner_response(self, response, status, exit_code)
 
     @staticmethod
     def fail_on_autopilot_agent_write(real_write: object) -> object:
@@ -1708,7 +1681,7 @@ class MutationHelperTests(unittest.TestCase):
                     completed, response, stderr_records = run_runner(
                         helper_request("install-codex-agents", mode="apply", inputs=inputs),
                         cwd=git_root,
-                        env_overrides=env,
+                        extra_env=env,
                     )
 
                     self.assertEqual(completed.returncode, 1)
@@ -1746,7 +1719,7 @@ class MutationHelperTests(unittest.TestCase):
                     inputs=self.route_aware_inputs(manifest_path, git_root, destination=None),
                 ),
                 cwd=git_root,
-                env_overrides=env,
+                extra_env=env,
             )
 
             self.assertEqual(completed.returncode, 0)
@@ -3970,16 +3943,7 @@ class MutationHelperTests(unittest.TestCase):
             identity = install.codex_agent_destination_identity(destination)
             moved = root / "moved-agents"
             real_open = install.os.open
-            injected = False
-
-            def move_after_copy_open(path: object, flags: int, *args: object, **kwargs: object) -> int:
-                nonlocal injected
-                descriptor = real_open(path, flags, *args, **kwargs)
-                if kwargs.get("dir_fd") is not None and flags & os.O_CREAT and not injected:
-                    injected = True
-                    destination.rename(moved)
-                    destination.mkdir()
-                return descriptor
+            move_after_copy_open = move_after_copy_open_hook(real_open, destination, moved)
 
             with patch.object(install.os, "open", side_effect=move_after_copy_open):
                 with self.assertRaises(install.CodexAgentRecoveryCopyFailure) as raised:
@@ -5806,16 +5770,7 @@ class MutationHelperTests(unittest.TestCase):
             identity = install.codex_agent_destination_identity(destination)
             moved = root / "moved-agents"
             real_open = install.os.open
-            injected = False
-
-            def move_after_copy_open(path: object, flags: int, *args: object, **kwargs: object) -> int:
-                nonlocal injected
-                descriptor = real_open(path, flags, *args, **kwargs)
-                if kwargs.get("dir_fd") is not None and flags & os.O_CREAT and not injected:
-                    injected = True
-                    destination.rename(moved)
-                    destination.mkdir()
-                return descriptor
+            move_after_copy_open = move_after_copy_open_hook(real_open, destination, moved)
 
             with patch.object(install.os, "open", side_effect=move_after_copy_open):
                 with self.assertRaises(install.CodexAgentRecoveryCopyFailure) as raised:
@@ -6555,7 +6510,7 @@ class MutationHelperTests(unittest.TestCase):
                     completed, response, stderr_records = run_runner(
                         helper_request("install-codex-agents", mode="apply", inputs=inputs),
                         cwd=git_root,
-                        env_overrides=env,
+                        extra_env=env,
                     )
 
                     self.assertEqual(completed.returncode, 0)
@@ -6652,7 +6607,7 @@ class MutationHelperTests(unittest.TestCase):
             completed, response, stderr_records = run_runner(
                 helper_request("install-codex-agents", mode="apply", inputs=inputs),
                 cwd=git_root,
-                env_overrides=env,
+                extra_env=env,
             )
 
             self.assertEqual(completed.returncode, 1)
@@ -7199,7 +7154,7 @@ This line must not be copied.
             completed, response, stderr_records = run_runner(
                 helper_request("install-codex-agents", mode="apply", inputs={"model": "gpt-6-sol"}),
                 cwd=git_root,
-                env_overrides=env,
+                extra_env=env,
             )
             self.assertEqual(completed.returncode, 0)
             self.assertEqual(stderr_records, [])
@@ -7219,7 +7174,7 @@ This line must not be copied.
             completed, response, stderr_records = run_runner(
                 helper_request("install-codex-agents", mode="apply", inputs={"model": "gpt-6-sol"}),
                 cwd=git_root,
-                env_overrides=env,
+                extra_env=env,
             )
             self.assertEqual(completed.returncode, 0)
             self.assertEqual(stderr_records, [])
@@ -7299,7 +7254,7 @@ This line must not be copied.
                         completed, response, stderr_records = run_runner(
                             helper_request("install-codex-agents", mode="dry_run", inputs={"destination": ".codex/agents"}),
                             cwd=git_root,
-                            env_overrides=overrides,
+                            extra_env=overrides,
                         )
                     self.assertEqual(completed.returncode, 0)
                     self.assertEqual(stderr_records, [])
@@ -7314,7 +7269,7 @@ This line must not be copied.
             completed, response, stderr_records = run_runner(
                 helper_request("install-codex-agents", mode="dry_run", inputs={"destination": ".codex/agents"}),
                 cwd=git_root,
-                env_overrides={"SPECKIT_CODEX_LUNA_FALLBACK": "yes"},
+                extra_env={"SPECKIT_CODEX_LUNA_FALLBACK": "yes"},
             )
             self.assertEqual(completed.returncode, 2)
             self.assert_response(response, "input_error", 2)
