@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import importlib
 import json
@@ -510,6 +511,34 @@ class PayloadRequiredSourceTests(unittest.TestCase):
                     payloads.build_installed_plugin_payloads(repo_root, Path(tmp) / "dist")
 
 
+class RunnerLayeringTests(unittest.TestCase):
+    """Core runner modules import no helper or gate module, at module level or inside a function."""
+
+    SHARED_MODULES = ("atomic_write", "sweep_export", "task_partition", "trusted_io", "workflow_stage")
+
+    def test_core_modules_never_import_helpers_or_gates(self) -> None:
+        offenders = []
+        for path in sorted(RUNNER_DIR.glob("*.py")):
+            if path.name in {"runtime.py", "__main__.py"}:
+                continue  # the composition root wires helpers and gates together
+            for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+                if isinstance(node, ast.ImportFrom) and node.level == 1 and node.module:
+                    if node.module.split(".")[0] in {"helpers", "gates"}:
+                        offenders.append(f"{path.name}:{node.lineno}: from .{node.module}")
+        self.assertEqual(offenders, [])
+
+    def test_helper_modules_reexport_the_shared_primitives_they_used_to_define(self) -> None:
+        for module_name in self.SHARED_MODULES:
+            shared = importlib.import_module(f"speckit_pro_runner.{module_name}")
+            for helper_name in ("read_only", "mutation"):
+                helper = importlib.import_module(f"speckit_pro_runner.helpers.{helper_name}")
+                for name, value in vars(shared).items():
+                    if name.startswith("__") or not hasattr(helper, name):
+                        continue
+                    with self.subTest(module=module_name, helper=helper_name, name=name):
+                        self.assertIs(getattr(helper, name), value)
+
+
 class RunnerInvocationVocabularyTests(unittest.TestCase):
     def test_operation_enum_matches_the_envelope(self) -> None:
         vocabulary = sorted(envelope.SUPPORTED_RUNNER_OPERATIONS)
@@ -539,6 +568,7 @@ if __name__ == "__main__":
             RunnerTrustRosterTests,
             PayloadRequiredSourceTests,
             RunnerInvocationVocabularyTests,
+            RunnerLayeringTests,
         )
     )
     result = unittest.TextTestRunner(verbosity=1).run(suite)

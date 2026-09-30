@@ -9,16 +9,16 @@ from pathlib import Path
 from typing import Any
 
 from .agent_materialization import canonical_bytes
+from .atomic_write import snapshot_write_target, write_file_atomic
 from .strict_input import require_text as text_field, unique_object
 from .task_execution import fingerprints
+from .task_partition import PHASE7_RESEARCH_AGENT, PHASE7_VERIFY_AGENT, partition_phase7_tasks
 
 SCHEMA = "task-results.v1"
 MAX_LINEAGE_DEPTH = 32
 
 
 def non_tdd_reason(batch: dict[str, Any]) -> str | None:
-    from .helpers.read_only import PHASE7_RESEARCH_AGENT, PHASE7_VERIFY_AGENT
-
     if batch["agent"] in {PHASE7_RESEARCH_AGENT, PHASE7_VERIFY_AGENT}:
         return f"native route {batch['agent']} does not run implementation TDD"
     return None
@@ -34,8 +34,6 @@ def result_path(root: Path, value: Any) -> Path:
 
 
 def source_snapshot(root: Path, path: Path) -> dict[str, Any]:
-    from .helpers.mutation import snapshot_write_target
-
     value = snapshot_write_target(path, root)
     if not value["exists"]:
         raise ValueError(f"required evidence or source missing: {path.relative_to(root)}")
@@ -73,8 +71,6 @@ def current_binding(root: Path, tasks: Path) -> tuple[dict[str, Any], dict[str, 
 
 def start_journal(root: Path, inputs: dict[str, Any], tasks: Path, path: Path,
                   binding: dict[str, Any], metadata: dict[str, Any]) -> dict[str, Any]:
-    from .helpers.read_only import partition_phase7_tasks
-
     partition = partition_phase7_tasks({**inputs, "task_execution_required": True}, root)
     if partition["exit_code"]:
         raise ValueError(partition["stderr"] or "task metadata partition failed")
@@ -285,8 +281,6 @@ def validate_lineage(root: Path, path: Path, journal: dict[str, Any]) -> None:
 
 def load_bound_journal(root: Path, path: Path, inputs: dict[str, Any], binding: dict[str, Any],
                        metadata: dict[str, Any]) -> tuple[dict[str, Any] | None, dict[str, Any]]:
-    from .helpers.mutation import snapshot_write_target
-
     snapshot = snapshot_write_target(path, root)
     expected = inputs.get("expected_partition_sha256")
     if expected is not None:
@@ -341,7 +335,6 @@ def task_results(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, Any
     Deterministic fixture success is therefore always native-unqualified.
     """
     from .execution_control import exclusive_ledger, ignore_owned_directory
-    from .helpers.mutation import write_file_atomic
 
     action = inputs.get("action")
     if action not in {"start", "record", "inspect"} or mode not in {"apply", "dry_run", "read_only"}:

@@ -24,6 +24,7 @@ from test_result import run_counted
 from speckit_pro_runner.execution_control import (durable_json, execution_control, record_failing_checks)
 from speckit_pro_runner.failing_checks import fingerprint as failing_check_fingerprint
 from speckit_pro_runner.helpers.read_only import json_schema_failures, validate_task_execution
+from speckit_pro_runner.helpers.run_finalization import finalize_run
 from speckit_pro_runner.task_execution import fingerprints
 from speckit_pro_runner.verification_records import digest, tree_bytes
 
@@ -137,7 +138,8 @@ class _ExecutionControlFixture(_LedgerAssertions, _LedgerScenarios):
     def invoke(self, action, mode="apply", **inputs):
         binding = {"expected_run_id": self.run_id} if self.run_id else {}
         with patch("speckit_pro_runner.execution_control.time.time", return_value=self.now):
-            result = execution_control(self.root, {"workflow_file": "feature/workflow.md", "action": action, **binding, **inputs}, mode)
+            result = execution_control(self.root, {"workflow_file": "feature/workflow.md", "action": action, **binding, **inputs}, mode,
+                                       finalizer=finalize_run)
         if mode == "apply":
             self.run_id = result["ledger"]["run_id"]
         return result
@@ -1799,6 +1801,20 @@ class EscalationCapTests(_EscalationFixture, unittest.TestCase):
                 validate_ledger({**valid, "finalize_observations": forged})
         with self.assertRaises(ValueError):
             self.invoke("record-finalize-cycle", finalize_inputs={"ledger_path": "elsewhere.json"})
+
+
+class FinalizeCycleSeamTests(_ExecutionControlFixture, unittest.TestCase):
+    """Counting a finalize cycle needs the finalize-run helper that only the helper request supplies."""
+
+    def test_counting_a_cycle_without_the_finalizer_is_refused_and_writes_nothing(self):
+        ledger_path = self.invoke("start")["ledger_path"]
+        before = (self.root / ledger_path).read_bytes()
+        request = {"workflow_file": "feature/workflow.md", "action": "record-finalize-cycle",
+                   "expected_run_id": self.run_id, "ledger_path": ledger_path,
+                   "finalize_inputs": {"ledger_path": ledger_path, "expected_run_id": self.run_id}}
+        with self.assertRaisesRegex(ValueError, "only through the execution-control helper request"):
+            execution_control(self.root, request, "apply")
+        self.assertEqual((self.root / ledger_path).read_bytes(), before)
 
 
 class EscalationRequestTests(_EscalationFixture, unittest.TestCase):

@@ -22,6 +22,9 @@ from pathlib import Path, PurePosixPath
 from typing import Any, NamedTuple
 
 from .strict_input import require_text as require_nonempty_text
+from .task_partition import PHASE7_LEADING_VERB, PHASE7_VERIFY_KEYWORDS
+from .trusted_io import is_test_path, trusted_text
+from .workflow_stage import parse_stage_args, workflow_stage_signals
 
 SCHEMA = "execution-control/v1"
 KINDS = {"implementation", "corrective", "verification", "infrastructure"}
@@ -484,8 +487,6 @@ def _class_scope(value: Any) -> dict[str, str]:
     keys = {"test_file", "failure_signature", "change_kind"}
     if not isinstance(value, dict) or set(value) != keys:
         raise ValueError("failure_class requires exactly test_file, failure_signature, and change_kind")
-    from .helpers.read_only import is_test_path
-
     test_file = require_text(value["test_file"], "failure_class test_file")
     path = PurePosixPath(test_file)
     if (path.is_absolute() or path.as_posix() != test_file or any(part in {"..", ".git"} for part in path.parts)
@@ -584,8 +585,6 @@ def _validate_tdd_units(item: dict[str, Any]) -> None:
 
 
 def _validate_test_fix_record(item: dict[str, Any]) -> None:
-    from .helpers.read_only import is_test_path
-
     paths = item.get("test_fix_paths")
     if ("test_fix" not in item or not isinstance(item["test_fix"], str) or not item["test_fix"].strip()
             or not _sorted_paths(paths) or not paths
@@ -803,19 +802,24 @@ def finalize_observation_key(kind: str, head_sha: str, gate: str) -> str:
 RECORD_FINALIZE_CYCLE = "record-finalize-cycle"
 
 
-def record_finalize_cycle(root: Path, ledger: dict[str, Any], inputs: dict[str, Any], ledger_path: str) -> dict[str, Any]:
+Finalizer = Callable[[Path, dict[str, Any]], dict[str, Any]]
+
+
+def record_finalize_cycle(root: Path, ledger: dict[str, Any], inputs: dict[str, Any], ledger_path: str,
+                          finalizer: Finalizer | None) -> dict[str, Any]:
     """Count each head and gate that a `finalize-run` over these inputs leaves unfinished, once for this cycle.
 
     The runner recomputes the observed pairs itself from the same evidence, so no request names one. A count
-    only moves a pair from pending work toward a stop; it never makes a run ready.
+    only moves a pair from pending work toward a stop; it never makes a run ready. `finalizer` is the
+    `finalize-run` helper, which the execution-control helper request supplies from the helpers layer.
     """
-    from .helpers.run_finalization import finalize_run
-
     request = inputs.get("finalize_inputs")
     if (not isinstance(request, dict) or request.get("ledger_path") != ledger_path
             or request.get("expected_run_id") != ledger["run_id"]):
         raise ValueError("finalize_inputs must be the finalize-run inputs for this run's own ledger")
-    observed = finalize_run(root, request)["observed"]
+    if finalizer is None:
+        raise ValueError("record-finalize-cycle is reachable only through the execution-control helper request")
+    observed = finalizer(root, request)["observed"]
     counts = dict(ledger.get("finalize_observations", {}))
     for key in observed:
         counts[key] = min(counts.get(key, 0) + 1, FINALIZE_OBSERVATION_CAP)
@@ -1739,8 +1743,6 @@ def _verb_swap(before: str, after: str) -> str | None:
     else (ID, markers, emphasis, and every byte after the verb) must be identical,
     and both verbs must be verification verbs, so the task keeps its routing.
     """
-    from .helpers.read_only import PHASE7_LEADING_VERB, PHASE7_VERIFY_KEYWORDS
-
     old, new = (METADATA_TASK_LINE.match(re.sub(r"^(\s*-\s+\[)[ xX]\]", r"\1 ]", line)) for line in (before, after))
     if old is None or new is None or old.group(1) != new.group(1):
         return None
@@ -1881,8 +1883,6 @@ def _test_fix_ineligibility(root: Path, spec: Path, ledger: dict[str, Any],
     runner recorded as changed by one of that increment's implementation dispatches
     in this run. Missing ownership, edit, or git evidence never qualifies.
     """
-    from .helpers.read_only import is_test_path
-
     unit, paths = request["tdd_unit"], request["paths"]
     if unit in ledger.get("test_fix_allowances", {}):
         return "test_fix_allowance_spent", None
@@ -2643,8 +2643,6 @@ def begin_stage_epoch(root: Path, ledger: dict[str, Any], inputs: dict[str, Any]
     its `Stage` row already written for this invocation. No operator event is
     needed, and the derived event ID makes a second opening for the stage a no-op.
     """
-    from .helpers.read_only import parse_stage_args, trusted_text, workflow_stage_signals
-
     args = inputs.get("autopilot_args")
     if not isinstance(args, list) or not all(isinstance(arg, str) for arg in args):
         raise ValueError("begin-stage-epoch requires autopilot_args, the invocation argv as an array of strings")
@@ -2717,6 +2715,7 @@ class _Control(NamedTuple):
     expected_run_id: Any
     relative: str
     path: Path
+    finalizer: Finalizer | None = None
 
 
 def _require_supported_action(action: Any, mode: str, evidence: dict[str, Any] | None) -> None:
@@ -2729,7 +2728,8 @@ def _require_supported_action(action: Any, mode: str, evidence: dict[str, Any] |
         raise ValueError("ledger mutations require dry_run or apply")
 
 
-def _open_control(root: Path, inputs: dict[str, Any], mode: str, evidence: dict[str, Any] | None) -> _Control:
+def _open_control(root: Path, inputs: dict[str, Any], mode: str, evidence: dict[str, Any] | None,
+                  finalizer: Finalizer | None = None) -> _Control:
     """Validate the request's workflow, spec, action, run binding, and ledger location."""
     workflow_name = require_text(inputs.get("workflow_file"), "workflow_file")
     workflow = confined_path(root, workflow_name)
@@ -2752,7 +2752,7 @@ def _open_control(root: Path, inputs: dict[str, Any], mode: str, evidence: dict[
     if Path(relative).parent.name != "execution-control" or Path(relative).suffix != ".json":
         raise ValueError("ledger_path must reference an owned execution-control JSON record")
     return _Control(root, inputs, mode, evidence, action, workflow_name, workflow, spec, expected_run_id, relative,
-                    confined_path(root, relative))
+                    confined_path(root, relative), finalizer)
 
 
 def _load_ledger(ctl: _Control, now: float) -> dict[str, Any]:
@@ -2783,7 +2783,7 @@ def _guarded_action(ctl: _Control, ledger: dict[str, Any], now: float) -> dict[s
     """The actions that run only while no clock or unknown-dispatch reason holds."""
     action, inputs, root, spec = ctl.action, ctl.inputs, ctl.root, ctl.spec
     if action == RECORD_FINALIZE_CYCLE:
-        return record_finalize_cycle(root, ledger, inputs, ctl.relative)
+        return record_finalize_cycle(root, ledger, inputs, ctl.relative, ctl.finalizer)
     if action == "reserve":
         return reserve(ledger, inputs, now, root, spec)
     if action == "authorize-corrective-retry":
@@ -2852,13 +2852,15 @@ def _update_ledger(ctl: _Control) -> dict[str, Any]:
 
 
 def execution_control(root: Path, inputs: dict[str, Any], mode: str,
-                      evidence: dict[str, Any] | None = None) -> dict[str, Any]:
+                      evidence: dict[str, Any] | None = None, finalizer: Finalizer | None = None) -> dict[str, Any]:
     """Runner adapter returns a disposition without changing autopilot top-state.
 
     `evidence` is set only by `record_failing_checks`, the verification executors'
-    internal path; a helper request cannot reach the evidence action.
+    internal path; a helper request cannot reach the evidence action. `finalizer`
+    is the `finalize-run` helper that `record-finalize-cycle` needs; the helper
+    request passes it in so this core module never imports the helpers layer.
     """
-    ctl = _open_control(root, inputs, mode, evidence)
+    ctl = _open_control(root, inputs, mode, evidence, finalizer)
     if mode == "apply":
         # Mark the evidence directory before the orchestrator can write its own logs there (#813).
         ignore_owned_directory(confined_path(root, evidence_directory(ctl.workflow_name)))
@@ -2875,33 +2877,3 @@ def record_failing_checks(root: Path, inputs: dict[str, Any], evidence: dict[str
     """
     request = {key: inputs.get(key) for key in ("workflow_file", "expected_run_id", "ledger_path", "dispatch_id")}
     return execution_control(root, {**request, "action": RECORD_FAILING_CHECKS}, "apply", evidence=evidence)
-
-
-def run_execution_helper(entry: Any, request: Any) -> dict[str, Any]:
-    """Existing runner envelope adapter; apply remains a host-authorized action."""
-    from .envelope import diagnostic, response
-    from .helpers.read_only import canonicalize_inputs, resolve_repo_root, validate_bounded_inputs
-    from .verification_records import execute_verification
-    from .task_results import task_results
-
-    root = resolve_repo_root(request.inputs)
-    if isinstance(root, dict):
-        return response("input_error", request_id=request.request_id, diagnostics=[root])
-    error = validate_bounded_inputs(entry.helper_id, request.inputs, root)
-    if error:
-        return response("input_error", request_id=request.request_id, diagnostics=[error])
-    inputs = canonicalize_inputs(entry.helper_id, request.inputs, root)
-    try:
-        handler = {"execution-control": execution_control, "execute-verification": execute_verification,
-                   "task-results": task_results}[entry.helper_id]
-        result = handler(root, inputs, request.mode)
-    except (ValueError, OSError, TypeError) as exc:
-        return response("input_error", request_id=request.request_id,
-                        diagnostics=[diagnostic("invalid_execution_request", str(exc))])
-    # A deferral refuses the dispatch, so it is an expected failure just like a checkpoint.
-    failed = (result.get("helper_exit_code") == 1 if entry.helper_id == "task-results"
-              else result.get("disposition") in {"checkpoint_required", "defer"})
-    status = "expected_failure" if failed else "ok"
-    result.update(helper_id=entry.helper_id, operation=entry.operation, mode=request.mode,
-                  promotion_status=entry.promotion_status)
-    return response(status, request_id=request.request_id, data=result)
