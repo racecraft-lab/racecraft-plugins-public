@@ -8,9 +8,9 @@
   },
   "source_feature_dir": "specs/fixture-pr-packet",
   "generated_title": {
-    "value": "feat(FEATURE-001): Add reviewer-ready PR packets",
+    "value": "feat(feature-001): Add reviewer-ready PR packets",
     "type": "feat",
-    "scope": "FEATURE-001",
+    "scope": "feature-001",
     "description": "Add reviewer-ready PR packets",
     "source_evidence": {
       "kind": "feature_spec",
@@ -105,7 +105,7 @@
   ],
   "protected_body_fingerprint": {
     "algorithm": "sha256",
-    "value": "55df98665bf70dadc8539eedf83af166f2ce186cf4219513c0e1b0afa37f8db5",
+    "value": "52c431c2e4fd6a75b2c12780b5be0faaa9c6dc064adb1a9648cc6a2f807158cb",
     "normalization": "LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
     "elided_fields": [
       "summary",
