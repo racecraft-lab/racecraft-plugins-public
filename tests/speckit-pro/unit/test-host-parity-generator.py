@@ -41,6 +41,7 @@ from speckit_pro_runner.host_parity import (  # noqa: E402
     unexplained_blocks,
 )
 from speckit_pro_runner.host_skills import codex_skill_overlay_errors  # noqa: E402
+from host_skill_views import host_skill_root  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
@@ -375,13 +376,48 @@ class HostSkillSourceTests(unittest.TestCase):
                                "| Spec | Name | DC | Specify |"):
                     self.assertIn(phrase, text)
 
+    @staticmethod
+    def rendered(skill: str, host: str) -> str:
+        """`skill`'s SKILL.md exactly as `host` loads it, whitespace collapsed."""
+        path = host_skill_root(host) / skill / "SKILL.md"
+        return " ".join(path.read_text(encoding="utf-8").split())
+
     def test_scaffold_stops_on_complete_and_reuses_in_progress_on_both_hosts(self) -> None:
-        # Scaffold-spec keeps its Codex overlay, so each host's own file is read.
-        for relative in ("skills/speckit-scaffold-spec/SKILL.md", "codex-skills/speckit-scaffold-spec/SKILL.md"):
-            with self.subTest(file=relative):
-                text = " ".join((PLUGIN_ROOT / relative).read_text(encoding="utf-8").split())
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                text = self.rendered("speckit-scaffold-spec", host)
                 self.assertRegex(text, r"(?i)complete, warn the user and stop")
                 self.assertRegex(text, r"(?i)in progress, (?:prefer )?reus\w+ (?:the |its )?existing worktree branch")
+
+    def test_scaffold_follows_the_runner_on_both_hosts(self) -> None:
+        # The two copies disagreed; each assertion is the runner's behavior.
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                text = self.rendered("speckit-scaffold-spec", host)
+                # The hand-off check uses the same binding helper autopilot uses.
+                self.assertIn("Invoke the read-only `resolve-workflow-binding` runner helper", text)
+                # The placement helper returns the disposition; there is no reuse question.
+                self.assertNotIn("reuse-or-recreate question", text)
+                # A missing preset stops setup, so scaffold never stages preset files.
+                self.assertNotIn(".specify/presets/.registry", text)
+                self.assertIn("Module and Interface Deltas, Terms, Verification Gates", text)
+                self.assertIn("`git -C <absolute-worktree-root> push -u <remote> <spec-branch>`", text)
+
+    def test_resolve_pr_follows_one_procedure_on_both_hosts(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                text = self.rendered("speckit-resolve-pr", host)
+                # Both hosts ship the lockfile and unpushed-commit hooks.
+                self.assertIn("denies a shell command that uses a different manager", text)
+                self.assertIn("the plugin's Stop hook blocks ending the turn with unpushed commits", text)
+                self.assertIn("Do not overwrite unrelated dirty worktree changes.", text)
+                self.assertIn("Never reply “fixed” on a thread while the branch is still broken.", text)
+                self.assertIn("If GitHub tooling is unavailable", text)
+        codex = self.rendered("speckit-resolve-pr", "codex")
+        # phase-executor runs one SDD phase and no remediation; Codex has no general-purpose role.
+        self.assertIn("built-in `default` subagent", codex)
+        self.assertNotIn("phase-executor", codex)
+        self.assertNotIn("general-purpose", codex)
 
 
 POST_ROW = re.compile(r'^\s*"(Post: [^"]+)"', re.M)
