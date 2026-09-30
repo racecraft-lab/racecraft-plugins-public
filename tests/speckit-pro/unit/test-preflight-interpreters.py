@@ -7,10 +7,9 @@ import json
 import subprocess
 import sys
 import tempfile
-import unittest
+import unittest.mock
 from pathlib import Path
 from types import SimpleNamespace
-from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
@@ -55,8 +54,8 @@ class ProbeCase(unittest.TestCase):
         evidence = Path(self.enterContext(tempfile.TemporaryDirectory())) / "evidence"
         outcome = {"side_effect": run} if callable(run) or isinstance(run, Exception) else {"return_value": run}
         with (
-            mock.patch.object(interpreters.shutil, "which", return_value="C:/Windows/launcher.exe"),
-            mock.patch.object(interpreters.subprocess, "run", **outcome) as run_mock,
+            unittest.mock.patch.object(interpreters.shutil, "which", return_value="C:/Windows/launcher.exe"),
+            unittest.mock.patch.object(interpreters.subprocess, "run", **outcome) as run_mock,
         ):
             record = interpreters.probe_interpreter(candidate, expected, evidence, cwd=REPO_ROOT)
         self.run_mock = run_mock
@@ -73,8 +72,8 @@ class ProbeRecordTests(ProbeCase):
 
     def test_a_missing_launcher_is_recorded_without_running_anything(self) -> None:
         evidence = Path(self.enterContext(tempfile.TemporaryDirectory()))
-        with mock.patch.object(interpreters.shutil, "which", return_value=None), \
-                mock.patch.object(interpreters.subprocess, "run") as run_mock:
+        with unittest.mock.patch.object(interpreters.shutil, "which", return_value=None), \
+                unittest.mock.patch.object(interpreters.subprocess, "run") as run_mock:
             record = interpreters.probe_interpreter("py -3", "x64", evidence, cwd=REPO_ROOT)
         run_mock.assert_not_called()
         self.assertEqual((record["status"], record["exit_code"], record["supported"]), ("missing", 127, False))
@@ -132,9 +131,9 @@ class ProbeSelectionTests(unittest.TestCase):
     def probe_all(self, active_python: str) -> tuple[object, list[dict[str, object]], Path, list[list[str]]]:
         evidence = Path(self.enterContext(tempfile.TemporaryDirectory())) / "evidence"
         with (
-            mock.patch.object(interpreters.shutil, "which", side_effect=lambda name: f"C:/Windows/{name}.exe"),
-            mock.patch.object(interpreters.subprocess, "run", side_effect=fake_probe_run) as run_mock,
-            mock.patch.object(interpreters.sys, "executable", active_python),
+            unittest.mock.patch.object(interpreters.shutil, "which", side_effect=lambda name: f"C:/Windows/{name}.exe"),
+            unittest.mock.patch.object(interpreters.subprocess, "run", side_effect=fake_probe_run) as run_mock,
+            unittest.mock.patch.object(interpreters.sys, "executable", active_python),
         ):
             selected, records = interpreters.probe_interpreters("arm64", evidence, cwd=REPO_ROOT)
         return selected, records, evidence, [call.args[0] for call in run_mock.call_args_list]
