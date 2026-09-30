@@ -103,7 +103,15 @@
         "value": "speckit_pro_runner/codex_agent_generator.py",
         "display": "speckit_pro_runner/codex_agent_generator.py"
       },
-      "sha256": "7851d968b42c54e05bf5080f9bf9786fddac76ca7159bc00ea8da280a03e6b7a"
+      "sha256": "0a938335b0ed6a4471adc9df9535f095f233a1f9799b21e6636e75f5c860a825"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/codex_agent_policy.json",
+        "display": "speckit_pro_runner/codex_agent_policy.json"
+      },
+      "sha256": "f3e60824b2470b2f1e55ac786d7dbd3816c67f1a346b7ed2200469582183ab7f"
     },
     {
       "path": {
@@ -671,7 +679,7 @@
         "value": "speckit_pro_runner/host_parity.py",
         "display": "speckit_pro_runner/host_parity.py"
       },
-      "sha256": "c4e8b20db87e400859820e082416f02b4c887a2519ba6ff6e6b041f3a91e13ba"
+      "sha256": "38b6102d90cd05e3e8f9b37eb0914bdabe27345e494659cb084cca69311393d4"
     },
     {
       "path": {

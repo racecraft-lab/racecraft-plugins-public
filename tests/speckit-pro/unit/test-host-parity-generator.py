@@ -5,6 +5,8 @@ enforcement, and the pairing manifest."""
 from __future__ import annotations
 
 import copy
+import json
+import subprocess
 import sys
 import tomllib
 import unittest
@@ -20,11 +22,14 @@ for import_root in (PLUGIN_ROOT, LIB_DIR):
 
 from speckit_pro_runner.agent_inventory import AGENT_INVENTORY  # noqa: E402
 from speckit_pro_runner.codex_agent_generator import (  # noqa: E402
-    generated_codex_agents,
+    generated_codex_files,
     render_codex_agent,
 )
 from speckit_pro_runner.host_parity import (  # noqa: E402
+    CODEX_HOOK_POLICY_FILE,
     HostParityError,
+    codex_hook_denial,
+    load_codex_hook_policies,
     derive_codex_enforcement,
     derive_codex_hook_policy,
     emit_host,
@@ -294,11 +299,12 @@ class CodexAgentGeneratorTests(unittest.TestCase):
         with self.assertRaisesRegex(HostParityError, "no description"):
             render_codex_agent("probe", agent("name: probe\ntools: Read\n"), CODEX_RECORD, "agents/probe.md")
 
-    def test_committed_codex_agents_equal_their_generated_text(self) -> None:
-        generated = generated_codex_agents(PLUGIN_ROOT, AGENT_INVENTORY)
+    def test_committed_codex_files_equal_their_generated_text(self) -> None:
+        generated = generated_codex_files(PLUGIN_ROOT, AGENT_INVENTORY)
         self.assertEqual(
             set(generated),
-            {role.codex_source for role in pairing_manifest(AGENT_INVENTORY).paired.values()},
+            {role.codex_source for role in pairing_manifest(AGENT_INVENTORY).paired.values()}
+            | {CODEX_HOOK_POLICY_FILE},
         )
         for relative, text in generated.items():
             with self.subTest(file=relative):
@@ -309,6 +315,76 @@ class CodexAgentGeneratorTests(unittest.TestCase):
             source = PLUGIN_ROOT / role.claude_source
             with self.subTest(agent=role.name):
                 self.assertEqual(unexplained_blocks(source.read_text(encoding="utf-8")), [])
+
+
+HOOK_SCRIPT = PLUGIN_ROOT / "scripts" / "codex-agent-policy-hook.py"
+
+
+def run_hook(payload: object, *args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, str(HOOK_SCRIPT), *(args or ("agent-policy-v1",))],
+        input=payload if isinstance(payload, str) else json.dumps(payload),
+        capture_output=True, text=True, check=False, timeout=60,
+    )
+
+
+class CodexAgentPolicyHookTests(unittest.TestCase):
+    # (calling agent_type, tool name, denied?) against the shipped policy.
+    CALLS = (
+        ("domain-researcher", "mcp__sweep_broker__snapshot_list", True),
+        ("domain-researcher", "mcp__research_broker__research_search", False),
+        ("domain-researcher", "apply_patch", True),
+        ("formal-model-author", "mcp__author_broker__write_formal_file", False),
+        ("formal-model-author", "mcp__author_broker__create_formal_session", True),
+        ("formal-model-author", "apply_patch", True),
+        ("clarify-executor", "apply_patch", True),
+        ("clarify-executor", "mcp__research_broker__docs_query", False),
+        ("implement-executor", "apply_patch", False),
+        (None, "apply_patch", False),
+        (None, "mcp__sweep_broker__snapshot_list", False),
+        ("some-other-agent", "apply_patch", False),
+    )
+
+    def test_the_shipped_hook_denies_only_what_each_role_policy_limits(self) -> None:
+        decisions = []
+        for agent_type, tool, _ in self.CALLS:
+            payload = {"hook_event_name": "PreToolUse", "tool_name": tool, "tool_input": {}}
+            if agent_type:
+                payload["agent_type"] = agent_type
+            completed = run_hook(payload)
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            decisions.append(
+                bool(completed.stdout.strip())
+                and json.loads(completed.stdout)["hookSpecificOutput"]["permissionDecision"] == "deny"
+            )
+        self.assertEqual(decisions, [denied for *_, denied in self.CALLS])
+
+    def test_a_large_patch_is_still_denied(self) -> None:
+        # A size bound that failed open would let a read-only role write by
+        # sending a big patch.
+        payload = {"agent_type": "clarify-executor", "tool_name": "apply_patch",
+                   "tool_input": {"command": "x" * 200_000}}
+        completed = run_hook(payload)
+        self.assertEqual(json.loads(completed.stdout)["hookSpecificOutput"]["permissionDecision"], "deny")
+
+    def test_the_hook_fails_open_on_input_it_cannot_read(self) -> None:
+        for payload in ("not json", "[1, 2]"):
+            with self.subTest(payload=payload):
+                completed = run_hook(payload)
+                self.assertEqual((completed.returncode, completed.stdout), (0, ""))
+                self.assertIn("no decision", completed.stderr)
+        self.assertEqual(run_hook({}, "wrong-version").returncode, 2)
+
+    def test_a_malformed_policy_fails_closed_in_the_loader(self) -> None:
+        for text in ('{"schema_version": 2, "roles": {}}', '{"schema_version": 1, "roles": {"r": {"deny_file_edits": "yes"}}}',
+                     '{"schema_version": 1, "roles": {"r": {"deny_file_edits": true, "allowed_mcp_tools": "all"}}}', "[]"):
+            with self.subTest(text=text), self.assertRaises(HostParityError):
+                load_codex_hook_policies(text)
+
+    def test_the_parent_and_unlisted_agents_always_pass(self) -> None:
+        policies = load_codex_hook_policies((PLUGIN_ROOT / CODEX_HOOK_POLICY_FILE).read_text(encoding="utf-8"))
+        self.assertIsNone(codex_hook_denial({"tool_name": "apply_patch"}, policies))
+        self.assertIsNone(codex_hook_denial({"agent_type": 7, "tool_name": "apply_patch"}, policies))
 
 
 def main() -> int:
@@ -323,6 +399,7 @@ def main() -> int:
             HookPolicyTests,
             PairingManifestTests,
             CodexAgentGeneratorTests,
+            CodexAgentPolicyHookTests,
         )
     )
     return run_counted(suite, label="test-host-parity-generator")

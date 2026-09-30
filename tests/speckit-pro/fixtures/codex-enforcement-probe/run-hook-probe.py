@@ -22,6 +22,15 @@ Cases:
 - hook-agent: the hook is declared inline in the probe agent file, not in the
   project, and denies unconditionally. It asks whether an agent-file hook
   layer applies to that agent only.
+- hook-plugin: the shipped hook itself. A throwaway CODEX_HOME installs
+  speckit-pro from this checkout's `dist/codex` payload, so the hook runs as
+  a plugin hook with the generated per-role policy. A project agent file
+  named `domain-researcher` takes that role's policy: its `apply_patch` and
+  its sweep-broker call must be denied, its research-broker call must pass,
+  and the parent's own `apply_patch` must pass. Run
+  `scripts/refresh-release-artifacts.py` first. The throwaway home gets a
+  copy of the operator's `auth.json`; the script deletes that home after the
+  run, and the operator's own config is not touched.
 
 The run passes `--dangerously-bypass-hook-trust`, so no hook trust is
 recorded, and trusts the project through a `-c` override.
@@ -43,7 +52,9 @@ from pathlib import Path
 
 
 CHILD = "probe_hook_child"
-CASES = ("hook-project", "hook-project-patch", "hook-agent")
+CASES = ("hook-project", "hook-project-patch", "hook-agent", "hook-plugin")
+PLUGIN_ROLE = "domain-researcher"
+MARKETPLACE = "racecraft-plugins-public"
 HOOK_SCRIPT = r'''
 import json, sys
 from pathlib import Path
@@ -99,6 +110,52 @@ CHILD_TASK = (
 )
 
 
+PLUGIN_TASK = (
+    "(a) Create a new file child-patch.txt containing the word ok, using your "
+    "file-editing tool (apply_patch), not the shell. (b) Call the research-broker "
+    "tool docs_query with library and query each set to a single space. (c) Call "
+    "the sweep-broker tool snapshot_list with no arguments. Report the exact result "
+    "or error text of each; you must attempt all three. Do not request escalated "
+    "permissions and do not retry another way."
+)
+
+
+def plugin_home(project: Path, repo_root: Path) -> dict[str, str]:
+    """A throwaway CODEX_HOME with speckit-pro installed from this checkout."""
+    home = project / "codex-home"
+    shutil.rmtree(home, ignore_errors=True)
+    home.mkdir(parents=True)
+    source = Path(os.environ.get("CODEX_HOME") or Path.home() / ".codex")
+    shutil.copy2(source / "auth.json", home / "auth.json")
+    (home / "config.toml").write_text(
+        'sandbox_mode = "workspace-write"\napproval_policy = "on-request"\n', encoding="utf-8"
+    )
+    env = dict(os.environ, CODEX_HOME=str(home))
+    for argv in (
+        ["codex", "plugin", "marketplace", "add", str(repo_root)],
+        ["codex", "plugin", "add", f"speckit-pro@{MARKETPLACE}"],
+    ):
+        subprocess.run(argv, env=env, stdin=subprocess.DEVNULL, check=True, timeout=300)
+    return env
+
+
+def plugin_setup(project: Path, token: str, model: str) -> None:
+    codex = project / ".codex"
+    shutil.rmtree(codex, ignore_errors=True)
+    (codex / "agents").mkdir(parents=True)
+    (project / "logs").mkdir(exist_ok=True)
+    for name in ("parent-patch.txt", "child-patch.txt"):
+        (project / name).unlink(missing_ok=True)
+    instructions = f"Begin your final reply with the line {token}. Then do this task: {PLUGIN_TASK}"
+    (codex / "agents" / f"{PLUGIN_ROLE}.toml").write_text("\n".join([
+        f"name = {json.dumps(PLUGIN_ROLE)}",
+        'description = "Probe agent that runs one short task and reports raw results."',
+        f"model = {json.dumps(model)}",
+        'model_reasoning_effort = "medium"',
+        f"developer_instructions = {json.dumps(instructions)}",
+    ]) + "\n", encoding="utf-8")
+
+
 def hook_command(project: Path, layer: str, policy: str) -> str:
     return f"python3 {json.dumps(str(project / '.codex' / 'probe_hook.py'))} {layer} {policy}"
 
@@ -138,30 +195,51 @@ def setup(project: Path, case: str, token: str, model: str) -> None:
     (codex / "agents" / f"{CHILD}.toml").write_text("\n".join(agent) + "\n", encoding="utf-8")
 
 
+PARENT_PROMPT = (
+    "First {parent_step} Then spawn exactly one subagent using the custom agent "
+    "type {child}, with the message 'Follow your developer instructions.' and "
+    "fork_turns set to \"none\". Wait for it, then print your own step's result "
+    "and the subagent's final reply verbatim."
+)
+
+
 def run_case(project: Path, case: str, model: str) -> int:
     token = f"PROBE-NONCE-{case.upper()}-{int(time.time())}"
-    setup(project, case, token, model)
-    prompt = (
-        "First run exactly this shell command yourself once: printf ok > "
-        "parent-write.txt, and note its exit status. Then spawn exactly one "
-        f"subagent using the custom agent type {CHILD}, with the message 'Follow "
-        "your developer instructions.' and fork_turns set to \"none\". Wait for "
-        "it, then print the parent write's exit status and the subagent's final "
-        "reply verbatim."
-    )
+    env = None
+    if case == "hook-plugin":
+        env = plugin_home(project, Path(__file__).resolve().parents[4])
+        plugin_setup(project, token, model)
+        prompt = PARENT_PROMPT.format(
+            parent_step="create a new file parent-patch.txt containing ok with your "
+            "file-editing tool (apply_patch), and note the result.",
+            child=PLUGIN_ROLE,
+        )
+    else:
+        setup(project, case, token, model)
+        prompt = PARENT_PROMPT.format(
+            parent_step="run exactly this shell command yourself once: printf ok > "
+            "parent-write.txt, and note its exit status.",
+            child=CHILD,
+        )
     argv = [
         "codex", "exec", "--json", "--skip-git-repo-check", "--dangerously-bypass-hook-trust",
         "-m", model, "-c", 'model_reasoning_effort="low"',
         "-c", f'projects."{project}".trust_level="trusted"', prompt,
     ]
-    completed = subprocess.run(
-        argv, cwd=project, stdin=subprocess.DEVNULL, capture_output=True, text=True,
-        check=False, timeout=900,
-    )
+    try:
+        completed = subprocess.run(
+            argv, cwd=project, env=env, stdin=subprocess.DEVNULL, capture_output=True,
+            text=True, check=False, timeout=900,
+        )
+    finally:
+        if env is not None:
+            shutil.rmtree(project / "codex-home", ignore_errors=True)
     logs = project / "logs"
     (logs / f"{case}.jsonl").write_text(completed.stdout, encoding="utf-8")
     (logs / f"{case}.stderr.txt").write_text(completed.stderr, encoding="utf-8")
     (logs / f"{case}.nonce.txt").write_text(token + "\n", encoding="utf-8")
+    created = sorted(path.name for path in project.glob("*.txt"))
+    (logs / f"{case}.files.json").write_text(json.dumps(created) + "\n", encoding="utf-8")
     print(f"{case}: exit={completed.returncode} nonce={token}")
     return completed.returncode
 
