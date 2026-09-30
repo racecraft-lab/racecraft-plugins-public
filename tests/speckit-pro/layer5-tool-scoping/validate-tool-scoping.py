@@ -237,6 +237,23 @@ MODEL_AND_EFFORT_PINS = (
 TIEBREAK_TWINS = ("consensus-synthesizer", "consensus-tiebreaker")
 
 
+BROKER_ONLY_WRITE_RULE = (
+    "a parent-minted formal-author capability",
+    "Use only the author-broker write tool for every file change",
+)
+
+
+def _assert_codex_writes_only_through_its_broker(test: unittest.TestCase, agent: str) -> None:
+    """The Codex twin of a broker-only author is read-only and states the broker rule."""
+    codex_file = CODEX_AGENTS_DIR / f"{agent}.toml"
+    with test.subTest(msg=f"carve-out: codex {agent} is read-only and writes only through the author broker"):
+        policy = tomllib.loads(codex_file.read_text(encoding="utf-8"))
+        test.assertEqual("read-only", policy["sandbox_mode"])
+        instructions = " ".join(policy["developer_instructions"].split())
+        for phrase in BROKER_ONLY_WRITE_RULE:
+            test.assertIn(phrase, instructions)
+
+
 class ValidateToolScoping(unittest.TestCase):
     def assert_denied(self, denials: list[str], tool: str, agent: str) -> None:
         self.assertIn(tool, denials, f"{agent} must deny '{tool}' in disallowedTools but does not")
@@ -486,21 +503,7 @@ class ValidateToolScoping(unittest.TestCase):
                 with self.subTest(msg=f"carve-out: {agent} excludes {tool} from its allowlist"):
                     self.assertNotIn(tool, declared)
 
-            codex_file = CODEX_AGENTS_DIR / f"{agent}.toml"
-            with self.subTest(msg=f"carve-out: codex {agent} exists"):
-                self.assertTrue(codex_file.is_file(), f"{codex_file} is missing")
-            if codex_file.is_file():
-                with self.subTest(msg=f"carve-out: codex {agent} sandbox_mode is read-only"):
-                    self.assertEqual("read-only", _toml_field(codex_file, "sandbox_mode"))
-                instructions = " ".join(
-                    tomllib.loads(codex_file.read_text(encoding="utf-8"))["developer_instructions"].split()
-                )
-                for phrase in (
-                    "a parent-minted formal-author capability",
-                    "Use only the author-broker write tool for every file change",
-                ):
-                    with self.subTest(msg=f"carve-out: codex {agent} writes only through the author broker", phrase=phrase):
-                        self.assertIn(phrase, instructions)
+            _assert_codex_writes_only_through_its_broker(self, agent)
 
     def test_no_tool_observers_pin_exact_tool_allowlists(self) -> None:
         with self.subTest(msg="no-tool observer roster is exactly the artifact preview observer"):

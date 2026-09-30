@@ -49,15 +49,17 @@ class HostBlockTests(unittest.TestCase):
         with self.assertRaisesRegex(HostParityError, reason):
             emit_host(text, host)
 
-    def test_balanced_blocks_keep_the_target_host_and_strip_the_other(self) -> None:
-        text = SHARED + CODEX_BLOCK + CLAUDE_BLOCK + "Tail.\n"
-        self.assertEqual(emit_host(text, "codex"), "Shared line.\nCodex only.\nTail.\n")
-        self.assertEqual(emit_host(text, "claude"), "Shared line.\nClaude only.\nTail.\n")
+    # (source, Codex view, Claude view)
+    VIEWS = (
+        (SHARED + CODEX_BLOCK + CLAUDE_BLOCK + "Tail.\n",
+         "Shared line.\nCodex only.\nTail.\n", "Shared line.\nClaude only.\nTail.\n"),
+        ("One.\n\nTwo.\n", "One.\n\nTwo.\n", "One.\n\nTwo.\n"),
+        ("<!-- host:codex: Codex runs exec_command -->\nCodex only.\n<!-- /host -->\n", "Codex only.\n", ""),
+    )
 
-    def test_text_without_markers_is_unchanged_for_both_hosts(self) -> None:
-        text = "One.\n\nTwo.\n"
-        self.assertEqual(emit_host(text, "codex"), text)
-        self.assertEqual(emit_host(text, "claude"), text)
+    def test_each_host_keeps_its_own_blocks_and_no_marker_or_reason(self) -> None:
+        views = [(emit_host(text, "codex"), emit_host(text, "claude")) for text, *_ in self.VIEWS]
+        self.assertEqual(views, [(codex, claude) for _, codex, claude in self.VIEWS])
 
     def test_nested_block_fails_closed(self) -> None:
         self.assert_rejected(
@@ -92,11 +94,6 @@ class HostBlockTests(unittest.TestCase):
 
     def test_error_names_the_line_number(self) -> None:
         self.assert_rejected("ok\n<!-- /host -->\n", "line 2")
-
-    def test_a_reason_rides_on_the_open_marker_and_never_reaches_output(self) -> None:
-        text = "<!-- host:codex: Codex runs exec_command -->\nCodex only.\n<!-- /host -->\n"
-        self.assertEqual(emit_host(text, "codex"), "Codex only.\n")
-        self.assertEqual(emit_host(text, "claude"), "")
 
     def test_unexplained_blocks_lists_open_markers_without_a_reason(self) -> None:
         text = (

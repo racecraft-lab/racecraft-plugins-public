@@ -209,6 +209,21 @@ CODEX_AGENT_PROFILES = {
 }
 validate_codex_agents_AGENTS = (*CODEX_REQUIRED_AGENT_NAMES, *CODEX_OPTIONAL_AGENT_NAMES)
 CONSENSUS_ANALYST_ROLES = frozenset({'codebase-analyst', 'spec-context-analyst', 'domain-researcher'})
+# (model, effort, sandbox_mode) per Codex agent. The formal model author is
+# read-only because it writes only through the author broker.
+_SOL_READ_ONLY = ('gpt-6-sol', 'xhigh', 'read-only')
+_SOL_WRITER = ('gpt-6-sol', 'xhigh', 'workspace-write')
+CODEX_PROFILES = {
+    'autopilot-fast-helper': ('gpt-6-luna', 'low', 'read-only'),
+    'clarify-executor': _SOL_READ_ONLY,
+    'formal-model-author': _SOL_READ_ONLY,
+    'phase-executor': _SOL_WRITER,
+    'checklist-executor': _SOL_WRITER,
+    'analyze-executor': _SOL_WRITER,
+    'implement-executor': _SOL_WRITER,
+    'consensus-synthesizer': ('gpt-6-sol', 'medium', 'read-only'),
+    **{role: ('gpt-6-luna', 'max', 'read-only') for role in CONSENSUS_ANALYST_ROLES},
+}
 NATIVE_COMMAND_LIFECYCLE_EXEMPT_ROLES = frozenset({'autopilot-fast-helper', 'consensus-synthesizer', 'consensus-tiebreaker'})
 CC_ONLY_FIELDS = ('tools', 'disallowedTools', 'permissionMode', 'color', 'maxTurns', 'background', 'effort')
 validate_codex_agents_MODEL_RE = re.compile('^(gpt-6-sol|gpt-6-luna|gpt-6-astra)$')
@@ -338,33 +353,17 @@ class ValidateCodexAgents(unittest.TestCase):
             self.assertEqual(0, len(non_toml), 'only standalone TOML custom-agent files are allowed')
 
     def _check_profile(self, agent: str, model_val: str, effort_val: str, sandbox_val: str, instructions: str) -> None:
-        if agent == 'autopilot-fast-helper':
-            with self.subTest(msg='autopilot-fast-helper: uses Luna low-effort read-only advisory profile'):
-                self.assertTrue(model_val == 'gpt-6-luna' and effort_val == 'low' and (sandbox_val == 'read-only'), f'expected gpt-6-luna / low / read-only, got {model_val} / {effort_val} / {sandbox_val}')
-        elif agent == 'clarify-executor':
-            with self.subTest(msg='clarify-executor: uses xhigh GPT-6 Sol read-only question-prep profile'):
-                self.assertTrue(model_val == 'gpt-6-sol' and effort_val == 'xhigh' and (sandbox_val == 'read-only'), f'expected gpt-6-sol / xhigh / read-only, got {model_val} / {effort_val} / {sandbox_val}')
+        expected = CODEX_PROFILES.get(agent)
+        if expected is not None:
+            with self.subTest(msg=f'{agent}: uses its {" / ".join(expected)} profile'):
+                self.assertEqual(expected, (model_val, effort_val, sandbox_val))
+        if agent == 'clarify-executor':
             with self.subTest(msg='clarify-executor: returns questions to parent'):
                 self.assertIn('## Clarify Question Set', instructions)
             with self.subTest(msg='clarify-executor: does not claim to be the user'):
                 self.assertNotIn('YOU ARE THE USER', instructions)
             with self.subTest(msg='clarify-executor: does not invoke interactive clarify skill'):
                 self.assertNotIn('Run `$speckit-clarify`', instructions)
-        elif agent == 'formal-model-author':
-            with self.subTest(msg='formal-model-author: uses xhigh GPT-6 Sol read-only profile; it writes only through the author broker'):
-                self.assertTrue(model_val == 'gpt-6-sol' and effort_val == 'xhigh' and (sandbox_val == 'read-only'), f'expected gpt-6-sol / xhigh / read-only, got {model_val} / {effort_val} / {sandbox_val}')
-        elif agent in ('phase-executor', 'checklist-executor', 'analyze-executor'):
-            with self.subTest(msg=f'{agent}: uses xhigh GPT-6 Sol executor profile'):
-                self.assertTrue(model_val == 'gpt-6-sol' and effort_val == 'xhigh' and (sandbox_val == 'workspace-write'), f'expected gpt-6-sol / xhigh / workspace-write, got {model_val} / {effort_val} / {sandbox_val}')
-        elif agent == 'implement-executor':
-            with self.subTest(msg='implement-executor: uses xhigh GPT-6 Sol TDD profile'):
-                self.assertTrue(model_val == 'gpt-6-sol' and effort_val == 'xhigh' and (sandbox_val == 'workspace-write'), f'expected gpt-6-sol / xhigh / workspace-write, got {model_val} / {effort_val} / {sandbox_val}')
-        elif agent in CONSENSUS_ANALYST_ROLES:
-            with self.subTest(msg=f'{agent}: uses max-effort GPT-6 Luna in a read-only sandbox'):
-                self.assertTrue(model_val == 'gpt-6-luna' and effort_val == 'max' and (sandbox_val == 'read-only'), f'expected gpt-6-luna / max / read-only, got {model_val} / {effort_val} / {sandbox_val}')
-        elif agent == 'consensus-synthesizer':
-            with self.subTest(msg='consensus-synthesizer: uses medium-effort GPT-6 Sol read-only synthesis profile'):
-                self.assertTrue(model_val == 'gpt-6-sol' and effort_val == 'medium' and (sandbox_val == 'read-only'), f'expected gpt-6-sol / medium / read-only, got {model_val} / {effort_val} / {sandbox_val}')
 
 AGENT_INSTRUCTION_DIRS = EXPECTED_AGENT_DIRS
 collect_agent_instruction_errors = collect_errors

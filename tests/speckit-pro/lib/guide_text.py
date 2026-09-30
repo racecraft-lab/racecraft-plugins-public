@@ -18,14 +18,15 @@ PHASE_EXECUTION_GUIDES = ("skills/speckit-autopilot/references/phase-execution.m
 EXECUTION_EFFICIENCY_GUIDE = "skills/speckit-autopilot/references/execution-efficiency.md"
 
 
-def guide_text(relative: str) -> str:
+def host_source(relative: str, host: str | None = None) -> str:
+    """One authored plugin file; with `host`, as that host receives it, without the other host's blocks."""
+    text = (PLUGIN_ROOT / relative).read_text(encoding="utf-8")
+    return text if host is None else emit_host(text, host)
+
+
+def guide_text(relative: str, host: str | None = None) -> str:
     """One shipped plugin file with its whitespace collapsed, so a phrase matches across wrapped lines."""
-    return " ".join((PLUGIN_ROOT / relative).read_text(encoding="utf-8").split())
-
-
-def host_source(relative: str, host: str) -> str:
-    """One authored plugin file as `host` receives it, without the other host's blocks."""
-    return emit_host((PLUGIN_ROOT / relative).read_text(encoding="utf-8"), host)
+    return " ".join(host_source(relative, host).split())
 
 
 def assert_guides_say(test: unittest.TestCase, guides: Iterable[str], present: Iterable[str],

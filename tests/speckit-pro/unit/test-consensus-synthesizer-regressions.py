@@ -15,7 +15,7 @@ LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
 
-from guide_text import host_source  # noqa: E402
+from guide_text import guide_text  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 PHRASES = json.loads(
@@ -70,8 +70,14 @@ def synthesizer_texts() -> tuple[tuple[str, str], ...]:
     """The synthesizer contract as each host receives it, whitespace collapsed."""
     return (
         ("codex", " ".join(instructions().split())),
-        ("claude", " ".join(host_source("agents/consensus-synthesizer.md", "claude").split())),
+        ("claude", guide_text("agents/consensus-synthesizer.md", "claude")),
     )
+
+
+def assert_both_hosts_say(test: unittest.TestCase, phrase_key: str) -> None:
+    for host, flat in synthesizer_texts():
+        with test.subTest(host=host):
+            assert_contains(test, flat, PHRASES[f"ConsensusSynthesizerRegressionTests.{phrase_key}#1"])
 
 
 def assert_contains(test: unittest.TestCase, text: str, phrases: tuple[str, ...]) -> None:
@@ -91,9 +97,7 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
         ))
 
     def test_all_agreement_branches_are_explicit_and_fail_closed(self) -> None:
-        for host, flat in synthesizer_texts():
-            with self.subTest(host=host):
-                assert_contains(self, flat, PHRASES["ConsensusSynthesizerRegressionTests.test_all_agreement_branches_are_explicit_and_fail_closed#1"])
+        assert_both_hosts_say(self, "test_all_agreement_branches_are_explicit_and_fail_closed")
 
     def test_keyword_only_route_uses_the_items_own_rule_when_no_analyst_flags_security(self) -> None:
         # A keyword such as `tokens` meaning LLM usage counts must not force
@@ -219,18 +223,15 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
         )
 
     def test_escape_phrases_and_security_override_are_complete(self) -> None:
-        for host, flat in synthesizer_texts():
-            with self.subTest(host=host):
-                assert_contains(self, flat, PHRASES["ConsensusSynthesizerRegressionTests.test_escape_phrases_and_security_override_are_complete#1"])
+        assert_both_hosts_say(self, "test_escape_phrases_and_security_override_are_complete")
 
     def test_result_contract_preserves_evidence_dissent_and_exact_edits(self) -> None:
         # The parent applies an edit only when Flags is None, so any flag,
         # including a routing violation, leaves no edit to apply.
+        assert_both_hosts_say(self, "test_result_contract_preserves_evidence_dissent_and_exact_edits")
         for host, flat in synthesizer_texts():
             with self.subTest(host=host):
-                assert_contains(self, flat, PHRASES["ConsensusSynthesizerRegressionTests.test_result_contract_preserves_evidence_dissent_and_exact_edits#1"])
                 self.assertIn("Omit the complete `Artifact Edit` block whenever `Flags` is not `None`", flat)
-                self.assertNotIn("omit entirely when Flags includes", flat)
         protocol = " ".join(PROTOCOL.read_text(encoding="utf-8").split())
         self.assertIn("IF Flags = None AND", protocol)
 

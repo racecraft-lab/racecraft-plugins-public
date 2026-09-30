@@ -112,26 +112,31 @@ def split_frontmatter(text: str) -> tuple[dict[str, str], str]:
     lines = text.splitlines(keepends=True)
     if not lines or lines[0].rstrip("\r\n") != "---":
         raise HostParityError("frontmatter must open with a --- line")
+    for index, line in enumerate(lines[1:], start=1):
+        if line.rstrip("\r\n") == "---":
+            return _frontmatter_fields(lines[1:index]), "".join(lines[index + 1 :])
+    raise HostParityError("frontmatter has no closing --- line")
+
+
+def _frontmatter_fields(lines: list[str]) -> dict[str, str]:
     fields: dict[str, str] = {}
     folded: dict[str, list[str]] = {}
     key = ""
-    for index, line in enumerate(lines[1:], start=1):
+    for number, line in enumerate(lines, start=2):
         bare = line.rstrip("\r\n")
-        if bare == "---":
-            fields.update({name: " ".join(parts) for name, parts in folded.items()})
-            return fields, "".join(lines[index + 1 :])
         if not bare.strip() or bare[0] in " \t":
             if key in folded and bare.strip():
                 folded[key].append(bare.strip())
             continue
         match = _FRONTMATTER_KEY.fullmatch(bare)
         if match is None:
-            raise HostParityError(f"frontmatter line {index + 1} is not a key: {bare!r}")
+            raise HostParityError(f"frontmatter line {number} is not a key: {bare!r}")
         key = match.group("key")
         fields[key] = (match.group("value") or "").strip()
         if fields[key] == ">":
             folded[key] = []
-    raise HostParityError("frontmatter has no closing --- line")
+    fields.update({name: " ".join(parts) for name, parts in folded.items()})
+    return fields
 
 
 def _tool_list(value: str) -> list[str]:
