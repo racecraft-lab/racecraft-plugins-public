@@ -159,6 +159,7 @@ ack dead-code:new-symbol 22ac1a9aa7cd30b1 0 cid=9d711a0bb198057c unittest discov
 ack dead-code:new-symbol 23162b065674f774 0 cid=41626097e320b46f unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 23d56b1ba388d83d 0 cid=ba0c0ec1981204a3 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 23ed57bec67de10a 0 cid=c14f44e28daec575 unittest discovers test_ methods by name, and the nested helpers are passed by value in a case table or as a mock side effect, so dead-code is a false positive
+ack dead-code:new-symbol 23fa55f8c10d0be8 0 cid=405fdf9586111a44 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 24221acaa002b28f 0 cid=482e1150f1549dd2 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 24e29fea18588822 0 cid=1f46e5e86e464ae6 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 24f33ce02c4b2012 0 cid=72c5b7a28c62f464 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
