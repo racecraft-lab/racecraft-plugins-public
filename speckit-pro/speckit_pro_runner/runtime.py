@@ -20,7 +20,7 @@ from . import (
     SOURCE_CONTEXT,
 )
 from .envelope import diagnostic, response
-from .path_utils import sha256_file
+from .path_utils import parse_version_tuple, sha256_file
 
 MANIFEST_NAME = "speckit-pro-runner.manifest.json"
 CHECKSUM_NAME = "speckit-pro-runner.sha256"
@@ -177,18 +177,6 @@ def build_report(*, check_metadata: bool) -> dict[str, Any]:
         },
         "metadata": metadata,
     }
-
-
-def parse_version_tuple(version: str) -> tuple[int, int, int]:
-    parts = []
-    for part in version.split(".")[:3]:
-        try:
-            parts.append(int(part))
-        except ValueError:
-            parts.append(0)
-    while len(parts) < 3:
-        parts.append(0)
-    return tuple(parts)  # type: ignore[return-value]
 
 
 def detect_plugin_root() -> Path | None:

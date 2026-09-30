@@ -33,6 +33,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
+from .path_utils import parse_version_tuple
+
 TOOL_NAME = "research-broker-preflight"
 CONTRACT_VERSION = 1
 
@@ -190,7 +192,7 @@ def parse_version(stdout: bytes) -> tuple[int, int, int] | None:
     match = VERSION_PATTERN.search(stdout.decode("utf-8", "replace"))
     if match is None:
         return None
-    return (int(match.group(1)), int(match.group(2)), int(match.group(3)))
+    return parse_version_tuple(".".join(match.groups()))
 
 
 def _format_version(version: tuple[int, int, int]) -> str:

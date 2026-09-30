@@ -10,7 +10,7 @@
     "traversal-rejection",
     "line-ending-normalization"
   ],
-  "default_inventory": "speckit-pro/speckit_pro_runner/install_inventory.json",
+  "default_inventory": "tests/speckit-pro/unit/fixtures/install-inventory/install_inventory.json",
   "cases": [
     {
       "case_id": "complete-fake-home",

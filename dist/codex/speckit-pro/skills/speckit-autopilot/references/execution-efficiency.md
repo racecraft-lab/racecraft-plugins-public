@@ -631,6 +631,12 @@ Supply `docker` with explicit `executable`, local Unix
 It retains stdout/stderr, not generated file artifacts. It does not provide a
 macOS guest or replace native Claude/Codex qualification.
 
+Docker verification runs only against a Linux/arm64 Docker daemon, with a
+Linux/arm64 `base_image`. The image build and container use
+`--platform=linux/arm64`, and the in-container filter requires aarch64. On an
+amd64 host or CI runner the helper fails with a `ValueError` naming
+Linux/arm64; use ordinary native verification there.
+
 For Git-dependent checks, additionally supply `git_snapshot` with canonical
 absolute `common_directory` and `worktree_directory` paths. These must match
 the source repository's actual Git layout; no implicit directory discovery or

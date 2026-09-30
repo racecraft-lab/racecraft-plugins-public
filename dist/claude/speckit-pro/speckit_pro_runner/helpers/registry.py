@@ -7,13 +7,13 @@ from dataclasses import dataclass
 from typing import Any
 
 from ..envelope import diagnostic, response
-from ..execution_control import run_execution_helper
 from ..formal.helper import run_formal_helper
 from ..research_preflight import run_research_broker_preflight_helper
 from .archive_sweep import run_archive_sweep_helper
 # The two CODEX_ names are re-exported: tests read them through the registry.
 from .install import CODEX_OPTIONAL_HELPER_NAME, CODEX_REQUIRED_AGENT_NAMES, run_install_helper  # noqa: F401
 from .egress_authorization import run_egress_authorization_helper
+from .execution_requests import run_execution_helper
 from .gate_preflight_coverage import run_gate_preflight_coverage_helper
 from .run_finalization import run_run_finalization_helper
 from .mutation import empty_mutation, run_mutation_helper, run_spec_index_write, run_sweep_apply_result

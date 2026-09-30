@@ -48,7 +48,7 @@ for entry in (PLUGIN_ROOT, REPO_ROOT / "tests" / "speckit-pro" / "lib"):
 from test_result import run_counted  # noqa: E402
 
 from speckit_pro_runner.execution_control import execution_control, record_failing_checks  # noqa: E402
-from speckit_pro_runner.helpers.run_finalization import gate_command_digest as command_digest  # noqa: E402
+from speckit_pro_runner.helpers.run_finalization import finalize_run, gate_command_digest as command_digest  # noqa: E402
 
 HELPER_ID = "finalize-run"
 FIXTURE_REQUEST = (
@@ -89,15 +89,14 @@ def per_head(*gates: dict[str, object], heads: tuple[str, ...] = tuple(HEADS.val
 
 def finalize(root: Path, inputs: dict[str, object], record: bool = False) -> dict[str, object]:
     """The read-only decision; with `record`, the runner then counts the cycle through execution-control."""
-    from speckit_pro_runner.helpers.run_finalization import finalize_run
-
     result = finalize_run(root, inputs)
     if record:
         ledger = json.loads((root / str(inputs["ledger_path"])).read_text(encoding="utf-8"))
         with patch("speckit_pro_runner.execution_control.time.time", return_value=ledger["last_observed_at"]):
             execution_control(root, {"workflow_file": ledger["workflow_identity"]["current_workflow_file"],
                                      "action": "record-finalize-cycle", "expected_run_id": inputs["expected_run_id"],
-                                     "ledger_path": inputs["ledger_path"], "finalize_inputs": inputs}, "apply")
+                                     "ledger_path": inputs["ledger_path"], "finalize_inputs": inputs}, "apply",
+                              finalizer=finalize_run)
     return result
 
 
@@ -926,7 +925,8 @@ class MissingGateAcrossCyclesTests(_LedgerFixture, unittest.TestCase):
                     execution_control(self.root, {"workflow_file": "clean/workflow.md", "action": "record-finalize-cycle",
                                                   "expected_run_id": self.clean["run_id"],
                                                   "ledger_path": self.clean["ledger_path"],
-                                                  "finalize_inputs": {**inputs, **change}}, "apply")
+                                                  "finalize_inputs": {**inputs, **change}}, "apply",
+                                      finalizer=finalize_run)
 
     def test_a_forged_observation_count_fails_closed(self) -> None:
         finalize(self.root, self.inputs(gates=self.TIP_ONLY), record=True)

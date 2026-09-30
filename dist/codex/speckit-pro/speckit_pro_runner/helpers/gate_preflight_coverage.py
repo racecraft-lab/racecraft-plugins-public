@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Any
 
 from ..envelope import diagnostic, response
+from ..trusted_io import resolve_repo_root
 
 # The autonomy-boundary schema's action categories; a test pins the two together.
 CATEGORIES = ("outside_writable_roots", "privileged_command", "interactive_authentication", "external_side_effect")
@@ -219,8 +220,6 @@ def gate_preflight_coverage(inputs: Any, root: Path | None = None) -> dict[str, 
 
 def run_gate_preflight_coverage_helper(entry: Any, request: Any) -> dict[str, Any]:
     """Runner helper entry point: a gap is an expected failure, never a pass."""
-    from .read_only import resolve_repo_root
-
     root = resolve_repo_root(request.inputs if isinstance(request.inputs, dict) else {})
     if isinstance(root, dict):
         return response("input_error", request_id=request.request_id, diagnostics=[root])
