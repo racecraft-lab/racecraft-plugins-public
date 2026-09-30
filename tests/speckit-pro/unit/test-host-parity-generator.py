@@ -377,13 +377,46 @@ class HostSkillSourceTests(unittest.TestCase):
                                "| Spec | Name | DC | Specify |"):
                     self.assertIn(phrase, text)
 
-    def test_scaffold_stops_on_complete_and_reuses_in_progress_on_both_hosts(self) -> None:
-        # Scaffold-spec keeps its Codex overlay, so each host's own file is read.
-        for relative in ("skills/speckit-scaffold-spec/SKILL.md", "codex-skills/speckit-scaffold-spec/SKILL.md"):
-            with self.subTest(file=relative):
-                text = " ".join((PLUGIN_ROOT / relative).read_text(encoding="utf-8").split())
-                self.assertRegex(text, r"(?i)complete, warn the user and stop")
-                self.assertRegex(text, r"(?i)in progress, (?:prefer )?reus\w+ (?:the |its )?existing worktree branch")
+
+class MergedSkillViewTests(unittest.TestCase):
+    """A merged skill's reconciled text reaches both hosts' rendered copies."""
+
+    def assert_both_views(self, skill: str, present: tuple[str, ...] = (), absent: tuple[str, ...] = ()) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(skill=skill, host=host):
+                path = host_skill_root(host) / skill / "SKILL.md"
+                text = " ".join(path.read_text(encoding="utf-8").split())
+                for phrase in present:
+                    self.assertIn(phrase, text)
+                for phrase in absent:
+                    self.assertNotIn(phrase, text)
+
+    def test_scaffold_follows_the_runner_on_both_hosts(self) -> None:
+        # The two copies disagreed; each phrase is the runner's behavior. The
+        # placement helper returns the disposition, so there is no reuse
+        # question, and a missing preset stops setup, so none is staged.
+        self.assert_both_views("speckit-scaffold-spec", present=(
+            "Invoke the read-only `resolve-workflow-binding` runner helper",
+            "Module and Interface Deltas, Terms, Verification Gates",
+            "`git -C <absolute-worktree-root> push -u <remote> <spec-branch>`",
+            "If the roadmap marks the spec complete, warn the user and STOP.",
+            "reuse its existing worktree branch rather than creating a second setup",
+        ), absent=("reuse-or-recreate question", ".specify/presets/.registry"))
+
+    def test_resolve_pr_follows_one_procedure_on_both_hosts(self) -> None:
+        # Both hosts ship the lockfile and unpushed-commit hooks.
+        self.assert_both_views("speckit-resolve-pr", present=(
+            "denies a shell command that uses a different manager",
+            "the plugin's Stop hook blocks ending the turn with unpushed commits",
+            "Do not overwrite unrelated dirty worktree changes.",
+            "Never reply “fixed” on a thread while the branch is still broken.",
+            "If GitHub tooling is unavailable",
+        ))
+        # phase-executor runs one SDD phase and no remediation; Codex has no general-purpose role.
+        codex = (host_skill_root("codex") / "speckit-resolve-pr" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("built-in `default` subagent", " ".join(codex.split()))
+        self.assertNotIn("phase-executor", codex)
+        self.assertNotIn("general-purpose", codex)
 
 
 # Statements that read differently on the two hosts before the install, upgrade
@@ -547,6 +580,7 @@ def main() -> int:
             CodexAgentGeneratorTests,
             CodexAgentPolicyHookTests,
             HostSkillSourceTests,
+            MergedSkillViewTests,
             SetupSkillDriftTests,
             PostPlanParityTests,
         )

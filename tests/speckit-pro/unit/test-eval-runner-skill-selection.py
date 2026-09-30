@@ -51,7 +51,7 @@ from speckit_pro_runner.helpers.registry import HELPERS, MUTATION_HELPERS  # noq
 SHIPPED_RUNTIME_CONTRACTS = (
     PLUGIN_ROOT / "skills" / "speckit-upgrade" / "SKILL.md",
     PLUGIN_ROOT / "skills" / "speckit-scaffold-spec" / "SKILL.md",
-    PLUGIN_ROOT / "codex-skills" / "speckit-scaffold-spec" / "SKILL.md",
+    codex_skill_dir("speckit-scaffold-spec") / "SKILL.md",
     PLUGIN_ROOT / "skills" / "speckit-autopilot" / "SKILL.md",
     PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "SKILL.md",
     PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "phase-execution.md",
@@ -347,7 +347,7 @@ def runtime_contract_parity_violations() -> list[str]:
         (
             "scaffold",
             PLUGIN_ROOT / "skills" / "speckit-scaffold-spec" / "SKILL.md",
-            PLUGIN_ROOT / "codex-skills" / "speckit-scaffold-spec" / "SKILL.md",
+            codex_skill_dir("speckit-scaffold-spec") / "SKILL.md",
             ("relocate-process-artifacts", "deferred", "unavailable"),
         ),
         (
@@ -658,7 +658,7 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
         self.assertIn("It is not a fallback for a broken or unexecuted command path", normalized)
 
     def test_codex_autopilot_worktree_handoff_contract(self) -> None:
-        scaffold = (PLUGIN_ROOT / "codex-skills/speckit-scaffold-spec/SKILL.md").read_text(encoding="utf-8")
+        scaffold = (codex_skill_dir("speckit-scaffold-spec") / "SKILL.md").read_text(encoding="utf-8")
         autopilot = (PLUGIN_ROOT / "codex-skills/speckit-autopilot/SKILL.md").read_text(encoding="utf-8")
         prerequisites = (
             PLUGIN_ROOT / "codex-skills/speckit-autopilot/references/prerequisites-codex.md"

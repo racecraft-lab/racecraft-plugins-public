@@ -34,8 +34,6 @@ UNMERGED_CODEX_OVERLAYS = frozenset({
     "speckit-autopilot/references/prerequisites-codex.md",
     "speckit-autopilot/references/task-list-canonical-codex.md",
     "speckit-autopilot/references/workflow-file-protocol-codex.md",
-    "speckit-resolve-pr/SKILL.md",
-    "speckit-scaffold-spec/SKILL.md",
 })
 CODEX_SKILL_GUARD = "## Codex Skill-Selection Guard"
 

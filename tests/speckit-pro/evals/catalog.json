@@ -13253,7 +13253,6 @@
       ],
       "provenance": [
         "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
-        "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
         "speckit-pro/skills/speckit-autopilot/references/gate-validation.md",
         "speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md"
       ],
@@ -13423,7 +13422,6 @@
       ],
       "provenance": [
         "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
-        "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
         "speckit-pro/skills/speckit-autopilot/references/gate-validation.md",
         "speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md"
       ],
@@ -18519,8 +18517,7 @@
       "provenance": [
         "tests/speckit-pro/layer3-functional/codex-evals/speckit-scaffold-spec-evals.json#eval-7",
         "tests/speckit-pro/evals/fixtures/functional/legacy-selection.json#functional.speckit-scaffold-spec.case-7",
-        "speckit-pro/skills/speckit-scaffold-spec/SKILL.md#4",
-        "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md#4"
+        "speckit-pro/skills/speckit-scaffold-spec/SKILL.md#4"
       ]
     },
     {
