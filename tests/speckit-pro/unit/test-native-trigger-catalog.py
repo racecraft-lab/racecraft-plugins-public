@@ -95,13 +95,12 @@ class NativeTriggerCatalogTests(unittest.TestCase):
         counts = self.audit["counts"]
         matrix = self.audit["coverage_matrix"]
         gaps = self.audit["unresolved_requirements"]
-        self.assertEqual(len(self.cases), 109)
-        self.assertEqual(counts["proposed_canonical_cases"], 109)
+        self.assertEqual(len(self.cases), counts["proposed_canonical_cases"])
         self.assertEqual(counts["supported_source_cases"], 209)
         self.assertEqual(counts["blocked_source_cases"], 8)
         self.assertEqual(counts["blocked_requirements"], 5)
-        self.assertEqual(len(matrix), 109)
-        self.assertEqual(len(gaps), 5)
+        self.assertEqual(len(matrix), counts["proposed_canonical_cases"])
+        self.assertEqual(len(gaps), counts["blocked_requirements"])
 
         by_id = {row["canonical_case_id"]: row for row in matrix}
         self.assertEqual(set(by_id), {case["id"] for case in self.cases})

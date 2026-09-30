@@ -6,7 +6,6 @@ from __future__ import annotations
 import ast
 import contextlib
 import hashlib
-import importlib.util
 import io
 import json
 import os
@@ -58,14 +57,11 @@ import trigger_evidence as evidence_records  # noqa: E402
 import trigger_process  # noqa: E402
 
 
+from script_loader import load_script  # noqa: E402
+
+
 def import_script(path: Path, name: str) -> ModuleType:
-    spec = importlib.util.spec_from_file_location(name, path)
-    if spec is None or spec.loader is None:
-        raise AssertionError(f"cannot import script: {path}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_script(name, path)
 
 
 def assert_no_speckit_contracts(test: unittest.TestCase, claude: ModuleType, staged_text: str) -> None:

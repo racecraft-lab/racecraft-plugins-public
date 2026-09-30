@@ -32,7 +32,10 @@ PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
+from agent_roster import codex_sandbox_policy  # noqa: E402
+from structural_helpers import developer_instructions  # noqa: E402
 from structural_helpers import frontmatter as _frontmatter  # noqa: E402
+from structural_helpers import frontmatter_field  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 AGENTS_DIR = PLUGIN_ROOT / "agents"
@@ -111,42 +114,9 @@ UNTRUSTED_INPUT_ALLOWLISTS = {
 TERMINAL_WORKERS = ("artifact-author", "implement-executor", "uat-runbook-author", "formal-model-author")
 AUTHOR_WORKERS = ("artifact-author", "uat-runbook-author")
 SKILL_DRIVEN_EXECUTORS = ("phase-executor", "analyze-executor", "checklist-executor")
-CODEX_SANDBOX_POLICY = {
-    "analyze-executor": "workspace-write",
-    "artifact-author": "workspace-write",
-    "autopilot-fast-helper": "read-only",
-    "checklist-executor": "workspace-write",
-    "clarify-executor": "read-only",
-    "codebase-analyst": "read-only",
-    "consensus-synthesizer": "read-only",
-    "consensus-tiebreaker": "read-only",
-    "domain-researcher": "read-only",
-    "formal-model-author": "read-only",
-    "implement-executor": "workspace-write",
-    "phase-executor": "workspace-write",
-    "spec-context-analyst": "read-only",
-    "uat-runbook-author": "workspace-write",
-}
+CODEX_SANDBOX_POLICY = codex_sandbox_policy()
 CODEX_READ_ONLY_ROLES = tuple(role for role, sandbox in CODEX_SANDBOX_POLICY.items() if sandbox == "read-only")
 CODEX_WRITE_ROLES = tuple(role for role, sandbox in CODEX_SANDBOX_POLICY.items() if sandbox == "workspace-write")
-TEST_METHOD_ORDER = (
-    "test_operator_tool_surface_no_tools_allowlist_pinning",
-    "test_open_executors_orchestration_capabilities_never_denied",
-    "test_read_only_roles_deny_builtin_mutation_primitives",
-    "test_terminal_workers_deny_skill_keep_mutation_surface",
-    "test_skill_driven_executors_keep_skill_and_mutation_surface",
-    "test_session_shape_metadata",
-    "test_codex_agent_sandbox_mode_scoping",
-    "test_codex_agent_sandbox_mode_scoping_rejects_missing_directory",
-    "test_named_tool_regression_guard",
-    "test_untrusted_input_consumers_pin_read_only_allowlists",
-    "test_path_scoped_untrusted_input_authors_pin_exact_tool_allowlists",
-    "test_no_tool_observers_pin_exact_tool_allowlists",
-    "test_claude_only_observer_has_no_codex_twin",
-    "test_brokered_researchers_pin_broker_allowlists",
-    "test_brokered_research_roles_deny_raw_research_tools",
-    "test_research_roles_route_research_through_the_broker_on_both_hosts",
-)
 
 NAMED_TOOL_PATTERN = re.compile(r"mcp__[A-Za-z0-9_-]+__[A-Za-z0-9_-]+")
 PROSE_TOKEN_ALLOWLIST: set[str] = set()
@@ -169,11 +139,12 @@ def _md_body(path: Path) -> str:
     return "\n".join(out)
 
 
+def _toml_prose(path: Path) -> str:
+    return developer_instructions(_read(path))
+
+
 def _yaml_field(path: Path, field: str) -> str:
-    for line in _frontmatter(_read(path).splitlines()).splitlines():
-        if line.startswith(f"{field}:"):
-            return re.sub(rf"^{re.escape(field)}:[ \t]*", "", line)
-    return ""
+    return frontmatter_field(_frontmatter(_read(path).splitlines()), field)
 
 
 def _toml_field(path: Path, field: str) -> str:
@@ -183,21 +154,6 @@ def _toml_field(path: Path, field: str) -> str:
         if match:
             return match.group(1)
     return ""
-
-
-def _toml_prose(path: Path) -> str:
-    out: list[str] = []
-    in_block = False
-    for line in _read(path).splitlines():
-        if line == 'developer_instructions = """':
-            in_block = True
-            continue
-        if in_block and line.strip() == '"""':
-            in_block = False
-            continue
-        if in_block:
-            out.append(line)
-    return "\n".join(out)
 
 
 def _disallowed_tools(path: Path) -> list[str]:
@@ -574,10 +530,7 @@ class ValidateToolScoping(unittest.TestCase):
 
 
 def build_suite() -> unittest.TestSuite:
-    suite = unittest.TestSuite()
-    for method_name in TEST_METHOD_ORDER:
-        suite.addTest(ValidateToolScoping(method_name))
-    return suite
+    return unittest.defaultTestLoader.loadTestsFromTestCase(ValidateToolScoping)
 
 
 def main() -> int:

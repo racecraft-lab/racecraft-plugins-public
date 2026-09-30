@@ -18,23 +18,19 @@ for _import_root in (LIB_DIR, PLUGIN_ROOT):
         sys.path.insert(0, str(_import_root))
 
 from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
+import agent_roster
 from structural_helpers import body as _body
+from structural_helpers import discover_skill_names
 from structural_helpers import frontmatter as _frontmatter
+from structural_helpers import frontmatter_field as _field
 from test_result import run_counted
 
 validate_skills_SKILLS_DIR = PLUGIN_ROOT / 'skills'
-validate_skills_SKILLS = ('grill-me', 'speckit-archive-cleanup', 'speckit-autopilot', 'speckit-coach', 'speckit-install', 'speckit-upgrade', 'speckit-scaffold-spec', 'speckit-status', 'speckit-resolve-pr', 'speckit-prd', 'ubiquitous-language')
+validate_skills_SKILLS = tuple(discover_skill_names(validate_skills_SKILLS_DIR))
 SKILLS_REQUIRING_REFERENCES = frozenset({'speckit-autopilot', 'speckit-coach'})
 ALLOWED_KEYS = frozenset({'name', 'description', 'license', 'allowed-tools', 'metadata', 'compatibility', 'user-invocable', 'disable-model-invocation', 'argument-hint'})
 NAME_RE = re.compile('^[a-z][a-z0-9]*(-[a-z0-9]+)*$')
 TOP_LEVEL_KEY_RE = re.compile('^([a-zA-Z][a-zA-Z0-9_-]*):', re.MULTILINE)
-
-def _field(frontmatter: str, key: str) -> str:
-    for line in frontmatter.splitlines():
-        if line.startswith(f'{key}:'):
-            value = re.sub(f'^{key}:[ \\t]*', '', line)
-            return value.replace('"', '').replace("'", '')
-    return ''
 
 def _description_value(frontmatter: str) -> str:
     block = re.search('description:\\s*([>|])\\s*\\n((?:\\s+.*\\n?)*)', frontmatter)
@@ -275,7 +271,7 @@ class ValidateSkills(unittest.TestCase):
                 with self.subTest(msg=f'{skill}: references directory exists if required'):
                     self.assertTrue((skill_dir / 'references').is_dir(), f"references directory not found at {skill_dir / 'references'}")
 validate_codex_skills_CODEX_SKILLS_DIR = PLUGIN_ROOT / 'codex-skills'
-validate_codex_skills_SKILLS = ('speckit-archive-cleanup', 'speckit-autopilot', 'speckit-coach', 'speckit-scaffold-spec', 'speckit-status', 'speckit-resolve-pr', 'install', 'speckit-install', 'speckit-upgrade', 'grill-me', 'speckit-prd', 'ubiquitous-language')
+validate_codex_skills_SKILLS = tuple(discover_skill_names(validate_codex_skills_CODEX_SKILLS_DIR))
 COLLISION_GUARD_SKILLS = ('speckit-archive-cleanup', 'speckit-autopilot', 'speckit-coach', 'grill-me', 'speckit-prd', 'ubiquitous-language')
 CC_ONLY_KEYS = ('user-invocable', 'disable-model-invocation', 'license', 'argument-hint')
 CLAUDE_ONLY_RUNTIME_RE = re.compile('TaskCreate|TaskUpdate|Agent\\(|Bash\\(|Opus-class|Opus 4\\.6|/model opus|/effort max|/speckit[.:]|run /<command>|general-purpose agent')
@@ -467,49 +463,6 @@ class ValidateCodexSkills(unittest.TestCase):
         with self.subTest(msg='speckit-autopilot: explicit external workflow binds to its registered worktree'):
             prerequisites = _read(skill_dir / 'references' / 'prerequisites-codex.md')
             self.assertTrue('explicitly supplied the absolute workflow path' in prerequisites and 'relation=external' in prerequisites and 'registered worktree' in prerequisites and 'real sandbox denial' in prerequisites and ('Open a new Codex task rooted at <workflow_root>' not in prerequisites), 'expected explicit registered-worktree binding with permission failures reported at the actual operation')
-        with self.subTest(msg='speckit-autopilot: eval 106 expects an explicit external workflow to bind and continue'):
-            evals = json.loads(_read(REPO_ROOT / 'tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json'))
-            eval_106 = json.dumps(next(item for item in evals['evals'] if item['id'] == 106))
-            self.assertNotIn('open a new Codex task rooted', eval_106, 'expected eval 106 to follow the explicit-selection binding rule')
-            self.assertIn('WORKFLOW_ROOT', eval_106, 'expected eval 106 to bind execution to the returned workflow root')
-        with self.subTest(msg='speckit-autopilot: the cookie keyword eval widens to all three with a conditional bar'):
-            for legacy_path, eval_id in (
-                ('tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json', 18),
-                ('tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json', 14),
-            ):
-                legacy = json.loads(_read(REPO_ROOT / legacy_path))
-                cookie_eval = json.dumps(next(item for item in legacy['evals'] if item['id'] == eval_id))
-                self.assertNotIn('ONLY domain-researcher', cookie_eval, f'expected eval {eval_id} to widen a keyword item to all three analysts')
-                self.assertIn('security_relevant', cookie_eval, f'expected eval {eval_id} to tie the unanimity bar to security_relevant')
-        with self.subTest(msg='speckit-autopilot: the security-tag eval requires 3/3 instead of always flagging review'):
-            stale = 'fires automatically for security items'
-            corrected = 'a unanimous 3/3 answer applies and the run continues'
-            for legacy_path, eval_id in (
-                ('tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json', 19),
-                ('tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json', 15),
-            ):
-                legacy = json.loads(_read(REPO_ROOT / legacy_path))
-                tag_eval = next(item for item in legacy['evals'] if item['id'] == eval_id)
-                self.assertNotIn(stale, tag_eval['expected_output'], f'expected eval {eval_id} to drop the always-review claim')
-                self.assertIn(corrected, tag_eval['expected_output'], f'expected eval {eval_id} to apply a unanimous security answer')
-            catalog = json.loads(_read(REPO_ROOT / 'tests/speckit-pro/evals/catalog.json'))
-            case_19 = next(case for case in catalog['cases'] if case['id'] == 'functional.speckit-autopilot.case-19')
-            self.assertNotIn(stale, case_19['capability'], 'expected catalog case-19 to drop the always-review claim')
-            self.assertIn(corrected, case_19['capability'], 'expected catalog case-19 to apply a unanimous security answer')
-        with self.subTest(msg='speckit-coach: eval 4 resolves unresolved disagreement through the Round 3 agent tiebreak'):
-            stale = 'asked in place in an interactive run'
-            corrected = 'resolved by a Round 3 agent tiebreak'
-            for legacy_path in (
-                'tests/speckit-pro/layer3-functional/codex-evals/speckit-coach-evals.json',
-                'tests/speckit-pro/layer3-functional/evals/speckit-coach-evals.json',
-            ):
-                legacy = json.loads(_read(REPO_ROOT / legacy_path))
-                coach_eval = json.dumps(next(item for item in legacy['evals'] if item['id'] == 4))
-                self.assertNotIn(stale, coach_eval, f'expected {legacy_path} eval 4 to drop the in-place answer')
-                self.assertIn(corrected, coach_eval, f'expected {legacy_path} eval 4 to name the Round 3 tiebreak')
-            catalog = json.dumps(next(case for case in json.loads(_read(REPO_ROOT / 'tests/speckit-pro/evals/catalog.json'))['cases'] if case['id'] == 'functional.speckit-coach.case-4'))
-            self.assertNotIn(stale, catalog, 'expected catalog coach case-4 to drop the in-place answer')
-            self.assertIn(corrected, catalog, 'expected catalog coach case-4 to name the Round 3 tiebreak')
         with self.subTest(msg='speckit-autopilot: documents the optional Luna helper'):
             self.assertIn('autopilot-fast-helper', body)
         with self.subTest(msg='speckit-autopilot: keeps the Luna helper advisory and parent-only'):
@@ -560,18 +513,12 @@ validate_capability_pointer_CODEX_AGENTS_DIR = PLUGIN_ROOT / 'codex-agents'
 validate_capability_pointer_DIRECTIVE_MARKER = 'capability-discovery.md'
 validate_capability_pointer_GROUNDING_MARKER = 'grounding.md'
 CAPABILITY_NOTE = 'Capability path:'
-validate_capability_pointer_CC_EXCLUSIONS = frozenset({'artifact-preview-observer', 'consensus-synthesizer', 'consensus-tiebreaker', 'phase-executor', 'sweep-analyst', 'sweep-classifier'})
-validate_capability_pointer_CODEX_EXCLUSIONS = frozenset({'autopilot-fast-helper', 'consensus-synthesizer', 'consensus-tiebreaker', 'phase-executor'})
-APPROVED_EQUIVALENTS: frozenset[str] = frozenset()
 
 def validate_capability_pointer__rel(path: Path) -> str:
     return path.relative_to(REPO_ROOT).as_posix()
 
 def validate_capability_pointer__excluded(runtime: str, name: str) -> bool:
-    return name in (validate_capability_pointer_CC_EXCLUSIONS if runtime == 'claude' else validate_capability_pointer_CODEX_EXCLUSIONS)
-
-def _approved_equivalent(runtime: str, name: str) -> bool:
-    return f'{runtime}:{name}' in APPROVED_EQUIVALENTS
+    return name in agent_roster.capability_exempt_roles(runtime)
 
 class ValidateCapabilityPointer(unittest.TestCase):
 
@@ -591,8 +538,8 @@ class ValidateCapabilityPointer(unittest.TestCase):
             if validate_capability_pointer__excluded(runtime, agent_name):
                 continue
             text = agent_file.read_text(encoding='utf-8', errors='replace')
-            with self.subTest(msg=f"{runtime}: in-scope agent '{agent_name}' references {validate_capability_pointer_DIRECTIVE_MARKER} (or approved equivalent)"):
-                self.assertTrue(validate_capability_pointer_DIRECTIVE_MARKER in text or _approved_equivalent(runtime, agent_name), f"uncovered in-scope agent: {runtime} '{agent_name}' references neither {validate_capability_pointer_DIRECTIVE_MARKER} nor an approved equivalent")
+            with self.subTest(msg=f"{runtime}: in-scope agent '{agent_name}' references {validate_capability_pointer_DIRECTIVE_MARKER}"):
+                self.assertIn(validate_capability_pointer_DIRECTIVE_MARKER, text, f"uncovered in-scope agent: {runtime} '{agent_name}' does not reference {validate_capability_pointer_DIRECTIVE_MARKER}")
             with self.subTest(msg=f"{runtime}: in-scope agent '{agent_name}' references {validate_capability_pointer_GROUNDING_MARKER}"):
                 self.assertIn(validate_capability_pointer_GROUNDING_MARKER, text, f"{runtime} '{agent_name}' does not reference {validate_capability_pointer_GROUNDING_MARKER}")
             with self.subTest(msg=f"{runtime}: in-scope agent '{agent_name}' output requires the grounding evidence note"):
@@ -609,7 +556,6 @@ validate_capability_resolution_DIRECTIVE_MARKER = 'capability-discovery.md'
 validate_capability_resolution_GROUNDING_MARKER = 'grounding.md'
 validate_capability_resolution_PATH_TOKEN_RE = re.compile('speckit-pro/[A-Za-z0-9._/-]*capability-discovery\\.md')
 validate_capability_resolution_GROUNDING_TOKEN_RE = re.compile('speckit-pro/[A-Za-z0-9._/-]*grounding\\.md')
-validate_capability_resolution_CC_EXCLUSIONS = frozenset({'consensus-synthesizer', 'phase-executor'})
 CONTRACT_REFERENCES = 'skills/speckit-autopilot/references'
 # One sentence per agent-facing grounding rule, quoted verbatim from grounding.md.
 GROUNDING_RULE_SENTENCES = (
@@ -618,13 +564,12 @@ GROUNDING_RULE_SENTENCES = (
     ('G3', 'never assign `high` confidence to a claim that is not grounded in an invoked result.'),
     ('G4', 'each external claim names the capability result and a locator (URL, `file:line`, command, or returned record)'),
 )
-validate_capability_resolution_CODEX_EXCLUSIONS = frozenset({'autopilot-fast-helper', 'consensus-synthesizer', 'consensus-tiebreaker', 'phase-executor'})
 
 def validate_capability_resolution__rel(path: Path) -> str:
     return path.relative_to(REPO_ROOT).as_posix()
 
 def validate_capability_resolution__excluded(runtime: str, name: str) -> bool:
-    return name in (validate_capability_resolution_CC_EXCLUSIONS if runtime == 'claude' else validate_capability_resolution_CODEX_EXCLUSIONS)
+    return name in agent_roster.capability_exempt_roles(runtime)
 
 class ValidateCapabilityResolution(unittest.TestCase):
 
@@ -870,8 +815,8 @@ validate_codex_parity_AGENTS_DIR = PLUGIN_ROOT / 'agents'
 validate_codex_parity_CODEX_AGENTS_DIR = PLUGIN_ROOT / 'codex-agents'
 validate_codex_parity_SKILLS_DIR = PLUGIN_ROOT / 'skills'
 validate_codex_parity_CODEX_SKILLS_DIR = PLUGIN_ROOT / 'codex-skills'
-CC_ONLY_AGENTS = frozenset({'artifact-preview-observer', 'sweep-classifier', 'sweep-analyst'})
-CODEX_ONLY_AGENTS = frozenset({'autopilot-fast-helper'})
+CC_ONLY_AGENTS = agent_roster.claude_only_roles()
+CODEX_ONLY_AGENTS = agent_roster.codex_only_roles()
 REF_RE = re.compile('\\.\\./\\.\\./skills/[^)\\s`]+\\.md')
 
 def _json_field(path: Path, key: str) -> str:

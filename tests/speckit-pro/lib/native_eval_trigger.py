@@ -8,14 +8,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import hashlib
-import importlib.util
 import json
 from pathlib import Path
 import re
 import stat
-import sys
 from typing import Any, Mapping
 
+from script_loader import load_script
 import trigger_codex_observer as codex_observer
 from trigger_evidence import description_override
 
@@ -93,12 +92,8 @@ def _helpers(host: str) -> object:
         return cached
     filename = "run-trigger-evals.py" if host == "claude" else "run_codex_evals.py"
     path = Path(__file__).resolve().parents[1] / "layer2-trigger" / filename
-    name = f"native_eval_trigger_{host}_helpers"
-    spec = importlib.util.spec_from_file_location(name, path)
-    _require(spec is not None and spec.loader is not None, f"{host} trigger helpers are unavailable")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
+    _require(path.is_file(), f"{host} trigger helpers are unavailable")
+    module = load_script(f"native_eval_trigger_{host}_helpers", path)
     _HELPERS[host] = module
     return module
 

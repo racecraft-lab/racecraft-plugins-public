@@ -6,7 +6,6 @@ from __future__ import annotations
 import ast
 import copy
 from contextlib import ExitStack
-import importlib.util
 import json
 import os
 import shutil
@@ -45,15 +44,10 @@ if str(PLUGIN_ROOT) not in sys.path:
 if str(TEST_LIB_ROOT) not in sys.path:
     sys.path.insert(0, str(TEST_LIB_ROOT))
 
+from runner_invocation import assert_runner_response, run_runner, runner_env  # noqa: E402
+from script_loader import load_script  # noqa: E402
 from speckit_pro_runner.envelope import STATUS_EXIT_CODES  # noqa: E402
 from structural_helpers import iter_subschemas  # noqa: E402
-
-
-def runner_env() -> dict[str, str]:
-    env = os.environ.copy()
-    existing = env.get("PYTHONPATH")
-    env["PYTHONPATH"] = str(PLUGIN_ROOT) if not existing else f"{PLUGIN_ROOT}{os.pathsep}{existing}"
-    return env
 
 
 def gate_request(
@@ -71,30 +65,6 @@ def gate_request(
         "mode": mode,
         "inputs": inputs or {},
     }
-
-
-def run_runner(
-    request: object,
-    *,
-    extra_env: dict[str, str] | None = None,
-    cwd: Path = REPO_ROOT,
-) -> tuple[subprocess.CompletedProcess[str], dict[str, Any], list[dict[str, Any]]]:
-    env = runner_env()
-    if extra_env:
-        env.update(extra_env)
-    completed = subprocess.run(
-        [sys.executable, "-m", "speckit_pro_runner"],
-        input=json.dumps(request) if not isinstance(request, str) else request,
-        text=True,
-        capture_output=True,
-        cwd=cwd,
-        env=env,
-        shell=False,
-        check=False,
-    )
-    response = json.loads(completed.stdout) if completed.stdout.strip() else {}
-    stderr_records = [json.loads(line) for line in completed.stderr.splitlines() if line.strip()]
-    return completed, response, stderr_records
 
 
 def fixture_request(name: str) -> dict[str, Any]:
@@ -196,10 +166,7 @@ def python_argv(source: str) -> list[str]:
 
 def load_layer_script_dispatcher() -> Any:
     dispatcher_path = REPO_ROOT / "tests" / "speckit-pro" / "run-layer-scripts.py"
-    spec = importlib.util.spec_from_file_location("run_layer_scripts", dispatcher_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load_script("run_layer_scripts", dispatcher_path)
 
 
 def successful_command(label: str) -> dict[str, Any]:
@@ -229,12 +196,7 @@ class GateFoundationTests(unittest.TestCase):
         return parsed
 
     def assert_response(self, response: dict[str, Any], status: str) -> None:
-        self.assertEqual(response["schema_version"], "1.0")
-        self.assertEqual(response["status"], status)
-        self.assertEqual(response["exit_code"], STATUS_EXIT_CODES[status])
-        self.assertIsNone(response["legacy_exit_code"])
-        self.assertIsInstance(response["diagnostics"], list)
-        self.assertIsInstance(response["data"], dict)
+        assert_runner_response(self, response, status, STATUS_EXIT_CODES[status])
 
     def schema_failures(self, value: object, schema: dict) -> list[dict[str, Any]]:
         from speckit_pro_runner.helpers import read_only
@@ -549,7 +511,7 @@ class GateFoundationTests(unittest.TestCase):
 
     def test_request_fixtures_cover_registered_suite_operations(self) -> None:
         expected = {
-            "run-default-suite.json",
+            "run-ci-suite.json",
             "run-toolchain-preflight.json",
             "run-toolchain-preflight-docs.json",
             "test-payload-evidence.json",
@@ -560,17 +522,19 @@ class GateFoundationTests(unittest.TestCase):
         }
         self.assertEqual({path.name for path in REQUESTS_DIR.iterdir()}, expected)
 
-        default_request = fixture_request("run-default-suite")
+        default_request = fixture_request("run-ci-suite")
         self.assertEqual(default_request["helper_id"], "suite-gate")
         self.assertEqual(default_request["operation"], "run-default-suite")
         self.assertEqual(default_request["mode"], "read_only")
+        from speckit_pro_runner.gates import suite as suite_gate
+
         self.assertEqual(
-            default_request["inputs"]["suite"],
-            ["toolchain", "structural", "unit", "tool-scoping", "integration", "parity"],
+            suite_gate.requested_suite(default_request["inputs"]),
+            suite_gate.EXTENDED_SUITE,
         )
 
         for name in [
-            "run-default-suite",
+            "run-ci-suite",
             "run-toolchain-preflight",
         ]:
             with self.subTest(fixture=name):
@@ -2292,7 +2256,7 @@ class GateFoundationTests(unittest.TestCase):
     def test_default_suite_fixture_uses_python_authoritative_commands_without_shell_paths(self) -> None:
         from speckit_pro_runner.gates import suite as suite_gate
 
-        request = fixture_request("run-default-suite")
+        request = fixture_request("run-ci-suite")
         suite_items = suite_gate.requested_suite(request["inputs"])
         self.assertEqual(suite_items, ("toolchain", "1", "4", "5", "6", "7"))
         results = [
@@ -2409,17 +2373,11 @@ class GateFoundationTests(unittest.TestCase):
         layer4_scripts = [self.repo_rel(path) for path in dispatcher.canonical_test_scripts(REPO_ROOT, "4")]
         integration_by_id = [self.repo_rel(path) for path in dispatcher.canonical_test_scripts(REPO_ROOT, "6")]
         integration_by_key = [self.repo_rel(path) for path in dispatcher.canonical_test_scripts(REPO_ROOT, "integration")]
-        layer1_names = (
-            "validate-plugin-metadata", "validate-hook-contracts", "validate-agent-contracts",
-            "validate-skill-contracts", "validate-payload-contracts", "validate-ci-release-contracts",
-            "validate-plugin-payload-hygiene", "validate-spec-templates-and-extensions",
-            "validate-moc-lint", "validate-spec-index-helper-contract", "test-structural-regressions",
-        )
-        expected_layer1_scripts = {f"tests/speckit-pro/layer1-structural/{name}.py" for name in layer1_names}
-        self.assertEqual(set(layer1_scripts), expected_layer1_scripts)
-        self.assertEqual(len(layer1_scripts), len(expected_layer1_scripts))
-        self.assertGreaterEqual(len(layer4_scripts), 17)
         manifest = json.loads((REPO_ROOT / "tests/speckit-pro/suite-manifest.json").read_text(encoding="utf-8"))
+        manifest_layer1 = next(layer for layer in manifest["layers"] if layer["id"] == "1")
+        self.assertEqual(layer1_scripts, [script["path"] for script in manifest_layer1["scripts"]])
+        self.assertTrue(layer1_scripts)
+        self.assertGreaterEqual(len(layer4_scripts), 17)
         manifest_layer4 = next(layer for layer in manifest["layers"] if layer["id"] == "4")
         self.assertEqual(layer4_scripts, [script["path"] for script in manifest_layer4["scripts"]])
         self.assertTrue(all(path.endswith(".py") for path in layer4_scripts))

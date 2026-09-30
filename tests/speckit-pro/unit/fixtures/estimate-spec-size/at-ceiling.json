@@ -1,1 +1,10 @@
-{"estimated_loc":400,"suggested_slices":1,"status":"ok"}
+{
+  "inputs": {
+    "files": "10"
+  },
+  "expected": {
+    "estimated_loc": 400,
+    "suggested_slices": 1,
+    "status": "ok"
+  }
+}

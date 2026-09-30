@@ -1,6 +1,0 @@
-# Technical Roadmap
-
-## SPEC-016 — Placeholder guard
-
-Scope: reject a workflow that retains unresolved template tokens.
-
