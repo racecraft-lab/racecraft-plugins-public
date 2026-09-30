@@ -65,13 +65,15 @@ Read `manifest.json` from the `Gallery dir:` directory at run time. It is the so
 of truth for routing and it grows, so a list memorized from an earlier run goes
 stale.
 
-1. Keep only entries whose `stage` is `draft-pr`. The other stages route a
+1. Keep only entries whose `status` is `shipped`. A `planned` entry has no
+   template yet, so it is never selected and never reported as a gap.
+2. Keep only entries whose `stage` is `draft-pr`. The other stages route a
    different moment and are out of scope here.
-2. Apply each surviving entry's `trigger`:
+3. Apply each surviving entry's `trigger`:
    - `{"always": true}` selects the entry on every run.
    - `{"any_of": [...]}` selects the entry only when the feature carries at
      least one of the signals it names.
-3. Signal names come from the manifest's own closed `signals` vocabulary. Two
+4. Signal names come from the manifest's own closed `signals` vocabulary. Two
    of them decide draft-stage routing:
    - `competing_approaches` — planning weighed a real alternative against the
      approach that was chosen.

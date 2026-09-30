@@ -994,8 +994,8 @@ does not end at the boundary commit above. It runs this sequence, in this order:
 
 **Read the [Artifact Review Handoff contract](./artifact-review.md) before this sequence.**
 It defines the durable record, preview evidence, current-task binding, and
-preview-only resume. Publication through step 6 remains fail-open for generation
-gaps. Steps 7–8 cannot treat publication or `queued` as verified delivery.
+preview-only resume. Publication through step 7 remains fail-open for generation
+gaps. Steps 8–9 cannot treat publication or `queued` as verified delivery.
 A preview-only resume bypasses generation and current-run artifact cleanup when
 the shared resolver reports reusable artifacts, and skips completed publication
 steps after corroboration.
@@ -1077,10 +1077,12 @@ Agent(
 
 **Selection lives inside the agent and is driven by the manifest.** The
 orchestrator names no page list of its own. The agent reads `manifest.json`
-from the `Gallery dir:` directory, built from `plugin_root`, and keeps the entries whose `stage` is
-`draft-pr`, and applies each surviving entry's `trigger`: `{"always": true}`
-selects on every run, and `{"any_of": [...]}` selects only when the feature
-carries at least one signal the entry names.
+from the `Gallery dir:` directory, built from `plugin_root`, keeps the `shipped`
+entries whose `stage` is `draft-pr`, and applies each surviving entry's
+`trigger`: `{"always": true}` selects on every run, and `{"any_of": [...]}`
+selects only when the feature carries at least one signal the entry names. A
+`planned` entry has no template yet, so it is never selected and never reported
+as a gap.
 
 **The gallery is input, never output.** `<plugin_root>/artifact-gallery/` holds
 the shipped manifest and the shipped templates, and writing anything into that
