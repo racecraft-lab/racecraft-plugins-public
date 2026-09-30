@@ -5,6 +5,8 @@ Covers:
   * ``test_result.CountingTestResult`` — per-assertion counting semantics
     (loop-generated ``subTest`` units AND non-loop grouped methods), the
     house-convention ``{passed}/{total}`` accounting.
+  * ``foreign_pid.foreign_pid`` — fake pids never equal the test process's own
+    pid or process group.
 Run standalone: ``python3 tests/speckit-pro/lib/test_lib.py`` — prints the
 house-convention ``test_lib: {passed}/{total} passed`` summary.
 """
@@ -14,6 +16,7 @@ from __future__ import annotations
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 LIB_DIR = Path(__file__).resolve().parent
@@ -21,6 +24,7 @@ if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
 
 import test_result  # noqa: E402
+from foreign_pid import foreign_pid  # noqa: E402
 
 
 class _Sample(unittest.TestCase):
@@ -223,12 +227,32 @@ class FailureReportTests(unittest.TestCase):
         self.assertIn("AssertionError: 2 != 3", report)
 
 
+class ForeignPidTests(unittest.TestCase):
+    """``foreign_pid`` keeps a preferred fake pid unless it is this process's own."""
+
+    def test_preferred_id_is_kept_when_foreign(self) -> None:
+        with mock.patch("os.getpid", return_value=100), mock.patch("os.getpgrp", return_value=200):
+            self.assertEqual(foreign_pid(31415), 31415)
+
+    def test_own_pid_and_group_are_skipped(self) -> None:
+        with mock.patch("os.getpid", return_value=31415), mock.patch("os.getpgrp", return_value=31416):
+            self.assertEqual(foreign_pid(31415), 31417)
+        with mock.patch("os.getpid", return_value=100), mock.patch("os.getpgrp", return_value=31415):
+            self.assertEqual(foreign_pid(31415), 31416)
+
+    def test_invalid_preferred_ids_are_rejected(self) -> None:
+        for bad in (0, 1, -5, True, 3.0):
+            with self.subTest(preferred=bad), self.assertRaises(ValueError):
+                foreign_pid(bad)
+
+
 def main() -> int:
     suite = unittest.TestSuite()
     loader = unittest.defaultTestLoader
     suite.addTests(loader.loadTestsFromTestCase(CountingTestResultTests))
     suite.addTests(loader.loadTestsFromTestCase(SpecsReadGuardTests))
     suite.addTests(loader.loadTestsFromTestCase(FailureReportTests))
+    suite.addTests(loader.loadTestsFromTestCase(ForeignPidTests))
     return test_result.run_counted(suite, label="test_lib")
 
 

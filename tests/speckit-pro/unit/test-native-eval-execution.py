@@ -10,6 +10,7 @@ from pathlib import Path
 from types import SimpleNamespace
 import sys
 import tempfile
+import time
 import unittest
 from unittest import mock
 import uuid
@@ -1359,8 +1360,8 @@ class FakeCallbacks:
 
     def assert_staging_before_reservation(self, staging):
         attempts = self.output / "attempts"
-        if not self.had_output and attempts.exists():
-            assert not any(attempts.iterdir())
+        if not self.had_output and attempts.exists():  # parallel jobs each reserve after preparing
+            assert sum(1 for _ in attempts.iterdir()) < len(self.prepared), "reserved before prepare"
         assert staging.parent == self.output.resolve() / "staging"
 
     def execute(self, prepared, timeout):
@@ -5825,6 +5826,45 @@ class NativeExecutionTests(unittest.TestCase):
             execution._sealed_plan_repair_inputs(value, prepared, self.repo)
 
 
+class ParallelProviderInterleavingTests(unittest.TestCase):
+    """Providers run in parallel, so fake callbacks must accept any job order."""
+
+    def test_codex_prepared_after_claude_reservation_still_passes_both_hosts(self):
+        # Force the interleaving where the codex job prepares only after the
+        # claude job has reserved its attempt.
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.repo, self.output = Path(temp.name) / "repo", Path(temp.name) / "run"
+        self.repo.mkdir()
+        payload = (json.dumps(runner_request(), sort_keys=True, indent=2) + "\n").encode()
+        (self.repo / "request.json").write_bytes(payload)
+        attempts = self.output / "attempts"
+        waited = []
+
+        class LateCodexCallbacks(RunnerResultCallbacks):
+            def prepare(self, value, host, *args, **kwargs):
+                if host == "codex":
+                    deadline = time.monotonic() + 10
+                    while not (attempts.is_dir() and any(attempts.iterdir())):
+                        if time.monotonic() > deadline:
+                            raise AssertionError("claude attempt was never reserved")
+                        time.sleep(0.01)
+                    waited.append(host)
+                return super().prepare(value, host, *args, **kwargs)
+
+        callbacks = LateCodexCallbacks(self.output)
+        report = run_evaluations(
+            config(self.output), {}, [runner_result_case()], [row("claude"), row("codex")],
+            repo_root=self.repo, prepare=callbacks.prepare, execute=callbacks.execute,
+        )
+        self.assertEqual(waited, ["codex"])
+        self.assertEqual(report["counts"]["passes"], 2, report)
+        self.assertEqual(report["counts"]["infrastructure_invalid"], 0, report)
+
+
 if __name__ == "__main__":
-    raise SystemExit(run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(NativeExecutionTests),
-                                 label="test-native-eval-execution"))
+    loader = unittest.defaultTestLoader
+    raise SystemExit(run_counted(unittest.TestSuite([
+        loader.loadTestsFromTestCase(NativeExecutionTests),
+        loader.loadTestsFromTestCase(ParallelProviderInterleavingTests),
+    ]), label="test-native-eval-execution"))

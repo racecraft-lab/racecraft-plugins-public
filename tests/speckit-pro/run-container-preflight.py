@@ -585,6 +585,9 @@ def _sentinel() -> int:
         run_preflight,
         heavy_result,
     )
+    superseded = None
+    if not passed and "cancelled" in {changes_result, heavy_result}:
+        superseded = _superseded_notice()
     _write_json(
         evidence_dir / "result.json",
         {
@@ -593,12 +596,25 @@ def _sentinel() -> int:
             "changes_result": changes_result,
             "run_preflight": run_preflight,
             "heavy_result": heavy_result,
-            "verdict": "pass" if passed else "fail",
+            "verdict": "pass" if passed else "superseded" if superseded else "fail",
+            "superseded": superseded,
             "python_version": platform.python_version(),
             "native_installed_uat": False,
         },
     )
-    return 0 if passed else 1
+    if superseded:
+        print(f"::notice::{superseded}")
+    return 0 if passed or superseded else 1
+
+
+def _superseded_notice() -> str | None:
+    """Ask whether a newer run for the same head commit reports this verdict."""
+    scripts_dir = str(REPO_ROOT / "scripts")
+    if scripts_dir not in sys.path:
+        sys.path.insert(0, scripts_dir)
+    import superseded_run  # noqa: E402
+
+    return superseded_run.superseded_notice()
 
 
 OPERATIONS: dict[str, Callable[[], int]] = {

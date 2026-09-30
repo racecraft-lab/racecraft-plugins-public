@@ -5,7 +5,11 @@ from __future__ import annotations
 
 import os
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import superseded_run as _superseded_run  # noqa: E402
 
 
 class WorkflowResultError(RuntimeError):
@@ -41,18 +45,26 @@ def check_workflow_results(
     )
 
 
-def main(argv: Sequence[str] | None = None) -> int:
+def main(
+    argv: Sequence[str] | None = None,
+    superseded: Callable[[], str | None] = _superseded_run.superseded_notice,
+) -> int:
     if argv:
         print("::error::check-pr-workflow-results.py does not accept arguments", file=sys.stderr)
         return 1
+    results = [
+        os.environ.get(name, "")
+        for name in ("DETECT_RESULT", "TEST_RESULT", "ARTIFACT_RESULT", "GO_RESULT")
+    ]
     try:
-        message = check_workflow_results(
-            os.environ.get("DETECT_RESULT", ""),
-            os.environ.get("TEST_RESULT", ""),
-            os.environ.get("ARTIFACT_RESULT", ""),
-            os.environ.get("GO_RESULT", ""),
-        )
+        message = check_workflow_results(*results)
     except WorkflowResultError as error:
+        # A same-commit newer run reports the verdict; do not leave a red
+        # context beside it. Anything short of proof keeps the failure.
+        notice = superseded() if "cancelled" in results else None
+        if notice is not None:
+            print(f"::notice::{notice}")
+            return 0
         print(f"::error::{error}", file=sys.stderr)
         return 1
     print(message)
