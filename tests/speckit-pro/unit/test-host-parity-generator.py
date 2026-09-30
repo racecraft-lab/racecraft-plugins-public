@@ -411,7 +411,9 @@ class PostPlanParityTests(unittest.TestCase):
         evals = (REPO_ROOT / "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json").read_text(encoding="utf-8")
         counts = [int(n) for n in re.findall(r"(\d+) mandatory (?:Post )?rows", skill)]
         counts += [int(n) for n in re.findall(r"keeps all (\d+) Post items", evals)]
-        self.assertGreaterEqual(len(counts), 3, "no stated count found; the check would pass on nothing")
+        reference = (PLUGIN_ROOT / "codex-skills/speckit-autopilot/references/task-list-canonical-codex.md").read_text(encoding="utf-8")
+        counts += [int(n) for n in re.findall(r"(\d+)-row combined", reference)]
+        self.assertGreaterEqual(len(counts), 4, "no stated count found; the check would pass on nothing")
         self.assertEqual(set(counts), {len(self.codex)})
 
     def test_workflow_template_carries_each_hosts_post_rows(self) -> None:
