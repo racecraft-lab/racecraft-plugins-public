@@ -1,1 +1,12 @@
-{"estimated_loc":230,"suggested_slices":1,"status":"ok"}
+{
+  "inputs": {
+    "user_stories": "2",
+    "files": "3",
+    "frs": "4"
+  },
+  "expected": {
+    "estimated_loc": 230,
+    "suggested_slices": 1,
+    "status": "ok"
+  }
+}

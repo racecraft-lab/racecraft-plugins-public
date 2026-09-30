@@ -13,7 +13,6 @@ Every refused step must leave the ledger bytes unchanged.
 from __future__ import annotations
 
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -28,6 +27,7 @@ FIXTURE_ROOT = TEST_ROOT / "evals" / "fixtures" / "functional" / "corrective-aut
 sys.path.insert(0, str(TEST_ROOT / "lib"))
 
 from git_fixture import commit_baseline  # noqa: E402
+from runner_invocation import run_runner as invoke_runner  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
@@ -58,14 +58,10 @@ class _ReplayRunner:
     """Shared fixture for the tests below."""
 
     def run_runner(self, request: dict) -> tuple[int, dict]:
-        environment = {**os.environ, "PYTHONPATH": str(REPO_ROOT / "speckit-pro"),
-                       "PYTHONDONTWRITEBYTECODE": "1"}
-        completed = subprocess.run(
-            [sys.executable, "-B", "-m", "speckit_pro_runner"], cwd=self.root,
-            env=environment, input=json.dumps(request), text=True,
-            capture_output=True, timeout=60, check=False, shell=False,
+        completed, response, _ = invoke_runner(
+            request, cwd=self.root, extra_env={"PYTHONDONTWRITEBYTECODE": "1"}
         )
-        return completed.returncode, json.loads(completed.stdout)
+        return completed.returncode, response
 
     def resolve(self, value: object) -> object:
         if isinstance(value, dict):

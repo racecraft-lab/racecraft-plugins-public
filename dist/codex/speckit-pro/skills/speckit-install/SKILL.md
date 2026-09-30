@@ -172,7 +172,7 @@ speckit-pro recommends a small set of community extensions and presets
 that power the autopilot's post-implementation parallel group and the
 AskUserQuestion picker preset for `/speckit.clarify` and
 `/speckit.checklist`. The full list and rationale are in
-`speckit-pro/skills/speckit-coach/references/presets-extensions-guide.md`
+`../speckit-coach/references/presets-extensions-guide.md`
 (section: "The curated set").
 
 Compare `.specify/extensions/` and `.specify/presets/` against the

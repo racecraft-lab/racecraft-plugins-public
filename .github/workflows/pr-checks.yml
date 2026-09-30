@@ -124,7 +124,7 @@ jobs:
           GIT_CONFIG_GLOBAL: /dev/null
           GIT_CONFIG_SYSTEM: /dev/null
           GIT_CONFIG_NOSYSTEM: "1"
-        run: PYTHONPATH="${PLUGIN}" python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json
+        run: PYTHONPATH="${PLUGIN}" python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-ci-suite.json
 
   # ───────────────────────────────────────────────────────────────────
   # Job 3: Validate GitHub Actions workflow syntax and semantics

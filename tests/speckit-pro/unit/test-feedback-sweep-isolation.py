@@ -7,7 +7,6 @@ import contextlib
 import hashlib
 import io
 import json
-import importlib.util
 import os
 import secrets
 import subprocess
@@ -27,6 +26,7 @@ for import_root in (PLUGIN_ROOT, LIB_DIR):
         sys.path.insert(0, str(import_root))
 
 from git_fixture import git_stdout
+from script_loader import load_script  # noqa: E402
 from test_result import run_counted  # noqa: E402
 from speckit_pro_runner import sweep_isolation  # noqa: E402
 from speckit_pro_runner import sweep_broker  # noqa: E402
@@ -1730,11 +1730,7 @@ class CaptureAndHookTests(unittest.TestCase):
         # exact JSON recursion limit varies across supported Python versions, so
         # a synthetic exception is the deterministic way to exercise this branch.
         script = PLUGIN_ROOT / "scripts" / "sweep-isolation-hook.py"
-        spec = importlib.util.spec_from_file_location("sweep_isolation_hook_unclassified", script)
-        self.assertIsNotNone(spec)
-        self.assertIsNotNone(spec.loader)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+        module = load_script("sweep_isolation_hook_unclassified", script)
         stdout, stderr = io.StringIO(), io.StringIO()
         canary = "unexpected-private-exception-text"
         with patch.object(module, "_payload", side_effect=RuntimeError(canary)), \
@@ -1750,12 +1746,7 @@ class CaptureAndHookTests(unittest.TestCase):
 
     def test_claude_hook_reason_vocabulary_is_closed_and_code_owned(self) -> None:
         script = PLUGIN_ROOT / "scripts" / "sweep-isolation-hook.py"
-        spec = importlib.util.spec_from_file_location("sweep_isolation_hook", script)
-        self.assertIsNotNone(spec)
-        self.assertIsNotNone(spec.loader)
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[spec.name] = module
-        spec.loader.exec_module(module)
+        module = load_script("sweep_isolation_hook", script)
 
         self.assertEqual(
             "feedback sweep security hook failed closed", module.FAILURE_MESSAGE
@@ -2035,12 +2026,7 @@ class WorkflowAndEvalContractTests(unittest.TestCase):
             / "tests/speckit-pro/layer6-integration/run-feedback-sweep-isolation-smoke.py"
         )
         self.assertTrue(script.is_file())
-        spec = importlib.util.spec_from_file_location("feedback_sweep_live_smoke", script)
-        self.assertIsNotNone(spec)
-        self.assertIsNotNone(spec.loader)
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[spec.name] = module
-        spec.loader.exec_module(module)
+        module = load_script("feedback_sweep_live_smoke", script)
 
         self.assertEqual(
             {"claude": "2.1.245", "codex": "0.149.0"},
