@@ -127,9 +127,8 @@ parent's G4 gate do that.
    - Gaps where your fix has low confidence (conflicting
      research, no clear precedent, multiple valid approaches)
    - Gaps containing security keywords (auth, token, secret,
-     encryption, PII, credential, permission, password,
-     authentication, authorization, session, cookie, jwt,
-     api-key, access-control)
+     encryption, PII, credential, permission, password, authentication,
+     authorization, session, cookie, jwt, api-key, access-control)
 
    **Tag every unresolved gap with a category prefix in square
    brackets** so the orchestrator can route consensus to only the
