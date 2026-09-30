@@ -1422,9 +1422,9 @@ creation and is not re-derived at the later ready flip:
 
 `type` is one of `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, and the
 scope is **lowercase**. Validate the exact string through the release-readiness
-gate's `validate-pr-title` operation before creating. The packet schema alone
-would also accept an uppercase ticket-style scope; the release-readiness shape
-would not, so the lowercase form is the binding one. Do **not** substitute the
+gate's `validate-pr-title` operation before creating. The packet schema and the
+release-readiness shape both reject an uppercase scope, so the lowercase form is
+the only valid one. Do **not** substitute the
 `validate-pr-workflow-contract` operation, which the ready pull request's
 packet check runs later: its scope rule upper-cases `prsg-`, `spec-`, `doc-`,
 and `xplat-` slugs, so on those spec families it would demand an uppercase

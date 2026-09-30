@@ -4456,13 +4456,108 @@ class PacketTitlePatternTests(unittest.TestCase):
         return str(json.loads(completed.stdout)["status"])
 
 
+PLAN_LAYERS_FILES = ("src/contract.md", "src/planner.py", "tests/test_planner.py")
+PLAN_LAYERS_BASELINE = {
+    "foundation": "- [ ] T001 Prepare the contract in src/contract.md",
+    "story": "- [ ] T002 [US1] Build the planner in src/planner.py and tests/test_planner.py",
+    "extra_phase": "",
+    "notes": "",
+    "us1_depends": "Depends on Foundation",
+    "dependencies": True,
+}
+PLAN_LAYERS_TEMPLATE = (
+    "# Tasks: Layer Planner Case\n\n## Phase 1: Foundation\n\n{foundation}\n\n"
+    "## Phase 2: User Story 1 - Emit Stable Plan (Priority: P1)\n\n{story}\n{extra_phase}{notes}"
+)
+PLAN_LAYERS_DEPENDENCIES = (
+    "\n## Dependencies & Execution Order\n\n### Phase Dependencies\n\n"
+    "- **Foundation**: No prerequisites.\n- **US1**: {us1_depends}.\n\n"
+    "### Incremental Delivery\n\n1. Complete Foundation: T001\n2. Complete US1: T002\n"
+)
+
+
+def plan_layers_tasks(**overrides: object) -> str:
+    """The baseline valid tasks.md with the named parts replaced."""
+    parts = {**PLAN_LAYERS_BASELINE, **overrides}
+    text = PLAN_LAYERS_TEMPLATE.format(**parts)
+    return text + (PLAN_LAYERS_DEPENDENCIES.format(**parts) if parts["dependencies"] else "")
+
+
+class PlanLayersPlannerCaseTests(unittest.TestCase):
+    """Each case is one defect in an otherwise valid tasks.md, run through the real helper."""
+
+    def plan(self, tasks_md: str) -> tuple[int, dict[str, object]]:
+        with helper_project() as root:
+            files = {**{name: "x\n" for name in PLAN_LAYERS_FILES}, "specs/feature/tasks.md": tasks_md}
+            for relative, text in files.items():
+                (root / relative).parent.mkdir(parents=True, exist_ok=True)
+                (root / relative).write_text(text, encoding="utf-8")
+            completed, response, _ = run_runner(
+                helper_request("plan-layers-feature-dir", {"feature_dir": "specs/feature"}),
+                cwd=root,
+            )
+        return completed.returncode, response["data"]["stdout_json"]
+
+    def test_the_baseline_is_a_clean_plan(self) -> None:
+        code, planner = self.plan(plan_layers_tasks())
+        self.assertEqual((code, planner["status"], planner["errors"], planner["warnings"]), (0, "ok", [], []))
+
+    def test_checkbox_state_and_parallel_marker_are_preserved(self) -> None:
+        code, planner = self.plan(plan_layers_tasks(
+            foundation="- [ ] T001 Unchecked in src/contract.md\n- [x] T003 Lowercase in src/planner.py\n"
+                       "- [X] T004 Uppercase in tests/test_planner.py",
+            story="- [ ] T002 [P] [US1] Parallel in src/planner.py",
+        ))
+        tasks = {task["id"]: task for inc in planner["increments"] for task in inc["tasks"]}
+        self.assertEqual({k: v["status"] for k, v in tasks.items()},
+                         {"T001": "todo", "T002": "todo", "T003": "done", "T004": "done"})
+        self.assertEqual(code, 0)
+        self.assertEqual({key for key, value in tasks.items() if value["parallel"]}, {"T002"})
+
+    def test_a_defective_plan_reports_each_error_code(self) -> None:
+        phase_3 = "\n## Phase 3: User Story 2 - Parse Ordered Increments (Priority: P1)\n\nNo tasks.\n"
+        cases = {
+            "empty increment": ({"extra_phase": phase_3}, ["empty_increment"]),
+            "unknown dependency": ({"us1_depends": "Depends on US3"}, ["unknown_increment"]),
+            "missing headings": (
+                {"dependencies": False, "notes": "\n## Notes\n\nNo dependency or delivery headings.\n"},
+                ["missing_required_heading", "missing_required_heading"],
+            ),
+        }
+        for name, (overrides, codes) in cases.items():
+            with self.subTest(case=name):
+                code, planner = self.plan(plan_layers_tasks(**overrides))
+                self.assertEqual((code, planner["status"]), (1, "invalid_plan"))
+                self.assertEqual([error["code"] for error in planner["errors"]], codes)
+
+    def test_reference_problems_are_warnings_not_errors(self) -> None:
+        cases = {
+            "missing files": (
+                {"story": "- [ ] T002 [US1] Use src/no-such.py and tests/no-such-test.py"},
+                [("reference_not_found", "src/no-such.py"), ("reference_not_found", "tests/no-such-test.py")],
+            ),
+            "no references": (
+                {"foundation": "- [ ] T001 Prepare it", "story": "- [ ] T002 [US1] Build it"},
+                [("task_without_references", "T001"), ("task_without_references", "T002")],
+            ),
+        }
+        for name, (overrides, expected) in cases.items():
+            with self.subTest(case=name):
+                code, planner = self.plan(plan_layers_tasks(**overrides))
+                self.assertEqual((code, planner["status"], planner["errors"]), (0, "ok", []))
+                found = [(w["code"], w["details"].get("reference") or w["details"].get("task_id"))
+                         for w in planner["warnings"]]
+                self.assertEqual(found, expected)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--helper", choices=EXPECTED_HELPERS)
     args = parser.parse_args()
     _ReadOnlyHelperRunner.helper_filter = args.helper
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                               for case in (ReadOnlyHelperTests, PlanLayersRepairRouteTests, PacketTitlePatternTests))
+                               for case in (ReadOnlyHelperTests, PlanLayersRepairRouteTests, PlanLayersPlannerCaseTests,
+                                            PacketTitlePatternTests))
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     total = result.testsRun
     failed = len(result.failures) + len(result.errors)
