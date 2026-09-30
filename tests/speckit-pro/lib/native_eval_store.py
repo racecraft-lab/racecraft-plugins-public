@@ -21,7 +21,7 @@ import threading
 import time
 import uuid
 
-from native_eval_catalog import _unique_object
+import native_eval_strict_json as strict_json
 from trigger_evidence import write_json_once
 
 
@@ -162,7 +162,7 @@ def _unlock_owner(stream) -> None:
 def _read(path: Path) -> dict:
     _require(path.is_file() and not path.is_symlink(), "receipt is not a regular file")
     try:
-        envelope = json.loads(path.read_text(), object_pairs_hook=_unique_object)
+        envelope = strict_json.loads(path.read_bytes(), error=ValueError)
         _require(isinstance(envelope, dict) and set(envelope) == {"payload", "sha256"}, "malformed receipt")
         value = envelope["payload"]
         _require(isinstance(value, dict) and digest(value) == envelope["sha256"], "receipt digest mismatch")
