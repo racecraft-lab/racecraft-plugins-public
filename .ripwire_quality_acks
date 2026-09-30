@@ -407,6 +407,7 @@ ack dead-code:new-symbol f898e85221887feb 0 cid=552f4af49f875e96 unittest discov
 ack dead-code:new-symbol f9d22b22251d618b 0 cid=ccfbbca217636927 unittest discovers these test methods through loadTestsFromTestCase in main(); no direct caller is expected
 ack dead-code:new-symbol f9df373ea3e5dd65 0 cid=fea8de3cc83030f6 unittest discovers and runs test_ methods and setUp hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol fa92d9f998356206 0 cid=8a9cfda936299b9b unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol fab3e4e7259f2fed 0 cid=8099edd4ba839db0 unittest discovers these test methods through loadTestsFromModule in main(); no direct caller is expected
 ack dead-code:new-symbol fd8dd510f8e2972e 0 cid=eb1ea3bb2edea554 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol ff38f69c9aa16158 0 cid=6dd388483fc5b2fd Passed by reference as a json.loads hook (object_pairs_hook or parse_constant); the dead-code scan does not follow function references
 ack dead-code:new-symbol ff6fdeb6a9f5319e 0 cid=a516ea111c6a22d8 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
