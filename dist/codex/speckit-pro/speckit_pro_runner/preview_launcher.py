@@ -1,6 +1,6 @@
 """Isolated Codex launcher for one artifact preview observation.
 
-Codex phase-execution step 7 dispatches ``artifact-preview-observer``. Without a
+Codex phase-execution step 8 dispatches ``artifact-preview-observer``. Without a
 launcher the Codex parent would have to run that role itself, inside a process
 that already holds repository tools and the workflow record, so nothing would
 stop it from reading the page and writing its own disposition. This module gives

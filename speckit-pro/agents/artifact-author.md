@@ -83,12 +83,12 @@ templates, you never change them.
 
 ## Selection — read the manifest, never hardcode the list
 
-Read `manifest.json` from the `Gallery dir:` directory at run time. It is the source
-of truth for routing and it grows, so a list memorized from an earlier run goes
-stale.
+Read `manifest.json` from the `Gallery dir:` directory at run time. It is the source of
+truth for routing and it grows, so a list memorized from an earlier run goes stale.
 
-1. Keep only entries whose `stage` is `draft-pr`. The other stages route a
-   different moment and are out of scope here.
+1. Keep only `shipped` entries whose `stage` is `draft-pr`; other stages route a
+   different moment. A `planned` entry has no template yet, so it is never
+   selected and never reported as a gap.
 2. Apply each surviving entry's `trigger`:
    - `{"always": true}` selects the entry on every run.
    - `{"any_of": [...]}` selects the entry only when the feature carries at

@@ -506,11 +506,80 @@ class PreviewReadbackTests(PreviewLauncherFixture):
                                 artifact_path="artifacts/plan.html", expected_sha256=digest,
                             )
 
+class BrokerErrorCodeTests(BrokerFixture):
+    """Each broker error code is reachable and names the failure it reports."""
+
+    def call(self, name: str, arguments: dict) -> str:
+        """The error code the broker reports for one failing tool call."""
+        try:
+            author_broker.call_tool(name, arguments)
+        except Exception as exc:  # noqa: BLE001 - the broker maps every failure to a code
+            return author_broker._error_code(exc)
+        raise self.failureException(f"{name} unexpectedly succeeded")
+
+    def formal_session(self) -> dict:
+        (self.root / "formal").mkdir(exist_ok=True)
+        return author_broker.create_formal_session(
+            repo_root=str(self.root), workflow_file="workflow.md", model_id="counter",
+            permitted_paths=["formal/Counter.tla"],
+        )
+
+    def code_for(self, code: str) -> str:
+        if code == "schema_validation":
+            return self.call("create_formal_session", {"repo_root": ""})
+        if code == "receipt_violation":
+            return self.call("close_session", {"capability": "author-cap:v1:not-a-capability"})
+        if code == "unsupported_kind":
+            return self.call("submit_preview_verdict", {"capability": self.formal_session()["capability"], "verdict": "verified"})
+        if code == "path_violation":
+            capability = self.formal_session()["capability"]
+            return self.call("write_formal_file", {"capability": capability, "target": "formal/Other.tla", "content": "x"})
+        if code == "content_too_large":
+            capability = self.formal_session()["capability"]
+            content = "x" * (author_broker.MAX_CONTENT_BYTES + 1)
+            return self.call("write_formal_file", {"capability": capability, "target": "formal/Counter.tla", "content": content})
+        artifact, _, session = self.preview_session()
+        artifact.write_bytes(b"<html><body>changed</body></html>\n")
+        return self.call("submit_preview_verdict", {"capability": session["capability"], "verdict": "verified"})
+
+    def test_every_declared_code_is_reported_for_its_own_failure(self) -> None:
+        reported = {code: self.code_for(code) for code in author_broker.BROKER_ERROR_CODES}
+        self.assertEqual(reported, {code: code for code in author_broker.BROKER_ERROR_CODES})
+
+    def test_a_changed_preview_artifact_is_a_preview_mismatch(self) -> None:
+        self.assertEqual(self.code_for("preview_mismatch"), "preview_mismatch")
+
+    def test_a_violation_cannot_carry_an_undeclared_code(self) -> None:
+        self.assertRaisesRegex(ValueError, "undeclared", author_broker.BrokerViolation, "message", code="not_a_code")
+
+
+class PreviewStepReferenceTests(unittest.TestCase):
+    """Every pointer to the observer dispatch names its step in the terminal sequence."""
+
+    def test_step_pointers_match_the_numbered_sequence(self) -> None:
+        import re
+
+        reference = (ROOT / "speckit-pro/skills/speckit-autopilot/references/phase-execution.md").read_text(encoding="utf-8")
+        launcher = (ROOT / "speckit-pro/speckit_pro_runner/preview_launcher.py").read_text(encoding="utf-8")
+        match = re.search(r"^(\d+)\. The parent dispatches `artifact-preview-observer`", reference, re.MULTILINE)
+        self.assertIsNotNone(match)
+        step = int(match.group(1))
+        for pointer, text in (
+            (f"Dispatch step {step} through the runner", reference),
+            (f"Steps {step}–{step + 1} cannot treat publication", reference),
+            (f"phase-execution step {step} dispatches", " ".join(launcher.split())),
+        ):
+            with self.subTest(pointer=pointer):
+                self.assertTrue(pointer in text, f"missing pointer: {pointer}")
+
+
 if __name__ == "__main__":
     suite = unittest.TestSuite([
         unittest.defaultTestLoader.loadTestsFromTestCase(AuthorBrokerTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(PreviewBrokerProvenanceTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(PreviewLauncherTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(PreviewReadbackTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(BrokerErrorCodeTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(PreviewStepReferenceTests),
     ])
     raise SystemExit(run_counted(suite, label="test-author-broker"))

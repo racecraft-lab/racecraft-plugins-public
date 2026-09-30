@@ -41,7 +41,17 @@ BROKER_ERROR_CODES = (
 
 
 class BrokerViolation(ValueError):
-    """A broker request violated its closed trust boundary."""
+    """A broker request violated its closed trust boundary.
+
+    The raise site names the error code the caller sees, so a message's wording
+    can never change which code is reported.
+    """
+
+    def __init__(self, message: str, *, code: str = "schema_validation") -> None:
+        if code not in BROKER_ERROR_CODES:
+            raise ValueError(f"undeclared author broker error code: {code}")
+        super().__init__(message)
+        self.code = code
 
 
 STATE_ROOT_VARIABLE = "SPECKIT_AUTHOR_BROKER_STATE_ROOT"
@@ -98,64 +108,64 @@ def _write_state(path: Path, state: dict[str, Any]) -> None:
 
 def _safe_session_path(root: Path, session_id: str) -> Path:
     if SESSION_ID_RE.fullmatch(session_id) is None:
-        raise BrokerViolation("session id is malformed")
+        raise BrokerViolation("session id is malformed", code="receipt_violation")
     session_path = root / session_id
     try:
         info = session_path.lstat()
     except OSError as exc:
-        raise BrokerViolation("author broker session is unavailable") from exc
+        raise BrokerViolation("author broker session is unavailable", code="receipt_violation") from exc
     uid = getattr(os, "getuid", lambda: info.st_uid)()
     if stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode) or info.st_uid != uid:
-        raise BrokerViolation("author broker session directory is unsafe")
+        raise BrokerViolation("author broker session directory is unsafe", code="receipt_violation")
     if stat.S_IMODE(info.st_mode) & 0o077:
-        raise BrokerViolation("author broker session directory is unsafe")
+        raise BrokerViolation("author broker session directory is unsafe", code="receipt_violation")
     return session_path
 
 
 def _read_state(root: Path, session_id: str) -> dict[str, Any]:
     if SESSION_ID_RE.fullmatch(session_id) is None:
-        raise BrokerViolation("session id is malformed")
+        raise BrokerViolation("session id is malformed", code="receipt_violation")
     session_path = _safe_session_path(root, session_id)
     path = session_path / "state.json"
     try:
         fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
     except OSError as exc:
-        raise BrokerViolation("author broker session is unavailable") from exc
+        raise BrokerViolation("author broker session is unavailable", code="receipt_violation") from exc
     try:
         info = os.fstat(fd)
         uid = getattr(os, "getuid", lambda: info.st_uid)()
         if not stat.S_ISREG(info.st_mode) or info.st_uid != uid or stat.S_IMODE(info.st_mode) & 0o077:
-            raise BrokerViolation("author broker session state is unsafe")
+            raise BrokerViolation("author broker session state is unsafe", code="receipt_violation")
         if info.st_size > 1024 * 1024:
-            raise BrokerViolation("author broker session state is too large")
+            raise BrokerViolation("author broker session state is too large", code="receipt_violation")
         with os.fdopen(fd, "rb") as handle:
             fd = -1
             state = json.loads(handle.read().decode("utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise BrokerViolation("author broker session state is unreadable") from exc
+        raise BrokerViolation("author broker session state is unreadable", code="receipt_violation") from exc
     finally:
         if fd >= 0:
             os.close(fd)
     if not isinstance(state, dict) or state.get("session_id") != session_id or state.get("version") != SESSION_VERSION:
-        raise BrokerViolation("author broker session state is invalid")
+        raise BrokerViolation("author broker session state is invalid", code="receipt_violation")
     if time.time() > float(state.get("expires_at", 0)):
-        raise BrokerViolation("author broker session has expired")
+        raise BrokerViolation("author broker session has expired", code="receipt_violation")
     return state
 
 
 def _canonical_paths(repo_root: Path, values: Any) -> tuple[str, ...]:
     if not isinstance(values, list) or not values or len(values) > MAX_PERMITTED_PATHS or len(set(values)) != len(values):
-        raise BrokerViolation("permitted_paths must be a non-empty unique array")
+        raise BrokerViolation("permitted_paths must be a non-empty unique array", code="path_violation")
     result: list[str] = []
     for value in values:
         if not isinstance(value, str) or not value:
-            raise BrokerViolation("permitted_paths entries must be non-empty text")
+            raise BrokerViolation("permitted_paths entries must be non-empty text", code="path_violation")
         diagnostic = validate_target_path(value, repo_root)
         if diagnostic is not None:
-            raise BrokerViolation("permitted path escapes the repository or crosses a symlink")
+            raise BrokerViolation("permitted path escapes the repository or crosses a symlink", code="path_violation")
         normalized = repo_relative(resolve_input_path(value, repo_root), repo_root)
         if any(part.casefold() == ".git" for part in PurePosixPath(normalized).parts):
-            raise BrokerViolation("permitted paths cannot name git metadata")
+            raise BrokerViolation("permitted paths cannot name git metadata", code="path_violation")
         result.append(normalized)
     return tuple(result)
 
@@ -178,11 +188,11 @@ def _mint_capability(state: dict[str, Any]) -> str:
 def _resolve_capability(capability: str) -> dict[str, Any]:
     match = CAPABILITY_RE.fullmatch(capability) if isinstance(capability, str) else None
     if match is None:
-        raise BrokerViolation("author broker capability is malformed")
+        raise BrokerViolation("author broker capability is malformed", code="receipt_violation")
     state = _read_state(_state_root(), match.group(1))
     expected = _mint_capability(state)
     if not hmac.compare_digest(expected, capability):
-        raise BrokerViolation("author broker capability is invalid")
+        raise BrokerViolation("author broker capability is invalid", code="receipt_violation")
     return state
 
 
@@ -237,13 +247,13 @@ def create_preview_session(
         raise BrokerViolation("repo_root must be a directory")
     diagnostic = validate_target_path(artifact_path, root)
     if diagnostic is not None:
-        raise BrokerViolation("artifact path escapes the repository or crosses a symlink")
+        raise BrokerViolation("artifact path escapes the repository or crosses a symlink", code="path_violation")
     normalized = repo_relative(resolve_input_path(artifact_path, root), root)
     artifact = root / normalized
     if not artifact.is_file():
-        raise BrokerViolation("artifact path is not a regular file")
+        raise BrokerViolation("artifact path is not a regular file", code="path_violation")
     if _hash_file(artifact) != expected_sha256:
-        raise BrokerViolation("artifact bytes do not match expected_sha256")
+        raise BrokerViolation("artifact bytes do not match expected_sha256", code="preview_mismatch")
     state_root = _state_root()
     _ensure_private_root(state_root)
     session_id = secrets.token_hex(16)
@@ -269,20 +279,20 @@ def create_preview_session(
 def write_formal_file(*, capability: str, target: str, content: str) -> dict[str, Any]:
     state = _resolve_capability(capability)
     if state.get("kind") != "formal":
-        raise BrokerViolation("formal write capability is required")
+        raise BrokerViolation("formal write capability is required", code="unsupported_kind")
     if not isinstance(target, str) or not target:
         raise BrokerViolation("target is required")
     if not isinstance(content, str):
         raise BrokerViolation("content must be text")
     if len(content.encode("utf-8")) > MAX_CONTENT_BYTES:
-        raise BrokerViolation("formal content exceeds the broker limit")
+        raise BrokerViolation("formal content exceeds the broker limit", code="content_too_large")
     root = Path(state["repo_root"])
     diagnostic = validate_target_path(target, root)
     if diagnostic is not None:
-        raise BrokerViolation("target escapes the repository or crosses a symlink")
+        raise BrokerViolation("target escapes the repository or crosses a symlink", code="path_violation")
     normalized = repo_relative(resolve_input_path(target, root), root)
     if normalized not in state["permitted_paths"]:
-        raise BrokerViolation("target is outside the permitted output list")
+        raise BrokerViolation("target is outside the permitted output list", code="path_violation")
     write_result = write_file_atomic(root / normalized, content, trust_root=root)
     return {"target": normalized, "sha256": write_result["digest"]}
 
@@ -290,19 +300,19 @@ def write_formal_file(*, capability: str, target: str, content: str) -> dict[str
 def submit_preview_verdict(*, capability: str, verdict: str) -> dict[str, Any]:
     state = _resolve_capability(capability)
     if state.get("kind") != "preview":
-        raise BrokerViolation("preview capability is required")
+        raise BrokerViolation("preview capability is required", code="unsupported_kind")
     if verdict not in PREVIEW_VERDICTS:
         raise BrokerViolation("preview verdict is outside the closed vocabulary")
     root = Path(state["repo_root"])
     artifact = root / state["artifact_path"]
     if validate_target_path(state["artifact_path"], root) is not None:
-        raise BrokerViolation("preview artifact changed after session creation")
+        raise BrokerViolation("preview artifact changed after session creation", code="preview_mismatch")
     try:
         digest = _hash_file(artifact)
     except OSError as exc:
-        raise BrokerViolation("preview artifact changed after session creation") from exc
+        raise BrokerViolation("preview artifact changed after session creation", code="preview_mismatch") from exc
     if digest != state["expected_sha256"]:
-        raise BrokerViolation("preview artifact changed after session creation")
+        raise BrokerViolation("preview artifact changed after session creation", code="preview_mismatch")
     session_path = _safe_session_path(_state_root(), state["session_id"])
     claim = session_path / "preview-submitted"
     try:
@@ -359,9 +369,9 @@ def close_session(*, capability: str) -> dict[str, Any]:
             (session_path / "preview-submitted").unlink(missing_ok=True)
         session_path.rmdir()
     except OSError as exc:
-        raise BrokerViolation("author broker session could not close safely") from exc
+        raise BrokerViolation("author broker session could not close safely", code="receipt_violation") from exc
     if artifact_changed:
-        raise BrokerViolation("preview artifact changed after verdict submission")
+        raise BrokerViolation("preview artifact changed after verdict submission", code="preview_mismatch")
     if implausible_time:
         raise BrokerViolation("preview observation time is implausible")
     result = {"session_id": state["session_id"], "status": "closed"}
@@ -437,18 +447,8 @@ def call_tool(name: str, arguments: Any) -> Any:
 
 
 def _error_code(exc: Exception) -> str:
-    message = str(exc).casefold()
-    if "permitted" in message or "target" in message or "artifact path" in message:
-        return "path_violation"
-    if "capability" in message or "session" in message:
-        return "receipt_violation"
-    if "content exceeds" in message:
-        return "content_too_large"
-    if "artifact bytes" in message or "preview artifact" in message:
-        return "preview_mismatch"
-    if "kind" in message:
-        return "unsupported_kind"
-    return "schema_validation"
+    """The raise site's code; any other failure is a malformed request."""
+    return exc.code if isinstance(exc, BrokerViolation) else "schema_validation"
 
 
 def _response(request_id: Any, result: Any) -> dict[str, Any]:
