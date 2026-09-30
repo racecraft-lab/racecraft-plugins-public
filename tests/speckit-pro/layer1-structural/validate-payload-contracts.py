@@ -28,11 +28,20 @@ from test_result import run_counted
 from host_skill_views import host_skill_root
 
 SOURCE_ROOT = REPO_ROOT / 'speckit-pro'
-BUILDER = REPO_ROOT / 'scripts' / 'build-plugin-payloads.py'
+REFRESH = REPO_ROOT / 'scripts' / 'refresh-release-artifacts.py'
+MARKETPLACE_FILES = ('.claude-plugin/marketplace.json', '.agents/plugins/marketplace.json')
 PATH_ESCAPE_RE = re.compile('\\.\\./\\.\\./(?:skills|codex-skills)/|\\.\\./\\.\\./\\.\\./(?:skills|codex-skills)/')
 
-def run_builder(repo_root: Path) -> subprocess.CompletedProcess[str]:
-    return subprocess.run([sys.executable, '-B', str(repo_root / 'scripts' / BUILDER.name)], cwd=repo_root, text=True, capture_output=True, shell=False, check=False)
+def run_refresh(repo_root: Path) -> subprocess.CompletedProcess[str]:
+    """Run the one full release refresh, the only payload build path, inside an isolated copy."""
+    return subprocess.run([sys.executable, '-B', str(repo_root / 'scripts' / REFRESH.name)], cwd=repo_root, text=True, capture_output=True, shell=False, check=False)
+
+def copy_refresh_inputs(work: Path) -> None:
+    """Copy what the full refresh reads into an empty directory: itself, the plugin source and registries."""
+    for relative in ('scripts/' + REFRESH.name, 'LICENSE', *MARKETPLACE_FILES):
+        (work / relative).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(REPO_ROOT / relative, work / relative)
+    shutil.copytree(SOURCE_ROOT, work / 'speckit-pro', ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
 
 def _display_path(path: Path) -> str:
     try:
@@ -122,13 +131,8 @@ class PayloadFixtureTests(unittest.TestCase):
 class ValidatePluginPayload(unittest.TestCase):
 
     def setUp(self) -> None:
-        temporary = tempfile.TemporaryDirectory(prefix='payload-builder-consumer-')
-        self.addCleanup(temporary.cleanup)
-        self.work = Path(temporary.name).resolve()
-        (self.work / 'scripts').mkdir()
-        shutil.copy2(BUILDER, self.work / 'scripts' / BUILDER.name)
-        shutil.copy2(REPO_ROOT / 'LICENSE', self.work / 'LICENSE')
-        shutil.copytree(SOURCE_ROOT, self.work / 'speckit-pro', ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
+        self.work = Path(self.enterContext(tempfile.TemporaryDirectory(prefix='payload-builder-consumer-'))).resolve()
+        copy_refresh_inputs(self.work)
 
     def test_payload(self) -> None:
         claude_payload = self.work / 'dist' / 'claude' / 'speckit-pro'
@@ -136,11 +140,11 @@ class ValidatePluginPayload(unittest.TestCase):
         self.assertFalse(claude_payload.resolve().is_relative_to(REPO_ROOT.resolve()))
         self.assertFalse(codex_payload.resolve().is_relative_to(REPO_ROOT.resolve()))
         self.assertFalse((self.work / 'dist').exists())
-        self.assertEqual(BUILDER.read_bytes(), (self.work / 'scripts' / BUILDER.name).read_bytes())
-        with self.subTest(msg='payload builder exists'):
-            self.assertTrue(BUILDER.is_file(), f'file not found: {BUILDER}')
-        with self.subTest(msg='payload builder rebuilds from scratch'):
-            completed = run_builder(self.work)
+        self.assertEqual(REFRESH.read_bytes(), (self.work / 'scripts' / REFRESH.name).read_bytes())
+        with self.subTest(msg='release refresh script exists'):
+            self.assertTrue(REFRESH.is_file(), f'file not found: {REFRESH}')
+        with self.subTest(msg='full refresh rebuilds the payloads from scratch'):
+            completed = run_refresh(self.work)
             self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
             self.assertFalse(any((self.work / 'speckit-pro').rglob('__pycache__')))
         with self.subTest(msg='Claude payload directory exists'):
@@ -196,7 +200,7 @@ class ValidatePluginPayload(unittest.TestCase):
             self.assertEqual([], matches, 'source-tree path references')
         with self.subTest(msg='Payload rebuild is deterministic'):
             first_fingerprint = payload_fingerprint(self.work)
-            completed = run_builder(self.work)
+            completed = run_refresh(self.work)
             self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
             second_fingerprint = payload_fingerprint(self.work)
             self.assertEqual(first_fingerprint, second_fingerprint, 'payload fingerprint')
@@ -253,7 +257,7 @@ class ValidatePayloadCompleteness(unittest.TestCase):
 
     def test_body_completeness(self) -> None:
         with self.subTest(msg=f'built Claude skills directory exists ({_rel(DIST_CLAUDE_SKILLS_DIR)})'):
-            self.assertTrue(DIST_CLAUDE_SKILLS_DIR.is_dir(), f'built Claude skills directory missing: {_rel(DIST_CLAUDE_SKILLS_DIR)} (run python3 scripts/build-plugin-payloads.py)')
+            self.assertTrue(DIST_CLAUDE_SKILLS_DIR.is_dir(), f'built Claude skills directory missing: {_rel(DIST_CLAUDE_SKILLS_DIR)} (run python3 scripts/refresh-release-artifacts.py)')
         if not DIST_CLAUDE_SKILLS_DIR.is_dir():
             return
         dist_skills = sorted((p for p in DIST_CLAUDE_SKILLS_DIR.glob('*/SKILL.md') if p.is_file()), key=lambda p: p.as_posix())
@@ -417,7 +421,7 @@ class ValidatePayloadConformance(unittest.TestCase):
 
     def validate_claude_payload(self) -> None:
         with self.subTest(msg=f'[claude] built payload root exists ({repo_rel(CLAUDE_ROOT)})'):
-            self.assertTrue(CLAUDE_ROOT.is_dir(), 'Claude payload missing - run python3 scripts/build-plugin-payloads.py')
+            self.assertTrue(CLAUDE_ROOT.is_dir(), 'Claude payload missing - run python3 scripts/refresh-release-artifacts.py')
         if not CLAUDE_ROOT.is_dir():
             return
         manifest = CLAUDE_ROOT / '.claude-plugin' / 'plugin.json'
@@ -462,7 +466,7 @@ class ValidatePayloadConformance(unittest.TestCase):
 
     def validate_codex_payload(self) -> None:
         with self.subTest(msg=f'[codex] built payload root exists ({repo_rel(CODEX_ROOT)})'):
-            self.assertTrue(CODEX_ROOT.is_dir(), 'Codex payload missing - run python3 scripts/build-plugin-payloads.py')
+            self.assertTrue(CODEX_ROOT.is_dir(), 'Codex payload missing - run python3 scripts/refresh-release-artifacts.py')
         if not CODEX_ROOT.is_dir():
             return
         manifest = CODEX_ROOT / '.codex-plugin' / 'plugin.json'

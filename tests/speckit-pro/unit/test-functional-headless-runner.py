@@ -30,6 +30,10 @@ from test_result import run_counted  # noqa: E402
 
 
 from script_loader import load_script  # noqa: E402
+from foreign_pid import foreign_pid  # noqa: E402
+
+# A fake owned group id that is never this test process's pid or group.
+FAKE_PGID = foreign_pid(31415)
 
 
 def import_runner():
@@ -900,7 +904,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
             self.assertEqual(result["stdout_sha256"], self.runner.sha256_bytes(b"\xff"))
 
     def test_timeout_kills_process_group_and_preserves_timeout_over_decode_error(self) -> None:
-        process = mock.Mock(pid=31415, returncode=-9)
+        process = mock.Mock(pid=FAKE_PGID, returncode=-9)
         process.communicate.side_effect = [
             subprocess.TimeoutExpired(["actor"], 1, output=b"partial", stderr=b""),
             (b"\xff", b"timed out"),
@@ -918,7 +922,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                     "claude", [str(cli)], b"prompt", evidence, Path(temporary), {}, 1
                 )
         self.assertTrue(popen.call_args.kwargs["start_new_session"])
-        self.assertEqual(killpg.call_args_list, [mock.call(31415, 0), mock.call(31415, signal.SIGTERM), mock.call(31415, 0)])
+        self.assertEqual(killpg.call_args_list, [mock.call(FAKE_PGID, 0), mock.call(FAKE_PGID, signal.SIGTERM), mock.call(FAKE_PGID, 0)])
         self.assertEqual(result["status"], "timeout")
         self.assertIs(result["process_group_cleanup"]["verified_absent"], True)
         self.assertIn("decode_error", result)
@@ -926,7 +930,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
 
     def test_normal_capture_checks_group_even_when_leader_exited(self) -> None:
         for descendant in (False, True):
-            process = mock.Mock(pid=31415, returncode=0)
+            process = mock.Mock(pid=FAKE_PGID, returncode=0)
             process.communicate.return_value = (b"raw output", b"raw error")
             process.poll.return_value = 0
             effects = [*([None] * 6), ProcessLookupError()] if descendant else [ProcessLookupError()]
@@ -945,11 +949,11 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
             self.assertEqual(result["stdout"], "raw output")
             self.assertEqual(result["stderr"], "raw error")
             self.assertIs(result["process_group_cleanup"]["verified_absent"], True)
-            self.assertEqual(killpg.call_args_list[0], mock.call(31415, 0))
+            self.assertEqual(killpg.call_args_list[0], mock.call(FAKE_PGID, 0))
 
     def test_normal_group_transient_within_grace_is_recorded_without_termination(self) -> None:
         with mock.patch.object(self.runner.os, "killpg", side_effect=[None, ProcessLookupError()]), mock.patch.object(self.runner.time, "sleep"):
-            cleanup = self.runner.cleanup_process_group(mock.Mock(pid=31415, returncode=0))
+            cleanup = self.runner.cleanup_process_group(mock.Mock(pid=FAKE_PGID, returncode=0))
         self.assertIs(cleanup["initially_present"], True)
         self.assertIs(cleanup["verified_absent"], True)
         self.assertEqual(cleanup["signals_sent"], [])
@@ -957,13 +961,13 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
         self.assertGreaterEqual(cleanup["duration_seconds"], 0)
 
     def test_cleanup_escalates_term_ignoring_descendant_and_verifies_absence(self) -> None:
-        process = mock.Mock(pid=31415, returncode=0)
+        process = mock.Mock(pid=FAKE_PGID, returncode=0)
         process.poll.return_value = 0
         alive = True
 
         def signal_group(pgid, sent):
             nonlocal alive
-            self.assertEqual(pgid, 31415)
+            self.assertEqual(pgid, FAKE_PGID)
             if sent == signal.SIGKILL:
                 alive = False
             elif sent == 0 and not alive:
@@ -973,7 +977,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
             cleanup = self.runner.cleanup_process_group(process)
         self.assertIs(cleanup["verified_absent"], True)
         self.assertEqual(cleanup["signals_sent"], ["SIGTERM", "SIGKILL"])
-        self.assertIn(mock.call(31415, signal.SIGKILL), killpg.call_args_list)
+        self.assertIn(mock.call(FAKE_PGID, signal.SIGKILL), killpg.call_args_list)
 
     @unittest.skipUnless(os.name == "posix", "POSIX process-group witness")
     def test_real_exited_leader_leaves_term_ignoring_child_that_is_drained(self) -> None:
@@ -1001,7 +1005,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
     def test_cleanup_cannot_convert_permission_error_or_surviving_group_to_success(self) -> None:
         for failure in (PermissionError("denied"), None):
             with self.subTest(failure=failure), mock.patch.object(self.runner.os, "killpg", side_effect=failure), mock.patch.object(self.runner.time, "sleep"):
-                cleanup = self.runner.cleanup_process_group(mock.Mock(pid=31415, returncode=0))
+                cleanup = self.runner.cleanup_process_group(mock.Mock(pid=FAKE_PGID, returncode=0))
                 self.assertIs(cleanup["verified_absent"], False)
                 self.assertTrue(cleanup["error"])
 
@@ -1039,7 +1043,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                     raise PermissionError(errno.EPERM, "probe denied")
 
             with self.subTest(failure_point=failure_point), mock.patch.object(self.runner.os, "killpg", side_effect=signal_group), mock.patch.object(self.runner.time, "sleep"):
-                cleanup = self.runner.cleanup_process_group(mock.Mock(pid=31415, returncode=0), natural_exit_grace=False)
+                cleanup = self.runner.cleanup_process_group(mock.Mock(pid=FAKE_PGID, returncode=0), natural_exit_grace=False)
             self.assertIs(cleanup["verified_absent"], failure_point == "transient")
             if failure_point == "transient":
                 self.assertEqual(post_kill_probes, 2)
@@ -1114,7 +1118,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
 
     def test_interruption_and_cleanup_failure_retain_raw_capture_evidence(self) -> None:
         for interrupted, cleanup_error in ((True, False), (False, True)):
-            process = mock.Mock(pid=31415, returncode=0)
+            process = mock.Mock(pid=FAKE_PGID, returncode=0)
             process.communicate.side_effect = [KeyboardInterrupt(), (b"partial", b"stderr")] if interrupted else [(b"partial", b"stderr")]
             effects = [None, None, ProcessLookupError()] if interrupted else PermissionError("denied")
             with self.subTest(interrupted=interrupted), tempfile.TemporaryDirectory() as temporary:
