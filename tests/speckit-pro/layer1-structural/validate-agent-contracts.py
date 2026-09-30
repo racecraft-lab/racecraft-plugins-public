@@ -19,6 +19,7 @@ from structural_helpers import body as _body
 from structural_helpers import developer_instructions as _extract_developer_instructions
 from structural_helpers import frontmatter as _frontmatter
 from structural_helpers import frontmatter_field as _field
+from structural_helpers import toml_string_field
 from test_result import run_counted
 from speckit_pro_runner.agent_inventory import (
     AGENT_INVENTORY,
@@ -136,11 +137,6 @@ NATIVE_COMMAND_LIFECYCLE_CONTRACT = (
     'every exact handle is tracked and drained',
 )
 
-def _extract_toml_string(text: str, field: str) -> str:
-    """First ``field = "value"`` line's value (mirrors the sed -n extractor)."""
-    match = re.search(f'^{re.escape(field)} = "([^"]*)"$', text, re.MULTILINE)
-    return match.group(1) if match else ''
-
 def validate_codex_agents__nonblank(text: str) -> str:
     return '\n'.join((line for line in text.split('\n') if line.strip()))
 
@@ -170,29 +166,29 @@ class ValidateCodexAgents(unittest.TestCase):
             content = agent_file.read_text(encoding='utf-8')
             with self.subTest(msg=f'{agent}: has name field'):
                 self.assertIn('name = "', content)
-            name_val = _extract_toml_string(content, 'name')
+            name_val = toml_string_field(content, 'name')
             with self.subTest(msg=f'{agent}: name matches filename'):
                 self.assertEqual(agent, name_val, 'name field must match filename stem')
             with self.subTest(msg=f'{agent}: has description field'):
                 self.assertIn('description = "', content)
             with self.subTest(msg=f'{agent}: has model field'):
                 self.assertIn('model = "', content)
-            model_val = _extract_toml_string(content, 'model')
+            model_val = toml_string_field(content, 'model')
             with self.subTest(msg=f'{agent}: model is an officially documented Codex GPT model'):
                 self.assertRegex(model_val, validate_codex_agents_MODEL_RE, 'model must be an officially documented Codex GPT model')
             if agent == 'autopilot-fast-helper':
                 with self.subTest(msg=f'{agent}: has low model_reasoning_effort field'):
                     self.assertIn('model_reasoning_effort = "low"', content)
-                effort_val = _extract_toml_string(content, 'model_reasoning_effort')
+                effort_val = toml_string_field(content, 'model_reasoning_effort')
             else:
                 with self.subTest(msg=f'{agent}: has model_reasoning_effort field'):
                     self.assertIn('model_reasoning_effort = "', content)
-                effort_val = _extract_toml_string(content, 'model_reasoning_effort')
+                effort_val = toml_string_field(content, 'model_reasoning_effort')
                 with self.subTest(msg=f'{agent}: reasoning effort uses supported values'):
                     self.assertRegex(effort_val, EFFORT_RE, 'reasoning effort must be minimal, low, medium, high, xhigh, or max')
             with self.subTest(msg=f'{agent}: has sandbox_mode field'):
                 self.assertIn('sandbox_mode = "', content)
-            sandbox_val = _extract_toml_string(content, 'sandbox_mode')
+            sandbox_val = toml_string_field(content, 'sandbox_mode')
             with self.subTest(msg=f'{agent}: sandbox_mode uses supported values'):
                 self.assertRegex(sandbox_val, SANDBOX_RE)
             with self.subTest(msg=f'{agent}: model, effort, and sandbox match the exact role policy'):
@@ -242,6 +238,24 @@ class ValidateCodexAgents(unittest.TestCase):
                 self.assertNotIn('YOU ARE THE USER', instructions)
             with self.subTest(msg='clarify-executor: does not invoke interactive clarify skill'):
                 self.assertNotIn('Run `$speckit-clarify`', instructions)
+
+# A backticked path in agent prose names a plugin file; it must resolve from the plugin root.
+PROSE_PLUGIN_PATH = re.compile(r'`((?:skills|codex-skills|references|agents|codex-agents|scripts)/[A-Za-z0-9_./-]+\.(?:md|json|py|toml))`')
+
+
+class ValidateAgentProsePaths(unittest.TestCase):
+
+    def test_plugin_paths_in_agent_prose_resolve_from_the_plugin_root(self) -> None:
+        surfaces = sorted(CC_AGENTS_DIR.glob('*.md')) + sorted(CODEX_AGENTS_DIR.glob('*.toml'))
+        self.assertTrue(surfaces, 'no agent definitions found; the path check would pass on nothing')
+        checked = 0
+        for surface in surfaces:
+            for target in sorted(set(PROSE_PLUGIN_PATH.findall(surface.read_text(encoding='utf-8')))):
+                checked += 1
+                with self.subTest(surface=surface.name, target=target):
+                    self.assertTrue((PLUGIN_ROOT / target).is_file(), f'{surface.name} names {target}, which is not a plugin file')
+        self.assertGreater(checked, 0, 'no plugin path found in agent prose; the pattern matches nothing')
+
 
 def main() -> int:
     suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])
