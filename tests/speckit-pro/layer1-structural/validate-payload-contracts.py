@@ -131,9 +131,7 @@ class PayloadFixtureTests(unittest.TestCase):
 class ValidatePluginPayload(unittest.TestCase):
 
     def setUp(self) -> None:
-        temporary = tempfile.TemporaryDirectory(prefix='payload-builder-consumer-')
-        self.addCleanup(temporary.cleanup)
-        self.work = Path(temporary.name).resolve()
+        self.work = Path(self.enterContext(tempfile.TemporaryDirectory(prefix='payload-builder-consumer-'))).resolve()
         copy_refresh_inputs(self.work)
 
     def test_payload(self) -> None:

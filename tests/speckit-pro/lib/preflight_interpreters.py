@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from preflight_architecture import resolve_architectures
-from evidence_files import write_json, write_text
+from evidence_files import write_json
 
 # Candidate launcher command -> evidence file slug. Order is probe order.
 INTERPRETER_SLUGS = {
@@ -48,9 +48,10 @@ def same_executable(left: str, right: str) -> bool:
 
 
 def _write_probe_files(evidence_dir: Path, slug: str, stdout: str, stderr: str, exit_code: int) -> None:
-    write_text(evidence_dir / f"probe-{slug}.json", stdout)
-    write_text(evidence_dir / f"probe-{slug}.stderr.txt", stderr)
-    write_text(evidence_dir / f"probe-{slug}.exit-code.txt", f"{exit_code}\n")
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    (evidence_dir / f"probe-{slug}.json").write_text(stdout, encoding="utf-8")
+    (evidence_dir / f"probe-{slug}.stderr.txt").write_text(stderr, encoding="utf-8")
+    (evidence_dir / f"probe-{slug}.exit-code.txt").write_text(f"{exit_code}\n", encoding="utf-8")
 
 
 def _parse_probe(stdout: str) -> dict[str, Any] | None:

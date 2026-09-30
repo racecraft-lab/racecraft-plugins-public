@@ -16,7 +16,6 @@ from typing import Any, Callable
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
 from preflight_architecture import architecture_family as _architecture_family  # noqa: E402
 from evidence_files import write_json as _write_json  # noqa: E402
-from evidence_files import write_text as _write_text  # noqa: E402
 from preflight_interpreters import (  # noqa: E402
     INTERPRETER_CANDIDATES,
     probe_interpreters,
@@ -96,6 +95,11 @@ LINUX_REQUESTS = (
 
 class PreflightError(RuntimeError):
     """A fail-closed preflight dispatch error."""
+
+
+def _write_text(path: Path, value: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(value, encoding="utf-8")
 
 
 def _required_env(name: str) -> str:

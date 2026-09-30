@@ -1,4 +1,4 @@
-"""Evidence file writers shared by the preflight scripts and live smoke runners."""
+"""JSON evidence writer shared by the preflight scripts."""
 
 from __future__ import annotations
 
@@ -14,8 +14,3 @@ def write_json(path: Path, payload: Any) -> None:
         + "\n",
         encoding="utf-8",
     )
-
-
-def write_text(path: Path, value: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(value, encoding="utf-8")
