@@ -94,17 +94,15 @@ class ExecutionContractTests(unittest.TestCase):
                     "depends_on", "owns", "tdd_unit", "fingerprints"):
             self.assertIn(key, tasks)
 
-    def test_checklist_domain_list_lives_only_in_the_guide(self):
+    def test_checklist_domain_signals_agree_between_guide_and_template(self):
         import re
 
         guide = (PLUGIN / "skills/speckit-coach/references/checklist-domains-guide.md").read_text()
         template = (PLUGIN / "skills/speckit-coach/templates/workflow-template.md").read_text()
         row = r"^\|[^|\n]+\| \*\*([a-z-]+)\*\* \|"
-        in_guide = set(re.findall(row, guide, re.M))
-        # The guide is the one domain list: all 15 domains, and the template keeps no copy.
-        self.assertTrue({"privacy", "supply-chain", "integration", "mobile-ux", "reliability"} <= in_guide, in_guide)
-        self.assertEqual(15, len(in_guide))
-        self.assertEqual(set(), set(re.findall(row, template, re.M)))
+        # The guide is the one domain list (all 15); the template keeps no copy and points to it.
+        self.assertEqual(15, len(set(re.findall(row, guide, re.M))))
+        self.assertEqual([], re.findall(row, template, re.M))
         self.assertIn("references/checklist-domains-guide.md", template)
 
     def test_quality_gates_table_has_a_row_per_discovered_slot(self):
