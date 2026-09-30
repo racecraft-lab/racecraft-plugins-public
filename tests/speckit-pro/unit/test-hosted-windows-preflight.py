@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import json
 import os
 import sys
@@ -28,13 +27,11 @@ from speckit_pro_runner import envelope  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
+from script_loader import load_script  # noqa: E402
+
+
 def load_helper(name: str, path: Path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    assert spec.loader is not None
-    spec.loader.exec_module(module)
-    return module
+    return load_script(name, path)
 
 
 helper = load_helper("run_hosted_windows_preflight", HELPER_PATH)
@@ -663,7 +660,7 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
             request_names,
             [
                 "toolchain",
-                "default-suite",
+                "ci-suite",
                 "repository-bash-confinement",
                 "installed-plugin-runner-invocation",
                 "installed-plugin-active-runtime-guard",

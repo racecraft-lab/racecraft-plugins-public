@@ -6,7 +6,6 @@ from __future__ import annotations
 import ast
 import copy
 import contextlib
-import importlib.util
 import io
 import json
 import os
@@ -105,13 +104,11 @@ LIVE_TOLERANCES = {
 }
 
 
+from script_loader import load_script  # noqa: E402
+
+
 def import_runner() -> ModuleType:
-    spec = importlib.util.spec_from_file_location("layer7_runner", RUNNER)
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_script("layer7_runner", RUNNER)
 
 
 def run_cli(*args: str) -> subprocess.CompletedProcess[str]:

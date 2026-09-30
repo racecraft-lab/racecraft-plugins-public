@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "request_id": "run-ci-suite",
+  "helper_id": "suite-gate",
+  "operation": "run-default-suite",
+  "mode": "read_only",
+  "inputs": {
+    "repo_root": ".",
+    "suite": ["toolchain", "structural", "unit", "tool-scoping", "integration", "parity"]
+  }
+}

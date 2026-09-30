@@ -1,1 +1,8 @@
-{"estimated_loc":0,"suggested_slices":1,"status":"ok"}
+{
+  "inputs": {},
+  "expected": {
+    "estimated_loc": 0,
+    "suggested_slices": 1,
+    "status": "ok"
+  }
+}

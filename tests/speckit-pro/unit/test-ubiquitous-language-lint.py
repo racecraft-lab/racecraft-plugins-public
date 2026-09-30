@@ -7,7 +7,6 @@ one case drives the real git path against a scratch repository.
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import subprocess
 import sys
@@ -20,13 +19,12 @@ SHARED_LIB = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 if str(SHARED_LIB) not in sys.path:
     sys.path.insert(0, str(SHARED_LIB))
 
+from script_loader import load_script  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 SCRIPT = REPO_ROOT / "speckit-pro" / "scripts" / "ubiquitous-language-lint.py"
 FIXTURES = REPO_ROOT / "tests" / "speckit-pro" / "unit" / "fixtures" / "ubiquitous-language"
-_spec = importlib.util.spec_from_file_location("ubiquitous_language_lint", SCRIPT)
-lint = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(lint)
+lint = load_script("ubiquitous_language_lint", SCRIPT)
 ENV = {"PYTHONDONTWRITEBYTECODE": "1", "PATH": "/usr/bin:/bin", "HOME": "/nonexistent",
        "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "support@openai.com",
        "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "support@openai.com",

@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import ast
 import contextlib
-import importlib.util
 import io
 import json
 import os
@@ -34,6 +33,10 @@ from test_result import run_counted  # noqa: E402
 AGGREGATE_RUNNER = LAYER6 / "run-all-fixtures.py"
 
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
+from script_loader import load_script  # noqa: E402
+
+
 def run_runner(path: Path, *args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [sys.executable, str(path), *args],
@@ -47,12 +50,7 @@ def run_runner(path: Path, *args: str) -> subprocess.CompletedProcess[str]:
 
 
 def load_script_module(path: Path, module_name: str) -> object:
-    spec = importlib.util.spec_from_file_location(module_name, path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"unable to load module from {path}")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load_script(module_name, path)
 
 
 class Layer6RunnerTests(unittest.TestCase):
