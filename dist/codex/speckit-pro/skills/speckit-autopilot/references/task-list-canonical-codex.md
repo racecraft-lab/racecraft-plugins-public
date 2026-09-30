@@ -46,7 +46,10 @@ extension is missing, still create the item but mark it
 
 This is the combined Codex plan: the numbered 10-19 gates from
 `post-implementation-codex.md` plus the three mandatory supporting tasks that
-remain independently visible for resume safety. `Final Reviewability Backstop`
+remain independently visible for resume safety. It is Claude's 11-row list plus
+`Final Reviewability Backstop` and `PR Packet/Body Generation`, which Claude runs
+inside its PR Body Generation and PR Creation rows; both hosts run the same
+steps. `Final Reviewability Backstop`
 owns the diff-gate/UAT boundary, and `PR Packet/Body Generation`
 owns the body-generation boundary; the supporting rows are evidence-producing
 steps, not substitutes for those numbered gates.

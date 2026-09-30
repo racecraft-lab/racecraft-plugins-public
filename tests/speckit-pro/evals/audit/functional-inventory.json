@@ -1558,7 +1558,7 @@
     },
     {
       "id": "codex:speckit-autopilot:31",
-      "requirement": "Explains that Codex keeps all 14 Post items active, consumes the plan-layers-feature-dir envelope as the only slice source, and may use multi-pr-emission only for golden_only command-plan capture after full verification.",
+      "requirement": "Explains that Codex keeps all 13 Post items active, consumes the plan-layers-feature-dir envelope as the only slice source, and may use multi-pr-emission only for golden_only command-plan capture after full verification.",
       "detail_count": 19,
       "disposition": "replace",
       "coverage": "authored-native-semantic",
