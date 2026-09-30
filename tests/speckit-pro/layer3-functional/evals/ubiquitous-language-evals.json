@@ -25,9 +25,9 @@
     {
       "id": 3,
       "prompt": "Run the ubiquitous-language lint on my branch against origin/main and tell me what does not map.",
-      "expected_output": "Runs ${CLAUDE_PLUGIN_ROOT}/scripts/ubiquitous-language-lint.py with --base origin/main, reports the JSON summary and each unmapped identifier with a suggested term or rename, and states that the lint is advisory and exits 0.",
+      "expected_output": "Runs resolved_python ${CLAUDE_PLUGIN_ROOT}/scripts/ubiquitous-language-lint.py with --base origin/main, reports the JSON summary and each unmapped identifier with a suggested term or rename, and states that the lint is advisory and exits 0.",
       "expectations": [
-        "Runs ${CLAUDE_PLUGIN_ROOT}/scripts/ubiquitous-language-lint.py",
+        "Runs resolved_python ${CLAUDE_PLUGIN_ROOT}/scripts/ubiquitous-language-lint.py",
         "Reports each unmapped identifier with file, line, and a suggestion",
         "States that the lint never blocks a gate"
       ]

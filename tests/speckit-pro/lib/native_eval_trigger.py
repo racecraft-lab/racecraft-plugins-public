@@ -283,9 +283,10 @@ def stage_trigger_catalog(
     _require(isinstance(trial_id, str) and bool(trial_id.strip()), "trial_id is empty")
     _require(isinstance(plugin_name, str) and _PLUGIN_NAME.fullmatch(plugin_name) is not None,
              "trigger plugin name is malformed")
-    expected_root = "skills" if host == "claude" else "codex-skills"
+    # The source is a host's rendered skill tree (see host_skill_views), named
+    # skills/ for both hosts as each installed payload names it.
     source_path = Path(source_root)
-    _require(source_path.name == expected_root, f"{host} trigger source root must be named {expected_root}")
+    _require(source_path.name == "skills", f"{host} trigger source root must be a rendered skills/ tree")
     stage = Path(stage_root)
     try:
         if stage.exists():

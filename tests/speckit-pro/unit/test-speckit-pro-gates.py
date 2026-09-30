@@ -2122,7 +2122,7 @@ class GateFoundationTests(unittest.TestCase):
         claude_status = next(item for item in by_surface["claude"]["actual_files"] if item["path"] == "skills/speckit-status/SKILL.md")
         codex_status = next(item for item in by_surface["codex"]["actual_files"] if item["path"] == "skills/speckit-status/SKILL.md")
         self.assertEqual(claude_status["source_path"], "speckit-pro/skills/speckit-status/SKILL.md")
-        self.assertEqual(codex_status["source_path"], "speckit-pro/codex-skills/speckit-status/SKILL.md")
+        self.assertEqual(codex_status["source_path"], "speckit-pro/skills/speckit-status/SKILL.md")
         for result in response["data"]["payload_completeness"]:
             self.assertEqual(result["status"], "pass")
             self.assertFalse(result["missing_paths"])

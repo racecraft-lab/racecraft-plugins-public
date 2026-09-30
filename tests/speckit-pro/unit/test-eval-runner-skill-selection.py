@@ -26,6 +26,12 @@ FUNCTIONAL_SCRIPT = TESTS_ROOT / "layer3-functional" / "run-functional-evals.py"
 TRIGGER_SCRIPT = TESTS_ROOT / "layer2-trigger" / "run-trigger-evals.py"
 CODEX_FUNCTIONAL_SCRIPT = TESTS_ROOT / "layer3-functional" / "run-functional-evals-codex.py"
 CODEX_TRIGGER_SCRIPT = TESTS_ROOT / "layer2-trigger" / "run-trigger-evals-codex.py"
+def codex_skill_dir(skill: str) -> Path:
+    """The source dir holding a skill's Codex SKILL.md: its overlay, else the shared skill."""
+    overlay = PLUGIN_ROOT / "codex-skills" / skill
+    return overlay if (overlay / "SKILL.md").is_file() else PLUGIN_ROOT / "skills" / skill
+
+
 CODEX_SKILLS = ("speckit-scaffold-spec", "speckit-status", "speckit-resolve-pr", "install")
 LAYER3_CONTRACT_ROOTS = (
     TESTS_ROOT / "layer3-functional" / "evals",
@@ -797,10 +803,10 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
             name = CURRENT_INVENTORY[2]
             with self.subTest(msg=name):
                 report = json.loads(result.stdout)
-                self.assertEqual(
-                    report["preflight"]["skill_source"],
-                    str(PLUGIN_ROOT / "skills" / "speckit-coach" / "SKILL.md"),
-                )
+                # The runner reads Claude's rendered view of the shared source.
+                source = Path(report["preflight"]["skill_source"])
+                self.assertEqual(("skills", "speckit-coach", "SKILL.md"), source.parts[-3:])
+                self.assertFalse(source.is_relative_to(PLUGIN_ROOT), source)
 
             name = CURRENT_INVENTORY[3]
             result = run_script(CODEX_FUNCTIONAL_SCRIPT, "speckit-coach")
@@ -808,7 +814,7 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
                 output = merged_output(result)
                 self.assertTrue(
                     result.returncode == 0
-                    and f"Skill path: {PLUGIN_ROOT / 'codex-skills' / 'speckit-coach'}" in output,
+                    and f"Skill path: {PLUGIN_ROOT / 'skills' / 'speckit-coach'}" in output,
                     output,
                 )
 
@@ -818,7 +824,7 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
                 output = merged_output(result)
                 self.assertTrue(
                     result.returncode == 0
-                    and f"Skill path: {PLUGIN_ROOT / 'codex-skills' / 'speckit-coach'}" in output,
+                    and f"Skill path: {PLUGIN_ROOT / 'skills' / 'speckit-coach'}" in output,
                     output,
                 )
 
@@ -830,7 +836,7 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
                     output = merged_output(result)
                     self.assertTrue(
                         result.returncode == 0
-                        and f"Skill path: {PLUGIN_ROOT / 'codex-skills' / skill}" in output,
+                        and f"Skill path: {codex_skill_dir(skill)}" in output,
                         output,
                     )
                 inventory_index += 1
@@ -841,7 +847,7 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
                     output = merged_output(result)
                     self.assertTrue(
                         result.returncode == 0
-                        and f"Skill path: {PLUGIN_ROOT / 'codex-skills' / skill}" in output,
+                        and f"Skill path: {codex_skill_dir(skill)}" in output,
                         output,
                     )
                 inventory_index += 1

@@ -99,8 +99,12 @@ Proactive discovery never overrides a component's role. A platform cannot
 categorically tell a "read" capability from a "write" one for an arbitrary
 installed tool, so the boundary is enforced two ways: the built-in mutation
 primitives (`Write`, `Edit`, `MultiEdit`, `NotebookEdit`) are denied at the
-platform layer (Claude `disallowedTools`, Codex `sandbox_mode`), and this role
-rule governs everything the platform cannot classify.
+platform layer, and this role rule governs everything the platform cannot
+classify. Claude denies them through `disallowedTools`. On Codex an agent
+file's `sandbox_mode` is advisory, so the plugin's `PreToolUse` agent-policy
+hook denies a read-only role's `apply_patch` edits and a broker-only role's
+MCP calls outside its allowlist; a read-only role's shell writes stay a rule
+of its role.
 
 - A component declared **read-only** (research and context agents) must never
   invoke a capability that writes, mutates, installs, pushes, or otherwise

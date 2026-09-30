@@ -35,6 +35,10 @@ dist/**                                                                   merge=
 docs-site/src/content/docs/reference/**                                   merge=generated
 speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json           merge=generated
 speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256                  merge=generated
+speckit-pro/codex-agents/*.toml                                           merge=generated
+# The one Codex-only agent is hand-authored, so it text-merges as usual.
+speckit-pro/codex-agents/autopilot-fast-helper.toml                       merge
+speckit-pro/speckit_pro_runner/codex_agent_policy.json                    merge=generated
 # Generated the same way and conflicting the same way, but outside
 # CHECK_WORKTREE_PATHS because a different generator owns each.
 #

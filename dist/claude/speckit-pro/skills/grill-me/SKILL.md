@@ -1,6 +1,6 @@
 ---
 name: grill-me
-description: "Run an interactive, one-question-at-a-time design interview before SpecKit specification work and produce a Design Concept record. Use when an active user requests Grill Me—for example “grill me,” “interview me about,” “walk the design tree,” or “produce a Design Concept”—or invokes /speckit-pro:grill-me, or when interactive /speckit-pro:speckit-scaffold-spec delegates its required interview. SDD methodology, checklist selection, and gate guidance without a requested design interview belong to /speckit-pro:speckit-coach. Recommend one grounded answer first for every consequential choice. Not for autonomous, background, CI, autopilot, or subagent execution."
+description: "Run an interactive, one-question-at-a-time design interview before SpecKit specification work and produce a Design Concept record. Use when an active user requests Grill Me—for example “grill me,” “interview me about,” “walk the design tree,” or “produce a Design Concept”—or invokes /speckit-pro:grill-me, or when interactive /speckit-pro:speckit-scaffold-spec delegates its required interview. SPEC setup, worktree creation, and workflow population belong to /speckit-pro:speckit-scaffold-spec; a setup request alone is not an interview delegation. SDD methodology, checklist selection, and gate guidance without a requested design interview belong to /speckit-pro:speckit-coach. Recommend one grounded answer first for every consequential choice. Not for autonomous, background, CI, autopilot, or subagent execution."
 argument-hint: "an idea, brief or transcript path, or spec scope"
 user-invocable: true
 license: MIT
@@ -17,8 +17,8 @@ conversation.
 
 Inspect the tools and skills actually available. Follow the shared
 [capability-discovery](${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/capability-discovery.md)
-and [grounding](${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/grounding.md) contracts. Base
-recommendations on the project constitution, codebase evidence, or current
+and [grounding](${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/grounding.md) contracts.
+Base recommendations on the project constitution, codebase evidence, or current
 authoritative sources; disclose uncertainty instead of guessing.
 
 ## Interactive boundary
@@ -28,12 +28,13 @@ or invoking `/speckit-pro:grill-me`, and an interactive
 `/speckit-pro:speckit-scaffold-spec` call. Before any question or write, confirm
 `AskUserQuestion` is available and a live user can answer it.
 
-Abort in background or non-interactive execution, CI, autopilot, any phase or
-consensus agent, and every subagent context. Say that Grill Me requires an active
-user conversation and that autopilot uses the Clarify Question Set and consensus
-protocol. Do not ask a question and do not write any file. That refusal is the
-entire result: end immediately after naming that mechanism, and do not offer to
-start or continue the interview after a later reply.
+Abort in background or non-interactive execution,
+CI, autopilot, any phase or consensus agent, and every subagent context. Say
+that Grill Me requires an active user conversation and that autopilot uses the
+Clarify Question Set and consensus protocol. Do not ask a question and do not
+write any file. That refusal is the entire result: end immediately after naming
+that mechanism, and do not offer to start or continue the interview after a
+later reply.
 
 ## Claude interaction adapter
 

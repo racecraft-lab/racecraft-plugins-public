@@ -23,6 +23,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 SHARED_LIB = SCRIPT_DIR.parent / "lib"
 if str(SHARED_LIB) not in sys.path:
     sys.path.insert(0, str(SHARED_LIB))
+import host_skill_views  # noqa: E402
 import trigger_process as processes  # noqa: E402
 import trigger_evidence as evidence_records  # noqa: E402
 import trigger_comparison as experiment_evidence  # noqa: E402
@@ -88,7 +89,8 @@ def find_eval_file(skill: str) -> Path:
 
 
 def find_skill_source(skill: str) -> Path:
-    return evidence_records.find_skill_source(PLUGIN_ROOT, skill, ("skills", "codex-skills"))
+    """Claude's rendered skill, or the Codex-only one when Claude has none."""
+    return host_skill_views.rendered_skill_source("claude", skill, PLUGIN_ROOT)
 
 
 source_description_lines = evidence_records.source_description_lines

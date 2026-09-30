@@ -11,6 +11,7 @@ from pathlib import Path
 TESTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(TESTS / "lib"))
 
+import host_skill_views
 from native_eval_trigger import TriggerEvidenceError, qualify_trigger_observation, stage_trigger_catalog
 from test_result import run_counted
 
@@ -36,7 +37,7 @@ def observation(*, text: str = "done", activations=None, calls=None) -> dict[str
 
 class NativeTriggerTests(unittest.TestCase):
     def make_sources(self, root: Path, host: str) -> tuple[Path, dict[str, bytes]]:
-        source = root / ("skills" if host == "claude" else "codex-skills")
+        source = root / host / "skills"
         originals = {}
         for name in ("alpha", "beta", "gamma"):
             payload = skill(name, f"Select {name} for its exact behavioral boundary.")
@@ -66,7 +67,7 @@ class NativeTriggerTests(unittest.TestCase):
             self.assertEqual(set(staged.source_identities), {"alpha", "beta", "gamma"})
             self.assertEqual(set(staged.staged_identities), {"alpha", "beta", "gamma", "no-speckit-skill"})
             for name, payload in originals.items():
-                self.assertEqual((root / "skills" / name / "SKILL.md").read_bytes(), payload)
+                self.assertEqual((root / "claude" / "skills" / name / "SKILL.md").read_bytes(), payload)
                 self.assertEqual(staged.source_identities[name]["sha256"], hashlib.sha256(payload).hexdigest())
                 body = (staged.stage_root / "skills" / name / "SKILL.md").read_text()
                 self.assertIn(f"description: Select {name} for its exact behavioral boundary.", body)
@@ -127,8 +128,8 @@ class NativeTriggerTests(unittest.TestCase):
         plugin = TESTS.parents[1] / "speckit-pro"
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            for host, source_name in (("claude", "skills"), ("codex", "codex-skills")):
-                source = plugin / source_name
+            for host in ("claude", "codex"):
+                source = host_skill_views.host_skill_root(host, plugin)
                 expected = {path.parent.name for path in source.glob("*/SKILL.md")}
                 staged = stage_trigger_catalog(
                     host, source, root / host, "speckit-status", "repository-contract",

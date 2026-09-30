@@ -105,8 +105,8 @@ headings only; the runbook is for humans, not for anchor plumbing.
 
 ## Output contract
 
-- Edit the skeleton file in place with `Edit` / `Write`. Do NOT create a
-  new file and do NOT print the runbook to stdout.
+- Edit the skeleton file in place. Do NOT create a new file and do NOT
+  print the runbook to stdout.
 - Return a short summary to the orchestrator: which three rewrites you
   applied, the story/check count, and any section you intentionally
   removed.

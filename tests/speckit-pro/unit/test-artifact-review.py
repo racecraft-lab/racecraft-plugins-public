@@ -20,6 +20,7 @@ sys.path.insert(0, str(ROOT / "tests/speckit-pro/lib"))
 
 from speckit_pro_runner import artifact_review
 from speckit_pro_runner.helpers.read_only import resolve_autopilot_stage, trusted_bytes
+from guide_text import guide_text
 from test_result import run_counted
 
 
@@ -298,10 +299,22 @@ class ArtifactReviewTests(unittest.TestCase):
             self.assertIn("direct local file links", text)
 
     def test_preview_guidance_requires_broker_readback_before_verification(self) -> None:
-        text = (ROOT / "speckit-pro/skills/speckit-autopilot/references/artifact-review.md").read_text()
+        text = guide_text("skills/speckit-autopilot/references/artifact-review.md", "claude")
         self.assertIn("`close_session`", text)
         self.assertIn("Compare the observer's closed verdict and", text)
         self.assertIn("Never create `observed_at` in the parent", text)
+
+    def test_each_host_describes_its_own_observer_tools(self) -> None:
+        relative = "skills/speckit-autopilot/references/artifact-review.md"
+        claude = guide_text(relative, "claude")
+        codex = guide_text(relative, "codex")
+        self.assertIn("The observer has only the `Artifact` tool and the broker's verdict tool", claude)
+        self.assertNotIn("preview-isolation-session", claude)
+        self.assertIn("only the broker's verdict tool (no `Artifact` tool and no network)", codex)
+        self.assertIn("`named_surface=observe_codex`", codex)
+        self.assertIn("`unavailable` is its normal verdict", codex)
+        self.assertNotIn("The observer has only the `Artifact` tool", codex)
+        self.assertIn("Never create `observed_at` in the parent", codex)
 
     def test_default_resume_returns_to_preview_without_redefining_planning_complete(self) -> None:
         result = self.resolve()

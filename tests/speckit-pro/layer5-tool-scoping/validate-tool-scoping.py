@@ -23,6 +23,7 @@ from __future__ import annotations
 import re
 import sys
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -190,6 +191,23 @@ MODEL_AND_EFFORT_PINS = (
     ("consensus-tiebreaker", "effort", "max", "the Round 3 tiebreak is a judgment call"),
 )
 TIEBREAK_TWINS = ("consensus-synthesizer", "consensus-tiebreaker")
+
+
+BROKER_ONLY_WRITE_RULE = (
+    "a parent-minted formal-author capability",
+    "Use only the author-broker write tool for every file change",
+)
+
+
+def _assert_codex_writes_only_through_its_broker(test: unittest.TestCase, agent: str) -> None:
+    """The Codex twin of a broker-only author is read-only and states the broker rule."""
+    codex_file = CODEX_AGENTS_DIR / f"{agent}.toml"
+    with test.subTest(msg=f"carve-out: codex {agent} is read-only and writes only through the author broker"):
+        policy = tomllib.loads(codex_file.read_text(encoding="utf-8"))
+        test.assertEqual("read-only", policy["sandbox_mode"])
+        instructions = " ".join(policy["developer_instructions"].split())
+        for phrase in BROKER_ONLY_WRITE_RULE:
+            test.assertIn(phrase, instructions)
 
 
 class ValidateToolScoping(unittest.TestCase):
@@ -441,10 +459,7 @@ class ValidateToolScoping(unittest.TestCase):
                 with self.subTest(msg=f"carve-out: {agent} excludes {tool} from its allowlist"):
                     self.assertNotIn(tool, declared)
 
-            codex_file = CODEX_AGENTS_DIR / f"{agent}.toml"
-            if codex_file.is_file():
-                with self.subTest(msg=f"carve-out: codex {agent} sandbox_mode is workspace-write"):
-                    self.assertEqual("workspace-write", _toml_field(codex_file, "sandbox_mode"))
+            _assert_codex_writes_only_through_its_broker(self, agent)
 
     def test_no_tool_observers_pin_exact_tool_allowlists(self) -> None:
         with self.subTest(msg="no-tool observer roster is exactly the artifact preview observer"):

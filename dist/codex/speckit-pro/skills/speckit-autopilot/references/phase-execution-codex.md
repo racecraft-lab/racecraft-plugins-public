@@ -2849,6 +2849,27 @@ id in marker checkpoint or verification evidence as
 commit for later live marker PR branches. Do not infer a new marker order from
 changed files or reviewability warnings.
 
+### Never Yield With Nothing In Flight
+
+**The loop advances only while this turn keeps it moving.** Codex collects a
+worker's result through the bounded `wait_agent` loop inside the same turn;
+nothing wakes the run after the turn ends. A turn that ends with no agent in
+flight and tasks still pending stops the phase there.
+
+**So, before ending any turn in Phase 7, check two things**: whether a
+dispatched agent's result is still unconsumed, and whether the run list still
+holds work. If an agent is in flight, keep the `wait_agent` loop going. If
+nothing is in flight and tasks remain, **spawn the next run in that same
+turn.** Do not end the turn on a status summary: the moment right after the
+last worker of a run reports, its entry is appended and its commit lands is
+exactly where writing a paragraph instead of dispatching ends the phase.
+
+**A summary is not a step.** Report to the operator when a slice or a phase
+group closes, and put the next `spawn_agent` call in the same turn as the
+report. A stage resolved for autonomous execution runs to its terminal step;
+handing control back mid-phase is a stop, whatever the accompanying prose
+says. A blocked action is not a stop condition either; see below.
+
 ### Blocked Actions Mid-Run: Fall Back or Defer, Never Stop
 
 Once autopilot is running, human input is for exceptional cases only. The Phase
