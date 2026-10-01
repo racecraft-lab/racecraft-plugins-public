@@ -98,11 +98,11 @@ class RoadmapFreshnessTests(unittest.TestCase):
         )
         return dispatch_helper(request)
 
-    def test_registered_as_read_only_helper_with_request_fixture(self) -> None:
-        self.assertIn(HELPER_ID, HELPERS)
-        self.assertEqual(HELPER_ID, HELPERS[HELPER_ID].operation)
+    def test_request_fixture_replays_the_registered_read_only_operation(self) -> None:
         fixture = REPO / "tests/speckit-pro/unit/fixtures/read-only-helpers/requests" / f"{HELPER_ID}.json"
-        self.assertEqual(HELPER_ID, json.loads(fixture.read_text(encoding="utf-8"))["helper_id"])
+        request = json.loads(fixture.read_text(encoding="utf-8"))
+        registered = HELPERS[HELPER_ID]
+        self.assertEqual((registered.helper_id, registered.operation, "read_only"), (request["helper_id"], request["operation"], request["mode"]))
 
     def test_checkout_behind_remote_roadmap_stops_with_both_revisions(self) -> None:
         remote = self.advance_remote("SPEC-001 six production files\n")
