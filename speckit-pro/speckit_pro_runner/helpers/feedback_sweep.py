@@ -145,12 +145,11 @@ def sweep_isolation_session(inputs: dict[str, Any], repo_root: Path) -> dict[str
             )
         else:
             raise SchemaViolation("isolation surface is unreachable")
-    except (CaptureViolation, IsolationViolation, LauncherViolation, ReceiptViolation, SchemaViolation):
-        return make_result(
-            json_text({"status": "blocked", "reason": "isolation_boundary_unavailable"}),
-            "feedback sweep isolation boundary unavailable\n",
-            3,
-        )
+    except (CaptureViolation, IsolationViolation, LauncherViolation, ReceiptViolation, SchemaViolation) as violation:
+        # A capture failure names its own closed reason, so the orchestrator can
+        # tell an absent tool or credential from a spent retry schedule.
+        reason = getattr(violation, "reason", "isolation_boundary_unavailable")
+        return make_result(json_text({"status": "blocked", "reason": reason}), f"feedback sweep blocked: {reason}\n", 3)
     return make_result(json_text(payload))
 
 

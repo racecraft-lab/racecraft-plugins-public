@@ -4,6 +4,7 @@
   "functional.speckit-autopilot.clarify-answer-provenance": {"human_answer_sessions": [1, 2], "mislabeled_sessions": [], "unrecorded_sessions": [], "clarify_record_compliant": true},
   "functional.speckit-autopilot.progress-projection-mid-run": {"canonical_rows_present": true, "projection_acceptable": true, "may_dispatch_plan_executor": true, "repair_before_dispatch": false},
   "functional.speckit-autopilot.rescope-reconciliation": {"plan_increment_count": 4, "stale_artifacts": [], "g3_may_run": true, "reconcile_before_g3": false},
+  "functional.speckit-autopilot.sweep-keeps-running": {"amended_run_stops_for_review": true, "amended_comment_in_final_report": false, "rate_limit_after_retries_stops": true, "unauthenticated_stop_reason": null, "sole_open_pull_request_action": "stop", "two_open_pull_requests_stop_reason": null, "closed_pull_request_stop_reason": null},
   "functional.speckit-autopilot.run-start-grant": {"uncovered_probes": [], "ask_before_phase_one": false, "ask_count": 3, "phase_work_before_reply": true, "mid_run_permission_stops": 3},
   "functional.speckit-autopilot.deferred-decision-ready-stack": {"outcome": "human_stop", "stack_ready": false, "keeps_draft": true, "decision_units": [], "decision_classes": [], "tier_reached": 1, "asked_question": true},
   "functional.speckit-autopilot.gate-failure-defers": {"repair_allowance_spent": false, "next_action": "stop", "run_continues": false, "independent_units": [], "question_offered": true},
