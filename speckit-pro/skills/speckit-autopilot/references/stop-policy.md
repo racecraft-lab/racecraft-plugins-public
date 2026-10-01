@@ -92,6 +92,8 @@ Each reason has one class.
 | `stop_reason:boundary_file_edit` | authority | Editing a file the boundary rules protect. |
 | `stop_reason:veto_bypass` | authority | Bypassing a veto. |
 | `stop_reason:reopen_closed_pr` | authority | Reopening a closed PR. |
+| `stop_reason:tool_unavailable` | authority | `gh` is absent or not authenticated. Installing or signing in is a run-start grant. |
+| `stop_reason:ambiguous_pr_record` | authority | The recorded PR is missing, or several open PRs match the branch. Choosing the right PR is a human call. |
 | `stop_reason:plan_stage_boundary` | authority | A `--stage plan` run stops after the plan. |
 | `stop_reason:strict_confidence_opt_in` | authority | An opt-in `--strict` run stops before Phase 7 below the confidence threshold. |
 | `stop_reason:all_tiers_failed` | exhausted | All three escalation tiers failed. |

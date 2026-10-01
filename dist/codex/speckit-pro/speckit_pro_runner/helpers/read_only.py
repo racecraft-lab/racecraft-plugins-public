@@ -2456,10 +2456,11 @@ def corroboration_record(
     merged: bool | None = None,
     reason: str | None = None,
 ) -> dict[str, Any]:
-    """All five keys, for every status, in the order the envelope writes them.
+    """All six keys, for every status, in the order the envelope writes them.
 
     What a status has nothing to say about is null rather than omitted, so no
-    consumer has to tell "missing" apart from "not applicable".
+    consumer has to tell "missing" apart from "not applicable". `repair` is the
+    identity the `Draft PR` row is rewritten to; only `with_repair` sets it.
     """
     return {
         "status": status,
@@ -2467,7 +2468,21 @@ def corroboration_record(
         "observed": observed,
         "merged": merged,
         "reason": reason,
+        "repair": None,
     }
+
+
+def with_repair(record: dict[str, Any], entries: list[dict[str, Any]]) -> dict[str, Any]:
+    """The record, carrying the branch's sole open pull request as the row's repair.
+
+    Counts open entries across the whole observation, never the entry a rule
+    happened to reach first: two open pull requests are an ambiguity a run must
+    not settle by picking one, so they leave `repair` null.
+    """
+    opened = [entry for entry in entries if entry["state"].casefold() == OPEN_PR_STATE]
+    if len(opened) != 1:
+        return record
+    return {**record, "repair": {"number": opened[0]["number"], "url": opened[0]["url"]}}
 
 
 def observation_pull_requests(observation: Any) -> list[dict[str, Any]] | None:
@@ -2533,7 +2548,9 @@ def corroborate_draft_pr(row: dict[str, Any] | None, observation: Any) -> dict[s
 
     Reports; never decides. The resolved stage is untouched, resolution is never
     blocked, and the run is never stopped here — a discrepancy is acted on at the
-    terminal step, which is the only place a pull request is ever written. This
+    terminal step, which is the only place a pull request is ever written. When
+    exactly one open pull request answers for the branch, an `identity_mismatch`
+    names it in `repair`; `pr_closed` and `pr_missing` never carry one. This
     operation neither runs `gh` nor touches the network: the orchestrator takes
     the one read-only observation and passes it in as data, which is what leaves
     the classification deterministic and offline-testable.
@@ -2558,8 +2575,9 @@ def corroborate_draft_pr(row: dict[str, Any] | None, observation: Any) -> dict[s
     # absence, the closure, or the moved URL.
     for entry in entries:
         if entry["state"].casefold() == OPEN_PR_STATE and entry["number"] != recorded["number"]:
-            return corroboration_record(
-                "identity_mismatch", recorded=recorded, observed=observed_identity(entry)
+            return with_repair(
+                corroboration_record("identity_mismatch", recorded=recorded, observed=observed_identity(entry)),
+                entries,
             )
     recorded_entry = next(
         (entry for entry in entries if entry["number"] == recorded["number"]), None
@@ -2573,7 +2591,9 @@ def corroborate_draft_pr(row: dict[str, Any] | None, observation: Any) -> dict[s
         # Rule 2: a repository transfer moves a pull request without changing its
         # number, so the recorded number can still resolve at a URL the row does
         # not name.
-        return corroboration_record("identity_mismatch", recorded=recorded, observed=observed)
+        return with_repair(
+            corroboration_record("identity_mismatch", recorded=recorded, observed=observed), entries
+        )
     if state in CLOSED_PR_STATES:
         return corroboration_record(
             "pr_closed", recorded=recorded, observed=observed, merged=CLOSED_PR_STATES[state]

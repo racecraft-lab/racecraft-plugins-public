@@ -1603,8 +1603,8 @@ What the emission sequence owes it:
   describing an earlier run's shortfall never survives a later refresh that no
   longer fell short.
 - **Left exactly as found** when the run stops at create-or-refresh because the
-  recorded and live identities disagree. A run that creates nothing and refreshes
-  nothing records nothing.
+  recorded pull request is closed, missing, or one of several open ones. A run
+  that creates nothing and refreshes nothing records nothing.
 
 **The workflow file is the only place this identity is stored — there is no
 state-file mirror.** That is why this row behaves differently from the `Stage`
@@ -1627,9 +1627,10 @@ discrepancies. This is what each one means here, at create-or-refresh:
 | `match` | refresh the recorded pull request's description, and its title if the title changed; report that URL |
 | `no_record` | fall through to the live by-branch existence test above, then create or refresh |
 | `skipped` | **never create.** The present row is already a positive under the two-way existence test, so a run that merely could not reach the tool has not learned that no pull request exists. Refresh the recorded pull request when the tool can be reached; when it cannot, report through the could-not-be-opened path |
-| `pr_closed` | do not reopen it, do not open a second one, and leave the row exactly as found. The stop report names the number, the URL, that **the operator** may reopen it with `gh pr reopen <number>`, and that a re-run then proceeds normally |
-| `pr_missing` | do not create, do not rewrite the row. The stop report names the recorded identity and says to correct or clear the row, then re-run |
-| `identity_mismatch` | do not create. The stop report names **both** identities — the one recorded and the one observed — and the manual resume path |
+| `pr_closed` | do not reopen it, do not open a second one, and leave the row exactly as found. The stop report carries `stop_reason:reopen_closed_pr` and names the number, the URL, that **the operator** may reopen it with `gh pr reopen <number>`, and that a re-run then proceeds normally |
+| `pr_missing` | do not create, do not rewrite the row. The stop report carries `stop_reason:ambiguous_pr_record` (no open pull request is left to repair the row to), names the recorded identity, and says to correct or clear the row, then re-run |
+| `identity_mismatch` with `corroboration.repair` set | exactly one open pull request answers for the branch, so **repair the row** to `repair.number` and `repair.url` (the "Repaired, not skipped" rule above), take the record commit, and refresh that pull request as on `match`. Report both identities: the one recorded and the one now recorded |
+| `identity_mismatch` with `corroboration.repair` null | several open pull requests answer for the branch, so do not create and do not rewrite the row. The stop report carries `stop_reason:ambiguous_pr_record` and names **both** identities (the one recorded and the one observed) and the manual resume path |
 
 **`gh pr reopen` is the operator's own step and never automation's.** It appears
 in this reference only as prose inside a resume path. Nothing in this sequence
@@ -1637,19 +1638,24 @@ runs it, and nothing infers permission to run it from the fact that the stop
 report mentions it.
 
 **No second pull request is opened in any discrepancy class.** That is the single
-invariant the three discrepancy rows share, and it is why each of them stops
-rather than falling through to creation.
+invariant the discrepancy rows share, and it is why each of them repairs or
+stops rather than falling through to creation. **Only a row that names another
+pull request than the branch's one open pull request repairs.** A closed,
+merged, or absent recorded pull request never does.
 
-**All three discrepancies end the attempt at create-or-refresh** — after
+**Every stopping discrepancy ends the attempt at create-or-refresh** — after
 generation, after the stage-boundary commit, and after the push. Never earlier.
 Ending earlier would strand the durable discrepancy line: that line is written at
 stage resolution, and it reaches version history only inside a commit this stage
 goes on to take. A run that stopped before its own boundary commit would discard
 the very record of why it stopped.
 
-**This is fail-open.** A discrepancy does not invoke the strict-mode blocked-stop
-contract, does not mark the gate blocked, and does not change the resolved stage.
-The stage did everything it could and reports what it found.
+**This is fail-open at the stage.** A discrepancy does not invoke the strict-mode
+blocked-stop contract, does not mark the gate blocked, does not change the
+resolved stage, and never stops stage resolution at Step 0.6c. The stage did
+everything it could and reports what it found. A discrepancy ends only this
+create-or-refresh attempt, and the Phase 7 corroboration gate below applies the
+same repair and the same stops, so both call sites read one policy.
 
 **The two reads are separate, and the later one is the current evidence.** The
 observation Step 0.6c takes at resolution and the existence query the terminal
@@ -1826,13 +1832,22 @@ After an amendment is committed and pushed, invalidate that private session.
 Capture the next comment against a fresh exact `HEAD`; never reuse a snapshot
 or receipt across amendment commits.
 
-**Stop for human re-review before artifact regeneration.** Preserve the
-one-artifact amendment commit, separate bookkeeping commit, deterministic
-reply, push, and re-review stop. Do not dispatch `artifact-author`, regenerate
-pages, refresh the pull-request description, or run any broader agent in that
-amendment run. **On a later resumed run**, the durable sweep row excludes the
-handled comment; then the ordinary freshness join may regenerate artifacts and
-refresh the pull request before task work.
+**Regenerate after an amendment in a fresh isolated worker; do not stop for
+re-review.** Preserve the one-artifact amendment commit, separate bookkeeping
+commit, deterministic reply, and push. Then invalidate the private session and
+run the regeneration sequence below. Its only page-authoring dispatch is a
+fresh `speckit-pro:artifact-author` worker that receives only committed bytes:
+the planning record and the shipped gallery at the pushed `HEAD`. Those already
+carry this run's amendment commits, so their committed diff is the only
+amendment text it can see. No comment text, classifier reason, session state,
+receipt, or capability reaches it. **List every amended comment in the final
+report** by comment id, class, artifact, and amending commit. **Keep the
+isolation-unavailable stop**: when the isolation boundary cannot be
+established, or the private session cannot be invalidated, stop with
+`stop_reason:integrity_failure` before any regeneration. A later resumed run
+still repairs pages a failed regeneration left stale, because the durable
+sweep row excludes the handled comment and the freshness join reads the same
+`amended` rows.
 
 #### Phase 7 Setup: The Run Report Every Path Builds
 
@@ -1854,9 +1869,8 @@ commit, no row, no reply" reads as a fact an operator can act on.
 
 **The what-already-landed part also carries one outcome line per page**, each
 reading `generated`, `gap`, or `removed`, with every gap naming what was
-missing and why. These lines belong to the shared shape, not to the
-amended-leg bullet below alone, because the freshness evaluation runs on every
-leg, the recovery leg included.
+missing and why. These lines belong to the shared shape, because the freshness
+evaluation runs on every leg, the recovery leg included.
 
 **Two run-level lines sit beside them**: the regeneration commit's short sha,
 and the outcome of the description refresh. A failure's manual resume path
@@ -1908,8 +1922,8 @@ manual resume path, and the resume-path part below names which one.
 
 **An `undeterminable` verdict is reported and acted on nowhere else.** It
 triggers no regeneration, no refresh, and no commit, and it moves the
-stop-or-proceed decision in neither direction — on a sweep that amended, the
-re-review stop still fires on its own independent ground. The report names the
+stop-or-proceed decision in neither direction, on a sweep that amended or on
+any other. The report names the
 verdict, each affected row's `#` and its reason, and the operator's manual
 resume path, through the run report **alone**: the three sinks do not apply,
 because no regeneration occurred to produce a shortfall for them to carry.
@@ -1957,25 +1971,27 @@ naming its absolute location.
 reaches, and never to the pull request.
 
 **The conditions that end a run in this sequence** are an invalid
-authenticated account, a corroboration status that is neither `match` nor
-`no_record` or one outside the six, a failed observation, an unreadable
-Feedback Sweep Log row, an unavailable isolation boundary, a malformed or
-non-receipt model result, a refused receipt mutation, a failed push, and
-one or more amendments requiring re-review. The final condition is not a
-failure. A consensus item that no round settles is not on this list: it takes
-the Round 3 tiebreak below and never ends a run.
+authenticated account, a corroboration status of `pr_closed` or `pr_missing`,
+an `identity_mismatch` that names no repair, a status outside the six, a failed
+observation whose tool or authentication is absent, an unreadable Feedback
+Sweep Log row, an unavailable isolation boundary, a malformed or non-receipt
+model result, a refused receipt mutation, and a failed amendment push. An
+amendment is not on this list, and neither is a rate limit or an unparseable
+answer: those retry, and a spent retry schedule ends only the sweep. A
+consensus item that no round settles is not on this list either: it takes the
+Round 3 tiebreak below and never ends a run.
 
 **The failed push in that list is the amendment push above.** The
-regeneration sequence's own artifacts push ends the run only on the leg that
-amended; on the leg that amended nothing it is reported and the run proceeds,
-so it is not among the conditions this list names. The member names the
-amendment push and no other.
+regeneration sequence's own artifacts push is reported and the run proceeds on
+every leg, so it is not among the conditions this list names. The member names
+the amendment push and no other.
 
 **A failed description refresh names its resume path per stopping status**,
 one line per status rather than one shared line, for the reason the
 corroboration gate below already gives: the stopping statuses have different
 fixes, and one shared path would send an operator to the wrong repair.
-`skipped` names fixing the tool. `pr_closed` names reopening the pull request.
+`skipped` names installing or authenticating the tool. `pr_closed` names
+reopening the pull request.
 `pr_missing` names correcting or clearing the `Draft PR` row. A refresh that
 failed against a reachable pull request names refreshing the description
 directly, outside the automated sequence. Neither `pr_closed` nor `pr_missing`
@@ -2008,28 +2024,42 @@ evidence.
 | --- | --- | --- |
 | `match` | sweep | none, the run proceeds |
 | `no_record` | proceed without sweeping | none, the run proceeds |
-| `skipped` | stop | fix the tool, then re-run |
-| `pr_closed` | stop | reopen the pull request, or clear the `Draft PR` row if the checkpoint is genuinely abandoned, then re-run |
-| `pr_missing` | stop | clear the row, then re-run |
-| `identity_mismatch` | stop | correct the row to name the right pull request, then re-run |
+| `skipped` | retake the observation with backoff, then run `gh auth status`; stop only when `gh` or its authentication is absent | install or authenticate `gh`, then re-run |
+| `pr_closed` | stop with `stop_reason:reopen_closed_pr` | reopen the pull request, or clear the `Draft PR` row if the checkpoint is genuinely abandoned, then re-run |
+| `pr_missing` | stop with `stop_reason:ambiguous_pr_record` (no open pull request is left to repair the row to) | clear the row, then re-run |
+| `identity_mismatch` with `corroboration.repair` set | repair the row, then sweep as on `match` | none, the run proceeds |
+| `identity_mismatch` with `corroboration.repair` null | stop with `stop_reason:ambiguous_pr_record` (several open pull requests answer for the branch) | correct the row to name the right pull request, then re-run |
 
-**Each stopping status names its own resume path**, because the four have
+**Each stopping status names its own resume path**, because the stops have
 different fixes and one shared path would send an operator to the wrong repair.
 **Clearing the row belongs to `pr_missing` alone**: it is the one status where
-the row's absence would match reality.
+the row's absence would match reality. **Reopening a closed pull request stays
+a human call**: nothing here runs `gh pr reopen`, and no repair applies to
+`pr_closed`.
 
-**The sweep never writes the `Draft PR` row on any path**, these four stops
-included. A run that repaired the record it had just failed to corroborate
-would destroy the evidence of the discrepancy, and the next reader would find a
-healthy row where a stop had been.
+**Repair the row when exactly one open pull request answers for the branch.**
+The runner names that pull request in `corroboration.repair` (its number and
+URL). It counts open entries across the whole observation, never the entry it
+happened to reach first, so two open pull requests leave `repair` null. Rewrite
+the `Draft PR` cell to that number and URL through the emission machinery's
+single writer (its "Repaired, not skipped" rule), keep any gap note as found,
+and take that machinery's record commit. Then treat the status as `match`, and
+report both identities, the one recorded and the one now recorded, as a
+run-level line.
+
+**The sweep never writes the `Draft PR` row itself on any other path.** A run
+that rewrote the record of a closed, missing, or ambiguous pull request would
+destroy the evidence of the discrepancy, and the next reader would find a
+healthy row where a stop had been. The repair keeps that evidence: Step 0.6c
+has already recorded the discrepancy line durably, and the report names both
+identities.
 
 **That invariant is about the sweep's own writes.** The description refresh
 below changes the `Draft PR` cell through the emission machinery, which keeps
 exactly one writer; the sweep supplies only the trigger and the timing, and
-the commit carrying that change is the machinery's own record commit. The
-invariant holds through the refresh: it exists so a run cannot repair a record
-it just failed to corroborate, and the refresh is reached only after an
-entry-gate `match`.
+the commit carrying that change is the machinery's own record commit. The row
+repair above and the refresh share that writer, so the row never has a second
+one.
 
 **A value outside the six is a malformed record and stops.** Do not map it onto
 one of the six, and do not read it as absence. Exactly one status proceeds, so
@@ -2040,33 +2070,46 @@ the checkpoint.
 `no_record` means the gate **does not apply**: no draft pull request was ever
 opened, so there is no checkpoint to carry unread feedback, and the run
 proceeds. `skipped` means the gate **applies and could not be evaluated**: a row
-is recorded and the observation behind it failed, so the run stops. Treating
-"could not observe" as "observed nothing" would make the checkpoint silently
-optional exactly when the tool is unreliable, which is when unread feedback is
-most likely to be sitting on the pull request.
+is recorded and the observation behind it failed. Treating "could not observe"
+as "observed nothing" would make the checkpoint silently optional exactly when
+the tool is unreliable, so a `skipped` is never read as `no_record`, and the
+report says the sweep did not run.
 
 **A tool that was absent, unauthenticated, rate-limited, or that returned output
 which could not be parsed is not evidence that a recorded pull request is
 gone.** Those four are the causes of a `skipped`, and not one of them observed
 anything about the pull request.
 
-**The `skipped` report must read differently from the three discrepancy stops,
-and must name which of the four causes occurred**: the tool was absent, the tool
+**Retry before a `skipped` stands, and let the cause decide.** Retake the
+observation up to four times, waiting 2, 8, and 30 seconds between attempts
+(the schedule the runner's own GitHub reads use), when `gh` reports a rate
+limit, times out, or returns output that cannot be parsed. Retake a parse
+failure as a whole observation; never patch it. Then run `gh auth status`.
+**Only an absent tool or absent authentication stops the run**: `gh` is not
+installed, or `gh auth status` fails. Both name `stop_reason:tool_unavailable`,
+because installing a tool or signing in is a run-start grant, not an agent
+power. **Retries spent on a rate limit or unparseable output, with `gh`
+installed and authenticated, do not stop the run.** Take the sweep as not run:
+proceed into task work without sweeping, and put the cause in the run report
+and under "Decisions for you" in the end-of-run request. The next run's Step
+0.6c observes again.
+
+**The `skipped` report must read differently from the discrepancy stops, and
+must name which of the four causes occurred**: the tool was absent, the tool
 was unauthenticated, the tool was rate-limited, or the tool returned output that
-could not be parsed. Those three stops observed something and this one observed
-nothing, so a report that read the same would tell an operator the record is
-wrong when the record may be perfectly correct. **Behaviour does not branch on
-the cause; only the report does.** All four take the same stop and the same
-resume path.
+could not be parsed. The discrepancy stops observed something and this one
+observed nothing, so a report that read the same would tell an operator the
+record is wrong when the record may be perfectly correct.
 
 **Clearing the `Draft PR` row is not a resume path here.** That belongs to
 `pr_missing`, and reusing it for a `skipped` would erase a probably-true record
 to manufacture a `no_record` reading on the next run.
 
-**Every one of these paths reports.** A gate stop's condition is the status
+**Every one of these paths reports.** A gate outcome's condition is the status
 and, for `skipped`, its cause. Nothing landed, because the gate is evaluated
-ahead of the first read and therefore ahead of every write. The resume path is
-the one the table above gives.
+ahead of the first read and therefore ahead of every write; the one exception
+is a row repair's record commit. The resume path is the one the table above
+gives.
 
 **Read the authenticated account from the live session, at call time.** The
 sweep excludes the replies it posted itself, and the author half of that rule
@@ -2099,19 +2142,30 @@ when both surfaces have been read to exhaustion. Three failures fall under the
 rule: one surface readable and the other not, a page failing partway through
 pagination, and output that cannot be parsed. **A failed observation is
 discarded rather than swept.** The partial data does not reach classification.
-The run writes zero log rows, posts zero replies, takes zero commits, and
-stops. Nothing needs unwinding, because every read precedes every write.
+The run writes zero log rows, posts zero replies, and takes zero commits.
+Nothing needs unwinding, because every read precedes every write.
 
-**The mid-read failure report is not the gate stop, and must not read like
+**The runner retries before it fails.** Each `gh api` read retries a rate
+limit, a timeout, a server error, and unparseable output on the same 2, 8, and
+30 second schedule. A failure `gh` names no cause for is not retried: the
+runner runs `gh auth status` instead. **Branch on the `reason` the capture
+surface returns** in its `{"status": "blocked", "reason": ...}` envelope (exit
+3). `gh_unavailable` and `gh_not_authenticated` stop with
+`stop_reason:tool_unavailable`. `rate_limited`, `malformed_output`, and
+`observation_failed` do not stop the run: they end this run's sweep, so
+proceed into task work and report the reason as the `skipped` outcome above
+does. `isolation_boundary_unavailable` is the isolation stop and names
+`stop_reason:integrity_failure`.
+
+**The mid-read failure report is not the gate outcome, and must not read like
 it.** It draws on the same four causes the gate's `skipped` draws on: the tool
 was absent, the tool was unauthenticated, the tool was rate-limited, or the tool
 returned output that could not be parsed. So the report **also names that
 reading had begun** and **which surface failed**, because an operator who cannot
 tell a gate failure from a mid-read failure cannot tell whether the pull request
 was ever reachable. Nothing landed, for the same reason nothing landed at the
-gate: every read precedes every write. The resume path is the same as the
-gate's `skipped`, fix the tool and re-run, and needs no repair step first,
-because the observation is retaken fresh on every invocation.
+gate: every read precedes every write. The resume path needs no repair step
+first, because the observation is retaken fresh on every invocation.
 
 **One isolated classifier process per candidate, and no body transport.**
 Iterate only the metadata returned by private capture. An `empty` route takes
@@ -2276,8 +2330,8 @@ idempotency.
 #### Phase 7 Setup: Amending, Committing, and Pushing
 
 **One commit per amendment, never one run-wide commit.** A log row names its
-commit, an `amended` reply names the amending commit, and the re-review stop
-reports a commit range. None of the three survives collapsing every amendment
+commit, an `amended` reply names the amending commit, and the final report
+lists a commit range. None of the three survives collapsing every amendment
 into a single blob.
 
 **Each amendment commit stages exactly the one artifact path it amended, never
@@ -2453,9 +2507,9 @@ interrupt case exact rather than ambiguous. A run interrupted after two rows
 were written, with one amendment commit local and unpushed, has posted
 **zero** replies.
 
-**Which stops post replies is named rather than inferred.** The re-review
-stop occurs **after** the reply point, so a run that reaches it
-has already posted every reply it owes. Every boundary, capture, schema,
+**Which stops post replies is named rather than inferred.** The regeneration
+sequence runs **after** the reply point, so a run that reaches it has already
+posted every reply it owes. Every boundary, capture, schema,
 receipt, mutation, or push failure aborts before the reply point and posts
 none.
 
@@ -2507,7 +2561,7 @@ tests that field for the literal `false` and has no branch of its own for this
 case, so a `null` or an omitted field reads as *not stale* and the run leaves
 the pages alone. That is the interrupted-run case exactly — pages written and
 never committed — and getting it wrong puts the pre-amendment plan back in
-front of the re-reviewer, which is the outcome this whole sequence exists to
+front of the reviewer, which is the outcome this whole sequence exists to
 prevent.
 
 **The helper refuses an observation whose shape is wrong:** an absent or non-array
@@ -2526,13 +2580,15 @@ failed gather, still yields `undeterminable`, and still never blocks the run.
 Treat an exit 2 here as the orchestrator's own defect and fix the gather; do not
 retry it and do not route it into the report as a freshness outcome.
 
-**This sequence is unreachable in a run that made an amendment.** That run
-stops for human re-review immediately after its amendment, bookkeeping, reply,
-and push cadence. On a later resumed run with no new amendment, a `stale`
-verdict regenerates through the installed `artifact-author` agent:
+**A run that made an amendment runs this sequence after its amendment,
+bookkeeping, reply, and push cadence.** Its `amended` rows are not ancestors of
+the last artifacts commit, so the verdict is `stale` by construction. A later
+resumed run runs it the same way when its verdict is `stale`.
+A `stale` verdict regenerates through the installed `artifact-author` agent:
 
 ```text
-0. Confirm this run made no amendment.
+0. Invalidate the private sweep session, and confirm every amendment commit is
+   pushed.
 1. Evaluate freshness through the `verdict` surface.
 2. On `stale`, one `spawn_agent` call on `artifact-author` against the committed
    planning record, then a bounded `wait_agent` loop until its outcome list
@@ -2554,8 +2610,14 @@ dispatch above does, and hand it the same inputs: the feature's planning
 record and the shipped gallery. Codex resolves it from the installed agent
 bundle, so it carries no namespace prefix.
 
-**Step 0 is a security boundary.** It keeps every broader agent and generated
-artifact consumer out of the run that received model-produced amendment text.
+**Step 0 is a security boundary.** The `artifact-author` worker in step 2 is
+fresh. Its inputs are the committed planning record and the shipped gallery at
+the pushed `HEAD`, which already carry the committed diff of the amendment
+commits, and nothing else. Model-produced amendment text reaches it only as
+committed bytes, never as comment text, classifier reason, session state, or
+receipt, and it never runs while a private session is live. A worker that
+cannot be launched inside that boundary is the isolation-unavailable stop,
+`stop_reason:integrity_failure`.
 
 **Re-selection reads the shipped gallery manifest against the amended
 record**, never the page list the previous run happened to produce. A run that
@@ -2566,26 +2628,26 @@ partially updated, and there is no second page-authoring path: the dispatch,
 its per-page `generated` and `gap` outcomes, and its on-disk verification are
 the ones the draft-PR emission sequence above describes.
 
-#### Phase 7 Setup: Freshness Runs Only After an Amendment-Free Sweep
+#### Phase 7 Setup: Freshness Runs on Every Sweep Leg
 
-**Do not evaluate freshness in a run that made an amendment.** The re-review
-stop comes first. Evaluate the verdict on every amendment-free sweep leg,
-including the leg that handles no comment, so a later resumed run repairs pages
-left stale by the prior amendment.
+**Evaluate freshness on every sweep leg, amending or not.** An amending run
+evaluates the verdict once its amendment commits are pushed and its private
+session is invalidated. The leg that handles no comment evaluates it too, so a
+later resumed run still repairs pages a failed regeneration left stale.
 
 **The evaluation runs inside the sweep, so the entry gate scopes it.** It is
 reached only on corroboration status `match`. On `no_record` the sweep does
-not run and there is no pull request to refresh. On the four statuses that
-stop the sweep no evaluation occurs and stale pages stay stale.
+not run and there is no pull request to refresh. On every status that stops
+the sweep or leaves it unrun, no evaluation occurs and stale pages stay stale.
 
 **That is a deferral, not a lost repair.** The join is durable and reads the
 same `amended` rows on the first `match` run after the operator resolves the
 gate, so the repair happens there.
 
-**On a `stale` verdict the leg that amended nothing regenerates, refreshes,
-and then proceeds without stopping.** Repairing stale pages never converts a
-proceed into a stop. Nothing new was amended, so there is nothing new to
-re-review.
+**On a `stale` verdict every leg regenerates, refreshes, and then proceeds
+without stopping.** Repairing stale pages never converts a proceed into a stop.
+An amendment does not hold the run for a human either: the final report lists
+the amended comment instead.
 
 #### Phase 7 Setup: The Superseded File Behind a Per-Page Gap
 
@@ -2752,12 +2814,13 @@ already applies between its own push and its create-or-refresh step.
 
 **The leg decides what happens next.**
 
-- **On a sweep that amended**, a failed push **stops the run immediately**.
-  The re-review stop's pull request has to already show current pages, and it
-  does not.
+- **On a sweep that amended**, a failed push does **not** stop the run. The
+  amendment commits are already on the remote, so a reviewer already sees the
+  amendment. The local artifacts commit stands and rides up with the branch's
+  next push, and the report lists the amended comment beside the failure.
 - **On a leg that amended nothing**, a failed push does **not** convert the
-  proceed into a stop. The local commit stands and rides up with the branch's
-  next push.
+  proceed into a stop either. The local commit stands and rides up with the
+  branch's next push.
 
 **On both legs the condition is unrecoverable by any later sweep, and the
 report says so.** The commit is local and complete, so the join reads the
@@ -2789,9 +2852,11 @@ existence test cannot produce.
 `corroborate_refresh` surface of the same helper registration — so each status
 takes the behaviour the create-or-refresh contract above already assigns it at
 its terminal step: `match` refreshes the recorded pull request's description;
-`pr_closed`, `pr_missing`, and `identity_mismatch` each end the refresh
-attempt, create nothing, and leave the `Draft PR` row exactly as found. **No
-status opens a second pull request.** The remaining two are the subject of the
+an `identity_mismatch` with `corroboration.repair` set repairs the row through
+the emission machinery's writer and then refreshes that pull request;
+`pr_closed`, `pr_missing`, and an `identity_mismatch` with no repair each end
+the refresh attempt, create nothing, and leave the `Draft PR` row exactly as
+found. **No status opens a second pull request.** The remaining two are the subject of the
 section below.
 
 #### Phase 7 Setup: Two Statuses That Cannot Classify Here
@@ -2825,13 +2890,15 @@ proceed into task work.
 
 #### Phase 7 Setup: Stop or Proceed
 
-**One or more `amended`: stop for re-review before any task work.** Its
-what-landed part names the comments swept, the amendments made, and the commit
-range.
+**One or more `amended`: regenerate and refresh through the fresh isolated
+worker, then proceed into task work.** Its what-landed part names the comments
+swept, the amendments made, and the commit range, and the final report lists
+each amended comment by id, class, artifact, and amending commit. A human
+still reviews the amendment on the pull request, and nothing waits for them.
 
 **No `amended` but at least one comment handled: write the records, post the
 replies, and proceed directly into task execution**, without stopping. Nothing
-was amended, so there is nothing to re-review.
+was amended, so the final report lists no amended comment.
 
 **No comment handled at all: no rows, no replies, no bookkeeping commit,
 proceed.** This case is stated apart from the one above so that the one above

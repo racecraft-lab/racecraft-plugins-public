@@ -1001,7 +1001,7 @@ class FeedbackSweepBehaviorTest(unittest.TestCase):
                 result = read_only.corroborate_draft_pr(recorded, observation)
                 self.assertEqual(result["status"], status)
                 self.assertEqual(
-                    set(result), {"status", "recorded", "observed", "merged", "reason"}
+                    set(result), {"status", "recorded", "observed", "merged", "reason", "repair"}
                 )
         closed = read_only.corroborate_draft_pr(
             row,

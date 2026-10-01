@@ -297,6 +297,13 @@ ORCHESTRATION_REQUIRING_TEXT["functional.speckit-autopilot.run-start-grant"] = (
     ("speckit-pro/skills/speckit-autopilot/references/prerequisites.md",
      "print the allow rules for the probe that failed, once, and stop before any phase work"),
 )
+ORCHESTRATION_REQUIRING_TEXT["functional.speckit-autopilot.sweep-keeps-running"] = tuple(
+    (PHASE_EXECUTION, rule) for rule in (
+        "Regenerate after an amendment in a fresh isolated worker; do not stop for re-review.",
+        "Retry before a `skipped` stands, and let the cause decide.",
+        "Repair the row when exactly one open pull request answers for the branch.",
+    )
+)
 ORCHESTRATION_IDS = set(ORCHESTRATION_REQUIRING_TEXT)
 # Native-only scaffold cases for the spec-scoped reviewability setup gate. The
 # staged roadmap puts the over-budget target first and a small entry last, so a
@@ -399,6 +406,7 @@ ORCHESTRATION_FAILURE_PHRASES = {
     "functional.speckit-autopilot.clarify-answer-provenance": "consensus answer as a human answer",
     "functional.speckit-autopilot.progress-projection-mid-run": "summary rows as an acceptable projection",
     "functional.speckit-autopilot.rescope-reconciliation": "accepts the rescoped plan.md alone",
+    "functional.speckit-autopilot.sweep-keeps-running": "stops for human re-review after an amendment",
     "functional.speckit-autopilot.run-start-grant": "asks once per probe",
     "functional.speckit-autopilot.deferred-decision-ready-stack": "keeps the stack in draft over the exhausted unit",
     "functional.speckit-autopilot.gate-failure-defers": "offers skip-and-log or a stop as an option",
@@ -1048,6 +1056,28 @@ def _derive_rescope_answers(read: Callable[[str], str], sources: dict[str, Path]
     }
 
 
+def _derive_sweep_answers(read: Callable[[str], str]) -> dict:
+    """The sweep's next action in each recorded situation, from the facts alone."""
+    situations = json.loads(read("scenario-inputs/sweep-situations.json"))
+    amendment = situations["amendment"]
+    failures = {row["id"]: row for row in situations["observation_failures"]}
+    rows = {row["id"]: row["corroboration"] for row in situations["draft_pr_rows"]}
+
+    def absent(failure: dict) -> bool:
+        # Only an absent tool or absent authentication stops a run.
+        return not (failure["gh_installed"] and failure["gh_authenticated"])
+
+    return {
+        "amended_run_stops_for_review": not (amendment["pushed"] and amendment["isolation_boundary_available"]),
+        "amended_comment_in_final_report": amendment["class"] == "amended",
+        "rate_limit_after_retries_stops": absent(failures["rate-limited"]),
+        "unauthenticated_stop_reason": "tool_unavailable" if absent(failures["not-authenticated"]) else None,
+        "sole_open_pull_request_action": "repair_row" if rows["sole-open"]["repair"] else "stop",
+        "two_open_pull_requests_stop_reason": None if rows["two-open"]["repair"] else "ambiguous_pr_record",
+        "closed_pull_request_stop_reason": "reopen_closed_pr" if rows["closed"]["status"] == "pr_closed" else None,
+    }
+
+
 def _derive_orchestration_answers(case: dict) -> dict:
     """Derive every graded response field from the staged evidence alone."""
     sources = {row["destination"]: REPO_ROOT / row["source"] for row in case["fixtures"]}
@@ -1087,6 +1117,8 @@ def _derive_orchestration_answers(case: dict) -> dict:
         return _derive_projection_answers(read, sources)
     if scenario == "rescope-reconciliation":
         return _derive_rescope_answers(read, sources)
+    if scenario == "sweep-keeps-running":
+        return _derive_sweep_answers(read)
     if scenario == "run-start-grant":
         return _derive_run_start_answers(read)
     if scenario == "deferred-decision-ready-stack":
