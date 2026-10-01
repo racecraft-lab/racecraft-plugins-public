@@ -1085,7 +1085,7 @@ class ValidateScaffoldBlindSpotDeadline(unittest.TestCase):
                 self.assertIn('N. **<Title>** - the finding, plus a repo-relative file or path pointer.', block)
         seconds = int(re.search(r'\*\*(\d+) minutes from dispatch\*\*', claude).group(1)) * 60
         with self.subTest(host='claude', check='timer armed at dispatch'):
-            self.assertRegex(claude, r'Bash\(run_in_background: true, command: "<resolved_python> -c \'import time; time\.sleep\(' + str(seconds) + r'\)\'"\)')
+            self.assertIn(f'background command (`run_in_background: true`) that runs `[resolved_python, "-c", "import time; time.sleep({seconds})"]`', claude)
             self.assertIn('Arm the deadline in the same turn as the dispatch', claude)
         with self.subTest(host='claude', check='deadline stops the analyst'):
             self.assertIn('**The timer completes first:** the deadline has passed. Stop the analyst with `TaskStop` on its task id', claude)

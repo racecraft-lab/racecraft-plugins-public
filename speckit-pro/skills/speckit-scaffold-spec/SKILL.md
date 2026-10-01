@@ -413,18 +413,19 @@ BEFORE the interview begins:
 ```text
 Agent(subagent_type: "speckit-pro:codebase-analyst", run_in_background: true,
       prompt: "...\nReference dir: ${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/")
-Bash(run_in_background: true, command: "<resolved_python> -c 'import time; time.sleep(300)'")
 ```
 
 The await is not optional: the Claude agent definition carries
 `background: true`, so an un-awaited dispatch hands back a task identifier
 rather than findings.
 
-**Arm the deadline in the same turn as the dispatch.** The second call is the
-deadline timer: a background command that exits 300 seconds (the pass
-execution deadline below) after dispatch. Its completion notice wakes the
-session while the analyst is still running; nothing else would. Keep both task
-ids, then act on whichever completion notice arrives first:
+**Arm the deadline in the same turn as the dispatch.** Start the deadline timer
+as a background command (`run_in_background: true`) that runs
+`[resolved_python, "-c", "import time; time.sleep(300)"]`, the same resolved
+interpreter the runner uses. It exits 300 seconds (the pass execution deadline
+below) after dispatch, and its completion notice wakes the session while the
+analyst is still running; nothing else would. Keep both task ids, then act on
+whichever completion notice arrives first:
 
 - **The analyst replies first:** stop the timer with `TaskStop` on its task id,
   so a stale wake cannot land mid-interview, then classify the reply below.
