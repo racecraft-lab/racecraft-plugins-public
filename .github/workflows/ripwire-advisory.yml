@@ -1,0 +1,57 @@
+# Ripwire Advisory — reports ripwire layering, quality-delta, and doc-drift
+# results on pull requests without blocking them.
+#
+# Advisory only. This is not a required check and must never become one:
+# no check may depend on ripwire (AGENTS.md). Both steps use
+# continue-on-error, and the report step exits 0 on findings, so the job
+# passes and the results land in the job summary and as warnings.
+#
+# scripts/install-ripwire.py pins the ripwire version and the SHA-256 of each
+# Linux release archive, and verifies the download before extracting it.
+#
+# Security notes:
+# - pull_request, not pull_request_target: a fork PR gets a read-only token
+#   and no secrets. The job uses no secrets and no token.
+# - BASE_SHA is passed via env, never interpolated in a run: block.
+
+name: Ripwire Advisory
+run-name: "Ripwire Advisory #${{ github.event.pull_request.number }}"
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  ripwire-advisory:
+    name: ripwire-advisory
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.event.pull_request.draft == false
+    permissions:
+      contents: read
+
+    steps:
+      # Full history, so the merge-base with the PR base is available for
+      # --quality-delta. Check out the PR head, not the synthetic merge commit.
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install pinned ripwire
+        continue-on-error: true
+        run: python3 scripts/install-ripwire.py install
+
+      - name: Report ripwire results
+        continue-on-error: true
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: python3 scripts/install-ripwire.py report

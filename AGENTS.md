@@ -83,10 +83,12 @@ scoped `AGENTS.md`; Codex loads one only when started inside that directory.
 | typesafe-jev | Go source and Go tests in `typesafe-jev/cmd/evaluate/`; shipped plugin in `typesafe-jev/plugin/`; `python3 scripts/check-go-module.py check` runs its CI checks |
 
 Two optional tools save reading and tokens; work on without them, and no check
-may depend on either. With `ripwire` on PATH (one argument per flag), run
-`ripwire . --for="<task>"` first, `--callers=SYM` and `--impact=SYM` before a
-change, and `--quality-delta=$(git merge-base origin/main HEAD)..HEAD` before a
-PR; confirm its graph with a read. Committed ripwire config: `.ripwire_arch_rules`
+may depend on either. The `ripwire-advisory` PR job reports ripwire results
+but never blocks: it is not a required check and passes on findings. With
+`ripwire` on PATH (one argument per flag), run `ripwire . --for="<task>"`
+first, `--callers=SYM` and `--impact=SYM` before a change, and
+`--quality-delta=$(git merge-base origin/main HEAD)..HEAD` before a PR;
+confirm its graph with a read. Committed ripwire config: `.ripwire_arch_rules`
 (intended layering) with `.ripwire_arch_baseline` (today's debt), checked by
 `ripwire . --arch=.ripwire_arch_rules` (exit 2 means a new violation), and
 `.ripwire_notes` (field notes that `--for` surfaces). Never re-baseline to hide a
@@ -112,6 +114,7 @@ Run from the repository root (Python 3.11+, Node >= 22.12 for docs).
 | Container preflight: Linux containers rerun the suite when runner, test, or workflow paths change | CI only; its extra requests (`LINUX_REQUESTS` in `tests/speckit-pro/run-container-preflight.py`) also run locally | `container-preflight-linux-amd64`, `-arm64` (yes) |
 | Python lint: ruff F, B, and BLE rules (`ruff.toml`); mypy over the `mypy.ini` allowlist (add a module once it passes) | In a virtual environment, `python3 scripts/run-python-lint.py install ruff`, then `run ruff`; the same for `mypy` | `python-lint` (no; built to be required), `mypy-ratchet` (no) |
 | Workflow lint | `actionlint` at the version pinned in `pr-checks.yml`, from the repository root. The CI installer (`scripts/install-actionlint.py`) fetches a Linux amd64 binary only | `validate-workflows` (no; it also checks release-PR ancestry, CI only) |
+| Ripwire advisory: `--arch`, `--quality-delta` from the merge-base, and `--doc-drift`, reported in the job summary | CI only; `scripts/install-ripwire.py` pins one Linux release by SHA-256. Locally, run the `ripwire .` commands above | `ripwire-advisory` (no; advisory, never required) |
 
 ## Worktree Preflight
 
