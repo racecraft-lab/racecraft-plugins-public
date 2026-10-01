@@ -11,7 +11,7 @@
     "quint": {
       "version": "0.32.0",
       "root": ".specify/tools/formal/quint-0.32.0",
-      "tree_sha256": "ad2b0a994292da8dcf69ef33d26a95bdfec609a1250615251789543b6cef342f",
+      "tree_sha256": "33f85324237f59253667cd3afcf716578eb26fec7dda7db87e0fe84695900f2b",
       "node": "node"
     }
   },
