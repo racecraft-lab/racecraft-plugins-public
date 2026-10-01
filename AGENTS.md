@@ -50,15 +50,17 @@ lowest future cost in this repository, and name the trade-off in the commit.
 
 ### Layers
 
-Each file does one kind of work. Name the layer of the file you edit.
+Each file does one kind of work. Name the layer of the file you edit. Plugin
+paths are relative to `speckit-pro/` and `typesafe-jev/`; repository paths are
+relative to the root.
 
-| Layer | speckit-pro | typesafe-jev |
-| --- | --- | --- |
-| Policy: decides | `speckit_pro_runner/` modules and `gates/` | Go code in `cmd/evaluate/` |
-| Contract: states a shape | `speckit_pro_runner/contracts/` schemas, plugin manifests | plugin manifests, `plugin/.mcp.json` |
-| Guidance: tells an agent what to do | `skills/`, `agents/`, `codex-agents/`, references, hook messages | `plugin/shared-skills/` |
-| Glue: dispatches | `hooks/`, `codex-hooks.json`, `helpers/registry.py`, `scripts/`, workflows | `plugin/scripts/`, workflows |
-| Proof | `tests/speckit-pro/` | `*_test.go` |
+| Layer | speckit-pro | typesafe-jev | Repository |
+| --- | --- | --- | --- |
+| Policy: decides | `speckit_pro_runner/` modules and `gates/` | `cmd/evaluate/` request, backend and update logic (`validation.go`, `config.go`, `fallback.go`, `update.go`) | release and check logic in `scripts/` |
+| Contract: states a shape | `speckit_pro_runner/contracts/` schemas, plugin manifests | MCP tool schema in `cmd/evaluate/tools.go`, exit codes in `cmd/evaluate/call.go`, plugin manifests, `plugin/.mcp.json` | marketplace manifests, `release-please-config.json` |
+| Guidance: tells an agent what to do | `skills/`, `agents/`, `codex-agents/`, references, hook messages | `plugin/shared-skills/`, tool descriptions | `AGENTS.md`, `REVIEW.md`, `docs-site/` |
+| Glue: dispatches | `hooks/`, `codex-hooks.json`, `speckit_pro_runner/helpers/registry.py`, `scripts/` | `cmd/evaluate/main.go`, `plugin/scripts/` | `.github/workflows/`, dispatch scripts |
+| Proof | `tests/speckit-pro/` | `cmd/evaluate/*_test.go` | `tests/speckit-pro/layer1-structural/`, including `validate-typesafe-jev-metadata.py` |
 
 ### Principles
 
@@ -75,17 +77,22 @@ Each file does one kind of work. Name the layer of the file you edit.
 - **Single responsibility:** if you describe a unit with "and", split it. Names
   say intent; comments say why.
 - **Depend on contracts:** policy takes and returns plain values (dicts,
-  dataclasses, JSON). It never parses guidance prose to learn a rule.
+  dataclasses, Go structs, JSON). It never parses guidance prose to learn a
+  rule.
 - Composition over inheritance · open/closed only where change has happened
   twice · Law of Demeter · fail fast at the edges, never swallow errors ·
-  optimize for deletion · boring tech (the standard library first).
+  optimize for deletion · boring tech (each language's standard library
+  first).
 
 ### Hard invariants
 
 1. **One owner per domain.** Each domain lives in one module, with one doc when
-   it has rules, and everything else calls it. Examples: `stop_policy.py` with
-   `references/stop-policy.md`, `host_skills.py`, `formal/pins.py`,
-   `canonical_json.py`, `scripts/pinned_archive.py`. Consolidate a scattered
+   it has rules, and everything else calls it. Examples: in `speckit-pro`,
+   `stop_policy.py` with `references/stop-policy.md`, `host_skills.py`,
+   `formal/pins.py` and `canonical_json.py`; in `typesafe-jev`,
+   `validation.go` for the one request shape both backends take and
+   `config.go` for backend specs; repository-wide, `scripts/pinned_archive.py`
+   for pinned downloads. Consolidate a scattered
    domain before adding to it. Extend the owner; a new module needs a stated
    reason the owner cannot hold it. A function-level import that dodges a
    cycle, or a new `.ripwire_arch_rules` violation, means the logic sits in
@@ -96,8 +103,9 @@ Each file does one kind of work. Name the layer of the file you edit.
    the move switches all of them, or the commit names each one left and why. A
    new helper beside old copies is one more copy. Each caller keeps its exact
    results; any behavior change is its own commit. The same holds across hosts:
-   one shared skill with host blocks, rendered by `host_skills.py`, never a
-   Codex copy.
+   each plugin keeps one skill source for Claude and Codex (`speckit-pro`
+   renders host blocks with `host_skills.py`; `typesafe-jev` ships
+   `plugin/shared-skills/` to both). Never add a per-host copy.
 3. **No policy in guidance or glue.** Skills, agent prompts, references, hook
    messages, workflows, and docs state or dispatch what policy code decides.
    They never compute a threshold, classify an outcome, or carry a rule the
@@ -110,7 +118,7 @@ Each file does one kind of work. Name the layer of the file you edit.
   tests green, then commit the change. Never both in one diff. For a large
   domain, record its outputs as a fixture before the refactor and compare after.
 - **Gates, not promises.** A rule that matters gets a check: a layer-1
-  validator, a unit test, an arch rule, or a hook. A "never" in this file alone
+  validator, a Python or Go test, an arch rule, or a hook. A "never" in this file alone
   protects nothing.
 - **Untangle a scattered domain in this order:** measure it (every file holding
   its logic, every copy, every place copies disagree), plan small
