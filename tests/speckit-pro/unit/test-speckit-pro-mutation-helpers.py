@@ -14,6 +14,7 @@ import tomllib
 import unittest
 import hashlib
 import ctypes
+import dataclasses
 import errno
 from contextlib import ExitStack
 from pathlib import Path, PosixPath
@@ -361,18 +362,30 @@ def install_windows_rename_name(rename_info_buffer: object, byte_length: int) ->
 
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
+sys.path.insert(0, str(REPO_ROOT / "tests" / "speckit-pro" / "lib"))
+from runner_invocation import assert_runner_response, command_stdin_fixture, run_runner  # noqa: E402
 
 
 from speckit_pro_runner.envelope import RunnerRequest
 from speckit_pro_runner.agent_materialization import materialize_agent_policy
-from speckit_pro_runner.helpers import install, mutation, pr_emission, registry
+from speckit_pro_runner import atomic_write
+from speckit_pro_runner.helpers import install, mutation, pr_packet, registry, uat_skeleton
 
 
-def runner_env() -> dict[str, str]:
-    env = os.environ.copy()
-    existing = env.get("PYTHONPATH")
-    env["PYTHONPATH"] = str(PLUGIN_ROOT) if not existing else f"{PLUGIN_ROOT}{os.pathsep}{existing}"
-    return env
+def move_after_copy_open_hook(real_open: object, destination: Path, moved: Path) -> object:
+    """An ``os.open`` stand-in that swaps ``destination`` for a fresh directory after the first dir_fd create."""
+    injected = False
+
+    def move_after_copy_open(path: object, flags: int, *args: object, **kwargs: object) -> int:
+        nonlocal injected
+        descriptor = real_open(path, flags, *args, **kwargs)
+        if kwargs.get("dir_fd") is not None and flags & os.O_CREAT and not injected:
+            injected = True
+            destination.rename(moved)
+            destination.mkdir()
+        return descriptor
+
+    return move_after_copy_open
 
 
 def helper_request(
@@ -392,39 +405,6 @@ def helper_request(
         "mode": mode,
         "inputs": inputs or {},
     }
-
-
-def run_runner(
-    request: object,
-    *,
-    cwd: Path = REPO_ROOT,
-    env_overrides: dict[str, str] | None = None,
-) -> tuple[subprocess.CompletedProcess[str], dict[str, object], list[dict[str, object]]]:
-    env = runner_env()
-    if env_overrides:
-        env.update(env_overrides)
-    completed = subprocess.run(
-        [sys.executable, "-m", "speckit_pro_runner"],
-        input=json.dumps(request) if not isinstance(request, str) else request,
-        text=True,
-        capture_output=True,
-        cwd=cwd,
-        env=env,
-        shell=False,
-        check=False,
-    )
-    response = json.loads(completed.stdout) if completed.stdout.strip() else {}
-    stderr_records = [json.loads(line) for line in completed.stderr.splitlines() if line.strip()]
-    return completed, response, stderr_records
-
-
-def command_stdin_fixture(command: str) -> Path:
-    if "<" not in command:
-        raise AssertionError(f"authoritative_command must include a stdin fixture: {command}")
-    stdin_path = command.split("<", 1)[1].strip()
-    if not stdin_path or any(char.isspace() for char in stdin_path):
-        raise AssertionError(f"authoritative_command must use one stdin fixture path: {command}")
-    return REPO_ROOT / stdin_path
 
 
 def canonical_json_bytes(value: object) -> bytes:
@@ -613,12 +593,7 @@ def bind_required_primary_probe(manifest: dict[str, object]) -> None:
 
 class MutationHelperTests(unittest.TestCase):
     def assert_response(self, response: dict[str, object], status: str, exit_code: int) -> None:
-        self.assertEqual(response["schema_version"], "1.0")
-        self.assertEqual(response["status"], status)
-        self.assertEqual(response["exit_code"], exit_code)
-        self.assertIsNone(response["legacy_exit_code"])
-        self.assertIsInstance(response["diagnostics"], list)
-        self.assertIsInstance(response["data"], dict)
+        assert_runner_response(self, response, status, exit_code)
 
     @staticmethod
     def fail_on_autopilot_agent_write(real_write: object) -> object:
@@ -647,7 +622,7 @@ class MutationHelperTests(unittest.TestCase):
         return fail_write
 
     def test_install_subprocess_dispatch_preserves_selected_python_candidate(self) -> None:
-        from speckit_pro_runner.helpers import install
+        from speckit_pro_runner.gates import runner_invocation
 
         cases = [
             ("py -V:3", ["py", "-3", "-m", "speckit_pro_runner"], ["py", "-3", "-m", "speckit_pro_runner"]),
@@ -658,8 +633,8 @@ class MutationHelperTests(unittest.TestCase):
 
         for selected_candidate, argv, expected_argv in cases:
             with self.subTest(selected_candidate=selected_candidate):
-                with patch.object(install.subprocess, "run", return_value=completed) as mocked_run:
-                    result = install.run_python_runner_subprocess(
+                with patch.object(runner_invocation.subprocess, "run", return_value=completed) as mocked_run:
+                    result = runner_invocation.run_python_runner_subprocess(
                         argv,
                         selected_candidate=selected_candidate,
                         input_text="{}",
@@ -1764,7 +1739,7 @@ class MutationHelperTests(unittest.TestCase):
                     completed, response, stderr_records = run_runner(
                         helper_request("install-codex-agents", mode="apply", inputs=inputs),
                         cwd=git_root,
-                        env_overrides=env,
+                        extra_env=env,
                     )
 
                     self.assertEqual(completed.returncode, 1)
@@ -1802,7 +1777,7 @@ class MutationHelperTests(unittest.TestCase):
                     inputs=self.route_aware_inputs(manifest_path, git_root, destination=None),
                 ),
                 cwd=git_root,
-                env_overrides=env,
+                extra_env=env,
             )
 
             self.assertEqual(completed.returncode, 0)
@@ -4026,16 +4001,7 @@ class MutationHelperTests(unittest.TestCase):
             identity = install.codex_agent_destination_identity(destination)
             moved = root / "moved-agents"
             real_open = install.os.open
-            injected = False
-
-            def move_after_copy_open(path: object, flags: int, *args: object, **kwargs: object) -> int:
-                nonlocal injected
-                descriptor = real_open(path, flags, *args, **kwargs)
-                if kwargs.get("dir_fd") is not None and flags & os.O_CREAT and not injected:
-                    injected = True
-                    destination.rename(moved)
-                    destination.mkdir()
-                return descriptor
+            move_after_copy_open = move_after_copy_open_hook(real_open, destination, moved)
 
             with patch.object(install.os, "open", side_effect=move_after_copy_open):
                 with self.assertRaises(install.CodexAgentRecoveryCopyFailure) as raised:
@@ -5862,16 +5828,7 @@ class MutationHelperTests(unittest.TestCase):
             identity = install.codex_agent_destination_identity(destination)
             moved = root / "moved-agents"
             real_open = install.os.open
-            injected = False
-
-            def move_after_copy_open(path: object, flags: int, *args: object, **kwargs: object) -> int:
-                nonlocal injected
-                descriptor = real_open(path, flags, *args, **kwargs)
-                if kwargs.get("dir_fd") is not None and flags & os.O_CREAT and not injected:
-                    injected = True
-                    destination.rename(moved)
-                    destination.mkdir()
-                return descriptor
+            move_after_copy_open = move_after_copy_open_hook(real_open, destination, moved)
 
             with patch.object(install.os, "open", side_effect=move_after_copy_open):
                 with self.assertRaises(install.CodexAgentRecoveryCopyFailure) as raised:
@@ -6611,7 +6568,7 @@ class MutationHelperTests(unittest.TestCase):
                     completed, response, stderr_records = run_runner(
                         helper_request("install-codex-agents", mode="apply", inputs=inputs),
                         cwd=git_root,
-                        env_overrides=env,
+                        extra_env=env,
                     )
 
                     self.assertEqual(completed.returncode, 0)
@@ -6708,7 +6665,7 @@ class MutationHelperTests(unittest.TestCase):
             completed, response, stderr_records = run_runner(
                 helper_request("install-codex-agents", mode="apply", inputs=inputs),
                 cwd=git_root,
-                env_overrides=env,
+                extra_env=env,
             )
 
             self.assertEqual(completed.returncode, 1)
@@ -7066,7 +7023,6 @@ This line must not be copied.
             self.assertFalse(missing_output.exists())
 
     def test_generate_uat_skeleton_rejects_template_symlink_escape(self) -> None:
-        from speckit_pro_runner.helpers import pr_emission
         from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
 
         tmp, git_root = self.temp_clean_git_repo()
@@ -7101,10 +7057,10 @@ This line must not be copied.
             os.chdir(git_root)
             try:
                 with (
-                    patch.object(pr_emission, "UAT_PAYLOAD_ROOT", payload_root),
-                    patch.object(pr_emission, "UAT_TEMPLATE_PATH", template_link),
+                    patch.object(uat_skeleton, "UAT_PAYLOAD_ROOT", payload_root),
+                    patch.object(uat_skeleton, "UAT_TEMPLATE_PATH", template_link),
                 ):
-                    response = pr_emission.generate_uat_skeleton(
+                    response = uat_skeleton.generate_uat_skeleton(
                         MUTATION_HELPERS["generate-uat-skeleton"],
                         request,
                     )
@@ -7167,7 +7123,7 @@ This line must not be copied.
             comparison_mode="fixture_semantic",
         )
         for mode in ("dry_run", "apply"):
-            with self.subTest(mode=mode), patch.object(pr_emission, "run_mutation_helper") as run_mutation:
+            with self.subTest(mode=mode), patch.object(registry, "run_mutation_helper") as run_mutation:
                 request = RunnerRequest(
                     request_id=f"test-unmatched-pr-route-{mode}",
                     helper_id=entry.helper_id,
@@ -7179,12 +7135,12 @@ This line must not be copied.
                     },
                 )
 
-                response = pr_emission.run_pr_emission_helper(entry, request)
+                response = registry.run_pr_emission_helper(entry, request)
 
                 run_mutation.assert_not_called()
-                self.assert_response(response, "input_error", 2)
+                self.assert_response(response, "internal_failure", 5)
                 self.assertEqual(response["data"], {})
-                self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["invalid_input"])
+                self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["helper_not_wired"])
                 self.assertEqual(response["diagnostics"][0]["details"], {"helper_id": entry.helper_id})
 
     def test_install_codex_agents_refreshes_stale_files_and_preserves_unrelated_agents(self) -> None:
@@ -7256,7 +7212,7 @@ This line must not be copied.
             completed, response, stderr_records = run_runner(
                 helper_request("install-codex-agents", mode="apply", inputs={"model": "gpt-6-sol"}),
                 cwd=git_root,
-                env_overrides=env,
+                extra_env=env,
             )
             self.assertEqual(completed.returncode, 0)
             self.assertEqual(stderr_records, [])
@@ -7276,7 +7232,7 @@ This line must not be copied.
             completed, response, stderr_records = run_runner(
                 helper_request("install-codex-agents", mode="apply", inputs={"model": "gpt-6-sol"}),
                 cwd=git_root,
-                env_overrides=env,
+                extra_env=env,
             )
             self.assertEqual(completed.returncode, 0)
             self.assertEqual(stderr_records, [])
@@ -7356,7 +7312,7 @@ This line must not be copied.
                         completed, response, stderr_records = run_runner(
                             helper_request("install-codex-agents", mode="dry_run", inputs={"destination": ".codex/agents"}),
                             cwd=git_root,
-                            env_overrides=overrides,
+                            extra_env=overrides,
                         )
                     self.assertEqual(completed.returncode, 0)
                     self.assertEqual(stderr_records, [])
@@ -7371,7 +7327,7 @@ This line must not be copied.
             completed, response, stderr_records = run_runner(
                 helper_request("install-codex-agents", mode="dry_run", inputs={"destination": ".codex/agents"}),
                 cwd=git_root,
-                env_overrides={"SPECKIT_CODEX_LUNA_FALLBACK": "yes"},
+                extra_env={"SPECKIT_CODEX_LUNA_FALLBACK": "yes"},
             )
             self.assertEqual(completed.returncode, 2)
             self.assert_response(response, "input_error", 2)
@@ -8597,7 +8553,7 @@ This line must not be copied.
             self.run_git(git_root, "add", "target.md")
             self.run_git(git_root, "commit", "--quiet", "-m", "target")
             calls = 0
-            real_ensure = mutation.ensure_safe_write_target_fd
+            real_ensure = atomic_write.ensure_safe_write_target_fd
 
             def swap_before_final_guard(parent_fd: int, name: str) -> None:
                 nonlocal calls
@@ -8625,7 +8581,7 @@ This line must not be copied.
             old_cwd = Path.cwd()
             os.chdir(git_root)
             try:
-                with patch.object(mutation, "ensure_safe_write_target_fd", side_effect=swap_before_final_guard):
+                with patch.object(atomic_write, "ensure_safe_write_target_fd", side_effect=swap_before_final_guard):
                     response = mutation.run_mutation_helper(registry.MUTATION_HELPERS["mutation-foundation"], request)
             finally:
                 os.chdir(old_cwd)
@@ -8969,7 +8925,7 @@ This line must not be copied.
             self.assertNotIn("Phase 6.5 Verdict: proceed", refreshed)
             packet = json.loads((git_root / inputs["packet_path"]).read_text(encoding="utf-8"))
             self.assertEqual(packet["protected_body_fingerprint"]["value"],
-                             pr_emission.protected_body_sha256(refreshed))
+                             pr_packet.protected_body_sha256(refreshed))
 
             stale_forms = (
                 "**Phase 6.5 Verdict:** proceed",
@@ -9433,7 +9389,7 @@ This line must not be copied.
                                 self.assertEqual(body, existing_body)
 
     def test_pr_packet_output_rejects_mismatched_paths_invalid_mode_and_invalid_body(self) -> None:
-        from speckit_pro_runner.helpers.pr_emission import build_packet_body
+        from speckit_pro_runner.helpers.pr_packet import build_packet_body
 
         base_inputs = {
             "packet_path": "specs/packet-999-packet/.process/pr-packets/packet-999.json",
@@ -9452,6 +9408,7 @@ This line must not be copied.
             why_it_matters="Reason.",
             how_to_review="- Review.",
             how_to_uat="No manual UAT.",
+            uat_heading="## UAT Runbook",
             verification="- Tests passed.",
             scope="- specs/packet-999-packet/spec.md",
             known_gaps="- None.",
@@ -9481,19 +9438,18 @@ This line must not be copied.
                 self.assertEqual([diag["code"] for diag in stderr_records], ["invalid_input"])
 
     def test_generated_title_keeps_the_description_case_as_given(self) -> None:
-        title = pr_emission.normalize_generated_title(
+        title = pr_packet.normalize_generated_title(
             {"title_type": "feat", "title_scope": "demo", "title_description": "add a demo feature"}
         )
         self.assertEqual(title["value"], "feat(demo): add a demo feature")
         self.assertEqual(title["description"], "add a demo feature")
 
     def test_documented_draft_packet_requests_execute_and_validate(self) -> None:
-        docs = [
-            PLUGIN_ROOT / "skills/speckit-autopilot/references/phase-execution.md",
-            PLUGIN_ROOT / "codex-skills/speckit-autopilot/references/phase-execution-codex.md",
-        ]
-        for doc_path in docs:
-            with self.subTest(doc=doc_path.name):
+        from host_skill_views import host_skill_root
+
+        for host in ("claude", "codex"):
+            doc_path = host_skill_root(host) / "speckit-autopilot/references/phase-execution.md"
+            with self.subTest(host=host):
                 document = doc_path.read_text(encoding="utf-8")
                 marker = document.index('"request_id": "example-draft-packet"')
                 start = document.rfind("```json\n", 0, marker) + len("```json\n")
@@ -9708,7 +9664,7 @@ This line must not be copied.
         self.assertIn("inputs.mode", stderr_records[0]["message"])
 
     def test_required_headings_returns_draft_blocks_and_preserves_reviewer_headings(self) -> None:
-        from speckit_pro_runner.helpers.pr_emission import required_headings
+        from speckit_pro_runner.helpers.pr_packet import required_headings
 
         reviewer_headings = [
             "Summary",
@@ -9816,8 +9772,90 @@ This line must not be copied.
             self.assertEqual(request["operation"], record["operation"])
             self.assertIn(request["mode"], record["modes"])
 
+
+class GeneratedTitleScopeTests(unittest.TestCase):
+    """The packet normalizer builds only titles the PR-title gate accepts."""
+
+    def test_generated_title_rejects_a_scope_the_title_gate_rejects(self) -> None:
+        for scope in ("PRSG-998", "FEATURE-001", "Demo", "demo scope", "demo_scope"):
+            with self.subTest(scope=scope):
+                title = pr_packet.normalize_generated_title(
+                    {"title_type": "feat", "title_scope": scope, "title_description": "add a demo feature"}
+                )
+                self.assertEqual(title["diagnostic"]["details"]["field"], "title_scope")
+        supplied = pr_packet.normalize_generated_title(
+            {
+                "generated_title": {
+                    "value": "feat(FEATURE-001): Add a demo feature",
+                    "type": "feat",
+                    "scope": "FEATURE-001",
+                    "description": "Add a demo feature",
+                    "source_evidence": {"kind": "workflow", "source": "autopilot-state", "summary": "the run state"},
+                    "rejected_candidates": [],
+                }
+            }
+        )
+        self.assertEqual(supplied["diagnostic"]["details"]["field"], "generated_title")
+
+
+class PrEmissionCohesionTests(unittest.TestCase):
+    """PR-emission routing, the draft body rule, and the UAT heading each have one owner."""
+
+    DRAFT_INPUTS = {
+        "packet_path": "specs/packet-997-draft/.process/pr-packets/packet-997.json",
+        "source_feature_dir": "specs/packet-997-draft",
+        "target": {"base_branch": "main", "head_branch": "agent/packet-997-draft"},
+        "mode": "draft",
+        "title_type": "feat",
+        "title_scope": "packet-997",
+        "title_description": "Open a draft pull request at the plan boundary",
+        "verification_evidence": [],
+        "scope_evidence": {
+            "reviewable_loc": 0, "production_files": 0, "total_files": 0, "budget_result": "within_budget",
+            "changed_files": [], "non_goals": ["Implementation evidence is not produced at the plan boundary."],
+        },
+    }
+
+    def test_a_routed_helper_with_no_handler_is_a_registry_error_not_an_input_error(self) -> None:
+        for helper_id in ("final-reviewability-backstop", "validate-pr-workflow-contract-write",
+                          "relocate-process-artifacts", "plan-layers-marker-plan"):
+            with self.subTest(helper_id=helper_id), patch.object(registry, "run_mutation_helper") as run_mutation:
+                promoted = dataclasses.replace(registry.MUTATION_HELPERS[helper_id], promotion_status="golden_only")
+                request = RunnerRequest(request_id=f"test-{helper_id}", helper_id=helper_id,
+                                        operation=promoted.operation, mode=promoted.modes[0], inputs={})
+
+                response = registry.dispatch_mutation_helper(promoted, request)
+
+                run_mutation.assert_not_called()
+                self.assert_wiring_error(response, helper_id)
+
+    def assert_wiring_error(self, response: dict[str, object], helper_id: str) -> None:
+        self.assertEqual(response["status"], "internal_failure")
+        diagnostics = response["diagnostics"]
+        self.assertEqual([item["code"] for item in diagnostics], ["helper_not_wired"])
+        self.assertEqual(diagnostics[0]["details"], {"helper_id": helper_id})
+
+    def test_a_draft_packet_without_a_body_is_refused_before_any_builder_runs(self) -> None:
+        with patch.object(pr_packet, "build_packet_body") as build:
+            result = pr_packet.normalize_packet_input(SimpleNamespace(inputs=dict(self.DRAFT_INPUTS)))
+
+        build.assert_not_called()
+        self.assertEqual(result["diagnostic"]["details"]["field"], "body")
+        self.assertIn("draft packet requires inputs.body", result["diagnostic"]["message"])
+
+    def test_the_uat_runbook_heading_comes_from_the_uat_record(self) -> None:
+        body = pr_packet.build_packet_body(
+            "feat(packet-997): Generate reviewer packet", summary="Summary.", what_changed="- Change.",
+            why_it_matters="Reason.", how_to_review="- Review.", how_to_uat="Walk the flow.",
+            uat_heading="## Manual Acceptance", verification="- Tests passed.", scope="- a", known_gaps="- None.",
+        )
+        self.assertIn("\n## Manual Acceptance\n\nWalk the flow.\n", body)
+        self.assertNotIn("## UAT Runbook", body)
+
+
 if __name__ == "__main__":
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(MutationHelperTests)
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
+                               for case in (MutationHelperTests, GeneratedTitleScopeTests, PrEmissionCohesionTests))
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     total = result.testsRun
     failed = len(result.failures) + len(result.errors)

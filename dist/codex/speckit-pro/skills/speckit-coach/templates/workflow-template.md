@@ -40,7 +40,7 @@ captured during scoping.
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
-| Post | Post-Implementation | ⏳ Pending | Canonical 11-item closeout |
+| Post | Post-Implementation | ⏳ Pending | Canonical 13-item closeout |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
@@ -82,7 +82,7 @@ Use `references/gate-validation.md` from the installed `speckit-autopilot` skill
 
 ### Quality Gates
 
-Filled from `detect-commands` at Step 0.11. One row per slot; the operator answer column holds the one-time missing-tool decision (`install`, `skip (spec)`, `skip (repo)`, or `unanswered`) and is the record that stops the question from firing again. A `skip (repo)` answer is durable only once the operator adds it to `.specify/quality-gates.json` `skips`.
+Filled from `detect-commands` at Step 0.11. One row per slot; the operator answer column holds the missing-tool outcome (`install` by default, then `skip (spec)`, or a recorded operator `skip (repo)`) and is the record autopilot reads before it defaults. A `skip (repo)` answer is durable only once the operator adds it to `.specify/quality-gates.json` `skips`.
 
 **Thresholds file:** `.specify/quality-gates.json` <!-- present / missing / invalid --> <!-- complexity N, CRAP N, mutation floor N; basis --> (G0 blocks unless present)
 
@@ -291,22 +291,7 @@ Use these markers in spec.md for traceability through later phases:
 
 ### Step 1: Analyze Spec for Recommended Domains
 
-Before running any checklists, read `spec.md` and `plan.md` and identify which domains apply. Look for these signals:
-
-| Signal in Your Spec/Plan | Recommended Domain |
-|---|---|
-| API endpoints, REST routes, request/response models | **api-contracts** |
-| User-facing UI, components, forms, layouts | **ux** |
-| Keyboard navigation, screen readers, WCAG, ARIA | **accessibility** |
-| Auth, tokens, secrets, input validation, user roles | **security** |
-| Response time budgets, caching, query performance | **performance** |
-| Database schemas, migrations, data validation | **data-integrity** |
-| LLM prompts, model calls, embeddings, token limits | **llm-integration** |
-| SSE, WebSocket, streaming, real-time events | **streaming-protocol** |
-| Error handling, retries, fallbacks, degradation | **error-handling** |
-| State lifecycle, sessions, caching, persistence | **state-management** |
-| Personal data (PII), consent, retention, deletion | **privacy** |
-| New third-party packages or dependency upgrades | **supply-chain** |
+Before running any checklists, read `spec.md` and `plan.md` and identify which domains apply. Match them against the signal table in the speckit-coach skill's `references/checklist-domains-guide.md`. That guide is the single list of checklist domains; do not keep a second copy here.
 
 **Target: 2-4 domains.** Prioritize domains where the spec has the most complexity or risk.
 
@@ -585,6 +570,8 @@ The canonical closeout. Every row must reach Complete or an explicit
 | Post: Integration Suite | ⏳ Pending | |
 | Post: Reviewability Diff Gate | ⏳ Pending | |
 | Post: UAT Runbook Generation | ⏳ Pending | |
+| Post: Final Reviewability Backstop | ⏳ Pending | |
+| Post: PR Packet/Body Generation | ⏳ Pending | |
 | Post: PR Body Generation | ⏳ Pending | |
 | Post: PR Creation | ⏳ Pending | |
 | Post: Review Remediation | ⏳ Pending | |

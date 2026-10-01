@@ -581,13 +581,13 @@
     "planning_fingerprints": {
       "plan_md": {
         "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/plan.md",
-        "size_bytes": 28182,
-        "sha256": "sha256:8381e50f0c0daf7491b6fb6f6e431adea30a89277d0b3073fd476194e6a8d759"
+        "size_bytes": 28242,
+        "sha256": "sha256:94238f91baabd64f578831f0affa6f93be8d7ab6e553215c4fbcd7b4d5a614ec"
       },
       "tasks_md": {
         "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md",
-        "size_bytes": 30479,
-        "sha256": "sha256:c5373d4f33f0ec316c2421d3e690888fc5844fb1989fd5f5db9b4a8d4d1f7d46"
+        "size_bytes": 31041,
+        "sha256": "sha256:85a266966d25b07ca11790e0a272712661a9c888e104b4b519fc70bf13755f57"
       }
     },
     "schema_version": "autonomy-boundary-receipt.v1",
@@ -956,9 +956,9 @@
     "status": "checkpointing",
     "source_fingerprint": {
       "feature_spec_sha": "sha256:18c93677aaaee5f73aa8399b2cea052cc58ed2724fe6e74d93be96a47eae7e58",
-      "plan_declared_scope_sha": "sha256:8381e50f0c0daf7491b6fb6f6e431adea30a89277d0b3073fd476194e6a8d759",
-      "tasks_sha": "sha256:91cc48b1ff3352e299b31537323760edf4a84f5909c6600fc7b7cb575d0e03e3",
-      "reviewability_sha": "sha256:4efa6739751bbef3183ebc677bde97f4971dfc61554ecf27a147af5d65aabefc",
+      "plan_declared_scope_sha": "sha256:94238f91baabd64f578831f0affa6f93be8d7ab6e553215c4fbcd7b4d5a614ec",
+      "tasks_sha": "sha256:68f57924b56b55ad525a8cb8f8b03fab68da0b84904be688f953bfec949e4a5a",
+      "reviewability_sha": "sha256:69b1f9ae9933e1d2f1d81fff5ae802ac3af161968c9300b8dff9999b8c82d49f",
       "hazard_route_sha": "sha256:f4259204cb8f92f1978ddf3b70195aba948d317567082f50f585fb0f4e0ef9c4"
     },
     "markers": [
@@ -985,15 +985,15 @@
         "declared_files": [
           {
             "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/helpers/pr_emission.py"
+            "path": "speckit-pro/speckit_pro_runner/helpers/pr_packet.py"
           },
           {
             "operation": "MODIFIED",
-            "path": "dist/claude/speckit-pro/speckit_pro_runner/helpers/pr_emission.py"
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/helpers/pr_packet.py"
           },
           {
             "operation": "MODIFIED",
-            "path": "dist/codex/speckit-pro/speckit_pro_runner/helpers/pr_emission.py"
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/helpers/pr_packet.py"
           },
           {
             "operation": "MODIFIED",
@@ -1014,10 +1014,6 @@
           {
             "operation": "MODIFIED",
             "path": "dist/claude/speckit-pro/skills/speckit-autopilot/SKILL.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md"
           },
           {
             "operation": "MODIFIED",
@@ -1088,7 +1084,7 @@
           "mode": "planned_candidates",
           "scope": "A1a",
           "production_files": 2,
-          "total_files": 24,
+          "total_files": 23,
           "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
         },
         "hazards": [],
@@ -1167,7 +1163,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "dist/claude/speckit-pro/speckit_pro_runner/helpers/pr_emission.py"
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/helpers/pr_packet.py"
           },
           {
             "operation": "MODIFIED",
@@ -1191,7 +1187,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "dist/codex/speckit-pro/speckit_pro_runner/helpers/pr_emission.py"
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/helpers/pr_packet.py"
           },
           {
             "operation": "MODIFIED",
@@ -1215,10 +1211,6 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md"
-          },
-          {
-            "operation": "MODIFIED",
             "path": "speckit-pro/skills/speckit-autopilot/SKILL.md"
           },
           {
@@ -1227,7 +1219,7 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/helpers/pr_emission.py"
+            "path": "speckit-pro/speckit_pro_runner/helpers/pr_packet.py"
           },
           {
             "operation": "MODIFIED",
@@ -1263,7 +1255,7 @@
           "mode": "actual_source_delta",
           "scope": "A1b",
           "production_files": 2,
-          "total_files": 24,
+          "total_files": 23,
           "qualification": "Actual source delta 21 paths and 292 authored non-process changed lines; 3 tracked process paths bring marker to 24. Final emitted PR base/head diff and reviewable LOC remain mandatory before emission."
         },
         "hazards": [],
@@ -1354,14 +1346,6 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/post-implementation-codex.md"
-          },
-          {
-            "operation": "MODIFIED",
             "path": "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py"
           },
           {
@@ -1434,7 +1418,7 @@
           "mode": "actual_source_delta",
           "scope": "A2",
           "production_files": 1,
-          "total_files": 23,
+          "total_files": 22,
           "qualification": "Actual source delta 21 paths and 257 authored non-process changed lines; 2 tracked marker process paths bring marker to 23. Final emitted PR base/head diff and reviewable LOC remain mandatory before emission."
         },
         "hazards": [],
@@ -1502,15 +1486,15 @@
         "declared_files": [
           {
             "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/helpers/pr_emission.py"
+            "path": "speckit-pro/speckit_pro_runner/helpers/pr_packet.py"
           },
           {
             "operation": "MODIFIED",
-            "path": "dist/claude/speckit-pro/speckit_pro_runner/helpers/pr_emission.py"
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/helpers/pr_packet.py"
           },
           {
             "operation": "MODIFIED",
-            "path": "dist/codex/speckit-pro/speckit_pro_runner/helpers/pr_emission.py"
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/helpers/pr_packet.py"
           },
           {
             "operation": "MODIFIED",
@@ -1531,10 +1515,6 @@
           {
             "operation": "MODIFIED",
             "path": "dist/claude/speckit-pro/skills/speckit-autopilot/SKILL.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md"
           },
           {
             "operation": "MODIFIED",
@@ -1605,7 +1585,7 @@
           "mode": "planned_candidates",
           "scope": "A3",
           "production_files": 2,
-          "total_files": 24,
+          "total_files": 23,
           "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
         },
         "hazards": [],
@@ -2312,10 +2292,6 @@
             "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/gate-validation.md"
           },
           {
-            "operation": "MODIFIED",
-            "path": ".specify/quality-gates.json"
-          },
-          {
             "operation": "NEW",
             "path": "tests/speckit-pro/unit/test-declared-quality-commands.py"
           },
@@ -2374,6 +2350,18 @@
           {
             "operation": "MODIFIED",
             "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/quality_gates.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/quality_gates.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/quality_gates.py"
           }
         ],
         "declared_tests": [
@@ -2385,7 +2373,7 @@
           "mode": "planned_candidates",
           "scope": "B3b",
           "production_files": 2,
-          "total_files": 22,
+          "total_files": 24,
           "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
         },
         "hazards": [],
@@ -2444,10 +2432,6 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md"
-          },
-          {
-            "operation": "MODIFIED",
             "path": "dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md"
           },
           {
@@ -2461,14 +2445,6 @@
           {
             "operation": "MODIFIED",
             "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/task-list-canonical.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/task-list-canonical-codex.md"
           },
           {
             "operation": "MODIFIED",
@@ -2527,7 +2503,7 @@
           "mode": "planned_candidates",
           "scope": "C1a1",
           "production_files": 1,
-          "total_files": 24,
+          "total_files": 21,
           "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
         },
         "hazards": [],
@@ -2586,10 +2562,6 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md"
-          },
-          {
-            "operation": "MODIFIED",
             "path": "dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md"
           },
           {
@@ -2603,14 +2575,6 @@
           {
             "operation": "MODIFIED",
             "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/post-implementation.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/post-implementation-codex.md"
           },
           {
             "operation": "MODIFIED",
@@ -2657,7 +2621,7 @@
           "mode": "planned_candidates",
           "scope": "C1a2",
           "production_files": 1,
-          "total_files": 21,
+          "total_files": 18,
           "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
         },
         "hazards": [],
@@ -2968,10 +2932,6 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "speckit-pro/codex-skills/speckit-resolve-pr/SKILL.md"
-          },
-          {
-            "operation": "MODIFIED",
             "path": "dist/codex/speckit-pro/skills/speckit-resolve-pr/SKILL.md"
           },
           {
@@ -3024,7 +2984,7 @@
           "mode": "planned_candidates",
           "scope": "C2a1",
           "production_files": 0,
-          "total_files": 14,
+          "total_files": 13,
           "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
         },
         "hazards": [],
@@ -3068,10 +3028,6 @@
           {
             "operation": "MODIFIED",
             "path": "dist/claude/speckit-pro/skills/speckit-scaffold-spec/SKILL.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md"
           },
           {
             "operation": "MODIFIED",
@@ -3127,7 +3083,7 @@
           "mode": "planned_candidates",
           "scope": "C2a2",
           "production_files": 0,
-          "total_files": 14,
+          "total_files": 13,
           "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
         },
         "hazards": [],
@@ -3171,10 +3127,6 @@
           {
             "operation": "MODIFIED",
             "path": "dist/claude/speckit-pro/skills/speckit-status/SKILL.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/codex-skills/speckit-status/SKILL.md"
           },
           {
             "operation": "MODIFIED",
@@ -3230,7 +3182,7 @@
           "mode": "planned_candidates",
           "scope": "C2a3",
           "production_files": 0,
-          "total_files": 14,
+          "total_files": 13,
           "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
         },
         "hazards": [],
@@ -3278,10 +3230,6 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md"
-          },
-          {
-            "operation": "MODIFIED",
             "path": "dist/codex/speckit-pro/skills/speckit-scaffold-spec/SKILL.md"
           },
           {
@@ -3295,14 +3243,6 @@
           {
             "operation": "MODIFIED",
             "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/phase-execution.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/phase-execution-codex.md"
           },
           {
             "operation": "NEW",
@@ -3363,7 +3303,7 @@
           "mode": "planned_candidates",
           "scope": "C2b1",
           "production_files": 0,
-          "total_files": 21,
+          "total_files": 18,
           "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
         },
         "hazards": [],
@@ -3411,10 +3351,6 @@
           {
             "operation": "MODIFIED",
             "path": "dist/claude/speckit-pro/skills/speckit-scaffold-spec/SKILL.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md"
           },
           {
             "operation": "MODIFIED",
@@ -3479,7 +3415,7 @@
           "mode": "planned_candidates",
           "scope": "C2b2",
           "production_files": 0,
-          "total_files": 16,
+          "total_files": 15,
           "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
         },
         "hazards": [],
@@ -3511,9 +3447,9 @@
   },
   "current_source_fingerprint": {
     "feature_spec_sha": "sha256:18c93677aaaee5f73aa8399b2cea052cc58ed2724fe6e74d93be96a47eae7e58",
-    "plan_declared_scope_sha": "sha256:8381e50f0c0daf7491b6fb6f6e431adea30a89277d0b3073fd476194e6a8d759",
-    "tasks_sha": "sha256:544621db7b0982fce7c65dfbc59f55f2ddbeab02c64b79c7017d12a23ac5b7a8",
-    "reviewability_sha": "sha256:4efa6739751bbef3183ebc677bde97f4971dfc61554ecf27a147af5d65aabefc",
+    "plan_declared_scope_sha": "sha256:94238f91baabd64f578831f0affa6f93be8d7ab6e553215c4fbcd7b4d5a614ec",
+    "tasks_sha": "sha256:68f57924b56b55ad525a8cb8f8b03fab68da0b84904be688f953bfec949e4a5a",
+    "reviewability_sha": "sha256:69b1f9ae9933e1d2f1d81fff5ae802ac3af161968c9300b8dff9999b8c82d49f",
     "hazard_route_sha": "sha256:f4259204cb8f92f1978ddf3b70195aba948d317567082f50f585fb0f4e0ef9c4"
   },
   "marker_plan_sources": {
@@ -3549,7 +3485,8 @@
         },
         "tool": "estimate-reviewable-loc"
       },
-      "inventory_sha256": "sha256:36e165fde9ede16ba76c0e440d23cf339512c7c24e3fb8d5491fb1a65dd47954"
+      "inventory_sha256": "sha256:e30016497fb06381f9d84315fc403c84156f3929b91ef8adca187c6ec468621e",
+      "qualification": "Historical setup/estimator snapshots retained; current candidate ownership and counts reconciled after main. Actual final PR scope and heavy gates pending."
     },
     "hazard_route": {
       "hints": [],
@@ -3645,9 +3582,8 @@
       "implementation_started": true
     },
     "task_journal": {
-      "journal_file": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-results/e7fbc9a6636945ed8a8c2abd42cbb892-routing-epoch2.json",
-      "producer_request_id": "hrns015-b1a-record-apply-2382",
-      "parent_retained_partition_sha256": "0a0054ea8b8b8411bd35e8b7ef6573042502ac316bff1e8def7ddf86a6274b6c",
+      "journal_file": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-results/main-paths-epoch4.json",
+      "parent_retained_partition_sha256": "6f399919e89975a7b5cf5bd621fd445ed2cf79864c19ca4c0ca20fc4507ad172",
       "completed_tasks": [
         "T001",
         "T002",
@@ -3658,8 +3594,12 @@
         "T007",
         "T008",
         "T009",
-        "T010"
-      ]
+        "T010",
+        "T011",
+        "T012",
+        "T013"
+      ],
+      "completion_basis": "preserved predecessor journal lineage and historical checkpoints"
     },
     "routing_replan": {
       "status": "completed",
@@ -4042,5 +3982,32 @@
       "resolved_tasks_md_sha256": "sha256:c5373d4f33f0ec316c2421d3e690888fc5844fb1989fd5f5db9b4a8d4d1f7d46",
       "proof": "task_definitions at receipt commit 06a9cfcc6 equals current; only task checkboxes changed"
     }
+  },
+  "main_merge_reconciliation": {
+    "status": "native_binding_reconciled",
+    "completed_task_definitions_preserved": true,
+    "historical_checkpoint_files_preserved": true,
+    "next_increment": "B3a",
+    "broad_verification": "deferred_until_all_implementation",
+    "corrective_epoch": 4,
+    "task_journal": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-results/main-paths-epoch4.json",
+    "parent_retained_partition_sha256": "6f399919e89975a7b5cf5bd621fd445ed2cf79864c19ca4c0ca20fc4507ad172",
+    "historical_completed_tasks": [
+      "T001",
+      "T002",
+      "T003",
+      "T004",
+      "T005",
+      "T006",
+      "T007",
+      "T008",
+      "T009",
+      "T010",
+      "T011",
+      "T012",
+      "T013"
+    ],
+    "current_heavy_gate_qualification": "pending_final_run",
+    "prior_task_journal_sha256": "458841b52b0feb147c2aa6b6521d557e464618644e6c5fffd3491327bfd74ca1"
   }
 }

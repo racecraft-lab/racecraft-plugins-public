@@ -24,6 +24,7 @@ if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
+from speckit_pro_runner import atomic_write  # noqa: E402
 from speckit_pro_runner.helpers.mutation import _spec_index_target_chain_is_safe  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
@@ -393,7 +394,7 @@ class GenerateSpecIndexTests(_SpecIndexGitIndexTests, unittest.TestCase):
         RunnerRequest, mutation, registry, root = self._spec_index_write_fixture()
         moc = root / "specs" / "prsg-901-stale" / "SPEC-MOC.md"
         calls = 0
-        real_ensure = mutation.ensure_safe_write_target_fd
+        real_ensure = atomic_write.ensure_safe_write_target_fd
 
         def swap_before_final_guard(parent_fd: int, name: str) -> None:
             nonlocal calls
@@ -412,7 +413,7 @@ class GenerateSpecIndexTests(_SpecIndexGitIndexTests, unittest.TestCase):
         old_cwd = Path.cwd()
         os.chdir(self.work)
         try:
-            with patch.object(mutation, "ensure_safe_write_target_fd", side_effect=swap_before_final_guard):
+            with patch.object(atomic_write, "ensure_safe_write_target_fd", side_effect=swap_before_final_guard):
                 body = mutation.run_spec_index_write(registry.MUTATION_HELPERS["generate-spec-index-write"], request)
         finally:
             os.chdir(old_cwd)

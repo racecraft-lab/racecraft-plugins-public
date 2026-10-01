@@ -94,6 +94,7 @@ class SpecIndexFreshnessTests(unittest.TestCase):
         self.assertIn("PRSG-999", self.generated("myproject-roadmap-MOC.md"))
 
     def test_plain_release_refresh_repairs_historical_stale_index(self) -> None:
+        from speckit_pro_runner import codex_agent_generator
         from speckit_pro_runner.gates import payloads
 
         shutil.copytree(
@@ -107,6 +108,7 @@ class SpecIndexFreshnessTests(unittest.TestCase):
         with (
             mock.patch.object(refresh, "refresh_runner_trust_metadata", return_value=[]),
             mock.patch.object(payloads, "build_installed_plugin_payloads"),
+            mock.patch.object(codex_agent_generator, "refresh_codex_agents", return_value=[]),
             mock.patch.object(refresh, "sync_marketplace_versions", return_value=[]),
         ):
             self.assertEqual(0, refresh.refresh_release_artifacts(self.root))

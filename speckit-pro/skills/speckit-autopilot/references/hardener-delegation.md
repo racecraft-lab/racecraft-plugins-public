@@ -14,7 +14,12 @@ Exactly once per spec, and only when all of these hold:
 
 - `MUTATION` is `populated` in the Quality Gates table (not `unconfigured`,
   `skipped`, or `N/A`).
+<!-- host:claude: Claude runs the MUTATION slot in Phase 7 Final Verification -->
 - The MUTATION run in Step 4 of Phase 7 produced a report.
+<!-- /host -->
+<!-- host:codex: Codex runs the MUTATION slot in Post item 14, Integration Suite -->
+- The MUTATION run in Post item 14 (Integration Suite) produced a report.
+<!-- /host -->
 - The Quality Gates table's `Hardener` line is still `not run`. A resumed run
   that finds any other value does not fire again; it reads the recorded
   outcome and continues.
@@ -26,7 +31,12 @@ workflow file; by default a passing score records `not needed` and skips.
 
 ## Inputs, always the same three
 
+<!-- host:claude: Claude runs the MUTATION slot in Phase 7 Final Verification -->
 1. **Mutation report**: the tool's output from the Step 4 run (cosmic-ray's
+<!-- /host -->
+<!-- host:codex: Codex runs the MUTATION slot in Post item 14, Integration Suite -->
+1. **Mutation report**: the tool's output from the Post item 14 run (cosmic-ray's
+<!-- /host -->
    `cr-report`/`cr-rate` text or StrykerJS's `reports/mutation/mutation.json`),
    pasted into the task, not referenced by path, so the worker never has to
    discover it.
@@ -52,9 +62,10 @@ are shared with every enclosing gate/repair loop; the hardener has no allowance
 of its own. Nested execution carries the parent's reservation_id.
 Stop when the score reaches the floor or that reservation ends.
 On exhaustion retain the failing MUTATION result and defer it (`disposition=defer`)
-so independent work continues. It is a gate, so it never stays deferred: at the
-end of the run the ledger deferral makes `finalize-run` return the one human
-stop, never a ready-for-review stack. Never count
+so independent work continues. It is a gate, so it never stays deferred: pass its
+failing MUTATION result to `finalize-run` as a failed gate, which climbs the
+escalation tiers and then keeps the stack in draft as a red gate, never a
+ready-for-review stack. Never count
 fallback, rejection, or a renamed error as a fresh repair family.
 
 ## Delegated path (delegation gateway)

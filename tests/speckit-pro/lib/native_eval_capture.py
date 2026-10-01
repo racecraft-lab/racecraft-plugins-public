@@ -13,7 +13,8 @@ import re
 import shlex
 from typing import Any, Mapping
 
-from native_eval_catalog import _relative_path, _search_glob, _unique_object
+import native_eval_strict_json as strict_json
+from native_eval_catalog import _relative_path, _search_glob
 from native_eval_fixture_reads import (
     bound_fixture_read_witnesses,
     bound_project_artifact_paths,
@@ -299,14 +300,7 @@ def _events(raw: str) -> list[dict[str, Any]]:
     for number, line in enumerate(raw.splitlines(), 1):
         if not line.strip():
             continue
-        try:
-            event = json.loads(
-                line,
-                object_pairs_hook=_unique_object,
-                parse_constant=lambda token: (_ for _ in ()).throw(ValueError(f"invalid constant {token}")),
-            )
-        except (json.JSONDecodeError, ValueError) as exc:
-            raise CaptureError(f"invalid JSONL at line {number}") from exc
+        event = strict_json.loads(line, error=CaptureError, label=f"invalid JSONL at line {number}")
         if not isinstance(event, dict) or not isinstance(event.get("type"), str):
             raise CaptureError(f"invalid native event at line {number}")
         events.append(event)

@@ -12,8 +12,8 @@ conversation.
 ## Ground recommendations
 
 Inspect the tools and skills actually available. Follow the shared
-[capability-discovery](speckit-pro/skills/speckit-autopilot/references/capability-discovery.md)
-and [grounding](speckit-pro/skills/speckit-autopilot/references/grounding.md) contracts.
+[capability-discovery](../speckit-autopilot/references/capability-discovery.md)
+and [grounding](../speckit-autopilot/references/grounding.md) contracts.
 Base recommendations on the project constitution, codebase evidence, or current
 authoritative sources; disclose uncertainty instead of guessing.
 
@@ -24,13 +24,14 @@ or invoking `$grill-me`, and an interactive `$speckit-scaffold-spec` call. Befor
 any question or write, confirm this is an active user chat that can receive a
 direct reply.
 
-Abort in background or non-interactive execution, `codex exec`, CI, autopilot,
-any phase or consensus agent, and every subagent context. Say that Grill Me
-requires an active user conversation and that autopilot uses the Clarify
-Question Set and consensus protocol. Do not ask a question and do not write any
-file. That refusal is the entire result: end immediately after naming that
-mechanism, and do not offer to start or continue the interview after a later
-reply.
+Abort in background or non-interactive execution,
+`codex exec`,
+CI, autopilot, any phase or consensus agent, and every subagent context. Say
+that Grill Me requires an active user conversation and that autopilot uses the
+Clarify Question Set and consensus protocol. Do not ask a question and do not
+write any file. That refusal is the entire result: end immediately after naming
+that mechanism, and do not offer to start or continue the interview after a
+later reply.
 
 ## Codex interaction adapter
 
@@ -52,18 +53,18 @@ Never use this fallback in background, CI, autopilot, or subagent execution.
      `docs/ai/specs/<slug>-design-concept.md` unless the user supplied a path.
    - **Setup:** use the scope and output path supplied by
      `$speckit-scaffold-spec`; never redirect the write to the primary checkout.
-2. Read the [shared interview protocol](references/interview-protocol.md).
-   Ground the initial model in applicable project instructions, constitution,
-   roadmap, prior design decisions, and targeted code. If
+2. Read the [shared interview protocol](references/interview-protocol.md). Ground
+   the initial model in applicable project instructions, constitution, roadmap,
+   prior design decisions, and targeted code. If
    `docs/ai/specs/ubiquitous-language.md` exists, read it before the Terms
    branch and reuse its rows.
 3. Walk the highest-impact, highest-uncertainty design branch first. Ask one
    neutral decision question, record the recommendation and evidence, record the
    user's answer, and update the remaining branches.
 4. Include a slice-sizing branch near the end. Read the canonical
-   [slicing heuristics](../speckit-coach/references/slicing-heuristics.md),
-   derive story, surface, requirement, and new-versus-modify signals, and run
-   runner operation `estimate-spec-size`.
+   [slicing heuristics](../speckit-coach/references/slicing-heuristics.md), derive
+   story, surface, requirement, and new-versus-modify signals, and run runner
+   operation `estimate-spec-size`.
    - Treat `warn` or a horizontal slice as a reason to recommend thin vertical
      slices, never as a gate.
    - Treat an unavailable, non-zero, empty, or unparseable estimate as absent;
@@ -71,9 +72,9 @@ Never use this fallback in background, CI, autopilot, or subagent execution.
    - Record an accepted split in Goals, a deferred split in Open Questions, and
      a declined or unnecessary split as an advisory note.
 5. Stop at natural convergence, when the user ends the interview, or at the
-   protocol's cap. Only after the interview, read the shared
-   [Design Concept output contract](references/output-formats.md)
-   and synthesize the record.
+   protocol's cap. Only after the interview, read the
+   [Design Concept output contract](references/output-formats.md) and synthesize
+   the record.
 
 ## Handoff
 

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import re
+import tomllib
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -135,3 +137,62 @@ def declared_hook_commands(data: object) -> list[str]:
 
     walk(data.get("hooks") if isinstance(data, dict) else None)
     return found
+
+
+def discover_skill_names(skills_dir: Path) -> list[str]:
+    """Sorted names of the directories under ``skills_dir`` that hold a SKILL.md."""
+    return sorted(path.name for path in skills_dir.iterdir() if (path / "SKILL.md").is_file())
+
+
+def frontmatter_field(frontmatter_text: str, key: str) -> str:
+    """First ``key: value`` line of a frontmatter block, with quotes stripped."""
+    for line in frontmatter_text.splitlines():
+        if line.startswith(f"{key}:"):
+            value = re.sub(rf"^{re.escape(key)}:[ \t]*", "", line)
+            return value.replace('"', "").replace("'", "")
+    return ""
+
+
+def toml_string_field(toml_text: str, field: str) -> str:
+    """Top-level string value of ``field`` in a TOML document; "" when absent or not a string.
+
+    Malformed TOML raises ``tomllib.TOMLDecodeError`` (a ``ValueError``), so a broken agent
+    file fails the check instead of reading as an empty field.
+    """
+    document = tomllib.loads(toml_text)
+    if field in document and isinstance(document[field], str):
+        return document[field]
+    return ""
+
+
+def developer_instructions(toml_text: str) -> str:
+    """Body of the first ``developer_instructions`` triple-quoted TOML block."""
+    out: list[str] = []
+    capture = False
+    for line in toml_text.splitlines():
+        if not capture and line.startswith('developer_instructions = """'):
+            capture = True
+            continue
+        if capture and line.strip() == '"""':
+            break
+        if capture:
+            out.append(line)
+    return "\n".join(out)
+
+
+def entries_by_name(document: object) -> dict[str, dict]:
+    """Marketplace plugin entries keyed by name."""
+    plugins = document.get("plugins") if isinstance(document, dict) else None
+    return {
+        entry["name"]: entry
+        for entry in plugins or []
+        if isinstance(entry, dict) and isinstance(entry.get("name"), str)
+    }
+
+
+def source_path(entry: dict) -> str:
+    """A marketplace entry's source path, from either the object or bare-path form."""
+    source = entry.get("source")
+    if isinstance(source, dict):
+        source = source.get("path")
+    return source if isinstance(source, str) else ""

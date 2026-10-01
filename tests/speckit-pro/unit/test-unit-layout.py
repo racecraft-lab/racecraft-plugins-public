@@ -121,6 +121,76 @@ def _contains_repository_spec_id(value: str, families: frozenset[str]) -> bool:
     )
 
 
+SUITE_LOADER_ATTRIBUTES = frozenset({"loadTestsFromModule", "discover", "main"})
+
+
+def _base_names(node: ast.ClassDef) -> list[str]:
+    return [b.id if isinstance(b, ast.Name) else b.attr for b in node.bases if isinstance(b, (ast.Name, ast.Attribute))]
+
+
+def _same_file_bases(node: ast.ClassDef, classes: dict[str, ast.ClassDef], seen: frozenset[str]) -> list[ast.ClassDef]:
+    return [classes[name] for name in _base_names(node) if name in classes and name not in seen]
+
+
+def _is_test_case(node: ast.ClassDef, classes: dict[str, ast.ClassDef], seen: frozenset[str] = frozenset()) -> bool:
+    return "TestCase" in _base_names(node) or any(
+        _is_test_case(base, classes, seen | {node.name}) for base in _same_file_bases(node, classes, seen)
+    )
+
+
+def _has_tests(node: ast.ClassDef, classes: dict[str, ast.ClassDef], seen: frozenset[str] = frozenset()) -> bool:
+    return any(isinstance(m, ast.FunctionDef) and m.name.startswith("test") for m in node.body) or any(
+        _has_tests(base, classes, seen | {node.name}) for base in _same_file_bases(node, classes, seen)
+    )
+
+
+def _mentioned_names(tree: ast.Module) -> set[str]:
+    """Names and string constants used outside the class definitions' own headers."""
+    mentioned: set[str] = set()
+
+    class Mentions(ast.NodeVisitor):
+        def visit_ClassDef(self, node: ast.ClassDef) -> None:
+            for child in [*node.decorator_list, *node.body]:
+                self.visit(child)
+
+        def visit_Name(self, node: ast.Name) -> None:
+            mentioned.add(node.id)
+
+        def visit_Constant(self, node: ast.Constant) -> None:
+            if isinstance(node.value, str):
+                mentioned.add(node.value)
+
+    Mentions().visit(tree)
+    return mentioned
+
+
+def _with_listed_bases(mentioned: set[str], classes: dict[str, ast.ClassDef]) -> set[str]:
+    """A listed subclass runs the tests it inherits, so its same-file bases count as listed."""
+    covered = set(mentioned)
+    pending = [name for name in classes if name in mentioned]
+    while pending:
+        for base in _base_names(classes[pending.pop()]):
+            if base in classes and base not in covered:
+                covered.add(base)
+                pending.append(base)
+    return covered
+
+
+def unreferenced_test_cases(source: str) -> list[str]:
+    """TestCase classes with tests that no suite builder in ``source`` mentions.
+
+    A module that loads by module, discovery or ``unittest.main`` runs them all.
+    Otherwise a class must appear by name (or as a string for loadTestsFromNames)
+    outside its own definition, or its tests never run and the suite still passes.
+    """
+    tree = ast.parse(source)
+    if any(isinstance(node, ast.Attribute) and node.attr in SUITE_LOADER_ATTRIBUTES for node in ast.walk(tree)):
+        return []
+    classes = {node.name: node for node in tree.body if isinstance(node, ast.ClassDef)}
+    covered = _with_listed_bases(_mentioned_names(tree), classes)
+    return sorted(name for name, node in classes.items() if _is_test_case(node, classes) and _has_tests(node, classes) and name not in covered)
+
+
 class UnitLayoutTests(unittest.TestCase):
     def test_unit_directory_replaces_the_opaque_layer_name(self) -> None:
         self.assertTrue(UNIT_ROOT.is_dir())
@@ -276,6 +346,123 @@ class UnitLayoutTests(unittest.TestCase):
             )
 
 
+class UnitRosterTests(unittest.TestCase):
+    def test_every_unit_test_script_is_registered_in_the_unit_layer(self) -> None:
+        manifest = json.loads(
+            (TEST_ROOT / "suite-manifest.json").read_text(encoding="utf-8")
+        )
+        layer = next(item for item in manifest["layers"] if item["id"] == "4")
+        registered = {script["path"] for script in layer["scripts"]}
+        discovered = {
+            path.relative_to(REPO_ROOT).as_posix()
+            for path in UNIT_ROOT.glob("test-*.py")
+        }
+        self.assertEqual(sorted(discovered - registered), [])
+
+
+LOADER_CALL = "spec_from_file_location"
+LOADER_HOME = LIB_DIR / "script_loader.py"
+
+
+def _is_patch_target(node: ast.AST, parent: ast.AST | None) -> bool:
+    """True for the loader name passed as the attribute of ``mock.patch.object(module, "name", ...)``.
+
+    A test may patch the importlib entry point to prove code does not load scripts. That
+    is the one allowed mention; it does not load anything.
+    """
+    return (
+        isinstance(node, ast.Constant) and node.value == LOADER_CALL
+        and isinstance(parent, ast.Call) and len(parent.args) >= 2 and parent.args[1] is node
+        and isinstance(parent.func, ast.Attribute) and parent.func.attr == "object"
+        and isinstance(parent.func.value, (ast.Name, ast.Attribute))
+        and getattr(parent.func.value, "attr", getattr(parent.func.value, "id", "")) == "patch"
+    )
+
+
+def mentions_private_loader(source: str) -> bool:
+    """True when ``source`` repeats the importlib file-loader call, other than as a patch target."""
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return LOADER_CALL in source
+    parents = {child: node for node in ast.walk(tree) for child in ast.iter_child_nodes(node)}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Attribute) and node.attr == LOADER_CALL:
+            return True
+        if isinstance(node, ast.Name) and node.id == LOADER_CALL:
+            return True
+        if isinstance(node, ast.Constant) and isinstance(node.value, str) and LOADER_CALL in node.value:
+            if not _is_patch_target(node, parents.get(node)):
+                return True
+    return False
+
+
+def files_with_private_loader(paths) -> list[str]:
+    """Return the paths whose source repeats the importlib file-loader call."""
+    return [str(p) for p in paths if mentions_private_loader(p.read_text(encoding="utf-8"))]
+
+
+class ScriptLoaderTests(unittest.TestCase):
+    def test_only_the_shared_helper_loads_scripts_by_file_path(self) -> None:
+        copies = [
+            Path(p).relative_to(REPO_ROOT).as_posix()
+            for p in files_with_private_loader(sorted(TEST_ROOT.rglob("*.py")))
+            if Path(p) != LOADER_HOME and Path(p) != Path(__file__).resolve()
+        ]
+        self.assertEqual([], copies)
+
+    def test_private_loader_detection_finds_a_copy_but_allows_a_patch_target(self) -> None:
+        patch_target = f"with mock.patch.object(importlib.util, {LOADER_CALL!r}, side_effect=AssertionError):\n    pass\n"
+        cases = {
+            "call": (f"importlib.util.{LOADER_CALL}('x', p)\n", True),
+            "child process source": (f"code = \"importlib.util.{LOADER_CALL}('x', p)\"\n", True),
+            "patch target": (patch_target, False),
+            "patch target beside a copy": (patch_target + f"spec = importlib.util.{LOADER_CALL}('x', p)\n", True),
+            "other patch target": (f"with mock.patch.object(os, {LOADER_CALL!r}):\n    pass\n", False),
+            "string outside patch": (f"NAME = {LOADER_CALL!r}\n", True),
+            "clean": ("from script_loader import load_script\n", False),
+        }
+        for label, (source, expected) in cases.items():
+            with self.subTest(case=label):
+                self.assertEqual(expected, mentions_private_loader(source))
+
+
+class UnitSuiteCompletenessTests(unittest.TestCase):
+    def test_every_registered_test_case_is_added_to_its_suite(self) -> None:
+        manifest = json.loads((TEST_ROOT / "suite-manifest.json").read_text(encoding="utf-8"))
+        scripts = [
+            script["path"]
+            for layer in manifest["layers"]
+            for script in layer.get("scripts", [])
+            if script["path"].endswith(".py")
+        ]
+        self.assertTrue(scripts)
+        unrun = {
+            path: names
+            for path in scripts
+            if (names := unreferenced_test_cases((REPO_ROOT / path).read_text(encoding="utf-8")))
+        }
+        self.assertEqual(unrun, {})
+
+    def test_unreferenced_test_case_detection_finds_a_class_missing_from_a_hand_list(self) -> None:
+        listed = (
+            "import unittest\n"
+            "class A(unittest.TestCase):\n    def test_a(self): pass\n"
+            "class B(unittest.TestCase):\n    def test_b(self): pass\n"
+            "suite = unittest.defaultTestLoader.loadTestsFromTestCase(A)\n"
+        )
+        self.assertEqual(["B"], unreferenced_test_cases(listed))
+        self.assertEqual([], unreferenced_test_cases(listed + "loader.loadTestsFromTestCase(B)\n"))
+        self.assertEqual([], unreferenced_test_cases(listed + "unittest.defaultTestLoader.loadTestsFromModule(m)\n"))
+        self.assertEqual([], unreferenced_test_cases(listed + "names = ['B']\n"))
+        inherited = "import unittest\nclass Base(unittest.TestCase):\n    def test_x(self): pass\nclass Child(Base): pass\nsuite = [Child]\n"
+        self.assertEqual([], unreferenced_test_cases(inherited))
+        self.assertEqual(["Base", "Child"], unreferenced_test_cases(inherited.replace("suite = [Child]", "")))
+
+
 if __name__ == "__main__":
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(UnitLayoutTests)
+    suite = unittest.TestSuite(
+        unittest.defaultTestLoader.loadTestsFromTestCase(case)
+        for case in (UnitLayoutTests, UnitRosterTests, ScriptLoaderTests, UnitSuiteCompletenessTests)
+    )
     raise SystemExit(run_counted(suite, label="test-unit-layout"))

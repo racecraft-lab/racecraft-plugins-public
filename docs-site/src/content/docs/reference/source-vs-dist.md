@@ -153,23 +153,23 @@ Editability and responsibility map for source, generated payloads, tests, releas
 - **Purpose:** Root scripts used for generated payload and marketplace maintenance.
 - **Classification:** `release-infrastructure`
 - **Platform concept:** Source-vs-dist responsibility
-- **Claude Code:** scripts/build-plugin-payloads.py, scripts/sync-marketplace-versions.py
-- **Codex:** scripts/build-plugin-payloads.py, scripts/sync-marketplace-versions.py
+- **Claude Code:** scripts/refresh-release-artifacts.py, scripts/sync-marketplace-versions.py
+- **Codex:** scripts/refresh-release-artifacts.py, scripts/sync-marketplace-versions.py
 - **Runtime difference:** Release and payload scripts are shared maintenance infrastructure unless an individual script declares a runtime-specific target.
 
 #### Source Facts
 
-- Release And Payload Scripts is classified as release-infrastructure. Source refs: `scripts/build-plugin-payloads.py`, `scripts/sync-marketplace-versions.py`.
+- Release And Payload Scripts is classified as release-infrastructure. Source refs: `scripts/refresh-release-artifacts.py`, `scripts/sync-marketplace-versions.py`.
 
 #### Sources
 
-- [scripts/build-plugin-payloads.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/build-plugin-payloads.py)
+- [scripts/refresh-release-artifacts.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/refresh-release-artifacts.py)
 - [scripts/sync-marketplace-versions.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/sync-marketplace-versions.py)
 
 #### Inferred Notes
 
 - Use this classification before deciding whether a future change should edit source directly, regenerate payloads, or update docs only.
-  - Based on: `scripts/build-plugin-payloads.py`, `scripts/sync-marketplace-versions.py`
+  - Based on: `scripts/refresh-release-artifacts.py`, `scripts/sync-marketplace-versions.py`
 
 ### SpecKit Integration Manifests
 
@@ -177,22 +177,23 @@ Editability and responsibility map for source, generated payloads, tests, releas
 - **Classification:** `source`
 - **Platform concept:** Source-vs-dist responsibility
 - **Claude Code:** .specify/integrations/claude.manifest.json, .specify/integrations/speckit.manifest.json
-- **Codex:** .specify/integrations/speckit.manifest.json
+- **Codex:** .specify/integrations/codex.manifest.json, .specify/integrations/speckit.manifest.json
 - **Runtime difference:** Integration manifests record installed SpecKit and Claude integration evidence; they are reference inventory, not generated plugin payloads.
 
 #### Source Facts
 
-- SpecKit Integration Manifests is classified as source. Source refs: `.specify/integrations/claude.manifest.json`, `.specify/integrations/speckit.manifest.json`.
+- SpecKit Integration Manifests is classified as source. Source refs: `.specify/integrations/claude.manifest.json`, `.specify/integrations/codex.manifest.json`, `.specify/integrations/speckit.manifest.json`.
 
 #### Sources
 
 - [.specify/integrations/claude.manifest.json](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/.specify/integrations/claude.manifest.json)
+- [.specify/integrations/codex.manifest.json](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/.specify/integrations/codex.manifest.json)
 - [.specify/integrations/speckit.manifest.json](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/.specify/integrations/speckit.manifest.json)
 
 #### Inferred Notes
 
 - Use this classification before deciding whether a future change should edit source directly, regenerate payloads, or update docs only.
-  - Based on: `.specify/integrations/claude.manifest.json`, `.specify/integrations/speckit.manifest.json`
+  - Based on: `.specify/integrations/claude.manifest.json`, `.specify/integrations/codex.manifest.json`, `.specify/integrations/speckit.manifest.json`
 
 ### Validation Test Suite
 

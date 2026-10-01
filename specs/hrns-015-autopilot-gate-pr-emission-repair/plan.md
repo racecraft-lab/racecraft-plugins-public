@@ -59,24 +59,24 @@ C2's stored union is 40; removing the six already-shipped link-only README/templ
 
 | Scope family | Approved increment/story | Production candidates | Stored candidate total |
 | --- | --- | ---: | ---: |
-| A | A1a / US1 note renderer-schema | 2 | 24 |
-| A | A1b / US1 editable note validation | 2 | 24 |
-| A | A2 / US2 current-packet guard | 1 | 24 |
-| A | A3 / US3 current verdict | 2 | 24 |
+| A | A1a / US1 note renderer-schema | 2 | 23 |
+| A | A1b / US1 editable note validation | 2 | 23 |
+| A | A2 / US2 current-packet guard | 1 | 22 |
+| A | A3 / US3 current verdict | 2 | 23 |
 | B | B1a / US4 marker visibility | 1 | 22 |
 | B | B1b / US5 tracked index-refresh | 2 | 23 |
 | B | B2b / US6 split/greenfield budgets | 1 | 23 |
 | B | B3a / US7 refactor estimate | 1 | 18 |
-| B | B3b / US8 declared commands | 2 | 22 |
-| C1a | C1a1 / US9 Post names | 1 | 24 |
-| C1a | C1a2 / US10 completion boundary | 1 | 21 |
+| B | B3b / US8 declared commands | 2 | 24 |
+| C1a | C1a1 / US9 Post names | 1 | 21 |
+| C1a | C1a2 / US10 completion boundary | 1 | 18 |
 | C1b | C1b1 / US10 phase/analyze teardown | 2 | 21 |
 | C1b | C1b2 / US10 checklist/implement teardown | 2 | 21 |
-| C2 | C2a1 / US11 review feedback | 0 | 14 |
-| C2 | C2a2 / US12 blind-spot wait | 0 | 14 |
-| C2 | C2a3 / US13 status envelopes | 0 | 14 |
-| C2 | C2b1 / US13 scaffold/phase envelopes | 0 | 21 |
-| C2 | C2b2 / US14 existing legacy links | 0 | 22, conservative candidate set |
+| C2 | C2a1 / US11 review feedback | 0 | 13 |
+| C2 | C2a2 / US12 blind-spot wait | 0 | 13 |
+| C2 | C2a3 / US13 status envelopes | 0 | 13 |
+| C2 | C2b1 / US13 scaffold/phase envelopes | 0 | 18 |
+| C2 | C2b2 / US14 existing legacy links | 0 | 15 |
 
 Each count comes from the existing [candidate inventory](.process/slice-inventory.md); none is an actual scope/LOC qualification. A1a plans the protected-note checkpoint and A1b completes editable validation; the final FR-002 contract is not claimed at the first checkpoint. Repeated story parts use unique marker IDs and current sequential-reuse rules. Planning records candidate paths and pending checkpoints; actual base/head diffs and required checkpoint evidence are collected before each PR emission. An approved allocation that fits candidate path estimates can still fail actual LOC, surface, checkpoint, fingerprint or hazard validation.
 
@@ -92,11 +92,14 @@ The pre-implementation record is `pr-marker-plan.v1`. The parent persists and va
 
 Before each PR emission, existing marker/emission validation requires actual base/head changed paths, reviewable LOC, production/total counts and passing checkpoint evidence. Repeated production paths are measured separately in each actual diff; candidate membership cannot supply that proof. Missing required planning evidence blocks planning; missing required implementation/emission evidence blocks emission.
 
+
+Current-source reconciliation after the main merge: packet behavior now lives in `helpers/pr_packet.py`; canonical packet path shapes live in `pr_contract.py`. Shared skill host blocks replace removed Codex overlays, and Codex agent TOMLs are regenerated from authored agent Markdown. Current candidate tables below deduplicate those shared sources. Recorded historical source/checkpoint counts and evidence files are preserved; final PR base/head measurements remain required. B3b extends `quality_gates.py` plus its existing read-only adapter and retains the default configuration unchanged. Mechanical merge path reanchoring is recorded separately from the eighteen behavior checkpoints.
+
 ## Module and Interface Deltas
 
 ### Slice A — packet and body
 
-- `helpers/pr_emission.py` — changed: one optional nonblank unfenced `release_note`, final rendering and a protected current Phase 6.5 Verdict under Verification, including refresh.
+- `helpers/pr_packet.py` — changed: one optional nonblank unfenced `release_note`, final rendering and a protected current Phase 6.5 Verdict under Verification, including refresh.
 - `skills/speckit-autopilot/contracts/pr-packet.schema.json` — changed: optional note and conditional fourth final editable field under the existing closed schema; drafts keep zero fields. This is the repository's packet-schema source path, correcting the old design concept location without changing scope.
 - `helpers/read_only.py` — changed: exact release-note structure and protected fingerprint boundaries.
 - `helpers/mutation.py` — changed: packet validation/output exempt only the current packet's three canonical untracked paths; tracked or unrelated changes still block.
@@ -105,10 +108,10 @@ Before each PR emission, existing marker/emission validation requires actual bas
 
 ### Slice B — gates, index, estimate and commands
 
-- `helpers/read_only.py` — changed: comma-token Gap matching plus shared code visibility for clarification counts/details; tracked-only spec index; complete split budget aggregation and LOC-only greenfield allowance; required-refactor estimate; per-quality-slot declarations.
+- `helpers/read_only.py` — changed: comma-token Gap matching plus shared code visibility for clarification counts/details; tracked-only spec index; complete split budget aggregation and LOC-only greenfield allowance; required-refactor estimate; quality-slot adapter. `quality_gates.py` owns declaration validation and resolution; default configuration values remain unchanged.
 - Named-entry selection, selected pragma and missing-budget blocking — **baseline, not new work** after #694. Keep compatibility fixtures; do not manufacture pre-fix failure for shipped behavior or require a registry edit solely for removed FR-011–FR-013.
 - `scripts/refresh-release-artifacts.py` — changed: existing index generator joins plain refresh and isolated check; check names stale tracked index paths. Existing required artifact-consistency job remains the CI owner.
-- `.specify/quality-gates.json` — changed only for optional validated quality-slot commands if needed; preserve approved complexity15, CRAP30, mutation floor60, thresholds and basis. Do not map general lint commands into unrelated quality slots.
+- `quality_gates.py` — validates optional declared commands; the default `.specify/quality-gates.json` stays unchanged; preserve approved complexity15, CRAP30, mutation floor60, thresholds and basis. Do not map general lint commands into unrelated quality slots.
 - Roadmap template — changed for ordered Slices/Slice Budgets syntax without literal accepted exception pragmas; its new-template workflow links are already shipped and stay baseline.
 - Both hosts' gate/prerequisite guidance and root `AGENTS.md` — align with real counters, command precedence and index refresh. `specs/formal-001-selective-formal-methods/SPEC-MOC.md` is regenerated, not authored by hand.
 
@@ -138,7 +141,6 @@ All helper paths above are under `speckit-pro/speckit_pro_runner/`; skill paths 
 
 These authored candidate operations are the estimator input for the remaining behavior design; they are not a final changed-file manifest. Generated fan-out and recurring evidence are counted separately in the inventory/table above. Tasks must reconcile this list to the approved direction and current-source review; a nonexistent planned fixture is not a test already run.
 
-- MODIFIED .specify/quality-gates.json
 - MODIFIED AGENTS.md
 - MODIFIED docs/ai/specs/harness-engineering-uplift-technical-roadmap.md
 - MODIFIED docs/prd-harness-engineering-uplift.md
@@ -147,32 +149,23 @@ These authored candidate operations are the estimator input for the remaining be
 - MODIFIED speckit-pro/agents/checklist-executor.md
 - MODIFIED speckit-pro/agents/implement-executor.md
 - MODIFIED speckit-pro/agents/phase-executor.md
-- MODIFIED speckit-pro/codex-agents/analyze-executor.toml
-- MODIFIED speckit-pro/codex-agents/checklist-executor.toml
-- MODIFIED speckit-pro/codex-agents/implement-executor.toml
-- MODIFIED speckit-pro/codex-agents/phase-executor.toml
-- MODIFIED speckit-pro/codex-skills/speckit-autopilot/SKILL.md
-- MODIFIED speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md
-- MODIFIED speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md
-- MODIFIED speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md
-- MODIFIED speckit-pro/codex-skills/speckit-resolve-pr/SKILL.md
-- MODIFIED speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md
-- MODIFIED speckit-pro/codex-skills/speckit-status/SKILL.md
 - MODIFIED speckit-pro/skills/speckit-autopilot/SKILL.md
-- MODIFIED speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json
-- MODIFIED speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md
-- MODIFIED speckit-pro/skills/speckit-autopilot/references/gate-validation.md
 - MODIFIED speckit-pro/skills/speckit-autopilot/references/phase-execution.md
 - MODIFIED speckit-pro/skills/speckit-autopilot/references/post-implementation.md
 - MODIFIED speckit-pro/skills/speckit-autopilot/references/task-list-canonical.md
-- MODIFIED speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py
-- MODIFIED speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md
-- MODIFIED speckit-pro/skills/speckit-coach/templates/workflow-template.md
 - MODIFIED speckit-pro/skills/speckit-resolve-pr/SKILL.md
 - MODIFIED speckit-pro/skills/speckit-scaffold-spec/SKILL.md
 - MODIFIED speckit-pro/skills/speckit-status/SKILL.md
+- MODIFIED speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json
+- MODIFIED speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md
+- MODIFIED speckit-pro/skills/speckit-autopilot/references/gate-validation.md
+- MODIFIED speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py
+- MODIFIED speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md
+- MODIFIED speckit-pro/skills/speckit-coach/templates/workflow-template.md
 - MODIFIED speckit-pro/speckit_pro_runner/helpers/mutation.py
-- MODIFIED speckit-pro/speckit_pro_runner/helpers/pr_emission.py
+- MODIFIED speckit-pro/speckit_pro_runner/helpers/pr_packet.py
+- MODIFIED speckit-pro/speckit_pro_runner/pr_contract.py
+- MODIFIED speckit-pro/speckit_pro_runner/quality_gates.py
 - MODIFIED speckit-pro/speckit_pro_runner/helpers/read_only.py
 - NEW tests/speckit-pro/layer1-structural/test-phase-analyze-teardown.py
 - NEW tests/speckit-pro/layer1-structural/test-checklist-implement-teardown.py
@@ -227,12 +220,12 @@ specs/hrns-015-autopilot-gate-pr-emission-repair/
 ├── tasks.md
 └── .process/{slice-inventory.md,task-execution.json}
 speckit-pro/
-├── speckit_pro_runner/helpers/{pr_emission,read_only,mutation,registry}.py
+├── speckit_pro_runner/helpers/{pr_packet,read_only,mutation,registry}.py
+├── speckit_pro_runner/{pr_contract,quality_gates}.py
 ├── speckit_pro_runner/formal/lifecycle.py
 ├── skills/{speckit-autopilot,speckit-resolve-pr,speckit-scaffold-spec,speckit-status,speckit-coach}/
-├── codex-skills/{speckit-autopilot,speckit-resolve-pr,speckit-scaffold-spec,speckit-status}/
 ├── agents/{phase,analyze,checklist,implement}-executor.md
-└── codex-agents/{phase,analyze,checklist,implement}-executor.toml
+└── codex-agents/{phase,analyze,checklist,implement}-executor.toml (generated)
 scripts/refresh-release-artifacts.py
 tests/speckit-pro/{unit,layer1-structural,layer5-tool-scoping}/
 ~~~

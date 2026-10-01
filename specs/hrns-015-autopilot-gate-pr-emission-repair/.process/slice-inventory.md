@@ -6,11 +6,14 @@ This is the conservative **per-PR candidate ledger** for the owner-approved eigh
 
 - Each increment includes the six tracked workflow/process/evidence candidates listed in every table: `HRNS-015-workflow.md`, `autopilot-state.json`, `tasks.md`, `task-execution.json`, `slice-inventory.md`, and HRNS-015 `SPEC-MOC.md`. The last is a conservative generated PR/index candidate; any proven no-diff path can fall out of the actual gate, while a new path must be added and re-budgeted before publication. The parent owns workflow/state updates during this Tasks phase.
 - A path is counted once per PR, including repeated helper, trust, manifest, and host paths in later PRs. Limits are ≤4 production paths and ≤24 total changed paths. Dist and reference rows are candidates requiring exact refresh/diff measurement. Packet files ignored by this repository are local process outputs, not committed PR diff candidates.
-- A1a emits a prefilled note as protected content; A1b adds the fourth editable marker pair and its fingerprint/structure rules in both `pr_emission.py` and `read_only.py`. Existing registered test modules are reused where needed to keep the vertical behavior slices inside the cap: A1a/A1b use the packet mutation/read-only tests, B2b use the read-only helper tests, and C1a1/C1a2 use the phase-coverage tests. New acceptance cases are inline in those modules; tests still begin RED. Adding a fixture/module or changing a generated page beyond this ledger requires re-inventory and reallocation.
+- A1a emits a prefilled note as protected content; A1b adds the fourth editable marker pair and its fingerprint/structure rules in both `pr_packet.py` and `read_only.py`. Existing registered test modules are reused where needed to keep the vertical behavior slices inside the cap: A1a/A1b use the packet mutation/read-only tests, B2b use the read-only helper tests, and C1a1/C1a2 use the phase-coverage tests. New acceptance cases are inline in those modules; tests still begin RED. Adding a fixture/module or changing a generated page beyond this ledger requires re-inventory and reallocation.
 - Each increment has its own passing RED → fix → GREEN checkpoint, host parity check, generated refresh, exact changed-path and reviewable-LOC measurement, and title/release-note gate before PR emission. Production paths count source Python, schema, active config, and Codex agent TOMLs; Claude agent Markdown is host guidance. The refactor-inclusive estimate is still `not_estimated`; no implementation diff has been measured.
 - Supplied #676 establishes sequential repeated-path marker support as baseline. Planning G6 requires coverage, task consistency, candidate budgets and a current planned marker record; the parent persists `pr-marker-plan.v1` after Tasks, with every `implementation_checkpoint` exactly `{"status": "pending"}` and no commit or evidence fields. Preserve the supplied `atomicity-route=one-navigable-PR` advisory without treating it as approval. Actual per-PR base/head paths, reviewable LOC and passing checkpoint evidence remain mandatory before PR emission. No planning gate pass or future diff is claimed here.
 
 C1b1 and C1b2 create distinct structural test files for phase/analyze and checklist/implement executor twins respectively. Each NEW path belongs to one increment only; both retain all four host-definition checks, the shared modified guidance, and their 21-total/2-production candidate budgets.
+
+
+Current-source reconciliation after the main merge: packet behavior now lives in `helpers/pr_packet.py`; canonical packet path shapes live in `pr_contract.py`. Shared skill host blocks replace removed Codex overlays, and Codex agent TOMLs are regenerated from authored agent Markdown. Current candidate tables below deduplicate those shared sources. Recorded historical source/checkpoint counts and evidence files are preserved; final PR base/head measurements remain required. B3b extends `quality_gates.py` plus its existing read-only adapter and retains the default configuration unchanged. Mechanical merge path reanchoring is recorded separately from the eighteen behavior checkpoints.
 
 ## Exact candidate counts
 
@@ -18,24 +21,24 @@ The current marker contract uses `kind=user_story`, `id=usN` for an unsplit stor
 
 | Increment | Marker ID | One story | Tasks | Production | Total | Qualification |
 | --- | --- | --- | --- | ---: | ---: | --- |
-| A1a | `us1-part1` | US1 | T003–T004 | 2 | 24 | Candidate only; actual diff/LOC unmeasured |
-| A1b | `us1-part2` | US1 | T005 | 2 | 24 | Candidate only; actual diff/LOC unmeasured |
-| A2 | `us2` | US2 | T006–T007 | 1 | 24 | Candidate only; actual diff/LOC unmeasured |
-| A3 | `us3` | US3 | T008–T009 | 2 | 24 | Source delta: 18 paths; 22 with four tracked process paths; 204 authored non-process changed lines; final PR base/head diff and LOC pending |
+| A1a | `us1-part1` | US1 | T003–T004 | 2 | 23 | Candidate only; actual diff/LOC unmeasured |
+| A1b | `us1-part2` | US1 | T005 | 2 | 23 | Candidate only; actual diff/LOC unmeasured |
+| A2 | `us2` | US2 | T006–T007 | 1 | 22 | Candidate only; actual diff/LOC unmeasured |
+| A3 | `us3` | US3 | T008–T009 | 2 | 23 | Source delta: 18 paths; 22 with four tracked process paths; 204 authored non-process changed lines; final PR base/head diff and LOC pending |
 | B1a | `us4` | US4 | T010 | 1 | 22 | Source delta: 18 paths; 22 with four tracked process paths; 497 authored non-process changed lines; final PR base/head diff and LOC pending |
 | B1b | `us5` | US5 | T011 | 2 | 23 | Source delta: 19 paths; 23 with four tracked process paths; 481 authored non-process changed lines; final PR base/head diff and LOC pending |
 | B2b | `us6` | US6 | T012–T013 | 1 | 23 | Source delta: 16 paths; 21 with four tracked process paths and index; 266 authored non-process changed lines; final PR base/head diff and LOC pending |
 | B3a | `us7` | US7 | T014 | 1 | 18 | Candidate only; actual diff/LOC unmeasured |
-| B3b | `us8` | US8 | T015–T016 | 2 | 22 | Candidate only; actual diff/LOC unmeasured |
-| C1a1 | `us9` | US9 | T017 | 1 | 24 | Candidate only; actual diff/LOC unmeasured |
-| C1a2 | `us10-part1` | US10 | T018 | 1 | 21 | Candidate only; actual diff/LOC unmeasured |
+| B3b | `us8` | US8 | T015–T016 | 2 | 24 | Candidate only; actual diff/LOC unmeasured |
+| C1a1 | `us9` | US9 | T017 | 1 | 21 | Candidate only; actual diff/LOC unmeasured |
+| C1a2 | `us10-part1` | US10 | T018 | 1 | 18 | Candidate only; actual diff/LOC unmeasured |
 | C1b1 | `us10-part2` | US10 | T019 | 2 | 21 | Candidate only; actual diff/LOC unmeasured |
 | C1b2 | `us10-part3` | US10 | T020–T021 | 2 | 21 | Candidate only; actual diff/LOC unmeasured |
-| C2a1 | `us11` | US11 | T022–T023 | 0 | 14 | Candidate only; actual diff/LOC unmeasured |
-| C2a2 | `us12` | US12 | T024 | 0 | 14 | Candidate only; actual diff/LOC unmeasured |
-| C2a3 | `us13-part1` | US13 | T025 | 0 | 14 | Candidate only; actual diff/LOC unmeasured |
-| C2b1 | `us13-part2` | US13 | T026–T027 | 0 | 21 | Candidate only; actual diff/LOC unmeasured |
-| C2b2 | `us14` | US14 | T028–T030 | 0 | 16 | Candidate only; actual diff/LOC unmeasured |
+| C2a1 | `us11` | US11 | T022–T023 | 0 | 13 | Candidate only; actual diff/LOC unmeasured |
+| C2a2 | `us12` | US12 | T024 | 0 | 13 | Candidate only; actual diff/LOC unmeasured |
+| C2a3 | `us13-part1` | US13 | T025 | 0 | 13 | Candidate only; actual diff/LOC unmeasured |
+| C2b1 | `us13-part2` | US13 | T026–T027 | 0 | 18 | Candidate only; actual diff/LOC unmeasured |
+| C2b2 | `us14` | US14 | T028–T030 | 0 | 15 | Candidate only; actual diff/LOC unmeasured |
 
 
 ### Shipped-scope exclusions and count provenance
@@ -57,19 +60,18 @@ Candidate group unions are A: 39 total/4 production; B: 36/3; C1a: 29/1; C1b: 30
 
 ### A1a — US1 optional note render/schema
 
-Tasks: T003–T004. Requirements: FR-001, FR-003, FR-026. **24 candidate paths; 2 production.**
+Tasks: T003–T004. Requirements: FR-001, FR-003, FR-026. **23 candidate paths; 2 production.**
 
 | Class | Operation | Path | Basis |
 | --- | --- | --- | --- |
-| production | modify | `speckit-pro/speckit_pro_runner/helpers/pr_emission.py` | task |
-| generated | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/helpers/pr_emission.py` | source payload |
-| generated | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/helpers/pr_emission.py` | source payload |
+| production | modify | `speckit-pro/speckit_pro_runner/helpers/pr_packet.py` | task |
+| generated | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/helpers/pr_packet.py` | source payload |
+| generated | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/helpers/pr_packet.py` | source payload |
 | production | modify | `speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json` | task |
 | generated | regenerate | `dist/claude/speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json` | source payload |
 | generated | regenerate | `dist/codex/speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json` | source payload |
 | host/support | modify | `speckit-pro/skills/speckit-autopilot/SKILL.md` | task |
 | generated | regenerate | `dist/claude/speckit-pro/skills/speckit-autopilot/SKILL.md` | Claude payload |
-| host/support | modify | `speckit-pro/codex-skills/speckit-autopilot/SKILL.md` | task |
 | generated | regenerate | `dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md` | Codex overlay |
 | generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
 | generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | runner source edited |
@@ -88,19 +90,18 @@ Tasks: T003–T004. Requirements: FR-001, FR-003, FR-026. **24 candidate paths; 
 
 ### A1b — US1 protected note validation
 
-Tasks: T005. Requirements: FR-002, FR-026. **24 candidate paths; 2 production.**
+Tasks: T005. Requirements: FR-002, FR-026. **23 candidate paths; 2 production.**
 
 | Class | Operation | Path | Basis |
 | --- | --- | --- | --- |
-| production | modify | `speckit-pro/speckit_pro_runner/helpers/pr_emission.py` | fourth editable field and note markers |
-| generated | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/helpers/pr_emission.py` | source payload |
-| generated | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/helpers/pr_emission.py` | source payload |
+| production | modify | `speckit-pro/speckit_pro_runner/helpers/pr_packet.py` | fourth editable field and note markers |
+| generated | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/helpers/pr_packet.py` | source payload |
+| generated | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/helpers/pr_packet.py` | source payload |
 | production | modify | `speckit-pro/speckit_pro_runner/helpers/read_only.py` | task |
 | generated | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/helpers/read_only.py` | source payload |
 | generated | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/helpers/read_only.py` | source payload |
 | host/support | modify | `speckit-pro/skills/speckit-autopilot/SKILL.md` | task |
 | generated | regenerate | `dist/claude/speckit-pro/skills/speckit-autopilot/SKILL.md` | Claude payload |
-| host/support | modify | `speckit-pro/codex-skills/speckit-autopilot/SKILL.md` | task |
 | generated | regenerate | `dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md` | Codex overlay |
 | generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
 | generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | runner source edited |
@@ -119,7 +120,7 @@ Tasks: T005. Requirements: FR-002, FR-026. **24 candidate paths; 2 production.**
 
 ### A2 — US2 packet-only guard and approved scope prose
 
-Tasks: T006–T007. Requirements: FR-004, FR-005, FR-027, FR-026. **24 candidate paths; 1 production.**
+Tasks: T006–T007. Requirements: FR-004, FR-005, FR-027, FR-026. **22 candidate paths; 1 production.**
 
 | Class | Operation | Path | Basis |
 | --- | --- | --- | --- |
@@ -129,8 +130,6 @@ Tasks: T006–T007. Requirements: FR-004, FR-005, FR-027, FR-026. **24 candidate
 | host/support | modify | `speckit-pro/skills/speckit-autopilot/references/post-implementation.md` | task |
 | generated | regenerate | `dist/claude/speckit-pro/skills/speckit-autopilot/references/post-implementation.md` | source payload |
 | generated | regenerate | `dist/codex/speckit-pro/skills/speckit-autopilot/references/post-implementation.md` | source payload |
-| host/support | modify | `speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md` | task |
-| generated | regenerate | `dist/codex/speckit-pro/skills/speckit-autopilot/references/post-implementation-codex.md` | Codex overlay |
 | test/manifest | modify | `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` | task |
 | test/manifest | add | `tests/speckit-pro/unit/fixtures/pr-packet-repair/packet-only-untracked.json` | task |
 | generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
@@ -150,19 +149,18 @@ Tasks: T006–T007. Requirements: FR-004, FR-005, FR-027, FR-026. **24 candidate
 
 ### A3 — US3 current verdict
 
-Tasks: T008–T009. Requirements: FR-006, FR-026. **24 candidate paths; 2 production.**
+Tasks: T008–T009. Requirements: FR-006, FR-026. **23 candidate paths; 2 production.**
 
 | Class | Operation | Path | Basis |
 | --- | --- | --- | --- |
-| production | modify | `speckit-pro/speckit_pro_runner/helpers/pr_emission.py` | task |
-| generated | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/helpers/pr_emission.py` | source payload |
-| generated | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/helpers/pr_emission.py` | source payload |
+| production | modify | `speckit-pro/speckit_pro_runner/helpers/pr_packet.py` | task |
+| generated | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/helpers/pr_packet.py` | source payload |
+| generated | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/helpers/pr_packet.py` | source payload |
 | production | modify | `speckit-pro/speckit_pro_runner/helpers/read_only.py` | task |
 | generated | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/helpers/read_only.py` | source payload |
 | generated | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/helpers/read_only.py` | source payload |
 | host/support | modify | `speckit-pro/skills/speckit-autopilot/SKILL.md` | task |
 | generated | regenerate | `dist/claude/speckit-pro/skills/speckit-autopilot/SKILL.md` | Claude payload |
-| host/support | modify | `speckit-pro/codex-skills/speckit-autopilot/SKILL.md` | task |
 | generated | regenerate | `dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md` | Codex overlay |
 | test/manifest | modify | `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` | task |
 | generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
@@ -303,17 +301,19 @@ Tasks: T014. Requirements: FR-015, FR-026. **18 candidate paths; 1 production.**
 
 ### B3b — US8 declared quality commands
 
-Tasks: T015–T016. Requirements: FR-016, FR-026. **22 candidate paths; 2 production.**
+Tasks: T015–T016. Requirements: FR-016, FR-026. **24 candidate paths; 2 production.**
 
 | Class | Operation | Path | Basis |
 | --- | --- | --- | --- |
 | production | modify | `speckit-pro/speckit_pro_runner/helpers/read_only.py` | task |
+| production | modify | `speckit-pro/speckit_pro_runner/quality_gates.py` | existing quality configuration owner |
+| generated | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/quality_gates.py` | existing quality configuration owner |
+| generated | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/quality_gates.py` | existing quality configuration owner |
 | generated | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/helpers/read_only.py` | source payload |
 | generated | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/helpers/read_only.py` | source payload |
 | host/support | modify | `speckit-pro/skills/speckit-autopilot/references/gate-validation.md` | task |
 | generated | regenerate | `dist/claude/speckit-pro/skills/speckit-autopilot/references/gate-validation.md` | source payload |
 | generated | regenerate | `dist/codex/speckit-pro/skills/speckit-autopilot/references/gate-validation.md` | source payload |
-| production | modify | `.specify/quality-gates.json` | task |
 | test/manifest | add | `tests/speckit-pro/unit/test-declared-quality-commands.py` | task |
 | test/manifest | modify | `tests/speckit-pro/suite-manifest.json` | task |
 | generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
@@ -332,7 +332,7 @@ Tasks: T015–T016. Requirements: FR-016, FR-026. **22 candidate paths; 2 produc
 
 ### C1a1 — US9 canonical Post list
 
-Tasks: T017. Requirements: FR-017, FR-026. **24 candidate paths; 1 production.**
+Tasks: T017. Requirements: FR-017, FR-026. **21 candidate paths; 1 production.**
 
 | Class | Operation | Path | Basis |
 | --- | --- | --- | --- |
@@ -341,13 +341,10 @@ Tasks: T017. Requirements: FR-017, FR-026. **24 candidate paths; 1 production.**
 | generated | regenerate | `dist/codex/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py` | source payload |
 | host/support | modify | `speckit-pro/skills/speckit-autopilot/SKILL.md` | task |
 | generated | regenerate | `dist/claude/speckit-pro/skills/speckit-autopilot/SKILL.md` | Claude payload |
-| host/support | modify | `speckit-pro/codex-skills/speckit-autopilot/SKILL.md` | task |
 | generated | regenerate | `dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md` | Codex overlay |
 | host/support | modify | `speckit-pro/skills/speckit-autopilot/references/task-list-canonical.md` | task |
 | generated | regenerate | `dist/claude/speckit-pro/skills/speckit-autopilot/references/task-list-canonical.md` | source payload |
 | generated | regenerate | `dist/codex/speckit-pro/skills/speckit-autopilot/references/task-list-canonical.md` | source payload |
-| host/support | modify | `speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md` | task |
-| generated | regenerate | `dist/codex/speckit-pro/skills/speckit-autopilot/references/task-list-canonical-codex.md` | Codex overlay |
 | host/support | modify | `speckit-pro/skills/speckit-coach/templates/workflow-template.md` | task |
 | generated | regenerate | `dist/claude/speckit-pro/skills/speckit-coach/templates/workflow-template.md` | source payload |
 | generated | regenerate | `dist/codex/speckit-pro/skills/speckit-coach/templates/workflow-template.md` | source payload |
@@ -363,7 +360,7 @@ Tasks: T017. Requirements: FR-017, FR-026. **24 candidate paths; 1 production.**
 
 ### C1a2 — US10 persisted completion boundary
 
-Tasks: T018. Requirements: FR-018, FR-026. **21 candidate paths; 1 production.**
+Tasks: T018. Requirements: FR-018, FR-026. **18 candidate paths; 1 production.**
 
 | Class | Operation | Path | Basis |
 | --- | --- | --- | --- |
@@ -372,13 +369,10 @@ Tasks: T018. Requirements: FR-018, FR-026. **21 candidate paths; 1 production.**
 | generated | regenerate | `dist/codex/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py` | source payload |
 | host/support | modify | `speckit-pro/skills/speckit-autopilot/SKILL.md` | task |
 | generated | regenerate | `dist/claude/speckit-pro/skills/speckit-autopilot/SKILL.md` | Claude payload |
-| host/support | modify | `speckit-pro/codex-skills/speckit-autopilot/SKILL.md` | task |
 | generated | regenerate | `dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md` | Codex overlay |
 | host/support | modify | `speckit-pro/skills/speckit-autopilot/references/post-implementation.md` | task |
 | generated | regenerate | `dist/claude/speckit-pro/skills/speckit-autopilot/references/post-implementation.md` | source payload |
 | generated | regenerate | `dist/codex/speckit-pro/skills/speckit-autopilot/references/post-implementation.md` | source payload |
-| host/support | modify | `speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md` | task |
-| generated | regenerate | `dist/codex/speckit-pro/skills/speckit-autopilot/references/post-implementation-codex.md` | Codex overlay |
 | generated reference | regenerate | `docs-site/src/content/docs/reference/skills.md` | changed source or new test inventory candidate |
 | generated reference | regenerate | `docs-site/src/content/docs/reference/scripts.md` | changed skill/script inventory candidate |
 | test/manifest | modify | `tests/speckit-pro/unit/test-autopilot-phase-coverage.py` | existing registered Post/guard test; inline cases |
@@ -397,11 +391,11 @@ Tasks: T019. Requirements: FR-019, FR-026. **21 candidate paths; 2 production.**
 | --- | --- | --- | --- |
 | host/support | modify | `speckit-pro/agents/phase-executor.md` | task |
 | generated | regenerate | `dist/claude/speckit-pro/agents/phase-executor.md` | Claude agent |
-| production | modify | `speckit-pro/codex-agents/phase-executor.toml` | task |
+| production | regenerate | `speckit-pro/codex-agents/phase-executor.toml` | generated from the authored agent host blocks |
 | generated | regenerate | `dist/codex/speckit-pro/codex-agents/phase-executor.toml` | Codex agent |
 | host/support | modify | `speckit-pro/agents/analyze-executor.md` | task |
 | generated | regenerate | `dist/claude/speckit-pro/agents/analyze-executor.md` | Claude agent |
-| production | modify | `speckit-pro/codex-agents/analyze-executor.toml` | task |
+| production | regenerate | `speckit-pro/codex-agents/analyze-executor.toml` | generated from the authored agent host blocks |
 | generated | regenerate | `dist/codex/speckit-pro/codex-agents/analyze-executor.toml` | Codex agent |
 | host/support | modify | `speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md` | task |
 | generated | regenerate | `dist/claude/speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md` | source payload |
@@ -425,11 +419,11 @@ Tasks: T020–T021. Requirements: FR-019, FR-026. **21 candidate paths; 2 produc
 | --- | --- | --- | --- |
 | host/support | modify | `speckit-pro/agents/checklist-executor.md` | task |
 | generated | regenerate | `dist/claude/speckit-pro/agents/checklist-executor.md` | Claude agent |
-| production | modify | `speckit-pro/codex-agents/checklist-executor.toml` | task |
+| production | regenerate | `speckit-pro/codex-agents/checklist-executor.toml` | generated from the authored agent host blocks |
 | generated | regenerate | `dist/codex/speckit-pro/codex-agents/checklist-executor.toml` | Codex agent |
 | host/support | modify | `speckit-pro/agents/implement-executor.md` | task |
 | generated | regenerate | `dist/claude/speckit-pro/agents/implement-executor.md` | Claude agent |
-| production | modify | `speckit-pro/codex-agents/implement-executor.toml` | task |
+| production | regenerate | `speckit-pro/codex-agents/implement-executor.toml` | generated from the authored agent host blocks |
 | generated | regenerate | `dist/codex/speckit-pro/codex-agents/implement-executor.toml` | Codex agent |
 | host/support | modify | `speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md` | task |
 | generated | regenerate | `dist/claude/speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md` | source payload |
@@ -447,13 +441,12 @@ Tasks: T020–T021. Requirements: FR-019, FR-026. **21 candidate paths; 2 produc
 
 ### C2a1 — US11 complete review feedback after verified push
 
-Tasks: T022–T023. Requirements: FR-020, FR-021, FR-026. **14 candidate paths; 0 production.**
+Tasks: T022–T023. Requirements: FR-020, FR-021, FR-026. **13 candidate paths; 0 production.**
 
 | Class | Operation | Path | Basis |
 | --- | --- | --- | --- |
 | host/support | modify | `speckit-pro/skills/speckit-resolve-pr/SKILL.md` | task |
 | generated | regenerate | `dist/claude/speckit-pro/skills/speckit-resolve-pr/SKILL.md` | Claude payload |
-| host/support | modify | `speckit-pro/codex-skills/speckit-resolve-pr/SKILL.md` | task |
 | generated | regenerate | `dist/codex/speckit-pro/skills/speckit-resolve-pr/SKILL.md` | Codex overlay |
 | test/manifest | add | `tests/speckit-pro/unit/test-resolve-pr-protocol.py` | task |
 | test/manifest | modify | `tests/speckit-pro/suite-manifest.json` | task |
@@ -468,13 +461,12 @@ Tasks: T022–T023. Requirements: FR-020, FR-021, FR-026. **14 candidate paths; 
 
 ### C2a2 — US12 await blind-spot result
 
-Tasks: T024. Requirements: FR-022, FR-023, FR-026. **14 candidate paths; 0 production.**
+Tasks: T024. Requirements: FR-022, FR-023, FR-026. **13 candidate paths; 0 production.**
 
 | Class | Operation | Path | Basis |
 | --- | --- | --- | --- |
 | host/support | modify | `speckit-pro/skills/speckit-scaffold-spec/SKILL.md` | task |
 | generated | regenerate | `dist/claude/speckit-pro/skills/speckit-scaffold-spec/SKILL.md` | Claude payload |
-| host/support | modify | `speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md` | task |
 | generated | regenerate | `dist/codex/speckit-pro/skills/speckit-scaffold-spec/SKILL.md` | Codex overlay |
 | test/manifest | add | `tests/speckit-pro/unit/test-scaffold-blindspot.py` | task |
 | test/manifest | modify | `tests/speckit-pro/suite-manifest.json` | task |
@@ -489,13 +481,12 @@ Tasks: T024. Requirements: FR-022, FR-023, FR-026. **14 candidate paths; 0 produ
 
 ### C2a3 — US13 status request envelopes
 
-Tasks: T025. Requirements: FR-024, FR-026. **14 candidate paths; 0 production.**
+Tasks: T025. Requirements: FR-024, FR-026. **13 candidate paths; 0 production.**
 
 | Class | Operation | Path | Basis |
 | --- | --- | --- | --- |
 | host/support | modify | `speckit-pro/skills/speckit-status/SKILL.md` | task |
 | generated | regenerate | `dist/claude/speckit-pro/skills/speckit-status/SKILL.md` | Claude payload |
-| host/support | modify | `speckit-pro/codex-skills/speckit-status/SKILL.md` | task |
 | generated | regenerate | `dist/codex/speckit-pro/skills/speckit-status/SKILL.md` | Codex overlay |
 | test/manifest | add | `tests/speckit-pro/unit/test-status-envelope-contract.py` | task |
 | test/manifest | modify | `tests/speckit-pro/suite-manifest.json` | task |
@@ -510,19 +501,16 @@ Tasks: T025. Requirements: FR-024, FR-026. **14 candidate paths; 0 production.**
 
 ### C2b1 — US13 scaffold/phase request envelopes
 
-Tasks: T026–T027. Requirements: FR-024, FR-026. **21 candidate paths; 0 production.**
+Tasks: T026–T027. Requirements: FR-024, FR-026. **18 candidate paths; 0 production.**
 
 | Class | Operation | Path | Basis |
 | --- | --- | --- | --- |
 | host/support | modify | `speckit-pro/skills/speckit-scaffold-spec/SKILL.md` | task |
 | generated | regenerate | `dist/claude/speckit-pro/skills/speckit-scaffold-spec/SKILL.md` | Claude payload |
-| host/support | modify | `speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md` | task |
 | generated | regenerate | `dist/codex/speckit-pro/skills/speckit-scaffold-spec/SKILL.md` | Codex overlay |
 | host/support | modify | `speckit-pro/skills/speckit-autopilot/references/phase-execution.md` | task |
 | generated | regenerate | `dist/claude/speckit-pro/skills/speckit-autopilot/references/phase-execution.md` | source payload |
 | generated | regenerate | `dist/codex/speckit-pro/skills/speckit-autopilot/references/phase-execution.md` | source payload |
-| host/support | modify | `speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md` | task |
-| generated | regenerate | `dist/codex/speckit-pro/skills/speckit-autopilot/references/phase-execution-codex.md` | Codex overlay |
 | test/manifest | add | `tests/speckit-pro/unit/test-scaffold-envelope-contract.py` | task |
 | test/manifest | add | `tests/speckit-pro/unit/test-phase-envelope-contract.py` | task |
 | test/manifest | modify | `tests/speckit-pro/suite-manifest.json` | task |
@@ -538,13 +526,12 @@ Tasks: T026–T027. Requirements: FR-024, FR-026. **21 candidate paths; 0 produc
 
 ### C2b2 — US14 existing legacy workflow links
 
-Tasks: T028–T030. Requirements: FR-025, FR-026. **16 candidate paths; 0 production.**
+Tasks: T028–T030. Requirements: FR-025, FR-026. **15 candidate paths; 0 production.**
 
 | Class | Operation | Path | Basis |
 | --- | --- | --- | --- |
 | host/support | modify | `speckit-pro/skills/speckit-scaffold-spec/SKILL.md` | task |
 | generated | regenerate | `dist/claude/speckit-pro/skills/speckit-scaffold-spec/SKILL.md` | Claude payload |
-| host/support | modify | `speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md` | task |
 | generated | regenerate | `dist/codex/speckit-pro/skills/speckit-scaffold-spec/SKILL.md` | Codex overlay |
 | test/manifest | add | `tests/speckit-pro/unit/test-roadmap-workflow-links.py` | task |
 | test/manifest | add | `tests/speckit-pro/unit/fixtures/roadmap-workflow-links/cases.json` | task |

@@ -8,7 +8,7 @@ import contextlib
 import functools
 import hashlib
 import http.client
-import importlib.util
+import importlib
 import io
 import json
 import os
@@ -40,6 +40,9 @@ TAG = "speckit-pro-v2.19.0"
 PREVIOUS_TAG = "speckit-pro-v2.18.0"
 
 
+from script_loader import load_script  # noqa: E402
+
+
 def inventory_check(test):  # type: ignore[no-untyped-def]
     """Give a non-loop unittest method one stable parity-inventory name."""
     @functools.wraps(test)
@@ -52,13 +55,7 @@ def inventory_check(test):  # type: ignore[no-untyped-def]
 
 
 def load_composer():  # type: ignore[no-untyped-def]
-    spec = importlib.util.spec_from_file_location("compose_release_notes", SCRIPT)
-    if spec is None or spec.loader is None:
-        raise AssertionError(f"unable to load composer: {SCRIPT}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_script("compose_release_notes", SCRIPT)
 
 
 COMPOSER = load_composer()
@@ -94,7 +91,7 @@ def release_snapshot(
     normalized_pulls = {
         str(number): {
             "body": metadata.get("body") or "",
-            "labels": sorted(COMPOSER._label_names(metadata)),
+            "labels": sorted(COMPOSER.label_names(metadata)),
         }
         for number, metadata in pulls.items()
     }
@@ -1094,8 +1091,38 @@ class ComposeReleaseNotesTests(unittest.TestCase):
         self.assertTrue({"requests", "httpx", "openai", "subprocess"}.isdisjoint(imports))
 
 
+class SharedReleaseNoteContractTests(unittest.TestCase):
+    def test_snapshot_contract_has_one_source(self) -> None:
+        sys.path.insert(0, str(REPO_ROOT / "scripts"))
+        audit = importlib.import_module("audit-release-notes")
+        policy = COMPOSER._release_note_policy
+        self.assertEqual(1, policy.SNAPSHOT_SCHEMA_VERSION)
+        self.assertEqual(
+            {"compare", "compare_headers", "previous_tag", "pulls", "release_body", "repository", "schema_version", "tag"},
+            set(policy.SNAPSHOT_KEYS),
+        )
+        for module in (COMPOSER, audit):
+            self.assertIs(policy.FAILURE_OUTCOME, module.FAILURE_OUTCOME)
+            self.assertIs(policy.SNAPSHOT_KEYS, module.SNAPSHOT_KEYS)
+            self.assertIs(policy.SNAPSHOT_SCHEMA_VERSION, module.SNAPSHOT_SCHEMA_VERSION)
+
+    def test_composer_helpers_are_public_and_environment_parsing_is_the_composers(self) -> None:
+        policy = COMPOSER._release_note_policy
+        self.assertIn("label_names", policy.__all__)
+        self.assertIs(policy.label_names, COMPOSER.label_names)
+        self.assertFalse(hasattr(policy, "_validation_inputs_from_environment"))
+        self.assertFalse(hasattr(COMPOSER, "_label_names"))
+        self.assertNotIn("PR_TITLE", (REPO_ROOT / "scripts" / "release_note_policy.py").read_text(encoding="utf-8"))
+        environment = {"PR_TITLE": "fix(x): y", "PR_BODY": "b", "PR_LABELS_JSON": '["a"]', "PR_DRAFT": "true"}
+        with mock.patch.dict(os.environ, environment):
+            self.assertEqual(("fix(x): y", "b", {"a"}, True), COMPOSER.validation_inputs_from_environment())
+
+
 def build_suite() -> unittest.TestSuite:
-    return unittest.defaultTestLoader.loadTestsFromTestCase(ComposeReleaseNotesTests)
+    loader = unittest.defaultTestLoader
+    return unittest.TestSuite(
+        loader.loadTestsFromTestCase(case) for case in (ComposeReleaseNotesTests, SharedReleaseNoteContractTests)
+    )
 
 
 def main() -> int:

@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import importlib.util
 import io
 import hashlib
 import json
@@ -22,14 +21,12 @@ from unittest import mock
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
+from script_loader import load_script  # noqa: E402
+
+
 def load_module(name: str, path: Path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"unable to load {path}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_script(name, path)
 
 
 resolver = load_module("resolve_release_prs", REPO_ROOT / "scripts" / "resolve_release_prs.py")
@@ -1452,6 +1449,32 @@ class RefreshReleaseArtifactsCheckTests(unittest.TestCase):
 
         self.assertEqual(1, returncode)
         self.assertEqual(before, after)
+
+
+class ReleasePrFallbackTests(unittest.TestCase):
+    def test_fallback_title_names_the_release_component(self) -> None:
+        for component in ("speckit-pro", "typesafe-jev"):
+            branch = f"release-please--branches--main--components--{component}"
+            expected = f"chore(release): release {component}"
+            with self.subTest(component=component):
+                (release_pr,) = dispatch.parse_release_prs(json.dumps([{"headBranchName": branch, "number": 7}]))
+                self.assertEqual(expected, release_pr["title"])
+                normalized = resolver.normalize_release_pr({"headBranchName": branch, "number": 7}, "main", strict=True)
+                self.assertEqual(expected, normalized["title"])
+
+    def test_dispatch_rejects_a_missing_title_it_cannot_derive_a_component_for(self) -> None:
+        with self.assertRaises(dispatch.DispatchError):
+            dispatch.parse_release_prs(json.dumps([{"headBranchName": "release/main", "number": 7}]))
+
+    def test_dispatch_passes_base_ref_through(self) -> None:
+        branch = "release-please--branches--stable--components--typesafe-jev"
+        release_prs = json.dumps([{"headBranchName": branch, "number": 9, "title": "release"}])
+        run = mock.Mock()
+        self.assertEqual(0, dispatch.main({"BASE_REF": "stable", "RELEASE_PRS": release_prs}, run=run))
+        dispatched = [call.args[0] for call in run.call_args_list]
+        self.assertTrue(all("base_ref=stable" in argv for argv in dispatched if "pr-checks.yml" in argv))
+        self.assertFalse(any("base_ref=main" in argv for argv in dispatched))
+        self.assertEqual(2, len(dispatched))
 
 
 if __name__ == "__main__":

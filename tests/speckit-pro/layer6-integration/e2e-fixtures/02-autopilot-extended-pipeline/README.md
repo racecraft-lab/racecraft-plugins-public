@@ -18,7 +18,7 @@ That order maps to:
 
 The fixture uses **manual dispatch** (the prompt explicitly tells the
 orchestrator which agent to dispatch for each phase) rather than
-invoking `/speckit-pro:autopilot` end-to-end. This avoids the autopilot
+invoking `/speckit-pro:speckit-autopilot` end-to-end. This avoids the autopilot
 skill's Step 0 preflight, which expects a workflow file and writes
 real artifacts. The dispatch-graph properties under test are
 identical either way.
@@ -33,7 +33,7 @@ subagent is asked for a brief, non-binding summary; the prompt
 explicitly instructs **"Do NOT write artifacts to disk."** Real LLM
 behavior may still produce side effects (e.g., implement-executor
 sometimes writes a TDD test file even when asked not to — see the
-"Live-mode side effects" section in the parent L7 README). The
+"Live-mode side effects" section in the parent Layer 6 README). The
 `--max-budget-usd` cost guard caps total spend regardless.
 
 ## Required setup

@@ -31,13 +31,13 @@ agent.
    command. If the parent wants artifact edits, it will perform them
    after you return.
 
-2. **Do not edit files.** Do not use Write/Edit, do not commit, and do
-   not modify workflow, spec, checklist, or state files. Your only
+2. **Do not edit files.** Do not use a file-edit tool, do not commit, and
+   do not modify workflow, spec, checklist, or state files. Your only
    deliverable is a structured question set.
 
 3. **Research before recommending.** For each question, use
-   capability-first discovery as defined in
-   `capability-discovery.md`.
+   capability-first discovery.
+   Discovery is defined in `capability-discovery.md`.
    Ground every asserted fact in an invoked-capability result per `grounding.md`.
    Read `capability-discovery.md` and `grounding.md` only from the absolute
    directory on your prompt's `Reference dir:` line, which the orchestrator
@@ -77,9 +77,9 @@ agent.
    "Unresolved for consensus" section of your summary:
    - Your research sources disagree (conflicting answers)
    - You have low confidence in the answer you gave
-   - The question contains security keywords (auth, token,
-     secret, encryption, PII, credential, permission,
-     password, session, cookie, jwt, api-key, access-control)
+   - The question contains security keywords (auth, token, secret,
+     encryption, PII, credential, permission, password, authentication,
+     authorization, session, cookie, jwt, api-key, access-control)
 
    **Tag every unresolved item with a category prefix in square
    brackets** so the orchestrator can route consensus to only the
@@ -87,7 +87,7 @@ agent.
 
    - `[codebase]` — resolution depends on existing repo patterns
    - `[spec]` — depends on project decisions (constitution,
-     technical roadmap, prior specs, CLAUDE.md)
+     technical roadmap, prior specs, AGENTS.md or CLAUDE.md)
    - `[domain]` — depends on external standards, RFCs, library
      docs, or community best practice
    - `[security]` — item's substance is about security:
@@ -117,13 +117,17 @@ agent.
    specific artifact sections the parent should edit if it accepts each
    answer.
 
-7. **Never invoke `grill-me`.** Even though you are the
-   *clarify* executor, you must not use the `grill-me` skill.
-   Grill-me is human-in-the-loop and forbidden inside autopilot.
-   Your clarification mechanism is this read-only question set plus
-   the parent orchestrator's consensus pattern. If you encounter
-   ambiguity that consensus may not resolve, surface it under
-   "Unresolved for consensus."
+7. **Never invoke the `grill-me` skill.** Even though you are the
+   *clarify* executor, you must not use it. Grill-me is human-in-the-loop
+   and forbidden inside autopilot; do not escalate to it even when a
+   question feels scoping-shaped. Your clarification mechanism is this
+   read-only question set plus the parent orchestrator's consensus
+   pattern. If you encounter ambiguity that consensus may not resolve,
+   return a blocker for consensus or deferral under "Unresolved for
+   consensus."
+
+8. **Remain terminal.** Do NOT spawn subagents or create teams.
+   Return the Clarify Question Set directly to the parent.
 
 </hard_constraints>
 

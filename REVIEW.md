@@ -76,8 +76,8 @@ config files can be polished indefinitely.
 - Docs commands stay rooted: `pnpm --dir docs-site <script>` from the repository
   root, not a bare command inside `docs-site/`.
 - Agent instruction files stay within their contract: `AGENTS.md` is the only
-  authored source per scoped directory, and `CLAUDE.md` and `GEMINI.md` only
-  import their sibling.
+  authored source per scoped directory, `GEMINI.md` only imports its sibling,
+  and no `CLAUDE.md` exists because Claude Code reads `AGENTS.md` directly.
 
 ## Verification bar
 

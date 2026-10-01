@@ -8,7 +8,7 @@ Load this only after the interview ends.
   the input filename or topic unless the user supplied a path.
 - **Setup:** write exactly to the worktree path supplied by
   `speckit-scaffold-spec`, conventionally ending
-  `docs/ai/specs/<SPEC-ID>-design-concept.md`.
+  `docs/ai/specs/.process/<SPEC-ID>-design-concept.md`.
 
 Never overwrite an existing file without confirmation. Offer a new suffix or a
 user-approved path instead.

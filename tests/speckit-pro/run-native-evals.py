@@ -4,12 +4,10 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
-import hashlib
 import json
 import os
 from pathlib import Path
 import sys
-import tempfile
 from typing import Any
 import uuid
 
@@ -20,59 +18,14 @@ if str(TEST_ROOT / "lib") not in sys.path:
     sys.path.insert(0, str(TEST_ROOT / "lib"))
 
 from native_eval_catalog import LAYERS, load_catalog, plan_trials, select_cases  # noqa: E402
-from native_eval_pool import _validate_limits  # noqa: E402
+from native_eval_pool import validate_limits  # noqa: E402
 from native_eval_execution import run_evaluations  # noqa: E402
-from native_eval_adapters import prepare_judge, execute_prepared, judge_runtime_compatibility_identity  # noqa: E402
-from native_eval_capture import normalize_trace  # noqa: E402
-from native_eval_judge import build_judge_request  # noqa: E402
+from native_eval_judge import NativeJudge  # noqa: E402
 
 
 DEFAULT_CATALOG = TEST_ROOT / "evals" / "catalog.json"
 SUITE_MANIFEST = TEST_ROOT / "suite-manifest.json"
 _HOSTS = ("claude", "codex")
-
-
-class NativeJudge:
-    """One pinned native judge callback, scheduled by the shared Codex pool."""
-
-    def __init__(self, model: str):
-        self.model = model
-        probe_case = {"requirements": [{"id": "probe"}], "checks": [
-            {"id": "probe", "requirement": "probe", "type": "semantic", "rubric": "Check the supplied evidence."}
-        ]}
-        probe_observation = {"completed": True, "error": None, "final_text": "probe",
-                             "activations": [], "tool_calls": [], "artifacts": {}, "usage": {}}
-        request = build_judge_request(probe_case, probe_observation)
-        with tempfile.TemporaryDirectory(prefix="native-judge-preflight-") as root:
-            prepared = prepare_judge(request, attempt_dir=Path(root) / "probe", model=model)
-            self._compatibility = judge_runtime_compatibility_identity(prepared)
-        self.runtime_identity = {
-            "native": self._compatibility,
-            "executor_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-        }
-
-    def __call__(self, request: dict[str, object], grade_dir: Path, model: str) -> str:
-        if model != self.model:
-            raise ValueError("semantic judge model changed after admission")
-        prepared = prepare_judge(request, attempt_dir=grade_dir / "native", model=model)
-        if judge_runtime_compatibility_identity(prepared) != self._compatibility:
-            raise ValueError("semantic judge runtime changed after admission")
-        raw = execute_prepared(prepared, timeout=120)
-        process = raw.process_evidence
-        if raw.exit_code != 0 or raw.timed_out or process.get("cleanup_verified") is not True \
-                or process.get("cleanup_error") is not None or process.get("unexpected_descendants") is True:
-            raise ValueError("semantic judge native process failed or cleanup is unverified")
-        observation = normalize_trace("codex", raw.raw_trace)
-        if observation["tool_calls"]:
-            raise ValueError("semantic judge performed a prohibited tool call")
-        result_path = prepared.result_path
-        if result_path is None or not result_path.is_file() or result_path.is_symlink() \
-                or result_path.stat().st_size > 1024 * 1024:
-            raise ValueError("semantic judge structured result is unavailable or unsafe")
-        result = result_path.read_text(encoding="utf-8")
-        if result.strip() != observation["final_text"].strip():
-            raise ValueError("semantic judge result differs from native terminal evidence")
-        return result
 
 
 @dataclass(frozen=True)
@@ -160,11 +113,11 @@ def parse_config(argv: list[str]) -> Config:
     if not 1 <= args.runs <= 50:
         raise ValueError("runs must be an integer from 1 through 50")
     selected_hosts = _HOSTS if args.hosts == "both" else (args.hosts,)
-    capacities = _validate_limits(
+    capacities = validate_limits(
         "provider concurrency", {"claude": args.claude_concurrency, "codex": args.codex_concurrency},
         {"claude": 8, "codex": 8},
     )
-    _validate_limits(
+    validate_limits(
         "nested concurrency", {host: args.nested_concurrency for host in _HOSTS},
         {host: min(2, capacities[host]) if host in selected_hosts else 2 for host in _HOSTS},
     )

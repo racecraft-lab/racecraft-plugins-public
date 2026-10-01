@@ -1,10 +1,10 @@
 {
-  "schema_version": "task-execution.v1",
   "fingerprints": {
-    "plan_sha256": "8381e50f0c0daf7491b6fb6f6e431adea30a89277d0b3073fd476194e6a8d759",
+    "plan_sha256": "94238f91baabd64f578831f0affa6f93be8d7ab6e553215c4fbcd7b4d5a614ec",
     "spec_sha256": "18c93677aaaee5f73aa8399b2cea052cc58ed2724fe6e74d93be96a47eae7e58",
-    "tasks_sha256": "c5373d4f33f0ec316c2421d3e690888fc5844fb1989fd5f5db9b4a8d4d1f7d46"
+    "tasks_sha256": "85a266966d25b07ca11790e0a272712661a9c888e104b4b519fc70bf13755f57"
   },
+  "schema_version": "task-execution.v1",
   "tasks": {
     "T001": {
       "capability_group": "setup",
@@ -421,7 +421,6 @@
         "speckit-pro/skills/speckit-autopilot/references/gate-validation.md",
         "dist/claude/speckit-pro/skills/speckit-autopilot/references/gate-validation.md",
         "dist/codex/speckit-pro/skills/speckit-autopilot/references/gate-validation.md",
-        ".specify/quality-gates.json",
         "tests/speckit-pro/unit/test-declared-quality-commands.py",
         "tests/speckit-pro/suite-manifest.json",
         "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
@@ -436,7 +435,10 @@
         "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md",
         "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json",
         "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md",
-        "specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md"
+        "specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md",
+        "speckit-pro/speckit_pro_runner/quality_gates.py",
+        "dist/claude/speckit-pro/speckit_pro_runner/quality_gates.py",
+        "dist/codex/speckit-pro/speckit_pro_runner/quality_gates.py"
       ],
       "tdd_unit": "increment-b3b"
     },
@@ -452,7 +454,6 @@
         "speckit-pro/skills/speckit-autopilot/references/gate-validation.md",
         "dist/claude/speckit-pro/skills/speckit-autopilot/references/gate-validation.md",
         "dist/codex/speckit-pro/skills/speckit-autopilot/references/gate-validation.md",
-        ".specify/quality-gates.json",
         "tests/speckit-pro/unit/test-declared-quality-commands.py",
         "tests/speckit-pro/suite-manifest.json",
         "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
@@ -467,7 +468,10 @@
         "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md",
         "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json",
         "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md",
-        "specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md"
+        "specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md",
+        "speckit-pro/speckit_pro_runner/quality_gates.py",
+        "dist/claude/speckit-pro/speckit_pro_runner/quality_gates.py",
+        "dist/codex/speckit-pro/speckit_pro_runner/quality_gates.py"
       ],
       "tdd_unit": "increment-b3b"
     },
@@ -482,13 +486,10 @@
         "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
         "speckit-pro/skills/speckit-autopilot/SKILL.md",
         "dist/claude/speckit-pro/skills/speckit-autopilot/SKILL.md",
-        "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
         "dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md",
         "speckit-pro/skills/speckit-autopilot/references/task-list-canonical.md",
         "dist/claude/speckit-pro/skills/speckit-autopilot/references/task-list-canonical.md",
         "dist/codex/speckit-pro/skills/speckit-autopilot/references/task-list-canonical.md",
-        "speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md",
-        "dist/codex/speckit-pro/skills/speckit-autopilot/references/task-list-canonical-codex.md",
         "speckit-pro/skills/speckit-coach/templates/workflow-template.md",
         "dist/claude/speckit-pro/skills/speckit-coach/templates/workflow-template.md",
         "dist/codex/speckit-pro/skills/speckit-coach/templates/workflow-template.md",
@@ -515,13 +516,10 @@
         "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
         "speckit-pro/skills/speckit-autopilot/SKILL.md",
         "dist/claude/speckit-pro/skills/speckit-autopilot/SKILL.md",
-        "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
         "dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md",
         "speckit-pro/skills/speckit-autopilot/references/post-implementation.md",
         "dist/claude/speckit-pro/skills/speckit-autopilot/references/post-implementation.md",
         "dist/codex/speckit-pro/skills/speckit-autopilot/references/post-implementation.md",
-        "speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md",
-        "dist/codex/speckit-pro/skills/speckit-autopilot/references/post-implementation-codex.md",
         "docs-site/src/content/docs/reference/skills.md",
         "docs-site/src/content/docs/reference/scripts.md",
         "tests/speckit-pro/unit/test-autopilot-phase-coverage.py",
@@ -632,7 +630,6 @@
       "owns": [
         "speckit-pro/skills/speckit-resolve-pr/SKILL.md",
         "dist/claude/speckit-pro/skills/speckit-resolve-pr/SKILL.md",
-        "speckit-pro/codex-skills/speckit-resolve-pr/SKILL.md",
         "dist/codex/speckit-pro/skills/speckit-resolve-pr/SKILL.md",
         "tests/speckit-pro/unit/test-resolve-pr-protocol.py",
         "tests/speckit-pro/suite-manifest.json",
@@ -655,7 +652,6 @@
       "owns": [
         "speckit-pro/skills/speckit-resolve-pr/SKILL.md",
         "dist/claude/speckit-pro/skills/speckit-resolve-pr/SKILL.md",
-        "speckit-pro/codex-skills/speckit-resolve-pr/SKILL.md",
         "dist/codex/speckit-pro/skills/speckit-resolve-pr/SKILL.md",
         "tests/speckit-pro/unit/test-resolve-pr-protocol.py",
         "tests/speckit-pro/suite-manifest.json",
@@ -678,7 +674,6 @@
       "owns": [
         "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
         "dist/claude/speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
-        "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
         "dist/codex/speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
         "tests/speckit-pro/unit/test-scaffold-blindspot.py",
         "tests/speckit-pro/suite-manifest.json",
@@ -701,7 +696,6 @@
       "owns": [
         "speckit-pro/skills/speckit-status/SKILL.md",
         "dist/claude/speckit-pro/skills/speckit-status/SKILL.md",
-        "speckit-pro/codex-skills/speckit-status/SKILL.md",
         "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
         "tests/speckit-pro/unit/test-status-envelope-contract.py",
         "tests/speckit-pro/suite-manifest.json",
@@ -724,13 +718,10 @@
       "owns": [
         "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
         "dist/claude/speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
-        "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
         "dist/codex/speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
         "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
         "dist/claude/speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
         "dist/codex/speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
-        "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
-        "dist/codex/speckit-pro/skills/speckit-autopilot/references/phase-execution-codex.md",
         "tests/speckit-pro/unit/test-scaffold-envelope-contract.py",
         "tests/speckit-pro/unit/test-phase-envelope-contract.py",
         "tests/speckit-pro/suite-manifest.json",
@@ -754,13 +745,10 @@
       "owns": [
         "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
         "dist/claude/speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
-        "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
         "dist/codex/speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
         "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
         "dist/claude/speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
         "dist/codex/speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
-        "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
-        "dist/codex/speckit-pro/skills/speckit-autopilot/references/phase-execution-codex.md",
         "tests/speckit-pro/unit/test-scaffold-envelope-contract.py",
         "tests/speckit-pro/unit/test-phase-envelope-contract.py",
         "tests/speckit-pro/suite-manifest.json",
@@ -784,7 +772,6 @@
       "owns": [
         "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
         "dist/claude/speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
-        "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
         "dist/codex/speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
         "tests/speckit-pro/unit/test-roadmap-workflow-links.py",
         "tests/speckit-pro/unit/fixtures/roadmap-workflow-links/cases.json",
@@ -809,7 +796,6 @@
       "owns": [
         "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
         "dist/claude/speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
-        "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
         "dist/codex/speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
         "tests/speckit-pro/unit/test-roadmap-workflow-links.py",
         "tests/speckit-pro/unit/fixtures/roadmap-workflow-links/cases.json",
@@ -834,7 +820,6 @@
       "owns": [
         "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
         "dist/claude/speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
-        "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
         "dist/codex/speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
         "tests/speckit-pro/unit/test-roadmap-workflow-links.py",
         "tests/speckit-pro/unit/fixtures/roadmap-workflow-links/cases.json",

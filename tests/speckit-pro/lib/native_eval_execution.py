@@ -21,16 +21,16 @@ import time
 from typing import Any, Callable, Mapping
 import uuid
 
+from native_eval_adapter_common import _tree_digest
 from native_eval_adapters import (
-    _capture_claude_artifacts,
-    _read_claude_trace,
-    _tree_digest,
     prepare_trial,
     execute_prepared,
     trigger_stage_from_runtime_identity,
 )
+from native_eval_claude_adapter import _capture_claude_artifacts, _read_claude_trace
 from native_eval_capture import CaptureError, normalize_trace
-from native_eval_catalog import _relative_path, _unique_object, input_fingerprint
+import native_eval_strict_json as strict_json
+from native_eval_catalog import _relative_path, input_fingerprint
 from native_eval_git_grading import validate_observation as validate_git_observation
 from native_eval_claude_activation import (
     ClaudeActivationInvalid,
@@ -90,7 +90,6 @@ _TERMINAL = {"pass", "fail", "invalid"}
 _ARTIFACT_LIMIT = 1024 * 1024
 _PLUGIN_NAME = re.compile(r"[a-z0-9][a-z0-9-]*")
 _GIT_FIXTURE_V2 = "native-eval-fixtures/v2"
-_GIT_OBSERVATION_V1 = "native-eval-git-observation/v1"
 _CONTROLLER_GIT_OBSERVATION_V1 = "native-eval-controller-git-observation/v1"
 _OBJECT_ID = re.compile(r"[a-f0-9]{40}|[a-f0-9]{64}")
 _DISPATCH_ITEM_MARKER = re.compile(r"\[\[work-item:([a-z0-9][a-z0-9._-]*)\]\]")
@@ -159,13 +158,8 @@ def _codex_rollout_plugin_name(prepared: object) -> str | None:
     if _tree_digest(root) != expected:
         raise ValueError("prepared Codex .agents controls changed before rollout qualification")
     try:
-        parsed = json.loads(
-            manifest.read_bytes().decode("utf-8", errors="strict"),
-            object_pairs_hook=_unique_object,
-            parse_constant=lambda token: (_ for _ in ()).throw(
-                ValueError(f"invalid JSON constant: {token}")),
-        )
-    except (UnicodeError, json.JSONDecodeError, ValueError) as exc:
+        parsed = strict_json.loads(manifest.read_bytes(), error=ValueError)
+    except ValueError as exc:
         raise ValueError("staged Codex plugin manifest is malformed") from exc
     if _tree_digest(root) != expected:
         raise ValueError("prepared Codex .agents controls changed during rollout qualification")
@@ -277,17 +271,7 @@ def _pair_judge_request(request: Mapping[str, object]) -> dict[str, object]:
 
 
 def _strict_json_object(raw_json: str, request: Mapping[str, object]) -> dict[str, object]:
-    def unique(pairs: list[tuple[str, object]]) -> dict[str, object]:
-        result = {}
-        for key, value in pairs:
-            if key in result:
-                raise ValueError(f"duplicate JSON key: {key}")
-            result[key] = value
-        return result
-
-    value = json.loads(raw_json, object_pairs_hook=unique,
-                       parse_constant=lambda token: (_ for _ in ()).throw(
-                           ValueError(f"invalid JSON constant: {token}")))
+    value = strict_json.loads(raw_json, error=ValueError)
     if not isinstance(value, dict):
         raise ValueError("pair judge response must be an object")
     criteria = request.get("semantic_criteria")
@@ -644,7 +628,8 @@ def _restore_artifacts(case: Mapping[str, object], observation: dict[str, Any],
     manifest_ref = refs.get("artifact_manifest")
     if not isinstance(manifest_ref, Mapping):
         raise ValueError("stored capture omitted its artifact manifest")
-    manifest = json.loads(_stored_evidence(attempt, manifest_ref).read_text(encoding="utf-8"))
+    manifest = strict_json.loads(
+        _stored_evidence(attempt, manifest_ref).read_bytes(), error=ValueError)
     entries = manifest.get("entries") if isinstance(manifest, Mapping) \
         and manifest.get("schema") == "native-artifact-manifest/v1" else None
     if not isinstance(entries, list) or not all(isinstance(entry, Mapping) for entry in entries):
@@ -709,8 +694,8 @@ def _native_error_text(raw: object) -> tuple[str, str] | None:
     native_errors = []
     for line in trace.splitlines():
         try:
-            event = json.loads(line)
-        except (json.JSONDecodeError, TypeError):
+            event = strict_json.loads(line, error=ValueError)
+        except ValueError:
             continue
         if isinstance(event, dict) and event.get("type") == "error":
             native_errors.append(str(event.get("message", event.get("error", "native error"))))
@@ -1038,7 +1023,7 @@ def _rollout_timeline(raw_by_thread: Mapping[str, bytes], identities: set[str],
     exact = True
     for thread_id, raw in raw_by_thread.items():
         for index, line in enumerate(raw.splitlines()):
-            record = json.loads(line)
+            record = strict_json.loads(line, error=ValueError)
             payload = record.get("payload") if isinstance(record, dict) else None
             item = payload.get("item") if isinstance(payload, dict) \
                 and payload.get("type") == "item_completed" \
@@ -1117,7 +1102,7 @@ def _rebind_codex_root_tool_ids(
                  if call.get("name") in supported and call.get("parent_id") is None]
     native: list[tuple[str, str, object]] = []
     for line in raw_root.splitlines():
-        record = json.loads(line)
+        record = strict_json.loads(line, error=ValueError)
         payload = record.get("payload") if isinstance(record, dict) else None
         item = payload.get("item") if isinstance(payload, dict) \
             and payload.get("type") == "item_completed" \
@@ -1331,12 +1316,8 @@ def _validate_git_observation(value: object) -> dict[str, Any]:
 
 def _parse_git_observation(payload: bytes) -> dict[str, Any]:
     try:
-        value = json.loads(
-            payload.decode("utf-8", errors="strict"), object_pairs_hook=_unique_object,
-            parse_constant=lambda token: (_ for _ in ()).throw(
-                ValueError(f"invalid JSON constant: {token}")),
-        )
-    except (UnicodeError, json.JSONDecodeError, ValueError) as exc:
+        value = strict_json.loads(payload, error=ValueError)
+    except ValueError as exc:
         raise ValueError("controller Git observation JSON is malformed") from exc
     value = _validate_git_observation(value)
     canonical = json.dumps(
@@ -1543,17 +1524,7 @@ def _claude_activation_binding(
 
 
 def _strict_json_evidence(payload: bytes, label: str) -> dict[str, Any]:
-    try:
-        value = json.loads(
-            payload.decode("utf-8", errors="strict"), object_pairs_hook=_unique_object,
-            parse_constant=lambda token: (_ for _ in ()).throw(
-                ValueError(f"invalid JSON constant: {token}")),
-        )
-    except (UnicodeError, json.JSONDecodeError, ValueError) as exc:
-        raise ValueError(f"{label} is malformed") from exc
-    if not isinstance(value, dict):
-        raise ValueError(f"{label} is malformed")
-    return value
+    return strict_json.load_object(payload, error=ValueError, message=f"{label} is malformed")
 
 
 def _capture_can_be_renormalized(found: Mapping[str, object]) -> bool:
@@ -2225,41 +2196,13 @@ def _bind_subagent_return_order(
     }
 
 
-def _strict_equal(left: object, right: object) -> bool:
-    if type(left) is not type(right):
-        return False
-    if isinstance(left, dict):
-        return left.keys() == right.keys() and all(
-            _strict_equal(left[key], right[key]) for key in left
-        )
-    if isinstance(left, list):
-        return len(left) == len(right) and all(
-            _strict_equal(a, b) for a, b in zip(left, right, strict=True)
-        )
-    return left == right
-
-
 def _strict_json_stream(text: object) -> list[object] | None:
     if not isinstance(text, str):
         return None
-    decoder = json.JSONDecoder(
-        object_pairs_hook=_unique_object,
-        parse_constant=lambda token: (_ for _ in ()).throw(
-            ValueError(f"invalid JSON constant: {token}")),
-    )
-    values: list[object] = []
-    position = 0
     try:
-        while position < len(text):
-            while position < len(text) and text[position].isspace():
-                position += 1
-            if position == len(text):
-                break
-            value, position = decoder.raw_decode(text, position)
-            values.append(value)
-    except (json.JSONDecodeError, ValueError, RecursionError):
+        return strict_json.stream(text, error=ValueError)
+    except ValueError:
         return None
-    return values
 
 
 def _normalized_repository_runner_values(
@@ -2302,7 +2245,7 @@ def _normalized_repository_runner_values(
             or not isinstance(stdout, Mapping) or not isinstance(stderr, Mapping) \
             or details.get("stdout_bytes") != stdout.get("byte_count") \
             or details.get("stderr_bytes") != stderr.get("byte_count") \
-            or not _strict_equal(response.get("diagnostics"), [diagnostic]):
+            or not strict_json.strict_equal(response.get("diagnostics"), [diagnostic]):
         raise ValueError("native runner diagnostic stream is not correlated")
     return json.dumps(
         response, sort_keys=True, separators=(",", ":"),
@@ -2341,7 +2284,7 @@ def _runner_response(output: object, request: Mapping[str, object]) \
     stdout_json = data.get("stdout_json") if isinstance(data, Mapping) else None
     expected_stdin = {key: value for key, value in request.items() if key != "request_id"}
     passed = stdout_json.get("pass") if isinstance(stdout_json, Mapping) else None
-    if not _strict_equal(stdin_request, expected_stdin) or type(passed) is not bool:
+    if not strict_json.strict_equal(stdin_request, expected_stdin) or type(passed) is not bool:
         return None
     encoded = json.dumps(
         response, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False,
@@ -3412,7 +3355,7 @@ def _plan_repair_renderer_response(
     data = response.get("data")
     expected_stdin = {key: value for key, value in request.items() if key != "request_id"}
     if not isinstance(data, Mapping) \
-            or not _strict_equal(data.get("stdin_request"), expected_stdin):
+            or not strict_json.strict_equal(data.get("stdin_request"), expected_stdin):
         return None
     encoded_response = json.dumps(
         response, ensure_ascii=False, sort_keys=True, separators=(",", ":"),

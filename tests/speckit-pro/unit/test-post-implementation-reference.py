@@ -9,26 +9,17 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-CLAUDE_REF = (
-    REPO_ROOT
-    / "speckit-pro"
-    / "skills"
-    / "speckit-autopilot"
-    / "references"
-    / "post-implementation.md"
-)
-CODEX_REF = (
-    REPO_ROOT
-    / "speckit-pro"
-    / "codex-skills"
-    / "speckit-autopilot"
-    / "references"
-    / "post-implementation-codex.md"
-)
 LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
+from host_skill_views import host_skill_root  # noqa: E402
 from test_result import run_counted  # noqa: E402
+
+# The shared post-implementation reference as each host receives it.
+CLAUDE_REF, CODEX_REF = (
+    host_skill_root(host) / "speckit-autopilot" / "references" / "post-implementation.md"
+    for host in ("claude", "codex")
+)
 
 
 CONTRACT_CHECKS = (
@@ -37,7 +28,7 @@ CONTRACT_CHECKS = (
     ("Claude reference consumes the layer plan without new slicing heuristics", "claude", ("MUST NOT infer, reroute, or re-slice",), ()),
     ("Claude reference records durable PRS rows and resume state", "claude", ("schemaVersion: 2",), ()),
     ("Claude reference records durable PRS rows and resume state", "claude", ("multi_pr_emission",), ()),
-    ("Claude reference blocks failed slices before PR creation", "claude", ("stop before `gh pr create`",), ()),
+    ("Claude reference blocks failed slices before PR creation", "claude", ("hold `gh pr create`",), ()),
     ("Claude reference blocks failed slices before PR creation", "claude", ("next_slice_id",), ()),
     ("Claude reference requires reslicing continuation before final response", "claude", ("autopilot_continuation",), ()),
     ("Claude reference requires reslicing continuation before final response", "claude", ("Never end the run or report completion while",), ()),
@@ -49,17 +40,17 @@ CONTRACT_CHECKS = (
     ("Codex mirror carries equivalent multi-PR emission behavior", "codex", ("MUST NOT infer, reroute, or re-slice",), ()),
     ("Codex mirror carries equivalent multi-PR emission behavior", "codex", ("schemaVersion: 2",), ()),
     ("Codex mirror carries equivalent multi-PR emission behavior", "codex", ("multi_pr_emission",), ()),
-    ("Codex mirror carries equivalent multi-PR emission behavior", "codex", ("stop before `gh pr create`",), ()),
+    ("Codex mirror carries equivalent multi-PR emission behavior", "codex", ("hold `gh pr create`",), ()),
     ("Codex mirror carries equivalent multi-PR emission behavior", "codex", ("autopilot_continuation",), ()),
     ("Codex mirror carries equivalent multi-PR emission behavior", "codex", ("Never report completion while",), ()),
     ("Codex mirror carries equivalent multi-PR emission behavior", "codex", ("gh pr create --base <base> --head <head> --body-file <body-file>",), ()),
     ("Codex mirror carries equivalent multi-PR emission behavior", "codex", ("restack",), ()),
     ("Codex mirror carries equivalent multi-PR emission behavior", "codex", ("MUST NOT modify `.github/workflows/pr-checks.yml`",), ()),
     ("Claude reference blocks skeleton-quality UAT before PR creation", "claude", ("validate-uat-runbook",), ()),
-    ("Claude reference blocks skeleton-quality UAT before PR creation", "claude", ("STOP before PR-body generation or PR creation",), ()),
+    ("Claude reference blocks skeleton-quality UAT before PR creation", "claude", ("hold PR-body generation and PR creation",), ()),
     ("Claude reference blocks skeleton-quality UAT before PR creation", "claude", (), ("A plain skeleton is an acceptable fallback",)),
     ("Codex reference blocks skeleton-quality UAT before PR creation", "codex", ("validate-uat-runbook",), ()),
-    ("Codex reference blocks skeleton-quality UAT before PR creation", "codex", ("STOP before PR-body generation or PR creation",), ()),
+    ("Codex reference blocks skeleton-quality UAT before PR creation", "codex", ("hold PR-body generation and PR creation",), ()),
     ("Codex reference blocks skeleton-quality UAT before PR creation", "codex", (), ("A plain skeleton is an acceptable fallback",)),
     ("Claude reference requires current feature-local packet", "claude", ("specs/<feature>/.process/pr-packets/<packet-id>.json",), ()),
     ("Codex reference requires current feature-local packet", "codex", ("specs/<feature>/.process/pr-packets/<packet-id>.json",), ()),

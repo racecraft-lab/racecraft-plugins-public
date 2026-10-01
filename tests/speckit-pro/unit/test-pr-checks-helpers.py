@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import contextlib
 import hashlib
-import importlib.util
 import io
 import json
 import os
@@ -29,15 +28,12 @@ if str(LIB_DIR) not in sys.path:
 from test_result import run_counted  # noqa: E402
 
 
+from script_loader import load_script as load_module_from_path  # noqa: E402
+
+
 def load_script(module_name: str, script_name: str) -> ModuleType:
     script_path = REPO_ROOT / "scripts" / script_name
-    spec = importlib.util.spec_from_file_location(module_name, script_path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"unable to load helper: {script_path}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[module_name] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_module_from_path(module_name, script_path)
 
 
 ACTIONLINT = load_script("pr_checks_install_actionlint", "install-actionlint.py")
@@ -46,6 +42,7 @@ RESULTS = load_script("pr_checks_results", "check-pr-workflow-results.py")
 MATRIX = load_script("pr_checks_matrix", "emit-plugin-matrix.py")
 GO_MODULE = load_script("pr_checks_go_module", "check-go-module.py")
 LINT = load_script("pr_checks_python_lint", "run-python-lint.py")
+SUPERSEDED = load_script("pr_checks_superseded_run", "superseded_run.py")
 
 
 def make_archive(files: dict[str, bytes]) -> bytes:
@@ -135,7 +132,7 @@ class ActionlintHelperTests(unittest.TestCase):
             archive_path.write_bytes(archive_bytes)
             with self.assertRaisesRegex(
                 ACTIONLINT.ActionlintError,
-                "exactly one top-level actionlint member",
+                "exactly one actionlint member",
             ):
                 ACTIONLINT.extract_actionlint(archive_path, root / "actionlint")
 
@@ -222,7 +219,7 @@ class DocsClassificationHelperTests(unittest.TestCase):
     def test_full_mode_for_docs_contract(self) -> None:
         for file_path in (
             ".github/workflows/pr-checks.yml",
-            "scripts/classify-docs-validation.py",
+            "scripts/changed_files.py", "scripts/classify-docs-validation.py",
             "scripts/docs-artifact.py",
         ):
             with self.subTest(file_path=file_path):
@@ -302,7 +299,7 @@ class DocsClassificationHelperTests(unittest.TestCase):
                 stderr="",
             )
         )
-        with mock.patch.object(DOCS.subprocess, "run", runner):
+        with mock.patch.object(DOCS._changed_files.subprocess, "run", runner):
             changed_files = DOCS.changed_files_for_base(
                 "main",
                 repo_root=REPO_ROOT,
@@ -332,6 +329,21 @@ class DocsClassificationHelperTests(unittest.TestCase):
             "docs_contract=false\n",
             content,
         )
+
+
+class DeployDocsTriggerTests(unittest.TestCase):
+    def test_deploy_trigger_paths_are_classified_as_docs_affecting(self) -> None:
+        workflow = (REPO_ROOT / ".github" / "workflows" / "deploy-docs.yml").read_text(encoding="utf-8")
+        block = workflow.split("    paths:\n", 1)[1].split("  workflow_dispatch:", 1)[0]
+        entries = [line.strip()[2:].strip('"') for line in block.splitlines() if line.strip().startswith("- ")]
+        self.assertGreater(len(entries), 10)
+        for entry in entries:
+            sample = entry.removeprefix("!").replace("**", "sample")
+            with self.subTest(entry=entry):
+                # The classifier is the stricter list: a path the deploy trigger
+                # excludes (fixtures, parity) still needs PR docs validation,
+                # because the generated test reference lists those files.
+                self.assertTrue(DOCS.classify_changed_files([sample]).should_validate_docs, sample)
 
 
 class WorkflowResultsHelperTests(unittest.TestCase):
@@ -403,12 +415,130 @@ class WorkflowResultsHelperTests(unittest.TestCase):
             ),
             contextlib.redirect_stderr(stderr),
         ):
-            return_code = RESULTS.main([])
+            return_code = RESULTS.main([], superseded=lambda: None)
         self.assertEqual(1, return_code)
         self.assertEqual(
             "::error::Plugin tests failed or were cancelled (result: cancelled).\n",
             stderr.getvalue(),
         )
+
+
+HEAD_SHA = "a" * 40
+
+
+def fetch_with(runs: list[dict], current: dict | None = None):
+    """Fake the two Actions API reads; record each requested path."""
+    requested: list[str] = []
+    current = current or {"id": 100, "workflow_id": 9, "head_sha": HEAD_SHA}
+    listing = f"/repos/owner/repo/actions/workflows/9/runs?head_sha={HEAD_SHA}&event=pull_request&per_page=100"
+
+    def fetch(path: str) -> dict:
+        requested.append(path)
+        if path in {"/repos/owner/repo/actions/runs/100", listing}:
+            return current if path.endswith("/100") else {"workflow_runs": runs}
+        raise AssertionError(f"unexpected path {path}")
+
+    return fetch, requested
+
+
+def run_row(run_id: object, **overrides: object) -> dict:
+    return {"id": run_id, "head_sha": HEAD_SHA, "workflow_id": 9, "event": "pull_request", **overrides}
+
+
+class SupersededRunLookupTests(unittest.TestCase):
+    def setUp(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.event = Path(temporary.name) / "event.json"
+        self.event.write_text(json.dumps({"pull_request": {"head": {"sha": HEAD_SHA}}}), encoding="utf-8")
+        self.env = {"GITHUB_EVENT_NAME": "pull_request", "GITHUB_REPOSITORY": "owner/repo",
+                    "GITHUB_RUN_ID": "100", "GITHUB_EVENT_PATH": str(self.event)}
+
+    def test_another_run_of_the_same_workflow_and_commit_supersedes(self) -> None:
+        fetch, requested = fetch_with([run_row(100), run_row(104), run_row(102)])
+        self.assertEqual(104, SUPERSEDED.sibling_run_id(self.env, fetch))
+        self.assertEqual(2, len(requested))
+        self.assertIn("superseded by run 104 for the same head commit",
+                      SUPERSEDED.superseded_notice(self.env, fetch))
+        rows = [run_row(100), run_row(101, head_sha="b" * 40), run_row(102, workflow_id=8),
+                run_row(103, event="workflow_dispatch"), run_row("104")]
+        self.assertIsNone(SUPERSEDED.sibling_run_id(self.env, fetch_with(rows)[0]))
+
+    def test_an_older_numbered_live_sibling_supersedes_a_cancelled_run(self) -> None:
+        # GitHub can cancel the higher-numbered of two runs created in the same
+        # second; the surviving sibling reports the verdict either way.
+        for sibling in (run_row(98, status="in_progress", conclusion=None),
+                        run_row(98, status="completed", conclusion="success")):
+            with self.subTest(sibling=sibling):
+                self.assertEqual(98, SUPERSEDED.sibling_run_id(self.env, fetch_with([sibling, run_row(100)])[0]))
+        cancelled = run_row(98, status="completed", conclusion="cancelled")
+        self.assertIsNone(SUPERSEDED.sibling_run_id(self.env, fetch_with([cancelled, run_row(100)])[0]))
+
+    def test_missing_inputs_never_reach_the_api(self) -> None:
+        def fetch(path: str) -> dict:
+            raise AssertionError("API must not be called")
+
+        cases = [("GITHUB_EVENT_NAME", "workflow_dispatch"), ("GITHUB_REPOSITORY", ""),
+                 ("GITHUB_RUN_ID", "abc"), ("GITHUB_EVENT_PATH", str(self.event) + ".missing")]
+        for key, value in cases:
+            with self.subTest(key=key, value=value):
+                self.assertIsNone(SUPERSEDED.sibling_run_id({**self.env, key: value}, fetch))
+        for payload in ({"pull_request": {"head": {"sha": "not-a-sha"}}}, {"pull_request": None}, []):
+            with self.subTest(payload=payload):
+                self.event.write_text(json.dumps(payload), encoding="utf-8")
+                self.assertIsNone(SUPERSEDED.sibling_run_id(self.env, fetch))
+        self.assertIsNone(SUPERSEDED.sibling_run_id(self.env))
+
+    def test_api_errors_and_mismatched_runs_fail_closed(self) -> None:
+        def broken(error: Exception):
+            def fetch(path: str) -> dict:
+                raise error
+            return fetch
+
+        for error in (OSError("offline"), ValueError("bad json"), KeyError("id")):
+            with self.subTest(error=type(error).__name__):
+                self.assertIsNone(SUPERSEDED.sibling_run_id(self.env, broken(error)))
+        for current in (
+            {"id": 100, "workflow_id": 9, "head_sha": "b" * 40},
+            {"id": 101, "workflow_id": 9, "head_sha": HEAD_SHA},
+            {"id": 100, "workflow_id": "9", "head_sha": HEAD_SHA},
+            {"id": 100, "head_sha": HEAD_SHA},
+        ):
+            with self.subTest(current=current):
+                fetch, _requested = fetch_with([run_row(105)], current)
+                self.assertIsNone(SUPERSEDED.sibling_run_id(self.env, fetch))
+        fetch = fetch_with([])[0]
+        self.assertIsNone(SUPERSEDED.superseded_notice(self.env, fetch))
+
+
+class SupersededVerdictTests(unittest.TestCase):
+    def test_main_passes_a_cancelled_run_only_when_a_sibling_run_supersedes_it(self) -> None:
+        results = {"DETECT_RESULT": "success", "ARTIFACT_RESULT": "success", "GO_RESULT": "success"}
+        cases = (
+            ("cancelled", "superseded by run 7", 0),
+            ("cancelled", None, 1),
+            ("failure", "superseded by run 7", 1),
+        )
+        for test_result, notice, expected in cases:
+            with self.subTest(test_result=test_result, notice=notice):
+                stdout, stderr = io.StringIO(), io.StringIO()
+                calls: list[str] = []
+
+                def superseded(notice: str | None = notice) -> str | None:
+                    calls.append("asked")
+                    return notice
+
+                with (
+                    mock.patch.dict(os.environ, {**results, "TEST_RESULT": test_result}),
+                    contextlib.redirect_stdout(stdout),
+                    contextlib.redirect_stderr(stderr),
+                ):
+                    self.assertEqual(expected, RESULTS.main([], superseded=superseded))
+                self.assertEqual(calls, ["asked"] if test_result == "cancelled" else [])
+                if expected == 0:
+                    self.assertEqual("::notice::superseded by run 7\n", stdout.getvalue())
+                else:
+                    self.assertIn("::error::Plugin tests failed", stderr.getvalue())
 
 
 class PythonLintHelperTests(unittest.TestCase):
@@ -478,7 +608,7 @@ class GoModuleHelperTests(unittest.TestCase):
             ["typesafe-jev/cmd/evaluate/main.go"],
             ["typesafe-jev/go.mod"],
             ["README.md", "scripts/check-go-module.py"],
-            [".github/workflows/pr-checks.yml"],
+            ["scripts/changed_files.py"], [".github/workflows/pr-checks.yml"],
         ):
             with self.subTest(changed=changed):
                 self.assertTrue(GO_MODULE.go_module_changed(changed))
@@ -564,7 +694,10 @@ def build_suite() -> unittest.TestSuite:
     for test_case in (
         ActionlintHelperTests,
         DocsClassificationHelperTests,
+        DeployDocsTriggerTests,
         WorkflowResultsHelperTests,
+        SupersededRunLookupTests,
+        SupersededVerdictTests,
         PluginMatrixHelperTests,
         GoModuleHelperTests,
     ):

@@ -16,27 +16,41 @@ import urllib.request
 PLUGIN_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(PLUGIN_ROOT))
 
-from speckit_pro_runner.formal.catalog import confined, digest, read_json
-from speckit_pro_runner.formal.evidence import atomic_record
+from speckit_pro_runner.formal.pins import CHECKER_SHA256, FORMAL_TOOLS_ROOT, QUINT_TREE_SHA256, QUINT_VERSION, VERSIONS
+from speckit_pro_runner.formal.primitives import atomic_record, confined, digest, read_json
 from speckit_pro_runner.formal.process import runtime_environment
 from speckit_pro_runner.formal.quint import ENTRY, inspect, tree_digest, validate_tool
 
 MAX_BYTES = 268435456
 TOOLS = {
     "apalache": {
-        "version": "0.62.2", "asset": "apalache-0.62.2.tgz",
-        "url": "https://github.com/apalache-mc/apalache/releases/download/v0.62.2/apalache-0.62.2.tgz",
+        "version": VERSIONS["apalache"], "asset": f"apalache-{VERSIONS['apalache']}.tgz",
+        "url": f"https://github.com/apalache-mc/apalache/releases/download/v{VERSIONS['apalache']}/apalache-{VERSIONS['apalache']}.tgz",
         "download_sha256": "765f610537281a0f25b8c30f2554f19523e2859c824e80e62276653ee23c10e2",
-        "sha256": "079b6c2320252469dcf79afec6886b8255d3dd1b34a9484433c88986752efaa8",
-        "member": "apalache-0.62.2/lib/apalache.jar", "jar": "apalache.jar",
+        "sha256": CHECKER_SHA256["apalache"],
+        "member": f"apalache-{VERSIONS['apalache']}/lib/apalache.jar", "jar": "apalache.jar",
     },
     "tlc": {
-        "version": "1.7.4", "asset": "tla2tools-1.7.4.jar",
-        "url": "https://github.com/tlaplus/tlaplus/releases/download/v1.7.4/tla2tools.jar",
-        "download_sha256": "936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88",
-        "sha256": "936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88", "jar": "tla2tools.jar",
+        "version": VERSIONS["tlc"], "asset": f"tla2tools-{VERSIONS['tlc']}.jar",
+        "url": f"https://github.com/tlaplus/tlaplus/releases/download/v{VERSIONS['tlc']}/tla2tools.jar",
+        "download_sha256": CHECKER_SHA256["tlc"],
+        "sha256": CHECKER_SHA256["tlc"], "jar": "tla2tools.jar",
     },
 }
+QUINT_DIRECTORY = f"quint-{QUINT_VERSION}"
+
+
+def tool_entry(name: str) -> dict:
+    """The catalog entry an install of this checker yields; example catalogs must match it."""
+    tool = TOOLS[name]
+    return {"version": tool["version"], "jar": f"{FORMAL_TOOLS_ROOT}/{name}-{tool['version']}/{tool['jar']}",
+            "sha256": tool["sha256"], "java": "java", "heap_mb": 4096}
+
+
+def quint_entry() -> dict:
+    """The catalog entry an install of the pinned Quint compiler yields."""
+    return {"version": QUINT_VERSION, "root": f"{FORMAL_TOOLS_ROOT}/{QUINT_DIRECTORY}",
+            "tree_sha256": QUINT_TREE_SHA256, "node": "node"}
 
 
 def download(url: str, target: Path) -> None:
@@ -88,12 +102,12 @@ def install_jar(root: Path, base: Path, name: str, cache: Path | None) -> dict:
             ready.rename(destination)
     if not jar.is_file() or digest(jar) != tool["sha256"]:
         raise ValueError("Existing formal tool differs from the pinned release; inspect it before repairing or replacing it")
-    return {"version": tool["version"], "jar": jar.relative_to(root).as_posix(), "sha256": tool["sha256"], "java": "java", "heap_mb": 4096}
+    return tool_entry(name)
 
 
 def install_quint(root: Path, base: Path) -> dict:
-    destination = confined(root, (base / "quint-0.32.0").relative_to(root).as_posix())
-    receipt = confined(root, (base / "quint-0.32.0-install.json").relative_to(root).as_posix())
+    destination = confined(root, (base / QUINT_DIRECTORY).relative_to(root).as_posix())
+    receipt = confined(root, (base / f"{QUINT_DIRECTORY}-install.json").relative_to(root).as_posix())
     source = PLUGIN_ROOT / "skills/speckit-coach/examples/formal/tooling/quint"
     if not destination.exists():
         with tempfile.TemporaryDirectory(prefix=".quint-setup-", dir=base) as temporary:
@@ -111,10 +125,10 @@ def install_quint(root: Path, base: Path) -> dict:
                            cwd=ready, env=env, stdin=subprocess.DEVNULL, stdout=sys.stderr, stderr=sys.stderr, check=True, timeout=300)
             if not (ready / ENTRY).is_file() or digest(ready / "package-lock.json") != digest(source / "package-lock.json"):
                 raise ValueError("Quint installation did not preserve the approved compiler and lockfile")
-            tool = {"version": "0.32.0", "root": str(ready), "tree_sha256": tree_digest(ready), "node": "node"}
+            tool = {**quint_entry(), "root": str(ready), "tree_sha256": tree_digest(ready)}
             inspect(root, tool)
             ready.rename(destination)
-            tool["root"] = destination.relative_to(root).as_posix()
+            tool["root"] = quint_entry()["root"]
             atomic_record(receipt, tool)
     if not receipt.is_file():
         raise ValueError("Quint installation is interrupted; inspect the directory and restore its recorded identity before retrying")
@@ -128,7 +142,7 @@ def install_quint(root: Path, base: Path) -> dict:
 
 def setup(root: Path, selected: list[str], apply: bool, cache: Path | None = None) -> dict:
     root = root.resolve(strict=True)
-    base = confined(root, ".specify/tools/formal")
+    base = confined(root, FORMAL_TOOLS_ROOT)
     if not apply:
         return {"verdict": "preview", "writes_state": False, "destination": str(base), "selected": selected,
                 "downloads": {name: TOOLS[name] for name in selected if name in TOOLS},

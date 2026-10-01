@@ -14,42 +14,24 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import stat
-import subprocess
 from typing import Any
 
+from .. import cli_probe
+from ..cli_probe import BRANCH
 from ..envelope import diagnostic, response
 from .read_only import resolve_repo_root
 
 SPECS_ROOT = "specs"
 ALLOWED_INPUTS = frozenset({"current_target", "repo_root"})
-# SpecKit names a feature branch after its spec directory. A name that could not
-# be a branch, or could be read as an option, is never passed to `gh`.
-BRANCH = re.compile(r"(?!-)(?!.*\.\.)[A-Za-z0-9._/-]{1,255}\Z")
+# SpecKit names a feature branch after its spec directory, so a spec name is
+# checked with the shared branch pattern before it reaches `gh`.
 PR_LIST_LIMIT = "20"
+PROBE_TIMEOUT_SECONDS = 30
 
 
 def probe(root: Path, argv: list[str]) -> dict[str, Any]:
     """Run one fixed read-only `gh` query; any failure to run is reported, not raised."""
-    try:
-        if argv[0] != "gh":
-            raise ValueError("archive sweep runs only gh")
-        result = subprocess.run(
-            ["gh", *argv[1:]],
-            cwd=root,
-            capture_output=True,
-            text=True,
-            timeout=30,
-            stdin=subprocess.DEVNULL,
-            shell=False,
-        )
-        return {
-            "argv": argv,
-            "exit_status": result.returncode,
-            "stdout_tail": result.stdout.strip(),
-            "stderr_tail": result.stderr[-2048:].strip(),
-        }
-    except (OSError, ValueError, subprocess.SubprocessError) as exc:
-        return {"argv": argv, "exit_status": None, "stdout_tail": "", "stderr_tail": str(exc)}
+    return cli_probe.probe(root, argv, allowed=("gh",), timeout=PROBE_TIMEOUT_SECONDS)
 
 
 def merged_pr_query(branch: str) -> list[str]:

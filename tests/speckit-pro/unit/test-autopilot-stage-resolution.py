@@ -18,9 +18,7 @@ Python 3.11+ standard library only.
 
 from __future__ import annotations
 
-import importlib.util
 import json
-import os
 import subprocess
 import sys
 import tempfile
@@ -36,6 +34,7 @@ if str(LIB_DIR) not in sys.path:
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
 
+from runner_invocation import run_runner as invoke_runner, runner_env  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 from speckit_pro_runner.helpers import read_only  # noqa: E402
@@ -610,7 +609,7 @@ OBSERVED_512_OPEN = {"number": 512, "url": SECOND_PR_URL, "state": "OPEN"}
 NO_OBSERVATION_REASON = "no observation supplied"
 UNUSABLE_OBSERVATION_REASON = "observation unusable"
 
-# `corroboration` carries the same five keys for every status; the ones a status
+# `corroboration` carries the same six keys for every status; the ones a status
 # has nothing to say about are null rather than absent, so every consumer reads
 # one shape (contracts/stage-corroboration.md:103-109).
 CORROBORATION_MATCH = {
@@ -619,6 +618,7 @@ CORROBORATION_MATCH = {
     "observed": OBSERVED_438_OPEN,
     "merged": None,
     "reason": None,
+    "repair": None,
 }
 # No row means no recorded identity to carry, and no observation was taken.
 CORROBORATION_NO_RECORD = {
@@ -627,6 +627,7 @@ CORROBORATION_NO_RECORD = {
     "observed": None,
     "merged": None,
     "reason": None,
+    "repair": None,
 }
 # The row IS present on a `skipped` run, and §7 needs its identity: the terminal
 # step refreshes that pull request once the tool can be reached again.
@@ -636,6 +637,7 @@ CORROBORATION_SKIPPED_NO_OBSERVATION = {
     "observed": None,
     "merged": None,
     "reason": NO_OBSERVATION_REASON,
+    "repair": None,
 }
 CORROBORATION_SKIPPED_UNUSABLE = {
     **CORROBORATION_SKIPPED_NO_OBSERVATION,
@@ -647,6 +649,7 @@ CORROBORATION_PR_CLOSED = {
     "observed": OBSERVED_438_CLOSED,
     "merged": False,
     "reason": None,
+    "repair": None,
 }
 CORROBORATION_PR_MERGED = {
     **CORROBORATION_PR_CLOSED,
@@ -659,6 +662,7 @@ CORROBORATION_PR_MISSING = {
     "observed": None,
     "merged": None,
     "reason": None,
+    "repair": None,
 }
 CORROBORATION_IDENTITY_MISMATCH_SECOND_PR = {
     "status": "identity_mismatch",
@@ -666,10 +670,17 @@ CORROBORATION_IDENTITY_MISMATCH_SECOND_PR = {
     "observed": OBSERVED_512_OPEN,
     "merged": None,
     "reason": None,
+    "repair": None,
+}
+# Exactly one open pull request answers for the branch, so the row is repairable.
+CORROBORATION_IDENTITY_MISMATCH_SOLE_PR = {
+    **CORROBORATION_IDENTITY_MISMATCH_SECOND_PR,
+    "repair": {"number": 512, "url": OBSERVED_512_OPEN["url"]},
 }
 CORROBORATION_IDENTITY_MISMATCH_URL = {
     **CORROBORATION_IDENTITY_MISMATCH_SECOND_PR,
     "observed": OBSERVED_438_TRANSFERRED,
+    "repair": {"number": 438, "url": OBSERVED_438_TRANSFERRED["url"]},
 }
 
 # One witness per status, in the §5.3 order, so the closed vocabulary is proved
@@ -716,7 +727,7 @@ STATUS_WITNESS_CASES = (
         "identity_mismatch",
         DRAFT_PR_PRESENT_ROW,
         {"ok": True, "pull_requests": [OPEN_512]},
-        CORROBORATION_IDENTITY_MISMATCH_SECOND_PR,
+        CORROBORATION_IDENTITY_MISMATCH_SOLE_PR,
     ),
 )
 
@@ -773,22 +784,27 @@ SUCCESSFUL_OBSERVATION_CASES = (
 # absence, the closure, or the moved URL. Every observation below satisfies a
 # later rule too, so a resolver that evaluated them in any other order would
 # report a different status (contracts/stage-corroboration.md:128-140).
-# (label, observation, the rule an extra open pull request outranks)
+# (label, observation, the rule an extra open pull request outranks, expected)
 PRECEDENCE_CASES = (
     (
         "an extra open pull request outranks a missing recorded number",
         {"ok": True, "pull_requests": [OPEN_512]},
         "rule 4",
+        CORROBORATION_IDENTITY_MISMATCH_SOLE_PR,
     ),
     (
         "an extra open pull request outranks a closed recorded number",
         {"ok": True, "pull_requests": [CLOSED_438, OPEN_512]},
         "rule 3",
+        CORROBORATION_IDENTITY_MISMATCH_SOLE_PR,
     ),
     (
         "an extra open pull request outranks a transferred recorded URL",
         {"ok": True, "pull_requests": [TRANSFERRED_438, OPEN_512]},
         "rule 2",
+        # The transferred recorded number is itself open, so the second open
+        # pull request beside it leaves the branch ambiguous and unrepaired.
+        CORROBORATION_IDENTITY_MISMATCH_SECOND_PR,
     ),
 )
 
@@ -905,6 +921,9 @@ CORROBORATION_TRIGGER_CASES = (
     (["--stage", "implement"], "implement"),
     (["--stage", "full"], "full"),
 )
+
+
+from script_loader import load_script  # noqa: E402
 
 
 def overview_table(rows: tuple[tuple[str, str], ...]) -> str:
@@ -1027,12 +1046,7 @@ def resolve_envelope(
     return json.loads(result["stdout"])
 
 
-def runner_env() -> dict[str, str]:
-    env = os.environ.copy()
-    existing = env.get("PYTHONPATH")
-    env["PYTHONPATH"] = str(PLUGIN_ROOT) if not existing else f"{PLUGIN_ROOT}{os.pathsep}{existing}"
-    env["PYTHONDONTWRITEBYTECODE"] = "1"
-    return env
+NO_BYTECODE = {"PYTHONDONTWRITEBYTECODE": "1"}
 
 
 def run_runner(inputs: dict[str, object]) -> dict[str, object]:
@@ -1045,28 +1059,12 @@ def run_runner(inputs: dict[str, object]) -> dict[str, object]:
         "mode": "read_only",
         "inputs": inputs,
     }
-    completed = subprocess.run(
-        [sys.executable, "-m", "speckit_pro_runner"],
-        input=json.dumps(request),
-        cwd=REPO_ROOT,
-        env=runner_env(),
-        text=True,
-        capture_output=True,
-        shell=False,
-        check=False,
-    )
-    return json.loads(completed.stdout)
+    return invoke_runner(request, extra_env=NO_BYTECODE)[1]
 
 
 def load_coverage_validator():
     """Import the shipped phase-coverage validator so vocabulary locks read real bytes."""
-    spec = importlib.util.spec_from_file_location(
-        "speckit_autopilot_phase_coverage_stage_lock", COVERAGE_VALIDATOR
-    )
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_script("speckit_autopilot_phase_coverage_stage_lock", COVERAGE_VALIDATOR)
 
 
 class StageVocabularyAndArgvTests(unittest.TestCase):
@@ -1332,13 +1330,13 @@ class DraftPrCorroborationTests(unittest.TestCase):
         # Each observation below also satisfies the later rule its label names,
         # so a resolver evaluating the rules in any other order reports a
         # different status here rather than passing by luck.
-        for label, observation, outranked in PRECEDENCE_CASES:
+        for label, observation, outranked, expected in PRECEDENCE_CASES:
             with self.subTest(case=label):
                 self.assertEqual(
                     self.corroboration(
                         draft_pr_document(DRAFT_PR_PRESENT_ROW), observation=observation
                     ),
-                    CORROBORATION_IDENTITY_MISMATCH_SECOND_PR,
+                    expected,
                     f"rule 1 must be evaluated before {outranked}",
                 )
 
@@ -1684,7 +1682,7 @@ class OpenAnalysisFindingTests(unittest.TestCase):
                     }
                     completed = subprocess.run(
                         [sys.executable, "-m", "speckit_pro_runner"],
-                        input=json.dumps(request), cwd=root, env=runner_env(),
+                        input=json.dumps(request), cwd=root, env=runner_env(NO_BYTECODE),
                         text=True, capture_output=True, check=False,
                     )
                     envelopes[helper_id] = (completed.returncode, json.loads(completed.stdout))

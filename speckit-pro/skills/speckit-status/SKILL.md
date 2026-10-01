@@ -1,10 +1,23 @@
 ---
 name: speckit-status
+<!-- host:claude: Claude reads a trigger-phrase description and Claude-only frontmatter keys -->
 description: "Use when the user wants to read SpecKit project status, see the roadmap dashboard, check which specs are complete, in-progress, blocked, or ready to start, see phase-level progress for active specs, find which active worktrees exist and what spec each belongs to, check the status or phase of a specific SPEC-ID, identify what is blocking a spec and why, get a recommendation for the next spec to implement, or summarize overall project health and next steps. Triggers on: show roadmap, project status, active workflows, blockers, dashboard, all specs, phases complete, next phase, list worktrees, which spec should I start, what is next, SpecKit progress, project health, check SPEC-XXX, is SPEC-XXX done, is SPEC-XXX blocked. Read-only: never creates files, branches, or worktrees. Do NOT use to set up or scaffold a spec (use speckit-scaffold-spec), execute a workflow autonomously (use speckit-autopilot), fix PR review comments (use speckit-resolve-pr), or ask about SDD or SpecKit consensus/voting (use speckit-coach)."
 argument-hint: "[SPEC-ID or 'all']"
 user-invocable: true
 allowed-tools: Read Glob Grep
 license: MIT
+<!-- /host -->
+<!-- host:codex: Codex keeps its own selection description -->
+description: >
+  Show the current SpecKit roadmap and workflow status in Codex.
+  Aggregates workflow files and technical roadmaps, highlights
+  active specs, identifies blocked work, and recommends the next
+  unblocked spec to start. Read-only: never creates files, branches,
+  or worktrees. Do not use to set up or scaffold a spec
+  (speckit-scaffold-spec), run a workflow (speckit-autopilot), fix PR
+  review comments (speckit-resolve-pr), or explain SDD methodology,
+  the consensus protocol, or voting rules (speckit-coach).
+<!-- /host -->
 ---
 
 # SpecKit Status Dashboard
@@ -17,14 +30,12 @@ stdin, read one JSON response from stdout, and surface stderr diagnostics.
 Do not add a shell fallback, `jq` parsing path, Git Bash, WSL, or
 PowerShell-specific command-language requirement for installed workflows.
 
-## Codex Skill-Selection Guard
-
-If this file is loaded in Codex, the runtime selected the Claude Code
-variant from `skills/` instead of the Codex variant from `codex-skills/`.
-Do not follow the Claude-oriented instructions below in Codex. Immediately
-read and follow `../../codex-skills/speckit-status/SKILL.md` from this plugin
-root, treat that document as the active skill, and report that the fallback
-guard was triggered.
+<!-- host:claude: allowed-tools frontmatter exists only in the Claude rendering -->
+The frontmatter `allowed-tools` pre-approves only `Read`, `Glob` and `Grep`.
+<!-- /host -->
+The runner helper calls below (`generate-spec-index-check`, `o5-topology`) are
+not pre-approved: they follow the session's permissions and may prompt. If a
+call is denied, say so and continue the dashboard without that section.
 
 Show the full project roadmap: completed specs, in-progress
 specs, specs that haven't started yet, and a recommendation for
@@ -34,9 +45,16 @@ Archive Sweep cleanup safety when the project has archive state.
 ## Invocation
 
 ```text
+<!-- host:claude: Claude names skills with a slash -->
 /speckit-pro:speckit-status          # Show full roadmap + active specs
 /speckit-pro:speckit-status all      # Same as above
 /speckit-pro:speckit-status SPEC-013 # Show specific spec detail
+<!-- /host -->
+<!-- host:codex: Codex names skills with a dollar sign -->
+$speckit-status          # Show full roadmap + active specs
+$speckit-status all      # Same as above
+$speckit-status SPEC-013 # Show specific spec detail
+<!-- /host -->
 ```
 
 ## What to Do
@@ -50,6 +68,8 @@ Workflow files:    **/*-workflow.md  (active/completed specs with phase detail)
 Technical roadmaps: **/*technical-roadmap*.md  OR  **/*-roadmap.md
 Design concepts:   **/*-design-concept.md  (grill-me output per spec)
 Also check:        docs/ai/specs/*-workflow.md
+                   docs/ai/specs/.process/*-workflow.md
+                   docs/ai/specs/.process/*-design-concept.md
                    docs/ai/specs/*-design-concept.md
                    docs/ai/*roadmap*.md
 Archive state:     .specify/extensions.yml
@@ -58,14 +78,25 @@ Archive state:     .specify/extensions.yml
                    .specify/extensions/archive/RACECRAFT-PIN.md
 ```
 
+Do not assume the user keeps everything under one directory. Search the current
+checkout first, then list attached git worktrees (`git worktree list
+--porcelain`, or without a shell the `gitdir` files under `.git/worktrees/`)
+and search each one the same way, so workflows in attached worktrees are
+included even when setup used a nonstandard worktree root. Record which
+worktree and branch each workflow belongs to. Narrow to the files that
+actually describe the SpecKit project; if a file looks unrelated, ignore it
+rather than polluting the dashboard. If multiple roadmap files exist, pick the
+most relevant current roadmap and say which file you used; do not merge
+unrelated roadmaps unless the repo clearly uses a multi-roadmap setup.
+
 For each design concept doc found, record the SPEC-ID it corresponds to
 (parsed from the filename `SPEC-<ID>-design-concept.md` or from the doc's
 frontmatter). This drives the **DC** (Design Concept) column in the
 phase-detail dashboard and the per-spec detail view.
 
-Search and glob results only discover candidates. This standalone status skill
-must read every selected current roadmap and workflow file from beginning to
-end before answering; snippets, cached summaries, and another skill's report
+Search, glob and worktree discovery only identify candidates. This standalone
+status skill must read every selected current roadmap and workflow file from
+beginning to end before answering; snippets, cached summaries, and another skill's report
 are not substitutes for a full-file read. Do not infer status, dependencies,
 branch, or phase state from an unread section.
 
@@ -148,12 +179,22 @@ If any spec has a workflow file with phases in progress, show the phase-level
 table. The **DC** column (Design Concept) shows ✅ if a `SPEC-<ID>-design-concept.md`
 exists for the spec, ⏳ otherwise. A workflow file without a corresponding design
 concept doc is a yellow flag — the phase prompts may be undercooked relative to
+<!-- host:claude: Claude names skills with a slash -->
 what `/speckit-pro:speckit-scaffold-spec` produces today:
+<!-- /host -->
+<!-- host:codex: Codex names skills with a dollar sign -->
+what `$speckit-scaffold-spec` produces today:
+<!-- /host -->
 
 | Spec | Name | DC | Specify | Clarify | Plan | Check | Tasks | Analyze | Impl | Next |
 |------|------|----|---------|---------|------|-------|-------|---------|------|------|
 | SPEC-XXX | <name> | ✅ | ✅ | ✅ | 🔄 | ⏳ | ⏳ | ⏳ | ⏳ | Plan |
+<!-- host:claude: Claude names skills with a slash -->
 | SPEC-YYY | <name> | ⏳ | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | Clarify (no design concept — re-run `/speckit-pro:speckit-scaffold-spec` or grill manually) |
+<!-- /host -->
+<!-- host:codex: Codex names skills with a dollar sign -->
+| SPEC-YYY | <name> | ⏳ | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | Clarify (no design concept — re-run `$speckit-scaffold-spec` or grill manually) |
+<!-- /host -->
 ```
 
 Include an Archive Sweep summary when archive state exists:
@@ -185,7 +226,12 @@ Surface a single freshness line in the dashboard from the exit code:
 
 - exit `0` → **index current**
 - exit `1` → **index stale — run regen** (the maps drifted from their
+<!-- host:claude: Claude names skills with a slash -->
   sources; the fix is `/speckit-pro:speckit-autopilot`, whose phase gates
+<!-- /host -->
+<!-- host:codex: Codex names skills with a dollar sign -->
+  sources; the fix is `$speckit-autopilot`, whose phase gates
+<!-- /host -->
   rebuild the zones — `speckit-status` does not regenerate them)
 - exit `2` → **index check error: `<message>`** — name the failure from the
   generator's stderr line (e.g. a malformed `prs.json` or a non-regular-file
@@ -254,11 +300,21 @@ taken from the spec's technical roadmap section.>
 To get started:
 
 ```text
+<!-- host:claude: Claude names skills with a slash -->
 /speckit-pro:speckit-scaffold-spec SPEC-XXX
+<!-- /host -->
+<!-- host:codex: Codex names skills with a dollar sign -->
+$speckit-scaffold-spec SPEC-XXX
+<!-- /host -->
 ```
 
 This creates the worktree, branch, and populated workflow file.
+<!-- host:claude: Claude names skills with a slash -->
 Then run `/speckit-pro:speckit-autopilot` to execute it.
+<!-- /host -->
+<!-- host:codex: Codex names skills with a dollar sign -->
+Then run `$speckit-autopilot` to execute it.
+<!-- /host -->
 
 **Alternatives** (if you prefer a smaller spec first):
 
@@ -275,6 +331,10 @@ Then run `/speckit-pro:speckit-autopilot` to execute it.
   a new spec."
 - If all specs are complete, say "All specs complete — project
   roadmap is finished."
+- If several workflow files describe the same spec, prefer the one that
+  matches the active branch or the most recent in-progress state.
+- If workflow files exist without a roadmap, report phase detail from the
+  workflows and note that backlog visibility is incomplete.
 
 ### 6. If Specific Spec Requested
 
@@ -296,7 +356,12 @@ technical roadmap scope and suggest creating a workflow file:
 ```text
 SPEC-008 (Perspectives) — ⏳ Not Started
 No workflow file found. To begin:
+<!-- host:claude: Claude names skills with a slash -->
 /speckit-pro:speckit-scaffold-spec SPEC-008
+<!-- /host -->
+<!-- host:codex: Codex names skills with a dollar sign -->
+$speckit-scaffold-spec SPEC-008
+<!-- /host -->
 ```
 
 ### 7. If No Technical Roadmap or Workflow Files Found
@@ -305,6 +370,30 @@ Tell the user:
 
 - No technical roadmap or workflow files found in the project
 - Guide them to create a technical roadmap:
+<!-- host:claude: Claude names skills with a slash -->
   `/speckit-pro:speckit-coach help me create a technical roadmap`
+<!-- /host -->
+<!-- host:codex: Codex names skills with a dollar sign -->
+  `$speckit-coach help me create a technical roadmap`
+<!-- /host -->
 - Or create a single workflow: copy
   `skills/speckit-coach/templates/workflow-template.md`
+
+### 8. Boundaries
+
+This skill does not mutate the repo. Do not create branches, edit workflow
+files, or mark roadmap rows complete from inside the status skill. If the user
+wants to act on the recommendation, direct them to the matching skill:
+
+<!-- host:claude: Claude names skills with a slash -->
+- /speckit-pro:speckit-scaffold-spec to prepare a spec
+- /speckit-pro:speckit-autopilot to execute a workflow
+- /speckit-pro:speckit-resolve-pr to address review feedback
+- /speckit-pro:speckit-coach for process guidance
+<!-- /host -->
+<!-- host:codex: Codex names skills with a dollar sign -->
+- $speckit-scaffold-spec to prepare a spec
+- $speckit-autopilot to execute a workflow
+- $speckit-resolve-pr to address review feedback
+- $speckit-coach for process guidance
+<!-- /host -->

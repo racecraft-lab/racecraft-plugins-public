@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import functools
 import hashlib
 import importlib.util
 import json
@@ -39,29 +40,22 @@ DRAFT_PACKET_VALIDATION_DIR = "specs/fixture-draft-pr/.process/pr-packets"
 PR_PACKET_SCHEMA = (
     PLUGIN_ROOT / "skills" / "speckit-autopilot" / "contracts" / "pr-packet.schema.json"
 )
-PR_PACKET_SCHEMA_FIXTURE = (
-    REPO_ROOT
-    / "tests"
-    / "speckit-pro"
-    / "unit"
-    / "fixtures"
-    / "pr-packet-title-patterns.json"
-)
 # Shipped runbooks that tell an operator what to do with the confidence-gate
 # JSON on the exit-2 path. All three describe the same loop, so they have to
 # agree on which field the loop reads first.
-CONFIDENCE_GATE_RUNBOOKS = (
-    PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "gate-validation.md",
-    PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "phase-execution.md",
-    PLUGIN_ROOT
-    / "codex-skills"
-    / "speckit-autopilot"
-    / "references"
-    / "phase-execution-codex.md",
-)
-
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
+sys.path.insert(0, str(REPO_ROOT / "tests" / "speckit-pro" / "lib"))
+from host_skill_views import host_skill_root  # noqa: E402
+
+CONFIDENCE_GATE_RUNBOOKS = (
+    PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "gate-validation.md",
+    *(host_skill_root(host) / "speckit-autopilot" / "references" / "phase-execution.md" for host in ("claude", "codex")),
+)
+import runner_invocation  # noqa: E402
+from runner_invocation import assert_runner_response, command_stdin_fixture  # noqa: E402
+
+from speckit_pro_runner.pr_contract import PACKET_TITLE_SCOPE_PATTERN, PACKET_TITLE_VALUE_PATTERN  # noqa: E402
 
 EXPECTED_HELPERS = [
     "formal-doctor",
@@ -249,14 +243,14 @@ def roadmap_slice_budget_entry(rows: str, ids: str = "A, B", *, greenfield: bool
         "| Slice | Estimated LOC | Production files | Total files |\n"
         "| --- | ---: | ---: | ---: |\n" + rows
     )
+RUNNER_ENV_DEFAULTS = {"SPECKIT_PR_PACKET_TIMESTAMP": "2026-07-02T00:00:00Z"}
 
 
 def runner_env() -> dict[str, str]:
-    env = os.environ.copy()
-    existing = env.get("PYTHONPATH")
-    env["PYTHONPATH"] = str(PLUGIN_ROOT) if not existing else f"{PLUGIN_ROOT}{os.pathsep}{existing}"
-    env.setdefault("SPECKIT_PR_PACKET_TIMESTAMP", "2026-07-02T00:00:00Z")
-    return env
+    return runner_invocation.runner_env(defaults=RUNNER_ENV_DEFAULTS)
+
+
+run_runner = functools.partial(runner_invocation.run_runner, env_defaults=RUNNER_ENV_DEFAULTS)
 
 
 def helper_request(helper_id: str, inputs: dict[str, object] | None = None) -> dict[str, object]:
@@ -279,30 +273,6 @@ def helper_project() -> Iterator[Path]:
         yield root
 
 
-def run_runner(
-    request: object,
-    env_override: dict[str, str] | None = None,
-    *,
-    cwd: Path = REPO_ROOT,
-) -> tuple[subprocess.CompletedProcess[str], dict[str, object], list[dict[str, object]]]:
-    env = runner_env()
-    if env_override:
-        env.update(env_override)
-    completed = subprocess.run(
-        [sys.executable, "-m", "speckit_pro_runner"],
-        input=json.dumps(request) if not isinstance(request, str) else request,
-        text=True,
-        capture_output=True,
-        cwd=cwd,
-        env=env,
-        shell=False,
-        check=False,
-    )
-    response = json.loads(completed.stdout) if completed.stdout.strip() else {}
-    stderr_records = [json.loads(line) for line in completed.stderr.splitlines() if line.strip()]
-    return completed, response, stderr_records
-
-
 def response_cwd(data: dict[str, object]) -> Path:
     record = data.get("effective_cwd") or data.get("cwd")
     if not isinstance(record, dict):
@@ -312,18 +282,30 @@ def response_cwd(data: dict[str, object]) -> Path:
     return path if path.is_absolute() else REPO_ROOT / path
 
 
-def command_stdin_fixture(command: str) -> Path:
-    if "<" not in command:
-        raise AssertionError(f"authoritative_command must include a stdin fixture: {command}")
-    stdin_path = command.split("<", 1)[1].strip()
-    if not stdin_path or any(char.isspace() for char in stdin_path):
-        raise AssertionError(f"authoritative_command must use one stdin fixture path: {command}")
-    return REPO_ROOT / stdin_path
+class _ReadOnlyHelperRunner:
+    """Shared fixture for the tests below."""
 
-
-class ReadOnlyHelperTests(unittest.TestCase):
     helper_filter: str | None = None
 
+    def run_plan_layers(
+        self,
+        feature_dir: str,
+    ) -> tuple[subprocess.CompletedProcess[str], dict[str, object], dict[str, object]]:
+        completed, response, stderr_records = run_runner(
+            helper_request("plan-layers-feature-dir", {"feature_dir": feature_dir})
+        )
+        self.assertEqual(completed.returncode, response["exit_code"])
+        self.assertEqual(
+            [diag["code"] for diag in stderr_records],
+            [diag["code"] for diag in response["diagnostics"]],
+        )
+        planner = response["data"]["stdout_json"]
+        self.assertEqual(planner["tool"], "plan-layers")
+        self.assertEqual(planner["contract_version"], 1)
+        return completed, response, planner
+
+
+class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
     def test_validate_agent_install_rejects_invalid_surface_or_loaded_root(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-agent-install":
             self.skipTest("validate-agent-install cases use validate-agent-install")
@@ -604,12 +586,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
         return json.loads(result["stdout"]), int(result["exit_code"])
 
     def assert_response(self, response: dict[str, object], status: str, exit_code: int) -> None:
-        self.assertEqual(response["schema_version"], "1.0")
-        self.assertEqual(response["status"], status)
-        self.assertEqual(response["exit_code"], exit_code)
-        self.assertIsNone(response["legacy_exit_code"])
-        self.assertIsInstance(response["diagnostics"], list)
-        self.assertIsInstance(response["data"], dict)
+        assert_runner_response(self, response, status, exit_code)
 
     def filtered_helpers(self) -> list[str]:
         if self.helper_filter:
@@ -644,23 +621,6 @@ class ReadOnlyHelperTests(unittest.TestCase):
             expected_json,
             f"FAIL detail: {helper_id} JSON stdout mismatch: actual_json={actual_json!r}; expected_json={expected_json!r}; actual={actual!r}; expected={expected!r}",
         )
-
-    def run_plan_layers(
-        self,
-        feature_dir: str,
-    ) -> tuple[subprocess.CompletedProcess[str], dict[str, object], dict[str, object]]:
-        completed, response, stderr_records = run_runner(
-            helper_request("plan-layers-feature-dir", {"feature_dir": feature_dir})
-        )
-        self.assertEqual(completed.returncode, response["exit_code"])
-        self.assertEqual(
-            [diag["code"] for diag in stderr_records],
-            [diag["code"] for diag in response["diagnostics"]],
-        )
-        planner = response["data"]["stdout_json"]
-        self.assertEqual(planner["tool"], "plan-layers")
-        self.assertEqual(planner["contract_version"], 1)
-        return completed, response, planner
 
     def test_registry_dispatch_lists_only_read_only_helpers(self) -> None:
         if self.helper_filter and self.helper_filter != "helper-registry-dispatch":
@@ -1919,6 +1879,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
         self.assertTrue(all(not root.exists() for root in roots))
 
     ANALYSIS_HEADER = ("| ID | Severity | Issue | Resolution |", "|----|----------|-------|------------|")
+
     SEVERITY_LEGEND = "\n".join(
         (
             "| Severity | Meaning | Action Required |",
@@ -2359,31 +2320,6 @@ class ReadOnlyHelperTests(unittest.TestCase):
                     rules = {failure["rule"] for failure in response["data"]["stdout_json"]["failures"]}
                     self.assertIn(expected_rule, rules)
                     self.assertEqual(stderr_records, response["diagnostics"])
-
-    def test_pr_packet_schema_accepts_established_scopes_and_rejects_mixed_case(self) -> None:
-        if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
-            self.skipTest("validate-pr-packet schema pattern case")
-        schema = json.loads(PR_PACKET_SCHEMA.read_text(encoding="utf-8"))
-        title_properties = schema["$defs"]["generated_title"]["properties"]
-        scope_pattern = title_properties["scope"]["pattern"]
-        value_pattern = title_properties["value"]["pattern"]
-        fixture_patterns = json.loads(PR_PACKET_SCHEMA_FIXTURE.read_text(encoding="utf-8"))
-        self.assertEqual(fixture_patterns["scope_pattern"], scope_pattern)
-        self.assertEqual(fixture_patterns["value_pattern"], value_pattern)
-
-        for scope in ("speckit-pro", "FEATURE-001", "FIXTURE-014C"):
-            with self.subTest(scope=scope, expected="accepted"):
-                self.assertIsNotNone(re.fullmatch(scope_pattern, scope))
-                self.assertIsNotNone(
-                    re.fullmatch(value_pattern, f"feat({scope}): Add packet validation")
-                )
-
-        for scope in ("PRsg-012", "SPEC-014c", "speckit-PRO"):
-            with self.subTest(scope=scope, expected="rejected"):
-                self.assertIsNone(re.fullmatch(scope_pattern, scope))
-                self.assertIsNone(
-                    re.fullmatch(value_pattern, f"feat({scope}): Add packet validation")
-                )
 
     def test_validate_pr_packet_rejects_unsafe_missing_and_unreadable_body(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
@@ -3697,6 +3633,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
         + "## Phase 3: User Story 1\n\n"
         + "- [ ] T003 [US1] Implement the parser in src/parser.py\n"
     )
+
     G5_LOOP_DEPENDS = {"T001": [], "T002": ["T001"], "T003": ["T002"]}
 
     def test_validate_gate_g5_rejects_a_gate_task_that_waits_on_its_dependents(self) -> None:
@@ -4424,7 +4361,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
             )
             completed, response, stderr_records = run_runner(
                 helper_request("detect-commands", {"repo_root": "."}),
-                env_override={"PATH": "/nonexistent"},
+                extra_env={"PATH": "/nonexistent"},
                 cwd=project_path,
             )
         self.assertEqual(completed.returncode, 0)
@@ -4547,7 +4484,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
                     with tempfile.TemporaryDirectory(prefix="research-preflight-home-") as home:
                         completed, response, stderr_records = run_runner(
                             helper_request(helper_id, HELPER_CASES[helper_id]),
-                            {
+                            extra_env={
                                 "HOME": home,
                                 "EVALUATE_BIN": "",
                                 "JEV_API_KEY_FILE": "",
@@ -4581,9 +4518,9 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 if helper_id == "finalize-run":
                     self.assert_response(response, "ok", 0)
                     self.assertFalse(data["writes_state"])
-                    # The fixture ledger holds a deferral, so the run ends in one human stop.
-                    self.assertEqual(data["outcome"], "human_stop")
-                    self.assertEqual(data["ready_commands"], [])
+                    # The fixture deferral failed every escalation tier: the run finalizes ready for review.
+                    self.assertEqual((data["outcome"], data["ready_commands"], [d["class"] for d in data["decisions"]]),
+                                     ("complete_with_deferred", ["gh pr ready 101", "gh pr ready 102"], ["exhausted"]))
                     self.assertEqual(stderr_records, [])
                     continue
                 if helper_id == "ratify-pr-split":
@@ -4604,7 +4541,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
                             (root / "specs" / name / "spec.md").write_text("# spec\n", encoding="utf-8")
                         completed, response, stderr_records = run_runner(
                             helper_request(helper_id, HELPER_CASES[helper_id]),
-                            {"PATH": str(root / "empty-path")},
+                            extra_env={"PATH": str(root / "empty-path")},
                             cwd=root,
                         )
                     data = response["data"]
@@ -4635,12 +4572,175 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 self.assert_response(response, expected_status, expected_code)
 
 
+class PlanLayersRepairRouteTests(_ReadOnlyHelperRunner, unittest.TestCase):
+    """A plan-layers failure routes its repair to the agent that owns the fix."""
+
+    def test_plan_layers_invalid_plan_routes_tasks_md_repair_to_the_phase_executor(self) -> None:
+        if self.helper_filter and self.helper_filter != "plan-layers-feature-dir":
+            self.skipTest("plan-layers repair route case")
+        _, _, planner = self.run_plan_layers(f"{PLAN_LAYERS_FIXTURE_DIR}/dependency-cycle")
+        self.assertEqual(planner["status"], "invalid_plan")
+        repair = planner["repair"]
+        self.assertEqual(repair["owner"], "phase-executor")
+        self.assertEqual(repair["target"], f"{PLAN_LAYERS_FIXTURE_DIR}/dependency-cycle/tasks.md")
+        self.assertEqual(repair["retry"], "plan-layers-feature-dir")
+        self.assertNotIn("repair", self.run_plan_layers(f"{PLAN_LAYERS_FIXTURE_DIR}/valid-real")[2])
+
+    def test_plan_layers_input_error_routes_by_what_is_missing(self) -> None:
+        if self.helper_filter and self.helper_filter != "plan-layers-feature-dir":
+            self.skipTest("plan-layers input-error repair route case")
+        cases = (
+            (PLAN_LAYERS_FIXTURE_DIR, "tasks_file_missing", "phase-executor"),
+            (f"{PLAN_LAYERS_FIXTURE_DIR}/no-such-feature", "feature_dir_not_found", "orchestrator"),
+        )
+        for feature_dir, code, owner in cases:
+            with self.subTest(code=code):
+                completed, response, planner = self.run_plan_layers(feature_dir)
+                self.assertEqual(completed.returncode, 2)
+                self.assertEqual(planner["status"], "input_error")
+                self.assertEqual(planner["errors"][0]["code"], code)
+                self.assertEqual(planner["repair"]["owner"], owner)
+                self.assertEqual(planner["repair"]["retry"], "plan-layers-feature-dir")
+
+
+class PacketTitlePatternTests(unittest.TestCase):
+    """The packet schema and the live PR-title gate accept the same title scopes."""
+
+    def test_pr_packet_schema_and_title_gate_accept_the_same_scopes(self) -> None:
+        schema = json.loads(PR_PACKET_SCHEMA.read_text(encoding="utf-8"))
+        title_properties = schema["$defs"]["generated_title"]["properties"]
+        scope_pattern = title_properties["scope"]["pattern"]
+        value_pattern = title_properties["value"]["pattern"]
+        self.assertEqual(scope_pattern, PACKET_TITLE_SCOPE_PATTERN)
+        self.assertEqual(value_pattern, PACKET_TITLE_VALUE_PATTERN)
+
+        for scope in ("speckit-pro", "feature-001", "spec-014c"):
+            with self.subTest(scope=scope, expected="accepted"):
+                title = f"feat({scope}): Add packet validation"
+                self.assertIsNotNone(re.fullmatch(scope_pattern, scope))
+                self.assertIsNotNone(re.fullmatch(value_pattern, title))
+                self.assertEqual(self.title_gate_status(title), "ok")
+
+        for scope in ("FEATURE-001", "FIXTURE-014C", "PRsg-012", "SPEC-014c", "speckit-PRO"):
+            with self.subTest(scope=scope, expected="rejected"):
+                title = f"feat({scope}): Add packet validation"
+                self.assertIsNone(re.fullmatch(scope_pattern, scope))
+                self.assertIsNone(re.fullmatch(value_pattern, title))
+                self.assertEqual(self.title_gate_status(title), "expected_failure")
+
+    @staticmethod
+    def title_gate_status(title: str) -> str:
+        """The status the live PR-title gate reports for `title`."""
+        request = REPO_ROOT / "tests" / "speckit-pro" / "unit" / "fixtures" / "runner-gates" / "requests" / "validate-pr-title-live.json"
+        completed = subprocess.run(
+            [sys.executable, "-m", "speckit_pro_runner"], input=request.read_text(encoding="utf-8"), text=True, capture_output=True,
+            cwd=REPO_ROOT, check=False, env={**os.environ, "TITLE": title, "PYTHONPATH": str(PLUGIN_ROOT)},
+        )
+        return str(json.loads(completed.stdout)["status"])
+
+
+PLAN_LAYERS_FILES = ("src/contract.md", "src/planner.py", "tests/test_planner.py")
+PLAN_LAYERS_BASELINE = {
+    "foundation": "- [ ] T001 Prepare the contract in src/contract.md",
+    "story": "- [ ] T002 [US1] Build the planner in src/planner.py and tests/test_planner.py",
+    "extra_phase": "",
+    "notes": "",
+    "us1_depends": "Depends on Foundation",
+    "dependencies": True,
+}
+PLAN_LAYERS_TEMPLATE = (
+    "# Tasks: Layer Planner Case\n\n## Phase 1: Foundation\n\n{foundation}\n\n"
+    "## Phase 2: User Story 1 - Emit Stable Plan (Priority: P1)\n\n{story}\n{extra_phase}{notes}"
+)
+PLAN_LAYERS_DEPENDENCIES = (
+    "\n## Dependencies & Execution Order\n\n### Phase Dependencies\n\n"
+    "- **Foundation**: No prerequisites.\n- **US1**: {us1_depends}.\n\n"
+    "### Incremental Delivery\n\n1. Complete Foundation: T001\n2. Complete US1: T002\n"
+)
+
+
+def plan_layers_tasks(**overrides: object) -> str:
+    """The baseline valid tasks.md with the named parts replaced."""
+    parts = {**PLAN_LAYERS_BASELINE, **overrides}
+    text = PLAN_LAYERS_TEMPLATE.format(**parts)
+    return text + (PLAN_LAYERS_DEPENDENCIES.format(**parts) if parts["dependencies"] else "")
+
+
+class PlanLayersPlannerCaseTests(unittest.TestCase):
+    """Each case is one defect in an otherwise valid tasks.md, run through the real helper."""
+
+    def plan(self, tasks_md: str) -> tuple[int, dict[str, object]]:
+        with helper_project() as root:
+            files = {**{name: "x\n" for name in PLAN_LAYERS_FILES}, "specs/feature/tasks.md": tasks_md}
+            for relative, text in files.items():
+                (root / relative).parent.mkdir(parents=True, exist_ok=True)
+                (root / relative).write_text(text, encoding="utf-8")
+            completed, response, _ = run_runner(
+                helper_request("plan-layers-feature-dir", {"feature_dir": "specs/feature"}),
+                cwd=root,
+            )
+        return completed.returncode, response["data"]["stdout_json"]
+
+    def test_the_baseline_is_a_clean_plan(self) -> None:
+        code, planner = self.plan(plan_layers_tasks())
+        self.assertEqual((code, planner["status"], planner["errors"], planner["warnings"]), (0, "ok", [], []))
+
+    def test_checkbox_state_and_parallel_marker_are_preserved(self) -> None:
+        code, planner = self.plan(plan_layers_tasks(
+            foundation="- [ ] T001 Unchecked in src/contract.md\n- [x] T003 Lowercase in src/planner.py\n"
+                       "- [X] T004 Uppercase in tests/test_planner.py",
+            story="- [ ] T002 [P] [US1] Parallel in src/planner.py",
+        ))
+        tasks = {task["id"]: task for inc in planner["increments"] for task in inc["tasks"]}
+        self.assertEqual({k: v["status"] for k, v in tasks.items()},
+                         {"T001": "todo", "T002": "todo", "T003": "done", "T004": "done"})
+        self.assertEqual(code, 0)
+        self.assertEqual({key for key, value in tasks.items() if value["parallel"]}, {"T002"})
+
+    def test_a_defective_plan_reports_each_error_code(self) -> None:
+        phase_3 = "\n## Phase 3: User Story 2 - Parse Ordered Increments (Priority: P1)\n\nNo tasks.\n"
+        cases = {
+            "empty increment": ({"extra_phase": phase_3}, ["empty_increment"]),
+            "unknown dependency": ({"us1_depends": "Depends on US3"}, ["unknown_increment"]),
+            "missing headings": (
+                {"dependencies": False, "notes": "\n## Notes\n\nNo dependency or delivery headings.\n"},
+                ["missing_required_heading", "missing_required_heading"],
+            ),
+        }
+        for name, (overrides, codes) in cases.items():
+            with self.subTest(case=name):
+                code, planner = self.plan(plan_layers_tasks(**overrides))
+                self.assertEqual((code, planner["status"]), (1, "invalid_plan"))
+                self.assertEqual([error["code"] for error in planner["errors"]], codes)
+
+    def test_reference_problems_are_warnings_not_errors(self) -> None:
+        cases = {
+            "missing files": (
+                {"story": "- [ ] T002 [US1] Use src/no-such.py and tests/no-such-test.py"},
+                [("reference_not_found", "src/no-such.py"), ("reference_not_found", "tests/no-such-test.py")],
+            ),
+            "no references": (
+                {"foundation": "- [ ] T001 Prepare it", "story": "- [ ] T002 [US1] Build it"},
+                [("task_without_references", "T001"), ("task_without_references", "T002")],
+            ),
+        }
+        for name, (overrides, expected) in cases.items():
+            with self.subTest(case=name):
+                code, planner = self.plan(plan_layers_tasks(**overrides))
+                self.assertEqual((code, planner["status"], planner["errors"]), (0, "ok", []))
+                found = [(w["code"], w["details"].get("reference") or w["details"].get("task_id"))
+                         for w in planner["warnings"]]
+                self.assertEqual(found, expected)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--helper", choices=EXPECTED_HELPERS)
     args = parser.parse_args()
-    ReadOnlyHelperTests.helper_filter = args.helper
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(ReadOnlyHelperTests)
+    _ReadOnlyHelperRunner.helper_filter = args.helper
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
+                               for case in (ReadOnlyHelperTests, PlanLayersRepairRouteTests, PlanLayersPlannerCaseTests,
+                                            PacketTitlePatternTests))
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     total = result.testsRun
     failed = len(result.failures) + len(result.errors)

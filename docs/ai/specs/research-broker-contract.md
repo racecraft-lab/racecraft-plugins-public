@@ -112,8 +112,10 @@ workflow log.
    - `spec_text_detected`: 12 or more consecutive words copied from a local
      `spec.md`, `plan.md`, or `tasks.md` under the project root. The project
      root is `CLAUDE_PROJECT_DIR`, else the git root of the working directory.
-     When neither names a project (Codex starts plugin MCP servers in the plugin
-     root), only the length cap applies.
+     When neither names a project, or the named directory is the running
+     plugin's own root (Codex starts plugin MCP servers in the plugin root),
+     this check is off. A plugin marketplace repository is a project, so the
+     check runs there. The other checks still apply.
    - `query_too_long`: over 400 characters.
    - `control_characters`: control, zero-width, or bidi characters.
 2. **Outbound Jev screening, `jev` mode only (OD-10).** One `evaluate call` on

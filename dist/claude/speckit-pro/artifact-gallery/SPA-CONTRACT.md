@@ -1,8 +1,13 @@
 # Single-File Artifact Contract
 
 This contract defines the gallery behavior a template author must preserve.
-`manifest.json` is the inventory and routing source of truth; repository tests
-validate the contracts below.
+`manifest.json` is the inventory and routing source of truth. The required
+static test, `tests/speckit-pro/unit/test-artifact-gallery.py`, checks the
+manifest inventory, canonical blocks, policy position, attribution, slot
+inventory, button types, and the Security bans in shipped template markup. The
+browser suite, `pnpm --dir docs-site validate:gallery`, checks rendered
+behavior: exports, keyboard scrolling, and network activity. It runs in the
+`validate-docs` job, which is not a required check.
 
 ## Single-file output
 
@@ -57,7 +62,9 @@ A shipped entry has exactly one matching HTML file. A planned entry has none.
 Files without a shipped entry are invalid. To complete a planned template, add
 its file and change only that row's status after its behavior is ready.
 
-Automated selection filters by stage, then evaluates the trigger. `always`
+Automated selection keeps shipped entries, filters by stage, then evaluates the
+trigger. A `planned` entry has no template yet, so it is never selected and
+never reported as a gap. `always`
 means always within that stage. `any_of` means at least one named signal is
 present. Ad-hoc entries are selected explicitly rather than by stage routing.
 

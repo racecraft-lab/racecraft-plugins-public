@@ -15,7 +15,8 @@ import subprocess
 import time
 from typing import Any
 
-from .verification_docker import EXECUTION_ID, IMAGE_ID, IMAGE_REFERENCE, build_context, validate_base_image
+from .verification_docker import (EXECUTION_ID, IMAGE_ID, IMAGE_REFERENCE, PLATFORM, PLATFORM_ARCHITECTURE, PLATFORM_OS,
+                                  build_context, validate_base_image)
 from .verification_docker_entrypoint import validate_argv
 from .verification_docker_readback import SnapshotReadback
 from .verification_docker_runtime import DockerClient, execute_container
@@ -50,7 +51,7 @@ def validate_built_image(info: dict[str, Any], base: dict[str, Any], image_id: s
             or not owned_image(info, image_id, execution_id)):
         raise ValueError("built image identity or ownership does not match")
     config = info["Config"]
-    if (info.get("Os") != "linux" or info.get("Architecture") != "arm64"
+    if (info.get("Os") != PLATFORM_OS or info.get("Architecture") != PLATFORM_ARCHITECTURE
             or config.get("OnBuild") not in (None, []) or config.get("Volumes") not in (None, {})):
         raise ValueError("built image has an unsupported platform or inherited execution/storage policy")
     inherited, actual = image_layers(base), image_layers(info)
@@ -118,7 +119,7 @@ def execute_image(client: DockerClient, files: dict[str, tuple[int, bytes | None
     image_id = None
     try:
         iidfile = directory / "image-id"
-        client.call(["build", "--pull=false", "--network=none", "--platform=linux/arm64", "--progress=plain",
+        client.call(["build", "--pull=false", "--network=none", f"--platform={PLATFORM}", "--progress=plain",
                      f"--label=org.racecraft.verification={execution_id}", "--iidfile", str(iidfile),
                      "--tag", tag, str(context)], image_timeout(deadline, 120))
         # Bounded and separate from workload-controlled files; compare with daemon inspection.

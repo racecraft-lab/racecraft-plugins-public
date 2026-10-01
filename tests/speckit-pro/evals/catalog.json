@@ -16,7 +16,7 @@
       "prompt": "run the autopilot workflow at docs/ai/specs/SPEC-009-workflow.md",
       "fixtures": [
         {
-          "source": "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/SPEC-009-workflow.md",
+          "source": "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/docs/ai/specs/SPEC-009-workflow.md",
           "destination": "docs/ai/specs/SPEC-009-workflow.md"
         }
       ],
@@ -293,7 +293,12 @@
         }
       ],
       "prompt": "fix the TypeScript build error in src/tools/primitives/tasks.ts — Zod schema discriminated-union issue",
-      "fixtures": [],
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/src/tools/primitives/tasks.ts",
+          "destination": "src/tools/primitives/tasks.ts"
+        }
+      ],
       "hosts": {
         "claude": {
           "skill": "speckit-pro:speckit-install",
@@ -1900,7 +1905,12 @@
         }
       ],
       "prompt": "fix the TypeScript build error in src/tools/primitives/tasks.ts. the Zod schema is failing because I'm using z.union instead of z.discriminatedUnion",
-      "fixtures": [],
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/src/tools/primitives/tasks.ts",
+          "destination": "src/tools/primitives/tasks.ts"
+        }
+      ],
       "hosts": {
         "claude": {
           "skill": "speckit-pro:grill-me",
@@ -2059,7 +2069,12 @@
         }
       ],
       "prompt": "I already have a PRD at docs/prd.md — help me decompose it into a technical roadmap and track dependencies between specs",
-      "fixtures": [],
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/docs/prd.md",
+          "destination": "docs/prd.md"
+        }
+      ],
       "hosts": {
         "claude": {
           "skill": "speckit-pro:speckit-prd",
@@ -3162,7 +3177,7 @@
       "prompt": "run the fully populated workflow at docs/ai/specs/SPEC-009-workflow.md through all 7 phases",
       "fixtures": [
         {
-          "source": "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/SPEC-009-workflow.md",
+          "source": "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/docs/ai/specs/SPEC-009-workflow.md",
           "destination": "docs/ai/specs/SPEC-009-workflow.md"
         }
       ],
@@ -4148,7 +4163,12 @@
         }
       ],
       "prompt": "run autopilot on the SPEC-027 workflow at docs/ai/specs/SPEC-027-workflow.md — all phase prompts are filled in",
-      "fixtures": [],
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/docs/ai/specs/SPEC-027-workflow.md",
+          "destination": "docs/ai/specs/SPEC-027-workflow.md"
+        }
+      ],
       "hosts": {
         "claude": {
           "skill": "speckit-pro:speckit-prd",
@@ -4763,7 +4783,12 @@
         }
       ],
       "prompt": "fix the TypeScript build error in src/tools/primitives/tasks.ts",
-      "fixtures": [],
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/src/tools/primitives/tasks.ts",
+          "destination": "src/tools/primitives/tasks.ts"
+        }
+      ],
       "hosts": {
         "claude": {
           "skill": "speckit-pro:speckit-upgrade",
@@ -5471,7 +5496,12 @@
         }
       ],
       "prompt": "fix the TypeScript build error in src/tools/primitives/tasks.ts — the Zod schema is using z.union instead of z.discriminatedUnion",
-      "fixtures": [],
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/layer2-trigger/fixtures/codex-workspace/src/tools/primitives/tasks.ts",
+          "destination": "src/tools/primitives/tasks.ts"
+        }
+      ],
       "hosts": {
         "claude": {
           "skill": "speckit-pro:speckit-prd",
@@ -6393,7 +6423,7 @@
     {
       "id": "functional.speckit-autopilot.case-4",
       "layer": "functional",
-      "capability": "Explains the 3 consensus modes and their voting behavior: conservative requires unanimity, moderate uses 2/3 majority (default), aggressive auto-accepts single-agent answers.",
+      "capability": "Explains that autopilot consensus has no selectable mode: one rule set applies to every run, where a 2/3 analyst majority applies an answer, a security item applies only on 3/3 agreement, and an all-disagree item goes to the Round 3 tiebreak; the project settings file configures only gate-failure and auto-commit.",
       "timeout_seconds": 300,
       "resource_class": "ordinary",
       "requirements": [
@@ -6403,23 +6433,23 @@
         },
         {
           "id": "legacy-01",
-          "description": "Names or describes the 3 consensus modes: conservative, moderate, and aggressive"
+          "description": "States that autopilot consensus has no conservative, moderate, or aggressive mode to choose; one rule set applies to every run"
         },
         {
           "id": "legacy-02",
-          "description": "Explains that moderate is the default mode"
+          "description": "Explains that a 2/3 analyst majority applies an answer automatically"
         },
         {
           "id": "legacy-03",
-          "description": "Describes how conservative mode differs (requires unanimity or higher threshold)"
+          "description": "Explains that a security item applies only on 3/3 agreement"
         },
         {
           "id": "legacy-04",
-          "description": "Describes the project-local aggressive-mode threshold without claiming that it removes required perspectives or permits single-analyst consensus"
+          "description": "Explains that an all-disagree item goes to the Round 3 tiebreak instead of stopping or asking a human"
         },
         {
           "id": "legacy-05",
-          "description": "Explains how to configure the supported consensus mode through the project-local workflow configuration used by this run"
+          "description": "Does not invent a consensus-mode setting or invocation flag for changing the rule on a run"
         }
       ],
       "prompt": "Use {{skill}} to address this bounded request. I heard the autopilot has different consensus modes — conservative, moderate, and aggressive. What do these modes control? Which is the default? And how do I change the mode for a specific workflow run?",
@@ -6458,31 +6488,31 @@
           "id": "legacy-01-semantic",
           "requirement": "legacy-01",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Names or describes the 3 consensus modes: conservative, moderate, and aggressive FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: States that autopilot consensus has no conservative, moderate, or aggressive mode to choose; one rule set applies to every run FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "legacy-02-semantic",
           "requirement": "legacy-02",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Explains that moderate is the default mode FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Explains that a 2/3 analyst majority applies an answer automatically FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "legacy-03-semantic",
           "requirement": "legacy-03",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Describes how conservative mode differs (requires unanimity or higher threshold) FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Explains that a security item applies only on 3/3 agreement FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "legacy-04-semantic",
           "requirement": "legacy-04",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Describes the project-local aggressive-mode threshold without claiming that it removes required perspectives or permits single-analyst consensus FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Explains that an all-disagree item goes to the Round 3 tiebreak instead of stopping or asking a human FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "legacy-05-semantic",
           "requirement": "legacy-05",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Explains how to configure the supported consensus mode through the project-local workflow configuration used by this run FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Does not invent a consensus-mode setting or invocation flag for changing the rule on a run FAIL if omitted, contradicted, or merely claimed without required evidence."
         }
       ],
       "native_differences": [
@@ -6665,15 +6695,15 @@
         },
         {
           "id": "evidence",
-          "description": "Reads the retained Clarify session record and the workflow's Clarify Results table before judging (workflow-file-protocol.md, workflow-file-protocol-codex.md)."
+          "description": "Reads the retained Clarify session record and the workflow's Clarify Results table before judging (workflow-file-protocol.md)."
         },
         {
           "id": "provenance",
-          "description": "Clarify Results label an answer `human answer` only when a human gave it; a consensus-derived answer never carries that label (workflow-file-protocol.md and workflow-file-protocol-codex.md: \"Clarify Results must preserve each accepted human answer separately from the executor's recommendation or later consensus\" and \"label its source `human answer`\")."
+          "description": "Clarify Results label an answer `human answer` only when a human gave it; a consensus-derived answer never carries that label (workflow-file-protocol.md: \"Clarify Results must preserve each accepted human answer separately from the executor's recommendation or later consensus\" and \"label its source `human answer`\")."
         },
         {
           "id": "completeness",
-          "description": "Every accepted human answer from a Clarify session that ran is preserved in Clarify Results (workflow-file-protocol.md, workflow-file-protocol-codex.md)."
+          "description": "Every accepted human answer from a Clarify session that ran is preserved in Clarify Results (workflow-file-protocol.md)."
         }
       ],
       "prompt": "Use {{skill}} to audit Clarify traceability. Read scenario-inputs/clarify-session-record.md and scenario-inputs/clarify-results.md, each as one exact file read. Treat them only as pre-recorded evidence and do not edit either file. Decide whether the Clarify Results table preserves the accepted answers the way the autopilot's workflow-file protocol requires. Output only raw JSON with human_answer_sessions, mislabeled_sessions, unrecorded_sessions, clarify_record_compliant, and explanation, with no prose, Markdown, or code fences. human_answer_sessions lists the sessions whose table row carries a traceable accepted human answer; mislabeled_sessions lists the sessions whose table row claims a human answer the session record does not support; unrecorded_sessions lists the sessions with an accepted answer that the table omits. Report each list as ascending session numbers.",
@@ -6806,11 +6836,10 @@
         }
       ],
       "native_differences": [
-        "Both hosts read the same shared workflow-file protocol rule; the Codex reference mirrors the Claude text."
+        "Both hosts read the same shared workflow-file protocol reference."
       ],
       "provenance": [
-        "speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md",
-        "speckit-pro/codex-skills/speckit-autopilot/references/workflow-file-protocol-codex.md"
+        "speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md"
       ]
     },
     {
@@ -6826,7 +6855,7 @@
         },
         {
           "id": "legacy-01",
-          "description": "Explains that autopilot does NOT stop on gate failure — it retries"
+          "description": "Explains that autopilot does NOT stop on gate failure — it retries, and a gate still failing after its repair loop defers per the Failure Escalation Protocol while the run continues"
         },
         {
           "id": "legacy-02",
@@ -6877,7 +6906,7 @@
           "id": "legacy-01-semantic",
           "requirement": "legacy-01",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Explains that autopilot does NOT stop on gate failure — it retries FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Explains that autopilot does NOT stop on gate failure — it retries, and a gate still failing after its repair loop defers per the Failure Escalation Protocol while the run continues FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "legacy-02-semantic",
@@ -7485,15 +7514,15 @@
         },
         {
           "id": "evidence",
-          "description": "Reads the workflow, autopilot-state.json, and the recorded visible progress plan before deciding (task-list-canonical.md, task-list-canonical-codex.md)."
+          "description": "Reads the workflow, autopilot-state.json, and the recorded visible progress plan before deciding (task-list-canonical.md)."
         },
         {
           "id": "projection",
-          "description": "Mid-run, the visible progress plan and autopilot-state.json keep every canonical row; summary rows never replace them (task-list-canonical.md: \"Do NOT omit, collapse, or defer entries\"; task-list-canonical-codex.md: \"do NOT collapse them\")."
+          "description": "Mid-run, the visible progress plan and autopilot-state.json keep every canonical row; summary rows never replace them (task-list-canonical.md: \"Do NOT omit, collapse, or defer entries\"; task-list-canonical.md: \"do NOT collapse them\")."
         },
         {
           "id": "dispatch-guard",
-          "description": "Before executing each phase the orchestrator re-audits plan coverage and repairs a missing canonical family before dispatch (SKILL.md, main loop step 0: \"on nonzero, repair the plan and the workflow status table, then repeat before executing this phase\"; phase-execution-codex.md, main loop step 0: \"If Archive Sweep or any canonical phase family is missing, STOP and repair the plan before executing this phase\")."
+          "description": "Before executing each phase the orchestrator re-audits plan coverage and repairs a missing canonical family before dispatch (SKILL.md, main loop step 0: \"on nonzero, repair the plan and the workflow status table, then repeat before executing this phase\"; phase-execution.md, main loop step 0: \"If Archive Sweep or any canonical phase family is missing, STOP and repair the plan before executing this phase\")."
         }
       ],
       "prompt": "Use {{skill}} to decide whether a resumed run may continue. Plan is the current phase. Read docs/ai/specs/.process/SPEC-830-workflow.md, docs/ai/specs/.process/autopilot-state.json, and scenario-inputs/visible-plan.json, each as one exact file read; the last file is the host-native visible progress plan as recorded. Treat them only as pre-recorded evidence: do not run helpers, dispatch agents, or edit any file. Output only raw JSON with canonical_rows_present, projection_acceptable, may_dispatch_plan_executor, repair_before_dispatch, and explanation, with no prose, Markdown, or code fences.",
@@ -7631,8 +7660,7 @@
       "provenance": [
         "speckit-pro/skills/speckit-autopilot/references/task-list-canonical.md",
         "speckit-pro/skills/speckit-autopilot/SKILL.md",
-        "speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md",
-        "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md"
+        "speckit-pro/skills/speckit-autopilot/references/phase-execution.md"
       ]
     },
     {
@@ -7648,11 +7676,11 @@
         },
         {
           "id": "evidence",
-          "description": "Reads plan.md and every other Plan artifact before deciding whether G3 may run (phase-execution.md, phase-execution-codex.md)."
+          "description": "Reads plan.md and every other Plan artifact before deciding whether G3 may run (phase-execution.md)."
         },
         {
           "id": "reconciliation",
-          "description": "After a rescope, every Plan artifact is reconciled with plan.md before G3 and each change is recorded in the workflow file (phase-execution.md, Phase 3: Plan, and phase-execution-codex.md, main loop step 7: \"After a rescope changes plan.md's scope, slices, or delivery order, the parent reconciles every Plan artifact before G3: `research.md`, `quickstart.md`, `data-model.md`, `contracts/`, and every file under `checklists/`. Record what changed in each artifact in the workflow file's Plan Results.\")."
+          "description": "After a rescope, every Plan artifact is reconciled with plan.md before G3 and each change is recorded in the workflow file (phase-execution.md, Phase 3: Plan, and phase-execution.md, main loop step 7: \"After a rescope changes plan.md's scope, slices, or delivery order, the parent reconciles every Plan artifact before G3: `research.md`, `quickstart.md`, `data-model.md`, `contracts/`, and every file under `checklists/`. Record what changed in each artifact in the workflow file's Plan Results.\")."
         }
       ],
       "prompt": "Use {{skill}} to decide whether G3 may run for a Plan phase that was rescoped. Read scenario-inputs/feature/plan.md, scenario-inputs/feature/research.md, scenario-inputs/feature/quickstart.md, scenario-inputs/feature/data-model.md, scenario-inputs/feature/contracts/gate-verdict.md, and scenario-inputs/feature/checklists/requirements.md, each as one exact file read. Treat them only as pre-recorded evidence: do not run helpers or gates, dispatch agents, or edit any file. Output only raw JSON with plan_increment_count, stale_artifacts, g3_may_run, reconcile_before_g3, and explanation, with no prose, Markdown, or code fences. List stale_artifacts as a sorted array of paths relative to scenario-inputs/feature/.",
@@ -7823,8 +7851,320 @@
         "Both hosts receive the same pre-recorded Plan artifacts and must not run G3."
       ],
       "provenance": [
-        "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
-        "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md"
+        "speckit-pro/skills/speckit-autopilot/references/phase-execution.md"
+      ]
+    },
+    {
+      "id": "functional.speckit-autopilot.sweep-keeps-running",
+      "layer": "functional",
+      "capability": "Keeps the PR feedback sweep running after an amended comment, a rate limit, and a sole open pull request under another number, and stops only for a closed or ambiguous pull request or absent GitHub authentication.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-autopilot capability is activated."
+        },
+        {
+          "id": "evidence",
+          "description": "Reads the recorded sweep situations before deciding what the sweep does next (phase-execution.md)."
+        },
+        {
+          "id": "continuation",
+          "description": "An amendment regenerates in a fresh isolated worker instead of stopping, a rate limit retries and only an absent tool or authentication stops, and one open pull request repairs the Draft PR row while a closed or ambiguous one stays a human call (phase-execution.md, Phase 7 Setup: Security Isolation Boundary and Phase 7 Setup: The Corroboration Gate: \"Regenerate after an amendment in a fresh isolated worker; do not stop for re-review.\", \"Retry before a `skipped` stands, and let the cause decide.\", \"Repair the row when exactly one open pull request answers for the branch.\")."
+        }
+      ],
+      "prompt": "Use {{skill}} to decide what the PR feedback sweep does next in each recorded situation. Read scenario-inputs/sweep-situations.json as one exact file read. Treat it only as pre-recorded evidence: do not run helpers or gates, dispatch agents, or edit any file. Output only raw JSON with amended_run_stops_for_review, amended_comment_in_final_report, rate_limit_after_retries_stops, unauthenticated_stop_reason, sole_open_pull_request_action, two_open_pull_requests_stop_reason, closed_pull_request_stop_reason, and explanation, with no prose, Markdown, or code fences. Name each stop reason by its id from the closed stop-reason set, without the stop_reason: prefix, or null when the sweep does not stop. Use repair_row or stop for sole_open_pull_request_action.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/sweep-keeps-running/sweep-situations.json",
+          "destination": "scenario-inputs/sweep-situations.json"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "read_file"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "read-situations",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/sweep-situations.json"
+        },
+        {
+          "id": "amended-run-stops-for-review",
+          "requirement": "continuation",
+          "type": "response_json_field",
+          "field_path": [
+            "amended_run_stops_for_review"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "amended-comment-in-final-report",
+          "requirement": "continuation",
+          "type": "response_json_field",
+          "field_path": [
+            "amended_comment_in_final_report"
+          ],
+          "expected_by_host": {
+            "claude": true,
+            "codex": true
+          }
+        },
+        {
+          "id": "rate-limit-after-retries-stops",
+          "requirement": "continuation",
+          "type": "response_json_field",
+          "field_path": [
+            "rate_limit_after_retries_stops"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "unauthenticated-stop-reason",
+          "requirement": "continuation",
+          "type": "response_json_field",
+          "field_path": [
+            "unauthenticated_stop_reason"
+          ],
+          "expected_by_host": {
+            "claude": "tool_unavailable",
+            "codex": "tool_unavailable"
+          }
+        },
+        {
+          "id": "sole-open-pull-request-action",
+          "requirement": "continuation",
+          "type": "response_json_field",
+          "field_path": [
+            "sole_open_pull_request_action"
+          ],
+          "expected_by_host": {
+            "claude": "repair_row",
+            "codex": "repair_row"
+          }
+        },
+        {
+          "id": "two-open-pull-requests-stop-reason",
+          "requirement": "continuation",
+          "type": "response_json_field",
+          "field_path": [
+            "two_open_pull_requests_stop_reason"
+          ],
+          "expected_by_host": {
+            "claude": "ambiguous_pr_record",
+            "codex": "ambiguous_pr_record"
+          }
+        },
+        {
+          "id": "closed-pull-request-stop-reason",
+          "requirement": "continuation",
+          "type": "response_json_field",
+          "field_path": [
+            "closed_pull_request_stop_reason"
+          ],
+          "expected_by_host": {
+            "claude": "reopen_closed_pr",
+            "codex": "reopen_closed_pr"
+          }
+        },
+        {
+          "id": "continuation-semantic",
+          "requirement": "continuation",
+          "type": "semantic",
+          "rubric": "PASS only if the response says an amended comment is followed by regeneration in a fresh isolated worker that sees only the committed diff, with the amended comment listed in the final report; that a rate limit or unparseable answer retries with backoff and only an absent gh or absent authentication stops the run; that exactly one open pull request repairs the recorded Draft PR row; and that a closed pull request, or two open ones, stays a human call. FAIL if it stops for human re-review after an amendment, stops a run for a rate limit that outlasted its retries, repairs or recreates a closed pull request, picks one of two open pull requests, or names a stop reason outside the closed stop-reason set."
+        }
+      ],
+      "native_differences": [
+        "Both hosts apply the same continuation rules from their own rendered phase-execution reference; the parent orchestrator, not a phase executor, decides what the sweep does next.",
+        "Both hosts receive the same pre-recorded sweep situations and must not run helpers or ask a question."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-autopilot/references/phase-execution.md"
+      ]
+    },
+    {
+      "id": "functional.speckit-autopilot.run-start-grant",
+      "layer": "functional",
+      "capability": "Reads run-start probe results in which a runner request prompted and two other surfaces were denied, and settles every uncovered probe in one ask before phase work instead of stopping midway.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-autopilot capability is activated."
+        },
+        {
+          "id": "evidence",
+          "description": "Reads the recorded run-start probe results before deciding what the run may do next (stop-policy.md, prerequisites.md)."
+        },
+        {
+          "id": "run-start-grant",
+          "description": "Every probe that prompted or was denied is settled in one ask before Phase 1, no phase work starts first, and nothing about it is left to stop the run midway (stop-policy.md, Run-start grants; prerequisites.md, Step -2: \"no permission or egress prompt can stop the run midway\"; prerequisites.md, Step -2: \"print the allow rules for the probe that failed, once\")."
+        }
+      ],
+      "prompt": "Use {{skill}} to decide what the run does with its run-start probe results. Read scenario-inputs/run-start/probe-results.json as one exact file read. Treat it only as pre-recorded evidence: do not run helpers, probes, or gates, dispatch agents, or edit any file. Output only raw JSON with uncovered_probes, ask_before_phase_one, ask_count, phase_work_before_reply, and mid_run_permission_stops, with no prose, Markdown, or code fences. List uncovered_probes as a sorted array of probe ids. ask_count is how many separate requests the run makes for them. mid_run_permission_stops is how many later permission or egress stops the run may still take for these probes after that ask.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/run-start-grant/probe-results.json",
+          "destination": "scenario-inputs/run-start/probe-results.json"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "read_file"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "read-probe-results",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/run-start/probe-results.json"
+        },
+        {
+          "id": "uncovered-probes",
+          "requirement": "run-start-grant",
+          "type": "response_json_field",
+          "field_path": [
+            "uncovered_probes"
+          ],
+          "expected_by_host": {
+            "claude": [
+              "pre-pr-audit",
+              "private-autonomy-record",
+              "runner-request"
+            ],
+            "codex": [
+              "pre-pr-audit",
+              "private-autonomy-record",
+              "runner-request"
+            ]
+          }
+        },
+        {
+          "id": "ask-before-phase-one",
+          "requirement": "run-start-grant",
+          "type": "response_json_field",
+          "field_path": [
+            "ask_before_phase_one"
+          ],
+          "expected_by_host": {
+            "claude": true,
+            "codex": true
+          }
+        },
+        {
+          "id": "one-ask",
+          "requirement": "run-start-grant",
+          "type": "response_json_field",
+          "field_path": [
+            "ask_count"
+          ],
+          "expected_by_host": {
+            "claude": 1,
+            "codex": 1
+          }
+        },
+        {
+          "id": "no-phase-work-first",
+          "requirement": "run-start-grant",
+          "type": "response_json_field",
+          "field_path": [
+            "phase_work_before_reply"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "no-mid-run-stops",
+          "requirement": "run-start-grant",
+          "type": "response_json_field",
+          "field_path": [
+            "mid_run_permission_stops"
+          ],
+          "expected_by_host": {
+            "claude": 0,
+            "codex": 0
+          }
+        },
+        {
+          "id": "run-start-grant-semantic",
+          "requirement": "run-start-grant",
+          "type": "semantic",
+          "rubric": "PASS only if the response names the runner request, the pre-PR audit, and the private record write as the probes that prompted or were denied, leaves out the passing probes, makes one ask before any phase work, and leaves no permission or egress stop for later. FAIL if it starts phase work first, asks once per probe, defers the denied probes to a mid-run stop, or treats a denied probe as a reason to route around the denial."
+        }
+      ],
+      "native_differences": [
+        "Claude prints the exact allow rule for a failed probe and stops once; Codex folds the same probe results into one run-start request. Both settle everything before Phase 1 and leave no permission or egress stop for later.",
+        "Both hosts receive the same pre-recorded probe results and must not run any probe."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-autopilot/references/stop-policy.md",
+        "speckit-pro/skills/speckit-autopilot/references/prerequisites.md"
       ]
     },
     {
@@ -8111,7 +8451,7 @@
     {
       "id": "functional.speckit-autopilot.case-15",
       "layer": "functional",
-      "capability": "Refuses to invoke grill-me. Explains that grill-me is human-in-the-loop only and is forbidden inside autopilot. The correct response to unresolvable ambiguity is to use the Clarify Question Set plus consensus flow, then fail the gate or surface the issue to the user if consensus cannot resolve it. It does not call the native grill-me capability under any circumstance.",
+      "capability": "Refuses to invoke grill-me. Explains that grill-me is human-in-the-loop only and is forbidden inside autopilot. The correct response to unresolvable ambiguity is to use the Clarify Question Set plus consensus flow, then run the Round 3 agent tiebreak, and defer only an unsettled product-scope choice to the end-of-run request, if consensus cannot resolve it. It does not call the native grill-me capability under any circumstance.",
       "timeout_seconds": 300,
       "resource_class": "ordinary",
       "requirements": [
@@ -8137,7 +8477,7 @@
         },
         {
           "id": "legacy-05",
-          "description": "Either fails the gate gracefully and surfaces to the user, or continues only after the parent has resolved/applied clarifications"
+          "description": "Either resolves the item through the Round 3 agent tiebreak without stopping or asking, or continues only after the parent has resolved/applied clarifications"
         },
         {
           "id": "legacy-06",
@@ -8161,7 +8501,7 @@
         },
         {
           "id": "legacy-11",
-          "description": "Suggests flagging unresolved questions under 'Unresolved for consensus' or failing the gate, not escalating to grill-me"
+          "description": "Suggests flagging unresolved questions under 'Unresolved for consensus' or deferring them, not escalating to grill-me"
         },
         {
           "id": "legacy-12",
@@ -8224,7 +8564,7 @@
           "id": "legacy-05-semantic",
           "requirement": "legacy-05",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Either fails the gate gracefully and surfaces to the user, or continues only after the parent has resolved/applied clarifications FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Either resolves the item through the Round 3 agent tiebreak without stopping or asking, or continues only after the parent has resolved/applied clarifications FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "legacy-06-semantic",
@@ -8260,7 +8600,7 @@
           "id": "legacy-11-semantic",
           "requirement": "legacy-11",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Suggests flagging unresolved questions under 'Unresolved for consensus' or failing the gate, not escalating to grill-me FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Suggests flagging unresolved questions under 'Unresolved for consensus' or deferring them, not escalating to grill-me FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "legacy-12-semantic",
@@ -8419,10 +8759,10 @@
         },
         {
           "id": "legacy-05",
-          "description": "States that the [domain] tag makes this a keyword-routed item, not a [security]-tagged one, so a 2/3 majority goes to human review only when at least one analyst returns `security_relevant: true`; when every analyst returns `security_relevant: false`, the ordinary 2/3 majority applies. An answer that demands 3/3 for every security-keyword item, or applies 2/3 without regard to `security_relevant`, contradicts this."
+          "description": "States that the [domain] tag makes this a keyword-routed item, not a [security]-tagged one, so a 2/3 majority starts the Round 3 tiebreak only when at least one analyst returns `security_relevant: true`; when every analyst returns `security_relevant: false`, the ordinary 2/3 majority applies. An answer that demands 3/3 for every security-keyword item, or applies 2/3 without regard to `security_relevant`, contradicts this."
         }
       ],
-      "prompt": "Use {{skill}} to address this bounded request. The analyze-executor flagged: '[domain] Finding 3 [HIGH]: cookie SameSite policy is not specified in plan.md.' Which consensus analyst(s) does the native client autopilot spawn, how does the security-keyword override interact with the [domain] tag, does consensus-synthesizer still run, and when two analysts agree and one dissents, does autopilot apply the majority answer or stop for human review?",
+      "prompt": "Use {{skill}} to address this bounded request. The analyze-executor flagged: '[domain] Finding 3 [HIGH]: cookie SameSite policy is not specified in plan.md.' Which consensus analyst(s) does the native client autopilot spawn, how does the security-keyword override interact with the [domain] tag, does consensus-synthesizer still run, and when two analysts agree and one dissents, does autopilot apply the majority answer or run the Round 3 tiebreak?",
       "fixtures": [],
       "hosts": {
         "claude": {
@@ -8484,7 +8824,7 @@
           "id": "legacy-05-semantic",
           "requirement": "legacy-05",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: States that the [domain] tag makes this a keyword-routed item, not a [security]-tagged one, so a 2/3 majority goes to human review only when at least one analyst returns `security_relevant: true`; when every analyst returns `security_relevant: false`, the ordinary 2/3 majority applies. An answer that demands 3/3 for every security-keyword item, or applies 2/3 without regard to `security_relevant`, contradicts this. FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: States that the [domain] tag makes this a keyword-routed item, not a [security]-tagged one, so a 2/3 majority starts the Round 3 tiebreak only when at least one analyst returns `security_relevant: true`; when every analyst returns `security_relevant: false`, the ordinary 2/3 majority applies. An answer that demands 3/3 for every security-keyword item, or applies 2/3 without regard to `security_relevant`, contradicts this. FAIL if omitted, contradicted, or merely claimed without required evidence."
         }
       ],
       "native_differences": [
@@ -8498,7 +8838,7 @@
     {
       "id": "functional.speckit-autopilot.case-19",
       "layer": "functional",
-      "capability": "[security] tag forces all 3 analysts (codebase-analyst, spec-context-analyst, domain-researcher) regardless of any other tag. Defense-in-depth: security items are NEVER single-routed. The orchestrator skips Round 1 single-routing and dispatches all 3 in parallel directly. The security override then requires 3/3 agreement: a unanimous 3/3 answer applies and the run continues, while a 2/3 majority or all-disagree makes the synthesizer flag [HUMAN REVIEW NEEDED].",
+      "capability": "[security] tag forces all 3 analysts (codebase-analyst, spec-context-analyst, domain-researcher) regardless of any other tag. Defense-in-depth: security items are NEVER single-routed. The orchestrator skips Round 1 single-routing and dispatches all 3 in parallel directly. The security override then requires 3/3 agreement: a unanimous 3/3 answer applies and the run continues, while a 2/3 majority or all-disagree makes the synthesizer flag [ROUND_3_TIEBREAK], which starts the Round 3 agent tiebreak instead of a stop or a question.",
       "timeout_seconds": 300,
       "resource_class": "ordinary",
       "requirements": [
@@ -8520,7 +8860,7 @@
         },
         {
           "id": "legacy-04",
-          "description": "Mentions that the synthesizer flags [HUMAN REVIEW NEEDED] for a security item unless all three analysts agree"
+          "description": "Mentions that the synthesizer flags [ROUND_3_TIEBREAK] for a security item unless all three analysts agree, and that Round 3 resolves it without asking a human or stopping the run"
         },
         {
           "id": "legacy-05",
@@ -8583,7 +8923,7 @@
           "id": "legacy-04-semantic",
           "requirement": "legacy-04",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Mentions that the synthesizer flags [HUMAN REVIEW NEEDED] for a security item unless all three analysts agree FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Mentions that the synthesizer flags [ROUND_3_TIEBREAK] for a security item unless all three analysts agree, and that Round 3 resolves it without asking a human or stopping the run FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "legacy-05-semantic",
@@ -10093,7 +10433,7 @@
     {
       "id": "functional.speckit-autopilot.case-110",
       "layer": "functional",
-      "capability": "Classifies the comments exactly once as amended, answered, deferred, and no action respectively; the out-of-scope README request is recorded and not acted on without implying future work. Only amended enters consensus. The isolated launcher obtains all three perspectives (codebase, spec-context, and domain) before synthesis. Exactly two materially agreeing records resolve at 2/3, all three at 3/3, any unresolved escape_hatch becomes human review with escape_unresolved, and no agreeing pair becomes human review with all_disagree. The parent receives only closed projections and an opaque receipt, never reviewer or model prose.",
+      "capability": "Classifies the comments exactly once as amended, answered, deferred, and no action respectively; the out-of-scope README request is recorded and not acted on without implying future work. Only amended enters consensus. The isolated launcher obtains all three perspectives (codebase, spec-context, and domain) before synthesis. Exactly two materially agreeing records resolve at 2/3, all three at 3/3, any unresolved escape_hatch returns human_review with escape_unresolved, and no agreeing pair returns human_review with all_disagree. Either takes one Round 3 tiebreak call by a fresh sweep-analyst, which resolves at agreement tiebreak or defers an unsettled product-scope choice as scope_unsettled, and the run never stops for it. The parent receives only closed projections and an opaque receipt, never reviewer or model prose.",
       "timeout_seconds": 300,
       "resource_class": "ordinary",
       "requirements": [
@@ -10119,7 +10459,7 @@
         },
         {
           "id": "legacy-05",
-          "description": "Maps an unresolved escape to escape_unresolved and no agreeing pair to all_disagree human review"
+          "description": "Maps an unresolved escape to escape_unresolved and no agreeing pair to all_disagree, each resolved by a Round 3 tiebreak call from a fresh sweep-analyst without stopping the run"
         },
         {
           "id": "legacy-06",
@@ -10182,7 +10522,7 @@
           "id": "legacy-05-semantic",
           "requirement": "legacy-05",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Maps an unresolved escape to escape_unresolved and no agreeing pair to all_disagree human review FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Maps an unresolved escape to escape_unresolved and no agreeing pair to all_disagree, each resolved by a Round 3 tiebreak call from a fresh sweep-analyst without stopping the run FAIL if omitted, contradicted, or merely claimed without required evidence."
         },
         {
           "id": "legacy-06-semantic",
@@ -10418,7 +10758,7 @@
         },
         {
           "id": "legacy-04",
-          "description": "Explains that unresolved Round 2 disagreement is surfaced for human review: asked in place in an interactive run, and stopping advancement in an unattended run"
+          "description": "Explains that unresolved Round 2 disagreement is resolved by a Round 3 agent tiebreak, in an interactive and an unattended run alike, without asking a human or stopping the run"
         }
       ],
       "prompt": "Use {{skill}} to address this bounded request. How does the consensus protocol work in the autopilot workflow? I heard there are always 3 agents that vote, but I want the current contract.",
@@ -10473,7 +10813,7 @@
           "id": "legacy-04-semantic",
           "requirement": "legacy-04",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Explains that unresolved Round 2 disagreement is surfaced for human review: asked in place in an interactive run, and stopping advancement in an unattended run FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Explains that unresolved Round 2 disagreement is resolved by a Round 3 agent tiebreak, in an interactive and an unattended run alike, without asking a human or stopping the run FAIL if omitted, contradicted, or merely claimed without required evidence."
         }
       ],
       "native_differences": [
@@ -13073,7 +13413,6 @@
       ],
       "provenance": [
         "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
-        "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
         "speckit-pro/skills/speckit-autopilot/references/gate-validation.md",
         "speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md"
       ],
@@ -13243,7 +13582,6 @@
       ],
       "provenance": [
         "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
-        "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
         "speckit-pro/skills/speckit-autopilot/references/gate-validation.md",
         "speckit-pro/skills/speckit-coach/templates/technical-roadmap-template.md"
       ],
@@ -13594,11 +13932,11 @@
         },
         {
           "id": "legacy-07",
-          "description": "Reports the exit-1 invalid_plan result as a stop before implementation, retaining the planner diagnostics and corrective rerun guidance."
+          "description": "Reports the exit-1 invalid_plan result by holding implementation and routing the planner's repair record to the phase-executor, retaining the planner diagnostics and the planner rerun."
         },
         {
           "id": "legacy-09",
-          "description": "Distinguishes exit 2 as input_error with its own message and planner diagnostics and stops before implementation"
+          "description": "Distinguishes exit 2 as input_error with its own message and planner diagnostics, routed by repair.owner before implementation continues"
         },
         {
           "id": "legacy-10",
@@ -13905,6 +14243,20 @@
           "expected": "invalid_plan"
         },
         {
+          "id": "invalid-repair-owner",
+          "requirement": "legacy-07",
+          "type": "json_field",
+          "path": "scenario-output/layer-plan-contract.json",
+          "field_path": [
+            "invalid",
+            "data",
+            "stdout_json",
+            "repair",
+            "owner"
+          ],
+          "expected": "phase-executor"
+        },
+        {
           "id": "input-error-exit",
           "requirement": "legacy-09",
           "type": "json_field",
@@ -13927,6 +14279,20 @@
             "status"
           ],
           "expected": "input_error"
+        },
+        {
+          "id": "input-error-repair-owner",
+          "requirement": "legacy-09",
+          "type": "json_field",
+          "path": "scenario-output/layer-plan-contract.json",
+          "field_path": [
+            "input_error",
+            "data",
+            "stdout_json",
+            "repair",
+            "owner"
+          ],
+          "expected": "orchestrator"
         },
         {
           "id": "distinct-input-error",
@@ -13979,7 +14345,7 @@
     {
       "id": "functional.speckit-autopilot.case-36",
       "layer": "functional",
-      "capability": "Fail closed before Phase 0 when an enabled archive extension points to a missing command contract, even when a manual directory listing finds no prior candidate.",
+      "capability": "Defer the Archive Sweep, without asking, when an enabled archive extension points to a missing command contract, even when a manual directory listing finds no prior candidate.",
       "timeout_seconds": 300,
       "resource_class": "ordinary",
       "requirements": [
@@ -14005,14 +14371,14 @@
         },
         {
           "id": "legacy-05",
-          "description": "Stops before Phase 0 and does not mark Phase 0 in progress"
+          "description": "Defers the Archive Sweep with the exact missing path, asks no question, and leaves the sweep item incomplete rather than marking it completed"
         },
         {
           "id": "legacy-06",
           "description": "Does not confuse status=no_candidates with an unavailable or unexecuted invocation path"
         }
       ],
-      "prompt": "Use {{skill}} to execute Archive Sweep startup for this staged, initialized Git project. Bind docs/ai/specs/.process/SPEC-921-workflow.md to the current feature checkout before resolving extension paths. Read .specify/extensions.yml, .specify/extensions/.registry, and .specify/extensions/archive/extension.yml as three separate exact file reads, never a compound shell read. The archive extension is enabled and the manual specs listing contains only the current target. Follow the installed manifest contract, persist the observed fail-closed startup result, and do not begin Phase 0 unless the invocation contract is available.",
+      "prompt": "Use {{skill}} to execute Archive Sweep startup for this staged, initialized Git project. Bind docs/ai/specs/.process/SPEC-921-workflow.md to the current feature checkout before resolving extension paths. Read .specify/extensions.yml, .specify/extensions/.registry, and .specify/extensions/archive/extension.yml as three separate exact file reads, never a compound shell read. The archive extension is enabled and the manual specs listing contains only the current target. Follow the installed manifest contract, persist the observed startup result as a deferral of the Archive Sweep with its evidence, and ask no question. This scenario covers Archive Sweep startup only, so leave Phase 0 unstarted.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/scenario-contracts/archive/broken/extensions.yml",
@@ -14207,10 +14573,10 @@
           "rubric": "PASS only if the final response reports .specify/extensions/archive/commands/missing-archive.md as the exact missing path and this agrees with the manifest plus failed_path artifact field. FAIL for a generic error or another path."
         },
         {
-          "id": "stop-before-phase-zero",
+          "id": "defer-archive-sweep",
           "requirement": "legacy-05",
           "type": "semantic",
-          "rubric": "PASS only if the response stops before Phase 0 and does not claim Archive Sweep or Phase 0 is complete/in progress, consistent with the captured workflow and plan artifacts. FAIL for any continuation."
+          "rubric": "PASS only if the response defers the Archive Sweep with its evidence, asks the operator no question, and does not claim Archive Sweep or Phase 0 is complete or in progress, consistent with the captured workflow and plan artifacts. FAIL if it claims the sweep completed, asks the operator, or stops the run."
         },
         {
           "id": "no-no-candidates-substitution",
@@ -14867,6 +15233,216 @@
       ]
     },
     {
+      "id": "functional.speckit-autopilot.deferred-decision-ready-stack",
+      "layer": "functional",
+      "capability": "Finishes a run whose only open item is a ledger unit that failed every escalation tier while every required gate is green at every PR head: the stack goes ready for review and the unit is listed under \"Decisions for you\".",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-autopilot capability is activated."
+        },
+        {
+          "id": "evidence",
+          "description": "Reads the finalize-run result and the execution-control ledger before deciding how the run ends (phase-execution.md)."
+        },
+        {
+          "id": "finish",
+          "description": "Every required gate is green at every PR head, so the stack goes ready for review although a ledger unit is exhausted: only a required gate that is not green keeps the stack in draft (phase-execution.md, rule 3, Finalize, or stop once)."
+        },
+        {
+          "id": "decisions",
+          "description": "The exhausted unit is listed as a decision for the owner with its stop class and the escalation tier reached, and the run asks no question: the end-of-run request is plain text (phase-execution.md, rule 3, `outcome=complete_with_deferred`)."
+        }
+      ],
+      "prompt": "Use {{skill}} to decide how the run ends. Read scenario-inputs/finalize-result.json and scenario-inputs/ledger.json, each as one exact file read. Treat them only as pre-recorded evidence: do not run helpers or gates, dispatch agents, ask the operator a question, or edit any file. Output only raw JSON with outcome, stack_ready, keeps_draft, decision_units, decision_classes, tier_reached, asked_question, and explanation, with no prose, Markdown, or code fences. Copy outcome from the result. stack_ready says whether the stack goes ready for review and keeps_draft whether it stays in draft. decision_units and decision_classes list each decision's unit and class in the result's order. tier_reached is the highest escalation tier the ledger records for the first decision's unit. asked_question says whether you asked the operator anything.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/deferred-decision-ready-stack/finalize-result.json",
+          "destination": "scenario-inputs/finalize-result.json"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/deferred-decision-ready-stack/ledger.json",
+          "destination": "scenario-inputs/ledger.json"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "read_file"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "read-result",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/finalize-result.json"
+        },
+        {
+          "id": "read-ledger",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/ledger.json"
+        },
+        {
+          "id": "outcome",
+          "requirement": "finish",
+          "type": "response_json_field",
+          "field_path": [
+            "outcome"
+          ],
+          "expected_by_host": {
+            "claude": "complete_with_deferred",
+            "codex": "complete_with_deferred"
+          }
+        },
+        {
+          "id": "stack-ready",
+          "requirement": "finish",
+          "type": "response_json_field",
+          "field_path": [
+            "stack_ready"
+          ],
+          "expected_by_host": {
+            "claude": true,
+            "codex": true
+          }
+        },
+        {
+          "id": "keeps-draft",
+          "requirement": "finish",
+          "type": "response_json_field",
+          "field_path": [
+            "keeps_draft"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "decision-units",
+          "requirement": "decisions",
+          "type": "response_json_field",
+          "field_path": [
+            "decision_units"
+          ],
+          "expected_by_host": {
+            "claude": [
+              "Failure family FR-001"
+            ],
+            "codex": [
+              "Failure family FR-001"
+            ]
+          }
+        },
+        {
+          "id": "decision-classes",
+          "requirement": "decisions",
+          "type": "response_json_field",
+          "field_path": [
+            "decision_classes"
+          ],
+          "expected_by_host": {
+            "claude": [
+              "exhausted"
+            ],
+            "codex": [
+              "exhausted"
+            ]
+          }
+        },
+        {
+          "id": "tier-reached",
+          "requirement": "decisions",
+          "type": "response_json_field",
+          "field_path": [
+            "tier_reached"
+          ],
+          "expected_by_host": {
+            "claude": 3,
+            "codex": 3
+          }
+        },
+        {
+          "id": "asked-question",
+          "requirement": "decisions",
+          "type": "response_json_field",
+          "field_path": [
+            "asked_question"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "no-claude-question",
+          "requirement": "decisions",
+          "type": "tool_used",
+          "name": "AskUserQuestion",
+          "min": 0,
+          "max": 0,
+          "include_failed": true
+        },
+        {
+          "id": "no-codex-question",
+          "requirement": "decisions",
+          "type": "tool_used",
+          "name": "request_user_input",
+          "min": 0,
+          "max": 0,
+          "include_failed": true
+        },
+        {
+          "id": "finish-semantic",
+          "requirement": "finish",
+          "type": "semantic",
+          "rubric": "PASS only if the response marks the stack ready for review, keeps it out of draft, and names the exhausted Failure family FR-001 as a decision for the owner while every required gate is green. FAIL if it keeps the stack in draft over the exhausted unit, calls that unit a human stop, or treats human UAT or a deferral as a reason to hold the stack."
+        },
+        {
+          "id": "decisions-semantic",
+          "requirement": "decisions",
+          "type": "semantic",
+          "rubric": "PASS only if the response lists the exhausted unit under decisions with the exhausted stop class and the tier 3 it reached, and asks the operator no question because the end-of-run request is plain text. FAIL if it asks for approval before finishing, omits the unit, or reports a lower tier."
+        }
+      ],
+      "native_differences": [
+        "Claude reads both files with its native Read tool; Codex uses precisely normalized native file inspection. Both grade the same recorded evidence."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-autopilot/references/phase-execution.md"
+      ]
+    },
+    {
       "id": "integration.return-01-synthesizer-disagreement",
       "layer": "integration",
       "capability": "Resolve a representative Clarify question by reading two retained analyst returns, preserving both supported options, and emitting the current low-confidence Round-2 escape without fabricating evidence.",
@@ -14906,7 +15482,7 @@
           "description": "Attribute each recommendation to its exact retained analyst source without fabricated evidence."
         }
       ],
-      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded Clarify consensus-synthesis observation. Read `scenario-inputs/analysts/codebase-analyst.md` and `scenario-inputs/analysts/domain-researcher.md` completely, using a separate native tool call for each analyst file; parallel calls are allowed. They are retained analyst returns for one Clarify Round-1 item, `[codebase, domain] Q2: Which hashing algorithm should new login records use, bcrypt or argon2id?`, which parse-consensus-categories routed to `[codebase, domain]` with `security_route: null`; do not dispatch replacement analysts and do not research beyond these inputs. Dispatch the installed client's named consensus-synthesizer with the protocol's synthesis input, including the `**Unresolved Item:**` line, `**Routed Categories:** [codebase, domain]`, `**Security Route:** none`, `**Round:** 1`, both analyst responses in full, and `NOT SPAWNED (not routed)` for the spec context analyst. Wait for its actual returned result, and use that result before writing the artifact. The parent must not perform or silently replace synthesis. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `human_review`), and `evidence` (input-order objects with exactly `analyst`, `source`, and `recommendation`). When the result escapes, the exact `next_action` token is `escape_to_round_2`; never substitute `escalate_to_round_2` or prose. Use the same concise option token in `retained_options`, in `decision` when non-null, and in each `evidence.recommendation`; do not put explanatory sentences in these token fields. Each evidence object must name the canonical analyst, its exact staged source path, and only the recommendation supported by that source. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
+      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded Clarify consensus-synthesis observation. Read `scenario-inputs/analysts/codebase-analyst.md` and `scenario-inputs/analysts/domain-researcher.md` completely, using a separate native tool call for each analyst file; parallel calls are allowed. They are retained analyst returns for one Clarify Round-1 item, `[codebase, domain] Q2: Which hashing algorithm should new login records use, bcrypt or argon2id?`, which parse-consensus-categories routed to `[codebase, domain]` with `security_route: null`; do not dispatch replacement analysts and do not research beyond these inputs. Dispatch the installed client's named consensus-synthesizer with the protocol's synthesis input, including the `**Unresolved Item:**` line, `**Routed Categories:** [codebase, domain]`, `**Security Route:** none`, `**Round:** 1`, both analyst responses in full, and `NOT SPAWNED (not routed)` for the spec context analyst. Wait for its actual returned result, and use that result before writing the artifact. The parent must not perform or silently replace synthesis. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `round_3_tiebreak`), and `evidence` (input-order objects with exactly `analyst`, `source`, and `recommendation`). When the result escapes, the exact `next_action` token is `escape_to_round_2`; never substitute `escalate_to_round_2` or prose. Use the same concise option token in `retained_options`, in `decision` when non-null, and in each `evidence.recommendation`; do not put explanatory sentences in these token fields. Each evidence object must name the canonical analyst, its exact staged source path, and only the recommendation supported by that source. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-01-synthesizer-disagreement/codebase-analyst.md",
@@ -15146,7 +15722,7 @@
           "description": "Attribute every agreeing recommendation to its exact retained analyst source without fabricated evidence."
         }
       ],
-      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded Checklist gap consensus-synthesis observation. Read `scenario-inputs/analysts/codebase-analyst.md`, `scenario-inputs/analysts/domain-researcher.md`, and `scenario-inputs/analysts/spec-context-analyst.md` completely, using a separate native tool call for each analyst file; parallel calls are allowed. They are retained analyst returns for one Checklist Round-1 gap routed to `[codebase, domain, spec]`; do not dispatch replacement analysts and do not research beyond these inputs. Dispatch the installed client's named consensus-synthesizer, wait for its actual returned result, and use that result before writing the artifact. The parent must not perform or silently replace synthesis. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `human_review`), and `evidence` (input-order objects with exactly `analyst`, `source`, and `recommendation`). Use the same concise option token in `retained_options`, in `decision` when non-null, and in each `evidence.recommendation`; do not put explanatory sentences in these token fields. Each evidence object must name the canonical analyst, its exact staged source path, and only the recommendation supported by that source. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
+      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded Checklist gap consensus-synthesis observation. Read `scenario-inputs/analysts/codebase-analyst.md`, `scenario-inputs/analysts/domain-researcher.md`, and `scenario-inputs/analysts/spec-context-analyst.md` completely, using a separate native tool call for each analyst file; parallel calls are allowed. They are retained analyst returns for one Checklist Round-1 gap routed to `[codebase, domain, spec]`; do not dispatch replacement analysts and do not research beyond these inputs. Dispatch the installed client's named consensus-synthesizer, wait for its actual returned result, and use that result before writing the artifact. The parent must not perform or silently replace synthesis. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `round_3_tiebreak`), and `evidence` (input-order objects with exactly `analyst`, `source`, and `recommendation`). Use the same concise option token in `retained_options`, in `decision` when non-null, and in each `evidence.recommendation`; do not put explanatory sentences in these token fields. Each evidence object must name the canonical analyst, its exact staged source path, and only the recommendation supported by that source. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-02-synthesizer-majority/codebase-analyst.md",
@@ -15540,7 +16116,7 @@
     {
       "id": "integration.return-04-keyword-only-majority",
       "layer": "integration",
-      "capability": "Resolve a Clarify item that a security keyword alone widened to all three analysts, where every analyst returns `security_relevant: false`, by applying the ordinary 2/3 majority rather than stopping for human review.",
+      "capability": "Resolve a Clarify item that a security keyword alone widened to all three analysts, where every analyst returns `security_relevant: false`, by applying the ordinary 2/3 majority rather than starting the Round 3 tiebreak.",
       "timeout_seconds": 300,
       "resource_class": "nested",
       "requirements": [
@@ -15573,7 +16149,7 @@
           "description": "Attribute each recommendation to its exact retained analyst source without fabricated evidence."
         }
       ],
-      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded Clarify consensus-synthesis observation. Read `scenario-inputs/analysts/codebase-analyst.md`, `scenario-inputs/analysts/domain-researcher.md`, and `scenario-inputs/analysts/spec-context-analyst.md` completely, using a separate native tool call for each analyst file; parallel calls are allowed. They are retained analyst returns for one Clarify Round-1 item, `[domain] I1: Should the usage report count tokens per LLM request or per billing period?`, which parse-consensus-categories widened from `[domain]` to all three analysts because `tokens` is a security keyword, returning `security_route: keyword`; do not dispatch replacement analysts and do not research beyond these inputs. Dispatch the installed client's named consensus-synthesizer with the protocol's synthesis input, including the `**Unresolved Item:**` line, `**Routed Categories:** [domain]`, `**Security Route:** keyword`, `**Round:** 1`, and all three analyst responses in full. Wait for its actual returned result, and use that result before writing the artifact. The parent must not perform or silently replace synthesis. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `human_review`), and `evidence` (input-order objects with exactly `analyst`, `source`, and `recommendation`). Use the same concise option token in `retained_options`, in `decision` when non-null, and in each `evidence.recommendation`; do not put explanatory sentences in these token fields. Each evidence object must name the canonical analyst, its exact staged source path, and only the recommendation supported by that source. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
+      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded Clarify consensus-synthesis observation. Read `scenario-inputs/analysts/codebase-analyst.md`, `scenario-inputs/analysts/domain-researcher.md`, and `scenario-inputs/analysts/spec-context-analyst.md` completely, using a separate native tool call for each analyst file; parallel calls are allowed. They are retained analyst returns for one Clarify Round-1 item, `[domain] I1: Should the usage report count tokens per LLM request or per billing period?`, which parse-consensus-categories widened from `[domain]` to all three analysts because `tokens` is a security keyword, returning `security_route: keyword`; do not dispatch replacement analysts and do not research beyond these inputs. Dispatch the installed client's named consensus-synthesizer with the protocol's synthesis input, including the `**Unresolved Item:**` line, `**Routed Categories:** [domain]`, `**Security Route:** keyword`, `**Round:** 1`, and all three analyst responses in full. Wait for its actual returned result, and use that result before writing the artifact. The parent must not perform or silently replace synthesis. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `round_3_tiebreak`), and `evidence` (input-order objects with exactly `analyst`, `source`, and `recommendation`). Use the same concise option token in `retained_options`, in `decision` when non-null, and in each `evidence.recommendation`; do not put explanatory sentences in these token fields. Each evidence object must name the canonical analyst, its exact staged source path, and only the recommendation supported by that source. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-04-keyword-only-majority/codebase-analyst.md",
@@ -15795,7 +16371,7 @@
     {
       "id": "integration.return-05-keyword-security-relevant",
       "layer": "integration",
-      "capability": "Resolve the same keyword-routed Clarify item when one analyst returns `security_relevant: true`, by keeping the unanimity bar and stopping a 2/3 majority for human review.",
+      "capability": "Resolve the same keyword-routed Clarify item when one analyst returns `security_relevant: true`, by keeping the unanimity bar and sending a 2/3 majority to the Round 3 tiebreak.",
       "timeout_seconds": 300,
       "resource_class": "nested",
       "requirements": [
@@ -15813,7 +16389,7 @@
         },
         {
           "id": "decision",
-          "description": "Do not apply a decision: one analyst returned `security_relevant: true`, so the item needs 3/3 agreement and a 2/3 majority goes to human review."
+          "description": "Do not apply a decision: one analyst returned `security_relevant: true`, so the item needs 3/3 agreement and a 2/3 majority starts the Round 3 tiebreak."
         },
         {
           "id": "options",
@@ -15828,7 +16404,7 @@
           "description": "Attribute each recommendation to its exact retained analyst source without fabricated evidence."
         }
       ],
-      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded Clarify consensus-synthesis observation. Read `scenario-inputs/analysts/codebase-analyst.md`, `scenario-inputs/analysts/domain-researcher.md`, and `scenario-inputs/analysts/spec-context-analyst.md` completely, using a separate native tool call for each analyst file; parallel calls are allowed. They are retained analyst returns for one Clarify Round-1 item, `[domain] I1: Should the usage report count tokens per LLM request or per billing period?`, which parse-consensus-categories widened from `[domain]` to all three analysts because `tokens` is a security keyword, returning `security_route: keyword`; do not dispatch replacement analysts and do not research beyond these inputs. Dispatch the installed client's named consensus-synthesizer with the protocol's synthesis input, including the `**Unresolved Item:**` line, `**Routed Categories:** [domain]`, `**Security Route:** keyword`, `**Round:** 1`, and all three analyst responses in full. Wait for its actual returned result, and use that result before writing the artifact. The parent must not perform or silently replace synthesis. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `human_review`), and `evidence` (input-order objects with exactly `analyst`, `source`, and `recommendation`). Use the same concise option token in `retained_options`, in `decision` when non-null, and in each `evidence.recommendation`; do not put explanatory sentences in these token fields. Each evidence object must name the canonical analyst, its exact staged source path, and only the recommendation supported by that source. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
+      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded Clarify consensus-synthesis observation. Read `scenario-inputs/analysts/codebase-analyst.md`, `scenario-inputs/analysts/domain-researcher.md`, and `scenario-inputs/analysts/spec-context-analyst.md` completely, using a separate native tool call for each analyst file; parallel calls are allowed. They are retained analyst returns for one Clarify Round-1 item, `[domain] I1: Should the usage report count tokens per LLM request or per billing period?`, which parse-consensus-categories widened from `[domain]` to all three analysts because `tokens` is a security keyword, returning `security_route: keyword`; do not dispatch replacement analysts and do not research beyond these inputs. Dispatch the installed client's named consensus-synthesizer with the protocol's synthesis input, including the `**Unresolved Item:**` line, `**Routed Categories:** [domain]`, `**Security Route:** keyword`, `**Round:** 1`, and all three analyst responses in full. Wait for its actual returned result, and use that result before writing the artifact. The parent must not perform or silently replace synthesis. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `round_3_tiebreak`), and `evidence` (input-order objects with exactly `analyst`, `source`, and `recommendation`). Use the same concise option token in `retained_options`, in `decision` when non-null, and in each `evidence.recommendation`; do not put explanatory sentences in these token fields. Each evidence object must name the canonical analyst, its exact staged source path, and only the recommendation supported by that source. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-05-keyword-security-relevant/codebase-analyst.md",
@@ -15939,14 +16515,14 @@
           "expected": null
         },
         {
-          "id": "human-review-action",
+          "id": "round-3-tiebreak-action",
           "requirement": "decision",
           "type": "json_field",
           "path": "scenario-output/consensus-result.json",
           "field_path": [
             "next_action"
           ],
-          "expected": "human_review"
+          "expected": "round_3_tiebreak"
         },
         {
           "id": "retained-options",
@@ -16045,6 +16621,419 @@
       "provenance": [
         "tests/speckit-pro/layer6-integration/return-format-fixtures/05-synthesizer-keyword-security-relevant",
         "speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md"
+      ]
+    },
+    {
+      "id": "integration.consensus-round3-tiebreak",
+      "layer": "integration",
+      "capability": "Resolve a keyword-routed Clarify item that Round 2 could not settle (one analyst returned `security_relevant: true` with only a 2/3 majority) through the Round 3 tiebreak: the max-effort consensus-tiebreaker applies the most conservative option that satisfies the spec as an assumption, logs the dissent, and neither asks a human nor stops.",
+      "timeout_seconds": 300,
+      "resource_class": "nested",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "Activate speckit-autopilot through the native client mechanism."
+        },
+        {
+          "id": "inputs",
+          "description": "Read all four retained analyst Markdown inputs in full, including the fresh tiebreak analyst's return."
+        },
+        {
+          "id": "mechanism",
+          "description": "Use the installed product's actual native synthesis mechanism with `Round: 3` and retain its actual result before materializing the observation artifact."
+        },
+        {
+          "id": "decision",
+          "description": "Apply the most conservative option that satisfies the spec as an assumption: the result is not `human_review`, not a stop, and not a question."
+        },
+        {
+          "id": "dissent",
+          "description": "Log the position that was not chosen as dissent, without inventing a third option."
+        },
+        {
+          "id": "agreement",
+          "description": "Record the Round 3 result using the `tiebreak` agreement value and no product-scope deferral."
+        }
+      ],
+      "prompt": "First invoke {{skill}} through the client's native skill-loading mechanism. Execute only one bounded Clarify Round 3 tiebreak observation. Read `scenario-inputs/analysts/codebase-analyst.md`, `scenario-inputs/analysts/domain-researcher.md`, `scenario-inputs/analysts/spec-context-analyst.md`, and `scenario-inputs/analysts/tiebreak-analyst.md` completely, using a separate native tool call for each file; parallel calls are allowed. They are retained returns for one Clarify item, `[domain] I1: Should the usage report count tokens per LLM request or per billing period?`, routed to all three analysts with `security_route: keyword`; one analyst returned `security_relevant: true` and only two of three agreed, so the synthesizer flagged the Round 3 tiebreak, and `tiebreak-analyst.md` is the fresh spec-context-analyst's return for it. Do not dispatch replacement analysts and do not research beyond these inputs. Dispatch the installed client's named consensus-tiebreaker with the protocol's synthesis input, including the `**Unresolved Item:**` line, `**Routed Categories:** [domain]`, `**Security Route:** keyword`, `**Round:** 3`, the three analyst responses, and the `**Tiebreak Analyst Response:**` in full. Wait for its actual returned result, and use that result before writing the artifact. The parent must not perform or silently replace synthesis, must not ask the user, and must not stop. Then write only `scenario-output/consensus-result.json` as strict JSON with exactly these keys: `decision` (string or null), `retained_options` (distinct recommendation tokens in input order), `dissent` (recommendation tokens the synthesizer did not choose), `agreement` (one of `single-analyst`, `both-agree`, `two-analyst-disagreement`, `3/3-unanimous`, `2/3-majority`, `0/3-all-disagree`, `tiebreak`), `confidence` (`high` or `low`), `next_action` (`apply`, `escape_to_round_2`, or `round_3_tiebreak`), and `scope_deferred` (boolean). Use the same concise option token in `retained_options`, in `dissent`, and in `decision` when non-null; do not put explanatory sentences in these token fields. Do not copy an expected answer from elsewhere, do not edit the inputs, and stop after the artifact is written.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-05-keyword-security-relevant/codebase-analyst.md",
+          "destination": "scenario-inputs/analysts/codebase-analyst.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-05-keyword-security-relevant/domain-researcher.md",
+          "destination": "scenario-inputs/analysts/domain-researcher.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/return-05-keyword-security-relevant/spec-context-analyst.md",
+          "destination": "scenario-inputs/analysts/spec-context-analyst.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/integration-return-contracts/round3-tiebreak/tiebreak-analyst.md",
+          "destination": "scenario-inputs/analysts/tiebreak-analyst.md"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read",
+            "Write",
+            "Agent"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "command_execution",
+            "file_change",
+            "spawn_agent"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "native-mechanism",
+          "requirement": "mechanism",
+          "type": "native_subagent_dispatch",
+          "expected": [
+            {
+              "item_id": "round3-item",
+              "role": "consensus-tiebreaker"
+            }
+          ],
+          "single_item_context": true,
+          "forbidden_roles": [
+            "consensus-synthesizer"
+          ]
+        },
+        {
+          "id": "read-codebase",
+          "requirement": "inputs",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/analysts/codebase-analyst.md"
+        },
+        {
+          "id": "read-domain",
+          "requirement": "inputs",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/analysts/domain-researcher.md"
+        },
+        {
+          "id": "read-spec-context",
+          "requirement": "inputs",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/analysts/spec-context-analyst.md"
+        },
+        {
+          "id": "read-tiebreak",
+          "requirement": "inputs",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/analysts/tiebreak-analyst.md"
+        },
+        {
+          "id": "result-exists",
+          "requirement": "decision",
+          "type": "file_exists",
+          "path": "scenario-output/consensus-result.json",
+          "exists": true
+        },
+        {
+          "id": "mechanism-evidence",
+          "requirement": "mechanism",
+          "type": "semantic",
+          "rubric": "PASS only if retained tool evidence and the captured artifact demonstrate the installed native synthesis mechanism rather than a final-response claim. When a subagent call is present, there must be exactly one successful call identifying consensus-tiebreaker, its actual nonempty returned result must support the artifact, and the parent artifact write must follow that return. When no subagent call is present, the exact declared analyst reads and artifact write must occur in the parent and no child synthesis role may be claimed. FAIL for a wrong or invented role, an empty or missing child return, multiple synthesis calls, write-before-return, or an artifact unsupported by observed work."
+        },
+        {
+          "id": "decision",
+          "requirement": "decision",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "decision"
+          ],
+          "expected": "per-request"
+        },
+        {
+          "id": "round-3-tiebreak-applies",
+          "requirement": "decision",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "next_action"
+          ],
+          "expected": "apply"
+        },
+        {
+          "id": "retained-options",
+          "requirement": "dissent",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "retained_options"
+          ],
+          "expected": [
+            "per-request",
+            "per-billing-period"
+          ]
+        },
+        {
+          "id": "dissent",
+          "requirement": "dissent",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "dissent"
+          ],
+          "expected": [
+            "per-billing-period"
+          ]
+        },
+        {
+          "id": "agreement",
+          "requirement": "agreement",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "agreement"
+          ],
+          "expected": "tiebreak"
+        },
+        {
+          "id": "no-scope-deferral",
+          "requirement": "agreement",
+          "type": "json_field",
+          "path": "scenario-output/consensus-result.json",
+          "field_path": [
+            "scope_deferred"
+          ],
+          "expected": false
+        },
+        {
+          "id": "unchanged-codebase-analyst",
+          "requirement": "inputs",
+          "type": "text",
+          "source": "scenario-inputs/analysts/codebase-analyst.md",
+          "pattern": "\\A\\#\\#\\ Answer\\\n\\\nCount\\ tokens\\ `per\\-request`\\.\\\n\\\n\\#\\#\\ Evidence\\\n\\\n\\-\\ \\*\\*File\\*\\*:\\ `src/usage/recorder\\.ts`\\ \\(line\\ 22\\)\\\n\\ \\ \\*\\*Pattern\\*\\*:\\ The\\ retained\\ fixture\\ records\\ one\\ usage\\ row\\ per\\ LLM\\ request,\\\n\\ \\ with\\ its\\ prompt\\ and\\ completion\\ token\\ counts\\.\\\n\\\n\\#\\#\\ Confidence\\\n\\\nhigh\\\n\\\n\\*\\*Rationale\\*\\*:\\ The\\ existing\\ recorder\\ already\\ stores\\ counts\\ at\\ this\\ grain\\.\\\n\\\n\\#\\#\\ Security\\ Relevance\\\n\\\nsecurity_relevant:\\ false\\\n\\Z"
+        },
+        {
+          "id": "unchanged-domain-researcher",
+          "requirement": "inputs",
+          "type": "text",
+          "source": "scenario-inputs/analysts/domain-researcher.md",
+          "pattern": "\\A\\#\\#\\ Answer\\\n\\\nCount\\ tokens\\ `per\\-billing\\-period`\\.\\\n\\\n\\#\\#\\ Citations\\\n\\\n\\-\\ \\*\\*Source\\*\\*:\\ LLM\\ provider\\ billing\\ documentation\\ \\(retained\\ fixture\\ evidence\\)\\\n\\ \\ \\*\\*Title\\*\\*:\\ Usage\\ and\\ billing\\\n\\ \\ \\*\\*Excerpt\\*\\*:\\ The\\ retained\\ analyst\\ response\\ notes\\ that\\ providers\\ invoice\\\n\\ \\ token\\ usage\\ in\\ aggregate\\ for\\ each\\ billing\\ period\\.\\\n\\\n\\#\\#\\ Confidence\\\n\\\nmedium\\\n\\\n\\*\\*Rationale\\*\\*:\\ This\\ matches\\ how\\ providers\\ bill\\.\\ Per\\-request\\ token\\ records\\ tie\\\nusage\\ to\\ individual\\ users,\\ which\\ makes\\ them\\ personal\\ data,\\ so\\ aggregate\\ counts\\\nexpose\\ less\\.\\\n\\\n\\#\\#\\ Security\\ Relevance\\\n\\\nsecurity_relevant:\\ true\\\n\\Z"
+        },
+        {
+          "id": "unchanged-spec-context-analyst",
+          "requirement": "inputs",
+          "type": "text",
+          "source": "scenario-inputs/analysts/spec-context-analyst.md",
+          "pattern": "\\A\\#\\#\\ Answer\\\n\\\nCount\\ tokens\\ `per\\-request`\\.\\\n\\\n\\#\\#\\ References\\\n\\\n\\-\\ \\*\\*Artifact\\*\\*:\\ Technical\\ roadmap\\\n\\ \\ \\*\\*Section\\*\\*:\\ Usage\\ reporting\\\n\\ \\ \\*\\*Relevance\\*\\*:\\ The\\ retained\\ fixture\\ records\\ a\\ roadmap\\ decision\\ to\\ report\\\n\\ \\ LLM\\ token\\ usage\\ for\\ each\\ request\\.\\\n\\\n\\#\\#\\ Confidence\\\n\\\nhigh\\\n\\\n\\*\\*Rationale\\*\\*:\\ The\\ roadmap\\ decision\\ addresses\\ the\\ report's\\ grain\\ directly\\.\\\n\\\n\\#\\#\\ Security\\ Relevance\\\n\\\nsecurity_relevant:\\ false\\\n\\Z"
+        },
+        {
+          "id": "unchanged-tiebreak-analyst",
+          "requirement": "inputs",
+          "type": "text",
+          "source": "scenario-inputs/analysts/tiebreak-analyst.md",
+          "pattern": "\\A\\#\\#\\ Answer\\\n\\\nCount\\ tokens\\ \\`per\\-request\\`\\.\\\n\\\n\\#\\#\\ References\\\n\\\n\\-\\ \\*\\*Artifact\\*\\*\\:\\ Technical\\ roadmap\\\n\\ \\ \\*\\*Section\\*\\*\\:\\ Usage\\ reporting\\\n\\ \\ \\*\\*Relevance\\*\\*\\:\\ The\\ roadmap\\ requires\\ the\\ usage\\ report\\ to\\ count\\ LLM\\ tokens\\ for\\\n\\ \\ each\\ request\\.\\ Aggregating\\ per\\ billing\\ period\\ would\\ drop\\ that\\ stated\\\n\\ \\ requirement\\,\\ so\\ \\`per\\-request\\`\\ is\\ the\\ most\\ conservative\\ option\\ that\\ satisfies\\\n\\ \\ the\\ spec\\.\\ The\\ privacy\\ concern\\ is\\ met\\ by\\ keeping\\ user\\ identifiers\\ out\\ of\\ the\\\n\\ \\ usage\\ rows\\,\\ which\\ changes\\ no\\ scope\\.\\\n\\\n\\#\\#\\ Confidence\\\n\\\nhigh\\\n\\\n\\*\\*Rationale\\*\\*\\:\\ The\\ roadmap\\ decision\\ addresses\\ the\\ report\\'s\\ grain\\ directly\\,\\ and\\\nthe\\ alternative\\ fails\\ it\\.\\\n\\\n\\#\\#\\ Security\\ Relevance\\\n\\\nsecurity_relevant\\:\\ true\\\n\\Z"
+        }
+      ],
+      "native_differences": [
+        "Claude dispatches the namespaced speckit-pro:consensus-tiebreaker role through its native Agent transport.",
+        "Codex dispatches the consensus-tiebreaker custom agent through its native collaboration transport; both clients require an actual nonempty returned result before the parent writes the artifact."
+      ],
+      "provenance": [
+        "tests/speckit-pro/layer6-integration/return-format-fixtures/06-synthesizer-round3-all-disagree",
+        "speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md"
+      ]
+    },
+    {
+      "id": "integration.finalize-red-gate-draft",
+      "layer": "integration",
+      "capability": "Finalizes a staged three-PR stack whose last gate failed at one head and writes the end-of-run request: the stack stays in draft, no ready or merge command runs, and the request names the gate, its command, and the head.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-autopilot capability is activated."
+        },
+        {
+          "id": "run",
+          "description": "Run the staged finalize-run request once through the protected runner."
+        },
+        {
+          "id": "draft",
+          "description": "Mark nothing ready and leave the whole stack in draft: run no gh pr ready or gh pr merge command."
+        },
+        {
+          "id": "request",
+          "description": "Write the runner's end-of-run request unchanged so it names the failed gate, its command, and the failing PR head."
+        }
+      ],
+      "prompt": "Use {{skill}} to close out a run whose last gate failed. Invoke the staged protected Python runner exactly once as one default-shell command: {resolved_python} -m speckit_pro_runner < scenario-inputs/finalize-request.json. Use no shell variable, prefix, suffix, pipe, or output redirection other than the required input redirection. Then write only scenario-output/end-of-run-request.md, containing exactly the runner response's data.end_of_run_request text and nothing else. Do not run any gh command, do not merge, do not ask the operator a question, and do not use a shell fallback or fabricate the result.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/finalize-run/red-gate/finalize-request.json",
+          "destination": "scenario-inputs/finalize-request.json"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/finalize-run/red-gate/ledger.json",
+          "destination": ".process/execution-control/ledger.json"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/finalize-run/project.json",
+          "destination": ".specify/project.json"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read",
+            "Write",
+            "Bash"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "read_file",
+            "command_execution",
+            "file_change"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "no-ready-or-merge-claude",
+          "requirement": "draft",
+          "type": "tool_used",
+          "name": "Bash",
+          "min": 0,
+          "max": 0,
+          "input_regex": "\\bgh\\s+pr\\s+(?:merge|ready)\\b",
+          "include_failed": true
+        },
+        {
+          "id": "no-ready-or-merge-codex",
+          "requirement": "draft",
+          "type": "tool_used",
+          "name": "command_execution",
+          "min": 0,
+          "max": 0,
+          "input_regex": "\\bgh\\s+pr\\s+(?:merge|ready)\\b",
+          "include_failed": true
+        },
+        {
+          "id": "no-claude-question",
+          "requirement": "draft",
+          "type": "tool_used",
+          "name": "AskUserQuestion",
+          "min": 0,
+          "max": 0,
+          "include_failed": true
+        },
+        {
+          "id": "no-codex-question",
+          "requirement": "draft",
+          "type": "tool_used",
+          "name": "request_user_input",
+          "min": 0,
+          "max": 0,
+          "include_failed": true
+        },
+        {
+          "id": "request-written",
+          "requirement": "request",
+          "type": "file_exists",
+          "path": "scenario-output/end-of-run-request.md",
+          "exists": true
+        },
+        {
+          "id": "request-names-gate",
+          "requirement": "request",
+          "type": "text",
+          "source": "scenario-output/end-of-run-request.md",
+          "pattern": "Post: Integration Suite"
+        },
+        {
+          "id": "request-names-command",
+          "requirement": "request",
+          "type": "text",
+          "source": "scenario-output/end-of-run-request.md",
+          "pattern": "python3 tests/integration\\.py"
+        },
+        {
+          "id": "request-names-head",
+          "requirement": "request",
+          "type": "text",
+          "source": "scenario-output/end-of-run-request.md",
+          "pattern": "b{40}"
+        },
+        {
+          "id": "request-keeps-draft",
+          "requirement": "request",
+          "type": "text",
+          "source": "scenario-output/end-of-run-request.md",
+          "pattern": "stays in draft"
+        },
+        {
+          "id": "run-semantic",
+          "requirement": "run",
+          "type": "semantic",
+          "rubric": "PASS only if retained tool evidence shows exactly one runner invocation on the staged finalize-request.json and the response uses its actual result. FAIL if the runner was skipped, run more than once, run with a changed request, or its result was fabricated."
+        },
+        {
+          "id": "draft-semantic",
+          "requirement": "draft",
+          "type": "semantic",
+          "rubric": "PASS only if retained tool evidence shows the protected runner ran once on the staged request, no gh pr ready or gh pr merge command was attempted, and the written request reports that the stack stays in draft. FAIL if any PR was marked ready or merged, the request was rewritten by hand, or the response treats the failed gate as deferred."
+        }
+      ],
+      "native_differences": [
+        "Claude runs the staged runner through Bash and writes the request with Write; Codex uses command_execution and file_change.",
+        "The question-tool checks name each host's own question tool, which the case never allows."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-autopilot/SKILL.md"
       ]
     },
     {
@@ -16354,7 +17343,7 @@
     {
       "id": "functional.speckit-autopilot.case-112",
       "layer": "functional",
-      "capability": "Preserves an explicit human UI-delivery requirement through the bounded Plan repair cycle, retains the unresolved marker and failed G3 result, logs provenance, and escalates the exact architectural gap.",
+      "capability": "Preserves an explicit human UI-delivery requirement through the bounded Plan repair cycle, retains the unresolved marker and failed G3 result, logs provenance, and defers the exact architectural gap.",
       "timeout_seconds": 600,
       "resource_class": "nested",
       "required_tools": [
@@ -16391,7 +17380,7 @@
         },
         {
           "id": "legacy-07",
-          "description": "After unsuccessful repair, escalates with G3 still failed; any explicit skip-and-log override keeps the verdict, marker, and provenance unchanged"
+          "description": "After unsuccessful repair, defers the exact choice with G3 still failed, keeps the verdict, marker, and provenance unchanged, and continues the run without a stop or skip-and-log option"
         }
       ],
       "prompt": "Use {{skill}} for this bounded local Plan scenario. G3 currently fails on the unresolved visible UI-delivery wording in scenario-inputs/feature/plan.md. The original Plan prompt, completed Clarify evidence, current architecture evidence, and docs/ai/specs/.process/SPEC-112-workflow.md are staged alongside it. Read that workflow file, scenario-inputs/g3-request.json, and scenario-inputs/context-request.json with separate exact native file reads before the first runner invocation. The supplied architecture evidence already proves that no supported observation mechanism exists, so perform exactly one bounded Plan repair; a second repair would repeat unchanged evidence. Record that repair under a literal #### Plan Ambiguity Repair Log heading inside the workflow file's Plan Results section. The parent must run the authoritative G3 command before the Plan-executor dispatch and once after its return; the executor must not run G3. Invoke the staged authoritative Python runner for the initial G3 check as the exact default-shell command {{resolved_python}} -m speckit_pro_runner < scenario-inputs/g3-request.json. Immediately preserve that complete actual response envelope as the sole element of scenario-output/g3-attempts.json, then invoke {{resolved_python}} -m speckit_pro_runner < scenario-inputs/context-request.json as its own exact command. Pass the complete successful helper response envelope unchanged as the native phase-executor child message; the executor uses only its hash-bound data.stdout_json.executor_message. Do not summarize, excerpt, reconstruct, extract, or splice it. Each runner tool call must contain only its required exact command: do not inspect the executable first and do not add ls, echo, a semicolon, a shell variable, chaining, or output redirection. After the executor returns, rerun the exact G3 command. At scenario-output/g3-attempts.json, leave exactly one top-level JSON object whose only key is attempts and whose attempts array preserves both complete actual G3 response envelopes in order. Work only in the staged scenario, do not ask the user, and stop at the contract's terminal result.",
@@ -16639,7 +17628,7 @@
           "id": "bounded-escalation",
           "requirement": "legacy-07",
           "type": "semantic",
-          "rubric": "PASS only if, after the evidence-bearing repair cycle ends without a solution, the run escalates the exact missing UI-delivery observation/callback choice with G3 failed, the marker and explicit-human provenance intact, and every actual attempt logged. If skip-and-log is mentioned, it must be identified as unconfigured and must not be claimed as taken. FAIL for a broader question, a completion claim, an assumed fixed two-attempt count unsupported by evidence, or altered failed evidence."
+          "rubric": "PASS only if, after the evidence-bearing repair cycle ends without a solution, the run defers the exact missing UI-delivery observation/callback choice to the end-of-run request with G3 failed, the marker and explicit-human provenance intact, and every actual attempt logged. FAIL if the run stops, asks mid-run, or offers skip-and-log. FAIL for a broader question, a completion claim, an assumed fixed two-attempt count unsupported by evidence, or altered failed evidence."
         }
       ],
       "native_differences": [
@@ -17686,8 +18675,7 @@
       "provenance": [
         "tests/speckit-pro/layer3-functional/codex-evals/speckit-scaffold-spec-evals.json#eval-7",
         "tests/speckit-pro/evals/fixtures/functional/legacy-selection.json#functional.speckit-scaffold-spec.case-7",
-        "speckit-pro/skills/speckit-scaffold-spec/SKILL.md#4",
-        "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md#4"
+        "speckit-pro/skills/speckit-scaffold-spec/SKILL.md#4"
       ]
     },
     {
@@ -18198,11 +19186,11 @@
         },
         {
           "id": "evidence",
-          "description": "Reads the retained binding result and Plan dispatch record before judging the dispatch (phase-execution.md, phase-execution-codex.md)."
+          "description": "Reads the retained binding result and Plan dispatch record before judging the dispatch (phase-execution.md)."
         },
         {
           "id": "skill-root",
-          "description": "The Plan executor resolves project skills against the bound WORKFLOW_ROOT, never the checkout that launched the run (phase-execution.md, Subagent Delegation: \"Executors resolve project skills and paths against the bound <WORKFLOW_ROOT>, never the checkout that launched the run\"; phase-execution-codex.md, Main Execution Loop: \"Never infer the execution root from the task's default checkout.\")."
+          "description": "The Plan executor resolves project skills against the bound WORKFLOW_ROOT, never the checkout that launched the run (phase-execution.md, Subagent Delegation: \"Executors resolve project skills and paths against the bound <WORKFLOW_ROOT>, never the checkout that launched the run\"; phase-execution.md, Main Execution Loop: \"Never infer the execution root from the task's default checkout.\")."
         }
       ],
       "prompt": "Use {{skill}} to review retained Plan-phase evidence. Read scenario-inputs/binding-result.json and scenario-inputs/plan-dispatch-record.json, each as one exact file read. Treat both files only as pre-recorded evidence: do not rerun helpers, dispatch agents, change directories, or edit any file. Decide whether the recorded Plan executor dispatch complied with the autopilot's execution-root rules. Output only raw JSON with skill_root_used, skill_root_required, dispatch_compliant, and explanation, with no prose, Markdown, or code fences. Copy absolute paths exactly as recorded.",
@@ -18309,8 +19297,7 @@
         "Both hosts receive the same pre-recorded evidence and must not rerun the binding helper."
       ],
       "provenance": [
-        "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
-        "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md"
+        "speckit-pro/skills/speckit-autopilot/references/phase-execution.md"
       ]
     },
     {
@@ -18330,11 +19317,11 @@
         },
         {
           "id": "dispatch",
-          "description": "The Plan executor follows the loaded speckit-plan command's research-agent dispatch step for Technical Context unknowns; its own direct research-broker calls do not replace that dispatch (phase-executor.md: \"Use a subagent only when the loaded command directs one\" and Rule 2, \"After the Skill loads, execute its steps\"; phase-executor.toml: \"Use `spawn_agent` only when the loaded skill directs it\" and Rule 2)."
+          "description": "The Plan executor follows the loaded speckit-plan command's research-agent dispatch step for Technical Context unknowns; its own direct research-broker calls do not replace that dispatch (phase-executor.md: \"Use a subagent only when the loaded command directs one\" and Rule 2, \"After the skill loads, execute its steps\"; phase-executor.toml: \"Use `spawn_agent` only when the loaded skill directs it\" and Rule 2)."
         },
         {
           "id": "gap-record",
-          "description": "Unavailable research is recorded as a gap, not presented as obtained evidence (error-recovery.md and error-recovery-codex.md: \"MCP tool unavailable: Skip research that depends on it ... Log warning\"; capability-discovery.md: \"use the fallback rule below and state the gap\")."
+          "description": "Unavailable research is recorded as a gap, not presented as obtained evidence (error-recovery.md: \"MCP tool unavailable: Skip research that depends on it ... Log warning\"; capability-discovery.md: \"use the fallback rule below and state the gap\")."
         }
       ],
       "prompt": "Use {{skill}} to review a retained Plan phase. Read scenario-inputs/speckit-plan-phase0.md (the Phase 0 step of the command the executor loaded), scenario-inputs/plan-executor-record.json, and scenario-inputs/research.md, each as one exact file read. Treat them only as pre-recorded evidence: do not rerun Plan, dispatch agents, search, or edit any file. Decide whether the Plan executor followed its loaded command and the autopilot's research-evidence rules. Output only raw JSON with research_dispatch_required, research_dispatch_observed, unavailable_research_recorded, plan_phase_compliant, and explanation, with no prose, Markdown, or code fences.",
@@ -18473,7 +19460,6 @@
         "speckit-pro/agents/phase-executor.md",
         "speckit-pro/codex-agents/phase-executor.toml",
         "speckit-pro/skills/speckit-autopilot/references/error-recovery.md",
-        "speckit-pro/codex-skills/speckit-autopilot/references/error-recovery-codex.md",
         "speckit-pro/skills/speckit-autopilot/references/capability-discovery.md"
       ]
     },
@@ -21137,6 +22123,1898 @@
       ]
     },
     {
+      "id": "integration.finalize-stack-ready",
+      "layer": "integration",
+      "capability": "Run the real finalize-run helper on a three-PR stack whose required gates are green at every head with only human UAT left, and finish ready for review: one ready command per PR, nothing merged, no question tool.",
+      "required_tools": [
+        "specify"
+      ],
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "Activate speckit-autopilot through the native client mechanism."
+        },
+        {
+          "id": "runner",
+          "description": "Invoke the protected runner exactly once on the staged finalize-run request and use its result."
+        },
+        {
+          "id": "outcome",
+          "description": "Record the runner's outcome, that the stack is ready for review, and that nothing keeps it in draft."
+        },
+        {
+          "id": "ready-commands",
+          "description": "Record one `gh pr ready` command for every PR of the stack, bottom first, and no merge command."
+        },
+        {
+          "id": "no-question",
+          "description": "Ask the operator nothing: the end-of-run request is plain text, so no question tool call is made, including a failed one."
+        },
+        {
+          "id": "safety",
+          "description": "Run no `gh pr` command and no `git push`; the ready commands are recorded, never executed by this case."
+        }
+      ],
+      "prompt": "Use {{skill}} to finish the run. Invoke the staged protected Python runner exactly once as one default-shell command: {{resolved_python}} -m speckit_pro_runner < scenario-inputs/finalize-request.json. Use no shell variable, prefix, suffix, pipe, or output redirection other than the required input redirection. Do not run gh, git push, or any merge, and do not ask the operator a question: the runner result is the whole decision. Then write only `scenario-output/finish-summary.json`, strict JSON with outcome, mark_ready, ready_commands, keeps_draft, and question_asked, copied from the runner's data (outcome, mark_ready, ready_commands) plus keeps_draft (true only when the runner says the stack stays in draft) and question_asked (whether you asked the operator anything). Then stop.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/integration-finalize/finalize-stack-ready/finalize-request.json",
+          "destination": "scenario-inputs/finalize-request.json"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/integration-finalize/finalize-stack-ready/ledger.json",
+          "destination": ".process/execution-control/ledger.json"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/scaffold-reviewability/project.json",
+          "destination": ".specify/project.json"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Bash",
+            "Write"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "command_execution",
+            "file_change"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "runner-invoked-claude",
+          "requirement": "runner",
+          "type": "tool_used",
+          "name": "Bash",
+          "min": 1,
+          "max": 1,
+          "input_regex": "speckit_pro_runner"
+        },
+        {
+          "id": "runner-invoked-codex",
+          "requirement": "runner",
+          "type": "tool_used",
+          "name": "command_execution",
+          "min": 1,
+          "max": 1,
+          "input_regex": "speckit_pro_runner"
+        },
+        {
+          "id": "no-claude-gh",
+          "requirement": "safety",
+          "type": "tool_used",
+          "name": "Bash",
+          "min": 0,
+          "max": 0,
+          "input_regex": "\\bgh\\s+pr\\b|\\bgit\\s+push\\b",
+          "include_failed": true
+        },
+        {
+          "id": "no-codex-gh",
+          "requirement": "safety",
+          "type": "tool_used",
+          "name": "command_execution",
+          "min": 0,
+          "max": 0,
+          "input_regex": "\\bgh\\s+pr\\b|\\bgit\\s+push\\b",
+          "include_failed": true
+        },
+        {
+          "id": "summary-exists",
+          "requirement": "outcome",
+          "type": "file_exists",
+          "path": "scenario-output/finish-summary.json",
+          "exists": true
+        },
+        {
+          "id": "outcome",
+          "requirement": "outcome",
+          "type": "json_field",
+          "path": "scenario-output/finish-summary.json",
+          "field_path": [
+            "outcome"
+          ],
+          "expected": "complete_with_deferred"
+        },
+        {
+          "id": "mark-ready",
+          "requirement": "outcome",
+          "type": "json_field",
+          "path": "scenario-output/finish-summary.json",
+          "field_path": [
+            "mark_ready"
+          ],
+          "expected": true
+        },
+        {
+          "id": "keeps-draft",
+          "requirement": "outcome",
+          "type": "json_field",
+          "path": "scenario-output/finish-summary.json",
+          "field_path": [
+            "keeps_draft"
+          ],
+          "expected": false
+        },
+        {
+          "id": "ready-commands",
+          "requirement": "ready-commands",
+          "type": "json_field",
+          "path": "scenario-output/finish-summary.json",
+          "field_path": [
+            "ready_commands"
+          ],
+          "expected": [
+            "gh pr ready 101",
+            "gh pr ready 102",
+            "gh pr ready 103"
+          ]
+        },
+        {
+          "id": "question-asked",
+          "requirement": "no-question",
+          "type": "json_field",
+          "path": "scenario-output/finish-summary.json",
+          "field_path": [
+            "question_asked"
+          ],
+          "expected": false
+        },
+        {
+          "id": "no-claude-question",
+          "requirement": "no-question",
+          "type": "tool_used",
+          "name": "AskUserQuestion",
+          "min": 0,
+          "max": 0,
+          "include_failed": true
+        },
+        {
+          "id": "no-codex-question",
+          "requirement": "no-question",
+          "type": "tool_used",
+          "name": "request_user_input",
+          "min": 0,
+          "max": 0,
+          "include_failed": true
+        },
+        {
+          "id": "no-merge-command",
+          "requirement": "ready-commands",
+          "type": "text",
+          "source": "scenario-output/finish-summary.json",
+          "pattern": "\\A(?![\\s\\S]*gh\\ pr\\ merge)[\\s\\S]*\\Z"
+        },
+        {
+          "id": "finish-semantic",
+          "requirement": "outcome",
+          "type": "semantic",
+          "rubric": "PASS only if retained tool evidence shows exactly one protected runner invocation on the staged request and the summary records that runner's outcome complete_with_deferred, a stack marked ready with no draft hold, and one ready command per PR. FAIL if the summary contradicts the runner result, holds the stack in draft for human UAT alone, or a merge, push, gh, or question tool call appears."
+        }
+      ],
+      "native_differences": [
+        "Claude runs the runner through Bash; Codex through command_execution. Both write the same summary from the same runner result."
+      ],
+      "provenance": [
+        "speckit-pro/speckit_pro_runner/helpers/run_finalization.py",
+        "speckit-pro/skills/speckit-autopilot/references/phase-execution.md"
+      ]
+    },
+    {
+      "id": "functional.speckit-autopilot.gate-failure-defers",
+      "layer": "functional",
+      "capability": "Decides what the run does after gate G4 still fails once its repair allowance is spent: defers the gate, records the failure, and keeps running the independent units without stopping or asking.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-autopilot capability is activated."
+        },
+        {
+          "id": "evidence",
+          "description": "Reads the workflow file and the recorded gate attempts before deciding (gate-validation.md, Failure Escalation Protocol)."
+        },
+        {
+          "id": "defer",
+          "description": "After the repair loop within its allowance, the failed gate defers per the Failure Escalation Protocol: it is recorded, never passed, and never a stop (gate-validation.md, G4 Step 5: \"run the repair loop within its allowance, then defer per the Failure Escalation Protocol\")."
+        },
+        {
+          "id": "continue",
+          "description": "The run keeps executing every task, increment, gate, and Post check that does not depend on the deferred gate and asks the operator nothing before the end of the run (gate-validation.md: \"Keep executing every task, increment, gate, and Post check that does not depend on the deferred gate. It is never a mid-run question.\")."
+        }
+      ],
+      "prompt": "Use {{skill}} to decide what the run does next for a failed gate. Read scenario-inputs/workflow.md and scenario-inputs/gate-attempts.json, each as one exact file read. Treat them only as pre-recorded evidence: do not run helpers or gates, dispatch agents, or edit any file. Output only raw JSON with repair_allowance_spent, next_action, run_continues, independent_units, question_offered, and explanation, with no prose, Markdown, or code fences. next_action is exactly one of repair, defer, or stop. independent_units is a sorted array of the unit ids that keep running. question_offered says whether the run asks the operator anything before the end of the run.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/gate-failure-defers/workflow.md",
+          "destination": "scenario-inputs/workflow.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/gate-failure-defers/gate-attempts.json",
+          "destination": "scenario-inputs/gate-attempts.json"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "read_file"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "read-workflow",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/workflow.md"
+        },
+        {
+          "id": "read-gate-attempts",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/gate-attempts.json"
+        },
+        {
+          "id": "allowance-spent",
+          "requirement": "defer",
+          "type": "response_json_field",
+          "field_path": [
+            "repair_allowance_spent"
+          ],
+          "expected_by_host": {
+            "claude": true,
+            "codex": true
+          }
+        },
+        {
+          "id": "next-action",
+          "requirement": "defer",
+          "type": "response_json_field",
+          "field_path": [
+            "next_action"
+          ],
+          "expected_by_host": {
+            "claude": "defer",
+            "codex": "defer"
+          }
+        },
+        {
+          "id": "run-continues",
+          "requirement": "continue",
+          "type": "response_json_field",
+          "field_path": [
+            "run_continues"
+          ],
+          "expected_by_host": {
+            "claude": true,
+            "codex": true
+          }
+        },
+        {
+          "id": "independent-units",
+          "requirement": "continue",
+          "type": "response_json_field",
+          "field_path": [
+            "independent_units"
+          ],
+          "expected_by_host": {
+            "claude": [
+              "T021",
+              "T022"
+            ],
+            "codex": [
+              "T021",
+              "T022"
+            ]
+          }
+        },
+        {
+          "id": "no-question",
+          "requirement": "continue",
+          "type": "response_json_field",
+          "field_path": [
+            "question_offered"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "defer-semantic",
+          "requirement": "defer",
+          "type": "semantic",
+          "rubric": "PASS only if the response says G4 defers after its repair allowance is spent, that the failing command and its output are recorded for the end-of-run request, that G4 is never passed, and that the independent units T021 and T022 keep running. FAIL if it stops the run, asks the operator mid-run, offers skip-and-log or a stop as an option, treats the gate as passed, or runs the dependent unit T023."
+        }
+      ],
+      "native_differences": [
+        "Both hosts apply the same Failure Escalation Protocol from the shared gate-validation reference; the deferral is recorded in the workflow file and ledger, not raised as a question.",
+        "Both hosts receive the same pre-recorded gate evidence and must not run any gate."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-autopilot/references/gate-validation.md"
+      ]
+    },
+    {
+      "id": "functional.speckit-autopilot.clean-finish-no-question",
+      "layer": "functional",
+      "capability": "Finalizes a completed run whose gates all passed at every PR head and that holds nothing deferred: reports the finish as plain text with the ready commands and asks the operator no question.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-autopilot capability is activated."
+        },
+        {
+          "id": "run",
+          "description": "Runs the staged finalize-run request exactly once and reads its result (SKILL.md and Codex SKILL.md: \"Print the final report as plain text on `outcome=complete` with nothing deferred, and ask no question.\")."
+        },
+        {
+          "id": "finish",
+          "description": "With every gate passed at every PR head and nothing deferred, the outcome is complete and the stack goes ready for review through one ready command per draft PR, never a merge (SKILL.md: \"mark the stack ready for review (never merge)\")."
+        },
+        {
+          "id": "no-question",
+          "description": "The final report is plain text and asks no question (SKILL.md and Codex SKILL.md: \"ask no question\")."
+        }
+      ],
+      "prompt": "Use {{skill}} to close out a finished run. Invoke the staged protected Python runner exactly once as one default-shell command: {resolved_python} -m speckit_pro_runner < scenario-inputs/finalize-request.json. Use no shell variable, prefix, suffix, pipe, or output redirection other than the required input redirection. Do not run any gh command, do not merge, and do not ask the operator a question. Output only raw JSON: exactly one top-level object with deferred_digest, outcome, mark_ready, ready_commands, operator_question_required, and explanation, with no prose, Markdown, or code fences. deferred_digest, outcome, mark_ready, and ready_commands come from the runner response's data field. operator_question_required is true only if data.end_of_run_request is nonempty. Do not use a shell fallback or fabricate the result.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/finalize-run/clean-finish/finalize-request.json",
+          "destination": "scenario-inputs/finalize-request.json"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/finalize-run/clean-finish/ledger.json",
+          "destination": ".process/execution-control/ledger.json"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/finalize-run/project.json",
+          "destination": ".specify/project.json"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read",
+            "Bash"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "read_file",
+            "command_execution"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "digest",
+          "requirement": "run",
+          "type": "response_json_field",
+          "field_path": [
+            "deferred_digest"
+          ],
+          "expected_by_host": {
+            "claude": "sha256:f7fb0889ce4cf4e9393fc031e0b749aa70116d147c4e641748d137419c692f24",
+            "codex": "sha256:f7fb0889ce4cf4e9393fc031e0b749aa70116d147c4e641748d137419c692f24"
+          }
+        },
+        {
+          "id": "outcome",
+          "requirement": "finish",
+          "type": "response_json_field",
+          "field_path": [
+            "outcome"
+          ],
+          "expected_by_host": {
+            "claude": "complete",
+            "codex": "complete"
+          }
+        },
+        {
+          "id": "mark-ready",
+          "requirement": "finish",
+          "type": "response_json_field",
+          "field_path": [
+            "mark_ready"
+          ],
+          "expected_by_host": {
+            "claude": true,
+            "codex": true
+          }
+        },
+        {
+          "id": "ready-commands",
+          "requirement": "finish",
+          "type": "response_json_field",
+          "field_path": [
+            "ready_commands"
+          ],
+          "expected_by_host": {
+            "claude": [
+              "gh pr ready 101",
+              "gh pr ready 102",
+              "gh pr ready 103"
+            ],
+            "codex": [
+              "gh pr ready 101",
+              "gh pr ready 102",
+              "gh pr ready 103"
+            ]
+          }
+        },
+        {
+          "id": "no-question-field",
+          "requirement": "no-question",
+          "type": "response_json_field",
+          "field_path": [
+            "operator_question_required"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "no-claude-question",
+          "requirement": "no-question",
+          "type": "tool_used",
+          "name": "AskUserQuestion",
+          "min": 0,
+          "max": 0,
+          "include_failed": true
+        },
+        {
+          "id": "no-codex-question",
+          "requirement": "no-question",
+          "type": "tool_used",
+          "name": "request_user_input",
+          "min": 0,
+          "max": 0,
+          "include_failed": true
+        },
+        {
+          "id": "no-merge-claude",
+          "requirement": "finish",
+          "type": "tool_used",
+          "name": "Bash",
+          "min": 0,
+          "max": 0,
+          "input_regex": "\\bgh\\s+pr\\s+merge\\b",
+          "include_failed": true
+        },
+        {
+          "id": "no-merge-codex",
+          "requirement": "finish",
+          "type": "tool_used",
+          "name": "command_execution",
+          "min": 0,
+          "max": 0,
+          "input_regex": "\\bgh\\s+pr\\s+merge\\b",
+          "include_failed": true
+        },
+        {
+          "id": "finish-semantic",
+          "requirement": "no-question",
+          "type": "semantic",
+          "rubric": "PASS only if the response reports outcome complete with the stack ready for review through gh pr ready commands, treats nothing as deferred, and needs no operator question. FAIL if it asks the operator to confirm or choose, treats the finish as a human stop or as deferred UAT, or accepts a merge command."
+        }
+      ],
+      "native_differences": [
+        "Claude runs the staged runner through Bash and Codex through command_execution; the question-tool checks name each host's own question tool, which the case never allows.",
+        "Both hosts receive the same frozen ledger and finalize-run request."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-autopilot/SKILL.md"
+      ]
+    },
+    {
+      "id": "functional.speckit-autopilot.red-required-gate-stays-draft",
+      "layer": "functional",
+      "capability": "Finalizes a run whose integration gate failed at one PR head: marks nothing ready, keeps the whole stack in draft, and names the failed gate, its command, and its PR head.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-autopilot capability is activated."
+        },
+        {
+          "id": "run",
+          "description": "Runs the staged finalize-run request exactly once and reads its result (SKILL.md and Codex SKILL.md: \"the stack stays in draft\")."
+        },
+        {
+          "id": "draft",
+          "description": "A gate failed at one PR head is one human stop: no stack member is marked ready and the stack stays in draft (SKILL.md and Codex SKILL.md: \"the stack stays in draft\")."
+        },
+        {
+          "id": "evidence",
+          "description": "The stop names the failed gate, its exact command, and the PR head it failed at (SKILL.md, finalize-run result `human_stop.gates`)."
+        }
+      ],
+      "prompt": "Use {{skill}} to close out a run whose last gate failed. Invoke the staged protected Python runner exactly once as one default-shell command: {resolved_python} -m speckit_pro_runner < scenario-inputs/finalize-request.json. Use no shell variable, prefix, suffix, pipe, or output redirection other than the required input redirection. Do not run any gh command and do not merge. Output only raw JSON: exactly one top-level object with deferred_digest, outcome, mark_ready, stack_state, ready_commands, failing_gate, failing_pull_request, failing_head_sha, and explanation, with no prose, Markdown, or code fences. deferred_digest, outcome, mark_ready, and ready_commands come from the runner response's data field. stack_state is draft or ready. failing_gate, failing_pull_request, and failing_head_sha come from data.human_stop.gates[0]. Do not use a shell fallback or fabricate the result.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/finalize-run/red-gate/finalize-request.json",
+          "destination": "scenario-inputs/finalize-request.json"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/finalize-run/red-gate/ledger.json",
+          "destination": ".process/execution-control/ledger.json"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/finalize-run/project.json",
+          "destination": ".specify/project.json"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read",
+            "Bash"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "read_file",
+            "command_execution"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "digest",
+          "requirement": "run",
+          "type": "response_json_field",
+          "field_path": [
+            "deferred_digest"
+          ],
+          "expected_by_host": {
+            "claude": "sha256:80d0474ec21a4e52827e39a48fdaae4bfd81cffc7d41c78e4fc0c984887e80c4",
+            "codex": "sha256:80d0474ec21a4e52827e39a48fdaae4bfd81cffc7d41c78e4fc0c984887e80c4"
+          }
+        },
+        {
+          "id": "outcome",
+          "requirement": "draft",
+          "type": "response_json_field",
+          "field_path": [
+            "outcome"
+          ],
+          "expected_by_host": {
+            "claude": "human_stop",
+            "codex": "human_stop"
+          }
+        },
+        {
+          "id": "mark-ready",
+          "requirement": "draft",
+          "type": "response_json_field",
+          "field_path": [
+            "mark_ready"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "stack-state",
+          "requirement": "draft",
+          "type": "response_json_field",
+          "field_path": [
+            "stack_state"
+          ],
+          "expected_by_host": {
+            "claude": "draft",
+            "codex": "draft"
+          }
+        },
+        {
+          "id": "ready-commands",
+          "requirement": "draft",
+          "type": "response_json_field",
+          "field_path": [
+            "ready_commands"
+          ],
+          "expected_by_host": {
+            "claude": [],
+            "codex": []
+          }
+        },
+        {
+          "id": "failing-gate",
+          "requirement": "evidence",
+          "type": "response_json_field",
+          "field_path": [
+            "failing_gate"
+          ],
+          "expected_by_host": {
+            "claude": "Post: Integration Suite",
+            "codex": "Post: Integration Suite"
+          }
+        },
+        {
+          "id": "failing-pull-request",
+          "requirement": "evidence",
+          "type": "response_json_field",
+          "field_path": [
+            "failing_pull_request"
+          ],
+          "expected_by_host": {
+            "claude": 102,
+            "codex": 102
+          }
+        },
+        {
+          "id": "failing-head",
+          "requirement": "evidence",
+          "type": "response_json_field",
+          "field_path": [
+            "failing_head_sha"
+          ],
+          "expected_by_host": {
+            "claude": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "codex": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        },
+        {
+          "id": "no-merge-or-ready-claude",
+          "requirement": "draft",
+          "type": "tool_used",
+          "name": "Bash",
+          "min": 0,
+          "max": 0,
+          "input_regex": "\\bgh\\s+pr\\s+(?:merge|ready)\\b",
+          "include_failed": true
+        },
+        {
+          "id": "no-merge-or-ready-codex",
+          "requirement": "draft",
+          "type": "tool_used",
+          "name": "command_execution",
+          "min": 0,
+          "max": 0,
+          "input_regex": "\\bgh\\s+pr\\s+(?:merge|ready)\\b",
+          "include_failed": true
+        },
+        {
+          "id": "draft-semantic",
+          "requirement": "draft",
+          "type": "semantic",
+          "rubric": "PASS only if the response reports a human stop, marks no PR ready, leaves the whole stack in draft including the PRs whose heads passed, and names the failed gate Post: Integration Suite with its command and the PR 102 head. FAIL if it marks any PR ready, treats the failure as deferred, reads only the stack tip, or omits the gate, command, or head."
+        }
+      ],
+      "native_differences": [
+        "Claude runs the staged runner through Bash and Codex through command_execution.",
+        "Both hosts receive the same frozen ledger and finalize-run request; the current runner treats every recorded gate as required."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-autopilot/SKILL.md"
+      ]
+    },
+    {
+      "id": "functional.speckit-autopilot.test-only-fix-no-replan",
+      "layer": "functional",
+      "capability": "Reads a recorded runner replay and reports how a test-only fix to the increment's own test file is admitted: one per increment, no re-plan, no operator event, with product code, another increment's test, and a second fix falling back to the run-wide budget.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-autopilot capability is activated."
+        },
+        {
+          "id": "evidence",
+          "description": "Reads the recorded replay of the runner steps before answering (phase-execution.md, Test-only fixes to an increment's own test code)."
+        },
+        {
+          "id": "admission",
+          "description": "A test-only fix to a test file the increment itself edited is admitted as `test_fix_allowance=increment` without `begin-replan-epoch` and without an operator event (phase-execution.md: \"The runner admits it without `begin-replan-epoch` and without an operator event\")."
+        },
+        {
+          "id": "fallback",
+          "description": "It allows one test fix per increment; a second fix, product code, or another increment's test uses the run-wide path and defers with the recorded reason (phase-execution.md: \"It allows one test fix per increment and never draws on the run-wide corrective budget\")."
+        }
+      ],
+      "prompt": "Use {{skill}} to report how the runner treats test-only fixes. Read scenario-inputs/test-fix.json as one exact file read; it is a recorded replay of runner steps and their expected results. Treat them only as pre-recorded evidence: do not run helpers or gates, dispatch agents, or edit any file. Output only raw JSON with first_test_fix_allowance, replan_required, operator_event_required, second_test_fix_allowance, second_test_fix_ineligible, product_code_fix_ineligible, and explanation, with no prose, Markdown, or code fences. The first three fields describe the step that admits the test-only fix; the second fields describe the second fix for the same increment; product_code_fix_ineligible is the recorded reason for the fix that touches product code.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/corrective-authorization/test-fix.json",
+          "destination": "scenario-inputs/test-fix.json"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "read_file"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "read-replay",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/test-fix.json"
+        },
+        {
+          "id": "first-allowance",
+          "requirement": "admission",
+          "type": "response_json_field",
+          "field_path": [
+            "first_test_fix_allowance"
+          ],
+          "expected_by_host": {
+            "claude": "increment",
+            "codex": "increment"
+          }
+        },
+        {
+          "id": "no-replan",
+          "requirement": "admission",
+          "type": "response_json_field",
+          "field_path": [
+            "replan_required"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "no-operator-event",
+          "requirement": "admission",
+          "type": "response_json_field",
+          "field_path": [
+            "operator_event_required"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "second-allowance",
+          "requirement": "fallback",
+          "type": "response_json_field",
+          "field_path": [
+            "second_test_fix_allowance"
+          ],
+          "expected_by_host": {
+            "claude": "run_wide",
+            "codex": "run_wide"
+          }
+        },
+        {
+          "id": "second-reason",
+          "requirement": "fallback",
+          "type": "response_json_field",
+          "field_path": [
+            "second_test_fix_ineligible"
+          ],
+          "expected_by_host": {
+            "claude": "test_fix_allowance_spent",
+            "codex": "test_fix_allowance_spent"
+          }
+        },
+        {
+          "id": "product-reason",
+          "requirement": "fallback",
+          "type": "response_json_field",
+          "field_path": [
+            "product_code_fix_ineligible"
+          ],
+          "expected_by_host": {
+            "claude": "path_not_test_code",
+            "codex": "path_not_test_code"
+          }
+        },
+        {
+          "id": "admission-semantic",
+          "requirement": "admission",
+          "type": "semantic",
+          "rubric": "PASS only if the response says the first test-only fix runs under the increment allowance without a re-plan or an operator event, and that the second fix for the same increment and the fix touching product code fall back to the run-wide path with their recorded reasons. FAIL if it requires begin-replan-epoch or an operator approval for the first fix, treats a second fix as another increment allowance, or admits the product-code fix."
+        }
+      ],
+      "native_differences": [
+        "Both hosts read the same replay; the same file is replayed against the shipped runner by the corrective-authorization runner-routes test, so the recorded results are the runner's own.",
+        "Both hosts must not run the runner or edit any file."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-autopilot/references/phase-execution.md"
+      ]
+    },
+    {
+      "id": "functional.speckit-autopilot.resolved-deferral-leaves-request",
+      "layer": "functional",
+      "capability": "Reads a recorded runner replay and reports how a deferral resolved by a completed operator-approved correction is kept in the ledger with `resolved_by` and dropped from the end-of-run request, while a second exception is refused.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-autopilot capability is activated."
+        },
+        {
+          "id": "evidence",
+          "description": "Reads the recorded replay of the runner steps before answering (execution-efficiency.md, deferred entries)."
+        },
+        {
+          "id": "resolution",
+          "description": "A completed dispatch tied to the entry's unit adds `resolved_by` and `resolved_at` and the ledger keeps the entry for audit (execution-efficiency.md: \"keeps the entry for audit\")."
+        },
+        {
+          "id": "request",
+          "description": "The end-of-run request lists only unresolved entries, so the resolved deferral leaves the request and the stack finalizes ready (execution-efficiency.md: \"list every unresolved entry\"), and a second exception is refused."
+        }
+      ],
+      "prompt": "Use {{skill}} to report how a resolved deferral ends a run. Read scenario-inputs/deferral-resolution.json as one exact file read; it is a recorded replay of runner steps and their expected results. Treat them only as pre-recorded evidence: do not run helpers or gates, dispatch agents, or edit any file. Output only raw JSON with deferral_unit, resolved_by, entry_kept_in_ledger, finalize_outcome, stack_ready, resolved_unit_in_request, second_exception_refused, and explanation, with no prose, Markdown, or code fences. deferral_unit and resolved_by come from the recorded ledger expectations. finalize_outcome and stack_ready come from the finalize step. resolved_unit_in_request says whether the request still names the deferral.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/corrective-authorization/deferral-resolution.json",
+          "destination": "scenario-inputs/deferral-resolution.json"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "read_file"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "read-replay",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/deferral-resolution.json"
+        },
+        {
+          "id": "unit",
+          "requirement": "resolution",
+          "type": "response_json_field",
+          "field_path": [
+            "deferral_unit"
+          ],
+          "expected_by_host": {
+            "claude": "FR-001",
+            "codex": "FR-001"
+          }
+        },
+        {
+          "id": "resolved-by",
+          "requirement": "resolution",
+          "type": "response_json_field",
+          "field_path": [
+            "resolved_by"
+          ],
+          "expected_by_host": {
+            "claude": "fix-c",
+            "codex": "fix-c"
+          }
+        },
+        {
+          "id": "kept",
+          "requirement": "resolution",
+          "type": "response_json_field",
+          "field_path": [
+            "entry_kept_in_ledger"
+          ],
+          "expected_by_host": {
+            "claude": true,
+            "codex": true
+          }
+        },
+        {
+          "id": "outcome",
+          "requirement": "request",
+          "type": "response_json_field",
+          "field_path": [
+            "finalize_outcome"
+          ],
+          "expected_by_host": {
+            "claude": "complete",
+            "codex": "complete"
+          }
+        },
+        {
+          "id": "ready",
+          "requirement": "request",
+          "type": "response_json_field",
+          "field_path": [
+            "stack_ready"
+          ],
+          "expected_by_host": {
+            "claude": true,
+            "codex": true
+          }
+        },
+        {
+          "id": "omitted",
+          "requirement": "request",
+          "type": "response_json_field",
+          "field_path": [
+            "resolved_unit_in_request"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "second-refused",
+          "requirement": "request",
+          "type": "response_json_field",
+          "field_path": [
+            "second_exception_refused"
+          ],
+          "expected_by_host": {
+            "claude": true,
+            "codex": true
+          }
+        },
+        {
+          "id": "resolution-semantic",
+          "requirement": "resolution",
+          "type": "semantic",
+          "rubric": "PASS only if the response says the FR-001 deferral was resolved by the completed fix-c dispatch, that the ledger keeps the entry with resolved_by, that the finalize result is complete with the stack ready and no mention of FR-001 in the request, and that a second exception is refused. FAIL if it lists the resolved deferral in the request, drops the ledger entry, holds the stack in draft, or accepts a second exception."
+        }
+      ],
+      "native_differences": [
+        "Both hosts read the same replay; the corrective-authorization runner-routes test replays it against the shipped runner, including the finalize-run step.",
+        "A forged resolution fails closed in the finalize-run unit tests; a replay cannot forge the ledger, so this case does not grade it."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-autopilot/references/execution-efficiency.md"
+      ]
+    },
+    {
+      "id": "functional.speckit-autopilot.blocked-action-defers",
+      "layer": "functional",
+      "capability": "Decides what the run does when one task's action is blocked and no fallback is defined: defers that task and its dependents, keeps running the independent tasks, and asks nothing mid-run.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-autopilot capability is activated."
+        },
+        {
+          "id": "evidence",
+          "description": "Reads the task list and the blocked-action record before deciding (phase-execution.md, Blocked Actions Mid-Run)."
+        },
+        {
+          "id": "defer",
+          "description": "With no defined fallback, the blocked task and every task that depends on it are deferred and nothing invents a workaround (phase-execution.md: \"With no defined fallback, defer that task.\")."
+        },
+        {
+          "id": "continue",
+          "description": "The independent tasks keep running and the run asks the operator nothing from inside the task (phase-execution.md: \"Never ask the operator from inside the task\")."
+        }
+      ],
+      "prompt": "Use {{skill}} to decide what the run does about a blocked action. Read scenario-inputs/tasks.md and scenario-inputs/blocked-record.json, each as one exact file read. Treat them only as pre-recorded evidence: do not run helpers or gates, dispatch agents, or edit any file. Output only raw JSON with deferred_tasks, continuing_tasks, fallback_applied, mid_run_question, and explanation, with no prose, Markdown, or code fences. deferred_tasks and continuing_tasks are sorted arrays of the open task ids. fallback_applied says whether the run applied a fallback the task or spec defines. mid_run_question says whether the run asks the operator anything before the end of the run.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/blocked-action-defers/tasks.md",
+          "destination": "scenario-inputs/tasks.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/blocked-action-defers/blocked-record.json",
+          "destination": "scenario-inputs/blocked-record.json"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "read_file"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "read-tasks",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/tasks.md"
+        },
+        {
+          "id": "read-blocked-record",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/blocked-record.json"
+        },
+        {
+          "id": "deferred",
+          "requirement": "defer",
+          "type": "response_json_field",
+          "field_path": [
+            "deferred_tasks"
+          ],
+          "expected_by_host": {
+            "claude": [
+              "T007",
+              "T009"
+            ],
+            "codex": [
+              "T007",
+              "T009"
+            ]
+          }
+        },
+        {
+          "id": "fallback",
+          "requirement": "defer",
+          "type": "response_json_field",
+          "field_path": [
+            "fallback_applied"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "continuing",
+          "requirement": "continue",
+          "type": "response_json_field",
+          "field_path": [
+            "continuing_tasks"
+          ],
+          "expected_by_host": {
+            "claude": [
+              "T008",
+              "T010"
+            ],
+            "codex": [
+              "T008",
+              "T010"
+            ]
+          }
+        },
+        {
+          "id": "no-question",
+          "requirement": "continue",
+          "type": "response_json_field",
+          "field_path": [
+            "mid_run_question"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "defer-semantic",
+          "requirement": "defer",
+          "type": "semantic",
+          "rubric": "PASS only if the response defers T007 with its blocked action and reason, defers T009 because it depends on T007, keeps T008 and T010 running, applies no invented workaround, and asks no mid-run question. FAIL if it stops the run, asks the operator, retries the blocked action by another route, or defers or blocks an independent task."
+        }
+      ],
+      "native_differences": [
+        "Both hosts apply the same blocked-action rule from their own phase-execution reference.",
+        "Both hosts receive the same pre-recorded evidence and must not run any command."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-autopilot/references/phase-execution.md"
+      ]
+    },
+    {
+      "id": "functional.speckit-autopilot.codex-run-start-grant",
+      "layer": "functional",
+      "capability": "Renders the paste-ready run-start egress authorization for the actions a run needs and reports it as one normal chat message, never a goal edit and never a mid-run stop.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-autopilot capability is activated."
+        },
+        {
+          "id": "run",
+          "description": "Runs the staged render-egress-authorization request exactly once and preserves its result (phase-execution.md: \"Show its output unchanged; do not write the text by hand.\")."
+        },
+        {
+          "id": "grant",
+          "description": "The grant covers every uncovered egress action in one authorization message, delivered as a normal chat message in the thread and never as a goal edit (phase-execution.md: \"Uncovered plan-derived data egress: the preflight asks for it as a chat reply.\")."
+        }
+      ],
+      "prompt": "Use {{skill}} to render the run-start egress authorization. Invoke the staged protected Python runner exactly once as one default-shell command: {resolved_python} -m speckit_pro_runner < scenario-inputs/render-egress-request.json. Use no shell variable, prefix, suffix, pipe, or output redirection other than the required input redirection. Do not write any file. Output only raw JSON: exactly one top-level object with action_ids, delivery_channel, authorization_message_sha256, and explanation, with no prose, Markdown, or code fences. action_ids and authorization_message_sha256 come from the runner response's data field. delivery_channel is chat_message when data.delivery says to send the authorization as a normal chat message, or goal_edit when it says to edit the thread goal. Do not use a shell fallback or fabricate the result.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/run-start-grant/render-egress-request.json",
+          "destination": "scenario-inputs/render-egress-request.json"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read",
+            "Bash"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "read_file",
+            "command_execution"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "action-ids",
+          "requirement": "grant",
+          "type": "response_json_field",
+          "field_path": [
+            "action_ids"
+          ],
+          "expected_by_host": {
+            "claude": [
+              "live-skill-eval",
+              "push-feature-branch"
+            ],
+            "codex": [
+              "live-skill-eval",
+              "push-feature-branch"
+            ]
+          }
+        },
+        {
+          "id": "delivery",
+          "requirement": "grant",
+          "type": "response_json_field",
+          "field_path": [
+            "delivery_channel"
+          ],
+          "expected_by_host": {
+            "claude": "chat_message",
+            "codex": "chat_message"
+          }
+        },
+        {
+          "id": "digest",
+          "requirement": "run",
+          "type": "response_json_field",
+          "field_path": [
+            "authorization_message_sha256"
+          ],
+          "expected_by_host": {
+            "claude": "sha256:e904eec73380204c10cc78ab23b197ead67f98bc225b5df237cc6df9eb2c6324",
+            "codex": "sha256:e904eec73380204c10cc78ab23b197ead67f98bc225b5df237cc6df9eb2c6324"
+          }
+        },
+        {
+          "id": "grant-semantic",
+          "requirement": "grant",
+          "type": "semantic",
+          "rubric": "PASS only if the response reports both actions covered by one authorization message that the operator sends as a normal chat message in the thread, unchanged from the helper output. FAIL if it delivers the grant as a goal edit, writes the message by hand, omits an action, or stops the run to ask for the grant mid-run."
+        }
+      ],
+      "native_differences": [
+        "The chat-reply delivery rule is Codex guidance; Claude runs the same helper and reports its delivery line, so both hosts grade the same helper result.",
+        "Only the egress grant is graded: run-start tool-install grants are not built on this branch."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-autopilot/references/phase-execution.md"
+      ]
+    },
+    {
+      "id": "functional.speckit-autopilot.missing-quality-tool-install-hint",
+      "layer": "functional",
+      "capability": "Resolves a missing quality-gate tool without asking: a recorded answer wins, otherwise the run carries out the recorded install hint and falls back to skip (spec) only when the install fails.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-autopilot capability is activated."
+        },
+        {
+          "id": "evidence",
+          "description": "Reads the workflow Quality Gates table and the recorded slot facts before deciding (prerequisites.md, Step 0.11)."
+        },
+        {
+          "id": "default",
+          "description": "With no recorded answer, the run defaults to the recorded install hint, then skip (spec), and a recorded operator answer wins (prerequisites.md: \"default to the recorded install hint, then `skip (spec)`\")."
+        },
+        {
+          "id": "no-question",
+          "description": "The run never asks the operator, and a failed install is listed under Decisions for you (prerequisites.md: \"the run never asks\")."
+        }
+      ],
+      "prompt": "Use {{skill}} to resolve the missing quality-gate tools. Read scenario-inputs/workflow.md and scenario-inputs/quality-slots.json, each as one exact file read. Treat them only as pre-recorded evidence: do not run helpers, install anything, dispatch agents, or edit any file. Output only raw JSON with question_offered, install_commands_run, outcomes, decisions_for_you, and explanation, with no prose, Markdown, or code fences. question_offered says whether the run asks the operator anything. install_commands_run is the sorted array of install hints the run carries out. outcomes maps each slot to exactly one of install, skip (spec), or skip (repo). decisions_for_you is the sorted array of slots listed under Decisions for you.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/missing-quality-tool-install-hint/workflow.md",
+          "destination": "scenario-inputs/workflow.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/missing-quality-tool-install-hint/quality-slots.json",
+          "destination": "scenario-inputs/quality-slots.json"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "read_file"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "read-workflow",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/workflow.md"
+        },
+        {
+          "id": "read-slots",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/quality-slots.json"
+        },
+        {
+          "id": "no-question-field",
+          "requirement": "no-question",
+          "type": "response_json_field",
+          "field_path": [
+            "question_offered"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "install-commands",
+          "requirement": "default",
+          "type": "response_json_field",
+          "field_path": [
+            "install_commands_run"
+          ],
+          "expected_by_host": {
+            "claude": [
+              "pip install lizard",
+              "pip install mutmut"
+            ],
+            "codex": [
+              "pip install lizard",
+              "pip install mutmut"
+            ]
+          }
+        },
+        {
+          "id": "slot-outcomes",
+          "requirement": "default",
+          "type": "response_json_field",
+          "field_path": [
+            "outcomes"
+          ],
+          "expected_by_host": {
+            "claude": {
+              "COMPLEXITY": "install",
+              "MUTATION": "skip (spec)",
+              "DEPENDENCY_RULES": "skip (repo)"
+            },
+            "codex": {
+              "COMPLEXITY": "install",
+              "MUTATION": "skip (spec)",
+              "DEPENDENCY_RULES": "skip (repo)"
+            }
+          }
+        },
+        {
+          "id": "decisions-for-you",
+          "requirement": "no-question",
+          "type": "response_json_field",
+          "field_path": [
+            "decisions_for_you"
+          ],
+          "expected_by_host": {
+            "claude": [
+              "MUTATION"
+            ],
+            "codex": [
+              "MUTATION"
+            ]
+          }
+        },
+        {
+          "id": "install-hint-semantic",
+          "requirement": "default",
+          "type": "semantic",
+          "rubric": "PASS only if the response installs through the recorded hint for COMPLEXITY, records skip (spec) for MUTATION after its install failed and lists it under Decisions for you, keeps the recorded skip (repo) for DEPENDENCY_RULES without an install, and asks the operator nothing. FAIL if it asks the operator to choose install or skip, records unanswered, stops the run, or reinstalls the tool that already carries a recorded answer."
+        }
+      ],
+      "native_differences": [
+        "Both hosts apply the same Step 0.11 default from their own prerequisites reference; the run-start authorization already grants installs, so no host asks.",
+        "Both hosts receive the same pre-recorded slot evidence and must not run any install."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-autopilot/references/prerequisites.md"
+      ]
+    },
+    {
+      "id": "functional.speckit-autopilot.red-baseline-repaired-by-implement-executor",
+      "layer": "functional",
+      "capability": "Routes a red baseline test suite to the implement-executor for repair, holds Phase 1 while the repair allowance lasts, and asks the operator nothing.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-autopilot capability is activated."
+        },
+        {
+          "id": "evidence",
+          "description": "Reads the workflow Prerequisites table and the recorded baseline attempts before deciding (prerequisites.md, Step 0.9)."
+        },
+        {
+          "id": "repair",
+          "description": "A failing baseline check goes to the implement-executor, which repairs it within its allowance (prerequisites.md: \"route the failing check to the implement-executor\")."
+        },
+        {
+          "id": "no-stop",
+          "description": "The run neither stops nor asks; Phase 1 waits for a passing or deferred baseline (prerequisites.md: \"Phase 1 starts once the check passes, or once the failure is deferred with its evidence\")."
+        }
+      ],
+      "prompt": "Use {{skill}} to decide what the run does next about a failing baseline. Read scenario-inputs/workflow.md and scenario-inputs/baseline-attempts.json, each as one exact file read. Treat them only as pre-recorded evidence: do not run helpers or tests, dispatch agents, or edit any file. Output only raw JSON with repair_allowance_spent, owner, next_action, rerun_command, phase_one_starts, question_offered, and explanation, with no prose, Markdown, or code fences. owner is the agent that repairs the failing check. next_action is exactly one of repair, defer, or stop. rerun_command is the check the owner reruns. phase_one_starts says whether Phase 1 starts now. question_offered says whether the run asks the operator anything.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/red-baseline-repaired-by-implement-executor/workflow.md",
+          "destination": "scenario-inputs/workflow.md"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/red-baseline-repaired-by-implement-executor/baseline-attempts.json",
+          "destination": "scenario-inputs/baseline-attempts.json"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "read_file"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "read-workflow",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/workflow.md"
+        },
+        {
+          "id": "read-baseline-attempts",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/baseline-attempts.json"
+        },
+        {
+          "id": "allowance-spent",
+          "requirement": "repair",
+          "type": "response_json_field",
+          "field_path": [
+            "repair_allowance_spent"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "repair-owner",
+          "requirement": "repair",
+          "type": "response_json_field",
+          "field_path": [
+            "owner"
+          ],
+          "expected_by_host": {
+            "claude": "implement-executor",
+            "codex": "implement-executor"
+          }
+        },
+        {
+          "id": "next-action",
+          "requirement": "repair",
+          "type": "response_json_field",
+          "field_path": [
+            "next_action"
+          ],
+          "expected_by_host": {
+            "claude": "repair",
+            "codex": "repair"
+          }
+        },
+        {
+          "id": "rerun-command",
+          "requirement": "repair",
+          "type": "response_json_field",
+          "field_path": [
+            "rerun_command"
+          ],
+          "expected_by_host": {
+            "claude": "python3 -m pytest -q",
+            "codex": "python3 -m pytest -q"
+          }
+        },
+        {
+          "id": "phase-one-waits",
+          "requirement": "no-stop",
+          "type": "response_json_field",
+          "field_path": [
+            "phase_one_starts"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "no-question",
+          "requirement": "no-stop",
+          "type": "response_json_field",
+          "field_path": [
+            "question_offered"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "repair-semantic",
+          "requirement": "repair",
+          "type": "semantic",
+          "rubric": "PASS only if the response routes the red baseline to the implement-executor to repair, reruns python3 -m pytest -q afterward, holds Phase 1 until the baseline passes or its failure is deferred with evidence, and asks the operator nothing. FAIL if it stops the run, asks the operator, starts Phase 1 on a red baseline, or routes the repair to anyone other than the implement-executor."
+        }
+      ],
+      "native_differences": [
+        "Both hosts apply the same Step 0.9 rule from their own prerequisites reference; the repair goes to the implement-executor agent on either host.",
+        "Both hosts receive the same pre-recorded baseline evidence and must not run any test."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-autopilot/references/prerequisites.md"
+      ]
+    },
+    {
+      "id": "functional.speckit-autopilot.pr-split-over-budget-reslices",
+      "layer": "functional",
+      "capability": "Runs ratify-pr-split on a split whose increment is over the path cap: the result asks for a re-slice through the orchestrator, ratifies nothing, and carries no operator stop reason.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-autopilot capability is activated."
+        },
+        {
+          "id": "run",
+          "description": "Runs the staged ratify-pr-split request exactly once and reads its result (phase-execution.md: \"`decision=reslice_required`\")."
+        },
+        {
+          "id": "reslice",
+          "description": "An increment over the cap is a size finding: the decision is reslice_required, nothing is ratified, and the orchestrator owns the repair (phase-execution.md: \"follow `data.repair`\")."
+        },
+        {
+          "id": "no-operator",
+          "description": "A size-only finding carries no scope-changing stop reason, so the operator is not asked (phase-execution.md: \"Ask the operator only when the helper returns `decision=operator_required`\")."
+        }
+      ],
+      "prompt": "Use {{skill}} to route a budget-driven PR split. Invoke the staged protected Python runner exactly once as one default-shell command: {resolved_python} -m speckit_pro_runner < scenario-inputs/ratify-request.json. Use no shell variable, prefix, suffix, pipe, or output redirection other than the required input redirection. Do not run any gh command and do not merge. Output only raw JSON: exactly one top-level object with decision, owner_ratification, ratified_by, repair_owner, repair_retry, operator_stop_reason, and explanation, with no prose, Markdown, or code fences. decision, owner_ratification, and ratified_by come from the runner response's data field. repair_owner and repair_retry come from data.repair. operator_stop_reason is data.stop_reason, or null when the field is absent. Do not use a shell fallback or fabricate the result.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/pr-split-reslice/reslice-request.json",
+          "destination": "scenario-inputs/ratify-request.json"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read",
+            "Bash"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "read_file",
+            "command_execution"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "decision",
+          "requirement": "run",
+          "type": "response_json_field",
+          "field_path": [
+            "decision"
+          ],
+          "expected_by_host": {
+            "claude": "reslice_required",
+            "codex": "reslice_required"
+          }
+        },
+        {
+          "id": "owner-ratification",
+          "requirement": "reslice",
+          "type": "response_json_field",
+          "field_path": [
+            "owner_ratification"
+          ],
+          "expected_by_host": {
+            "claude": "pending",
+            "codex": "pending"
+          }
+        },
+        {
+          "id": "ratified-by",
+          "requirement": "reslice",
+          "type": "response_json_field",
+          "field_path": [
+            "ratified_by"
+          ],
+          "expected_by_host": {
+            "claude": null,
+            "codex": null
+          }
+        },
+        {
+          "id": "repair-owner",
+          "requirement": "reslice",
+          "type": "response_json_field",
+          "field_path": [
+            "repair_owner"
+          ],
+          "expected_by_host": {
+            "claude": "orchestrator",
+            "codex": "orchestrator"
+          }
+        },
+        {
+          "id": "repair-retry",
+          "requirement": "reslice",
+          "type": "response_json_field",
+          "field_path": [
+            "repair_retry"
+          ],
+          "expected_by_host": {
+            "claude": "ratify-pr-split",
+            "codex": "ratify-pr-split"
+          }
+        },
+        {
+          "id": "operator-stop-reason",
+          "requirement": "no-operator",
+          "type": "response_json_field",
+          "field_path": [
+            "operator_stop_reason"
+          ],
+          "expected_by_host": {
+            "claude": null,
+            "codex": null
+          }
+        },
+        {
+          "id": "no-merge-or-ready-claude",
+          "requirement": "no-operator",
+          "type": "tool_used",
+          "name": "Bash",
+          "min": 0,
+          "max": 0,
+          "input_regex": "\\bgh\\s+pr\\s+(?:merge|ready)\\b",
+          "include_failed": true
+        },
+        {
+          "id": "no-merge-or-ready-codex",
+          "requirement": "no-operator",
+          "type": "tool_used",
+          "name": "command_execution",
+          "min": 0,
+          "max": 0,
+          "input_regex": "\\bgh\\s+pr\\s+(?:merge|ready)\\b",
+          "include_failed": true
+        },
+        {
+          "id": "no-claude-question",
+          "requirement": "no-operator",
+          "type": "tool_used",
+          "name": "AskUserQuestion",
+          "min": 0,
+          "max": 0,
+          "include_failed": true
+        },
+        {
+          "id": "no-codex-question",
+          "requirement": "no-operator",
+          "type": "tool_used",
+          "name": "request_user_input",
+          "min": 0,
+          "max": 0,
+          "include_failed": true
+        },
+        {
+          "id": "reslice-semantic",
+          "requirement": "reslice",
+          "type": "semantic",
+          "rubric": "PASS only if the response reports decision reslice_required with owner_ratification pending, names the orchestrator as the repair owner with ratify-pr-split as the retry, and carries no operator stop reason. FAIL if it reports operator_required, marks the split ratified, asks the operator to decide, or invents a scope-changing stop reason."
+        }
+      ],
+      "native_differences": [
+        "Claude runs the staged runner through Bash and Codex through command_execution.",
+        "Both hosts receive the same frozen ratify-pr-split request; the runner result decides the answer."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-autopilot/references/phase-execution.md"
+      ]
+    },
+    {
       "id": "parity.02-scaffold-relocation-guidance",
       "layer": "parity",
       "capability": "Use the host-native scaffold capability to inspect a real staged legacy-spec topology, identify the sole eligible Tier-2 PROCESS relocation candidate, preserve all source artifacts, report the deferred runner gap, and produce equivalent Claude and Codex guidance without invoking a retired or invented operation.",
@@ -21519,7 +24397,6 @@
         "The report is evaluation evidence only. Both clients must derive the same guidance from their installed scaffold skill and the same neutral staged topology; neither executes the broader scaffold workflow."
       ],
       "provenance": [
-        "tests/speckit-pro/layer7-parity/02-repository-migration-guidance",
         "tests/speckit-pro/layer3-functional/evals/speckit-scaffold-spec-evals.json#eval-id=1",
         "tests/speckit-pro/layer3-functional/codex-evals/speckit-scaffold-spec-evals.json#eval-id=8",
         "tests/speckit-pro/evals/audit/integration-parity-inventory.json#legacy_id=parity-02-repository-migration-guidance"
@@ -21785,6 +24662,242 @@
       "provenance": [
         "tests/speckit-pro/layer7-parity/01-post-impl-parity",
         "tests/speckit-pro/evals/audit/integration-parity-inventory.json#legacy_id=parity-01-post-impl"
+      ]
+    },
+    {
+      "id": "parity.03-stop-policy-finish",
+      "layer": "parity",
+      "capability": "Run the real finalize-run helper on the same three-PR stack through both hosts and report the same finish: ready for review, one ready command per PR, no draft hold for human UAT, no merge, and no question tool on either host.",
+      "required_tools": [
+        "specify"
+      ],
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "activation",
+          "description": "The host-native speckit-autopilot capability is activated."
+        },
+        {
+          "id": "runner",
+          "description": "The protected runner is invoked exactly once on the staged finalize-run request and its result is the whole decision."
+        },
+        {
+          "id": "finish",
+          "description": "The report records the runner's outcome, a stack ready for review, no draft hold, and one ready command per PR, bottom first."
+        },
+        {
+          "id": "forbidden-invocation",
+          "description": "Neither host runs a merge, a push, a `gh pr` command, or a question tool, including a failed attempt."
+        },
+        {
+          "id": "preservation",
+          "description": "The only final workspace addition is the declared report."
+        },
+        {
+          "id": "parity",
+          "description": "After each host independently passes, the outcome, ready-command, and no-question fields are equivalent."
+        }
+      ],
+      "prompt": "Use {{skill}} to finish the run. Invoke the staged protected Python runner exactly once as one default-shell command: {{resolved_python}} -m speckit_pro_runner < scenario-inputs/finalize-request.json. Use no shell variable, prefix, suffix, pipe, or output redirection other than the required input redirection. Do not run gh, git push, or any merge, and do not ask the operator a question: the runner result is the whole decision. Then write artifacts/parity-03-stop-policy-finish.md with these Markdown tables: under ## Outcome use columns Field and Value with one row each for outcome, stack_ready, keeps_draft, decision_count, and question_asked; under ## Ready Commands use one column, Command, with one row per ready command in the runner's order. Derive every value from the runner result; the requested table shape is not an answer key. Then stop without creating a commit.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/parity/03-stop-policy-finish/finalize-request.json",
+          "destination": "scenario-inputs/finalize-request.json"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/parity/03-stop-policy-finish/ledger.json",
+          "destination": ".process/execution-control/ledger.json"
+        },
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/scaffold-reviewability/project.json",
+          "destination": ".specify/project.json"
+        }
+      ],
+      "git_fixture": {
+        "recipe": "baseline-feature-origin-main/v1",
+        "baseline": [
+          {
+            "source": "tests/speckit-pro/evals/fixtures/parity/parity-02-scaffold-relocation-guidance/baseline.md",
+            "destination": "README.md"
+          }
+        ]
+      },
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read",
+            "Bash",
+            "Write"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "read_file",
+            "command_execution",
+            "apply_patch"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "activation",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "runner-invoked-claude",
+          "requirement": "runner",
+          "type": "tool_used",
+          "name": "Bash",
+          "min": 1,
+          "max": 1,
+          "input_regex": "speckit_pro_runner"
+        },
+        {
+          "id": "runner-invoked-codex",
+          "requirement": "runner",
+          "type": "tool_used",
+          "name": "command_execution",
+          "min": 1,
+          "max": 1,
+          "input_regex": "speckit_pro_runner"
+        },
+        {
+          "id": "no-claude-gh",
+          "requirement": "forbidden-invocation",
+          "type": "tool_used",
+          "name": "Bash",
+          "min": 0,
+          "max": 0,
+          "input_regex": "\\bgh\\s+pr\\b|\\bgit\\s+push\\b",
+          "include_failed": true
+        },
+        {
+          "id": "no-codex-gh",
+          "requirement": "forbidden-invocation",
+          "type": "tool_used",
+          "name": "command_execution",
+          "min": 0,
+          "max": 0,
+          "input_regex": "\\bgh\\s+pr\\b|\\bgit\\s+push\\b",
+          "include_failed": true
+        },
+        {
+          "id": "preservation-boundary",
+          "requirement": "preservation",
+          "type": "native_git_final_state",
+          "head_equals_initial_feature": true,
+          "branch": "feature",
+          "commit_count": 0,
+          "commits_added": [],
+          "changed_tracked_paths_from_initial_feature": [],
+          "status": {
+            "clean": false,
+            "tracked_dirty": false,
+            "untracked_dirty": true,
+            "tracked": [],
+            "untracked": [
+              "artifacts/parity-03-stop-policy-finish.md"
+            ]
+          }
+        },
+        {
+          "id": "report-exists",
+          "requirement": "parity",
+          "type": "file_exists",
+          "path": "artifacts/parity-03-stop-policy-finish.md",
+          "exists": true
+        },
+        {
+          "id": "report-outcome-table",
+          "requirement": "finish",
+          "type": "text",
+          "source": "artifacts/parity-03-stop-policy-finish.md",
+          "pattern": "(?m)^## Outcome\\s*$"
+        },
+        {
+          "id": "report-ready-table",
+          "requirement": "finish",
+          "type": "text",
+          "source": "artifacts/parity-03-stop-policy-finish.md",
+          "pattern": "(?m)^## Ready Commands\\s*$"
+        },
+        {
+          "id": "report-ready-commands",
+          "requirement": "finish",
+          "type": "text",
+          "source": "artifacts/parity-03-stop-policy-finish.md",
+          "pattern": "gh pr ready 101[\\s\\S]*gh pr ready 102[\\s\\S]*gh pr ready 103"
+        },
+        {
+          "id": "report-no-merge",
+          "requirement": "forbidden-invocation",
+          "type": "text",
+          "source": "artifacts/parity-03-stop-policy-finish.md",
+          "pattern": "\\A(?![\\s\\S]*gh pr merge)[\\s\\S]*\\Z"
+        },
+        {
+          "id": "no-claude-question",
+          "requirement": "forbidden-invocation",
+          "type": "tool_used",
+          "name": "AskUserQuestion",
+          "min": 0,
+          "max": 0,
+          "include_failed": true
+        },
+        {
+          "id": "no-codex-question",
+          "requirement": "forbidden-invocation",
+          "type": "tool_used",
+          "name": "request_user_input",
+          "min": 0,
+          "max": 0,
+          "include_failed": true
+        },
+        {
+          "id": "finish-semantic",
+          "requirement": "finish",
+          "type": "semantic",
+          "rubric": "PASS only if retained tool evidence shows exactly one protected runner invocation on the staged request and the report records outcome complete_with_deferred, stack_ready true, keeps_draft false, decision_count 0, question_asked false, and one ready command per PR. FAIL if the report contradicts the runner result, holds the stack in draft for human UAT alone, or claims a merge, push, or question."
+        }
+      ],
+      "pairing": {
+        "schema": "native-eval-pair/v1",
+        "arms": {
+          "claude": "plugin",
+          "codex": "project"
+        },
+        "checks": [
+          {
+            "id": "stop-policy-finish-parity",
+            "requirement": "parity",
+            "type": "comparison_plan",
+            "expected_path": "tests/speckit-pro/evals/fixtures/parity/03-stop-policy-finish/expected-equivalence.json",
+            "tolerance_path": "tests/speckit-pro/evals/fixtures/parity/03-stop-policy-finish/tolerance.json",
+            "invariant_keys": []
+          }
+        ]
+      },
+      "native_differences": [
+        "Claude runs the runner through Bash; Codex through command_execution. The report is evaluation evidence only, and both hosts must derive the same finish from the same staged request."
+      ],
+      "provenance": [
+        "speckit-pro/speckit_pro_runner/helpers/run_finalization.py",
+        "speckit-pro/skills/speckit-autopilot/references/phase-execution.md"
       ]
     }
   ]

@@ -337,6 +337,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+      actions: read
 
     steps:
       - name: Checkout preflight helper
@@ -346,11 +347,9 @@ jobs:
           persist-credentials: false
 
       - name: Set up exact hosted Python
-        id: setup-python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ env.HOSTED_PYTHON_VERSION }}
-          check-latest: false
 
       - name: Report Linux amd64 required-check verdict
         if: always() && steps.checkout.outcome == 'success'
@@ -362,6 +361,7 @@ jobs:
           CHANGES_RESULT: ${{ needs.changes.result }}
           RUN_PREFLIGHT: ${{ needs.changes.outputs.run_preflight }}
           PREFLIGHT_RESULT: ${{ needs.linux-amd64-preflight.result }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: import runpy; runpy.run_path("tests/speckit-pro/run-container-preflight.py", run_name="__main__")
 
       - name: Upload Linux amd64 required-check evidence
@@ -382,6 +382,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+      actions: read
 
     steps:
       - name: Checkout preflight helper
@@ -391,11 +392,9 @@ jobs:
           persist-credentials: false
 
       - name: Set up exact hosted Python
-        id: setup-python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ env.HOSTED_PYTHON_VERSION }}
-          check-latest: false
 
       - name: Report Linux arm64 required-check verdict
         if: always() && steps.checkout.outcome == 'success'
@@ -407,6 +406,7 @@ jobs:
           CHANGES_RESULT: ${{ needs.changes.result }}
           RUN_PREFLIGHT: ${{ needs.changes.outputs.run_preflight }}
           PREFLIGHT_RESULT: ${{ needs.linux-arm64-preflight.result }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: import runpy; runpy.run_path("tests/speckit-pro/run-container-preflight.py", run_name="__main__")
 
       - name: Upload Linux arm64 required-check evidence

@@ -6,10 +6,12 @@ version fields but does not rebuild the generated payloads. This refreshes
 them from the current source tree so a release PR is self-consistent before
 merge:
 
-1. Recompute the runner trust metadata (manifest sha256 entries + ``.sha256``).
-2. Rebuild the Claude and Codex install payloads.
-3. Sync the marketplace registries to the source plugin versions.
-4. Refresh tracked spec-index maps.
+1. Regenerate each paired role's Codex agent TOML, and the Codex agent hook
+   policy, from its Claude agent.
+2. Recompute the runner trust metadata (manifest sha256 entries + ``.sha256``).
+3. Rebuild the Claude and Codex install payloads.
+4. Sync the marketplace registries to the source plugin versions.
+5. Refresh tracked spec-index maps.
 
 The refresh is idempotent: a second run on the same source makes no further
 changes. It does NOT regenerate the docs reference — the release workflow runs
@@ -35,13 +37,30 @@ sys.dont_write_bytecode = True
 
 RUNNER_MANIFEST_FILE = "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
 RUNNER_CHECKSUM_FILE = "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
-RUNNER_DATA_FILES = ("agent_inventory.json",)
 
 # marketplace registry -> within-plugin manifest read from each entry's source dir
 MARKETPLACES = (
     (".claude-plugin/marketplace.json", ".claude-plugin/plugin.json"),
     (".agents/plugins/marketplace.json", ".codex-plugin/plugin.json"),
 )
+
+PLUGIN_SOURCE_ROOT = Path(__file__).resolve().parents[1] / "speckit-pro"
+sys.path.insert(0, str(PLUGIN_SOURCE_ROOT))
+from speckit_pro_runner.agent_inventory import AGENT_INVENTORY  # noqa: E402
+from speckit_pro_runner.host_parity import CODEX_HOOK_POLICY_FILE, pairing_manifest  # noqa: E402
+
+# Codex agents generated from a Claude twin, and their hook policy; a
+# Codex-only agent stays authored.
+GENERATED_CODEX_AGENTS = tuple(
+    sorted(
+        f"speckit-pro/{path}"
+        for path in (
+            *(role.codex_source for role in pairing_manifest(AGENT_INVENTORY).paired.values()),
+            CODEX_HOOK_POLICY_FILE,
+        )
+    )
+)
+
 
 CHECK_WORKTREE_PATHS = (
     "dist",
@@ -52,6 +71,7 @@ CHECK_WORKTREE_PATHS = (
     RUNNER_CHECKSUM_FILE,
     ":(glob)specs/*/SPEC-MOC.md",
     ":(glob)docs/ai/specs/*-roadmap-MOC.md",
+    *GENERATED_CODEX_AGENTS,
 )
 CHECK_COPY_IGNORES = {
     ".git",
@@ -83,20 +103,33 @@ def refresh_release_artifacts(repo_root: Path) -> int:
     runner_root = repo_root / "speckit-pro"
     sys.path.insert(0, str(runner_root))
 
+    from speckit_pro_runner.agent_inventory import load_agent_inventory
+    from speckit_pro_runner.codex_agent_generator import refresh_codex_agents
     from speckit_pro_runner.gates import payloads
+    from speckit_pro_runner.host_skills import codex_skill_overlay_errors
+
+    overlay_errors = codex_skill_overlay_errors(runner_root)
+    if overlay_errors:
+        for error in overlay_errors:
+            print(f"::error::{error}", file=sys.stderr)
+        return 1
 
     changed: list[str] = []
 
-    # 1. Runner trust metadata (manifest sha256 entries + .sha256 companion).
+    # 1. Generated Codex agents and their hook policy, before the trust
+    #    metadata hashes the policy file and the payloads copy both.
+    changed += refresh_codex_agents(runner_root, load_agent_inventory())
+
+    # 2. Runner trust metadata (manifest sha256 entries + .sha256 companion).
     changed += refresh_runner_trust_metadata(repo_root)
 
-    # 2. Rebuild Claude and Codex payloads.
+    # 3. Rebuild Claude and Codex payloads.
     payloads.build_installed_plugin_payloads(repo_root, repo_root / "dist")
 
-    # 3. Sync marketplace versions to the source plugin versions.
+    # 4. Sync marketplace versions to the source plugin versions.
     changed += sync_marketplace_versions(repo_root)
 
-    # 4. Refresh tracked spec-index maps through the runner's mutation contract.
+    # 5. Refresh tracked spec-index maps through the runner's mutation contract.
     try:
         changed += refresh_spec_index(repo_root)
     except (OSError, RuntimeError, ValueError) as exc:
@@ -354,10 +387,10 @@ def report_check_drift(drift: Sequence[str], stderr: TextIO) -> None:
 def refresh_runner_trust_metadata(repo_root: Path) -> list[str]:
     plugin_root = repo_root / "speckit-pro"
     package_dir = plugin_root / "speckit_pro_runner"
-    source_files = sorted(
-        [path for path in package_dir.rglob("*.py") if "__pycache__" not in path.parts]
-        + [package_dir / name for name in RUNNER_DATA_FILES]
-    )
+    sys.path.insert(0, str(plugin_root))
+    from speckit_pro_runner.runtime import runner_source_files
+
+    source_files = runner_source_files(package_dir)
     digests = {path.relative_to(plugin_root).as_posix(): sha256_file(path) for path in source_files}
 
     changed: list[str] = []

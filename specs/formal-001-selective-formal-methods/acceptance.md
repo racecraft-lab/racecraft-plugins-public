@@ -137,7 +137,7 @@ Organization runner admission and VM sizing are not inferred from this repositor
 
 ## Trace and Quint layer evidence
 
-- Native trace qualification passed 31/31 Apalache/Quint and 26/26 TLC checks.
+- Native trace qualification passed 31/31 Apalache/Quint and 27/27 TLC checks.
   All three real implementations passed; changing their increments from one to
   two failed conformance despite every observed count remaining within bounds.
   The full-sequence query also rejected a sequence whose hidden states could

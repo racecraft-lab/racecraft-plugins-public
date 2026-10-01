@@ -26,16 +26,21 @@ input.
 ## Table of Contents
 
 1. [Roadmap Overview](#roadmap-overview)
-2. [Dependency Graph](#dependency-graph)
-3. [Progress Tracking](#progress-tracking)
-4. [Specification Sections](#specification-sections)
+2. [Reviewability Contract](#reviewability-contract)
+3. [Dependency Graph](#dependency-graph)
+4. [Progress Tracking](#progress-tracking)
+5. [Specification Sections](#specification-sections)
+6. [Decomposition Principles](#decomposition-principles)
+7. [Environment & Deployment Context](#environment--deployment-context)
+8. [References](#references)
 
 ---
 
 ## Roadmap Overview
 
-The roadmap currently tracks **21 specifications** overall; **13** of them are mapped into **6 dependency
-tiers**:
+The roadmap currently tracks **21 specifications** overall. The original **13** (ART-001 to ART-013) are mapped
+into **6 dependency tiers**. ART-014 to ART-021 are follow-up specs opened later; they are tracked in Progress
+Tracking and Specification Sections without a tier:
 
 | Tier | Specs | Purpose | Parallelization |
 |------|-------|---------|-----------------|
@@ -61,7 +66,7 @@ ART-013
   flips), and ART-012 (implementation notes it embeds).
 - ART-011 requires ART-006 (the plan stage it chains into).
 - ART-012 requires ART-006 (implement-stage dispatch it extends).
-- ART-013 requires everything (documents shipped behavior).
+- ART-013 requires ART-001 to ART-012 (documents shipped behavior). The follow-up specs ART-014 to ART-021 do not block it.
 
 ## Reviewability Contract
 
@@ -134,7 +139,7 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-010 | Final-PR Writeup, Companions & Ready Flip | ⏳ Ready | - | All three dependencies satisfied: ART-003 by PRs #435/#436/#439, ART-007 by PR #445, ART-012 by PR #426 |
 | ART-011 | Scaffold Integration | ✅ Complete / Archived | [.process/ART-011-workflow.md](.process/ART-011-workflow.md) | PR #434; archived 2026-08-13. The blind-spot pass and the planning hand-off live on both platforms outside `specs/**`. Shipped inverted from its design: scaffold cannot invoke the autopilot, which carries `disable-model-invocation: true`, so it prints the command instead — nine requirements amended, five superseded. Declared 162 reviewable LOC and estimated 322 at the final 31 FRs; shipped 1160 production changed lines across the two scaffold `SKILL.md` variants, a second data point for ART-015. Layer 2 trigger evaluation is still owed, and the 984-line result is what ART-019 slice D exists to repair |
 | ART-012 | Implementation-Notes Capture | ✅ Complete / Archived | [.process/ART-012-workflow.md](.process/ART-012-workflow.md) | PR #426; archived 2026-08-12. The record contract and the executor reporting field live on both platforms outside `specs/**`. Budget re-estimated at every amendment (115 at scaffold → 155 → 162 → 190 once the operator restored the literal per-task guarantee), and the final six production files matched the declaration exactly |
-| ART-013 | Documentation | ⏳ Pending | - | Blocked by all |
+| ART-013 | Documentation | ⏳ Pending | - | Blocked by ART-009 and ART-010, the only tiered specs still open |
 | ART-014 | Phase-Guard Enforcement Repair | ✅ Complete / Archived | [.process/ART-014-workflow.md](.process/ART-014-workflow.md) | PR #433; archived 2026-08-13. The guard, its tests, and both platforms' authority documentation live outside `specs/**`. Declared 337 reviewable LOC and shipped 906 added across six authored files, 488 across the five production ones; the overrun is the classification record and the tests, and it argues for ART-015. Found during ART-006, which deliberately did not fix it. Opened ART-016, ART-017 and ART-018 |
 | ART-015 | Spec-Size Re-Estimation Trigger | ⏳ Ready | - | No dependencies; found during ART-006 — the estimator is sound but is never re-fed. HRNS-015 Slice B adds a required-refactor input; this entry keeps the re-invocation (reconciled 2026-09-25) |
 | ART-016 | Claude-Side Live PR Commit Authority | ⏳ Ready | - | No dependencies; opened from ART-014, which documents the gap and names this entry in the shipped Claude `SKILL.md` |
@@ -1245,47 +1250,6 @@ slice.
 
 ---
 
-## Decomposition Principles
-
-When breaking a feature into specs:
-
-1. **Each spec is independently executable** through the full SpecKit workflow (specify → implement)
-2. **Minimize cross-spec dependencies** — prefer sequential over deeply nested
-3. **Foundations first** — brand kit and staging before emission and sweep
-4. **Parallel tiers where seams allow** — template ports are sibling-independent
-5. **Integration spec near last** — ART-010 wires draft PR, templates, and notes together
-6. **Each spec gets its own directory**: `specs/<branch>/` (typically
-   `specs/art-NNN-<name>/` for this roadmap)
-
-## Environment & Deployment Context
-
-### Existing Infrastructure (No Changes Needed)
-
-| Resource | Detail |
-|----------|--------|
-| Plugin runtime | `speckit_pro_runner` (Python 3.11+ stdlib, JSON stdin/stdout contract) |
-| Test suite | `python3 tests/speckit-pro/run-all.py` (Layers 1, 4, 5) |
-| Release | release-please + payload/proof regeneration ritual |
-| Docs site | Astro/Starlight, Node ≥ 22.12, `pnpm --dir docs-site validate` |
-
-### Changes Required
-
-| Change | Where | Detail |
-|--------|-------|--------|
-| New shipped directory | `speckit-pro/artifact-gallery/` | brand kit, manifest, 21 templates (20 ports + UAT walkthrough) |
-| New/renamed agents | `speckit-pro/agents/`, codex mirror | `artifact-author`, `uat-artifact-author` |
-| Payload regen | generated artifact contract | every ART spec ships plugin bytes |
-
-### Local Development Setup
-
-| Requirement | How |
-|-------------|-----|
-| Python 3.11+ | pyenv (repo standard) |
-| Node ≥ 22.12 + pnpm | nvm v22.22.2 for docs-site work (ART-013) |
-| Browser check | open each template over `file://`; console must be clean |
-
----
-
 ### ART-018: Repair The Silently-Clean Governance Matchers
 
 **Priority:** P2 | **Depends On:** none | **Enables:** governance checks that can prove they detect
@@ -1657,6 +1621,47 @@ remaining work until this one (added 2026-09-25).
 - `speckit-pro/agents/artifact-author.md` and `speckit-pro/codex-agents/artifact-author.toml` — fill routing
 - `docs/ai/specs/gate-tooling-decision.md` — the DEPENDENCY_RULES tools and their graph output
 - `tests/speckit-pro/unit/test-architecture-graph.py` and `docs-site/tests/artifact-gallery.spec.mjs` — the absent-template assertions
+
+---
+
+## Decomposition Principles
+
+When breaking a feature into specs:
+
+1. **Each spec is independently executable** through the full SpecKit workflow (specify → implement)
+2. **Minimize cross-spec dependencies** — prefer sequential over deeply nested
+3. **Foundations first** — brand kit and staging before emission and sweep
+4. **Parallel tiers where seams allow** — template ports are sibling-independent
+5. **Integration spec near last** — ART-010 wires draft PR, templates, and notes together
+6. **Each spec gets its own directory**: `specs/<branch>/` (typically
+   `specs/art-NNN-<name>/` for this roadmap)
+
+## Environment & Deployment Context
+
+### Existing Infrastructure (No Changes Needed)
+
+| Resource | Detail |
+|----------|--------|
+| Plugin runtime | `speckit_pro_runner` (Python 3.11+ stdlib, JSON stdin/stdout contract) |
+| Test suite | `python3 tests/speckit-pro/run-all.py` (Layers 1, 4, 5) |
+| Release | release-please + payload/proof regeneration ritual |
+| Docs site | Astro/Starlight, Node ≥ 22.12, `pnpm --dir docs-site validate` |
+
+### Changes Required
+
+| Change | Where | Detail |
+|--------|-------|--------|
+| New shipped directory | `speckit-pro/artifact-gallery/` | brand kit, manifest, 21 templates (20 ports + UAT walkthrough) |
+| New/renamed agents | `speckit-pro/agents/`, codex mirror | `artifact-author`, `uat-artifact-author` |
+| Payload regen | generated artifact contract | every ART spec ships plugin bytes |
+
+### Local Development Setup
+
+| Requirement | How |
+|-------------|-----|
+| Python 3.11+ | pyenv (repo standard) |
+| Node ≥ 22.12 + pnpm | nvm v22.22.2 for docs-site work (ART-013) |
+| Browser check | open each template over `file://`; console must be clean |
 
 ---
 

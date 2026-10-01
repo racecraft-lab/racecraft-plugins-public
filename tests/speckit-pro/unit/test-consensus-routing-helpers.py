@@ -18,6 +18,7 @@ test-speckit-pro-read-only-helpers.py.
 from __future__ import annotations
 
 import json
+import re
 import sys
 import tempfile
 import unittest
@@ -35,6 +36,7 @@ if str(SHARED_LIB) not in sys.path:
 from test_result import run_counted  # noqa: E402
 
 from speckit_pro_runner.helpers.read_only import (  # noqa: E402
+    CONSENSUS_SECURITY_KEYWORDS,
     aggregate_crl,
     parse_consensus_categories,
 )
@@ -475,10 +477,75 @@ class ReferenceProseTests(unittest.TestCase):
         self.assertIn("parse-consensus-categories", round_one)
 
 
+class SecurityKeywordCopyTests(unittest.TestCase):
+    """Every prose copy of the Security Keywords list names the runner's list.
+
+    `parse-consensus-categories` widens on CONSENSUS_SECURITY_KEYWORDS. The
+    executors flag items from their own copy, so a copy that drops a keyword
+    stops flagging items the helper would widen.
+    """
+
+    EXECUTORS = ("clarify-executor", "checklist-executor", "analyze-executor")
+    COPY_RE = re.compile(r"security keywords \(([^)]*)\)", re.IGNORECASE)
+
+    def assert_matches_runner(self, label: str, words: str) -> None:
+        found = {word.strip().casefold() for word in words.replace("\n", " ").split(",") if word.strip()}
+        self.assertEqual(found, set(CONSENSUS_SECURITY_KEYWORDS), label)
+
+    def test_every_executor_copy_matches_the_runner_list(self) -> None:
+        for name in self.EXECUTORS:
+            for path in (PLUGIN_ROOT / "agents" / f"{name}.md", PLUGIN_ROOT / "codex-agents" / f"{name}.toml"):
+                copies = self.COPY_RE.findall(" ".join(path.read_text(encoding="utf-8").split()))
+                with self.subTest(path=path.name):
+                    self.assertEqual(len(copies), 1, f"{path.name}: expected one keyword list")
+                    self.assert_matches_runner(path.name, copies[0])
+
+    def test_the_reference_list_matches_the_runner_list(self) -> None:
+        section = section_between(REFERENCE_DOC.read_text(encoding="utf-8"), "## Security Keywords", "## Round 3 Tiebreak")
+        block = re.search(r"```\n(.*?)```", section, re.DOTALL)
+        self.assertIsNotNone(block)
+        self.assert_matches_runner("consensus-protocol.md", block.group(1))
+
+
+class SettingsSurfaceTests(unittest.TestCase):
+    """No surface offers a consensus setting that nothing reads.
+
+    The synthesizer applies one rule set and the routing helper reads one fixed
+    keyword list, so a `consensus-mode` or `security-keywords` setting would be
+    accepted and silently ignored.
+    """
+
+    SURFACES = (
+        PLUGIN_ROOT / "README.md",
+        PLUGIN_ROOT / "skills" / "speckit-autopilot" / "SKILL.md",
+        PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "prerequisites.md",
+        REFERENCE_DOC,
+        PLUGIN_ROOT / "agents" / "consensus-synthesizer.md",
+        PLUGIN_ROOT / "agents" / "consensus-tiebreaker.md",
+    )
+
+    def test_no_surface_offers_an_unread_consensus_setting(self) -> None:
+        for path in self.SURFACES:
+            text = path.read_text(encoding="utf-8")
+            for phrase in ("consensus-mode", "security-keywords", "Conservative Mode", "Aggressive Mode",
+                           "conservative mode", "aggressive mode"):
+                # `#security-keywords` is the reference's own section anchor, not a setting.
+                offered = re.search(rf"(?<!#){re.escape(phrase)}", text)
+                with self.subTest(path=path.name, phrase=phrase):
+                    self.assertIsNone(offered, f"{path.name} still offers {phrase!r}")
+
+
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
     suite = unittest.TestSuite()
-    for case in (RoutingTests, AggregationTests, DispatchFixtureAgreementTests, ReferenceProseTests):
+    for case in (
+        RoutingTests,
+        AggregationTests,
+        DispatchFixtureAgreementTests,
+        ReferenceProseTests,
+        SecurityKeywordCopyTests,
+        SettingsSurfaceTests,
+    ):
         suite.addTests(loader.loadTestsFromTestCase(case))
     return suite
 

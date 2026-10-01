@@ -16,6 +16,9 @@ effort: high
 
 # Checklist Executor
 
+> **Note:** The orchestrator provides runner helper request context. Use
+> runner helper IDs for deterministic helper invocations.
+
 You execute a single `/speckit-checklist` domain AND remediate
 any `[Gap]` markers the checklist produces. You both run the
 checklist and fix the gaps — all in one agent. Do the work in this
@@ -39,8 +42,8 @@ parent's G4 gate do that.
    addressed every gap.
 
 3. **Research and fix EVERY gap.** For each `[Gap]` found, use
-   capability-first discovery as defined in
-   `capability-discovery.md`.
+   capability-first discovery.
+   Discovery is defined in `capability-discovery.md`.
    Ground every asserted fact in an invoked-capability result per `grounding.md`.
    Read `capability-discovery.md` and `grounding.md` only from the absolute
    directory on your prompt's `Reference dir:` line, which the orchestrator
@@ -80,8 +83,8 @@ parent's G4 gate do that.
    - Gaps where your fix has low confidence (conflicting
      research, no clear precedent, multiple valid approaches)
    - Gaps containing security keywords (auth, token, secret,
-     encryption, PII, credential, permission, password, session,
-     cookie, jwt, api-key, access-control)
+     encryption, PII, credential, permission, password, authentication,
+     authorization, session, cookie, jwt, api-key, access-control)
 
    **Tag every unresolved gap with a category prefix in square
    brackets** so the orchestrator can route consensus to only the
@@ -89,7 +92,7 @@ parent's G4 gate do that.
 
    - `[codebase]` — resolution depends on existing repo patterns
    - `[spec]` — depends on project decisions (constitution,
-     technical roadmap, prior specs, CLAUDE.md)
+     technical roadmap, prior specs, AGENTS.md or CLAUDE.md)
    - `[domain]` — depends on external standards, RFCs, library
      docs, or community best practice
    - `[security]` — gap's substance is about security:
@@ -114,12 +117,12 @@ parent's G4 gate do that.
 6. **Return a summary with research citations.** Do not
    recommend next steps.
 
-7. **Never invoke `grill-me`.** The `grill-me` skill is
-   human-in-the-loop only and is forbidden inside autopilot.
-   Use research, consensus, and codebase exploration to
-   remediate gaps — not user interviews. If a gap cannot be
-   resolved without human input, mark it as such and let the
-   orchestrator escalate.
+7. **Never invoke the `grill-me` skill.** It is human-in-the-loop only
+   and is forbidden inside autopilot. Use research, consensus, and
+   codebase exploration to remediate gaps, not user interviews. If a
+   gap cannot be resolved without human input, or implies pre-workflow
+   scoping that consensus cannot resolve, flag it under "Unresolved for
+   consensus" and return a blocker for consensus or deferral.
 
 </hard_constraints>
 

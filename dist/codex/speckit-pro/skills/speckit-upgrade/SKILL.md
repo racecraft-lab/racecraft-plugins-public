@@ -5,33 +5,31 @@ description: "Upgrade or migrate an existing SpecKit installation safely. Use wh
 
 # SpecKit Upgrade
 
-## Scope
+Upgrade an existing SpecKit install in the current repository safely.
+Preserves `.specify/memory/constitution.md` and any other
+locally-modified files via backup-then-force-then-restore. Supports
+upgrading one or both integrations (`claude`, `codex`).
 
-Upgrade an existing SpecKit installation in the current repository
-safely. Preserves `.specify/memory/constitution.md` and any other
-locally-modified files via backup-then-force-then-restore. Supports upgrading
-one or both integrations (`claude`, `codex`).
-
-If `.specify/` is missing, hands off to `$speckit-install` —
-upgrade only operates on existing installs.
+If `.specify/` is missing, hands off to `$speckit-install`
+— upgrade only operates on existing installs.
 
 This skill is **mutation-heavy** (it modifies files in `.specify/`,
-`.claude/`, `.codex/`, `.agents/skills/`, and writes backups to `/tmp/`). It runs only
-on explicit operator request and never auto-fires from other
+`.claude/`, `.codex/`, `.agents/skills/`, and writes backups to `/tmp/`). It
+runs only on explicit operator request and never auto-fires from other
 skills.
 
 ## Scope Boundaries — Not For
 
 - Initial install (no `.specify/` directory yet). That is
-  `$speckit-install`. This skill hands off to it automatically.
+  `$speckit-install`. This skill hands off to it.
 - Scaffolding a new spec from the technical roadmap. That is
   `$speckit-scaffold-spec`.
 - Installing this plugin's own bundled Codex subagent TOML files
   into `~/.codex/agents/`. That is `$install`.
 - Upgrading the SpecKit CLI binary itself (`specify` package). The
-  operator runs that with `uv tool install --force` — this skill
+  operator runs that with `uv tool install --force`; this skill
   detects when it's out of date and recommends the command, but
-  does not run it for them.
+  does not run it.
 
 ## Repository Structure Migration Guidance
 
@@ -46,52 +44,28 @@ Record the deferred capability gap and leave repository structure unchanged.
 Tier-2 PROCESS relocation is separate, but `relocate-process-artifacts` is also
 deferred and unavailable. Do not recommend or auto-run either operation.
 
-## Input
+## Invocation
 
-Accept optional integration keys as arguments:
+```text
+$speckit-upgrade                    # upgrade all installed integrations
+$speckit-upgrade claude             # upgrade claude only
+$speckit-upgrade codex              # upgrade codex only
+$speckit-upgrade claude codex       # both, explicit
+```
 
-- `$speckit-upgrade` (upgrade all installed integrations interactively)
-- `$speckit-upgrade claude`
-- `$speckit-upgrade codex`
-- `$speckit-upgrade claude codex`
+## What to Do
 
-## Hard Constraints
-
-- Always snapshot the repo state to
-  `/tmp/specify-upgrade-backup-<STAMP>/` BEFORE the first
-  `specify integration upgrade` invocation.
-- Never use `--force` on the first attempt. Try the safe path
-  first; only escalate to `--force` after explicit operator
-  confirmation AND after the backup exists.
-- Never delete files from `.claude/commands/` or `.codex/prompts/`
-  without explicit operator confirmation in the dedupe step.
-- Never delete non-SpecKit-managed files. SpecKit-managed
-  slash-command files are exactly those matching `speckit.*.md`
-  (the dot-prefixed legacy form). Extension commands like
-  `speckit.speckit-utils.doctor.md` are NOT SpecKit-managed and
-  must be preserved.
-- Never modify `.specify/memory/constitution.md` mid-flight without
-  explicit operator instruction. Restore the operator's backup
-  verbatim, or leave the freshly-templated placeholder in place if
-  they explicitly said so.
-- Never touch this plugin's own files (`.claude-plugin/`,
-  `codex-skills/`, plugin's `commands/`).
-- If any `specify` invocation fails for non-diff reasons (network,
-  missing source bundle), STOP and report — do not retry silently.
-
-## Procedure
-
-### 1. Detect state; hand off if needed
+### 1. Detect state and hand off if needed
 
 Use a filesystem directory check for `.specify/` and record the state
 as PRESENT or ABSENT.
 
-If ABSENT: STOP this skill and invoke `$speckit-install` (upgrade
-operates only on existing installs).
+If `.specify/` is **ABSENT**: STOP and invoke `$speckit-install`
+— upgrade only operates on existing installs.
 
-If PRESENT: continue.
+If **PRESENT**: continue.
 
-### 2. Capture current CLI version and installed integrations
+### 2. Capture current versions and integrations
 
 Use argv-only execution to capture the `specify` version, run
 `specify self check`, and run `specify integration list`. Preserve
@@ -100,31 +74,28 @@ stdout, stderr, and exit status for each command in the report.
 Surface to the operator:
 
 - Current CLI version (e.g. `specify 0.6.1`).
-- Whether `specify self check` reports a newer release.
+- Whether `specify self check` reports a newer release available.
 - Each installed integration with its current status.
 
-If the CLI itself is outdated, recommend:
-
-Invoke `uv tool install specify-cli --force --from
-git+https://github.com/github/spec-kit.git` with argv-only execution,
-then re-run this skill after the CLI update finishes.
-
-Ask the operator to either upgrade the CLI first (then re-invoke
-this skill) or confirm they want to proceed with the current CLI
-version.
+If the CLI itself is outdated, recommend that the operator run
+`uv tool install specify-cli --force --from
+git+https://github.com/github/spec-kit.git` and then re-invoke this
+skill. This skill does not run it. Ask the operator to either upgrade
+the CLI first or confirm they want to proceed with the current CLI
+version, and wait for the answer before continuing.
 
 ### 3. Resolve which integrations to upgrade
 
-If the operator passed keys, use them. Otherwise ask:
+If the operator passed integration keys, use those. Otherwise ask:
 
 > Which integrations should I upgrade?
 > - `<each-installed-key>` (currently installed)
-> - `all` for everything that's installed
+> - `all` to upgrade everything that's installed
 >
 > If you want to ADD a new integration (e.g., add `codex` to a
 > `claude`-only repo), use `$speckit-install <new-key>` instead.
 
-### 4. Snapshot the repo state
+### 4. Snapshot the repo state for safety
 
 Create a timestamped backup directory outside the repo, copy
 `.specify/`, and copy any present `.claude/`, `.codex/`,
@@ -133,21 +104,23 @@ filesystem APIs or argv-only file operations. Codex skills live in
 `.agents/skills/` (primary) or `.codex/skills/` (legacy); back up
 whichever exists, or both. Report the backup path and copied entries.
 
-Tell the operator: "Repo state snapshotted to `<backup-path>/`.
-Manual rollback: restore `.specify/` and any listed integration
+Tell the operator: "Repo state snapshotted to `<backup-path>/`. If
+anything goes wrong, restore `.specify/` and any listed integration
 directories from that backup."
 
 ### 5. Per-integration upgrade
 
 For each integration the operator chose:
 
-#### 5a. Safe (no --force) attempt
+#### 5a. Try the safe (no --force) upgrade first
 
 Invoke `specify integration upgrade <key> --script sh` with argv-only
 execution.
 
-The CLI is diff-aware. If it succeeds, capture its output and read
-it before moving to the next integration.
+The CLI is diff-aware: it compares manifest hashes and blocks if
+the operator has locally-modified files. If the upgrade succeeds
+without blocking, capture its output and read it before moving to
+the next integration.
 
 A successful upgrade can still leave shared infrastructure behind.
 It refreshes the integration's skills but not the shared
@@ -174,60 +147,60 @@ here). A failing `setup_contract` names each skill that still calls an
 option its script rejects. Its `template_resolution` check must pass
 too: SpecKit parses preset manifests with PyYAML from the first
 `python3` on `PATH`, and a `uv tool` or `pipx` install keeps PyYAML in
-its own environment. Codex runs commands in a non-interactive login
-shell, which does not read `~/.zshrc`, so a Python set up only there
-(for example by pyenv) is not the one SpecKit finds. If the check
-fails, show its message; installing packages or editing shell startup
-files is the operator's call.
+its own environment.
+Codex runs commands in a non-interactive login shell, which does not
+read `~/.zshrc`, so a Python set up only there (for example by pyenv)
+is not the one SpecKit finds.
+If the check fails, show its message; installing packages or editing
+shell startup files is the operator's call.
 
-#### 5b. If blocked: structured triage
+#### 5b. If blocked: parse the block message, back up, force, restore
 
-The CLI block message names each modified file. Surface them and
-ask:
+When the CLI blocks, its output names the modified files. Surface
+that list to the operator and ask:
 
 > The upgrade is blocked because these files are locally modified:
 > - `<file1>`
 > - `<file2>`
 >
 > Options:
->
-> 1. `force-and-restore` — back up each modified file (already in
->    `$BACKUP`), run `--force` to take the new template, then offer
->    to restore your modifications on top. Recommended when the
->    upstream updates are bigger than your local edits.
->
-> 2. `keep-mine` — skip this integration's upgrade. Modifications
->    stay; you miss the upstream template updates.
->
+> 1. `force-and-restore` — back up each modified file (already
+>    snapshotted to `$BACKUP`), run `--force` to take the new
+>    template, then offer to restore your modifications on top.
+>    Recommended when the CLI updates are bigger than your local
+>    edits.
+> 2. `keep-mine` — skip the upgrade for this integration. Your
+>    modifications stay intact; you'll miss the upstream template
+>    updates.
 > 3. `manual-merge` — abort this skill, examine the diff yourself,
->    re-run after deciding.
+>    and re-run after deciding which edits to keep.
 
-On `force-and-restore`, invoke
+If `force-and-restore`, invoke
 `specify integration upgrade <key> --force --script sh` with
 argv-only execution.
 
-Then for each previously-modified file:
+Then for each previously-modified file, compare the backup copy with
+the freshly-templated file using a diff tool, show the operator the
+result, and ask whether to restore (file-by-file or all-at-once):
 
-```text
-diff "$BACKUP/<file>" "<file>"
-```
-
-Ask whether to restore (file-by-file or all-at-once):
-
-- `constitution.md` — almost always restore the backup. This is the
-  operator's project content.
-- Templates / scripts / gate validators — case-by-case. The CLI's
+- `constitution.md` — almost always restore the backup verbatim. This
+  is the operator's project content.
+- Templates, scripts, and gate validators — case-by-case. The CLI's
   new versions usually carry fixes/features the operator wants.
 
 ### 6. Deduplicate legacy commands when both forms are present
 
-When the upgraded project has the `claude` integration, use a resolved Python 3.11+ interpreter to run `<resolved_python> <plugin-root>/scripts/agent-memory-ignore.py --mode apply --repo-root <repository-root>` with argv-only execution. Preserve and commit any `.gitignore` change before clean-worktree-gated helpers. Report tracked memory or overriding nested ignore rules separately; an ignore rule does not untrack files, and this command never deletes memory.
+When the upgraded project has the `claude` integration, use the resolved Python 3.11+ interpreter to run
+`<resolved_python> <plugin-root>/scripts/agent-memory-ignore.py --mode apply --repo-root <repository-root>`
+with argv-only execution. Preserve and commit any `.gitignore` change before
+clean-worktree-gated helpers. Report tracked memory or overriding nested ignore
+rules separately; an ignore rule does not untrack files, and this command never
+deletes memory.
 
 After upgrading, the new skills directories may now exist alongside
-the legacy slash-command files. Detect:
-
-Use filesystem glob checks to detect legacy command/prompt entries
-and current skills entries for Claude and Codex:
+the legacy slash-command files (if the prior install was in legacy
+mode). Use filesystem glob checks to detect legacy command/prompt
+entries and current skills entries for Claude and Codex:
 
 - Claude: legacy `.claude/commands/speckit.*.md`; skills
   `.claude/skills/speckit-*/`.
@@ -240,9 +213,9 @@ If BOTH legacy and skills paths exist for an integration:
 > Both legacy slash-commands and skills are installed for `<integration>`.
 > The legacy slash-commands still work but create duplicate triggers. Options:
 >
-> 1. `dedupe` — delete the legacy `<path>/speckit.*.md` files.
->    Recommended unless downstream tooling references the
->    slash-command names.
+> 1. `dedupe` — delete the legacy `<path>/speckit.*.md` files that
+>    SpecKit manages. Recommended unless downstream tooling references
+>    the slash-command names.
 > 2. `keep-both` — leave the duplicates in place.
 
 On `dedupe`, delete only files matching `speckit.<single-word>.md`
@@ -250,7 +223,7 @@ On `dedupe`, delete only files matching `speckit.<single-word>.md`
 `speckit.plan.md`). Files like `speckit.speckit-utils.doctor.md`
 and any non-`speckit.` files MUST be preserved — those are
 extension commands or unrelated. Show the exact deletion list
-before running `rm` so the operator can confirm.
+before deleting anything so the operator can confirm.
 
 ### 7. Verify
 
@@ -280,9 +253,8 @@ Report `data.screening_mode` and each `data.warnings[].message` and
   Tavily key in `~/.config/speckit-pro/tavily.key` (mode 0600).
 - `expected_failure` means a credential or binary is configured but broken.
   Report the fix it names. Do not roll back the SpecKit install for it.
-- A key held only in an environment variable is a warning: Codex forwards
-  only allowlisted variables to MCP servers, so the broker may not see it.
-  Prefer the key files.
+- A key held only in an environment variable is a warning: the broker runs
+  as an MCP server, which may not see it. Prefer the key files.
 
 #### Autopilot review policy check
 
@@ -308,18 +280,18 @@ repository's GitHub `owner/name`, its default branch, and that string as
 - This skill never writes the fragment into `~/.codex`, the repository's
   `.codex/`, or `AGENTS.md`: the reviewer trusts `AGENTS.md`, and a branch
   could rewrite it.
-- A missing policy is a warning, not a failure. The autopilot still runs and
-  reports it once as a setup gap.
+- A missing policy is a warning, not a failure. The autopilot asks for it once,
+  at run start, before Phase 1, and the run starts on the operator's reply.
 
 ### 8. Offer missing curated extensions and presets
 
 speckit-pro maintains a manual recommendation catalog of community extensions
-and presets. The full list is in
-`speckit-pro/skills/speckit-coach/references/presets-extensions-guide.md`
-(section: "The curated set").
+and presets. See
+[presets-extensions-guide.md → The curated set](../speckit-coach/references/presets-extensions-guide.md)
+for the full list.
 
-Compare `.specify/extensions/` and `.specify/presets/` against the
-entries in `<plugin-root>/scripts/curated-set.json`.
+Compare `.specify/extensions/` and `.specify/presets/` against the entries in
+`<plugin-root>/scripts/curated-set.json`.
 
 - If every entry is present: report "Curated extensions and presets already
   installed." Continue to Step 9.
@@ -327,13 +299,13 @@ entries in `<plugin-root>/scripts/curated-set.json`.
 - Otherwise, list the missing entries and ask which to install. Recommended
   default is **all**. For each accepted entry, give the operator the
   `specify extension add <id>` or `specify preset add <id>` command and run it
-  only after they confirm.
-  Skipped entries leave the autopilot's post-implementation parallel
-  group running with reduced coverage; it does not fail.
+  only after they confirm. Skipped entries leave the
+  autopilot's post-implementation parallel group running with reduced
+  coverage; it does not fail.
 
 ### 9. Report
 
-Return a structured summary:
+Return a concise upgrade summary:
 
 ```text
 ## SpecKit Upgrade Complete
@@ -351,8 +323,8 @@ Return a structured summary:
 - SpecKit prerequisite helper restored from backup
 
 **Next steps:**
-1. Restart Codex (and Claude Code if it's running) so the new
-   skills load.
+1. Restart your coding-agent process (Claude Code or Codex CLI) so the
+   upgraded skills load.
 2. Skim the summary above — if you preferred the old version of
    any file, restore from $BACKUP/.
 3. Run `specify check` independently to confirm health.
@@ -361,19 +333,44 @@ Return a structured summary:
 Do not continue into any other workflow in the same skill. Upgrade
 ends here.
 
+## Hard Constraints
+
+- Always snapshot to `/tmp/specify-upgrade-backup-<STAMP>/` BEFORE
+  the first `specify integration upgrade` call.
+- Never use `--force` on the first attempt. Try the safe path
+  first; only escalate to `--force` after the operator has chosen
+  `force-and-restore` and the backup exists.
+- Never delete files from `.claude/commands/` or `.codex/prompts/`
+  without explicit operator confirmation in Step 6.
+- Never delete non-SpecKit-managed files. SpecKit-managed legacy
+  command files are the `speckit.<single-word>.md` files; extension
+  commands such as `speckit.speckit-utils.doctor.md` and custom
+  commands without the `speckit.` prefix must be preserved.
+- Never modify `.specify/memory/constitution.md` mid-flight without
+  explicit operator instruction. Either restore the operator's backup
+  verbatim or leave the freshly-templated version in place if the
+  operator says so.
+- Never touch this plugin's own files (`.claude-plugin/`,
+  `codex-skills/`, the plugin's `commands/`).
+- If `specify integration upgrade` fails for reasons other than
+  the diff-aware block (e.g., network failure, missing source
+  bundle), STOP and report the exact error. Do not retry silently.
+  The operator can re-run after fixing the underlying issue.
+
 ## Failure Handling
 
 STOP and report — do not improvise — when:
 
-- The CLI itself is missing (uncommon for upgrade, but possible;
-  recommend installing it via `$speckit-install`).
+- The CLI itself is missing (uncommon for upgrade, but possible; hand
+  off to `$speckit-install`).
 - A `specify integration upgrade` call fails for non-diff reasons.
 - The backup directory could not be created (filesystem full,
   permission denied, etc.).
 - The operator declines all three options in Step 5b for a blocked
   upgrade. Their choice stands; do not retry.
 - A restore step fails mid-flight. Report which files succeeded,
-  which did not, and the backup path.
+  which did not, and where the backup is.
 
 The backup at `/tmp/specify-upgrade-backup-<STAMP>/` is the
-operator's safety net. Surface it explicitly in the final report.
+operator's safety net. Tell them about it explicitly in the final
+report so they know it exists and where to find it.

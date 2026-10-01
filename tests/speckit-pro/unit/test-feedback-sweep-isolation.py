@@ -7,8 +7,8 @@ import contextlib
 import hashlib
 import io
 import json
-import importlib.util
 import os
+import re
 import secrets
 import subprocess
 import sys
@@ -26,29 +26,13 @@ for import_root in (PLUGIN_ROOT, LIB_DIR):
     if str(import_root) not in sys.path:
         sys.path.insert(0, str(import_root))
 
+from git_fixture import git_stdout
+from script_loader import load_script  # noqa: E402
 from test_result import run_counted  # noqa: E402
 from speckit_pro_runner import sweep_isolation  # noqa: E402
 from speckit_pro_runner import sweep_broker  # noqa: E402
 from speckit_pro_runner import sweep_launcher  # noqa: E402
 from speckit_pro_runner.helpers import read_only, registry  # noqa: E402
-
-
-def git(repo: Path, *args: str) -> str:
-    completed = subprocess.run(
-        ["git", *args],
-        cwd=repo,
-        text=True,
-        capture_output=True,
-        check=False,
-        env={
-            "PATH": os.environ.get("PATH", ""),
-            "GIT_CONFIG_NOSYSTEM": "1",
-            "GIT_CONFIG_GLOBAL": os.devnull,
-        },
-    )
-    if completed.returncode != 0:
-        raise AssertionError(f"git {' '.join(args)} failed: {completed.stderr}")
-    return completed.stdout.strip()
 
 
 def issuer_secret_cases() -> tuple[str, ...]:
@@ -69,9 +53,9 @@ class GitFixture:
         self.temp = tempfile.TemporaryDirectory(prefix="sweep-isolation-")
         self.root = Path(self.temp.name) / "repo"
         self.root.mkdir()
-        git(self.root, "init", "-q")
-        git(self.root, "config", "user.name", "Sweep Test")
-        git(self.root, "config", "user.email", "sweep.invalid")
+        git_stdout(self.root, "init", "-q")
+        git_stdout(self.root, "config", "user.name", "Sweep Test")
+        git_stdout(self.root, "config", "user.email", "sweep.invalid")
 
     def close(self) -> None:
         self.temp.cleanup()
@@ -86,9 +70,9 @@ class GitFixture:
         return target
 
     def commit(self, message: str = "fixture") -> str:
-        git(self.root, "add", "-A")
-        git(self.root, "commit", "-qm", message)
-        return git(self.root, "rev-parse", "HEAD")
+        git_stdout(self.root, "add", "-A")
+        git_stdout(self.root, "commit", "-qm", message)
+        return git_stdout(self.root, "rev-parse", "HEAD")
 
 
 class SnapshotIsolationTests(unittest.TestCase):
@@ -108,10 +92,10 @@ class SnapshotIsolationTests(unittest.TestCase):
         self.fixture.write(".env", canary)
         os.environ["SPECKIT_SWEEP_TEST_CANARY"] = canary
         (self.fixture.root / "host-link").symlink_to(outside)
-        git(self.fixture.root, "add", "host-link")
-        git(self.fixture.root, "commit", "-qm", "tracked symlink")
+        git_stdout(self.fixture.root, "add", "host-link")
+        git_stdout(self.fixture.root, "commit", "-qm", "tracked symlink")
         sibling = Path(self.fixture.temp.name) / "sibling-worktree"
-        git(self.fixture.root, "worktree", "add", "-q", "-b", "sibling-test", str(sibling), "HEAD")
+        git_stdout(self.fixture.root, "worktree", "add", "-q", "-b", "sibling-test", str(sibling), "HEAD")
         (sibling / "sibling-canary.txt").write_text(canary, encoding="utf-8")
 
         snapshot = sweep_isolation.GitSnapshot.capture(self.fixture.root)
@@ -132,8 +116,8 @@ class SnapshotIsolationTests(unittest.TestCase):
         self.fixture.write("config/credentials.json", "{}\n")
         self.fixture.write("leaky.txt", f"API_TOKEN={canary}\n")
         head = self.fixture.commit()
-        git(self.fixture.root, "update-index", "--add", "--cacheinfo", f"160000,{head},vendor/module")
-        git(self.fixture.root, "commit", "-qm", "gitlink")
+        git_stdout(self.fixture.root, "update-index", "--add", "--cacheinfo", f"160000,{head},vendor/module")
+        git_stdout(self.fixture.root, "commit", "-qm", "gitlink")
 
         snapshot = sweep_isolation.GitSnapshot.capture(self.fixture.root)
         listed = {entry["path"] for entry in snapshot.list()}
@@ -181,7 +165,9 @@ class SnapshotIsolationTests(unittest.TestCase):
             snapshot.search("")
 
 
-class SessionAndReceiptTests(unittest.TestCase):
+class SweepSessionCase(unittest.TestCase):
+    """One committed feature and one live sweep session for a single amended comment."""
+
     def setUp(self) -> None:
         self.fixture = GitFixture()
         self.fixture.write("specs/001-safe/spec.md", "# Scope\nold text\n")
@@ -213,26 +199,26 @@ class SessionAndReceiptTests(unittest.TestCase):
         self.fixture.close()
 
     def classifier(self, **overrides: object) -> dict[str, object]:
-        record: dict[str, object] = {
-            "comment_id": "RC_kwDO123",
-            "class": "amended",
-            "target": "plan.md",
-            "reason": "The plan needs the requested constraint.",
-        }
-        record.update(overrides)
-        return record
+        result = {"comment_id": "RC_kwDO123", "class": "amended", "target": "plan.md"}
+        result["reason"] = "The plan needs the requested constraint."
+        result.update(overrides)
+        return result
 
     def synthesis(self, **overrides: object) -> dict[str, object]:
-        record: dict[str, object] = {
-            "comment_id": "RC_kwDO123",
-            "outcome": "resolved",
-            "agreement": "3/3",
-            "basis": None,
-            "edit": {"file": "plan.md", "anchor": "old text", "replacement": "new text"},
-        }
-        record.update(overrides)
-        return record
+        result = {"comment_id": "RC_kwDO123", "outcome": "resolved", "agreement": "3/3", "basis": None}
+        result["edit"] = {"file": "plan.md", "anchor": "old text", "replacement": "new text"}
+        result.update(overrides)
+        return result
 
+    def human_review(self, basis: str) -> dict[str, object]:
+        return self.synthesis(outcome="human_review", agreement=None, basis=basis, edit=None)
+
+    def apply_receipt(self, receipt: object, mode: str) -> dict[str, object]:
+        return sweep_isolation.apply_synthesis_receipt(
+            self.fixture.root, "specs/001-safe", self.session, receipt, mode=mode)
+
+
+class SessionAndReceiptTests(SweepSessionCase):
     def test_public_session_metadata_never_contains_reviewer_text(self) -> None:
         encoded = json.dumps(self.metadata, sort_keys=True)
         self.assertNotIn(self.comment_canary, encoded)
@@ -592,9 +578,7 @@ class SessionAndReceiptTests(unittest.TestCase):
         before = target.read_bytes()
         duplicate = self.session.submit_result("synthesis", self.synthesis())
         with self.assertRaises(sweep_isolation.MutationViolation):
-            sweep_isolation.apply_synthesis_receipt(
-                self.fixture.root, "specs/001-safe", self.session, duplicate, mode="apply"
-            )
+            self.apply_receipt(duplicate, "apply")
         self.assertEqual(before, target.read_bytes())
 
         target.write_text("# Plan\nold text\n", encoding="utf-8")
@@ -602,9 +586,7 @@ class SessionAndReceiptTests(unittest.TestCase):
         secret_receipt = self.session.submit_result(
             "synthesis", self.synthesis(edit={"file": "plan.md", "anchor": "old text", "replacement": secret})
         )
-        result = sweep_isolation.apply_synthesis_receipt(
-            self.fixture.root, "specs/001-safe", self.session, secret_receipt, mode="apply"
-        )
+        result = self.apply_receipt(secret_receipt, "apply")
         self.assertEqual("applied_redacted", result["status"])
         self.assertNotIn(secret, target.read_text(encoding="utf-8"))
         self.assertNotIn(secret, json.dumps(result, sort_keys=True))
@@ -626,9 +608,7 @@ class SessionAndReceiptTests(unittest.TestCase):
             with self.subTest(edit=record["edit"]):
                 with self.assertRaises((sweep_isolation.SchemaViolation, sweep_isolation.MutationViolation)):
                     receipt = self.session.submit_result("synthesis", record)
-                    sweep_isolation.apply_synthesis_receipt(
-                        self.fixture.root, "specs/001-safe", self.session, receipt, mode="apply"
-                    )
+                    self.apply_receipt(receipt, "apply")
                 self.assertEqual(before, target.read_bytes())
 
     def test_mutation_preconditions_do_not_consume_a_valid_receipt(self) -> None:
@@ -641,9 +621,7 @@ class SessionAndReceiptTests(unittest.TestCase):
                 sweep_isolation.apply_synthesis_receipt(
                     other.root, "specs/001-safe", self.session, receipt, mode="apply"
                 )
-            result = sweep_isolation.apply_synthesis_receipt(
-                self.fixture.root, "specs/001-safe", self.session, receipt, mode="apply"
-            )
+            result = self.apply_receipt(receipt, "apply")
             self.assertEqual("applied", result["status"])
         finally:
             other.close()
@@ -691,6 +669,133 @@ class SessionAndReceiptTests(unittest.TestCase):
             sweep_isolation.apply_synthesis_receipt(
                 self.fixture.root, "specs/missing", self.session, receipt, mode="apply"
             )
+
+
+class _Round3Fixture(SweepSessionCase):
+    """Shared fixture for the tests below."""
+
+    def accept_consensus_prior(self, *, escape: bool = False) -> None:
+        receipt = self.session.submit_result("classifier", self.classifier())
+        self.session.accept_receipt(receipt, expected_stage="classifier")
+        for perspective in sweep_isolation.PERSPECTIVES:
+            self.accept_perspective(perspective, f"{perspective} reached a bounded conclusion.", escape=escape and perspective == "domain")
+
+    def accept_perspective(self, perspective: str, finding: str, *, escape: bool = False) -> None:
+        record = {
+            "comment_id": "RC_kwDO123",
+            "perspective": perspective,
+            "finding": finding,
+            "evidence": ["specs/001-safe/plan.md:2"],
+            "escape_hatch": escape,
+        }
+        receipt = self.session.submit_result("perspective", record, perspective=perspective)
+        self.session.accept_receipt(receipt, expected_stage="perspective")
+
+    def accept_first_round_review(self, basis: str) -> dict[str, object]:
+        receipt = self.session.submit_result(
+            "synthesis",
+            self.human_review(basis),
+        )
+        return self.apply_receipt(receipt, "apply")
+
+    def tiebreak(self, **overrides: object) -> dict[str, object]:
+        return self.synthesis(agreement="tiebreak", **overrides)
+
+    def start_round_three(self, basis: str, *, escape: bool = False) -> None:
+        self.accept_consensus_prior(escape=escape)
+        self.accept_first_round_review(basis)
+
+    def assert_synthesis_refused(self, payload: dict[str, object]) -> None:
+        with self.assertRaises(sweep_isolation.SchemaViolation):
+            self.session.submit_result("synthesis", payload)
+
+    def assert_second_synthesis_refused(self, receipt: object) -> None:
+        self.apply_receipt(receipt, "dry_run")
+        with self.assertRaises(sweep_isolation.ReceiptViolation):
+            self.session.issue_capability("RC_kwDO123", stage="synthesis")
+
+
+class Round3TiebreakTests(_Round3Fixture):
+    def test_round3_tiebreak_resolves_an_all_disagree_synthesis_through_a_fresh_call(self) -> None:
+        self.accept_consensus_prior()
+        first = self.accept_first_round_review("all_disagree")
+        self.assertEqual("human_review", first["status"])
+        self.assertNotIn("round", first)
+
+        self.session.issue_capability("RC_kwDO123", stage="synthesis")
+        inputs = self.session.consensus_inputs("RC_kwDO123", stage="synthesis")
+        self.assertIs(True, inputs["tiebreak"])
+        self.assertEqual("all_disagree", inputs["prior_basis"])
+        self.assertEqual(3, len(inputs["perspectives"]))
+
+        receipt = self.session.submit_result("synthesis", self.tiebreak())
+        result = self.apply_receipt(receipt, "apply")
+        self.assertEqual("applied", result["status"])
+        self.assertEqual(3, result["round"])
+        self.assertEqual("# Plan\nnew text\n", (self.fixture.root / "specs/001-safe/plan.md").read_text())
+        self.assertNotIn("new text", json.dumps(result, sort_keys=True))
+
+    def test_round3_tiebreak_resolves_an_unresolved_escape_without_weakening_round_one(self) -> None:
+        self.accept_consensus_prior(escape=True)
+        self.assert_synthesis_refused(self.synthesis())
+        self.accept_first_round_review("escape_unresolved")
+
+        inputs = self.session.consensus_inputs("RC_kwDO123", stage="synthesis")
+        self.assertEqual("escape_unresolved", inputs["prior_basis"])
+        receipt = self.session.submit_result("synthesis", self.tiebreak())
+        result = self.apply_receipt(receipt, "dry_run")
+        self.assertEqual("planned", result["status"])
+        self.assertEqual(3, result["round"])
+
+    def test_round3_scope_deferral_is_a_status_not_a_stop_and_writes_nothing(self) -> None:
+        self.start_round_three("all_disagree")
+        before = (self.fixture.root / "specs/001-safe/plan.md").read_bytes()
+        receipt = self.session.submit_result(
+            "synthesis",
+            self.human_review("scope_unsettled"),
+        )
+        result = self.apply_receipt(receipt, "apply")
+        self.assertEqual(
+            {"status": "scope_deferred", "comment_id": "RC_kwDO123", "head": self.head, "round": 3},
+            result,
+        )
+        self.assertEqual(before, (self.fixture.root / "specs/001-safe/plan.md").read_bytes())
+
+
+class Round3TiebreakRefusalTests(_Round3Fixture):
+    """The round three call accepts only tiebreak values and runs once."""
+
+    def test_tiebreak_values_are_refused_outside_a_round_three_call(self) -> None:
+        self.accept_consensus_prior()
+        self.assert_synthesis_refused(self.tiebreak())
+        self.assert_synthesis_refused(self.human_review("scope_unsettled"))
+
+    def test_round3_call_must_use_tiebreak_values_and_runs_once(self) -> None:
+        self.start_round_three("all_disagree")
+        self.assert_synthesis_refused(self.synthesis())
+        self.assert_synthesis_refused(self.human_review("all_disagree"))
+        self.assert_second_synthesis_refused(self.session.submit_result("synthesis", self.tiebreak()))
+
+    def test_a_resolved_synthesis_cannot_be_reopened_by_a_second_synthesis_call(self) -> None:
+        self.accept_consensus_prior()
+        self.assert_second_synthesis_refused(self.session.submit_result("synthesis", self.synthesis()))
+
+    def test_a_fresh_perspective_replaces_a_failed_one_and_reaches_synthesis(self) -> None:
+        self.accept_consensus_prior()
+        self.accept_perspective("domain", "A fresh analyst replaced the failed domain call.")
+        inputs = self.session.consensus_inputs("RC_kwDO123", stage="synthesis")
+        self.assertNotIn("tiebreak", inputs)
+        self.assertEqual(
+            "A fresh analyst replaced the failed domain call.",
+            inputs["perspectives"][2]["finding"],
+        )
+        self.session.issue_capability("RC_kwDO123", stage="synthesis")
+
+    def test_broker_manifest_names_the_round_three_values(self) -> None:
+        manifest = json.dumps(sweep_broker.TOOLS, sort_keys=True)
+        for value in ('"tiebreak"', '"scope_unsettled"'):
+            with self.subTest(value=value):
+                self.assertIn(value, manifest)
 
 
 class SurfaceConfinementTests(unittest.TestCase):
@@ -752,7 +857,7 @@ class SurfaceConfinementTests(unittest.TestCase):
             patch.object(sweep_launcher.shutil, "which", return_value="/trusted/claude"),
             patch.object(
                 sweep_launcher,
-                "_trusted_executable",
+                "trusted_executable",
                 return_value=Path("/trusted/claude"),
             ),
             patch.object(sweep_launcher.subprocess, "run", return_value=completed),
@@ -776,7 +881,7 @@ class SurfaceConfinementTests(unittest.TestCase):
                 "which",
                 side_effect=(alias, str(resolved)),
             ) as which,
-            patch.object(sweep_launcher, "_trusted_executable", return_value=resolved),
+            patch.object(sweep_launcher, "trusted_executable", return_value=resolved),
             patch.object(sweep_launcher.subprocess, "run", return_value=completed) as run,
         ):
             self.assertEqual((0, 149, 0), sweep_launcher._codex_version())
@@ -833,7 +938,7 @@ class SurfaceConfinementTests(unittest.TestCase):
 
     def test_broker_refuses_unsupported_python_before_reading_stdio(self) -> None:
         stderr = io.StringIO()
-        with patch.object(sweep_broker.sys, "version_info", (3, 10)), \
+        with patch.object(sys, "version_info", (3, 10)), \
                 contextlib.redirect_stderr(stderr):
             self.assertEqual(2, sweep_broker.main())
         self.assertEqual(
@@ -853,7 +958,7 @@ class SurfaceConfinementTests(unittest.TestCase):
             ), patch.object(
                 sweep_launcher, "python_executable", return_value=python_runtime
             ), patch.object(
-                sweep_launcher.sys, "base_prefix", str(python_runtime_root)
+                sys, "base_prefix", str(python_runtime_root)
             ):
                 command = sweep_launcher.codex_command(
                     plugin_root=PLUGIN_ROOT,
@@ -912,28 +1017,22 @@ class SurfaceConfinementTests(unittest.TestCase):
         )
         for tool_name in sweep_isolation.BROKER_TOOL_NAMES:
             self.assertIn(json.dumps(tool_name), enabled_tools)
-        self.assertIn(
-            "cannot construct or guess the receipt",
-            sweep_launcher.CODEX_STAGE_PROMPTS["classifier"],
-        )
-        self.assertIn(
-            "must call the broker tools",
-            sweep_launcher.CODEX_STAGE_PROMPTS["classifier"].casefold(),
-        )
         for stage, required_tools in {
             "classifier": ("review_comment", "submit_result"),
             "perspective": ("review_comment", "consensus_inputs", "submit_result"),
             "synthesis": ("consensus_inputs", "submit_result"),
         }.items():
-            for tool_name in required_tools:
-                self.assertIn(
-                    f"mcp__sweep-broker__{tool_name}",
-                    sweep_launcher.CODEX_STAGE_PROMPTS[stage],
-                )
-            self.assertIn(
-                "one top-level result field",
-                sweep_launcher.CODEX_STAGE_PROMPTS[stage].casefold(),
-            )
+            prompt = " ".join(codex_stage_prompt(stage).split()).casefold()
+            with self.subTest(stage=stage):
+                for phrase in (
+                    "cannot construct or guess the receipt",
+                    "must call the broker tools",
+                    "one top-level `result` field",
+                    "do not produce analysis or a final response before",
+                    f"trusted invocation context: stage={stage}",
+                    *(f"mcp__sweep-broker__{tool_name}" for tool_name in required_tools),
+                ):
+                    self.assertIn(phrase, prompt)
 
     def test_codex_event_projection_exposes_only_broker_tool_status(self) -> None:
         events = "\n".join(
@@ -1209,7 +1308,7 @@ class SurfaceConfinementTests(unittest.TestCase):
         self.assertIn("sweep-apply-result", registry.MUTATION_HELPERS)
         entry = registry.MUTATION_HELPERS["sweep-apply-result"]
         self.assertEqual(("dry_run", "apply"), entry.modes)
-        implementation = (PLUGIN_ROOT / "speckit_pro_runner/helpers/read_only.py").read_text(
+        implementation = (PLUGIN_ROOT / "speckit_pro_runner/helpers/feedback_sweep.py").read_text(
             encoding="utf-8"
         )
         self.assertIn('"launch_claude"', implementation)
@@ -1217,7 +1316,7 @@ class SurfaceConfinementTests(unittest.TestCase):
     def test_runner_exposes_a_bounded_private_session_close_surface(self) -> None:
         source = read_only.sweep_isolation_session.__doc__ or ""
         self.assertIn("private", source)
-        implementation = (PLUGIN_ROOT / "speckit_pro_runner/helpers/read_only.py").read_text(
+        implementation = (PLUGIN_ROOT / "speckit_pro_runner/helpers/feedback_sweep.py").read_text(
             encoding="utf-8"
         )
         self.assertIn('"close"', implementation)
@@ -1626,11 +1725,7 @@ class CaptureAndHookTests(unittest.TestCase):
         # exact JSON recursion limit varies across supported Python versions, so
         # a synthetic exception is the deterministic way to exercise this branch.
         script = PLUGIN_ROOT / "scripts" / "sweep-isolation-hook.py"
-        spec = importlib.util.spec_from_file_location("sweep_isolation_hook_unclassified", script)
-        self.assertIsNotNone(spec)
-        self.assertIsNotNone(spec.loader)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+        module = load_script("sweep_isolation_hook_unclassified", script)
         stdout, stderr = io.StringIO(), io.StringIO()
         canary = "unexpected-private-exception-text"
         with patch.object(module, "_payload", side_effect=RuntimeError(canary)), \
@@ -1646,12 +1741,7 @@ class CaptureAndHookTests(unittest.TestCase):
 
     def test_claude_hook_reason_vocabulary_is_closed_and_code_owned(self) -> None:
         script = PLUGIN_ROOT / "scripts" / "sweep-isolation-hook.py"
-        spec = importlib.util.spec_from_file_location("sweep_isolation_hook", script)
-        self.assertIsNotNone(spec)
-        self.assertIsNotNone(spec.loader)
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[spec.name] = module
-        spec.loader.exec_module(module)
+        module = load_script("sweep_isolation_hook", script)
 
         self.assertEqual(
             "feedback sweep security hook failed closed", module.FAILURE_MESSAGE
@@ -1753,14 +1843,12 @@ class CaptureAndHookTests(unittest.TestCase):
 
 class WorkflowAndEvalContractTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.claude_reference = (
-            PLUGIN_ROOT
-            / "skills/speckit-autopilot/references/phase-execution.md"
-        ).read_text(encoding="utf-8")
-        self.codex_reference = (
-            PLUGIN_ROOT
-            / "codex-skills/speckit-autopilot/references/phase-execution-codex.md"
-        ).read_text(encoding="utf-8")
+        from host_skill_views import host_skill_root
+
+        self.claude_reference, self.codex_reference = (
+            (host_skill_root(host) / "speckit-autopilot/references/phase-execution.md").read_text(encoding="utf-8")
+            for host in ("claude", "codex")
+        )
         self.classifier_prompts = {
             "claude": (PLUGIN_ROOT / "agents/sweep-classifier.md").read_text(
                 encoding="utf-8"
@@ -1817,15 +1905,13 @@ class WorkflowAndEvalContractTests(unittest.TestCase):
             r"spawn_agent[^\n]{0,160}sweep-(?:classifier|analyst)",
         )
 
-    def test_amendment_run_stops_before_broader_artifact_regeneration(self) -> None:
-        for surface, source in (
-            ("Claude", self.claude_reference),
-            ("Codex", self.codex_reference),
-        ):
-            stop = source.index("Stop for human re-review before artifact regeneration")
-            resume = source.index("On a later resumed run")
+    def test_amendment_run_invalidates_the_session_before_regenerating(self) -> None:
+        for surface, source in (("Claude", self.claude_reference), ("Codex", self.codex_reference)):
+            regenerate = source.index("Regenerate after an amendment in a fresh isolated worker")
+            invalidate = source.index("0. Invalidate the private sweep session")
             with self.subTest(surface=surface):
-                self.assertLess(stop, resume)
+                self.assertLess(regenerate, invalidate)
+                self.assertLess(invalidate, source.index("2. On `stale`", invalidate))
 
     def test_both_surfaces_ship_the_same_adversarial_isolation_eval(self) -> None:
         paths = {
@@ -1931,12 +2017,7 @@ class WorkflowAndEvalContractTests(unittest.TestCase):
             / "tests/speckit-pro/layer6-integration/run-feedback-sweep-isolation-smoke.py"
         )
         self.assertTrue(script.is_file())
-        spec = importlib.util.spec_from_file_location("feedback_sweep_live_smoke", script)
-        self.assertIsNotNone(spec)
-        self.assertIsNotNone(spec.loader)
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[spec.name] = module
-        spec.loader.exec_module(module)
+        module = load_script("feedback_sweep_live_smoke", script)
 
         self.assertEqual(
             {"claude": "2.1.245", "codex": "0.149.0"},
@@ -1971,6 +2052,109 @@ class WorkflowAndEvalContractTests(unittest.TestCase):
             (REPO_ROOT / "tests/speckit-pro/suite-manifest.json").read_text(encoding="utf-8")
         )
         self.assertNotIn(script.name, json.dumps(manifest, sort_keys=True))
+
+
+class AnchorUniquenessTests(SweepSessionCase):
+    """validate_result refuses an anchor the snapshot does not match exactly once."""
+
+    def validated(self, anchor: str) -> dict[str, object]:
+        snapshot = sweep_isolation.GitSnapshot.capture(self.fixture.root)
+        edit = {"file": "plan.md", "anchor": anchor, "replacement": "new text"}
+        return sweep_isolation.validate_result("synthesis", self.synthesis(edit=edit), perspective=None, snapshot=snapshot)
+
+    def test_an_ambiguous_or_absent_anchor_is_refused_before_a_receipt(self) -> None:
+        self.fixture.write("specs/002-other/plan.md", "# Plan\nold text\n")
+        self.fixture.commit()
+        for anchor in ("old text", "not in the plan"):
+            with self.subTest(anchor=anchor), self.assertRaises(sweep_isolation.SchemaViolation) as caught:
+                self.validated(anchor)
+            self.assertEqual("anchor_ambiguous", sweep_broker._broker_error_code(caught.exception))
+
+    def test_a_unique_anchor_is_accepted(self) -> None:
+        self.assertEqual("old text", self.validated("old text")["edit"]["anchor"])
+
+    def test_the_refusal_is_a_declared_broker_error_code(self) -> None:
+        self.assertIn("anchor_ambiguous", sweep_isolation.BROKER_ERROR_CODES)
+
+    def test_codex_trace_allows_a_bounded_retry_after_an_anchor_refusal(self) -> None:
+        def call(tool: str, *, failed_with: str | None = None) -> str:
+            item = {"type": "mcp_tool_call", "server": "sweep-broker", "tool": tool, "arguments": {}}
+            if failed_with is None:
+                item.update(result={"content": []}, error=None, status="completed")
+            else:
+                item.update(
+                    result={"isError": True, "content": [{"type": "text", "text": f"broker_error:{failed_with}"}]},
+                    error={"message": "failed"},
+                    status="failed",
+                )
+            return json.dumps({"type": "item.completed", "item": item})
+
+        retried = "\n".join((call("consensus_inputs"), call("submit_result", failed_with="anchor_ambiguous"),
+                             call("submit_result")))
+        sweep_launcher.verify_codex_event_trace(retried, stage="synthesis")
+        for label, trace in (
+            ("other failure", "\n".join((call("consensus_inputs"), call("submit_result", failed_with="schema_fields"),
+                                         call("submit_result")))),
+            ("no success", "\n".join((call("consensus_inputs"), call("submit_result", failed_with="anchor_ambiguous")))),
+            ("unbounded retries", "\n".join((call("consensus_inputs"),
+                                              *[call("submit_result", failed_with="anchor_ambiguous")] * 3,
+                                              call("submit_result")))),
+        ):
+            with self.subTest(case=label), self.assertRaises(sweep_launcher.LauncherViolation):
+                sweep_launcher.verify_codex_event_trace(trace, stage="synthesis")
+
+
+class BrokerCohesionTests(unittest.TestCase):
+    """Each broker contract has one authoritative statement."""
+
+    def test_the_hook_receipt_and_capability_patterns_match_the_session_store(self) -> None:
+        hook = load_script("sweep_hook_patterns", PLUGIN_ROOT / "scripts/sweep-isolation-hook.py")
+
+        self.assertEqual(language_of(sweep_isolation.RECEIPT_RE.pattern), language_of(hook.RECEIPT_RE.pattern))
+        self.assertEqual(language_of(sweep_isolation.CAPABILITY_RE.pattern), language_of(hook.CAPABILITY_RE.pattern))
+        self.assertEqual(sweep_isolation.HOOK_VERSION, hook.HOOK_VERSION)
+        self.assertNotEqual(language_of(sweep_isolation.RECEIPT_RE.pattern), language_of(hook.RECEIPT_RE.pattern) + "x")
+
+    def test_the_claude_receipt_schema_is_the_shipped_codex_schema(self) -> None:
+        shipped = json.loads(
+            (PLUGIN_ROOT / "speckit_pro_runner/contracts/sweep-receipt-output.schema.json").read_text(encoding="utf-8")
+        )
+        claude = sweep_launcher.CLAUDE_RECEIPT_OUTPUT_SCHEMA
+        self.assertEqual({key: value for key, value in shipped.items() if key != "$schema"}, claude)
+        self.assertEqual(
+            language_of(sweep_isolation.RECEIPT_RE.pattern), claude["properties"]["receipt"]["pattern"]
+        )
+        source = (PLUGIN_ROOT / "speckit_pro_runner/sweep_launcher.py").read_text(encoding="utf-8")
+        self.assertFalse("sweep-result:v1:" in source, "sweep_launcher.py restates the receipt pattern")
+
+    def test_stage_instructions_live_only_in_the_prompt_markdown(self) -> None:
+        self.assertFalse(hasattr(sweep_launcher, "CODEX_STAGE_PROMPTS"))
+        self.assertEqual(("classifier", "perspective", "synthesis"), sweep_isolation.STAGES)
+
+    def test_brokers_share_one_stdio_loop(self) -> None:
+        for name in ("sweep_broker", "research_broker", "author_broker"):
+            source = (PLUGIN_ROOT / f"speckit_pro_runner/{name}.py").read_text(encoding="utf-8")
+            with self.subTest(broker=name):
+                self.assertFalse("sys.stdin" in source or '"tools/list"' in source, f"{name} keeps its own stdio loop")
+
+
+def codex_stage_prompt(stage: str) -> str:
+    """The full trusted prompt the launcher hands the isolated Codex process."""
+    with patch.object(sweep_launcher, "codex_executable", return_value=REPO_ROOT.parent / "rt" / "bin" / "codex"), \
+            patch.object(sweep_launcher, "python_executable", return_value=REPO_ROOT.parent / "rt" / "bin" / "python3"):
+        return sweep_launcher.codex_command(
+            plugin_root=PLUGIN_ROOT,
+            repo_root=REPO_ROOT,
+            runtime_root=REPO_ROOT.parent / "isolated-sweep-runtime",
+            capability=f"sweep-cap:v1:{'a' * 32}:{'b' * 64}",
+            stage=stage,
+            perspective="codebase" if stage == "perspective" else None,
+        )[-1]
+
+
+def language_of(pattern: str) -> str:
+    """A regular expression's matched language, ignoring capture groups."""
+    return re.sub(r"[()]", "", pattern)
 
 
 if __name__ == "__main__":

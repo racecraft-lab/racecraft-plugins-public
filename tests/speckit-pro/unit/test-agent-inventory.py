@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 import sys
 import tempfile
 import unittest
@@ -40,12 +41,12 @@ class AgentInventoryTests(unittest.TestCase):
 
     def test_canonical_inventory_has_expected_shared_and_exception_counts(self) -> None:
         categories = [role["category"] for role in AGENT_INVENTORY["roles"]]
-        self.assertEqual(categories.count("shared"), 12)
+        self.assertEqual(categories.count("shared"), 13)
         self.assertEqual(categories.count("sweep_security"), 2)
         self.assertEqual(categories.count("brokered_observer"), 1)
         self.assertEqual(categories.count("optional_helper"), 1)
-        self.assertEqual(len(CLAUDE_REQUIRED_AGENT_NAMES), 15)
-        self.assertEqual(len(CODEX_REQUIRED_AGENT_NAMES), 12)
+        self.assertEqual(len(CLAUDE_REQUIRED_AGENT_NAMES), 16)
+        self.assertEqual(len(CODEX_REQUIRED_AGENT_NAMES), 13)
         self.assertEqual(CODEX_OPTIONAL_AGENT_NAMES, ("autopilot-fast-helper",))
         self.assertEqual(inventory_source_errors(PLUGIN_ROOT, AGENT_INVENTORY), [])
 
@@ -86,8 +87,34 @@ class AgentInventoryTests(unittest.TestCase):
         self.assertTrue(any("must be a regular file" in error for error in errors), errors)
 
 
+class MemoryScopeMatrixTests(unittest.TestCase):
+    def test_memory_scope_matrix_lists_every_claude_role_with_its_inventory_scope(self) -> None:
+        policy = PLUGIN_ROOT / "skills/speckit-autopilot/references/subagent-memory-policy.md"
+        section = policy.read_text(encoding="utf-8").split("## Scope matrix", 1)[1].split("\n## ", 1)[0]
+        documented: dict[str, list[str]] = {}
+        for row in section.splitlines():
+            cells = [cell.strip() for cell in row.strip().strip("|").split("|")]
+            if len(cells) < 2 or not row.startswith("| `"):
+                continue
+            for name in re.findall(r"`([a-z0-9-]+)`", cells[0]):
+                documented.setdefault(name, []).append(cells[1].strip("`"))
+        expected = {
+            role["name"]: role["claude_code"]["memory"]
+            for role in AGENT_INVENTORY["roles"]
+            if role["claude_code"]["implementation"] != "none"
+        }
+        self.assertEqual(sorted(expected), sorted(documented), "matrix roles differ from the inventory")
+        for name, scopes in documented.items():
+            with self.subTest(role=name):
+                self.assertEqual([expected[name]], scopes)
+
+
+
 def main() -> int:
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(AgentInventoryTests)
+    suite = unittest.TestSuite(
+        unittest.defaultTestLoader.loadTestsFromTestCase(case)
+        for case in (AgentInventoryTests, MemoryScopeMatrixTests)
+    )
     return run_counted(suite, label="test-agent-inventory")
 
 

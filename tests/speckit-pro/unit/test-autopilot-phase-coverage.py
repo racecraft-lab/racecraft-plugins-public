@@ -4,19 +4,32 @@
 from __future__ import annotations
 
 import hashlib
-import importlib.util
 import json
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
-import uuid
 from pathlib import Path
 from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
+if str(PLUGIN_ROOT) not in sys.path:
+    sys.path.insert(0, str(PLUGIN_ROOT))
+
+from speckit_pro_runner.json_schema import json_schema_failures, resolve_local_schema_reference  # noqa: E402
+
+sys.path.insert(0, str(REPO_ROOT / "tests" / "speckit-pro" / "lib"))
+from script_loader import load_script  # noqa: E402
+from autonomy_boundary_fixture import (  # noqa: E402
+    autonomy_execution_control,
+    autonomy_private_record,
+    autonomy_public_receipt,
+    write_autonomy_private_record,
+)
+
 VALIDATOR = REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot" / "scripts" / "validate-autopilot-phase-coverage.py"
 CANONICAL_SCHEMA_PATHS = tuple(
     VALIDATOR.parents[1] / "contracts" / name
@@ -25,6 +38,11 @@ CANONICAL_SCHEMA_PATHS = tuple(
         "changed-file-manifest.schema.json",
         "verification-report.schema.json",
     )
+)
+# The validator imports these beside itself, so an installed copy needs them too.
+VALIDATOR_SUPPORT_FILES = (
+    *(PLUGIN_ROOT / "speckit_pro_runner" / name for name in ("__init__.py", "json_schema.py")),
+    *sorted(VALIDATOR.parent.glob("lib/*.py")),
 )
 MARKER_CHECKPOINT_SCHEMA = VALIDATOR.parents[1] / "contracts" / "marker-checkpoint.schema.json"
 REPORT_SCHEMA = (
@@ -37,6 +55,15 @@ REPORT_SCHEMA = (
     / "contracts"
     / "autopilot-phase-coverage-report.schema.json"
 )
+
+
+def install_validator(plugin_home: Path) -> Path:
+    """Copy the validator and the files it imports into a plugin-shaped tree."""
+    for source in (VALIDATOR, *VALIDATOR_SUPPORT_FILES):
+        copied = plugin_home / source.relative_to(REPO_ROOT)
+        copied.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, copied)
+    return plugin_home / VALIDATOR.relative_to(REPO_ROOT)
 
 
 def commit_test_repo(root: Path, message: str) -> None:
@@ -60,150 +87,18 @@ def commit_test_repo(root: Path, message: str) -> None:
 
 
 def load_validator_module() -> object:
-    spec = importlib.util.spec_from_file_location(
-        "speckit_autopilot_phase_coverage_validator",
-        VALIDATOR,
-    )
-    if spec is None or spec.loader is None:
-        raise RuntimeError("could not load autopilot phase coverage validator")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_script("speckit_autopilot_phase_coverage_validator", VALIDATOR)
 
 
 VALIDATOR_MODULE = load_validator_module()
+import phase_coverage_repo_files  # noqa: E402  (the validator puts its lib directory on sys.path)
 
 
 def load_privacy_scan_module() -> object:
     """Reuse the Layer-4 privacy patterns instead of copying their regexes."""
     path = REPO_ROOT / "tests" / "speckit-pro" / "unit" / "test-privacy-scan.py"
-    spec = importlib.util.spec_from_file_location("speckit_privacy_scan_patterns", path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError("could not load the privacy scan module")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load_script("speckit_privacy_scan_patterns", path)
 
-
-def autonomy_private_record(repo_root: Path, writable_roots: list[str]) -> dict[str, object]:
-    """A complete v1 boundary record whose roots and target are machine-local."""
-    feature = repo_root / "specs" / "demo"
-    feature.mkdir(parents=True, exist_ok=True)
-    fingerprints: dict[str, object] = {}
-    for label, name, content in (
-        ("plan_md", "plan.md", b"# Plan\n"),
-        ("tasks_md", "tasks.md", b"# Tasks\n"),
-    ):
-        (feature / name).write_bytes(content)
-        fingerprints[label] = {
-            "path": f"specs/demo/{name}",
-            "sha256": VALIDATOR_MODULE._sha256_bytes(content),
-            "size_bytes": len(content),
-        }
-    execution_scope = {
-        "execution_environment": "local",
-        "sandbox_mode": "workspace-write",
-        "approval_reviewer": "auto_review",
-        "writable_roots": sorted(writable_roots),
-    }
-    execution_sha = VALIDATOR_MODULE._canonical_json_sha256(execution_scope)
-    action_scope = {
-        "category": "outside_writable_roots",
-        "command_or_tool": "apply_patch",
-        "target": str(Path(writable_roots[0]).parent / "shared-config" / "settings.json"),
-        "effect": "persistent edit of a machine-local file",
-        "execution_boundary_sha256": execution_sha,
-    }
-    scope_sha = VALIDATOR_MODULE._canonical_json_sha256(action_scope)
-    return {
-        "schema_version": "autonomy-boundary.v1",
-        "status": "ready",
-        "planning_fingerprints": fingerprints,
-        "execution_boundary": {
-            **execution_scope,
-            "summary": f"Writes stay inside {writable_roots[0]}.",
-            "sha256": execution_sha,
-        },
-        "actions": [
-            {
-                "action_id": "edit-shared-config",
-                **action_scope,
-                "scope_sha256": scope_sha,
-                "disposition": "ready",
-                "authorization": {
-                    "status": "explicit_user",
-                    # A dashed native event id guarantees a privacy-pattern hit on
-                    # every platform, whatever the home and temp roots are.
-                    "evidence": (
-                        f"user approved the edit at {action_scope['target']} "
-                        f"in native event {uuid.uuid4()}"
-                    ),
-                    "scope_sha256": scope_sha,
-                },
-            }
-        ],
-    }
-
-
-def autonomy_public_receipt(record: dict[str, object]) -> dict[str, object]:
-    """Project a private boundary record onto its portable public receipt."""
-    execution = record["execution_boundary"]
-    return {
-        "schema_version": "autonomy-boundary-receipt.v1",
-        "status": record["status"],
-        "planning_fingerprints": record["planning_fingerprints"],
-        "execution_boundary": {
-            key: execution[key]
-            for key in ("execution_environment", "sandbox_mode", "approval_reviewer", "sha256")
-        },
-        "actions": [
-            {
-                "action_id": action["action_id"],
-                "category": action["category"],
-                "execution_boundary_sha256": action["execution_boundary_sha256"],
-                "scope_sha256": action["scope_sha256"],
-                "disposition": action["disposition"],
-                "authorization": {
-                    "status": action["authorization"]["status"],
-                    "scope_sha256": action["authorization"]["scope_sha256"],
-                },
-            }
-            for action in record["actions"]
-        ],
-        "private_record_sha256": VALIDATOR_MODULE._canonical_json_sha256(record),
-    }
-
-
-AUTONOMY_RUN_ID = "0" * 32
-
-
-def autonomy_execution_control(run_id: str = AUTONOMY_RUN_ID) -> dict[str, object]:
-    """The state's execution-control mirror; its run id locates the private record."""
-    return {
-        "ledger_path": ".process/execution-control/workflow.json",
-        "run_id": run_id,
-        "disposition": "continue",
-        "reasons": [],
-        "elapsed_seconds": 0,
-        "checkpoint_due": False,
-    }
-
-
-def write_autonomy_private_record(
-    repo_root: Path, record: object, run_id: str = AUTONOMY_RUN_ID,
-) -> Path:
-    """Write the private record owner-only where the full guard reads it.
-
-    `repo_root` must be a `git init` checkout, so its git common directory is
-    `repo_root/.git`.
-    """
-    directory = repo_root / ".git" / "speckit-pro" / "autonomy-boundary"
-    directory.mkdir(parents=True, exist_ok=True, mode=0o700)
-    path = directory / f"{run_id}.json"
-    path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
-    path.chmod(0o600)
-    return path
 
 POST_STEPS = [
     "Post: Doctor Extension Check",
@@ -321,7 +216,9 @@ def state_json(*, include_confidence: bool = True, include_post: bool = True, co
     }
 
 
-class AutopilotPhaseCoverageTests(unittest.TestCase):
+class _ValidatorRunner(object):
+    """Shared fixture for the tests below."""
+
     def run_validator_paths(self, workflow_path: Path, state_path: Path) -> tuple[int, dict[str, object]]:
         local_validator = state_path.parent / VALIDATOR.relative_to(REPO_ROOT)
         installed_validator = getattr(self, "_installed_validator", None)
@@ -377,6 +274,8 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 state_path.write_text(json.dumps(state), encoding="utf-8")
             return self.run_validator_paths(workflow_path, state_path)
 
+
+class AutopilotPhaseCoverageTests(_ValidatorRunner, unittest.TestCase):
     @staticmethod
     def complete_checkpoint(*, commit_sha: str = "a" * 40) -> dict[str, object]:
         return {
@@ -504,7 +403,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             )
 
     @unittest.skipUnless(
-        getattr(VALIDATOR_MODULE, "HAS_DESCRIPTOR_RELATIVE_IO", False),
+        phase_coverage_repo_files.HAS_DESCRIPTOR_RELATIVE_IO,
         "requires descriptor-relative no-follow reads",
     )
     def test_repo_reader_rejects_directory_swap_during_open(self) -> None:
@@ -851,7 +750,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 _, report = self.run_validator(workflow_text(), state)
                 self.assertTrue(
                     any(
-                        f"implementation_checkpoint is missing required fields: {missing}" in error
+                        f"implementation_checkpoint.{missing}: Required schema field is missing" in error
                         for error in report["marker_plan_status_errors"]
                     ),
                     report["marker_plan_status_errors"],
@@ -1047,7 +946,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
         self.assertEqual(
             report["marker_plan_status_errors"],
             [
-                "pr_marker_plan.markers[0].emission_mapping.status does not match its schema constant",
+                "pr_marker_plan.markers[0].emission_mapping.status: Value does not match the schema constant.",
                 "pr_marker_plan.status emitted rejects marker 0 emission 'pending'",
             ],
         )
@@ -1465,8 +1364,8 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             schema["properties"]["schema_version"], {"const": "marker-checkpoint.v1"}
         )
         self.assertIsInstance(
-            VALIDATOR_MODULE._resolve_schema_reference(
-                schema, "#/$defs/checkpoint_correction_record"
+            resolve_local_schema_reference(
+                "#/$defs/checkpoint_correction_record", schema
             ),
             dict,
         )
@@ -1593,9 +1492,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                     ),
                     encoding="utf-8",
                 )
-            local_validator = plugin_home / VALIDATOR.relative_to(REPO_ROOT)
-            local_validator.parent.mkdir(parents=True)
-            shutil.copy2(VALIDATOR, local_validator)
+            local_validator = install_validator(plugin_home)
             if not plugin_inside_repo:
                 self._installed_validator = local_validator
                 self.addCleanup(delattr, self, "_installed_validator")
@@ -2020,7 +1917,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 self.assertEqual(exit_code, 1)
                 self.assertIn(
                     "pr_marker_plan.markers[0] checkpoint evidence schema: "
-                    + "checkpoint_evidence.tasks_sha does not match its schema pattern",
+                    + "checkpoint_evidence.tasks_sha: String does not match the packet schema pattern.",
                     report["checkpoint_evidence_errors"],
                 )
                 evidence_path.write_bytes(valid_evidence)
@@ -2589,10 +2486,10 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             )
 
             manifest_authority_cases = (
-                ("schema_version", "changed-file-manifest.v999", "schema constant"),
+                ("schema_version", "changed-file-manifest.v999", "does not match the schema constant"),
                 ("feature_id", "OTHER-999", "feature_id does not match state authority"),
                 ("comparison_ref", "BASE", "comparison_ref"),
-                ("unexpected", True, "unsupported fields"),
+                ("unexpected", True, "Schema does not allow packet field"),
             )
             for field, value, expected_error in manifest_authority_cases:
                 with self.subTest(manifest_authority=field):
@@ -3536,15 +3433,15 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
         exit_code, report = self.run_validator(workflow_text(), state)
         self.assertEqual(exit_code, 1)
         self.assertIn(
-            "pr_marker_plan is missing required fields: status",
+            "pr_marker_plan.status: Required schema field is missing: pr_marker_plan.status.",
             report["marker_plan_status_errors"],
         )
         self.assertTrue(any(
-            "implementation_checkpoint" in error and "missing required fields" in error
+            "implementation_checkpoint" in error and "Required schema field is missing" in error
             for error in report["marker_plan_status_errors"]
         ))
         self.assertTrue(any(
-            "unsupported fields: unexpected" in error
+            "Schema does not allow packet field: pr_marker_plan.markers[0].unexpected." in error
             for error in report["marker_plan_status_errors"]
         ))
 
@@ -3566,23 +3463,23 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
         self.assertEqual(exit_code, 1)
         errors = report["marker_plan_status_errors"]
         self.assertTrue(any(
-            "source_fingerprint is missing required fields" in error
+            "source_fingerprint." in error and "Required schema field is missing" in error
             for error in errors
         ))
         self.assertTrue(any(
-            "declared_tests[0] has the wrong schema type" in error
+            "declared_tests[0]: Value must have schema type" in error
             for error in errors
         ))
         self.assertTrue(any(
-            "reviewability is missing required fields" in error
+            "reviewability." in error and "Required schema field is missing" in error
             for error in errors
         ))
         self.assertTrue(any(
-            "subdivision is missing required fields" in error
+            "subdivision." in error and "Required schema field is missing" in error
             for error in errors
         ))
         self.assertTrue(any(
-            "warnings[0] is missing required fields" in error
+            "warnings[0]." in error and "Required schema field is missing" in error
             for error in errors
         ))
 
@@ -3897,8 +3794,51 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
         self.assertIn("migrate", required[0])
 
 
+class AutopilotPhaseCoverageReportSchemaTests(_ValidatorRunner, unittest.TestCase):
+    def test_real_reports_validate_against_the_report_schema(self) -> None:
+        schema = json.loads(REPORT_SCHEMA.read_text(encoding="utf-8"))
+        failing_state = state_json()
+        failing_state["plan"] = failing_state["plan"][:-1]
+        scenarios = {
+            "pass": (workflow_text(), state_json(), "pass"),
+            "fail": (workflow_text(), failing_state, "fail"),
+        }
+        for name, (workflow, state, status) in scenarios.items():
+            with self.subTest(scenario=name):
+                _, report = self.run_validator(workflow, state)
+                self.assertEqual(report["status"], status)
+                self.assertEqual(json_schema_failures(report, schema, schema, ""), [])
+
+    def test_report_schema_names_every_emitted_problem_key(self) -> None:
+        schema = json.loads(REPORT_SCHEMA.read_text(encoding="utf-8"))
+        _, report = self.run_validator(workflow_text(), state_json())
+        self.assertEqual(set(report) - set(schema["properties"]), set())
+        pass_fail_required = set(schema["allOf"][0]["then"]["required"])
+        self.assertEqual(set(report), pass_fail_required | {"status", "repair"})
+
+
+class AutopilotPhaseCoverageRepairTests(_ValidatorRunner, unittest.TestCase):
+    """A failing coverage report names the orchestrator repair route and the failing keys."""
+
+    def test_a_failing_report_names_the_orchestrator_repair_route_and_the_failing_keys(self) -> None:
+        exit_code, report = self.run_validator(workflow_text(), state_json(include_post=False))
+        self.assertEqual(exit_code, 1)
+        repair = report["repair"]
+        self.assertEqual(repair["owner"], "orchestrator")
+        self.assertEqual(repair["retry"], "validate-autopilot-phase-coverage")
+        self.assertEqual(repair["failing_keys"], ["missing_state_post_items"])
+        exit_code, report = self.run_validator(workflow_text(), state_json())
+        self.assertEqual(exit_code, 0)
+        self.assertIsNone(report["repair"])
+
+
 if __name__ == "__main__":
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(AutopilotPhaseCoverageTests)
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
+                               for case in (
+                                   AutopilotPhaseCoverageTests,
+                                   AutopilotPhaseCoverageReportSchemaTests,
+                                   AutopilotPhaseCoverageRepairTests,
+                               ))
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     total = result.testsRun
     failed = len(result.failures) + len(result.errors)

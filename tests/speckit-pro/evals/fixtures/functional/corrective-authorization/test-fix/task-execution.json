@@ -1,0 +1,29 @@
+{
+  "schema_version": "task-execution.v1",
+  "fingerprints": {
+    "spec_sha256": "3f985848b59847f70a7ef84b6f6e111cdd6fd56fd4c5c0646fd0a209f795cef9",
+    "plan_sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3",
+    "tasks_sha256": "aac6cbd6ee8180cfe4b78af9c377b4061b5b8fe2ef8dcefff3bf8d39f57f2f2e"
+  },
+  "tasks": {
+    "T001": {
+      "capability_group": "stories",
+      "depends_on": [],
+      "owns": [
+        "src/alpha",
+        "tests/test_runner.py",
+        "tests/test_alpha_extra.py"
+      ],
+      "tdd_unit": "alpha"
+    },
+    "T002": {
+      "capability_group": "stories",
+      "depends_on": [],
+      "owns": [
+        "src/beta",
+        "tests/test_beta.py"
+      ],
+      "tdd_unit": "beta"
+    }
+  }
+}

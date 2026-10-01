@@ -11,13 +11,14 @@ Marketplace, plugin, integration, and generated distribution manifests with runt
 
 - **Public path:** `/racecraft-plugins-public/reference/manifests/`
 - **Generated output:** `docs-site/src/content/docs/reference/manifests.md`
-- **Records:** 8
+- **Records:** 9
 
 ## Navigation Summary
 
 - .agents/plugins/marketplace.json
 - .claude-plugin/marketplace.json
 - .specify/integrations/claude.manifest.json
+- .specify/integrations/codex.manifest.json
 - .specify/integrations/speckit.manifest.json
 - dist/claude/speckit-pro/.claude-plugin/plugin.json
 - dist/codex/speckit-pro/.codex-plugin/plugin.json
@@ -103,6 +104,30 @@ Marketplace, plugin, integration, and generated distribution manifests with runt
 - Required and optional field groupings are reference metadata for review; they do not change manifest semantics or generated payload content.
   - Based on: `.specify/integrations/claude.manifest.json`
 
+### .specify/integrations/codex.manifest.json
+
+- **Purpose:** Reference inventory for the Codex SpecKit integration manifest.
+- **Classification:** `source`
+- **Platform concept:** SpecKit integration manifest
+- **Claude Code:** Not a Claude Code manifest record.
+- **Codex:** .specify/integrations/codex.manifest.json
+- **Runtime difference:** Marketplace, plugin, integration, and generated distribution manifests are documented as separate categories.
+
+#### Source Facts
+
+- .specify/integrations/codex.manifest.json is categorized as SpecKit integration manifest. Source refs: `.specify/integrations/codex.manifest.json`.
+- Top-level fields: `files`, `installed_at`, `integration`, `version`. Source refs: `.specify/integrations/codex.manifest.json`.
+- The manifest declares version `1.0.11`. Source refs: `.specify/integrations/codex.manifest.json`.
+
+#### Sources
+
+- [.specify/integrations/codex.manifest.json](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/.specify/integrations/codex.manifest.json)
+
+#### Inferred Notes
+
+- Required and optional field groupings are reference metadata for review; they do not change manifest semantics or generated payload content.
+  - Based on: `.specify/integrations/codex.manifest.json`
+
 ### .specify/integrations/speckit.manifest.json
 
 - **Purpose:** Reference inventory for the shared Claude Code and Codex SpecKit integration manifest.
@@ -175,7 +200,7 @@ Marketplace, plugin, integration, and generated distribution manifests with runt
 
 - dist/codex/speckit-pro/.codex-plugin/plugin.json is categorized as generated distribution plugin manifest. Source refs: `dist/codex/speckit-pro/.codex-plugin/plugin.json`.
 - Top-level fields: `author`, `description`, `homepage`, `hooks`, `interface`, `keywords`, `license`, `mcpServers`, `name`, `repository`, `skills`, `version`. Source refs: `dist/codex/speckit-pro/.codex-plugin/plugin.json`.
-- The manifest declares version `2.38.2`. Source refs: `dist/codex/speckit-pro/.codex-plugin/plugin.json`.
+- The manifest declares version `2.39.0`. Source refs: `dist/codex/speckit-pro/.codex-plugin/plugin.json`.
 
 #### Sources
 
@@ -234,7 +259,7 @@ Marketplace, plugin, integration, and generated distribution manifests with runt
 
 - speckit-pro/.codex-plugin/plugin.json is categorized as source plugin manifest. Source refs: `speckit-pro/.codex-plugin/plugin.json`.
 - Top-level fields: `author`, `description`, `homepage`, `hooks`, `interface`, `keywords`, `license`, `mcpServers`, `name`, `repository`, `skills`, `version`. Source refs: `speckit-pro/.codex-plugin/plugin.json`.
-- The manifest declares version `2.38.2`. Source refs: `speckit-pro/.codex-plugin/plugin.json`.
+- The manifest declares version `2.39.0`. Source refs: `speckit-pro/.codex-plugin/plugin.json`.
 
 #### Sources
 

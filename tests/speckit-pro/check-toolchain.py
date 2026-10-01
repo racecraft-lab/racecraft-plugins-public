@@ -17,12 +17,11 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SUPPORTED_MODES = {"tests", "shell", "docs", "all"}
+SUPPORTED_MODES = {"tests", "docs", "all"}
 HELP_TEXT = """check-toolchain.py - Report and validate local tools used by speckit-pro checks.
 
 Usage:
   python3 tests/speckit-pro/check-toolchain.py --mode tests
-  python3 tests/speckit-pro/check-toolchain.py --mode shell
   python3 tests/speckit-pro/check-toolchain.py --mode docs
   python3 tests/speckit-pro/check-toolchain.py --mode all
 """
@@ -162,6 +161,15 @@ def check_test_tools(reporter: Reporter) -> None:
     check_repo_tools(reporter, "tests")
 
 
+def declared_package_manager() -> str:
+    """Return docs-site/package.json packageManager, the one source of the pnpm pin."""
+    try:
+        value = json.loads((REPO_ROOT / "docs-site" / "package.json").read_text(encoding="utf-8")).get("packageManager", "")
+    except (OSError, json.JSONDecodeError):
+        return ""
+    return value if isinstance(value, str) else ""
+
+
 def check_docs_tools(reporter: Reporter) -> None:
     print("speckit-pro toolchain check (docs)")
     require_cmd(reporter, "node", "node")
@@ -179,22 +187,21 @@ def check_docs_tools(reporter: Reporter) -> None:
         else:
             reporter.fail("node >= 22", f"{node_version or 'unknown'}; expected Node 22 or newer")
 
+    package_manager = declared_package_manager()
+    if re.fullmatch(r"pnpm@[0-9]+\.[0-9]+\.[0-9]+", package_manager):
+        reporter.pass_("docs packageManager", package_manager)
+    else:
+        reporter.fail("docs packageManager", f"{package_manager or 'missing'}; expected pnpm@<version> in docs-site/package.json")
+    expected_pnpm = package_manager.removeprefix("pnpm@")
+
     pnpm_path = cmd_path("pnpm")
     if pnpm_path:
         completed = run_command("pnpm", ["--version"])
         pnpm_version = completed.stdout.strip()
-        if pnpm_version == "10.25.0":
+        if pnpm_version == expected_pnpm:
             reporter.pass_("pnpm version", pnpm_version)
         else:
-            reporter.fail("pnpm version", f"{pnpm_version or 'unknown'}; expected 10.25.0")
-
-    package_json = REPO_ROOT / "docs-site" / "package.json"
-    if package_json.is_file():
-        package_manager = json.loads(package_json.read_text(encoding="utf-8")).get("packageManager", "")
-        if package_manager == "pnpm@10.25.0":
-            reporter.pass_("docs packageManager", package_manager)
-        else:
-            reporter.fail("docs packageManager", f"{package_manager or 'missing'}; expected pnpm@10.25.0")
+            reporter.fail("pnpm version", f"{pnpm_version or 'unknown'}; expected {expected_pnpm or 'the docs-site packageManager pin'}")
 
     node_modules = REPO_ROOT / "docs-site" / "node_modules"
     if pnpm_path and node_modules.is_dir():
@@ -218,8 +225,6 @@ def main(argv: list[str]) -> int:
     reporter = Reporter()
     if mode == "tests":
         check_test_tools(reporter)
-    elif mode == "shell":
-        check_repo_tools(reporter, "shell")
     elif mode == "docs":
         check_docs_tools(reporter)
     elif mode == "all":

@@ -22,8 +22,8 @@ proposed content before it is written.
 
 | Field | Meaning |
 |---|---|
-| `thresholds.complexity` | Maximum cyclomatic complexity per changed function (integer, at least 1). |
-| `thresholds.crap` | Maximum CRAP score per changed function (number above 0). CRAP is `cc² × (1 − coverage)³ + cc`, so a well-tested complex function still passes. |
+| `thresholds.complexity` | Maximum cyclomatic complexity per function in each changed file (integer, at least 1). |
+| `thresholds.crap` | Maximum CRAP score per function in each changed file (number above 0). CRAP is `cc² × (1 − coverage)³ + cc`, so a well-tested complex function still passes. |
 | `thresholds.mutation_score_floor` | Minimum mutation score in percent. cosmic-ray receives `100 − floor` as its survival ceiling; for StrykerJS the slot chains `scripts/mutation-score.py`, which reads `reports/mutation/mutation.json` and fails below the floor, because Stryker's default `thresholds.break` is `null` and never fails a run. |
 | `skips` | Permanent skips keyed by slot with a reason. A skipped slot is `N/A` in every workflow without asking. Optional. |
 | `enforce` | Opt-in slots this repository runs. A listed slot runs and blocks; an unlisted one never runs. Only `DEPENDENCY_AUDIT` is opt-in today. Optional. |
@@ -174,8 +174,8 @@ fails when the network does. bun 1.3 exits 1 on a finding at or above
 
 ## Record a permanent skip
 
-When the operator answers "skip this repo" to autopilot's missing-tool
-question, the durable record is a `skips` entry in this file, not the
+When the operator wants a tool skipped for the whole repository, instead of
+autopilot's default of the install hint then `skip (spec)`, the durable record is a `skips` entry in this file, not the
 workflow table. Add the slot with a one-line reason and today's date, validate,
 and confirm before writing. Remove the entry when the tool arrives; autopilot
 re-populates the slot on the next run.

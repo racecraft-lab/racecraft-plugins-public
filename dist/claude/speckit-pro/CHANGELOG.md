@@ -1,5 +1,47 @@
 # Changelog
 
+## [2.39.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.38.2...speckit-pro-v2.39.0) (2026-10-01)
+
+
+### Features
+
+* **speckit-pro:** add the host-parity generator core and record which Codex agent limits are enforced ([#904](https://github.com/racecraft-lab/racecraft-plugins-public/issues/904)) ([e8a8f8c](https://github.com/racecraft-lab/racecraft-plugins-public/commit/e8a8f8c798e5bd5aa3796a9bbb42412acb04ffde))
+* **speckit-pro:** enforce Codex agent tool limits with a PreToolUse hook ([#949](https://github.com/racecraft-lab/racecraft-plugins-public/issues/949)) ([2546b24](https://github.com/racecraft-lab/racecraft-plugins-public/commit/2546b2499f771c4a7c24300a82794600b3419849))
+* **speckit-pro:** generate Codex agent files from their Claude sources ([#948](https://github.com/racecraft-lab/racecraft-plugins-public/issues/948)) ([2d2165f](https://github.com/racecraft-lab/racecraft-plugins-public/commit/2d2165f6c384e631816019a1c36ae8a66114ce3b))
+* **speckit-pro:** give both hosts one status dashboard and one scaffold status rule ([#951](https://github.com/racecraft-lab/racecraft-plugins-public/issues/951)) ([c3ec8da](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c3ec8da7c2e81374276c4eaef18081a7b0891c17))
+* **speckit-pro:** render both hosts' skills from one source for four skills ([#950](https://github.com/racecraft-lab/racecraft-plugins-public/issues/950)) ([4871a17](https://github.com/racecraft-lab/racecraft-plugins-public/commit/4871a1724bfe5d2d375c876e1c399da8c56cf5d0))
+
+
+### Bug Fixes
+
+* **speckit-pro:** align lifecycle skill references, evals and templates with the shipped skills ([#977](https://github.com/racecraft-lab/racecraft-plugins-public/issues/977)) ([83c17a7](https://github.com/racecraft-lab/racecraft-plugins-public/commit/83c17a7be3cebd7cfb20b893d529105553587177))
+* **speckit-pro:** align the Codex and Claude autopilot contracts where they drifted ([#952](https://github.com/racecraft-lab/racecraft-plugins-public/issues/952)) ([b1aaa92](https://github.com/racecraft-lab/racecraft-plugins-public/commit/b1aaa9209b65e1d02648995e90014ea1431f0bd9))
+* **speckit-pro:** defer failed gates and end a clean run without a question ([#844](https://github.com/racecraft-lab/racecraft-plugins-public/issues/844)) ([1d1293f](https://github.com/racecraft-lab/racecraft-plugins-public/commit/1d1293f14ce2038ecfd02f78dd47d82f321d5eaf))
+* **speckit-pro:** define one stop-policy contract that autopilot guidance and the runner share ([#843](https://github.com/racecraft-lab/racecraft-plugins-public/issues/843)) ([3763829](https://github.com/racecraft-lab/racecraft-plugins-public/commit/376382982a03f3400992d1fec1c42733c59b0850))
+* **speckit-pro:** document the arm64-only Docker verification limit and break its import cycle ([#945](https://github.com/racecraft-lab/racecraft-plugins-public/issues/945)) ([51390db](https://github.com/racecraft-lab/racecraft-plugins-public/commit/51390db97cc33f1edc019eafee847c377c18b2d8))
+* **speckit-pro:** document the gh-stack skill pin and keep a retried link's mutation record ([#946](https://github.com/racecraft-lab/racecraft-plugins-public/issues/946)) ([df787ac](https://github.com/racecraft-lab/racecraft-plugins-public/commit/df787acf46412871b374b6836d80072aae04ae2e))
+* **speckit-pro:** drop a resolved deferral from the end-of-run request ([#838](https://github.com/racecraft-lab/racecraft-plugins-public/issues/838)) ([ec7bef2](https://github.com/racecraft-lab/racecraft-plugins-public/commit/ec7bef246d2a102e8fb0a554b8abf4e9fbdcf3d7))
+* **speckit-pro:** drop the consensus settings nothing reads and align the executor keyword lists ([#982](https://github.com/racecraft-lab/racecraft-plugins-public/issues/982)) ([63b0be8](https://github.com/racecraft-lab/racecraft-plugins-public/commit/63b0be8efb885e4371cab1d270f186d95b69805a))
+* **speckit-pro:** fix agent prose paths and derive audit counts ([#972](https://github.com/racecraft-lab/racecraft-plugins-public/issues/972)) ([079c30e](https://github.com/racecraft-lab/racecraft-plugins-public/commit/079c30e9475a380bddcac3ec926b9368fc28fbe5))
+* **speckit-pro:** flag govulncheck and cargo-audit as egress needs and state the gate threshold scope ([#939](https://github.com/racecraft-lab/racecraft-plugins-public/issues/939)) ([d0c0f96](https://github.com/racecraft-lab/racecraft-plugins-public/commit/d0c0f96056ecd89619e836ed3e106e4e8bcd83b1))
+* **speckit-pro:** keep the PR feedback sweep running through amendments and GitHub errors ([#989](https://github.com/racecraft-lab/racecraft-plugins-public/issues/989)) ([402982c](https://github.com/racecraft-lab/racecraft-plugins-public/commit/402982c41638795e8f007d00b159fc43d0e70ac9))
+* **speckit-pro:** keep the research broker spec-text guard on in plugin marketplace repositories ([#899](https://github.com/racecraft-lab/racecraft-plugins-public/issues/899)) ([d94ab07](https://github.com/racecraft-lab/racecraft-plugins-public/commit/d94ab0739b520035aaf05b8fe70683f78487a36e))
+* **speckit-pro:** let a test-only fix to an increment's own tests run without a re-plan ([#837](https://github.com/racecraft-lab/racecraft-plugins-public/issues/837)) ([817be62](https://github.com/racecraft-lab/racecraft-plugins-public/commit/817be625cb646ab69b1da67563e9b8dae073784b))
+* **speckit-pro:** make PR packet validation match the title gate and deferred items ([#919](https://github.com/racecraft-lab/racecraft-plugins-public/issues/919)) ([3ff291b](https://github.com/racecraft-lab/racecraft-plugins-public/commit/3ff291b83c2af0906605cc552a9fe1f2fd37c244))
+* **speckit-pro:** pin uppercase pull request scope statements as historical ([#971](https://github.com/racecraft-lab/racecraft-plugins-public/issues/971)) ([a7c9c41](https://github.com/racecraft-lab/racecraft-plugins-public/commit/a7c9c41651dbbf3a6e454ebc65e7f885af0efd21))
+* **speckit-pro:** point Codex skills at shared contracts by a path the payload build rewrites ([#923](https://github.com/racecraft-lab/racecraft-plugins-public/issues/923)) ([39a3b4d](https://github.com/racecraft-lab/racecraft-plugins-public/commit/39a3b4d22c033d9f378347462ff6b45ac09d89b5))
+* **speckit-pro:** recognize more test runners and stop pooling untagged failures ([#846](https://github.com/racecraft-lab/racecraft-plugins-public/issues/846)) ([7078778](https://github.com/racecraft-lab/racecraft-plugins-public/commit/7078778219b489f8eeb9df29c5fcbd52ae798094))
+* **speckit-pro:** refuse an ambiguous sweep anchor at submission and share the broker plumbing ([#986](https://github.com/racecraft-lab/racecraft-plugins-public/issues/986)) ([8f4a85b](https://github.com/racecraft-lab/racecraft-plugins-public/commit/8f4a85b65b1c1bb08c7bb3196e8bd7f1a2761af7))
+* **speckit-pro:** repair fixable helper results instead of stopping the run ([#850](https://github.com/racecraft-lab/racecraft-plugins-public/issues/850)) ([026ac03](https://github.com/racecraft-lab/racecraft-plugins-public/commit/026ac039afcdc9b45176d57d5d2fcc073991d403))
+* **speckit-pro:** resolve consensus disagreement with a Round 3 agent tiebreak ([#851](https://github.com/racecraft-lab/racecraft-plugins-public/issues/851)) ([59feb83](https://github.com/racecraft-lab/racecraft-plugins-public/commit/59feb8323ce8f634e9287983dd00a3d46f8f2138))
+* **speckit-pro:** scope the Codex lockfile guard to the shell tool ([#911](https://github.com/racecraft-lab/racecraft-plugins-public/issues/911)) ([bee831e](https://github.com/racecraft-lab/racecraft-plugins-public/commit/bee831e92ea8642d8025b9e2fd45dd8dbd938b4d))
+* **speckit-pro:** scope unknown outcomes to their unit and let agents issue capped approvals ([#848](https://github.com/racecraft-lab/racecraft-plugins-public/issues/848)) ([f6aa5d3](https://github.com/racecraft-lab/racecraft-plugins-public/commit/f6aa5d367a267fce44bedcc6a2b317eda41b33ad))
+* **speckit-pro:** settle permissions and egress once at run start ([#849](https://github.com/racecraft-lab/racecraft-plugins-public/issues/849)) ([8aef492](https://github.com/racecraft-lab/racecraft-plugins-public/commit/8aef4922ae3aa62cab8a33e7a57e6790b10109c6))
+* **speckit-pro:** state that Docker verification needs an arm64 daemon and break the verification import cycle ([51390db](https://github.com/racecraft-lab/racecraft-plugins-public/commit/51390db97cc33f1edc019eafee847c377c18b2d8))
+* **speckit-pro:** test the artifact gallery contract and align the broker codes and preview guidance ([#985](https://github.com/racecraft-lab/racecraft-plugins-public/issues/985)) ([69146e0](https://github.com/racecraft-lab/racecraft-plugins-public/commit/69146e07176c94474f0771ec40f24cf505d8ac61))
+* **speckit-pro:** try an escalated agent fix before the end-of-run human stop ([#847](https://github.com/racecraft-lab/racecraft-plugins-public/issues/847)) ([44201c6](https://github.com/racecraft-lab/racecraft-plugins-public/commit/44201c6db1c0e2ab4ce86f39cbf28243b8d54da1))
+* **speckit-pro:** verify runtime JSON files and fail payload builds on missing sources ([#905](https://github.com/racecraft-lab/racecraft-plugins-public/issues/905)) ([c5bd0d8](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c5bd0d817a8e7ca3c9ab6da7575c09b9c5ebe1cd))
+
 ## [2.38.2](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.38.1...speckit-pro-v2.38.2) (2026-09-28)
 
 

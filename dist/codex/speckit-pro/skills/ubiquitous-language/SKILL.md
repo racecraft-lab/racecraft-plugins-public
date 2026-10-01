@@ -8,14 +8,14 @@ description: "Build or refresh the repository's ubiquitous-language terms docume
 Write and maintain `docs/ai/specs/ubiquitous-language.md`: one table of the
 domain terms this repository uses, what each means here, and the code
 identifiers that carry it. Grill Me and PRD authoring read it when present, so
-a term is pinned once and reused instead of re-derived in every interview. In
-Codex, use `$skill-name` syntax for plugin skills.
+a term is pinned once and reused instead of re-derived in every interview.
+In Codex, use `$skill-name` syntax for plugin skills.
 
 ## Ground recommendations
 
 Inspect the tools and skills actually available. Follow the shared
-[capability-discovery](speckit-pro/skills/speckit-autopilot/references/capability-discovery.md)
-and [grounding](speckit-pro/skills/speckit-autopilot/references/grounding.md) contracts.
+[capability-discovery](../speckit-autopilot/references/capability-discovery.md)
+and [grounding](../speckit-autopilot/references/grounding.md) contracts.
 A term's meaning comes from the code and documents that use it; disclose
 uncertainty and do not invent a definition.
 

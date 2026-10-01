@@ -11,55 +11,57 @@
     "workflow_file": { "type": "string" },
     "state_file": { "type": "string" },
     "plan_step_count": { "type": "integer", "minimum": 0 },
-    "missing_workflow_sections": {
-      "type": "array",
-      "items": { "type": "string" }
+    "repair": {
+      "type": ["object", "null"],
+      "required": ["owner", "failing_keys", "retry"],
+      "properties": {
+        "owner": { "const": "orchestrator" },
+        "failing_keys": { "type": "array", "items": { "type": "string" } },
+        "retry": { "type": "string" }
+      }
     },
-    "missing_workflow_tokens": {
-      "type": "array",
-      "items": { "type": "string" }
-    },
-    "missing_workflow_post_items": {
-      "type": "array",
-      "items": { "type": "string" }
-    },
-    "missing_state_prefixes": {
-      "type": "array",
-      "items": { "type": "string" }
-    },
-    "missing_state_post_items": {
-      "type": "array",
-      "items": { "type": "string" }
-    },
-    "duplicate_state_steps": {
-      "type": "array",
-      "items": { "type": "string" }
-    },
-    "state_order_errors": {
-      "type": "array",
-      "items": { "type": "string" }
-    },
-    "in_progress_errors": {
-      "type": "array",
-      "items": { "type": "string" }
-    }
+    "missing_workflow_sections": { "$ref": "#/$defs/string_list" },
+    "missing_workflow_tokens": { "$ref": "#/$defs/string_list" },
+    "missing_workflow_post_items": { "$ref": "#/$defs/string_list" },
+    "missing_state_prefixes": { "$ref": "#/$defs/string_list" },
+    "missing_state_post_items": { "$ref": "#/$defs/string_list" },
+    "duplicate_state_steps": { "$ref": "#/$defs/string_list" },
+    "state_order_errors": { "$ref": "#/$defs/string_list" },
+    "in_progress_errors": { "$ref": "#/$defs/string_list" },
+    "artifact_review_errors": { "$ref": "#/$defs/string_list" },
+    "autonomy_boundary_errors": { "$ref": "#/$defs/string_list" },
+    "changed_file_manifest_errors": { "$ref": "#/$defs/string_list" },
+    "checkpoint_evidence_errors": { "$ref": "#/$defs/string_list" },
+    "checkpoint_file_errors": { "$ref": "#/$defs/string_list" },
+    "checkpoint_source_fingerprint_errors": { "$ref": "#/$defs/string_list" },
+    "completed_phase_pending_fields": { "$ref": "#/$defs/string_list" },
+    "emission_mapping_errors": { "$ref": "#/$defs/string_list" },
+    "formal_checkpoint_errors": { "$ref": "#/$defs/string_list" },
+    "marker_evidence_privacy_errors": { "$ref": "#/$defs/string_list" },
+    "marker_plan_status_errors": { "$ref": "#/$defs/string_list" },
+    "projection_status_errors": { "$ref": "#/$defs/string_list" },
+    "stage_mirror_errors": { "$ref": "#/$defs/string_list" },
+    "state_privacy_errors": { "$ref": "#/$defs/string_list" },
+    "state_status_errors": { "$ref": "#/$defs/string_list" },
+    "workflow_authority_errors": { "$ref": "#/$defs/string_list" },
+    "workflow_checkpoint_errors": { "$ref": "#/$defs/string_list" },
+    "workflow_status_evidence_errors": { "$ref": "#/$defs/string_list" }
   },
   "allOf": [
     {
       "if": { "properties": { "status": { "enum": ["pass", "fail"] } }, "required": ["status"] },
       "then": {
         "required": [
-          "workflow_file",
-          "state_file",
-          "plan_step_count",
-          "missing_workflow_sections",
-          "missing_workflow_tokens",
-          "missing_workflow_post_items",
-          "missing_state_prefixes",
-          "missing_state_post_items",
-          "duplicate_state_steps",
-          "state_order_errors",
-          "in_progress_errors"
+          "workflow_file", "state_file", "plan_step_count", "missing_workflow_sections",
+          "missing_workflow_tokens", "missing_workflow_post_items", "missing_state_prefixes",
+          "missing_state_post_items", "duplicate_state_steps", "state_order_errors",
+          "in_progress_errors", "artifact_review_errors", "autonomy_boundary_errors",
+          "changed_file_manifest_errors", "checkpoint_evidence_errors", "checkpoint_file_errors",
+          "checkpoint_source_fingerprint_errors", "completed_phase_pending_fields",
+          "emission_mapping_errors", "formal_checkpoint_errors", "marker_evidence_privacy_errors",
+          "marker_plan_status_errors", "projection_status_errors", "stage_mirror_errors",
+          "state_privacy_errors", "state_status_errors", "workflow_authority_errors",
+          "workflow_checkpoint_errors", "workflow_status_evidence_errors"
         ]
       }
     },
@@ -67,5 +69,11 @@
       "if": { "properties": { "status": { "const": "input_error" } }, "required": ["status"] },
       "then": { "required": ["code", "message"] }
     }
-  ]
+  ],
+  "$defs": {
+    "string_list": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
 }

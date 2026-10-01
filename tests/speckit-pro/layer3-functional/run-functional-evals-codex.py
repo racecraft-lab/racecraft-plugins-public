@@ -40,7 +40,10 @@ def main(argv: list[str]) -> int:
     root = plugin_root()
     skill = argv[0] if argv else "speckit-coach"
     eval_file = eval_file_for(root, skill)
+    # A Codex overlay wins; a merged skill's Codex text lives in skills/ as host blocks.
     skill_path = root / "codex-skills" / skill
+    if not (skill_path / "SKILL.md").is_file():
+        skill_path = root / "skills" / skill
 
     if eval_file is None:
         print(f"ERROR: Eval file not found for: {skill}", file=sys.stderr)
@@ -49,7 +52,7 @@ def main(argv: list[str]) -> int:
             print(name, file=sys.stderr)
         return 1
 
-    if not skill_path.is_dir():
+    if not (skill_path / "SKILL.md").is_file():
         print(f"ERROR: Codex skill not found: {skill_path}", file=sys.stderr)
         return 1
 

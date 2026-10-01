@@ -50,9 +50,9 @@ gate never becomes a pass.
    table entirely for an unsplit entry.
 ```
 
-**Auto-Fix:** Not applicable — if the codebase doesn't pass typecheck/test/build, the user must fix it before starting a new spec workflow. These are foundational health checks.
+**Auto-Fix:** Spawn a repair agent for the failing typecheck/test/build check within the gate's allowance. These are foundational health checks.
 
-**Failure Escalation:** Immediate STOP. Report which checks failed with output. The user must resolve codebase issues before autopilot can proceed.
+**Failure Escalation:** If a check still fails, run the repair loop within its allowance, then defer per the Failure Escalation Protocol. Record which checks failed with their output.
 
 Marker visibility for G1–G4 uses the runner `count-markers` and `validate-gate` helpers. Count only real bracket tags in visible Markdown prose: exclude inline code, fenced code, and indented code, interpreting indentation relative to list and quote containers. A Gap tag has a case-sensitive comma-separated `Gap` token, with surrounding spaces or tabs ignored; count each qualifying tag once, including two tags on one line. Apply the same visibility rule to clarification counts and details. Other finding marker types keep their existing counting rule.
 
@@ -70,17 +70,17 @@ This is a routing decision, not a pass/fail gate. The presence of markers is exp
 
 ### G2 — After Clarify
 
-**Check:** All ambiguities resolved, no human review flags.
+**Check:** All ambiguities resolved, no unresolved review flags.
 
 ```
 1. Run `count-markers clarifications` or `validate-gate` G2; visible spec markers must be 0
-2. grep -c "HUMAN REVIEW NEEDED" spec.md → must be 0
+2. grep -c "ROUND_3_TIEBREAK" spec.md → must be 0
 3. Clarifications section exists in spec.md with documented decisions
 ```
 
 **Auto-Fix:** Re-run clarify focused on remaining markers. Spawn consensus agents for each unresolved question.
 
-**Failure Escalation:** If markers remain when the shared reservation ends, STOP. Present remaining ambiguities to human with all 3 agent perspectives.
+**Failure Escalation:** If markers remain when the shared reservation ends, run the repair loop within its allowance, then defer per the Failure Escalation Protocol; its last tier for a remaining consensus item is the Round 3 tiebreak (see consensus-protocol.md §Round 3 Tiebreak). An item that changes product scope the spec and roadmap do not settle is applied provisionally with its most conservative option and listed in the end-of-run request; the run continues. Record the remaining ambiguities with all 3 agent perspectives.
 
 ### G3 — After Plan
 
@@ -193,12 +193,11 @@ impossible. A skipped repair records the applicable reason rather than
 fabricating an attempt.
 
 **Failure Escalation:** If any G3 condition still fails after its reserved cycle,
-or provenance cannot be established well enough to repair safely, apply the
-configured `gate-failure` behavior. The default `stop` path presents the exact
-gate output, disputed wording, source evidence, provenance class, repairs made,
-and the remaining choice that requires human input. `skip-and-log` is a
-deliberate override only: it leaves the failed G3 verdict and unresolved marker
-recorded and must not rewrite their provenance.
+or provenance cannot be established well enough to repair safely, run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
+Record the exact gate output, disputed wording, source evidence, provenance
+class, repairs made, and the remaining choice that requires human input. The
+deferred item leaves the failed G3 verdict and unresolved marker recorded and
+must not rewrite their provenance.
 
 ### G4 — After Checklist
 
@@ -214,7 +213,7 @@ recorded and must not rewrite their provenance.
 G4 counts only `[Gap]` markers, by design. Unticked checklist items are
 reviewer-owned, so they do not fail G4. They are deferred to PR review, and
 Phase 7 setup records that decision as the Implement Checklist Gate (see
-phase-execution.md, or phase-execution-codex.md on Codex).
+phase-execution.md).
 
 **Auto-Fix:** This is the **Checklist Gap Remediation Loop**.
 Runs after each domain subagent returns (not batched — see
@@ -256,8 +255,8 @@ Step 4: Re-run the domain checklist to verify the gap
     no per-domain reset or independent nested allowance
   - If 0 gaps → domain complete, proceed to next domain
 
-Step 5: If gaps remain when the shared reservation ends → STOP, present
-  to human with the gap description, research findings,
+Step 5: If gaps remain when the shared reservation ends → run the repair loop within its allowance, then defer per the Failure Escalation Protocol,
+  recording the gap description, research findings,
   and attempted fixes
 ```
 
@@ -326,7 +325,7 @@ names no evidence and passes. An unreadable sidecar fails the gate closed.
 - Place it in the appropriate user story phase
 - Ensure it has the correct FR reference marker
 
-**Failure Escalation:** If coverage gaps persist after the reserved cycle, STOP. Present the unmapped FRs with the relevant spec sections.
+**Failure Escalation:** If coverage gaps persist after the reserved cycle, run the repair loop within its allowance, then defer per the Failure Escalation Protocol. Record the unmapped FRs with the relevant spec sections.
 
 #### Post-G5 Reviewability Capture Matrix
 
@@ -425,8 +424,8 @@ Step 4: Re-run analyze to verify all findings resolved
   - If new required findings appear → reserve by stable invariant in the same ledger
   - If 0 findings → G6 PASS
 
-Step 5: If required findings remain when the reservation ends → STOP, present
-  to human with all remaining findings, research results,
+Step 5: If required findings remain when the reservation ends → run the repair loop within its allowance, then defer per the Failure Escalation Protocol,
+  recording all remaining findings, research results,
   and attempted fixes
 ```
 
@@ -589,13 +588,13 @@ final reviewability boundary before PR body generation, any `gh pr create`
 variant, or `multi-pr-emission`. The runner helper
 `final-reviewability-backstop` is registered as deferred for installed
 workflows; do not invoke it as an active helper. Use current committed
-reviewability evidence or stop before PR side effects if no current evidence
-exists.
+reviewability evidence, or hold PR side effects and regenerate the committed reviewability evidence if no current evidence
+exists; run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
 Only `pass`, `warn`, or an honored typed-exception outcome may continue. An
-unexcepted block or gate error stops PR preparation and records the
+unexcepted block or gate error holds PR preparation and records the
 `final_reviewability_gate` state plus re-slicing packet when applicable.
 
-**Failure Escalation:** If verification suite fails after its shared corrective cycle, STOP. Present the specific failures to human.
+**Failure Escalation:** If verification suite fails after its shared corrective cycle, run the repair loop within its allowance, then defer per the Failure Escalation Protocol. Record the specific failures.
 
 ## Gate Summary Table
 

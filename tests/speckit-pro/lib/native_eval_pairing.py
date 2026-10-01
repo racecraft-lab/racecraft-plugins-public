@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import math
 from pathlib import Path, PurePosixPath
 import re
 from typing import Any, Mapping, Sequence
+
+import native_eval_strict_json as strict_json
 
 
 PAIR_SCHEMA_VERSION = "native-eval-pair/v1"
@@ -67,14 +68,7 @@ def _json_value(value: object) -> bool:
 
 def _canonical(value: object, label: str) -> bytes:
     _require(_json_value(value), f"{label} must be a strict JSON value")
-    return json.dumps(
-        value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False,
-    ).encode("utf-8")
-
-
-def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-    _require(len(pairs) == len({key for key, _value in pairs}), "pair contract contains a duplicate JSON key")
-    return dict(pairs)
+    return strict_json.canonical_bytes(value)
 
 
 def _contract_path(repo_root: Path, value: object, label: str) -> tuple[str, Path]:
@@ -92,12 +86,8 @@ def _contract_path(repo_root: Path, value: object, label: str) -> tuple[str, Pat
 
 def _load_contract(path: Path, label: str) -> dict[str, Any]:
     try:
-        value = json.loads(
-            path.read_text(encoding="utf-8"),
-            object_pairs_hook=_unique_object,
-            parse_constant=lambda token: (_ for _ in ()).throw(PairingError(f"invalid constant {token}")),
-        )
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        value = strict_json.loads(path.read_bytes(), error=PairingError, label=f"could not load {label}")
+    except OSError as exc:
         raise PairingError(f"could not load {label}: {exc}") from exc
     _require(isinstance(value, dict), f"{label} must contain an object")
     return value

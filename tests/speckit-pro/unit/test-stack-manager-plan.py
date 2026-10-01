@@ -5,6 +5,7 @@ import copy
 import hashlib
 import json
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 from types import SimpleNamespace
@@ -13,12 +14,15 @@ from unittest.mock import patch
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO / "speckit-pro"), str(REPO / "tests/speckit-pro/lib")]
-from speckit_pro_runner.helpers import stack_manager
+from speckit_pro_runner.helpers import archive_sweep, stack_manager
 from speckit_pro_runner.helpers.registry import dispatch_helper
+from speckit_pro_runner.json_schema import json_schema_failures
 from test_result import run_counted
 
 
-class StackManagerTests(unittest.TestCase):
+class StackManagerTestCase(unittest.TestCase):
+    """Shared staging for the manager selection and recovery tests."""
+
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
@@ -67,6 +71,9 @@ class StackManagerTests(unittest.TestCase):
         return dispatch_helper(SimpleNamespace(helper_id="detect-stack-manager-plan", operation="detect-stack-manager-plan",
                                               request_id="manager-test", mode="dry_run", inputs={**self.inputs, **changes}))
 
+
+
+class StackManagerTests(StackManagerTestCase):
     def test_selected_manager_links_verified_urls_and_preserves_packet_creation(self):
         with patch.object(stack_manager, "probe", side_effect=self.probe):
             result = self.request()
@@ -158,5 +165,161 @@ class StackManagerTests(unittest.TestCase):
         self.assertEqual(previous["topology"]["post_mutation"], decision["recovery"]["observed_post_failure_topology"])
 
 
+
+class StackManagerRecoveryTests(StackManagerTestCase):
+    def partial_mutation_path(self):
+        with patch.object(stack_manager, "probe", side_effect=self.probe):
+            previous = self.request()["data"]["decision"]
+        previous["mutation_boundary"]["status"] = "partial_mutation_unknown"
+        previous["topology"]["post_mutation"] = previous["topology"]["pre_mutation"][:1]
+        path = "specs/example/.process/stack-manager-decision.json"
+        (self.root / path).parent.mkdir(parents=True)
+        (self.root / path).write_text(json.dumps(previous))
+        return path
+
+    def test_reverified_partial_mutation_retries_the_existing_pr_link(self):
+        path = self.partial_mutation_path()
+        self.calls.clear()
+        with patch.object(stack_manager, "probe", side_effect=self.probe):
+            result = self.request(previous_decision=path, preference="explicit-gh", reverify_recovery=True)
+        self.assertEqual("ok", result["status"], result)
+        decision = result["data"]["decision"]
+        blocked = self.request(previous_decision=path)["data"]["decision"]
+        self.assertEqual("gh-stack", decision["selected_manager"])
+        self.assertEqual(blocked["recovery"], decision["recovery"])
+        self.assertFalse(decision["fallback_allowed"])
+        self.assertEqual(blocked["mutation_boundary"], decision["mutation_boundary"])
+        self.assertEqual("partial_mutation_unknown", decision["mutation_boundary"]["status"])
+        plan = decision["command_plan"][0]
+        self.assertEqual(("link-stack", True), (plan["id"], plan["mutates"]))
+        self.assertEqual([x["pr_url"] for x in self.inputs["topology"]], plan["argv"][-2:])
+        self.assertFalse(any("create" in c or "edit" in c for c in self.calls))
+
+    def test_recovery_stays_blocked_when_the_prs_no_longer_verify(self):
+        path = self.partial_mutation_path()
+
+        def drifted(root, argv):
+            result = self.probe(root, argv)
+            if argv[:2] == ["gh", "api"] and "/pulls/" in argv[-1]:
+                body = json.loads(result["stdout_tail"])
+                body["head"]["sha"] = "b" * 40
+                result["stdout_tail"] = json.dumps(body)
+            return result
+
+        with patch.object(stack_manager, "probe", side_effect=drifted):
+            decision = self.request(previous_decision=path, reverify_recovery=True)["data"]["decision"]
+        self.assertEqual("blocked", decision["selected_manager"])
+        self.assertFalse(decision["fallback_allowed"])
+        self.assertEqual("gh-stack", decision["recovery"]["selected_manager"])
+
+    def test_recovery_stays_blocked_when_a_slice_has_no_pr_identity(self):
+        path = self.partial_mutation_path()
+        record = json.loads((self.root / path).read_text())
+        record["topology"]["pre_mutation"][1].pop("pr_url")
+        (self.root / path).write_text(json.dumps(record))
+        with patch.object(stack_manager, "probe", side_effect=self.probe):
+            decision = self.request(previous_decision=path, reverify_recovery=True)["data"]["decision"]
+        self.assertEqual("blocked", decision["selected_manager"])
+
+
+class DecisionContractTests(StackManagerTestCase):
+    """Every decision the helper returns fits the shipped schema and says why a manager was not qualified."""
+
+    SCHEMA = json.loads((REPO / "speckit-pro/skills/speckit-autopilot/contracts/stack-manager-decision.schema.json")
+                        .read_text(encoding="utf-8"))
+
+    def decision(self, **changes):
+        with patch.object(stack_manager, "probe", side_effect=self.probe):
+            return self.request(**changes)["data"]["decision"]
+
+    def test_every_decision_satisfies_the_shipped_schema(self):
+        path = StackManagerRecoveryTests.partial_mutation_path(self)
+        untrusted = self.root / "gh-stack/SKILL.md"
+        untrusted.parent.mkdir()
+        untrusted.write_text(self.skill.read_text())
+        decisions = {"auto": self.decision(), "operator": self.decision(preference="explicit-gh"),
+                     "untrusted": self.decision(skill_path=str(untrusted)),
+                     "blocked": self.decision(previous_decision=path),
+                     "retry": self.decision(previous_decision=path, reverify_recovery=True)}
+        for name, decision in decisions.items():
+            with self.subTest(decision=name):
+                self.assertEqual(json_schema_failures(decision, self.SCHEMA, self.SCHEMA, "decision"), [])
+
+    def test_support_status_names_why_the_skill_did_not_qualify(self):
+        untrusted = self.root / "gh-stack/SKILL.md"
+        untrusted.parent.mkdir()
+        untrusted.write_text(self.skill.read_text())
+        self.assertEqual("untrusted_skill", self.decision(skill_path=str(untrusted))["gh_stack"]["support_status"])
+        self.assertEqual("operator_preference", self.decision(preference="explicit-gh")["gh_stack"]["support_status"])
+        self.assertEqual("missing", self.decision(skill_path=str(self.root / "absent/SKILL.md"))["gh_stack"]["support_status"])
+        self.skill.write_text(self.skill.read_text() + "changed\n")
+        self.assertEqual("skill_mismatch", self.decision()["gh_stack"]["support_status"])
+
+
+class SkillPinTests(unittest.TestCase):
+    """The pinned gh-stack digest is the committed copy of github/gh-stack's MIT-licensed SKILL.md.
+
+    The fixture holds the bytes `gh skill install github/gh-stack gh-stack --scope user` writes for the
+    qualified tag, so a stale pin fails here instead of silently selecting explicit-gh in every run.
+    """
+
+    FIXTURE = REPO / "tests/speckit-pro/unit/fixtures/stack-manager/gh-stack-SKILL.md"
+    GUIDE = REPO / "speckit-pro/skills/speckit-autopilot/references/stack-manager.md"
+
+    def test_the_pin_is_the_committed_copy_of_the_qualified_tag(self):
+        body = self.FIXTURE.read_bytes()
+        self.assertEqual(stack_manager.SKILL_SHA256, hashlib.sha256(body).hexdigest())
+        self.assertIn(f"github-ref: refs/tags/v{stack_manager.QUALIFIED_VERSION}\n", body.decode("utf-8"))
+
+    def test_the_guidance_states_the_pin_and_its_trusted_roots(self):
+        guide = self.GUIDE.read_text(encoding="utf-8")
+        for fact in (stack_manager.SKILL_SHA256, stack_manager.QUALIFIED_VERSION,
+                     "~/.claude/skills", "~/.agents/skills", "~/.codex/skills"):
+            with self.subTest(fact=fact):
+                self.assertIn(fact, guide)
+
+
+class BoundedProbeTests(unittest.TestCase):
+    """Both helpers share one gh/git probe: fixed argv, a per-caller allowlist and timeout, one record shape."""
+
+    KEYS = {"argv", "exit_status", "stdout_tail", "stderr_tail"}
+
+    def run_probe(self, module, argv, run):
+        with tempfile.TemporaryDirectory() as root, patch("subprocess.run", side_effect=run) as call:
+            return module.probe(Path(root), argv), call
+
+    def test_an_unlisted_cli_is_reported_and_never_started(self):
+        for module, argv in ((stack_manager, ["curl", "https://example.invalid"]), (archive_sweep, ["git", "status"])):
+            with self.subTest(module=module.__name__):
+                record, call = self.run_probe(module, argv, AssertionError("must not run"))
+                self.assertEqual(set(record), self.KEYS)
+                self.assertEqual((record["exit_status"], record["stdout_tail"]), (None, ""))
+                self.assertIn("may run here", record["stderr_tail"])
+                call.assert_not_called()
+
+    def test_a_timeout_is_reported_with_the_callers_own_limit(self):
+        for module, limit in ((stack_manager, 20), (archive_sweep, 30)):
+            with self.subTest(module=module.__name__):
+                record, call = self.run_probe(module, ["gh", "api", "user"], subprocess.TimeoutExpired("gh", limit))
+                self.assertEqual(set(record), self.KEYS)
+                self.assertEqual(record["exit_status"], None)
+                self.assertIn("timed out", record["stderr_tail"])
+                self.assertEqual(call.call_args.kwargs["timeout"], limit)
+                self.assertEqual(call.call_args.args[0], ["gh", "api", "user"])
+
+    def test_a_finished_run_keeps_the_exit_status_and_trims_the_output(self):
+        done = subprocess.CompletedProcess(["git"], 1, stdout=" out \n", stderr="x" * 5000)
+        record, call = self.run_probe(stack_manager, ["git", "rev-parse", "HEAD"], [done])
+        self.assertEqual(record, {"argv": ["git", "rev-parse", "HEAD"], "exit_status": 1, "stdout_tail": "out",
+                                  "stderr_tail": "x" * 2048})
+        self.assertFalse(call.call_args.kwargs["shell"])
+
+
 if __name__ == "__main__":
-    sys.exit(run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(StackManagerTests), label="test-stack-manager-plan"))
+    loader = unittest.defaultTestLoader
+    suite = unittest.TestSuite([loader.loadTestsFromTestCase(StackManagerTests),
+                                loader.loadTestsFromTestCase(StackManagerRecoveryTests),
+                                loader.loadTestsFromTestCase(BoundedProbeTests),
+                                loader.loadTestsFromTestCase(DecisionContractTests),
+                                loader.loadTestsFromTestCase(SkillPinTests)])
+    sys.exit(run_counted(suite, label="test-stack-manager-plan"))

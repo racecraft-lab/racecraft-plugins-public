@@ -26,21 +26,45 @@ for entry in (PLUGIN_ROOT, REPO_ROOT / "tests" / "speckit-pro" / "lib"):
     if str(entry) not in sys.path:
         sys.path.insert(0, str(entry))
 
+from host_skill_views import host_skill_root  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 HELPER_ID = "ratify-pr-split"
-FIXTURES = REPO_ROOT / "tests/speckit-pro/unit/fixtures/pr-split-ratification"
 FIXTURE_REQUEST = (
     REPO_ROOT / "tests/speckit-pro/unit/fixtures/read-only-helpers/requests" / f"{HELPER_ID}.json"
 )
-CLAUDE_PHASE = PLUGIN_ROOT / "skills/speckit-autopilot/references/phase-execution.md"
-CODEX_PHASE = PLUGIN_ROOT / "codex-skills/speckit-autopilot/references/phase-execution-codex.md"
-CLAUDE_SKILL = PLUGIN_ROOT / "skills/speckit-autopilot/SKILL.md"
+CLAUDE_PHASE, CODEX_PHASE = (
+    host_skill_root(host) / "speckit-autopilot/references/phase-execution.md" for host in ("claude", "codex")
+)
+CLAUDE_SKILL = host_skill_root("claude") / "speckit-autopilot/SKILL.md"
 CLAUDE_GATES = PLUGIN_ROOT / "skills/speckit-autopilot/references/gate-validation.md"
 
 
+def _drop_requirement(inputs: dict[str, object]) -> None:
+    """Increment B-1 no longer carries FR-002, so the split drops approved scope."""
+    for increment in inputs["increments"]:  # type: ignore[attr-defined]
+        if increment["increment_id"] == "B-1":
+            increment["scope"] = [item for item in increment["scope"] if item != "FR-002"]
+
+
+def _reorder_groups(inputs: dict[str, object]) -> None:
+    """Increment C1b-1 lands before C1a-1, so the split reorders approved groups."""
+    increments = inputs["increments"]
+    positions = {item["increment_id"]: index for index, item in enumerate(increments)}  # type: ignore[attr-defined]
+    first, second = positions["C1a-1"], positions["C1b-1"]
+    increments[first], increments[second] = increments[second], increments[first]  # type: ignore[index]
+
+
+VARIANTS = {"preserving-split": None, "dropped-requirement": _drop_requirement, "reordered-groups": _reorder_groups}
+
+
 def _fixture(name: str) -> dict[str, object]:
-    return json.loads((FIXTURES / f"{name}.json").read_text(encoding="utf-8"))["inputs"]
+    """The request fixture's inputs, the one source of the ratified split, with the named variant applied."""
+    inputs = json.loads(FIXTURE_REQUEST.read_text(encoding="utf-8"))["inputs"]
+    mutate = VARIANTS[name]
+    if mutate is not None:
+        mutate(inputs)
+    return inputs
 
 
 def _run(inputs: object) -> dict[str, object]:
@@ -150,15 +174,6 @@ class RatifyPrSplitTests(unittest.TestCase):
         data = _run(inputs)["data"]
         self.assertIn("group_added", _codes(data))
 
-    def test_over_budget_increment_needs_a_reviewability_exception(self) -> None:
-        for field, value in (("production_paths", 5), ("total_paths", 25)):
-            with self.subTest(field=field):
-                inputs = _fixture("preserving-split")
-                inputs["increments"][0][field] = value  # type: ignore[index]
-                data = _run(inputs)["data"]
-                self.assertEqual(data["decision"], "operator_required")
-                self.assertEqual(_codes(data), ["reviewability_exception_needed"])
-
     def test_invalid_input_fails_closed(self) -> None:
         base = _fixture("preserving-split")
 
@@ -188,11 +203,53 @@ class RatifyPrSplitTests(unittest.TestCase):
                 response = _run(inputs)
                 self.assertEqual(response["status"], "input_error", response)
                 self.assertEqual([item["code"] for item in response["diagnostics"]], ["invalid_input"])
+                remediation = response["diagnostics"][0]["remediation"]
+                self.assertNotIn("ask the operator", remediation["summary"].lower())
+                self.assertIn("regenerate the split evidence", remediation["summary"])
+                self.assertEqual(response["data"]["repair"]["owner"], "orchestrator")
 
     def test_fixture_request_is_ratified(self) -> None:
         request = json.loads(FIXTURE_REQUEST.read_text(encoding="utf-8"))
         self.assertEqual(request["helper_id"], HELPER_ID)
         self.assertEqual(_run(request["inputs"])["data"]["decision"], "autopilot_ratified")
+
+
+class RatifyPrSplitRepairTests(unittest.TestCase):
+    """A size finding is repaired by a re-slice while a scope change stays with the operator."""
+
+    def test_over_budget_increment_is_resliced_not_sent_to_the_operator(self) -> None:
+        for field, value in (("production_paths", 5), ("total_paths", 25)):
+            with self.subTest(field=field):
+                inputs = _fixture("preserving-split")
+                inputs["increments"][0][field] = value  # type: ignore[index]
+                data = _run(inputs)["data"]
+                self.assertEqual(data["decision"], "reslice_required")
+                self.assertEqual(data["owner_ratification"], "pending")
+                self.assertIsNone(data["ratified_by"])
+                self.assertEqual(_codes(data), ["reviewability_exception_needed"])
+                self.assertNotIn("stop_reason", data)
+                self.assertEqual(data["repair"]["owner"], "orchestrator")
+                self.assertEqual(data["repair"]["retry"], HELPER_ID)
+                self.assertIn("reviewability exception", data["repair"]["action"])
+
+    def test_scope_changing_findings_stay_with_the_operator_and_name_the_stop_reason(self) -> None:
+        from speckit_pro_runner.stop_policy import STOP_REASONS
+
+        self.assertIn("scope_changing_pr_split", STOP_REASONS)
+        for name in ("dropped-requirement", "reordered-groups"):
+            with self.subTest(fixture=name):
+                data = _run(_fixture(name))["data"]
+                self.assertEqual(data["decision"], "operator_required")
+                self.assertEqual(data["stop_reason"], "scope_changing_pr_split")
+                self.assertNotIn("repair", data)
+
+    def test_a_size_finding_beside_a_scope_finding_stays_with_the_operator(self) -> None:
+        inputs = _fixture("dropped-requirement")
+        inputs["increments"][0]["total_paths"] = 25  # type: ignore[index]
+        data = _run(inputs)["data"]
+        self.assertIn("reviewability_exception_needed", _codes(data))
+        self.assertEqual(data["decision"], "operator_required")
+        self.assertEqual(data["stop_reason"], "scope_changing_pr_split")
 
 
 class SplitRatificationSourceContractTests(unittest.TestCase):
@@ -244,6 +301,7 @@ if __name__ == "__main__":
     suite = unittest.TestSuite(
         [
             loader.loadTestsFromTestCase(RatifyPrSplitTests),
+            loader.loadTestsFromTestCase(RatifyPrSplitRepairTests),
             loader.loadTestsFromTestCase(SplitRatificationSourceContractTests),
         ]
     )

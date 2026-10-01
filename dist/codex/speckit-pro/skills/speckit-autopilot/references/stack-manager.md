@@ -42,6 +42,27 @@ chain of owned local branches. Existing PRs must match repository, open state,
 head commit, head branch and base branch. Other versions, missing CLI or skill,
 unsupported repositories, and incompatible topology select `explicit-gh` before
 mutation. Keep the returned reason; never relabel unavailable evidence as support.
+`gh_stack.support_status` names the cause: `missing`, `untrusted_skill` (a skill
+outside the trusted roots), `skill_mismatch` (a skill whose bytes differ from the
+pin), `operator_preference`, `unsupported_version`, `ambiguous`,
+`read_only_proof_failed` or `topology_incompatible`.
+
+The skill is pinned by digest. The helper trusts a `gh-stack/SKILL.md` only under
+`~/.claude/skills`, `~/.agents/skills` or `~/.codex/skills`, and only when its
+SHA-256 is
+`f90eec41187457b44640f3d85d2b6069dc702c898b923c79759e7858597d62f7`: the bytes
+`gh skill install github/gh-stack gh-stack --scope user` writes for tag v0.1.1.
+Those are not upstream's file bytes, since the installer rewrites the front
+matter. Installing with `--pin`, or from a later tag, changes the bytes, so the
+run selects `explicit-gh` with `skill_mismatch` until the pin is refreshed. A
+fresh unpinned install does the same once upstream tags past v0.1.1.
+
+To refresh the pin, install the new tag unpinned, copy the installed `SKILL.md`
+over `tests/speckit-pro/unit/fixtures/stack-manager/gh-stack-SKILL.md`, and set
+`SKILL_SHA256` and `QUALIFIED_VERSION` in `helpers/stack_manager.py` together.
+Update the digest and version in this section, then run
+`tests/speckit-pro/unit/test-stack-manager-plan.py`: it fails while the pin, the
+committed copy, its `github-ref` tag and this page disagree.
 
 Persist `data.decision` using the existing
 `stack-manager-decision.schema.json`, and reference that path in the emission
@@ -71,9 +92,16 @@ evidence. A lower-layer fix propagates upward by merge, never by rebase or
 force-push; then re-verify every affected head.
 
 After any attempted or partial mutation, resume through the selected manager.
-Detection returns a blocking recovery record, preserving prior PR identities and
+Detection returns a blocked recovery record, preserving prior PR identities and
 observed topology. Use the installed skill and read-only remote evidence to
-reconcile the exact outcome before retrying the existing-PR command. Never
+reconcile the exact outcome, then rerun detection with `previous_decision` and
+`reverify_recovery=true`. When the read-only proof still matches every recorded
+PR, the helper returns a `gh-stack` decision that plans the same existing-PR
+command: retry the existing-PR link within the shared allowance. That decision
+keeps the prior `mutation_boundary` and `recovery` record, with
+`fallback_allowed: false`. When it does
+not match, the record stays blocked and defers only when repair fails, through
+the Failure Escalation Protocol. Never
 automatically switch managers, recreate PRs, or erase the attempted boundary.
 Only a reconciled successful result may supersede the blocked event. Subsequent
 supported stack operations follow the installed skill; this helper does not
