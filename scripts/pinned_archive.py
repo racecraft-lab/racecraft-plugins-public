@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import hashlib
 import hmac
-import re
 import stat
 import tarfile
 import tempfile
@@ -25,6 +24,7 @@ DOWNLOAD_TIMEOUT_SECONDS = 30
 MAX_ARCHIVE_BYTES = 64 * 1024 * 1024
 MAX_BINARY_BYTES = 128 * 1024 * 1024
 _CHUNK_BYTES = 1024 * 1024
+_LOWER_HEX = frozenset("0123456789abcdef")
 _EXECUTABLE_MODE = (
     stat.S_IRUSR
     | stat.S_IWUSR
@@ -41,11 +41,11 @@ class PinnedArchiveError(RuntimeError):
 
 
 def validated_sha256(expected_sha256: str, *, label: str) -> str:
-    if re.fullmatch(r"[0-9a-f]{64}", expected_sha256) is None:
-        raise PinnedArchiveError(
-            f"{label} SHA-256 must be exactly 64 lowercase hexadecimal characters"
-        )
-    return expected_sha256
+    if len(expected_sha256) == 64 and set(expected_sha256) <= _LOWER_HEX:
+        return expected_sha256
+    raise PinnedArchiveError(
+        f"{label} SHA-256 must be exactly 64 lowercase hexadecimal characters"
+    )
 
 
 def download_archive(

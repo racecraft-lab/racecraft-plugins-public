@@ -120,21 +120,18 @@ class InstallTests(unittest.TestCase):
         )
         self.assertEqual([RIPWIRE.DOWNLOAD_TIMEOUT_SECONDS], opener.timeouts)
 
-    def test_checksum_mismatch_fails_before_extraction(self) -> None:
-        with self.assertRaisesRegex(RIPWIRE.RipwireError, "checksum mismatch"):
-            self.install(fake_release("x64"), "x64")
-        self.assertEqual([], self.left_behind)
-
-    def test_architecture_without_a_pin_fails_closed(self) -> None:
-        with self.assertRaisesRegex(RIPWIRE.RipwireError, "no pinned ripwire release"):
-            self.install(b"unused", "riscv64")
-        self.assertEqual([], self.left_behind)
-
-    def test_archive_without_the_versioned_binary_is_rejected(self) -> None:
-        payload = make_archive({"ripwire": b"top-level-binary\n"})
-        with self.assertRaisesRegex(RIPWIRE.RipwireError, "exactly one"):
-            self.install(payload, "x64", {"x64": hashlib.sha256(payload).hexdigest()})
-        self.assertEqual([], self.left_behind)
+    def test_mismatch_unpinned_architecture_or_bad_layout_installs_nothing(self) -> None:
+        top_level = make_archive({"ripwire": b"top-level-binary\n"})
+        cases = (
+            ("checksum mismatch", fake_release("x64"), "x64", None),
+            ("no pinned ripwire release", b"unused", "riscv64", None),
+            ("exactly one", top_level, "x64", {"x64": hashlib.sha256(top_level).hexdigest()}),
+        )
+        for pattern, payload, arch, pins in cases:
+            with self.subTest(pattern=pattern):
+                with self.assertRaisesRegex(RIPWIRE.RipwireError, pattern):
+                    self.install(payload, arch, pins)
+                self.assertEqual([], self.left_behind)
 
 
 ARCH_OUTPUT = (
@@ -150,19 +147,25 @@ DRIFT_OUTPUT = '<doc-drift schema="ripwire.doc-drift/v1" docs="9" clean="9" chec
 OUTPUT_BY_FLAG = {"--arch": ARCH_OUTPUT, "--quality-delta": QUALITY_OUTPUT, "--doc-drift": DRIFT_OUTPUT}
 
 
-def fake_subprocess(merge_base_code: int = 0, arch_code: int = 2) -> mock.Mock:
+class FakeSubprocess:
     """Stand in for subprocess.run: git merge-base plus the three ripwire checks."""
 
-    def run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+    def __init__(self, merge_base_code: int = 0, arch_code: int = 2) -> None:
+        self.merge_base_code = merge_base_code
+        self.arch_code = arch_code
+
+    def __call__(self, argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
         if kwargs.get("shell") is not False or kwargs.get("check") is not False:
             raise AssertionError(f"unsafe subprocess call: {kwargs}")
         if argv[:2] == ["git", "merge-base"]:
-            return subprocess.CompletedProcess(argv, merge_base_code, "abc123\n", "")
+            return subprocess.CompletedProcess(argv, self.merge_base_code, "abc123\n", "")
         flag = argv[2].split("=", 1)[0]
-        code = arch_code if flag == "--arch" else 0
+        code = self.arch_code if flag == "--arch" else 0
         return subprocess.CompletedProcess(argv, code, OUTPUT_BY_FLAG[flag], "")
 
-    return mock.Mock(side_effect=run)
+
+def fake_subprocess(merge_base_code: int = 0, arch_code: int = 2) -> mock.Mock:
+    return mock.Mock(side_effect=FakeSubprocess(merge_base_code, arch_code))
 
 
 class ReportTests(unittest.TestCase):
