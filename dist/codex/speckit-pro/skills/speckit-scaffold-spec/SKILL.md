@@ -365,13 +365,22 @@ interview starts. Each `wait_agent` call is one wait; consecutive expired waits
 are the loop's cue to check the execution deadline below, not a second
 independently-triggering bound.
 
+**The loop is the deadline timer.** Note the dispatch time. On every
+`wait_agent` call, pass `timeout_ms` set to the time left until the pass
+execution deadline, never more, so the loop wakes no later than the deadline.
+When the deadline passes with no summary, call `close_agent` on the analyst
+when that action is exposed, otherwise `interrupt_agent` when exposed, then
+record `did not run` with reason `wait deadline expired` and continue into the
+interview. When neither action is exposed, abandon the wait and leave the
+thread to the host; the recorded outcome is the same.
+
 **The bound. A single wait expiring is not the deadline.** Abandonment is
 governed by one execution deadline for the whole pass:
 
 | Bound | Value | On expiry |
 | ----- | ----- | --------- |
 | Per-wait timeout | whatever the surface provides | keep waiting; **not** a verdict |
-| Pass execution deadline | **5 minutes from dispatch** | abandon the wait and record the `did not run` outcome with reason `wait deadline expired` |
+| Pass execution deadline | **5 minutes from dispatch** | stop the analyst as the dispatch step above says, and record the `did not run` outcome with reason `wait deadline expired` |
 
 "No reply at all" therefore has one observation point: the await returned
 without a summary, or the deadline expired. Never infer it from a dispatch still
@@ -433,6 +442,9 @@ Seed (required): the Scope text below, and each spec named in Depends On.
 Seed (optional hint, may be absent): the Key Files section.
 For each Depends On spec whose artifacts are not in the working tree, chase
 it into git history rather than reporting it absent.
+
+Budget: at most 40 tool calls. When you reach it, stop exploring and return the
+findings you have, ranked as below; a partial list beats no report.
 
 Return every finding worth raising, ranked by impact then surprise. Each finding:
 N. **<Title>** - the finding, plus a repo-relative file or path pointer.

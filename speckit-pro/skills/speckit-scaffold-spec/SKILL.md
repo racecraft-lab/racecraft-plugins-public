@@ -413,11 +413,28 @@ BEFORE the interview begins:
 ```text
 Agent(subagent_type: "speckit-pro:codebase-analyst", run_in_background: true,
       prompt: "...\nReference dir: ${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/")
+Bash(run_in_background: true, command: "<resolved_python> -c 'import time; time.sleep(300)'")
 ```
 
 The await is not optional: the Claude agent definition carries
 `background: true`, so an un-awaited dispatch hands back a task identifier
 rather than findings.
+
+**Arm the deadline in the same turn as the dispatch.** The second call is the
+deadline timer: a background command that exits 300 seconds (the pass
+execution deadline below) after dispatch. Its completion notice wakes the
+session while the analyst is still running; nothing else would. Keep both task
+ids, then act on whichever completion notice arrives first:
+
+- **The analyst replies first:** stop the timer with `TaskStop` on its task id,
+  so a stale wake cannot land mid-interview, then classify the reply below.
+- **The timer completes first:** the deadline has passed. Stop the analyst with
+  `TaskStop` on its task id, record `did not run` with reason
+  `wait deadline expired`, and continue into the interview.
+
+If the timer call is denied or fails, nothing can enforce the deadline: stop
+the analyst with `TaskStop` and record `did not run` with reason
+`dispatch error: <the timer's error>`.
 <!-- /host -->
 <!-- host:codex: Codex spawns the custom agent with spawn_agent and polls wait_agent -->
 **Dispatch, then await.** Dispatch with `spawn_agent`, using
@@ -432,6 +449,15 @@ or a terminal status without a delivered result is **not** the result. Call
 interview starts. Each `wait_agent` call is one wait; consecutive expired waits
 are the loop's cue to check the execution deadline below, not a second
 independently-triggering bound.
+
+**The loop is the deadline timer.** Note the dispatch time. On every
+`wait_agent` call, pass `timeout_ms` set to the time left until the pass
+execution deadline, never more, so the loop wakes no later than the deadline.
+When the deadline passes with no summary, call `close_agent` on the analyst
+when that action is exposed, otherwise `interrupt_agent` when exposed, then
+record `did not run` with reason `wait deadline expired` and continue into the
+interview. When neither action is exposed, abandon the wait and leave the
+thread to the host; the recorded outcome is the same.
 <!-- /host -->
 
 **The bound. A single wait expiring is not the deadline.** Abandonment is
@@ -440,7 +466,7 @@ governed by one execution deadline for the whole pass:
 | Bound | Value | On expiry |
 | ----- | ----- | --------- |
 | Per-wait timeout | whatever the surface provides | keep waiting; **not** a verdict |
-| Pass execution deadline | **5 minutes from dispatch** | abandon the wait and record the `did not run` outcome with reason `wait deadline expired` |
+| Pass execution deadline | **5 minutes from dispatch** | stop the analyst as the dispatch step above says, and record the `did not run` outcome with reason `wait deadline expired` |
 
 "No reply at all" therefore has one observation point: the await returned
 without a summary, or the deadline expired. Never infer it from a dispatch still
@@ -502,6 +528,9 @@ Seed (required): the Scope text below, and each spec named in Depends On.
 Seed (optional hint, may be absent): the Key Files section.
 For each Depends On spec whose artifacts are not in the working tree, chase
 it into git history rather than reporting it absent.
+
+Budget: at most 40 tool calls. When you reach it, stop exploring and return the
+findings you have, ranked as below; a partial list beats no report.
 
 Return every finding worth raising, ranked by impact then surprise. Each finding:
 N. **<Title>** - the finding, plus a repo-relative file or path pointer.
