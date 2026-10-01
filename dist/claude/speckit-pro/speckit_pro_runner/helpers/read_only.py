@@ -1972,6 +1972,17 @@ def _marker_new_containers(line: str, containers: list[tuple[str, int]]) -> tupl
         return line, display_prefix
 
 
+def _marker_fence_closes(line: str, fence_char: str, fence_width: int) -> bool:
+    return bool(re.fullmatch(rf" {{0,3}}{re.escape(fence_char)}{{{fence_width},}}[ \t]*", line))
+
+
+def _marker_prose_tail(content: str, display_prefix: str, paragraph_open: bool) -> tuple[str, bool]:
+    if len(content) - len(content.lstrip(" ")) >= 4 and not paragraph_open:
+        return "", paragraph_open
+    paragraph_open = not bool(re.match(r" {0,3}(?:#{1,6}(?:[ \t]|$)|(?:[-*_][ \t]*){3,}$)", content))
+    return display_prefix + content, paragraph_open
+
+
 def _marker_prose_lines(raw_lines: list[str]) -> tuple[list[str], set[int]]:
     """Render prose after Markdown containers, fences, and indented code."""
     rendered_lines: list[str] = []
@@ -1990,7 +2001,7 @@ def _marker_prose_lines(raw_lines: list[str]) -> tuple[list[str], set[int]]:
         containers = matched
         if fence_char:
             rendered_lines.append("")
-            if re.fullmatch(rf" {{0,3}}{re.escape(fence_char)}{{{fence_width},}}[ \t]*", line):
+            if _marker_fence_closes(line, fence_char, fence_width):
                 fence_char = ""
                 paragraph_open = False
             continue
@@ -2010,15 +2021,74 @@ def _marker_prose_lines(raw_lines: list[str]) -> tuple[list[str], set[int]]:
             rendered_lines.append("")
             paragraph_open = False
             continue
-        if len(content) - len(content.lstrip(" ")) >= 4 and not paragraph_open:
-            rendered_lines.append("")
-            continue
-        rendered_lines.append(display_prefix + content)
-        paragraph_open = not bool(re.match(r" {0,3}(?:#{1,6}(?:[ \t]|$)|(?:[-*_][ \t]*){3,}$)", content))
+        appended, paragraph_open = _marker_prose_tail(content, display_prefix, paragraph_open)
+        rendered_lines.append(appended)
     if fence_char:
         # Without a closing fence, expose its markers for a conservative gate.
         rendered_lines[fence_start:] = [line.expandtabs(4).replace("`", "") for line in raw_lines[fence_start:]]
     return rendered_lines, block_starts
+
+
+def _mask_boundary_offsets(rendered_lines: list[str], block_starts: set[int]) -> list[int]:
+    boundary_offsets: list[int] = []
+    offset = 0
+    for index, line in enumerate(rendered_lines):
+        if index in block_starts:
+            boundary_offsets.append(offset)
+        offset += len(line) + 1
+    return boundary_offsets
+
+
+def _mask_backslash_run_before(document: str, index: int) -> int:
+    preceding = index - 1
+    while preceding >= 0 and document[preceding] == "\\":
+        preceding -= 1
+    return index - preceding - 1
+
+
+def _mask_backtick_run_end(document: str, index: int) -> int:
+    end = index + 1
+    while end < len(document) and document[end] == "`":
+        end += 1
+    return end
+
+
+def _mask_span_block_end(document: str, end: int, cursor: int, boundary_offsets: list[int]) -> int:
+    # Blank lines, headings, and list starts separate inline parsing blocks.
+    block_end = document.find("\n\n", end)
+    if block_end < 0:
+        block_end = len(document)
+    block_end = min(block_end, next((boundary for boundary in boundary_offsets if boundary > cursor), len(document)))
+    next_block = re.search(
+        r"\n(?= {0,3}#{1,6}[ \t]| {0,3}(?:[-+*]|[0-9]+[.)])[ \t]+)",
+        document[end:block_end],
+    )
+    if next_block:
+        block_end = end + next_block.start()
+    line_start = document.rfind("\n", 0, cursor) + 1
+    if re.match(r" {0,3}#{1,6}(?:[ \t]|$)", document[line_start:]):
+        line_end = document.find("\n", end)
+        if line_end >= 0:
+            block_end = min(block_end, line_end)
+    return block_end
+
+
+def _mask_span(document: str, masked: list[str], cursor: int, end: int, block_end: int) -> int | None:
+    width = end - cursor
+    closing = end
+    while closing < block_end:
+        if document[closing] != "`":
+            closing += 1
+            continue
+        preceding = _mask_backslash_run_before(document, closing)
+        run_end = _mask_backtick_run_end(document, closing)
+        if preceding % 2 == 0 and run_end - closing == width:
+            for position in range(cursor, run_end):
+                if masked[position] != "\n":
+                    masked[position] = " "
+            return run_end
+        closing = run_end
+    return None
 
 
 def _mask_markdown_code_spans(rendered_lines: list[str], block_starts: set[int]) -> list[str]:
@@ -2026,64 +2096,20 @@ def _mask_markdown_code_spans(rendered_lines: list[str], block_starts: set[int])
     # A CommonMark code span may cross line boundaries. Pair equal-width runs
     # before counting markers, leaving unmatched and escaped backticks as prose.
     document = "\n".join(rendered_lines)
-    boundary_offsets: list[int] = []
-    offset = 0
-    for index, line in enumerate(rendered_lines):
-        if index in block_starts:
-            boundary_offsets.append(offset)
-        offset += len(line) + 1
+    boundary_offsets = _mask_boundary_offsets(rendered_lines, block_starts)
     masked = list(document)
     cursor = 0
     while cursor < len(document):
         if document[cursor] != "`":
             cursor += 1
             continue
-        preceding = cursor - 1
-        while preceding >= 0 and document[preceding] == "\\":
-            preceding -= 1
-        if (cursor - preceding - 1) % 2:
+        if _mask_backslash_run_before(document, cursor) % 2:
             cursor += 1
             continue
-        end = cursor + 1
-        while end < len(document) and document[end] == "`":
-            end += 1
-        width = end - cursor
-        closing = end
-        # Blank lines, headings, and list starts separate inline parsing blocks.
-        block_end = document.find("\n\n", end)
-        if block_end < 0:
-            block_end = len(document)
-        block_end = min(block_end, next((boundary for boundary in boundary_offsets if boundary > cursor), len(document)))
-        next_block = re.search(
-            r"\n(?= {0,3}#{1,6}[ \t]| {0,3}(?:[-+*]|[0-9]+[.)])[ \t]+)",
-            document[end:block_end],
-        )
-        if next_block:
-            block_end = end + next_block.start()
-        line_start = document.rfind("\n", 0, cursor) + 1
-        if re.match(r" {0,3}#{1,6}(?:[ \t]|$)", document[line_start:]):
-            line_end = document.find("\n", end)
-            if line_end >= 0:
-                block_end = min(block_end, line_end)
-        while closing < block_end:
-            if document[closing] != "`":
-                closing += 1
-                continue
-            before = closing - 1
-            while before >= 0 and document[before] == "\\":
-                before -= 1
-            run_end = closing + 1
-            while run_end < len(document) and document[run_end] == "`":
-                run_end += 1
-            if (closing - before - 1) % 2 == 0 and run_end - closing == width:
-                for position in range(cursor, run_end):
-                    if masked[position] != "\n":
-                        masked[position] = " "
-                cursor = run_end
-                break
-            closing = run_end
-        else:
-            cursor = end
+        end = _mask_backtick_run_end(document, cursor)
+        block_end = _mask_span_block_end(document, end, cursor, boundary_offsets)
+        new_cursor = _mask_span(document, masked, cursor, end, block_end)
+        cursor = end if new_cursor is None else new_cursor
 
     return "".join(masked).split("\n")
 
@@ -2463,6 +2489,41 @@ REVIEWABILITY_BUDGET_FIELDS = (
 REVIEWABILITY_EXCEPTION_PRAGMA = re.compile(r"^Reviewability-Exception: (refactor|infra|upgrade)$", re.M)
 
 
+def _reviewability_slice_ids(declaration: str, spec_id: str, errors: list[str]) -> list[str]:
+    ids = [value.strip() for value in declaration.split(",")]
+    if not ids or any(not value or "<" in value or ">" in value for value in ids):
+        errors.append(f"{spec_id}: Slices must contain nonempty concrete IDs")
+    if len(ids) != len(set(ids)):
+        errors.append(f"{spec_id}: Slices contains a duplicate ID")
+    return ids
+
+
+def _reviewability_budget_header_invalid(table: list[str]) -> bool:
+    header = [cell.strip() for cell in table[0].strip().strip("|").split("|")] if table else []
+    expected_header = ["Slice", "Estimated LOC", "Production files", "Total files"]
+    return header != expected_header or len(table) < 2 or not re.fullmatch(r"\|?\s*:?-+:?\s*\|\s*:?-+:?\s*\|\s*:?-+:?\s*\|\s*:?-+:?\s*\|?", table[1])
+
+
+def _reviewability_budget_row(
+    line: str, spec_id: str, ids: list[str], rows: dict[str, dict[str, int | str]],
+) -> tuple[bool, str | None]:
+    if not line.strip():
+        return True, None
+    if not line.lstrip().startswith("|"):
+        return True, f"{spec_id}: malformed Slice Budgets row: {line.strip()}"
+    cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+    slice_id = cells[0] if cells else "<missing>"
+    if len(cells) != 4 or any(not re.fullmatch(r"[0-9]+", cell) for cell in cells[1:]):
+        return False, f"{spec_id}: {slice_id} has a malformed or nonnegative-integer Slice Budgets row"
+    if slice_id in rows:
+        return False, f"{spec_id}: duplicate Slice Budgets row for {slice_id}"
+    if slice_id not in ids:
+        return False, f"{spec_id}: extra Slice Budgets row for {slice_id}"
+    rows[slice_id] = dict(zip(("slice_id", "reviewable_loc", "production_files", "total_files"),
+                              (slice_id, *(int(cell) for cell in cells[1:])), strict=True))
+    return False, None
+
+
 def reviewability_slice_rows(section: str, spec_id: str) -> tuple[list[dict[str, int | str]], list[str]] | None:
     """Read the complete ordered budget table for a declared split."""
     declarations = re.findall(r"^Slices:[ \t]*(.*)$", section, flags=re.M)
@@ -2471,41 +2532,22 @@ def reviewability_slice_rows(section: str, spec_id: str) -> tuple[list[dict[str,
     errors: list[str] = []
     if len(declarations) != 1:
         errors.append(f"{spec_id}: exactly one Slices declaration is required")
-    ids = [value.strip() for value in declarations[0].split(",")]
-    if not ids or any(not value or "<" in value or ">" in value for value in ids):
-        errors.append(f"{spec_id}: Slices must contain nonempty concrete IDs")
-    if len(ids) != len(set(ids)):
-        errors.append(f"{spec_id}: Slices contains a duplicate ID")
+    ids = _reviewability_slice_ids(declarations[0], spec_id, errors)
     headings = re.findall(r"^Slice Budgets:[ \t]*$", section, flags=re.M)
     if len(headings) != 1:
         errors.append(f"{spec_id}: exactly one Slice Budgets table is required")
         return [], errors
     table = section.split("Slice Budgets:", 1)[1].lstrip("\r\n").splitlines()
-    header = [cell.strip() for cell in table[0].strip().strip("|").split("|")] if table else []
-    expected_header = ["Slice", "Estimated LOC", "Production files", "Total files"]
-    if header != expected_header or len(table) < 2 or not re.fullmatch(r"\|?\s*:?-+:?\s*\|\s*:?-+:?\s*\|\s*:?-+:?\s*\|\s*:?-+:?\s*\|?", table[1]):
+    if _reviewability_budget_header_invalid(table):
         errors.append(f"{spec_id}: Slice Budgets requires the four named columns and separator")
         return [], errors
     rows: dict[str, dict[str, int | str]] = {}
     for line in table[2:]:
-        if not line.strip():
+        stop, error = _reviewability_budget_row(line, spec_id, ids, rows)
+        if error is not None:
+            errors.append(error)
+        if stop:
             break
-        if not line.lstrip().startswith("|"):
-            errors.append(f"{spec_id}: malformed Slice Budgets row: {line.strip()}")
-            break
-        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-        slice_id = cells[0] if cells else "<missing>"
-        if len(cells) != 4 or any(not re.fullmatch(r"[0-9]+", cell) for cell in cells[1:]):
-            errors.append(f"{spec_id}: {slice_id} has a malformed or nonnegative-integer Slice Budgets row")
-            continue
-        if slice_id in rows:
-            errors.append(f"{spec_id}: duplicate Slice Budgets row for {slice_id}")
-            continue
-        if slice_id not in ids:
-            errors.append(f"{spec_id}: extra Slice Budgets row for {slice_id}")
-            continue
-        rows[slice_id] = dict(zip(("slice_id", "reviewable_loc", "production_files", "total_files"),
-                                  (slice_id, *(int(cell) for cell in cells[1:])), strict=True))
     for slice_id in ids:
         if slice_id not in rows:
             errors.append(f"{spec_id}: missing Slice Budgets row for {slice_id}")
@@ -4149,6 +4191,15 @@ def _spec_index_path_state(path: Path, label: str, repo_root: Path) -> str:
     return "regular"
 
 
+def _spec_index_indexed_names(indexed_paths: set[str]) -> set[str]:
+    """The top-level spec directories represented by tracked index paths."""
+    return {
+        parts[1]
+        for path in indexed_paths
+        if (parts := Path(path).parts)[:1] == ("specs",) and len(parts) >= 3
+    }
+
+
 def _spec_index_directories(
     specs_dir: Path, repo_root: Path, indexed_paths: set[str]
 ) -> list[Path]:
@@ -4156,11 +4207,7 @@ def _spec_index_directories(
     if names is None:
         raise SpecIndexRenderError(f"could not scan specs directory: {specs_dir} (descriptor-safe read failed)")
     entries = sorted((specs_dir / name for name in names), key=lambda path: path.name.encode("utf-8"))
-    indexed_names = {
-        parts[1]
-        for path in indexed_paths
-        if (parts := Path(path).parts)[:1] == ("specs",) and len(parts) >= 3
-    }
+    indexed_names = _spec_index_indexed_names(indexed_paths)
     directories: list[Path] = []
     for entry in entries:
         if entry.name not in indexed_names:
@@ -4604,6 +4651,33 @@ def _spec_index_assemble_block(bodies: dict[str, list[str]]) -> list[str]:
     return block
 
 
+def _spec_index_replace_zones(
+    lines: list[str],
+    positions: dict[str, tuple[int, int] | None],
+    bodies: dict[str, list[str]],
+) -> list[str]:
+    """Replace generated zone bodies while preserving their fences and authored lines."""
+    by_start = {
+        position[0]: (zone, position[1])
+        for zone, position in positions.items()
+        if position is not None
+    }
+    rebuilt: list[str] = []
+    index = 0
+    while index < len(lines):
+        zone_record = by_start.get(index)
+        if zone_record is None:
+            rebuilt.append(lines[index])
+            index += 1
+            continue
+        zone, end = zone_record
+        rebuilt.append(lines[index])
+        rebuilt.extend(bodies[zone])
+        rebuilt.append(lines[end])
+        index = end + 1
+    return rebuilt
+
+
 def _spec_index_rebuild_map(
     path: Path,
     text: str,
@@ -4653,24 +4727,7 @@ def _spec_index_rebuild_map(
         lines.extend(_spec_index_assemble_block(bodies))
         return newline.join(lines) + newline
 
-    by_start = {
-        position[0]: (zone, position[1])
-        for zone, position in positions.items()
-        if position is not None
-    }
-    rebuilt: list[str] = []
-    index = 0
-    while index < len(lines):
-        zone_record = by_start.get(index)
-        if zone_record is None:
-            rebuilt.append(lines[index])
-            index += 1
-            continue
-        zone, end = zone_record
-        rebuilt.append(lines[index])
-        rebuilt.extend(bodies[zone])
-        rebuilt.append(lines[end])
-        index = end + 1
+    rebuilt = _spec_index_replace_zones(lines, positions, bodies)
     return newline.join(rebuilt) + newline
 
 

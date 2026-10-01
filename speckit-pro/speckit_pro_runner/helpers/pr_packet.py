@@ -115,8 +115,8 @@ def validate_pr_packet_write(entry: Any, request: Any) -> dict[str, Any]:
     )
 
 
-def normalize_packet_input(request: Any) -> dict[str, Any]:
-    inputs = request.inputs
+def packet_input_identity(inputs: dict[str, Any]) -> dict[str, Any]:
+    """The packet's path, feature directory, and id, which must all agree."""
     packet_path = inputs.get("packet_path")
     source_feature_dir = inputs.get("source_feature_dir")
     packet_parts = packet_path_parts(packet_path)
@@ -137,7 +137,11 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
         return invalid_packet_input("packet_id must be lowercase alphanumeric with dot, dash, or underscore separators", field="packet_id")
     if packet_id != packet_parts["packet_id"]:
         return invalid_packet_input("packet_id must match the packet_path filename", field="packet_id")
+    return {"packet_path": packet_path, "source_feature_dir": source_feature_dir, "packet_id": packet_id}
 
+
+def packet_owned_paths(inputs: dict[str, Any], source_feature_dir: str, packet_id: str) -> dict[str, Any]:
+    """The body and validation paths a packet owns; supplied overrides must equal them."""
     canonical_paths = canonical_packet_paths(source_feature_dir, packet_id)
     body_file = inputs.get("body_file") or canonical_paths["body_file"]
     validation_result_path = inputs.get("validation_result_path") or canonical_paths["validation_result_path"]
@@ -153,7 +157,11 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
             field="validation_result_path",
             details={"expected": canonical_paths["validation_result_path"]},
         )
+    return {"body_file": body_file, "validation_result_path": validation_result_path}
 
+
+def packet_input_target(inputs: dict[str, Any]) -> dict[str, Any]:
+    """The pull-request target, whose base and head branches are both required."""
     target = inputs.get("target")
     if not isinstance(target, dict):
         return invalid_packet_input("target must include base_branch and head_branch", field="target")
@@ -161,6 +169,167 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
     head_branch = target.get("head_branch")
     if not isinstance(base_branch, str) or not base_branch or not isinstance(head_branch, str) or not head_branch:
         return invalid_packet_input("target.base_branch and target.head_branch are required", field="target")
+    return {"base_branch": base_branch, "head_branch": head_branch}
+
+
+def packet_input_mode(inputs: dict[str, Any]) -> str | dict[str, Any]:
+    """The packet mode, single by default; inputs.mode_name is never accepted."""
+    if "mode_name" in inputs:
+        return invalid_packet_input(
+            "inputs.mode is the packet mode field; remove inputs.mode_name and set inputs.mode to single, split, or draft",
+            field="mode_name",
+        )
+    mode = inputs.get("mode")
+    if mode is None:
+        return "single"
+    if mode not in {"single", "split", "draft"}:
+        return invalid_packet_input("mode must be single, split, or draft when provided", field="mode")
+    return mode
+
+
+def packet_input_release_note(inputs: dict[str, Any]) -> str | None | dict[str, Any]:
+    """The optional release note, which must be nonblank unfenced Markdown when supplied."""
+    release_note = inputs.get("release_note")
+    if "release_note" in inputs:
+        if not isinstance(release_note, str) or not release_note.strip():
+            return invalid_packet_input("release_note must be a nonblank Markdown string", field="release_note")
+        if any(re.match(r"^[ \t]*(?:`{3,}|~{3,})", line) for line in release_note.splitlines()):
+            return invalid_packet_input("release_note must be unfenced Markdown", field="release_note")
+    return release_note
+
+
+def packet_input_uat(inputs: dict[str, Any], mode: str) -> dict[str, str]:
+    """The packet's UAT record; a draft body declares no UAT runbook section."""
+    return {
+        "how_to_uat": "" if mode == "draft" else markdown_block(inputs.get("how_to_uat"), "No manual UAT runbook was provided; use verification evidence for this PR."),
+        "uat_runbook_heading": "" if mode == "draft" else "## UAT Runbook",
+        "uat_source": str(inputs.get("uat_source") or "packet-input"),
+    }
+
+
+def packet_workflow_verdict(inputs: dict[str, Any]) -> str | dict[str, Any]:
+    """The workflow file's current Phase 6.5 verdict, required for every final packet."""
+    workflow_raw = inputs.get("workflow_file")
+    if not isinstance(workflow_raw, str) or not workflow_raw.strip():
+        return invalid_packet_input("workflow_file is required for final packets", field="workflow_file")
+    repo_root = find_repo_root(Path.cwd())
+    if repo_root is None:
+        return invalid_packet_input("repository root is unavailable", field="workflow_file")
+    workflow_path = resolve_input_path(workflow_raw, repo_root)
+    if not path_stays_in_trust_boundary(workflow_path, repo_root):
+        return invalid_packet_input("workflow_file escapes the repository", field="workflow_file")
+    workflow_text = trusted_text(workflow_path, repo_root)
+    verdict = workflow_phase65_verdict(workflow_text) if workflow_text is not None else None
+    if verdict is None:
+        return invalid_packet_input("workflow_file must record one valid Phase 6.5 Verdict", field="workflow_file")
+    return verdict
+
+
+def packet_input_body(
+    inputs: dict[str, Any],
+    mode: str,
+    generated_title: dict[str, Any],
+    uat: dict[str, str],
+    verification_evidence: list[dict[str, str]],
+    scope_evidence: dict[str, Any],
+    deferred_items: list[dict[str, str]] | None,
+) -> str | dict[str, Any]:
+    """The packet body: a supplied draft or orchestrator body, else the builder's rendering."""
+    body = inputs.get("body")
+    if isinstance(body, str) and body.strip():
+        return ensure_final_newline(body)
+    if mode == "draft":
+        return invalid_packet_input(
+            "a draft packet requires inputs.body: the orchestrator composes the draft body, so no builder runs",
+            field="body",
+        )
+    return build_packet_body(
+        generated_title["value"],
+        summary=markdown_block(inputs.get("summary"), "Generated SpecKit Pro review packet."),
+        what_changed=markdown_list(inputs.get("what_changed"), ["See changed-file scope evidence in the packet."]),
+        why_it_matters=markdown_block(inputs.get("why_it_matters"), "This prepares the completed SpecKit work for review."),
+        how_to_review=markdown_list(inputs.get("how_to_review"), ["Review the changed files and verification evidence in order."]),
+        how_to_uat=uat["how_to_uat"],
+        uat_heading=uat["uat_runbook_heading"],
+        verification=markdown_list(inputs.get("verification"), [item["summary"] for item in verification_evidence]),
+        scope=markdown_list(inputs.get("scope"), scope_evidence["changed_files"]),
+        known_gaps=markdown_list(inputs.get("known_gaps"), ["No known gaps for this PR."]),
+        deferred_items=deferred_items,
+    )
+
+
+def append_release_note(rendered_body: str, release_note: str) -> str | dict[str, Any]:
+    """The supplied release note, appended as one protected final fence, or the refusal."""
+    # An enclosing fence owns its literal examples, as in the host parser.
+    body_lines = rendered_body.splitlines()
+    line_index = 0
+    last_section_heading = ""
+    while line_index < len(body_lines):
+        line = body_lines[line_index]
+        quote_depth = 0
+        while quote := re.match(r"^ {0,3}>[ \t]?", line):
+            line = line[quote.end():]
+            quote_depth += 1
+        opening = re.fullmatch(
+            r"(?P<indent> {0,3})(?:(?P<marker>[-+*]|[0-9]{1,9}[.)])(?P<space>[ \t]+))?"
+            r"(?P<fence>`{3,}|~{3,})(?P<info>[^\r\n]*)",
+            line,
+        )
+        if opening is None or (opening["fence"][0] == "`" and "`" in opening["info"]):
+            if quote_depth == 0 and body_lines[line_index].startswith("## "):
+                last_section_heading = body_lines[line_index]
+            line_index += 1
+            continue
+        if opening["info"].strip(" \t") == "release-note":
+            return invalid_packet_input("body already contains a release-note fence", field="body")
+        container_indent = (
+            len(opening["indent"]) + len(opening["marker"]) + len(opening["space"])
+            if opening["marker"] else 0
+        )
+        close_index = None
+        for probe in range(line_index + 1, len(body_lines)):
+            line = body_lines[probe]
+            stripped_quotes = 0
+            while stripped_quotes < quote_depth and (quote := re.match(r"^ {0,3}>[ \t]?", line)):
+                line = line[quote.end():]
+                stripped_quotes += 1
+            if stripped_quotes != quote_depth and line.strip():
+                break
+            leading_spaces = len(line) - len(line.lstrip(" "))
+            content = line[container_indent:] if leading_spaces >= container_indent else line
+            if leading_spaces >= container_indent and re.fullmatch(
+                rf" {{0,3}}{re.escape(opening['fence'][0])}{{{len(opening['fence'])},}}[ \t]*",
+                content,
+            ):
+                close_index = probe
+                break
+            if leading_spaces < container_indent and line.strip():
+                break
+        if close_index is None:
+            return invalid_packet_input("body contains an unclosed fence that would enclose the supplied release note", field="body")
+        line_index = close_index + 1
+    heading = "\n" if last_section_heading == "## Release note" else "\n## Release note\n\n"
+    return (
+        ensure_final_newline(rendered_body) + heading + "```release-note\n"
+        + f"<!-- speckit-pro-editable:release_note:start -->\n{release_note}\n"
+        + "<!-- speckit-pro-editable:release_note:end -->\n```\n"
+    )
+
+
+def normalize_packet_input(request: Any) -> dict[str, Any]:
+    inputs = request.inputs
+
+    identity = packet_input_identity(inputs)
+    if isinstance(identity, dict) and "diagnostic" in identity:
+        return identity
+
+    owned_paths = packet_owned_paths(inputs, identity["source_feature_dir"], identity["packet_id"])
+    if isinstance(owned_paths, dict) and "diagnostic" in owned_paths:
+        return owned_paths
+
+    target = packet_input_target(inputs)
+    if isinstance(target, dict) and "diagnostic" in target:
+        return target
 
     generated_title = normalize_generated_title(inputs)
     if isinstance(generated_title, dict) and "diagnostic" in generated_title:
@@ -169,23 +338,13 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
     # Resolved before the evidence normalizers because draft mode relaxes what they
     # accept. Left below them, a draft packet dies in input normalization before the
     # gate is ever reached.
-    if "mode_name" in inputs:
-        return invalid_packet_input(
-            "inputs.mode is the packet mode field; remove inputs.mode_name and set inputs.mode to single, split, or draft",
-            field="mode_name",
-        )
-    mode = inputs.get("mode")
-    if mode is None:
-        mode = "single"
-    elif mode not in {"single", "split", "draft"}:
-        return invalid_packet_input("mode must be single, split, or draft when provided", field="mode")
+    mode = packet_input_mode(inputs)
+    if isinstance(mode, dict):
+        return mode
 
-    release_note = inputs.get("release_note")
-    if "release_note" in inputs:
-        if not isinstance(release_note, str) or not release_note.strip():
-            return invalid_packet_input("release_note must be a nonblank Markdown string", field="release_note")
-        if any(re.match(r"^[ \t]*(?:`{3,}|~{3,})", line) for line in release_note.splitlines()):
-            return invalid_packet_input("release_note must be unfenced Markdown", field="release_note")
+    release_note = packet_input_release_note(inputs)
+    if isinstance(release_note, dict):
+        return release_note
 
     deferred_items = normalize_deferred_items(inputs.get("deferred_items"), mode)
     if isinstance(deferred_items, dict):
@@ -205,56 +364,22 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
     if isinstance(verification_evidence, dict) and "diagnostic" in verification_evidence:
         return verification_evidence
 
-    source_markers = normalize_source_markers(inputs.get("source_markers"), packet_id, generated_title["value"], source_feature_dir)
+    source_markers = normalize_source_markers(inputs.get("source_markers"), identity["packet_id"], generated_title["value"], identity["source_feature_dir"])
     if isinstance(source_markers, dict) and "diagnostic" in source_markers:
         return source_markers
 
-    # A draft body carries no UAT section, so it declares neither the runbook heading
-    # nor the fallback prose that would describe one.
-    uat = {
-        "how_to_uat": "" if mode == "draft" else markdown_block(inputs.get("how_to_uat"), "No manual UAT runbook was provided; use verification evidence for this PR."),
-        "uat_runbook_heading": "" if mode == "draft" else "## UAT Runbook",
-        "uat_source": str(inputs.get("uat_source") or "packet-input"),
-    }
+    uat = packet_input_uat(inputs, mode)
 
-    verdict: str | None = None
+    verdict = None
     if mode != "draft":
-        workflow_raw = inputs.get("workflow_file")
-        if not isinstance(workflow_raw, str) or not workflow_raw.strip():
-            return invalid_packet_input("workflow_file is required for final packets", field="workflow_file")
-        repo_root = find_repo_root(Path.cwd())
-        if repo_root is None:
-            return invalid_packet_input("repository root is unavailable", field="workflow_file")
-        workflow_path = resolve_input_path(workflow_raw, repo_root)
-        if not path_stays_in_trust_boundary(workflow_path, repo_root):
-            return invalid_packet_input("workflow_file escapes the repository", field="workflow_file")
-        workflow_text = trusted_text(workflow_path, repo_root)
-        verdict = workflow_phase65_verdict(workflow_text) if workflow_text is not None else None
-        if verdict is None:
-            return invalid_packet_input("workflow_file must record one valid Phase 6.5 Verdict", field="workflow_file")
+        verdict = packet_workflow_verdict(inputs)
+        if isinstance(verdict, dict):
+            return verdict
 
-    body = inputs.get("body")
-    if isinstance(body, str) and body.strip():
-        rendered_body = ensure_final_newline(body)
-    elif mode == "draft":
-        return invalid_packet_input(
-            "a draft packet requires inputs.body: the orchestrator composes the draft body, so no builder runs",
-            field="body",
-        )
-    else:
-        rendered_body = build_packet_body(
-            generated_title["value"],
-            summary=markdown_block(inputs.get("summary"), "Generated SpecKit Pro review packet."),
-            what_changed=markdown_list(inputs.get("what_changed"), ["See changed-file scope evidence in the packet."]),
-            why_it_matters=markdown_block(inputs.get("why_it_matters"), "This prepares the completed SpecKit work for review."),
-            how_to_review=markdown_list(inputs.get("how_to_review"), ["Review the changed files and verification evidence in order."]),
-            how_to_uat=uat["how_to_uat"],
-            uat_heading=uat["uat_runbook_heading"],
-            verification=markdown_list(inputs.get("verification"), [item["summary"] for item in verification_evidence]),
-            scope=markdown_list(inputs.get("scope"), scope_evidence["changed_files"]),
-            known_gaps=markdown_list(inputs.get("known_gaps"), ["No known gaps for this PR."]),
-            deferred_items=deferred_items,
-        )
+    rendered_body = packet_input_body(inputs, mode, generated_title, uat, verification_evidence, scope_evidence, deferred_items)
+    if isinstance(rendered_body, dict):
+        return rendered_body
+
     if verdict is not None:
         rendered_body = with_current_phase65_verdict(rendered_body, verdict)
         if rendered_body is None:
@@ -266,60 +391,10 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
         )
 
     if mode != "draft" and release_note is not None:
-        # An enclosing fence owns its literal examples, as in the host parser.
-        body_lines = rendered_body.splitlines()
-        line_index = 0
-        last_section_heading = ""
-        while line_index < len(body_lines):
-            line = body_lines[line_index]
-            quote_depth = 0
-            while quote := re.match(r"^ {0,3}>[ \t]?", line):
-                line = line[quote.end():]
-                quote_depth += 1
-            opening = re.fullmatch(
-                r"(?P<indent> {0,3})(?:(?P<marker>[-+*]|[0-9]{1,9}[.)])(?P<space>[ \t]+))?"
-                r"(?P<fence>`{3,}|~{3,})(?P<info>[^\r\n]*)",
-                line,
-            )
-            if opening is None or (opening["fence"][0] == "`" and "`" in opening["info"]):
-                if quote_depth == 0 and body_lines[line_index].startswith("## "):
-                    last_section_heading = body_lines[line_index]
-                line_index += 1
-                continue
-            if opening["info"].strip(" \t") == "release-note":
-                return invalid_packet_input("body already contains a release-note fence", field="body")
-            container_indent = (
-                len(opening["indent"]) + len(opening["marker"]) + len(opening["space"])
-                if opening["marker"] else 0
-            )
-            close_index = None
-            for probe in range(line_index + 1, len(body_lines)):
-                line = body_lines[probe]
-                stripped_quotes = 0
-                while stripped_quotes < quote_depth and (quote := re.match(r"^ {0,3}>[ \t]?", line)):
-                    line = line[quote.end():]
-                    stripped_quotes += 1
-                if stripped_quotes != quote_depth and line.strip():
-                    break
-                leading_spaces = len(line) - len(line.lstrip(" "))
-                content = line[container_indent:] if leading_spaces >= container_indent else line
-                if leading_spaces >= container_indent and re.fullmatch(
-                    rf" {{0,3}}{re.escape(opening['fence'][0])}{{{len(opening['fence'])},}}[ \t]*",
-                    content,
-                ):
-                    close_index = probe
-                    break
-                if leading_spaces < container_indent and line.strip():
-                    break
-            if close_index is None:
-                return invalid_packet_input("body contains an unclosed fence that would enclose the supplied release note", field="body")
-            line_index = close_index + 1
-        heading = "\n" if last_section_heading == "## Release note" else "\n## Release note\n\n"
-        rendered_body = (
-            ensure_final_newline(rendered_body) + heading + "```release-note\n"
-            + f"<!-- speckit-pro-editable:release_note:start -->\n{release_note}\n"
-            + "<!-- speckit-pro-editable:release_note:end -->\n```\n"
-        )
+        appended = append_release_note(rendered_body, release_note)
+        if isinstance(appended, dict):
+            return appended
+        rendered_body = appended
 
     body_failures = packet_body_structure_failures(
         {
@@ -341,12 +416,12 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
 
     packet: dict[str, Any] = {
         "schema_version": "1.0.0",
-        "packet_id": packet_id,
+        "packet_id": identity["packet_id"],
         "mode": mode,
-        "target": {"base_branch": base_branch, "head_branch": head_branch},
-        "source_feature_dir": source_feature_dir,
+        "target": {"base_branch": target["base_branch"], "head_branch": target["head_branch"]},
+        "source_feature_dir": identity["source_feature_dir"],
         "generated_title": generated_title,
-        "body_file": body_file,
+        "body_file": owned_paths["body_file"],
         "required_headings": required_headings(mode),
         "verification_evidence": verification_evidence,
         "scope_evidence": scope_evidence,
@@ -359,7 +434,7 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
             "normalization": "LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
             "elided_fields": [field["field_id"] for field in editable_fields(mode, has_release_note=release_note is not None)],
         },
-        "validation_result_path": validation_result_path,
+        "validation_result_path": owned_paths["validation_result_path"],
     }
     if mode != "draft" and release_note is not None:
         packet["release_note"] = release_note
@@ -380,7 +455,7 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
     return {
         "packet": packet,
         "body": rendered_body,
-        "packet_path": packet_path,
+        "packet_path": identity["packet_path"],
     }
 
 

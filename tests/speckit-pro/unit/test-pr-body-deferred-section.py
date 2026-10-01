@@ -44,6 +44,20 @@ def _packet_inputs(**overrides: object) -> dict[str, object]:
     return inputs
 
 
+def _render_deferred_packet(**overrides: object) -> dict[str, object]:
+    from speckit_pro_runner.helpers.pr_packet import normalize_packet_input
+
+    with tempfile.TemporaryDirectory() as temp:
+        root = Path(temp).resolve()
+        (root / "workflow.md").write_text(
+            "## Phase 6.5: Confidence Gate\n\n| Field | Value |\n"
+            "| --- | --- |\n| Verdict | proceed |\n",
+            encoding="utf-8",
+        )
+        with patch("speckit_pro_runner.helpers.pr_packet.find_repo_root", return_value=root):
+            return normalize_packet_input(SimpleNamespace(inputs=_packet_inputs(**overrides)))
+
+
 class DeferredSectionInPrBodyTests(unittest.TestCase):
     ITEMS = [
         {"item": "UAT story 1: the report page loads", "reason": "It needs a person at a browser.",
@@ -54,17 +68,7 @@ class DeferredSectionInPrBodyTests(unittest.TestCase):
     ]
 
     def render(self, **overrides: object) -> dict[str, object]:
-        from speckit_pro_runner.helpers.pr_packet import normalize_packet_input
-
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp).resolve()
-            (root / "workflow.md").write_text(
-                "## Phase 6.5: Confidence Gate\n\n| Field | Value |\n"
-                "| --- | --- |\n| Verdict | proceed |\n",
-                encoding="utf-8",
-            )
-            with patch("speckit_pro_runner.helpers.pr_packet.find_repo_root", return_value=root):
-                return normalize_packet_input(SimpleNamespace(inputs=_packet_inputs(**overrides)))
+        return _render_deferred_packet(**overrides)
 
     def test_body_opens_with_the_deferred_section_and_still_validates(self) -> None:
         from speckit_pro_runner.helpers.read_only import validate_pr_packet_read_only

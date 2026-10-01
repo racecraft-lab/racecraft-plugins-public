@@ -183,6 +183,65 @@ def refresh_spec_index(repo_root: Path) -> list[str]:
     return touched
 
 
+def copied_source_index_paths(index_text: str, isolated_root: Path) -> list[str]:
+    """Copied paths in source-index order, excluding files omitted from the isolated tree."""
+    return [
+        path for path in dict.fromkeys(index_text.split("\0"))
+        if path and ((isolated_root / path).is_file() or (isolated_root / path).is_symlink())
+    ]
+
+
+def prepare_isolated_source_index(
+    repo_root: Path,
+    isolated_root: Path,
+    run: Callable[..., subprocess.CompletedProcess[Any]],
+    stderr: TextIO,
+) -> int:
+    """Initialize the isolated Git index with exactly the source index's copied paths."""
+    source_index = run(
+        ["git", "ls-files", "--cached", "-z"],
+        cwd=str(repo_root),
+        text=True,
+        capture_output=True,
+        check=False,
+        shell=False,
+    )
+    if source_index.returncode != 0:
+        if source_index.stderr:
+            stderr.write(source_index.stderr)
+        print("::error::Unable to read the source Git index.", file=stderr)
+        return source_index.returncode or 1
+    indexed_files = copied_source_index_paths(source_index.stdout, isolated_root)
+    setup_commands = [["git", "init", "--quiet"]]
+    if indexed_files:
+        setup_commands.append(
+            [
+                "git", "--literal-pathspecs", "add", "--force",
+                "--pathspec-from-file=-", "--pathspec-file-nul",
+            ]
+        )
+    for setup_argv in setup_commands:
+        setup = run(
+            setup_argv,
+            cwd=str(isolated_root),
+            text=True,
+            capture_output=True,
+            check=False,
+            shell=False,
+            **({"input": "\0".join(indexed_files) + "\0"} if "add" in setup_argv else {}),
+        )
+        if setup.returncode != 0:
+            if setup.stderr:
+                stderr.write(setup.stderr)
+            print(
+                f"::error::Unable to prepare the isolated release artifact check "
+                f"({setup_argv[0]} {setup_argv[1]} exited {setup.returncode}).",
+                file=stderr,
+            )
+            return setup.returncode or 1
+    return 0
+
+
 def check_release_artifacts(
     repo_root: Path,
     *,
@@ -238,50 +297,9 @@ def check_release_artifacts(
                 ignore=ignored_copy_names,
                 symlinks=True,
             )
-            source_index = run(
-                ["git", "ls-files", "--cached", "-z"],
-                cwd=str(repo_root),
-                text=True,
-                capture_output=True,
-                check=False,
-                shell=False,
-            )
-            if source_index.returncode != 0:
-                if source_index.stderr:
-                    stderr.write(source_index.stderr)
-                print("::error::Unable to read the source Git index.", file=stderr)
-                return source_index.returncode or 1
-            indexed_files = [
-                path for path in dict.fromkeys(source_index.stdout.split("\0"))
-                if path and ((isolated_root / path).is_file() or (isolated_root / path).is_symlink())
-            ]
-            setup_commands = [["git", "init", "--quiet"]]
-            if indexed_files:
-                setup_commands.append(
-                    [
-                        "git", "--literal-pathspecs", "add", "--force",
-                        "--pathspec-from-file=-", "--pathspec-file-nul",
-                    ]
-                )
-            for setup_argv in setup_commands:
-                setup = run(
-                    setup_argv,
-                    cwd=str(isolated_root),
-                    text=True,
-                    capture_output=True,
-                    check=False,
-                    shell=False,
-                    **({"input": "\0".join(indexed_files) + "\0"} if "add" in setup_argv else {}),
-                )
-                if setup.returncode != 0:
-                    if setup.stderr:
-                        stderr.write(setup.stderr)
-                    print(
-                        f"::error::Unable to prepare the isolated release artifact check "
-                        f"({setup_argv[0]} {setup_argv[1]} exited {setup.returncode}).",
-                        file=stderr,
-                    )
-                    return setup.returncode or 1
+            prepared = prepare_isolated_source_index(repo_root, isolated_root, run, stderr)
+            if prepared:
+                return prepared
             child_environment = os.environ.copy()
             child_environment["PYTHONDONTWRITEBYTECODE"] = "1"
             completed = run(
