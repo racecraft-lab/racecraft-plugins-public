@@ -15,6 +15,7 @@ from .install import CODEX_OPTIONAL_HELPER_NAME, CODEX_REQUIRED_AGENT_NAMES, run
 from .egress_authorization import run_egress_authorization_helper
 from .execution_requests import run_execution_helper
 from .gate_preflight_coverage import run_gate_preflight_coverage_helper
+from .roadmap_freshness import run_roadmap_freshness_helper
 from .run_finalization import run_run_finalization_helper
 from .mutation import empty_mutation, run_mutation_helper, run_spec_index_write, run_sweep_apply_result
 from .pr_emission import generate_pr_body, plan_commands
@@ -236,6 +237,16 @@ HELPERS: dict[str, HelperEntry] = {
         "python_authoritative",
         "python_only",
         authoritative_request("list-archive-candidates"),
+    ),
+    # Scaffold's pre-parse check: the checkout's roadmap against the remote
+    # default branch, and the revision a new spec worktree is based on.
+    "check-roadmap-freshness": HelperEntry(
+        "check-roadmap-freshness",
+        "check-roadmap-freshness",
+        None,
+        "python_authoritative",
+        "python_only",
+        authoritative_request("check-roadmap-freshness"),
     ),
     # Value-free check of the research broker's screening dependencies: the
     # typesafe-jev binary, its credential state, and the search key sources.
@@ -734,6 +745,8 @@ def dispatch_helper(request: Any) -> dict[str, Any]:
         return run_pr_split_ratification_helper(entry, request)
     if entry.helper_id == "list-archive-candidates":
         return run_archive_sweep_helper(entry, request)
+    if entry.helper_id == "check-roadmap-freshness":
+        return run_roadmap_freshness_helper(entry, request)
     return run_registered_helper(entry, request)
 
 

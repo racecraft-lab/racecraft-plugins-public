@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-check-roadmap-freshness",
+  "helper_id": "check-roadmap-freshness",
+  "operation": "check-roadmap-freshness",
+  "mode": "read_only",
+  "inputs": {
+    "roadmap_path": "docs/ai/technical-roadmap.md"
+  }
+}

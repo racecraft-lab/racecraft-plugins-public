@@ -98,6 +98,7 @@ EXPECTED_HELPERS = [
     "finalize-run",
     "ratify-pr-split",
     "list-archive-candidates",
+    "check-roadmap-freshness",
 ]
 
 JSON_STDOUT_PARITY_HELPERS = {"atomicity-route"}
@@ -171,6 +172,7 @@ HELPER_CASES: dict[str, dict[str, object]] = {
         .read_text(encoding="utf-8")
     )["inputs"],
     "list-archive-candidates": {"current_target": "specs/001-current-feature"},
+    "check-roadmap-freshness": {"roadmap_path": "docs/ai/technical-roadmap.md"},
     "sweep-pr-feedback": {
         "workflow_file": "docs/ai/specs/.process/FEATURE-002-workflow.md",
         "self_login": "speckit-pro-bot",
@@ -4365,6 +4367,23 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
                     self.assertEqual(data["decision"], "autopilot_ratified")
                     self.assertEqual(data["ratified_by"], "autopilot")
                     self.assertEqual(stderr_records, [])
+                    continue
+                if helper_id == "check-roadmap-freshness":
+                    # A throwaway repository with no remote: the roadmap cannot be
+                    # verified, so the helper stops instead of passing.
+                    with tempfile.TemporaryDirectory(prefix="roadmap-freshness-repo-") as repo:
+                        root = Path(repo)
+                        (root / ".specify").mkdir()
+                        (root / "docs/ai").mkdir(parents=True)
+                        (root / "docs/ai/technical-roadmap.md").write_text("# roadmap\n", encoding="utf-8")
+                        completed, response, stderr_records = run_runner(
+                            helper_request(helper_id, HELPER_CASES[helper_id]),
+                            cwd=root,
+                        )
+                    data = response["data"]
+                    self.assert_response(response, "expected_failure", 1)
+                    self.assertFalse(data["writes_state"])
+                    self.assertEqual((data["verdict"], data["cause"]), ("stop", "no_remote"))
                     continue
                 if helper_id == "list-archive-candidates":
                     # A throwaway repository with no gh on PATH: the prior spec

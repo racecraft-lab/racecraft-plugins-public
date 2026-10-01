@@ -252,6 +252,15 @@ one with
 `$speckit-coach help me create a technical roadmap`."
 <!-- /host -->
 
+Before parsing the roadmap, run runner helper `check-roadmap-freshness` with
+`roadmap_path` set to the roadmap path relative to the repository root. It
+fetches the remote and compares the roadmap in this checkout with the one on
+the remote default branch. Require `verdict=proceed`. On `verdict=stop`, print
+the returned `stop_message` unchanged and STOP: parse no roadmap entry, run no
+gate, and write nothing. Keep the returned `base_revision`: step 3 bases a new
+spec worktree branch on it, so the roadmap you parse and the worktree come from
+the same revision.
+
 ### 2. Find the Spec in the Technical Roadmap
 
 Read the technical roadmap and find the section for the requested
@@ -337,7 +346,8 @@ the helper's disposition:
 2. On `disposition=create`, inspect the intended branch locally and on every
    actual remote. STOP if more than one remote carries it. Add the returned
    worktree using the local branch, the single remote tracking branch, or a new
-   branch as the observed state requires. Never commit or push `main` while
+   branch as the observed state requires. Base a new branch on the
+   `base_revision` from step 1, never on the checkout's current commit. Never commit or push `main` while
    recovering or reusing a remote branch.
 3. Never substitute a different path because branch creation or remote lookup
    is inconvenient; rerun the resolver if live state changes.
