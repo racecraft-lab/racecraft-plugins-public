@@ -647,7 +647,15 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "cce7c789e9fd56fd9dc00172bb127aaeefc627d9ed8da7283bde021be9d8954a"
+      "sha256": "a60a06474e1e71eb6c4f04cb01f6dc74412a69e6e1cd7085742bf766213ef761"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/roadmap_freshness.py",
+        "display": "speckit_pro_runner/helpers/roadmap_freshness.py"
+      },
+      "sha256": "05f8af0c4950655c8774709eb987799d8353e3e36708f39b0676032382d669e4"
     },
     {
       "path": {

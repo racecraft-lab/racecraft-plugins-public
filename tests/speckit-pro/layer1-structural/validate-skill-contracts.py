@@ -1099,6 +1099,28 @@ class ValidateScaffoldBlindSpotDeadline(unittest.TestCase):
             with self.subTest(host=host, check='deadline records did not run'):
                 self.assertRegex(section, r'record `did not run` with reason `wait deadline expired`')
 
+class ValidateScaffoldRoadmapFreshness(unittest.TestCase):
+
+    def test_scaffold_checks_roadmap_freshness_before_parsing_on_each_host(self) -> None:
+        # A stale checkout once fed scaffold an old roadmap entry: each host must
+        # call the runner check before step 2 parses the roadmap, stop on its
+        # verdict, and base the new worktree branch on the revision it returns.
+        from speckit_pro_runner.helpers.registry import HELPERS
+        helper = 'check-roadmap-freshness'
+        self.assertIn(helper, HELPERS, 'the freshness check must be a registered runner helper')
+        for host, view in (('claude', CLAUDE_VIEW), ('codex', CODEX_VIEW)):
+            skill = ' '.join((view / 'speckit-scaffold-spec' / 'SKILL.md').read_text(encoding='utf-8').split())
+            with self.subTest(host=host, check='called before the roadmap is parsed'):
+                call = skill.find(f'run runner helper `{helper}`')
+                self.assertNotEqual(-1, call, 'expected scaffold to call the freshness helper')
+                self.assertLess(call, skill.index('### 2. Find the Spec in the Technical Roadmap'))
+                self.assertLess(skill.index('### 1. Find the Technical Roadmap'), call)
+            with self.subTest(host=host, check='stops on the verdict'):
+                self.assertIn('Require `verdict=proceed`. On `verdict=stop`, print the returned `stop_message` unchanged and STOP', skill)
+            with self.subTest(host=host, check='worktree is based on the returned revision'):
+                self.assertIn('Base a new branch on the `base_revision` from step 1', skill)
+        self.assertFalse((REPO_ROOT / 'speckit-pro' / 'codex-skills' / 'speckit-scaffold-spec' / 'SKILL.md').exists(), 'scaffold keeps one shared skill source')
+
 def main() -> int:
     suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])
     return run_counted(suite, label="validate-skill-contracts")
