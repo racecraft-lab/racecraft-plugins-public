@@ -700,7 +700,7 @@ class GenerateSpecIndexTests(_SpecIndexGitIgnoreTests, unittest.TestCase):
         helpers = {record["helper_id"]: record for record in body["data"]["helpers"]}
         entry = helpers["generate-spec-index-write"]
         self.assertEqual(entry["promotion_status"], "golden_only")
-        self.assertTrue(entry["authoritative_command"])
+        self.assertNotIn("authoritative_command", entry)
 
 
 def main() -> int:
