@@ -17,6 +17,16 @@ stdin, read one JSON response from stdout, and surface stderr diagnostics.
 Do not add a shell fallback, `jq` parsing path, Git Bash, WSL, or
 PowerShell-specific command-language requirement for installed workflows.
 
+The frontmatter `allowed-tools` pre-approves only `Read`, `Glob` and `Grep`.
+The runner helper calls below (`generate-spec-index-check`, `o5-topology`) are
+not pre-approved: they follow the session's permissions and may prompt. If a
+call is denied, say so and continue the dashboard without that section.
+
+Show the full project roadmap: completed specs, in-progress
+specs, specs that haven't started yet, and a recommendation for
+what to work on next. Also surface archive extension installation and
+Archive Sweep cleanup safety when the project has archive state.
+
 ## Invocation
 
 ```text
@@ -36,6 +46,8 @@ Workflow files:    **/*-workflow.md  (active/completed specs with phase detail)
 Technical roadmaps: **/*technical-roadmap*.md  OR  **/*-roadmap.md
 Design concepts:   **/*-design-concept.md  (grill-me output per spec)
 Also check:        docs/ai/specs/*-workflow.md
+                   docs/ai/specs/.process/*-workflow.md
+                   docs/ai/specs/.process/*-design-concept.md
                    docs/ai/specs/*-design-concept.md
                    docs/ai/*roadmap*.md
 Archive state:     .specify/extensions.yml
@@ -44,14 +56,25 @@ Archive state:     .specify/extensions.yml
                    .specify/extensions/archive/RACECRAFT-PIN.md
 ```
 
+Do not assume the user keeps everything under one directory. Search the current
+checkout first, then list attached git worktrees (`git worktree list
+--porcelain`, or without a shell the `gitdir` files under `.git/worktrees/`)
+and search each one the same way, so workflows in attached worktrees are
+included even when setup used a nonstandard worktree root. Record which
+worktree and branch each workflow belongs to. Narrow to the files that
+actually describe the SpecKit project; if a file looks unrelated, ignore it
+rather than polluting the dashboard. If multiple roadmap files exist, pick the
+most relevant current roadmap and say which file you used; do not merge
+unrelated roadmaps unless the repo clearly uses a multi-roadmap setup.
+
 For each design concept doc found, record the SPEC-ID it corresponds to
 (parsed from the filename `SPEC-<ID>-design-concept.md` or from the doc's
 frontmatter). This drives the **DC** (Design Concept) column in the
 phase-detail dashboard and the per-spec detail view.
 
-Search and glob results only discover candidates. This standalone status skill
-must read every selected current roadmap and workflow file from beginning to
-end before answering; snippets, cached summaries, and another skill's report
+Search, glob and worktree discovery only identify candidates. This standalone
+status skill must read every selected current roadmap and workflow file from
+beginning to end before answering; snippets, cached summaries, and another skill's report
 are not substitutes for a full-file read. Do not infer status, dependencies,
 branch, or phase state from an unread section.
 
@@ -261,6 +284,10 @@ Then run `/speckit-pro:speckit-autopilot` to execute it.
   a new spec."
 - If all specs are complete, say "All specs complete — project
   roadmap is finished."
+- If several workflow files describe the same spec, prefer the one that
+  matches the active branch or the most recent in-progress state.
+- If workflow files exist without a roadmap, report phase detail from the
+  workflows and note that backlog visibility is incomplete.
 
 ### 6. If Specific Spec Requested
 
@@ -294,3 +321,14 @@ Tell the user:
   `/speckit-pro:speckit-coach help me create a technical roadmap`
 - Or create a single workflow: copy
   `skills/speckit-coach/templates/workflow-template.md`
+
+### 8. Boundaries
+
+This skill does not mutate the repo. Do not create branches, edit workflow
+files, or mark roadmap rows complete from inside the status skill. If the user
+wants to act on the recommendation, direct them to the matching skill:
+
+- /speckit-pro:speckit-scaffold-spec to prepare a spec
+- /speckit-pro:speckit-autopilot to execute a workflow
+- /speckit-pro:speckit-resolve-pr to address review feedback
+- /speckit-pro:speckit-coach for process guidance

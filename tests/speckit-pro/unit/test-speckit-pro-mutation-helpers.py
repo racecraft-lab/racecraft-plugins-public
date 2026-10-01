@@ -14,6 +14,7 @@ import tomllib
 import unittest
 import hashlib
 import ctypes
+import dataclasses
 import errno
 from contextlib import ExitStack
 from pathlib import Path, PosixPath
@@ -361,18 +362,30 @@ def install_windows_rename_name(rename_info_buffer: object, byte_length: int) ->
 
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
+sys.path.insert(0, str(REPO_ROOT / "tests" / "speckit-pro" / "lib"))
+from runner_invocation import assert_runner_response, command_stdin_fixture, run_runner  # noqa: E402
 
 
 from speckit_pro_runner.envelope import RunnerRequest
 from speckit_pro_runner.agent_materialization import materialize_agent_policy
-from speckit_pro_runner.helpers import install, mutation, pr_emission, registry
+from speckit_pro_runner import atomic_write
+from speckit_pro_runner.helpers import install, mutation, pr_packet, registry, uat_skeleton
 
 
-def runner_env() -> dict[str, str]:
-    env = os.environ.copy()
-    existing = env.get("PYTHONPATH")
-    env["PYTHONPATH"] = str(PLUGIN_ROOT) if not existing else f"{PLUGIN_ROOT}{os.pathsep}{existing}"
-    return env
+def move_after_copy_open_hook(real_open: object, destination: Path, moved: Path) -> object:
+    """An ``os.open`` stand-in that swaps ``destination`` for a fresh directory after the first dir_fd create."""
+    injected = False
+
+    def move_after_copy_open(path: object, flags: int, *args: object, **kwargs: object) -> int:
+        nonlocal injected
+        descriptor = real_open(path, flags, *args, **kwargs)
+        if kwargs.get("dir_fd") is not None and flags & os.O_CREAT and not injected:
+            injected = True
+            destination.rename(moved)
+            destination.mkdir()
+        return descriptor
+
+    return move_after_copy_open
 
 
 def helper_request(
@@ -390,39 +403,6 @@ def helper_request(
         "mode": mode,
         "inputs": inputs or {},
     }
-
-
-def run_runner(
-    request: object,
-    *,
-    cwd: Path = REPO_ROOT,
-    env_overrides: dict[str, str] | None = None,
-) -> tuple[subprocess.CompletedProcess[str], dict[str, object], list[dict[str, object]]]:
-    env = runner_env()
-    if env_overrides:
-        env.update(env_overrides)
-    completed = subprocess.run(
-        [sys.executable, "-m", "speckit_pro_runner"],
-        input=json.dumps(request) if not isinstance(request, str) else request,
-        text=True,
-        capture_output=True,
-        cwd=cwd,
-        env=env,
-        shell=False,
-        check=False,
-    )
-    response = json.loads(completed.stdout) if completed.stdout.strip() else {}
-    stderr_records = [json.loads(line) for line in completed.stderr.splitlines() if line.strip()]
-    return completed, response, stderr_records
-
-
-def command_stdin_fixture(command: str) -> Path:
-    if "<" not in command:
-        raise AssertionError(f"authoritative_command must include a stdin fixture: {command}")
-    stdin_path = command.split("<", 1)[1].strip()
-    if not stdin_path or any(char.isspace() for char in stdin_path):
-        raise AssertionError(f"authoritative_command must use one stdin fixture path: {command}")
-    return REPO_ROOT / stdin_path
 
 
 def canonical_json_bytes(value: object) -> bytes:
@@ -611,12 +591,7 @@ def bind_required_primary_probe(manifest: dict[str, object]) -> None:
 
 class MutationHelperTests(unittest.TestCase):
     def assert_response(self, response: dict[str, object], status: str, exit_code: int) -> None:
-        self.assertEqual(response["schema_version"], "1.0")
-        self.assertEqual(response["status"], status)
-        self.assertEqual(response["exit_code"], exit_code)
-        self.assertIsNone(response["legacy_exit_code"])
-        self.assertIsInstance(response["diagnostics"], list)
-        self.assertIsInstance(response["data"], dict)
+        assert_runner_response(self, response, status, exit_code)
 
     @staticmethod
     def fail_on_autopilot_agent_write(real_write: object) -> object:
@@ -645,7 +620,7 @@ class MutationHelperTests(unittest.TestCase):
         return fail_write
 
     def test_install_subprocess_dispatch_preserves_selected_python_candidate(self) -> None:
-        from speckit_pro_runner.helpers import install
+        from speckit_pro_runner.gates import runner_invocation
 
         cases = [
             ("py -V:3", ["py", "-3", "-m", "speckit_pro_runner"], ["py", "-3", "-m", "speckit_pro_runner"]),
@@ -656,8 +631,8 @@ class MutationHelperTests(unittest.TestCase):
 
         for selected_candidate, argv, expected_argv in cases:
             with self.subTest(selected_candidate=selected_candidate):
-                with patch.object(install.subprocess, "run", return_value=completed) as mocked_run:
-                    result = install.run_python_runner_subprocess(
+                with patch.object(runner_invocation.subprocess, "run", return_value=completed) as mocked_run:
+                    result = runner_invocation.run_python_runner_subprocess(
                         argv,
                         selected_candidate=selected_candidate,
                         input_text="{}",
@@ -849,19 +824,19 @@ class MutationHelperTests(unittest.TestCase):
         required_files = [f"{agent_name}.toml" for agent_name in routing_required_agents()]
         failed_target = (destination / f"{failed_agent_name}.toml").resolve().as_posix()
 
-        self.assertEqual(mutation["mutation_status"], "partial_failure")
+        self.assertEqual(mutation["mutation_status"], "blocked")
         self.assertEqual(response["data"]["verification"], {"status": "failed", "matched_files": []})
-        self.assertFalse(response["data"]["rollback_succeeded"])
-        self.assertTrue(response["data"]["writes_state"])
-        self.assertTrue(response["data"]["restart_required"])
-        self.assertTrue(recovery["writes_state"])
-        self.assertTrue(recovery["restart_required"])
+        self.assertTrue(response["data"]["rollback_succeeded"])
+        self.assertFalse(response["data"]["writes_state"])
+        self.assertFalse(response["data"]["restart_required"])
+        self.assertFalse(recovery["writes_state"])
+        self.assertFalse(recovery["restart_required"])
         self.assertRegex(record["pre_state_id"], r"^sha256:[0-9a-f]{64}$")
         self.assertEqual(record["pre_state_id"], record["final_state_id"])
         self.assertEqual(record["rollback_outcome"], "restored")
-        self.assertEqual(record["terminal_outcome"], "uncertain_state")
-        self.assertEqual(record["state_status"], "uncertain")
-        self.assertEqual([action["reason"] for action in record["manual_remediation"]], ["cleanup_incomplete", "concurrent_file_preserved"])
+        self.assertEqual(record["terminal_outcome"], "restored")
+        self.assertEqual(record["state_status"], "restored")
+        self.assertEqual(record["manual_remediation"], [])
         self.assertEqual([action["name"] for action in record["prior_state"]], required_files)
         for state in record["prior_state"]:
             agent_name = state["name"].removesuffix(".toml")
@@ -874,8 +849,9 @@ class MutationHelperTests(unittest.TestCase):
         self.assertEqual(record["failed_actions"][0]["operation_id"], mutation["failure_operation"]["operation_id"])
         self.assertEqual(record["failed_actions"][0]["target"], failed_target)
         self.assertEqual([action["name"] for action in record["rolled_back_actions"]], required_files[:1])
-        self.assertTrue(any(error["kind"] == "preserved_cleanup_entry" for error in record["cleanup_errors"]))
+        self.assertEqual(record["cleanup_errors"], [])
         self.assertEqual(record["cleanup_actions"], [])
+        self.assertEqual(sorted(entry.name for entry in destination.iterdir() if entry.name.startswith(".")), [])
         self.assertEqual(recovery["planned_writes"], mutation["planned_paths"])
         self.assertEqual(recovery["applied_writes"], mutation["touched_paths"])
         self.assertEqual(recovery["planned_removals"], [])
@@ -1232,10 +1208,13 @@ class MutationHelperTests(unittest.TestCase):
             self.assertNotEqual(record["promotion_status"], "python_authoritative")
             active_record = {key: value for key, value in record.items() if key != "inactive_provenance"}
             self.assertNotIn(".sh", json.dumps(active_record, sort_keys=True))
+            self.assertNotIn("authoritative_command", record)
+            self.assertNotIn("tests/", json.dumps(record))
+            fixture_command = registry.MUTATION_HELPERS[record["helper_id"]].authoritative_command
             if record["promotion_status"] in {"deferred", "out_of_scope"}:
-                self.assertEqual(record["authoritative_command"], "")
+                self.assertEqual(fixture_command, "")
             else:
-                self.assertTrue(command_stdin_fixture(record["authoritative_command"]).is_file())
+                self.assertTrue(command_stdin_fixture(fixture_command).is_file())
             promotion = record["promotion"]
             self.assertEqual(promotion["helper_id"], record["helper_id"])
             self.assertEqual(promotion["promotion_status"], record["promotion_status"])
@@ -1706,7 +1685,7 @@ class MutationHelperTests(unittest.TestCase):
                     completed, response, stderr_records = run_runner(
                         helper_request("install-codex-agents", mode="apply", inputs=inputs),
                         cwd=git_root,
-                        env_overrides=env,
+                        extra_env=env,
                     )
 
                     self.assertEqual(completed.returncode, 1)
@@ -1744,7 +1723,7 @@ class MutationHelperTests(unittest.TestCase):
                     inputs=self.route_aware_inputs(manifest_path, git_root, destination=None),
                 ),
                 cwd=git_root,
-                env_overrides=env,
+                extra_env=env,
             )
 
             self.assertEqual(completed.returncode, 0)
@@ -1882,10 +1861,8 @@ class MutationHelperTests(unittest.TestCase):
                 cwd=git_root,
             )
 
-            self.assertEqual(completed.returncode, 1)
-            self.assert_response(response, "expected_failure", 1)
-            cleanup_errors = response["diagnostics"][0]["details"]["cleanup_errors"]
-            self.assertTrue(any(error["kind"] == "preserved_cleanup_entry" for error in cleanup_errors))
+            self.assertEqual(completed.returncode, 0, stderr_records)
+            self.assert_response(response, "ok", 0)
             self.assert_route_aware_snapshot_response(
                 response,
                 manifest_path=manifest_path,
@@ -1893,9 +1870,10 @@ class MutationHelperTests(unittest.TestCase):
                 expected_snapshot=expected_snapshot,
             )
             self.assert_route_aware_required_resolution(response, expected_snapshot=expected_snapshot)
-            self.assertEqual(response["data"]["mutation"]["mutation_status"], "partial_failure")
+            self.assertEqual(response["data"]["mutation"]["mutation_status"], "applied")
             self.assert_route_aware_required_destination_bytes(response, destination)
             self.assertEqual(unrelated.read_text(encoding="utf-8"), "user owned\n")
+            self.assertEqual(sorted(entry.name for entry in destination.iterdir() if entry.name.startswith(".")), [])
         self.assertEqual(codex_agent_source_digests(), before_source_digests)
 
     def test_install_codex_agents_route_aware_apply_failure_restores_prior_required_bytes_and_modes(self) -> None:
@@ -2131,7 +2109,7 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(len(record["applied_actions"]), 1)
             self.assertEqual(len(record["rolled_back_actions"]), 1)
             self.assertEqual(record["cleanup_actions"], [])
-            self.assertTrue(any(error["kind"] == "preserved_cleanup_entry" for error in record["cleanup_errors"]))
+            self.assertFalse(any(error["kind"] == "preserved_cleanup_entry" for error in record["cleanup_errors"]))
             directory_error = next(error for error in record["cleanup_errors"] if error["kind"] == "remove_directory")
             self.assertEqual(directory_error["error"], "identity_bound_directory_removal_unavailable")
             self.assertFalse((fake_home / ".codex" / "agents").exists())
@@ -2412,7 +2390,8 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(backups[0].read_bytes(), b"captured\n")
             self.assertIn(backups[0].as_posix(), raised.exception.preserved_paths)
             self.assertIn(target.as_posix(), raised.exception.preserved_paths)
-            self.assertTrue(any(".cleanup-dir/" in path and path.endswith(".tmp") for path in raised.exception.preserved_paths))
+            self.assertFalse(any(".cleanup-dir" in path for path in raised.exception.preserved_paths))
+            self.assertEqual(sorted(path.name for path in destination.iterdir() if path.name.endswith((".tmp", ".cleanup-dir"))), [])
 
     def test_install_codex_agents_no_clobber_removal_preserves_entry_created_after_move(self) -> None:
         from speckit_pro_runner.helpers import install
@@ -2712,7 +2691,33 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(target.read_bytes(), b"installer bytes\n")
             self.assertEqual(raised.exception.preserved_paths, [backups[0].as_posix(), target.as_posix()])
 
-    def test_install_codex_agents_cleanup_owned_entry_final_unlink_takeover_preserves_victim(self) -> None:
+    def test_install_codex_agents_cleanup_owned_entry_removes_verified_quarantine(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve() / "agents"
+            destination.mkdir()
+            target_name = "agent.tmp"
+            (destination / target_name).write_bytes(b"installer-owned cleanup\n")
+            unrelated = destination / "user-owned-agent.toml"
+            unrelated.write_bytes(b"user owned\n")
+            identity = install.codex_agent_destination_identity(destination)
+            agent_dir = install.AnchoredAgentDir.open(destination, identity)
+            state = agent_dir.previous_state(target_name)
+            assert state is not None
+
+            try:
+                result = agent_dir.cleanup_owned_entry(target_name, state)
+            finally:
+                agent_dir.close()
+
+            self.assertEqual(result.public_conflicts, [])
+            self.assertEqual(result.preserved_private_paths, [])
+            self.assertEqual(result.cleanup_errors, [])
+            self.assertEqual(sorted(path.name for path in destination.iterdir()), ["user-owned-agent.toml"])
+            self.assertEqual(unrelated.read_bytes(), b"user owned\n")
+
+    def test_install_codex_agents_cleanup_owned_entry_final_unlink_swap_fails_closed(self) -> None:
         from speckit_pro_runner.helpers import install
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -2725,21 +2730,101 @@ class MutationHelperTests(unittest.TestCase):
             agent_dir = install.AnchoredAgentDir.open(destination, identity)
             state = agent_dir.previous_state(target_name)
             assert state is not None
+            private_dir = destination / ".cleanupid.cleanup-dir"
+            private_name = ".cleanupid.cleanup.agent.tmp"
+            moved_aside = private_dir / "moved-aside"
+            real_unlink = install.os.unlink
+            swapped = False
+
+            def swap_before_private_unlink(path: object, *args: object, **kwargs: object) -> None:
+                nonlocal swapped
+                if path == private_name and kwargs.get("dir_fd") not in {None, agent_dir.directory_fd}:
+                    swapped = True
+                    os.rename(private_dir / private_name, moved_aside)
+                    (private_dir / private_name).write_bytes(b"swapped-in entry\n")
+                real_unlink(path, *args, **kwargs)
 
             try:
-                with patch.object(install.secrets, "token_hex", return_value="cleanupid"):
-                    conflicts = agent_dir.cleanup_owned_entry(target_name, state)
+                with (
+                    patch.object(install.secrets, "token_hex", return_value="cleanupid"),
+                    patch.object(install.os, "unlink", side_effect=swap_before_private_unlink),
+                ):
+                    result = agent_dir.cleanup_owned_entry(target_name, state)
             finally:
                 agent_dir.close()
 
-            preserved = destination / ".cleanupid.cleanup-dir" / ".cleanupid.cleanup.agent.tmp"
-            private_dir = destination / ".cleanupid.cleanup-dir"
-            self.assertFalse((destination / ".cleanupid.cleanup.agent.tmp").exists())
-            self.assertEqual(preserved.read_bytes(), b"installer-owned cleanup\n")
-            self.assertEqual(conflicts.preserved_private_paths, [preserved.as_posix(), private_dir.as_posix()])
+            self.assertTrue(swapped)
+            self.assertEqual(moved_aside.read_bytes(), b"installer-owned cleanup\n")
+            self.assertTrue(private_dir.is_dir())
+            self.assertEqual(result.preserved_private_paths, [private_dir.as_posix()])
+            self.assertEqual(
+                result.cleanup_errors,
+                [
+                    {
+                        "kind": "preserved_concurrent_file",
+                        "target": private_dir.as_posix(),
+                        "error": "private_quarantine_unlink_identity_mismatch",
+                    }
+                ],
+            )
+
+    def test_install_codex_agents_verified_quarantine_is_kept_after_destination_change(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve() / "agents"
+            destination.mkdir()
+            cleanup_name = ".moved.cleanup.agent.tmp"
+            (destination / cleanup_name).write_bytes(b"installer-owned cleanup\n")
+            identity = install.codex_agent_destination_identity(destination)
+            agent_dir = install.AnchoredAgentDir.open(destination, identity)
+            expected_state = agent_dir.previous_state(cleanup_name)
+            assert expected_state is not None
+            private_dir = destination / ".dirid.cleanup-dir"
+            private_leaf = private_dir / cleanup_name
+            changed_identity = (identity[0], identity[1] + 1)
+            destination_changed = False
+            real_identity = install.codex_agent_destination_identity
+            real_move = install.codex_agent_native_rename_no_replace_between
+            real_unlink = install.os.unlink
+            private_unlink_attempted = False
+
+            def reported_identity(path: Path) -> tuple[int, int]:
+                return changed_identity if destination_changed else real_identity(path)
+
+            def move_then_change_destination(*args: object, **kwargs: object) -> None:
+                nonlocal destination_changed
+                real_move(*args, **kwargs)
+                destination_changed = True
+
+            def record_private_unlink(path: object, *args: object, **kwargs: object) -> None:
+                nonlocal private_unlink_attempted
+                if kwargs.get("dir_fd") not in {None, agent_dir.directory_fd}:
+                    private_unlink_attempted = True
+                real_unlink(path, *args, **kwargs)
+
+            try:
+                with (
+                    patch.object(install.secrets, "token_hex", return_value="dirid"),
+                    patch.object(install, "codex_agent_destination_identity", side_effect=reported_identity),
+                    patch.object(install, "codex_agent_native_rename_no_replace_between", side_effect=move_then_change_destination),
+                    patch.object(install.os, "unlink", side_effect=record_private_unlink),
+                ):
+                    result = agent_dir.cleanup_verified_quarantine(cleanup_name, expected_state)
+            finally:
+                agent_dir.close()
+
+            anchored_leaf = f"anchored-agent-dir:{identity[0]}:{identity[1]}/.dirid.cleanup-dir/{cleanup_name}"
+            self.assertFalse(private_unlink_attempted)
+            self.assertEqual(private_leaf.read_bytes(), b"installer-owned cleanup\n")
+            self.assertIn(anchored_leaf, result.preserved_private_paths)
             self.assertIn(
-                {"kind": "preserved_concurrent_file", "target": private_dir.as_posix(), "error": "private_quarantine_dir_not_empty"},
-                conflicts.cleanup_errors,
+                {
+                    "kind": "preserved_cleanup_entry",
+                    "target": anchored_leaf,
+                    "error": "private_quarantine_destination_changed",
+                },
+                result.cleanup_errors,
             )
 
     def test_install_codex_agents_posix_cleanup_preserves_verified_quarantine_without_unlink(self) -> None:
@@ -3240,8 +3325,8 @@ class MutationHelperTests(unittest.TestCase):
                 agent_dir.close()
 
             self.assertFalse(public_cleanup.exists())
-            self.assertEqual(private_leaf.read_bytes(), b"installer-owned cleanup\n")
-            self.assertIn(private_leaf.as_posix(), result.preserved_private_paths)
+            self.assertFalse(private_leaf.exists())
+            self.assertIn(private_dir.as_posix(), result.preserved_private_paths)
             self.assertIn(
                 {"kind": "close_descriptor", "target": private_dir.as_posix(), "error": "OSError"},
                 result.cleanup_errors,
@@ -3325,9 +3410,9 @@ class MutationHelperTests(unittest.TestCase):
                 agent_dir.close()
 
             self.assertFalse(public_cleanup.exists())
-            self.assertEqual(private_leaf.read_bytes(), b"installer-owned cleanup\n")
+            self.assertFalse(private_leaf.exists())
             self.assertEqual(late_child.read_bytes(), b"late concurrent child\n")
-            self.assertIn(private_leaf.as_posix(), result.preserved_private_paths)
+            self.assertNotIn(private_leaf.as_posix(), result.preserved_private_paths)
             self.assertIn(private_dir.as_posix(), result.preserved_private_paths)
             self.assertIn(
                 {"kind": "preserved_concurrent_file", "target": private_dir.as_posix(), "error": "private_quarantine_dir_not_empty"},
@@ -3367,7 +3452,7 @@ class MutationHelperTests(unittest.TestCase):
                 agent_dir.close()
 
             self.assertFalse(public_cleanup.exists())
-            self.assertEqual(private_leaf.read_bytes(), b"installer-owned cleanup\n")
+            self.assertFalse(private_leaf.exists())
             self.assertEqual(backslash_child.read_bytes(), b"valid POSIX backslash child\n")
             self.assertIn(private_dir.as_posix(), result.preserved_private_paths)
             self.assertIn(
@@ -3738,7 +3823,7 @@ class MutationHelperTests(unittest.TestCase):
                     )
 
             self.assertIn(cleanup_error, raised.exception.cleanup_errors)
-            self.assertTrue(any(error["kind"] == "preserved_cleanup_entry" for error in raised.exception.cleanup_errors))
+            self.assertFalse(any(error["kind"] == "preserved_cleanup_entry" for error in raised.exception.cleanup_errors))
             self.assertIn("preserved-path", raised.exception.preserved_paths)
 
     def test_install_codex_agents_temp_cleanup_stays_anchored_after_directory_swap(self) -> None:
@@ -3862,16 +3947,7 @@ class MutationHelperTests(unittest.TestCase):
             identity = install.codex_agent_destination_identity(destination)
             moved = root / "moved-agents"
             real_open = install.os.open
-            injected = False
-
-            def move_after_copy_open(path: object, flags: int, *args: object, **kwargs: object) -> int:
-                nonlocal injected
-                descriptor = real_open(path, flags, *args, **kwargs)
-                if kwargs.get("dir_fd") is not None and flags & os.O_CREAT and not injected:
-                    injected = True
-                    destination.rename(moved)
-                    destination.mkdir()
-                return descriptor
+            move_after_copy_open = move_after_copy_open_hook(real_open, destination, moved)
 
             with patch.object(install.os, "open", side_effect=move_after_copy_open):
                 with self.assertRaises(install.CodexAgentRecoveryCopyFailure) as raised:
@@ -5698,16 +5774,7 @@ class MutationHelperTests(unittest.TestCase):
             identity = install.codex_agent_destination_identity(destination)
             moved = root / "moved-agents"
             real_open = install.os.open
-            injected = False
-
-            def move_after_copy_open(path: object, flags: int, *args: object, **kwargs: object) -> int:
-                nonlocal injected
-                descriptor = real_open(path, flags, *args, **kwargs)
-                if kwargs.get("dir_fd") is not None and flags & os.O_CREAT and not injected:
-                    injected = True
-                    destination.rename(moved)
-                    destination.mkdir()
-                return descriptor
+            move_after_copy_open = move_after_copy_open_hook(real_open, destination, moved)
 
             with patch.object(install.os, "open", side_effect=move_after_copy_open):
                 with self.assertRaises(install.CodexAgentRecoveryCopyFailure) as raised:
@@ -6323,13 +6390,12 @@ class MutationHelperTests(unittest.TestCase):
                 cwd=git_root,
             )
 
-            self.assertEqual(completed.returncode, 1)
-            self.assert_response(response, "expected_failure", 1)
-            cleanup_errors = response["diagnostics"][0]["details"]["cleanup_errors"]
-            self.assertTrue(any(error["kind"] == "preserved_cleanup_entry" for error in cleanup_errors))
+            self.assertEqual(completed.returncode, 0, stderr_records)
+            self.assert_response(response, "ok", 0)
             self.assert_route_aware_required_resolution(response, expected_snapshot=expected_snapshot)
             self.assert_route_aware_managed_helper_removal(response, proof_status="known_rendered_digest")
-            self.assertEqual(response["data"]["mutation"]["mutation_status"], "partial_failure")
+            self.assertEqual(response["data"]["mutation"]["mutation_status"], "applied")
+            self.assertEqual(sorted(entry.name for entry in destination.iterdir() if entry.name.startswith(".")), [])
             self.assert_route_aware_required_destination_bytes(response, destination)
             self.assertFalse(helper_path.exists())
 
@@ -6448,7 +6514,7 @@ class MutationHelperTests(unittest.TestCase):
                     completed, response, stderr_records = run_runner(
                         helper_request("install-codex-agents", mode="apply", inputs=inputs),
                         cwd=git_root,
-                        env_overrides=env,
+                        extra_env=env,
                     )
 
                     self.assertEqual(completed.returncode, 0)
@@ -6545,7 +6611,7 @@ class MutationHelperTests(unittest.TestCase):
             completed, response, stderr_records = run_runner(
                 helper_request("install-codex-agents", mode="apply", inputs=inputs),
                 cwd=git_root,
-                env_overrides=env,
+                extra_env=env,
             )
 
             self.assertEqual(completed.returncode, 1)
@@ -6903,7 +6969,6 @@ This line must not be copied.
             self.assertFalse(missing_output.exists())
 
     def test_generate_uat_skeleton_rejects_template_symlink_escape(self) -> None:
-        from speckit_pro_runner.helpers import pr_emission
         from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
 
         tmp, git_root = self.temp_clean_git_repo()
@@ -6938,10 +7003,10 @@ This line must not be copied.
             os.chdir(git_root)
             try:
                 with (
-                    patch.object(pr_emission, "UAT_PAYLOAD_ROOT", payload_root),
-                    patch.object(pr_emission, "UAT_TEMPLATE_PATH", template_link),
+                    patch.object(uat_skeleton, "UAT_PAYLOAD_ROOT", payload_root),
+                    patch.object(uat_skeleton, "UAT_TEMPLATE_PATH", template_link),
                 ):
-                    response = pr_emission.generate_uat_skeleton(
+                    response = uat_skeleton.generate_uat_skeleton(
                         MUTATION_HELPERS["generate-uat-skeleton"],
                         request,
                     )
@@ -7004,7 +7069,7 @@ This line must not be copied.
             comparison_mode="fixture_semantic",
         )
         for mode in ("dry_run", "apply"):
-            with self.subTest(mode=mode), patch.object(pr_emission, "run_mutation_helper") as run_mutation:
+            with self.subTest(mode=mode), patch.object(registry, "run_mutation_helper") as run_mutation:
                 request = RunnerRequest(
                     request_id=f"test-unmatched-pr-route-{mode}",
                     helper_id=entry.helper_id,
@@ -7016,12 +7081,12 @@ This line must not be copied.
                     },
                 )
 
-                response = pr_emission.run_pr_emission_helper(entry, request)
+                response = registry.run_pr_emission_helper(entry, request)
 
                 run_mutation.assert_not_called()
-                self.assert_response(response, "input_error", 2)
+                self.assert_response(response, "internal_failure", 5)
                 self.assertEqual(response["data"], {})
-                self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["invalid_input"])
+                self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["helper_not_wired"])
                 self.assertEqual(response["diagnostics"][0]["details"], {"helper_id": entry.helper_id})
 
     def test_install_codex_agents_refreshes_stale_files_and_preserves_unrelated_agents(self) -> None:
@@ -7053,11 +7118,10 @@ This line must not be copied.
                 helper_request("install-codex-agents", mode="apply", inputs=inputs),
                 cwd=git_root,
             )
-            self.assertEqual(completed.returncode, 1)
-            self.assert_response(response, "expected_failure", 1)
-            self.assertEqual(response["data"]["mutation"]["mutation_status"], "partial_failure")
-            cleanup_errors = response["diagnostics"][0]["details"]["cleanup_errors"]
-            self.assertTrue(any(error["kind"] == "preserved_cleanup_entry" for error in cleanup_errors))
+            self.assertEqual(completed.returncode, 0, stderr_records)
+            self.assert_response(response, "ok", 0)
+            self.assertEqual(response["data"]["mutation"]["mutation_status"], "applied")
+            self.assertEqual(sorted(entry.name for entry in destination.iterdir() if entry.name.startswith(".")), [])
             self.assertTrue(response["data"]["writes_state"])
             self.assertTrue(response["data"]["restart_required"])
             self.assertEqual(response["data"]["verification"]["status"], "verified")
@@ -7094,7 +7158,7 @@ This line must not be copied.
             completed, response, stderr_records = run_runner(
                 helper_request("install-codex-agents", mode="apply", inputs={"model": "gpt-6-sol"}),
                 cwd=git_root,
-                env_overrides=env,
+                extra_env=env,
             )
             self.assertEqual(completed.returncode, 0)
             self.assertEqual(stderr_records, [])
@@ -7114,7 +7178,7 @@ This line must not be copied.
             completed, response, stderr_records = run_runner(
                 helper_request("install-codex-agents", mode="apply", inputs={"model": "gpt-6-sol"}),
                 cwd=git_root,
-                env_overrides=env,
+                extra_env=env,
             )
             self.assertEqual(completed.returncode, 0)
             self.assertEqual(stderr_records, [])
@@ -7194,7 +7258,7 @@ This line must not be copied.
                         completed, response, stderr_records = run_runner(
                             helper_request("install-codex-agents", mode="dry_run", inputs={"destination": ".codex/agents"}),
                             cwd=git_root,
-                            env_overrides=overrides,
+                            extra_env=overrides,
                         )
                     self.assertEqual(completed.returncode, 0)
                     self.assertEqual(stderr_records, [])
@@ -7209,7 +7273,7 @@ This line must not be copied.
             completed, response, stderr_records = run_runner(
                 helper_request("install-codex-agents", mode="dry_run", inputs={"destination": ".codex/agents"}),
                 cwd=git_root,
-                env_overrides={"SPECKIT_CODEX_LUNA_FALLBACK": "yes"},
+                extra_env={"SPECKIT_CODEX_LUNA_FALLBACK": "yes"},
             )
             self.assertEqual(completed.returncode, 2)
             self.assert_response(response, "input_error", 2)
@@ -7329,11 +7393,11 @@ This line must not be copied.
 
             self.assert_response(response, "expected_failure", 1)
             self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["codex_agent_install_failed"])
-            self.assertFalse(response["data"]["rollback_succeeded"])
-            self.assertTrue(response["data"]["writes_state"])
-            self.assertTrue(response["data"]["restart_required"])
-            cleanup_errors = response["diagnostics"][0]["details"]["cleanup_errors"]
-            self.assertTrue(any(error["kind"] == "preserved_cleanup_entry" for error in cleanup_errors))
+            self.assertTrue(response["data"]["rollback_succeeded"])
+            self.assertFalse(response["data"]["writes_state"])
+            self.assertFalse(response["data"]["restart_required"])
+            self.assertEqual(response["diagnostics"][0]["details"]["cleanup_errors"], [])
+            self.assertEqual(sorted(entry.name for entry in destination.iterdir() if entry.name.startswith(".")), [])
             self.assertEqual(stale.read_bytes(), b"stale\xff\n")
             self.assertEqual(stale.stat().st_mode & 0o7777, 0o640)
             self.assertEqual(unrelated.read_bytes(), b"user owned\n")
@@ -7698,6 +7762,49 @@ This line must not be copied.
                     )
                     self.assertEqual(response["data"]["mutation"]["dirty_worktree"], not clean)
                     self.assertEqual(target.exists(), clean)
+                    if clean:
+                        self.assertEqual(completed.returncode, 0, response)
+                    else:
+                        self.assertEqual([diag["code"] for diag in stderr_records], ["dirty_worktree"])
+
+    def test_apply_tolerates_only_the_implementation_notes_record(self) -> None:
+        """#801: the notes record lags its checkpoint commit; it never fails the clean check."""
+        notes = "specs/001-demo/.process/implementation-notes.md"
+        cases = (
+            ("untracked notes", (), (notes,), True),
+            ("modified tracked notes", (notes,), (notes,), True),
+            ("notes plus another file", (), (notes, "untracked.txt"), False),
+            ("notes outside .process", (), ("specs/001-demo/implementation-notes.md",), False),
+            ("other file in .process", (), ("specs/001-demo/.process/other-notes.md",), False),
+            ("notes outside specs", (), ("docs/.process/implementation-notes.md",), False),
+            ("notes nested below a feature", (), ("specs/001-demo/sub/.process/implementation-notes.md",), False),
+        )
+        for label, tracked, written, clean in cases:
+            with self.subTest(case=label):
+                tmp, git_root = self.temp_clean_git_repo()
+                with tmp:
+                    for relative in tracked:
+                        path = git_root / relative
+                        path.parent.mkdir(parents=True, exist_ok=True)
+                        path.write_text("# Implementation Notes: DEMO-001\n", encoding="utf-8")
+                        self.run_git(git_root, "add", relative)
+                    if tracked:
+                        self.run_git(git_root, "commit", "--quiet", "-m", "notes")
+                    for relative in written:
+                        path = git_root / relative
+                        path.parent.mkdir(parents=True, exist_ok=True)
+                        with path.open("a", encoding="utf-8") as handle:
+                            handle.write("- T001: entry\n")
+                    completed, response, stderr_records = run_runner(
+                        helper_request(
+                            "mutation-foundation",
+                            mode="apply",
+                            inputs={"operations": [{"operation_id": "notes", "kind": "write_file",
+                                                    "target": "generated/notes-output.md", "content": "ok\n"}]},
+                        ),
+                        cwd=git_root,
+                    )
+                    self.assertEqual(response["data"]["mutation"]["dirty_worktree"], not clean, response)
                     if clean:
                         self.assertEqual(completed.returncode, 0, response)
                     else:
@@ -8392,7 +8499,7 @@ This line must not be copied.
             self.run_git(git_root, "add", "target.md")
             self.run_git(git_root, "commit", "--quiet", "-m", "target")
             calls = 0
-            real_ensure = mutation.ensure_safe_write_target_fd
+            real_ensure = atomic_write.ensure_safe_write_target_fd
 
             def swap_before_final_guard(parent_fd: int, name: str) -> None:
                 nonlocal calls
@@ -8420,7 +8527,7 @@ This line must not be copied.
             old_cwd = Path.cwd()
             os.chdir(git_root)
             try:
-                with patch.object(mutation, "ensure_safe_write_target_fd", side_effect=swap_before_final_guard):
+                with patch.object(atomic_write, "ensure_safe_write_target_fd", side_effect=swap_before_final_guard):
                     response = mutation.run_mutation_helper(registry.MUTATION_HELPERS["mutation-foundation"], request)
             finally:
                 os.chdir(old_cwd)
@@ -8832,7 +8939,7 @@ This line must not be copied.
             self.assertEqual(set(persisted["source_fingerprints"]), {"body", "packet"})
 
     def test_pr_packet_output_rejects_mismatched_paths_invalid_mode_and_invalid_body(self) -> None:
-        from speckit_pro_runner.helpers.pr_emission import build_packet_body
+        from speckit_pro_runner.helpers.pr_packet import build_packet_body
 
         base_inputs = {
             "packet_path": "specs/packet-999-packet/.process/pr-packets/packet-999.json",
@@ -8851,6 +8958,7 @@ This line must not be copied.
             why_it_matters="Reason.",
             how_to_review="- Review.",
             how_to_uat="No manual UAT.",
+            uat_heading="## UAT Runbook",
             verification="- Tests passed.",
             scope="- specs/packet-999-packet/spec.md",
             known_gaps="- None.",
@@ -8880,19 +8988,18 @@ This line must not be copied.
                 self.assertEqual([diag["code"] for diag in stderr_records], ["invalid_input"])
 
     def test_generated_title_keeps_the_description_case_as_given(self) -> None:
-        title = pr_emission.normalize_generated_title(
+        title = pr_packet.normalize_generated_title(
             {"title_type": "feat", "title_scope": "demo", "title_description": "add a demo feature"}
         )
         self.assertEqual(title["value"], "feat(demo): add a demo feature")
         self.assertEqual(title["description"], "add a demo feature")
 
     def test_documented_draft_packet_requests_execute_and_validate(self) -> None:
-        docs = [
-            PLUGIN_ROOT / "skills/speckit-autopilot/references/phase-execution.md",
-            PLUGIN_ROOT / "codex-skills/speckit-autopilot/references/phase-execution-codex.md",
-        ]
-        for doc_path in docs:
-            with self.subTest(doc=doc_path.name):
+        from host_skill_views import host_skill_root
+
+        for host in ("claude", "codex"):
+            doc_path = host_skill_root(host) / "speckit-autopilot/references/phase-execution.md"
+            with self.subTest(host=host):
                 document = doc_path.read_text(encoding="utf-8")
                 marker = document.index('"request_id": "example-draft-packet"')
                 start = document.rfind("```json\n", 0, marker) + len("```json\n")
@@ -9107,7 +9214,7 @@ This line must not be copied.
         self.assertIn("inputs.mode", stderr_records[0]["message"])
 
     def test_required_headings_returns_draft_blocks_and_preserves_reviewer_headings(self) -> None:
-        from speckit_pro_runner.helpers.pr_emission import required_headings
+        from speckit_pro_runner.helpers.pr_packet import required_headings
 
         reviewer_headings = [
             "Summary",
@@ -9215,8 +9322,90 @@ This line must not be copied.
             self.assertEqual(request["operation"], record["operation"])
             self.assertIn(request["mode"], record["modes"])
 
+
+class GeneratedTitleScopeTests(unittest.TestCase):
+    """The packet normalizer builds only titles the PR-title gate accepts."""
+
+    def test_generated_title_rejects_a_scope_the_title_gate_rejects(self) -> None:
+        for scope in ("PRSG-998", "FEATURE-001", "Demo", "demo scope", "demo_scope"):
+            with self.subTest(scope=scope):
+                title = pr_packet.normalize_generated_title(
+                    {"title_type": "feat", "title_scope": scope, "title_description": "add a demo feature"}
+                )
+                self.assertEqual(title["diagnostic"]["details"]["field"], "title_scope")
+        supplied = pr_packet.normalize_generated_title(
+            {
+                "generated_title": {
+                    "value": "feat(FEATURE-001): Add a demo feature",
+                    "type": "feat",
+                    "scope": "FEATURE-001",
+                    "description": "Add a demo feature",
+                    "source_evidence": {"kind": "workflow", "source": "autopilot-state", "summary": "the run state"},
+                    "rejected_candidates": [],
+                }
+            }
+        )
+        self.assertEqual(supplied["diagnostic"]["details"]["field"], "generated_title")
+
+
+class PrEmissionCohesionTests(unittest.TestCase):
+    """PR-emission routing, the draft body rule, and the UAT heading each have one owner."""
+
+    DRAFT_INPUTS = {
+        "packet_path": "specs/packet-997-draft/.process/pr-packets/packet-997.json",
+        "source_feature_dir": "specs/packet-997-draft",
+        "target": {"base_branch": "main", "head_branch": "agent/packet-997-draft"},
+        "mode": "draft",
+        "title_type": "feat",
+        "title_scope": "packet-997",
+        "title_description": "Open a draft pull request at the plan boundary",
+        "verification_evidence": [],
+        "scope_evidence": {
+            "reviewable_loc": 0, "production_files": 0, "total_files": 0, "budget_result": "within_budget",
+            "changed_files": [], "non_goals": ["Implementation evidence is not produced at the plan boundary."],
+        },
+    }
+
+    def test_a_routed_helper_with_no_handler_is_a_registry_error_not_an_input_error(self) -> None:
+        for helper_id in ("final-reviewability-backstop", "validate-pr-workflow-contract-write",
+                          "relocate-process-artifacts", "plan-layers-marker-plan"):
+            with self.subTest(helper_id=helper_id), patch.object(registry, "run_mutation_helper") as run_mutation:
+                promoted = dataclasses.replace(registry.MUTATION_HELPERS[helper_id], promotion_status="golden_only")
+                request = RunnerRequest(request_id=f"test-{helper_id}", helper_id=helper_id,
+                                        operation=promoted.operation, mode=promoted.modes[0], inputs={})
+
+                response = registry.dispatch_mutation_helper(promoted, request)
+
+                run_mutation.assert_not_called()
+                self.assert_wiring_error(response, helper_id)
+
+    def assert_wiring_error(self, response: dict[str, object], helper_id: str) -> None:
+        self.assertEqual(response["status"], "internal_failure")
+        diagnostics = response["diagnostics"]
+        self.assertEqual([item["code"] for item in diagnostics], ["helper_not_wired"])
+        self.assertEqual(diagnostics[0]["details"], {"helper_id": helper_id})
+
+    def test_a_draft_packet_without_a_body_is_refused_before_any_builder_runs(self) -> None:
+        with patch.object(pr_packet, "build_packet_body") as build:
+            result = pr_packet.normalize_packet_input(SimpleNamespace(inputs=dict(self.DRAFT_INPUTS)))
+
+        build.assert_not_called()
+        self.assertEqual(result["diagnostic"]["details"]["field"], "body")
+        self.assertIn("draft packet requires inputs.body", result["diagnostic"]["message"])
+
+    def test_the_uat_runbook_heading_comes_from_the_uat_record(self) -> None:
+        body = pr_packet.build_packet_body(
+            "feat(packet-997): Generate reviewer packet", summary="Summary.", what_changed="- Change.",
+            why_it_matters="Reason.", how_to_review="- Review.", how_to_uat="Walk the flow.",
+            uat_heading="## Manual Acceptance", verification="- Tests passed.", scope="- a", known_gaps="- None.",
+        )
+        self.assertIn("\n## Manual Acceptance\n\nWalk the flow.\n", body)
+        self.assertNotIn("## UAT Runbook", body)
+
+
 if __name__ == "__main__":
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(MutationHelperTests)
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
+                               for case in (MutationHelperTests, GeneratedTitleScopeTests, PrEmissionCohesionTests))
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     total = result.testsRun
     failed = len(result.failures) + len(result.errors)

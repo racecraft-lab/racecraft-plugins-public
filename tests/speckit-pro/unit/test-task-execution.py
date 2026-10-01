@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import sys
 import tempfile
 import unittest
@@ -12,31 +13,17 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "speckit-pro"))
 sys.path.insert(0, str(REPO_ROOT / "tests/speckit-pro/lib"))
+from task_feature_fixture import build_task_feature
 from test_result import run_counted
 from speckit_pro_runner.helpers.read_only import partition_phase7_tasks, validate_task_execution
-from speckit_pro_runner.task_execution import fingerprints
+from speckit_pro_runner.task_execution import fingerprints, gate_task_loops
 
 
 class TaskExecutionTests(unittest.TestCase):
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.temp.cleanup)
-        self.root = Path(self.temp.name).resolve()
-        self.feature = self.root / "feature"
-        (self.feature / ".process").mkdir(parents=True)
-        (self.feature / "spec.md").write_text("spec\n")
-        (self.feature / "plan.md").write_text("plan\n")
-        self.body = "## Phase 1\n" + "".join(
-            f"- [ ] T{i:03d} [P] Add capability behavior {i}\n" for i in range(1, 13)
-        )
-        self.meta = {
-            "schema_version": "task-execution.v1",
-            "fingerprints": fingerprints("spec\n", "plan\n", self.body),
-            "tasks": {f"T{i:03d}": {
-                "capability_group": "feature", "depends_on": [],
-                "owns": [f"src/unit{i}.py"], "tdd_unit": f"behavior-{i}"
-            } for i in range(1, 13)},
-        }
+        self.root = Path(tempfile.mkdtemp()).resolve()
+        self.addCleanup(shutil.rmtree, self.root)
+        self.feature, self.body, self.meta = build_task_feature(self.root)
 
     def run_partition(self, **inputs):
         (self.feature / "tasks.md").write_text(self.body)
@@ -326,6 +313,31 @@ class TaskExecutionTests(unittest.TestCase):
         self.meta["tasks"]["T001"]["owns"] = ["src"]
         self.assertEqual(self.run_partition()[1], 2)
 
+
+    def test_gate_loop_ignores_dependents_missing_from_tasks_md(self):
+        tasks = (
+            "## Phase 3: User Story 1\n"
+            "- [ ] T010 Verify candidate inventory before the first implementation checkpoint\n"
+            "## Phase 9: Polish\n"
+            "- [ ] T020 Reconcile actual diffs\n"
+        )
+        # T099 is a stale sidecar entry with no row in tasks.md.
+        self.assertEqual(gate_task_loops(tasks, {"T099": ["T010"], "T020": ["T010"]}), [])
+        loops = gate_task_loops(tasks.replace("## Phase 9: Polish", "## Phase 4: User Story 2"), {"T020": ["T010"]})
+        self.assertEqual([loop["task"] for loop in loops], ["T010"])
+
+    def test_gate_loop_ignores_a_stop_before_pr_emission_guard(self):
+        # #802: "stop before PR emission" times a stop; it names no evidence a dependent produces.
+        tasks = (
+            "## Phase 12: User Story 10\n"
+            "- [ ] T021 [US10] Record the slice paths and marker checkpoint; "
+            "stop before PR emission on any new path or failed gate\n"
+            "## Phase 13: User Story 11\n"
+            "- [ ] T022 [US11] Implement the writer in src/writer.py\n"
+        )
+        self.assertEqual(gate_task_loops(tasks, {"T022": ["T021"]}), [])
+        genuine = tasks.replace("Record the slice paths", "Record the actual LOC")
+        self.assertEqual([loop["task"] for loop in gate_task_loops(genuine, {"T022": ["T021"]})], ["T021"])
 
 if __name__ == "__main__":
     raise SystemExit(run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(TaskExecutionTests), label="test-task-execution"))

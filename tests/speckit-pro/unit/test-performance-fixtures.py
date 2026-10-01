@@ -14,6 +14,11 @@ FIXTURES = ROOT / "tests/speckit-pro/layer6-integration/performance-fixtures"
 sys.path.insert(0, str(ROOT / "tests/speckit-pro/lib"))
 from test_result import run_counted
 
+SCHEMA = ROOT / "speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json"
+PROSE_ROOTS = (ROOT / "speckit-pro/skills", ROOT / "speckit-pro/codex-skills", FIXTURES)
+UPPERCASE_CLAIM = re.compile(r"(?:accept|permit)s?\s+an\s+uppercase", re.IGNORECASE)
+HISTORICAL_NOTE = "draft-pr-emission/HISTORICAL-NOTES.md"
+
 EXPECTED = {
     "ART-012": (14, "ba22a0938b37743029142b8763b23be693193966", "3a0e49b6c6b49c855e23c4663ae407b7f34fd8a7"),
     "ART-007": (54, "2c4edf01b6f84068bd311de81212fc3d4f2384b9", "d30876bb498a009b24a26df9f2371505722b45ef"),
@@ -150,6 +155,40 @@ class PreparationInputTests(unittest.TestCase):
             self.assertIn(token, protocol)
 
 
+class HistoricalScopeStatementTests(unittest.TestCase):
+    """Frozen planning prose may say the schema accepts an uppercase scope only with a marker."""
+
+    def claims(self):
+        found = []
+        for root in PROSE_ROOTS:
+            for path in sorted(root.rglob("*.md")):
+                text = " ".join(path.read_text(encoding="utf-8").split())
+                if UPPERCASE_CLAIM.search(text):
+                    found.append(path.relative_to(ROOT).as_posix())
+        return found
+
+    def test_the_schema_rejects_an_uppercase_scope(self):
+        schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
+        pattern = schema["$defs"]["generated_title"]["properties"]["value"]["pattern"]
+        self.assertIsNotNone(re.match(pattern, "fix(speckit-pro): keep scopes lowercase"))
+        self.assertIsNone(re.match(pattern, "fix(ABC-123): keep scopes lowercase"))
+
+    def test_only_marked_frozen_fixtures_say_the_schema_accepts_an_uppercase_scope(self):
+        manifest = json.loads((FIXTURES / "manifest.json").read_text())
+        pinned = {
+            (FIXTURES / source["file"]).relative_to(ROOT).as_posix()
+            for scenario in manifest["scenarios"] for source in scenario["sources"]
+        }
+        note = " ".join((FIXTURES / HISTORICAL_NOTE).read_text(encoding="utf-8").split())
+        self.assertIn(HISTORICAL_NOTE, {entry["file"] for entry in manifest["authored_files"]})
+        for claim in self.claims():
+            with self.subTest(claim=claim):
+                self.assertTrue(claim in pinned, "a shipped or live file states the stale schema behavior")
+                self.assertIn(claim.removeprefix(FIXTURES.relative_to(ROOT).as_posix() + "/draft-pr-emission/"), note)
+        for token in ("historical", "rejects an uppercase scope", "pr-packet.schema.json"):
+            self.assertIn(token, note)
+
+
 if __name__ == "__main__":
-    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PerformanceFixtureTests, PreparationInputTests))
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PerformanceFixtureTests, PreparationInputTests, HistoricalScopeStatementTests))
     raise SystemExit(run_counted(suite, label="test-performance-fixtures"))

@@ -35,13 +35,11 @@ LIB_DIR = TEST_DIR.parent / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
 
+from guide_text import host_source  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
-CLAUDE_PHASE_EXECUTION = "speckit-pro/skills/speckit-autopilot/references/phase-execution.md"
-CODEX_PHASE_EXECUTION = (
-    "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md"
-)
+PHASE_EXECUTION = "speckit-pro/skills/speckit-autopilot/references/phase-execution.md"
 AGENT_TEAMS_INTEGRATION = (
     "speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md"
 )
@@ -57,8 +55,8 @@ TERMINAL_DELIVERABLE_HEADING = "### Terminal Deliverable"
 
 # Target key -> (repository-relative file, section heading or None for whole file).
 TARGETS = {
-    "claude_phase7": (CLAUDE_PHASE_EXECUTION, CLAUDE_PHASE_7_HEADING),
-    "codex_phase7": (CODEX_PHASE_EXECUTION, CODEX_PHASE_7_HEADING),
+    "claude_phase7": (PHASE_EXECUTION, CLAUDE_PHASE_7_HEADING),
+    "codex_phase7": (PHASE_EXECUTION, CODEX_PHASE_7_HEADING),
     "agent_teams": (AGENT_TEAMS_INTEGRATION, None),
     "agent_teams_use_site_3": (AGENT_TEAMS_INTEGRATION, USE_SITE_3_HEADING),
     # The Task Result block itself cannot be a section target: it sits inside a
@@ -123,6 +121,11 @@ def _phase_execution_checks(target: str, platform: str) -> tuple[tuple[str, str,
         (f"{platform} names the record header", target, "contains", RECORD_HEADER),
         (f"{platform} names the entry heading", target, "contains", ENTRY_HEADING),
         (f"{platform} names the entry field", target, "contains", ENTRY_FIELD),
+        # Item 1b: reported text reaches a committed record with any
+        # loaded-plugin path reduced to its plugin-relative form, never an
+        # absolute or home path.
+        (f"{platform} keeps loaded-plugin paths plugin-relative in the record", target, "regex",
+         r"(?i)loaded-plugin path[^|]{0,120}plugin-relative[^|]{0,120}never[^|]{0,40}absolute"),
         # Item 2 — create-if-absent, never truncate, never a second header.
         (f"{platform} states create-if-absent lifecycle", target, "regex", r"(?i)create[- ]if[- ]absent"),
         (f"{platform} forbids truncating an existing record", target, "regex", r"(?i)(never|do not|not) truncate"),
@@ -322,6 +325,10 @@ def _section(body: str, heading_prefix: str) -> str:
     return "" if start is None else "".join(lines[start:])
 
 
+# Targets read as one host receives the shared file.
+HOST_VIEWS = {"claude_phase7": "claude", "codex_phase7": "codex"}
+
+
 def _normalize(body: str) -> str:
     """Collapse whitespace so hard-wrapped prose matches a single-line phrase."""
     return re.sub(r"\s+", " ", body)
@@ -353,13 +360,11 @@ class ImplementationNotesRecordTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        raw: dict[str, str] = {}
         cls.bodies = {}
         cls.labels = {}
         for key, (relative_path, heading) in TARGETS.items():
-            if relative_path not in raw:
-                raw[relative_path] = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
-            text = raw[relative_path] if heading is None else _section(raw[relative_path], heading)
+            source = host_source(relative_path.removeprefix("speckit-pro/"), HOST_VIEWS.get(key))
+            text = source if heading is None else _section(source, heading)
             cls.bodies[key] = _normalize(text)
             cls.labels[key] = relative_path if heading is None else f"{relative_path} §{heading}"
 

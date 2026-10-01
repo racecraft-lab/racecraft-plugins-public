@@ -82,7 +82,7 @@ SPEC-006a (Deterministic UAT Skeleton + Template + PR Body Wiring)
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |------|------|--------|---------------|------------|
-| SPEC-006a | Deterministic UAT Skeleton + PR Body Integration | ✅ Complete | `SPEC-006a-workflow.md` (historical) | Shipped — skeleton script, template, and PR-body wiring on `main` |
+| SPEC-006a | Deterministic UAT Skeleton + PR Body Integration | ✅ Complete | `.process/SPEC-006a-workflow.md` (historical) | Shipped — skeleton script, template, and PR-body wiring on `main` |
 | SPEC-006b | UAT Author Agent + Autopilot Integration | ✅ Complete | — (delivered as direct PR #114, not scaffolded) | Shipped in speckit-pro 2.7.0 (PR #114) |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked

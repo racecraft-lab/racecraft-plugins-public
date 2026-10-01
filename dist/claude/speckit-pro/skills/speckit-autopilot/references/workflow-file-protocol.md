@@ -250,6 +250,16 @@ warnings, final marker_split status, packet validation, and PR mappings as
 `specs/<feature>/.process/reviewability/tasks-gate.json`, not absolute runtime
 paths under `/tmp`, a local worktree, or a plugin cache.
 
+Under `pr-marker-plan.v2`, each marker gets exactly one row in the marker table,
+whose fifth cell is its checkpoint. A marker with a recorded checkpoint
+`commit_sha` names that commit in its Checkpoint cell and has exactly one
+current claim line, `- Implementation checkpoint [<marker-id>]: \`<commit_sha>\``.
+A marker still awaiting its first checkpoint (checkpoint `status` `pending`, no
+`commit_sha`, and no phase result field beyond the plan projection for it) has a Checkpoint cell of
+exactly `Pending` and no claim line. The Step 1.1 coverage guard rejects any
+other cell for that marker, and it still requires the commit binding for every
+other marker.
+
 If the workflow mirror and top-level `pr_marker_plan` disagree, repair the
 workflow mirror from `autopilot-state.json`. If `autopilot-state.json` is
 missing, malformed, stale, or fingerprint-mismatched at a boundary that requires

@@ -8,17 +8,17 @@ from contextlib import nullcontext
 from pathlib import Path
 from typing import Any
 
-from .agent_materialization import canonical_bytes
-from .formal.selection import require_text as text_field, unique_object
+from .canonical_json import canonical_bytes
+from .atomic_write import snapshot_write_target, write_file_atomic
+from .strict_input import require_text as text_field, unique_object
 from .task_execution import fingerprints
+from .task_partition import PHASE7_RESEARCH_AGENT, PHASE7_VERIFY_AGENT, partition_phase7_tasks
 
 SCHEMA = "task-results.v1"
 MAX_LINEAGE_DEPTH = 32
 
 
 def non_tdd_reason(batch: dict[str, Any]) -> str | None:
-    from .helpers.read_only import PHASE7_RESEARCH_AGENT, PHASE7_VERIFY_AGENT
-
     if batch["agent"] in {PHASE7_RESEARCH_AGENT, PHASE7_VERIFY_AGENT}:
         return f"native route {batch['agent']} does not run implementation TDD"
     return None
@@ -34,8 +34,6 @@ def result_path(root: Path, value: Any) -> Path:
 
 
 def source_snapshot(root: Path, path: Path) -> dict[str, Any]:
-    from .helpers.mutation import snapshot_write_target
-
     value = snapshot_write_target(path, root)
     if not value["exists"]:
         raise ValueError(f"required evidence or source missing: {path.relative_to(root)}")
@@ -73,8 +71,6 @@ def current_binding(root: Path, tasks: Path) -> tuple[dict[str, Any], dict[str, 
 
 def start_journal(root: Path, inputs: dict[str, Any], tasks: Path, path: Path,
                   binding: dict[str, Any], metadata: dict[str, Any]) -> dict[str, Any]:
-    from .helpers.read_only import partition_phase7_tasks
-
     partition = partition_phase7_tasks({**inputs, "task_execution_required": True}, root)
     if partition["exit_code"]:
         raise ValueError(partition["stderr"] or "task metadata partition failed")
@@ -194,10 +190,20 @@ def append_report(root: Path, journal: dict[str, Any], inputs: dict[str, Any]) -
     completed = {t["task_id"]: t for r in prior for t in r["results"] if t["status"] == "complete"}
     if any(t != completed[t["task_id"]] for t in report["results"] if t["task_id"] in completed):
         raise ValueError("previously complete task results must be carried forward unchanged")
-    carried_ids = {ref for t in completed.values() for ref in t["evidence_event_ids"]}
+    # A task may re-cite, unchanged, an event it referenced in an earlier report of this batch.
+    owners: dict[str, set[str]] = {}
+    for t in (t for r in prior for t in r["results"]):
+        for ref in t["evidence_event_ids"]:
+            owners.setdefault(ref, set()).add(t["task_id"])
+    citers: dict[str, set[str]] = {}
+    for t in report["results"]:
+        for ref in t["evidence_event_ids"]:
+            citers.setdefault(ref, set()).add(t["task_id"])
     previous_events = {e["event_id"]: e for r in journal["reports"] for e in r["native_observations"]}
     for event in report["native_observations"]:
-        if event["event_id"] in previous_events and (event["event_id"] not in carried_ids or previous_events[event["event_id"]] != event):
+        event_id = event["event_id"]
+        if event_id in previous_events and (not citers[event_id] <= owners.get(event_id, set())
+                                            or previous_events[event_id] != event):
             raise ValueError("only unchanged completed task observations may be carried forward")
     journal["reports"].append(report)
     return True
@@ -275,8 +281,6 @@ def validate_lineage(root: Path, path: Path, journal: dict[str, Any]) -> None:
 
 def load_bound_journal(root: Path, path: Path, inputs: dict[str, Any], binding: dict[str, Any],
                        metadata: dict[str, Any]) -> tuple[dict[str, Any] | None, dict[str, Any]]:
-    from .helpers.mutation import snapshot_write_target
-
     snapshot = snapshot_write_target(path, root)
     expected = inputs.get("expected_partition_sha256")
     if expected is not None:
@@ -298,6 +302,31 @@ def load_bound_journal(root: Path, path: Path, inputs: dict[str, Any], binding: 
     return journal, snapshot
 
 
+def pending_batches(journal: dict[str, Any]) -> list[dict[str, Any]]:
+    """The batches whose latest report left tasks unfinished, each with the agent that owns the repair."""
+    latest = {report["batch_id"]: report for report in journal["reports"]}
+    agents = {batch["id"]: batch["agent"] for batch in journal["batches"]}
+    return [{"batch_id": batch_id, "agent": agents[batch_id], "task_ids": ids}
+            for batch_id, report in latest.items()
+            if (ids := [r["task_id"] for r in report["results"] if r["status"] == "unfinished"])]
+
+
+def task_results_response(journal: dict[str, Any], inputs: dict[str, Any], action: str,
+                          writes_state: bool) -> dict[str, Any]:
+    """The helper's result: the journal, and a redispatch to each batch's own agent while tasks stay unfinished."""
+    pending = pending_batches(journal)
+    unfinished = bool(pending)
+    # Unfinished work is repaired by its batch's own agent, not parked for a human.
+    repair = {"repair": {"retry": "task-results", "batches": pending}} if unfinished else {}
+    return {"journal": journal, "journal_path": inputs["journal_file"],
+            "partition_sha256": journal["partition_sha256"],
+            "disposition": "redispatch" if unfinished else "continue",
+            "reasons": ["unfinished_task_results"] if unfinished else [],
+            "helper_exit_code": int(unfinished and action == "record"),
+            "authorization_granted": False, "native_qualification": "pending",
+            "writes_state": writes_state, **repair}
+
+
 def task_results(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, Any]:
     """Validate supplied evidence; never execute workers or authenticate the caller.
 
@@ -305,8 +334,7 @@ def task_results(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, Any
     blocks. This JSON boundary cannot establish that a caller is that parent.
     Deterministic fixture success is therefore always native-unqualified.
     """
-    from .execution_control import exclusive_ledger
-    from .helpers.mutation import write_file_atomic
+    from .execution_control import exclusive_ledger, ignore_owned_directory
 
     action = inputs.get("action")
     if action not in {"start", "record", "inspect"} or mode not in {"apply", "dry_run", "read_only"}:
@@ -338,15 +366,8 @@ def task_results(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, Any
                 if current_binding(root, tasks)[0] != binding:
                     raise ValueError("source changed before journal commit")
                 validate_lineage(root, path, journal)
+                ignore_owned_directory(path.parent)
                 write_file_atomic(path, canonical_bytes(journal).decode("utf-8") + "\n", trust_root=root, expected_snapshot=snapshot)
-            latest = {report["batch_id"]: report for report in journal["reports"]}
-            unfinished = any(r["status"] == "unfinished" for report in latest.values() for r in report["results"])
-            return {"journal": journal, "journal_path": inputs["journal_file"],
-                    "partition_sha256": journal["partition_sha256"],
-                    "disposition": "checkpoint_required" if unfinished else "continue",
-                    "reasons": ["unfinished_task_results"] if unfinished else [],
-                    "helper_exit_code": int(unfinished and action == "record"),
-                    "authorization_granted": False, "native_qualification": "pending",
-                    "writes_state": changed and mode == "apply"}
+            return task_results_response(journal, inputs, action, changed and mode == "apply")
     except (OSError, TypeError, KeyError, AttributeError, UnicodeError) as exc:
         raise ValueError(f"task result journal invalid or inaccessible: {exc}") from exc

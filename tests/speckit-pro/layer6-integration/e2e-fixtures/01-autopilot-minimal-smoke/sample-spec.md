@@ -1,6 +1,6 @@
-# SPEC-FIXTURE-MINIMAL — Trivial feature for L7 e2e smoke
+# SPEC-FIXTURE-MINIMAL — Trivial feature for Layer 6 e2e smoke
 
-> This is an L7 integration-test fixture spec, not a real SpecKit
+> This is a Layer 6 integration-test fixture spec, not a real SpecKit
 > feature spec. It is intentionally tiny so the autopilot can complete
 > phases G0–G3 within the live-mode budget cap. Do not derive product
 > requirements from this file.

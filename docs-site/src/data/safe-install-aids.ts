@@ -174,7 +174,7 @@ export const handoffs = [
     label: 'Troubleshooting orientation',
     href: `${siteBase}/troubleshooting/`,
     audience: 'installer',
-    scope: 'Lightweight handoff for mismatch, unavailable, cache, permission, or path questions. DOC-008 owns full diagnosis.',
+    scope: 'Lightweight handoff for mismatch, unavailable, cache, permission, or path questions. The troubleshooting page owns full diagnosis.',
   },
   {
     id: 'reference',
@@ -610,7 +610,7 @@ export const firstRunCheckpoints = [
     id: 'docs-validation',
     label: 'Docs validation evidence',
     category: 'validation',
-    description: 'Capture focused DOC-006 validation, docs-site validation, and link validation evidence before PR review.',
+    description: 'Capture focused docs validation, docs-site validation, and link validation evidence before PR review.',
     handoff: docsLink('Contributor and release handoff', '/contribute-and-release/'),
   },
 ];

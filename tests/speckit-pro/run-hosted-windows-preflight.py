@@ -14,6 +14,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
+sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
+from evidence_files import write_json as _write_json  # noqa: E402
+from preflight_architecture import architecture_family as _architecture_family  # noqa: E402
+from preflight_architecture import resolve_architectures  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 IMMUTABLE_SPEC_KIT_REF_RE = re.compile(
@@ -50,14 +54,6 @@ SPECIFY_VERSION_CODE = (
     "import sys; from specify_cli import main; "
     "sys.argv = ['specify', 'version']; raise SystemExit(main())"
 )
-
-
-def _write_json(path: Path, payload: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(payload, ensure_ascii=True, separators=(",", ":")) + "\n",
-        encoding="utf-8",
-    )
 
 
 def _read_text(path: Path) -> str:
@@ -136,29 +132,14 @@ def _installed_spec_kit_version(output: str) -> str:
     return match.group("version") if match is not None else ""
 
 
-def _architecture_family(machine: str) -> str:
-    normalized = machine.strip().lower().replace("-", "_")
-    if normalized in {"amd64", "x64", "x86_64"}:
-        return "x64"
-    if normalized in {"aarch64", "arm64"}:
-        return "arm64"
-    return ""
-
-
 def _architecture_details() -> tuple[str, str, str, bool]:
     host_architecture = platform.machine()
-    process_architecture = (
-        os.environ.get("PROCESSOR_ARCHITECTURE", "").strip() or host_architecture
+    resolved = resolve_architectures(
+        host_architecture,
+        os.environ.get("PROCESSOR_ARCHITECTURE", ""),
+        os.environ.get("PROCESSOR_ARCHITEW6432", ""),
     )
-    native_architecture = (
-        os.environ.get("PROCESSOR_ARCHITEW6432", "").strip() or host_architecture
-    )
-    process_family = _architecture_family(process_architecture)
-    native_family = _architecture_family(native_architecture)
-    emulated = bool(
-        process_family and native_family and process_family != native_family
-    )
-    return host_architecture, process_architecture, native_architecture, emulated
+    return host_architecture, resolved.process, resolved.native, resolved.emulated
 
 
 def _response_details(path: Path) -> tuple[bool, str, list[str], str]:

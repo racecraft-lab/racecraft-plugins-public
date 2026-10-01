@@ -75,7 +75,7 @@ class ControlledDescriptionTests(unittest.TestCase):
                     self.assertEqual(state["NO_SPECKIT_SKILL_DESCRIPTION"], original)
                     self.assertEqual(state["evidence_records"].description_override(None, state["NO_SPECKIT_SKILL_DESCRIPTION"]), original)
 
-    def test_both_current_hosts_use_the_approved_candidate(self):
+    def test_the_library_constant_is_the_approved_candidate(self):
         manifest = json.loads((LAYER / "controlled-descriptions.json").read_text())
         for path in manifest["source_paths"]:
             with self.subTest(path=path):

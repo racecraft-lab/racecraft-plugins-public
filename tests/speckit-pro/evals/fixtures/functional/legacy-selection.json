@@ -3781,7 +3781,7 @@
             "Verifies the live branch from WORKFLOW_ROOT before Archive Sweep and stops on main, a detached HEAD, or a protected branch",
             "Treats the explicitly supplied absolute path that resolved to relation=external in a registered same-repository worktree as executable in the same Codex task, binding WORKFLOW_ROOT to /external/spec and keeping TASK_ROOT as discovery context",
             "Runs every shell, helper, file, Git, and state operation from WORKFLOW_ROOT with the exact absolute workflow file and original stage flags, and re-runs resolve-workflow-binding from WORKFLOW_ROOT, requiring relation=same, on resume and before any write-capable dispatch",
-            "Does not treat the binding as a filesystem grant: a real sandbox denial goes through the normal permission mechanism and stops naming the denied path and operation",
+            "Does not treat the binding as a filesystem grant: it probes the external root for write access before any phase work, and a real sandbox denial goes into the single run-start request naming the denied path and operation",
             "Does not copy, reconstruct, or search revisions for the workflow",
             "Still stops before Archive Sweep when the external target is implicit, relative, inferred from repository content, or ambiguous"
           ],
@@ -4359,7 +4359,7 @@
             "Verifies the live branch from WORKFLOW_ROOT before Archive Sweep and stops on main, a detached HEAD, or a protected branch",
             "Treats the explicitly supplied absolute path that resolved to relation=external in a registered same-repository worktree as executable in the same Codex task, binding WORKFLOW_ROOT to /external/spec and keeping TASK_ROOT as discovery context",
             "Runs every shell, helper, file, Git, and state operation from WORKFLOW_ROOT with the exact absolute workflow file and original stage flags, and re-runs resolve-workflow-binding from WORKFLOW_ROOT, requiring relation=same, on resume and before any write-capable dispatch",
-            "Does not treat the binding as a filesystem grant: a real sandbox denial goes through the normal permission mechanism and stops naming the denied path and operation",
+            "Does not treat the binding as a filesystem grant: it probes the external root for write access before any phase work, and a real sandbox denial goes into the single run-start request naming the denied path and operation",
             "Does not copy, reconstruct, or search revisions for the workflow",
             "Still stops before Archive Sweep when the external target is implicit, relative, inferred from repository content, or ambiguous"
           ],
@@ -5834,7 +5834,7 @@
             "Lists pre-create PR workflow contract validation via runner helper validate-pr-workflow-contract with packet title and changed-file evidence",
             "Lists PR creation with gh pr create --base --head --title --body-file using packet target/title/body values",
             "Lists the parent-session review remediation loop",
-            "States final-reviewability-backstop and detect-stack-manager-plan are not active installed helper calls, so current evidence and explicit gh fallback behavior apply",
+            "States final-reviewability-backstop is deferred, so current committed reviewability evidence is required before PR side effects, and that the orchestrator runs detect-stack-manager-plan in dry_run per stack-manager.md before any stack mutation",
             "States packet emission or validation failures block before PR creation; no post-create auto-repair fallback is used"
           ]
         }

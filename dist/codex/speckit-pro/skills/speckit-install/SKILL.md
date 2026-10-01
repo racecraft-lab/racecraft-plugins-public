@@ -5,13 +5,11 @@ description: "Install the SpecKit CLI and initialize the current repository for 
 
 # SpecKit Install
 
-## Scope
-
 Install the official SpecKit CLI (https://github.com/github/spec-kit)
-if missing, then initialize the current repository for one or both
-coding-agent integrations (Claude Code, Codex CLI). Safe to run on
-any repo — detects an existing `.specify/` directory and hands off
-to `$speckit-upgrade` rather than mutating it.
+if missing, then initialize this repository to use it with Claude
+Code, Codex CLI, or both. Safe to run on any repo — detects an
+existing `.specify/` directory and hands off to
+`$speckit-upgrade` rather than overwriting it.
 
 This skill is **mutation-heavy** (it writes files to the repo and
 to `~/.local/share/uv/tools/specify-cli/` if installing the CLI).
@@ -21,8 +19,7 @@ other skills.
 ## Scope Boundaries — Not For
 
 - Upgrading an existing SpecKit install. That is `$speckit-upgrade`.
-  This skill hands off to it automatically when `.specify/` is
-  present.
+  This skill hands off to it when `.specify/` is present.
 - Scaffolding a new spec from the technical roadmap. That is
   `$speckit-scaffold-spec`.
 - Installing this plugin's own bundled Codex subagent TOML files
@@ -30,51 +27,37 @@ other skills.
   `~/.codex/agents/`. That is `$install`.
 - Methodology coaching. That is `$speckit-coach`.
 
-## Input
+## Invocation
 
-Accept optional integration keys as arguments:
-
-- `$speckit-install` (interactive — asks which integrations)
-- `$speckit-install claude`
-- `$speckit-install codex`
-- `$speckit-install claude codex` (dual-integration)
+```text
+$speckit-install                    # interactive — asks which integrations
+$speckit-install claude             # claude only
+$speckit-install codex              # codex only
+$speckit-install claude codex       # both (dual-integration)
+```
 
 If the operator does not specify, ask before proceeding.
 
-## Hard Constraints
+## What to Do
 
-- Never run `specify init --here --force` from this skill. `--force`
-  overwrites local customizations. Force-flagged behavior lives
-  exclusively in `$speckit-upgrade` (where it is wrapped with
-  backup/restore).
-- Never mutate `.specify/memory/constitution.md`. The placeholder
-  written by `specify init` is the operator's content from that
-  moment on.
-- Never partially-install. If any `specify` invocation fails, STOP
-  and report the exact error.
-- Never proceed to mutation without explicit confirmation of the
-  integration choice when there is ambiguity.
-- Never touch `.claude-plugin/`, `commands/`, or this plugin's
-  marketplace files. Those are this plugin's own files, not the
-  consumer repo's.
+### 1. Ensure the SpecKit CLI is available
 
-## Procedure
+Look up `specify` with argv-only execution, never through shell
+parsing: first on `PATH`, then at `~/.local/bin/specify`, where
+`uv tool install` puts it. This is where the runner's own
+prerequisite check looks.
 
-### 1. Resolve the SpecKit CLI
-
-Use argv-only executable lookup for `specify`. If it is present,
-capture the version (for example, `specify 0.8.13`) and continue.
-
-If the CLI is missing, use argv-only executable lookup for `uv`.
-When `uv` is present, install the official SpecKit CLI by invoking
-the equivalent of `uv tool install specify-cli --from
-git+https://github.com/github/spec-kit.git` without shell parsing.
-
-If `uv` is missing, STOP and tell the operator:
-
-> Install `uv` first from the official Astral documentation, then
-> re-run `$speckit-install`. SpecKit CLI is distributed as a `uv`
-> tool.
+- If it is found, capture the version (for example, `specify 0.8.13`)
+  and move on.
+- If the CLI is missing:
+  - Look up `uv` the same way.
+  - If `uv` is present, install the official SpecKit CLI by invoking
+    the equivalent of `uv tool install specify-cli --from
+    git+https://github.com/github/spec-kit.git` with argv-only
+    execution.
+  - If `uv` is missing, STOP and tell the operator to install `uv`
+    from the official Astral documentation, then re-run
+    `$speckit-install`. SpecKit CLI is distributed as a `uv` tool.
 
 Do not attempt other install methods (pipx, manual git clone) unless
 the operator explicitly requests it.
@@ -82,44 +65,40 @@ the operator explicitly requests it.
 ### 2. Detect existing-install state
 
 Use a filesystem directory check for `.specify/` and record the state
-as PRESENT or ABSENT.
+as `PRESENT` or `ABSENT`.
 
 If `.specify/` is **PRESENT**:
 
-1. Capture current integrations:
-
-   Invoke `specify integration list` with argv-only execution and
-   capture stdout and stderr.
-
+1. Invoke `specify integration list` with argv-only execution and
+   capture stdout and stderr to see which integrations are installed.
 2. Tell the operator: "This repo already has SpecKit installed
    (integrations: `<list>`). The right tool for this state is
    `$speckit-upgrade` (handles diff-aware upgrades and
    slash-command-to-skills migration safely)."
-
-3. Ask: (a) hand off to `$speckit-upgrade`, (b) add a new integration
-   alongside the existing ones (e.g., adding `codex` to a `claude`-only
-   repo), or (c) abort.
-
+3. Ask whether to (a) hand off to `$speckit-upgrade`, (b) add a new
+   integration alongside the existing ones (e.g., adding `codex` to a
+   `claude`-only repo), or (c) abort.
 4. On (a): STOP this skill and invoke `$speckit-upgrade`.
-5. On (b): skip Step 3's `specify init` and go directly to Step 4
-   with only the new integration(s) the operator wants to add.
+5. On (b): go directly to Step 4 with only the new integration(s) the
+   operator wants to add, and skip its bootstrap `specify init`.
 6. On (c): STOP.
 
 If `.specify/` is **ABSENT**: continue to Step 3.
 
-### 3. Resolve integration choice
+### 3. Ask which integrations to install
 
-If the operator passed integration keys as arguments, use them. Otherwise:
+If the operator passed integration keys as arguments, use those.
+Otherwise ask:
 
-> Which coding-agent integrations should this repo support?
+> Which coding-agent integrations should this project support?
 >
-> - `claude` — Claude Code (default in v0.8.13 installs skills at `.claude/skills/speckit-*/`)
+> - `claude` — Claude Code (installs skills at `.claude/skills/speckit-*/`)
 > - `codex`  — Codex CLI (installs skills at `.agents/skills/speckit-*/`; skills mode is the default)
 > - `both`   — dual-integration (`claude` AND `codex` side-by-side)
 
 Both `claude` and `codex` are declared "Multi-install Safe" by the
 SpecKit CLI, so dual-integration is officially supported in a single
-project.
+project. The plugin's own skills work in both runtimes.
 
 If the operator's request is ambiguous (e.g., "install for codex but
 also leave Claude alone"), ask one clarifying question — do NOT
@@ -127,36 +106,23 @@ infer.
 
 ### 4. Initialize the repository
 
-For a fresh install (`.specify/` was ABSENT in Step 2):
+Every `specify` call passes `--script sh`, the script flavor the
+runner's setup-contract check reads, and which avoids the CLI's script
+prompt.
+
+For a **fresh install** (Step 2 said ABSENT):
 
 1. Pick the operator's first integration key as the bootstrap key.
-2. Run:
+2. Run `specify init --here --integration <first-key> --script sh` to
+   scaffold `.specify/` (templates, scripts, constitution placeholder)
+   AND install the first integration. For Codex, skills mode is the
+   default and writes `.agents/skills/speckit-*/`, so no extra option
+   is needed.
+3. For each additional integration the operator chose, run
+   `specify integration install <key> --script sh`.
 
-   ```text
-   specify init --here --integration <first-key> --script sh
-   ```
-
-   For Codex, skills mode is the default and writes
-   `.agents/skills/speckit-*/`, so no extra option is needed:
-
-   ```text
-   specify init --here --integration codex --script sh
-   ```
-
-3. For each additional integration the operator chose, run:
-
-   ```text
-   specify integration install <key> --script sh
-   ```
-
-   For Codex, the same command installs skills mode by default:
-
-   ```text
-   specify integration install codex --script sh
-   ```
-
-For adding to an existing install (Step 2 was PRESENT, operator chose
-option (b)):
+For **adding to an existing install** (Step 2 said PRESENT, operator
+chose option (b)):
 
 - Skip the bootstrap `specify init`. For each new integration the
   operator chose, run `specify integration install <key> --script sh`.
@@ -164,22 +130,27 @@ option (b)):
 If any command returns non-zero, STOP. Do not retry or "fix" without
 operator input — the CLI's error message is the operator's signal.
 
-When `claude` was installed, use a resolved Python 3.11+ interpreter to run `<resolved_python> <plugin-root>/scripts/agent-memory-ignore.py --mode apply --repo-root <repository-root>` with argv-only execution. Include the resulting `.gitignore` change in the setup commit before clean-worktree-gated helpers. If the command reports tracked memory or an ineffective nested override, stop and report its paths; never remove memory automatically.
+When `claude` was installed, use the resolved Python 3.11+ interpreter to run
+`<resolved_python> <plugin-root>/scripts/agent-memory-ignore.py --mode apply --repo-root <repository-root>`
+with argv-only execution before any memory-enabled plugin agent runs. Include
+the resulting `.gitignore` change in the setup commit before clean-worktree-gated
+helpers. If the command reports tracked memory or an ineffective nested
+override, stop and report its paths; never remove memory automatically.
 
 ### 5. Offer to install the curated set of extensions and presets
 
 speckit-pro recommends a small set of community extensions and presets
 that power the autopilot's post-implementation parallel group and the
-AskUserQuestion picker preset for `/speckit.clarify` and
-`/speckit.checklist`. The full list and rationale are in
-`speckit-pro/skills/speckit-coach/references/presets-extensions-guide.md`
-(section: "The curated set").
+AskUserQuestion picker preset for `$speckit-clarify` and
+`$speckit-checklist`.
+See [presets-extensions-guide.md → The curated set](../speckit-coach/references/presets-extensions-guide.md)
+for the full list and rationale.
 
-Compare `.specify/extensions/` and `.specify/presets/` against the
-entries in `<plugin-root>/scripts/curated-set.json`.
+Compare `.specify/extensions/` and `.specify/presets/` against the entries in
+`<plugin-root>/scripts/curated-set.json`.
 
 - If every entry is present: report "Curated extensions and presets
-  already installed." Continue to Step 6.
+  already installed — nothing to install." Continue to Step 6.
 
 - Otherwise, list the missing entries and ask which to install.
   Recommended default is **all**. For each accepted entry, give the
@@ -189,12 +160,8 @@ entries in `<plugin-root>/scripts/curated-set.json`.
 
 ### 6. Verify
 
-```text
-specify check 2>&1
-specify integration list 2>&1
-```
-
-Confirm:
+Invoke `specify check` and `specify integration list` with argv-only
+execution, and capture stdout and stderr. Confirm:
 
 - `specify check` reports the project is ready.
 - Each chosen integration appears as `installed` in the integration
@@ -226,9 +193,35 @@ Report `data.screening_mode` and each `data.warnings[].message` and
   Tavily key in `~/.config/speckit-pro/tavily.key` (mode 0600).
 - `expected_failure` means a credential or binary is configured but broken.
   Report the fix it names. Do not roll back the SpecKit install for it.
-- A key held only in an environment variable is a warning: Codex forwards
-  only allowlisted variables to MCP servers, so the broker may not see it.
-  Prefer the key files.
+- A key held only in an environment variable is a warning: the broker runs
+  as an MCP server, which may not see it. Prefer the key files.
+
+#### Autopilot review policy check
+
+Codex's automatic approval reviewer needs a standing policy so that a ratified
+autopilot plan's ordinary actions run without a per-run question: feature-branch
+pushes, the plan's pull requests and review replies, public documentation
+research, and offline audits on a worker on this machine. Read the
+`auto_review.extra_policy` string from the user-level `~/.codex/config.toml`,
+if one exists; read that file, never write it. Run runner helper
+`render-egress-authorization` in `read_only` mode with `scope=standing`, the
+repository's GitHub `owner/name`, its default branch, and that string as
+`installed_extra_policy`.
+
+- When `data.installed` is true, report the standing policy as installed.
+- Otherwise print `data.extra_policy_fragment` unchanged as the install text,
+  and tell the operator to review it and install it once. It needs Codex 0.158
+  or later. TOML allows one `[auto_review]` table, so merge it into an existing
+  `extra_policy` string. It is an `extra_policy` fragment, never
+  `auto_review.policy`, which replaces the default reviewer policy.
+- Tell the operator that a reviewer session persists for its thread, even
+  after an app restart: a new or changed policy reaches only threads started
+  after the change, so start the autopilot in a new thread after installing it.
+- This skill never writes the fragment into `~/.codex`, the repository's
+  `.codex/`, or `AGENTS.md`: the reviewer trusts `AGENTS.md`, and a branch
+  could rewrite it.
+- A missing policy is a warning, not a failure. The autopilot asks for it once,
+  at run start, before Phase 1, and the run starts on the operator's reply.
 
 ### 7. Report
 
@@ -249,25 +242,46 @@ Return a concise install summary:
 2. Create your project constitution:
    - Claude: `/speckit-constitution` or `/speckit-pro:speckit-coach create my project constitution`
    - Codex:  `$speckit-constitution` or `$speckit-coach`
-3. When you're ready to spec a feature, use `$speckit-scaffold-spec
-   SPEC-ID` to bootstrap from the technical roadmap.
+3. When you're ready to spec a feature, scaffold it from the technical
+   roadmap with `/speckit-pro:speckit-scaffold-spec SPEC-ID` (Claude)
+   or `$speckit-scaffold-spec SPEC-ID` (Codex).
 ```
 
 Do not continue into any other workflow in the same skill. Install
 ends here.
 
+## Hard Constraints
+
+- Never run `specify init --here --force` from this skill. `--force`
+  overwrites local customizations. Force-flagged behavior lives
+  exclusively in the upgrade skill, where it is wrapped with
+  backup/restore.
+- Never proceed to mutation without explicit operator confirmation of
+  the integration choice when there is ambiguity.
+- Never mutate `.specify/memory/constitution.md` — that's the
+  operator's content. If they don't have one yet, leave the SpecKit
+  placeholder in place and tell them how to fill it.
+- Never partially-install. If any `specify` invocation fails (e.g.,
+  network error fetching templates), STOP and report the exact error.
+  Do not retry silently.
+- Never touch `.claude-plugin/`, `commands/`, or this plugin's
+  marketplace files. Those are this plugin's own files, not the
+  consumer repo's.
+
 ## Failure Handling
 
-STOP and report — do not improvise — when:
+Stop and report — do not improvise — when:
 
 - `uv` is missing and the operator cannot install it.
 - `specify init` returns a non-zero exit code (network failure,
   template fetch error, etc.).
-- `specify integration install <key>` fails (likely conflict — let
-  the operator decide).
-- The repo has uncommitted changes that would conflict with the
-  new files. Recommend committing or stashing first.
-- The operator declines confirmation on integration choice.
+- `specify integration install <key>` fails (the operator may have a
+  conflicting integration; surface the CLI's error message and let
+  them decide).
+- The repo has detached HEAD or uncommitted changes that would
+  conflict with the new files. Recommend committing or stashing
+  first.
+- The operator declines confirmation on the integration choice.
 
 If a partial install happened (e.g., `claude` succeeded but `codex`
 failed), report exactly what landed and what did not. Recommend

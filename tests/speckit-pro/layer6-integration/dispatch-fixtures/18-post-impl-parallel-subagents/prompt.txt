@@ -2,8 +2,8 @@ You are speckit-autopilot. All 7 phases of SPEC-FIXTURE-POSTIMPL have
 completed and G7 passed. The workflow file's Post-Implementation
 Checklist is empty.
 
-The Step 0.6 capability probe set `AGENT_TEAMS_AVAILABLE=false` (env
-var unset OR Claude Code version < 2.1.32). Per
+The Step 0.6 runtime record reports `AGENT_TEAMS_AVAILABLE=false` (agent
+teams are unavailable for this session). Per
 `references/post-implementation.md` §Path B (Parallel subagents),
 dispatch the post-impl parallel group's 3 tracks as background
 subagents in ONE assistant message:
@@ -18,7 +18,7 @@ subagents in ONE assistant message:
 After the three subagents return, the parent-owned serial tail must keep
 reviewer-ready PR packet ordering intact: final-reviewability backstop
 precedes packet generation, generated packets are validated with
-validate-pr-packet.sh, and every split slice validates before its own
+validate-pr-packet-read-only, and every split slice validates before its own
 gh pr create --base --head --title --body-file call.
 
 All three Agent calls go in the SAME assistant message with

@@ -3,9 +3,10 @@
 The hardener is a bounded test-writing loop that runs once per spec, after
 the MUTATION slot has run on the whole diff and before its result is allowed
 to block. It kills surviving mutants by adding or strengthening tests; it
-never edits source. The loop is delegated to the local Qwen worker when the
-delegation gateway is healthy and runs on the primary model otherwise. Both
-paths follow the same inputs, allowed writes, stop rule, and record.
+never edits source. The loop is delegated to the delegation gateway on its
+default route, `route: "auto"`, when the gateway is healthy and runs on the
+primary model otherwise. Both paths follow the same inputs, allowed writes,
+stop rule, and record.
 
 ## When it fires
 
@@ -50,19 +51,26 @@ before corrective work. One cycle per failure family and two cycles per spec
 are shared with every enclosing gate/repair loop; the hardener has no allowance
 of its own. Nested execution carries the parent's reservation_id.
 Stop when the score reaches the floor or that reservation ends.
-On exhaustion retain the failing MUTATION result and checkpoint; never count
+On exhaustion retain the failing MUTATION result and defer it (`disposition=defer`)
+so independent work continues. It is a gate, so it never stays deferred: pass its
+failing MUTATION result to `finalize-run` as a failed gate, which climbs the
+escalation tiers and then keeps the stack in draft as a red gate, never a
+ready-for-review stack. Never count
 fallback, rejection, or a renamed error as a fresh repair family.
 
-## Delegated path (Qwen)
+## Delegated path (delegation gateway)
 
 Preconditions, checked in this order and recorded:
 
-1. The `qwen_health`, `qwen_delegate`, `qwen_status`, `qwen_candidate`, and
-   `qwen_apply` tools are present in this session (capability discovery).
-2. `qwen_health` reports the sandbox boundary, default-deny policy, and the
-   accepted Qwen profile as healthy. Any other result selects the fallback.
+1. The `delegate_health`, `delegate_task`, `delegate_status`,
+   `delegate_reply`, `delegate_candidate`, `delegate_apply`, and
+   `delegate_read` tools are present in this session (capability discovery).
+2. `delegate_health` reports the sandbox boundary, default-deny policy, and
+   the `route: "auto"` worker as healthy. Any other result selects the
+   fallback. Never switch to an explicit local route to get past a failed
+   check; only the operator chooses that route.
 3. The live checkout is clean apart from the workflow and state files, so
-   `qwen_apply` cannot fail on source drift.
+   `delegate_apply` cannot fail on source drift.
 4. `UNIT_TEST` and `MUTATION` can run in the gateway's validation sandbox.
    That sandbox stages tracked files only, never ignored paths such as
    `node_modules`; denies the network, so nothing can be installed; and has
@@ -76,8 +84,9 @@ Preconditions, checked in this order and recorded:
 Delegation request, one per iteration:
 
 ```text
-qwen_delegate
+delegate_task
   mode: "write"
+  route: "auto"
   strategy: "direct"
   webPolicy: "disabled"
   sourceVisibility: "private"
@@ -108,15 +117,17 @@ qwen_delegate
 
 Then:
 
-1. Poll `qwen_status` until the state is terminal and `cleanupCompletedAt`
-   is set. A paused task gets at most one `qwen_reply` with `approveOnce:
+1. Wait on `delegate_status` until the state is terminal and
+   `cleanupCompletedAt` is set. A large report arrives as an index; read the
+   findings you act on with one `delegate_read`. A paused task gets at most
+   one `delegate_reply` with `approveOnce:
    true` only within existing authorization; a second pause requires a checkpoint.
-2. `qwen_candidate` with the returned candidate id. Inspect the patch before
+2. `delegate_candidate` with the returned candidate id. Inspect the patch before
    any apply decision: every changed path is in `allowedPaths`; no source
    path; no deleted or weakened assertion; the validation digests match the
    commands sent. Reject anything else and record why. A rejection consumes the
    same reserved cycle; it does not authorize a new delegation or fallback.
-3. `qwen_apply` with the candidate id and the one-time review nonce.
+3. `delegate_apply` with the candidate id and the one-time review nonce.
 4. Re-run `UNIT_TEST`, then `MUTATION` with the same `{paths}` and `{paths_csv}`. Record the
    new score. Apply the stop rule.
 
@@ -140,7 +151,7 @@ outcome, reconcile read-only and checkpoint; do not use fallback to retry it.
 The Quality Gates table's `Hardener` line carries one of:
 
 - `not run` (initial), `not needed (score N ≥ floor F)`,
-- `qwen: iteration k of cap: N → M`, one entry per iteration, ending with
+- `delegated: iteration k of cap: N → M`, one entry per iteration, ending with
   `floor reached` or `cap reached`,
 - `fallback (reason): iteration k of cap: N → M`, same endings,
 - `rejected candidate: <reason>` when a candidate was refused.

@@ -25,7 +25,6 @@ import json
 import os
 import re
 import stat
-import sys
 import time
 import unicodedata
 import urllib.error
@@ -36,7 +35,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
-from .mcp_protocol import negotiate_protocol_version
+from .mcp_protocol import ToolServer, serve
+from .mcp_protocol import handle_message as mcp_handle_message
 from . import research_preflight as preflight
 
 SERVER_INFO = {"name": "speckit-pro-research-broker", "version": "1.0.0"}
@@ -222,8 +222,15 @@ def outbound_findings(text: str, spec_ngrams: set[tuple[str, ...]]) -> list[str]
     return findings
 
 
+PLUGIN_ROOT = Path(__file__).resolve().parents[1]
+
+
 def project_root(env: Mapping[str, str]) -> Path | None:
-    """The consumer project root, or None when the broker runs inside the plugin."""
+    """The consumer project root, or None when the broker runs inside the plugin.
+
+    A directory that only holds plugin manifests (a marketplace repository) is a
+    project. Only the running plugin's own root is not.
+    """
     explicit = env.get("CLAUDE_PROJECT_DIR") or ""
     candidates = [Path(explicit)] if explicit else []
     try:
@@ -234,7 +241,7 @@ def project_root(env: Mapping[str, str]) -> Path | None:
         candidates.extend([cwd, *cwd.parents])
     for candidate in candidates:
         if (candidate / ".git").exists() or explicit:
-            if (candidate / ".codex-plugin").exists() or (candidate / ".claude-plugin").exists():
+            if candidate.resolve() == PLUGIN_ROOT:
                 return None
             return candidate if candidate.is_dir() else None
     return None
@@ -1040,57 +1047,18 @@ def call_tool(name: Any, arguments: Any, instance: ResearchBroker | None = None)
     return instance.docs_query(**arguments)
 
 
-def _response(request_id: Any, result: Any) -> dict[str, Any]:
-    return {"jsonrpc": "2.0", "id": request_id, "result": result}
-
-
-def _error(request_id: Any, code: int, message: str) -> dict[str, Any]:
-    return {"jsonrpc": "2.0", "id": request_id, "error": {"code": code, "message": message}}
+def _error_code(exc: Exception) -> str:
+    """No exception text crosses the boundary: a violation is the caller's, anything else is ours."""
+    return "invalid_request" if isinstance(exc, BrokerViolation) else "internal_error"
 
 
 def handle_message(message: Any, instance: ResearchBroker | None = None) -> dict[str, Any] | None:
-    if not isinstance(message, dict) or message.get("jsonrpc") != "2.0":
-        return _error(None, -32600, "invalid request")
-    request_id = message.get("id")
-    method = message.get("method")
-    if method == "notifications/initialized":
-        return None
-    if method == "initialize":
-        return _response(request_id, {"protocolVersion": negotiate_protocol_version(message.get("params")), "capabilities": {"tools": {"listChanged": False}}, "serverInfo": SERVER_INFO})
-    if method == "ping":
-        return _response(request_id, {})
-    if method == "tools/list":
-        return _response(request_id, {"tools": list(TOOLS)})
-    if method == "tools/call":
-        params = message.get("params")
-        if not isinstance(params, dict):
-            return _error(request_id, -32602, "invalid tool parameters")
-        try:
-            result = call_tool(params.get("name"), params.get("arguments", {}), instance)
-        except BrokerViolation:
-            code = "invalid_request"
-        except Exception:  # noqa: BLE001 - no exception text may cross the boundary
-            code = "internal_error"
-        else:
-            return _response(request_id, {"content": [{"type": "text", "text": json.dumps(result, sort_keys=True, separators=(",", ":"))}]})
-        return _response(request_id, {"isError": True, "content": [{"type": "text", "text": f"broker_error:{code}"}], "structuredContent": {"error_code": code}})
-    return _error(request_id, -32601, "method not found")
+    server = ToolServer(SERVER_INFO, TOOLS, lambda name, arguments: call_tool(name, arguments, instance), _error_code)
+    return mcp_handle_message(server, message)
 
 
 def main() -> int:
-    if sys.version_info < (3, 11):
-        print("research broker requires Python 3.11 or newer", file=sys.stderr)
-        return 2
-    for raw_line in sys.stdin.buffer:
-        try:
-            message = json.loads(raw_line)
-            reply = handle_message(message)
-        except (UnicodeDecodeError, json.JSONDecodeError):
-            reply = _error(None, -32700, "parse error")
-        if reply is not None:
-            sys.stdout.write(json.dumps(reply, separators=(",", ":")) + "\n")
-            sys.stdout.flush()
-    return 0
+    return serve(handle_message, label="research broker")
 
 
 if __name__ == "__main__":

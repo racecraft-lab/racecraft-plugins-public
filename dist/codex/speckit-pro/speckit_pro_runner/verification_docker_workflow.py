@@ -9,22 +9,26 @@ from __future__ import annotations
 import base64
 import json
 from pathlib import Path
+import tempfile
 import time
 from typing import Any
 import uuid
 
-from .execution_control import confined_path, durable_json, execution_control, ignore_owned_directory, require_text
+from .execution_control import (confined_path, durable_json, evidence_directory, execution_control, ignore_owned_directory,
+                                record_failing_checks, require_text, worktree_evidence)
+from .failing_checks import fingerprint as failing_check_fingerprint
 from .verification_docker import validate_base_image, validate_location
 from .verification_docker_entrypoint import ENVIRONMENT, QUALIFIED_ENVIRONMENT, validate_argv
 from .verification_docker_image import execute_image, inspect_image
 from .verification_docker_runtime import DockerClient
 from .verification_git import capture_git_metadata
 from .verification_docker_qualification import (
-    PROFILE, event_log_sha256, execution_closure_sha256, observation_material as docker_observation_material,
-    qualification_reasons, revalidation_input_sha256,
+    MAX_EVIDENCE_BYTES, PROFILE, RECORD_KEYS, SCHEMA, SHA256, decode_evidence, event_log_sha256, execution_closure_sha256,
+    observation_material, qualification_reasons, revalidation_input_sha256,
 )
-from .verification_records import (
-    COMMAND_TIMEOUT_SECONDS, MAX_BYTES, MAX_FILES, PROJECT_PROGRAMS, digest, evidence_directory, runner_binding, sha, tree_bytes, tree_digest, workflow_argv,
+from .verification_evidence import (
+    COMMAND_TIMEOUT_SECONDS, MAX_BYTES, MAX_FILES, PROJECT_PROGRAMS, digest, evidence_directories, read_bounded_regular,
+    runner_binding, sha, tree_bytes, tree_digest, workflow_argv,
 )
 
 
@@ -103,7 +107,6 @@ def docker_workflow_execution(root: Path, workflow_name: str, begun: dict[str, A
 def qualified_evidence(config: dict[str, str], git_binding: dict[str, Any], result: dict[str, Any],
                        evidence: bytes, snapshot_sha: str, argv: list[str], source_binding: str,
                        execution_id: str) -> bytes:
-    from .verification_docker_qualification import decode_evidence
     events = decode_evidence(evidence)["events"]
     result["event_log_sha256"] = event_log_sha256(events)
     result["execution_closure_sha256"] = execution_closure_sha256(config, git_binding, result, events)
@@ -161,6 +164,7 @@ def execute_docker_verification(root: Path, inputs: dict[str, Any], mode: str) -
         raise ValueError("qualified Docker verification requires an explicit Git snapshot")
     before, git_binding = docker_input_snapshot(root, workflow_name, git_settings, qualified=qualified)
     snapshot_sha = tree_digest(before)
+    head_evidence = worktree_evidence(root)
     if mode == "dry_run":
         result = {"command_id": command_id, "argv": argv, "snapshot_sha256": snapshot_sha, "git_snapshot": git_binding,
                   "writes_state": False, "authorization_granted": False, "reusable": False,
@@ -193,7 +197,10 @@ def execute_docker_verification(root: Path, inputs: dict[str, Any], mode: str) -
     record_name = f"{evidence_directory(workflow_name)}/{execution_id}.json"
     record_path = confined_path(root, record_name)
     durable_json(record_path, record)
-    observation = docker_observation_material(sha(record_path.read_bytes()), record) if qualified else dict(record)
+    record_failing_checks(root, {**inputs, "workflow_file": workflow_name},
+                          {**failing_check_fingerprint(command_id, argv, result["exit_code"], result["completed"],
+                                                       result["stdout"], result["stderr"]), **head_evidence})
+    observation = observation_material(sha(record_path.read_bytes()), record) if qualified else dict(record)
     return {"record_path": record_name, "record": record, "observation_material": observation,
             "evidence_path": f"{directory_name}/docker-evidence.json", "writes_state": True, "reusable": False,
             "authorization_granted": False, "requires_independent_native_event": True, "rerun_required": True,
@@ -201,3 +208,108 @@ def execute_docker_verification(root: Path, inputs: dict[str, Any], mode: str) -
                             if qualified else ["docker_isolation_not_independently_qualified", "independent_producer_qualification_pending",
                                                "only_stdout_stderr_retained", "private_context_and_build_cache_may_retain_inputs"])
                            + (git_binding["limitations"] if git_binding else [])}
+
+
+def validate_docker_record(root: Path, workflow_name: str, command_id: str, record_name: str,
+                           record_body: bytes, record: dict[str, Any], observation: Any) -> list[str]:
+    reasons: list[str] = []
+    try:
+        if set(record) != RECORD_KEYS or record.get("schema_version") != SCHEMA:
+            raise ValueError("invalid Docker verification record version")
+        if any(SHA256.fullmatch(record.get(key, "")) is None for key in (
+                "snapshot_sha256", "environment_sha256", "stdout_sha256", "stderr_sha256", "evidence_sha256",
+                "event_log_sha256", "execution_closure_sha256", "revalidation_input_sha256")):
+            raise ValueError("Docker verification record contains a malformed digest")
+        if record.get("output_contract") != "streams_only" or record.get("isolation_mode") != "docker_readonly_qualified" or record.get("producer") != "runner-docker-project-command/v2":
+            raise ValueError("Docker verification record contract is not qualified v2")
+        execution_id = require_text(record.get("execution_id"), "execution_id")
+        record_directory = Path(record_name).parent.as_posix()
+        directory_name = f"{record_directory}/{execution_id}"
+        if (record_directory not in evidence_directories(workflow_name) or record.get("output_directory") != directory_name
+                or Path(record_name).stem != execution_id):
+            raise ValueError("Docker evidence path is not bound to the execution identity")
+        directory = confined_path(root, directory_name)
+        evidence_body = read_bounded_regular(directory / "docker-evidence.json", MAX_EVIDENCE_BYTES,
+                                              "retained Docker evidence")
+        stdout = read_bounded_regular(directory / "stdout", MAX_EVIDENCE_BYTES, "retained Docker stdout")
+        stderr = read_bounded_regular(directory / "stderr", MAX_EVIDENCE_BYTES, "retained Docker stderr")
+        expected_observation = observation_material(sha(record_body), record)
+        if (not isinstance(observation, dict) or set(observation) != {"native_event_id", "docker_qualification"}
+                or not isinstance(observation.get("native_event_id"), str) or not observation["native_event_id"].strip()):
+            reasons.append("missing_independent_native_event")
+        elif {"docker_qualification": observation.get("docker_qualification")} != expected_observation:
+            reasons.append("native_event_disagrees_with_docker_closure")
+        evidence = decode_evidence(evidence_body)
+        result, events = evidence["result"], evidence["events"]
+        if (not isinstance(result, dict) or not isinstance(events, list)
+                or not isinstance(evidence.get("configuration"), dict)
+                or not isinstance(evidence.get("git_snapshot"), dict)):
+            raise ValueError("Docker evidence result or events are invalid")
+        if sha(evidence_body) != record.get("evidence_sha256") or sha(stdout) != record.get("stdout_sha256") or sha(stderr) != record.get("stderr_sha256"):
+            reasons.append("retained_docker_output_changed")
+        if result.get("stdout") != stdout or result.get("stderr") != stderr:
+            reasons.append("retained_streams_disagree_with_evidence")
+        if evidence.get("git_snapshot") != record.get("git_snapshot"):
+            reasons.append("git_snapshot_disagrees_with_evidence")
+        toolchain = record.get("toolchain")
+        if (not isinstance(toolchain, dict) or set(toolchain) != {"kind", "base_reference", "base_image_id", "image_id",
+                                                    "runner_sha256", "cli", "engine", "base_image"}
+                or toolchain.get("kind") != "docker-image"
+                or toolchain.get("base_reference") != record.get("configuration", {}).get("base_image")
+                or toolchain.get("base_image_id") != result.get("base_image", {}).get("Id")
+                or toolchain.get("image_id") != result.get("image_id")
+                or toolchain.get("engine") != result.get("engine_before")
+                or toolchain.get("cli") != result.get("engine_before", {}).get("cli")
+                or toolchain.get("base_image") != result.get("base_image")):
+            reasons.append("docker_toolchain_disagrees_with_evidence")
+        input_readback, post_readback = result.get("input_readback"), result.get("post_input_readback")
+        if (not isinstance(input_readback, dict) or not isinstance(post_readback, dict)
+                or record.get("input_snapshot_verified") is not (input_readback.get("verified") is True)
+                or record.get("post_input_snapshot_verified") is not (post_readback.get("verified") is True)):
+            reasons.append("docker_readback_receipt_disagrees_with_evidence")
+        event_sha = event_log_sha256(events)
+        closure_sha = execution_closure_sha256(evidence["configuration"], evidence["git_snapshot"], result, events)
+        if event_sha != record.get("event_log_sha256") or closure_sha != record.get("execution_closure_sha256"):
+            reasons.append("docker_execution_closure_changed")
+        computed_qualification_reasons = qualification_reasons(result, evidence["git_snapshot"], events)
+        reasons.extend(computed_qualification_reasons)
+        if result.get("qualification_reasons") != computed_qualification_reasons:
+            reasons.append("docker_qualification_receipt_changed")
+        if reasons:
+            return reasons
+        if (record.get("workflow_file"), record.get("command_id"), record.get("argv")) != (
+                workflow_name, command_id, workflow_argv(confined_path(root, workflow_name), command_id)):
+            reasons.append("command_binding_changed")
+        configuration = docker_configuration(evidence["configuration"])
+        if configuration.get("qualification_profile") != PROFILE or record.get("configuration") != configuration:
+            reasons.append("docker_configuration_changed")
+        git_snapshot = record.get("git_snapshot")
+        if not isinstance(git_snapshot, dict):
+            raise ValueError("qualified Docker record omitted Git binding")
+        files, current_git = docker_input_snapshot(root, workflow_name, git_snapshot.get("directories"), qualified=True)
+        snapshot_sha256 = tree_digest(files)
+        current_runner = runner_binding()
+        if (snapshot_sha256 != record.get("snapshot_sha256")
+                or digest(QUALIFIED_ENVIRONMENT) != record.get("environment_sha256")
+                or current_runner != record.get("toolchain", {}).get("runner_sha256")):
+            reasons.append("docker_current_input_closure_changed")
+        if reasons:
+            return reasons
+        with tempfile.TemporaryDirectory(prefix="speckit-docker-validation-") as temporary:
+            client = DockerClient(Path(configuration["executable"]), configuration["endpoint"], Path(temporary) / "cli")
+            engine = client.engine_binding()
+            base = inspect_image(client, configuration["base_image"])
+            validate_base_image(base, configuration["base_image"])
+            if client.engine_binding() != engine:
+                raise ValueError("Docker engine changed during current-state validation")
+        current_sha = revalidation_input_sha256(configuration=configuration, snapshot_sha256=snapshot_sha256,
+                                                git_snapshot=current_git, argv=record["argv"],
+                                                environment_sha256=digest(QUALIFIED_ENVIRONMENT), runner_sha256=current_runner,
+                                                engine_binding=engine, base_image=base)
+        if current_sha != record.get("revalidation_input_sha256"):
+            reasons.append("docker_current_input_closure_changed")
+        if record.get("inputs_unchanged") is not True or record.get("completed") is not True or record.get("exit_code") != 0:
+            reasons.append("docker_verification_not_successful")
+    except (OSError, ValueError, TypeError, KeyError, AttributeError, RecursionError) as exc:
+        reasons.append(f"unverifiable_docker_record: {str(exc)[:160]}")
+    return reasons

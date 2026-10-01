@@ -13,15 +13,21 @@ from typing import Any
 
 from .. import RUNNER_VERSION
 from ..envelope import diagnostic, is_diagnostic, response
+from ..host_skills import emit_host_files, render_host_skills
+from ..install_inventory import read_install_inventory
 from ..path_utils import find_repo_root, is_relative_to, sha256_file, sha256_text
+from ..runtime import runner_source_files
 from .gate_response import gate_base_data
 
 FIXTURE_BOUNDARY = Path("tests") / "speckit-pro" / "unit" / "fixtures" / "runner-gates"
 DEFAULT_PAYLOAD_CASES = FIXTURE_BOUNDARY / "payload-evidence-cases.json"
 DEFAULT_INSTALL_CASES = FIXTURE_BOUNDARY / "install-verification-cases.json"
-INSTALL_INVENTORY = Path("speckit-pro") / "speckit_pro_runner" / "install_inventory.json"
 INSTALLED_PLUGIN_FIXTURE_BOUNDARY = Path("tests") / "speckit-pro" / "unit" / "fixtures" / "installed-plugin-release"
 DEFAULT_INSTALLED_PLUGIN_PAYLOAD_CASES = INSTALLED_PLUGIN_FIXTURE_BOUNDARY / "payload-completeness-cases.json"
+# A payload cannot work without these; a missing source fails the build.
+CLAUDE_REQUIRED_PAYLOAD_PATHS = (".claude-plugin", "agents", "hooks", "speckit_pro_runner")
+# Both payloads also require skills/, and Codex codex-skills/, rendered below.
+CODEX_REQUIRED_PAYLOAD_PATHS = (".codex-plugin", "codex-agents", "speckit_pro_runner")
 PROHIBITED_SCRIPT_SUFFIXES = (".sh", ".bash", ".zsh", ".ps1", ".bat", ".cmd")
 PAYLOAD_INPUT_FIELDS = {
     "build-test-payload-evidence": frozenset({"case_file", "case_id", "output_root"}),
@@ -300,40 +306,35 @@ def build_installed_plugin_payloads(repo_root: Path, dist_root: Path) -> None:
         raise FileNotFoundError(f"source plugin directory not found: {source}")
 
     reset_payload_dir(claude, dist_root)
+    for name in CLAUDE_REQUIRED_PAYLOAD_PATHS:
+        copy_required_installed_plugin(source / name, claude / name)
     for name in [
-        ".claude-plugin",
         ".mcp.json",
-        "agents",
         "commands",
-        "hooks",
-        "skills",
         "artifact-gallery",
         "scripts",
-        "speckit_pro_runner",
         "README.md",
         "CHANGELOG.md",
     ]:
         copy_optional_installed_plugin(source / name, claude / name)
     copy_optional_installed_plugin(repo_root / "LICENSE", claude / "LICENSE")
-    for skill_file in claude.glob("skills/*/SKILL.md"):
-        strip_codex_guard(skill_file)
+    render_payload_skills(source, "claude", claude / "skills")
+    emit_host_files(claude.glob("agents/*.md"), "claude")
     remove_payload_shell_scripts_installed_plugin(claude)
 
     reset_payload_dir(codex, dist_root)
+    for name in CODEX_REQUIRED_PAYLOAD_PATHS:
+        copy_required_installed_plugin(source / name, codex / name)
     for name in [
-        ".codex-plugin",
-        "codex-agents",
         "codex-hooks.json",
         "artifact-gallery",
         "scripts",
-        "speckit_pro_runner",
         "README.md",
         "CHANGELOG.md",
     ]:
         copy_optional_installed_plugin(source / name, codex / name)
     copy_optional_installed_plugin(repo_root / "LICENSE", codex / "LICENSE")
-    copy_required_installed_plugin(source / "skills", codex / "skills")
-    copy_required_installed_plugin(source / "codex-skills", codex / "skills")
+    render_payload_skills(source, "codex", codex / "skills")
     rewrite_codex_manifest_installed_plugin(codex)
     for text_file in codex.rglob("*"):
         if text_file.is_file():
@@ -383,20 +384,11 @@ def remove_payload_shell_scripts_installed_plugin(root: Path) -> None:
             pass
 
 
-def strip_codex_guard(skill_file: Path) -> None:
-    text = skill_file.read_text(encoding="utf-8")
-    lines = text.splitlines(keepends=True)
-    output: list[str] = []
-    i = 0
-    while i < len(lines):
-        if lines[i].rstrip("\n") == "## Codex Skill-Selection Guard":
-            i += 1
-            while i < len(lines) and not lines[i].startswith("## "):
-                i += 1
-            continue
-        output.append(lines[i])
-        i += 1
-    skill_file.write_text("".join(output), encoding="utf-8")
+def render_payload_skills(source: Path, host: str, destination: Path) -> None:
+    for required in ("skills", "codex-skills") if host == "codex" else ("skills",):
+        if not (source / required).exists():
+            raise FileNotFoundError(f"required source path missing: {source / required}")
+    render_host_skills(source, host, destination)
 
 
 def rewrite_codex_manifest_installed_plugin(codex_root: Path) -> None:
@@ -543,15 +535,7 @@ def payload_trust_metadata_mismatches(payload_root: Path) -> list[str]:
     checksum_path = runner_root / "speckit-pro-runner.sha256"
     manifest_rel = "speckit_pro_runner/speckit-pro-runner.manifest.json"
     checksum_rel = "speckit_pro_runner/speckit-pro-runner.sha256"
-    inventory_path = runner_root / "agent_inventory.json"
-    runner_files = sorted(
-        [
-            path
-            for path in runner_root.rglob("*.py")
-            if path.is_file() and "__pycache__" not in path.parts and not path.name.endswith(".pyc")
-        ]
-        + ([inventory_path] if inventory_path.is_file() else [])
-    )
+    runner_files = runner_source_files(runner_root)
     if not runner_files:
         return []
 
@@ -898,28 +882,11 @@ def install_root_from_case(case: dict[str, Any], repo_root: Path) -> Path | dict
     )
 
 
-def load_install_inventory(repo_root: Path, case: dict[str, Any]) -> list[dict[str, str]]:
-    inventory_path = repo_root / INSTALL_INVENTORY
-    try:
-        document = json.loads(inventory_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        return diagnostic(
-            "malformed_inventory",
-            "install inventory could not be loaded",
-            details={"path": INSTALL_INVENTORY.as_posix(), "error": type(exc).__name__},
-        )
-    files = document.get("files")
-    if not isinstance(files, list):
-        return diagnostic("malformed_inventory", "install inventory files must be an array")
-    normalized: list[dict[str, str]] = []
-    for item in files:
-        if not isinstance(item, dict):
-            continue
-        path = normalize_posix_path(str(item.get("path", "")))
-        content = str(item.get("content", ""))
-        digest = str(item.get("sha256", "skip"))
-        normalized.append({"path": path, "content": normalized_content(content, case), "sha256": digest})
-    return normalized
+def load_install_inventory(repo_root: Path, case: dict[str, Any]) -> list[dict[str, str]] | dict[str, Any]:
+    inventory = read_install_inventory(repo_root)
+    if is_diagnostic(inventory):
+        return inventory
+    return [{**record, "content": normalized_content(record["content"], case)} for record in inventory["files"]]
 
 
 def normalized_content(content: str, case: dict[str, Any]) -> str:

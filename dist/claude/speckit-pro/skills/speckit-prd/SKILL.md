@@ -17,8 +17,8 @@ roadmap-MOC that makes the spec tree navigable.
 
 Inspect the tools and skills actually available. Follow the shared
 [capability-discovery](${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/capability-discovery.md)
-and [grounding](${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/grounding.md) contracts. Read
-applicable project instructions, `.specify/memory/constitution.md`, prior
+and [grounding](${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/grounding.md) contracts.
+Read applicable project instructions, `.specify/memory/constitution.md`, prior
 roadmaps and decisions, and targeted code. Disclose uncertainty; do not guess.
 
 ## Claude interaction adapter
@@ -28,8 +28,9 @@ call offers 2-3 mutually exclusive choices: put the grounded recommendation
 first, suffix its label `(Recommended)`, and state each tradeoff briefly. Wait
 for the reply before the next question.
 
-If no live user can answer because the skill was invoked in a background,
-automation, CI, or subagent context, do not fabricate intent. A caller that
+If no live user can answer because the skill was invoked in
+a background, automation, CI, autopilot, or subagent context, never use a
+free-text fallback and do not fabricate intent. A caller that
 explicitly requested a draft may receive only a best-effort PRD from supplied
 material, with every unvalidated decision in Open Questions and a clear
 "interactive pass required" status. Do not claim the PRD is roadmap-ready and

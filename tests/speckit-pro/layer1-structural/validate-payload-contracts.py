@@ -25,13 +25,23 @@ for _import_root in (LIB_DIR, PLUGIN_ROOT):
         sys.path.insert(0, str(_import_root))
 
 from test_result import run_counted
+from host_skill_views import host_skill_root
 
 SOURCE_ROOT = REPO_ROOT / 'speckit-pro'
-BUILDER = REPO_ROOT / 'scripts' / 'build-plugin-payloads.py'
+REFRESH = REPO_ROOT / 'scripts' / 'refresh-release-artifacts.py'
+MARKETPLACE_FILES = ('.claude-plugin/marketplace.json', '.agents/plugins/marketplace.json')
 PATH_ESCAPE_RE = re.compile('\\.\\./\\.\\./(?:skills|codex-skills)/|\\.\\./\\.\\./\\.\\./(?:skills|codex-skills)/')
 
-def run_builder(repo_root: Path) -> subprocess.CompletedProcess[str]:
-    return subprocess.run([sys.executable, '-B', str(repo_root / 'scripts' / BUILDER.name)], cwd=repo_root, text=True, capture_output=True, shell=False, check=False)
+def run_refresh(repo_root: Path) -> subprocess.CompletedProcess[str]:
+    """Run the one full release refresh, the only payload build path, inside an isolated copy."""
+    return subprocess.run([sys.executable, '-B', str(repo_root / 'scripts' / REFRESH.name)], cwd=repo_root, text=True, capture_output=True, shell=False, check=False)
+
+def copy_refresh_inputs(work: Path) -> None:
+    """Copy what the full refresh reads into an empty directory: itself, the plugin source and registries."""
+    for relative in ('scripts/' + REFRESH.name, 'LICENSE', *MARKETPLACE_FILES):
+        (work / relative).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(REPO_ROOT / relative, work / relative)
+    shutil.copytree(SOURCE_ROOT, work / 'speckit-pro', ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
 
 def _display_path(path: Path) -> str:
     try:
@@ -121,13 +131,8 @@ class PayloadFixtureTests(unittest.TestCase):
 class ValidatePluginPayload(unittest.TestCase):
 
     def setUp(self) -> None:
-        temporary = tempfile.TemporaryDirectory(prefix='payload-builder-consumer-')
-        self.addCleanup(temporary.cleanup)
-        self.work = Path(temporary.name).resolve()
-        (self.work / 'scripts').mkdir()
-        shutil.copy2(BUILDER, self.work / 'scripts' / BUILDER.name)
-        shutil.copy2(REPO_ROOT / 'LICENSE', self.work / 'LICENSE')
-        shutil.copytree(SOURCE_ROOT, self.work / 'speckit-pro', ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
+        self.work = Path(self.enterContext(tempfile.TemporaryDirectory(prefix='payload-builder-consumer-'))).resolve()
+        copy_refresh_inputs(self.work)
 
     def test_payload(self) -> None:
         claude_payload = self.work / 'dist' / 'claude' / 'speckit-pro'
@@ -135,11 +140,11 @@ class ValidatePluginPayload(unittest.TestCase):
         self.assertFalse(claude_payload.resolve().is_relative_to(REPO_ROOT.resolve()))
         self.assertFalse(codex_payload.resolve().is_relative_to(REPO_ROOT.resolve()))
         self.assertFalse((self.work / 'dist').exists())
-        self.assertEqual(BUILDER.read_bytes(), (self.work / 'scripts' / BUILDER.name).read_bytes())
-        with self.subTest(msg='payload builder exists'):
-            self.assertTrue(BUILDER.is_file(), f'file not found: {BUILDER}')
-        with self.subTest(msg='payload builder rebuilds from scratch'):
-            completed = run_builder(self.work)
+        self.assertEqual(REFRESH.read_bytes(), (self.work / 'scripts' / REFRESH.name).read_bytes())
+        with self.subTest(msg='release refresh script exists'):
+            self.assertTrue(REFRESH.is_file(), f'file not found: {REFRESH}')
+        with self.subTest(msg='full refresh rebuilds the payloads from scratch'):
+            completed = run_refresh(self.work)
             self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
             self.assertFalse(any((self.work / 'speckit-pro').rglob('__pycache__')))
         with self.subTest(msg='Claude payload directory exists'):
@@ -171,7 +176,7 @@ class ValidatePluginPayload(unittest.TestCase):
         with self.subTest(msg='Claude payload keeps the Claude skill set'):
             self.assertEqual(count_skill_entrypoints(SOURCE_ROOT / 'skills'), count_skill_entrypoints(claude_payload / 'skills'), 'Claude skill count')
         with self.subTest(msg='Codex payload keeps exactly the Codex skill set'):
-            self.assertEqual(skill_entrypoint_set(SOURCE_ROOT / 'codex-skills'), skill_entrypoint_set(codex_payload / 'skills'), 'Codex skill entrypoints')
+            self.assertEqual(skill_entrypoint_set(host_skill_root('codex')), skill_entrypoint_set(codex_payload / 'skills'), 'Codex skill entrypoints')
         with self.subTest(msg='Codex payload manifest exposes skills at ./skills/'):
             codex_manifest = load_json_file(codex_payload / '.codex-plugin' / 'plugin.json')
             self.assertEqual('./skills/', codex_manifest['skills'], 'Codex manifest skills')
@@ -195,7 +200,7 @@ class ValidatePluginPayload(unittest.TestCase):
             self.assertEqual([], matches, 'source-tree path references')
         with self.subTest(msg='Payload rebuild is deterministic'):
             first_fingerprint = payload_fingerprint(self.work)
-            completed = run_builder(self.work)
+            completed = run_refresh(self.work)
             self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
             second_fingerprint = payload_fingerprint(self.work)
             self.assertEqual(first_fingerprint, second_fingerprint, 'payload fingerprint')
@@ -252,7 +257,7 @@ class ValidatePayloadCompleteness(unittest.TestCase):
 
     def test_body_completeness(self) -> None:
         with self.subTest(msg=f'built Claude skills directory exists ({_rel(DIST_CLAUDE_SKILLS_DIR)})'):
-            self.assertTrue(DIST_CLAUDE_SKILLS_DIR.is_dir(), f'built Claude skills directory missing: {_rel(DIST_CLAUDE_SKILLS_DIR)} (run python3 scripts/build-plugin-payloads.py)')
+            self.assertTrue(DIST_CLAUDE_SKILLS_DIR.is_dir(), f'built Claude skills directory missing: {_rel(DIST_CLAUDE_SKILLS_DIR)} (run python3 scripts/refresh-release-artifacts.py)')
         if not DIST_CLAUDE_SKILLS_DIR.is_dir():
             return
         dist_skills = sorted((p for p in DIST_CLAUDE_SKILLS_DIR.glob('*/SKILL.md') if p.is_file()), key=lambda p: p.as_posix())
@@ -273,7 +278,10 @@ class ValidatePayloadCompleteness(unittest.TestCase):
                 self.assertTrue(dist_ok, f"built skill '{skill_name}' SKILL.md is not readable at {_rel(dist_file)}")
             if not dist_ok:
                 continue
-            src_text = src_file.read_text(encoding='utf-8', errors='replace')
+            # Compare against the source as Claude renders it: host blocks for
+            # Codex are dropped, so the raw source is longer by design.
+            view_file = host_skill_root('claude') / skill_name / 'SKILL.md'
+            src_text = view_file.read_text(encoding='utf-8', errors='replace')
             anchor = last_non_guard_heading(src_text)
             with self.subTest(msg=f'[{skill_name}] source has a non-guard level-2 heading to anchor on'):
                 self.assertNotEqual('', anchor, f"source SKILL.md for '{skill_name}' has no non-guard '## ' heading — cannot anchor completeness")
@@ -282,7 +290,7 @@ class ValidatePayloadCompleteness(unittest.TestCase):
             dist_text = dist_file.read_text(encoding='utf-8', errors='replace')
             with self.subTest(msg=f"[{skill_name}] last non-guard source heading survives in built body: '{anchor}'"):
                 self.assertIn(anchor, dist_text, f"built '{skill_name}' SKILL.md is missing the last non-guard source heading ('{anchor}') — body truncated")
-            src_lines = src_file.read_bytes().count(b'\n')
+            src_lines = view_file.read_bytes().count(b'\n')
             dist_lines = dist_file.read_bytes().count(b'\n')
             guard_lines = guard_section_lines(src_text)
             expected = src_lines - guard_lines
@@ -413,7 +421,7 @@ class ValidatePayloadConformance(unittest.TestCase):
 
     def validate_claude_payload(self) -> None:
         with self.subTest(msg=f'[claude] built payload root exists ({repo_rel(CLAUDE_ROOT)})'):
-            self.assertTrue(CLAUDE_ROOT.is_dir(), 'Claude payload missing - run python3 scripts/build-plugin-payloads.py')
+            self.assertTrue(CLAUDE_ROOT.is_dir(), 'Claude payload missing - run python3 scripts/refresh-release-artifacts.py')
         if not CLAUDE_ROOT.is_dir():
             return
         manifest = CLAUDE_ROOT / '.claude-plugin' / 'plugin.json'
@@ -458,7 +466,7 @@ class ValidatePayloadConformance(unittest.TestCase):
 
     def validate_codex_payload(self) -> None:
         with self.subTest(msg=f'[codex] built payload root exists ({repo_rel(CODEX_ROOT)})'):
-            self.assertTrue(CODEX_ROOT.is_dir(), 'Codex payload missing - run python3 scripts/build-plugin-payloads.py')
+            self.assertTrue(CODEX_ROOT.is_dir(), 'Codex payload missing - run python3 scripts/refresh-release-artifacts.py')
         if not CODEX_ROOT.is_dir():
             return
         manifest = CODEX_ROOT / '.codex-plugin' / 'plugin.json'
@@ -506,6 +514,38 @@ class ValidatePayloadConformance(unittest.TestCase):
         for path in codex_agents:
             self.assert_toml_agent('codex-agent', path)
         self.assert_hooks_json('codex', CODEX_ROOT / 'codex-hooks.json')
+
+HOST_MARKER_RE = re.compile(r'<!--\s*/?\s*host\b')
+HOST_MARKER_SUFFIXES = frozenset({'.md', '.toml', '.json', '.yaml', '.yml', '.html', '.txt'})
+
+
+def host_marker_lines(root: Path) -> list[str]:
+    """Every shipped prose or config line that still carries a host marker."""
+    found: list[str] = []
+    for path in sorted(p for p in root.rglob('*') if p.is_file() and p.suffix in HOST_MARKER_SUFFIXES):
+        for number, line in enumerate(path.read_text(encoding='utf-8', errors='replace').splitlines(), start=1):
+            if HOST_MARKER_RE.search(line):
+                found.append(f'{path.relative_to(root).as_posix()}:{number}')
+    return found
+
+
+class ValidateHostMarkersStripped(unittest.TestCase):
+    """Each payload carries its host's text only, never a marker line."""
+
+    def test_payloads_carry_no_host_marker(self) -> None:
+        for host in ('claude', 'codex'):
+            root = REPO_ROOT / 'dist' / host / 'speckit-pro'
+            with self.subTest(host=host):
+                self.assertTrue(root.is_dir(), f'missing payload {root}')
+                self.assertEqual([], host_marker_lines(root))
+
+    def test_scan_reports_a_marker_left_in_a_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / 'agents').mkdir()
+            (root / 'agents' / 'probe.md').write_text('ok\n<!-- host:codex: x -->\nleak\n<!-- /host -->\n', encoding='utf-8')
+            self.assertEqual(['agents/probe.md:2', 'agents/probe.md:4'], host_marker_lines(root))
+
 
 def main() -> int:
     suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])

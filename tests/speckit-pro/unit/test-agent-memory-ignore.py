@@ -11,6 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 from test_result import run_counted
+from host_skill_views import host_skill_root
 
 
 SCRIPT = Path(__file__).resolve().parents[3] / "speckit-pro/scripts/agent-memory-ignore.py"
@@ -98,9 +99,9 @@ class AgentMemoryIgnoreTests(unittest.TestCase):
         self.assertFalse((self.root / ".gitignore").exists())
 
     def test_both_clients_include_repair_in_setup_and_check_before_dispatch(self):
-        for client in ("skills", "codex-skills"):
+        for host in ("claude", "codex"):
             for operation in ("speckit-install", "speckit-upgrade"):
-                path = REPO_ROOT / "speckit-pro" / client / operation / "SKILL.md"
+                path = host_skill_root(host) / operation / "SKILL.md"
                 with self.subTest(path=path):
                     body = path.read_text()
                     self.assertIn("agent-memory-ignore.py", body)

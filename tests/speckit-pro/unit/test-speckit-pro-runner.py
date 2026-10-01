@@ -3,9 +3,13 @@
 
 from __future__ import annotations
 
+import ast
 import hashlib
+import importlib
 import json
 import os
+import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -19,36 +23,35 @@ PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 RUNNER_DIR = PLUGIN_ROOT / "speckit_pro_runner"
 RELEASE_PLEASE_BRANCH_PREFIX = "release-please--branches--"
 sys.path.insert(0, str(PLUGIN_ROOT))
+sys.path.insert(0, str(REPO_ROOT / "tests" / "speckit-pro" / "lib"))
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
+from runner_invocation import assert_runner_response, run_runner  # noqa: E402
+from speckit_pro_runner import envelope, runtime  # noqa: E402
+from speckit_pro_runner.gates import payloads, release, runner_invocation  # noqa: E402
+
 FIXTURE_FILE = Path(__file__).resolve().parent / "fixtures" / "speckit-pro-runner" / "contract-fixtures.json"
+RELEASE_FIXTURES = Path(__file__).resolve().parent / "fixtures" / "installed-plugin-release"
 
 
-def runner_env() -> dict[str, str]:
-    env = os.environ.copy()
-    existing = env.get("PYTHONPATH")
-    env["PYTHONPATH"] = str(PLUGIN_ROOT) if not existing else f"{PLUGIN_ROOT}{os.pathsep}{existing}"
-    return env
+RUNTIME_LOADED_JSON = (
+    "gate_discovery_table.json",
+    "contracts/task-results.schema.json",
+)
 
 
-def encode_request(request: object) -> str:
-    if isinstance(request, str):
-        return request
-    return json.dumps(request)
+def copy_runner(root: Path) -> Path:
+    package_dir = root / "speckit-pro" / "speckit_pro_runner"
+    shutil.copytree(RUNNER_DIR, package_dir, ignore=shutil.ignore_patterns("__pycache__"))
+    return package_dir
 
 
-def run_runner(request: object) -> tuple[subprocess.CompletedProcess[str], dict[str, object] | None, list[dict[str, object]]]:
-    completed = subprocess.run(
-        [sys.executable, "-m", "speckit_pro_runner"],
-        input=encode_request(request),
-        text=True,
-        capture_output=True,
-        cwd=REPO_ROOT,
-        env=runner_env(),
-        shell=False,
-        check=False,
-    )
-    response = json.loads(completed.stdout) if completed.stdout.strip() else None
-    stderr_records = [json.loads(line) for line in completed.stderr.splitlines() if line.strip()]
-    return completed, response, stderr_records
+def payload_mismatches_after_editing(name: str) -> set[str]:
+    with tempfile.TemporaryDirectory() as tmp:
+        payloads.build_installed_plugin_payloads(REPO_ROOT, Path(tmp) / "dist")
+        payload_root = Path(tmp) / "dist" / "claude" / "speckit-pro"
+        edited = payload_root / "speckit_pro_runner" / name
+        edited.write_text(edited.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+        return set(payloads.payload_trust_metadata_mismatches(payload_root))
 
 
 def review_base_candidates() -> list[str]:
@@ -142,21 +145,13 @@ class RunnerFoundationTests(unittest.TestCase):
             self.assertEqual(diagnostic["code"], code)
 
     def assert_response(self, response: dict[str, object], status: str, exit_code: int) -> None:
-        self.assertEqual(response["schema_version"], "1.0")
-        self.assertEqual(response["status"], status)
-        self.assertEqual(response["exit_code"], exit_code)
-        self.assertIsNone(response["legacy_exit_code"])
-        self.assertIsInstance(response["diagnostics"], list)
-        self.assertIsInstance(response["data"], dict)
+        assert_runner_response(self, response, status, exit_code)
 
     def test_runner_subprocess_executables_are_statically_bash_free(self) -> None:
         from speckit_pro_runner.gates.active_path_guard import repo_bash_python_findings
 
-        paths = [
-            PLUGIN_ROOT / "speckit_pro_runner" / "gates" / "suite.py",
-            PLUGIN_ROOT / "speckit_pro_runner" / "helpers" / "install.py",
-            PLUGIN_ROOT / "speckit_pro_runner" / "runtime.py",
-        ]
+        paths = [PLUGIN_ROOT / "speckit_pro_runner" / name
+                 for name in ("cli_probe.py", "gates/suite.py", "gates/runner_invocation.py", "helpers/install.py", "runtime.py")]
         findings = [
             (path.relative_to(REPO_ROOT).as_posix(), finding.line, finding.pattern)
             for path in paths
@@ -319,7 +314,7 @@ class RunnerFoundationTests(unittest.TestCase):
         expected = {}
         runner_sources = sorted(
             [path for path in RUNNER_DIR.rglob("*.py") if "__pycache__" not in path.parts]
-            + [RUNNER_DIR / "agent_inventory.json"]
+            + [path for path in RUNNER_DIR.rglob("*.json") if path.name != "speckit-pro-runner.manifest.json"]
         )
         for path in runner_sources:
             digest = hashlib.sha256(path.read_bytes()).hexdigest()
@@ -458,8 +453,119 @@ class RunnerFoundationTests(unittest.TestCase):
             self.assertFalse(is_release_please_review())
 
 
+class RunnerTrustRosterTests(unittest.TestCase):
+    def test_runtime_loaded_json_changes_break_verification(self) -> None:
+        refresh = importlib.import_module("refresh-release-artifacts")
+        for name in RUNTIME_LOADED_JSON:
+            with self.subTest(file=name), tempfile.TemporaryDirectory() as tmp:
+                package_dir = copy_runner(Path(tmp))
+                refresh.refresh_runner_trust_metadata(Path(tmp))
+                target = package_dir / name
+                target.write_text(target.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+
+                report = runtime.metadata_report(package_dir.parent, package_dir, check_metadata=True)
+
+                self.assertEqual("mismatch", report["verification_status"])
+
+    def test_refresh_script_records_the_runtime_roster(self) -> None:
+        refresh = importlib.import_module("refresh-release-artifacts")
+        with tempfile.TemporaryDirectory() as tmp:
+            package_dir = copy_runner(Path(tmp))
+            refresh.refresh_runner_trust_metadata(Path(tmp))
+            report = runtime.metadata_report(package_dir.parent, package_dir, check_metadata=True)
+
+        self.assertEqual("verified", report["verification_status"])
+        recorded = {record["path"]["value"] for record in report["runner_files"]}
+        for name in RUNTIME_LOADED_JSON:
+            self.assertIn(f"speckit_pro_runner/{name}", recorded)
+        self.assertNotIn(f"speckit_pro_runner/{runtime.MANIFEST_NAME}", recorded)
+
+    def test_payload_gate_flags_stale_runtime_json(self) -> None:
+        self.assertEqual(
+            {"speckit_pro_runner/speckit-pro-runner.manifest.json", "speckit_pro_runner/speckit-pro-runner.sha256"},
+            payload_mismatches_after_editing("gate_discovery_table.json"),
+        )
+
+
+class PayloadRequiredSourceTests(unittest.TestCase):
+    def test_build_fails_when_a_required_source_directory_is_missing(self) -> None:
+        required = sorted(
+            {*payloads.CLAUDE_REQUIRED_PAYLOAD_PATHS, *payloads.CODEX_REQUIRED_PAYLOAD_PATHS, "skills", "codex-skills"}
+        )
+        self.assertIn("agents", required)
+        self.assertIn("codex-agents", required)
+        for missing in required:
+            with self.subTest(missing=missing), tempfile.TemporaryDirectory() as tmp:
+                repo_root = Path(tmp) / "repo"
+                source = repo_root / "speckit-pro"
+                for name in required:
+                    if name != missing:
+                        (source / name).mkdir(parents=True)
+                expected = re.escape(f"required source path missing: {source / missing}")
+                with self.assertRaisesRegex(FileNotFoundError, expected):
+                    payloads.build_installed_plugin_payloads(repo_root, Path(tmp) / "dist")
+
+
+class RunnerLayeringTests(unittest.TestCase):
+    """Core runner modules import no helper or gate module, at module level or inside a function."""
+
+    SHARED_MODULES = ("atomic_write", "sweep_export", "task_partition", "trusted_io", "workflow_stage")
+
+    def test_core_modules_never_import_helpers_or_gates(self) -> None:
+        offenders = []
+        for path in sorted(RUNNER_DIR.glob("*.py")):
+            if path.name in {"runtime.py", "__main__.py"}:
+                continue  # the composition root wires helpers and gates together
+            for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+                if isinstance(node, ast.ImportFrom) and node.level == 1 and node.module:
+                    if node.module.split(".")[0] in {"helpers", "gates"}:
+                        offenders.append(f"{path.name}:{node.lineno}: from .{node.module}")
+        self.assertEqual(offenders, [])
+
+    def test_helper_modules_reexport_the_shared_primitives_they_used_to_define(self) -> None:
+        for module_name in self.SHARED_MODULES:
+            shared = importlib.import_module(f"speckit_pro_runner.{module_name}")
+            for helper_name in ("read_only", "mutation"):
+                helper = importlib.import_module(f"speckit_pro_runner.helpers.{helper_name}")
+                for name, value in vars(shared).items():
+                    if name.startswith("__") or not hasattr(helper, name):
+                        continue
+                    with self.subTest(module=module_name, helper=helper_name, name=name):
+                        self.assertIs(getattr(helper, name), value)
+
+
+class RunnerInvocationVocabularyTests(unittest.TestCase):
+    def test_operation_enum_matches_the_envelope(self) -> None:
+        vocabulary = sorted(envelope.SUPPORTED_RUNNER_OPERATIONS)
+        self.assertEqual(vocabulary, sorted(release.RUNNER_OPERATIONS))
+        contracts = RELEASE_FIXTURES / "contracts"
+        schema = json.loads((contracts / "runner-invocation.schema.json").read_text(encoding="utf-8"))
+        release_schema = json.loads((contracts / "release-readiness.schema.json").read_text(encoding="utf-8"))
+        self.assertEqual(vocabulary, sorted(schema["properties"]["operation"]["enum"]))
+        record_schema = release_schema["$defs"]["runner_invocation"]
+        self.assertEqual(vocabulary, sorted(record_schema["properties"]["operation"]["enum"]))
+
+    def test_records_report_the_operation_they_send(self) -> None:
+        cases = json.loads((RELEASE_FIXTURES / "runner-invocation-cases.json").read_text(encoding="utf-8"))["cases"]
+        for case in (item for item in cases if "candidate_results" in item):
+            with self.subTest(case_id=case["case_id"]):
+                record, _diagnostics = runner_invocation.runner_invocation_record(case, None, REPO_ROOT)
+                self.assertEqual(record["runner_request"]["operation"], record["operation"])
+                self.assertIn(record["operation"], envelope.SUPPORTED_RUNNER_OPERATIONS)
+
+
 if __name__ == "__main__":
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(RunnerFoundationTests)
+    loader = unittest.defaultTestLoader
+    suite = unittest.TestSuite(
+        loader.loadTestsFromTestCase(case)
+        for case in (
+            RunnerFoundationTests,
+            RunnerTrustRosterTests,
+            PayloadRequiredSourceTests,
+            RunnerInvocationVocabularyTests,
+            RunnerLayeringTests,
+        )
+    )
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     total = result.testsRun
     failed = len(result.failures) + len(result.errors)

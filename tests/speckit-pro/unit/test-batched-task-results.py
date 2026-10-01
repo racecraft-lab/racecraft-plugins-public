@@ -6,6 +6,7 @@ import copy
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -15,28 +16,23 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "speckit-pro"))
 sys.path.insert(0, str(REPO_ROOT / "tests/speckit-pro/lib"))
+from git_fixture import commit_baseline, git
+from task_feature_fixture import build_task_feature
 from test_result import run_counted
+from speckit_pro_runner.execution_control import is_runner_byproduct
+from speckit_pro_runner.helpers.mutation import dirty_worktree_diagnostic
 from speckit_pro_runner.task_execution import fingerprints
 from speckit_pro_runner.task_results import MAX_LINEAGE_DEPTH, non_tdd_reason, partition_sha256, task_results
 
 
-class BatchedTaskResultsTests(unittest.TestCase):
+class _TaskResultsFixture(object):
+    """Shared fixture for the tests below."""
+
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.temp.cleanup)
-        self.root = Path(self.temp.name).resolve()
-        self.feature = self.root / "feature"
-        (self.feature / ".process").mkdir(parents=True)
-        (self.feature / "spec.md").write_text("spec\n")
-        (self.feature / "plan.md").write_text("plan\n")
-        self.body = "## Phase 1\n" + "".join(
-            f"- [ ] T{i:03d} [P] Add capability behavior {i}\n" for i in range(1, 13))
+        self.root = Path(tempfile.mkdtemp()).resolve()
+        self.addCleanup(shutil.rmtree, self.root)
+        self.feature, self.body, self.meta = build_task_feature(self.root)
         (self.feature / "tasks.md").write_text(self.body)
-        self.meta = {"schema_version": "task-execution.v1",
-                     "fingerprints": fingerprints("spec\n", "plan\n", self.body),
-                     "tasks": {f"T{i:03d}": {"capability_group": "feature", "depends_on": [],
-                               "owns": [f"src/unit{i}.py"], "tdd_unit": f"behavior-{i}"}
-                               for i in range(1, 13)}}
         self.metadata_path = self.feature / ".process/task-execution.json"
         self.metadata_path.write_text(json.dumps(self.meta))
         self.inputs = {"tasks_file": "feature/tasks.md",
@@ -77,6 +73,8 @@ class BatchedTaskResultsTests(unittest.TestCase):
     def first_report(self):
         return self.report(self.call()["journal"]["batches"][0])
 
+
+class BatchedTaskResultsTests(_TaskResultsFixture, unittest.TestCase):
     def rejected_unchanged(self, report):
         before = self.path.read_bytes()
         with self.assertRaises(ValueError):
@@ -168,20 +166,6 @@ class BatchedTaskResultsTests(unittest.TestCase):
         restarted = self.call()
         self.assertEqual(restarted["journal"]["batches"][0]["tasks"][0], "T001")
         self.assertEqual(self.path.read_bytes(), before)
-
-    def test_unfinished_results_preserved_and_require_checkpoint(self):
-        report = self.first_report()
-        report["results"][0]["status"] = "unfinished"
-        report["results"][0]["evidence_event_ids"] = []
-        report["native_observations"] = report["native_observations"][3:]
-        result = self.call("record", **report)
-        self.assertEqual(result["helper_exit_code"], 1)
-        self.assertEqual(result["disposition"], "checkpoint_required")
-        self.assertEqual(result["journal"]["reports"][0]["results"], report["results"])
-        inspected = self.call("inspect", mode="read_only")
-        self.assertEqual(inspected["disposition"], "checkpoint_required")
-        self.assertEqual(inspected["helper_exit_code"], 0)
-        self.assertEqual(self.call()["disposition"], "checkpoint_required")
 
     def test_same_unit_cannot_report_test_only_green(self):
         self.meta["tasks"]["T002"]["tdd_unit"] = "behavior-1"
@@ -312,6 +296,71 @@ class BatchedTaskResultsTests(unittest.TestCase):
         result = self.call("record", **complete)
         self.assertEqual(len(result["journal"]["reports"]), 2)
         self.assertEqual(result["helper_exit_code"], 0)
+
+    def record_unfinished_red(self):
+        complete = self.first_report()
+        partial = copy.deepcopy(complete)
+        partial["results"][0]["status"] = "unfinished"
+        partial["results"][0]["evidence_event_ids"] = ["T001-red"]
+        partial["native_observations"] = partial["native_observations"][:1] + partial["native_observations"][3:]
+        self.assertEqual(self.call("record", **partial)["helper_exit_code"], 1)
+        return complete
+
+    def test_completing_report_cites_its_own_earlier_red_evidence(self):
+        complete = self.record_unfinished_red()
+        result = self.call("record", **complete)
+        self.assertEqual(result["helper_exit_code"], 0)
+        self.assertEqual(len(result["journal"]["reports"]), 2)
+        self.assertEqual(self.call("inspect", mode="read_only")["helper_exit_code"], 0)
+
+    def test_changed_earlier_red_event_is_refused(self):
+        complete = self.record_unfinished_red()
+        complete["native_observations"][0]["snapshot_sha256"] = hashlib.sha256(b"changed").hexdigest()
+        before = self.path.read_bytes()
+        with self.assertRaisesRegex(ValueError, "only unchanged completed task observations"):
+            self.call("record", **complete)
+        self.assertEqual(before, self.path.read_bytes())
+
+    def test_earlier_red_event_cited_by_another_task_is_refused(self):
+        complete = self.record_unfinished_red()
+        complete["results"][1]["evidence_event_ids"] = ["T001-red", "T002-green", "T002-refactor"]
+        complete["native_observations"] = [e for e in complete["native_observations"] if e["event_id"] != "T002-red"]
+        with self.assertRaisesRegex(ValueError, "missing or mismatched native event reference"):
+            self.call("record", **complete)
+
+    def test_task_cannot_recite_an_event_another_task_recorded(self):
+        self.body = self.body.replace("Add capability behavior 1\n", "Research the interface\n").replace(
+            "Add capability behavior 2\n", "Research the schema\n")
+        (self.feature / "tasks.md").write_text(self.body)
+        self.meta["fingerprints"] = fingerprints("spec\n", "plan\n", self.body)
+        self.meta["tasks"]["T002"]["tdd_unit"] = "behavior-1"
+        self.metadata_path.write_text(json.dumps(self.meta))
+        batch = self.call()["journal"]["batches"][0]
+        self.assertEqual(batch["tasks"], ["T001", "T002"])
+        self.assertIn("tdd_not_applicable_reason", batch)
+        complete = self.native_task_report(batch)
+        partial = copy.deepcopy(complete)
+        partial["results"][1]["status"] = "unfinished"
+        partial["results"][1]["evidence_event_ids"] = []
+        partial["native_observations"] = partial["native_observations"][:1]
+        self.assertEqual(self.call("record", **partial)["helper_exit_code"], 1)
+        complete["results"][1]["status"] = "unfinished"
+        complete["results"][1]["evidence_event_ids"] = ["T001-result"]
+        complete["native_observations"] = complete["native_observations"][:1]
+        before = self.path.read_bytes()
+        with self.assertRaisesRegex(ValueError, "only unchanged completed task observations"):
+            self.call("record", **complete)
+        self.assertEqual(before, self.path.read_bytes())
+
+    def test_red_event_recorded_under_another_batch_is_refused(self):
+        batches = self.call()["journal"]["batches"]
+        self.call("record", **self.report(batches[0]))
+        second = self.report(batches[1])
+        first_red = self.report(batches[0])["native_observations"][0]
+        second["results"][0]["evidence_event_ids"][0] = first_red["event_id"]
+        second["native_observations"][0] = first_red
+        with self.assertRaisesRegex(ValueError, "missing or mismatched native event reference"):
+            self.call("record", **second)
 
     def test_successor_rejects_missing_or_modified_retained_history(self):
         self.call()
@@ -449,7 +498,7 @@ class BatchedTaskResultsTests(unittest.TestCase):
         self.assertEqual(result["status"], "expected_failure")
         code, inspected = self.runner("inspect", mode="read_only")
         self.assertEqual(code, 0, inspected)
-        self.assertEqual(inspected["data"]["disposition"], "checkpoint_required")
+        self.assertEqual(inspected["data"]["disposition"], "redispatch")
         report["results"].append(copy.deepcopy(report["results"][0]))
         code, result = self.runner("record", **report)
         self.assertEqual(code, 2, result)
@@ -457,7 +506,46 @@ class BatchedTaskResultsTests(unittest.TestCase):
         code, result = self.runner("inspect", mode="read_only")
         self.assertEqual(code, 2, result)
 
+    def test_journal_never_dirties_the_worktree_or_joins_a_directory_wide_add(self):
+        commit_baseline(self.root, "fixture")
+        self.assertIsNone(dirty_worktree_diagnostic({}, self.root))
+        self.call()
+        self.assertTrue(self.path.is_file())
+        self.assertTrue(is_runner_byproduct(self.inputs["journal_file"]))
+        self.assertIsNone(dirty_worktree_diagnostic({}, self.root))
+        git(self.root, "add", "-A")
+        self.assertEqual([name for name in git(self.root, "diff", "--cached", "--name-only", "-z").stdout.split("\0") if name], [])
+        (self.root / "unrelated.txt").write_text("unrelated\n")
+        self.assertEqual(dirty_worktree_diagnostic({}, self.root)["code"], "dirty_worktree")
+
+
+class BatchedTaskResultsRepairTests(_TaskResultsFixture, unittest.TestCase):
+    """Unfinished results route their repair to the batch's own agent."""
+
+    def test_unfinished_results_preserved_and_routed_to_their_batch_agent(self):
+        report = self.first_report()
+        report["results"][0]["status"] = "unfinished"
+        report["results"][0]["evidence_event_ids"] = []
+        report["native_observations"] = report["native_observations"][3:]
+        result = self.call("record", **report)
+        batch = result["journal"]["batches"][0]
+        self.assertEqual(result["helper_exit_code"], 1)
+        self.assertEqual(result["disposition"], "redispatch")
+        self.assertEqual(result["reasons"], ["unfinished_task_results"])
+        self.assertEqual(result["repair"], {"retry": "task-results", "batches": [
+            {"batch_id": batch["id"], "agent": batch["agent"], "task_ids": [report["results"][0]["task_id"]]}]})
+        self.assertEqual(result["journal"]["reports"][0]["results"], report["results"])
+        inspected = self.call("inspect", mode="read_only")
+        self.assertEqual(inspected["disposition"], "redispatch")
+        self.assertEqual(inspected["helper_exit_code"], 0)
+        self.assertEqual(self.call()["disposition"], "redispatch")
+
+    def test_complete_results_need_no_repair(self):
+        result = self.call("record", **self.first_report())
+        self.assertEqual({key: result.get(key) for key in ("disposition", "repair")}, {"disposition": "continue", "repair": None})
+
 
 if __name__ == "__main__":
-    raise SystemExit(run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(BatchedTaskResultsTests),
-                                label="test-batched-task-results"))
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
+                               for case in (BatchedTaskResultsTests, BatchedTaskResultsRepairTests))
+    raise SystemExit(run_counted(suite, label="test-batched-task-results"))

@@ -13,6 +13,21 @@ license: MIT
 
 Before researching or recommending, enumerate the tools and skills your session actually exposes — do not assume a fixed set; the user may have installed anything — and select the best fit per `${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/capability-discovery.md`. Ground every external fact you assert in a real tool, skill, or file result per `${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/references/grounding.md`, and abstain when nothing grounds it.
 
+Address ALL unresolved review comments on a pull request,
+fix the code, and mark each thread resolved.
+
+## Scope
+
+Use this skill when the user wants review feedback addressed on an existing
+pull request. The goal is not a general code review. The goal is to read the
+unresolved review feedback, make the necessary code changes, verify the branch,
+reply to the review comments, and resolve the threads.
+
+If the user wants a fresh review of a PR, use a review workflow instead. If
+they want to learn how the post-PR loop works, redirect to
+`/speckit-pro:speckit-coach`.
+This skill is for remediation and closure.
+
 ## Input
 
 The user provides either:
@@ -38,9 +53,17 @@ If just a number:
 Check out the PR branch and verify the actual code behavior in that
 checkout. Never review or remediate from the diff alone.
 
+Before editing anything, confirm `gh` is available and authenticated if thread
+resolution is required, and inspect the repo state with `git status` so you
+know whether unrelated user changes are already present. Do not overwrite
+unrelated dirty worktree changes. If the current checkout cannot safely host
+the remediation, create or switch to the correct branch without discarding
+existing work.
+
 ### 2. Discover Project Commands
 
-Read CLAUDE.md and package.json (or equivalent) to find:
+Read the project guidance files (CLAUDE.md, AGENTS.md) and package.json (or
+equivalent) to find:
 - BUILD command
 - TYPECHECK command
 - LINT command
@@ -116,7 +139,7 @@ Dispatch subagents only when `PARTITIONS` has 2 or more entries and the
 fixes are large enough to repay each worker's setup cost (it re-reads the
 file, rebuilds context, and re-runs the checks). A few small fixes are
 faster to make directly, one partition at a time. When you dispatch, send
-ALL partitions in ONE assistant message via background subagents:
+ALL partitions at once:
 
 ```text
 For each (file_path, threads) in PARTITIONS:
@@ -124,44 +147,53 @@ For each (file_path, threads) in PARTITIONS:
     subagent_type: "general-purpose",
     run_in_background: true,
     description: "Resolve PR #<N> comments on <file_path>",
-    prompt: """
-      Fix the following review threads on `<file_path>`. Threads are
-      ordered by line number; address them in order.
-
-      ## Project commands (from Step 2)
-      BUILD: <BUILD>
-      TYPECHECK: <TYPECHECK>
-      UNIT_TEST: <UNIT_TEST>
-      LINT_FIX: <LINT_FIX>
-
-      ## Threads
-      <list of {thread_id, line, comment_body, comment_id}>
-
-      ## What to do for each thread
-      (a) CODE FIX → Edit the file; run BUILD+TYPECHECK+UNIT_TEST; fix
-          until clean.
-      (b) STYLE → run LINT_FIX.
-      (c) QUESTION → prepare a reply (no code change).
-      (d) FALSE POSITIVE → prepare a reply explaining why no change.
-
-      ## When done
-      Commit ALL fixes for this file in one commit:
-        git add <file_path>
-        git commit -m "fix: address review - <brief summary>"
-      Return a structured summary:
-        - Threads handled (count, IDs, action taken per ID)
-        - Commit SHA (if any fix committed; null otherwise)
-        - Verification result (pass/fail; if fail, surface error)
-        - Per-thread reply text (for the orchestrator to post)
-      Do NOT push. Do NOT post replies. Do NOT resolve threads.
-      The orchestrator handles git push and gh API calls serially.
-    """
+    prompt: <the worker prompt below>
   )
+```
+
+The worker prompt:
+
+```text
+Fix the following review threads on `<file_path>`. Threads are
+ordered by line number; address them in order.
+
+## Project commands (from Step 2)
+BUILD: <BUILD>
+TYPECHECK: <TYPECHECK>
+UNIT_TEST: <UNIT_TEST>
+LINT_FIX: <LINT_FIX>
+
+## Threads
+<list of {thread_id, line, comment_body, comment_id}>
+
+## What to do for each thread
+Read the referenced code and its surroundings first.
+(a) CODE FIX → make the smallest correct fix; run
+    BUILD+TYPECHECK+UNIT_TEST; fix until clean.
+(b) STYLE → run LINT_FIX.
+(c) QUESTION → prepare a reply (no code change).
+(d) FALSE POSITIVE → prepare a reply explaining why no change.
+
+## When done
+Commit ALL fixes for this file in one commit:
+  git add <file_path>
+  git commit -m "fix: address review - <brief summary>"
+Return a structured summary:
+  - Threads handled (count, IDs, action taken per ID)
+  - Commit SHA (if any fix committed; null otherwise)
+  - Verification result (pass/fail; if fail, surface error)
+  - Per-thread reply text (for the orchestrator to post)
+Do NOT push. Do NOT post replies. Do NOT resolve threads.
+The orchestrator handles git push and gh API calls serially.
 ```
 
 If `PARTITIONS` has 1 entry (all threads on one file), do NOT spawn a
 subagent — process directly in the orchestrator (no parallelism win,
 extra tool-call latency).
+
+When a reviewer is simply asking a question and the existing code is
+correct, do not churn the code just to make the thread go away. Reply
+with a grounded explanation instead.
 
 #### 4d. Process cross-file comments serially
 
@@ -169,7 +201,29 @@ After all partition subagents return, process `CROSS_FILE` threads
 one at a time in the orchestrator (each touches multiple files; serial
 prevents inter-thread race).
 
-### 5. Reply and Resolve Each Thread (orchestrator, serial)
+### 5. Verify, Push, Confirm
+
+Do not resolve a thread until the relevant code path has been verified. After
+all comments are addressed, finish in one pass:
+
+1. Run the full suite: FULL_VERIFY, or BUILD && TYPECHECK && LINT &&
+   UNIT_TEST && INTEGRATION_TEST. A failure here reopens Step 4; do
+   not push a red branch. If verification fails, keep working until you
+   either fix it or can clearly explain why the repo was already failing
+   independently. Never reply “fixed” on a thread while the branch is still
+   broken.
+2. Run `git push`.
+3. Confirm with `git status -sb`: the branch line must not read
+   `ahead`. Do not report completion until that confirmation is in
+   hand. While an autopilot workflow is active, the plugin's Stop hook
+   blocks ending the turn with unpushed commits.
+
+Group related review fixes into intentional commits rather than one commit
+per comment. Do not amend or rewrite history unless the user explicitly asks
+for it. If the repo already has unrelated local changes, work around them
+rather than reverting them.
+
+### 6. Reply and Resolve Each Thread (orchestrator, serial)
 
 The orchestrator collects partition-subagent results, then for each
 thread (parallel partitions + serial cross-file) posts the reply and
@@ -195,18 +249,9 @@ repos/<OWNER>/<REPO>/pulls/<PR_NUMBER>/comments` with `path`, `line`,
 `side`, and `commit_id` targeting the exact diff line. A summary
 comment is not a substitute for an inline one.
 
-### 6. Verify, Push, Confirm
-
-After all comments are addressed, finish in one pass:
-
-1. Run the full suite: FULL_VERIFY, or BUILD && TYPECHECK && LINT &&
-   UNIT_TEST && INTEGRATION_TEST. A failure here reopens Step 4; do
-   not push a red branch.
-2. Run `git push`.
-3. Confirm with `git status -sb`: the branch line must not read
-   `ahead`. Do not report completion until that confirmation is in
-   hand. While an autopilot workflow is active, the plugin's Stop hook
-   blocks ending the turn with unpushed commits.
+If GitHub tooling is unavailable, stop after making, verifying, and pushing
+the fix, and tell the user that thread resolution could not be completed from
+the current environment.
 
 ### 7. Report Summary
 
@@ -220,9 +265,20 @@ After all comments are addressed, finish in one pass:
 - Style fixes: N (committed)
 - Replies only: N (questions/false positives)
 
-**Commits pushed:** N
+**Verification:** <commands run and result>
+**Commits pushed:** N (confirmed: `git status -sb` shows no `ahead`)
 **Threads resolved:** N
 
 **Remaining:** 0 unresolved
 (or "N comments could not be resolved — manual review needed")
 ```
+
+If anything remains open, name the blocker explicitly: missing auth, failing
+verification, ambiguous feedback, or a thread that needs a human decision.
+
+## Boundaries
+
+Stay within files touched by the PR unless a review comment forces a broader
+change. Do not turn a review-remediation task into a drive-by refactor. The
+goal is to satisfy the actionable review feedback and leave the branch in a
+mergeable state.

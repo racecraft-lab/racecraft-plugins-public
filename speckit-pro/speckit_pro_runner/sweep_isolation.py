@@ -23,6 +23,18 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any, Iterator
 
+from .atomic_write import snapshot_write_target, write_bytes_atomic
+from .cli_probe import probe
+from .private_state import ensure_private_directory, write_private_json
+from .sweep_export import (
+    SWEEP_SELF_REPLY_PREFIX,
+    SWEEP_TRUSTED_ASSOCIATIONS,
+    sweep_analyst_payload,
+    sweep_cut_utf8,
+    sweep_export_record,
+    sweep_logged_comment_ids,
+)
+
 
 MAX_BLOB_BYTES = 256 * 1024
 MAX_SNAPSHOT_BYTES = 16 * 1024 * 1024
@@ -33,6 +45,8 @@ MAX_SEARCH_LITERAL_BYTES = 512
 MAX_SEARCH_RESULTS = 50
 MAX_SEARCH_LINE_BYTES = 1_024
 MAX_COMMENT_BYTES = 8_192
+MAX_GH_OUTPUT_BYTES = 16 * 1024 * 1024
+GH_TIMEOUT_SECONDS = 60
 MAX_SESSION_COMMENTS = 1_024
 MAX_SESSION_COMMENT_BYTES = 8 * 1024 * 1024
 MAX_REASON_BYTES = 512
@@ -52,6 +66,12 @@ HEX_OBJECT_RE = re.compile(r"^[0-9a-f]{40}(?:[0-9a-f]{24})?$")
 ARTIFACT_ALLOWLIST = ("spec.md", "plan.md", "tasks.md")
 CLASS_VALUES = ("amended", "answered", "deferred", "no action")
 PERSPECTIVES = ("codebase", "spec-context", "domain")
+# The three model-call stages, in the order a comment moves through them.
+STAGES = ("classifier", "perspective", "synthesis")
+# Round 3 tiebreak: one more synthesis call by a fresh analyst, only after a first
+# synthesis returned human_review. Its own values keep it apart from round one.
+TIEBREAK_AGREEMENT = "tiebreak"
+TIEBREAK_SCOPE_BASIS = "scope_unsettled"
 BROKER_TOOL_NAMES = (
     "snapshot_list",
     "snapshot_read",
@@ -70,6 +90,7 @@ BROKER_ERROR_CODES = (
     "evidence_path",
     "perspective_mismatch",
     "synthesis_consistency",
+    "anchor_ambiguous",
     "receipt_violation",
     "isolation_violation",
     "schema_validation",
@@ -93,7 +114,35 @@ class MutationViolation(ValueError):
 
 
 class CaptureViolation(RuntimeError):
-    """The private GitHub observation could not be captured completely."""
+    """The private GitHub observation could not be captured completely.
+
+    `reason` is the closed word the capture surface reports, so the orchestrator
+    can tell an absent tool or credential (a stop) from a spent retry schedule.
+    """
+
+    reason = "observation_failed"
+
+
+class GitHubUnavailable(CaptureViolation):
+    reason = "gh_unavailable"
+
+
+class GitHubUnauthenticated(CaptureViolation):
+    reason = "gh_not_authenticated"
+
+
+class GitHubRateLimited(CaptureViolation):
+    reason = "rate_limited"
+
+
+class GitHubMalformedOutput(CaptureViolation):
+    reason = "malformed_output"
+
+
+CAPTURE_REASONS = tuple(
+    violation.reason
+    for violation in (GitHubUnavailable, GitHubUnauthenticated, GitHubRateLimited, GitHubMalformedOutput, CaptureViolation)
+)
 
 
 @dataclass(frozen=True)
@@ -425,43 +474,73 @@ def default_state_root() -> Path:
     return Path(tempfile.gettempdir()) / f"speckit-pro-feedback-sweep-{uid}"
 
 
-def _bounded_comment_body(body: str) -> tuple[str, bool]:
-    raw = body.encode("utf-8")
-    if len(raw) <= MAX_COMMENT_BYTES:
-        return body, False
-    end = MAX_COMMENT_BYTES
-    while end > 0 and (raw[end] & 0xC0) == 0x80:
-        end -= 1
-    return raw[:end].decode("utf-8"), True
+# Bounded backoff for a rate limit, a timeout, a server error, or output that
+# cannot be parsed: one first attempt plus one retry per delay. Only a missing
+# tool or missing credentials end a read without retrying.
+GH_RETRY_DELAYS = (2.0, 8.0, 30.0)
+_GH_RATE_LIMIT = re.compile(r"rate limit|abuse detection|HTTP 429", re.IGNORECASE)
+_GH_TRANSIENT = re.compile(r"HTTP 5\d\d|timed? ?out|temporar", re.IGNORECASE)
 
 
-def _run_gh(args: list[str], repo_root: Path) -> str:
-    executable = shutil.which("gh")
-    if executable is None:
-        raise CaptureViolation("GitHub CLI is unavailable")
-    try:
-        completed = subprocess.run(
-            [executable, "api", *args],
-            cwd=repo_root,
-            env=os.environ.copy(),
-            text=True,
-            capture_output=True,
-            check=False,
-            timeout=60,
-            shell=False,
-        )
-    except (OSError, subprocess.TimeoutExpired) as exc:
-        raise CaptureViolation("GitHub observation failed") from exc
-    if completed.returncode != 0 or len(completed.stdout.encode("utf-8")) > 16 * 1024 * 1024:
+def _sleep(seconds: float) -> None:
+    time.sleep(seconds)
+
+
+def _gh_authenticated(repo_root: Path) -> bool:
+    return probe(repo_root, ["gh", "auth", "status"], allowed=("gh",), timeout=GH_TIMEOUT_SECONDS)["exit_status"] == 0
+
+
+def _gh_attempt(args: list[str], repo_root: Path) -> tuple[Any, str]:
+    """One JSON read: (value, "") on success, else (None, failure kind).
+
+    The kind is a closed word, never gh's own text, so no stderr byte can reach
+    a violation message.
+    """
+    result = probe(repo_root, ["gh", "api", *args], allowed=("gh",), timeout=GH_TIMEOUT_SECONDS)
+    if result["exit_status"] != 0:
+        stderr = str(result["stderr_tail"])
+        if _GH_RATE_LIMIT.search(stderr):
+            return None, "rate_limit"
+        return None, "transient" if _GH_TRANSIENT.search(stderr) else "failed"
+    stdout = str(result["stdout_tail"])
+    if len(stdout.encode("utf-8")) > MAX_GH_OUTPUT_BYTES:
         raise CaptureViolation("GitHub observation failed")
-    return completed.stdout
+    try:
+        return json.loads(stdout), ""
+    except json.JSONDecodeError:
+        return None, "malformed"
+
+
+def _capture_failure(kind: str, repo_root: Path) -> CaptureViolation:
+    """The violation for a read that failed on every attempt it was allowed."""
+    if kind == "failed" and not _gh_authenticated(repo_root):
+        return GitHubUnauthenticated("GitHub CLI is not authenticated")
+    if kind == "rate_limit":
+        return GitHubRateLimited("GitHub rate limit persisted after retries")
+    if kind == "malformed":
+        return GitHubMalformedOutput("GitHub observation returned malformed JSON")
+    return CaptureViolation("GitHub observation failed")
 
 
 def _run_gh_json(args: list[str], repo_root: Path) -> Any:
-    try:
-        return json.loads(_run_gh(args, repo_root))
-    except json.JSONDecodeError as exc:
-        raise CaptureViolation("GitHub observation returned malformed JSON") from exc
+    """Run one `gh api` JSON read, retrying transient failures with backoff.
+
+    Output is decoded inside the retry loop, so output that cannot be parsed
+    retries like a rate limit. A missing tool stops at once. A failure gh names
+    no cause for is not retried; `gh auth status` then tells missing
+    credentials from a plain failure.
+    """
+    if shutil.which("gh") is None:
+        raise GitHubUnavailable("GitHub CLI is unavailable")
+    kind = ""
+    for delay in (*GH_RETRY_DELAYS, None):
+        value, kind = _gh_attempt(args, repo_root)
+        if not kind:
+            return value
+        if kind == "failed" or delay is None:
+            break
+        _sleep(delay)
+    raise _capture_failure(kind, repo_root)
 
 
 THREADS_QUERY = """
@@ -505,7 +584,7 @@ def _review_comment_record(node: Any) -> dict[str, Any]:
     body = node.get("body")
     if not isinstance(body, str):
         raise CaptureViolation("review thread comment has no body")
-    bounded, truncated = _bounded_comment_body(body)
+    bounded, truncated = sweep_cut_utf8(body, MAX_COMMENT_BYTES)
     return {
         "id": node.get("id"),
         "surface": "review_thread",
@@ -619,7 +698,7 @@ def read_github_comments(
             if not isinstance(node, dict) or not isinstance(node.get("body"), str):
                 raise CaptureViolation("pull-request conversation comment is malformed")
             user = node.get("user")
-            bounded, truncated = _bounded_comment_body(node["body"])
+            bounded, truncated = sweep_cut_utf8(node["body"], MAX_COMMENT_BYTES)
             conversation_comments.append(
                 {
                     "id": node.get("node_id"),
@@ -657,13 +736,6 @@ def capture_session_from_comments(
     """Filter one complete private observation before creating a model session."""
     if not isinstance(self_login, str) or not self_login.strip():
         raise CaptureViolation("authenticated GitHub login is required")
-    from .helpers.read_only import (
-        SWEEP_SELF_REPLY_PREFIX,
-        SWEEP_TRUSTED_ASSOCIATIONS,
-        sweep_export_record,
-        sweep_logged_comment_ids,
-    )
-
     snapshot = GitSnapshot.capture(repo_root)
     logged, unreadable_row = sweep_logged_comment_ids(_workflow_text(snapshot, workflow_file))
     if unreadable_row is not None:
@@ -732,36 +804,7 @@ def capture_github_session(
 
 
 def _ensure_private_directory(path: Path) -> None:
-    path.mkdir(mode=0o700, parents=True, exist_ok=True)
-    info = path.lstat()
-    if stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode):
-        raise ReceiptViolation("private session root is unsafe")
-    uid = getattr(os, "getuid", lambda: info.st_uid)()
-    if info.st_uid != uid:
-        raise ReceiptViolation("private session root has the wrong owner")
-    if stat.S_IMODE(info.st_mode) & 0o077:
-        os.chmod(path, 0o700)
-
-
-def _write_private_json(path: Path, payload: dict[str, Any]) -> None:
-    encoded = (json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
-    temporary = path.with_name(f".{path.name}.{secrets.token_hex(8)}.tmp")
-    fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600)
-    try:
-        with os.fdopen(fd, "wb") as handle:
-            fd = -1
-            handle.write(encoded)
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(temporary, path)
-    finally:
-        if fd >= 0:
-            os.close(fd)
-        try:
-            temporary.unlink()
-        except FileNotFoundError:
-            # Atomic replacement may have already removed the temporary path.
-            pass
+    ensure_private_directory(path, label="private session root", violation=ReceiptViolation)
 
 
 def _safe_session_path(state_root: Path, session_id: str) -> Path:
@@ -885,7 +928,7 @@ class SweepSession:
             "accepted": {"classifier": {}, "perspective": {}, "synthesis": {}},
         }
         try:
-            _write_private_json(session_path / "state.json", state)
+            write_private_json(session_path / "state.json", state)
             lock_fd = os.open(session_path / "state.lock", os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
             os.close(lock_fd)
         except OSError:
@@ -960,7 +1003,7 @@ class SweepSession:
                     os.close(state_fd)
             self._validate_state(state)
             yield state
-            _write_private_json(self.state_path, state)
+            write_private_json(self.state_path, state)
         finally:
             try:
                 fcntl.flock(fd, fcntl.LOCK_UN)
@@ -1080,15 +1123,34 @@ class SweepSession:
                 return comment
         raise SchemaViolation("comment id is not part of this sweep session")
 
+    def _accepted_payload(
+        self, state: dict[str, Any], stage: str, comment_id: str
+    ) -> dict[str, Any] | None:
+        digest = state["accepted"][stage].get(comment_id)
+        result = state["results"].get(digest) if isinstance(digest, str) else None
+        payload = result.get("payload") if isinstance(result, dict) else None
+        return payload if isinstance(payload, dict) else None
+
     def _accepted_amended_classifier(
         self, state: dict[str, Any], comment_id: str
     ) -> dict[str, Any]:
-        digest = state["accepted"]["classifier"].get(comment_id)
-        result = state["results"].get(digest) if isinstance(digest, str) else None
-        payload = result.get("payload") if isinstance(result, dict) else None
-        if not isinstance(payload, dict) or payload.get("class") != "amended":
+        payload = self._accepted_payload(state, "classifier", comment_id)
+        if payload is None or payload.get("class") != "amended":
             raise ReceiptViolation("an accepted amended classifier result is required")
         return payload
+
+    def _require_consensus_prerequisites(
+        self, state: dict[str, Any], comment_id: str, stage: str
+    ) -> None:
+        self._accepted_amended_classifier(state, comment_id)
+        if stage != "synthesis":
+            return
+        accepted = state["accepted"]["perspective"].get(comment_id, {})
+        if not isinstance(accepted, dict) or set(accepted) != set(PERSPECTIVES):
+            raise ReceiptViolation("three accepted perspectives are required")
+        prior = self._accepted_payload(state, "synthesis", comment_id)
+        if prior is not None and (prior["outcome"] != "human_review" or is_tiebreak_result(prior)):
+            raise ReceiptViolation("the round 3 tiebreak follows one unresolved synthesis only")
 
     def issue_capability(
         self,
@@ -1098,7 +1160,7 @@ class SweepSession:
         perspective: str | None = None,
     ) -> str:
         """Mint one opaque model-call capability bound to closed private context."""
-        if stage not in {"classifier", "perspective", "synthesis"}:
+        if stage not in STAGES:
             raise SchemaViolation("capability stage is unknown")
         if stage == "perspective":
             if perspective not in PERSPECTIVES:
@@ -1109,11 +1171,7 @@ class SweepSession:
             self._assert_live_head(state)
             self._comment(state, comment_id)
             if stage in {"perspective", "synthesis"}:
-                self._accepted_amended_classifier(state, comment_id)
-            if stage == "synthesis":
-                accepted = state["accepted"]["perspective"].get(comment_id, {})
-                if not isinstance(accepted, dict) or set(accepted) != set(PERSPECTIVES):
-                    raise ReceiptViolation("three accepted perspectives are required")
+                self._require_consensus_prerequisites(state, comment_id, stage)
             binding = {
                 "session_id": self.session_id,
                 "head": state["head"],
@@ -1176,8 +1234,6 @@ class SweepSession:
         with self._locked_state() as state:
             self._assert_live_head(state)
             comment = self._comment(state, comment_id)
-            from .helpers.read_only import sweep_analyst_payload, sweep_export_record
-
             normalized = comment["body"].replace("\r\n", "\n").replace("\r", "\n")
             export = sweep_export_record(normalized)
             matched_lines = [] if export is None else export["matched_lines"]
@@ -1228,10 +1284,14 @@ class SweepSession:
                     edit = normalized.get("edit")
                     if isinstance(edit, dict) and edit.get("file") != classifier.get("target"):
                         raise SchemaViolation("synthesis target differs from the accepted classifier target")
+                prior = self._accepted_payload(state, "synthesis", comment_id)
+                tiebreak = prior is not None and prior["outcome"] == "human_review"
+                if is_tiebreak_result(normalized) != tiebreak:
+                    raise SchemaViolation("tiebreak values belong to the round 3 call only")
                 accepted_perspectives = state["accepted"]["perspective"].get(comment_id, {})
-                if isinstance(accepted_perspectives, dict) and set(accepted_perspectives) == set(
-                    PERSPECTIVES
-                ):
+                if not tiebreak and isinstance(accepted_perspectives, dict) and set(
+                    accepted_perspectives
+                ) == set(PERSPECTIVES):
                     perspective_records = [
                         state["results"][accepted_perspectives[name]]["payload"]
                         for name in PERSPECTIVES
@@ -1276,7 +1336,7 @@ class SweepSession:
             }
             return RECEIPT_PREFIX + digest
 
-    def _consume_result(self, receipt: str, *, expected_stage: str) -> dict[str, Any]:
+    def consume_result(self, receipt: str, *, expected_stage: str) -> dict[str, Any]:
         match = RECEIPT_RE.fullmatch(receipt) if isinstance(receipt, str) else None
         if match is None:
             raise ReceiptViolation("result is not an exact sweep receipt")
@@ -1303,7 +1363,7 @@ class SweepSession:
             return json.loads(json.dumps(result))
 
     def accept_receipt(self, receipt: str, *, expected_stage: str) -> dict[str, Any]:
-        result = self._consume_result(receipt, expected_stage=expected_stage)
+        result = self.consume_result(receipt, expected_stage=expected_stage)
         payload = result["payload"]
         if expected_stage == "classifier":
             return {
@@ -1348,11 +1408,16 @@ class SweepSession:
                 found = accepted["perspective"].get(comment_id, {})
                 if set(found) != set(PERSPECTIVES):
                     raise ReceiptViolation("three accepted perspectives are required")
-                return {
+                inputs = {
                     "comment_id": comment_id,
                     "target": classifier["target"],
                     "perspectives": [state["results"][found[name]]["payload"] for name in PERSPECTIVES],
                 }
+                prior = self._accepted_payload(state, "synthesis", comment_id)
+                if prior is not None and prior["outcome"] == "human_review":
+                    inputs["tiebreak"] = True
+                    inputs["prior_basis"] = prior["basis"]
+                return inputs
             raise ReceiptViolation("consensus stage is unknown")
 
 
@@ -1376,6 +1441,38 @@ def _safe_evidence_path(value: str, snapshot: GitSnapshot) -> None:
         snapshot.entry(match.group(1))
     except IsolationViolation as exc:
         raise SchemaViolation("evidence citation is outside the snapshot") from exc
+
+
+def is_tiebreak_result(payload: dict[str, Any]) -> bool:
+    """True for a synthesis record that carries a round 3 tiebreak value."""
+    return payload.get("agreement") == TIEBREAK_AGREEMENT or payload.get("basis") == TIEBREAK_SCOPE_BASIS
+
+
+def _anchor_count(snapshot: GitSnapshot, file_name: str, anchor: str) -> int:
+    """How often ``anchor`` occurs across every snapshot file named ``file_name``.
+
+    The session does not know which feature directory an edit will land in, so
+    an anchor counts as unique only when it occurs once across all of them.
+    Apply time still requires exactly one match in the target file.
+    """
+    return sum(
+        snapshot.entry(row["path"]).content.decode("utf-8").count(anchor)
+        for row in snapshot.list()
+        if PurePosixPath(row["path"]).name == file_name
+    )
+
+
+def _validated_edit(value: Any, snapshot: GitSnapshot) -> dict[str, Any]:
+    """One resolved synthesis edit: an allowed artifact, a unique anchor, a bounded replacement."""
+    edit = _require_exact_keys(value, {"file", "anchor", "replacement"}, "edit")
+    if edit["file"] not in ARTIFACT_ALLOWLIST:
+        raise SchemaViolation("synthesis edit targets a non-artifact path")
+    _bounded_nonempty(edit["anchor"], MAX_ANCHOR_BYTES, "anchor")
+    if _anchor_count(snapshot, edit["file"], edit["anchor"]) != 1:
+        raise SchemaViolation("edit anchor must match the snapshot exactly once")
+    if not isinstance(edit["replacement"], str) or len(edit["replacement"].encode("utf-8")) > MAX_REPLACEMENT_BYTES:
+        raise SchemaViolation("replacement is not text or exceeds its bound")
+    return edit
 
 
 def validate_result(
@@ -1433,20 +1530,15 @@ def validate_result(
         if record["outcome"] == "human_review":
             if (
                 record["agreement"] is not None
-                or record["basis"] not in {"all_disagree", "escape_unresolved", "analyst_failed"}
+                or record["basis"]
+                not in {"all_disagree", "escape_unresolved", "analyst_failed", TIEBREAK_SCOPE_BASIS}
                 or record["edit"] is not None
             ):
                 raise SchemaViolation("human-review synthesis fields are inconsistent")
             return record
-        if record["agreement"] not in {"3/3", "2/3"} or record["basis"] is not None:
+        if record["agreement"] not in {"3/3", "2/3", TIEBREAK_AGREEMENT} or record["basis"] is not None:
             raise SchemaViolation("resolved synthesis fields are inconsistent")
-        edit = _require_exact_keys(record["edit"], {"file", "anchor", "replacement"}, "edit")
-        if edit["file"] not in ARTIFACT_ALLOWLIST:
-            raise SchemaViolation("synthesis edit targets a non-artifact path")
-        _bounded_nonempty(edit["anchor"], MAX_ANCHOR_BYTES, "anchor")
-        if not isinstance(edit["replacement"], str) or len(edit["replacement"].encode("utf-8")) > MAX_REPLACEMENT_BYTES:
-            raise SchemaViolation("replacement is not text or exceeds its bound")
-        record["edit"] = edit
+        record["edit"] = _validated_edit(record["edit"], snapshot)
         return record
     raise SchemaViolation("result stage is unknown")
 
@@ -1517,11 +1609,18 @@ def apply_synthesis_receipt(
     session_head = session.head()
     if current_head(root) != session_head:
         raise MutationViolation("repository HEAD changed before mutation")
-    result = session._consume_result(receipt, expected_stage="synthesis")
+    result = session.consume_result(receipt, expected_stage="synthesis")
     payload = result["payload"]
     if result["head"] != session_head:
         raise MutationViolation("receipt head does not match the sweep session")
     if payload["outcome"] == "human_review":
+        if payload["basis"] == TIEBREAK_SCOPE_BASIS:
+            return {
+                "status": "scope_deferred",
+                "comment_id": payload["comment_id"],
+                "head": result["head"],
+                "round": 3,
+            }
         return {
             "status": "human_review",
             "comment_id": payload["comment_id"],
@@ -1561,8 +1660,6 @@ def apply_synthesis_receipt(
         if current_head(root) != result["head"]:
             raise MutationViolation("repository HEAD changed during mutation validation")
         try:
-            from .helpers.mutation import snapshot_write_target, write_bytes_atomic
-
             expected = snapshot_write_target(target, root)
             if expected.get("digest") != live_digest:
                 raise MutationViolation("artifact changed during mutation validation")
@@ -1572,7 +1669,7 @@ def apply_synthesis_receipt(
         except OSError as exc:
             raise MutationViolation("atomic artifact write failed") from exc
         status = "applied_redacted" if redaction_count else "applied"
-    return {
+    projection = {
         "status": status,
         "comment_id": payload["comment_id"],
         "path": relative,
@@ -1581,3 +1678,6 @@ def apply_synthesis_receipt(
         "after_sha256": after_digest,
         "redaction_count": redaction_count,
     }
+    if payload["agreement"] == TIEBREAK_AGREEMENT:
+        projection["round"] = 3
+    return projection

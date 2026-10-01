@@ -1539,9 +1539,9 @@
     }
   },
   "identities": {
-    "observer": "9968b9160d5164f6433051f5fb2cc4a80f19288a0ac8cbb05645e7442407a8e4",
-    "catalog": "173f40ef89e1614502a575dec090c04fd6804d9798efbe86aacc3c5d4b9206aa",
-    "fixture": "1253f805565b41bd894bbed3ee202d2c476ef8537584aa043f794ccea4ce07ba"
+    "observer": "53586ab21be360bbecc3528fb8eba03af0b4949a919e8e698f34f8e9ddd1d7a2",
+    "catalog": "182f0dfaf537cab1ecee76e4514b4fd4d633221422c0a78f255f9b8ca2e7270a",
+    "fixture": "c094071e16a77dab28275236262066f77b78fd9ee7cdc3cbfbcb78147b36edfe"
   },
   "controlled_difference": {
     "path": "NO_SPECKIT_SKILL_DESCRIPTION",

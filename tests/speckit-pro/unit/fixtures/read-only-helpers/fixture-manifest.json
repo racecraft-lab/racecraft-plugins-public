@@ -431,6 +431,42 @@
       "rollback": "Remove the registry entry and write the authorization message and extra_policy fragment by hand from the preflight record."
     },
     {
+      "helper_id": "check-gate-preflight-coverage",
+      "operation": "check-gate-preflight-coverage",
+      "promotion_status": "python_authoritative",
+      "failure_classes": ["invalid_input"],
+      "rejected_stdout_schema": {"status": "input_error", "data": "object"},
+      "deterministic_remediation": {"summary": "Check at run start that every gate's required escalation is in the preflight inventory.", "actions": ["Pass every gate with its command and its needs, and the preflight inventory's actions with their category and target.", "Rerun check-gate-preflight-coverage."]},
+      "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
+      "path_boundary_policy": {"boundary": "request_inputs_only", "rejects": ["file_reads", "file_writes", "unknown_inputs"]},
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/read-only-helpers/requests/check-gate-preflight-coverage.json",
+      "rollback": "Remove the registry entry and compare each gate's needs with the preflight inventory by hand."
+    },
+    {
+      "helper_id": "finalize-run",
+      "operation": "finalize-run",
+      "promotion_status": "python_authoritative",
+      "failure_classes": ["invalid_input"],
+      "rejected_stdout_schema": {"status": "input_error", "data": "object"},
+      "deterministic_remediation": {"summary": "Decide how an autopilot run ends once no runnable work remains.", "actions": ["Pass the run's execution-control ledger, every final non-UAT gate result with its command, the open runnable work, every unresolved deferral, the human UAT, and the pull-request stack.", "Rerun finalize-run."]},
+      "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
+      "path_boundary_policy": {"boundary": "execution_control_ledger", "rejects": ["file_writes", "path_traversal", "unknown_inputs"]},
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/read-only-helpers/requests/finalize-run.json",
+      "rollback": "Remove the registry entry and decide the run's end from the ledger's deferred list and the gate results by hand."
+    },
+    {
+      "helper_id": "ratify-pr-split",
+      "operation": "ratify-pr-split",
+      "promotion_status": "python_authoritative",
+      "failure_classes": ["invalid_input"],
+      "rejected_stdout_schema": {"status": "input_error", "data": "object"},
+      "deterministic_remediation": {"summary": "Decide whether autopilot may ratify a budget-driven PR split or must ask the operator.", "actions": ["Pass the approved groups in order with their scope, the proposed increments in order with their group, scope, and path counts, the active requirement, story, and task IDs, and the per-PR path budget.", "Rerun ratify-pr-split."]},
+      "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
+      "path_boundary_policy": {"boundary": "request_inputs_only", "rejects": ["file_reads", "file_writes", "unknown_inputs"]},
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/read-only-helpers/requests/ratify-pr-split.json",
+      "rollback": "Remove the registry entry and ask the operator to ratify every budget-driven split."
+    },
+    {
       "helper_id": "list-archive-candidates",
       "operation": "list-archive-candidates",
       "promotion_status": "python_authoritative",
@@ -441,6 +477,18 @@
       "path_boundary_policy": {"boundary": "repo_or_plugin", "rejects": ["traversal", "external_absolute_path", "symlinked_spec_directories"]},
       "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/read-only-helpers/requests/list-archive-candidates.json",
       "rollback": "Use the registered list-archive-candidates operation in read_only mode; it never writes and never archives."
+    },
+    {
+      "helper_id": "check-roadmap-freshness",
+      "operation": "check-roadmap-freshness",
+      "promotion_status": "python_authoritative",
+      "failure_classes": ["invalid_input", "unsupported_path", "missing_prerequisite", "stale_roadmap", "unverified_roadmap"],
+      "rejected_stdout_schema": {"status": "expected_failure|input_error|missing_prerequisite", "data": "object"},
+      "deterministic_remediation": {"summary": "Update the checkout to the remote default branch, then rerun scaffold; an unverified roadmap is never parsed.", "actions": ["Fix the remote or the roadmap path reported in cause.", "Rerun the helper before parsing the roadmap."]},
+      "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 60},
+      "path_boundary_policy": {"boundary": "repo_or_plugin", "rejects": ["traversal", "external_absolute_path", "symlinked_roadmap"]},
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/read-only-helpers/requests/check-roadmap-freshness.json",
+      "rollback": "Use the registered check-roadmap-freshness operation in read_only mode; it fetches only the remote default branch and never writes a working-tree file."
     }
   ]
 }

@@ -1,6 +1,8 @@
 # Post-Implementation Reference
 
-Detailed procedures for Steps 3.0-3.3 of the autopilot workflow.
+Detailed procedures for Steps 3.0-3.3 of the autopilot workflow. Run these
+items only after all seven SDD phases complete and G7 passes. They remain part
+of the same durable plan and are mirrored in `autopilot-state.json`.
 
 Read [Bounded Execution and Verification](./execution-efficiency.md) before
 Post dispatch: all tracks share the same reservations. Post
@@ -16,12 +18,42 @@ This selected prerequisite is blocking, including when a parallel Post track
 fails or other extension findings are advisory. Coverage validation requires
 current final/Post evidence and the matching durable state mirror.
 
+On resume, all seven SDD phases being complete is not sufficient to stop.
+If any Post item is missing, pending, or in progress, rebuild the durable plan
+and continue with the first incomplete Post item. Never report completion while
+a Post item is incomplete or `autopilot_continuation.required=true`.
+
 ## Contents
 
+- [How Extension Commands Become Available](#how-extension-commands-become-available) — extension skills installed by `specify extension add`
 - [Post-Implementation Parallel Group](#post-implementation-parallel-group) — capability-driven dispatch for tasks 10/11/12/13/14
+- [Post Rules](#post-rules) — extension dispatch, parent-session ownership, PR body, missing-extension behavior, pre-final audit
 - [3.1 Full Integration / E2E Suite Verification](#31-full-integration--e2e-suite-verification)
-- [3.2 PR Creation](#32-pr-creation)
+- [3.2 PR Creation](#32-pr-creation) — fail-closed single-PR and multi-PR emission
 - [3.3 Copilot Review Remediation Loop](#33-copilot-review-remediation-loop)
+- [UAT Runbook Generation](#uat-runbook-generation)
+
+
+## How Extension Commands Become Available
+
+Commands like `/speckit.verify`, `/speckit.verify-tasks`,
+`/speckit.doctor`, and `/speckit.retrospective.analyze` are INSTALLED by
+`specify extension add <name>`. The CLI creates command files in the
+project's commands directory (`.codex/commands/` for Codex CLI,
+`.claude/commands/` for Claude Code). These commands then appear as
+invocable skills.
+
+If Step 0.12 detected the extension in `.registry` as enabled, its
+commands ARE available — run the item. If an extension is NOT in
+`.registry` and NOT found via search, log a warning and mark that specific
+item `skipped: <ext> not installed` (do NOT fail the entire autopilot). The
+item MUST still appear in the plan — never drop it silently. Recommend:
+`specify extension add <name>`.
+
+**CRITICAL:** Use subagents only for extension-backed items and the
+parallel-group tracks defined below. Parent-session items stay in the parent
+session so durable state, PR side effects, and final reporting remain under
+the orchestrator's control.
 
 ## Post-Implementation Parallel Group
 
@@ -33,7 +65,7 @@ sites (consensus debate, Phase 7 `[P]` tasks, parallel
 checklist/analyze).
 
 Tasks 10/11/12/13/14 are independent post-implementation work that
-benefits from parallel dispatch. The serial tail, tasks 15-20, is
+benefits from parallel dispatch. The serial tail after them is
 **not** part of that parallel group: each step stays strictly sequential
 because of hard dependencies (Reviewability reads the resulting diff, PR
 Body needs the reviewability result, PR Creation needs
@@ -46,7 +78,7 @@ no user-facing opt-in. Agent Teams adds inter-teammate messaging and
 shared task-list coordination; the subagents fallback achieves the
 same wall-clock parallelism via background dispatch.
 
-### Dependency graph (both paths)
+### Dependency graph
 
 ```text
 10 Doctor Extension Check        — reads project state, no deps
@@ -55,17 +87,17 @@ same wall-clock parallelism via background dispatch.
 14 Integration Suite             ─┘   (chain serially within this group)
 13 Code Review                    — built-in independent review of the diff, no deps
 
-→ all 5 complete before 15 Reviewability Diff Gate begins
+→ all 5 complete before the serial tail begins
 ```
 
-**Three parallel tracks** (same in both code paths):
+**Three parallel tracks:**
 
 - Track A: `10 Doctor` (singleton, read-only)
 - Track B: `13 Code Review` (singleton, independent review of the diff)
 - Track C: `11 Verify` → `12 Verify-Tasks` → `14 Integration Suite`
   (chained — shared test fixtures, serialize within track)
 
-Wall-clock = `max(track A, track B, track C)` for either code path.
+Wall-clock = `max(track A, track B, track C)`.
 
 **Resolve the native launcher before dispatch:** use `Agent` when the current
 Claude tool inventory exposes `Agent`; when the runtime instead exposes the
@@ -274,10 +306,62 @@ and uses parallel subagents otherwise — both paths deliver the same
 contract (3 parallel tracks, lead synthesizes, then serial tail).
 Users do not need to know about a setting; the autopilot adapts.
 
+## Post Rules
+
+- Extension commands run in a subagent with the exact `/speckit.*` command
+  and SPEC context, never through `Skill()` in the parent.
+- Built-in verification, git, push, PR creation, and review polling stay in the
+  parent session so the orchestrator owns durable state and final reporting.
+- PR creation requires a current schema-valid feature-local packet and the
+  repo-relative body file it references. The active `golden_only`
+  `pr-packet-output` helper creates or refreshes packet JSON and packet-owned
+  body content; `validate-pr-packet-write` persists validation only after
+  rerunning current read-only validation.
+- Pass every auto-applied fallback and every deferred item to
+  `pr-packet-output` as `known_gaps`, so the PR body lists them under
+  `## Known Gaps`.
+- Missing optional extensions are logged and skipped. Do not fail the entire
+  autopilot because an optional extension command is unavailable.
+- Never mark the workflow complete until every planned Post item is completed or
+  explicitly logged as skipped.
+- **Pre-final completion audit:** Before any final user-facing response,
+  re-read `autopilot-state.json`, reconcile it with the visible progress plan, and verify
+  the canonical Post list. A completion response is forbidden while any `Post:` item is pending,
+  in_progress, or missing. `execution_control.disposition=checkpoint_required`
+  permits a checkpoint explicitly saying the run is not complete, retaining
+  all pending work, consumed budget and unknown effects. `disposition=defer`
+  is not a stop: it defers one unit whose allowance is spent. When every runnable
+  item has finished and deferred items remain, the read-only `finalize-run`
+  helper decides the end, as the phase-execution reference's blocked-action
+  rule states. Human UAT is the only gate a run may defer: with every required
+  gate green at every PR head, the stack goes ready for review, the top PR body opens with
+  `deferred_items` and each of `decisions` in its Deferred / not verified section, and the goal is
+  marked complete. Only a required gate that is not green after its escalation
+  tiers is one human stop. The end-of-run request is plain text in the final
+  message, never a question tool call, and lists every fallback taken and every
+  deferred item. Run every
+  Post item that does not depend on deferred work first. Otherwise continue
+  with the first incomplete item. `Post: Retrospective` remains the final Post item and
+  must be completed or explicitly skipped before completion can be reported.
+- **Worker sweep before completion:** as part of the same pre-final audit,
+  audit every tracked worker and consume every required final report. Cleanup
+  is best-effort when the host exposes it; do not retry-loop an already-gone
+  worker. A single wait timeout never authorizes interruption; interrupt only a
+  confirmed stuck turn, then reconcile read-only and checkpoint unknown effects.
+  No interruption authorizes a replacement launch.
+- **Drain final tool work:** give each final local gate one owner and run each
+  gate exactly once as a separately attributable foreground command. Consume
+  one gate's completed result before starting the next; do not launch an
+  overlapping copy while an equivalent gate is pending. Reuse completed gate
+  evidence only when its command, configuration, baseline, working directory,
+  and relevant source and fixture state are unchanged. A final or checkpoint
+  response is forbidden while any started tool item remains in progress; wait
+  on that exact native handle for its terminal result and reconcile it first.
+
 ## 3.1 Full Integration / E2E Suite Verification
 
 Integration tests for the spec are created DURING the Implement
-phase (the `speckit-pro:implement-executor` agent creates them as part of TDD).
+phase (the implement-executor agent creates them as part of TDD).
 This step requires FULL-suite proof to catch regressions from other specs.
 Validate the final snapshot's existing result before executing; unchanged G7
 proof is reusable only under the shared native-observation contract.
@@ -289,7 +373,7 @@ Glob("tests/integration/*<spec-name>*")  <- TOOL CALL
 Glob("tests/e2e/*<spec-name>*")          <- TOOL CALL
 ```
 
-If no spec-specific tests exist, the `speckit-pro:implement-executor` failed to
+If no spec-specific tests exist, the implement-executor failed to
 create them. Spawn it again to fix:
 
 ```text
@@ -362,10 +446,11 @@ emission. The `plan-layers` output is the authoritative source of
 review order and slice membership. The post-implementation phase MUST NOT infer, reroute, or re-slice
 work from changed files, reviewability warnings, or fallback heuristics.
 
-For non-split routes, keep the existing single-PR behavior. For split-PR routes,
-the previous all-changes PR path is forbidden, even when the layer plan has only
-one slice. A one-slice plan still goes through the same emission contract and
-opens one slice PR.
+For non-split routes with no current `pr_marker_plan`, keep the existing
+single-PR behavior. For split-PR routes or any current `pr_marker_plan` marked
+emission-ready, the previous all-changes PR path is forbidden, even when the
+layer/marker plan has only one slice. A one-slice plan still goes through the
+same emission contract and opens one slice PR.
 
 ```text
 1. Validate existing final-snapshot evidence; execute only ineligible checks:
@@ -375,7 +460,8 @@ opens one slice PR.
    that list is empty, skip COMPLEXITY and MUTATION and record
    `n/a: no source files changed`
    (use PROJECT_COMMANDS discovered in Step 0; a populated slot
-   that fails blocks). The hardener already ran once in Phase 7
+   that fails blocks).
+   The hardener already ran once in Phase 7
    Step 4; read its recorded line, do not run it again.
 2. Detect remote: git remote -v
 3. Capture the full-suite evidence path under
@@ -384,9 +470,11 @@ opens one slice PR.
    evidence. It must be the exact `plan-layers` envelope with
    status=ok.
 5. Apply the final reviewability boundary using current committed evidence. If
-   no current evidence exists, stop before `generate-pr-body`, any
-   `gh pr create` variant, or `multi-pr-emission` because
-   `final-reviewability-backstop` is deferred for installed workflows. Proceed
+   no current evidence exists, hold `generate-pr-body`, any
+   `gh pr create` variant, and `multi-pr-emission` because
+   `final-reviewability-backstop` is deferred for installed workflows, and
+   regenerate the committed reviewability evidence through the Reviewability Diff Gate task;
+   run the repair loop within its allowance, then defer per the Failure Escalation Protocol. Proceed
    only on `pass`, `warn`, honored typed-exception, or final `marker_split`
    when the current `pr_marker_plan`
    is valid. If a current `pr_marker_plan` exists, marker-based PR emission is
@@ -400,13 +488,13 @@ opens one slice PR.
    `autopilot_continuation`, `operator_steps`, and `resume.resume_from`, then
    continue through reviewability routing, layer planning, and split-PR emission until a valid slice PR stack is emitted or a
    typed exception is committed. Never end the run or report completion while
-   `autopilot_continuation.required=true`; on gate error, stop with state only
-   and no packet. Correctness stops include
+   `autopilot_continuation.required=true`; on gate error, write state only
+   and no packet, then rerun the gate; run the repair loop within its allowance, then defer per the Failure Escalation Protocol. Correctness blocks include
    malformed/stale marker state, failed verification, invalid packet, unsafe
    output, unusable gate evidence, invalid JSON, missing status/mode, and stale
    fingerprints.
-5b. For a marker-aware proceed result, record gate
-   status/mode/exit/evidence path, fingerprint status, ordered marker IDs,
+5b. For a marker-aware proceed result, record
+   gate status/mode/exit/evidence path, fingerprint status, ordered marker IDs,
    checkpoints, warnings, final marker_split or marker-plan-ready handoff,
    packet validation, and PR mappings before any PR side effect. All evidence
    paths must be repo-relative.
@@ -421,7 +509,9 @@ opens one slice PR.
    declares the validation-result path. `generate-pr-body` is a body-only
    `golden_only` operation and cannot replace the packet. Its complete input
    contract is only `output_path`, `title`, and `sections`; it writes one
-   Markdown body and no packet metadata. Do not pass it packet JSON, raw gate
+   Markdown body and no packet metadata, template markers, validation
+   evidence, or PR commands, and its output alone never authorizes PR
+   creation. Do not pass it packet JSON, raw gate
    output, full test logs, internal evidence records, or any other undeclared
    field. Include one plain-English `how_to_review` line saying the domain
    checklist boxes under `specs/<feature>/checklists/` are left unticked for the
@@ -433,21 +523,28 @@ opens one slice PR.
    packet declares editable fields and its existing body contains their exact
    marker pairs, edit only those regions with content drawn from `spec.md`,
    `plan.md`, and the diff. Otherwise leave the body unchanged and fail closed
-   if required reviewer content is absent. Style rules:
+   if required reviewer content is absent. The packet-owned title and body must
+   describe the actual change in strict, unpatronizing, ELI5-style plain
+   English. Style rules:
    - **Lead with what the change does, in human terms.** A reader who has never
      seen this repo should understand it at a glance.
    - **No internal jargon.** Drop requirement IDs (`FR-009`), internal layer
      numbers (`Layer 4`), workstream/codenames, and process jargon
      (`consensus`, `tolerance arm`, `gate`). Say what happened in English.
    - **No evidence dump.** Summarize the verified outcome and reviewer-relevant
-     risk in plain English. Do not paste raw commands, transcripts, hashes,
-     grader output, internal state JSON, or exhaustive test logs into editable
-     prose; packet-owned evidence fields remain the structured audit record.
+     risk in plain English. Do not dump commands, file paths, packet
+     mechanics, or raw evidence into PR prose: no raw commands, transcripts,
+     hashes, grader output, internal state JSON, or exhaustive test logs in
+     editable prose; packet-owned evidence fields remain the structured audit
+     record.
    - **Keep governance terse and collapsed.** Do NOT promote the
      `<details>Reviewer checklist &amp; scope details</details>` block to
      top-level headings, and do NOT pad it — the auto-filled numbers plus a
      one-line rollback are enough.
-   - **Do not touch protected packet-owned sections or markers.**
+   - **Do not touch protected packet-owned sections or markers**, such as
+     `How To Review`, `How To UAT`, `Verification`, `Scope`, `Known Gaps`,
+     `## UAT Runbook`, or the `speckit-pro-review-packet-source` marker.
+   - Do not add template comments, hidden TODOs, or ad hoc HTML comments.
    - Omit **Anything reviewers should know** entirely if there is nothing real
      to say. An empty section is worse than no section.
 6d. Validate the packet before any single-PR create attempt with one runner JSON
@@ -457,8 +554,9 @@ opens one slice PR.
    Consume the current response's `data.stdout_json` in memory and durable
    workflow state. Continue only when `data.stdout_json.status=passed`,
    `data.stdout_json.pr_blocked=false`, and response `data.writes_state=false`.
-   If any required packet is absent or invalid, stop before PR creation with
-   the validator diagnostics. Commit or otherwise checkpoint the packet/body
+   If any required packet is absent or invalid, regenerate it with `pr-packet-output` from the validator diagnostics,
+   then revalidate; run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
+   No PR is created until validation passes. Commit or otherwise checkpoint the packet/body
    artifacts so the worktree is clean, then run `validate-pr-packet-write`;
    apply mode reruns read-only validation before persisting the packet's
    `validation_result_path`. Prior validation artifacts never authorize PR
@@ -472,13 +570,15 @@ opens one slice PR.
    Continue only when this just-run validator exits 0. It checks the actual PR
    title against changed spec scope and rejects aggregate single-PR creation
    when changed files contain multi-PR candidate commands or multi-marker final
-   split evidence. A documentation SPEC title uses the lowercase scope required
-   by release readiness, for example `docs(spec-704): document the marketplace
-   installation path`; `docs(SPEC-704): ...` is invalid. Likewise,
+   split evidence. A documentation spec such as `SPEC-704` uses the derived
+   lowercase spec scope required by release readiness, `docs(spec-704): ...`,
+   for example `docs(spec-704): document the marketplace installation path`;
+   `docs(SPEC-704): ...` and `docs(DOC-704): ...` are invalid for that
+   spec-backed implementation. Likewise,
    `feat(speckit-pro): ...` is only valid for non-spec plugin changes. Any
    split-contract failure means the single-PR path is forbidden: run
-   `multi-pr-emission` with the current layer or marker plan, or stop
-   blocked with the validator output.
+   `multi-pr-emission` with the current layer or marker plan, or route the
+   validator output to the packet regenerator and revalidate; run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
 6f. Create the single PR from packet fields, never from branch-derived title
    text or hand-written body content:
    ```text
@@ -495,8 +595,8 @@ opens one slice PR.
    packets or execute live PR mutations. Every slice packet must be emitted or
    refreshed at `specs/<feature>/.process/pr-packets/<packet-id>.json` with
    `pr-packet-output`, rerun through read-only validation, and paired with
-   persisted current validation evidence before PR side effects. Stop only if
-   emission or validation fails.
+   persisted current validation evidence before PR side effects. If
+   emission or validation fails, route the diagnostics to the packet regenerator and rerun; run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
    For marker emission, `--feature-branch` is the emitted branch prefix. If
    that prefix would collide with an existing parent branch ref, pass a
    non-conflicting prefix through `--feature-branch` and the authoritative
@@ -506,31 +606,20 @@ opens one slice PR.
    prefix.
    Live marker emission requires each marker checkpoint to record
    `implementation_checkpoint.head_sha` or
-   `implementation_checkpoint.commit_sha`; without those commit SHAs, stop
-   before branch or PR mutation and repair the marker checkpoints.
-   The per-slice order is exact and fail-closed:
-   1. validate the current `pr_marker_plan`, source fingerprint, marker order,
-      checkpoint commit, and final `marker_split`/emission-ready status;
-   2. derive that slice's packet ID, title, body path, base/head, and file scope
-      from its marker/layer-plan record—never from a branch name, changed-file
-      guess, aggregate candidate command, or another slice's packet;
-   3. emit or refresh that slice's packet with `pr-packet-output`;
-   4. run fresh `validate-pr-packet-read-only`, consume its current
-      `data.stdout_json`, and persist the passing validation evidence; and
-   5. only then create or refresh the PR using the validated packet's title and
-      body file.
-   Each slice title and body must describe that marker's own outcome and scope
-   in plain English. Never reuse an aggregate or neighboring slice title/body,
-   and never create first and repair title, body, membership, or splitting
-   afterward. A `multi-pr-emission` candidate command plan is planning evidence,
-   not packet validation or authorization for a PR side effect.
+   `implementation_checkpoint.commit_sha`; without those commit SHAs, hold
+   branch and PR mutation and record the marker checkpoint commit SHAs through the orchestrator, then rerun;
+   run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
 7b. Run `detect-stack-manager-plan` in `dry_run` mode per
    [Optional stack manager](stack-manager.md). It qualifies CLI **and** skill,
    repository and owned topology, respects operator fallback, and blocks manager
    switching after mutation. Preserve packet-owned PR creation and refresh;
    selected gh-stack links verified existing PR URLs only after packet checks.
-   After a partial `gh-stack` mutation, block with recovery evidence instead of
-   mixing managers.
+   Resume partial mutation through its recorded manager; never mix managers or
+   recreate PRs. After a partial `gh-stack` mutation, block with recovery
+   evidence instead of mixing managers, unless read-only proof matches every
+   recorded PR: then rerun detection with `previous_decision` and
+   `reverify_recovery=true` and retry the existing-PR link through the same
+   manager. Defer per the Failure Escalation Protocol when it does not match.
 7c. Persist stack-manager evidence in the emission state, command log, and PRS
    records: `selected_manager`, `fallback_reason`, `mutation_boundary`,
    `gh_stack.available`, `gh_stack.supported`, `gh_stack.reason`,
@@ -545,14 +634,54 @@ opens one slice PR.
      for that marker; never infer slice contents from changed-file globs
    - PR command shape:
      gh pr create --base <base> --head <head> --body-file <body-file> --title <generated-title>
-9. Each slice must pass or record scoped verification before PR creation and
-   its existing packet must pass a fresh `validate-pr-packet-read-only` request
-   whose `data.stdout_json` is consumed in memory/state. If any required packet
-   is absent or invalid, stop before PR creation with the validator diagnostics.
-   The read-only validator writes no state or validation file. A
-   failing required scoped command must stop before `gh pr create`, record the
-   failed command, exit status, evidence path, stderr/stdout tail, and keep
-   `next_slice_id` on the blocked slice.
+9. The per-slice order is exact and fail-closed.
+   Apply this exact fail-closed sequence independently to every planned slice;
+   do not open any slice PR until all preceding steps for that slice pass:
+   1. validate the current `pr_marker_plan`, source fingerprint, marker order,
+      checkpoint commit, and final `marker_split`/emission-ready status;
+   2. derive that slice's packet ID, title, body path, base/head, and file scope
+      from its marker/layer-plan record—never from a branch name, changed-file
+      guess, aggregate candidate command, or another slice's packet;
+   3. run every required non-UAT gate (the full suite, the checks CI requires,
+      and any per-commit identity or evidence check the repository defines) at
+      the slice's own head, bottom-up, and run or record the slice's required
+      scoped verification; never carry another head's evidence to a slice. On
+      a failed required command, hold `gh pr create`; record the command, exit
+      status, evidence path, stderr/stdout tail, and keep `next_slice_id` on
+      the blocked slice. Then route the failing command to the implement-executor,
+      rerun it, and run the repair loop within its allowance, then defer per the Failure Escalation Protocol
+      while independent slices keep moving;
+   4. emit or refresh that slice's feature-local packet with `pr-packet-output`.
+      Its verification cites only the evidence produced at that slice's own
+      head. Reject generic foundation/story/slice titles, hardcoded plugin
+      scopes for spec PRs, packet-mechanics prose, and raw evidence dumps
+      before any slice PR is opened;
+   5. Run a fresh `validate-pr-packet-read-only` request, consume its current
+      `data.stdout_json` in memory/state, and require `data.writes_state=false`.
+      The read-only validator writes no state or validation file. If any
+      required packet is absent or invalid, regenerate it with
+      `pr-packet-output` from the validator diagnostics and revalidate; no PR
+      is created until it passes;
+   6. checkpoint the packet/body artifacts so the worktree is clean, then run
+      `validate-pr-packet-write`; its apply mode must rerun current read-only
+      validation before persisting `validation_result_path`;
+   7. Run `validate-pr-workflow-contract` against the packet title and current
+      changed-file evidence. Any title, scope, or split-contract failure blocks
+      before PR creation;
+   8. only then create or refresh the PR with the validated packet's
+      `--base`, `--head`, `--title`, and `--body-file` values; and
+   9. persist the successful PRS row, regenerated SPEC-MOC table,
+      `multi_pr_emission` state, and workflow evidence before advancing
+      `next_slice_id`.
+   Each slice title and body must describe that marker's own outcome and scope
+   in plain English; normalize raw `Foundation`, `User Story`, and `slice`
+   labels into a specific change description and derive the lowercase title
+   scope from the spec ID. Never reuse an aggregate or neighboring slice
+   title/body, and never create first and repair title, body, membership, or
+   splitting afterward. A validation failure blocks on the same slice without
+   opening or repairing a PR; there is no post-create auto-repair fallback. A
+   `multi-pr-emission` candidate command plan is planning evidence,
+   not packet validation or authorization for a PR side effect.
 10. After each successful slice PR, persist reviewer and resume surfaces before
     the next slice starts:
     - specs/<feature>/.process/prs.json with `schemaVersion: 2`
@@ -588,6 +717,12 @@ slice's declared scope, record command results and recovery evidence, and run a
 fresh DEFAULT_VERIFY before final merge evidence is considered current. If a
 prior `gh-stack` mutation crossed its mutation boundary, resume with
 same-manager recovery evidence or block; do not mix managers.
+
+**Lower-layer fixes:** a fix made on a lower slice must propagate it upward by
+merge: merge each fixed branch into the slice above it, bottom-up, never by
+rebase or force-push. Then re-verify every affected head: rerun every non-UAT
+gate at each head the merge changed and refresh that PR's body evidence, so
+`finalize-run` receives a current result for every gate at every head.
 
 ## 3.3 Copilot Review Remediation Loop
 
@@ -727,7 +862,7 @@ mandatory. Invoke the registered `generate-uat-skeleton` mutation helper in `dry
 
 **Terms lint (advisory).** When `docs/ai/specs/ubiquitous-language.md` exists,
 run
-`${CLAUDE_PLUGIN_ROOT}/scripts/ubiquitous-language-lint.py --base origin/main`
+`resolved_python ${CLAUDE_PLUGIN_ROOT}/scripts/ubiquitous-language-lint.py --base origin/main`
 and record its one-line note plus each unmapped identifier (file:line) in the
 workflow log. Without the document, record `Terms lint: no terms document`. The
 lint exits 0 by design; an unmapped identifier is a suggestion for a term or a
@@ -746,9 +881,9 @@ diagnostic, record the UAT row's fail-open outcome, skip authoring and
 validation, and continue. A genuine generation failure does not block PR side
 effects, but helper promotion status is never a reason to skip the attempt.
 
-When the helper writes the runbook, **spawn the
-`speckit-pro:uat-runbook-author` subagent to rewrite it in place** so the
-runbook reads in plain English and a non-engineer can actually execute it:
+When the helper writes the runbook, **spawn the `uat-runbook-author` agent to
+rewrite it in place** so the runbook reads in plain English and a non-engineer
+can actually execute it:
 
 ```text
 Agent(
@@ -788,8 +923,8 @@ actual registered UAT-validation path exists, log
 `skipped: UAT validation unavailable` and continue fail-open. If a registered
 validation path exists, run that registered validator against the existing
 runbook. If and only if that just-run validator reports the existing runbook
-invalid, STOP before PR-body generation or PR creation and report its
-diagnostics. Missing output after a recorded generation failure is never sent
+invalid, hold PR-body generation and PR creation, route the validator diagnostics to the uat-runbook-author to rewrite the runbook,
+and revalidate; run the repair loop within its allowance, then defer per the Failure Escalation Protocol. Missing output after a recorded generation failure is never sent
 to validation and never blocks.
 
 If generation or authoring changed the runbook, auto-commit that change:

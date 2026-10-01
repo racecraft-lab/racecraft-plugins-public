@@ -17,7 +17,9 @@ Per the autopilot error-handling protocol, you MUST NOT blindly
 retry the same phase. Surface the error and either:
 (a) dispatch the appropriate remediation phase (e.g., re-run Specify
     via phase-executor with a corrective prompt), OR
-(b) stop and report the blocking issue.
+(b) defer the blocking issue: record it for the end-of-run request and
+    continue any independent work. Do not stop the run and do not ask a
+    question.
 
 Pick (a) or (b) and execute it. Use the Agent tool only if option (a).
 Do not call grill-me. Do not write files outside dispatching agents.

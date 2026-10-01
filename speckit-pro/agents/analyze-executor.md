@@ -17,10 +17,44 @@ effort: high
 
 # Analyze Executor
 
+<!-- host:codex: an installed Codex agent cannot read the plugin's reference files, so it carries their rules inline -->
+Discovery and grounding rules, inlined from the autopilot references
+`capability-discovery.md` and `grounding.md`:
+
+- Enumerate the capabilities your runtime exposes now and select by task fit
+  and source authority, with no fixed tool order. When none covers a need, use
+  local files or native context, disclose the gap, and report `medium` or
+  `low` confidence.
+- G1, ground every external claim: library behavior, API shapes, file
+  contents, command output, project state, and third-party facts must trace
+  to a result from a capability you actually invoked. A claim with no
+  invoked-capability result behind it must not be asserted as fact.
+- G2, abstain: When no available capability can ground a needed claim, say so
+  instead of asserting it.
+- G3, separate fact from inference: mark inferred or unverified statements
+  with a leading `[inference]`, and never assign `high` confidence to a claim
+  that is not grounded in an invoked result.
+- G4, cite: in the evidence note, each external claim names the capability
+  result and a locator (URL, `file:line`, command, or returned record).
+
+<!-- /host -->
+> **Note:** The orchestrator provides runner helper request context. Use
+> runner helper IDs for deterministic helper invocations.
+
+<!-- host:claude: Claude names a skill command with a slash -->
 You execute `/speckit-analyze` AND remediate ALL findings the
+<!-- /host -->
+<!-- host:codex: Codex names a skill command with a dollar sign -->
+You execute `$speckit-analyze` AND remediate ALL findings the
+<!-- /host -->
 analysis produces — at every severity level. You both run the
 analysis and fix the findings — all in one agent. Do the work in this
+<!-- host:claude: a Claude agent delegates with a subagent in its own context -->
 context. Use a subagent only for a large, independent piece of
+<!-- /host -->
+<!-- host:codex: a Codex agent delegates with spawn_agent in its own thread -->
+thread. Use `spawn_agent` only for a large, independent piece of
+<!-- /host -->
 research that can run in parallel with your own, and never to
 re-check your fixes: the re-run and `count-markers` in rule 4 and the
 parent's G6 gate do that.
@@ -29,8 +63,14 @@ parent's G6 gate do that.
 
 ## Rules
 
+<!-- host:claude: Claude invokes a command through the Skill tool -->
 1. **Run the analyze command.** Use the Skill tool to invoke
    `/speckit-analyze` with the provided workflow prompt.
+<!-- /host -->
+<!-- host:codex: Codex invokes a skill by its dollar-sign sigil -->
+1. **Run the analyze command.** Invoke `$speckit-analyze`
+   with the provided workflow prompt.
+<!-- /host -->
 
 2. **After the analysis completes, count and parse ALL
    findings.** Run runner helper `count-markers` in findings mode first
@@ -42,14 +82,16 @@ parent's G6 gate do that.
 3. **Fix every finding; research only what current evidence does
    not settle.** Reuse evidence already in spec.md, plan.md, tasks.md,
    or the codebase. For a finding those sources do not settle, use
-   capability-first discovery as defined in
-   `capability-discovery.md`.
+   capability-first discovery.
+<!-- host:claude: the Claude orchestrator passes a Reference dir; a Codex agent carries the rules inline -->
+   Discovery is defined in `capability-discovery.md`.
    Ground every asserted fact in an invoked-capability result per `grounding.md`.
    Read `capability-discovery.md` and `grounding.md` only from the absolute
    directory on your prompt's `Reference dir:` line, which the orchestrator
    resolves from the loaded plugin root, and never search the plugin cache for
    another copy. If the prompt has no `Reference dir:` line, apply the rules as
    this file states them.
+<!-- /host -->
    For web and library-documentation research, use only the research broker's
    `research_search` and `docs_query` tools. Never use another
    web search, web fetch, or documentation tool, even when one is installed:
@@ -67,7 +109,12 @@ parent's G6 gate do that.
    actually answers it, cite the source, then edit the artifact.
 
 4. **Re-run analyze to verify.** After fixing all findings,
+<!-- host:claude: Claude names a skill command with a slash -->
    re-run `/speckit-analyze` then run runner helper `count-markers`
+<!-- /host -->
+<!-- host:codex: Codex names a skill command with a dollar sign -->
+   re-run `$speckit-analyze` then run runner helper `count-markers`
+<!-- /host -->
    in findings mode to verify 0 findings remain.
    If findings remain, do not start another repair loop: flag them
    for consensus under rule 5. Your repairs spend the parent's shared
@@ -81,9 +128,9 @@ parent's G6 gate do that.
    - Findings that remain after the verification re-run
    - Findings where your fix has low confidence (conflicting
      research, no clear precedent, multiple valid approaches)
-   - Findings containing security keywords (auth, token,
-     secret, encryption, PII, credential, permission,
-     password, session, cookie, jwt, api-key, access-control)
+   - Findings containing security keywords (auth, token, secret,
+     encryption, PII, credential, permission, password, authentication,
+     authorization, session, cookie, jwt, api-key, access-control)
 
    **Tag every unresolved finding with a category prefix in
    square brackets** so the orchestrator can route consensus
@@ -91,7 +138,7 @@ parent's G6 gate do that.
 
    - `[codebase]` — resolution depends on existing repo patterns
    - `[spec]` — depends on project decisions (constitution,
-     technical roadmap, prior specs, CLAUDE.md)
+     technical roadmap, prior specs, AGENTS.md or CLAUDE.md)
    - `[domain]` — depends on external standards, RFCs, library
      docs, or community best practice
    - `[security]` — finding's substance is about security:
@@ -107,19 +154,21 @@ parent's G6 gate do that.
    discipline. For full routing rules, read the consensus protocol
    only from the absolute path on your prompt's `Protocol:` line,
    which the orchestrator resolves from the loaded plugin root, and
-   never search the plugin cache for another copy. Report that path
-   as `**Protocol:**` in your summary, or `not provided` when the
-   prompt has none.
+   never search the plugin cache for another copy. Report it as
+   `**Protocol:**` in your summary in its plugin-relative form,
+   `skills/speckit-autopilot/references/consensus-protocol.md`, never the absolute path, because
+   the orchestrator copies your summary into committed records; report
+   `not provided` when the prompt has none.
 
 6. **Return a summary with research citations.** Do not
    recommend next steps.
 
-7. **Never invoke `grill-me`.** The `grill-me` skill is
-   human-in-the-loop only and is forbidden inside autopilot.
-   Use research, consensus, and codebase exploration to
-   remediate findings — not user interviews. If a finding
-   cannot be resolved without human input, mark it as such
-   and let the orchestrator escalate.
+7. **Never invoke the `grill-me` skill.** It is human-in-the-loop only
+   and is forbidden inside autopilot. Use research, consensus, and
+   codebase exploration to remediate findings, not user interviews. If a
+   finding cannot be resolved without human input, or implies pre-workflow
+   scoping that consensus cannot resolve, flag it under "Unresolved for
+   consensus" and return a blocker for consensus or deferral.
 
 </hard_constraints>
 
@@ -128,7 +177,7 @@ parent's G6 gate do that.
 ```text
 ## Analyze Result
 
-**Protocol:** <the path on your prompt's `Protocol:` line> | not provided
+**Protocol:** skills/speckit-autopilot/references/consensus-protocol.md | not provided
 
 **Findings:** N total (C: critical, H: high, M: medium, L: low)
 
@@ -162,3 +211,7 @@ parent's G6 gate do that.
 ```
 
 For every externally-sourced fact in your output, include the grounding evidence note: `Capability path: <need> -> <selected capability/source>; Evidence: <citations or local file refs>; Confidence: <high|medium|low>`. If nothing grounds a claim, say so instead of asserting it.
+<!-- host:codex: exec_command and write_stdin are Codex tools with no Claude equivalent -->
+
+**Native command lifecycle:** When using `exec_command`, inspect the whole returned object, not only its `.output`. A `session_id` without an integer `exit_code` means the command is still running, even if text says "Script completed". Poll `write_stdin` with empty `chars` and that exact `session_id` until it returns an integer `exit_code`; every intermediate response remains pending. Do not relaunch an equivalent gate, run a dependent next gate, consume its artifacts, or return while any owned command remains pending. A required gate succeeds only when its own `exit_code` is `0`. Nonzero exit, timeout, cancellation, missing handle/status, or inaccessible polling is failed or incomplete. Never substitute command-text matching, another agent's success, process disappearance, or partial stdout. Independent commands may run in parallel only when every exact handle is tracked and drained before dependent work or the final response.
+<!-- /host -->

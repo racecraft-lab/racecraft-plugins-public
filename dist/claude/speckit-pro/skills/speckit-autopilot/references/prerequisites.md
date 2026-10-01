@@ -1,21 +1,57 @@
 # Prerequisites Reference
 
-The autopilot's pre-flight sequence. Run these before Step 1 (Parse Workflow State) and before any phase work. If any check fails, STOP with the error message from the script's JSON output.
+The autopilot's pre-flight sequence. Run these before Step 1 (Parse Workflow State) and before any phase work. If any check fails, report the error message from the script's JSON output and route the failure to its owner for repair: the orchestrator repairs a fixable environment check, and the implement-executor repairs a failing project check. Run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
 
 ## Contents
 
+- [Step -2: Run-Start Permission Probe](#step--2-run-start-permission-probe) — settle the runner and `git status` prompts once, before any phase work
 - [Workflow Worktree Binding](#workflow-worktree-binding) — verify Claude's live checkout after `/cd`
 - [Step -1: Archive Sweep Startup](#step--1-archive-sweep-startup) — archive previously merged specs before workflow execution
-- [Step 0.0: Resolve Script Paths](#step-00-resolve-script-paths) — extract `SKILL_SCRIPTS` from the skill header (plugin path)
+- [Step 0.0: Resolve Script Paths](#step-00-resolve-script-paths) — locate the plugin's `SKILL_SCRIPTS` directory
 - [Step 0.0b: Claude Agent Package Completeness](#step-00b-claude-agent-package-completeness) — verify bundled plugin agents are present
 - [Step 0.0c: Research Broker Preflight](#step-00c-research-broker-preflight) — record the research screening mode (`jev` or `sanitizer-only`)
 - [Step 0.1–0.7: Environment Checks](#step-01-07-environment-checks) — `check-prerequisites` JSON parsing, branch detection
 - [Step 0.6: Load Settings and Resolve Claude Runtime](#step-06-load-settings--resolve-claude-runtime) — local settings plus one versioned subagent-runtime record
-- [Step 0.8: Capability Coverage & Plugin Limitation Check](#step-08-capability-coverage--plugin-limitation-check) — informational research/context advisory + plugin-agent caveats
+- [Step 0.8: Capability Coverage & Plugin Limitation Check](#step-08-capability-coverage--plugin-limitation-check) — informational research/context advisory
 - [Step 0.9: Constitution Validation](#step-09-constitution-validation) — principle checks against current codebase
 - [Step 0.10: Implementation Agent Detection](#step-010-implementation-agent-detection) — discover `PROJECT_IMPLEMENTATION_AGENT`
 - [Step 0.11: Project Command Discovery](#step-011-project-command-discovery) — `detect-commands` → `PROJECT_COMMANDS`
 - [Step 0.12: Preset and Extension Detection](#step-012-preset-and-extension-detection) — `detect-presets` → `PRESET_CONVENTIONS`
+
+## Step -2: Run-Start Permission Probe
+
+Run this first, before the binding guard, Step -1, Step 0, and any phase work, on
+every start and every resume. Runner calls and Git commands follow the session's
+permission settings, and plugin agents inherit them, so an unattended run stops at
+the first call the settings do not allow. Probe that once, up front, instead of
+midway. The contract is in
+[Run-start grants](./stop-policy.md#run-start-grants).
+
+1. Run one no-op runner request: helper `helper-registry-dispatch` with empty
+   `inputs`, sent on stdin to `<resolved_python> -m speckit_pro_runner` exactly as
+   every later request is.
+2. Run one `git status --porcelain` in the live checkout.
+
+When both run without a prompt and finish cleanly, print nothing and continue. When
+either prompts or is denied, print the allow rules for the probe that failed, once,
+and stop before any phase work: do not run Archive Sweep, edit a file, or dispatch
+an agent. This halt happens before the run starts, so it is the run-start grant and
+not a run stop.
+
+```text
+Autopilot needs permission for its own calls before it starts. Add these allow
+rules to permissions.allow in .claude/settings.local.json or your user settings,
+then rerun. Or start the session in bypassPermissions mode.
+  runner request:  <resolved_python> -m speckit_pro_runner:*   and   printf:*
+  git status:      git status:*
+```
+
+Print each rule in Claude Code's `Tool(pattern)` form, where the tool is the shell
+tool and the pattern is the text above. Print only the rules for the failed probe.
+Replace `<resolved_python>` with the interpreter path the request used, written
+exactly as the request invoked it: a shell rule matches the command text, and an
+absolute interpreter path must appear in the rule as it does in the request. A probe
+that passes needs no rule.
 
 ## Workflow Worktree Binding
 
@@ -78,13 +114,20 @@ to archive previously merged specs.
    command once per `archive_order` entry, in that order, and let each run
    finish before the next starts:
    ```text
-   /speckit-archive-run specs/<merged-spec-dir>
+   /speckit-archive-run specs/<merged-spec-dir> --spec-only --plan-only --changelog-only
    ```
-   Pass only the feature directory. The stock archive extension
-   (`stn1slv/spec-kit-archive`) archives one feature per run and rejects
-   `--sweep`, `--current-target`, and `--dry-run`; the vendored
-   `racecraft-lab/spec-kit-archive` fork accepts the same single-feature form.
-   If a run fails, STOP before Phase 0 with that spec and the command's error.
+   Pass the feature directory first, then exactly these three scope
+   modifiers. The stock archive extension (`stn1slv/spec-kit-archive`)
+   archives one feature per run, treats several scope modifiers as a union,
+   and rejects `--sweep`, `--current-target`, and `--dry-run`; the vendored
+   `racecraft-lab/spec-kit-archive` fork accepts the same single-feature form
+   and the same modifiers. The union updates `.specify/memory/spec.md`,
+   `plan.md`, and `changelog.md` and leaves out the agent context files
+   (stock step 5.3, fork step 6.3). If an archive run still changes
+   `AGENTS.md`, `CLAUDE.md`, or `GEMINI.md`, the installed contract ignored the
+   union: treat that run as failed, and do not commit the agent context change.
+   If a run fails, retry the failed archive run once, then defer the Archive Sweep with that spec and the command's error
+   and continue to Phase 0. The sweep is hygiene, so a failed sweep never holds Phase 0.
 
    **`main`, a release branch, or any protected integration branch** (dry-run
    only): do not run the archive command, because every archive run writes
@@ -100,8 +143,8 @@ to archive previously merged specs.
    cleanup mode (`apply` on a feature branch, `dry_run` otherwise), and
    `safeToApplyCleanup=false` (the sweep never passes `--apply-cleanup`, so it
    never removes spec folders).
-7. Add an `Archive Sweep: previously merged specs archived` task before Phase 0
-   in the visible task list.
+7. Add the canonical `Archive Sweep: previously merged specs dry-run/apply
+   eligibility` task before Phase 0 in the visible task list.
 
 If the archive extension is missing, record `archive_extension_installed=false`,
 keep cleanup disabled, and continue only after warning that the project should
@@ -173,8 +216,11 @@ Keep the returned `plugin_root`. Every consensus-synthesizer,
 clarify-executor, checklist-executor, and analyze-executor prompt carries a `Protocol:` line
 set to `<plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md`,
 so those agents read the active protocol and never a cached copy from another
-version. Check the `**Protocol:**` path each one reports against that line,
-and never copy that expanded path into the workflow file.
+version. Each one reports `**Protocol:**` in the plugin-relative form
+`skills/speckit-autopilot/references/consensus-protocol.md`; check that value
+against the sent line with `<plugin_root>/` removed. Never copy the expanded
+path into the workflow file, state, implementation notes, or a pull request
+body.
 
 Every clarify-, checklist-, analyze-, and implement-executor prompt, every
 consensus analyst prompt, and every artifact-author, formal-model-author, and
@@ -190,6 +236,11 @@ plugin cache, so autopilot cannot safely self-heal a missing Claude agent file.
 Tell the user to update/reinstall `speckit-pro`, run `/reload-plugins`, and
 retry.
 
+This check and its stop apply at setup or run start, before any phase work.
+Once phase work has begun, a plugin update is never a stop: follow
+§Plugin Update Mid-Run: Record, Re-resolve, Continue in
+[phase-execution.md](./phase-execution.md).
+
 ## Step 0.0c: Research Broker Preflight
 
 Record how the research broker will screen web and docs results:
@@ -204,8 +255,8 @@ The helper never reads a key value. Write `data.screening_mode` and every
 - `ok` with no warnings: research runs in `jev` mode.
 - `ok` with warnings: continue. A missing Jev key or binary means
   `sanitizer-only` mode. A missing Tavily key means `research_search` returns
-  `search_unavailable` while `docs_query` still works. Show each warning
-  message to the user once.
+  `search_unavailable` while `docs_query` still works.
+  Show each warning message to the user once.
 - `expected_failure`: a credential or binary is configured but broken. Report
   each `data.errors[].message` and continue. The broker drops every affected
   result and reports it, so research evidence may be thin until it is fixed.
@@ -221,7 +272,9 @@ printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-check-prerequisit
 ```
 
 Parse the JSON result:
-- `all_pass`: if `false`, report each failed check's `message` and STOP
+- `all_pass`: if `false`, route each failed check's `message` to its owner: the orchestrator repairs a fixable check
+  (a missing workflow directory, a stale binding), and the implement-executor repairs a failing project check; rerun the helper,
+  then defer per the Failure Escalation Protocol when repair fails
 - `branch`: current git branch name
 - `on_feature_branch`: if `true`, Specify must skip branch creation
 - `is_worktree`: if `true`, already in an isolated worktree
@@ -239,11 +292,12 @@ Before dispatching any memory-enabled Claude agent in the bound workflow worktre
 
 ### Settings file
 
-Read `.claude/speckit-pro.local.md` if it exists. Parse YAML
-frontmatter for: `consensus-mode` (default: `moderate`),
-`gate-failure` (default: `stop`), `auto-commit` (default:
-`per-phase`), `security-keywords` (default: the list in the
-Security Keywords section of `consensus-protocol.md`).
+Read `.claude/speckit-pro.local.md` if it exists, otherwise
+`.codex/speckit-pro.local.md` (the order `resolve-confidence-mode` checks).
+Parse YAML frontmatter for: `gate-failure` (default: `defer`) and
+`auto-commit` (default: `per-phase`). Consensus has no setting: one rule
+set and the fixed Security Keywords list in `consensus-protocol.md` apply to
+every run.
 If the file doesn't exist, use all defaults.
 
 ### Versioned subagent-runtime record
@@ -331,13 +385,16 @@ Read the workflow file's Prerequisites table. If already
    check (typecheck, test suite, build, lint). For code
    review items (KISS, YAGNI, SOLID), mark `Verified` —
    these are validated during implementation.
-3. Run every populated quality-gate slot from Step 0.11 with an
-   empty `{paths}` (only `DEPENDENCY_RULES` and an opted-in
-   `DEPENDENCY_AUDIT` do real work here) and record the baseline
-   in the Quality Gates table
+3. Record the G0 baseline for every populated quality-gate slot
+   per the Step 0.11 rule: `COMPLEXITY` on the whole tracked
+   source tree (a measurement; only exit 2 blocks), `MUTATION`
+   as `deferred`, `DEPENDENCY_RULES` as a real blocking run,
+   `DEPENDENCY_AUDIT` as a real blocking run only when opted in
 4. Update the workflow file's table with results and baselines
-5. If any check or populated blocking gate fails, STOP — do not proceed
-   to Phase 1
+5. If any check or populated blocking gate fails, route the failing check to the implement-executor, which repairs it
+   (a red baseline included). Rerun the check, and
+   run the repair loop within its allowance, then defer per the Failure Escalation Protocol with `stop_reason:all_tiers_failed`.
+   Phase 1 starts once the check passes, or once the failure is deferred with its evidence.
 
 ## Step 0.10: Implementation Agent Detection
 
@@ -370,6 +427,7 @@ implementation agent (e.g., "my-project-developer" or
 Before application command discovery, run the selected-model preflight from
 [formal checkpoints](./formal-methods.md#selection-and-preflight) at WORKFLOW_ROOT.
 It is independent of app language and catalog/tool presence does not activate it.
+An absent legacy selection activates nothing.
 New-model authoring may be pending; missing existing files or tool setup blocks
 with a resumable diagnostic. Do not install a checker implicitly.
 
@@ -494,43 +552,35 @@ warning to note and move past. The final table shows the
 `COMPLEXITY` baseline next to the diff result so the delta is
 visible.
 
-**Missing tool, one question per tool per repository.** For each
+**Missing tool: default to the recorded install hint, then `skip (spec)`.** For each
 populated slot with `tool_present: false`,
 look for a recorded answer for that tool: first `skips` in `.specify/quality-gates.json`,
 then the workflow file's Quality Gates table, then (only while no
 `quality-gates.json` exists yet) a `skip (repo)` row for the same
-tool in any other `docs/ai/specs/.process/*-workflow.md`. If none
-exists, ask once
-with `AskUserQuestion`:
+tool in any other `docs/ai/specs/.process/*-workflow.md`. A recorded
+answer wins. If none exists, the run never asks: tool installs are
+granted once in the run-start authorization
+(`references/stop-policy.md`), so default to the recorded install hint,
+then `skip (spec)`. Record the outcome in the Quality Gates table before continuing:
 
-```text
-<tool> is not installed, but this repository configures the
-<slot> gate (signal: <signal>). Install it, skip it for this
-spec, or skip it for this repository?
-  1. Install (<install>)   2. Skip this spec   3. Skip this repo
-```
-
-Record the answer in the Quality Gates table before continuing:
-
-- `install`: carry out the install hint. Run its commands, and add
+- `install` (the default): carry out the install hint. Run its commands, and add
   any tool it names as a project dev dependency with the project's
   own package manager. Then re-run `detect-commands` and require
-  `tool_present: true`. If it is still false, STOP.
-- `skip (spec)`: the slot is `"N/A"` for this workflow only.
-- `skip (repo)`: the durable record is a `skips` entry in
-  `.specify/quality-gates.json`, written by the operator through
-  the coach flow, never by an agent. Record `skip (repo)` in the
-  table, point the operator at the coach flow, and continue with
-  the slot as `"N/A"`.
-
-When no interactive runtime is available, record `unanswered`
-for the tool, then STOP naming the tool and the three options;
-a resume after the operator edits the table proceeds from the
-recorded answer.
+  `tool_present: true`. If it is still false, or the install fails,
+  record `skip (spec)` with the failing command and its output, and continue.
+- `skip (spec)`: the slot is `"N/A"` for this workflow only. List it
+  under "Decisions for you" with the tool, the slot, and the install
+  hint that failed.
+- `skip (repo)`: only ever a recorded operator answer. The durable
+  record is a `skips` entry in `.specify/quality-gates.json`, written by
+  the operator through the coach flow, never by an agent. When a row
+  already records `skip (repo)`, continue with the slot as `"N/A"`.
 
 ### Workflow guards
 
-Two plugin hooks enforce rules the orchestrator must also honor by hand:
+Two plugin hooks enforce rules the orchestrator must also honor by hand. Each
+hook fails open, below Python 3.11 included, so a broken guard never locks the
+operator out.
 
 - **Lockfile package manager** (`PreToolUse` on the shell tool): when exactly one
   JavaScript lockfile kind exists, a command that invokes another

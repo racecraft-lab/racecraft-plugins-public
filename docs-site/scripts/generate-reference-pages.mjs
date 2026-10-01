@@ -222,12 +222,14 @@ function skillPrerequisites(name) {
 }
 async function buildSkillsPage() {
   const claudeSkills = new Map();
-  for (const file of await listFiles('speckit-pro/skills', (rel) => rel.endsWith('/SKILL.md'))) {
+  // Shared skill sources carry host blocks, so each host's skill is read from
+  // its generated payload, which holds only that host's text.
+  for (const file of await listFiles('dist/claude/speckit-pro/skills', (rel) => rel.endsWith('/SKILL.md'))) {
     const skill = await parseSkill(file);
     claudeSkills.set(skill.name, skill);
   }
   const codexSkills = new Map();
-  for (const file of await listFiles('speckit-pro/codex-skills', (rel) => rel.endsWith('/SKILL.md'))) {
+  for (const file of await listFiles('dist/codex/speckit-pro/skills', (rel) => rel.endsWith('/SKILL.md'))) {
     const skill = await parseSkill(file);
     codexSkills.set(skill.name, skill);
   }
@@ -272,7 +274,6 @@ async function buildSkillsPage() {
   }
   return page('skills', 'Skills Reference', 'Claude Code and Codex skill surfaces, invocations, prerequisites, expected artifacts, and source citations.', records, [
     await citation('speckit-pro/skills/speckit-status/SKILL.md'),
-    await citation('speckit-pro/codex-skills/speckit-status/SKILL.md'),
   ]);
 }
 async function buildAgentsPage() {
@@ -365,44 +366,70 @@ async function buildAgentsPage() {
   generatedPage.comparisonRows = comparisonRows;
   return generatedPage;
 }
+function hookHandlers(hookConfig) {
+  const handlers = [];
+  for (const [event, groups] of Object.entries(hookConfig.hooks || {})) {
+    for (const group of groups) {
+      for (const hook of group.hooks || []) {
+        handlers.push({ event, matcher: group.matcher, command: String(hook.command || '') });
+      }
+    }
+  }
+  return handlers;
+}
+function hookHandlerLabel({ event, matcher, command }) {
+  const [script, ...args] = command.split(' ').map((part) => part.split('/').pop());
+  const scope = matcher ? ` (matcher \`${matcher}\`)` : '';
+  return `${event}${scope} runs \`${[script, args[0]].filter(Boolean).join(' ')}\`.`;
+}
+function hookSourceFacts(hookConfig, repoPath) {
+  const handlers = hookHandlers(hookConfig);
+  const events = Object.keys(hookConfig.hooks || {});
+  const facts = [
+    sourceFact(`Hook events: ${events.join(', ')}.`, [repoPath]),
+    sourceFact(`${handlers.length} command ${handlers.length === 1 ? 'handler is' : 'handlers are'} declared.`, [repoPath]),
+  ];
+  for (const event of events) {
+    const count = handlers.filter((handler) => handler.event === event).length;
+    if (count === 0) facts.push(sourceFact(`${event} declares no command handlers and executes no command.`, [repoPath]));
+  }
+  for (const handler of handlers) facts.push(sourceFact(hookHandlerLabel(handler), [repoPath]));
+  return facts;
+}
 async function buildHooksPage() {
   const claudeHooks = await readJson('speckit-pro/hooks/hooks.json');
   const codexHooks = await readJson('speckit-pro/codex-hooks.json');
+  const claudeEvents = Object.keys(claudeHooks.hooks || {}).join(', ');
+  const codexEvents = Object.keys(codexHooks.hooks || {}).join(', ');
   const records = [];
   records.push({
     id: 'claude-code-hooks',
     heading: 'Claude Code Hooks',
-    purpose: 'Documents Claude Code lifecycle hooks that enforce feedback-sweep isolation.',
+    purpose: 'Documents the Claude Code lifecycle hooks the plugin declares.',
     platformMapping: {
-      concept: 'Feedback-sweep lifecycle enforcement',
-      claudeCode: 'SessionStart, PreToolUse, and SubagentStop hooks in speckit-pro/hooks/hooks.json',
+      concept: 'Plugin lifecycle hook inventory',
+      claudeCode: `${claudeEvents} hooks in speckit-pro/hooks/hooks.json`,
       codex: 'Codex hook inventory is documented separately.',
       runtimeDifference: 'Claude Code uses the plugin hook configuration under hooks/hooks.json.',
     },
-    sourceFacts: [
-      sourceFact(`Claude Code hook events: ${Object.keys(claudeHooks.hooks || {}).join(', ')}.`, ['speckit-pro/hooks/hooks.json']),
-      sourceFact('Four command handlers attest the sweep boundary, authorize Agent and broker dispatch, and validate sweep-subagent stops.', ['speckit-pro/hooks/hooks.json']),
-    ],
+    sourceFacts: hookSourceFacts(claudeHooks, 'speckit-pro/hooks/hooks.json'),
     sources: [await citation('speckit-pro/hooks/hooks.json')],
     inferredNotes: [
-      inferredNote('This reference treats hook files as configuration inventory only; DOC-007 does not change hook behavior.', ['speckit-pro/hooks/hooks.json']),
+      inferredNote('This reference treats hook files as configuration inventory only; it does not describe hook behavior.', ['speckit-pro/hooks/hooks.json']),
     ],
     classification: 'source',
   });
   records.push({
     id: 'codex-hooks',
     heading: 'Codex Hooks',
-    purpose: 'Documents the current Codex plugin hook inventory.',
+    purpose: 'Documents the Codex plugin hooks the plugin declares.',
     platformMapping: {
-      concept: 'Codex plugin hook inventory',
+      concept: 'Plugin lifecycle hook inventory',
       claudeCode: 'Claude Code lifecycle hooks are documented separately.',
-      codex: 'UserPromptSubmit hook in speckit-pro/codex-hooks.json',
+      codex: `${codexEvents} hooks in speckit-pro/codex-hooks.json`,
       runtimeDifference: 'Codex uses the root codex-hooks.json plugin configuration.',
     },
-    sourceFacts: [
-      sourceFact(`Codex hook events: ${Object.keys(codexHooks.hooks || {}).join(', ')}.`, ['speckit-pro/codex-hooks.json']),
-      sourceFact('The declared Codex UserPromptSubmit matcher group contains no hook handlers and executes no command.', ['speckit-pro/codex-hooks.json']),
-    ],
+    sourceFacts: hookSourceFacts(codexHooks, 'speckit-pro/codex-hooks.json'),
     sources: [await citation('speckit-pro/codex-hooks.json')],
     inferredNotes: [
       inferredNote('Codex hook behavior is runtime-specific and should be reviewed separately from Claude Code hook behavior.', ['speckit-pro/codex-hooks.json']),
@@ -448,8 +475,12 @@ function manifestFieldSet(repoPath, json) {
     sourceRefs: [repoPath],
   };
 }
+function listIntegrationManifests() {
+  return listFiles('.specify/integrations', (rel) => /\.manifest\.json$/.test(rel));
+}
 async function buildManifestsPage() {
-  const paths = ['.claude-plugin/marketplace.json', '.agents/plugins/marketplace.json', 'speckit-pro/.claude-plugin/plugin.json', 'speckit-pro/.codex-plugin/plugin.json', '.specify/integrations/claude.manifest.json', '.specify/integrations/speckit.manifest.json', 'dist/claude/speckit-pro/.claude-plugin/plugin.json', 'dist/codex/speckit-pro/.codex-plugin/plugin.json'];
+  const integrationManifests = await listIntegrationManifests();
+  const paths = ['.claude-plugin/marketplace.json', '.agents/plugins/marketplace.json', 'speckit-pro/.claude-plugin/plugin.json', 'speckit-pro/.codex-plugin/plugin.json', ...integrationManifests, 'dist/claude/speckit-pro/.claude-plugin/plugin.json', 'dist/codex/speckit-pro/.codex-plugin/plugin.json'];
   const records = [];
   for (const repoPath of paths) {
     const json = await readJson(repoPath);
@@ -491,7 +522,7 @@ async function buildManifestsPage() {
 async function buildScriptsPage() {
   const scriptFiles = [
     ...(await listFiles('scripts', (rel) => /\.(sh|py|mjs|js)$/.test(rel))),
-    ...(await listFiles('speckit-pro/scripts', (rel) => /\.(sh|json|mjs|js)$/.test(rel))),
+    ...(await listFiles('speckit-pro/scripts', (rel) => /\.(sh|py|json|mjs|js)$/.test(rel))),
     ...(await listFiles('speckit-pro/skills/speckit-autopilot/scripts', (rel) => /\.(sh|py|json|mjs|js)$/.test(rel))),
   ].sort((a, b) => a.localeCompare(b));
   const records = [];
@@ -540,7 +571,7 @@ async function buildScriptsPage() {
     });
   }
   return page('scripts', 'Scripts Reference', 'Root scripts and SpecKit Pro helper scripts with repository-role classification.', records, [
-    await citation('scripts/build-plugin-payloads.py'),
+    await citation('scripts/refresh-release-artifacts.py'),
     await citation('speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py'),
   ]);
 }
@@ -586,15 +617,16 @@ async function buildTestsPage() {
   ]);
 }
 async function buildSourceVsDistPage() {
+  const integrationManifests = await listIntegrationManifests();
   const definitions = [
     ['plugin-authoring-source', 'Plugin Authoring Source', 'Editable source for skills, agents, hooks, scripts, manifests, README, and changelog context.', ['speckit-pro/README.md', 'speckit-pro/.claude-plugin/plugin.json', 'speckit-pro/.codex-plugin/plugin.json'], 'source'],
     ['claude-generated-payload', 'Claude Code Generated Payload', 'Generated Claude Code install payload inventory under dist/claude.', ['dist/claude/speckit-pro/README.md', 'dist/claude/speckit-pro/.claude-plugin/plugin.json'], 'generated-payload'],
     ['codex-generated-payload', 'Codex Generated Payload', 'Generated Codex install payload inventory under dist/codex.', ['dist/codex/speckit-pro/README.md', 'dist/codex/speckit-pro/.codex-plugin/plugin.json'], 'generated-payload'],
     ['marketplace-registries', 'Marketplace Registries', 'Repository marketplace catalogs that point to generated payloads.', ['.claude-plugin/marketplace.json', '.agents/plugins/marketplace.json'], 'source'],
-    ['release-scripts', 'Release And Payload Scripts', 'Root scripts used for generated payload and marketplace maintenance.', ['scripts/build-plugin-payloads.py', 'scripts/sync-marketplace-versions.py'], 'release-infrastructure'],
+    ['release-scripts', 'Release And Payload Scripts', 'Root scripts used for generated payload and marketplace maintenance.', ['scripts/refresh-release-artifacts.py', 'scripts/sync-marketplace-versions.py'], 'release-infrastructure'],
     ['test-suite', 'Validation Test Suite', 'Layered validation files for plugin structure, scripts, parity, and integration fixtures.', ['tests/speckit-pro/run-all.py', 'tests/speckit-pro/layer1-structural/validate-plugin-metadata.py'], 'test-only'],
     ['docs-site', 'Documentation Site', 'Astro/Starlight documentation source and local validation scripts.', ['docs-site/package.json', 'docs-site/astro.config.mjs', 'docs-site/src/content/docs/reference.md'], 'documentation-infrastructure'],
-    ['speckit-integration-manifests', 'SpecKit Integration Manifests', 'SpecKit project integration manifest evidence recorded under .specify.', ['.specify/integrations/claude.manifest.json', '.specify/integrations/speckit.manifest.json'], 'source'],
+    ['speckit-integration-manifests', 'SpecKit Integration Manifests', 'SpecKit project integration manifest evidence recorded under .specify.', integrationManifests, 'source'],
   ].map(([id, heading, purpose, paths, classification]) => ({ id, heading, purpose, paths, classification }));
   const records = [];
   for (const item of definitions) {

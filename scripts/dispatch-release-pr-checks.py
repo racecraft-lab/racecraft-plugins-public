@@ -8,16 +8,20 @@ import os
 import subprocess
 import sys
 from collections.abc import Callable, Mapping
+from pathlib import Path
 from typing import Any
 
-DEFAULT_TITLE = "chore(release): release speckit-pro"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import resolve_release_prs  # noqa: E402
+
+DEFAULT_BASE_REF = "main"
 
 
 class DispatchError(ValueError):
     """Release PR metadata or workflow dispatch failed."""
 
 
-def parse_release_prs(raw: str | None) -> list[dict[str, str]]:
+def parse_release_prs(raw: str | None, base_ref: str = DEFAULT_BASE_REF) -> list[dict[str, str]]:
     try:
         value = json.loads(raw or "[]")
     except json.JSONDecodeError as exc:
@@ -37,7 +41,7 @@ def parse_release_prs(raw: str | None) -> list[dict[str, str]]:
         branch_value = item.get("headBranchName") or item.get("headRefName")
         branch = _validated_branch(branch_value, index)
         number = _validated_number(item.get("number"), index)
-        title = _validated_title(item.get("title"), index)
+        title = _validated_title(item.get("title"), index, branch, base_ref)
         release_prs.append({"branch": branch, "number": number, "title": title})
     return release_prs
 
@@ -72,9 +76,14 @@ def _validated_number(value: Any, index: int) -> str:
     return str(number)
 
 
-def _validated_title(value: Any, index: int) -> str:
+def _validated_title(value: Any, index: int, branch: str, base_ref: str) -> str:
     if value is None or value == "":
-        return DEFAULT_TITLE
+        component = resolve_release_prs.component_from_branch(branch, base_ref)
+        if not component:
+            raise DispatchError(
+                f"release PR metadata at index {index} has no title and no release component in its branch"
+            )
+        return resolve_release_prs.default_release_title(component)
     if not isinstance(value, str) or not value.strip() or len(value) > 256:
         raise DispatchError(f"release PR metadata at index {index} has an invalid title")
     if any(ord(character) < 32 or ord(character) == 127 for character in value):
@@ -84,6 +93,7 @@ def _validated_title(value: Any, index: int) -> str:
 
 def dispatch_release_pr_checks(
     release_prs: list[dict[str, str]],
+    base_ref: str = DEFAULT_BASE_REF,
     *,
     run: Callable[..., subprocess.CompletedProcess[Any]] = subprocess.run,
 ) -> None:
@@ -103,7 +113,7 @@ def dispatch_release_pr_checks(
                     "-f",
                     f"pr_number={release_pr['number']}",
                     "-f",
-                    "base_ref=main",
+                    f"base_ref={base_ref}",
                 ],
             ),
             (
@@ -143,8 +153,9 @@ def main(
 ) -> int:
     environment = os.environ if environment is None else environment
     try:
-        release_prs = parse_release_prs(environment.get("RELEASE_PRS"))
-        dispatch_release_pr_checks(release_prs, run=run)
+        base_ref = environment.get("BASE_REF") or DEFAULT_BASE_REF
+        release_prs = parse_release_prs(environment.get("RELEASE_PRS"), base_ref)
+        dispatch_release_pr_checks(release_prs, base_ref, run=run)
     except DispatchError as exc:
         print(f"dispatch-release-pr-checks: {exc}", file=sys.stderr)
         return 1

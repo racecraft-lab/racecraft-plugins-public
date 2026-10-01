@@ -269,10 +269,11 @@ fresh ledger, and requires the exact ordered 217-baseline plus 217-candidate
 union before qualification. All multi-generation timing remains
 non-contiguous and ineligible.
 
-For the reviewed recovery scenario, the three physical histories contain
-414 + 3 + 243 = 660 charged launches: 651 complete baseline trials and nine
-invalid charges. The fresh candidate request is exactly 651 launches, giving
-the full 1,302 valid-trial comparison and a maximum cumulative charge of 1,311.
+Each history's charged launches are counted from its frozen ledger. The fresh
+request is the logical manifest minus every carried valid identity, and the
+maximum cumulative charge is the sum of all historical charges plus that fresh
+request. The authorization record carries the concrete counts for one recovery;
+this protocol does not.
 The V5 destination must be absent and must not equal, contain, or be contained
 by any historical output; historical outputs are also pairwise non-overlapping.
 Every history binds the exact same global lease path that execution acquires.

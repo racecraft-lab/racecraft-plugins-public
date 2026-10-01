@@ -23,6 +23,7 @@ from __future__ import annotations
 import re
 import sys
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -31,7 +32,11 @@ PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
+from agent_roster import codex_sandbox_policy  # noqa: E402
+from structural_helpers import developer_instructions  # noqa: E402
 from structural_helpers import frontmatter as _frontmatter  # noqa: E402
+from structural_helpers import frontmatter_field  # noqa: E402
+from structural_helpers import toml_string_field  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 AGENTS_DIR = PLUGIN_ROOT / "agents"
@@ -46,6 +51,7 @@ READ_ONLY_ROLES = (
     "domain-researcher",
     "clarify-executor",
     "consensus-synthesizer",
+    "consensus-tiebreaker",
 )
 UNTRUSTED_INPUT_CONSUMERS = ("sweep-classifier", "sweep-analyst")
 RESEARCH_BROKER_TOOLS = {
@@ -109,41 +115,9 @@ UNTRUSTED_INPUT_ALLOWLISTS = {
 TERMINAL_WORKERS = ("artifact-author", "implement-executor", "uat-runbook-author", "formal-model-author")
 AUTHOR_WORKERS = ("artifact-author", "uat-runbook-author")
 SKILL_DRIVEN_EXECUTORS = ("phase-executor", "analyze-executor", "checklist-executor")
-CODEX_SANDBOX_POLICY = {
-    "analyze-executor": "workspace-write",
-    "artifact-author": "workspace-write",
-    "autopilot-fast-helper": "read-only",
-    "checklist-executor": "workspace-write",
-    "clarify-executor": "read-only",
-    "codebase-analyst": "read-only",
-    "consensus-synthesizer": "read-only",
-    "domain-researcher": "read-only",
-    "formal-model-author": "workspace-write",
-    "implement-executor": "workspace-write",
-    "phase-executor": "workspace-write",
-    "spec-context-analyst": "read-only",
-    "uat-runbook-author": "workspace-write",
-}
+CODEX_SANDBOX_POLICY = codex_sandbox_policy()
 CODEX_READ_ONLY_ROLES = tuple(role for role, sandbox in CODEX_SANDBOX_POLICY.items() if sandbox == "read-only")
 CODEX_WRITE_ROLES = tuple(role for role, sandbox in CODEX_SANDBOX_POLICY.items() if sandbox == "workspace-write")
-TEST_METHOD_ORDER = (
-    "test_operator_tool_surface_no_tools_allowlist_pinning",
-    "test_open_executors_orchestration_capabilities_never_denied",
-    "test_read_only_roles_deny_builtin_mutation_primitives",
-    "test_terminal_workers_deny_skill_keep_mutation_surface",
-    "test_skill_driven_executors_keep_skill_and_mutation_surface",
-    "test_session_shape_metadata",
-    "test_codex_agent_sandbox_mode_scoping",
-    "test_codex_agent_sandbox_mode_scoping_rejects_missing_directory",
-    "test_named_tool_regression_guard",
-    "test_untrusted_input_consumers_pin_read_only_allowlists",
-    "test_path_scoped_untrusted_input_authors_pin_exact_tool_allowlists",
-    "test_no_tool_observers_pin_exact_tool_allowlists",
-    "test_claude_only_observer_has_no_codex_twin",
-    "test_brokered_researchers_pin_broker_allowlists",
-    "test_brokered_research_roles_deny_raw_research_tools",
-    "test_research_roles_route_research_through_the_broker_on_both_hosts",
-)
 
 NAMED_TOOL_PATTERN = re.compile(r"mcp__[A-Za-z0-9_-]+__[A-Za-z0-9_-]+")
 PROSE_TOKEN_ALLOWLIST: set[str] = set()
@@ -166,35 +140,16 @@ def _md_body(path: Path) -> str:
     return "\n".join(out)
 
 
-def _yaml_field(path: Path, field: str) -> str:
-    for line in _frontmatter(_read(path).splitlines()).splitlines():
-        if line.startswith(f"{field}:"):
-            return re.sub(rf"^{re.escape(field)}:[ \t]*", "", line)
-    return ""
-
-
-def _toml_field(path: Path, field: str) -> str:
-    pattern = re.compile(rf'^[ \t]*{re.escape(field)}[ \t]*=[ \t]*"([^"]*)"[ \t]*$')
-    for line in _read(path).splitlines():
-        match = pattern.match(line)
-        if match:
-            return match.group(1)
-    return ""
-
-
 def _toml_prose(path: Path) -> str:
-    out: list[str] = []
-    in_block = False
-    for line in _read(path).splitlines():
-        if line == 'developer_instructions = """':
-            in_block = True
-            continue
-        if in_block and line.strip() == '"""':
-            in_block = False
-            continue
-        if in_block:
-            out.append(line)
-    return "\n".join(out)
+    return developer_instructions(_read(path))
+
+
+def toml_string_field_of(path: Path, field: str) -> str:
+    return toml_string_field(_read(path), field)
+
+
+def _yaml_field(path: Path, field: str) -> str:
+    return frontmatter_field(_frontmatter(_read(path).splitlines()), field)
 
 
 def _disallowed_tools(path: Path) -> list[str]:
@@ -222,6 +177,33 @@ def _first_named_tool_violation(text: str) -> str:
         if token not in PROSE_TOKEN_ALLOWLIST:
             return token
     return ""
+
+
+MODEL_AND_EFFORT_PINS = (
+    ("phase-executor", "effort", "high", "measured against max, no quality loss"),
+    ("consensus-synthesizer", "model", "sonnet", "bounded rule-applier"),
+    ("consensus-synthesizer", "effort", "high", "bounded rule-applier runs at the documented default"),
+    ("consensus-tiebreaker", "model", "sonnet", "same model tier as the synthesizer"),
+    ("consensus-tiebreaker", "effort", "max", "the Round 3 tiebreak is a judgment call"),
+)
+TIEBREAK_TWINS = ("consensus-synthesizer", "consensus-tiebreaker")
+
+
+BROKER_ONLY_WRITE_RULE = (
+    "a parent-minted formal-author capability",
+    "Use only the author-broker write tool for every file change",
+)
+
+
+def _assert_codex_writes_only_through_its_broker(test: unittest.TestCase, agent: str) -> None:
+    """The Codex twin of a broker-only author is read-only and states the broker rule."""
+    codex_file = CODEX_AGENTS_DIR / f"{agent}.toml"
+    with test.subTest(msg=f"carve-out: codex {agent} is read-only and writes only through the author broker"):
+        policy = tomllib.loads(codex_file.read_text(encoding="utf-8"))
+        test.assertEqual("read-only", policy["sandbox_mode"])
+        instructions = " ".join(policy["developer_instructions"].split())
+        for phrase in BROKER_ONLY_WRITE_RULE:
+            test.assertIn(phrase, instructions)
 
 
 class ValidateToolScoping(unittest.TestCase):
@@ -327,14 +309,13 @@ class ValidateToolScoping(unittest.TestCase):
             with self.subTest(msg=f"{agent_name} does not reference retired TeamCreate tooling"):
                 self.assertNotIn("TeamCreate", _read(agent_file))
 
-        with self.subTest(msg="phase-executor effort is high (measured against max, no quality loss)"):
-            self.assertEqual("high", _yaml_field(AGENTS_DIR / "phase-executor.md", "effort"))
+        for agent, field, expected, why in MODEL_AND_EFFORT_PINS:
+            with self.subTest(msg=f"{agent} {field} is {expected} ({why})"):
+                self.assertEqual(expected, _yaml_field(AGENTS_DIR / f"{agent}.md", field))
 
-        with self.subTest(msg="consensus-synthesizer model is sonnet"):
-            self.assertEqual("sonnet", _yaml_field(AGENTS_DIR / "consensus-synthesizer.md", "model"))
-
-        with self.subTest(msg="consensus-synthesizer effort is high (bounded rule-applier runs at the documented default)"):
-            self.assertEqual("high", _yaml_field(AGENTS_DIR / "consensus-synthesizer.md", "effort"))
+        with self.subTest(msg="consensus-tiebreaker carries the synthesizer's read-only tool set"):
+            tools = [_yaml_field(AGENTS_DIR / f"{agent}.md", "disallowedTools") for agent in TIEBREAK_TWINS]
+            self.assertEqual(tools[0], tools[1])
 
     def test_codex_agent_sandbox_mode_scoping(self) -> None:
         with self.subTest(msg="codex agent directory exists (fail closed)"):
@@ -354,7 +335,7 @@ class ValidateToolScoping(unittest.TestCase):
                 continue
 
             with self.subTest(msg=f"codex {agent}: sandbox_mode is {expected_sandbox}"):
-                self.assertEqual(expected_sandbox, _toml_field(agent_file, "sandbox_mode"), f"{agent} must be {expected_sandbox}")
+                self.assertEqual(expected_sandbox, toml_string_field_of(agent_file, "sandbox_mode"), f"{agent} must be {expected_sandbox}")
 
     def test_codex_agent_sandbox_mode_scoping_rejects_missing_directory(self) -> None:
         module = sys.modules[__name__]
@@ -449,7 +430,7 @@ class ValidateToolScoping(unittest.TestCase):
                 with self.subTest(msg=f"carve-out: codex {agent} sandbox_mode is read-only"):
                     self.assertEqual(
                         "read-only",
-                        _toml_field(codex_file, "sandbox_mode"),
+                        toml_string_field_of(codex_file, "sandbox_mode"),
                         f"{agent} must be read-only - sandbox_mode is the only Codex lever, and it bounds the filesystem rather than the tool set",
                     )
 
@@ -474,10 +455,7 @@ class ValidateToolScoping(unittest.TestCase):
                 with self.subTest(msg=f"carve-out: {agent} excludes {tool} from its allowlist"):
                     self.assertNotIn(tool, declared)
 
-            codex_file = CODEX_AGENTS_DIR / f"{agent}.toml"
-            if codex_file.is_file():
-                with self.subTest(msg=f"carve-out: codex {agent} sandbox_mode is workspace-write"):
-                    self.assertEqual("workspace-write", _toml_field(codex_file, "sandbox_mode"))
+            _assert_codex_writes_only_through_its_broker(self, agent)
 
     def test_no_tool_observers_pin_exact_tool_allowlists(self) -> None:
         with self.subTest(msg="no-tool observer roster is exactly the artifact preview observer"):
@@ -548,10 +526,7 @@ class ValidateToolScoping(unittest.TestCase):
 
 
 def build_suite() -> unittest.TestSuite:
-    suite = unittest.TestSuite()
-    for method_name in TEST_METHOD_ORDER:
-        suite.addTest(ValidateToolScoping(method_name))
-    return suite
+    return unittest.defaultTestLoader.loadTestsFromTestCase(ValidateToolScoping)
 
 
 def main() -> int:

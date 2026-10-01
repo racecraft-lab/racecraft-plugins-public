@@ -8,9 +8,9 @@
   },
   "source_feature_dir": "specs/fixture-pr-packet",
   "generated_title": {
-    "value": "feat(FEATURE-001): Validate reviewer packet slices",
+    "value": "feat(feature-001): Validate reviewer packet slices",
     "type": "feat",
-    "scope": "FEATURE-001",
+    "scope": "feature-001",
     "description": "Validate reviewer packet slices",
     "source_evidence": {
       "kind": "split_source_boundary",
@@ -112,7 +112,7 @@
   ],
   "protected_body_fingerprint": {
     "algorithm": "sha256",
-    "value": "690b24a0443052348ebe4dff4f0dc620f8f9ae5e483f887eec0c069cb7025c12",
+    "value": "34d0f8605d56ab459d59ff2215dd1c1f11e3c40089bec1e8e837c9a537e4eca8",
     "normalization": "LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
     "elided_fields": [
       "summary",

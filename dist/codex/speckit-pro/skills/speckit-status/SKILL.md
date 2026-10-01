@@ -11,7 +11,7 @@ description: >
   the consensus protocol, or voting rules (speckit-coach).
 ---
 
-# SpecKit Status
+# SpecKit Status Dashboard
 
 ## Installed Runtime Contract
 
@@ -21,156 +21,195 @@ stdin, read one JSON response from stdout, and surface stderr diagnostics.
 Do not add a shell fallback, `jq` parsing path, Git Bash, WSL, or
 PowerShell-specific command-language requirement for installed workflows.
 
-## Scope
+The runner helper calls below (`generate-spec-index-check`, `o5-topology`) are
+not pre-approved: they follow the session's permissions and may prompt. If a
+call is denied, say so and continue the dashboard without that section.
 
-Use this skill when the user wants to know what is in progress, what is
-blocked, what has already shipped, or which spec should be started next. This
-is the read-only project dashboard for SpecKit workflows. It should summarize
-both the high-level roadmap and the phase-level progress inside workflow files.
+Show the full project roadmap: completed specs, in-progress
+specs, specs that haven't started yet, and a recommendation for
+what to work on next. Also surface archive extension installation and
+Archive Sweep cleanup safety when the project has archive state.
 
-If the user wants help understanding SDD methodology, checklist domains, or how
-to fix a failing gate, redirect to `$speckit-coach`. If the user wants to
-execute a populated workflow, redirect to `$speckit-autopilot`. This skill is
-for status, synthesis, and next-step recommendation.
+## Invocation
 
-## Input
+```text
+$speckit-status          # Show full roadmap + active specs
+$speckit-status all      # Same as above
+$speckit-status SPEC-013 # Show specific spec detail
+```
 
-Accept either:
+## What to Do
 
-- no argument, meaning “show the overall roadmap”
-- `all`, which is the same as the overall roadmap view
-- a specific `SPEC-ID` such as `SPEC-013`
+### 1. Find All Data Sources
 
-When no argument is provided, prefer the full dashboard. When a `SPEC-ID` is
-provided, show the targeted detail view for that spec first.
+Search for workflow files, technical roadmap files, and design concept docs:
 
-## What to Read
-
-Search the repository and any attached git worktrees for both of the following
-before answering:
-
-- technical roadmap files, typically matching `*technical-roadmap*` or
-  `*roadmap*`
-- workflow files, typically matching `*-workflow.md`
-- archive extension state files when present:
-  `.specify/extensions.yml`, `.specify/extensions/.registry`,
-  `.specify/extensions/archive/extension.yml`, and
-  `.specify/extensions/archive/RACECRAFT-PIN.md`
+```text
+Workflow files:    **/*-workflow.md  (active/completed specs with phase detail)
+Technical roadmaps: **/*technical-roadmap*.md  OR  **/*-roadmap.md
+Design concepts:   **/*-design-concept.md  (grill-me output per spec)
+Also check:        docs/ai/specs/*-workflow.md
+                   docs/ai/specs/.process/*-workflow.md
+                   docs/ai/specs/.process/*-design-concept.md
+                   docs/ai/specs/*-design-concept.md
+                   docs/ai/*roadmap*.md
+Archive state:     .specify/extensions.yml
+                   .specify/extensions/.registry
+                   .specify/extensions/archive/extension.yml
+                   .specify/extensions/archive/RACECRAFT-PIN.md
+```
 
 Do not assume the user keeps everything under one directory. Search the current
-checkout first, then inspect `git worktree list --porcelain` so workflows in
-attached worktrees are included even when setup used a nonstandard worktree
-root. Narrow to the files that actually describe the SpecKit project. If a file
-looks unrelated, ignore it rather than polluting the dashboard.
+checkout first, then list attached git worktrees (`git worktree list
+--porcelain`, or without a shell the `gitdir` files under `.git/worktrees/`)
+and search each one the same way, so workflows in attached worktrees are
+included even when setup used a nonstandard worktree root. Record which
+worktree and branch each workflow belongs to. Narrow to the files that
+actually describe the SpecKit project; if a file looks unrelated, ignore it
+rather than polluting the dashboard. If multiple roadmap files exist, pick the
+most relevant current roadmap and say which file you used; do not merge
+unrelated roadmaps unless the repo clearly uses a multi-roadmap setup.
 
-Search and worktree discovery only identify candidates. This standalone status
-skill must read every selected current roadmap and workflow file from beginning
-to end before answering; snippets, cached summaries, and another skill's report
+For each design concept doc found, record the SPEC-ID it corresponds to
+(parsed from the filename `SPEC-<ID>-design-concept.md` or from the doc's
+frontmatter). This drives the **DC** (Design Concept) column in the
+phase-detail dashboard and the per-spec detail view.
+
+Search, glob and worktree discovery only identify candidates. This standalone
+status skill must read every selected current roadmap and workflow file from
+beginning to end before answering; snippets, cached summaries, and another skill's report
 are not substitutes for a full-file read. Do not infer status, dependencies,
 branch, or phase state from an unread section.
 
-## Overall Dashboard Procedure
+### 2. Parse the Technical Roadmap (Full Roadmap)
 
-### 1. Parse the roadmap first
+If a technical roadmap file exists, extract the **Progress Tracking**
+table. This contains ALL specs in the project — including those
+that haven't started the SpecKit workflow yet.
 
-The technical roadmap is the source of truth for the full set of specs,
-including pending work that does not yet have a workflow file. From the roadmap
-extract, when available:
+For each spec in the progress table, extract:
 
-- spec IDs
-- spec names
-- priority
-- dependency relationships or tiers
-- tool counts
-- status markers such as complete, in progress, pending, or blocked
-- next phase or blocker notes
+- **Spec ID** (e.g., SPEC-006)
+- **Name** (e.g., Notifications)
+- **Tools** count, only when the progress table has that column
+- **Status** (✅ Complete, 🔄 In Progress, ⏳ Pending, ⚠️ Blocked)
+- **Next Phase** or blocker info
 
-If multiple roadmap files exist, pick the most relevant current roadmap and say
-which file you used. Do not merge unrelated roadmaps unless the repo clearly
-uses a multi-roadmap setup.
+Also extract:
 
-### 2. Parse workflow files for phase detail
+- The **Dependency Graph** or tier information to show which
+  specs can run in parallel and which are blocked
+- Each spec's **Priority** (P1/P2/P3) from its section in the
+  technical roadmap (line format:
+  `**Priority:** P1 | **Depends On:** ...`)
 
-Workflow files add the fine-grained execution state the roadmap usually lacks.
-Collect them from the main checkout and any attached worktree paths. For each
-workflow file:
+### 3. Parse Workflow Files (Phase Detail)
 
-- identify the `SPEC-ID`
-- read the workflow overview table
-- record which phases are complete, in progress, pending, or failed
-- detect the current phase
-- capture the branch name if the workflow records it
+For each workflow file found, extract:
 
-Use workflow data to enrich the roadmap view, not to replace it. A spec may be
-pending in the roadmap and have no workflow file yet. That should still appear
-in the output.
+- **Spec ID and Name** from the header
+- **Phase statuses** from the "Workflow Overview" table
+  (look for ⏳, 🔄, ✅, ⚠️)
+- **Current phase** (the first ⏳ or 🔄 phase)
+- **Branch** from the "Specification Context" table
 
-### 3. Build a unified picture
+### 4. Present Unified Dashboard
 
-Combine roadmap and workflow information into a single report. The dashboard
-should clearly separate:
+Combine technical roadmap and workflow data into a single report (illustrative:
+the table skeletons pin the output format, and every cell holds a placeholder
+rather than real project data; add a Tools column and summary line only when the
+roadmap records tool counts):
 
-- complete specs
-- active specs with phase detail
-- ready-to-start specs with no blockers
-- blocked specs with the specific dependency or missing prerequisite
-- archive extension installation state, excluded current spec, cleanup mode,
-  and whether `safeToApplyCleanup` is true or false when the data is available
+```markdown
+# SpecKit Project Status
 
-When there are active workflows, show a phase table so the user can see whether
-the spec is stuck in clarify, checklist, analyze, or implementation.
+## Summary
 
-### 3.1 Archive Extension Status
+- **Total specs:** <n>
+- **Complete:** <n> (SPEC-XXX, SPEC-YYY)
+- **In progress:** <n>
+- **Remaining:** <n>
 
-When archive state files exist, include an `Archive` or `Archive Sweep` row in
-the dashboard:
+## Completed Specs
 
-- installed: true when `.specify/extensions.yml` lists `archive` or
-  `.specify/extensions/.registry` has an enabled `archive` entry
-- source: registry `source_url`/`source_ref`/`source_commit`, or the vendored
-  `.specify/extensions/archive/extension.yml` repository and version
-- safe cleanup state: use `autopilot-state.json.archive_sweep.safe_to_apply_cleanup`
-  or the latest Archive Sweep report if available
-- excluded current spec: use `archive_sweep.excluded_current_spec` when present
-- recommendation: if missing, install or vendor `racecraft-lab/spec-kit-archive`;
-  if installed but unsafe, recommend dry-run evidence or a clean safe apply-mode
-  cleanup branch; if safe, recommend reviewed cleanup only after archive success
-  and recovery commands are recorded
+| Spec | Name | PR | Notes |
+|------|------|----|-------|
+| SPEC-XXX | <name> | #<pr> | <note> |
+| SPEC-YYY | <name> | #<pr> | <note> |
 
-### 3.2 Spec-Map index freshness (read-only)
+## Ready to Start (No Blockers)
 
-When the project has version-marked `SPEC-MOC.md` maps, report whether their
-generated navigation zones are current. Run the shared generator in read-only
-`--check` mode — it rebuilds the zones in memory, diffs them against the
-committed maps, and writes nothing. The generator is the one shared script;
-reference it by its plugin-root-relative path rather than reimplementing the
-check:
+These specs have no dependencies beyond the completed foundation and can start now:
+
+| Spec | Name | Tier | Priority | Notes |
+|------|------|------|----------|-------|
+| SPEC-XXX | <name> | <tier> | P1 | <note> |
+| SPEC-YYY | <name> | <tier> | P2 | <note> |
+| ... | ... | ... | ... | ... |
+
+## Blocked
+
+| Spec | Name | Blocked By | Reason |
+|------|------|------------|--------|
+| SPEC-XXX | <name> | SPEC-YYY | <reason> |
+| SPEC-YYY | <name> | SPEC-ZZZ | <reason> |
+
+## Active Workflows (Phase Detail)
+
+If any spec has a workflow file with phases in progress, show the phase-level
+table. The **DC** column (Design Concept) shows ✅ if a `SPEC-<ID>-design-concept.md`
+exists for the spec, ⏳ otherwise. A workflow file without a corresponding design
+concept doc is a yellow flag — the phase prompts may be undercooked relative to
+what `$speckit-scaffold-spec` produces today:
+
+| Spec | Name | DC | Specify | Clarify | Plan | Check | Tasks | Analyze | Impl | Next |
+|------|------|----|---------|---------|------|-------|-------|---------|------|------|
+| SPEC-XXX | <name> | ✅ | ✅ | ✅ | 🔄 | ⏳ | ⏳ | ⏳ | ⏳ | Plan |
+| SPEC-YYY | <name> | ⏳ | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | Clarify (no design concept — re-run `$speckit-scaffold-spec` or grill manually) |
+```
+
+Include an Archive Sweep summary when archive state exists:
+
+- whether the archive extension is installed/enabled
+- pinned source URL/ref/commit when available
+- excluded current spec from `autopilot-state.json.archive_sweep`
+- cleanup mode and `safeToApplyCleanup`
+- next step: install/vendor archive, keep dry-run-only, or perform reviewed
+  cleanup after archive success and recovery commands
+
+#### Spec-Map Index Freshness (read-only)
+
+As part of producing the dashboard, report whether each version-marked
+`SPEC-MOC.md`'s generated navigation zones are current. Run the shared
+generator in **read-only `--check` mode** — it regenerates the zones in
+memory, diffs them against the committed maps, and **writes nothing**:
 
 ```text
 Run runner helper generate-spec-index-check with repo root "$PWD".
 ```
 
-Pass `"$PWD"` (the project root) explicitly. Without it the generator infers its
-repo root from the script's own location, which in a cached-plugin install is the
-plugin cache — not the user's project — so the freshness check would scan the
-wrong tree.
+Pass `"$PWD"` (the project root) explicitly. Without it the generator infers
+its repo root from the script's own location, which in a cached-plugin install
+is the plugin cache — not the user's project — so the freshness check would
+scan the wrong tree.
 
-Surface one freshness line in the dashboard from the exit code:
+Surface a single freshness line in the dashboard from the exit code:
 
 - exit `0` → **index current**
-- exit `1` → **index stale — run regen**: the maps drifted from their sources.
-  `speckit-status` does not regenerate them; the fix is `$speckit-autopilot`,
-  whose phase gates rebuild the zones.
-- exit `2` → **index check error**: name the failure from the generator's
-  stderr line (for example a malformed `prs.json` or a non-regular-file map
-  target).
+- exit `1` → **index stale — run regen** (the maps drifted from their
+  sources; the fix is `$speckit-autopilot`, whose phase gates
+  rebuild the zones — `speckit-status` does not regenerate them)
+- exit `2` → **index check error: `<message>`** — name the failure from the
+  generator's stderr line (e.g. a malformed `prs.json` or a non-regular-file
+  map target)
 
-This dashboard is strictly read-only. It invokes the generator only with
-`--check`, which writes nothing on any path — including the exit-`2` error
-path. `speckit-status` never runs the generator in write mode and never
-regenerates the maps itself; reporting staleness here is purely advisory.
+**Read-only guarantee:** `speckit-status` MUST NOT write any file. It invokes
+the generator only with `--check`, which writes nothing on **any** path —
+including the exit-`2` error path. The dashboard never runs the generator in
+write mode and never regenerates the maps itself; reporting staleness here is
+purely advisory.
 
-### 3.3 O5 parent rollup and re-slicing status
+#### O5 Parent Rollup And Re-Slicing Status
 
 When a spec directory contains `o5-parent-manifest.json`, validate topology
 before reporting child status:
@@ -193,70 +232,106 @@ has not started and status should point to the recorded re-slicing packet,
 blocked operations, and the next re-slicing resume action instead of marking
 implementation complete.
 
-### 4. Recommend the next spec
+### 5. Recommend Next Spec
 
-Pick the next recommendation using concrete rules, not vibes:
+After the dashboard tables, add a `## Recommended Next` section
+that proposes the next spec to implement.
 
-1. Exclude complete specs.
-2. If a spec is already in progress, recommend finishing it first.
-3. Among pending specs, exclude anything blocked by incomplete dependencies.
-4. Sort the remaining specs by priority, then by roadmap order.
-5. Recommend the top candidate and optionally list one or two alternatives.
+**Algorithm:**
 
-Explain why the recommendation is unblocked and why it outranks the
-alternatives. If all remaining specs are blocked, say so plainly.
+1. From the technical roadmap, collect all unblocked specs with status
+   `⏳ Pending` (not `✅ Complete`, not `🔄 In Progress`, not
+   blocked by incomplete specs).
+2. For each, read its **Priority** (P1/P2/P3) from the spec's
+   section in the technical roadmap.
+3. Sort by: Priority (P1 first) → then technical roadmap order
+   (preserves tier sequencing).
+4. The **top recommendation** is the first spec in the sorted
+   list.
+5. Also list 1-2 **alternatives** from the same or next priority
+   level, especially if they are smaller (a lower Projected
+   reviewable LOC in the roadmap) for a quicker win.
 
-## Specific Spec Procedure
+**Output format** (illustrative: the shape is fixed, the values are
+placeholders):
 
-When the user requests a single `SPEC-ID`, show:
+```markdown
+## Recommended Next
 
-- the spec name and status
-- the roadmap scope summary
-- dependencies and what this spec unlocks
-- workflow phase status if a workflow file exists
-- current blockers or missing artifacts
-- the next concrete command
+**SPEC-XXX: <name>** (P1, Tier <tier>)
 
-If no workflow file exists for the requested spec, say that directly and
-recommend `$speckit-scaffold-spec <SPEC-ID>` rather than pretending there is execution
-state.
+This is the highest-priority unblocked spec. <one or two sentences of scope,
+taken from the spec's technical roadmap section.>
 
-## Output Format
+To get started:
 
-Prefer a concise dashboard with:
+```text
+$speckit-scaffold-spec SPEC-XXX
+```
 
-- a summary section with totals
-- grouped tables or lists for complete, active, ready, and blocked specs
-- a `Recommended Next` section
+This creates the worktree, branch, and populated workflow file.
+Then run `$speckit-autopilot` to execute it.
 
-For a spec-specific view, prefer a shorter report with the current phase, key
-artifacts, blockers, and next action.
+**Alternatives** (if you prefer a smaller spec first):
 
-The answer should be actionable. If the best next step is to create a workflow,
-say so. If the best next step is to resume autopilot from an active workflow,
-say so. If the roadmap is missing, point the user to `$speckit-coach` for
-roadmap creation guidance.
+- SPEC-YYY: <name> (P2)
+- SPEC-ZZZ: <name> (P2)
+```
 
-## Edge Cases
+**Edge cases:**
 
-Handle these explicitly:
+- If no unblocked specs remain, say "All unblocked specs are
+  complete. Remaining specs are blocked by dependencies."
+- If a spec is `🔄 In Progress`, recommend finishing it first:
+  "SPEC-XXX is already in progress — finish it before starting
+  a new spec."
+- If all specs are complete, say "All specs complete — project
+  roadmap is finished."
+- If several workflow files describe the same spec, prefer the one that
+  matches the active branch or the most recent in-progress state.
+- If workflow files exist without a roadmap, report phase detail from the
+  workflows and note that backlog visibility is incomplete.
 
-- No roadmap and no workflow files: report that no SpecKit tracking artifacts
-  were found.
-- Roadmap exists but no workflow files: show the roadmap view and recommend
-  `$speckit-scaffold-spec` for pending specs.
-- Workflow files exist without a roadmap: report phase detail from workflows,
-  but note that backlog visibility is incomplete.
-- Multiple workflow files for the same spec: prefer the one that matches the
-  active branch or the most recent in-progress state.
+### 6. If Specific Spec Requested
 
-## Boundaries
+Show detailed information for that spec:
+
+- All phase statuses with notes (from workflow file, if exists)
+- Technical roadmap scope description
+- Design Concept doc path (if `SPEC-<ID>-design-concept.md` exists) — also
+  surface its frontmatter `question_count` and Open Questions count for a
+  quick read on how thoroughly the spec was scoped
+- Dependencies and what it enables
+- Gate results and key artifacts produced
+- Current blockers (if any)
+- Files generated
+
+If no workflow file exists for the requested spec, show the
+technical roadmap scope and suggest creating a workflow file:
+
+```text
+SPEC-008 (Perspectives) — ⏳ Not Started
+No workflow file found. To begin:
+$speckit-scaffold-spec SPEC-008
+```
+
+### 7. If No Technical Roadmap or Workflow Files Found
+
+Tell the user:
+
+- No technical roadmap or workflow files found in the project
+- Guide them to create a technical roadmap:
+  `$speckit-coach help me create a technical roadmap`
+- Or create a single workflow: copy
+  `skills/speckit-coach/templates/workflow-template.md`
+
+### 8. Boundaries
 
 This skill does not mutate the repo. Do not create branches, edit workflow
 files, or mark roadmap rows complete from inside the status skill. If the user
-wants to act on the recommendation, direct them to the corresponding entrypoint:
+wants to act on the recommendation, direct them to the matching skill:
 
-- `$speckit-scaffold-spec` to prepare a spec
-- `$speckit-autopilot` to execute a workflow
-- `$speckit-resolve-pr` to address review feedback
-- `$speckit-coach` for process guidance
+- $speckit-scaffold-spec to prepare a spec
+- $speckit-autopilot to execute a workflow
+- $speckit-resolve-pr to address review feedback
+- $speckit-coach for process guidance

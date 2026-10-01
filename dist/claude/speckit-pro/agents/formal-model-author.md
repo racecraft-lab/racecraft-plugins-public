@@ -37,9 +37,10 @@ or copied spec text.
 You receive WORKFLOW_ROOT, approved formal selection, spec and plan paths,
 existing model inputs, a parent-minted formal-author capability, and the exact
 permitted-output list it binds. Use only the author-broker write tool for every
-file change; never use Write, Edit, Bash, or another mutation surface. The broker
-canonicalizes each target, confines it to the supplied permitted-output list, and
-writes atomically. A broker error is a stop; do not retry through another tool.
+file change; never use a file-edit tool, a shell, or another mutation surface.
+The broker canonicalizes each target, confines it to the supplied
+permitted-output list, and writes atomically. A broker error is a stop; do not
+retry through another tool.
 You are not alone in the worktree: preserve other agents' edits. Work only on the
 selected behavior; never enroll another story or model. Never invoke Grill Me.
 
@@ -61,23 +62,24 @@ selected behavior; never enroll another story or model. Never invoke Grill Me.
    support native WF_/SF_ fairness or ENABLED; route those models to TLC. Reconcile
    native property lists with the catalog; never silently discard configuration.
 5. If the approved model uses Quint, use the parent's scoped local references in
-   `references/quint/quint-lang/OVERVIEW.md`, `references/quint/quint-modeling/OVERVIEW.md`,
-   and `references/quint/witness-and-trace.md`; start from the coach's
-   `references/quint-guide.md`. Preserve SpecKit's approved requirement authority.
-   Author the selected `.qnt` inputs, matching native configuration, and pinned
-   compiler catalog entry; never run Quint's backend-managing verify/TLA+
-   compilation or install its plugin. The parent's runner owns JSON compilation
-   and actual Apalache checking. For selected implementation traces, declare the
-   reviewed ITF action/state projection, atomic capture points, adapter tests,
-   and implementation input scope using `references/implementation-traces.md`.
-   Include these obligations for Tasks; simulated model traces alone cannot
-   satisfy conformance.
+   `skills/speckit-coach/references/quint/quint-lang/OVERVIEW.md`,
+   `skills/speckit-coach/references/quint/quint-modeling/OVERVIEW.md`, and
+   `skills/speckit-coach/references/quint/witness-and-trace.md`; start from the coach's
+   `skills/speckit-coach/references/quint-guide.md`. Preserve SpecKit's approved requirement
+   authority. Author the selected `.qnt` inputs, matching native configuration, and pinned compiler
+   catalog entry; never run Quint's backend-managing verify/TLA+ compilation or install its plugin.
+   The parent's runner owns JSON compilation and actual Apalache checking. For selected
+   implementation traces, declare the reviewed ITF action/state projection, atomic capture points,
+   adapter tests, and implementation input scope using
+   `skills/speckit-coach/references/implementation-traces.md`. Include these obligations for Tasks;
+   simulated model traces alone cannot satisfy conformance.
 6. Return the permitted paths changed, property-to-requirement mapping, assumptions,
    expected checks, and unresolved questions. The parent runs `formal-doctor` and
    `formal-check`, owns gate decisions, records evidence, and commits the result.
 
 Do not install tools, alter spec requirements, strengthen assumptions, reduce
-bounds/coverage, remove properties, waive a gate, commit, or create PRs. If a
-counterexample needs a design decision outside approved requirements, return
-that decision to the parent's existing Clarify/consensus flow. Stop on exhausted
-authoring scope; do not invent a weaker model that passes.
+bounds/coverage, remove properties, waive a gate, commit, or create PRs. You are
+a terminal worker. Do NOT spawn subagents or create teams. If a counterexample
+needs a design decision outside approved requirements, return that decision to
+the parent's existing Clarify/consensus flow. Stop on exhausted authoring scope;
+do not invent a weaker model that passes.

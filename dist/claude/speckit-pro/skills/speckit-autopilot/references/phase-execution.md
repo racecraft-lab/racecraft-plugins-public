@@ -1,5 +1,6 @@
 # Phase Execution Reference
 
+
 ## Contents
 
 - [SpecKit Infrastructure](#speckit-infrastructure) — commands, scripts, templates, constitution
@@ -92,6 +93,7 @@ a "skip branch creation" prefix in its prompt. Do NOT use
 `export SPECIFY_FEATURE` — env vars do not persist across
 tool invocations.
 
+
 ## Stage-Bounded Phase Selection
 
 `AUTOPILOT_STAGE` is resolved once at Step 0.6c. It bounds which phases this
@@ -102,6 +104,7 @@ invocation may run:
 | `plan` | Specify, Clarify, Plan, Checklist, Tasks, Analyze | G6.5 confidence gate, then the stage-boundary commit |
 | `implement` | Implement, then the post-implementation steps | `Post: Retrospective` |
 | `full` | All seven phases end to end | `Post: Retrospective` |
+
 
 **A resolved stage MUST NOT start a phase outside its own range.** Apply the
 range *before* the SKILL.md Step 1 scan picks a row, not after:
@@ -185,6 +188,35 @@ verdict, flag or no flag. Naming the implementation stage explicitly remains
 sufficient to proceed — the operator is not blocked, and no confirmation is
 required. Crossing *silently* is the only thing forbidden.
 
+### Resume Protocol
+
+Resuming is the same protocol on both distributions, because both read the same
+durable store through the same Step 0.6c operation.
+
+**The `Stage` entry is workflow-file-wins.** The `Stage` row in the workflow
+file's `### Basic Information` table is the authoritative durable store of the
+resolved stage; `autopilot-state.json.stage` mirrors it for the active run only
+and is never authoritative. On disagreement the workflow file wins and the
+mirror is repaired from it. Absence on either side is legal — it means no run
+yet, and resolves through Step 0.6c auto-detection. A two-sided disagreement is
+reported by the Step 1.1 coverage guard as `stage_mirror_errors`, which is
+registered in the `status-evidence` rule and so fails the guard rather than
+merely printing.
+
+Three resume forms, in order of preference:
+
+- **Bare re-invocation** — pass the workflow file and nothing else. Step 0.6c
+  re-resolves the stage from the workflow file's own status table and prints the
+  basis. After a plan-stage boundary this re-resolves `plan` whenever the
+  `Confidence Gate` row is non-terminal, so a refused boundary is never crossed
+  by accident.
+- **`--stage implement`** — the explicit crossing. Required after a strict-mode
+  stop, and it reports the recorded verdict it is proceeding past rather than
+  re-running the gate.
+- **`--from-phase <phase>`** — moves the starting point within the resolved
+  stage's range. The older `--from-phase implement` form keeps working and is
+  not rejected against an auto-detected stage.
+
 ## Phase-by-Phase Execution
 
 Each phase follows the same pattern: read prompt → spawn
@@ -229,8 +261,9 @@ it does NOT invoke a `/speckit-*` command.
 **Gate:** G0 — `quality_gates.status` from Step 0.11 must be
 `present`, all automated checks must pass, `DEPENDENCY_RULES`
 must pass, and no blocking slot may exit 2. A `COMPLEXITY` baseline over
-the ceiling is recorded, not a block. If any fail, STOP; a missing or
-invalid `.specify/quality-gates.json` stops with the Step 0.11
+the ceiling is recorded, not a block. If any fail, route the failing gate to the implement-executor, which repairs
+it (a red baseline included); run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
+A missing or invalid `.specify/quality-gates.json` stops with the Step 0.11
 message naming the file and the coach flow.
 
 **Doctor Health Check (ALWAYS — plugin skill):**
@@ -331,7 +364,7 @@ For each clarify session in the workflow file:
         Stage 3: apply each synthesizer's Artifact Edit SERIALLY
                  to spec.md (preserves write contention safety).
         Round 2 escape-hatch: also batched across all queued items.
-        [HUMAN REVIEW NEEDED]: consensus-protocol.md#human-review-needed
+        [ROUND_3_TIEBREAK]: consensus-protocol.md#round-3-tiebreak (Round 3 agent tiebreak)
      c. TaskUpdate: "<session> Consensus" → completed
   7. After accepted consensus edits, re-scan spec.md and update the recorded
      remaining-marker count
@@ -348,9 +381,10 @@ edit artifacts. It returns questions and recommendations to the parent.
 (low confidence, conflicting sources, security keywords),
 the main session spawns 3 consensus agents to get distinct
 perspectives and applies consensus rules. An item that ends in
-`[HUMAN REVIEW NEEDED]` goes to the operator through `AskUserQuestion` when
-the session is interactive; an unattended run stops, as in every phase that
-runs consensus.
+`[ROUND_3_TIEBREAK]` takes the Round 3 agent tiebreak in
+[consensus-protocol.md](./consensus-protocol.md#round-3-tiebreak), in an
+interactive and an unattended run alike; it never asks the operator and never
+stops the run.
 
 **Why after each session:** Session 2 may depend on
 Session 1's resolved questions. Both layers complete
@@ -362,7 +396,7 @@ G2 is a separate post-Clarify check, not an inference from completed tasks or
 consensus. After the final session, scan the current `spec.md` again and advance
 only when the actual `[NEEDS CLARIFICATION]` count is zero. A missing scan,
 unreadable spec, or remaining marker leaves Clarify and G2 incomplete and
-follows the configured gate-failure/escalation path.
+follows the Failure Escalation Protocol and defers.
 
 **Commit:**
 `git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json && git commit -m "feat(SPEC-XXX): complete clarify phase"`
@@ -397,6 +431,7 @@ capture the structured response instead of letting a failed helper response
 abort the run:
 
 ```text
+plan = "specs/<feature>/plan.md"
 resolved_python -m speckit_pro_runner < request.json
 
 request.json:
@@ -455,6 +490,45 @@ compact evidence live outside specs/. Exclude raw checker output.
 **Commit:**
 `git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json && git commit -m "feat(SPEC-XXX): complete plan phase"`
 
+### G3 Plan ambiguity branch
+
+The parent orchestrator, not the Plan executor or consensus agents, classifies
+the disputed wording before retrying. Follow
+[`gate-validation.md`](./gate-validation.md)
+§Plan ambiguity provenance repair exactly. Give the same `phase-executor` the
+complete original Plan prompt within that same corrective reservation, plus
+literal trusted context blocks containing the direct source evidence and a
+`Plan Repair Context` containing the complete immediately preceding actual G3
+runner response envelope without summary or field omission (including its exact
+G3 JSON), disputed wording, provenance class, prior repair result, and attempt number. Append every attempt
+and revalidation result to the workflow's Plan Ambiguity Repair Log. If
+provenance is unresolved, record why repair cannot safely proceed; never turn
+downstream agent agreement into human ratification.
+
+The executor message itself must contain those exact bytes. A file path, an
+instruction for the executor to read the file, an excerpt, or a paraphrase is
+not a trusted-context block. Before dispatch, verify locally that the complete
+original prompt, every required source-evidence block, and the complete parsed
+G3 response object are literal substrings of the message. If any block is
+missing, repair the message before dispatch rather than asking the executor to
+recover the context independently.
+
+Construct that message with the registered read-only
+`render-plan-repair-context` runner helper. First persist the complete actual
+G3 response envelope in the request's declared attempts file. Then invoke the
+helper request and pass its complete successful response envelope unchanged as
+the `phase-executor` child message. The executor treats only the envelope's
+hash-bound `data.stdout_json.executor_message` as its instruction. This sealed
+transport avoids a second model-authored copy while preserving every source
+byte and the complete G3 object. Do not manually summarize, reconstruct,
+extract, or splice the helper output. If the helper rejects its bounded inputs
+or retained evidence, stop before dispatch and repair the request or evidence.
+
+The parent, never the executor, runs the authoritative G3 command before the
+first repair and after every completed executor return. Preserve the strict
+order `parent G3 -> executor dispatch and return -> parent G3 rerun`; the
+executor must not produce or substitute the G3 evidence it receives.
+
 ### Phase 4: Checklist
 
 Spawn a **separate subagent for each checklist domain**,
@@ -482,7 +556,7 @@ For each checklist domain in the workflow file:
         Stage 3: apply each synthesizer's Artifact Edit SERIALLY
                  to spec.md or plan.md.
         Round 2 escape-hatch: also batched across all queued gaps.
-        [HUMAN REVIEW NEEDED]: consensus-protocol.md#human-review-needed
+        [ROUND_3_TIEBREAK]: consensus-protocol.md#round-3-tiebreak (Round 3 agent tiebreak)
      c. Re-run domain checklist to verify gaps closed
      d. TaskUpdate: "<domain> Consensus" → completed
   5. TaskUpdate: domain task → completed
@@ -508,6 +582,7 @@ domain runs.
 
 ### Phase 5: Tasks
 
+
 Before dispatching Tasks for an enabled formal selection, reconcile and renew
 the `planning` checkpoint per [Selected formal checkpoints](formal-methods.md#later-planning-implementation-and-closeout).
 Include the selected properties' implementation obligations and declared scope.
@@ -518,28 +593,89 @@ Spawn a subagent.
 **Gate:** G5 — cross-reference every FR in spec.md with
 tasks.md
 
-**Post-G5 reviewability capture (guarded):**
-After G5 passes, run the task reviewability gate without letting
-the script's compatibility exit code abort the run:
+G5 also fails a gate task that waits on evidence its own dependents produce,
+and lists it under `gate_task_loops` (see [G5](gate-validation.md#g5--after-tasks)).
+Split each listed task: a candidate check now, with the reconciliation against
+actual evidence attached to the emission step. Then rerun G5.
 
-```text
-code=0
-out=<command output> || code=$?
-```
-
-Parse stdout as JSON and record stdout, stderr, exit code, gate
-status/mode/exit/evidence path, and a repo-relative evidence path in the
-workflow file. If the result is `pass`, `warn`, or an honored typed exception,
-continue normally. If the result is a valid current size-only `status=block`
-for `mode=tasks`, continue into marker planning and later marker emission; it is
-not a manual re-slicing stop and MUST NOT ask the operator to rewrite task
-boundaries solely for size.
+**Post-G5 reviewability capture:**
+After G5 passes, apply the tasks-phase reviewability boundary.
+Runner helper `reviewability-gate`
+supports setup mode only on the installed runner — tasks mode is deferred, so
+do not invoke it as an active helper. Record the deferred-mode diagnostics
+(helper ID, requested mode, deferral reason) in the workflow file, then
+evaluate the fallback evidence chain: the setup-mode gate result recorded at
+scaffold, the plan-phase `estimate-reviewable-loc` verdict, and any
+ratified split decision (autopilot or operator) in the workflow file. If that committed
+evidence shows `pass`, `warn`, or an honored typed exception, continue. If it
+shows a valid current size-only `status=block`, continue into marker
+planning and later marker emission; it is not a manual re-slicing stop and
+MUST NOT ask the operator to rewrite task boundaries solely for size.
 
 Correctness stops remain blocking: malformed/stale marker state, failed
 verification, invalid packet, unsafe output, unusable gate evidence, invalid
 JSON, unreadable artifacts, missing reviewability status/mode, stale
 fingerprints, or any non-size safety finding. These stops fire before Analyze or
 Implement.
+
+**Budget-driven split ratification:**
+When the per-PR path budget makes the planner split an approved PR order into
+smaller increments, do not park the split for a human. Run runner helper
+`helper_id=ratify-pr-split operation=ratify-pr-split mode=read_only` with
+these inputs:
+
+- `approved_groups`: the approved PR groups in approved order, each with
+  `group_id` and `scope` (its requirement, story, and task IDs);
+- `increments`: the proposed increments in delivery order, each with
+  `increment_id`, the `group_id` it splits, `scope`, `production_paths`, and
+  `total_paths`;
+- `active_scope`: every active requirement, story, and task ID;
+- `path_budget`: the repository's per-PR `production_paths` and `total_paths`
+  caps.
+
+Each marker's evidence records, `<feature>/.process/checkpoints/<marker-id>.json`
+and `<feature>/.process/verification/<marker-id>.json`, are runner-owned and
+never count toward `production_paths` or `total_paths`, so recording them never
+needs a re-plan or an operator approval. `estimate-reviewable-loc` leaves them
+out of its counts too and reports them as `declared_files.marker_evidence`. Still
+list both files in that marker's `declared_files` and in the changed-file
+manifest, which must match the pull request's diff.
+
+The implementation-notes record, `<feature>/.process/implementation-notes.md`,
+is accounted for the same way. It is committed, publishable evidence, so stage
+it with each marker checkpoint commit and list it in each marker's
+`declared_files` and in the changed-file manifest as a path several markers
+share, like the workflow and state files. It never counts toward
+`production_paths` or `total_paths`: `estimate-reviewable-loc` leaves it out and
+reports it as `declared_files.implementation_notes`. Because an entry is
+appended after every task, the record can lag its checkpoint commit, so the
+mutation helpers' clean-worktree check ignores it; every other untracked or
+modified path still refuses apply with `dirty_worktree`.
+
+The helper ratifies only a split that divides approved groups without merging
+or dropping any, keeps the approved order and each group's scope, keeps every
+active requirement, story, and task, and keeps each increment within the
+budget. On `decision=autopilot_ratified`, write `data.record` verbatim to the
+current workflow section (`owner_ratification=ratified`,
+`ratified_by=autopilot`, and the reason) and continue without a question.
+Ask the operator only when the helper returns `decision=operator_required`,
+which carries `stop_reason:scope_changing_pr_split`; its findings name the
+cause: `scope_added`, `scope_dropped`, `group_added`, `group_dropped`,
+`group_reordered`, `group_merged`, or `scope_duplicated`. Record `data.record`
+(`owner_ratification=pending` with the blockers), park that split for the
+operator's decision, and keep every independent unit running. A
+`decision=reslice_required` result carries only `reviewability_exception_needed`:
+follow `data.repair` by re-slicing the over-cap increment through the layer
+planner, or committing a typed reviewability exception when it cannot split
+further, then rerun the helper. An `input_error`, a missing budget, or
+unreadable evidence is repaired by the orchestrator: regenerate the split
+evidence from the layer plan and rerun the helper, and
+run the repair loop within its allowance, then defer per the Failure Escalation Protocol; never ratify it yourself.
+
+Keep only one live `owner_ratification` value in the workflow file. When a
+later section records a ratification, change each earlier
+`owner_ratification=` line to `owner_ratification=superseded` and add
+`superseded_by=<later section heading>` beside it.
 
 **Optional: Tasks to GitHub Issues:**
 If the project uses GitHub Issues for tracking and the GitHub
@@ -593,7 +729,7 @@ signals[], hints[], warnings[]}` or an error and writes no file.
 
 Then record the four surfaced fields (`route`, `releasable`,
 `signals`, `warnings`) into the workflow file's `## Atomicity Route`
-section via the orchestrator's own `Edit`. Route values:
+section with the orchestrator's own file edit. Route values:
 `split-PR` (proven additive multi-seam), `one-navigable-PR` (default /
 abstain, guarded cutover, or modify-heavy), `single-atomic-PR`
 (hard-atomic or release-held cutover), `branch-by-abstraction`
@@ -623,7 +759,9 @@ phase-coverage guard checks against the pull request's actual diff, which does
 not exist until code is written, so move to `pr-marker-plan.v2` at the first
 implementation checkpoint. Under v2, a pending checkpoint needs `commit_sha`
 and `evidence_path` together, and needs them only once a phase result is
-recorded for its marker; the guard does not check v1 checkpoints.
+recorded for its marker; the guard does not check v1 checkpoints. Until
+then, the marker's PR Marker Plan Evidence row reads `Pending` in its
+Checkpoint cell and the workflow carries no checkpoint claim for it.
 
 When ordered markers each modify an existing shared file, declare `MODIFIED`
 for that path in each marker and list those marker IDs in review order in the
@@ -669,7 +807,7 @@ Items it can't resolve are flagged in its
       Stage 3: apply each synthesizer's Artifact Edit SERIALLY to
                tasks.md, spec.md, or plan.md.
       Round 2 escape-hatch: also batched across all queued findings.
-      [HUMAN REVIEW NEEDED]: consensus-protocol.md#human-review-needed
+      [ROUND_3_TIEBREAK]: consensus-protocol.md#round-3-tiebreak (Round 3 agent tiebreak)
    c. Re-run analyze to verify findings resolved
    d. TaskUpdate: "Analyze - Consensus" → completed
 5. TaskUpdate: "Analyze" → completed
@@ -677,6 +815,24 @@ Items it can't resolve are flagged in its
 
 If 0 unresolved items from executor, skip consensus and
 advance immediately.
+
+**Documentation-only remediation at a planning gate.** When a gate's
+remediation, most often Analyze (G6), edits only planning documents of the
+feature (`spec.md`, `plan.md`, `research.md`, `tasks.md`, `data-model.md`,
+`quickstart.md`, `.process/task-execution.json`, or a `checklists/<name>.md`),
+reserve it with `kind=corrective`, its `failure_invariant`, the explicit
+`spec_file`, and `gate_remediation`: the gate and every repository-relative
+path the fix will touch. The ledger admits it under that gate's own allowance
+of two rounds, so a run-wide budget spent at an earlier gate never stalls it,
+and it needs no operator approval. A remediation that touches code, tests,
+formal models, `contracts/`, or any path outside those documents goes through
+the run-wide budget with the reason in `gate_ineligible`. The helper judges
+paths only, so a threshold or scope change written inside a planning document
+is the orchestrator's call: omit `gate_remediation` and reserve it run-wide.
+When the
+reserve returns `gate_remediation_allowance_exhausted`, record the open findings
+for the end-of-run request and continue. It is never a mid-run question and
+never a stop.
 
 **Gate:** G6 — verify 0 CRITICAL findings
 
@@ -692,7 +848,8 @@ emit on the workflow file (see
 provides the data; the gate script reads it and decides whether
 to proceed, surface a remediation hint, or stop.
 
-```
+
+```text
 1. Read mode from `CONFIDENCE_GATE_MODE` (set at Step 0.6b — see
    [Prerequisites](./prerequisites.md) and the SKILL.md orchestration
    summary). Do not re-run `resolve-confidence-mode` here —
@@ -718,7 +875,8 @@ to proceed, surface a remediation hint, or stop.
    - exit 0 (PASS): TaskUpdate G6.5 → completed; advance to Phase 7.
    - exit 1 (NO_DATA): log a warning, surface to operator that the
      synthesizer skipped its confidence emit (treat as a plugin
-     regression report). TaskUpdate G6.5 → completed with a
+     regression report).
+     TaskUpdate G6.5 → completed with a
      `no_data: true` note. Advance to Phase 7.
    - exit 2 (FAIL):
        a. Read JSON `deductions_applied` first. When it is true,
@@ -833,10 +991,11 @@ does not end at the boundary commit above. It runs this sequence, in this order:
 9. Validate and commit/push the workflow-only preview evidence.
 ```
 
+
 **Read the [Artifact Review Handoff contract](./artifact-review.md) before this sequence.**
 It defines the durable record, preview evidence, current-task binding, and
-preview-only resume. Publication through step 6 remains fail-open for generation
-gaps. Steps 7–8 cannot treat publication or `queued` as verified delivery.
+preview-only resume. Publication through step 7 remains fail-open for generation
+gaps. Steps 8–9 cannot treat publication or `queued` as verified delivery.
 A preview-only resume bypasses generation and current-run artifact cleanup when
 the shared resolver reports reusable artifacts, and skips completed publication
 steps after corroboration.
@@ -886,6 +1045,7 @@ only recovery path.
 
 #### Artifact generation: the `artifact-author` dispatch
 
+
 Step 1 is one dispatch of the `speckit-pro:artifact-author` subagent. The
 orchestrator hands it the feature's planning record and the shipped gallery, and
 it returns one outcome per page it wrote or could not write:
@@ -914,12 +1074,15 @@ Agent(
 )
 ```
 
+
 **Selection lives inside the agent and is driven by the manifest.** The
 orchestrator names no page list of its own. The agent reads `manifest.json`
-from the `Gallery dir:` directory, built from `plugin_root`, and keeps the entries whose `stage` is
-`draft-pr`, and applies each surviving entry's `trigger`: `{"always": true}`
-selects on every run, and `{"any_of": [...]}` selects only when the feature
-carries at least one signal the entry names.
+from the `Gallery dir:` directory, built from `plugin_root`, keeps the `shipped`
+entries whose `stage` is `draft-pr`, and applies each surviving entry's
+`trigger`: `{"always": true}` selects on every run, and `{"any_of": [...]}`
+selects only when the feature carries at least one signal the entry names. A
+`planned` entry has no template yet, so it is never selected and never reported
+as a gap.
 
 **The gallery is input, never output.** `<plugin_root>/artifact-gallery/` holds
 the shipped manifest and the shipped templates, and writing anything into that
@@ -1080,9 +1243,13 @@ creation and is not re-derived at the later ready flip:
 
 `type` is one of `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, and the
 scope is **lowercase**. Validate the exact string through the release-readiness
-gate's `validate-pr-title` operation before creating. The packet schema alone
-would also accept an uppercase ticket-style scope; the release-readiness shape
-would not, so the lowercase form is the binding one. Draft-mode title validation
+gate's `validate-pr-title` operation before creating. The packet schema and the
+release-readiness shape both reject an uppercase scope, so the lowercase form is
+the only valid one. Do **not** substitute the
+`validate-pr-workflow-contract` operation, which the ready pull request's
+packet check runs later: its scope rule upper-cases `prsg-`, `spec-`, `doc-`,
+and `xplat-` slugs, so on those spec families it would demand an uppercase
+scope that this lowercase requirement can never satisfy. Draft-mode title validation
 checks the conventional shape only — it does not ask the description to reference
 verification or evidence a draft has not produced.
 
@@ -1255,8 +1422,8 @@ What the emission sequence owes it:
   describing an earlier run's shortfall never survives a later refresh that no
   longer fell short.
 - **Left exactly as found** when the run stops at create-or-refresh because the
-  recorded and live identities disagree. A run that creates nothing and refreshes
-  nothing records nothing.
+  recorded pull request is closed, missing, or one of several open ones. A run
+  that creates nothing and refreshes nothing records nothing.
 
 **The workflow file is the only place this identity is stored — there is no
 state-file mirror.** That is why this row behaves differently from the `Stage`
@@ -1279,9 +1446,10 @@ discrepancies. This is what each one means here, at create-or-refresh:
 | `match` | refresh the recorded pull request's description, and its title if the title changed; report that URL |
 | `no_record` | fall through to the live by-branch existence test above, then create or refresh |
 | `skipped` | **never create.** The present row is already a positive under the two-way existence test, so a run that merely could not reach the tool has not learned that no pull request exists. Refresh the recorded pull request when the tool can be reached; when it cannot, report through the could-not-be-opened path |
-| `pr_closed` | do not reopen it, do not open a second one, and leave the row exactly as found. The stop report names the number, the URL, that **the operator** may reopen it with `gh pr reopen <number>`, and that a re-run then proceeds normally |
-| `pr_missing` | do not create, do not rewrite the row. The stop report names the recorded identity and says to correct or clear the row, then re-run |
-| `identity_mismatch` | do not create. The stop report names **both** identities — the one recorded and the one observed — and the manual resume path |
+| `pr_closed` | do not reopen it, do not open a second one, and leave the row exactly as found. The stop report carries `stop_reason:reopen_closed_pr` and names the number, the URL, that **the operator** may reopen it with `gh pr reopen <number>`, and that a re-run then proceeds normally |
+| `pr_missing` | do not create, do not rewrite the row. The stop report carries `stop_reason:ambiguous_pr_record` (no open pull request is left to repair the row to), names the recorded identity, and says to correct or clear the row, then re-run |
+| `identity_mismatch` with `corroboration.repair` set | exactly one open pull request answers for the branch, so **repair the row** to `repair.number` and `repair.url` (the "Repaired, not skipped" rule above), take the record commit, and refresh that pull request as on `match`. Report both identities: the one recorded and the one now recorded |
+| `identity_mismatch` with `corroboration.repair` null | several open pull requests answer for the branch, so do not create and do not rewrite the row. The stop report carries `stop_reason:ambiguous_pr_record` and names **both** identities (the one recorded and the one observed) and the manual resume path |
 
 **`gh pr reopen` is the operator's own step and never automation's.** It appears
 in this reference only as prose inside a resume path. Nothing in this sequence
@@ -1289,19 +1457,24 @@ runs it, and nothing infers permission to run it from the fact that the stop
 report mentions it.
 
 **No second pull request is opened in any discrepancy class.** That is the single
-invariant the three discrepancy rows share, and it is why each of them stops
-rather than falling through to creation.
+invariant the discrepancy rows share, and it is why each of them repairs or
+stops rather than falling through to creation. **Only a row that names another
+pull request than the branch's one open pull request repairs.** A closed,
+merged, or absent recorded pull request never does.
 
-**All three discrepancies end the attempt at create-or-refresh** — after
+**Every stopping discrepancy ends the attempt at create-or-refresh** — after
 generation, after the stage-boundary commit, and after the push. Never earlier.
 Ending earlier would strand the durable discrepancy line: that line is written at
 stage resolution, and it reaches version history only inside a commit this stage
 goes on to take. A run that stopped before its own boundary commit would discard
 the very record of why it stopped.
 
-**This is fail-open.** A discrepancy does not invoke the strict-mode blocked-stop
-contract, does not mark the gate blocked, and does not change the resolved stage.
-The stage did everything it could and reports what it found.
+**This is fail-open at the stage.** A discrepancy does not invoke the strict-mode
+blocked-stop contract, does not mark the gate blocked, does not change the
+resolved stage, and never stops stage resolution at Step 0.6c. The stage did
+everything it could and reports what it found. A discrepancy ends only this
+create-or-refresh attempt, and the Phase 7 corroboration gate below applies the
+same repair and the same stops, so both call sites read one policy.
 
 **The two reads are separate, and the later one is the current evidence.** The
 observation Step 0.6c takes at resolution and the existence query the terminal
@@ -1338,6 +1511,12 @@ the marker's `review_order`; within one marker, keep the existing task-order and
 marker ID, ordered task IDs, test/verification evidence path, fingerprint
 status, checkpoint commit SHA (`implementation_checkpoint.head_sha` or
 `implementation_checkpoint.commit_sha`), warnings, and any blocked/fixed tasks.
+Cite an external task, session, thread, or event id, such as a delegated audit's
+task id, only as `sha256:<digest>` (the hex SHA-256 of the raw value) or omit
+it. The rule covers every committed record: the marker checkpoint, the
+verification report, the workflow file, implementation notes, and each PR body.
+The status-evidence guard fails on a raw id in marker checkpoint or verification
+evidence as `marker_evidence_privacy_errors`.
 The marker checkpoint SHA is the source commit for later live marker PR
 branches. Do not infer a new marker order from changed files or reviewability
 warnings.
@@ -1345,6 +1524,17 @@ warnings.
 **Why task-level:** this workflow keeps one orchestration owner
 (SKILL.md §Architectural Constraint); executors are terminal workers,
 so routing happens here.
+
+**A declared pre-PR command runs as a pre-PR gate.** A command the root
+`AGENTS.md` or `CLAUDE.md` names for every PR, such as a dependency audit,
+runs before each PR like any other gate.
+On Codex the Phase 6.5 preflight
+collects its egress authorization at run start through
+`check-gate-preflight-coverage`. Claude Code has no approval reviewer, so it has
+no egress inventory. Its Step -2 run-start permission probe settles the runner
+and `git status` prompts before any phase work. The command then runs under the
+session's permission settings, and a denial the probe could not know is a blocked
+action (below).
 
 #### Phase 7 Setup: The Pull-Request Feedback Sweep
 
@@ -1437,13 +1627,22 @@ After an amendment is committed and pushed, invalidate that private session.
 Capture the next comment against a fresh exact `HEAD`; never reuse a snapshot
 or receipt across amendment commits.
 
-**Stop for human re-review before artifact regeneration.** Preserve the
-one-artifact amendment commit, separate bookkeeping commit, deterministic
-reply, push, and re-review stop. Do not dispatch `artifact-author`, regenerate
-pages, refresh the pull-request description, or run any broader agent in that
-amendment run. **On a later resumed run**, the durable sweep row excludes the
-handled comment; then the ordinary freshness join may regenerate artifacts and
-refresh the pull request before task work.
+**Regenerate after an amendment in a fresh isolated worker; do not stop for
+re-review.** Preserve the one-artifact amendment commit, separate bookkeeping
+commit, deterministic reply, and push. Then invalidate the private session and
+run the regeneration sequence below. Its only page-authoring dispatch is a
+fresh `speckit-pro:artifact-author` worker that receives only committed bytes:
+the planning record and the shipped gallery at the pushed `HEAD`. Those already
+carry this run's amendment commits, so their committed diff is the only
+amendment text it can see. No comment text, classifier reason, session state,
+receipt, or capability reaches it. **List every amended comment in the final
+report** by comment id, class, artifact, and amending commit. **Keep the
+isolation-unavailable stop**: when the isolation boundary cannot be
+established, or the private session cannot be invalidated, stop with
+`stop_reason:integrity_failure` before any regeneration. A later resumed run
+still repairs pages a failed regeneration left stale, because the durable
+sweep row excludes the handled comment and the freshness join reads the same
+`amended` rows.
 
 #### Phase 7 Setup: The Run Report Every Path Builds
 
@@ -1465,9 +1664,8 @@ commit, no row, no reply" reads as a fact an operator can act on.
 
 **The what-already-landed part also carries one outcome line per page**, each
 reading `generated`, `gap`, or `removed`, with every gap naming what was
-missing and why. These lines belong to the shared shape, not to the
-amended-leg bullet below alone, because the freshness evaluation runs on every
-leg, the recovery leg included.
+missing and why. These lines belong to the shared shape, because the freshness
+evaluation runs on every leg, the recovery leg included.
 
 **Two run-level lines sit beside them**: the regeneration commit's short sha,
 and the outcome of the description refresh. A failure's manual resume path
@@ -1519,8 +1717,8 @@ manual resume path, and the resume-path part below names which one.
 
 **An `undeterminable` verdict is reported and acted on nowhere else.** It
 triggers no regeneration, no refresh, and no commit, and it moves the
-stop-or-proceed decision in neither direction — on a sweep that amended, the
-re-review stop still fires on its own independent ground. The report names the
+stop-or-proceed decision in neither direction, on a sweep that amended or on
+any other. The report names the
 verdict, each affected row's `#` and its reason, and the operator's manual
 resume path, through the run report **alone**: the three sinks do not apply,
 because no regeneration occurred to produce a shortfall for them to carry.
@@ -1568,29 +1766,27 @@ naming its absolute location.
 reaches, and never to the pull request.
 
 **The conditions that end a run in this sequence** are an invalid
-authenticated account, a corroboration status that is neither `match` nor
-`no_record` or one outside the six, a failed observation, an unreadable
-Feedback Sweep Log row, an unavailable isolation boundary, a malformed or
-non-receipt model result, a refused receipt mutation, a failed push, a
-consensus outcome requiring human review, and one or more amendments requiring
-re-review. The final condition is not a failure.
+authenticated account, a corroboration status of `pr_closed` or `pr_missing`,
+an `identity_mismatch` that names no repair, a status outside the six, a failed
+observation whose tool or authentication is absent, an unreadable Feedback
+Sweep Log row, an unavailable isolation boundary, a malformed or non-receipt
+model result, a refused receipt mutation, and a failed amendment push. An
+amendment is not on this list, and neither is a rate limit or an unparseable
+answer: those retry, and a spent retry schedule ends only the sweep. A
+consensus item that no round settles is not on this list either: it takes the
+Round 3 tiebreak below and never ends a run.
 
 **The failed push in that list is the amendment push above.** The
-regeneration sequence's own artifacts push ends the run only on the leg that
-amended; on the leg that amended nothing it is reported and the run proceeds,
-so it is not among the conditions this list names. The member names the
-amendment push and no other.
-
-**One condition needs more than the shared shape.** The human-review stop's
-resume path names **both** operator actions, resolve the substance and re-run
-**or** resolve the thread, because it is the only stop whose resume path a
-re-run alone does not satisfy.
+regeneration sequence's own artifacts push is reported and the run proceeds on
+every leg, so it is not among the conditions this list names. The member names
+the amendment push and no other.
 
 **A failed description refresh names its resume path per stopping status**,
 one line per status rather than one shared line, for the reason the
 corroboration gate below already gives: the stopping statuses have different
 fixes, and one shared path would send an operator to the wrong repair.
-`skipped` names fixing the tool. `pr_closed` names reopening the pull request.
+`skipped` names installing or authenticating the tool. `pr_closed` names
+reopening the pull request.
 `pr_missing` names correcting or clearing the `Draft PR` row. A refresh that
 failed against a reachable pull request names refreshing the description
 directly, outside the automated sequence. Neither `pr_closed` nor `pr_missing`
@@ -1623,28 +1819,42 @@ evidence.
 | --- | --- | --- |
 | `match` | sweep | none, the run proceeds |
 | `no_record` | proceed without sweeping | none, the run proceeds |
-| `skipped` | stop | fix the tool, then re-run |
-| `pr_closed` | stop | reopen the pull request, or clear the `Draft PR` row if the checkpoint is genuinely abandoned, then re-run |
-| `pr_missing` | stop | clear the row, then re-run |
-| `identity_mismatch` | stop | correct the row to name the right pull request, then re-run |
+| `skipped` | retake the observation with backoff, then run `gh auth status`; stop only when `gh` or its authentication is absent | install or authenticate `gh`, then re-run |
+| `pr_closed` | stop with `stop_reason:reopen_closed_pr` | reopen the pull request, or clear the `Draft PR` row if the checkpoint is genuinely abandoned, then re-run |
+| `pr_missing` | stop with `stop_reason:ambiguous_pr_record` (no open pull request is left to repair the row to) | clear the row, then re-run |
+| `identity_mismatch` with `corroboration.repair` set | repair the row, then sweep as on `match` | none, the run proceeds |
+| `identity_mismatch` with `corroboration.repair` null | stop with `stop_reason:ambiguous_pr_record` (several open pull requests answer for the branch) | correct the row to name the right pull request, then re-run |
 
-**Each stopping status names its own resume path**, because the four have
+**Each stopping status names its own resume path**, because the stops have
 different fixes and one shared path would send an operator to the wrong repair.
 **Clearing the row belongs to `pr_missing` alone**: it is the one status where
-the row's absence would match reality.
+the row's absence would match reality. **Reopening a closed pull request stays
+a human call**: nothing here runs `gh pr reopen`, and no repair applies to
+`pr_closed`.
 
-**The sweep never writes the `Draft PR` row on any path**, these four stops
-included. A run that repaired the record it had just failed to corroborate
-would destroy the evidence of the discrepancy, and the next reader would find a
-healthy row where a stop had been.
+**Repair the row when exactly one open pull request answers for the branch.**
+The runner names that pull request in `corroboration.repair` (its number and
+URL). It counts open entries across the whole observation, never the entry it
+happened to reach first, so two open pull requests leave `repair` null. Rewrite
+the `Draft PR` cell to that number and URL through the emission machinery's
+single writer (its "Repaired, not skipped" rule), keep any gap note as found,
+and take that machinery's record commit. Then treat the status as `match`, and
+report both identities, the one recorded and the one now recorded, as a
+run-level line.
+
+**The sweep never writes the `Draft PR` row itself on any other path.** A run
+that rewrote the record of a closed, missing, or ambiguous pull request would
+destroy the evidence of the discrepancy, and the next reader would find a
+healthy row where a stop had been. The repair keeps that evidence: Step 0.6c
+has already recorded the discrepancy line durably, and the report names both
+identities.
 
 **That invariant is about the sweep's own writes.** The description refresh
 below changes the `Draft PR` cell through the emission machinery, which keeps
 exactly one writer; the sweep supplies only the trigger and the timing, and
-the commit carrying that change is the machinery's own record commit. The
-invariant holds through the refresh: it exists so a run cannot repair a record
-it just failed to corroborate, and the refresh is reached only after an
-entry-gate `match`.
+the commit carrying that change is the machinery's own record commit. The row
+repair above and the refresh share that writer, so the row never has a second
+one.
 
 **A value outside the six is a malformed record and stops.** Do not map it onto
 one of the six, and do not read it as absence. Exactly one status proceeds, so
@@ -1655,33 +1865,46 @@ the checkpoint.
 `no_record` means the gate **does not apply**: no draft pull request was ever
 opened, so there is no checkpoint to carry unread feedback, and the run
 proceeds. `skipped` means the gate **applies and could not be evaluated**: a row
-is recorded and the observation behind it failed, so the run stops. Treating
-"could not observe" as "observed nothing" would make the checkpoint silently
-optional exactly when the tool is unreliable, which is when unread feedback is
-most likely to be sitting on the pull request.
+is recorded and the observation behind it failed. Treating "could not observe"
+as "observed nothing" would make the checkpoint silently optional exactly when
+the tool is unreliable, so a `skipped` is never read as `no_record`, and the
+report says the sweep did not run.
 
 **A tool that was absent, unauthenticated, rate-limited, or that returned output
 which could not be parsed is not evidence that a recorded pull request is
 gone.** Those four are the causes of a `skipped`, and not one of them observed
 anything about the pull request.
 
-**The `skipped` report must read differently from the three discrepancy stops,
-and must name which of the four causes occurred**: the tool was absent, the tool
+**Retry before a `skipped` stands, and let the cause decide.** Retake the
+observation up to four times, waiting 2, 8, and 30 seconds between attempts
+(the schedule the runner's own GitHub reads use), when `gh` reports a rate
+limit, times out, or returns output that cannot be parsed. Retake a parse
+failure as a whole observation; never patch it. Then run `gh auth status`.
+**Only an absent tool or absent authentication stops the run**: `gh` is not
+installed, or `gh auth status` fails. Both name `stop_reason:tool_unavailable`,
+because installing a tool or signing in is a run-start grant, not an agent
+power. **Retries spent on a rate limit or unparseable output, with `gh`
+installed and authenticated, do not stop the run.** Take the sweep as not run:
+proceed into task work without sweeping, and put the cause in the run report
+and under "Decisions for you" in the end-of-run request. The next run's Step
+0.6c observes again.
+
+**The `skipped` report must read differently from the discrepancy stops, and
+must name which of the four causes occurred**: the tool was absent, the tool
 was unauthenticated, the tool was rate-limited, or the tool returned output that
-could not be parsed. Those three stops observed something and this one observed
-nothing, so a report that read the same would tell an operator the record is
-wrong when the record may be perfectly correct. **Behaviour does not branch on
-the cause; only the report does.** All four take the same stop and the same
-resume path.
+could not be parsed. The discrepancy stops observed something and this one
+observed nothing, so a report that read the same would tell an operator the
+record is wrong when the record may be perfectly correct.
 
 **Clearing the `Draft PR` row is not a resume path here.** That belongs to
 `pr_missing`, and reusing it for a `skipped` would erase a probably-true record
 to manufacture a `no_record` reading on the next run.
 
-**Every one of these paths reports.** A gate stop's condition is the status
+**Every one of these paths reports.** A gate outcome's condition is the status
 and, for `skipped`, its cause. Nothing landed, because the gate is evaluated
-ahead of the first read and therefore ahead of every write. The resume path is
-the one the table above gives.
+ahead of the first read and therefore ahead of every write; the one exception
+is a row repair's record commit. The resume path is the one the table above
+gives.
 
 **Read the authenticated account from the live session, at call time.** The
 sweep excludes the replies it posted itself, and the author half of that rule
@@ -1714,19 +1937,30 @@ when both surfaces have been read to exhaustion. Three failures fall under the
 rule: one surface readable and the other not, a page failing partway through
 pagination, and output that cannot be parsed. **A failed observation is
 discarded rather than swept.** The partial data does not reach classification.
-The run writes zero log rows, posts zero replies, takes zero commits, and
-stops. Nothing needs unwinding, because every read precedes every write.
+The run writes zero log rows, posts zero replies, and takes zero commits.
+Nothing needs unwinding, because every read precedes every write.
 
-**The mid-read failure report is not the gate stop, and must not read like
+**The runner retries before it fails.** Each `gh api` read retries a rate
+limit, a timeout, a server error, and unparseable output on the same 2, 8, and
+30 second schedule. A failure `gh` names no cause for is not retried: the
+runner runs `gh auth status` instead. **Branch on the `reason` the capture
+surface returns** in its `{"status": "blocked", "reason": ...}` envelope (exit
+3). `gh_unavailable` and `gh_not_authenticated` stop with
+`stop_reason:tool_unavailable`. `rate_limited`, `malformed_output`, and
+`observation_failed` do not stop the run: they end this run's sweep, so
+proceed into task work and report the reason as the `skipped` outcome above
+does. `isolation_boundary_unavailable` is the isolation stop and names
+`stop_reason:integrity_failure`.
+
+**The mid-read failure report is not the gate outcome, and must not read like
 it.** It draws on the same four causes the gate's `skipped` draws on: the tool
 was absent, the tool was unauthenticated, the tool was rate-limited, or the tool
 returned output that could not be parsed. So the report **also names that
 reading had begun** and **which surface failed**, because an operator who cannot
 tell a gate failure from a mid-read failure cannot tell whether the pull request
 was ever reachable. Nothing landed, for the same reason nothing landed at the
-gate: every read precedes every write. The resume path is the same as the
-gate's `skipped`, fix the tool and re-run, and needs no repair step first,
-because the observation is retaken fresh on every invocation.
+gate: every read precedes every write. The resume path needs no repair step
+first, because the observation is retaken fresh on every invocation.
 
 **Launch one classifier per candidate without transporting a body.** Iterate
 only the metadata returned by private capture. An `empty` route takes the
@@ -1795,13 +2029,13 @@ the loop terminate, and any future rule that writes to either comment surface
 has to be tested against it, because a rule that adds an unexcluded comment
 breaks convergence however reasonable it looks on its own.
 
-One path does not shrink the set. A comment whose consensus round returns a
-human-review outcome takes no class and writes no row, so it is in the set
-again on the next run and stops that run too. The set does not grow, so this
-is not divergence, but re-running without operator action reproduces the same
-stop. That path is bounded by a human rather than by a counter, and **no
-attempt counter is introduced**: a per-comment counter would need the
-state-file mirror the log rules forbid.
+One path does not shrink the set. A comment whose Round 3 tiebreak returns
+`scope_deferred`, or whose replacement analyst fails, takes no class and
+writes no row, so it is in the set again on the next run. The set does not
+grow, so this is not divergence, and the current run continues past it. The
+next run repeats the tiebreak unless an operator has settled the scope or
+resolved the thread first. **No attempt counter is introduced**: a per-comment
+counter would need the state-file mirror the log rules forbid.
 
 #### Phase 7 Setup: Consensus for an Amended Comment
 
@@ -1833,43 +2067,67 @@ table and the three phase-specific flows under it are never reached and
 Clarify, Checklist, and Analyze keep the shared analysts and those flows
 unchanged.
 
-**When consensus does not answer, the item goes to human review.** Three ways
-lead there: all three analysts disagreeing after Round 2, a Round-1 escape
+**When consensus does not answer, the item takes a Round 3 tiebreak.** Three
+ways lead there: all three analysts disagreeing after Round 2, a Round-1 escape
 whose Round 2 still cannot resolve, and an analyst that fails its single
-retry. All three land on one behavior, and only the report names which
-occurred.
+retry. The first two return `human_review` from `sweep-apply-result` with basis
+`all_disagree` or `escape_unresolved`. An analyst that fails its retry is
+replaced by a fresh analyst, not a human: launch that perspective once more
+through `launch_claude`, which mints a new capability and replaces the failed
+perspective's record. If the replacement fails too, no synthesis is possible,
+the report names `analyst_failed`, and the comment is deferred as below.
+
+**The Round 3 call.** On `human_review`, call `launch_claude` once more with
+`stage=synthesis` for the same comment. That is one more `stage=synthesis`
+call by a fresh `sweep-analyst`, a new process that has no memory of the first
+call. The broker's `consensus_inputs` adds `tiebreak: true` and `prior_basis`
+to what it returns, which is how the analyst knows it is the tiebreak. It
+picks the most conservative option that satisfies the spec, from the three
+accepted perspective records and the constitution and roadmap in the snapshot,
+and returns one of two results. A resolved result carries an `agreement` of
+`tiebreak` and one edit. A result whose choice changes product scope the spec
+and roadmap do not settle carries basis `scope_unsettled` and no edit. The
+runner allows exactly one such call per comment and only after a synthesis
+returned `human_review`, and refuses the two tiebreak values anywhere else.
+The receipt goes directly to `sweep-apply-result`.
+
+**The tiebreak is a `sweep-analyst` call, never `consensus-synthesizer`**, for
+the reason above: only `sweep-analyst` carries the closed read-only allowlist.
+The orchestrator is still not a conduit: it never receives the tiebreak's
+finding, its dissent, or its edit text. Those stay in the private session.
+
+**Two outcomes.** A resolved tiebreak is an ordinary amendment from here on: the
+same helper leg edits the artifact, the projection adds `round: 3`, the comment
+takes class `amended`, and the run follows the steps below unchanged. The
+Consensus Resolution Log row for it has Outcome `[ROUND 3]` and the fixed
+Resolution text `Round 3 tiebreak assumption`. The assumption and its dissent
+stay in the private session, so the orchestrator lists in `known_gaps` only the
+comment id, the artifact, and the amending commit. When `sweep-apply-result`
+returns `scope_deferred`, nothing is edited, the comment takes no class, and
+**no Feedback Sweep Log row is written**, because the skip key is that log's
+comment-id column and nothing else, so the absent row is what makes the
+comment a candidate again once the scope is settled; a row here would record
+the sweep's own deferral as the comment's disposition and make it permanent.
+The comment id is added to the `unresolved_deferrals` input of `finalize-run`
+and appears in the one end-of-run consolidated request. Nothing stops the run,
+and other items in the batch complete normally.
 
 The closed synthesis basis must remain exact: no agreeing pair is
-`all_disagree`, an unresolved escape is `escape_unresolved`, and an exhausted
-analyst retry is `analyst_failed`. Do not replace these sweep-specific values
-with the general Consensus Resolution Log outcome labels.
+`all_disagree`, an unresolved escape is `escape_unresolved`, an unsettled scope
+is `scope_unsettled`, and a launcher failure that survives its replacement is
+`analyst_failed`. Do not replace these sweep-specific values with the general
+Consensus Resolution Log outcome labels.
 
-**No edit, no class, no sweep row.** No artifact is edited and the comment is
-given no class, because `amended` would assert an edit nobody resolved and the
-other three would assert a disposition nobody reached. Writing no Feedback
-Sweep Log row is the load-bearing part: the skip key is that log's comment-id
-column and nothing else, so the absent row is what makes the comment a
-candidate again once a human has resolved it. A row here would record the
-sweep's own failure as the comment's disposition and make it permanent.
-
-**It surfaces as one Consensus Resolution Log row instead**, `Type` `Sweep`,
-its item cell naming the comment id, and that row **counts** toward the
-Round-2 escape-rate metric. That log feeds no skip key, so a row there costs
-no idempotency.
-
-**It stops the run whether or not anything was amended.** A run whose only
-unresolved item took no class would otherwise read as nothing to act on and
-walk into task work. When other items amended in the same run, the re-review
-stop and this one are the same stop and one report, not two.
-
-**Other items in the batch still complete.** Items that resolved are edited,
-committed, recorded, and replied to normally, and the run stops after that.
+**It surfaces as one Consensus Resolution Log row**, `Type` `Sweep`, its item
+cell naming the comment id, and that row **counts** toward the Round-2
+escape-rate metric. That log feeds no skip key, so a row there costs no
+idempotency.
 
 #### Phase 7 Setup: Amending, Committing, and Pushing
 
 **One commit per amendment, never one run-wide commit.** A log row names its
-commit, an `amended` reply names the amending commit, and the re-review stop
-reports a commit range. None of the three survives collapsing every amendment
+commit, an `amended` reply names the amending commit, and the final report
+lists a commit range. None of the three survives collapsing every amendment
 into a single blob.
 
 **Each amendment commit stages exactly the one artifact path it amended, never
@@ -1994,8 +2252,8 @@ deferred: Recorded and not acted on because the requested target is outside the 
 no action: Recorded; no actionable artifact change was identified.
 ```
 
-A human-review Consensus Resolution Log row uses only the comment id, the
-closed `Sweep` type, fixed text `Requires human review`, the closed round and
+A scope-deferred Consensus Resolution Log row uses only the comment id, the
+closed `Sweep` type, fixed text `Scope deferred`, the closed round and
 outcome enums, and analyst role names. It never summarizes the disagreement.
 The legacy outbound redaction helper remains defense in depth for callers
 outside this isolated flow; it is not a transport for model text here.
@@ -2045,9 +2303,9 @@ interrupt case exact rather than ambiguous. A run interrupted after two rows
 were written, with one amendment commit local and unpushed, has posted
 **zero** replies.
 
-**Which stops post replies is named rather than inferred.** The re-review and
-human-review stops occur **after** the reply point, so a run that reaches either
-has already posted every reply it owes. Every boundary, capture, schema,
+**Which stops post replies is named rather than inferred.** The regeneration
+sequence runs **after** the reply point, so a run that reaches it has already
+posted every reply it owes. Every boundary, capture, schema,
 receipt, mutation, or push failure aborts before the reply point and posts
 none.
 
@@ -2099,7 +2357,7 @@ tests that field for the literal `false` and has no branch of its own for this
 case, so a `null` or an omitted field reads as *not stale* and the run leaves
 the pages alone. That is the interrupted-run case exactly — pages written and
 never committed — and getting it wrong puts the pre-amendment plan back in
-front of the re-reviewer, which is the outcome this whole sequence exists to
+front of the reviewer, which is the outcome this whole sequence exists to
 prevent.
 
 **The helper refuses an observation whose shape is wrong:** an absent or non-array
@@ -2118,14 +2376,16 @@ failed gather, still yields `undeterminable`, and still never blocks the run.
 Treat an exit 2 here as the orchestrator's own defect and fix the gather; do not
 retry it and do not route it into the report as a freshness outcome.
 
-**This sequence is unreachable in a run that made an amendment.** That run
-stops for human re-review immediately after its amendment, bookkeeping, reply,
-and push cadence. On a later resumed run with no new amendment, a `stale`
-verdict re-dispatches the shipped `speckit-pro:artifact-author` agent against
-the committed planning record and runs this sequence:
+**A run that made an amendment runs this sequence after its amendment,
+bookkeeping, reply, and push cadence.** Its `amended` rows are not ancestors of
+the last artifacts commit, so the verdict is `stale` by construction. A later
+resumed run runs it the same way when its verdict is `stale`.
+A `stale` verdict re-dispatches the shipped `speckit-pro:artifact-author` agent
+against the committed planning record and runs this sequence:
 
 ```text
-0. Confirm this run made no amendment.
+0. Invalidate the private sweep session, and confirm every amendment commit is
+   pushed.
 1. Evaluate freshness through the `verdict` surface.
 2. On `stale`, re-dispatch `speckit-pro:artifact-author` against the committed
    planning record.
@@ -2141,8 +2401,15 @@ the committed planning record and runs this sequence:
 9. When the `Draft PR` cell actually changed, take the record commit.
 ```
 
-**Step 0 is a security boundary.** It keeps every broader agent and generated
-artifact consumer out of the run that received model-produced amendment text.
+
+**Step 0 is a security boundary.** The `artifact-author` worker in step 2 is
+fresh. Its inputs are the committed planning record and the shipped gallery at
+the pushed `HEAD`, which already carry the committed diff of the amendment
+commits, and nothing else. Model-produced amendment text reaches it only as
+committed bytes, never as comment text, classifier reason, session state, or
+receipt, and it never runs while a private session is live. A worker that
+cannot be launched inside that boundary is the isolation-unavailable stop,
+`stop_reason:integrity_failure`.
 
 **Re-selection reads the shipped gallery manifest against the amended
 record**, never the page list the previous run happened to produce. A run that
@@ -2153,26 +2420,26 @@ partially updated, and there is no second page-authoring path: the dispatch,
 its per-page `generated` and `gap` outcomes, and its on-disk verification are
 the ones the draft-PR emission sequence above describes.
 
-#### Phase 7 Setup: Freshness Runs Only After an Amendment-Free Sweep
+#### Phase 7 Setup: Freshness Runs on Every Sweep Leg
 
-**Do not evaluate freshness in a run that made an amendment.** The re-review
-stop comes first. Evaluate the verdict on every amendment-free sweep leg,
-including the leg that handles no comment, so a later resumed run repairs pages
-left stale by the prior amendment.
+**Evaluate freshness on every sweep leg, amending or not.** An amending run
+evaluates the verdict once its amendment commits are pushed and its private
+session is invalidated. The leg that handles no comment evaluates it too, so a
+later resumed run still repairs pages a failed regeneration left stale.
 
 **The evaluation runs inside the sweep, so the entry gate scopes it.** It is
 reached only on corroboration status `match`. On `no_record` the sweep does
-not run and there is no pull request to refresh. On the four statuses that
-stop the sweep no evaluation occurs and stale pages stay stale.
+not run and there is no pull request to refresh. On every status that stops
+the sweep or leaves it unrun, no evaluation occurs and stale pages stay stale.
 
 **That is a deferral, not a lost repair.** The join is durable and reads the
 same `amended` rows on the first `match` run after the operator resolves the
 gate, so the repair happens there.
 
-**On a `stale` verdict the leg that amended nothing regenerates, refreshes,
-and then proceeds without stopping.** Repairing stale pages never converts a
-proceed into a stop. Nothing new was amended, so there is nothing new to
-re-review.
+**On a `stale` verdict every leg regenerates, refreshes, and then proceeds
+without stopping.** Repairing stale pages never converts a proceed into a stop.
+An amendment does not hold the run for a human either: the final report lists
+the amended comment instead.
 
 #### Phase 7 Setup: The Superseded File Behind a Per-Page Gap
 
@@ -2339,12 +2606,13 @@ already applies between its own push and its create-or-refresh step.
 
 **The leg decides what happens next.**
 
-- **On a sweep that amended**, a failed push **stops the run immediately**.
-  The re-review stop's pull request has to already show current pages, and it
-  does not.
+- **On a sweep that amended**, a failed push does **not** stop the run. The
+  amendment commits are already on the remote, so a reviewer already sees the
+  amendment. The local artifacts commit stands and rides up with the branch's
+  next push, and the report lists the amended comment beside the failure.
 - **On a leg that amended nothing**, a failed push does **not** convert the
-  proceed into a stop. The local commit stands and rides up with the branch's
-  next push.
+  proceed into a stop either. The local commit stands and rides up with the
+  branch's next push.
 
 **On both legs the condition is unrecoverable by any later sweep, and the
 report says so.** The commit is local and complete, so the join reads the
@@ -2376,9 +2644,11 @@ existence test cannot produce.
 `corroborate_refresh` surface of the same helper registration — so each status
 takes the behaviour the create-or-refresh contract above already assigns it at
 its terminal step: `match` refreshes the recorded pull request's description;
-`pr_closed`, `pr_missing`, and `identity_mismatch` each end the refresh
-attempt, create nothing, and leave the `Draft PR` row exactly as found. **No
-status opens a second pull request.** The remaining two are the subject of the
+an `identity_mismatch` with `corroboration.repair` set repairs the row through
+the emission machinery's writer and then refreshes that pull request;
+`pr_closed`, `pr_missing`, and an `identity_mismatch` with no repair each end
+the refresh attempt, create nothing, and leave the `Draft PR` row exactly as
+found. **No status opens a second pull request.** The remaining two are the subject of the
 section below.
 
 #### Phase 7 Setup: Two Statuses That Cannot Classify Here
@@ -2412,13 +2682,15 @@ proceed into task work.
 
 #### Phase 7 Setup: Stop or Proceed
 
-**One or more `amended`: stop for re-review before any task work.** Its
-what-landed part names the comments swept, the amendments made, and the commit
-range.
+**One or more `amended`: regenerate and refresh through the fresh isolated
+worker, then proceed into task work.** Its what-landed part names the comments
+swept, the amendments made, and the commit range, and the final report lists
+each amended comment by id, class, artifact, and amending commit. A human
+still reviews the amendment on the pull request, and nothing waits for them.
 
 **No `amended` but at least one comment handled: write the records, post the
 replies, and proceed directly into task execution**, without stopping. Nothing
-was amended, so there is nothing to re-review.
+was amended, so the final report lists no amended comment.
 
 **No comment handled at all: no rows, no replies, no bookkeeping commit,
 proceed.** This case is stated apart from the one above so that the one above
@@ -2492,6 +2764,10 @@ written exactly once:
 ```text
 # Implementation Notes: <SPEC_ID>
 ```
+
+The record is committed with each marker checkpoint and never counts toward the
+per-PR path budget; see the evidence-record rule beside the `ratify-pr-split`
+inputs.
 
 - **Create if absent**: when the record is not there, create its `.process/`
   directory too if that directory is also absent, then create the file with the
@@ -2605,7 +2881,13 @@ For each dependency-ready wave from the helper:
   For a team, request graceful shutdown after every report is received and
   confirm owned cleanup before starting another team. Idle is not a result.
   Reconcile partial results; schedule only proven unfinished work.
+  An unfinished task result returns `disposition=redispatch` with a `repair` record naming each
+  batch's agent and its unfinished task IDs: redispatch only those tasks to that agent, and
+  run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
   Missing/unknown effects permit one read-only reconciliation, not relaunch.
+  Pass `tdd_units` on each implementation reserve. An unknown outcome blocks
+  only that unit: settle it with `execution-control action=reconcile-unit`
+  while independent units keep running.
   Record execution-control completion for each dispatch.
 
 At each completed capability group:
@@ -2621,6 +2903,54 @@ security/authorization problems, and regression risk. Treat naming/style
 suggestions separately; they do not require another repair/review cycle.
 Research a vendor claim using relevant official documentation only when needed;
 reuse still-current evidence and do not repeat generic web/code/history passes.
+
+**Review fixes inside one increment.** When an increment's required review
+finds defects in code that increment just wrote, reserve the fix with
+`kind=corrective`, its `failure_invariant`, the feature's `spec_file`, and
+`review_remediation`: the increment's `tdd_unit` and every repository-relative
+path the fix will touch.
+When the task-execution sidecar is current and every path sits inside that
+TDD unit's own `owns` and in no other unit that is still open, the ledger
+admits the fix under that increment's own allowance of two review rounds. A
+unit is closed when all its tasks are checked in the committed `tasks.md` and
+still checked in the worktree, so a file shared with finished, committed
+increments does not refuse the fix. It never draws on the
+run-wide corrective budget, so a spent run-wide budget does not stop the next
+increment's review loop. A fix that touches a path outside the increment's
+ownership, overlaps an increment that is still open, or lacks current
+ownership evidence goes through the run-wide budget unchanged. When the
+reserve returns `disposition=defer` with `increment_review_allowance_exhausted`, defer that increment
+under [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop).
+A review-fix deferral is not a blocked task: the increment's tasks stay
+checked and committed, and its dependents stay runnable. Record its open
+findings as a tracked follow-up in the increment's implementation-notes entry
+and the workflow file's Phase 7 result (the ledger's `deferred` entry already
+names it), then continue with the next increment, even in a strictly serial
+plan. A later increment whose review round touches the same path may fix it;
+anything still open goes to the `finalize-run` end-of-run request. The
+follow-up is never a new task line in `tasks.md`: a changed task list stales
+the task-execution sidecar, and every later review fix would fall back to the
+run-wide budget with `ownership_evidence_stale`. It is never a mid-run
+question and never a stop.
+
+**Test-only fixes to an increment's own test code.** Reserve every
+implementation dispatch with `tdd_units`, the TDD units of the tasks it runs,
+so the runner records the paths it changed. When an increment's own test code
+breaks a test (for example an optional mock it added to an existing test file)
+and the fix only removes or narrows that test code, reserve the fix with
+`kind=corrective`, its `failure_invariant`, the feature's `spec_file`, and
+`test_fix`: the increment's `tdd_unit` and every test file the fix will touch.
+The runner admits it without `begin-replan-epoch` and without an operator
+event, even while the increment's tasks are still open, when every path is a
+test file the increment owns and one of its own implementation dispatches
+changed earlier in this run. It allows one test fix per increment and never
+draws on the run-wide corrective budget. Run nothing else while the fix is
+open: completing it `completed` succeeds only when the runner sees a change
+and none outside the declared test files. Any other fix, including one that touches
+product code, a test file another increment edited, or a second test fix for
+the same increment, takes the run-wide path unchanged. When the run-wide
+corrective budget is spent and the fix qualifies, reserve it as a test fix;
+never ask the operator for a re-plan or a corrective exception for it.
 
 ##### Step 3c: Agent Prompt Template
 
@@ -2701,39 +3031,272 @@ denial), a missing approval, or an unavailable tool or route.
    it in the task's implementation-notes entry and the workflow file's Phase 7
    result. Then continue. Only a fallback the task or spec defines qualifies. An
    alternative the autopilot invents is a workaround and is not allowed.
+   A fallback applies only to non-gate work: it never lets a gate pass, be
+   skipped, or be deferred, and a gate the blocked action feeds still has to
+   run and pass.
 2. **With no defined fallback, defer that task.** Leave its checkbox unchecked,
    record it as deferred with the blocked action and the reason, and mark
    deferred every task and Post item that depends on it. Then keep executing
    every independent task, gate, and Post check. A deferral reserves no
    execution-control budget, is not a failure family, and is never retried by
    another route. Never ask the operator from inside the task, and never set a
-   workflow row or progress item to blocked while runnable work remains.
-3. **Ask once, at the end.** Only after every runnable item has finished, and
-   only if deferred items remain, make one consolidated operator request with
-   `AskUserQuestion`. It names each deferred item, the blocked action, why the
-   requirement needs it, the smallest operator action that unblocks it, and the
-   resume command. Always print the same question as plain text in the final
-   message too, so a question that does not render still reaches the operator.
-   In an unattended run, or when `AskUserQuestion` is unavailable, the plain-text
-   copy is the request. Only then may the rows holding deferred work move to
-   `⚠ Blocked`.
+   workflow row or progress item to blocked while runnable work remains. Mid-run a deferral only keeps the run
+   working on other units; at the end of the run an unresolved deferral climbs the escalation tiers in rule 3 before it reaches the owner as a decision. So a serial plan never stops mid-run on a deferral:
+   when no runnable work remains, even before the plan's last task, go
+   straight to rule 3 and run `finalize-run`; the only stop is a required gate that is still not green.
+3. **Finalize, or stop once.** Human UAT is the only gate a run may defer.
+   Every other gate (the integration suite, live evaluations, quality and test
+   gates) must run and pass before the stack goes ready for review, and each
+   runs at each PR head, bottom-up: the full suite, the checks CI requires, and
+   any per-commit identity or evidence check the repository defines run at every
+   PR head, never only at the stack tip. Run each gate through `execute-verification`
+   with its `dispatch_id`, so the runner fingerprints the failing checks, the head, and
+   the clean worktree into the ledger: the runner's record, never this transcript,
+   decides each gate's status. A gate whose command `execute-verification` cannot run directly
+   (a compound or shell command) has no runner record and cannot finalize, so give the gate a direct
+   `PROJECT_COMMANDS` slot. Only after
+   every runnable item has finished, run the read-only `finalize-run` runner
+   helper. Pass the execution-control `ledger_path` and `expected_run_id`; every
+   final non-UAT gate result as `gate`, `status` (`passed`, `failed`, or
+   `harness_error`), its
+   exact `command`, and the `head_sha` of the PR head it ran at, one result per
+   gate per head, plus the `dispatch_id` of the verification the runner ran (a
+   `harness_error` result carries `attempts` and `evidence` instead). The `status`
+   must equal what the runner's record shows; a forged status, a command or head the
+   runner did not run, or a verification of a dirty worktree is refused; the runnable work still open as `pending_items`; every rule
+   2 deferral still unresolved as `unresolved_deferrals`, each with `unit`,
+   `reason` (for a veto, the reviewer's own text), and `finish` (the exact
+   command or authorization that finishes it); the human UAT steps no agent can
+   perform as `human_uat`, each with `item`, `reason`, and `finish`; the stack's
+   `pull_requests`, bottom first, each with `number`, `url`, `draft`, and its
+   `head_sha`; and the `resume_command`. A gate reported at any head must pass
+   at every head: a PR head with no result for a gate becomes a pending item
+   first and is listed in `human_stop.missing` with the head and the gate only
+   if it stays missing, and a result whose
+   `head_sha` is not a listed PR head is refused.
+   - `outcome=continue`: runnable work remains, so keep executing it. The helper
+     adds a pending item for each of these, and none of them is a stop yet:
+     - **A failed unit with an escalation tier left.** A ledger `deferred` unit
+       (the tier-1 repair loop inside its allowance is already spent) or a failed
+       gate climbs two tiers, each one `implement-executor` retry reserved through
+       `execution-control` `reserve` with `kind=corrective` and
+       `escalation={unit_kind, unit, tier}`. Tier 2 is a fresh agent with a
+       different approach, guided by a consensus diagnosis: dispatch the consensus
+       analysts on the failure evidence first and hand the executor their diagnosis.
+       Tier 3 is the strongest model at max effort with the full failure history,
+       and the runner caps it at 3 per run in the ledger (`escalation_tier3_cap`).
+       Use the `unit_kind` and `unit` the pending item names: a deferral's own unit,
+       or `gate_failure` with the failing command's `command_sha256` (the pending
+       item states it). A retry draws on its own escalation record, never on
+       `corrective_cycles`, and the record shows the tier reached. The runner
+       refuses a tier out of order, a repeat tier, a unit that has not failed, and
+       tier 3 past the cap (`escalation_tier3_cap_reached`). A completed retry that
+       fixes a deferral resolves it; a completed gate retry means rerun the gate at
+       the PR's head and pass the fresh result.
+     - **A gate missing at a head.** Run it at that head. The gate is not a stop
+       until it stays missing: after each `finalize-run` cycle that returned it
+       pending, record the cycle with `execution-control` action
+       `record-finalize-cycle` (`mode=apply`, with `finalize_inputs` set to the same
+       inputs you passed to `finalize-run`). The runner recomputes the unfinished
+       heads and gates itself and counts each in the ledger; only a pair counted in
+       an earlier cycle stops the run. `finalize-run` itself never writes.
+     - **A harness error awaiting its changed-environment attempt** (see Harness
+       errors below).
+   - `outcome=complete_with_deferred` or `outcome=complete`: every required
+     non-UAT gate passed at every PR head, so the run finalizes even when human
+     UAT, an exhausted ledger unit, or an unresolved task is left: those never
+     keep the stack draft. Each PR body cites only the gate results listed under
+     its own entry in the helper's `pull_requests`; evidence from another head is
+     never reused:
+     - Refresh the top PR's packet with `pr-packet-output`, passing the human UAT
+       from `deferred_items` unchanged, then each of `decisions` as one more
+       item (its `unit` as `item`, with its `reason` and `finish`), so the body
+       opens with the `Deferred / not verified` section, then update that PR's
+       body from the refreshed body file.
+     - Run each of `ready_commands` to mark the whole stack ready for review.
+       The run never merges.
+     - Print `end_of_run_request` as plain text in the final message. It is the
+       handoff: it opens with the ready stack, lists each of `decisions` under
+       "Decisions for you" with its evidence, then the human UAT. The run never
+       pauses to ask, so make no `AskUserQuestion` call for it; a question tool call is not
+       the request.
+   - `outcome=human_stop`: a required gate is not green after its escalation
+     tiers: a gate failed and every tier failed or the tier-3 cap is spent, a
+     gate stayed missing at a PR head across finalize cycles, or a harness error
+     persisted through the changed-environment attempt. This is one human stop
+     and the stack stays in draft; nothing else keeps it there. Before calling the
+     helper, retry with backoff any gate that failed on a genuine external failure,
+     such as a service outage or a reviewer veto despite a recorded chat
+     authorization: up to three attempts, waiting longer before each. Then print
+     `end_of_run_request` as plain text in the final message: it names each red
+     gate with its exact command, its stop `class`, and what finishes it.
+   - **Harness errors.** A harness or tooling error that blocks a gate (the
+     harness crashed, timed out, or replaced the inner error with a bare exit
+     code before the code under test produced a result) is retried the same
+     way, up to three attempts, then once more in a changed environment (a fresh
+     worktree or cleared caches). Before the harness can delete them, keep each
+     attempt's raw error output and trace under
+     `<feature>/.process/verification/harness/<gate-slug>-<head>/attempt-<n>.log`,
+     which the runner keeps out of commits. Report it as a harness error, never
+     as a failure of the code under test. If it persists until `attempts`
+     reaches 3, pass that gate's result with `status=harness_error`, its
+     `attempts`, and that directory as `evidence`. The helper answers with a
+     pending item asking for the changed-environment attempt: run it, then pass
+     the result with `attempts` 4 and `environment_change` (`fresh_worktree` or
+     `cleared_caches`) in a later finalize cycle, recorded the same way. It never counts as passed, and the human stop
+     cites the evidence only if the error persists through that attempt. An attempt that ran the code
+     under test and failed is a gate failure, not a harness error.
+   Record `deferred_digest` in the workflow file's Phase 7 result. After the
+   run finalizes or stops, a later turn acts only on a new operator message and
+   never re-checks an unchanged blocker.
 4. **Report what happened.** The final report and the PR body list every
-   fallback taken and every deferred item. Pass them to `pr-packet-output` as
-   `known_gaps`, so they appear under the body's `## Known Gaps` heading. A run
-   with deferred items reports an honest incomplete checkpoint, never
-   completion.
+   fallback taken and every deferred item. Pass the fallbacks and the human UAT
+   to `pr-packet-output` as `known_gaps` too, so they also appear under the
+   body's `## Known Gaps` heading. A finalized run is complete: it names the
+   human UAT that is not verified instead of waiting on the operator.
 
 G7 and Post run on the implemented snapshot. A requirement whose only task is
 deferred is listed as deferred in the G7 evidence and in `known_gaps`; it
-neither fails G7 nor counts as covered by it.
+neither fails G7 nor counts as covered by it, and the unresolved task
+reaches the owner as a decision in the end-of-run request.
 
 The run must never bypass a veto: never change approval, sandbox, or reviewer
 configuration, never rerun the vetoed action under a different command or tool,
-and never treat an earlier answer as authorization for the vetoed action. The
+and never treat an earlier answer as authorization for the vetoed action. A reviewer veto despite a recorded chat
+authorization is a genuine external failure: retry with backoff, then the veto
+is a decision for the owner in the end-of-run request. The
 correctness stops in this reference are unchanged and still stop the run:
-unknown side effects, an execution-control `checkpoint_required` disposition
-(including an exhausted repair budget), a ledger or clock error, invalid or
-stale state, and a failed gate whose repair is out of scope.
+unknown side effects the runner cannot classify with `reconcile-unit`, an
+execution-control `checkpoint_required` disposition, a ledger or clock error,
+invalid or stale state, and a failed gate whose repair is out of scope.
+An unknown dispatch
+outcome blocks only its own unit: pass `tdd_units` on each implementation
+reserve, run a read-only reconciler over the unit's owned paths, and settle it
+with `execution-control action=reconcile-unit`; `no_effect` allows a new
+dispatch with no operator event, and `partial` or `complete` need a
+`kind=verification` dispatch (`verifies_dispatch_id`) first.
+A `checkpoint_required` whose `reasons` is only `unknown_dispatch_blocks_unit`
+is not a stop: run `reconcile-unit` for each id in `blocked_by`. On
+`unit_classification_mismatch`, re-inspect the owned paths and call once more
+with the class the paths show; never cycle the three values. Read
+`unknown_dispatch_ids` from `status` before each wave so a blocked unit is
+seldom reserved.
+
+A failed gate or test is not a blocked action: diagnose it through the
+consensus agents, fix it through the executor, rerun verification, and keep
+remediating while each round converges. The ledger admits the next correction
+in a family with no operator event while the previous one shrank the
+runner-recorded failing set, or moved it with every earlier failure passing.
+
+An exhausted correction allowance is not a stop. It is the non-convergence
+fallback: a correction that made no measurable progress, returned to an
+earlier failing set, left unparsed output, or followed a spec change meets the
+fixed allowances, and then the ledger returns
+`disposition=defer`, refuses that dispatch, and records the blocked failure
+family, increment, gate, or failure class in its `deferred` list. Defer that work
+under rule 2, name the task or gate it blocks, and keep executing every
+independent task, increment, gate, and Post check.
+Mid-run that only moves the run on to other units. At the end of the run an
+unresolved ledger deferral first climbs the escalation tiers in rule 3: tier 2, a fresh agent with a
+different approach guided by a consensus diagnosis, then tier 3, the strongest model at max effort with the
+full failure history, capped at 3 per run. Only a unit that failed every tier, or met the cap, is
+exhausted, and `finalize-run` then lists it under "Decisions for you" in the request of a stack that is
+still ready for review (a deferral whose unit a later completed dispatch fixed is marked resolved by the
+ledger and drops out); there the owner can approve `authorize-corrective-exception` or
+`begin-replan-epoch` once for everything deferred. It is never a mid-run question, and it never keeps
+the stack in draft: only a required gate that is not green does.
+
+Issue capped approvals yourself when the runner proves them, instead of asking
+the operator. Pass `agent_authorized: true` and no `native_observation` to
+`authorize-corrective-retry` (a lost worker's failed corrective dispatch with
+a recorded native failure event; one per run), to `begin-replan-epoch` (a
+deferral is open, the spec is unchanged, the Tasks rerun changed the plan or
+task fingerprints the stage epoch recorded, and every dispatch is settled; two
+per run), or to `authorize-corrective-continuation` with `spec_file` (the
+metadata-only proof holds). A refusal means the proof does not hold or the cap
+is spent; only then does the request go to the operator. Scope changes and
+forged events stay operator-only.
+
+#### Repeated Gate Failures: Diagnose One Class, Approve It Once
+
+When consecutive runs of a gate fail with the same failure signature in the
+same test file, even when the failing tests differ, the cause is one failure
+class. The usual case is a timeout that several slow tests in one file sit
+close to. Diagnose it as one failure class, name it in the gate evidence, and
+propose one class-level fix (for example, a file-level timeout default),
+never per-test diffs for whichever tests failed this time.
+
+1. **Normalize the signature.** Strip test names, durations, and counts from
+   the failure message so two runs of the same class compare equal.
+2. **Check the environment first.** When timeouts move between different
+   tests across reruns with the same signature, treat that as an environment
+   signal first. Check host load and temp-directory size, then rerun the gate
+   once, before proposing any timeout change. Propose the class-level fix only
+   if the rerun still fails with the same signature.
+3. **Ask at most once, at the end.** When the repair budget is exhausted, the
+   reserve returns `disposition=defer`: record the class as deferred and keep
+   executing independent work. In the one end-of-run consolidated operator
+   request, ask for `authorize-corrective-exception` with a `failure_class`
+   scope: the repo-relative test file, the normalized signature, and the
+   change kind (`test_timeout`). It is never a mid-run question. The approval
+   never covers production code, another file, or another signature.
+4. **Use the approval for follow-ups.** If a later run fails again inside that
+   exact class after the approved fix completed, reserve the next correction
+   with `reserve-class-correction` and apply it without a new question. The
+   helper allows two follow-ups per approval.
+5. **Defer anything outside it.** A correction outside the approved class, a
+   class whose follow-ups are spent (`failure_class_allowance_exhausted`), or
+   a second approval request is never
+   asked in place. Defer it to the one consolidated operator request at the
+   end of the run and keep executing independent work.
+
+#### Ambiguous Task Wording: Apply the Recorded Decision, Else Defer
+
+When a task's wording is ambiguous, for example whether an approved timing
+decision covers a gate task, look in the workflow file for a recorded owner
+decision that covers it: a Clarify answer, a consensus resolution, an Analyze
+remediation, or an operator decision the workflow records. If one covers it,
+apply that decision, record the interpretation with a reference to that
+decision in the task's implementation-notes entry and the workflow file's
+Phase 7 result, and then continue. If no recorded decision covers it, defer the
+item under [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop)
+and name it in the end-of-run request. Never ask the operator mid-run to
+interpret task wording.
+
+#### Plugin Update Mid-Run: Record, Re-resolve, Continue
+
+The Step 0.0b agent-package check and its "update or reinstall, then run
+`/reload-plugins`" rule apply only at setup or run start, before any phase
+work. Once phase work has begun, a plugin update is never a stop. The run
+continues on the agents it already has.
+
+1. **Cache drift: re-resolve and retry.** When the plugin root the run started
+   from changed or vanished (a plugin update replaced the cached version
+   directory), runner and bookkeeping calls can fail. Then re-resolve the
+   plugin root against the live install and rerun `validate-agent-install`,
+   taking its returned `plugin_root` as the new root. Re-read the Installed
+   Runtime Contract in the autopilot SKILL.md once against that root, build
+   every later `Protocol:`, `Reference dir:`, and `Gallery dir:` line from it,
+   and retry each failed bookkeeping call once.
+2. **Agent unavailable: defer that dispatch.** If a dispatch fails because its
+   agent file is missing after the update, defer only that dispatch under
+   [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](#blocked-actions-mid-run-fall-back-or-defer-never-stop)
+   and keep executing everything else.
+3. **Record the drift.** In both cases, record the drift in the current phase's
+   result in the workflow file and in the final report: the plugin version the
+   run started on, the version now installed, and the calls retried. Then
+   continue.
+4. **Any reload goes to the end.** A `/reload-plugins` or restart that is still
+   needed is not a deferred task. Add it as one line to the single end-of-run
+   consolidated request, or, when no such request is made, print it as plain
+   text in the final message. Keep it out of `known_gaps` and the PR body,
+   because it is an operator-environment note, not a gap in the feature. Never
+   ask for it mid-run, and never set a workflow row or progress item to blocked
+   for it.
+
+Drift itself is never a stop, but the correctness stops above still apply. If a
+retried bookkeeping call fails again, or the ledger or state is invalid after
+the retry, stop on that error, not on the drift.
 
 #### Append Contract: One Entry Per Dispatched Attempt
 
@@ -2748,6 +3311,12 @@ step opened, appended after everything already in the file:
 
 `<TASK_ID>` is the task's ID exactly as `tasks.md` writes it, and one blank line
 separates the entry from the content before it.
+
+The record is committed and published, so write every loaded-plugin path in
+reported text in its plugin-relative form, for example
+`skills/speckit-autopilot/references/consensus-protocol.md`, and never as an
+absolute or home path. The same rule holds for the workflow file, the state
+file, and pull request bodies.
 
 **One entry per task, even when several tasks share one dispatch.** Batching
 related tasks into a single worker is a sensible dispatch choice and does not
@@ -2823,7 +3392,8 @@ Then Command(DEPENDENCY_AUDIT) only when populated, which requires
 When MUTATION is populated, run the hardener once per spec between the
 MUTATION run and its block decision, per
 [Hardener Delegation](./hardener-delegation.md): delegate a tests-only
-loop to local Qwen when `qwen_health` is good, else run it on the primary
+loop to the delegation gateway on `route: "auto"` when `delegate_health` is
+good, else run it on the primary
 model; stop at the floor or the shared corrective ceiling; record the outcome on the
 Quality Gates table's `Hardener` line. Only after the hardener records its
 ending does a still-failing MUTATION block. MUTATION fails on its exit
@@ -2837,7 +3407,7 @@ status: `cr-rate --fail-over` for cosmic-ray, and the chained
 | Contract/unit/integration tests | `speckit-pro:implement-executor` | Yes |
 | Implementation needing project patterns | PROJECT_IMPLEMENTATION_AGENT | Yes |
 | Research / API investigation | `speckit-pro:domain-researcher` | No |
-| Verification-only, by leading verb (`verify`, `run`, `check`, `build`, `lint`) | orchestrator-direct (command tool) | No |
+| Verification-only, by leading verb (`verify`, `run`, `check`, `build`, `lint`, `confirm`, `recheck`) | orchestrator-direct (command tool) | No |
 
 Every agent receiving implementation work gets the TDD protocol
 injected. Agent selection is about DOMAIN EXPERTISE — the
@@ -2871,11 +3441,23 @@ one research task.
 `git add -A && git commit -m "feat(SPEC-XXX): implement phase"`
 
 Runner byproducts are never committed. The runner writes a `.gitignore`
-holding `*` into each directory it owns (`.process/execution-control/` and
-`.process/verification/`), so `git add -A` cannot stage the ledger or the
-verification evidence. If `git ls-files` shows such a path already tracked
+holding `*` into each directory it owns (`.process/execution-control/`,
+`.process/verification/`, and `.process/task-results/`), so `git add -A`
+cannot stage the ledger, the verification evidence, or the task-results
+journals. Every `execution-control` apply, starting with the run's `start`,
+writes that `.gitignore` into both the ledger directory and the verification
+directory, so the verification directory is self-ignoring before any
+verification record exists. Put your own verification logs there: they stay out
+of commits and out of the repository privacy scan. If `git ls-files` shows such a path already tracked
 (from an older plugin version), run `git rm -r --cached -- <path>` before this
 commit.
+
+One exception: a marker's verification record,
+`<feature>/.process/verification/<marker-id>.json`, is committed evidence that
+the phase-coverage guard reads from the pull request head. When the workflow
+file sits in the feature's `.process/` directory, the runner's ignore rule
+covers that directory, so stage the record by path with
+`git add --force -- <path>`, and never untrack it.
 
 **After G7 passes:** Validate/reuse Integration/E2E proof,
 then execute PR Creation Protocol (see below).
@@ -2911,8 +3493,11 @@ runner helper generate-spec-index-write with repo root "$PWD" and mode apply
 **Act on the result:**
 
 - **Exit 2 (error)** → a map is malformed/unbalanced or a PRS manifest
-  is unreadable. **Surface the actionable stderr line and STOP.** Do
-  NOT commit a broken regen and do NOT advance the phase.
+  is unreadable. **Route the actionable stderr line to the phase-executor,**
+  which repairs the malformed zone or unreadable manifest it names. Then
+  rerun `generate-spec-index-write` once; if it still exits 2,
+  run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
+  Do NOT commit a broken regeneration and do NOT advance the phase until it exits 0.
 - **Exit 0 (clean)** → the generator wrote any stale maps and returned
   success. **The commit decision is diff-driven, not exit-code-driven**
   (write mode returns `0` whether or not it changed a file; the stale

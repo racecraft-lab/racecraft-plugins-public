@@ -2,7 +2,6 @@
 """Mocked dispatch, cancellation, global ceiling and resume contracts; no providers."""
 from __future__ import annotations
 
-import importlib.util
 from contextlib import ExitStack, nullcontext
 import hashlib
 import json
@@ -23,18 +22,23 @@ from dataclasses import dataclass, replace
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "lib"))
+import trigger_approval_fixtures as approvals
 import trigger_campaign_execution as execution
 import trigger_campaign as accounting
 from trigger_campaign import CampaignLedger
 import trigger_comparison as comparison
 from test_result import run_counted
+from foreign_pid import foreign_pid
+
+
+from script_loader import load_script  # noqa: E402
+
+# A fake runner pid that is never this test process's pid or group.
+FAKE_RUNNER_PID = foreign_pid(12345)
 
 
 def fixture_module():
-    spec = importlib.util.spec_from_file_location("campaign_comparison_fixture", ROOT / "unit/test-trigger-comparison.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load_script("campaign_comparison_fixture", ROOT / 'unit/test-trigger-comparison.py')
 
 
 def request_fixture(root):
@@ -62,24 +66,12 @@ def standing_request_fixture(root):
     return replace(request, approval=approval, launch_budget=1302, workers=1)
 
 
+CONVERSATION = approvals.RetainedConversation(
+    "execution-session-123", "assistant-request-123", "user-response-456", (200, 201), "source")
+
+
 def contextual_approval(digest, budget=6, response="approved"):
-    session = "execution-session-123"
-    request_id = "assistant-request-123"
-    response_id = "user-response-456"
-    request = f"Approve trigger campaign {digest} with launch budget {budget}."
-
-    def observation(role, message_id, timestamp, ordinal, content):
-        return {"role": role, "message_id": message_id, "session_id": session,
-                "timestamp": timestamp, "source_ordinal": ordinal, "content": content,
-                "content_sha256": hashlib.sha256(content.encode()).hexdigest(),
-                "source_line_sha256": hashlib.sha256(f"source:{message_id}:{content}".encode()).hexdigest()}
-
-    return {"schema_version": "trigger-campaign-approval/v2", "manifest_sha256": digest,
-            "launch_budget": budget, "recorder_observation": {
-                "observer": "trusted-orchestrator", "session_id": session,
-                "adjacent_user_visible_message_ids": [request_id, response_id],
-                "request": observation("assistant", request_id, "2026-09-14T16:00:00.000Z", 200, request),
-                "response": observation("user", response_id, "2026-09-14T16:00:01.000Z", 201, response)}}
+    return CONVERSATION.contextual_approval(digest, budget, response)
 
 
 def saved_carry_fixture(root):
@@ -450,7 +442,7 @@ def terminal_reconciliation_fixture(root, *, cleanup_failed=True):
     (directory / "runner.stdout").write_bytes(b"retained runner output\n")
     (directory / "runner.stderr").write_bytes(b"")
     (directory / "launch.json").write_text(json.dumps({
-        "pid": 12345,
+        "pid": FAKE_RUNNER_PID,
         "command": execution.native_command(case, request, "baseline", directory),
         "started_at": 1000.0,
     }))
@@ -520,7 +512,7 @@ def assert_preflight_rejected(test, root, request, message=None):
 
 
 class FakeChild:
-    pid = 12345
+    pid = FAKE_RUNNER_PID
     returncode = None
 
     def poll(self):

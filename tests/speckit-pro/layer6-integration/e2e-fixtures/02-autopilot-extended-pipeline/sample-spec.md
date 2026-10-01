@@ -1,6 +1,6 @@
-# SPEC-FIXTURE-EXTENDED — Trivial feature for L7 extended-pipeline e2e
+# SPEC-FIXTURE-EXTENDED — Trivial feature for Layer 6 extended-pipeline e2e
 
-> L7 fixture spec for the extended-pipeline e2e test (G0 → G6).
+> Layer 6 fixture spec for the extended-pipeline e2e test (G1 → G7).
 > Intentionally tiny so the autopilot can complete more phases within
 > the live-mode budget cap. Do not derive product requirements from
 > this file.

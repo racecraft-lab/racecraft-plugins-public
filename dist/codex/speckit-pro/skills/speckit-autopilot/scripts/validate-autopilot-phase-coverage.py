@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Validate that a Codex autopilot workflow/state pair keeps every phase visible.
+"""Validate that an autopilot workflow/state pair keeps every phase visible.
+
+Claude Code and Codex both run this script. Only `--require-autonomy-boundary` makes the
+Codex Phase 6.5 autonomy record mandatory.
 
 Maintainer notes on the ``workflow_file`` authority check
 (``_workflow_authority_errors``), moved here from
@@ -30,7 +33,7 @@ import re
 import stat
 import subprocess
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field as dataclass_field
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -98,15 +101,50 @@ ORDERED_STATE_CHECKPOINTS = (
 
 TASK_LINE_RE = re.compile(r"^- \[[ xX]\] (T[0-9]+)\b")
 UTC_TIMESTAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
-WINDOWS_ABSOLUTE_PATH_RE = re.compile(r"^[A-Za-z]:")
-MAX_REPO_FILE_BYTES = 32 * 1024 * 1024
-HAS_DESCRIPTOR_RELATIVE_IO = (
-    os.name != "nt"
-    and bool(getattr(os, "O_NOFOLLOW", 0))
-    and os.open in os.supports_dir_fd
-    and os.stat in os.supports_dir_fd
-    and os.stat in os.supports_follow_symlinks
+# The tracked state file stores decision fields only. These three patterns match
+# the repository privacy scan's (tests/speckit-pro/lib/privacy_patterns.py), and a
+# test holds them equal, so the state guard rejects what the scan would reject.
+STATE_HOME_PATH_PATTERN = re.compile(
+    r"(?:/(?:Users|home)/|[A-Za-z]:[\\/]+Users[\\/]+)[A-Za-z0-9_.\-]+",
+    re.IGNORECASE,
 )
+STATE_HYPHENATED_HOME_PATH_PATTERN = re.compile(r"-Users-[A-Za-z0-9_.\-]+", re.IGNORECASE)
+STATE_UUID_PATTERN = re.compile(
+    r"[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}",
+    re.IGNORECASE,
+)
+STATE_PRIVATE_KEYS = frozenset({"argv"})
+# The plugin root is fixed by this script's own location, never by request input.
+INSTALLED_PLUGIN_ROOT = Path(__file__).resolve().parents[3]
+# The plugin ships the runner beside its skills, so its validator is imported, not copied.
+if str(INSTALLED_PLUGIN_ROOT) not in sys.path:
+    sys.path.insert(0, str(INSTALLED_PLUGIN_ROOT))
+from speckit_pro_runner.json_schema import json_schema_failures, json_values_equal  # noqa: E402
+
+_LIB_DIR = str(Path(__file__).resolve().parent / "lib")
+if _LIB_DIR not in sys.path:
+    sys.path.insert(0, _LIB_DIR)
+from phase_coverage_git import (  # noqa: E402
+    _git_changed_paths,
+    _git_commit_exists,
+    _git_commit_is_ancestor,
+    _git_commit_is_ancestor_of_head,
+    _git_commit_is_strict_ancestor,
+    _git_common_dir,
+    _git_env,
+    _git_file_at_commit,
+    _git_path_introduction_commit,
+    _git_tree_entries,
+)
+from phase_coverage_repo_files import (  # noqa: E402
+    MAX_REPO_FILE_BYTES,
+    WINDOWS_ABSOLUTE_PATH_RE,
+    _is_normalized_repo_path,
+    _read_repo_bytes,
+    _repo_file,
+    _repository_root,
+)
+
 SUPPORTED_MARKER_PLAN_VERSIONS = frozenset({"pr-marker-plan.v1", "pr-marker-plan.v2"})
 MARKER_PLAN_SCHEMA_PATH = Path(__file__).resolve().parents[1] / "contracts" / "pr-marker-plan.schema.json"
 CHANGED_FILE_MANIFEST_SCHEMA_PATH = (
@@ -114,6 +152,9 @@ CHANGED_FILE_MANIFEST_SCHEMA_PATH = (
 )
 VERIFICATION_REPORT_SCHEMA_PATH = (
     Path(__file__).resolve().parents[1] / "contracts" / "verification-report.schema.json"
+)
+MARKER_CHECKPOINT_SCHEMA_PATH = (
+    Path(__file__).resolve().parents[1] / "contracts" / "marker-checkpoint.schema.json"
 )
 MARKER_PLAN_STATUSES = frozenset({
     "planned", "checkpointing", "emission_ready", "emitting", "emitted",
@@ -264,6 +305,8 @@ RULE_PROBLEM_KEYS = {
         "autonomy_boundary_errors",
         "stage_mirror_errors",
         "workflow_authority_errors",
+        "state_privacy_errors",
+        "marker_evidence_privacy_errors",
         "formal_checkpoint_errors",
         "artifact_review_errors",
         "in_progress_errors",
@@ -347,6 +390,24 @@ PROBLEM_KEY_INTENT: dict[str, dict[str, str]] = {
             "A state naming a workflow other than the one supplied means the run is "
             "proceeding against a different specification. This is the one key "
             "workflow-authority check, and the failure it exists to stop."
+        ),
+    },
+    "state_privacy_errors": {
+        "verdict": "gated",
+        "reason": (
+            "The state file is committed, so it may hold decision fields and "
+            "digests only. A raw runner envelope, its argv, an absolute home path, "
+            "or an external task or session UUID would publish machine-local "
+            "identity with the next checkpoint commit."
+        ),
+    },
+    "marker_evidence_privacy_errors": {
+        "verdict": "gated",
+        "reason": (
+            "Marker checkpoint and verification evidence is committed with its "
+            "checkpoint, so an external task, session, thread, or event id cited "
+            "there must be a sha256 digest. A raw id or an absolute home path would "
+            "publish machine-local identity and fail the repository privacy scan."
         ),
     },
     # --- gated: armed by ``--rule coverage``. Kept out of the status-evidence
@@ -751,6 +812,20 @@ def _visible_markdown(text: str) -> str:
     return "\n".join(visible_lines)
 
 
+def _marker_phase_claims(phase_results: object, marker_id: str) -> list[tuple[str, str]]:
+    """Phase-result fields for one marker that claim work beyond the plan projection."""
+    phases = phase_results if isinstance(phase_results, dict) else {}
+    return [
+        (phase_name, phase_field)
+        for phase_name, phase_result in phases.items()
+        if isinstance(phase_name, str)
+        and isinstance(phase_result, dict)
+        and phase_result.get("marker_id") == marker_id
+        for phase_field in phase_result
+        if phase_field not in PHASE_RESULT_PROJECTION_FIELDS
+    ]
+
+
 def validate_workflow_checkpoint_bindings(
     text: str, state: dict[str, Any],
 ) -> dict[str, list[str]]:
@@ -765,6 +840,10 @@ def validate_workflow_checkpoint_bindings(
     visible_text = _visible_markdown(text)
     expected: dict[str, str | None] = {}
     expected_superseded: dict[str, str] = {}
+    # A marker awaits its first checkpoint while its checkpoint is pending, records
+    # no commit, and no phase result claims work for it. Its workflow row reads
+    # Pending and it has no current checkpoint claim yet.
+    awaiting: set[str] = set()
     for marker in markers:
         if not isinstance(marker, dict) or not isinstance(marker.get("id"), str):
             continue
@@ -775,6 +854,13 @@ def validate_workflow_checkpoint_bindings(
             if isinstance(commit_sha, str) and re.fullmatch(r"[0-9a-f]{40}", commit_sha)
             else None
         )
+        if (
+            isinstance(checkpoint, dict)
+            and checkpoint.get("status") == "pending"
+            and expected[marker["id"]] is None
+            and not _marker_phase_claims(state.get("phase_results"), marker["id"])
+        ):
+            awaiting.add(marker["id"])
         superseded_sha = (
             checkpoint.get("superseded_commit_sha")
             if isinstance(checkpoint, dict)
@@ -801,6 +887,8 @@ def validate_workflow_checkpoint_bindings(
         errors.append("workflow checkpoint claims must name their marker")
     if strict_contract:
         for marker_id in expected:
+            if marker_id in awaiting:
+                continue
             claim_count = sum(
                 claimed_marker_id == marker_id
                 for claimed_marker_id, _claimed_sha in checkpoint_claims
@@ -870,6 +958,13 @@ def validate_workflow_checkpoint_bindings(
             if marker_id not in expected:
                 continue
             marker_row_counts[marker_id] += 1
+            if marker_id in awaiting:
+                if cells[4] != "Pending":
+                    errors.append(
+                        f"workflow PR Marker Plan Evidence marker {marker_id!r} checkpoint must read "
+                        "Pending until its pr_marker_plan checkpoint records commit_sha"
+                    )
+                continue
             checkpoint_shas = set(re.findall(r"\b[0-9a-f]{40}\b", cells[4]))
             expected_sha = expected[marker_id]
             if expected_sha is None or expected_sha not in checkpoint_shas:
@@ -944,331 +1039,6 @@ def _pending_value_paths(value: Any, path: str) -> list[str]:
     return []
 
 
-def _repository_root(path: Path) -> Path | None:
-    # Resolve before walking, so whether a root is found depends on where the file
-    # *is* rather than on how the caller spelled the path and which directory they
-    # ran from. A relative path's parents chain terminates at the working
-    # directory, which found no marker for a file sitting inside the repository.
-    #
-    # A resolution failure is treated as an unresolvable root, which is the same
-    # verdict this function already returns when no marker is found and which the
-    # callers already handle. The alternative is an exception escaping into
-    # ``main()``, which catches only ``ValidationError`` and would print a
-    # traceback where the autopilot expects a JSON report. Reaching this today
-    # requires the state file to be readable while its own path will not resolve,
-    # because ``load_state`` runs first; that ordering is a property of the caller
-    # rather than of this function, so the guard does not depend on it holding.
-    try:
-        resolved = path.resolve()
-    except (OSError, RuntimeError):
-        return None
-    for candidate in (resolved.parent, *resolved.parents):
-        if (candidate / ".git").exists():
-            return candidate
-    return None
-
-
-def _repo_file(repo_root: Path, raw_path: object) -> Path | None:
-    if not _is_normalized_repo_path(raw_path):
-        return None
-    relative = Path(str(raw_path))
-    resolved = (repo_root / relative).resolve()
-    try:
-        resolved.relative_to(repo_root.resolve())
-    except ValueError:
-        return None
-    return resolved
-
-
-def _stable_file_identity(metadata: os.stat_result) -> tuple[int, ...]:
-    return (
-        metadata.st_dev,
-        metadata.st_ino,
-        metadata.st_size,
-        metadata.st_mtime_ns,
-        metadata.st_ctime_ns,
-        stat.S_IFMT(metadata.st_mode),
-        stat.S_IMODE(metadata.st_mode),
-        metadata.st_nlink,
-    )
-
-
-def _stable_directory_identity(metadata: os.stat_result) -> tuple[int, ...]:
-    return (
-        metadata.st_dev,
-        metadata.st_ino,
-        stat.S_IFMT(metadata.st_mode),
-        stat.S_IMODE(metadata.st_mode),
-    )
-
-
-def _normalized_absolute_path(path: Path) -> str:
-    return os.path.normcase(os.path.abspath(path))
-
-
-def _windows_final_path_from_descriptor(descriptor: int) -> Path:
-    try:
-        import ctypes
-        import msvcrt
-        from ctypes import wintypes
-    except ImportError as exc:  # pragma: no cover - available on supported Windows Python
-        raise OSError("repository file handle inspection is unavailable") from exc
-    get_final_path = ctypes.WinDLL("kernel32", use_last_error=True).GetFinalPathNameByHandleW
-    get_final_path.argtypes = [
-        wintypes.HANDLE,
-        wintypes.LPWSTR,
-        wintypes.DWORD,
-        wintypes.DWORD,
-    ]
-    get_final_path.restype = wintypes.DWORD
-    handle = wintypes.HANDLE(msvcrt.get_osfhandle(descriptor))
-    required = get_final_path(handle, None, 0, 0)
-    if required == 0:
-        raise OSError("repository file handle could not be resolved")
-    buffer = ctypes.create_unicode_buffer(required + 1)
-    written = get_final_path(handle, buffer, len(buffer), 0)
-    if written == 0 or written >= len(buffer):
-        raise OSError("repository file handle could not be resolved")
-    value = buffer.value
-    if value.startswith("\\\\?\\UNC\\"):
-        value = "\\\\" + value[8:]
-    elif value.startswith("\\\\?\\"):
-        value = value[4:]
-    return Path(value)
-
-
-def _repo_path_snapshot(
-    source: Path,
-    root: Path,
-    relative: Path,
-) -> tuple[tuple[int, ...], list[tuple[int, ...]], os.stat_result, Path]:
-    canonical_root = root.resolve(strict=True)
-    canonical_source = source.resolve(strict=True)
-    if _normalized_absolute_path(canonical_root) != _normalized_absolute_path(root):
-        raise OSError("repository root must be a real directory")
-    if _normalized_absolute_path(canonical_source) != _normalized_absolute_path(source):
-        raise OSError("repository file path must not contain symlinks")
-    canonical_source.relative_to(canonical_root)
-    root_metadata = os.stat(root, follow_symlinks=False)
-    if not stat.S_ISDIR(root_metadata.st_mode):
-        raise OSError("repository root must be a real directory")
-    directory_identities: list[tuple[int, ...]] = []
-    current = root
-    for component in relative.parts[:-1]:
-        current /= component
-        metadata = os.stat(current, follow_symlinks=False)
-        if not stat.S_ISDIR(metadata.st_mode) or stat.S_ISLNK(metadata.st_mode):
-            raise OSError("repository path components must be real directories")
-        directory_identities.append(_stable_directory_identity(metadata))
-    pathname = os.stat(source, follow_symlinks=False)
-    if not stat.S_ISREG(pathname.st_mode) or stat.S_ISLNK(pathname.st_mode):
-        raise OSError("repository file must be a regular non-symlink file")
-    return (
-        _stable_directory_identity(root_metadata),
-        directory_identities,
-        pathname,
-        canonical_source,
-    )
-
-
-def _read_repo_file_by_handle(
-    source: Path,
-    root: Path,
-    relative: Path,
-    max_bytes: int,
-) -> bytes:
-    root_identity, directory_identities, pathname_before, canonical_source = (
-        _repo_path_snapshot(source, root, relative)
-    )
-    flags = (
-        os.O_RDONLY
-        | getattr(os, "O_BINARY", 0)
-        | getattr(os, "O_NOINHERIT", 0)
-        | getattr(os, "O_NONBLOCK", 0)
-    )
-    descriptor = os.open(source, flags)
-    try:
-        before = os.fstat(descriptor)
-        if not stat.S_ISREG(before.st_mode):
-            raise OSError("repository file must be regular")
-        if _stable_file_identity(pathname_before) != _stable_file_identity(before):
-            raise OSError("repository file changed before it was opened")
-        if os.name == "nt" and (
-            _normalized_absolute_path(_windows_final_path_from_descriptor(descriptor))
-            != _normalized_absolute_path(canonical_source)
-        ):
-            raise OSError("repository file handle escaped its approved path")
-        if before.st_size > max_bytes:
-            raise OSError("repository file exceeds the maximum size")
-        chunks: list[bytes] = []
-        total = 0
-        while True:
-            chunk = os.read(descriptor, min(1024 * 1024, max_bytes + 1 - total))
-            if not chunk:
-                break
-            chunks.append(chunk)
-            total += len(chunk)
-            if total > max_bytes:
-                raise OSError("repository file exceeds the maximum size")
-        after = os.fstat(descriptor)
-        if _stable_file_identity(after) != _stable_file_identity(before) or total != after.st_size:
-            raise OSError("repository file changed while it was being read")
-        current_root, current_directories, current_pathname, current_canonical = (
-            _repo_path_snapshot(source, root, relative)
-        )
-        if (
-            current_root != root_identity
-            or current_directories != directory_identities
-            or _stable_file_identity(current_pathname) != _stable_file_identity(after)
-            or _normalized_absolute_path(current_canonical)
-            != _normalized_absolute_path(canonical_source)
-        ):
-            raise OSError("repository file path changed while it was being read")
-        return b"".join(chunks)
-    finally:
-        os.close(descriptor)
-
-
-def _read_repo_file_by_descriptor(
-    source: Path,
-    root: Path,
-    relative: Path,
-    max_bytes: int,
-) -> bytes:
-    nofollow = os.O_NOFOLLOW
-    directory_flags = (
-        os.O_RDONLY
-        | getattr(os, "O_CLOEXEC", 0)
-        | nofollow
-        | getattr(os, "O_DIRECTORY", 0)
-    )
-    file_flags = (
-        os.O_RDONLY
-        | getattr(os, "O_CLOEXEC", 0)
-        | nofollow
-        | getattr(os, "O_NONBLOCK", 0)
-    )
-    directory_descriptors: list[int] = []
-    directory_identities: list[tuple[int, ...]] = []
-    descriptor: int | None = None
-    try:
-        root_before = os.stat(root, follow_symlinks=False)
-        if not stat.S_ISDIR(root_before.st_mode):
-            raise OSError("repository root must be a real directory")
-        root_descriptor = os.open(root, directory_flags)
-        directory_descriptors.append(root_descriptor)
-        root_open = os.fstat(root_descriptor)
-        if _stable_directory_identity(root_before) != _stable_directory_identity(root_open):
-            raise OSError("repository root changed before it was opened")
-        directory_identities.append(_stable_directory_identity(root_open))
-        parent_descriptor = root_descriptor
-        for component in relative.parts[:-1]:
-            component_before = os.stat(
-                component,
-                dir_fd=parent_descriptor,
-                follow_symlinks=False,
-            )
-            if not stat.S_ISDIR(component_before.st_mode):
-                raise OSError("repository path components must be real directories")
-            child_descriptor = os.open(
-                component,
-                directory_flags,
-                dir_fd=parent_descriptor,
-            )
-            child_open = os.fstat(child_descriptor)
-            if _stable_directory_identity(component_before) != _stable_directory_identity(child_open):
-                os.close(child_descriptor)
-                raise OSError("repository directory changed before it was opened")
-            directory_descriptors.append(child_descriptor)
-            directory_identities.append(_stable_directory_identity(child_open))
-            parent_descriptor = child_descriptor
-        filename = relative.parts[-1]
-        pathname_before = os.stat(
-            filename,
-            dir_fd=parent_descriptor,
-            follow_symlinks=False,
-        )
-        if not stat.S_ISREG(pathname_before.st_mode):
-            raise OSError("repository file must be a regular non-symlink file")
-        descriptor = os.open(filename, file_flags, dir_fd=parent_descriptor)
-        before = os.fstat(descriptor)
-        if (
-            not stat.S_ISREG(before.st_mode)
-            or _stable_file_identity(pathname_before) != _stable_file_identity(before)
-        ):
-            raise OSError("repository file changed before it was opened")
-        if before.st_size > max_bytes:
-            raise OSError("repository file exceeds the maximum size")
-        chunks: list[bytes] = []
-        total = 0
-        while True:
-            chunk = os.read(descriptor, min(1024 * 1024, max_bytes + 1 - total))
-            if not chunk:
-                break
-            chunks.append(chunk)
-            total += len(chunk)
-            if total > max_bytes:
-                raise OSError("repository file exceeds the maximum size")
-        after = os.fstat(descriptor)
-        current = os.stat(filename, dir_fd=parent_descriptor, follow_symlinks=False)
-        if (
-            _stable_file_identity(after) != _stable_file_identity(before)
-            or _stable_file_identity(current) != _stable_file_identity(after)
-            or total != after.st_size
-        ):
-            raise OSError("repository file changed while it was being read")
-        verifier_descriptors: list[int] = []
-        try:
-            root_current = os.stat(root, follow_symlinks=False)
-            verifier = os.open(root, directory_flags)
-            verifier_descriptors.append(verifier)
-            if (
-                _stable_directory_identity(root_current) != directory_identities[0]
-                or _stable_directory_identity(os.fstat(verifier)) != directory_identities[0]
-            ):
-                raise OSError("repository root changed while it was being read")
-            for component, expected_identity in zip(
-                relative.parts[:-1],
-                directory_identities[1:], strict=True
-            ):
-                next_descriptor = os.open(component, directory_flags, dir_fd=verifier)
-                verifier_descriptors.append(next_descriptor)
-                if _stable_directory_identity(os.fstat(next_descriptor)) != expected_identity:
-                    raise OSError("repository directory changed while it was being read")
-                verifier = next_descriptor
-            current_path = os.stat(filename, dir_fd=verifier, follow_symlinks=False)
-            if _stable_file_identity(current_path) != _stable_file_identity(after):
-                raise OSError("repository file path changed while it was being read")
-        finally:
-            for verifier_descriptor in reversed(verifier_descriptors):
-                os.close(verifier_descriptor)
-        return b"".join(chunks)
-    finally:
-        if descriptor is not None:
-            os.close(descriptor)
-        for directory_descriptor in reversed(directory_descriptors):
-            os.close(directory_descriptor)
-
-
-def _read_repo_bytes(
-    repo_root: Path,
-    raw_path: object,
-    *,
-    max_bytes: int = MAX_REPO_FILE_BYTES,
-) -> bytes | None:
-    if not _is_normalized_repo_path(raw_path):
-        return None
-    root = Path(os.path.abspath(repo_root))
-    relative = Path(*PurePosixPath(str(raw_path)).parts)
-    source = root / relative
-    try:
-        if HAS_DESCRIPTOR_RELATIVE_IO:
-            return _read_repo_file_by_descriptor(source, root, relative, max_bytes)
-        return _read_repo_file_by_handle(source, root, relative, max_bytes)
-    except (OSError, RuntimeError, ValueError):
-        return None
-
-
 def _sha256_bytes(value: bytes) -> str:
     return f"sha256:{hashlib.sha256(value).hexdigest()}"
 
@@ -1277,15 +1047,6 @@ def _string_list(value: object) -> list[str] | None:
     if not isinstance(value, list) or not all(isinstance(item, str) and item for item in value):
         return None
     return value
-
-
-def _is_normalized_repo_path(value: object) -> bool:
-    if not isinstance(value, str) or not value or "\\" in value:
-        return False
-    if value.startswith("/") or WINDOWS_ABSOLUTE_PATH_RE.match(value):
-        return False
-    path = PurePosixPath(value)
-    return path.as_posix() == value and all(part not in {"", ".", ".."} for part in path.parts)
 
 
 def _is_utc_timestamp(value: object) -> bool:
@@ -1323,170 +1084,17 @@ def _marker_plan_version_errors(marker_plan: object) -> list[str]:
     return []
 
 
-def _json_values_equal(left: object, right: object) -> bool:
-    if isinstance(left, bool) or isinstance(right, bool):
-        return type(left) is type(right) and left == right
-    if isinstance(left, (int, float)) and isinstance(right, (int, float)):
-        return left == right
-    return type(left) is type(right) and left == right
-
-
-def _json_schema_type_matches(value: object, expected: object) -> bool:
-    expected_types = expected if isinstance(expected, list) else [expected]
-    checks = {
-        "array": lambda candidate: isinstance(candidate, list),
-        "boolean": lambda candidate: isinstance(candidate, bool),
-        "integer": lambda candidate: isinstance(candidate, int) and not isinstance(candidate, bool),
-        "null": lambda candidate: candidate is None,
-        "number": lambda candidate: isinstance(candidate, (int, float)) and not isinstance(candidate, bool),
-        "object": lambda candidate: isinstance(candidate, dict),
-        "string": lambda candidate: isinstance(candidate, str),
-    }
-    return any(
-        isinstance(name, str) and name in checks and checks[name](value)
-        for name in expected_types
-    )
-
-
-def _resolve_schema_reference(root: dict[str, Any], reference: object) -> object | None:
-    if not isinstance(reference, str) or not reference.startswith("#/"):
-        return None
-    resolved: object = root
-    for token in reference[2:].split("/"):
-        key = token.replace("~1", "/").replace("~0", "~")
-        if not isinstance(resolved, dict) or key not in resolved:
-            return None
-        resolved = resolved[key]
-    return resolved
-
-
-def _json_schema_matches(value: object, schema: object, root: dict[str, Any]) -> bool:
-    return not _json_schema_errors(value, schema, root, "candidate")
-
-
 def _json_schema_errors(
     value: object,
     schema: object,
     root: dict[str, Any],
     path: str,
 ) -> list[str]:
-    if schema is True:
-        return []
-    if schema is False or not isinstance(schema, dict):
-        return [f"{path} is rejected by schema"]
-
-    errors: list[str] = []
-    if "$ref" in schema:
-        resolved = _resolve_schema_reference(root, schema["$ref"])
-        if resolved is None:
-            errors.append(f"{path} uses an unresolved schema reference")
-        else:
-            errors.extend(_json_schema_errors(value, resolved, root, path))
-
-    for branch in schema.get("allOf", ()) if isinstance(schema.get("allOf"), list) else ():
-        errors.extend(_json_schema_errors(value, branch, root, path))
-    any_of = schema.get("anyOf")
-    if isinstance(any_of, list) and not any(
-        _json_schema_matches(value, branch, root) for branch in any_of
-    ):
-        errors.append(f"{path} does not match any allowed schema shape")
-    one_of = schema.get("oneOf")
-    if isinstance(one_of, list) and sum(
-        _json_schema_matches(value, branch, root) for branch in one_of
-    ) != 1:
-        errors.append(f"{path} does not match exactly one allowed schema shape")
-    negated = schema.get("not")
-    if isinstance(negated, dict) and _json_schema_matches(value, negated, root):
-        errors.append(f"{path} matches a prohibited schema shape")
-    condition = schema.get("if")
-    if isinstance(condition, dict):
-        branch = schema.get("then") if _json_schema_matches(value, condition, root) else schema.get("else")
-        if branch is not None:
-            errors.extend(_json_schema_errors(value, branch, root, path))
-
-    if "const" in schema and not _json_values_equal(value, schema["const"]):
-        errors.append(f"{path} does not match its schema constant")
-    enum = schema.get("enum")
-    if isinstance(enum, list) and not any(_json_values_equal(value, item) for item in enum):
-        errors.append(f"{path} is outside its schema enum")
-    expected_type = schema.get("type")
-    if expected_type is not None and not _json_schema_type_matches(value, expected_type):
-        errors.append(f"{path} has the wrong schema type")
-        return errors
-
-    if isinstance(value, str):
-        minimum_length = schema.get("minLength")
-        if isinstance(minimum_length, int) and len(value) < minimum_length:
-            errors.append(f"{path} is shorter than allowed")
-        pattern = schema.get("pattern")
-        if isinstance(pattern, str):
-            try:
-                matched = re.search(pattern, value) is not None
-            except re.error:
-                matched = False
-            if not matched:
-                errors.append(f"{path} does not match its schema pattern")
-    if (
-        isinstance(value, (int, float))
-        and not isinstance(value, bool)
-        and isinstance(schema.get("minimum"), (int, float))
-        and value < schema["minimum"]
-    ):
-        errors.append(f"{path} is below its schema minimum")
-    if isinstance(value, list):
-        minimum_items = schema.get("minItems")
-        if isinstance(minimum_items, int) and len(value) < minimum_items:
-            errors.append(f"{path} has too few items")
-        maximum_items = schema.get("maxItems")
-        if isinstance(maximum_items, int) and len(value) > maximum_items:
-            errors.append(f"{path} has too many items")
-        if schema.get("uniqueItems") is True:
-            try:
-                serialized = [
-                    json.dumps(item, sort_keys=True, separators=(",", ":"), allow_nan=False)
-                    for item in value
-                ]
-            except (RecursionError, TypeError, ValueError) as exc:
-                raise ValidationError(
-                    f"could not safely compare unique JSON values at {path}"
-                ) from exc
-            if len(set(serialized)) != len(serialized):
-                errors.append(f"{path} must contain unique items")
-        item_schema = schema.get("items")
-        if item_schema is not None:
-            for index, item in enumerate(value):
-                errors.extend(_json_schema_errors(item, item_schema, root, f"{path}[{index}]"))
-        contains = schema.get("contains")
-        if contains is not None and not any(
-            _json_schema_matches(item, contains, root) for item in value
-        ):
-            errors.append(f"{path} does not contain a required schema item")
-    if isinstance(value, dict):
-        required = schema.get("required") if isinstance(schema.get("required"), list) else []
-        missing = sorted(
-            key for key in required if isinstance(key, str) and key not in value
-        )
-        if missing:
-            errors.append(f"{path} is missing required fields: {', '.join(missing)}")
-        minimum_properties = schema.get("minProperties")
-        if isinstance(minimum_properties, int) and len(value) < minimum_properties:
-            errors.append(f"{path} has too few properties")
-        properties = schema.get("properties") if isinstance(schema.get("properties"), dict) else {}
-        for key, child_schema in properties.items():
-            if key in value:
-                errors.extend(
-                    _json_schema_errors(value[key], child_schema, root, f"{path}.{key}")
-                )
-        additional = schema.get("additionalProperties")
-        extra = sorted(str(key) for key in value.keys() - properties.keys())
-        if additional is False and extra:
-            errors.append(f"{path} has unsupported fields: {', '.join(extra)}")
-        elif isinstance(additional, dict):
-            for key in value.keys() - properties.keys():
-                errors.extend(
-                    _json_schema_errors(value[key], additional, root, f"{path}.{key}")
-                )
-    return errors
+    """Validate with the runner's shared validator; one line per failure."""
+    return [
+        f"{failure['field']}: {failure['message']}"
+        for failure in json_schema_failures(value, schema, root, path)
+    ]
 
 
 def _marker_plan_shape_errors(
@@ -1518,23 +1126,6 @@ def _marker_tasks_sha_text(tasks_text: str, task_ids: set[str]) -> str | None:
     return _sha256_bytes(("\n".join(selected) + "\n").encode("utf-8"))
 
 
-def _git_env() -> dict[str, str]:
-    return {**os.environ, "GIT_NO_REPLACE_OBJECTS": "1"}
-
-
-def _git_file_at_commit(repo_root: Path, commit_sha: object, relative_path: str) -> bytes | None:
-    if not isinstance(commit_sha, str) or not re.fullmatch(r"[0-9a-f]{40}", commit_sha):
-        return None
-    completed = subprocess.run(
-        ["git", "-C", str(repo_root), "show", f"{commit_sha}:{relative_path}"],
-        capture_output=True,
-        env=_git_env(),
-        shell=False,
-        check=False,
-    )
-    return completed.stdout if completed.returncode == 0 else None
-
-
 def _canonical_schema(
     schema_path: Path,
     label: str,
@@ -1552,18 +1143,32 @@ def _canonical_schema(
     )
     if exact_head:
         try:
-            schema_ref = schema_path.resolve().relative_to(repo_root.resolve()).as_posix()
+            schema_ref: str | None = (
+                schema_path.resolve().relative_to(repo_root.resolve()).as_posix()
+            )
         except ValueError:
-            return None, [f"canonical {label} schema is outside the authorized repository"]
-        schema_bytes = _git_file_at_commit(repo_root, expected_head_commit, schema_ref)
-        if schema_bytes is None:
-            return None, [f"canonical {label} schema is absent from the authorized PR head"]
-        try:
-            worktree_schema_bytes = schema_path.read_bytes()
-        except OSError:
-            worktree_schema_bytes = None
-        if worktree_schema_bytes != schema_bytes:
-            errors.append(f"canonical {label} schema differs from the authorized PR head")
+            schema_ref = None
+        if schema_ref is not None:
+            schema_bytes = _git_file_at_commit(repo_root, expected_head_commit, schema_ref)
+            if schema_bytes is None:
+                return None, [f"canonical {label} schema is absent from the authorized PR head"]
+            try:
+                worktree_schema_bytes = schema_path.read_bytes()
+            except OSError:
+                worktree_schema_bytes = None
+            if worktree_schema_bytes != schema_bytes:
+                errors.append(f"canonical {label} schema differs from the authorized PR head")
+        else:
+            # An installed plugin runs from outside the repository, so its
+            # contracts are trusted from the plugin root itself.
+            try:
+                schema_path.resolve(strict=True).relative_to(INSTALLED_PLUGIN_ROOT)
+            except (OSError, ValueError):
+                return None, [f"canonical {label} schema is outside the installed plugin root"]
+            try:
+                schema_bytes = schema_path.read_bytes()
+            except OSError:
+                schema_bytes = None
     else:
         try:
             schema_bytes = schema_path.read_bytes()
@@ -1765,145 +1370,6 @@ def _phase_evidence_owner(
         return ("multiple" if candidates else None), None
     owner, value, permitted = candidates[0]
     return (owner, value) if permitted else (None, None)
-
-
-def _git_commit_exists(repo_root: Path, commit_sha: object) -> bool:
-    if not isinstance(commit_sha, str) or not re.fullmatch(r"[0-9a-f]{40}", commit_sha):
-        return False
-    completed = subprocess.run(
-        ["git", "-C", str(repo_root), "cat-file", "-e", f"{commit_sha}^{{commit}}"],
-        capture_output=True,
-        env=_git_env(),
-        shell=False,
-        check=False,
-    )
-    return completed.returncode == 0
-
-
-def _git_commit_is_ancestor(repo_root: Path, ancestor_sha: str, descendant_sha: str) -> bool:
-    completed = subprocess.run(
-        ["git", "-C", str(repo_root), "merge-base", "--is-ancestor", ancestor_sha, descendant_sha],
-        capture_output=True,
-        env=_git_env(),
-        shell=False,
-        check=False,
-    )
-    return completed.returncode == 0
-
-
-def _git_commit_is_strict_ancestor(
-    repo_root: Path, ancestor_sha: str, descendant_sha: str,
-) -> bool:
-    return (
-        ancestor_sha != descendant_sha
-        and _git_commit_is_ancestor(repo_root, ancestor_sha, descendant_sha)
-    )
-
-
-def _git_commit_is_ancestor_of_head(repo_root: Path, commit_sha: str) -> bool:
-    return _git_commit_is_ancestor(repo_root, commit_sha, "HEAD")
-
-
-def _git_changed_paths(
-    repo_root: Path, base_sha: object, head_sha: object,
-) -> set[str] | None:
-    if (
-        not _git_commit_exists(repo_root, base_sha)
-        or not _git_commit_exists(repo_root, head_sha)
-    ):
-        return None
-    completed = subprocess.run(
-        [
-            "git", "-C", str(repo_root),
-            "-c", "diff.renames=true",
-            "-c", "diff.renameLimit=0",
-            "diff", "--no-ext-diff", "--find-renames=50%",
-            "--ignore-submodules=none", "--name-status", "-z",
-            f"{base_sha}..{head_sha}",
-        ],
-        capture_output=True,
-        env=_git_env(),
-        shell=False,
-        check=False,
-    )
-    if completed.returncode != 0:
-        return None
-    records = completed.stdout.split(b"\0")
-    paths: set[str] = set()
-    index = 0
-    try:
-        while index < len(records) and records[index]:
-            status = records[index].decode("ascii")
-            index += 1
-            if not status or index >= len(records):
-                return None
-            first_path = records[index].decode("utf-8")
-            index += 1
-            paths.add(first_path)
-            if status[0] in {"R", "C"}:
-                if index >= len(records) or not records[index]:
-                    return None
-                paths.add(records[index].decode("utf-8"))
-                index += 1
-            elif status[0] not in {"A", "D", "M", "T", "U", "X", "B"}:
-                return None
-    except (UnicodeDecodeError, IndexError):
-        return None
-    return paths
-
-
-def _git_path_introduction_commit(
-    repo_root: Path, path: object, head_sha: object,
-) -> str | None:
-    if (
-        not _is_normalized_repo_path(path)
-        or not isinstance(head_sha, str)
-        or not re.fullmatch(r"[0-9a-f]{40}", head_sha)
-    ):
-        return None
-    completed = subprocess.run(
-        [
-            "git", "-C", str(repo_root), "log", "--diff-filter=A", "--format=%H",
-            "--reverse", head_sha, "--", path,
-        ],
-        text=True,
-        capture_output=True,
-        env=_git_env(),
-        shell=False,
-        check=False,
-    )
-    if completed.returncode != 0:
-        return None
-    commits = [line for line in completed.stdout.splitlines() if line]
-    return commits[0] if commits else None
-
-
-def _git_tree_entries(repo_root: Path, commit_sha: object) -> dict[str, str] | None:
-    if not isinstance(commit_sha, str) or not re.fullmatch(r"[0-9a-f]{40}", commit_sha):
-        return None
-    completed = subprocess.run(
-        ["git", "-C", str(repo_root), "ls-tree", "-r", "-z", "--full-tree", commit_sha],
-        capture_output=True,
-        env=_git_env(),
-        shell=False,
-        check=False,
-    )
-    if completed.returncode != 0:
-        return None
-    entries: dict[str, str] = {}
-    for raw_record in completed.stdout.split(b"\0"):
-        if not raw_record:
-            continue
-        try:
-            raw_identity, raw_path = raw_record.split(b"\t", 1)
-            identity = raw_identity.decode("ascii")
-            path = raw_path.decode("utf-8")
-        except (UnicodeDecodeError, ValueError):
-            return None
-        if path in entries:
-            return None
-        entries[path] = identity
-    return entries
 
 
 def _load_json_bytes(value: bytes | None) -> dict[str, Any] | None:
@@ -2454,6 +1920,1760 @@ def validate_changed_file_manifest(
     return {"changed_file_manifest_errors": errors}
 
 
+@dataclass
+class _ProjectionContext:
+    """State the projection integrity checks share.
+
+    The first group describes the whole state file. The error lists fill in place as
+    checks run. The last group is the marker under check, set as the walk reaches it.
+    """
+
+    state: dict[str, Any]
+    state_path: Path
+    expected_head_commit: str | None
+    marker_plan: Any
+    markers: Any
+    plan_status: Any
+    strict_contract: bool
+    repo_root: Path | None
+    feature_dir: Any
+    phase_results: Any
+    phases: dict[Any, Any]
+    current_tasks_text: str | None
+    current_tasks_sha: str | None
+    phases_by_marker: dict[str, list[tuple[str, dict[str, Any]]]] = dataclass_field(default_factory=dict)
+    checkpoint_evidence_schema: dict[str, Any] | None = None
+    verification_report_schema: dict[str, Any] | None = None
+    completed_phase_pending_fields: list[str] = dataclass_field(default_factory=list)
+    projection_status_errors: list[str] = dataclass_field(default_factory=list)
+    checkpoint_evidence_errors: list[str] = dataclass_field(default_factory=list)
+    checkpoint_source_fingerprint_errors: list[str] = dataclass_field(default_factory=list)
+    checkpoint_file_errors: list[str] = dataclass_field(default_factory=list)
+    emission_mapping_errors: list[str] = dataclass_field(default_factory=list)
+    marker_plan_status_errors: list[str] = dataclass_field(default_factory=list)
+    seen_marker_ids: set[str] = dataclass_field(default_factory=set)
+    seen_review_orders: set[int] = dataclass_field(default_factory=set)
+    task_owners: dict[str, str] = dataclass_field(default_factory=dict)
+    file_owners: dict[str, tuple[Any, Any]] = dataclass_field(default_factory=dict)
+    index: Any = None
+    raw_marker: Any = None
+    marker_id: Any = None
+    checkpoint: Any = None
+    checkpoint_status: Any = None
+    claimed_commit: Any = None
+    committed_verification_bytes: Any = None
+    correction_authority: Any = None
+    correction_prefix: Any = None
+    correction_projection_evidence: Any = None
+    corrections: Any = None
+    evidence: Any = None
+    evidence_ref: Any = None
+    expected_feature_id: Any = None
+    projection_evidence: Any = None
+    required_gate_ids: Any = None
+    reviewed_head: Any = None
+    superseded_evidence: Any = None
+    verification: Any = None
+    verification_report: Any = None
+
+
+# Emission-mapping fields each emission status requires.
+_EMISSION_REQUIRED_FIELDS = {
+    "marker_split": ("packet_path",),
+    "emitted": ("packet_path", "pr_number", "pr_url"),
+}
+
+
+def _emission_field_errors(
+    ctx: _ProjectionContext, prefix: str, emission: dict[str, Any], status: Any,
+) -> list[str]:
+    """Missing required fields, a bad packet path, and fields that only an emitted mapping may carry."""
+    errors: list[str] = []
+    for required in _EMISSION_REQUIRED_FIELDS.get(status, ()):
+        value = emission.get(required)
+        if value is None or isinstance(value, str) and not value.strip():
+            errors.append(f"{prefix}.{required}")
+    packet_path = emission.get("packet_path")
+    if packet_path is not None and (
+        not _is_normalized_repo_path(packet_path)
+        or ctx.repo_root and _repo_file(ctx.repo_root, packet_path) is None
+    ):
+        errors.append(f"{prefix}.packet_path is not a normalized repository-relative path")
+    if status != "emitted":
+        errors.extend(
+            f"{prefix}.{field} is only valid after emission"
+            for field in ("pr_number", "pr_url")
+            if field in emission
+        )
+    return errors
+
+
+def _check_marker_emission(ctx: _ProjectionContext) -> None:
+    """Check the marker's emission mapping against its checkpoint."""
+    emission = ctx.raw_marker.get("emission_mapping")
+    if not ctx.strict_contract or not isinstance(emission, dict):
+        return
+    status = emission.get("status")
+    prefix = f"pr_marker_plan.markers[{ctx.index}].emission_mapping"
+    ctx.emission_mapping_errors.extend(_emission_field_errors(ctx, prefix, emission, status))
+    if status in {"marker_split", "emitted", "hazard_collapsed"}:
+        if not isinstance(ctx.checkpoint, dict) or ctx.checkpoint.get("status") != "complete":
+            ctx.emission_mapping_errors.append(
+                f"pr_marker_plan.markers[{ctx.index}] emission requires a complete checkpoint"
+            )
+
+
+def _check_phase_evidence_owners(ctx: _ProjectionContext) -> None:
+    """Every phase result field must have exactly one matching checkpoint evidence owner."""
+    for phase_name, phase_result in ctx.phases_by_marker.get(ctx.marker_id, []):
+        for phase_field, phase_value in phase_result.items():
+            if phase_field in PHASE_RESULT_PROJECTION_FIELDS:
+                continue
+            owner, evidence_value = _phase_evidence_owner(
+                phase_field, ctx.projection_evidence,
+            )
+            if owner is None:
+                ctx.checkpoint_evidence_errors.append(
+                    f"pr_marker_plan.markers[{ctx.index}] phase_results[{phase_name}] {phase_field} has no checkpoint evidence owner"
+                )
+            elif owner == "multiple":
+                ctx.checkpoint_evidence_errors.append(
+                    f"pr_marker_plan.markers[{ctx.index}] phase_results[{phase_name}] {phase_field} has multiple checkpoint evidence owners"
+                )
+            elif not json_values_equal(phase_value, evidence_value):
+                ctx.checkpoint_evidence_errors.append(
+                    f"pr_marker_plan.markers[{ctx.index}] phase_results[{phase_name}] {phase_field} does not match checkpoint evidence"
+                )
+
+
+def _check_evidence_commit_binding(ctx: _ProjectionContext) -> None:
+    """The checkpoint evidence status and implementation commit must agree with the checkpoint."""
+    if ctx.evidence.get("status") != ctx.checkpoint_status:
+        ctx.checkpoint_evidence_errors.append(
+            f"pr_marker_plan.markers[{ctx.index}] checkpoint evidence status does not match checkpoint status"
+        )
+    ctx.claimed_commit = ctx.checkpoint.get("commit_sha")
+    if ctx.claimed_commit != ctx.evidence.get("implementation_checkpoint_sha"):
+        ctx.checkpoint_evidence_errors.append(
+            f"pr_marker_plan.markers[{ctx.index}] checkpoint commit_sha does not match checkpoint evidence implementation_checkpoint_sha"
+        )
+    if ctx.repo_root is not None:
+        if not _git_commit_exists(ctx.repo_root, ctx.claimed_commit):
+            ctx.checkpoint_evidence_errors.append(
+                f"pr_marker_plan.markers[{ctx.index}] checkpoint commit_sha is not an existing commit"
+            )
+        elif not (
+            isinstance(ctx.expected_head_commit, str)
+            and re.fullmatch(r"[0-9a-f]{40}", ctx.expected_head_commit)
+            and _git_commit_is_ancestor(
+                ctx.repo_root, ctx.claimed_commit, ctx.expected_head_commit,
+            )
+        ):
+            ctx.checkpoint_evidence_errors.append(
+                f"pr_marker_plan.markers[{ctx.index}] checkpoint commit_sha is not an ancestor of the authorized PR head"
+            )
+
+
+@dataclass
+class _CorrectionChain:
+    """The evidence the next correction must supersede, and the paths corrections already used."""
+
+    path: Any
+    commit: Any
+    sha: Any
+    used_paths: set[str]
+
+
+def _error_count(ctx: _ProjectionContext) -> int:
+    return len(ctx.checkpoint_evidence_errors) + len(ctx.checkpoint_file_errors)
+
+
+def _check_correction_lineage(
+    ctx: _ProjectionContext, chain: _CorrectionChain, prefix: str, position: int, correction: dict[str, Any],
+) -> None:
+    """A correction must be next in sequence, supersede the previous evidence, and descend from it in git."""
+    if correction.get("sequence") != position + 1:
+        ctx.checkpoint_evidence_errors.append(f"{prefix}.sequence must be append-only and contiguous")
+    supersedes = (
+        correction.get("supersedes_evidence_path"),
+        correction.get("supersedes_evidence_commit_sha"),
+        correction.get("supersedes_evidence_sha"),
+    )
+    if supersedes != (chain.path, chain.commit, chain.sha):
+        ctx.checkpoint_evidence_errors.append(
+            f"{prefix} does not supersede the previous authorized checkpoint evidence"
+        )
+    path = correction.get("evidence_path")
+    if (
+        not _is_normalized_repo_path(path)
+        or path != f"{ctx.correction_prefix}{position + 1:03d}.json"
+        or path == chain.path
+        or path in chain.used_paths
+    ):
+        ctx.checkpoint_file_errors.append(f"{prefix}.evidence_path is invalid or reused")
+    else:
+        chain.used_paths.add(path)
+
+
+def _check_correction_commit(
+    ctx: _ProjectionContext, chain: _CorrectionChain, prefix: str, correction: dict[str, Any],
+) -> None:
+    """A correction's evidence commit must exist, introduce its path, and sit between the previous commit and the PR head."""
+    commit = correction.get("checkpoint_evidence_commit_sha")
+    commit_exists = _git_commit_exists(ctx.repo_root, commit)
+    if not commit_exists:
+        ctx.checkpoint_evidence_errors.append(
+            f"{prefix}.checkpoint_evidence_commit_sha is not an existing commit"
+        )
+    introduction_commit = _git_path_introduction_commit(
+        ctx.repo_root, correction.get("evidence_path"), ctx.expected_head_commit,
+    )
+    if introduction_commit != commit:
+        ctx.checkpoint_evidence_errors.append(
+            f"{prefix}.checkpoint_evidence_commit_sha is not the immutable path-introduction commit"
+        )
+    if commit_exists and not (
+        isinstance(ctx.expected_head_commit, str)
+        and _git_commit_is_ancestor(ctx.repo_root, commit, ctx.expected_head_commit)
+    ):
+        ctx.checkpoint_evidence_errors.append(
+            f"{prefix}.checkpoint_evidence_commit_sha is not an ancestor of the authorized PR head"
+        )
+    if (
+        commit_exists
+        and isinstance(chain.commit, str)
+        and not _git_commit_is_strict_ancestor(ctx.repo_root, chain.commit, commit)
+    ):
+        ctx.checkpoint_evidence_errors.append(
+            f"{prefix} does not strictly descend from the superseded evidence commit"
+        )
+
+
+def _check_committed_evidence_bytes(
+    ctx: _ProjectionContext, prefix: str, record: dict[str, Any], origin: str,
+) -> bytes | None:
+    """An evidence record's file must match its commit, the authorized PR head, and the worktree.
+
+    `origin` names the record's commit in messages. Returns the bytes committed there.
+    """
+    path = record.get("evidence_path")
+    commit = record.get("checkpoint_evidence_commit_sha")
+    committed = _git_file_at_commit(ctx.repo_root, commit, path) if isinstance(path, str) else None
+    if committed is None:
+        ctx.checkpoint_file_errors.append(f"{prefix} evidence is absent from its {origin}")
+        return None
+    authorized = (
+        _git_file_at_commit(ctx.repo_root, ctx.expected_head_commit, path) if isinstance(path, str) else None
+    )
+    if record.get("checkpoint_evidence_sha") != _sha256_bytes(committed):
+        ctx.checkpoint_file_errors.append(f"{prefix}.checkpoint_evidence_sha")
+    if authorized != committed:
+        ctx.checkpoint_file_errors.append(f"{prefix} differs from the authorized PR head")
+    if _read_repo_bytes(ctx.repo_root, path) != committed:
+        ctx.checkpoint_file_errors.append(f"{prefix} worktree bytes differ from its {origin}")
+    return committed
+
+
+def _check_correction_record(
+    ctx: _ProjectionContext, prefix: str, position: int, correction: dict[str, Any], committed: bytes | None,
+) -> dict[str, Any] | None:
+    """The committed correction record must satisfy the correction schema and repeat the marker's authority."""
+    record = _load_json_bytes(committed)
+    if not isinstance(record, dict):
+        ctx.checkpoint_evidence_errors.append(f"{prefix} evidence must be a JSON object")
+        return None
+    if ctx.checkpoint_evidence_schema is None:
+        ctx.checkpoint_evidence_errors.append(f"{prefix} schema authority is unavailable")
+    else:
+        schema_errors = _json_schema_errors(
+            record,
+            {"$ref": "#/$defs/checkpoint_correction_record"},
+            ctx.checkpoint_evidence_schema,
+            "checkpoint_correction",
+        )
+        ctx.checkpoint_evidence_errors.extend(f"{prefix} schema: {error}" for error in schema_errors)
+    record_authority = (
+        record.get("supersedes_evidence_path"),
+        record.get("supersedes_evidence_commit_sha"),
+        record.get("supersedes_evidence_sha"),
+    )
+    claimed_authority = (
+        correction.get("supersedes_evidence_path"),
+        correction.get("supersedes_evidence_commit_sha"),
+        correction.get("supersedes_evidence_sha"),
+    )
+    if (
+        record.get("feature_id") != ctx.marker_plan.get("feature_id")
+        or record.get("marker_id") != ctx.marker_id
+        or record.get("sequence") != position + 1
+        or record_authority != claimed_authority
+    ):
+        ctx.checkpoint_evidence_errors.append(f"{prefix} evidence authority does not match marker state")
+    return record
+
+
+def _apply_owner_removals(ctx: _ProjectionContext, prefix: str, record: dict[str, Any]) -> None:
+    """Drop the evidence owners a valid correction removes from the projected evidence."""
+    removals = record.get("remove_evidence_owners")
+    if not isinstance(removals, list):
+        ctx.checkpoint_evidence_errors.append(f"{prefix}.remove_evidence_owners must be an array")
+        return
+    for removal in removals:
+        container_name, separator, field_name = (
+            removal.partition(".") if isinstance(removal, str) else ("", "", "")
+        )
+        if not separator or not container_name or not field_name:
+            ctx.checkpoint_evidence_errors.append(
+                f"{prefix} has an invalid evidence owner removal {removal!r}"
+            )
+            return
+        container = ctx.correction_projection_evidence.get(container_name)
+        if not isinstance(container, dict) or field_name not in container:
+            ctx.checkpoint_evidence_errors.append(
+                f"{prefix} removes a missing evidence owner {removal!r}"
+            )
+            return
+        del container[field_name]
+
+
+def _replay_correction(
+    ctx: _ProjectionContext, chain: _CorrectionChain, position: int, correction: dict[str, Any],
+) -> None:
+    """Check one correction, apply its owner removals when it is valid, and advance the chain."""
+    prefix = (
+        f"pr_marker_plan.markers[{ctx.index}].implementation_checkpoint."
+        f"corrections[{position}]"
+    )
+    errors_before = _error_count(ctx)
+    _check_correction_lineage(ctx, chain, prefix, position, correction)
+    _check_correction_commit(ctx, chain, prefix, correction)
+    committed = _check_committed_evidence_bytes(ctx, prefix, correction, "correction commit")
+    record = _check_correction_record(ctx, prefix, position, correction, committed)
+    if _error_count(ctx) == errors_before and record is not None:
+        _apply_owner_removals(ctx, prefix, record)
+    chain.path = correction.get("evidence_path")
+    chain.commit = correction.get("checkpoint_evidence_commit_sha")
+    chain.sha = correction.get("checkpoint_evidence_sha")
+
+
+def _check_checkpoint_corrections(ctx: _ProjectionContext) -> None:
+    """Replay the append-only correction chain over the checkpoint evidence."""
+    if ctx.checkpoint_status != "complete" or ctx.corrections is None:
+        return
+    if not isinstance(ctx.corrections, list) or ctx.superseded_evidence is None and not ctx.corrections:
+        ctx.checkpoint_evidence_errors.append(
+            f"pr_marker_plan.markers[{ctx.index}].implementation_checkpoint.corrections must be a non-empty array"
+        )
+        return
+    if ctx.repo_root is None:
+        return
+    chain = _CorrectionChain(
+        path=ctx.correction_authority.get("evidence_path"),
+        commit=ctx.correction_authority.get("checkpoint_evidence_commit_sha"),
+        sha=ctx.correction_authority.get("checkpoint_evidence_sha"),
+        used_paths=set(),
+    )
+    for position, correction in enumerate(ctx.corrections):
+        if isinstance(correction, dict):
+            _replay_correction(ctx, chain, position, correction)
+        else:
+            ctx.checkpoint_evidence_errors.append(
+                f"pr_marker_plan.markers[{ctx.index}].implementation_checkpoint."
+                f"corrections[{position}] must be an object"
+            )
+    if ctx.superseded_evidence is None:
+        ctx.projection_evidence = ctx.correction_projection_evidence
+    elif (
+        isinstance(chain.commit, str)
+        and isinstance(ctx.checkpoint.get("checkpoint_evidence_commit_sha"), str)
+        and not _git_commit_is_strict_ancestor(
+            ctx.repo_root, chain.commit, ctx.checkpoint["checkpoint_evidence_commit_sha"],
+        )
+    ):
+        ctx.checkpoint_evidence_errors.append(
+            f"pr_marker_plan.markers[{ctx.index}].implementation_checkpoint.superseded_evidence correction chain does not strictly precede the current checkpoint evidence"
+        )
+
+
+def _check_superseded_commits(ctx: _ProjectionContext, prefix: str, superseded: dict[str, Any]) -> None:
+    """Superseded evidence must sit in git history between its implementation and the current evidence."""
+    path = superseded.get("evidence_path")
+    commit = superseded.get("checkpoint_evidence_commit_sha")
+    implementation = superseded.get("implementation_checkpoint_sha")
+    if not _is_normalized_repo_path(path) or path == ctx.evidence_ref:
+        ctx.checkpoint_file_errors.append(f"{prefix}.evidence_path is invalid or current")
+    if not _git_commit_exists(ctx.repo_root, commit):
+        ctx.checkpoint_evidence_errors.append(
+            f"{prefix}.checkpoint_evidence_commit_sha is not an existing commit"
+        )
+    elif not (
+        isinstance(ctx.expected_head_commit, str)
+        and _git_commit_is_ancestor(ctx.repo_root, commit, ctx.expected_head_commit)
+    ):
+        ctx.checkpoint_evidence_errors.append(
+            f"{prefix}.checkpoint_evidence_commit_sha is not an ancestor of the authorized PR head"
+        )
+    if not _git_commit_exists(ctx.repo_root, implementation):
+        ctx.checkpoint_evidence_errors.append(
+            f"{prefix}.implementation_checkpoint_sha is not an existing commit"
+        )
+    elif isinstance(commit, str) and not _git_commit_is_ancestor(ctx.repo_root, implementation, commit):
+        ctx.checkpoint_evidence_errors.append(
+            f"{prefix}.implementation_checkpoint_sha is not an ancestor of its evidence commit"
+        )
+    current_commit = ctx.checkpoint.get("checkpoint_evidence_commit_sha")
+    if (
+        isinstance(current_commit, str)
+        and isinstance(commit, str)
+        and _git_commit_exists(ctx.repo_root, current_commit)
+        and not _git_commit_is_strict_ancestor(ctx.repo_root, commit, current_commit)
+    ):
+        ctx.checkpoint_evidence_errors.append(f"{prefix} does not precede the current checkpoint evidence")
+
+
+def _check_superseded_record(
+    ctx: _ProjectionContext, prefix: str, superseded: dict[str, Any], committed: bytes,
+) -> None:
+    """The superseded record must satisfy the checkpoint schema and name this marker; it seeds the correction replay."""
+    parsed = _load_json_bytes(committed)
+    if not isinstance(parsed, dict):
+        ctx.checkpoint_evidence_errors.append(f"{prefix} evidence must be a JSON object")
+        return
+    ctx.correction_projection_evidence = parsed
+    if ctx.checkpoint_evidence_schema is not None:
+        schema_errors = _json_schema_errors(
+            parsed,
+            ctx.checkpoint_evidence_schema,
+            ctx.checkpoint_evidence_schema,
+            "superseded_checkpoint_evidence",
+        )
+        ctx.checkpoint_evidence_errors.extend(f"{prefix} schema: {error}" for error in schema_errors)
+    if (
+        parsed.get("feature_id") != ctx.marker_plan.get("feature_id")
+        or parsed.get("marker_id") != ctx.marker_id
+        or parsed.get("status") != "complete"
+        or parsed.get("implementation_checkpoint_sha") != superseded.get("implementation_checkpoint_sha")
+    ):
+        ctx.checkpoint_evidence_errors.append(f"{prefix} identity does not match marker state")
+
+
+def _check_superseded_evidence(ctx: _ProjectionContext) -> None:
+    """Check the superseded evidence a corrected checkpoint replaced."""
+    if ctx.superseded_evidence is None:
+        return
+    prefix = f"pr_marker_plan.markers[{ctx.index}].implementation_checkpoint.superseded_evidence"
+    if not isinstance(ctx.superseded_evidence, dict):
+        ctx.checkpoint_evidence_errors.append(f"{prefix} must be an object")
+        return
+    if ctx.repo_root is None:
+        return
+    _check_superseded_commits(ctx, prefix, ctx.superseded_evidence)
+    committed = _check_committed_evidence_bytes(ctx, prefix, ctx.superseded_evidence, "evidence commit")
+    if committed is not None:
+        _check_superseded_record(ctx, prefix, ctx.superseded_evidence, committed)
+
+def _gate_results_all_pass(results: dict[str, Any]) -> bool:
+    return all(
+        isinstance(result, dict)
+        and set(result) == {"status", "evidence"}
+        and result.get("status") == "pass"
+        and isinstance(result.get("evidence"), str)
+        and bool(result["evidence"].strip())
+        for result in results.values()
+    )
+
+
+def _verification_gate_agreement(
+    checkpoint: Any, evidence: Any, verification_report: Any,
+) -> tuple[bool, bool, bool, bool, list[str] | None, Any]:
+    """Compare the checkpoint's, the evidence's, and the verification report's required gates and results.
+
+    Returns whether the gate sets match, the evidence results all pass, the report gate
+    set matches, the report results match the evidence, then the required gate ids and
+    the evidence's verification record.
+    """
+    required_gate_ids = _string_list(checkpoint.get("required_verification_gate_ids"))
+    evidence_gate_ids = _string_list(evidence.get("required_verification_gate_ids"))
+    verification = evidence.get("verification")
+    report = verification_report if isinstance(verification_report, dict) else None
+    report_gate_ids = _string_list(report.get("required_gate_ids")) if report is not None else None
+    report_results = report.get("results") if report is not None else None
+    gate_sets_match = (
+        required_gate_ids is not None
+        and evidence_gate_ids is not None
+        and len(required_gate_ids) == len(set(required_gate_ids))
+        and len(evidence_gate_ids) == len(set(evidence_gate_ids))
+        and set(required_gate_ids) == set(evidence_gate_ids)
+        and isinstance(verification, dict)
+        and set(verification) == set(required_gate_ids)
+    )
+    passing_results = gate_sets_match and _gate_results_all_pass(verification)
+    report_gate_sets_match = (
+        gate_sets_match
+        and report_gate_ids is not None
+        and required_gate_ids == evidence_gate_ids == report_gate_ids
+        and isinstance(report_results, dict)
+        and set(report_results) == set(required_gate_ids)
+    )
+    report_passing_results = report_gate_sets_match and _gate_results_all_pass(report_results)
+    report_results_match = report_passing_results and report_results == verification
+    return (
+        gate_sets_match, passing_results, report_gate_sets_match, report_results_match,
+        required_gate_ids, verification,
+    )
+
+
+_REPORT_FIELDS = (
+    "schema_version", "feature_id", "marker_id", "status", "generated_at", "verified_commit_sha",
+)
+
+
+def _verification_report_checks(
+    ctx: _ProjectionContext, report_gate_sets_match: bool, report_results_match: bool,
+) -> dict[str, bool]:
+    """Whether each verification report field agrees with the marker, the commit, and the evidence."""
+    report = ctx.verification_report
+    if not isinstance(report, dict):
+        return {
+            **dict.fromkeys(_REPORT_FIELDS, False),
+            "required_gate_ids": report_gate_sets_match,
+            "results": report_results_match,
+        }
+    return {
+        "schema_version": report.get("schema_version") == "verification-report.v1",
+        "feature_id": report.get("feature_id") == ctx.expected_feature_id,
+        "marker_id": report.get("marker_id") == ctx.marker_id,
+        "status": report.get("status") == "pass",
+        "generated_at": _is_utc_timestamp(report.get("generated_at")),
+        "verified_commit_sha": report.get("verified_commit_sha") == ctx.claimed_commit,
+        "required_gate_ids": report_gate_sets_match,
+        "results": report_results_match,
+    }
+
+
+def _check_complete_verification_evidence(ctx: _ProjectionContext) -> None:
+    """A complete checkpoint's evidence and verification report must agree gate by gate."""
+    evidence = ctx.evidence
+    ctx.expected_feature_id = ctx.marker_plan.get("feature_id") if isinstance(ctx.marker_plan, dict) else None
+    (
+        gate_sets_match, passing_results, report_gate_sets_match, report_results_match,
+        ctx.required_gate_ids, ctx.verification,
+    ) = _verification_gate_agreement(ctx.checkpoint, evidence, ctx.verification_report)
+    evidence_checks = {
+        "schema_version": evidence.get("schema_version") == "marker-checkpoint.v1",
+        "feature_id": evidence.get("feature_id") == ctx.expected_feature_id,
+        "marker_id": evidence.get("marker_id") == ctx.marker_id,
+        "status": evidence.get("status") == "complete",
+        "completed_at": _is_utc_timestamp(evidence.get("completed_at")),
+        "tasks_sha": (
+            isinstance(evidence.get("tasks_sha"), str)
+            and re.fullmatch(r"sha256:[0-9a-f]{64}", evidence["tasks_sha"]) is not None
+        ),
+        "source_fingerprint_status": evidence.get("source_fingerprint_status") == "current",
+        "verification_evidence_sha": (
+            ctx.committed_verification_bytes is not None
+            and evidence.get("verification_evidence_sha")
+            == ctx.checkpoint.get("verification_evidence_sha")
+            == _sha256_bytes(ctx.committed_verification_bytes)
+        ),
+        "required_verification_gate_ids": gate_sets_match,
+        "verification": passing_results,
+    }
+    prefix = f"pr_marker_plan.markers[{ctx.index}]"
+    ctx.checkpoint_evidence_errors.extend(
+        f"{prefix} checkpoint evidence {field} is invalid"
+        for field, passed in evidence_checks.items() if not passed
+    )
+    report_checks = _verification_report_checks(ctx, report_gate_sets_match, report_results_match)
+    ctx.checkpoint_evidence_errors.extend(
+        f"{prefix} verification report {field} is invalid"
+        for field, passed in report_checks.items() if not passed
+    )
+    if evidence.get("implementation_checkpoint_sha") != ctx.claimed_commit:
+        ctx.checkpoint_evidence_errors.append(
+            f"{prefix} checkpoint/evidence implementation commit mismatch"
+        )
+
+
+# Where each marker's own checkpoint, verification, and reviewability carrier files live.
+_GLOBAL_CARRIER_NAMESPACES = {
+    "checkpoint": "checkpoints/",
+    "verification": "verification/",
+    "reviewability": "reviewability/",
+}
+
+
+def _marker_carrier_paths(marker: dict[str, Any]) -> dict[str, Any]:
+    checkpoint = marker.get("implementation_checkpoint")
+    reviewability = marker.get("reviewability")
+    return {
+        "checkpoint": checkpoint.get("evidence_path") if isinstance(checkpoint, dict) else None,
+        "verification": checkpoint.get("verification_evidence_path") if isinstance(checkpoint, dict) else None,
+        "reviewability": reviewability.get("evidence_path") if isinstance(reviewability, dict) else None,
+    }
+
+
+def _collect_global_carrier_paths(
+    ctx: _ProjectionContext, feature_process_prefix: str | None, review_carrier_paths: set[str],
+) -> None:
+    """Every marker's own carrier files count as review carriers, so later markers may change them."""
+    if feature_process_prefix is None:
+        return
+    for marker in ctx.markers or []:
+        if not isinstance(marker, dict):
+            continue
+        for role, path in _marker_carrier_paths(marker).items():
+            namespace = feature_process_prefix + _GLOBAL_CARRIER_NAMESPACES[role]
+            if _is_normalized_repo_path(path) and path.startswith(namespace) and path.endswith(".json"):
+                review_carrier_paths.add(path)
+def _check_carrier_roles_unchanged(role_bindings: Any, reviewed_roles: Any, ctx: _ProjectionContext, role_namespace_checks: Any, review_carrier_paths: Any) -> None:
+    """Each carrier role must still name the file it named at the independently reviewed head."""
+    for role, current_path in role_bindings.items():
+        reviewed_path = reviewed_roles.get(role)
+        if (
+            isinstance(reviewed_path, str)
+            and reviewed_path != current_path
+        ):
+            ctx.checkpoint_evidence_errors.append(
+                f"pr_marker_plan.markers[{ctx.index}] independent review carrier role {role!r} changed after review"
+            )
+        carrier_path = (
+            reviewed_path
+            if isinstance(reviewed_path, str)
+            else current_path
+        )
+        if (
+            role_namespace_checks.get(role)
+            and isinstance(carrier_path, str)
+        ):
+            review_carrier_paths.add(
+                carrier_path
+            )
+
+
+def _reviewed_marker(reviewed_state: dict[str, Any], marker_id: Any) -> Any:
+    plan = reviewed_state.get("pr_marker_plan")
+    markers = plan.get("markers") if isinstance(plan, dict) else None
+    return next(
+        (m for m in markers or [] if isinstance(m, dict) and m.get("id") == marker_id),
+        None,
+    )
+
+
+def _reviewed_marker_roles(marker: dict[str, Any]) -> dict[str, Any]:
+    roles: dict[str, Any] = {}
+    checkpoint = marker.get("implementation_checkpoint")
+    reviewability = marker.get("reviewability")
+    if isinstance(checkpoint, dict):
+        roles["checkpoint_evidence"] = checkpoint.get("evidence_path")
+        roles["verification_evidence"] = checkpoint.get("verification_evidence_path")
+    if isinstance(reviewability, dict):
+        roles["reviewability_evidence"] = reviewability.get("evidence_path")
+    return roles
+
+
+def _reviewed_carrier_roles(ctx: _ProjectionContext, reviewed_state: Any) -> dict[str, Any]:
+    """Read the carrier roles the independently reviewed head recorded."""
+    if not isinstance(reviewed_state, dict):
+        return {}
+    reviewed_feature_dir = reviewed_state.get("feature_dir")
+    if isinstance(reviewed_feature_dir, str) and reviewed_feature_dir != ctx.feature_dir:
+        ctx.checkpoint_evidence_errors.append(
+            f"pr_marker_plan.markers[{ctx.index}] feature_dir changed after independent review"
+        )
+    roles: dict[str, Any] = {
+        "workflow_file": reviewed_state.get("workflow_file"),
+        "changed_file_manifest": reviewed_state.get("changed_file_manifest"),
+    }
+    marker = _reviewed_marker(reviewed_state, ctx.marker_id)
+    if isinstance(marker, dict):
+        roles.update(_reviewed_marker_roles(marker))
+    return roles
+def _check_review_delta(authorized_head_valid: Any, ctx: _ProjectionContext, role_bindings: Any, role_namespace_checks: Any, feature_process_prefix: Any) -> None:
+    """Every path changed after the independent review must be a review carrier file."""
+    if authorized_head_valid:
+        changed_after_review = _git_changed_paths(
+            ctx.repo_root,
+            ctx.reviewed_head,
+            ctx.expected_head_commit,
+        )
+        try:
+            state_ref = (
+                ctx.state_path.resolve()
+                .relative_to(ctx.repo_root.resolve())
+                .as_posix()
+            )
+        except ValueError:
+            state_ref = None
+        reviewed_state = _load_json_bytes(
+            _git_file_at_commit(
+                ctx.repo_root,
+                ctx.reviewed_head,
+                state_ref,
+            )
+            if isinstance(state_ref, str)
+            else None
+        )
+        reviewed_roles = _reviewed_carrier_roles(ctx, reviewed_state)
+        review_carrier_paths = {
+            state_ref
+        } if isinstance(state_ref, str) else set()
+        _check_carrier_roles_unchanged(role_bindings, reviewed_roles, ctx, role_namespace_checks, review_carrier_paths)
+        _collect_global_carrier_paths(ctx, feature_process_prefix, review_carrier_paths)
+        if changed_after_review is None:
+            ctx.checkpoint_evidence_errors.append(
+                f"pr_marker_plan.markers[{ctx.index}] independent review delta is unavailable"
+            )
+        else:
+            for path in sorted(
+                changed_after_review
+                - review_carrier_paths
+            ):
+                ctx.checkpoint_evidence_errors.append(
+                    f"pr_marker_plan.markers[{ctx.index}] unreviewed non-carrier path after independent review: {path}"
+                )
+
+
+def _check_review_gates_bind_head(review_gate_ids: Any, ctx: _ProjectionContext) -> None:
+    """Each independent review gate's evidence must name the reviewed head."""
+    for gate_id in review_gate_ids:
+        gate_result = (
+            ctx.verification.get(gate_id)
+            if isinstance(ctx.verification, dict)
+            else None
+        )
+        gate_evidence = (
+            gate_result.get("evidence")
+            if isinstance(gate_result, dict)
+            else None
+        )
+        if (
+            not isinstance(gate_evidence, str)
+            or ctx.reviewed_head not in gate_evidence
+        ):
+            ctx.checkpoint_evidence_errors.append(
+                f"pr_marker_plan.markers[{ctx.index}] independent review gate {gate_id!r} does not bind last_reviewed_head_sha"
+            )
+
+
+def _check_reviewability_evidence_binds_review(role_namespace_checks: Any, ctx: _ProjectionContext, reviewability_ref: Any) -> None:
+    """The reviewability evidence file must bind the independently reviewed head."""
+    if role_namespace_checks[
+        "reviewability_evidence"
+    ]:
+        reviewability_evidence = _load_json_bytes(
+            _git_file_at_commit(
+                ctx.repo_root,
+                ctx.expected_head_commit,
+                reviewability_ref,
+            )
+        )
+        if (
+            not isinstance(
+                reviewability_evidence, dict,
+            )
+            or reviewability_evidence.get(
+                "schema_version"
+            )
+            != "reviewability-evidence.v1"
+            or reviewability_evidence.get(
+                "feature_id"
+            )
+            != ctx.expected_feature_id
+            or reviewability_evidence.get(
+                "marker_id"
+            )
+            != ctx.marker_id
+            or reviewability_evidence.get("head_sha")
+            != ctx.reviewed_head
+        ):
+            ctx.checkpoint_evidence_errors.append(
+                f"pr_marker_plan.markers[{ctx.index}] reviewability evidence does not bind the independent review head"
+            )
+
+
+# Carrier roles that must name a file with a fixed suffix anywhere in the repository.
+_CARRIER_FILE_SUFFIXES = {
+    "workflow_file": "workflow.md",
+    "changed_file_manifest": "changed-file-manifest.json",
+}
+# Carrier roles that must name a JSON file in one feature `.process/` subdirectory.
+_CARRIER_NAMESPACES = {
+    "checkpoint_evidence": "checkpoints/",
+    "verification_evidence": "verification/",
+    "reviewability_evidence": "reviewability/",
+}
+
+
+def _carrier_role_in_namespace(role: str, path: Any, feature_process_prefix: str | None) -> bool:
+    if not _is_normalized_repo_path(path):
+        return False
+    if role in _CARRIER_FILE_SUFFIXES:
+        return path.endswith(_CARRIER_FILE_SUFFIXES[role])
+    return (
+        feature_process_prefix is not None
+        and path.startswith(feature_process_prefix + _CARRIER_NAMESPACES[role])
+        and path.endswith(".json")
+    )
+
+
+def _review_carrier_role_checks(ctx: _ProjectionContext, reviewability_ref: Any, feature_process_prefix: str | None) -> tuple[dict[str, Any], dict[str, bool]]:
+    """Each independent review carrier role must name a file inside its metadata namespace."""
+    role_bindings = {
+        "workflow_file": ctx.state.get("workflow_file"),
+        "changed_file_manifest": ctx.state.get("changed_file_manifest"),
+        "checkpoint_evidence": ctx.checkpoint.get("evidence_path"),
+        "verification_evidence": ctx.checkpoint.get("verification_evidence_path"),
+        "reviewability_evidence": reviewability_ref,
+    }
+    role_namespace_checks = {
+        role: _carrier_role_in_namespace(role, path, feature_process_prefix)
+        for role, path in role_bindings.items()
+    }
+    ctx.checkpoint_evidence_errors.extend(
+        f"pr_marker_plan.markers[{ctx.index}] independent review carrier role {role!r} is missing or outside its metadata namespace"
+        for role, passed in role_namespace_checks.items()
+        if not passed
+    )
+    return role_bindings, role_namespace_checks
+
+
+def _check_review_head_ancestry(ctx: _ProjectionContext) -> bool:
+    """The reviewed head must cover the checkpoint commit and precede the authorized PR head.
+
+    Returns whether the reviewed head is an ancestor of the authorized PR head.
+    """
+    if (
+        not _git_commit_exists(ctx.repo_root, ctx.claimed_commit)
+        or not _git_commit_is_ancestor(ctx.repo_root, ctx.claimed_commit, ctx.reviewed_head)
+    ):
+        ctx.checkpoint_evidence_errors.append(
+            f"pr_marker_plan.markers[{ctx.index}] independent review does not cover the implementation checkpoint"
+        )
+    authorized_head_valid = (
+        isinstance(ctx.expected_head_commit, str)
+        and re.fullmatch(r"[0-9a-f]{40}", ctx.expected_head_commit) is not None
+        and _git_commit_exists(ctx.repo_root, ctx.expected_head_commit)
+        and _git_commit_is_ancestor(ctx.repo_root, ctx.reviewed_head, ctx.expected_head_commit)
+    )
+    if not authorized_head_valid:
+        ctx.checkpoint_evidence_errors.append(
+            f"pr_marker_plan.markers[{ctx.index}] independent review head is not an ancestor of the authorized PR head"
+        )
+    return authorized_head_valid
+
+
+def _check_independent_review(ctx: _ProjectionContext) -> None:
+    """Independent review gates must bind the reviewed head to the implementation and the authorized PR head."""
+    review_gate_ids = sorted(set(ctx.required_gate_ids or ()) & INDEPENDENT_REVIEW_GATE_IDS)
+    if not review_gate_ids:
+        return
+    ctx.reviewed_head = ctx.evidence.get("last_reviewed_head_sha")
+    reviewed_head_valid = (
+        isinstance(ctx.reviewed_head, str)
+        and re.fullmatch(r"[0-9a-f]{40}", ctx.reviewed_head) is not None
+        and _git_commit_exists(ctx.repo_root, ctx.reviewed_head)
+    )
+    if not reviewed_head_valid:
+        ctx.checkpoint_evidence_errors.append(
+            f"pr_marker_plan.markers[{ctx.index}] checkpoint evidence last_reviewed_head_sha is invalid"
+        )
+        return
+    authorized_head_valid = _check_review_head_ancestry(ctx)
+    reviewability = ctx.raw_marker.get("reviewability")
+    projected_reviewed_head = (
+        reviewability.get("head_sha") if isinstance(reviewability, dict) else None
+    )
+    if projected_reviewed_head != ctx.reviewed_head:
+        ctx.checkpoint_evidence_errors.append(
+            f"pr_marker_plan.markers[{ctx.index}] checkpoint/reviewability reviewed-head mismatch"
+        )
+    reviewability_ref = (
+        reviewability.get("evidence_path") if isinstance(reviewability, dict) else None
+    )
+    feature_process_prefix = (
+        f"{ctx.feature_dir}/.process/" if _is_normalized_repo_path(ctx.feature_dir) else None
+    )
+    role_bindings, role_namespace_checks = _review_carrier_role_checks(ctx, reviewability_ref, feature_process_prefix)
+    _check_reviewability_evidence_binds_review(role_namespace_checks, ctx, reviewability_ref)
+    _check_review_gates_bind_head(review_gate_ids, ctx)
+    _check_review_delta(authorized_head_valid, ctx, role_bindings, role_namespace_checks, feature_process_prefix)
+
+
+# Checkpoint and emission statuses each marker-plan status allows.
+_PLAN_STATUS_CONSTRAINTS = {
+    "planned": ({"pending"}, {"pending"}),
+    "checkpointing": ({"pending", "complete"}, {"pending"}),
+    "emission_ready": ({"complete"}, {"pending", "marker_split"}),
+    "emitting": ({"complete"}, {"pending", "marker_split", "emitted"}),
+    "emitted": ({"complete"}, {"emitted"}),
+    "collapsed": ({"complete"}, {"hazard_collapsed"}),
+    "stale": ({"pending", "complete"}, {"pending", "marker_split", "emitted", "hazard_collapsed"}),
+    "invalid": ({"pending", "complete"}, {"pending", "marker_split", "emitted", "hazard_collapsed"}),
+}
+
+
+def _marker_status_pair(raw_marker: Any) -> tuple[Any, Any]:
+    """The marker's checkpoint status and emission status, None where absent."""
+    checkpoint = raw_marker.get("implementation_checkpoint") if isinstance(raw_marker, dict) else None
+    emission = raw_marker.get("emission_mapping") if isinstance(raw_marker, dict) else None
+    return (
+        checkpoint.get("status") if isinstance(checkpoint, dict) else None,
+        emission.get("status") if isinstance(emission, dict) else None,
+    )
+
+
+def _check_plan_status_constraints(ctx: _ProjectionContext) -> None:
+    """The marker plan's own status limits which checkpoint and emission states its markers may hold."""
+    if not ctx.strict_contract or ctx.plan_status not in _PLAN_STATUS_CONSTRAINTS:
+        return
+    allowed_checkpoints, allowed_emissions = _PLAN_STATUS_CONSTRAINTS[ctx.plan_status]
+    for index, raw_marker in enumerate(ctx.markers):
+        checkpoint_status, emission_status = _marker_status_pair(raw_marker)
+        if checkpoint_status not in allowed_checkpoints:
+            ctx.marker_plan_status_errors.append(
+                f"pr_marker_plan.status {ctx.plan_status} rejects marker {index} checkpoint {checkpoint_status!r}"
+            )
+        if emission_status not in allowed_emissions:
+            ctx.marker_plan_status_errors.append(
+                f"pr_marker_plan.status {ctx.plan_status} rejects marker {index} emission {emission_status!r}"
+            )
+    if ctx.plan_status == "emitting":
+        emission_statuses = {
+            raw_marker.get("emission_mapping", {}).get("status")
+            for raw_marker in ctx.markers
+            if isinstance(raw_marker, dict) and isinstance(raw_marker.get("emission_mapping"), dict)
+        }
+        if "emitted" not in emission_statuses or emission_statuses <= {"emitted"}:
+            ctx.marker_plan_status_errors.append(
+                "pr_marker_plan.status emitting requires both emitted and unfinished marker mappings"
+            )
+
+
+def _check_pending_claims_and_paths(ctx: _ProjectionContext) -> None:
+    """A strict checkpoint's pending claims and evidence paths must be well formed."""
+    pending_phase_claims = _marker_phase_claims(ctx.phase_results, ctx.marker_id)
+    if ctx.strict_contract and ctx.checkpoint_status == "pending" and pending_phase_claims:
+        if not _is_normalized_repo_path(ctx.checkpoint.get("evidence_path")):
+            ctx.checkpoint_evidence_errors.append(
+                f"pr_marker_plan.markers[{ctx.index}] pending checkpoint with phase claims requires evidence_path"
+            )
+        if not isinstance(ctx.checkpoint.get("commit_sha"), str) or not re.fullmatch(
+            r"[0-9a-f]{40}", ctx.checkpoint["commit_sha"]
+        ):
+            ctx.checkpoint_evidence_errors.append(
+                f"pr_marker_plan.markers[{ctx.index}] pending checkpoint with phase claims requires commit_sha"
+            )
+    for path_field in ("evidence_path", "verification_evidence_path") if ctx.strict_contract else ():
+        path_value = ctx.checkpoint.get(path_field)
+        if path_value is not None and (
+            not _is_normalized_repo_path(path_value)
+            or ctx.repo_root and _repo_file(ctx.repo_root, path_value) is None
+        ):
+            ctx.checkpoint_file_errors.append(
+                f"pr_marker_plan.markers[{ctx.index}].implementation_checkpoint.{path_field} is not a normalized repository-relative path"
+            )
+
+
+@dataclass(frozen=True)
+class _BoundFileMessages:
+    """The error text for one evidence file bound to a checkpoint commit."""
+
+    absent: str
+    sha: str
+    worktree: str
+    authorized: str | None = None
+
+
+def _bound_file_messages(prefix: str, *, verification: bool, pending: bool) -> _BoundFileMessages:
+    """The error text for a checkpoint's evidence file, or its verification file."""
+    checkpoint = f"{prefix}.implementation_checkpoint"
+    noun = "verification" if verification else "checkpoint"
+    if verification:
+        absent = f"{checkpoint} verification evidence is absent from checkpoint commit"
+    else:
+        absent = f"{checkpoint}.checkpoint_evidence_commit_sha"
+    return _BoundFileMessages(
+        absent=absent,
+        sha=f"{checkpoint}.{noun}_evidence_sha",
+        worktree=(
+            f"{prefix} pending {noun} evidence worktree differs from checkpoint commit"
+            if pending
+            else f"{checkpoint} immutable {'verification ' if verification else ''}evidence differs from checkpoint commit"
+        ),
+        authorized=f"{prefix} pending {noun} evidence differs from checkpoint commit" if pending else None,
+    )
+
+
+def _check_bound_file(
+    ctx: _ProjectionContext, ref: Any, expected_sha: Any, messages: _BoundFileMessages,
+) -> bytes | None:
+    """A checkpoint's evidence file must match the bytes committed at its evidence commit.
+
+    Returns the committed bytes, or None when the commit does not hold the file.
+    """
+    commit = ctx.checkpoint.get("checkpoint_evidence_commit_sha")
+    committed = _git_file_at_commit(ctx.repo_root, commit, ref) if isinstance(ref, str) else None
+    if committed is None:
+        ctx.checkpoint_file_errors.append(messages.absent)
+        return None
+    if expected_sha != _sha256_bytes(committed):
+        ctx.checkpoint_file_errors.append(messages.sha)
+    if messages.authorized is not None:
+        authorized = (
+            _git_file_at_commit(ctx.repo_root, ctx.expected_head_commit, ref) if isinstance(ref, str) else None
+        )
+        if authorized != committed:
+            ctx.checkpoint_file_errors.append(messages.authorized)
+    if _read_repo_bytes(ctx.repo_root, ref) != committed:
+        ctx.checkpoint_file_errors.append(messages.worktree)
+    return committed
+
+
+def _check_evidence_commit_ancestry(ctx: _ProjectionContext, head: Any, head_label: str) -> None:
+    """The evidence commit must exist, descend from the implementation commit, and precede `head`."""
+    prefix = f"pr_marker_plan.markers[{ctx.index}]"
+    commit = ctx.checkpoint.get("checkpoint_evidence_commit_sha")
+    claimed = ctx.checkpoint.get("commit_sha")
+    if not _git_commit_exists(ctx.repo_root, commit):
+        ctx.checkpoint_evidence_errors.append(
+            f"{prefix}.implementation_checkpoint.checkpoint_evidence_commit_sha is not an existing commit"
+        )
+    elif not (isinstance(head, str) and _git_commit_is_ancestor(ctx.repo_root, commit, head)):
+        ctx.checkpoint_evidence_errors.append(
+            f"{prefix}.implementation_checkpoint.checkpoint_evidence_commit_sha is not an ancestor of {head_label}"
+        )
+    elif _git_commit_exists(ctx.repo_root, claimed) and not _git_commit_is_ancestor(
+        ctx.repo_root, claimed, commit,
+    ):
+        ctx.checkpoint_evidence_errors.append(
+            f"{prefix} implementation commit is not an ancestor of evidence commit"
+        )
+
+
+def _is_unique_string_list(value: Any) -> bool:
+    return (
+        isinstance(value, list)
+        and bool(value)
+        and all(isinstance(item, str) and item for item in value)
+        and len(set(value)) == len(value)
+    )
+
+
+def _invalid_complete_fields(checkpoint: dict[str, Any]) -> list[str]:
+    """The required fields a complete checkpoint lacks or carries in the wrong shape."""
+    return [
+        *(
+            field for field in COMPLETE_CHECKPOINT_STRING_FIELDS
+            if not isinstance(checkpoint.get(field), str) or not checkpoint[field].strip()
+        ),
+        *(
+            field for field in COMPLETE_CHECKPOINT_LIST_FIELDS
+            if not _is_unique_string_list(checkpoint.get(field))
+        ),
+        *(
+            field for field in COMPLETE_CHECKPOINT_OBJECT_FIELDS
+            if not isinstance(checkpoint.get(field), dict)
+        ),
+    ]
+
+
+def _check_complete_field_presence(ctx: _ProjectionContext) -> None:
+    """A complete checkpoint must carry its required fields, cover the marker's tasks, and name one commit."""
+    prefix = f"pr_marker_plan.markers[{ctx.index}]"
+    ctx.checkpoint_evidence_errors.extend(
+        f"{prefix}.implementation_checkpoint.{field}" for field in _invalid_complete_fields(ctx.checkpoint)
+    )
+    task_ids = _string_list(ctx.raw_marker.get("task_ids"))
+    folded_task_ids = _string_list(ctx.raw_marker.get("folded_polish_task_ids"))
+    expected_tasks = set(task_ids or ()) | set(folded_task_ids or ())
+    completed_tasks = _string_list(ctx.checkpoint.get("completed_task_ids"))
+    if task_ids is None or folded_task_ids is None:
+        ctx.checkpoint_evidence_errors.append(f"{prefix} marker task coverage")
+    elif completed_tasks is not None and set(completed_tasks) != expected_tasks:
+        ctx.checkpoint_evidence_errors.append(
+            f"{prefix}.implementation_checkpoint.completed_task_ids coverage"
+        )
+    if ctx.checkpoint.get("commit_sha") != ctx.checkpoint.get("head_sha"):
+        ctx.checkpoint_evidence_errors.append(f"{prefix}.implementation_checkpoint commit/head mismatch")
+
+
+def _check_complete_evidence_files(ctx: _ProjectionContext) -> None:
+    """A complete checkpoint's evidence and verification files must exist and match their commit."""
+    prefix = f"pr_marker_plan.markers[{ctx.index}]"
+    ctx.evidence_ref = ctx.checkpoint.get("evidence_path")
+    verification_ref = ctx.checkpoint.get("verification_evidence_path")
+    for required, ref in (("evidence_path", ctx.evidence_ref), ("verification_evidence_path", verification_ref)):
+        if _read_repo_bytes(ctx.repo_root, ref) is None:
+            ctx.checkpoint_file_errors.append(f"{prefix}.implementation_checkpoint.{required}")
+    if ctx.evidence_ref == verification_ref:
+        ctx.checkpoint_evidence_errors.append(
+            f"{prefix} checkpoint and verification evidence paths must differ"
+        )
+    _check_bound_file(
+        ctx, ctx.evidence_ref, ctx.checkpoint.get("checkpoint_evidence_sha"),
+        _bound_file_messages(prefix, verification=False, pending=False),
+    )
+    ctx.committed_verification_bytes = _check_bound_file(
+        ctx, verification_ref, ctx.checkpoint.get("verification_evidence_sha"),
+        _bound_file_messages(prefix, verification=True, pending=False),
+    )
+
+
+def _check_complete_checkpoint_fields(ctx: _ProjectionContext) -> None:
+    """A complete checkpoint must carry every required field and its evidence commit and files."""
+    if ctx.checkpoint_status != "complete" or not ctx.strict_contract:
+        return
+    _check_complete_field_presence(ctx)
+    if ctx.repo_root:
+        _check_evidence_commit_ancestry(ctx, "HEAD", "HEAD")
+        _check_complete_evidence_files(ctx)
+
+
+_PENDING_AUTHORITY_FIELDS = (
+    "checkpoint_evidence_sha",
+    "checkpoint_evidence_commit_sha",
+    "verification_evidence_path",
+    "verification_evidence_sha",
+)
+
+
+def _check_pending_checkpoint_authority(ctx: _ProjectionContext) -> None:
+    """A pending checkpoint that names evidence must bind it to a commit and files."""
+    if not (
+        ctx.checkpoint_status == "pending"
+        and ctx.strict_contract
+        and ctx.repo_root
+        and any(field in ctx.checkpoint for field in _PENDING_AUTHORITY_FIELDS)
+    ):
+        return
+    prefix = f"pr_marker_plan.markers[{ctx.index}]"
+    ctx.evidence_ref = ctx.checkpoint.get("evidence_path")
+    verification_ref = ctx.checkpoint.get("verification_evidence_path")
+    _check_evidence_commit_ancestry(ctx, ctx.expected_head_commit, "the authorized PR head")
+    if ctx.evidence_ref == verification_ref:
+        ctx.checkpoint_evidence_errors.append(
+            f"{prefix} checkpoint and verification evidence paths must differ"
+        )
+    _check_bound_file(
+        ctx, ctx.evidence_ref, ctx.checkpoint.get("checkpoint_evidence_sha"),
+        _bound_file_messages(prefix, verification=False, pending=True),
+    )
+    _check_bound_file(
+        ctx, verification_ref, ctx.checkpoint.get("verification_evidence_sha"),
+        _bound_file_messages(prefix, verification=True, pending=True),
+    )
+
+
+def _authorized_evidence_bytes(ctx: _ProjectionContext) -> bytes | None:
+    """The checkpoint evidence bytes at the authorized PR head, checked against the worktree."""
+    if not (ctx.strict_contract and ctx.repo_root and isinstance(ctx.evidence_ref, str)):
+        return None
+    prefix = f"pr_marker_plan.markers[{ctx.index}]"
+    authorized = _git_file_at_commit(ctx.repo_root, ctx.expected_head_commit, ctx.evidence_ref)
+    if authorized is None:
+        ctx.checkpoint_file_errors.append(f"{prefix} checkpoint evidence is absent from the authorized PR head")
+    elif _read_repo_bytes(ctx.repo_root, ctx.evidence_ref) != authorized:
+        ctx.checkpoint_file_errors.append(f"{prefix} checkpoint evidence differs from the authorized PR head")
+    return authorized
+
+
+def _load_checkpoint_evidence(ctx: _ProjectionContext) -> None:
+    """Load the checkpoint evidence from the authorized head, or the commit or worktree for legacy plans."""
+    ctx.evidence_ref = ctx.checkpoint.get("evidence_path")
+    authorized = _authorized_evidence_bytes(ctx)
+    if ctx.strict_contract:
+        source = authorized
+    elif ctx.checkpoint_status == "complete":
+        source = (
+            _git_file_at_commit(
+                ctx.repo_root, ctx.checkpoint.get("checkpoint_evidence_commit_sha"), ctx.evidence_ref,
+            )
+            if ctx.repo_root and isinstance(ctx.evidence_ref, str)
+            else None
+        )
+    else:
+        source = _read_repo_bytes(ctx.repo_root, ctx.evidence_ref) if ctx.repo_root is not None else None
+    ctx.evidence = _load_json_bytes(source)
+    if (
+        ctx.strict_contract
+        and ctx.repo_root is not None
+        and ctx.expected_head_commit is not None
+        and isinstance(ctx.evidence_ref, str)
+        and not isinstance(ctx.evidence, dict)
+    ):
+        ctx.checkpoint_evidence_errors.append(
+            f"pr_marker_plan.markers[{ctx.index}] checkpoint evidence must be a JSON object"
+        )
+    ctx.projection_evidence = ctx.evidence
+
+
+def _prepare_corrections(ctx: _ProjectionContext) -> None:
+    """Find the correction authority and check the declared corrections cover the committed correction files."""
+    ctx.superseded_evidence = ctx.checkpoint.get("superseded_evidence")
+    prefix = f"pr_marker_plan.markers[{ctx.index}]"
+    if ctx.superseded_evidence is not None and ctx.checkpoint.get("corrections") is not None:
+        ctx.checkpoint_evidence_errors.append(
+            f"{prefix}.implementation_checkpoint must not declare both corrections and superseded_evidence"
+        )
+    ctx.correction_authority = (
+        ctx.superseded_evidence if isinstance(ctx.superseded_evidence, dict) else ctx.checkpoint
+    )
+    ctx.corrections = ctx.correction_authority.get("corrections")
+    ctx.correction_prefix = f"{ctx.feature_dir}/.process/checkpoint-corrections/{ctx.marker_id}-"
+    authorized_tree = (
+        _git_tree_entries(ctx.repo_root, ctx.expected_head_commit) if ctx.repo_root is not None else None
+    )
+    correction_file = re.compile(rf"{re.escape(ctx.correction_prefix)}[0-9]{{3}}\.json")
+    discovered_corrections = sorted(
+        path for path in authorized_tree or {} if correction_file.fullmatch(path)
+    )
+    declared_corrections = (
+        [c.get("evidence_path") for c in ctx.corrections if isinstance(c, dict)]
+        if isinstance(ctx.corrections, list)
+        else []
+    )
+    if discovered_corrections != declared_corrections:
+        ctx.checkpoint_evidence_errors.append(
+            f"{prefix} checkpoint correction state does not cover the authorized append-only correction files"
+        )
+
+
+def _check_checkpoint_evidence_body(ctx: _ProjectionContext) -> None:
+    """Check strict checkpoint evidence against its schema, corrections, commits, and phase results."""
+    if not (ctx.strict_contract and isinstance(ctx.evidence, dict)):
+        return
+    if ctx.checkpoint_evidence_schema is not None:
+        ctx.checkpoint_evidence_errors.extend(
+            f"pr_marker_plan.markers[{ctx.index}] checkpoint evidence schema: {error}"
+            for error in _json_schema_errors(
+                ctx.evidence,
+                ctx.checkpoint_evidence_schema,
+                ctx.checkpoint_evidence_schema,
+                "checkpoint_evidence",
+            )
+        )
+    _prepare_corrections(ctx)
+    ctx.correction_projection_evidence = json.loads(json.dumps(ctx.evidence))
+    _check_superseded_evidence(ctx)
+    _check_checkpoint_corrections(ctx)
+    _check_evidence_commit_binding(ctx)
+    _check_phase_evidence_owners(ctx)
+
+
+def _check_complete_verification_report(ctx: _ProjectionContext) -> None:
+    """A complete checkpoint's verification report must be an object that matches the evidence."""
+    if ctx.checkpoint_status == "complete" and ctx.strict_contract and ctx.repo_root:
+        ctx.claimed_commit = ctx.checkpoint.get("commit_sha")
+        ctx.verification_report = _load_json_bytes(ctx.committed_verification_bytes)
+        if not isinstance(ctx.verification_report, dict):
+            ctx.checkpoint_evidence_errors.append(
+                f"pr_marker_plan.markers[{ctx.index}] verification report must be a JSON object"
+            )
+        elif ctx.verification_report_schema is not None:
+            ctx.checkpoint_evidence_errors.extend(
+                f"pr_marker_plan.markers[{ctx.index}] verification report schema: {error}"
+                for error in _json_schema_errors(
+                    ctx.verification_report,
+                    ctx.verification_report_schema,
+                    ctx.verification_report_schema,
+                    "verification_report",
+                )
+            )
+        if not isinstance(ctx.evidence, dict):
+            ctx.checkpoint_evidence_errors.append(
+                f"pr_marker_plan.markers[{ctx.index}] checkpoint evidence must be a JSON object"
+            )
+        else:
+            _check_complete_verification_evidence(ctx)
+            _check_independent_review(ctx)
+        if ctx.repo_root:
+            if not _git_commit_exists(ctx.repo_root, ctx.claimed_commit):
+                ctx.checkpoint_evidence_errors.append(
+                    f"pr_marker_plan.markers[{ctx.index}].implementation_checkpoint.commit_sha is not an existing commit"
+                )
+            elif not _git_commit_is_ancestor_of_head(ctx.repo_root, ctx.claimed_commit):
+                ctx.checkpoint_evidence_errors.append(
+                    f"pr_marker_plan.markers[{ctx.index}].implementation_checkpoint.commit_sha is not an ancestor of HEAD"
+                )
+
+
+def _checkpoint_tasks_bytes(ctx: _ProjectionContext) -> bytes | None:
+    """The feature's tasks.md as committed at the checkpoint's implementation commit."""
+    if not (ctx.repo_root and isinstance(ctx.feature_dir, str)):
+        return None
+    return _git_file_at_commit(
+        ctx.repo_root, ctx.evidence.get("implementation_checkpoint_sha"), f"{ctx.feature_dir}/tasks.md",
+    )
+
+
+def _freshness_field_checks(
+    ctx: _ProjectionContext, freshness: dict[str, Any], expected_checkpoint: Any, expected_current: Any,
+) -> dict[str, bool]:
+    """Whether the freshness record names the current tasks file and the marker's task-line fingerprints."""
+    return {
+        "source_fingerprint_contract": freshness.get("source_fingerprint_contract") == "marker-task-lines.v2",
+        "source_fingerprint_status": freshness.get("source_fingerprint_status") == "current_marker_scope",
+        "tasks_sha_scope": freshness.get("tasks_sha_scope") == "checkpoint_time_whole_file",
+        "current_tasks_sha": freshness.get("current_tasks_sha") == ctx.current_tasks_sha,
+        "checkpoint_marker_tasks_sha": freshness.get("checkpoint_marker_tasks_sha") == expected_checkpoint,
+        "current_marker_tasks_sha": freshness.get("current_marker_tasks_sha") == expected_current,
+        "marker_scope_unchanged": expected_checkpoint is not None and expected_checkpoint == expected_current,
+    }
+
+
+def _check_source_fingerprint_freshness(ctx: _ProjectionContext) -> None:
+    """Checkpoint evidence must record the marker's current task fingerprint."""
+    if not (
+        ctx.strict_contract
+        and ctx.evidence is not None
+        and ctx.current_tasks_text is not None
+        and ctx.current_tasks_sha
+    ):
+        return
+    primary_task_values = _string_list(ctx.raw_marker.get("task_ids"))
+    folded_task_values = _string_list(ctx.raw_marker.get("folded_polish_task_ids"))
+    marker_task_values = (
+        [*primary_task_values, *folded_task_values]
+        if primary_task_values is not None and folded_task_values is not None
+        else None
+    )
+    marker_task_ids = set(marker_task_values or ())
+    evidence_task_values = _string_list(ctx.evidence.get("task_ids"))
+    freshness = ctx.checkpoint.get("freshness") if ctx.checkpoint_status == "complete" else ctx.evidence
+    freshness = freshness if isinstance(freshness, dict) else {}
+    expected_current = (
+        _marker_tasks_sha_text(ctx.current_tasks_text, marker_task_ids)
+        if marker_task_values is not None
+        else None
+    )
+    checkpoint_tasks_bytes = _checkpoint_tasks_bytes(ctx)
+    checkpoint_tasks_text = _decoded_or_none(checkpoint_tasks_bytes or None)
+    expected_checkpoint = (
+        _marker_tasks_sha_text(checkpoint_tasks_text, marker_task_ids)
+        if checkpoint_tasks_text is not None and marker_task_values is not None
+        else None
+    )
+    checkpoint_tasks_sha = _sha256_bytes(checkpoint_tasks_bytes) if checkpoint_tasks_bytes is not None else None
+    checks = {
+        "marker_id": ctx.evidence.get("marker_id") == ctx.marker_id,
+        "task_ids": (
+            marker_task_values is not None
+            and evidence_task_values is not None
+            and set(evidence_task_values) == marker_task_ids
+        ),
+        "tasks_sha": ctx.evidence.get("tasks_sha") == checkpoint_tasks_sha,
+        **_freshness_field_checks(ctx, freshness, expected_checkpoint, expected_current),
+    }
+    ctx.checkpoint_source_fingerprint_errors.extend(
+        f"pr_marker_plan.markers[{ctx.index}] checkpoint {field}"
+        for field, passed in checks.items() if not passed
+    )
+
+
+def _check_phase_checkpoint_agreement(ctx: _ProjectionContext) -> None:
+    """A phase result is completed exactly when its marker's checkpoint is complete."""
+    matching_phases = [
+        (phase_name, result)
+        for phase_name, result in ctx.phases.items()
+        if isinstance(result, dict) and result.get("marker_id") == ctx.marker_id
+    ]
+    for phase_name, result in matching_phases:
+        phase_complete = result.get("status") == "completed"
+        checkpoint_complete = ctx.checkpoint_status == "complete"
+        if phase_complete != checkpoint_complete:
+            ctx.projection_status_errors.append(
+                f"marker {ctx.marker_id!r} checkpoint={ctx.checkpoint_status!r} "
+                f"does not match phase_results[{phase_name}].status={result.get('status')!r}"
+            )
+
+
+def _check_marker_checkpoint(ctx: _ProjectionContext) -> None:
+    """Check one marker's implementation checkpoint and its evidence."""
+    if not isinstance(ctx.checkpoint, dict):
+        return
+    ctx.checkpoint_status = ctx.checkpoint.get("status")
+    _check_pending_claims_and_paths(ctx)
+    _check_complete_checkpoint_fields(ctx)
+
+    _check_pending_checkpoint_authority(ctx)
+
+    _load_checkpoint_evidence(ctx)
+    _check_checkpoint_evidence_body(ctx)
+    _check_complete_verification_report(ctx)
+    _check_source_fingerprint_freshness(ctx)
+    _check_phase_checkpoint_agreement(ctx)
+
+
+def _check_marker_reviewability_path(ctx: _ProjectionContext) -> None:
+    """A strict marker's reviewability evidence path must be a normalized repository file."""
+    reviewability = ctx.raw_marker.get("reviewability")
+    if ctx.strict_contract and isinstance(reviewability, dict) and "evidence_path" in reviewability:
+        evidence_path_value = reviewability.get("evidence_path")
+        if not _is_normalized_repo_path(evidence_path_value) or ctx.repo_root and _repo_file(ctx.repo_root, evidence_path_value) is None:
+            ctx.marker_plan_status_errors.append(
+                f"pr_marker_plan.markers[{ctx.index}].reviewability.evidence_path is not a normalized repository-relative path"
+            )
+
+
+def _repo_path_unusable(ctx: _ProjectionContext, path: Any) -> bool:
+    """Whether a strict marker names a path that is not a normalized repository file."""
+    return ctx.strict_contract and (
+        not _is_normalized_repo_path(path)
+        or bool(ctx.repo_root and _repo_file(ctx.repo_root, path) is None)
+    )
+
+
+def _claim_owned_path(ctx: _ProjectionContext, path_kind: str, owned_path: Any, operation: Any) -> None:
+    """A path belongs to one marker, except that later markers may modify what an earlier one modified."""
+    owner = ctx.file_owners.get(owned_path)
+    sequential_modify = (
+        path_kind == "file"
+        and operation == "MODIFIED"
+        and owner is not None
+        and owner[1] == "MODIFIED"
+        and owner[0] != ctx.marker_id
+    )
+    if owner is not None and not sequential_modify:
+        ctx.marker_plan_status_errors.append(
+            f"pr_marker_plan {path_kind} {owned_path!r} is owned by both {owner[0]!r} and {ctx.marker_id!r}"
+        )
+    else:
+        ctx.file_owners[owned_path] = (ctx.marker_id, operation)
+
+
+def _check_declared_file(ctx: _ProjectionContext, file_index: int, record: Any) -> None:
+    fields = record if isinstance(record, dict) else {}
+    path, operation, source_path = fields.get("path"), fields.get("operation"), fields.get("source_path")
+    prefix = f"pr_marker_plan.markers[{ctx.index}].declared_files[{file_index}]"
+    if _repo_path_unusable(ctx, path):
+        ctx.marker_plan_status_errors.append(
+            f"{prefix}.path is not a normalized repository-relative path"
+        )
+        return
+    owned_paths = [("file", path)]
+    if operation == "RENAMED":
+        if ctx.strict_contract and (source_path == path or _repo_path_unusable(ctx, source_path)):
+            ctx.marker_plan_status_errors.append(
+                f"{prefix}.source_path is not a normalized repository-relative rename source"
+            )
+            return
+        owned_paths.append(("rename source", source_path))
+    elif source_path is not None:
+        ctx.marker_plan_status_errors.append(f"{prefix}.source_path is only valid for RENAMED")
+    for path_kind, owned_path in owned_paths:
+        _claim_owned_path(ctx, path_kind, owned_path, operation)
+
+
+def _check_marker_declared_files(ctx: _ProjectionContext) -> None:
+    """Declared files must be repository paths that no other marker owns."""
+    declared_files = ctx.raw_marker.get("declared_files")
+    if isinstance(declared_files, list):
+        for file_index, record in enumerate(declared_files):
+            _check_declared_file(ctx, file_index, record)
+
+
+def _check_marker_task_ownership(ctx: _ProjectionContext) -> None:
+    """A marker's task ids must be unique and owned by that marker alone."""
+    task_values = _string_list(ctx.raw_marker.get("task_ids"))
+    folded_values = _string_list(ctx.raw_marker.get("folded_polish_task_ids"))
+    if task_values is not None and len(set(task_values)) != len(task_values):
+        ctx.marker_plan_status_errors.append(
+            f"pr_marker_plan.markers[{ctx.index}].task_ids contains duplicates"
+        )
+    if folded_values is not None and len(set(folded_values)) != len(folded_values):
+        ctx.marker_plan_status_errors.append(
+            f"pr_marker_plan.markers[{ctx.index}].folded_polish_task_ids contains duplicates"
+        )
+    for task_id in (task_values or []) + (folded_values or []):
+        owner = ctx.task_owners.get(task_id)
+        if owner is not None:
+            ctx.marker_plan_status_errors.append(
+                f"pr_marker_plan task {task_id!r} is owned by both {owner!r} and {ctx.marker_id!r}"
+            )
+        else:
+            ctx.task_owners[task_id] = ctx.marker_id
+
+
+# Marker kinds whose id is fixed, with that id.
+_FIXED_MARKER_IDS = {"foundation": "foundation", "full_spec": "full-spec", "polish": "polish"}
+
+
+def _check_story_part(ctx: _ProjectionContext, story_id: int, parent_marker_id: Any) -> None:
+    """A user-story part is named us<N>-part<M> and hangs off us<N>."""
+    prefix = f"pr_marker_plan.markers[{ctx.index}] user_story_part"
+    if not isinstance(ctx.marker_id, str) or not re.fullmatch(fr"us{story_id}-part[0-9]+", ctx.marker_id):
+        ctx.marker_plan_status_errors.append(f"{prefix} id does not match story_id {story_id}")
+    if parent_marker_id != f"us{story_id}":
+        ctx.marker_plan_status_errors.append(f"{prefix} parent does not match story_id {story_id}")
+
+
+def _check_marker_identity(ctx: _ProjectionContext) -> None:
+    """A marker's id, kind, story, and parent must agree."""
+    source_boundary = ctx.raw_marker.get("source_boundary")
+    story_id = source_boundary.get("story_id") if isinstance(source_boundary, dict) else None
+    kind = ctx.raw_marker.get("kind")
+    parent_marker_id = ctx.raw_marker.get("parent_marker_id")
+    expected_identity: tuple[str, object, object] | None = None
+    if kind == "user_story" and isinstance(story_id, int):
+        expected_identity = (f"us{story_id}", story_id, None)
+    elif kind == "user_story_part" and isinstance(story_id, int):
+        _check_story_part(ctx, story_id, parent_marker_id)
+    elif isinstance(kind, str) and kind in _FIXED_MARKER_IDS:
+        expected_identity = (_FIXED_MARKER_IDS[kind], None, None)
+    else:
+        ctx.marker_plan_status_errors.append(
+            f"pr_marker_plan.markers[{ctx.index}] kind/story_id combination is invalid"
+        )
+    if expected_identity is not None:
+        expected_id, expected_story_id, expected_parent = expected_identity
+        if ctx.marker_id != expected_id or story_id != expected_story_id or parent_marker_id != expected_parent:
+            ctx.marker_plan_status_errors.append(
+                f"pr_marker_plan.markers[{ctx.index}] id, kind, story_id, and parent_marker_id are inconsistent"
+            )
+
+
+def _check_marker_position(ctx: _ProjectionContext) -> None:
+    """A marker needs a unique id and a unique contiguous review order."""
+    ctx.marker_id = ctx.raw_marker.get("id")
+    if not isinstance(ctx.marker_id, str) or not ctx.marker_id:
+        ctx.marker_plan_status_errors.append(f"pr_marker_plan.markers[{ctx.index}].id is invalid")
+        ctx.marker_id = f"marker[{ctx.index}]"
+    elif ctx.marker_id in ctx.seen_marker_ids:
+        ctx.marker_plan_status_errors.append(f"pr_marker_plan marker id {ctx.marker_id!r} is duplicated")
+    else:
+        ctx.seen_marker_ids.add(ctx.marker_id)
+    review_order = ctx.raw_marker.get("review_order")
+    if not isinstance(review_order, int) or isinstance(review_order, bool) or review_order < 1:
+        ctx.marker_plan_status_errors.append(
+            f"pr_marker_plan.markers[{ctx.index}].review_order is invalid"
+        )
+    elif review_order in ctx.seen_review_orders:
+        ctx.marker_plan_status_errors.append(
+            f"pr_marker_plan review_order {review_order} is duplicated"
+        )
+    else:
+        ctx.seen_review_orders.add(review_order)
+    if (
+        isinstance(review_order, int)
+        and not isinstance(review_order, bool)
+        and review_order >= 1
+        and review_order != ctx.index + 1
+    ):
+        ctx.marker_plan_status_errors.append(
+            f"pr_marker_plan.markers[{ctx.index}].review_order must equal its "
+            f"contiguous marker array position {ctx.index + 1}"
+        )
+
+
+def _decoded_or_none(data: bytes | None) -> str | None:
+    try:
+        return data.decode("utf-8") if data is not None else None
+    except UnicodeDecodeError:
+        return None
+
+
+def _new_projection_context(
+    state: dict[str, Any], state_path: Path, expected_head_commit: str | None,
+) -> _ProjectionContext:
+    """Gather what every projection check reads from the state file and the repository."""
+    marker_plan = state.get("pr_marker_plan")
+    phase_results = state.get("phase_results")
+    repo_root = _repository_root(state_path)
+    feature_dir = state.get("feature_dir")
+    tasks_bytes = (
+        _read_repo_bytes(repo_root, f"{feature_dir}/tasks.md")
+        if repo_root is not None and isinstance(feature_dir, str)
+        else None
+    )
+    return _ProjectionContext(
+        state=state,
+        state_path=state_path,
+        expected_head_commit=expected_head_commit,
+        marker_plan=marker_plan,
+        markers=marker_plan.get("markers") if isinstance(marker_plan, dict) else None,
+        plan_status=marker_plan.get("status") if isinstance(marker_plan, dict) else None,
+        strict_contract=(
+            isinstance(marker_plan, dict) and marker_plan.get("schema_version") == "pr-marker-plan.v2"
+        ),
+        repo_root=repo_root,
+        feature_dir=feature_dir,
+        phase_results=phase_results,
+        phases=phase_results if isinstance(phase_results, dict) else {},
+        current_tasks_text=_decoded_or_none(tasks_bytes),
+        current_tasks_sha=_sha256_bytes(tasks_bytes) if tasks_bytes is not None else None,
+    )
+
+
+def _load_marker_plan_schemas(ctx: _ProjectionContext) -> None:
+    """Validate the marker plan's shape and load the verification report schema."""
+    ctx.marker_plan_status_errors.extend(_marker_plan_version_errors(ctx.marker_plan))
+    if not ctx.strict_contract:
+        ctx.marker_plan_status_errors.extend(_marker_plan_shape_errors(ctx.marker_plan))
+        return
+    marker_plan_schema, marker_schema_errors = _canonical_schema(
+        MARKER_PLAN_SCHEMA_PATH,
+        "pr-marker-plan",
+        repo_root=ctx.repo_root,
+        expected_head_commit=ctx.expected_head_commit,
+    )
+    ctx.marker_plan_status_errors.extend(marker_schema_errors)
+    if marker_plan_schema is not None:
+        ctx.marker_plan_status_errors.extend(_marker_plan_shape_errors(ctx.marker_plan, marker_plan_schema))
+    ctx.verification_report_schema, verification_schema_errors = _canonical_schema(
+        VERIFICATION_REPORT_SCHEMA_PATH,
+        "verification report",
+        repo_root=ctx.repo_root,
+        expected_head_commit=ctx.expected_head_commit,
+    )
+    ctx.checkpoint_evidence_errors.extend(verification_schema_errors)
+
+
+# Marker-plan statuses that stop the run, with the warning code and severities that must explain them.
+_DIAGNOSTIC_WARNINGS = {
+    "stale": ("MARKER_PLAN_STALE", {"warning", "error"}),
+    "invalid": ("MARKER_PLAN_INVALID", {"error"}),
+}
+
+
+def _check_plan_status_diagnostics(ctx: _ProjectionContext) -> None:
+    """A stale or invalid plan is a correctness stop, and a strict plan must carry the matching warning."""
+    if ctx.plan_status not in _DIAGNOSTIC_WARNINGS:
+        return
+    ctx.marker_plan_status_errors.append(f"pr_marker_plan.status {ctx.plan_status} is a correctness stop")
+    if not ctx.strict_contract:
+        return
+    code, severities = _DIAGNOSTIC_WARNINGS[ctx.plan_status]
+    warnings = ctx.marker_plan.get("warnings")
+    if not isinstance(warnings, list) or not any(
+        isinstance(warning, dict)
+        and warning.get("code") == code
+        and warning.get("severity") in severities
+        for warning in warnings
+    ):
+        ctx.marker_plan_status_errors.append(
+            f"pr_marker_plan.status {ctx.plan_status} requires diagnostic warning {code}"
+        )
+
+
+def _load_checkpoint_schema(ctx: _ProjectionContext) -> None:
+    """Load the checkpoint evidence schema from the authorized head, else the plugin's own contract."""
+    if not (ctx.strict_contract and ctx.repo_root):
+        return
+    if not _is_normalized_repo_path(ctx.feature_dir):
+        ctx.checkpoint_evidence_errors.append(
+            "pr-marker-plan.v2 checkpoint evidence requires a normalized feature_dir"
+        )
+        return
+    schema_ref = f"{ctx.feature_dir}/contracts/marker-checkpoint.schema.json"
+    committed = _git_file_at_commit(ctx.repo_root, ctx.expected_head_commit, schema_ref)
+    worktree = _read_repo_bytes(ctx.repo_root, schema_ref)
+    if committed is None:
+        # No feature-local schema: validate against the plugin's own contract.
+        ctx.checkpoint_evidence_schema, schema_errors = _canonical_schema(
+            MARKER_CHECKPOINT_SCHEMA_PATH,
+            "marker-checkpoint",
+            repo_root=ctx.repo_root,
+            expected_head_commit=ctx.expected_head_commit,
+        )
+        ctx.checkpoint_evidence_errors.extend(schema_errors)
+        if worktree is not None:
+            ctx.checkpoint_file_errors.append(
+                "feature-local checkpoint evidence schema exists in the worktree but not "
+                "at the authorized PR head; commit it or remove it to use the plugin schema"
+            )
+        return
+    if worktree != committed:
+        ctx.checkpoint_file_errors.append("checkpoint evidence schema differs from the authorized PR head")
+    ctx.checkpoint_evidence_schema = _load_json_bytes(committed)
+    if ctx.checkpoint_evidence_schema is None:
+        ctx.checkpoint_evidence_errors.append(
+            "checkpoint evidence schema at the authorized PR head is malformed"
+        )
+
+
+def _check_phase_marker_binding(ctx: _ProjectionContext, phase_name: str, phase_marker_id: Any) -> None:
+    """An implement phase must name exactly one marker, and the plan must declare it."""
+    if not ctx.strict_contract or not phase_name.startswith("Phase 7: Implement"):
+        return
+    declared_marker_ids = {
+        marker.get("id")
+        for marker in ctx.markers or []
+        if isinstance(marker, dict) and isinstance(marker.get("id"), str) and marker["id"]
+    }
+    if not isinstance(phase_marker_id, str) or not phase_marker_id:
+        ctx.marker_plan_status_errors.append(
+            f"phase_results[{phase_name}] must declare exactly one marker_id"
+        )
+    elif phase_marker_id not in declared_marker_ids:
+        ctx.marker_plan_status_errors.append(
+            f"phase_results[{phase_name}] marker_id {phase_marker_id!r} is not declared by pr_marker_plan"
+        )
+
+
+def _check_phase_plan_agreement(
+    ctx: _ProjectionContext, steps: list[PlanStep], phase_name: str, result_status: Any,
+) -> None:
+    """A phase result's status must match its plan step."""
+    matching_steps = [
+        step for step in steps if step.step == phase_name or step.step.startswith(f"{phase_name} (")
+    ]
+    if result_status not in {"completed", "in_progress", "pending", "checkpointing"} or not matching_steps:
+        return
+    expected_plan_status = "completed" if result_status == "completed" else result_status
+    if matching_steps[0].status != expected_plan_status:
+        ctx.projection_status_errors.append(
+            f"plan[{matching_steps[0].step}]={matching_steps[0].status!r} "
+            f"does not match phase_results[{phase_name}].status={result_status!r}"
+        )
+
+
+def _check_phase_result(
+    ctx: _ProjectionContext, steps: list[PlanStep], phase_name: str, raw_result: dict[str, Any],
+) -> None:
+    """One phase result must bind to its marker, agree with the plan step, and carry no pending values once done."""
+    phase_marker_id = raw_result.get("marker_id")
+    if isinstance(phase_marker_id, str) and phase_marker_id:
+        ctx.phases_by_marker.setdefault(phase_marker_id, []).append((phase_name, raw_result))
+    _check_phase_marker_binding(ctx, phase_name, phase_marker_id)
+    result_status = raw_result.get("status")
+    _check_phase_plan_agreement(ctx, steps, phase_name, result_status)
+    if result_status == "completed":
+        ctx.completed_phase_pending_fields.extend(
+            _pending_value_paths(raw_result, f"phase_results.{phase_name}")
+        )
+
+
+def _check_phase_results(ctx: _ProjectionContext, steps: list[PlanStep]) -> None:
+    for phase_name, raw_result in ctx.phases.items():
+        if isinstance(phase_name, str) and isinstance(raw_result, dict):
+            _check_phase_result(ctx, steps, phase_name, raw_result)
+
+
+def _check_marker(ctx: _ProjectionContext) -> None:
+    """Every check one marker of the plan must pass."""
+    _check_marker_position(ctx)
+    _check_marker_identity(ctx)
+    _check_marker_task_ownership(ctx)
+    _check_marker_declared_files(ctx)
+    _check_marker_reviewability_path(ctx)
+    ctx.checkpoint = ctx.raw_marker.get("implementation_checkpoint")
+    _check_marker_checkpoint(ctx)
+    _check_marker_emission(ctx)
+
+
+def _check_markers(ctx: _ProjectionContext) -> None:
+    if not isinstance(ctx.markers, list):
+        return
+    if ctx.strict_contract:
+        ctx.marker_plan_status_errors.extend(_timestamp_errors(ctx.marker_plan, "pr_marker_plan"))
+    for position, marker in enumerate(ctx.markers):
+        ctx.index, ctx.raw_marker = position, marker
+        if isinstance(marker, dict):
+            _check_marker(ctx)
+    _check_plan_status_constraints(ctx)
+
+
 def validate_projection_integrity(
     state: dict[str, Any],
     steps: list[PlanStep],
@@ -2461,1857 +3681,20 @@ def validate_projection_integrity(
     *,
     expected_head_commit: str | None = None,
 ) -> dict[str, list[str]]:
-    phase_results = state.get("phase_results")
-    marker_plan = state.get("pr_marker_plan")
-    completed_phase_pending_fields: list[str] = []
-    projection_status_errors: list[str] = []
-    checkpoint_evidence_errors: list[str] = []
-    checkpoint_source_fingerprint_errors: list[str] = []
-    checkpoint_file_errors: list[str] = []
-    emission_mapping_errors: list[str] = []
-    marker_plan_status_errors: list[str] = []
-    repo_root = _repository_root(state_path)
-    feature_dir = state.get("feature_dir")
-    tasks_ref = f"{feature_dir}/tasks.md" if isinstance(feature_dir, str) else None
-    current_tasks_bytes = (
-        _read_repo_bytes(repo_root, tasks_ref)
-        if repo_root is not None and tasks_ref is not None
-        else None
-    )
-    try:
-        current_tasks_text = (
-            current_tasks_bytes.decode("utf-8")
-            if current_tasks_bytes is not None
-            else None
-        )
-    except UnicodeDecodeError:
-        current_tasks_text = None
-    current_tasks_sha = (
-        _sha256_bytes(current_tasks_bytes)
-        if current_tasks_bytes is not None
-        else None
-    )
-    strict_contract = (
-        isinstance(marker_plan, dict)
-        and marker_plan.get("schema_version") == "pr-marker-plan.v2"
-    )
-    marker_plan_status_errors.extend(_marker_plan_version_errors(marker_plan))
-    marker_plan_schema: dict[str, Any] | None = None
-    verification_report_schema: dict[str, Any] | None = None
-    if strict_contract:
-        marker_plan_schema, marker_schema_errors = _canonical_schema(
-            MARKER_PLAN_SCHEMA_PATH,
-            "pr-marker-plan",
-            repo_root=repo_root,
-            expected_head_commit=expected_head_commit,
-        )
-        marker_plan_status_errors.extend(marker_schema_errors)
-        if marker_plan_schema is not None:
-            marker_plan_status_errors.extend(
-                _marker_plan_shape_errors(marker_plan, marker_plan_schema)
-            )
-        verification_report_schema, verification_schema_errors = _canonical_schema(
-            VERIFICATION_REPORT_SCHEMA_PATH,
-            "verification report",
-            repo_root=repo_root,
-            expected_head_commit=expected_head_commit,
-        )
-        checkpoint_evidence_errors.extend(verification_schema_errors)
-    else:
-        marker_plan_status_errors.extend(_marker_plan_shape_errors(marker_plan))
-
-    plan_status = marker_plan.get("status") if isinstance(marker_plan, dict) else None
-    diagnostic_warnings = {
-        "stale": ("MARKER_PLAN_STALE", {"warning", "error"}),
-        "invalid": ("MARKER_PLAN_INVALID", {"error"}),
-    }
-    if plan_status in diagnostic_warnings:
-        marker_plan_status_errors.append(
-            f"pr_marker_plan.status {plan_status} is a correctness stop"
-        )
-        if strict_contract:
-            code, severities = diagnostic_warnings[plan_status]
-            warnings = marker_plan.get("warnings")
-            if not isinstance(warnings, list) or not any(
-                isinstance(warning, dict)
-                and warning.get("code") == code
-                and warning.get("severity") in severities
-                for warning in warnings
-            ):
-                marker_plan_status_errors.append(
-                    f"pr_marker_plan.status {plan_status} requires diagnostic warning {code}"
-                )
-
-    checkpoint_evidence_schema: dict[str, Any] | None = None
-    if strict_contract and repo_root:
-        if not _is_normalized_repo_path(feature_dir):
-            checkpoint_evidence_errors.append(
-                "pr-marker-plan.v2 checkpoint evidence requires a normalized feature_dir"
-            )
-        else:
-            checkpoint_schema_ref = (
-                f"{feature_dir}/contracts/marker-checkpoint.schema.json"
-            )
-            committed_schema_bytes = _git_file_at_commit(
-                repo_root, expected_head_commit, checkpoint_schema_ref,
-            )
-            worktree_schema_bytes = _read_repo_bytes(repo_root, checkpoint_schema_ref)
-            if committed_schema_bytes is None:
-                checkpoint_evidence_errors.append(
-                    "checkpoint evidence schema is absent from the authorized PR head"
-                )
-            else:
-                if worktree_schema_bytes != committed_schema_bytes:
-                    checkpoint_file_errors.append(
-                        "checkpoint evidence schema differs from the authorized PR head"
-                    )
-                checkpoint_evidence_schema = _load_json_bytes(committed_schema_bytes)
-                if checkpoint_evidence_schema is None:
-                    checkpoint_evidence_errors.append(
-                        "checkpoint evidence schema at the authorized PR head is malformed"
-                    )
-
-    markers = marker_plan.get("markers") if isinstance(marker_plan, dict) else None
-    declared_marker_ids = {
-        marker.get("id")
-        for marker in markers or []
-        if isinstance(marker, dict)
-        and isinstance(marker.get("id"), str)
-        and marker["id"]
-    }
-    phases = phase_results if isinstance(phase_results, dict) else {}
-    phases_by_marker: dict[str, list[tuple[str, dict[str, Any]]]] = {}
-    for phase_name, raw_result in phases.items():
-        if not isinstance(phase_name, str) or not isinstance(raw_result, dict):
-            continue
-        phase_marker_id = raw_result.get("marker_id")
-        if isinstance(phase_marker_id, str) and phase_marker_id:
-            phases_by_marker.setdefault(phase_marker_id, []).append(
-                (phase_name, raw_result)
-            )
-        if strict_contract and phase_name.startswith("Phase 7: Implement"):
-            if not isinstance(phase_marker_id, str) or not phase_marker_id:
-                marker_plan_status_errors.append(
-                    f"phase_results[{phase_name}] must declare exactly one marker_id"
-                )
-            elif phase_marker_id not in declared_marker_ids:
-                marker_plan_status_errors.append(
-                    f"phase_results[{phase_name}] marker_id {phase_marker_id!r} is not declared by pr_marker_plan"
-                )
-        result_status = raw_result.get("status")
-        matching_steps = [step for step in steps if step.step == phase_name or step.step.startswith(f"{phase_name} (")]
-        if result_status in {"completed", "in_progress", "pending", "checkpointing"} and matching_steps:
-            expected_plan_status = "completed" if result_status == "completed" else result_status
-            if matching_steps[0].status != expected_plan_status:
-                projection_status_errors.append(
-                    f"plan[{matching_steps[0].step}]={matching_steps[0].status!r} "
-                    f"does not match phase_results[{phase_name}].status={result_status!r}"
-                )
-        if result_status == "completed":
-            completed_phase_pending_fields.extend(
-                _pending_value_paths(raw_result, f"phase_results.{phase_name}")
-            )
-
-    if isinstance(markers, list):
-        if strict_contract:
-            marker_plan_status_errors.extend(_timestamp_errors(marker_plan, "pr_marker_plan"))
-        seen_marker_ids: set[str] = set()
-        seen_review_orders: set[int] = set()
-        task_owners: dict[str, str] = {}
-        file_owners: dict[str, tuple[str, str | None]] = {}
-        for index, raw_marker in enumerate(markers):
-            if not isinstance(raw_marker, dict):
-                continue
-            marker_id = raw_marker.get("id")
-            if not isinstance(marker_id, str) or not marker_id:
-                marker_plan_status_errors.append(f"pr_marker_plan.markers[{index}].id is invalid")
-                marker_id = f"marker[{index}]"
-            elif marker_id in seen_marker_ids:
-                marker_plan_status_errors.append(f"pr_marker_plan marker id {marker_id!r} is duplicated")
-            else:
-                seen_marker_ids.add(marker_id)
-            review_order = raw_marker.get("review_order")
-            if not isinstance(review_order, int) or isinstance(review_order, bool) or review_order < 1:
-                marker_plan_status_errors.append(
-                    f"pr_marker_plan.markers[{index}].review_order is invalid"
-                )
-            elif review_order in seen_review_orders:
-                marker_plan_status_errors.append(
-                    f"pr_marker_plan review_order {review_order} is duplicated"
-                )
-            else:
-                seen_review_orders.add(review_order)
-            if (
-                isinstance(review_order, int)
-                and not isinstance(review_order, bool)
-                and review_order >= 1
-                and review_order != index + 1
-            ):
-                marker_plan_status_errors.append(
-                    f"pr_marker_plan.markers[{index}].review_order must equal its "
-                    f"contiguous marker array position {index + 1}"
-                )
-
-            source_boundary = raw_marker.get("source_boundary")
-            story_id = source_boundary.get("story_id") if isinstance(source_boundary, dict) else None
-            kind = raw_marker.get("kind")
-            parent_marker_id = raw_marker.get("parent_marker_id")
-            expected_identity: tuple[str, object, object] | None = None
-            if kind == "user_story" and isinstance(story_id, int):
-                expected_identity = (f"us{story_id}", story_id, None)
-            elif kind == "user_story_part" and isinstance(story_id, int):
-                if not isinstance(marker_id, str) or not re.fullmatch(fr"us{story_id}-part[0-9]+", marker_id):
-                    marker_plan_status_errors.append(
-                        f"pr_marker_plan.markers[{index}] user_story_part id does not match story_id {story_id}"
-                    )
-                if parent_marker_id != f"us{story_id}":
-                    marker_plan_status_errors.append(
-                        f"pr_marker_plan.markers[{index}] user_story_part parent does not match story_id {story_id}"
-                    )
-            elif kind == "foundation":
-                expected_identity = ("foundation", None, None)
-            elif kind == "full_spec":
-                expected_identity = ("full-spec", None, None)
-            elif kind == "polish":
-                expected_identity = ("polish", None, None)
-            else:
-                marker_plan_status_errors.append(
-                    f"pr_marker_plan.markers[{index}] kind/story_id combination is invalid"
-                )
-            if expected_identity is not None:
-                expected_id, expected_story_id, expected_parent = expected_identity
-                if marker_id != expected_id or story_id != expected_story_id or parent_marker_id != expected_parent:
-                    marker_plan_status_errors.append(
-                        f"pr_marker_plan.markers[{index}] id, kind, story_id, and parent_marker_id are inconsistent"
-                    )
-
-            task_values = _string_list(raw_marker.get("task_ids"))
-            folded_values = _string_list(raw_marker.get("folded_polish_task_ids"))
-            if task_values is not None and len(set(task_values)) != len(task_values):
-                marker_plan_status_errors.append(
-                    f"pr_marker_plan.markers[{index}].task_ids contains duplicates"
-                )
-            if folded_values is not None and len(set(folded_values)) != len(folded_values):
-                marker_plan_status_errors.append(
-                    f"pr_marker_plan.markers[{index}].folded_polish_task_ids contains duplicates"
-                )
-            for task_id in (task_values or []) + (folded_values or []):
-                owner = task_owners.get(task_id)
-                if owner is not None:
-                    marker_plan_status_errors.append(
-                        f"pr_marker_plan task {task_id!r} is owned by both {owner!r} and {marker_id!r}"
-                    )
-                else:
-                    task_owners[task_id] = marker_id
-
-            declared_files = raw_marker.get("declared_files")
-            if isinstance(declared_files, list):
-                for file_index, record in enumerate(declared_files):
-                    path = record.get("path") if isinstance(record, dict) else None
-                    operation = record.get("operation") if isinstance(record, dict) else None
-                    source_path = record.get("source_path") if isinstance(record, dict) else None
-                    if strict_contract and (
-                        not _is_normalized_repo_path(path)
-                        or repo_root and _repo_file(repo_root, path) is None
-                    ):
-                        marker_plan_status_errors.append(
-                            f"pr_marker_plan.markers[{index}].declared_files[{file_index}].path is not a normalized repository-relative path"
-                        )
-                        continue
-                    owned_paths = [("file", path)]
-                    if operation == "RENAMED":
-                        if strict_contract and (
-                            not _is_normalized_repo_path(source_path)
-                            or source_path == path
-                            or repo_root and _repo_file(repo_root, source_path) is None
-                        ):
-                            marker_plan_status_errors.append(
-                                f"pr_marker_plan.markers[{index}].declared_files[{file_index}].source_path is not a normalized repository-relative rename source"
-                            )
-                            continue
-                        owned_paths.append(("rename source", source_path))
-                    elif source_path is not None:
-                        marker_plan_status_errors.append(
-                            f"pr_marker_plan.markers[{index}].declared_files[{file_index}].source_path is only valid for RENAMED"
-                        )
-                    for path_kind, owned_path in owned_paths:
-                        owner = file_owners.get(owned_path)
-                        sequential_modify = (
-                            path_kind == "file"
-                            and operation == "MODIFIED"
-                            and owner is not None
-                            and owner[1] == "MODIFIED"
-                            and owner[0] != marker_id
-                        )
-                        if owner is not None and not sequential_modify:
-                            marker_plan_status_errors.append(
-                                f"pr_marker_plan {path_kind} {owned_path!r} is owned by both {owner[0]!r} and {marker_id!r}"
-                            )
-                        else:
-                            file_owners[owned_path] = (marker_id, operation)
-
-            reviewability = raw_marker.get("reviewability")
-            if strict_contract and isinstance(reviewability, dict) and "evidence_path" in reviewability:
-                evidence_path_value = reviewability.get("evidence_path")
-                if not _is_normalized_repo_path(evidence_path_value) or repo_root and _repo_file(repo_root, evidence_path_value) is None:
-                    marker_plan_status_errors.append(
-                        f"pr_marker_plan.markers[{index}].reviewability.evidence_path is not a normalized repository-relative path"
-                    )
-            checkpoint = raw_marker.get("implementation_checkpoint")
-            if isinstance(checkpoint, dict):
-                checkpoint_status = checkpoint.get("status")
-                pending_phase_claims = [
-                    (phase_name, phase_field)
-                    for phase_name, phase_result in phases_by_marker.get(marker_id, [])
-                    for phase_field in phase_result
-                    if phase_field not in PHASE_RESULT_PROJECTION_FIELDS
-                ]
-                if strict_contract and checkpoint_status == "pending" and pending_phase_claims:
-                    if not _is_normalized_repo_path(checkpoint.get("evidence_path")):
-                        checkpoint_evidence_errors.append(
-                            f"pr_marker_plan.markers[{index}] pending checkpoint with phase claims requires evidence_path"
-                        )
-                    if not isinstance(checkpoint.get("commit_sha"), str) or not re.fullmatch(
-                        r"[0-9a-f]{40}", checkpoint["commit_sha"]
-                    ):
-                        checkpoint_evidence_errors.append(
-                            f"pr_marker_plan.markers[{index}] pending checkpoint with phase claims requires commit_sha"
-                        )
-                for path_field in ("evidence_path", "verification_evidence_path") if strict_contract else ():
-                    path_value = checkpoint.get(path_field)
-                    if path_value is not None and (
-                        not _is_normalized_repo_path(path_value)
-                        or repo_root and _repo_file(repo_root, path_value) is None
-                    ):
-                        checkpoint_file_errors.append(
-                            f"pr_marker_plan.markers[{index}].implementation_checkpoint.{path_field} is not a normalized repository-relative path"
-                        )
-                if checkpoint_status == "complete" and strict_contract:
-                    for required in COMPLETE_CHECKPOINT_STRING_FIELDS:
-                        if not isinstance(checkpoint.get(required), str) or not checkpoint[required].strip():
-                            checkpoint_evidence_errors.append(
-                                f"pr_marker_plan.markers[{index}].implementation_checkpoint.{required}"
-                            )
-                    for required in COMPLETE_CHECKPOINT_LIST_FIELDS:
-                        value = checkpoint.get(required)
-                        if (
-                            not isinstance(value, list)
-                            or not value
-                            or not all(isinstance(item, str) and item for item in value)
-                            or len(set(value)) != len(value)
-                        ):
-                            checkpoint_evidence_errors.append(
-                                f"pr_marker_plan.markers[{index}].implementation_checkpoint.{required}"
-                            )
-                    for required in COMPLETE_CHECKPOINT_OBJECT_FIELDS:
-                        if not isinstance(checkpoint.get(required), dict):
-                            checkpoint_evidence_errors.append(
-                                f"pr_marker_plan.markers[{index}].implementation_checkpoint.{required}"
-                            )
-                    task_ids = _string_list(raw_marker.get("task_ids"))
-                    folded_task_ids = _string_list(raw_marker.get("folded_polish_task_ids"))
-                    expected_tasks = set(task_ids or ()) | set(folded_task_ids or ())
-                    completed_tasks = _string_list(checkpoint.get("completed_task_ids"))
-                    if task_ids is None or folded_task_ids is None:
-                        checkpoint_evidence_errors.append(
-                            f"pr_marker_plan.markers[{index}] marker task coverage"
-                        )
-                    elif completed_tasks is not None and set(completed_tasks) != expected_tasks:
-                        checkpoint_evidence_errors.append(
-                            f"pr_marker_plan.markers[{index}].implementation_checkpoint.completed_task_ids coverage"
-                        )
-                    if checkpoint.get("commit_sha") != checkpoint.get("head_sha"):
-                        checkpoint_evidence_errors.append(
-                            f"pr_marker_plan.markers[{index}].implementation_checkpoint commit/head mismatch"
-                        )
-                    if repo_root:
-                        committed_verification_bytes: bytes | None = None
-                        evidence_commit_sha = checkpoint.get("checkpoint_evidence_commit_sha")
-                        claimed_commit_sha = checkpoint.get("commit_sha")
-                        if not _git_commit_exists(repo_root, evidence_commit_sha):
-                            checkpoint_evidence_errors.append(
-                                f"pr_marker_plan.markers[{index}].implementation_checkpoint.checkpoint_evidence_commit_sha is not an existing commit"
-                            )
-                        elif not _git_commit_is_ancestor_of_head(repo_root, evidence_commit_sha):
-                            checkpoint_evidence_errors.append(
-                                f"pr_marker_plan.markers[{index}].implementation_checkpoint.checkpoint_evidence_commit_sha is not an ancestor of HEAD"
-                            )
-                        elif (
-                            _git_commit_exists(repo_root, claimed_commit_sha)
-                            and not _git_commit_is_ancestor(
-                                repo_root, claimed_commit_sha, evidence_commit_sha,
-                            )
-                        ):
-                            checkpoint_evidence_errors.append(
-                                f"pr_marker_plan.markers[{index}] implementation commit is not an ancestor of evidence commit"
-                            )
-                        evidence_ref = checkpoint.get("evidence_path")
-                        verification_ref = checkpoint.get("verification_evidence_path")
-                        worktree_evidence_bytes = _read_repo_bytes(
-                            repo_root,
-                            evidence_ref,
-                        )
-                        worktree_verification_bytes = _read_repo_bytes(
-                            repo_root,
-                            verification_ref,
-                        )
-                        for required, worktree_bytes in (
-                            ("evidence_path", worktree_evidence_bytes),
-                            ("verification_evidence_path", worktree_verification_bytes),
-                        ):
-                            if worktree_bytes is None:
-                                checkpoint_file_errors.append(
-                                    f"pr_marker_plan.markers[{index}].implementation_checkpoint.{required}"
-                                )
-                        if evidence_ref == verification_ref:
-                            checkpoint_evidence_errors.append(
-                                f"pr_marker_plan.markers[{index}] checkpoint and verification evidence paths must differ"
-                            )
-                        committed_evidence_bytes = (
-                            _git_file_at_commit(
-                                repo_root,
-                                checkpoint.get("checkpoint_evidence_commit_sha"),
-                                evidence_ref,
-                            )
-                            if isinstance(evidence_ref, str)
-                            else None
-                        )
-                        if committed_evidence_bytes is None:
-                            checkpoint_file_errors.append(
-                                f"pr_marker_plan.markers[{index}].implementation_checkpoint.checkpoint_evidence_commit_sha"
-                            )
-                        else:
-                            expected_evidence_sha = _sha256_bytes(committed_evidence_bytes)
-                            if checkpoint.get("checkpoint_evidence_sha") != expected_evidence_sha:
-                                checkpoint_file_errors.append(
-                                    f"pr_marker_plan.markers[{index}].implementation_checkpoint.checkpoint_evidence_sha"
-                                )
-                            if worktree_evidence_bytes != committed_evidence_bytes:
-                                checkpoint_file_errors.append(
-                                    f"pr_marker_plan.markers[{index}].implementation_checkpoint immutable evidence differs from checkpoint commit"
-                                )
-                        committed_verification_bytes = (
-                            _git_file_at_commit(
-                                repo_root,
-                                checkpoint.get("checkpoint_evidence_commit_sha"),
-                                verification_ref,
-                            )
-                            if isinstance(verification_ref, str)
-                            else None
-                        )
-                        if committed_verification_bytes is None:
-                            checkpoint_file_errors.append(
-                                f"pr_marker_plan.markers[{index}].implementation_checkpoint verification evidence is absent from checkpoint commit"
-                            )
-                        else:
-                            expected_verification_sha = _sha256_bytes(committed_verification_bytes)
-                            if checkpoint.get("verification_evidence_sha") != expected_verification_sha:
-                                checkpoint_file_errors.append(
-                                    f"pr_marker_plan.markers[{index}].implementation_checkpoint.verification_evidence_sha"
-                                )
-                            if worktree_verification_bytes != committed_verification_bytes:
-                                checkpoint_file_errors.append(
-                                    f"pr_marker_plan.markers[{index}].implementation_checkpoint immutable verification evidence differs from checkpoint commit"
-                                )
-
-                pending_authority_fields = (
-                    "checkpoint_evidence_sha",
-                    "checkpoint_evidence_commit_sha",
-                    "verification_evidence_path",
-                    "verification_evidence_sha",
-                )
-                if (
-                    checkpoint_status == "pending"
-                    and strict_contract
-                    and repo_root
-                    and any(field in checkpoint for field in pending_authority_fields)
-                ):
-                    evidence_commit_sha = checkpoint.get("checkpoint_evidence_commit_sha")
-                    claimed_commit_sha = checkpoint.get("commit_sha")
-                    evidence_ref = checkpoint.get("evidence_path")
-                    verification_ref = checkpoint.get("verification_evidence_path")
-                    if not _git_commit_exists(repo_root, evidence_commit_sha):
-                        checkpoint_evidence_errors.append(
-                            f"pr_marker_plan.markers[{index}].implementation_checkpoint.checkpoint_evidence_commit_sha is not an existing commit"
-                        )
-                    elif not (
-                        isinstance(expected_head_commit, str)
-                        and _git_commit_is_ancestor(
-                            repo_root, evidence_commit_sha, expected_head_commit,
-                        )
-                    ):
-                        checkpoint_evidence_errors.append(
-                            f"pr_marker_plan.markers[{index}].implementation_checkpoint.checkpoint_evidence_commit_sha is not an ancestor of the authorized PR head"
-                        )
-                    elif (
-                        _git_commit_exists(repo_root, claimed_commit_sha)
-                        and not _git_commit_is_ancestor(
-                            repo_root, claimed_commit_sha, evidence_commit_sha,
-                        )
-                    ):
-                        checkpoint_evidence_errors.append(
-                            f"pr_marker_plan.markers[{index}] implementation commit is not an ancestor of evidence commit"
-                        )
-                    if evidence_ref == verification_ref:
-                        checkpoint_evidence_errors.append(
-                            f"pr_marker_plan.markers[{index}] checkpoint and verification evidence paths must differ"
-                        )
-                    committed_pending_evidence = (
-                        _git_file_at_commit(repo_root, evidence_commit_sha, evidence_ref)
-                        if isinstance(evidence_ref, str)
-                        else None
-                    )
-                    authorized_pending_evidence = (
-                        _git_file_at_commit(repo_root, expected_head_commit, evidence_ref)
-                        if isinstance(evidence_ref, str)
-                        else None
-                    )
-                    worktree_pending_evidence = _read_repo_bytes(repo_root, evidence_ref)
-                    if committed_pending_evidence is None:
-                        checkpoint_file_errors.append(
-                            f"pr_marker_plan.markers[{index}].implementation_checkpoint.checkpoint_evidence_commit_sha"
-                        )
-                    else:
-                        if checkpoint.get("checkpoint_evidence_sha") != _sha256_bytes(
-                            committed_pending_evidence
-                        ):
-                            checkpoint_file_errors.append(
-                                f"pr_marker_plan.markers[{index}].implementation_checkpoint.checkpoint_evidence_sha"
-                            )
-                        if authorized_pending_evidence != committed_pending_evidence:
-                            checkpoint_file_errors.append(
-                                f"pr_marker_plan.markers[{index}] pending checkpoint evidence differs from checkpoint commit"
-                            )
-                        if worktree_pending_evidence != committed_pending_evidence:
-                            checkpoint_file_errors.append(
-                                f"pr_marker_plan.markers[{index}] pending checkpoint evidence worktree differs from checkpoint commit"
-                            )
-                    committed_pending_verification = (
-                        _git_file_at_commit(repo_root, evidence_commit_sha, verification_ref)
-                        if isinstance(verification_ref, str)
-                        else None
-                    )
-                    authorized_pending_verification = (
-                        _git_file_at_commit(repo_root, expected_head_commit, verification_ref)
-                        if isinstance(verification_ref, str)
-                        else None
-                    )
-                    worktree_pending_verification = _read_repo_bytes(
-                        repo_root,
-                        verification_ref,
-                    )
-                    if committed_pending_verification is None:
-                        checkpoint_file_errors.append(
-                            f"pr_marker_plan.markers[{index}].implementation_checkpoint verification evidence is absent from checkpoint commit"
-                        )
-                    else:
-                        if checkpoint.get("verification_evidence_sha") != _sha256_bytes(
-                            committed_pending_verification
-                        ):
-                            checkpoint_file_errors.append(
-                                f"pr_marker_plan.markers[{index}].implementation_checkpoint.verification_evidence_sha"
-                            )
-                        if authorized_pending_verification != committed_pending_verification:
-                            checkpoint_file_errors.append(
-                                f"pr_marker_plan.markers[{index}] pending verification evidence differs from checkpoint commit"
-                            )
-                        if worktree_pending_verification != committed_pending_verification:
-                            checkpoint_file_errors.append(
-                                f"pr_marker_plan.markers[{index}] pending verification evidence worktree differs from checkpoint commit"
-                            )
-
-                evidence_ref = checkpoint.get("evidence_path")
-                authorized_evidence_bytes: bytes | None = None
-                if strict_contract and repo_root and isinstance(evidence_ref, str):
-                    authorized_evidence_bytes = _git_file_at_commit(
-                        repo_root, expected_head_commit, evidence_ref,
-                    )
-                    if authorized_evidence_bytes is None:
-                        checkpoint_file_errors.append(
-                            f"pr_marker_plan.markers[{index}] checkpoint evidence is absent from the authorized PR head"
-                        )
-                    else:
-                        if _read_repo_bytes(repo_root, evidence_ref) != authorized_evidence_bytes:
-                            checkpoint_file_errors.append(
-                                f"pr_marker_plan.markers[{index}] checkpoint evidence differs from the authorized PR head"
-                            )
-                immutable_evidence_bytes = (
-                    _git_file_at_commit(
-                        repo_root,
-                        checkpoint.get("checkpoint_evidence_commit_sha"),
-                        evidence_ref,
-                    )
-                    if checkpoint_status == "complete"
-                    and repo_root
-                    and isinstance(evidence_ref, str)
-                    else None
-                )
-                evidence = _load_json_bytes(
-                    authorized_evidence_bytes
-                    if strict_contract
-                    else immutable_evidence_bytes
-                )
-                if checkpoint_status != "complete" and not strict_contract:
-                    evidence = _load_json_bytes(
-                        _read_repo_bytes(repo_root, evidence_ref)
-                        if repo_root is not None
-                        else None
-                    )
-                if (
-                    strict_contract
-                    and repo_root is not None
-                    and expected_head_commit is not None
-                    and isinstance(evidence_ref, str)
-                    and not isinstance(evidence, dict)
-                ):
-                    checkpoint_evidence_errors.append(
-                        f"pr_marker_plan.markers[{index}] checkpoint evidence must be a JSON object"
-                    )
-                projection_evidence = evidence
-                if strict_contract and isinstance(evidence, dict):
-                    if checkpoint_evidence_schema is not None:
-                        checkpoint_evidence_errors.extend(
-                            f"pr_marker_plan.markers[{index}] checkpoint evidence schema: {error}"
-                            for error in _json_schema_errors(
-                                evidence,
-                                checkpoint_evidence_schema,
-                                checkpoint_evidence_schema,
-                                "checkpoint_evidence",
-                            )
-                        )
-                    superseded_evidence = checkpoint.get("superseded_evidence")
-                    if (
-                        superseded_evidence is not None
-                        and checkpoint.get("corrections") is not None
-                    ):
-                        checkpoint_evidence_errors.append(
-                            f"pr_marker_plan.markers[{index}].implementation_checkpoint must not declare both corrections and superseded_evidence"
-                        )
-                    correction_authority = (
-                        superseded_evidence
-                        if isinstance(superseded_evidence, dict)
-                        else checkpoint
-                    )
-                    corrections = correction_authority.get("corrections")
-                    correction_prefix = (
-                        f"{feature_dir}/.process/checkpoint-corrections/{marker_id}-"
-                    )
-                    authorized_tree = _git_tree_entries(
-                        repo_root, expected_head_commit,
-                    ) if repo_root is not None else None
-                    discovered_corrections = sorted(
-                        path
-                        for path in authorized_tree or {}
-                        if path.startswith(correction_prefix)
-                        and re.fullmatch(
-                            rf"{re.escape(correction_prefix)}[0-9]{{3}}\.json",
-                            path,
-                        )
-                    )
-                    declared_corrections = (
-                        [
-                            correction.get("evidence_path")
-                            for correction in corrections
-                            if isinstance(correction, dict)
-                        ]
-                        if isinstance(corrections, list)
-                        else []
-                    )
-                    if discovered_corrections != declared_corrections:
-                        checkpoint_evidence_errors.append(
-                            f"pr_marker_plan.markers[{index}] checkpoint correction state does not cover the authorized append-only correction files"
-                        )
-                    correction_projection_evidence = json.loads(json.dumps(evidence))
-                    if superseded_evidence is not None:
-                        prefix = (
-                            f"pr_marker_plan.markers[{index}].implementation_checkpoint."
-                            "superseded_evidence"
-                        )
-                        if not isinstance(superseded_evidence, dict):
-                            checkpoint_evidence_errors.append(
-                                f"{prefix} must be an object"
-                            )
-                        elif repo_root is not None:
-                            superseded_path = superseded_evidence.get("evidence_path")
-                            superseded_commit = superseded_evidence.get(
-                                "checkpoint_evidence_commit_sha"
-                            )
-                            superseded_sha = superseded_evidence.get(
-                                "checkpoint_evidence_sha"
-                            )
-                            superseded_implementation = superseded_evidence.get(
-                                "implementation_checkpoint_sha"
-                            )
-                            committed_superseded = (
-                                _git_file_at_commit(
-                                    repo_root, superseded_commit, superseded_path,
-                                )
-                                if isinstance(superseded_path, str)
-                                else None
-                            )
-                            authorized_superseded = (
-                                _git_file_at_commit(
-                                    repo_root, expected_head_commit, superseded_path,
-                                )
-                                if isinstance(superseded_path, str)
-                                else None
-                            )
-                            if (
-                                not _is_normalized_repo_path(superseded_path)
-                                or superseded_path == evidence_ref
-                            ):
-                                checkpoint_file_errors.append(
-                                    f"{prefix}.evidence_path is invalid or current"
-                                )
-                            if not _git_commit_exists(repo_root, superseded_commit):
-                                checkpoint_evidence_errors.append(
-                                    f"{prefix}.checkpoint_evidence_commit_sha is not an existing commit"
-                                )
-                            elif not (
-                                isinstance(expected_head_commit, str)
-                                and _git_commit_is_ancestor(
-                                    repo_root, superseded_commit, expected_head_commit,
-                                )
-                            ):
-                                checkpoint_evidence_errors.append(
-                                    f"{prefix}.checkpoint_evidence_commit_sha is not an ancestor of the authorized PR head"
-                                )
-                            if not _git_commit_exists(
-                                repo_root, superseded_implementation,
-                            ):
-                                checkpoint_evidence_errors.append(
-                                    f"{prefix}.implementation_checkpoint_sha is not an existing commit"
-                                )
-                            elif (
-                                isinstance(superseded_commit, str)
-                                and not _git_commit_is_ancestor(
-                                    repo_root,
-                                    superseded_implementation,
-                                    superseded_commit,
-                                )
-                            ):
-                                checkpoint_evidence_errors.append(
-                                    f"{prefix}.implementation_checkpoint_sha is not an ancestor of its evidence commit"
-                                )
-                            current_evidence_commit = checkpoint.get(
-                                "checkpoint_evidence_commit_sha"
-                            )
-                            if (
-                                isinstance(current_evidence_commit, str)
-                                and isinstance(superseded_commit, str)
-                                and _git_commit_exists(repo_root, current_evidence_commit)
-                                and not _git_commit_is_strict_ancestor(
-                                    repo_root, superseded_commit, current_evidence_commit,
-                                )
-                            ):
-                                checkpoint_evidence_errors.append(
-                                    f"{prefix} does not precede the current checkpoint evidence"
-                                )
-                            if committed_superseded is None:
-                                checkpoint_file_errors.append(
-                                    f"{prefix} evidence is absent from its evidence commit"
-                                )
-                            else:
-                                if superseded_sha != _sha256_bytes(committed_superseded):
-                                    checkpoint_file_errors.append(
-                                        f"{prefix}.checkpoint_evidence_sha"
-                                    )
-                                if authorized_superseded != committed_superseded:
-                                    checkpoint_file_errors.append(
-                                        f"{prefix} differs from the authorized PR head"
-                                    )
-                                if _read_repo_bytes(repo_root, superseded_path) != committed_superseded:
-                                    checkpoint_file_errors.append(
-                                        f"{prefix} worktree bytes differ from its evidence commit"
-                                    )
-                                parsed_superseded = _load_json_bytes(
-                                    committed_superseded
-                                )
-                                if not isinstance(parsed_superseded, dict):
-                                    checkpoint_evidence_errors.append(
-                                        f"{prefix} evidence must be a JSON object"
-                                    )
-                                else:
-                                    correction_projection_evidence = parsed_superseded
-                                    if checkpoint_evidence_schema is not None:
-                                        superseded_schema_errors = _json_schema_errors(
-                                            parsed_superseded,
-                                            checkpoint_evidence_schema,
-                                            checkpoint_evidence_schema,
-                                            "superseded_checkpoint_evidence",
-                                        )
-                                        checkpoint_evidence_errors.extend(
-                                            f"{prefix} schema: {error}"
-                                            for error in superseded_schema_errors
-                                        )
-                                    if (
-                                        parsed_superseded.get("feature_id")
-                                        != marker_plan.get("feature_id")
-                                        or parsed_superseded.get("marker_id")
-                                        != marker_id
-                                        or parsed_superseded.get("status") != "complete"
-                                        or parsed_superseded.get(
-                                            "implementation_checkpoint_sha"
-                                        )
-                                        != superseded_implementation
-                                    ):
-                                        checkpoint_evidence_errors.append(
-                                            f"{prefix} identity does not match marker state"
-                                        )
-                    if checkpoint_status == "complete" and corrections is not None:
-                        if (
-                            not isinstance(corrections, list)
-                            or superseded_evidence is None and not corrections
-                        ):
-                            checkpoint_evidence_errors.append(
-                                f"pr_marker_plan.markers[{index}].implementation_checkpoint.corrections must be a non-empty array"
-                            )
-                        elif repo_root is not None:
-                            previous_path = correction_authority.get("evidence_path")
-                            previous_commit = correction_authority.get(
-                                "checkpoint_evidence_commit_sha"
-                            )
-                            previous_sha = correction_authority.get(
-                                "checkpoint_evidence_sha"
-                            )
-                            correction_paths: set[str] = set()
-                            correction_schema = {
-                                "$ref": "#/$defs/checkpoint_correction_record"
-                            }
-                            for correction_index, correction in enumerate(corrections):
-                                prefix = (
-                                    f"pr_marker_plan.markers[{index}].implementation_checkpoint."
-                                    f"corrections[{correction_index}]"
-                                )
-                                if not isinstance(correction, dict):
-                                    checkpoint_evidence_errors.append(
-                                        f"{prefix} must be an object"
-                                    )
-                                    continue
-                                correction_valid = True
-                                if correction.get("sequence") != correction_index + 1:
-                                    checkpoint_evidence_errors.append(
-                                        f"{prefix}.sequence must be append-only and contiguous"
-                                    )
-                                    correction_valid = False
-                                supersedes = (
-                                    correction.get("supersedes_evidence_path"),
-                                    correction.get("supersedes_evidence_commit_sha"),
-                                    correction.get("supersedes_evidence_sha"),
-                                )
-                                if supersedes != (
-                                    previous_path, previous_commit, previous_sha,
-                                ):
-                                    checkpoint_evidence_errors.append(
-                                        f"{prefix} does not supersede the previous authorized checkpoint evidence"
-                                    )
-                                    correction_valid = False
-                                correction_path = correction.get("evidence_path")
-                                correction_commit = correction.get(
-                                    "checkpoint_evidence_commit_sha"
-                                )
-                                correction_sha = correction.get(
-                                    "checkpoint_evidence_sha"
-                                )
-                                if (
-                                    not _is_normalized_repo_path(correction_path)
-                                    or correction_path
-                                    != f"{correction_prefix}{correction_index + 1:03d}.json"
-                                    or correction_path == previous_path
-                                    or correction_path in correction_paths
-                                ):
-                                    checkpoint_file_errors.append(
-                                        f"{prefix}.evidence_path is invalid or reused"
-                                    )
-                                    correction_valid = False
-                                else:
-                                    correction_paths.add(correction_path)
-                                correction_commit_exists = _git_commit_exists(
-                                    repo_root, correction_commit,
-                                )
-                                if not correction_commit_exists:
-                                    checkpoint_evidence_errors.append(
-                                        f"{prefix}.checkpoint_evidence_commit_sha is not an existing commit"
-                                    )
-                                    correction_valid = False
-                                introduction_commit = _git_path_introduction_commit(
-                                    repo_root, correction_path, expected_head_commit,
-                                )
-                                if introduction_commit != correction_commit:
-                                    checkpoint_evidence_errors.append(
-                                        f"{prefix}.checkpoint_evidence_commit_sha is not the immutable path-introduction commit"
-                                    )
-                                    correction_valid = False
-                                if correction_commit_exists and not (
-                                    isinstance(expected_head_commit, str)
-                                    and _git_commit_is_ancestor(
-                                        repo_root, correction_commit, expected_head_commit,
-                                    )
-                                ):
-                                    checkpoint_evidence_errors.append(
-                                        f"{prefix}.checkpoint_evidence_commit_sha is not an ancestor of the authorized PR head"
-                                    )
-                                    correction_valid = False
-                                if (
-                                    correction_commit_exists
-                                    and
-                                    isinstance(previous_commit, str)
-                                    and not _git_commit_is_strict_ancestor(
-                                        repo_root, previous_commit, correction_commit,
-                                    )
-                                ):
-                                    checkpoint_evidence_errors.append(
-                                        f"{prefix} does not strictly descend from the superseded evidence commit"
-                                    )
-                                    correction_valid = False
-                                committed_correction = (
-                                    _git_file_at_commit(
-                                        repo_root, correction_commit, correction_path,
-                                    )
-                                    if isinstance(correction_path, str)
-                                    else None
-                                )
-                                authorized_correction = (
-                                    _git_file_at_commit(
-                                        repo_root, expected_head_commit, correction_path,
-                                    )
-                                    if isinstance(correction_path, str)
-                                    else None
-                                )
-                                worktree_correction = _read_repo_bytes(
-                                    repo_root,
-                                    correction_path,
-                                )
-                                if committed_correction is None:
-                                    checkpoint_file_errors.append(
-                                        f"{prefix} evidence is absent from its correction commit"
-                                    )
-                                    correction_valid = False
-                                else:
-                                    if correction_sha != _sha256_bytes(
-                                        committed_correction
-                                    ):
-                                        checkpoint_file_errors.append(
-                                            f"{prefix}.checkpoint_evidence_sha"
-                                        )
-                                        correction_valid = False
-                                    if authorized_correction != committed_correction:
-                                        checkpoint_file_errors.append(
-                                            f"{prefix} differs from the authorized PR head"
-                                        )
-                                        correction_valid = False
-                                    if worktree_correction != committed_correction:
-                                        checkpoint_file_errors.append(
-                                            f"{prefix} worktree bytes differ from its correction commit"
-                                        )
-                                        correction_valid = False
-                                correction_record = _load_json_bytes(
-                                    committed_correction
-                                )
-                                if not isinstance(correction_record, dict):
-                                    checkpoint_evidence_errors.append(
-                                        f"{prefix} evidence must be a JSON object"
-                                    )
-                                    correction_valid = False
-                                elif checkpoint_evidence_schema is None:
-                                    checkpoint_evidence_errors.append(
-                                        f"{prefix} schema authority is unavailable"
-                                    )
-                                    correction_valid = False
-                                else:
-                                    correction_schema_errors = _json_schema_errors(
-                                        correction_record,
-                                        correction_schema,
-                                        checkpoint_evidence_schema,
-                                        "checkpoint_correction",
-                                    )
-                                    checkpoint_evidence_errors.extend(
-                                        f"{prefix} schema: {error}"
-                                        for error in correction_schema_errors
-                                    )
-                                    correction_valid = (
-                                        correction_valid
-                                        and not correction_schema_errors
-                                    )
-                                if isinstance(correction_record, dict):
-                                    record_authority = (
-                                        correction_record.get(
-                                            "supersedes_evidence_path"
-                                        ),
-                                        correction_record.get(
-                                            "supersedes_evidence_commit_sha"
-                                        ),
-                                        correction_record.get(
-                                            "supersedes_evidence_sha"
-                                        ),
-                                    )
-                                    if (
-                                        correction_record.get("feature_id")
-                                        != marker_plan.get("feature_id")
-                                        or correction_record.get("marker_id")
-                                        != marker_id
-                                        or correction_record.get("sequence")
-                                        != correction_index + 1
-                                        or record_authority != supersedes
-                                    ):
-                                        checkpoint_evidence_errors.append(
-                                            f"{prefix} evidence authority does not match marker state"
-                                        )
-                                        correction_valid = False
-                                if correction_valid and isinstance(
-                                    correction_record, dict
-                                ):
-                                    removals = correction_record.get(
-                                        "remove_evidence_owners"
-                                    )
-                                    if not isinstance(removals, list):
-                                        checkpoint_evidence_errors.append(
-                                            f"{prefix}.remove_evidence_owners must be an array"
-                                        )
-                                        correction_valid = False
-                                        removals = []
-                                    for removal in removals:
-                                        if (
-                                            not isinstance(removal, str)
-                                            or "." not in removal
-                                        ):
-                                            checkpoint_evidence_errors.append(
-                                                f"{prefix} has an invalid evidence owner removal {removal!r}"
-                                            )
-                                            correction_valid = False
-                                            break
-                                        container_name, separator, field_name = (
-                                            removal.partition(".")
-                                        )
-                                        if not separator or not container_name or not field_name:
-                                            checkpoint_evidence_errors.append(
-                                                f"{prefix} has an invalid evidence owner removal {removal!r}"
-                                            )
-                                            correction_valid = False
-                                            break
-                                        container = correction_projection_evidence.get(
-                                            container_name
-                                        )
-                                        if (
-                                            not isinstance(container, dict)
-                                            or field_name not in container
-                                        ):
-                                            checkpoint_evidence_errors.append(
-                                                f"{prefix} removes a missing evidence owner {removal!r}"
-                                            )
-                                            correction_valid = False
-                                            break
-                                        del container[field_name]
-                                previous_path = correction_path
-                                previous_commit = correction_commit
-                                previous_sha = correction_sha
-                            if superseded_evidence is None:
-                                projection_evidence = correction_projection_evidence
-                            elif (
-                                isinstance(previous_commit, str)
-                                and isinstance(
-                                    checkpoint.get("checkpoint_evidence_commit_sha"),
-                                    str,
-                                )
-                                and not _git_commit_is_strict_ancestor(
-                                    repo_root,
-                                    previous_commit,
-                                    checkpoint["checkpoint_evidence_commit_sha"],
-                                )
-                            ):
-                                checkpoint_evidence_errors.append(
-                                    f"pr_marker_plan.markers[{index}].implementation_checkpoint.superseded_evidence correction chain does not strictly precede the current checkpoint evidence"
-                                )
-                    if evidence.get("status") != checkpoint_status:
-                        checkpoint_evidence_errors.append(
-                            f"pr_marker_plan.markers[{index}] checkpoint evidence status does not match checkpoint status"
-                        )
-                    claimed_commit = checkpoint.get("commit_sha")
-                    if claimed_commit != evidence.get("implementation_checkpoint_sha"):
-                        checkpoint_evidence_errors.append(
-                            f"pr_marker_plan.markers[{index}] checkpoint commit_sha does not match checkpoint evidence implementation_checkpoint_sha"
-                        )
-                    if repo_root is not None:
-                        if not _git_commit_exists(repo_root, claimed_commit):
-                            checkpoint_evidence_errors.append(
-                                f"pr_marker_plan.markers[{index}] checkpoint commit_sha is not an existing commit"
-                            )
-                        elif not (
-                            isinstance(expected_head_commit, str)
-                            and re.fullmatch(r"[0-9a-f]{40}", expected_head_commit)
-                            and _git_commit_is_ancestor(
-                                repo_root, claimed_commit, expected_head_commit,
-                            )
-                        ):
-                            checkpoint_evidence_errors.append(
-                                f"pr_marker_plan.markers[{index}] checkpoint commit_sha is not an ancestor of the authorized PR head"
-                            )
-                    for phase_name, phase_result in phases_by_marker.get(marker_id, []):
-                        for phase_field, phase_value in phase_result.items():
-                            if phase_field in PHASE_RESULT_PROJECTION_FIELDS:
-                                continue
-                            owner, evidence_value = _phase_evidence_owner(
-                                phase_field, projection_evidence,
-                            )
-                            if owner is None:
-                                checkpoint_evidence_errors.append(
-                                    f"pr_marker_plan.markers[{index}] phase_results[{phase_name}] {phase_field} has no checkpoint evidence owner"
-                                )
-                            elif owner == "multiple":
-                                checkpoint_evidence_errors.append(
-                                    f"pr_marker_plan.markers[{index}] phase_results[{phase_name}] {phase_field} has multiple checkpoint evidence owners"
-                                )
-                            elif not _json_values_equal(phase_value, evidence_value):
-                                checkpoint_evidence_errors.append(
-                                    f"pr_marker_plan.markers[{index}] phase_results[{phase_name}] {phase_field} does not match checkpoint evidence"
-                                )
-                if checkpoint_status == "complete" and strict_contract and repo_root:
-                    claimed_commit = checkpoint.get("commit_sha")
-                    verification_report = _load_json_bytes(committed_verification_bytes)
-                    if not isinstance(verification_report, dict):
-                        checkpoint_evidence_errors.append(
-                            f"pr_marker_plan.markers[{index}] verification report must be a JSON object"
-                        )
-                    elif verification_report_schema is not None:
-                        checkpoint_evidence_errors.extend(
-                            f"pr_marker_plan.markers[{index}] verification report schema: {error}"
-                            for error in _json_schema_errors(
-                                verification_report,
-                                verification_report_schema,
-                                verification_report_schema,
-                                "verification_report",
-                            )
-                        )
-                    if not isinstance(evidence, dict):
-                        checkpoint_evidence_errors.append(
-                            f"pr_marker_plan.markers[{index}] checkpoint evidence must be a JSON object"
-                        )
-                    else:
-                        expected_feature_id = marker_plan.get("feature_id") if isinstance(marker_plan, dict) else None
-                        required_gate_ids = _string_list(
-                            checkpoint.get("required_verification_gate_ids")
-                        )
-                        evidence_gate_ids = _string_list(
-                            evidence.get("required_verification_gate_ids")
-                        )
-                        verification = evidence.get("verification")
-                        report_gate_ids = (
-                            _string_list(verification_report.get("required_gate_ids"))
-                            if isinstance(verification_report, dict)
-                            else None
-                        )
-                        report_results = (
-                            verification_report.get("results")
-                            if isinstance(verification_report, dict)
-                            else None
-                        )
-                        gate_sets_match = (
-                            required_gate_ids is not None
-                            and evidence_gate_ids is not None
-                            and len(required_gate_ids) == len(set(required_gate_ids))
-                            and len(evidence_gate_ids) == len(set(evidence_gate_ids))
-                            and set(required_gate_ids) == set(evidence_gate_ids)
-                            and isinstance(verification, dict)
-                            and set(verification) == set(required_gate_ids)
-                        )
-                        passing_results = (
-                            gate_sets_match
-                            and all(
-                                isinstance(result, dict)
-                                and set(result) == {"status", "evidence"}
-                                and result.get("status") == "pass"
-                                and isinstance(result.get("evidence"), str)
-                                and bool(result["evidence"].strip())
-                                for result in verification.values()
-                            )
-                        )
-                        report_gate_sets_match = (
-                            gate_sets_match
-                            and report_gate_ids is not None
-                            and required_gate_ids == evidence_gate_ids == report_gate_ids
-                            and isinstance(report_results, dict)
-                            and set(report_results) == set(required_gate_ids)
-                        )
-                        report_passing_results = (
-                            report_gate_sets_match
-                            and all(
-                                isinstance(result, dict)
-                                and set(result) == {"status", "evidence"}
-                                and result.get("status") == "pass"
-                                and isinstance(result.get("evidence"), str)
-                                and bool(result["evidence"].strip())
-                                for result in report_results.values()
-                            )
-                        )
-                        report_results_match = (
-                            report_passing_results
-                            and report_results == verification
-                        )
-                        evidence_checks = {
-                            "schema_version": evidence.get("schema_version") == "marker-checkpoint.v1",
-                            "feature_id": evidence.get("feature_id") == expected_feature_id,
-                            "marker_id": evidence.get("marker_id") == marker_id,
-                            "status": evidence.get("status") == "complete",
-                            "completed_at": _is_utc_timestamp(evidence.get("completed_at")),
-                            "tasks_sha": (
-                                isinstance(evidence.get("tasks_sha"), str)
-                                and re.fullmatch(r"sha256:[0-9a-f]{64}", evidence["tasks_sha"]) is not None
-                            ),
-                            "source_fingerprint_status": evidence.get("source_fingerprint_status") == "current",
-                            "verification_evidence_sha": (
-                                committed_verification_bytes is not None
-                                and evidence.get("verification_evidence_sha")
-                                == checkpoint.get("verification_evidence_sha")
-                                == _sha256_bytes(committed_verification_bytes)
-                            ),
-                            "required_verification_gate_ids": gate_sets_match,
-                            "verification": passing_results,
-                        }
-                        checkpoint_evidence_errors.extend(
-                            f"pr_marker_plan.markers[{index}] checkpoint evidence {field} is invalid"
-                            for field, passed in evidence_checks.items() if not passed
-                        )
-                        verification_report_checks = {
-                            "schema_version": (
-                                isinstance(verification_report, dict)
-                                and verification_report.get("schema_version")
-                                == "verification-report.v1"
-                            ),
-                            "feature_id": (
-                                isinstance(verification_report, dict)
-                                and verification_report.get("feature_id") == expected_feature_id
-                            ),
-                            "marker_id": (
-                                isinstance(verification_report, dict)
-                                and verification_report.get("marker_id") == marker_id
-                            ),
-                            "status": (
-                                isinstance(verification_report, dict)
-                                and verification_report.get("status") == "pass"
-                            ),
-                            "generated_at": (
-                                isinstance(verification_report, dict)
-                                and _is_utc_timestamp(verification_report.get("generated_at"))
-                            ),
-                            "verified_commit_sha": (
-                                isinstance(verification_report, dict)
-                                and verification_report.get("verified_commit_sha")
-                                == claimed_commit
-                            ),
-                            "required_gate_ids": report_gate_sets_match,
-                            "results": report_results_match,
-                        }
-                        checkpoint_evidence_errors.extend(
-                            f"pr_marker_plan.markers[{index}] verification report {field} is invalid"
-                            for field, passed in verification_report_checks.items() if not passed
-                        )
-                        if evidence.get("implementation_checkpoint_sha") != claimed_commit:
-                            checkpoint_evidence_errors.append(
-                                f"pr_marker_plan.markers[{index}] checkpoint/evidence implementation commit mismatch"
-                            )
-                        review_gate_ids = sorted(
-                            set(required_gate_ids or ())
-                            & INDEPENDENT_REVIEW_GATE_IDS
-                        )
-                        if review_gate_ids:
-                            reviewed_head = evidence.get("last_reviewed_head_sha")
-                            reviewed_head_valid = (
-                                isinstance(reviewed_head, str)
-                                and re.fullmatch(r"[0-9a-f]{40}", reviewed_head)
-                                is not None
-                                and _git_commit_exists(repo_root, reviewed_head)
-                            )
-                            if not reviewed_head_valid:
-                                checkpoint_evidence_errors.append(
-                                    f"pr_marker_plan.markers[{index}] checkpoint evidence last_reviewed_head_sha is invalid"
-                                )
-                            else:
-                                if (
-                                    not _git_commit_exists(
-                                        repo_root, claimed_commit,
-                                    )
-                                    or not _git_commit_is_ancestor(
-                                        repo_root,
-                                        claimed_commit,
-                                        reviewed_head,
-                                    )
-                                ):
-                                    checkpoint_evidence_errors.append(
-                                        f"pr_marker_plan.markers[{index}] independent review does not cover the implementation checkpoint"
-                                    )
-                                authorized_head_valid = (
-                                    isinstance(expected_head_commit, str)
-                                    and re.fullmatch(
-                                        r"[0-9a-f]{40}", expected_head_commit,
-                                    )
-                                    is not None
-                                    and _git_commit_exists(
-                                        repo_root, expected_head_commit,
-                                    )
-                                    and _git_commit_is_ancestor(
-                                        repo_root,
-                                        reviewed_head,
-                                        expected_head_commit,
-                                    )
-                                )
-                                if not authorized_head_valid:
-                                    checkpoint_evidence_errors.append(
-                                        f"pr_marker_plan.markers[{index}] independent review head is not an ancestor of the authorized PR head"
-                                    )
-                                reviewability = raw_marker.get("reviewability")
-                                projected_reviewed_head = (
-                                    reviewability.get("head_sha")
-                                    if isinstance(reviewability, dict)
-                                    else None
-                                )
-                                if projected_reviewed_head != reviewed_head:
-                                    checkpoint_evidence_errors.append(
-                                        f"pr_marker_plan.markers[{index}] checkpoint/reviewability reviewed-head mismatch"
-                                    )
-                                reviewability_ref = (
-                                    reviewability.get("evidence_path")
-                                    if isinstance(reviewability, dict)
-                                    else None
-                                )
-                                feature_process_prefix = (
-                                    f"{feature_dir}/.process/"
-                                    if _is_normalized_repo_path(feature_dir)
-                                    else None
-                                )
-                                role_bindings = {
-                                    "workflow_file": state.get("workflow_file"),
-                                    "changed_file_manifest": state.get(
-                                        "changed_file_manifest"
-                                    ),
-                                    "checkpoint_evidence": checkpoint.get(
-                                        "evidence_path"
-                                    ),
-                                    "verification_evidence": checkpoint.get(
-                                        "verification_evidence_path"
-                                    ),
-                                    "reviewability_evidence": reviewability_ref,
-                                }
-                                role_namespace_checks = {
-                                    "workflow_file": (
-                                        _is_normalized_repo_path(
-                                            role_bindings["workflow_file"]
-                                        )
-                                        and role_bindings["workflow_file"].endswith(
-                                            "workflow.md"
-                                        )
-                                    ),
-                                    "changed_file_manifest": (
-                                        _is_normalized_repo_path(
-                                            role_bindings[
-                                                "changed_file_manifest"
-                                            ]
-                                        )
-                                        and role_bindings[
-                                            "changed_file_manifest"
-                                        ].endswith(
-                                            "changed-file-manifest.json"
-                                        )
-                                    ),
-                                    "checkpoint_evidence": (
-                                        feature_process_prefix is not None
-                                        and _is_normalized_repo_path(
-                                            role_bindings[
-                                                "checkpoint_evidence"
-                                            ]
-                                        )
-                                        and role_bindings[
-                                            "checkpoint_evidence"
-                                        ].startswith(
-                                            feature_process_prefix
-                                            + "checkpoints/"
-                                        )
-                                        and role_bindings[
-                                            "checkpoint_evidence"
-                                        ].endswith(".json")
-                                    ),
-                                    "verification_evidence": (
-                                        feature_process_prefix is not None
-                                        and _is_normalized_repo_path(
-                                            role_bindings[
-                                                "verification_evidence"
-                                            ]
-                                        )
-                                        and role_bindings[
-                                            "verification_evidence"
-                                        ].startswith(
-                                            feature_process_prefix
-                                            + "verification/"
-                                        )
-                                        and role_bindings[
-                                            "verification_evidence"
-                                        ].endswith(".json")
-                                    ),
-                                    "reviewability_evidence": (
-                                        feature_process_prefix is not None
-                                        and _is_normalized_repo_path(
-                                            role_bindings[
-                                                "reviewability_evidence"
-                                            ]
-                                        )
-                                        and role_bindings[
-                                            "reviewability_evidence"
-                                        ].startswith(
-                                            feature_process_prefix
-                                            + "reviewability/"
-                                        )
-                                        and role_bindings[
-                                            "reviewability_evidence"
-                                        ].endswith(".json")
-                                    ),
-                                }
-                                checkpoint_evidence_errors.extend(
-                                    f"pr_marker_plan.markers[{index}] independent review carrier role {role!r} is missing or outside its metadata namespace"
-                                    for role, passed in role_namespace_checks.items()
-                                    if not passed
-                                )
-                                if role_namespace_checks[
-                                    "reviewability_evidence"
-                                ]:
-                                    reviewability_evidence = _load_json_bytes(
-                                        _git_file_at_commit(
-                                            repo_root,
-                                            expected_head_commit,
-                                            reviewability_ref,
-                                        )
-                                    )
-                                    if (
-                                        not isinstance(
-                                            reviewability_evidence, dict,
-                                        )
-                                        or reviewability_evidence.get(
-                                            "schema_version"
-                                        )
-                                        != "reviewability-evidence.v1"
-                                        or reviewability_evidence.get(
-                                            "feature_id"
-                                        )
-                                        != expected_feature_id
-                                        or reviewability_evidence.get(
-                                            "marker_id"
-                                        )
-                                        != marker_id
-                                        or reviewability_evidence.get("head_sha")
-                                        != reviewed_head
-                                    ):
-                                        checkpoint_evidence_errors.append(
-                                            f"pr_marker_plan.markers[{index}] reviewability evidence does not bind the independent review head"
-                                        )
-                                for gate_id in review_gate_ids:
-                                    gate_result = (
-                                        verification.get(gate_id)
-                                        if isinstance(verification, dict)
-                                        else None
-                                    )
-                                    gate_evidence = (
-                                        gate_result.get("evidence")
-                                        if isinstance(gate_result, dict)
-                                        else None
-                                    )
-                                    if (
-                                        not isinstance(gate_evidence, str)
-                                        or reviewed_head not in gate_evidence
-                                    ):
-                                        checkpoint_evidence_errors.append(
-                                            f"pr_marker_plan.markers[{index}] independent review gate {gate_id!r} does not bind last_reviewed_head_sha"
-                                        )
-                                if authorized_head_valid:
-                                    changed_after_review = _git_changed_paths(
-                                        repo_root,
-                                        reviewed_head,
-                                        expected_head_commit,
-                                    )
-                                    try:
-                                        state_ref = (
-                                            state_path.resolve()
-                                            .relative_to(repo_root.resolve())
-                                            .as_posix()
-                                        )
-                                    except ValueError:
-                                        state_ref = None
-                                    reviewed_state = _load_json_bytes(
-                                        _git_file_at_commit(
-                                            repo_root,
-                                            reviewed_head,
-                                            state_ref,
-                                        )
-                                        if isinstance(state_ref, str)
-                                        else None
-                                    )
-                                    reviewed_roles: dict[str, object] = {}
-                                    if isinstance(reviewed_state, dict):
-                                        reviewed_feature_dir = reviewed_state.get(
-                                            "feature_dir"
-                                        )
-                                        if (
-                                            isinstance(
-                                                reviewed_feature_dir, str,
-                                            )
-                                            and reviewed_feature_dir
-                                            != feature_dir
-                                        ):
-                                            checkpoint_evidence_errors.append(
-                                                f"pr_marker_plan.markers[{index}] feature_dir changed after independent review"
-                                            )
-                                        reviewed_roles.update(
-                                            {
-                                                "workflow_file": reviewed_state.get(
-                                                    "workflow_file"
-                                                ),
-                                                "changed_file_manifest": reviewed_state.get(
-                                                    "changed_file_manifest"
-                                                ),
-                                            }
-                                        )
-                                        reviewed_plan = reviewed_state.get(
-                                            "pr_marker_plan"
-                                        )
-                                        reviewed_markers = (
-                                            reviewed_plan.get("markers")
-                                            if isinstance(
-                                                reviewed_plan, dict,
-                                            )
-                                            else None
-                                        )
-                                        reviewed_marker = next(
-                                            (
-                                                candidate
-                                                for candidate in (
-                                                    reviewed_markers or []
-                                                )
-                                                if isinstance(candidate, dict)
-                                                and candidate.get("id")
-                                                == marker_id
-                                            ),
-                                            None,
-                                        )
-                                        if isinstance(reviewed_marker, dict):
-                                            reviewed_checkpoint = (
-                                                reviewed_marker.get(
-                                                    "implementation_checkpoint"
-                                                )
-                                            )
-                                            reviewed_reviewability = (
-                                                reviewed_marker.get(
-                                                    "reviewability"
-                                                )
-                                            )
-                                            if isinstance(
-                                                reviewed_checkpoint, dict,
-                                            ):
-                                                reviewed_roles.update(
-                                                    {
-                                                        "checkpoint_evidence": reviewed_checkpoint.get(
-                                                            "evidence_path"
-                                                        ),
-                                                        "verification_evidence": reviewed_checkpoint.get(
-                                                            "verification_evidence_path"
-                                                        ),
-                                                    }
-                                                )
-                                            if isinstance(
-                                                reviewed_reviewability, dict,
-                                            ):
-                                                reviewed_roles[
-                                                    "reviewability_evidence"
-                                                ] = reviewed_reviewability.get(
-                                                    "evidence_path"
-                                                )
-                                    review_carrier_paths = {
-                                        state_ref
-                                    } if isinstance(state_ref, str) else set()
-                                    for role, current_path in role_bindings.items():
-                                        reviewed_path = reviewed_roles.get(role)
-                                        if (
-                                            isinstance(reviewed_path, str)
-                                            and reviewed_path != current_path
-                                        ):
-                                            checkpoint_evidence_errors.append(
-                                                f"pr_marker_plan.markers[{index}] independent review carrier role {role!r} changed after review"
-                                            )
-                                        carrier_path = (
-                                            reviewed_path
-                                            if isinstance(reviewed_path, str)
-                                            else current_path
-                                        )
-                                        if (
-                                            role_namespace_checks.get(role)
-                                            and isinstance(carrier_path, str)
-                                        ):
-                                            review_carrier_paths.add(
-                                                carrier_path
-                                            )
-                                    if feature_process_prefix is not None:
-                                        global_carrier_roles = (
-                                            (
-                                                "checkpoint",
-                                                feature_process_prefix
-                                                + "checkpoints/",
-                                            ),
-                                            (
-                                                "verification",
-                                                feature_process_prefix
-                                                + "verification/",
-                                            ),
-                                            (
-                                                "reviewability",
-                                                feature_process_prefix
-                                                + "reviewability/",
-                                            ),
-                                        )
-                                        for carrier_marker in markers or []:
-                                            if not isinstance(
-                                                carrier_marker, dict,
-                                            ):
-                                                continue
-                                            carrier_checkpoint = (
-                                                carrier_marker.get(
-                                                    "implementation_checkpoint"
-                                                )
-                                            )
-                                            carrier_reviewability = (
-                                                carrier_marker.get(
-                                                    "reviewability"
-                                                )
-                                            )
-                                            candidates = {
-                                                "checkpoint": (
-                                                    carrier_checkpoint.get(
-                                                        "evidence_path"
-                                                    )
-                                                    if isinstance(
-                                                        carrier_checkpoint,
-                                                        dict,
-                                                    )
-                                                    else None
-                                                ),
-                                                "verification": (
-                                                    carrier_checkpoint.get(
-                                                        "verification_evidence_path"
-                                                    )
-                                                    if isinstance(
-                                                        carrier_checkpoint,
-                                                        dict,
-                                                    )
-                                                    else None
-                                                ),
-                                                "reviewability": (
-                                                    carrier_reviewability.get(
-                                                        "evidence_path"
-                                                    )
-                                                    if isinstance(
-                                                        carrier_reviewability,
-                                                        dict,
-                                                    )
-                                                    else None
-                                                ),
-                                            }
-                                            for (
-                                                role,
-                                                namespace,
-                                            ) in global_carrier_roles:
-                                                candidate = candidates[role]
-                                                if (
-                                                    _is_normalized_repo_path(
-                                                        candidate
-                                                    )
-                                                    and candidate.startswith(
-                                                        namespace
-                                                    )
-                                                    and candidate.endswith(
-                                                        ".json"
-                                                    )
-                                                ):
-                                                    review_carrier_paths.add(
-                                                        candidate
-                                                    )
-                                    if changed_after_review is None:
-                                        checkpoint_evidence_errors.append(
-                                            f"pr_marker_plan.markers[{index}] independent review delta is unavailable"
-                                        )
-                                    else:
-                                        for path in sorted(
-                                            changed_after_review
-                                            - review_carrier_paths
-                                        ):
-                                            checkpoint_evidence_errors.append(
-                                                f"pr_marker_plan.markers[{index}] unreviewed non-carrier path after independent review: {path}"
-                                            )
-                    if repo_root:
-                        if not _git_commit_exists(repo_root, claimed_commit):
-                            checkpoint_evidence_errors.append(
-                                f"pr_marker_plan.markers[{index}].implementation_checkpoint.commit_sha is not an existing commit"
-                            )
-                        elif not _git_commit_is_ancestor_of_head(repo_root, claimed_commit):
-                            checkpoint_evidence_errors.append(
-                                f"pr_marker_plan.markers[{index}].implementation_checkpoint.commit_sha is not an ancestor of HEAD"
-                            )
-                if (
-                    strict_contract
-                    and evidence is not None
-                    and current_tasks_text is not None
-                    and current_tasks_sha
-                ):
-                    primary_task_values = _string_list(raw_marker.get("task_ids"))
-                    folded_task_values = _string_list(raw_marker.get("folded_polish_task_ids"))
-                    marker_task_values = (
-                        [*primary_task_values, *folded_task_values]
-                        if primary_task_values is not None and folded_task_values is not None
-                        else None
-                    )
-                    marker_task_ids = set(marker_task_values or ())
-                    evidence_task_values = _string_list(evidence.get("task_ids"))
-                    freshness = checkpoint.get("freshness") if checkpoint_status == "complete" else evidence
-                    freshness = freshness if isinstance(freshness, dict) else {}
-                    expected_current_marker_sha = (
-                        _marker_tasks_sha_text(current_tasks_text, marker_task_ids)
-                        if marker_task_values is not None
-                        else None
-                    )
-                    feature_tasks_path = f"{feature_dir}/tasks.md"
-                    checkpoint_tasks_bytes = (
-                        _git_file_at_commit(
-                            repo_root,
-                            evidence.get("implementation_checkpoint_sha"),
-                            feature_tasks_path,
-                        )
-                        if repo_root and isinstance(feature_dir, str)
-                        else None
-                    )
-                    try:
-                        checkpoint_tasks_text = checkpoint_tasks_bytes.decode("utf-8") if checkpoint_tasks_bytes else None
-                    except UnicodeDecodeError:
-                        checkpoint_tasks_text = None
-                    expected_checkpoint_marker_sha = (
-                        _marker_tasks_sha_text(checkpoint_tasks_text, marker_task_ids)
-                        if checkpoint_tasks_text is not None and marker_task_values is not None
-                        else None
-                    )
-                    checkpoint_tasks_sha = (
-                        _sha256_bytes(checkpoint_tasks_bytes) if checkpoint_tasks_bytes is not None else None
-                    )
-                    checks = {
-                        "marker_id": evidence.get("marker_id") == marker_id,
-                        "task_ids": (
-                            marker_task_values is not None
-                            and evidence_task_values is not None
-                            and set(evidence_task_values) == marker_task_ids
-                        ),
-                        "tasks_sha": evidence.get("tasks_sha") == checkpoint_tasks_sha,
-                        "source_fingerprint_contract": freshness.get("source_fingerprint_contract") == "marker-task-lines.v2",
-                        "source_fingerprint_status": freshness.get("source_fingerprint_status") == "current_marker_scope",
-                        "tasks_sha_scope": freshness.get("tasks_sha_scope") == "checkpoint_time_whole_file",
-                        "current_tasks_sha": freshness.get("current_tasks_sha") == current_tasks_sha,
-                        "checkpoint_marker_tasks_sha": (
-                            freshness.get("checkpoint_marker_tasks_sha") == expected_checkpoint_marker_sha
-                        ),
-                        "current_marker_tasks_sha": (
-                            freshness.get("current_marker_tasks_sha") == expected_current_marker_sha
-                        ),
-                        "marker_scope_unchanged": (
-                            expected_checkpoint_marker_sha is not None
-                            and expected_checkpoint_marker_sha == expected_current_marker_sha
-                        ),
-                    }
-                    checkpoint_source_fingerprint_errors.extend(
-                        f"pr_marker_plan.markers[{index}] checkpoint {field}"
-                        for field, passed in checks.items() if not passed
-                    )
-                matching_phases = [
-                    (phase_name, result)
-                    for phase_name, result in phases.items()
-                    if isinstance(result, dict) and result.get("marker_id") == marker_id
-                ]
-                for phase_name, result in matching_phases:
-                    phase_complete = result.get("status") == "completed"
-                    checkpoint_complete = checkpoint_status == "complete"
-                    if phase_complete != checkpoint_complete:
-                        projection_status_errors.append(
-                            f"marker {marker_id!r} checkpoint={checkpoint_status!r} "
-                            f"does not match phase_results[{phase_name}].status={result.get('status')!r}"
-                        )
-
-            emission = raw_marker.get("emission_mapping")
-            if strict_contract and isinstance(emission, dict):
-                emission_status = emission.get("status")
-                required_fields: tuple[str, ...] = ()
-                if emission_status == "marker_split":
-                    required_fields = ("packet_path",)
-                elif emission_status == "emitted":
-                    required_fields = ("packet_path", "pr_number", "pr_url")
-                for required in required_fields:
-                    value = emission.get(required)
-                    if value is None or isinstance(value, str) and not value.strip():
-                        emission_mapping_errors.append(
-                            f"pr_marker_plan.markers[{index}].emission_mapping.{required}"
-                        )
-                packet_path = emission.get("packet_path")
-                if packet_path is not None and (
-                    not _is_normalized_repo_path(packet_path)
-                    or repo_root and _repo_file(repo_root, packet_path) is None
-                ):
-                    emission_mapping_errors.append(
-                        f"pr_marker_plan.markers[{index}].emission_mapping.packet_path is not a normalized repository-relative path"
-                    )
-                if emission_status != "emitted":
-                    for field in ("pr_number", "pr_url"):
-                        if field in emission:
-                            emission_mapping_errors.append(
-                                f"pr_marker_plan.markers[{index}].emission_mapping.{field} is only valid after emission"
-                            )
-                if emission_status in {"marker_split", "emitted", "hazard_collapsed"}:
-                    if not isinstance(checkpoint, dict) or checkpoint.get("status") != "complete":
-                        emission_mapping_errors.append(
-                            f"pr_marker_plan.markers[{index}] emission requires a complete checkpoint"
-                        )
-
-        status_constraints = {
-            "planned": ({"pending"}, {"pending"}),
-            "checkpointing": ({"pending", "complete"}, {"pending"}),
-            "emission_ready": ({"complete"}, {"pending", "marker_split"}),
-            "emitting": ({"complete"}, {"pending", "marker_split", "emitted"}),
-            "emitted": ({"complete"}, {"emitted"}),
-            "collapsed": ({"complete"}, {"hazard_collapsed"}),
-            "stale": ({"pending", "complete"}, {"pending", "marker_split", "emitted", "hazard_collapsed"}),
-            "invalid": ({"pending", "complete"}, {"pending", "marker_split", "emitted", "hazard_collapsed"}),
-        }
-        if strict_contract and plan_status in status_constraints:
-            allowed_checkpoints, allowed_emissions = status_constraints[plan_status]
-            for index, raw_marker in enumerate(markers):
-                checkpoint = raw_marker.get("implementation_checkpoint") if isinstance(raw_marker, dict) else None
-                emission = raw_marker.get("emission_mapping") if isinstance(raw_marker, dict) else None
-                checkpoint_status = checkpoint.get("status") if isinstance(checkpoint, dict) else None
-                emission_status = emission.get("status") if isinstance(emission, dict) else None
-                if checkpoint_status not in allowed_checkpoints:
-                    marker_plan_status_errors.append(
-                        f"pr_marker_plan.status {plan_status} rejects marker {index} checkpoint {checkpoint_status!r}"
-                    )
-                if emission_status not in allowed_emissions:
-                    marker_plan_status_errors.append(
-                        f"pr_marker_plan.status {plan_status} rejects marker {index} emission {emission_status!r}"
-                    )
-            if plan_status == "emitting":
-                emission_statuses = {
-                    raw_marker.get("emission_mapping", {}).get("status")
-                    for raw_marker in markers
-                    if isinstance(raw_marker, dict) and isinstance(raw_marker.get("emission_mapping"), dict)
-                }
-                if "emitted" not in emission_statuses or emission_statuses <= {"emitted"}:
-                    marker_plan_status_errors.append(
-                        "pr_marker_plan.status emitting requires both emitted and unfinished marker mappings"
-                    )
+    ctx = _new_projection_context(state, state_path, expected_head_commit)
+    _load_marker_plan_schemas(ctx)
+    _check_plan_status_diagnostics(ctx)
+    _load_checkpoint_schema(ctx)
+    _check_phase_results(ctx, steps)
+    _check_markers(ctx)
     return {
-        "completed_phase_pending_fields": completed_phase_pending_fields,
-        "projection_status_errors": projection_status_errors,
-        "checkpoint_evidence_errors": checkpoint_evidence_errors,
-        "checkpoint_source_fingerprint_errors": checkpoint_source_fingerprint_errors,
-        "checkpoint_file_errors": checkpoint_file_errors,
-        "emission_mapping_errors": emission_mapping_errors,
-        "marker_plan_status_errors": marker_plan_status_errors,
+        "completed_phase_pending_fields": ctx.completed_phase_pending_fields,
+        "projection_status_errors": ctx.projection_status_errors,
+        "checkpoint_evidence_errors": ctx.checkpoint_evidence_errors,
+        "checkpoint_source_fingerprint_errors": ctx.checkpoint_source_fingerprint_errors,
+        "checkpoint_file_errors": ctx.checkpoint_file_errors,
+        "emission_mapping_errors": ctx.emission_mapping_errors,
+        "marker_plan_status_errors": ctx.marker_plan_status_errors,
     }
 
 
@@ -4428,6 +3811,116 @@ def validate_state_status(state: dict[str, Any]) -> dict[str, list[str]]:
     return {"state_status_errors": errors}
 
 
+def _state_private_value_reason(value: str) -> str | None:
+    if STATE_HOME_PATH_PATTERN.search(value) or STATE_HYPHENATED_HOME_PATH_PATTERN.search(value):
+        return "an absolute home path"
+    if STATE_UUID_PATTERN.search(value):
+        return "a raw UUID"
+    return None
+
+
+def _private_value_errors(
+    root_location: str,
+    root: object,
+    *,
+    private_keys: frozenset[str] = frozenset(),
+    remedy: str = "",
+) -> list[str]:
+    """Name every private key or value under ``root`` by its location, never echoing it."""
+    errors: list[str] = []
+    pending: list[tuple[str, object]] = [(root_location, root)]
+    while pending:
+        location, value = pending.pop()
+        if isinstance(value, dict):
+            for key, child in value.items():
+                child_location = f"{location}.{key}"
+                if key in private_keys:
+                    errors.append(
+                        f"{child_location} stores a raw runner argv; remove this key, keep only "
+                        + "decision fields, and rerun this guard"
+                    )
+                    continue
+                reason = _state_private_value_reason(key)
+                if reason is not None:
+                    key_digest = "sha256:" + hashlib.sha256(key.encode("utf-8")).hexdigest()
+                    errors.append(
+                        f"{location} has a key holding {reason} (key {key_digest}); replace that key "
+                        + f"with {key_digest}{remedy}, and rerun this guard"
+                    )
+                    continue
+                pending.append((child_location, child))
+        elif isinstance(value, list):
+            pending.extend((f"{location}[{index}]", item) for index, item in enumerate(value))
+        elif isinstance(value, str):
+            reason = _state_private_value_reason(value)
+            if reason is not None:
+                errors.append(
+                    f"{location} holds {reason}; replace the value with sha256: plus the hex "
+                    + f"SHA-256 of the value{remedy}, and rerun this guard"
+                )
+    return errors
+
+
+def state_privacy_errors(state: object) -> dict[str, list[str]]:
+    """Reject private values in the committed autopilot state file.
+
+    The state stores decision fields such as ``stage``, ``source``, ``basis``,
+    and ``planning_complete``. It never stores a raw runner envelope, an
+    ``argv`` key, an absolute home path, or an external task or session UUID.
+    Errors name the JSON location and the in-place remedy (#800), and never
+    echo the value. A non-object root fails rather than passing on nothing.
+    """
+    if not isinstance(state, dict):
+        return {"state_privacy_errors": ["autopilot_state must be a JSON object"]}
+    errors = _private_value_errors("autopilot_state", state, private_keys=STATE_PRIVATE_KEYS)
+    return {"state_privacy_errors": sorted(errors)}
+
+
+def marker_evidence_privacy_errors(state: object, state_path: Path) -> dict[str, list[str]]:
+    """Reject private values in committed marker checkpoint and verification evidence (#819).
+
+    Each marker's ``implementation_checkpoint.evidence_path`` and
+    ``verification_evidence_path`` name committed JSON records. They cite an
+    external task, session, thread, or event id only as ``sha256:<digest>``,
+    and hold no absolute home path. Errors name the file and JSON location
+    with the digest remedy, and never echo the value. A record that is not
+    JSON is scanned as text. A file not yet written, such as a pending
+    marker's, is skipped here; the checkpoint checks own its existence.
+    """
+    marker_plan = state.get("pr_marker_plan") if isinstance(state, dict) else None
+    markers = marker_plan.get("markers") if isinstance(marker_plan, dict) else None
+    repo_root = _repository_root(state_path)
+    if not isinstance(markers, list) or repo_root is None:
+        return {"marker_evidence_privacy_errors": []}
+    refs: list[str] = []
+    for marker in markers:
+        checkpoint = marker.get("implementation_checkpoint") if isinstance(marker, dict) else None
+        if not isinstance(checkpoint, dict):
+            continue
+        for field in ("evidence_path", "verification_evidence_path"):
+            ref = checkpoint.get(field)
+            if isinstance(ref, str) and ref not in refs:
+                refs.append(ref)
+    remedy = " or omit it"
+    errors: list[str] = []
+    for ref in refs:
+        content = _read_repo_bytes(repo_root, ref)
+        if content is None:
+            continue
+        try:
+            evidence = json.loads(content.decode("utf-8"))
+        except (UnicodeDecodeError, ValueError, RecursionError):
+            reason = _state_private_value_reason(content.decode("utf-8", errors="replace"))
+            if reason is not None:
+                errors.append(
+                    f"{ref} holds {reason}; write each such value as sha256: plus the hex SHA-256 "
+                    + f"of the value{remedy}, and rerun this guard"
+                )
+            continue
+        errors.extend(_private_value_errors(f"{ref} $", evidence, remedy=remedy))
+    return {"marker_evidence_privacy_errors": sorted(errors)}
+
+
 def _canonical_json_sha256(value: object) -> str | None:
     try:
         encoded = json.dumps(
@@ -4513,9 +4006,33 @@ def _autonomy_file_errors(
         return errors, parent
     if record.get("size_bytes") != len(content):
         errors.append(f"autonomy boundary {label} size_bytes is stale")
-    if record.get("sha256") != _sha256_bytes(content):
+    if record.get("sha256") not in _autonomy_file_digests(label, content):
         errors.append(f"autonomy boundary {label} sha256 is stale")
     return errors, parent
+
+
+def _autonomy_file_digests(label: str, content: bytes) -> set[str]:
+    """Digests that keep a planning fingerprint current.
+
+    plan.md binds its raw bytes. tasks.md also accepts the digest of its task
+    definitions, the checkbox-insensitive text task fingerprints use, so marking a
+    task complete never stales the boundary. When the runner is not importable or
+    the file is not UTF-8, only the raw digest counts, so the check fails closed.
+    """
+    digests = {_sha256_bytes(content)}
+    if label != "tasks_md":
+        return digests
+    plugin_root = str(Path(__file__).resolve().parents[3])
+    if plugin_root not in sys.path:
+        sys.path.insert(0, plugin_root)
+    try:
+        from speckit_pro_runner.task_execution import task_definitions  # noqa: PLC0415
+
+        digests.add(_sha256_bytes(task_definitions(content.decode("utf-8")).encode("utf-8")))
+    except (ImportError, UnicodeDecodeError):
+        # Fail closed: without the runner or valid UTF-8, only the raw digest counts.
+        return digests
+    return digests
 
 
 def _autonomy_planning_errors(
@@ -4613,25 +4130,6 @@ def _autonomy_current_execution_errors(
 
 
 AUTONOMY_RUN_ID_RE = re.compile(r"[0-9a-f]{32}")
-
-
-def _git_common_dir(repo_root: Path) -> Path | None:
-    """`git rev-parse --git-common-dir` resolved against the worktree, or None."""
-    try:
-        completed = subprocess.run(
-            ["git", "-C", str(repo_root), "rev-parse", "--git-common-dir"],
-            capture_output=True,
-            text=True,
-            env=_git_env(),
-            shell=False,
-            check=False,
-        )
-    except (OSError, ValueError):
-        return None
-    common = completed.stdout.strip()
-    if completed.returncode != 0 or not common:
-        return None
-    return repo_root / common
 
 
 def _read_private_record_bytes(path: Path) -> bytes | None:
@@ -4896,7 +4394,7 @@ def formal_checkpoint_errors(workflow: Path, workflow_text: str, state: dict[str
     if plugin_root not in sys.path:
         sys.path.insert(0, plugin_root)
     try:
-        from speckit_pro_runner.formal.lifecycle import coverage_errors
+        from speckit_pro_runner.helpers.formal_policy import coverage_errors
         from speckit_pro_runner.formal.selection import selection_from_workflow
 
         selection = selection_from_workflow(workflow_text)
@@ -4937,6 +4435,12 @@ def artifact_review_errors(workflow: Path, workflow_text: str) -> dict[str, list
     return {"artifact_review_errors": errors}
 
 
+def _repair_request(problems: dict[str, Any]) -> dict[str, Any] | None:
+    """The orchestrator owns the workflow and state files, so a failure is its to repair, not a stop."""
+    failing = sorted(key for key, values in problems.items() if values)
+    return {"owner": "orchestrator", "failing_keys": failing, "retry": "validate-autopilot-phase-coverage"} if failing else None
+
+
 def build_report(
     workflow: Path, state: Path, *, authority: ReportAuthority | None = None,
 ) -> dict[str, Any]:
@@ -4951,11 +4455,11 @@ def build_report(
     workflow_checkpoint_result = validate_workflow_checkpoint_bindings(
         workflow_text, state_data,
     )
-    workflow_checkpoint_result["workflow_checkpoint_errors"].extend(
-        workflow_checkpoint_errors
-    )
+    workflow_checkpoint_result["workflow_checkpoint_errors"].extend(workflow_checkpoint_errors)
     state_result = validate_state(plan_steps)
     status_result = validate_state_status(state_data)
+    privacy_result = state_privacy_errors(state_data)
+    marker_privacy_result = marker_evidence_privacy_errors(state_data, state)
     autonomy_result = validate_autonomy_boundary(
         state_data, _repository_root(workflow),
         current_execution_boundary=authority.current_execution_boundary,
@@ -4981,6 +4485,8 @@ def build_report(
         **workflow_result,
         **workflow_status_result,
         **status_result,
+        **privacy_result,
+        **marker_privacy_result,
         **autonomy_result,
         **stage_result,
         **formal_result,
@@ -5002,6 +4508,7 @@ def build_report(
         "workflow_file": str(workflow),
         "state_file": str(state),
         "plan_step_count": len(plan_steps),
+        "repair": _repair_request(problems),
         **problems,
     }
 

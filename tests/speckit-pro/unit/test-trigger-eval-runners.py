@@ -6,7 +6,6 @@ from __future__ import annotations
 import ast
 import contextlib
 import hashlib
-import importlib.util
 import io
 import json
 import os
@@ -52,16 +51,21 @@ if str(SHARED_LIB) not in sys.path:
     sys.path.insert(0, str(SHARED_LIB))
 
 from test_result import run_counted  # noqa: E402
+import trigger_claude_observer as claude_observer  # noqa: E402
+import trigger_codex_observer as codex_observer  # noqa: E402
+import trigger_evidence as evidence_records  # noqa: E402
+import trigger_process  # noqa: E402
+from foreign_pid import foreign_pid  # noqa: E402
+
+# A fake child pid that is never this test process's pid or group.
+FAKE_CHILD_PID = foreign_pid(43210)
+
+
+from script_loader import load_script  # noqa: E402
 
 
 def import_script(path: Path, name: str) -> ModuleType:
-    spec = importlib.util.spec_from_file_location(name, path)
-    if spec is None or spec.loader is None:
-        raise AssertionError(f"cannot import script: {path}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_script(name, path)
 
 
 def assert_no_speckit_contracts(test: unittest.TestCase, claude: ModuleType, staged_text: str) -> None:
@@ -272,7 +276,7 @@ class FakePopen:
         self.stdout_value = stdout
         self.stderr_value = stderr
         self.returncode = returncode
-        self.pid = 43210
+        self.pid = FAKE_CHILD_PID
         self.communicate_calls = 0
         self.timeout = False
 
@@ -304,8 +308,8 @@ def successful_process_evidence(
     return {
         "provider_exit_code": 0, "timed_out": False, "interrupted_by_signal": None,
         "cleanup_verified": True, "cleanup_error": None, "cleanup_scope": "owned-process-group",
-        "unexpected_descendants": False, "child_pid": 43210, "child_pgid": 43210,
-        "cleanup_observations": [{"pgid": 43210, "errno": 3, "elapsed_seconds": 0.01}],
+        "unexpected_descendants": False, "child_pid": FAKE_CHILD_PID, "child_pgid": FAKE_CHILD_PID,
+        "cleanup_observations": [{"pgid": FAKE_CHILD_PID, "errno": 3, "elapsed_seconds": 0.01}],
         "process_error": None,
         "launch_contract": {
             "config_isolated": True,
@@ -985,7 +989,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 use = events[1]["message"]["content"][0]
                 use["id"] = identifier
                 self.assertEqual(
-                    claude.skill_results_error(events, [(1, use)], 0, len(events) - 1),
+                    claude_observer.skill_results_error(events, [(1, use)], 0, len(events) - 1),
                     "malformed Skill tool use identity",
                 )
                 parsed = claude.inspect_claude_stream(
@@ -3177,6 +3181,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             fixture_root = root / "fixture"
             plugin_root = fixture_root / "speckit-pro"
             (plugin_root / "codex-skills" / "demo").mkdir(parents=True)
+            (plugin_root / "codex-skills" / "demo" / "SKILL.md").write_text("---\nname: demo\n---\n", encoding="utf-8")
             codex_eval = fixture_root / "tests/speckit-pro/layer2-trigger/codex-evals/demo-trigger.json"
             codex_eval.parent.mkdir(parents=True)
             codex_eval.write_text("{}\n", encoding="utf-8")
@@ -3736,6 +3741,155 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             with self.subTest(draft=path.name):
                 self.assertEqual(manifest["pins"], expected)
 
+
+class MeasurementRecordTests(unittest.TestCase):
+    def test_measurement_record_matches_the_runner_pins(self):
+        """The qualification record must name what each runner launches.
+
+        A runner pin that moves past the recorded build is allowed only while
+        the record lists it under ``pending_runner_pins``, so a silent drift
+        fails here instead of leaving a stale "qualified" claim.
+        """
+        record = json.loads((LAYER2 / "measurement-capabilities.json").read_bytes())
+        claude = import_script(CLAUDE_RUNNER, "layer2_record_pin_claude")
+        codex = import_script(CODEX_ENGINE, "layer2_record_pin_codex")
+        params = record["canonical_parameters"]
+        self.assertEqual(params["runs_per_query"], claude.RUNS_PER_QUERY)
+        self.assertEqual(params["trigger_threshold"], claude.TRIGGER_THRESHOLD)
+        self.assertEqual(params["claude"]["model"], claude.DEFAULT_MODEL)
+        self.assertEqual(params["codex"]["model"], codex.DEFAULT_MODEL)
+        self.assertEqual(params["codex"]["reasoning_effort"], codex.DEFAULT_REASONING_EFFORT)
+        for host, pin, suffix in (
+            ("claude", claude.PINNED_CLAUDE_VERSION, " (Claude Code)"),
+            ("codex", codex.PINNED_CODEX_VERSION, ""),
+        ):
+            with self.subTest(host=host):
+                pinned = pin.removesuffix(suffix).removeprefix("codex-cli ")
+                entry = record["hosts"][host]
+                if entry["cli_version"] != pinned:
+                    self.assertEqual(record.get("pending_runner_pins", {}).get(host), pinned)
+
+
+class CodexEvalCorpusResolutionTests(unittest.TestCase):
+    """A Codex run reads only a Codex eval set; a Claude-only set must not stand in."""
+
+    def stage_claude_only_repo(self, root: Path) -> None:
+        corpus = root / "tests" / "speckit-pro" / "layer2-trigger" / "evals" / "demo-trigger.json"
+        corpus.parent.mkdir(parents=True)
+        corpus.write_text("[]", encoding="utf-8")
+        (root / "tests" / "speckit-pro" / "layer2-trigger" / "codex-evals").mkdir()
+        (root / "speckit-pro" / "codex-skills" / "demo").mkdir(parents=True)
+
+    def test_engine_fails_loudly_when_only_a_claude_eval_set_exists(self) -> None:
+        engine = import_script(CODEX_ENGINE, "layer2_codex_engine_corpus")
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.stage_claude_only_repo(root)
+            with mock.patch.object(engine, "TESTS_ROOT", root / "tests" / "speckit-pro"):
+                with self.assertRaises(SystemExit) as failure:
+                    engine.find_eval_file("demo")
+        self.assertIn("no Codex eval file", str(failure.exception))
+
+    def test_wrapper_refuses_to_resolve_a_claude_only_eval_set(self) -> None:
+        wrapper = import_script(CODEX_RUNNER, "layer2_codex_wrapper_corpus")
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.stage_claude_only_repo(root)
+            output = io.StringIO()
+            with (
+                mock.patch.object(wrapper, "PLUGIN_ROOT", root / "speckit-pro"),
+                contextlib.redirect_stdout(output), contextlib.redirect_stderr(output),
+            ):
+                exit_code = wrapper.main(["demo"])
+        self.assertEqual(exit_code, 1)
+        self.assertNotIn("Eval file:", output.getvalue())
+
+
+class SharedRunnerCodeTests(unittest.TestCase):
+    """Both runners reuse the library's corpus, sibling, evidence and process helpers."""
+
+    def test_runners_reuse_the_library_helpers(self) -> None:
+        claude = import_script(CLAUDE_RUNNER, "layer2_shared_claude")
+        engine = import_script(CODEX_ENGINE, "layer2_shared_engine")
+        for name in ("load_eval_corpus", "sibling_skill_dirs"):
+            with self.subTest(helper=name):
+                self.assertIs(getattr(claude, name), getattr(engine, name))
+                self.assertIs(getattr(claude, name), getattr(evidence_records, name))
+        self.assertIs(claude.retain_trial_evidence, evidence_records.retain_trial_evidence)
+        self.assertIs(claude.source_description_lines, evidence_records.source_description_lines)
+        self.assertIs(engine.selection_stub, evidence_records.selection_stub)
+        self.assertEqual(claude.MEASUREMENT_STUB_SENTENCE, evidence_records.MEASUREMENT_STUB_SENTENCE)
+        self.assertEqual(engine.MEASUREMENT_STUB_SENTENCE, evidence_records.MEASUREMENT_STUB_SENTENCE)
+        self.assertEqual(
+            (claude.CLEANUP_TIMEOUT, claude.DESCENDANT_EXIT_GRACE),
+            (trigger_process.CLEANUP_TIMEOUT, trigger_process.DESCENDANT_EXIT_GRACE),
+        )
+
+    def test_codex_evidence_keys_map_the_shared_stream_record(self) -> None:
+        engine = import_script(CODEX_ENGINE, "layer2_shared_engine_keys")
+        with tempfile.TemporaryDirectory() as temporary:
+            kept = engine.retain_run_evidence(Path(temporary), 1, 2, b"out", b"err")
+            shared = evidence_records.retain_trial_evidence(Path(temporary), 3, 4, b"out", b"err")
+        self.assertEqual(kept["jsonl_sha256"], shared["stdout_sha256"])
+        self.assertEqual(kept["stderr_sha256"], shared["stderr_sha256"])
+        self.assertTrue(kept["jsonl_path"].endswith("case-001-trial-02.jsonl"))
+
+
+class NoOpDescriptionSourceTests(unittest.TestCase):
+    """The no-op description has one source, and an override reaches staging as an argument."""
+
+    OVERRIDE = "Use when nothing else applies; reply that no skill applies and stop."
+
+    def test_runners_alias_the_library_constant_and_define_no_copy(self) -> None:
+        for path in (CLAUDE_RUNNER, CODEX_ENGINE):
+            with self.subTest(runner=path.name):
+                module = import_script(path, f"layer2_noop_{path.stem.replace('-', '_')}")
+                self.assertIs(module.NO_SPECKIT_SKILL_DESCRIPTION, evidence_records.NO_SPECKIT_SKILL_DESCRIPTION)
+                self.assertEqual(module.NO_SPECKIT_SKILL_NAME, evidence_records.NO_SPECKIT_SKILL_NAME)
+                defined = [node for node in ast.parse(path.read_text()).body
+                           if isinstance(node, ast.Assign) and isinstance(node.value, ast.Constant)
+                           and any(getattr(target, "id", "") == "NO_SPECKIT_SKILL_DESCRIPTION"
+                                   for target in node.targets)]
+                self.assertEqual(defined, [])
+
+    def test_an_override_reaches_staging_without_touching_the_default(self) -> None:
+        claude = import_script(CLAUDE_RUNNER, "layer2_noop_claude_stage")
+        engine = import_script(CODEX_ENGINE, "layer2_noop_engine_stage")
+        default = evidence_records.NO_SPECKIT_SKILL_DESCRIPTION
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            claude_source = root / "skills" / "demo" / "SKILL.md"
+            codex_source = root / "codex-skills" / "demo" / "SKILL.md"
+            for source in (claude_source, codex_source):
+                source.parent.mkdir(parents=True)
+                source.write_text("---\nname: demo\ndescription: Demo.\n---\n\nBody.\n", encoding="utf-8")
+            claude.stage_measurement_plugin(claude_source, root / "plugin", "catalog", "demo-eval", "nonce",
+                                            {claude.NO_SPECKIT_SKILL_NAME: self.OVERRIDE})
+            staged = (root / "plugin" / "skills" / claude.NO_SPECKIT_SKILL_NAME / "SKILL.md").read_text()
+            siblings, _markers = engine.stage_sibling_skills(codex_source, root / "workspace", "0123456789ab",
+                                                             no_op_description=self.OVERRIDE)
+            with self.assertRaisesRegex(ValueError, "reserved sibling skill name"):
+                claude.stage_measurement_plugin(claude_source, root / "other", "catalog", "demo-eval", "nonce",
+                                                {claude.NO_SPECKIT_SKILL_NAME: claude_source})
+        self.assertIn(f"description: {self.OVERRIDE}", staged)
+        self.assertEqual(siblings[engine.NO_SPECKIT_SKILL_NAME], self.OVERRIDE)
+        self.assertEqual((claude.NO_SPECKIT_SKILL_DESCRIPTION, engine.NO_SPECKIT_SKILL_DESCRIPTION), (default, default))
+
+
+class CatalogIdentityFailureTests(unittest.TestCase):
+    """An unresolvable catalog path fails the identity check and reports no locator."""
+
+    def test_a_missing_catalog_file_yields_flags_and_no_locator(self) -> None:
+        missing = Path("/nonexistent-skill-root/demo/SKILL.md")
+        identity = codex_observer._catalog_entry_identity(
+            f"Demo. (file: {missing})", ("demo", "Demo.", missing), None, {},
+        )
+        self.assertEqual(
+            (identity["description_exact"], identity["alias_valid"], identity["file_valid"], identity["locator"]),
+            (True, True, False, None),
+        )
+
+
 class CodexRelativeSkillBodyReadTests(unittest.TestCase):
     def test_relative_skill_body_read_requires_the_matched_skill_path(self) -> None:
         engine = import_script(CODEX_ENGINE, "layer2_codex_relative_skill_body_read")
@@ -3805,6 +3959,11 @@ def main() -> int:
     suite = unittest.TestSuite([
         unittest.defaultTestLoader.loadTestsFromTestCase(Layer2TriggerRunnerTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(CodexRelativeSkillBodyReadTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(MeasurementRecordTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(CodexEvalCorpusResolutionTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(SharedRunnerCodeTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(NoOpDescriptionSourceTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(CatalogIdentityFailureTests),
     ])
     return run_counted(suite, label="test-trigger-eval-runners")
 

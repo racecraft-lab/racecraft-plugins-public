@@ -26,6 +26,12 @@ FUNCTIONAL_SCRIPT = TESTS_ROOT / "layer3-functional" / "run-functional-evals.py"
 TRIGGER_SCRIPT = TESTS_ROOT / "layer2-trigger" / "run-trigger-evals.py"
 CODEX_FUNCTIONAL_SCRIPT = TESTS_ROOT / "layer3-functional" / "run-functional-evals-codex.py"
 CODEX_TRIGGER_SCRIPT = TESTS_ROOT / "layer2-trigger" / "run-trigger-evals-codex.py"
+def codex_skill_dir(skill: str) -> Path:
+    """The source dir holding a skill's Codex SKILL.md: its overlay, else the shared skill."""
+    overlay = PLUGIN_ROOT / "codex-skills" / skill
+    return overlay if (overlay / "SKILL.md").is_file() else PLUGIN_ROOT / "skills" / skill
+
+
 CODEX_SKILLS = ("speckit-scaffold-spec", "speckit-status", "speckit-resolve-pr", "install")
 LAYER3_CONTRACT_ROOTS = (
     TESTS_ROOT / "layer3-functional" / "evals",
@@ -44,15 +50,12 @@ from speckit_pro_runner.helpers.registry import HELPERS, MUTATION_HELPERS  # noq
 
 SHIPPED_RUNTIME_CONTRACTS = (
     PLUGIN_ROOT / "skills" / "speckit-upgrade" / "SKILL.md",
-    PLUGIN_ROOT / "codex-skills" / "speckit-upgrade" / "SKILL.md",
     PLUGIN_ROOT / "skills" / "speckit-scaffold-spec" / "SKILL.md",
-    PLUGIN_ROOT / "codex-skills" / "speckit-scaffold-spec" / "SKILL.md",
+    codex_skill_dir("speckit-scaffold-spec") / "SKILL.md",
+    # The autopilot's shared sources carry both hosts' text.
     PLUGIN_ROOT / "skills" / "speckit-autopilot" / "SKILL.md",
-    PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "SKILL.md",
     PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "phase-execution.md",
-    PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "references" / "phase-execution-codex.md",
     PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "post-implementation.md",
-    PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "references" / "post-implementation-codex.md",
 )
 EXPECTED_DEFERRED_HELPERS = frozenset(
     {
@@ -127,28 +130,7 @@ LAYER3_NEGATIVE_CONTEXTS = {
 
 # Layer 7 Markdown is scanned only in contract files. Each retained retired
 # path must live in one explicitly classified section.
-LAYER7_MARKDOWN_CONTEXTS = {
-    (
-        "tests/speckit-pro/layer7-parity/02-repository-migration-guidance/README.md",
-        "Test scenario",
-        "relocate-process-artifacts.sh",
-    ): "negative",
-    (
-        "tests/speckit-pro/layer7-parity/02-repository-migration-guidance/workflow.md",
-        "Legacy Input Scenario",
-        "migrate-structure.sh",
-    ): "legacy_input",
-    (
-        "tests/speckit-pro/layer7-parity/02-repository-migration-guidance/workflow.md",
-        "Legacy Input Scenario",
-        "relocate-process-artifacts.sh",
-    ): "legacy_input",
-    (
-        "tests/speckit-pro/layer7-parity/02-repository-migration-guidance/workflow.md",
-        "No Auto-Run Guard",
-        "relocate-process-artifacts.sh",
-    ): "negative",
-}
+LAYER7_MARKDOWN_CONTEXTS: dict[tuple[str, str, str], str] = {}
 
 NEGATIVE_MARKERS = ("must not", "does not", "never", "reject", "forbidden", "not invoke")
 LEGACY_SECTION_MARKERS = ("fixture input", "historical provenance", "neither may be recommended or invoked")
@@ -172,7 +154,13 @@ CURRENT_INVENTORY = [
 LIB_DIR = TESTS_ROOT / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
+from host_skill_views import host_skill_root  # noqa: E402
 from test_result import run_counted  # noqa: E402
+
+
+def autopilot_view(host: str, relative: str) -> Path:
+    """One autopilot file as `host` receives it."""
+    return host_skill_root(host) / "speckit-autopilot" / relative
 
 
 def merged_output(result: subprocess.CompletedProcess[str]) -> str:
@@ -357,31 +345,31 @@ def runtime_contract_parity_violations() -> list[str]:
         (
             "upgrade",
             PLUGIN_ROOT / "skills" / "speckit-upgrade" / "SKILL.md",
-            PLUGIN_ROOT / "codex-skills" / "speckit-upgrade" / "SKILL.md",
+            codex_skill_dir("speckit-upgrade") / "SKILL.md",
             ("migrate-structure", "relocate-process-artifacts", "promotion_status=deferred", "no authoritative request"),
         ),
         (
             "scaffold",
             PLUGIN_ROOT / "skills" / "speckit-scaffold-spec" / "SKILL.md",
-            PLUGIN_ROOT / "codex-skills" / "speckit-scaffold-spec" / "SKILL.md",
+            codex_skill_dir("speckit-scaffold-spec") / "SKILL.md",
             ("relocate-process-artifacts", "deferred", "unavailable"),
         ),
         (
             "autopilot",
-            PLUGIN_ROOT / "skills" / "speckit-autopilot" / "SKILL.md",
-            PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "SKILL.md",
+            autopilot_view("claude", "SKILL.md"),
+            autopilot_view("codex", "SKILL.md"),
             (),
         ),
         (
             "phase execution",
-            PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "phase-execution.md",
-            PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "references" / "phase-execution-codex.md",
+            autopilot_view("claude", "references/phase-execution.md"),
+            autopilot_view("codex", "references/phase-execution.md"),
             (PACKET_PATH_CONTRACT, "relocate-process-artifacts", "data.stdout_json", "writes_state=false", "output_path", "sections"),
         ),
         (
             "post implementation",
-            PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "post-implementation.md",
-            PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "references" / "post-implementation-codex.md",
+            autopilot_view("claude", "references/post-implementation.md"),
+            autopilot_view("codex", "references/post-implementation.md"),
             (
                 PACKET_PATH_CONTRACT,
                 "pr-packet-output",
@@ -431,19 +419,10 @@ def runtime_contract_parity_violations() -> list[str]:
 
 
 def autopilot_entrypoint_post_contract_violations(bodies: dict[str, str]) -> list[str]:
-    reference_names = {
-        "Claude": "post-implementation.md",
-        "Codex": "post-implementation-codex.md",
-    }
-    reference_labels = {
-        "Claude": "references/post-implementation.md",
-        "Codex": "post-implementation-codex.md",
-    }
+    reference, label = "post-implementation.md", "references/post-implementation.md"
     violations: list[str] = []
     for surface, raw_body in bodies.items():
         body = re.sub(r"\s+", " ", raw_body.casefold())
-        reference = reference_names[surface]
-        label = reference_labels[surface]
         mandatory_read = re.escape(
             f"after phase 7 passes g7, read and execute [`{label}`](./references/{reference}) in canonical order."
         )
@@ -490,7 +469,7 @@ def post_implementation_outcome_violations(bodies: dict[str, str]) -> list[str]:
         ),
     }
     required_patterns = {
-        "missing packet blocker": r"if any (?:required )?packet is absent or invalid,(?:.|\n){0,120}stop",
+        "missing packet blocker": r"if any (?:required )?packet is absent or invalid,(?:.|\n){0,120}regenerate it with `pr-packet-output`",
         "post-mutation manager block": r"(?:prior|partial) `gh-stack` mutation(?: already occurred)?,?(?:.|\n){0,120}block(?:.|\n){0,120}(?:rather than|instead of) mixing managers",
         "golden-only live-mutation prohibition": r"`multi-pr-emission`(?:.|\n){0,120}`golden_only`(?:.|\n){0,160}does not emit packets or execute live pr mutations",
     }
@@ -658,9 +637,7 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
             self.assertNotIn("Traceback", stderr.getvalue())
 
     def test_codex_archive_sweep_execution_contract(self) -> None:
-        prerequisites = (
-            PLUGIN_ROOT / "codex-skills/speckit-autopilot/references/prerequisites-codex.md"
-        ).read_text(encoding="utf-8")
+        prerequisites = autopilot_view("codex", "references/prerequisites.md").read_text(encoding="utf-8")
         normalized = " ".join(prerequisites.split())
 
         self.assertIn("use its project-local command contract as the Codex invocation path", normalized)
@@ -669,19 +646,15 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
         self.assertIn("Do not resolve or execute those entries from the Codex plugin", normalized)
         self.assertIn("`prerequisite_mode=codex_native_worktree_binding`", normalized)
         self.assertIn("Do not substitute a manual `specs/` inventory", normalized)
-        self.assertIn("STOP before Phase 0", normalized)
+        self.assertIn("defer the Archive Sweep with the exact failed path or operation and continue to Phase 0", normalized)
         self.assertIn("`status=no_candidates`", normalized)
         self.assertIn("It is not a fallback for a broken or unexecuted command path", normalized)
 
     def test_codex_autopilot_worktree_handoff_contract(self) -> None:
-        scaffold = (PLUGIN_ROOT / "codex-skills/speckit-scaffold-spec/SKILL.md").read_text(encoding="utf-8")
-        autopilot = (PLUGIN_ROOT / "codex-skills/speckit-autopilot/SKILL.md").read_text(encoding="utf-8")
-        prerequisites = (
-            PLUGIN_ROOT / "codex-skills/speckit-autopilot/references/prerequisites-codex.md"
-        ).read_text(encoding="utf-8")
-        phase_execution = (
-            PLUGIN_ROOT / "codex-skills/speckit-autopilot/references/phase-execution-codex.md"
-        ).read_text(encoding="utf-8")
+        scaffold = (codex_skill_dir("speckit-scaffold-spec") / "SKILL.md").read_text(encoding="utf-8")
+        autopilot = autopilot_view("codex", "SKILL.md").read_text(encoding="utf-8")
+        prerequisites = autopilot_view("codex", "references/prerequisites.md").read_text(encoding="utf-8")
+        phase_execution = autopilot_view("codex", "references/phase-execution.md").read_text(encoding="utf-8")
         phase_execution_normalized = " ".join(phase_execution.split())
 
         normalized_prerequisites = " ".join(prerequisites.split())
@@ -732,10 +705,8 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
         self.assertIn("Never mutate the parent checkout as a fallback", prerequisites)
 
     def test_post_implementation_outcome_negative_canaries(self) -> None:
-        claude = (PLUGIN_ROOT / "skills/speckit-autopilot/references/post-implementation.md").read_text(encoding="utf-8")
-        codex = (PLUGIN_ROOT / "codex-skills/speckit-autopilot/references/post-implementation-codex.md").read_text(
-            encoding="utf-8"
-        )
+        claude = autopilot_view("claude", "references/post-implementation.md").read_text(encoding="utf-8")
+        codex = autopilot_view("codex", "references/post-implementation.md").read_text(encoding="utf-8")
         self.assertEqual(post_implementation_outcome_violations({"Claude": claude, "Codex": codex}), [])
 
         canaries = {
@@ -818,10 +789,10 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
             name = CURRENT_INVENTORY[2]
             with self.subTest(msg=name):
                 report = json.loads(result.stdout)
-                self.assertEqual(
-                    report["preflight"]["skill_source"],
-                    str(PLUGIN_ROOT / "skills" / "speckit-coach" / "SKILL.md"),
-                )
+                # The runner reads Claude's rendered view of the shared source.
+                source = Path(report["preflight"]["skill_source"])
+                self.assertEqual(("skills", "speckit-coach", "SKILL.md"), source.parts[-3:])
+                self.assertFalse(source.is_relative_to(PLUGIN_ROOT), source)
 
             name = CURRENT_INVENTORY[3]
             result = run_script(CODEX_FUNCTIONAL_SCRIPT, "speckit-coach")
@@ -829,7 +800,7 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
                 output = merged_output(result)
                 self.assertTrue(
                     result.returncode == 0
-                    and f"Skill path: {PLUGIN_ROOT / 'codex-skills' / 'speckit-coach'}" in output,
+                    and f"Skill path: {PLUGIN_ROOT / 'skills' / 'speckit-coach'}" in output,
                     output,
                 )
 
@@ -839,7 +810,7 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
                 output = merged_output(result)
                 self.assertTrue(
                     result.returncode == 0
-                    and f"Skill path: {PLUGIN_ROOT / 'codex-skills' / 'speckit-coach'}" in output,
+                    and f"Skill path: {PLUGIN_ROOT / 'skills' / 'speckit-coach'}" in output,
                     output,
                 )
 
@@ -851,7 +822,7 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
                     output = merged_output(result)
                     self.assertTrue(
                         result.returncode == 0
-                        and f"Skill path: {PLUGIN_ROOT / 'codex-skills' / skill}" in output,
+                        and f"Skill path: {codex_skill_dir(skill)}" in output,
                         output,
                     )
                 inventory_index += 1
@@ -862,7 +833,7 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
                     output = merged_output(result)
                     self.assertTrue(
                         result.returncode == 0
-                        and f"Skill path: {PLUGIN_ROOT / 'codex-skills' / skill}" in output,
+                        and f"Skill path: {codex_skill_dir(skill)}" in output,
                         output,
                     )
                 inventory_index += 1

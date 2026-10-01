@@ -10,8 +10,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-from ..envelope import diagnostic, is_diagnostic, response
+from ..envelope import SUPPORTED_RUNNER_OPERATIONS, diagnostic, is_diagnostic, response
 from ..path_utils import find_repo_root
+from ..pr_contract import GATE_TITLE_PATTERN
 from .gate_response import gate_base_data
 
 INSTALLED_RELEASE_CHECK_IDS = {
@@ -32,7 +33,7 @@ INSTALLED_RELEASE_BLOCKER_CLASSES = {
 }
 VALID_STATUS = {"pass", "fail"}
 EVIDENCE_STATUS = {"pass", "fail", "blocked"}
-RUNNER_OPERATIONS = {"preflight", "scaffold", "status", "autopilot-dry-run", "doctor", "update", "autoheal"}
+RUNNER_OPERATIONS = SUPPORTED_RUNNER_OPERATIONS
 PAYLOAD_RESULT_KEYS = {
     "payload_surface",
     "plugin_version",
@@ -106,7 +107,7 @@ def run_release_gate(entry: Any, request: Any) -> dict[str, Any]:
     title = os.environ.get(title_env, "")
     check = check_record(
         "validate-pr-title",
-        re.match(r"^(feat|fix|chore|docs|test|refactor)\([a-z0-9-]+\): .+", title) is not None,
+        re.match(GATE_TITLE_PATTERN, title) is not None,
         [title or "missing title"],
     )
     status = "ok" if check["status"] == "pass" else "expected_failure"
@@ -178,8 +179,7 @@ def installed_release_readiness(entry: Any, request: Any, repo_root: Path) -> di
 
 
 def live_installed_release_gate_evidence(repo_root: Path) -> dict[str, Any]:
-    from . import active_path_guard, payloads as payload_gate
-    from ..helpers import install as install_helper
+    from . import active_path_guard, payloads as payload_gate, runner_invocation
 
     evidence: dict[str, Any] = {"checks": [], "payload_results": [], "runner_invocations": []}
 
@@ -289,7 +289,7 @@ def live_installed_release_gate_evidence(repo_root: Path) -> dict[str, Any]:
     if isinstance(payload_results, list):
         evidence["payload_results"].extend(item for item in payload_results if isinstance(item, dict))
 
-    runner_case = install_helper.runner_invocation_case(
+    runner_case = runner_invocation.runner_invocation_case(
         repo_root,
         {
             "case_file": "tests/speckit-pro/unit/fixtures/installed-plugin-release/runner-invocation-cases.json",
@@ -307,7 +307,7 @@ def live_installed_release_gate_evidence(repo_root: Path) -> dict[str, Any]:
             )
         )
     else:
-        runner_record, _diagnostics = install_helper.runner_invocation_record(
+        runner_record, _diagnostics = runner_invocation.runner_invocation_record(
             runner_case,
             "installed-release-readiness:runner-invocation",
             repo_root,

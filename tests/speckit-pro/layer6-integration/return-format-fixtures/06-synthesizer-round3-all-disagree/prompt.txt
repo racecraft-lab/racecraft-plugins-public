@@ -1,0 +1,76 @@
+You are running speckit-autopilot's consensus synthesis stage.
+
+Rounds 1 and 2 could not agree on one item. The parent has dispatched one fresh
+`spec-context-analyst` for the Round 3 tiebreak and now dispatches the
+max-effort `consensus-tiebreaker` with `Round: 3`. Dispatch
+`consensus-tiebreaker` with exactly this input and have it produce its
+standard Consensus Result. It must not ask a question or flag human review.
+
+---
+## Consensus Resolution
+
+**Protocol:** speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md
+**Unresolved Item:** [ambiguous] I2: Should the export job retry a failed upload or fail fast?
+**Routed Categories:** [ambiguous]
+**Security Route:** none
+**Round:** 3
+
+**Codebase Analyst Response:**
+## Answer
+
+Retry up to 3 times with backoff.
+
+## Evidence
+
+- codebase pattern in `src/jobs/upload.ts`
+
+## Confidence
+
+medium
+
+## Security Relevance
+
+security_relevant: false
+**Spec Context Analyst Response:**
+## Answer
+
+Fail fast and report.
+
+## Evidence
+
+- roadmap decision: jobs surface failures immediately
+
+## Confidence
+
+medium
+
+## Security Relevance
+
+security_relevant: false
+**Domain Researcher Response:**
+## Answer
+
+Retry indefinitely with a dead-letter queue.
+
+## Evidence
+
+- provider reliability guidance
+
+## Confidence
+
+medium
+
+## Security Relevance
+
+security_relevant: false
+
+**Tiebreak Analyst Response:**
+## Answer
+
+Fail fast and report: the spec requires failures to surface immediately, and it is the narrowest behavior that satisfies the spec.
+---
+
+The `**Protocol:**` line is the repository-relative path of the active
+consensus protocol in this checkout. Dispatch `consensus-tiebreaker`
+with the input above, unchanged. Stop after the synthesizer returns.
+Do not write to disk.

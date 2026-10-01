@@ -20,11 +20,10 @@ from . import (
     SOURCE_CONTEXT,
 )
 from .envelope import diagnostic, response
-from .path_utils import sha256_file
+from .path_utils import parse_version_tuple, sha256_file
 
 MANIFEST_NAME = "speckit-pro-runner.manifest.json"
 CHECKSUM_NAME = "speckit-pro-runner.sha256"
-RUNNER_DATA_FILES = ("agent_inventory.json",)
 
 
 class MetadataFormatError(ValueError):
@@ -180,18 +179,6 @@ def build_report(*, check_metadata: bool) -> dict[str, Any]:
     }
 
 
-def parse_version_tuple(version: str) -> tuple[int, int, int]:
-    parts = []
-    for part in version.split(".")[:3]:
-        try:
-            parts.append(int(part))
-        except ValueError:
-            parts.append(0)
-    while len(parts) < 3:
-        parts.append(0)
-    return tuple(parts)  # type: ignore[return-value]
-
-
 def detect_plugin_root() -> Path | None:
     for candidate in [Path(__file__).resolve().parent, *Path(__file__).resolve().parents]:
         if (candidate / ".claude-plugin" / "plugin.json").is_file() or (candidate / ".codex-plugin" / "plugin.json").is_file():
@@ -302,13 +289,17 @@ def metadata_report(
 
 
 def runner_source_files(package_dir: Path) -> list[Path]:
+    """List every runner file the trust manifest covers.
+
+    This is the one roster: the refresh script and the payload gates call it.
+    It holds all Python modules and every JSON file the runner loads at run
+    time, except the manifest itself.
+    """
     return sorted(
-        [
-            path
-            for path in package_dir.rglob("*.py")
-            if "__pycache__" not in path.parts
-        ]
-        + [package_dir / name for name in RUNNER_DATA_FILES]
+        path
+        for pattern in ("*.py", "*.json")
+        for path in package_dir.rglob(pattern)
+        if "__pycache__" not in path.parts and path.is_file() and path.name != MANIFEST_NAME
     )
 
 

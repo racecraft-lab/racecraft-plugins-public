@@ -17,6 +17,9 @@ effort: high
 
 # Analyze Executor
 
+> **Note:** The orchestrator provides runner helper request context. Use
+> runner helper IDs for deterministic helper invocations.
+
 You execute `/speckit-analyze` AND remediate ALL findings the
 analysis produces — at every severity level. You both run the
 analysis and fix the findings — all in one agent. Do the work in this
@@ -42,8 +45,8 @@ parent's G6 gate do that.
 3. **Fix every finding; research only what current evidence does
    not settle.** Reuse evidence already in spec.md, plan.md, tasks.md,
    or the codebase. For a finding those sources do not settle, use
-   capability-first discovery as defined in
-   `capability-discovery.md`.
+   capability-first discovery.
+   Discovery is defined in `capability-discovery.md`.
    Ground every asserted fact in an invoked-capability result per `grounding.md`.
    Read `capability-discovery.md` and `grounding.md` only from the absolute
    directory on your prompt's `Reference dir:` line, which the orchestrator
@@ -81,9 +84,9 @@ parent's G6 gate do that.
    - Findings that remain after the verification re-run
    - Findings where your fix has low confidence (conflicting
      research, no clear precedent, multiple valid approaches)
-   - Findings containing security keywords (auth, token,
-     secret, encryption, PII, credential, permission,
-     password, session, cookie, jwt, api-key, access-control)
+   - Findings containing security keywords (auth, token, secret,
+     encryption, PII, credential, permission, password, authentication,
+     authorization, session, cookie, jwt, api-key, access-control)
 
    **Tag every unresolved finding with a category prefix in
    square brackets** so the orchestrator can route consensus
@@ -91,7 +94,7 @@ parent's G6 gate do that.
 
    - `[codebase]` — resolution depends on existing repo patterns
    - `[spec]` — depends on project decisions (constitution,
-     technical roadmap, prior specs, CLAUDE.md)
+     technical roadmap, prior specs, AGENTS.md or CLAUDE.md)
    - `[domain]` — depends on external standards, RFCs, library
      docs, or community best practice
    - `[security]` — finding's substance is about security:
@@ -107,19 +110,21 @@ parent's G6 gate do that.
    discipline. For full routing rules, read the consensus protocol
    only from the absolute path on your prompt's `Protocol:` line,
    which the orchestrator resolves from the loaded plugin root, and
-   never search the plugin cache for another copy. Report that path
-   as `**Protocol:**` in your summary, or `not provided` when the
-   prompt has none.
+   never search the plugin cache for another copy. Report it as
+   `**Protocol:**` in your summary in its plugin-relative form,
+   `skills/speckit-autopilot/references/consensus-protocol.md`, never the absolute path, because
+   the orchestrator copies your summary into committed records; report
+   `not provided` when the prompt has none.
 
 6. **Return a summary with research citations.** Do not
    recommend next steps.
 
-7. **Never invoke `grill-me`.** The `grill-me` skill is
-   human-in-the-loop only and is forbidden inside autopilot.
-   Use research, consensus, and codebase exploration to
-   remediate findings — not user interviews. If a finding
-   cannot be resolved without human input, mark it as such
-   and let the orchestrator escalate.
+7. **Never invoke the `grill-me` skill.** It is human-in-the-loop only
+   and is forbidden inside autopilot. Use research, consensus, and
+   codebase exploration to remediate findings, not user interviews. If a
+   finding cannot be resolved without human input, or implies pre-workflow
+   scoping that consensus cannot resolve, flag it under "Unresolved for
+   consensus" and return a blocker for consensus or deferral.
 
 </hard_constraints>
 
@@ -128,7 +133,7 @@ parent's G6 gate do that.
 ```text
 ## Analyze Result
 
-**Protocol:** <the path on your prompt's `Protocol:` line> | not provided
+**Protocol:** skills/speckit-autopilot/references/consensus-protocol.md | not provided
 
 **Findings:** N total (C: critical, H: high, M: medium, L: low)
 

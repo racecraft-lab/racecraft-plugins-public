@@ -27,7 +27,7 @@ artifacts to live.
 | Check | Command or action | Expected signal | Bounded fallback |
 |---|---|---|---|
 | Spec Kit CLI exists | `command -v specify` | A path to the `specify` executable | Return to the platform install page and confirm Spec Kit setup before continuing. |
-| Spec Kit CLI version | `specify version` | A version report from the installed CLI | Compare the local output with the install route and pause before documenting new command behavior. |
+| Spec Kit CLI version | `specify --version` | A version report from the installed CLI | Compare the local output with the install route and pause before documenting new command behavior. |
 | Python runtime | `python3 --version` | Python 3.11 or newer | Install or select Python 3.11+ before running installed SpecKit Pro workflows. |
 | Constitution exists | `test -f .specify/memory/constitution.md` | Exit status 0 | Inspect the repo's Spec Kit project setup and use the platform install route for setup context. |
 | Roadmap has the SPEC-ID | Review `docs/ai/specs/*.md` or run the project status skill | A roadmap row for the target SPEC-ID | Return to PRD or roadmap creation before scaffolding a SPEC. |
@@ -53,8 +53,8 @@ full Codex setup path. Claude Code setup is separate and belongs in the
 |---|---|---|---|
 | Scoping interview | `/speckit-pro:grill-me` | `$grill-me` | You need one decision at a time before a spec is written. |
 | PRD and roadmap | `/speckit-pro:speckit-prd` | `$speckit-prd` | You have a broad idea and need a PRD plus SPEC catalog. |
-| SPEC scaffold | `/speckit-pro:speckit-scaffold-spec DOC-005` | `$speckit-scaffold-spec DOC-005` | A SPEC exists in the roadmap and needs a worktree plus workflow file. |
-| Autopilot | `/speckit-pro:speckit-autopilot docs/ai/specs/.process/DOC-005-workflow.md` | `$speckit-autopilot docs/ai/specs/.process/DOC-005-workflow.md` | The workflow file is ready to run through the SpecKit phases. |
+| SPEC scaffold | `/speckit-pro:speckit-scaffold-spec EXAMPLE-001` | `$speckit-scaffold-spec EXAMPLE-001` | A SPEC exists in the roadmap and needs a worktree plus workflow file. |
+| Autopilot | `/speckit-pro:speckit-autopilot docs/ai/specs/.process/EXAMPLE-001-workflow.md` | `$speckit-autopilot docs/ai/specs/.process/EXAMPLE-001-workflow.md` | The workflow file is ready to run through the SpecKit phases. |
 | Status check | `/speckit-pro:speckit-status` | `$speckit-status` | You need the current roadmap, active spec, archive sweep, or next step. |
 
 ## Walk The First Artifact Trail
@@ -83,7 +83,7 @@ the source of truth for the SPEC-ID used by scaffold and autopilot.
 | `/speckit-pro:speckit-prd "first successful workflow tutorial"` | `$speckit-prd "first successful workflow tutorial"` |
 
 **Checkpoint:** The artifact trail includes a PRD, a technical roadmap, and a
-SPEC-ID such as `DOC-005`.
+SPEC-ID such as `EXAMPLE-001`.
 
 **Next action:** Confirm the SPEC-ID is ready, then scaffold that SPEC.
 
@@ -94,14 +94,14 @@ file, spec folder, and `SPEC-MOC.md` for one roadmap item.
 
 | Claude Code | Codex |
 |---|---|
-| `/speckit-pro:speckit-scaffold-spec DOC-005` | `$speckit-scaffold-spec DOC-005` |
+| `/speckit-pro:speckit-scaffold-spec EXAMPLE-001` | `$speckit-scaffold-spec EXAMPLE-001` |
 
 **Checkpoint:** Look for these artifacts:
 
-- `docs/ai/specs/.process/DOC-005-design-concept.md`
-- `docs/ai/specs/.process/DOC-005-workflow.md`
-- `specs/doc-005-first-successful-workflow-tutorial-and-lifecycle-explainer/SPEC-MOC.md`
-- `specs/doc-005-first-successful-workflow-tutorial-and-lifecycle-explainer/spec.md`
+- `docs/ai/specs/.process/EXAMPLE-001-design-concept.md`
+- `docs/ai/specs/.process/EXAMPLE-001-workflow.md`
+- `specs/example-001-first-feature/SPEC-MOC.md`
+- `specs/example-001-first-feature/spec.md`
 
 **Next action:** Start autopilot with the generated workflow file.
 
@@ -112,7 +112,7 @@ artifacts before implementation starts.
 
 | Claude Code | Codex |
 |---|---|
-| `/speckit-pro:speckit-autopilot docs/ai/specs/.process/DOC-005-workflow.md` | `$speckit-autopilot docs/ai/specs/.process/DOC-005-workflow.md` |
+| `/speckit-pro:speckit-autopilot docs/ai/specs/.process/EXAMPLE-001-workflow.md` | `$speckit-autopilot docs/ai/specs/.process/EXAMPLE-001-workflow.md` |
 
 **Checkpoint:** The artifact trail grows as each gate completes:
 
@@ -129,16 +129,11 @@ understand any phase or gate before continuing.
 
 ### 5. Validate The First Success
 
-For DOC-005-style docs work, validation is the docs-site check plus manual
-review evidence.
+Validation for the first run is your own project's checks plus the workflow's
+gate results. Run the build, type-check, lint, and test commands that your
+repository already uses, and read the gate results in the workflow file.
 
-```bash
-cd docs-site
-pnpm validate
-pnpm validate:links
-```
-
-**Checkpoint:** The validation output and manual review notes are recorded in
+**Checkpoint:** Your project's checks pass and the gate results are recorded in
 the feature's PR packet. The first run is successful when the artifacts and
 validation evidence are visible, even before a PR is merged.
 

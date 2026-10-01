@@ -40,7 +40,12 @@ captured during scoping.
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
+<!-- host:claude: Claude's canonical Post plan has 11 rows -->
 | Post | Post-Implementation | ⏳ Pending | Canonical 11-item closeout |
+<!-- /host -->
+<!-- host:codex: Codex's canonical Post plan adds two visible supporting rows, 13 in all -->
+| Post | Post-Implementation | ⏳ Pending | Canonical 13-item closeout |
+<!-- /host -->
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
@@ -82,11 +87,11 @@ Use `references/gate-validation.md` from the installed `speckit-autopilot` skill
 
 ### Quality Gates
 
-Filled from `detect-commands` at Step 0.11. One row per slot; the operator answer column holds the one-time missing-tool decision (`install`, `skip (spec)`, `skip (repo)`, or `unanswered`) and is the record that stops the question from firing again. A `skip (repo)` answer is durable only once the operator adds it to `.specify/quality-gates.json` `skips`.
+Filled from `detect-commands` at Step 0.11. One row per slot; the operator answer column holds the missing-tool outcome (`install` by default, then `skip (spec)`, or a recorded operator `skip (repo)`) and is the record autopilot reads before it defaults. A `skip (repo)` answer is durable only once the operator adds it to `.specify/quality-gates.json` `skips`.
 
 **Thresholds file:** `.specify/quality-gates.json` <!-- present / missing / invalid --> <!-- complexity N, CRAP N, mutation floor N; basis --> (G0 blocks unless present)
 
-**Hardener:** not run <!-- not needed (score N ≥ floor F) | qwen: iteration k of cap: N → M ... floor reached / cap reached | fallback (reason): ... | rejected candidate: reason --> (fires once per spec when MUTATION is populated)
+**Hardener:** not run <!-- not needed (score N ≥ floor F) | delegated: iteration k of cap: N → M ... floor reached / cap reached | fallback (reason): ... | rejected candidate: reason --> (fires once per spec when MUTATION is populated)
 
 | Slot | Status | Tool | Command | Operator answer | G0 baseline | Final |
 |------|--------|------|---------|-----------------|-------------|-------|
@@ -291,22 +296,7 @@ Use these markers in spec.md for traceability through later phases:
 
 ### Step 1: Analyze Spec for Recommended Domains
 
-Before running any checklists, read `spec.md` and `plan.md` and identify which domains apply. Look for these signals:
-
-| Signal in Your Spec/Plan | Recommended Domain |
-|---|---|
-| API endpoints, REST routes, request/response models | **api-contracts** |
-| User-facing UI, components, forms, layouts | **ux** |
-| Keyboard navigation, screen readers, WCAG, ARIA | **accessibility** |
-| Auth, tokens, secrets, input validation, user roles | **security** |
-| Response time budgets, caching, query performance | **performance** |
-| Database schemas, migrations, data validation | **data-integrity** |
-| LLM prompts, model calls, embeddings, token limits | **llm-integration** |
-| SSE, WebSocket, streaming, real-time events | **streaming-protocol** |
-| Error handling, retries, fallbacks, degradation | **error-handling** |
-| State lifecycle, sessions, caching, persistence | **state-management** |
-| Personal data (PII), consent, retention, deletion | **privacy** |
-| New third-party packages or dependency upgrades | **supply-chain** |
+Before running any checklists, read `spec.md` and `plan.md` and identify which domains apply. Match them against the signal table in the speckit-coach skill's `references/checklist-domains-guide.md`. That guide is the single list of checklist domains; do not keep a second copy here.
 
 **Target: 2-4 domains.** Prioritize domains where the spec has the most complexity or risk.
 
@@ -394,6 +384,18 @@ When checklist identifies `[Gap]` items:
 - Organize by user story, not by technical layer
 - Keep related test and implementation checkboxes in one closed TDD unit;
   each unit must fit an adjacent batch of at most four tasks
+- Write a setup or foundation gate task as a candidate check that can finish
+  before source work starts. Attach any reconciliation against the actual diff,
+  actual LOC, or an implementation checkpoint to the emission step. G5 rejects
+  a gate task that waits on evidence only its own dependents produce.
+- Open a check-only task (one that changes no code) with a verification verb:
+  `verify`, `run`, `check`, `build`, `lint`, `confirm`, `recheck`. The scheduler
+  routes only these to verification; any other leading verb routes the task
+  as implementation or research work. Open implementation work with
+  `Implement`, `Add`, or `Create`
+- When tasks.md includes a requirement coverage table, fill every row's task
+  cell from the task list above, for every requirement. G5 fails a row whose
+  task cell is blank or a placeholder such as `()`
 
 ## Execution Metadata
 Produce `specs/{{BRANCH_NAME}}/.process/task-execution.json` alongside tasks.md.
@@ -573,6 +575,10 @@ The canonical closeout. Every row must reach Complete or an explicit
 | Post: Integration Suite | ⏳ Pending | |
 | Post: Reviewability Diff Gate | ⏳ Pending | |
 | Post: UAT Runbook Generation | ⏳ Pending | |
+<!-- host:codex: Codex keeps the final backstop and packet generation as visible Post rows -->
+| Post: Final Reviewability Backstop | ⏳ Pending | |
+| Post: PR Packet/Body Generation | ⏳ Pending | |
+<!-- /host -->
 | Post: PR Body Generation | ⏳ Pending | |
 | Post: PR Creation | ⏳ Pending | |
 | Post: Review Remediation | ⏳ Pending | |

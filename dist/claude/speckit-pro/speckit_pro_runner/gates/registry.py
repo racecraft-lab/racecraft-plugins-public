@@ -10,7 +10,7 @@ from .payloads import run_payload_gate
 from .release import run_release_gate
 from .suite import run_suite_gate
 from .active_path_guard import run_active_path_guard
-from ..helpers.install import run_runner_invocation_gate
+from .runner_invocation import run_runner_invocation_gate
 
 
 INSTALLED_RELEASE_READINESS_OPERATION = "installed-release-readiness"

@@ -18,29 +18,72 @@ The autopilot reads prior artifacts and recovers the same execution-control
 ledger per [Bounded Execution](./execution-efficiency.md), then continues only
 when its disposition permits. Resume and agent replacement never reset budget.
 
+**Resume protocol:**
+
+1. Re-read the workflow file, then `autopilot-state.json` next to it
+2. Rebuild the visible task list from the canonical plan
+3. Verify artifact status and prompt content against the workflow file
+4. If the state file is missing, reconstruct it from the workflow file, then
+   continue from the requested phase
+5. If all seven SDD phases are complete but any canonical `Post:` item is
+   missing, `pending`, or `in_progress`, resume at the first incomplete Post
+   item. Do not summarize completion from a `Phase 7: Implement Complete`
+   state.
+
 ## Common Issues
 
 - **Subagent returns an empty/incomplete summary:** Reserve the one read-only
   reconciliation with `execution-control action=reconcile`. Inspect retained
   output and owned effects; a supported `SendMessage` may request only the
-  already-produced result, not continuing writes. Unknown effects require an
-  honest checkpoint, never a fresh retry or direct-command fallback. Proven
-  partial results retain completed tasks; only unfinished work may be reserved.
+  already-produced result, not continuing writes. An unknown outcome blocks
+  only its own unit: spawn a read-only reconciler over the unit's owned paths
+  and settle it with `execution-control action=reconcile-unit` (see
+  [Bounded Execution](./execution-efficiency.md)). The reconciler reports
+  `no_effect`, `partial`, or `complete`, and the runner verifies the class from
+  git state under the unit's owned paths. `no_effect` allows a new dispatch of
+  that unit with no operator event; `partial` and `complete` need a
+  `kind=verification` dispatch (`verifies_dispatch_id`) before the unit is
+  released. Never use a direct-command fallback. Proven partial results retain
+  completed tasks; only unfinished work may be reserved.
 - **A parallel wave exceeds capacity:** Dispatch deterministic waves of at most
   `SUBAGENT_WAVE_SIZE`, preserving task order in the final result regardless of
   completion order. The resolver reserves one slot for recovery. An invalid
   concurrency override forces wave size 1 and emits a warning.
-- **Gate needs repair:** Use the shared one-cycle-per-family/two-cycle-per-spec
-  reservation limits. On exhaustion, checkpoint and show the gate output. After
-  an operator-ordered re-plan, `begin-replan-epoch` opens a fresh allowance with
-  the operator's approval ([Bounded Execution](./execution-efficiency.md)).
-- **Consensus agents all disagree:** Flag `[HUMAN REVIEW NEEDED]`.
-  In an interactive session, ask the operator in place with
-  `AskUserQuestion` (the analysts' positions as options, the synthesizer's
-  recommendation first, and a `Stop the run` option), apply the answer with
-  the `human answer` label, and continue. In an unattended run, STOP and
-  present all 3 perspectives. See
-  [consensus-protocol.md §Human Review Needed](./consensus-protocol.md#human-review-needed).
+- **Gate needs repair:** Diagnose through the consensus agents, fix through
+  the executor, rerun verification, and keep remediating while each round
+  converges: the ledger admits the next correction in a family with no
+  operator event when the previous one shrank the runner-recorded failing set,
+  or moved it with every earlier failure passing. On non-convergence (no
+  measurable progress, a return to an earlier failing set, unparsed output, or
+  a spec change) the shared one-cycle-per-family/two-cycle-per-spec
+  reservation limits apply to every nested worker. An exhausted allowance
+  returns `disposition=defer`: record the deferral with the exact gate output,
+  keep executing every independent task, increment, and gate, and list it in
+  the one end-of-run consolidated request. It is never a mid-run question.
+  `authorize-corrective-exception` (one operator-approved application
+  correction) and `begin-replan-epoch` are end-of-run tools that act on the
+  operator's answer to that request. Before that request, use the agent-issued
+  paths in [Bounded Execution](./execution-efficiency.md): `agent_authorized:
+  true` on `authorize-corrective-retry`, `begin-replan-epoch`, or
+  `authorize-corrective-continuation`, each capped and runner-proved. An
+  explicit `--stage implement` opens the implement stage's own allowance
+  through `begin-stage-epoch`. A task-verb fix that only reroutes a task to
+  verification reserves with `metadata_only: true`; the runner proves it
+  against the committed baseline and spends no cycle. Never reset or bypass
+  the ledger otherwise; `checkpoint_required` and ledger integrity errors
+  still stop. Repeated failures with one signature in one test file are one
+  class: one approval covers its follow-ups through `reserve-class-correction`.
+  See
+  [Repeated Gate Failures: Diagnose One Class, Approve It Once](./phase-execution.md#repeated-gate-failures-diagnose-one-class-approve-it-once).
+- **Consensus agents cannot agree:** The synthesizer flags
+  `[ROUND_3_TIEBREAK]`, which starts the Round 3 tiebreak: a fresh analyst
+  and a max-effort `consensus-tiebreaker` return the most conservative option
+  that satisfies the spec. Apply it as an assumption with the dissent logged,
+  in an interactive and an unattended run alike, and continue. An analyst that
+  fails its retry is replaced by a fresh analyst. A choice that changes
+  product scope the spec and roadmap do not settle is deferred to the
+  end-of-run request, never a mid-run stop. See
+  [consensus-protocol.md §Round 3 Tiebreak](./consensus-protocol.md#round-3-tiebreak).
 - **MCP tool unavailable:** Skip research that depends on it.
   Use Read/Grep fallback for codebase analysis. Log warning.
 - **Action blocked mid-run:** An approval-reviewer veto, a missing approval,
@@ -48,6 +91,11 @@ when its disposition permits. Resume and agent replacement never reset budget.
   own fallback, or defer that task and keep executing independent work, then
   ask once at the end. See
   [Blocked Actions Mid-Run: Fall Back or Defer, Never Stop](./phase-execution.md#blocked-actions-mid-run-fall-back-or-defer-never-stop).
+- **Plugin updated mid-run:** A plugin cache that changed or vanished, or an
+  agent refreshed after phase work began, is not a stop. Re-resolve the plugin
+  root, retry the failed bookkeeping calls once, record the drift, and
+  continue; any restart goes into the end-of-run request. See
+  [Plugin Update Mid-Run: Record, Re-resolve, Continue](./phase-execution.md#plugin-update-mid-run-record-re-resolve-continue).
 
 ## Context Window Management
 

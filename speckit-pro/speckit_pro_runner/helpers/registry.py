@@ -2,21 +2,29 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
 from ..envelope import diagnostic, response
-from ..execution_control import run_execution_helper
 from ..formal.helper import run_formal_helper
 from ..research_preflight import run_research_broker_preflight_helper
 from .archive_sweep import run_archive_sweep_helper
 # The two CODEX_ names are re-exported: tests read them through the registry.
 from .install import CODEX_OPTIONAL_HELPER_NAME, CODEX_REQUIRED_AGENT_NAMES, run_install_helper  # noqa: F401
 from .egress_authorization import run_egress_authorization_helper
+from .execution_requests import run_execution_helper
+from .gate_preflight_coverage import run_gate_preflight_coverage_helper
+from .roadmap_freshness import run_roadmap_freshness_helper
+from .run_finalization import run_run_finalization_helper
 from .mutation import empty_mutation, run_mutation_helper, run_spec_index_write, run_sweep_apply_result
-from .pr_emission import run_pr_emission_helper
+from .pr_emission import generate_pr_body, plan_commands
+from .pr_packet import generate_pr_packet, validate_pr_packet_write
+from .pr_split_ratification import run_pr_split_ratification_helper
 from .promotion import promotion_record
 from .read_only import registry_report, run_registered_helper
+from .stack_manager import run_stack_manager_helper
+from .uat_skeleton import generate_uat_skeleton
 
 
 @dataclass(frozen=True)
@@ -39,7 +47,6 @@ class HelperEntry:
             "python_operation": self.operation,
             "promotion_status": self.promotion_status,
             "comparison_mode": self.comparison_mode,
-            "authoritative_command": self.authoritative_command,
             "out_of_scope_modes": list(self.out_of_scope_modes),
         }
         if self.script is not None:
@@ -69,7 +76,6 @@ class MutationEntry:
             "python_operation": self.operation if self.authoritative_command else None,
             "promotion_status": self.promotion_status,
             "comparison_mode": self.comparison_mode,
-            "authoritative_command": self.authoritative_command,
             "promotion": promotion_record(
                 self.helper_id,
                 promotion_status=self.promotion_status,
@@ -83,6 +89,8 @@ class MutationEntry:
         return record
 
 
+# Test-only: the request fixture each entry's `authoritative_command` names. The
+# plugin does not ship `tests/`, so no emitted record or envelope carries these paths.
 SCRIPT_BASE = "speckit-pro/skills/speckit-autopilot/scripts"
 REQUEST_FIXTURE_BASE = "tests/speckit-pro/unit/fixtures/read-only-helpers/requests"
 MUTATION_REQUEST_FIXTURE_BASE = "tests/speckit-pro/unit/fixtures/mutation-helpers/requests"
@@ -230,6 +238,16 @@ HELPERS: dict[str, HelperEntry] = {
         "python_only",
         authoritative_request("list-archive-candidates"),
     ),
+    # Scaffold's pre-parse check: the checkout's roadmap against the remote
+    # default branch, and the revision a new spec worktree is based on.
+    "check-roadmap-freshness": HelperEntry(
+        "check-roadmap-freshness",
+        "check-roadmap-freshness",
+        None,
+        "python_authoritative",
+        "python_only",
+        authoritative_request("check-roadmap-freshness"),
+    ),
     # Value-free check of the research broker's screening dependencies: the
     # typesafe-jev binary, its credential state, and the search key sources.
     "research-broker-preflight": HelperEntry(
@@ -247,6 +265,30 @@ HELPERS: dict[str, HelperEntry] = {
         "python_authoritative",
         "python_only",
         authoritative_request("render-egress-authorization"),
+    ),
+    "check-gate-preflight-coverage": HelperEntry(
+        "check-gate-preflight-coverage",
+        "check-gate-preflight-coverage",
+        None,
+        "python_authoritative",
+        "python_only",
+        authoritative_request("check-gate-preflight-coverage"),
+    ),
+    "finalize-run": HelperEntry(
+        "finalize-run",
+        "finalize-run",
+        None,
+        "python_authoritative",
+        "python_only",
+        authoritative_request("finalize-run"),
+    ),
+    "ratify-pr-split": HelperEntry(
+        "ratify-pr-split",
+        "ratify-pr-split",
+        None,
+        "python_authoritative",
+        "python_only",
+        authoritative_request("ratify-pr-split"),
     ),
     "resolve-claude-subagent-runtime": HelperEntry(
         "resolve-claude-subagent-runtime",
@@ -695,8 +737,16 @@ def dispatch_helper(request: Any) -> dict[str, Any]:
         return run_research_broker_preflight_helper(entry, request)
     if entry.helper_id == "render-egress-authorization":
         return run_egress_authorization_helper(entry, request)
+    if entry.helper_id == "check-gate-preflight-coverage":
+        return run_gate_preflight_coverage_helper(entry, request)
+    if entry.helper_id == "finalize-run":
+        return run_run_finalization_helper(entry, request)
+    if entry.helper_id == "ratify-pr-split":
+        return run_pr_split_ratification_helper(entry, request)
     if entry.helper_id == "list-archive-candidates":
         return run_archive_sweep_helper(entry, request)
+    if entry.helper_id == "check-roadmap-freshness":
+        return run_roadmap_freshness_helper(entry, request)
     return run_registered_helper(entry, request)
 
 
@@ -752,22 +802,49 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
     if entry.helper_id in {"doctor-preflight", "doctor-repair", "install-codex-agents"}:
         return run_install_helper(entry, request)
 
-    if entry.helper_id in {
-        "generate-pr-body",
-        "generate-uat-skeleton",
-        "final-reviewability-backstop",
-        "pr-packet-output",
-        "validate-pr-workflow-contract-write",
-        "multi-pr-emission",
-        "restack",
-        "relocate-process-artifacts",
-        "plan-layers-marker-plan",
-        "validate-pr-packet-write",
-        "detect-stack-manager-plan",
-    }:
+    if entry.helper_id in PR_EMISSION_HANDLERS or entry.helper_id in UNWIRED_PR_EMISSION_IDS:
         return run_pr_emission_helper(entry, request)
 
     return run_mutation_helper(entry, request)
+
+
+# The one table that routes a PR-emission helper id to its handler.
+PR_EMISSION_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
+    "generate-pr-body": generate_pr_body,
+    "generate-uat-skeleton": generate_uat_skeleton,
+    "pr-packet-output": generate_pr_packet,
+    "validate-pr-packet-write": validate_pr_packet_write,
+    "multi-pr-emission": plan_commands,
+    "restack": plan_commands,
+    "detect-stack-manager-plan": run_stack_manager_helper,
+}
+# Routed as PR emission, but deferred: promoting one needs a handler in the table above first.
+UNWIRED_PR_EMISSION_IDS = frozenset({
+    "final-reviewability-backstop",
+    "validate-pr-workflow-contract-write",
+    "relocate-process-artifacts",
+    "plan-layers-marker-plan",
+})
+
+
+def run_pr_emission_helper(entry: MutationEntry, request: Any) -> dict[str, Any]:
+    handler = PR_EMISSION_HANDLERS.get(entry.helper_id)
+    if handler is None:
+        return response(
+            "internal_failure",
+            request_id=request.request_id,
+            diagnostics=[
+                diagnostic(
+                    "helper_not_wired",
+                    "the registry routes this helper to PR emission, but no handler is registered for it",
+                    details={"helper_id": entry.helper_id},
+                    remediation_summary="Add the helper to PR_EMISSION_HANDLERS before promoting it.",
+                    remediation_actions=["Register a handler in helpers/registry.py.", "Retry the request."],
+                )
+            ],
+        )
+    return handler(entry, request)
+
 
 
 def blocked_promotion_response(entry: MutationEntry, request: Any) -> dict[str, Any]:

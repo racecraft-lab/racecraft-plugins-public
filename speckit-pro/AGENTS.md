@@ -12,9 +12,13 @@ workflow ships for Claude Code and Codex.
 
 ## How the Parts Fit
 
-- Skills (`skills/`, with Codex overlays in `codex-skills/`) hold the workflow
-  prose; `speckit-autopilot` orchestrates it and dispatches the named agents in
-  `agents/` (Codex twins in `codex-agents/`).
+- Skills (`skills/`) hold the workflow prose; `speckit-autopilot` orchestrates
+  it and dispatches the named agents in `agents/`. Text that differs by host
+  sits in reasoned host blocks, and each payload renders its own view
+  (`speckit_pro_runner/host_skills.py`). `codex-skills/` holds only Codex-only
+  files. Each paired role's Codex twin in `codex-agents/` is generated
+  from its `agents/*.md` source, where Codex-only text sits inside
+  `<!-- host:codex: reason -->` blocks. Edit the source, never the TOML.
 - Decisions that must be deterministic (gates, stage resolution, ledgers, PR
   packets) live in the Python runner, `speckit_pro_runner/`; skills call a
   runner helper by id (`helpers/registry.py`) instead of restating its logic.

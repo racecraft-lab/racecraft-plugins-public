@@ -11,40 +11,31 @@ import sys
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PLUGIN_ROOT = (SCRIPT_DIR / "../../../speckit-pro").resolve()
+sys.path.insert(0, str(SCRIPT_DIR.parent / "lib"))
+import trigger_evidence as evidence_records  # noqa: E402
 
 
 def eprint(message: str = "") -> None:
     print(message, file=sys.stderr)
 
 
-def trigger_names_for_available_message(paths: list[Path]) -> list[str]:
-    existing: list[str] = []
-    for root in paths:
-        if root.is_dir():
-            existing.extend(str(path) for path in root.glob("*-trigger.json"))
-    return [Path(path).name.removesuffix("-trigger.json") for path in sorted(existing)]
-
-
 def main(argv: list[str]) -> int:
     skill = argv[0] if argv else "speckit-coach"
     codex_eval_dir = PLUGIN_ROOT / "../tests/speckit-pro/layer2-trigger/codex-evals"
-    shared_eval_dir = PLUGIN_ROOT / "../tests/speckit-pro/layer2-trigger/evals"
-    codex_eval_file = codex_eval_dir / f"{skill}-trigger.json"
-    shared_eval_file = shared_eval_dir / f"{skill}-trigger.json"
+    eval_file = codex_eval_dir / f"{skill}-trigger.json"
 
-    if codex_eval_file.is_file():
-        eval_file = codex_eval_file
-    elif shared_eval_file.is_file():
-        eval_file = shared_eval_file
-    else:
+    if not eval_file.is_file():
         eprint(f"ERROR: Eval file not found for: {skill}")
         eprint("Available Codex trigger evals:")
-        for name in trigger_names_for_available_message([codex_eval_dir, shared_eval_dir]):
+        for name in evidence_records.available_evals(codex_eval_dir):
             eprint(name)
         return 1
 
+    # A Codex overlay wins; a merged skill's Codex text lives in skills/ as host blocks.
     skill_path = PLUGIN_ROOT / f"codex-skills/{skill}"
-    if not skill_path.is_dir():
+    if not (skill_path / "SKILL.md").is_file():
+        skill_path = PLUGIN_ROOT / f"skills/{skill}"
+    if not (skill_path / "SKILL.md").is_file():
         eprint(f"ERROR: Codex skill not found: {skill_path}")
         return 1
 

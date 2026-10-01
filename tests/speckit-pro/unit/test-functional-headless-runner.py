@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import errno
-import importlib.util
 import io
 import json
 import os
@@ -30,14 +29,15 @@ if str(SHARED_LIB) not in sys.path:
 from test_result import run_counted  # noqa: E402
 
 
+from script_loader import load_script  # noqa: E402
+from foreign_pid import foreign_pid  # noqa: E402
+
+# A fake owned group id that is never this test process's pid or group.
+FAKE_PGID = foreign_pid(31415)
+
+
 def import_runner():
-    spec = importlib.util.spec_from_file_location("functional_headless_runner", RUNNER_PATH)
-    if spec is None or spec.loader is None:
-        raise AssertionError(f"cannot import {RUNNER_PATH}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_script("functional_headless_runner", RUNNER_PATH)
 
 
 def actor_environment(root: Path) -> dict[str, str]:
@@ -209,6 +209,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                 ("codex", "speckit-autopilot", 112),
                 ("claude", "speckit-scaffold-spec", 1),
                 ("claude", "speckit-scaffold-spec", 2),
+                ("claude", "speckit-scaffold-spec", 3),
                 ("claude", "speckit-upgrade", 1),
                 ("codex", "speckit-resolve-pr", 2),
                 ("codex", "speckit-resolve-pr", 3),
@@ -439,10 +440,10 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
         self.assertTrue(any(item.startswith("shell_environment_policy.set=") for item in command))
         self.assertIn("--ignore-user-config", command)
         self.assertNotIn("--ignore-rules", command)
-        self.assertEqual(command.count("--disable"), 7)
+        self.assertEqual(command.count("--disable"), 8)
         self.assertEqual(
             [command[index + 1] for index, item in enumerate(command) if item == "--disable"],
-            ["plugins", "apps", "browser_use", "computer_use", "hooks", "skill_mcp_dependency_install", "memories"],
+            ["plugins", "apps", "browser_use", "computer_use", "hooks", "skill_mcp_dependency_install", "memories", "unbounded_connection_retries"],
         )
         self.assertIn("skills.bundled.enabled=false", command)
         self.assertIn("mcp_servers={}", command)
@@ -903,7 +904,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
             self.assertEqual(result["stdout_sha256"], self.runner.sha256_bytes(b"\xff"))
 
     def test_timeout_kills_process_group_and_preserves_timeout_over_decode_error(self) -> None:
-        process = mock.Mock(pid=31415, returncode=-9)
+        process = mock.Mock(pid=FAKE_PGID, returncode=-9)
         process.communicate.side_effect = [
             subprocess.TimeoutExpired(["actor"], 1, output=b"partial", stderr=b""),
             (b"\xff", b"timed out"),
@@ -921,7 +922,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                     "claude", [str(cli)], b"prompt", evidence, Path(temporary), {}, 1
                 )
         self.assertTrue(popen.call_args.kwargs["start_new_session"])
-        self.assertEqual(killpg.call_args_list, [mock.call(31415, 0), mock.call(31415, signal.SIGTERM), mock.call(31415, 0)])
+        self.assertEqual(killpg.call_args_list, [mock.call(FAKE_PGID, 0), mock.call(FAKE_PGID, signal.SIGTERM), mock.call(FAKE_PGID, 0)])
         self.assertEqual(result["status"], "timeout")
         self.assertIs(result["process_group_cleanup"]["verified_absent"], True)
         self.assertIn("decode_error", result)
@@ -929,7 +930,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
 
     def test_normal_capture_checks_group_even_when_leader_exited(self) -> None:
         for descendant in (False, True):
-            process = mock.Mock(pid=31415, returncode=0)
+            process = mock.Mock(pid=FAKE_PGID, returncode=0)
             process.communicate.return_value = (b"raw output", b"raw error")
             process.poll.return_value = 0
             effects = [*([None] * 6), ProcessLookupError()] if descendant else [ProcessLookupError()]
@@ -948,11 +949,11 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
             self.assertEqual(result["stdout"], "raw output")
             self.assertEqual(result["stderr"], "raw error")
             self.assertIs(result["process_group_cleanup"]["verified_absent"], True)
-            self.assertEqual(killpg.call_args_list[0], mock.call(31415, 0))
+            self.assertEqual(killpg.call_args_list[0], mock.call(FAKE_PGID, 0))
 
     def test_normal_group_transient_within_grace_is_recorded_without_termination(self) -> None:
         with mock.patch.object(self.runner.os, "killpg", side_effect=[None, ProcessLookupError()]), mock.patch.object(self.runner.time, "sleep"):
-            cleanup = self.runner.cleanup_process_group(mock.Mock(pid=31415, returncode=0))
+            cleanup = self.runner.cleanup_process_group(mock.Mock(pid=FAKE_PGID, returncode=0))
         self.assertIs(cleanup["initially_present"], True)
         self.assertIs(cleanup["verified_absent"], True)
         self.assertEqual(cleanup["signals_sent"], [])
@@ -960,13 +961,13 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
         self.assertGreaterEqual(cleanup["duration_seconds"], 0)
 
     def test_cleanup_escalates_term_ignoring_descendant_and_verifies_absence(self) -> None:
-        process = mock.Mock(pid=31415, returncode=0)
+        process = mock.Mock(pid=FAKE_PGID, returncode=0)
         process.poll.return_value = 0
         alive = True
 
         def signal_group(pgid, sent):
             nonlocal alive
-            self.assertEqual(pgid, 31415)
+            self.assertEqual(pgid, FAKE_PGID)
             if sent == signal.SIGKILL:
                 alive = False
             elif sent == 0 and not alive:
@@ -976,7 +977,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
             cleanup = self.runner.cleanup_process_group(process)
         self.assertIs(cleanup["verified_absent"], True)
         self.assertEqual(cleanup["signals_sent"], ["SIGTERM", "SIGKILL"])
-        self.assertIn(mock.call(31415, signal.SIGKILL), killpg.call_args_list)
+        self.assertIn(mock.call(FAKE_PGID, signal.SIGKILL), killpg.call_args_list)
 
     @unittest.skipUnless(os.name == "posix", "POSIX process-group witness")
     def test_real_exited_leader_leaves_term_ignoring_child_that_is_drained(self) -> None:
@@ -1004,7 +1005,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
     def test_cleanup_cannot_convert_permission_error_or_surviving_group_to_success(self) -> None:
         for failure in (PermissionError("denied"), None):
             with self.subTest(failure=failure), mock.patch.object(self.runner.os, "killpg", side_effect=failure), mock.patch.object(self.runner.time, "sleep"):
-                cleanup = self.runner.cleanup_process_group(mock.Mock(pid=31415, returncode=0))
+                cleanup = self.runner.cleanup_process_group(mock.Mock(pid=FAKE_PGID, returncode=0))
                 self.assertIs(cleanup["verified_absent"], False)
                 self.assertTrue(cleanup["error"])
 
@@ -1042,7 +1043,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                     raise PermissionError(errno.EPERM, "probe denied")
 
             with self.subTest(failure_point=failure_point), mock.patch.object(self.runner.os, "killpg", side_effect=signal_group), mock.patch.object(self.runner.time, "sleep"):
-                cleanup = self.runner.cleanup_process_group(mock.Mock(pid=31415, returncode=0), natural_exit_grace=False)
+                cleanup = self.runner.cleanup_process_group(mock.Mock(pid=FAKE_PGID, returncode=0), natural_exit_grace=False)
             self.assertIs(cleanup["verified_absent"], failure_point == "transient")
             if failure_point == "transient":
                 self.assertEqual(post_kill_probes, 2)
@@ -1069,9 +1070,9 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                 self.assertFalse(cli.resolve().is_relative_to(root.resolve()))
                 supervisor = root / "supervisor.py"
                 supervisor.write_text(
-                    "import importlib.util,json,os,signal,sys\nfrom pathlib import Path\n"
-                    f"spec=importlib.util.spec_from_file_location('signal_witness_collector', {str(RUNNER_PATH)!r})\n"
-                    "runner=importlib.util.module_from_spec(spec)\nsys.modules[spec.name]=runner\nspec.loader.exec_module(runner)\n"
+                    "import json,os,signal,sys\nfrom pathlib import Path\n"
+                    f"sys.path.insert(0,{str(SHARED_LIB)!r})\nfrom script_loader import load_script\n"
+                    f"runner=load_script('signal_witness_collector', Path({str(RUNNER_PATH)!r}))\n"
                     f"runner.shutil.which=lambda host:{str(cli)!r}\n"
                     "before={s:signal.getsignal(s) for s in (signal.SIGTERM,signal.SIGHUP)}\n"
                     f"result=runner.capture_process('claude',[{str(cli)!r},{str(ready)!r}],b'',Path({str(root / 'evidence')!r}),Path({str(root)!r}),os.environ.copy(),30)\n"
@@ -1117,7 +1118,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
 
     def test_interruption_and_cleanup_failure_retain_raw_capture_evidence(self) -> None:
         for interrupted, cleanup_error in ((True, False), (False, True)):
-            process = mock.Mock(pid=31415, returncode=0)
+            process = mock.Mock(pid=FAKE_PGID, returncode=0)
             process.communicate.side_effect = [KeyboardInterrupt(), (b"partial", b"stderr")] if interrupted else [(b"partial", b"stderr")]
             effects = [None, None, ProcessLookupError()] if interrupted else PermissionError("denied")
             with self.subTest(interrupted=interrupted), tempfile.TemporaryDirectory() as temporary:
@@ -1357,8 +1358,96 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
         )
 
 
+class SharedCodexIsolationTests(unittest.TestCase):
+    """Layer 3 launches Codex with the isolation arguments Layer 2 qualified."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.runner = import_runner()
+        engine_path = TESTS_ROOT / "layer2-trigger" / "run_codex_evals.py"
+        cls.engine = load_script("layer2_codex_engine_for_layer3", engine_path)
+
+    def test_skill_and_server_overrides_match_layer2(self) -> None:
+        skills = (Path("/x/a/SKILL.md"), Path("/x/b/SKILL.md"))
+        names = ("alpha", 'quoted"name')
+        self.assertEqual(
+            [item for item in self.runner.skill_isolation_args(skills, names) if item not in ("-c", "--config")],
+            [item for item in self.engine.skill_isolation_args(skills, names) if item not in ("-c", "--config")],
+        )
+
+    def test_layer3_disables_every_feature_layer2_disables(self) -> None:
+        args = self.runner.skill_isolation_args((), ())
+        disabled = [args[index + 1] for index, item in enumerate(args) if item == "--disable"]
+        self.assertEqual(sorted(disabled), sorted(self.engine.DISABLED_FEATURES))
+
+    def test_layer3_does_not_reach_into_private_layer2_names(self) -> None:
+        source = RUNNER_PATH.read_text(encoding="utf-8")
+        self.assertNotIn("codex_trigger_evals._", source)
+
+
+class HeadlessCaseCatalogContractTests(unittest.TestCase):
+    """Case metadata the runner never reads must not ship as if it were enforced."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.runner = import_runner()
+        cls.path = TESTS_ROOT / "layer3-functional" / "headless_cases.json"
+        cls.data = json.loads(cls.path.read_text(encoding="utf-8"))
+
+    def load_with(self, mutate) -> None:
+        data = json.loads(json.dumps(self.data))
+        mutate(data["cases"][0], next(case for case in data["cases"] if case["host"] == "claude"))
+        with tempfile.TemporaryDirectory() as temporary:
+            target = Path(temporary) / self.path.relative_to(REPO_ROOT)
+            target.parent.mkdir(parents=True)
+            target.write_text(json.dumps(data), encoding="utf-8")
+            self.runner.load_case_catalog(Path(temporary))
+
+    def test_shipped_claude_cases_carry_no_unenforced_required_tools(self) -> None:
+        offenders = [case["skill"] for case in self.data["cases"]
+                     if case["host"] == "claude" and "required_tools" in case]
+        self.assertEqual(offenders, [])
+
+    def test_launch_policy_is_only_ever_hold(self) -> None:
+        values = {case["launch_policy"] for case in self.data["cases"] if "launch_policy" in case}
+        self.assertLessEqual(values, {"hold"})
+
+    def test_loader_rejects_metadata_nothing_reads(self) -> None:
+        cases = {
+            "required_tools": lambda _first, claude: claude.update(required_tools=["Skill"]),
+            "launch_policy": lambda first, _claude: first.update(launch_policy="read_only"),
+        }
+        for field, mutate in cases.items():
+            with self.subTest(field=field), self.assertRaisesRegex(self.runner.EvidenceError, field):
+                self.load_with(mutate)
+
+
+class RunCaseTests(unittest.TestCase):
+    """One case runs in ``run_case``, which returns its manifest; ``main`` only wraps it."""
+
+    def test_run_case_returns_the_manifest_and_writes_it_even_on_setup_failure(self) -> None:
+        runner = import_runner()
+        with tempfile.TemporaryDirectory() as temporary:
+            evidence = Path(temporary) / "evidence"
+            evidence.mkdir()
+            args = runner.parser().parse_args([
+                "--host", "codex", "--skill", "speckit-coach", "--eval-id", "1", "--source-commit", "0" * 40,
+                "--source-tree", "0" * 40, "--model", "m", "--reasoning", "low", "--cli", "/nonexistent/codex",
+                "--evidence-dir", str(evidence),
+            ])
+            manifest, exit_code = runner.run_case(args, REPO_ROOT, evidence)
+            self.assertEqual((manifest["status"], exit_code), ("setup_error", 1))
+            self.assertEqual(json.loads((evidence / "manifest.json").read_text())["status"], "setup_error")
+            self.assertTrue((evidence / "sha256.txt").is_file())
+
+
 def main() -> int:
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(FunctionalHeadlessRunnerTests)
+    suite = unittest.TestSuite([
+        unittest.defaultTestLoader.loadTestsFromTestCase(FunctionalHeadlessRunnerTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(SharedCodexIsolationTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(HeadlessCaseCatalogContractTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(RunCaseTests),
+    ])
     return run_counted(suite, label="test-functional-headless-runner")
 
 
