@@ -30,8 +30,7 @@ remain, and each has evidence on `main`.
 
 1. **Observed defects keep reaching live runs.** Four of the eight defects
    recorded against autopilot and PR emission are still open. Runs of this
-   workflow on other repositories hit three more, and two issues (#637, #638)
-   describe gate and template faults.
+   workflow on other repositories hit three more.
 2. **Completion is decided from signals a fluent agent can satisfy without
    doing the work.** Tasks marked `[X]`, a self-rated confidence composite, an
    FR identifier in a task title, a review reply that sounds like a fix, and a
@@ -204,8 +203,9 @@ review.
   run the hardener when MUTATION is populated, run an architecture check
   against the plan's Module and Interface Deltas and the dependency rules, then
   record the story checkpoint in the workflow file.
-- **AC-15.3**: Each story opens its own pull request with the story's
-  Independent Test as its verification section. When `gh-stack` and its skill
+- **AC-15.3**: Each story opens its own pull request, emitted as one
+  increment through the existing marker plan and `ratify-pr-split`, with the
+  story's Independent Test as its verification section. When `gh-stack` and its skill
   are installed, the spec is one stack rooted on trunk with one PR per story in
   priority order; otherwise each story is an independent branch off trunk, and
   the workflow file records which mode was selected and why.
@@ -220,33 +220,31 @@ review.
 
 ### 3.16 Autopilot, Gate, and PR-Emission Repair *(-> HRNS-015)*
 
-- **AC-16.1**: A packet emitted by the documented path produces a body that
-  passes a host repository's release-note gate, proven by a fixture carrying
-  the required fence, or a documented and exercised host-body hook.
-- **AC-16.2**: A fixture proves the post-implementation sequence refuses to
-  report completion while any entry is unexecuted, on both hosts, and the
-  entry count is stated once and read everywhere.
-- **AC-16.3**: The packet write-validation contract states which outcome is
-  success when packets are untracked in the host repository, with a fixture.
+- **AC-16.1**: A final packet built with an optional `release_note` input
+  carries one non-empty `release-note` fence and passes a host repository's
+  release-note gate, proven by a fixture for a `feat` and a `fix` title.
+  Without the input the body is unchanged, and a draft never carries a fence.
+- **AC-16.2**: The packet write-validation contract treats the current
+  packet's three canonical files as the only allowed untracked paths. A second
+  packet, an unrelated file, a tracked edit, or a `git status` failure still
+  refuses, each with a fixture, and the packet guidance states the outcome.
+- **AC-16.3**: The final packet body shows the current Phase 6.5 verdict, and
+  a missing verdict blocks finalization, unless HRNS-025 owns the verdict.
 - **AC-16.4**: Executors that can form agent teams carry a teardown
-  obligation, and a structural check proves it.
-- **AC-16.5**: The gap counter matches `[Gap` rather than `[Gap]`, with a
+  obligation, and a structural check proves it on both hosts.
+- **AC-16.5**: The gap counters match `[Gap]` and `[Gap, <ref>]` alike, with a
   fixture for the `[Gap, <ref>]` form.
-- **AC-16.6**: The spec-index walk excludes untracked files as well as ignored
-  ones, and a check runs the index against the real repository tree and fails
-  on drift.
+- **AC-16.6**: The spec-index walk uses tracked paths only, and the
+  generated-artifact check runs the index against the real repository tree and
+  fails on drift.
 - **AC-16.7**: `speckit-resolve-pr` fetches every review-thread and comment
   page before claiming feedback is handled, and replies and resolves only after
-  final verification and a confirmed pushed SHA.
-- **AC-16.8**: The scaffold blind-spot pass reports an expired wait as a
-  finding rather than silently skipping, a detected quality-gate command honors
-  the host repository's documented test command, and spec-size estimation
-  counts required refactors.
-- **AC-16.9**: Reviewability-gate setup mode checks every roadmap entry and
-  honors a typed `Reviewability-Exception` pragma (#637), and the roadmap
-  template links workflow files where scaffold writes them (#638).
-- **AC-16.10**: Every runner helper a skill tells the agent to call is shown
-  with a complete request envelope in that skill's prose.
+  final verification and a pushed SHA that matches the PR's fresh head.
+- **AC-16.8**: A detected quality-gate command honors the host repository's
+  documented test command, and spec-size estimation counts required
+  refactors.
+- **AC-16.9**: Every runner helper `speckit-status` tells the agent to call is
+  shown with a complete request envelope, matched by a passing fixture.
 
 ### 3.17 Host Capability Spike *(-> HRNS-017)*
 
@@ -267,6 +265,8 @@ review.
   source as open, resolved, or unverified.
 - **AC-17.5**: The spike changes no shipped source, installs nothing into user
   registries, and makes no paid provider call.
+- **AC-17.6**: The report records how each host lets a teammate or child
+  process outlive its parent and what ends it.
 
 ### 3.18 Typed Workflow State *(-> HRNS-018)*
 
@@ -292,6 +292,9 @@ review.
   mirror, and the ledger by hand.
 - **AC-18.9**: Reading resumable state never writes; only a separately
   recorded transition changes the record.
+- **AC-18.10**: A fixture proves the post-implementation sequence refuses to
+  report completion while any Post row is pending, on both hosts, and the row
+  count per host is stated once and read everywhere.
 
 ### 3.19 Helper Registry Contract and Tiered Disclosure *(-> HRNS-019)*
 
@@ -299,7 +302,8 @@ review.
   input and output schemas, and risk flags (read-only, mutating, destructive,
   networked, credential-bearing, untrusted-content, approval-required).
 - **AC-19.2**: Helper reference docs and skill-facing request examples are
-  generated from the registry, and a check fails when they drift.
+  generated from the registry, and a check fails when they drift. This
+  includes the request envelopes of every skill beyond `speckit-status`.
 - **AC-19.3**: The mutation fixture manifest covers every dispatchable
   mutation helper.
 - **AC-19.4**: Helpers are disclosed in tiers: a one-line index, a schema on
@@ -381,9 +385,9 @@ review.
 
 ### 3.23 Harness Drift Scanner *(-> HRNS-023)*
 
-- **AC-23.1**: A scanner reports stale skill and reference prose (counts, file
-  paths, line references, retired helpers), status drift between roadmaps and
-  workflow records, dead helper references, and orphaned process files.
+- **AC-23.1**: A scanner reports status drift between roadmaps and workflow
+  records, and orphaned process files. Stale prose and doc drift stay with the
+  `ripwire-advisory` workflow.
 - **AC-23.2**: Every finding cites concrete repository evidence and is
   classified as a remediation or a no-op.
 - **AC-23.3**: Output is bounded into reviewable batches and never a broad
@@ -445,8 +449,8 @@ review.
 - **AC-25.6**: A crash after send and before record leaves the request
   unknown; no automatic retry is billed on the assumption that it failed.
 - **AC-25.7**: The PR body carries a compact, secret-screened trace summary
-  (what ran, outcome, evidence paths, known gaps, next action) and the
-  confidence-gate verdict.
+  (what ran, outcome, evidence paths, known gaps, next action). The
+  confidence-gate verdict is carried by AC-16.3 unless this spec takes it.
 - **AC-25.8**: The journal stays local; nothing is sent to an external
   telemetry service.
 - **AC-25.9**: The storage decision compares stdlib `sqlite3` with JSON lines
@@ -464,7 +468,9 @@ review.
 
 ### 3.26 Autonomous-Run Permission and Egress Policy *(-> HRNS-026)*
 
-- **AC-26.1**: During autonomous runs, a deterministic command policy denies
+- **AC-26.1**: Codex egress authorization and run-start permission settlement
+  already exist; this feature adds the Claude-side policy below. During
+  autonomous runs, a deterministic command policy denies
   access to credential stores and environment secrets, denies network egress
   from scripts unless the task scope allows it, asks before writes outside the
   worktree, and allows a declared read-only set; script contents are inspected
@@ -715,7 +721,7 @@ review.
   position is an explicit unknown, never a vote.
 - **AC-39.4**: A red-first fixture covers every routing rule in the consensus
   protocol, including the security-route and misrouting defects (#661, #718,
-  #726), and passes on both hosts.
+  #726) and the Round 3 tiebreak route, and passes on both hosts.
 - **AC-39.5**: The consensus protocol and the synthesizer agent files on both
   hosts describe the split, and the parity fixtures pass.
 
@@ -778,12 +784,14 @@ the dependencies above. Its Jev check is a later slice that waits for HRNS-027.
 | Per-story Autopilot (§3.15) | `speckit-pro/skills/speckit-autopilot/references/phase-execution.md` and the Codex mirror | changed | Task-group loop becomes a story loop |
 | Per-story Autopilot (§3.15) | `speckit-pro/skills/speckit-autopilot/references/post-implementation.md` and the Codex mirror | changed | Per-story PR emission |
 | Per-story Autopilot (§3.15) | `speckit-pro/skills/speckit-coach/templates/workflow-template.md` | changed | Per-story checkpoint table |
-| Repair (§3.16) | `speckit-pro/speckit_pro_runner/helpers/pr_emission.py` | changed | Release-note field or body hook; untracked-packet outcome |
-| Repair (§3.16) | `speckit-pro/speckit_pro_runner/helpers/read_only.py` | changed | `[Gap` matching; untracked-file exclusion in the spec-index walk; spec-size refactor count |
-| Repair (§3.16) | `speckit-pro/skills/speckit-autopilot/` and the Codex mirror | changed | Self-verifying Post list; team teardown |
+| Repair (§3.16) | `speckit-pro/speckit_pro_runner/helpers/pr_packet.py` | changed | Optional release-note fence; current Phase 6.5 verdict |
+| Repair (§3.16) | `speckit-pro/speckit_pro_runner/helpers/mutation.py` | changed | Current-packet untracked exemption |
+| Repair (§3.16) | `speckit-pro/speckit_pro_runner/helpers/pr_contract.py` | new | Canonical packet paths shared with `pr_packet.py` |
+| Repair (§3.16) | `speckit-pro/speckit_pro_runner/helpers/read_only.py` | changed | `[Gap` matching; tracked-only spec-index walk; spec-size refactor count; declared test command |
+| Repair (§3.16) | `speckit-pro/agents/` executors and their Codex TOML | changed | Team teardown obligation |
 | Repair (§3.16) | `speckit-pro/skills/speckit-resolve-pr/SKILL.md` | changed | Full pagination; verify, push, then reply and resolve |
-| Repair (§3.16) | `speckit-pro/skills/speckit-scaffold-spec/SKILL.md`, reviewability gate helper, roadmap template | changed | Blind-spot expiry finding; #637; #638 |
-| Repair (§3.16) | `.github/workflows/pr-checks.yml` | changed | Real-tree spec-index check |
+| Repair (§3.16) | `speckit-pro/skills/speckit-status/SKILL.md` | changed | Complete request envelopes |
+| Repair (§3.16) | `scripts/refresh-release-artifacts.py` | changed | Spec-index refresh and check |
 | Host Spike (§3.17) | `docs/ai/specs/harness-engineering-uplift-host-capability-spike.md` | new | Report only |
 | Typed State (§3.18) | `speckit-pro/speckit_pro_runner/contracts/workflow-state.schema.json` | new | Typed phase, gate, and Post record |
 | Typed State (§3.18) | workflow-file rendering helper in `speckit-pro/speckit_pro_runner/helpers/` | new | Renders status tables from the record |
@@ -801,7 +809,7 @@ the dependencies above. Its Jev check is a later slice that waits for HRNS-027.
 | Decision Contract (§3.24) | `speckit-pro/speckit_pro_runner/helpers/registry.py` | changed | Registers `prepare-semantic-check`, `assess-semantic-check` |
 | Decision Contract (§3.24) | `speckit-pro/speckit_pro_runner/research_broker.py` | changed | Screening moves onto the contract |
 | Run Journal (§3.25) | `speckit-pro/speckit_pro_runner/run_journal.py` | new | Append, replay, simulate; evidence-store reference |
-| Run Journal (§3.25) | `speckit-pro/speckit_pro_runner/helpers/pr_emission.py` | changed | Trace summary and confidence verdict in the body |
+| Run Journal (§3.25) | `speckit-pro/speckit_pro_runner/helpers/pr_packet.py` | changed | Trace summary in the body |
 | Permission Policy (§3.26) | `speckit-pro/scripts/workflow-guard-hook.py` and a policy file | changed | Command policy, content inspection, protected files |
 | Permission Policy (§3.26) | `SECURITY.md` | changed | Allowlist wording matches behavior |
 | Jev Adapter (§3.27) | `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md` | changed | Optional typed-judgment capability |

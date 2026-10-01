@@ -50,6 +50,8 @@ land.
 
 - HRNS-016 requires HRNS-015 because one PR per story repeats the packet
   release-note and untracked-packet failures on every story.
+- HRNS-032 requires HRNS-015 for `speckit-resolve-pr` pagination and the
+  pushed-SHA check, and HRNS-027 for the adapter.
 - HRNS-024 requires HRNS-017 because the contract binds to the result
   visibility and hook facts the spike observes on each host.
 - HRNS-026 requires HRNS-019 because the command policy reads helper risk
@@ -64,8 +66,8 @@ land.
 - HRNS-027 requires HRNS-017, HRNS-024, HRNS-025, and HRNS-026 because a
   journal admission failure must skip the call and every call passes the
   egress policy.
-- HRNS-031, HRNS-032, and HRNS-033 each require only HRNS-027; they are
-  consumers at existing handoffs and do not depend on each other.
+- HRNS-031 and HRNS-033 each require only HRNS-027; HRNS-032 adds HRNS-015.
+  They are consumers at existing handoffs and do not depend on each other.
 - HRNS-034 requires HRNS-025, HRNS-027, and HRNS-030 because it reads frozen
   obligations, consumes adapter results, and records to the journal.
 - HRNS-035 requires HRNS-034; HRNS-036 requires HRNS-035; HRNS-038 requires
@@ -113,6 +115,7 @@ is a forward guess, not the authoritative count.
 
 ```text
 HRNS-015 Repair ─────────────────────► HRNS-016 Per-story autopilot
+         └─────────────────────────────► HRNS-032 Review-fix pilot (also needs HRNS-027)
 HRNS-017 Host spike ──► HRNS-024 Decision contract ─┬─► HRNS-025 Run journal ─┐
 HRNS-018 Typed state ─┬─────────────────────────────┴─► HRNS-030 Obligations ─┤
                       └─► HRNS-037 Progress page                               │
@@ -178,7 +181,7 @@ HRNS-025 Run journal ┘
 | HRNS-029 | Visibility Ladder and Handoff Preservation | ⏳ Pending | - | HRNS-020 |
 | HRNS-030 | Obligation and Subgoal Registry | ⏳ Pending | - | HRNS-018, HRNS-024 |
 | HRNS-031 | Pilot: Requirement-to-Task Semantic Coverage | ⏳ Pending | - | HRNS-027 |
-| HRNS-032 | Pilot: Review-Fix Closure Verification | ⏳ Pending | - | HRNS-027 |
+| HRNS-032 | Pilot: Review-Fix Closure Verification | ⏳ Pending | - | HRNS-015, HRNS-027 |
 | HRNS-033 | Pilot: Claim-to-Source Support Annotation | ⏳ Pending | - | HRNS-027 |
 | HRNS-034 | Phase-Boundary Goal-Completion Verifier | ⏳ Pending | - | HRNS-025, HRNS-027, HRNS-030 |
 | HRNS-035 | Change-Triggered Scheduler and Invalidation | ⏳ Pending | - | HRNS-034 |
@@ -209,104 +212,127 @@ gap-to-spec mapping.
 
 ### HRNS-015: Autopilot, Gate, and PR-Emission Repair
 
-**Priority:** P1 | **Depends On:** none | **Enables:** HRNS-016
+**Priority:** P1 | **Depends On:** none | **Enables:** HRNS-016, HRNS-032
 
-**Goal:** Fix every open defect observed in live autopilot runs, each with a
-failing-first fixture, so the documented happy path stops producing a failing
-pull request or a silently wrong artifact.
+**Goal:** Fix the defects from live autopilot runs that main still has, each
+with a failing-first fixture, so the documented happy path stops producing a
+failing pull request or a silently wrong count.
 
 **Reviewability Budget:** Primary surface: harness/adapter |
-Projected reviewable LOC: 292 (estimate-spec-size: 3 story groups, 10 FRs, 9 files, modify) |
-Production files: 9 |
-Total files: 20 |
-Budget result: over the 8-file block line as one PR; ships as three slices of at most four production files each
+Projected reviewable LOC: 390 (estimate-spec-size: 3 story groups, 9 FRs, 6 files, modify; re-run at scaffold) |
+Production files: 6 |
+Total files: 24 |
+Budget result: warn on total files as one PR; ships as three slices, each with at most four production files and ten total authored files. Regenerated `dist/` and runner trust files follow their sources and are not budgeted.
 
-Two of the original eight defects are already repaired: the correct-but-halted
-turn (#531, "Never Yield With Nothing In Flight") and the spec-index walk over
-git-ignored files (#568). The rest were recorded while running ART-001 and
-ART-007 (`docs/ai/specs/.process/ART-001-workflow.md`,
-`docs/ai/specs/.process/ART-007-manual-uat.md`) or reported by operators
-running this workflow on other repositories.
+Already fixed or owned elsewhere, so out of scope: #637 (PR #694), #638
+(PR #699), the correct-but-halted turn (#531), git-ignored spec-index files
+(#568), the "12-row" Post prose (#896), and the scaffold blind-spot deadline
+(#994, PR #996).
 
 **Scope:**
 
-- **Slice A, PR emission.**
-  - The generated packet body cannot satisfy a host repository's release-note
-    gate: `build_packet_body` emits eight fixed headings and no fence, while
-    this repository requires one non-empty ` ```release-note ` fence on `feat`
-    and `fix` bodies. Add a consumer-facing release-note field, or document and
-    exercise the existing `inputs.body` override as the host-body hook.
-  - `validate-pr-packet-write` apply mode refuses on a dirty worktree, and a
-    freshly emitted packet is untracked in any repository that never commits
-    packets. State which outcome is success for that case.
-  - Carry the confidence-gate verdict into the generated body only if HRNS-025
-    has not landed; otherwise leave it to HRNS-025.
-- **Slice B, gates and counters.**
-  - The gap counter matches `[Gap]` literally, so `[Gap, <ref>]` markers (the
-    checklist skill's own example form) under-report.
-  - The spec-index walk still selects untracked, non-ignored files, and no CI
-    check runs the index against the real tree (`AGENTS.md` says "freshness:
-    no PR check"). Add the exclusion and the real-tree check together.
-  - Reviewability-gate setup mode checks only the last roadmap entry and
-    ignores `Reviewability-Exception` (#637).
-  - `estimate-spec-size` has no signal for required refactors, so a roadmap
-    budget goes stale after the interview.
-- **Slice C, workflow behavior.**
-  - The Post list is not self-verifying, and its size is stated three ways (11
-    on Claude, 13 on Codex, "12" in prose). State it once and add a
-    deterministic check that refuses completion while any entry is pending.
-  - Executors that keep the `Agent` tool can form teams with no teardown
-    obligation; one teammate outlived its parent by about 1.75 hours.
-  - `speckit-resolve-pr` must fetch every thread and comment page and must
-    reply and resolve only after final verification and a confirmed pushed
-    SHA. Re-verify current behavior first.
-  - The scaffold blind-spot pass can expire its wait and silently skip; report
-    the expiry as a finding. A detected quality-gate command must honor the
-    host repository's documented test command rather than a raw default.
-  - The roadmap template links workflow files where scaffold never writes them
-    (#638).
-  - Skills that tell the agent to call a runner helper must show the complete
-    request envelope; `speckit-status` names `generate-spec-index-check`
-    without one, which cost three failed calls in a live run.
+- **Slice A, PR emission** (`helpers/pr_packet.py`, `pr-packet.schema.json`,
+  `helpers/mutation.py`, `helpers/pr_contract.py`).
+  - Add an optional `release_note` input to final (single and split) packets.
+    `build_packet_body` renders it as one ` ```release-note ` fence after
+    Known Gaps. Drafts never carry one. The note is protected body content,
+    not a new editable field.
+  - `pr-packet-output` and `validate-pr-packet-write` apply succeed when the
+    only untracked paths are the current packet's three canonical files. A
+    second packet, an unrelated file, a tracked edit, or a `git status` failure
+    still refuses. State this outcome in the autopilot packet guidance.
+  - The final body shows the current Phase 6.5 verdict under Verification, read
+    from the workflow file inside `pr_packet.py`. A missing verdict blocks
+    finalization. HRNS-025 then drops the verdict from its scope. If the
+    scaffold estimate exceeds 400 LOC, move this item back to HRNS-025 first.
+- **Slice B, gates and counters** (`helpers/read_only.py`,
+  `scripts/refresh-release-artifacts.py`).
+  - G1-G4 and `count-markers` count `[Gap]` and `[Gap, <ref>]` alike with one
+    shared pattern. Code-span and fence exclusion is out of scope.
+  - The spec-index walk uses tracked paths only (`git ls-files --cached`).
+    `refresh-release-artifacts.py` refreshes and `--check`s the spec index, so
+    the existing `artifact-consistency` job catches a stale tracked map. Update
+    the `AGENTS.md` freshness row.
+  - `estimate-spec-size` accepts `required_refactor_files` and adds 40 LOC per
+    distinct file. A missing or invalid value adds nothing.
+  - `detect-commands` honors the host repository's documented test command
+    (`UNIT_TEST`, or `FULL_VERIFY`) before marker-based detection. Scaffold
+    chooses where a repository declares it; `.specify/quality-gates.json`
+    holds thresholds only. Thresholds and the four quality slots are unchanged.
+- **Slice C, workflow behavior** (no production files).
+  - `speckit-resolve-pr` pages through every review thread and every thread's
+    comments with `pageInfo` and cursors, and blocks mutation on a failed page.
+    After verify and push, it compares the PR's fresh `headRefOid` with the
+    pushed SHA before any reply or resolve.
+  - phase-, analyze-, checklist-, and implement-executor (both hosts) state a
+    teardown obligation for any team they form: collect each teammate result,
+    request graceful shutdown, and report unconfirmed cleanup as unresolved.
+    One Layer 1 structural test covers all eight definitions. Runtime child
+    lifetime stays with HRNS-017.
+  - `speckit-status` shows the complete request envelope for
+    `generate-spec-index-check` and `o5-topology`, each matched by a passing
+    fixture. HRNS-019 owns the broader envelope sweep.
 
 **Out of Scope:**
 
+- Post-list completion refusal and a single Post count (moved to HRNS-018,
+  whose typed record owns Post status).
+- Slice-row budget parsing and greenfield aggregation in the setup gate.
+- Markdown-visibility rules for markers.
+- Legacy roadmap-link repair; #699 fixed the template.
 - Redesigning the PR-packet schema or the post-implementation sequence.
-- Changing any host repository's release-note policy; the gate is correct.
-- Removing autopilot's wall-clock budgets, which is separate work already in
-  review.
+- Changing any host repository's release-note policy.
 
 **Module and Interface Deltas:**
 
-- `speckit-pro/speckit_pro_runner/helpers/pr_emission.py` — changed: release-note field or body hook; untracked-packet outcome.
-- `speckit-pro/speckit_pro_runner/helpers/read_only.py` — changed: `[Gap` matching; untracked-file exclusion; refactor signal for spec-size estimation.
-- `speckit-pro/skills/speckit-autopilot/` and the Codex mirror — changed: self-verifying Post list; team teardown.
-- `speckit-pro/skills/speckit-resolve-pr/SKILL.md` — changed: full pagination; verify, push, then reply and resolve.
-- `speckit-pro/skills/speckit-scaffold-spec/SKILL.md`, the reviewability gate helper, and the roadmap template — changed: blind-spot expiry finding; #637; #638.
-- `.github/workflows/pr-checks.yml` — changed: real-tree spec-index check.
+- `speckit-pro/speckit_pro_runner/helpers/pr_packet.py`: changed. Optional
+  release-note fence; current Phase 6.5 verdict.
+- `speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json`:
+  changed, only if the packet records the note.
+- `speckit-pro/speckit_pro_runner/helpers/mutation.py`: changed. Current-packet
+  untracked exemption.
+- `speckit-pro/speckit_pro_runner/helpers/pr_contract.py`: new. Canonical
+  packet paths shared by `pr_packet.py` and `mutation.py`.
+- `speckit-pro/speckit_pro_runner/helpers/read_only.py`: changed. Gap pattern;
+  tracked-only spec index; refactor signal; declared test command.
+- `scripts/refresh-release-artifacts.py`: changed. Spec-index refresh and check.
+- `speckit-pro/skills/speckit-resolve-pr/SKILL.md`,
+  `speckit-pro/skills/speckit-status/SKILL.md`, and four executor definitions
+  in `speckit-pro/agents/` with their generated Codex TOML: changed.
 
 **Key Files:**
 
-- `speckit-pro/speckit_pro_runner/helpers/pr_emission.py` — `required_headings()`, `build_packet_body`, and the write-validation guard.
-- `speckit-pro/speckit_pro_runner/helpers/mutation.py` — the `--untracked-files=all` dirty-worktree check.
-- `speckit-pro/speckit_pro_runner/helpers/read_only.py` — the gap counter, the spec-index walk, and `estimate_spec_size`.
-- `speckit-pro/skills/speckit-autopilot/SKILL.md` and `references/post-implementation.md` — the Post list and its audit prose.
-- `speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md` — team formation.
-- `tests/speckit-pro/layer1-structural/validate-spec-index-helper-contract.py` — the fixture-root spec-index contract.
+- `speckit-pro/speckit_pro_runner/helpers/pr_packet.py`: `build_packet_body`,
+  `required_headings`, `packet_path_parts`, `canonical_packet_paths`.
+- `speckit-pro/speckit_pro_runner/helpers/mutation.py`:
+  `git_worktree_status` and `dirty_worktree_diagnostic`.
+- `speckit-pro/speckit_pro_runner/helpers/read_only.py`: the G1-G4 counters,
+  `_spec_index_walk_regular_files`, `estimate_spec_size`, and `detect_commands`.
+- `scripts/release_note_policy.py`: the gate the packet must satisfy.
+- `docs/ai/specs/.process/ART-007-manual-uat.md`: the stale-index provenance.
 
 **Done When:**
 
-- A packet emitted by the documented path passes a host release-note gate,
-  proven by a fixture, or the body hook is documented and exercised.
-- The untracked-packet outcome is stated and covered by a fixture.
-- A `[Gap, <ref>]` fixture counts correctly.
-- The real-tree spec-index check fails on the pre-fix ART-007 `SPEC-MOC.md`
-  and passes with an untracked file present.
-- #637 and #638 each have a failing-first fixture.
-- A fixture proves the Post sequence refuses completion with any entry
-  pending, on both hosts, and one constant states the entry count.
-- A structural check proves every executor that can form a team tears it down.
-- `speckit-resolve-pr` pagination and ordering are covered by fixtures.
+- A final packet built with `release_note` passes `scripts/release_note_policy.py`
+  for a `feat` and a `fix` title. Without the input the body is byte-identical
+  to today, and a draft still has no fence.
+- Packet apply succeeds with only the current packet's three files untracked,
+  and refuses for each blocked case above, each proven by a fixture.
+- The final body carries the current Phase 6.5 verdict, and a missing verdict
+  blocks (unless moved to HRNS-025).
+- A fixture with `[Gap]` and `[Gap, <ref>]` counts both in G1-G4 and
+  `count-markers`.
+- `refresh-release-artifacts.py --check` fails on a frozen pre-fix stale
+  `SPEC-MOC.md` fixture and passes with an untracked file present in the tree.
+- `estimate-spec-size` fixtures cover a refactor count, a missing value, and
+  an invalid value.
+- A declared test command wins over detection in a `detect-commands` fixture.
+- `speckit-resolve-pr` fixtures cover more than 100 threads, more than one
+  comment page, a failed page, and a pushed-SHA mismatch that leaves threads
+  unresolved.
+- The structural test fails when any of the eight executor definitions loses
+  its teardown obligation.
+- Each documented `speckit-status` envelope matches a passing fixture.
 
 ---
 
@@ -329,6 +355,11 @@ The "Quality Gauntlet" prerequisites are merged (#536, #537, #542). This entry
 records the accepted direction; it goes through `speckit-scaffold-spec` and a
 grill-me interview, where the design tree is walked branch by branch.
 
+One pull request per increment already exists on main: marker increments, the
+`ratify-pr-split` helper, and ready-for-review stacks (#763, #804, #814;
+`references/phase-execution.md`). This spec makes a story one increment of that
+machinery, with the story loop on top. It adds no second PR-splitting path.
+
 **Scope:**
 
 - Phase 7 restructured around the story phases `tasks.md` already carries:
@@ -341,8 +372,9 @@ grill-me interview, where the design tree is walked branch by branch.
   the plan's Module and Interface Deltas and the `DEPENDENCY_RULES` slot;
   record the checkpoint with the story's `**Independent Test**` and evidence
   paths.
-- One pull request per story. With `gh-stack` installed, the spec is one stack
-  rooted on trunk with one layer per story; otherwise each story is an
+- One pull request per story, emitted as one increment through the existing
+  marker plan and `ratify-pr-split`. With `gh-stack` installed, the spec is one
+  stack rooted on trunk with one layer per story; otherwise each story is an
   independent branch. The selected mode and reason are recorded before the
   first story PR.
 - Stop rule: continue while every check is green; stop on the first failing
@@ -370,7 +402,7 @@ grill-me interview, where the design tree is walked branch by branch.
 
 - `.specify/templates/spec-template.md` and `.specify/templates/tasks-template.md` — the story and checkpoint structure this spec consumes.
 - `speckit-pro/speckit_pro_runner/helpers/stack_manager.py` — splits by marker slice today.
-- `speckit-pro/speckit_pro_runner/helpers/pr_emission.py` — `multi-pr-emission` apply is deferred today.
+- `speckit-pro/speckit_pro_runner/helpers/pr_emission.py`: a command-plan module of about 100 lines after #920; `multi-pr-emission` apply is deferred today (`helpers/registry.py`).
 
 **Done When:**
 
@@ -409,6 +441,9 @@ Budget result: within budget
   whether Codex exposes a prompt-time hook, how two plugins' Stop hooks
   interact when one continues the turn, and how per-turn hook text from
   several plugins shares the lead's context.
+- Observe how each host lets a teammate or child process outlive its parent,
+  and what ends it. HRNS-015 states only a teardown obligation for executors;
+  runtime child lifetime belongs here.
 - Re-check the Jev model version, token budgets, and backends the installed
   `typesafe-jev` plugin actually uses.
 - Classify each inherited finding in the typed-judgment catalog as open,
@@ -464,6 +499,10 @@ Budget result: within budget
   ledger by hand.
 - Reading resumable state never writes; only a recorded transition changes
   the record.
+- A deterministic check refuses completion while any Post row is pending, read
+  from the record's Post status on both hosts. One constant states the Post
+  row count per host (11 on Claude; 13 on Codex, two of them supporting rows);
+  `validate-autopilot-phase-coverage.py` checks only row presence today.
 
 **Out of Scope:**
 
@@ -494,6 +533,8 @@ the stage-resolution tests (PRD OQ-8).
 - A resume fixture proves latest-instruction precedence and partial reload.
 - Next-step fixtures cover every phase transition, and the autopilot
   sequencing prose reduces to calling it.
+- A fixture proves completion is refused while any Post row is pending, on both
+  hosts, and one constant states each host's Post row count.
 
 ---
 
@@ -514,9 +555,11 @@ Budget result: within budget
 
 - Add purpose, owner workflow, linked input and output schemas, and risk flags
   to each registry entry. The record shape has not changed since the HRNS-001
-  baseline, and 57 entries now exist.
+  baseline, and 62 entries now exist (39 read-only helpers, 23 mutation
+  helpers).
 - Generate helper reference pages and skill-facing request examples from the
-  registry, with a drift check.
+  registry, with a drift check. This covers the envelope sweep beyond
+  `speckit-status` (HRNS-015 fixes that one skill).
 - Close the mutation fixture-manifest gap (17 dispatchable helpers, 14 in the
   manifest: `detect-stack-manager-plan`, `formal-check`, and
   `generate-spec-index-write` are missing).
@@ -627,7 +670,7 @@ Budget result: within budget
   so compaction of an earlier turn cannot drop it.
 - Keep entrypoints as short maps with references; report entrypoints that grow
   past a documented size without references (`speckit-scaffold-spec`
-  `SKILL.md` grew from 497 to 1021 lines with no `references/`).
+  `SKILL.md` grew from 497 to 1,274 lines with no `references/`).
 - A reviewable proposal path for lessons with provenance, secret screening,
   and a size bound.
 - Optional scaffold of the guidance layout in a host repository on request;
@@ -714,20 +757,19 @@ Budget result: within budget
 
 **Priority:** P2 | **Depends On:** none | **Enables:** none
 
-**Goal:** Find stale skill prose, status drift, dead references, and orphaned
-process files with cited evidence, in bounded batches.
+**Goal:** Find roadmap-to-workflow status drift and orphaned process files with
+cited evidence, in bounded batches.
 
 **Reviewability Budget:** Primary surface: docs/process |
-Projected reviewable LOC: 205 (estimate-spec-size: 2 stories, 5 FRs, 2 files, new; greenfield allowance applies) |
+Projected reviewable LOC: 205 (estimate-spec-size: 2 stories, 5 FRs, 2 files, new; greenfield allowance applies; re-run at scaffold) |
 Production files: 2 |
 Total files: 7 |
 Budget result: within budget
 
 **Scope:**
 
-- Report stale counts, paths, and line references in skill and reference
-  prose; status drift between roadmaps and workflow records; dead helper
-  references; orphaned process files.
+- Report status drift between roadmaps and workflow records, and orphaned
+  process files.
 - Cite repository evidence per finding and classify it as remediation or
   no-op.
 - Bound output into reviewable batches and report coverage.
@@ -736,6 +778,8 @@ Budget result: within budget
 
 **Out of Scope:**
 
+- Stale counts, paths, and doc drift in skill and reference prose: the
+  `ripwire-advisory` workflow reports doc drift on pull requests (#841).
 - Automatic rewrites of harness-control files; remediation is a reviewable
   diff.
 
@@ -745,8 +789,9 @@ Budget result: within budget
 
 **Done When:**
 
-- The scanner reports the live drift the 2026-09-24 audit found (for example
-  the Post-list count stated three ways) and a clean tree reports none.
+- The scanner reports a fixture roadmap whose status disagrees with its
+  workflow record and an orphaned `.process` file, and a clean tree reports
+  none.
 
 ---
 
@@ -832,8 +877,8 @@ Budget result: within budget
   Counterfactual policy simulation edits nothing. Zero provider, dispatch,
   apply, push, or resolve calls, proven by test.
 - A crash after send and before record leaves the request unknown.
-- A compact, secret-screened trace summary and the confidence-gate verdict in
-  the PR body.
+- A compact, secret-screened trace summary in the PR body. The confidence-gate
+  verdict ships with HRNS-015 unless that spec moves it here.
 - The journal stays local.
 - Compare stdlib `sqlite3` with JSON lines against the duplicate, torn-append,
   and partial-read rules, and record the choice. The ledger lock is released
@@ -854,7 +899,7 @@ Budget result: within budget
 **Module and Interface Deltas:**
 
 - `speckit-pro/speckit_pro_runner/run_journal.py` — new: append, replay, simulate; evidence-store reference.
-- `speckit-pro/speckit_pro_runner/helpers/pr_emission.py` — changed: trace summary and confidence verdict in the body.
+- `speckit-pro/speckit_pro_runner/helpers/pr_packet.py`: changed. Trace summary in the body (and the confidence verdict if HRNS-015 does not ship it).
 
 **Key Files:**
 
@@ -863,8 +908,8 @@ Budget result: within budget
 **Done When:**
 
 - Replay and simulation fixtures run with zero side-effecting calls.
-- A generated PR body carries the trace summary and verdict, and a planted
-  secret is screened out.
+- A generated PR body carries the trace summary, and a planted secret is
+  screened out.
 - A killed process leaves no lock that blocks the next run, an old-format
   ledger replays, and a changed gate decision fails replay.
 
@@ -882,6 +927,12 @@ Projected reviewable LOC: 225 (estimate-spec-size: 3 stories, 9 FRs, 6 files, mo
 Production files: 6 |
 Total files: 15 |
 Budget result: within budget
+
+Landed on main and not repeated here: Codex egress authorization
+(`helpers/egress_authorization.py`), the `check-gate-preflight-coverage`
+helper, and run-start permission and egress settlement (#748, #755, #805,
+#833). What remains is the Claude-side command policy, content inspection, and
+harness-control file protection.
 
 **Scope:**
 
@@ -1139,7 +1190,7 @@ Budget result: within budget
 
 ### HRNS-032: Pilot: Review-Fix Closure Verification
 
-**Priority:** P1 | **Depends On:** HRNS-027 | **Enables:** HRNS-038
+**Priority:** P1 | **Depends On:** HRNS-015, HRNS-027 | **Enables:** HRNS-038
 
 **Goal:** Annotate each review thread with whether the concern was actually
 addressed, after verification and push, without replying from a model result.
@@ -1154,7 +1205,8 @@ Budget result: within budget
 
 - A closure judgment per thread over the concern, full thread, before and
   after source, acceptance condition, verification observations, and pushed
-  SHA (JEV-038). The pagination and ordering prerequisite is HRNS-015.
+  SHA (JEV-038). HRNS-015 owns the pagination and the pushed-SHA check this
+  judgment reads.
 - Annotation only; missing verification cannot become resolved; later edits
   invalidate the judgment.
 - Fixtures: wrong-path fix, superficially similar edit, correct fix without
@@ -1413,7 +1465,9 @@ Budget result: within budget
   security override, and routes human review.
 - The model step only judges whether two positions match and writes the
   artifact edit; a missing or malformed position is an explicit unknown.
-- Red-first fixtures for every routing rule, including #661, #718, and #726.
+- Red-first fixtures for every routing rule, including #661, #718, and #726,
+  and for Round 3 tiebreak routing to the `consensus-tiebreaker` agent (#827).
+  PR #982 (#883) dropped the consensus settings nothing read.
 
 **Out of Scope:**
 
