@@ -11,7 +11,7 @@ User-invocable. Stops Claude from auto-running this — it has side effects (pus
 
 ## What this does
 
-Walks through the publish flow in the root `AGENTS.md` (Commands, Pull Requests, Definition Of Done) and enforces the parts that are easy to forget:
+Walks through the publish flow in the root `AGENTS.md` (Commands, Pull Requests, Definition of Done) and enforces the parts that are easy to forget:
 
 1. **Pre-flight check** — `python3 tests/speckit-pro/run-all.py --layer 1` must pass (catches missing frontmatter and invalid JSON).
 2. **Detect remote** — run `git remote -v`; do not assume the remote is named `origin`.

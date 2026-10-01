@@ -16,3 +16,11 @@ unless a test file explicitly marks a live or operator-only path.
 - If a `.md`, `.py`, or `.sh` file under this tree changes, regenerate or check
   the committed docs-site test reference page before finishing.
 - Keep fixture changes narrow and explain why generated or proof data changed.
+- Name tests for durable behavior or capability, never a temporary spec ID,
+  and never have test code read a `specs/<feature>/` path from disk at run
+  time. Archive cleanup deletes that folder once the feature merges, so such a
+  read is green today and red at archive time, in a cleanup branch that has
+  nothing to do with it. Freeze any spec prose a test needs under that test's
+  own `fixtures/` tree. Asserting a `specs/...` path as a string is fine;
+  opening one is not, and `lib/test_result.py` enforces the difference at run
+  time.

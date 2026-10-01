@@ -22,7 +22,7 @@ speckit-pro/speckit_pro_runner/**/*.json text eol=lf
 # The driver is defined in local config, because git will not run driver code
 # from a cloned repository. Without that one-time setup these rules are inert
 # and merges behave exactly as they do today, so this fails safe. See the
-# Worktree Preflight section of AGENTS.md.
+# merge-driver steps in docs/agent-runbook.md (linked from AGENTS.md section 6).
 #
 # This list mirrors CHECK_WORKTREE_PATHS in scripts/refresh-release-artifacts.py.
 # Keep the two in step: a path CI checks but git still text-merges is the exact
