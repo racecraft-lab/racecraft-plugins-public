@@ -17,10 +17,10 @@ import sys
 import tarfile
 import tempfile
 import unittest
+import unittest.mock
 import urllib.request
 from pathlib import Path
 from types import ModuleType
-from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -165,19 +165,19 @@ class FakeSubprocess:
         return subprocess.CompletedProcess(argv, code, OUTPUT_BY_FLAG[flag], "")
 
 
-def fake_subprocess(merge_base_code: int = 0, arch_code: int = 2) -> mock.Mock:
-    return mock.Mock(side_effect=FakeSubprocess(merge_base_code, arch_code))
+def fake_subprocess(merge_base_code: int = 0, arch_code: int = 2) -> unittest.mock.Mock:
+    return unittest.mock.Mock(side_effect=FakeSubprocess(merge_base_code, arch_code))
 
 
 class ReportTests(unittest.TestCase):
-    def report(self, runner: mock.Mock, *, installed: bool = True) -> tuple[int, str, str]:
+    def report(self, runner: unittest.mock.Mock, *, installed: bool = True) -> tuple[int, str, str]:
         root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         binary = root / "ripwire"
         if installed:
             binary.write_bytes(b"fake\n")
             binary.chmod(0o755)
         stdout = io.StringIO()
-        with mock.patch.object(RIPWIRE.subprocess, "run", runner):
+        with unittest.mock.patch.object(RIPWIRE.subprocess, "run", runner):
             code, summary = RIPWIRE.build_report(binary, "base-sha", stdout=stdout)
         return code, summary, stdout.getvalue()
 

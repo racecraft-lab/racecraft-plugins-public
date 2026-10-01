@@ -28,7 +28,6 @@ from typing import BinaryIO, TextIO
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import pinned_archive as _pinned  # noqa: E402
-from pinned_archive import DOWNLOAD_TIMEOUT_SECONDS  # noqa: E402,F401
 
 
 RIPWIRE_VERSION = "0.6.5"
@@ -45,6 +44,7 @@ _MACHINES = {"x86_64": "x64", "amd64": "x64", "aarch64": "arm64", "arm64": "arm6
 
 # Raised when ripwire cannot be installed safely.
 RipwireError = _pinned.PinnedArchiveError
+DOWNLOAD_TIMEOUT_SECONDS = _pinned.DOWNLOAD_TIMEOUT_SECONDS
 
 
 def linux_architecture(system: str | None = None, machine: str | None = None) -> str:

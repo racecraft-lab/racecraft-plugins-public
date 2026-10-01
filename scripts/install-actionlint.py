@@ -14,13 +14,13 @@ from typing import BinaryIO
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import pinned_archive as _pinned  # noqa: E402
-from pinned_archive import DOWNLOAD_TIMEOUT_SECONDS  # noqa: E402,F401
 
 
 ACTIONLINT_MEMBER = "actionlint"
 
 # Raised when actionlint cannot be installed or executed safely.
 ActionlintError = _pinned.PinnedArchiveError
+DOWNLOAD_TIMEOUT_SECONDS = _pinned.DOWNLOAD_TIMEOUT_SECONDS
 
 
 def _validated_version(version: str) -> str:
