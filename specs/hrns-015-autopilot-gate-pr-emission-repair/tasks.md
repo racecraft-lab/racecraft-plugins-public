@@ -92,7 +92,7 @@ Current-source reconciliation: completed T001–T013 definitions below are retai
 
 **Goal**: Required distinct refactor files change estimate and slice count. **Independent test**: refactor signal adds 40 LOC per distinct extra file after baseline/modify logic, missing or invalid signal leaves baseline, spike precedence holds (FR-015).
 
-- [ ] T014 [US7] Add failing-first required_refactor_files additional-distinct-path cases (integer/integer-string normalization, missing/invalid zero, existing modify discount first, +40 LOC per extra distinct file, spike precedence and ceil(total/400) slice count), then update `speckit-pro/speckit_pro_runner/helpers/read_only.py` and `tests/speckit-pro/unit/test-size-estimate-refactors.py`; prove GREEN, confirm distinct refactor paths against the inventory, register the test, refresh B3a outputs, run targeted/quick suites, and record B3a budget/marker checkpoint (FR-015, FR-026).
+- [x] T014 [US7] Add failing-first required_refactor_files additional-distinct-path cases (integer/integer-string normalization, missing/invalid zero, existing modify discount first, +40 LOC per extra distinct file, spike precedence and ceil(total/400) slice count), then update `speckit-pro/speckit_pro_runner/helpers/read_only.py` and `tests/speckit-pro/unit/test-size-estimate-refactors.py`; prove GREEN, confirm distinct refactor paths against the inventory, register the test, refresh B3a outputs, run targeted/quick suites, and record B3a budget/marker checkpoint (FR-015, FR-026).
 
 ## Phase 10: User Story 8 — declared quality commands (P1, Increment B3b)
 

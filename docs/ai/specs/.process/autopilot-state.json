@@ -957,8 +957,8 @@
     "source_fingerprint": {
       "feature_spec_sha": "sha256:18c93677aaaee5f73aa8399b2cea052cc58ed2724fe6e74d93be96a47eae7e58",
       "plan_declared_scope_sha": "sha256:94238f91baabd64f578831f0affa6f93be8d7ab6e553215c4fbcd7b4d5a614ec",
-      "tasks_sha": "sha256:68f57924b56b55ad525a8cb8f8b03fab68da0b84904be688f953bfec949e4a5a",
-      "reviewability_sha": "sha256:69b1f9ae9933e1d2f1d81fff5ae802ac3af161968c9300b8dff9999b8c82d49f",
+      "tasks_sha": "sha256:e1c25aa2908c96660e76ca3e78b7bb57d2a9a8557c692f3796021751d87f9306",
+      "reviewability_sha": "sha256:742f5e9f9be8304f3d20b04aef1e576d5bc703cc9cc93abca141a577ee085eb9",
       "hazard_route_sha": "sha256:f4259204cb8f92f1978ddf3b70195aba948d317567082f50f585fb0f4e0ef9c4"
     },
     "markers": [
@@ -3448,8 +3448,8 @@
   "current_source_fingerprint": {
     "feature_spec_sha": "sha256:18c93677aaaee5f73aa8399b2cea052cc58ed2724fe6e74d93be96a47eae7e58",
     "plan_declared_scope_sha": "sha256:94238f91baabd64f578831f0affa6f93be8d7ab6e553215c4fbcd7b4d5a614ec",
-    "tasks_sha": "sha256:68f57924b56b55ad525a8cb8f8b03fab68da0b84904be688f953bfec949e4a5a",
-    "reviewability_sha": "sha256:69b1f9ae9933e1d2f1d81fff5ae802ac3af161968c9300b8dff9999b8c82d49f",
+    "tasks_sha": "sha256:e1c25aa2908c96660e76ca3e78b7bb57d2a9a8557c692f3796021751d87f9306",
+    "reviewability_sha": "sha256:742f5e9f9be8304f3d20b04aef1e576d5bc703cc9cc93abca141a577ee085eb9",
     "hazard_route_sha": "sha256:f4259204cb8f92f1978ddf3b70195aba948d317567082f50f585fb0f4e0ef9c4"
   },
   "marker_plan_sources": {
@@ -3485,7 +3485,7 @@
         },
         "tool": "estimate-reviewable-loc"
       },
-      "inventory_sha256": "sha256:e30016497fb06381f9d84315fc403c84156f3929b91ef8adca187c6ec468621e",
+      "inventory_sha256": "sha256:e4a9c3db8c3296b1d48025826559cd85db590813a86e352fc5f480ae224990a5",
       "qualification": "Historical setup/estimator snapshots retained; current candidate ownership and counts reconciled after main. Actual final PR scope and heavy gates pending."
     },
     "hazard_route": {
@@ -3559,7 +3559,11 @@
       "T007",
       "T008",
       "T009",
-      "T010"
+      "T010",
+      "T011",
+      "T012",
+      "T013",
+      "T014"
     ],
     "routing_checkpoint": {
       "status": "superseded_by_plugin_2.38.1",
@@ -3686,39 +3690,14 @@
       "actual_emission_qualification": "pending"
     },
     "active_batch": {
-      "batch_id": "B007",
-      "tasks": [
-        "T010"
+      "batch_id": "B002",
+      "task_ids": [
+        "T015",
+        "T016"
       ],
-      "dispatch_id": "hrns015-b1a-t010-2381",
-      "stage": "marker_checkpoint_complete",
-      "completed_tasks": [
-        "T001",
-        "T002",
-        "T003",
-        "T004",
-        "T005",
-        "T006",
-        "T007",
-        "T008",
-        "T009",
-        "T010"
-      ],
-      "source_commit_sha": "a1aa6bd265aa15d4a7005b5c0f0be77af786cb04",
-      "checkpoint_evidence_commit_sha": "f79ec881cb7e9c7baf9221841cf6488c70170398",
-      "journal_request_id": "hrns015-b1a-record-apply-2382",
-      "quick_suite": "10118/10118 passed",
-      "ci_suite": "6/6 dispatches passed",
-      "independent_review": "paragraph, heading and blockquote false negatives fixed red-first; reviewer confirmed repros at committed head",
-      "actual_source_delta": {
-        "base_commit": "06a9cfcc6",
-        "source_commit": "a1aa6bd265aa15d4a7005b5c0f0be77af786cb04",
-        "source_changed_paths": 18,
-        "marker_budget_counted_paths": 22,
-        "production_paths": 1,
-        "authored_nonprocess_changed_lines": 497,
-        "qualification": "source delta only; final PR base/head diff and reviewable LOC required before emission"
-      }
+      "tdd_unit": "increment-b3b",
+      "stage": "next_increment",
+      "routing": "direct_parent"
     },
     "a1a_checkpoint": {
       "status": "complete",
@@ -3981,13 +3960,25 @@
       "receipt_edited": true,
       "resolved_tasks_md_sha256": "sha256:c5373d4f33f0ec316c2421d3e690888fc5844fb1989fd5f5db9b4a8d4d1f7d46",
       "proof": "task_definitions at receipt commit 06a9cfcc6 equals current; only task checkboxes changed"
+    },
+    "b3a_checkpoint": {
+      "status": "pending_final_heavy_gates",
+      "marker_id": "us7",
+      "task_ids": [
+        "T014"
+      ],
+      "focused_tests": {
+        "new": "28/28",
+        "existing": "31/31"
+      },
+      "tdd": "native_red_green_refactor_accepted"
     }
   },
   "main_merge_reconciliation": {
     "status": "native_binding_reconciled",
     "completed_task_definitions_preserved": true,
     "historical_checkpoint_files_preserved": true,
-    "next_increment": "B3a",
+    "next_increment": "B3b",
     "broad_verification": "deferred_until_all_implementation",
     "corrective_epoch": 4,
     "task_journal": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-results/main-paths-epoch4.json",

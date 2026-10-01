@@ -140,6 +140,7 @@
         { "path": "tests/speckit-pro/unit/test-performance-fixtures.py", "label": "test-performance-fixtures" },
         { "path": "tests/speckit-pro/unit/test-consensus-routing-helpers.py", "label": "test-consensus-routing-helpers" },
         { "path": "tests/speckit-pro/unit/test-estimate-spec-size.py", "label": "test-estimate-spec-size" },
+        { "path": "tests/speckit-pro/unit/test-size-estimate-refactors.py", "label": "test-size-estimate-refactors" },
         { "path": "tests/speckit-pro/unit/test-gate-discovery-table.py", "label": "test-gate-discovery-table" },
         { "path": "tests/speckit-pro/unit/test-crap-score.py", "label": "test-crap-score" },
         { "path": "tests/speckit-pro/unit/test-mutation-score.py", "label": "test-mutation-score" },

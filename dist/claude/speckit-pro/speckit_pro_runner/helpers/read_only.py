@@ -2749,6 +2749,9 @@ def estimate_spec_size(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any
     # literal "modify" keeps the net-new estimate.
     if inputs.get("new_vs_modify") == "modify":
         estimated_loc //= 2
+    # Refactor files count distinct additional paths, outside the modify discount.
+    required_refactor_files = normalize_size_signal(inputs.get("required_refactor_files"))
+    estimated_loc += required_refactor_files * 40
     # suggested_slices = ceil(estimated_loc / ceiling), minimum 1.
     suggested_slices = 1 if estimated_loc <= 0 else (estimated_loc + ceiling - 1) // ceiling
     # At-ceiling boundary: ok at exactly the ceiling; warn only when strictly over.

@@ -1230,3 +1230,9 @@ B1a marker checkpoint, 2026-09-28T23:26:57Z: T010 is complete in the original ro
 ### Main merge and current-source reconciliation
 
 The main merge rehomes packet behavior into `helpers/pr_packet.py`, canonical packet path contracts into `pr_contract.py`, and shared host guidance into rendered skill blocks. Codex agent twins remain generated from authored Markdown. Focused mutation, read-only, marker, finalization, host-contract and index-fixture checks pass after the merge repairs. Completed T001–T013 definitions, their historical ownership, and all seven checkpoint files are preserved. Pending task ownership and eighteen candidate budgets use current sources; B3b remains within twenty-four paths. Native metadata validation passes, and guarded epoch4 preserves the run and archived history. Its source-bound successor journal links to the unchanged predecessor. Current broad gates remain pending until all implementation is complete; B3a/T014 is next.
+
+### B3a direct implementation checkpoint
+
+The operator changed implementation routing to direct worktree edits. The reviewed packet-normalizer and parser refactors are committed at `96ee229c`; their focused checks passed 384 assertions, and the parser equivalence battery matched 15,732 cases. Remaining quality-delta findings belong to the final Step 3 gate.
+
+T014 has native accepted RED, GREEN and refactor evidence. The new estimator cases failed ten assertions before the change and passed 28/28 after it; the existing estimator cases passed 31/31. Additional distinct refactor files add 40 LOC each after the existing modify discount. Invalid or absent counts preserve the baseline, and spike precedence and slice ceilings are covered. B3a implementation is complete; its marker and broad qualification remain pending for the single final heavy run. B3b/T015 is next.

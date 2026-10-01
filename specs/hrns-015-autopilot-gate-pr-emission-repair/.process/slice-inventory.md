@@ -551,3 +551,7 @@ Tasks: T028–T030. Requirements: FR-025, FR-026. **15 candidate paths; 0 produc
 The tables are complete named candidates under the present task design, not measured final diffs. Regenerate `dist`, runner trust outputs, spec indexes, and reference pages at each owning checkpoint; compare against the exact marker base/head. If an output changes outside this ledger, a fixture needs another child, a refactor adds a path, production exceeds four, total reaches 25, or LOC crosses a block line, stop and reallocate before that PR. T031 records full cross-feature verification. No implementation checkbox is complete.
 
 Sequential repeated-path support is supplied as shipped in #676; do not remove honest repeated declarations. Actual changed paths, LOC and implementation checkpoint evidence remain unqualified. The parent validates the current planned marker record and planning G6 after Tasks; no future implementation diff is fabricated to satisfy that gate.
+
+### B3a implementation measurement
+
+T014: RED ten assertion failures; GREEN and refactor 28/28; existing estimator 31/31. The delta from the prior checkpoint contains 16 owned paths, 1 production paths and 76 authored non-process changed lines. Generated payload and trust files are refreshed; the new test is registered. All paths are within the native task ownership and candidate inventory. The us7 marker stays pending for final broad qualification.
