@@ -43,27 +43,80 @@ own failure patterns.
   `<type>(<lowercase-scope>): <plain English description>`.
 - If verification cannot run, report the exact command and reason.
 
-## Timeless Constraints
+## Design Rules
 
-These are constraints, not a checklist. When two principles collide, pick the
-one that cuts future cost in this codebase.
+These are constraints, not a checklist. When two collide, pick the one with the
+lowest future cost in this repository, and name the trade-off in the commit.
 
-HARD RULE: refactor to the principle FIRST, then change behavior.
+### Layers
 
-1. Separation of Concerns — one kind of work per part (UI / domain / persistence / infra). Root principle.
-2. Encapsulation / Information Hiding — small stable contract; hide internals.
-3. High Cohesion + Loose Coupling — change-together lives together; independents talk narrow.
-4. DRY — one authoritative representation of each piece of *knowledge* (not every similar line). Avoid over-DRY.
-5. KISS — simplest design that works; complexity is the long-term tax.
-6. Single Responsibility — one reason to change.
-7. Depend on Abstractions — policy doesn’t depend on details; both depend on contracts.
-8. YAGNI — no speculative features, frameworks, or “later” hooks.
-9. Composition over Inheritance — assemble pieces; don’t grow fragile hierarchies.
-10. Open/Closed (with discipline) — extend at stable boundaries; only where change showed up twice.
+Each file does one kind of work. Name the layer of the file you edit.
 
-Honorable: Law of Demeter · fail fast / illegal states unrepresentable · optimize for deletion · Unix do-one-thing + compose.
+| Layer | speckit-pro | typesafe-jev |
+| --- | --- | --- |
+| Policy: decides | `speckit_pro_runner/` modules and `gates/` | Go code in `cmd/evaluate/` |
+| Contract: states a shape | `speckit_pro_runner/contracts/` schemas, plugin manifests | plugin manifests, `.mcp.json` |
+| Guidance: tells an agent what to do | `skills/`, `agents/`, `codex-agents/`, references, hook messages | `shared-skills/` |
+| Glue: dispatches | `hooks/`, `codex-hooks.json`, `helpers/registry.py`, `scripts/`, workflows | `plugin/scripts/`, workflows |
+| Proof | `tests/speckit-pro/` | `*_test.go` |
 
-Treat as constraints. Violate slogans when judgment says so.
+### Principles
+
+- **Separation of concerns:** one layer per file. Root principle.
+- **Encapsulation:** call another module's public functions; never read its
+  private state files or underscore names.
+- **Cohesion and coupling:** one rule change touches one owner module, plus its
+  tests and its doc.
+- **DRY:** one home per rule, threshold, path, schema fact, or message. Search
+  before writing (`ripwire . --exemplar="<what>"`). Do not merge code that is
+  only similar by coincidence.
+- **KISS and YAGNI:** the simplest shape that works; a function before a class;
+  no speculative flags, hooks, or frameworks.
+- **Single responsibility:** if you describe a unit with "and", split it. Names
+  say intent; comments say why.
+- **Depend on contracts:** policy takes and returns plain values (dicts,
+  dataclasses, JSON). It never parses guidance prose to learn a rule.
+- Composition over inheritance · open/closed only where change has happened
+  twice · Law of Demeter · fail fast at the edges, never swallow errors ·
+  optimize for deletion · boring tech (the standard library first).
+
+### Hard invariants
+
+1. **One owner per domain.** Each domain lives in one module, with one doc when
+   it has rules, and everything else calls it. Examples: `stop_policy.py` with
+   `references/stop-policy.md`, `host_skills.py`, `formal/pins.py`,
+   `canonical_json.py`, `scripts/pinned_archive.py`. Consolidate a scattered
+   domain before adding to it. Extend the owner; a new module needs a stated
+   reason the owner cannot hold it. A function-level import that dodges a
+   cycle, or a new `.ripwire_arch_rules` violation, means the logic sits in
+   the wrong module.
+2. **Never duplicate logic.** On a second use: move the logic to its owner,
+   switch every existing caller with tests green and no behavior change, then
+   build the new use. List every copy first (`ripwire . --grep=` or a search);
+   the move switches all of them, or the commit names each one left and why. A
+   new helper beside old copies is one more copy. Each caller keeps its exact
+   results; any behavior change is its own commit. The same holds across hosts:
+   one shared skill with host blocks, rendered by `host_skills.py`, never a
+   Codex copy.
+3. **No policy in guidance or glue.** Skills, agent prompts, references, hook
+   messages, workflows, and docs state or dispatch what policy code decides.
+   They never compute a threshold, classify an outcome, or carry a rule the
+   code lacks. A rule stated only in prose is a bug: implement it, test it, or
+   delete it.
+
+### How to work
+
+- **Refactor first, then change.** Commit a behavior-preserving refactor with
+  tests green, then commit the change. Never both in one diff. For a large
+  domain, record its outputs as a fixture before the refactor and compare after.
+- **Gates, not promises.** A rule that matters gets a check: a layer-1
+  validator, a unit test, an arch rule, or a hook. A "never" in this file alone
+  protects nothing.
+- **Untangle a scattered domain in this order:** measure it (every file holding
+  its logic, every copy, every place copies disagree), plan small
+  behavior-preserving steps with no new features, one PR each, add the check
+  that fails if the mess returns, and measure again with the same numbers. Only
+  then build the feature.
 
 ## Start Here
 
