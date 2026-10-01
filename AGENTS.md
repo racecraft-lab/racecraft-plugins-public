@@ -55,8 +55,8 @@ Each file does one kind of work. Name the layer of the file you edit.
 | Layer | speckit-pro | typesafe-jev |
 | --- | --- | --- |
 | Policy: decides | `speckit_pro_runner/` modules and `gates/` | Go code in `cmd/evaluate/` |
-| Contract: states a shape | `speckit_pro_runner/contracts/` schemas, plugin manifests | plugin manifests, `.mcp.json` |
-| Guidance: tells an agent what to do | `skills/`, `agents/`, `codex-agents/`, references, hook messages | `shared-skills/` |
+| Contract: states a shape | `speckit_pro_runner/contracts/` schemas, plugin manifests | plugin manifests, `plugin/.mcp.json` |
+| Guidance: tells an agent what to do | `skills/`, `agents/`, `codex-agents/`, references, hook messages | `plugin/shared-skills/` |
 | Glue: dispatches | `hooks/`, `codex-hooks.json`, `helpers/registry.py`, `scripts/`, workflows | `plugin/scripts/`, workflows |
 | Proof | `tests/speckit-pro/` | `*_test.go` |
 
