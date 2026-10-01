@@ -9,20 +9,21 @@ from __future__ import annotations
 
 import hashlib
 import hmac
-import os
 import re
 import stat
 import tarfile
+import tempfile
 import urllib.error
 import urllib.request
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import BinaryIO
 
 
 DOWNLOAD_TIMEOUT_SECONDS = 30
 MAX_ARCHIVE_BYTES = 64 * 1024 * 1024
-MAX_BINARY_BYTES = 64 * 1024 * 1024
+MAX_BINARY_BYTES = 128 * 1024 * 1024
 _CHUNK_BYTES = 1024 * 1024
 _EXECUTABLE_MODE = (
     stat.S_IRUSR
@@ -39,25 +40,12 @@ class PinnedArchiveError(RuntimeError):
     """Raised when a pinned tool cannot be installed or executed safely."""
 
 
-def validated_version(version: str, *, label: str) -> str:
-    if re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version) is None:
-        raise PinnedArchiveError(f"invalid {label} version: {version!r}")
-    return version
-
-
 def validated_sha256(expected_sha256: str, *, label: str) -> str:
     if re.fullmatch(r"[0-9a-f]{64}", expected_sha256) is None:
         raise PinnedArchiveError(
             f"{label} SHA-256 must be exactly 64 lowercase hexadecimal characters"
         )
     return expected_sha256
-
-
-def required_environment(name: str) -> str:
-    value = os.environ.get(name, "")
-    if not value:
-        raise PinnedArchiveError(f"required environment variable is not set: {name}")
-    return value
 
 
 def download_archive(
@@ -116,7 +104,7 @@ def member_name_is_safe(name: str) -> bool:
     return not path.is_absolute() and ".." not in path.parts
 
 
-def _checked_member(archive: tarfile.TarFile, member_name: str, *, label: str, max_bytes: int) -> tarfile.TarInfo:
+def _checked_member(archive: tarfile.TarFile, member_name: str, *, label: str) -> tarfile.TarInfo:
     members = archive.getmembers()
     unsafe_members = [
         member.name
@@ -135,7 +123,7 @@ def _checked_member(archive: tarfile.TarFile, member_name: str, *, label: str, m
             f"{label} archive must contain exactly one {member_name} member"
         )
     member = matches[0]
-    if not member.isreg() or member.size <= 0 or member.size > max_bytes:
+    if not member.isreg() or member.size <= 0 or member.size > MAX_BINARY_BYTES:
         raise PinnedArchiveError(f"{label} archive member is not a safe regular file")
     return member
 
@@ -146,7 +134,6 @@ def extract_member(
     destination: Path,
     *,
     label: str,
-    max_bytes: int = MAX_BINARY_BYTES,
 ) -> None:
     """Write one regular-file member to ``destination`` with executable mode."""
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -155,7 +142,7 @@ def extract_member(
 
     try:
         with tarfile.open(archive_path, mode="r:gz") as archive:
-            member = _checked_member(archive, member_name, label=label, max_bytes=max_bytes)
+            member = _checked_member(archive, member_name, label=label)
             extracted = archive.extractfile(member)
             if extracted is None:
                 raise PinnedArchiveError(f"unable to read {label} archive member")
@@ -180,3 +167,34 @@ def extract_member(
     except (OSError, tarfile.TarError) as error:
         temporary_destination.unlink(missing_ok=True)
         raise PinnedArchiveError(f"unable to extract {label} archive: {error}") from error
+
+
+@dataclass(frozen=True)
+class PinnedArchive:
+    """One release archive: where it lives, its SHA-256, and the binary inside."""
+
+    label: str
+    url: str
+    sha256: str
+    member: str
+
+
+def install_binary(
+    archive: PinnedArchive,
+    destination: Path,
+    *,
+    opener: Callable[..., BinaryIO] | None = None,
+) -> Path:
+    """Download ``archive``, verify its SHA-256, then extract its binary to ``destination``."""
+    pinned_sha256 = validated_sha256(archive.sha256, label=archive.label)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    archive_name = archive.url.rsplit("/", 1)[-1]
+    with tempfile.TemporaryDirectory(
+        prefix=f"{archive.label}-install-",
+        dir=destination.parent,
+    ) as temporary_directory:
+        archive_path = Path(temporary_directory) / archive_name
+        download_archive(archive.url, archive_path, label=archive.label, opener=opener)
+        verify_sha256(archive_path, pinned_sha256, label=archive.label)
+        extract_member(archive_path, archive.member, destination, label=archive.label)
+    return destination

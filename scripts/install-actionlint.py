@@ -5,22 +5,35 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import subprocess
 import sys
-import tempfile
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import BinaryIO
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import pinned_archive as _pinned  # noqa: E402
-from pinned_archive import DOWNLOAD_TIMEOUT_SECONDS, verify_sha256  # noqa: E402,F401
+from pinned_archive import DOWNLOAD_TIMEOUT_SECONDS  # noqa: E402,F401
 
 
 ACTIONLINT_MEMBER = "actionlint"
 
 # Raised when actionlint cannot be installed or executed safely.
 ActionlintError = _pinned.PinnedArchiveError
+
+
+def _validated_version(version: str) -> str:
+    if re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version) is None:
+        raise ActionlintError(f"invalid actionlint version: {version!r}")
+    return version
+
+
+def _required_environment(name: str) -> str:
+    value = os.environ.get(name, "")
+    if not value:
+        raise ActionlintError(f"required environment variable is not set: {name}")
+    return value
 
 
 def extract_actionlint(archive_path: Path, destination: Path) -> None:
@@ -34,25 +47,14 @@ def install_actionlint(
     *,
     opener: Callable[..., BinaryIO] | None = None,
 ) -> Path:
-    pinned_version = _pinned.validated_version(version, label="actionlint")
-    pinned_sha256 = _pinned.validated_sha256(expected_sha256, label="actionlint")
+    pinned_version = _validated_version(version)
     archive_name = f"actionlint_{pinned_version}_linux_amd64.tar.gz"
     download_url = (
         "https://github.com/rhysd/actionlint/releases/download/"
         f"v{pinned_version}/{archive_name}"
     )
-
-    install_directory.mkdir(parents=True, exist_ok=True)
-    destination = install_directory / ACTIONLINT_MEMBER
-    with tempfile.TemporaryDirectory(
-        prefix="actionlint-install-",
-        dir=install_directory,
-    ) as temporary_directory:
-        archive_path = Path(temporary_directory) / archive_name
-        _pinned.download_archive(download_url, archive_path, label="actionlint", opener=opener)
-        verify_sha256(archive_path, pinned_sha256)
-        extract_actionlint(archive_path, destination)
-    return destination
+    release = _pinned.PinnedArchive("actionlint", download_url, expected_sha256, ACTIONLINT_MEMBER)
+    return _pinned.install_binary(release, install_directory / ACTIONLINT_MEMBER, opener=opener)
 
 
 def sorted_workflow_files(workflows_directory: Path) -> list[Path]:
@@ -121,11 +123,11 @@ def _build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     try:
-        runner_temp = Path(_pinned.required_environment("RUNNER_TEMP"))
+        runner_temp = Path(_required_environment("RUNNER_TEMP"))
         if args.command == "install":
             installed = install_actionlint(
-                _pinned.required_environment("ACTIONLINT_VERSION"),
-                _pinned.required_environment("ACTIONLINT_SHA256"),
+                _required_environment("ACTIONLINT_VERSION"),
+                _required_environment("ACTIONLINT_SHA256"),
                 runner_temp,
             )
             print(f"Installed actionlint at {installed}")

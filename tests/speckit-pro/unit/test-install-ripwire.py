@@ -16,6 +16,7 @@ import sys
 import tarfile
 import tempfile
 import unittest
+import urllib.request
 from pathlib import Path
 from types import ModuleType
 from unittest import mock
@@ -81,67 +82,59 @@ class PinTests(unittest.TestCase):
                     RIPWIRE.linux_architecture(system, machine)
 
 
+class RecordingOpener:
+    """Fake urlopen that serves fixed bytes and records each request."""
+
+    def __init__(self, payload: bytes) -> None:
+        self.payload = payload
+        self.urls: list[str] = []
+        self.timeouts: list[int] = []
+
+    def __call__(self, request: urllib.request.Request, *, timeout: int) -> io.BytesIO:
+        self.urls.append(request.full_url)
+        self.timeouts.append(timeout)
+        return io.BytesIO(self.payload)
+
+
 class InstallTests(unittest.TestCase):
+    def install(self, payload: bytes, arch: str, pins: dict[str, str] | None = None) -> tuple[Path, RecordingOpener]:
+        """Install from a fake release into a fresh directory; pins default to the real ones."""
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        opener = RecordingOpener(payload)
+        kwargs = {} if pins is None else {"sha256_by_arch": pins}
+        try:
+            RIPWIRE.install_ripwire(root, arch, opener=opener, **kwargs)
+        finally:
+            self.left_behind = sorted(p.name for p in root.iterdir())
+        return root / "ripwire", opener
+
     def test_correct_pin_installs_the_verified_binary(self) -> None:
-        archive_bytes = fake_release("arm64")
-        observed: dict[str, object] = {}
-
-        def opener(request: object, *, timeout: int) -> io.BytesIO:
-            observed["url"] = request.full_url  # type: ignore[attr-defined]
-            observed["timeout"] = timeout
-            return io.BytesIO(archive_bytes)
-
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            install_directory = Path(temporary_directory)
-            installed = RIPWIRE.install_ripwire(
-                install_directory,
-                "arm64",
-                sha256_by_arch={"arm64": hashlib.sha256(archive_bytes).hexdigest()},
-                opener=opener,
-            )
-            self.assertEqual(install_directory / "ripwire", installed)
-            self.assertEqual(b"fake-ripwire-binary\n", installed.read_bytes())
-            self.assertEqual(0o755, stat.S_IMODE(installed.stat().st_mode))
-            self.assertEqual(["ripwire"], sorted(p.name for p in install_directory.iterdir()))
-
+        payload = fake_release("arm64")
+        installed, opener = self.install(payload, "arm64", {"arm64": hashlib.sha256(payload).hexdigest()})
+        self.assertEqual(b"fake-ripwire-binary\n", installed.read_bytes())
+        self.assertEqual(0o755, stat.S_IMODE(installed.stat().st_mode))
+        self.assertEqual(["ripwire"], self.left_behind)
         self.assertEqual(
-            "https://github.com/redhat-et/ripwire/releases/download/"
-            "v0.6.5/ripwire-0.6.5-linux-arm64.tar.gz",
-            observed["url"],
+            ["https://github.com/redhat-et/ripwire/releases/download/v0.6.5/ripwire-0.6.5-linux-arm64.tar.gz"],
+            opener.urls,
         )
-        self.assertEqual(RIPWIRE.DOWNLOAD_TIMEOUT_SECONDS, observed["timeout"])
+        self.assertEqual([RIPWIRE.DOWNLOAD_TIMEOUT_SECONDS], opener.timeouts)
 
     def test_checksum_mismatch_fails_before_extraction(self) -> None:
-        archive_bytes = fake_release("x64")
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            install_directory = Path(temporary_directory)
-            with self.assertRaisesRegex(RIPWIRE.RipwireError, "checksum mismatch"):
-                RIPWIRE.install_ripwire(
-                    install_directory,
-                    "x64",
-                    opener=lambda *_args, **_kwargs: io.BytesIO(archive_bytes),
-                )
-            self.assertFalse((install_directory / "ripwire").exists())
+        with self.assertRaisesRegex(RIPWIRE.RipwireError, "checksum mismatch"):
+            self.install(fake_release("x64"), "x64")
+        self.assertEqual([], self.left_behind)
 
     def test_architecture_without_a_pin_fails_closed(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            opener = mock.Mock()
-            with self.assertRaisesRegex(RIPWIRE.RipwireError, "no pinned ripwire release"):
-                RIPWIRE.install_ripwire(Path(temporary_directory), "riscv64", opener=opener)
-            opener.assert_not_called()
+        with self.assertRaisesRegex(RIPWIRE.RipwireError, "no pinned ripwire release"):
+            self.install(b"unused", "riscv64")
+        self.assertEqual([], self.left_behind)
 
     def test_archive_without_the_versioned_binary_is_rejected(self) -> None:
-        archive_bytes = make_archive({"ripwire": b"top-level-binary\n"})
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            install_directory = Path(temporary_directory)
-            with self.assertRaisesRegex(RIPWIRE.RipwireError, "exactly one"):
-                RIPWIRE.install_ripwire(
-                    install_directory,
-                    "x64",
-                    sha256_by_arch={"x64": hashlib.sha256(archive_bytes).hexdigest()},
-                    opener=lambda *_args, **_kwargs: io.BytesIO(archive_bytes),
-                )
-            self.assertFalse((install_directory / "ripwire").exists())
+        payload = make_archive({"ripwire": b"top-level-binary\n"})
+        with self.assertRaisesRegex(RIPWIRE.RipwireError, "exactly one"):
+            self.install(payload, "x64", {"x64": hashlib.sha256(payload).hexdigest()})
+        self.assertEqual([], self.left_behind)
 
 
 ARCH_OUTPUT = (
@@ -154,62 +147,71 @@ QUALITY_OUTPUT = (
     'preexisting-worse="0" new-symbol="0" gating="0"></quality-delta>\n'
 )
 DRIFT_OUTPUT = '<doc-drift schema="ripwire.doc-drift/v1" docs="9" clean="9" checked="40" drift="0"></doc-drift>\n'
+OUTPUT_BY_FLAG = {"--arch": ARCH_OUTPUT, "--quality-delta": QUALITY_OUTPUT, "--doc-drift": DRIFT_OUTPUT}
 
 
-def completed(argv: list[str], returncode: int, stdout: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.CompletedProcess(argv, returncode, stdout, "")
+def fake_subprocess(merge_base_code: int = 0, arch_code: int = 2) -> mock.Mock:
+    """Stand in for subprocess.run: git merge-base plus the three ripwire checks."""
+
+    def run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        if kwargs.get("shell") is not False or kwargs.get("check") is not False:
+            raise AssertionError(f"unsafe subprocess call: {kwargs}")
+        if argv[:2] == ["git", "merge-base"]:
+            return subprocess.CompletedProcess(argv, merge_base_code, "abc123\n", "")
+        flag = argv[2].split("=", 1)[0]
+        code = arch_code if flag == "--arch" else 0
+        return subprocess.CompletedProcess(argv, code, OUTPUT_BY_FLAG[flag], "")
+
+    return mock.Mock(side_effect=run)
 
 
 class ReportTests(unittest.TestCase):
-    def fake_binary(self, root: Path) -> Path:
+    def report(self, runner: mock.Mock, *, installed: bool = True) -> tuple[int, str, str]:
+        root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         binary = root / "ripwire"
-        binary.write_bytes(b"fake\n")
-        binary.chmod(0o755)
-        return binary
-
-    def fake_run(self, arch_code: int = 2) -> mock.Mock:
-        def run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
-            self.assertIs(kwargs.get("shell"), False)
-            self.assertIs(kwargs.get("check"), False)
-            if argv[:2] == ["git", "merge-base"]:
-                return completed(argv, 0, "abc123\n")
-            flag = argv[2]
-            if flag.startswith("--arch="):
-                return completed(argv, arch_code, ARCH_OUTPUT)
-            if flag.startswith("--quality-delta="):
-                return completed(argv, 0, QUALITY_OUTPUT)
-            return completed(argv, 0, DRIFT_OUTPUT)
-
-        return mock.Mock(side_effect=run)
+        if installed:
+            binary.write_bytes(b"fake\n")
+            binary.chmod(0o755)
+        stdout = io.StringIO()
+        with mock.patch.object(RIPWIRE.subprocess, "run", runner):
+            code, summary = RIPWIRE.build_report(binary, "base-sha", stdout=stdout)
+        return code, summary, stdout.getvalue()
 
     def test_findings_are_reported_but_never_fail_the_step(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory)
-            runner = self.fake_run(arch_code=2)
-            stdout = io.StringIO()
-            with mock.patch.object(RIPWIRE.subprocess, "run", runner):
-                code, summary = RIPWIRE.build_report(self.fake_binary(root), "base-sha", stdout=stdout)
-
+        runner = fake_subprocess(arch_code=2)
+        code, summary, annotations = self.report(runner)
         self.assertEqual(0, code)
         argvs = [call.args[0] for call in runner.call_args_list]
         self.assertEqual(["git", "merge-base", "base-sha", "HEAD"], argvs[0])
         self.assertEqual(
-            [
-                ["--arch=.ripwire_arch_rules"],
-                ["--quality-delta=abc123..HEAD"],
-                ["--doc-drift"],
-            ],
-            [argv[2:] for argv in argvs[1:]],
+            [[".", "--arch=.ripwire_arch_rules"], [".", "--quality-delta=abc123..HEAD"], [".", "--doc-drift"]],
+            [argv[1:] for argv in argvs[1:]],
         )
-        self.assertTrue(all(argv[1] == "." for argv in argvs[1:]))
         self.assertIn("advisory", summary.lower())
         self.assertRegex(summary, r"\| Layering \|.*\| 2 \|.*new_violations=1.*\| findings \|")
         self.assertRegex(summary, r"\| Quality delta \|.*\| 0 \|.*regressions=0.*\| clean \|")
         self.assertRegex(summary, r"\| Doc drift \|.*\| 0 \|.*drift=0.*\| clean \|")
         self.assertIn("&lt;arch schema=", summary)
         self.assertNotIn("<arch schema=", summary)
-        self.assertIn("::warning", stdout.getvalue())
+        self.assertIn("::warning", annotations)
 
+    def test_missing_binary_reports_an_error_without_failing(self) -> None:
+        runner = fake_subprocess()
+        code, summary, _annotations = self.report(runner, installed=False)
+        runner.assert_not_called()
+        self.assertEqual(0, code)
+        self.assertIn("not installed", summary)
+
+    def test_merge_base_failure_skips_only_the_quality_delta(self) -> None:
+        runner = fake_subprocess(merge_base_code=1)
+        code, summary, _annotations = self.report(runner)
+        self.assertEqual(0, code)
+        flags = [call.args[0][2] for call in runner.call_args_list[1:]]
+        self.assertEqual(["--arch=.ripwire_arch_rules", "--doc-drift"], flags)
+        self.assertRegex(summary, r"\| Quality delta \|.*merge-base.*\| error \|")
+
+
+class StatusTests(unittest.TestCase):
     def test_quality_regressions_and_doc_drift_count_as_findings(self) -> None:
         self.assertEqual(
             "findings",
@@ -219,31 +221,6 @@ class ReportTests(unittest.TestCase):
         self.assertEqual("clean", RIPWIRE.check_status("arch", 0, {"new_violations": "0"}))
         self.assertEqual("error", RIPWIRE.check_status("doc-drift", 1, {}))
         self.assertEqual("error", RIPWIRE.check_status("arch", 0, {}))
-
-    def test_missing_binary_reports_an_error_without_failing(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            with mock.patch.object(RIPWIRE.subprocess, "run") as runner:
-                code, summary = RIPWIRE.build_report(
-                    Path(temporary_directory) / "ripwire", "base-sha", stdout=io.StringIO()
-                )
-            runner.assert_not_called()
-        self.assertEqual(0, code)
-        self.assertIn("not installed", summary)
-
-    def test_merge_base_failure_skips_only_the_quality_delta(self) -> None:
-        def run(argv: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
-            if argv[:2] == ["git", "merge-base"]:
-                return completed(argv, 1, "")
-            return completed(argv, 0, DRIFT_OUTPUT if argv[2] == "--doc-drift" else ARCH_OUTPUT)
-
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory)
-            with mock.patch.object(RIPWIRE.subprocess, "run", mock.Mock(side_effect=run)) as runner:
-                code, summary = RIPWIRE.build_report(self.fake_binary(root), "base-sha", stdout=io.StringIO())
-        self.assertEqual(0, code)
-        flags = [call.args[0][2] for call in runner.call_args_list[1:]]
-        self.assertEqual(["--arch=.ripwire_arch_rules", "--doc-drift"], flags)
-        self.assertRegex(summary, r"\| Quality delta \|.*merge-base.*\| error \|")
 
     def test_long_output_is_truncated(self) -> None:
         text = RIPWIRE.output_excerpt("x" * (RIPWIRE.MAX_OUTPUT_CHARS + 50))
@@ -290,7 +267,7 @@ class AdvisoryWorkflowTests(unittest.TestCase):
 
 def build_suite() -> unittest.TestSuite:
     suite = unittest.TestSuite()
-    for test_case in (PinTests, InstallTests, ReportTests, AdvisoryWorkflowTests):
+    for test_case in (PinTests, InstallTests, ReportTests, StatusTests, AdvisoryWorkflowTests):
         suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(test_case))
     return suite
 

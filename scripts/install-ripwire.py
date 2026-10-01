@@ -22,7 +22,6 @@ import platform
 import re
 import subprocess
 import sys
-import tempfile
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import BinaryIO, TextIO
@@ -40,7 +39,6 @@ RIPWIRE_SHA256 = {
 }
 RELEASE_BASE_URL = "https://github.com/redhat-et/ripwire/releases/download"
 RIPWIRE_BINARY = "ripwire"
-MAX_BINARY_BYTES = 128 * 1024 * 1024
 CHECK_TIMEOUT_SECONDS = 600
 MAX_OUTPUT_CHARS = 20_000
 _MACHINES = {"x86_64": "x64", "amd64": "x64", "aarch64": "arm64", "arm64": "arm64"}
@@ -67,26 +65,14 @@ def install_ripwire(
 ) -> Path:
     if arch not in sha256_by_arch:
         raise RipwireError(f"no pinned ripwire release for Linux {arch}")
-    version = _pinned.validated_version(RIPWIRE_VERSION, label="ripwire")
-    pinned_sha256 = _pinned.validated_sha256(sha256_by_arch[arch], label="ripwire")
-    stem = f"ripwire-{version}-linux-{arch}"
-    archive_name = f"{stem}.tar.gz"
-    download_url = f"{RELEASE_BASE_URL}/v{version}/{archive_name}"
-
-    install_directory.mkdir(parents=True, exist_ok=True)
-    destination = install_directory / RIPWIRE_BINARY
-    with tempfile.TemporaryDirectory(prefix="ripwire-install-", dir=install_directory) as temporary:
-        archive_path = Path(temporary) / archive_name
-        _pinned.download_archive(download_url, archive_path, label="ripwire", opener=opener)
-        _pinned.verify_sha256(archive_path, pinned_sha256, label="ripwire")
-        _pinned.extract_member(
-            archive_path,
-            f"{stem}/{RIPWIRE_BINARY}",
-            destination,
-            label="ripwire",
-            max_bytes=MAX_BINARY_BYTES,
-        )
-    return destination
+    stem = f"ripwire-{RIPWIRE_VERSION}-linux-{arch}"
+    release = _pinned.PinnedArchive(
+        "ripwire",
+        f"{RELEASE_BASE_URL}/v{RIPWIRE_VERSION}/{stem}.tar.gz",
+        sha256_by_arch[arch],
+        f"{stem}/{RIPWIRE_BINARY}",
+    )
+    return _pinned.install_binary(release, install_directory / RIPWIRE_BINARY, opener=opener)
 
 
 # (kind, title, root element, attributes shown in the summary)
@@ -219,15 +205,19 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
-    try:
-        install_directory = Path(_pinned.required_environment("RUNNER_TEMP")) / "ripwire-bin"
-        if args.command == "install":
-            installed = install_ripwire(install_directory, linux_architecture())
-            print(f"Installed ripwire {RIPWIRE_VERSION} at {installed}")
-            return 0
-    except RipwireError as error:
-        print(f"::error::ripwire {args.command} failed: {error}", file=sys.stderr)
+    runner_temp = os.environ.get("RUNNER_TEMP", "")
+    if not runner_temp:
+        print("::error::RUNNER_TEMP is not set", file=sys.stderr)
         return 1
+    install_directory = Path(runner_temp) / "ripwire-bin"
+    if args.command == "install":
+        try:
+            installed = install_ripwire(install_directory, linux_architecture())
+        except RipwireError as error:
+            print(f"::error::ripwire install failed: {error}", file=sys.stderr)
+            return 1
+        print(f"Installed ripwire {RIPWIRE_VERSION} at {installed}")
+        return 0
 
     code, summary = build_report(install_directory / RIPWIRE_BINARY, os.environ.get("BASE_SHA", ""))
     summary_path = os.environ.get("GITHUB_STEP_SUMMARY", "")
