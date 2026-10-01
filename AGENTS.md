@@ -230,6 +230,10 @@ mirrors section 11; `speckit-pro/codex-agents/*.toml` are generated from
   with a guessed title and the template body; set the title and fence with
   `gh pr edit`, then mark it ready. A draft skips every other PR Checks job,
   yet `validate-plugins` passes. One concern per PR.
+- Work with dependent parts is a stack: plan the layers, then `gh stack init`
+  before writing code, one concern per layer, foundations at the bottom.
+  Unrelated work gets its own stack off `main`. Merge with
+  `gh stack merge <pr> --yes`, never `gh pr merge`.
 - Only `feat` and `fix` PRs fill the `release-note` fence, required unless
   labeled `release-note/skip`; any unlabeled fence is published.
 
@@ -284,3 +288,12 @@ in step.
 - No feature plans, release notes, implementation transcripts, or detailed
   process history in agent files. Add a rule when an agent repeats a mistake;
   prune one that no longer earns its line.
+
+## 14. Agent skills
+
+- **Issue tracker:** GitHub Issues via `gh`; PRs open through `gh stack`. See
+  `docs/agents/issue-tracker.md`.
+- **Triage labels:** the five default role labels. See
+  `docs/agents/triage-labels.md`.
+- **Domain docs:** single-context (root `GLOSSARY.md`, `docs/adr/`). See
+  `docs/agents/domain.md`.
