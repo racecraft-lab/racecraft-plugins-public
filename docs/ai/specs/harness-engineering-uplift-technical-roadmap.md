@@ -164,7 +164,7 @@ HRNS-025 Run journal ┘
 | HRNS-012 | Knowledge Conformance, Health, and Drift Maintenance | Retired | - | Dropped |
 | HRNS-013 | Code-Intelligence and Vector-Index Interoperability | Retired | - | Dropped |
 | HRNS-014 | External OKF Exchange and Reviewable Reconciliation | Retired | - | Dropped |
-| HRNS-015 | Autopilot, Gate, and PR-Emission Repair | ⏳ Ready | - | Specify |
+| HRNS-015 | Autopilot, Gate, and PR-Emission Repair | 🔄 In Progress | - | Specify |
 | HRNS-016 | Per-story Autopilot Execution | ⏳ Pending | - | HRNS-015 |
 | HRNS-017 | Host Capability Spike | ⏳ Ready | - | Specify |
 | HRNS-018 | Typed Workflow State | ⏳ Ready | - | Specify |
