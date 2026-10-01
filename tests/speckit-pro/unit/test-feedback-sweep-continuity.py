@@ -98,7 +98,7 @@ class DraftPrRowRepairTests(unittest.TestCase):
                 self.assertEqual(record["status"], status)
                 self.assertIsNone(record["repair"])
 
-    def test_the_record_gains_one_trailing_key(self) -> None:
+    def test_the_record_carries_one_more_key_and_never_drops_one(self) -> None:
         self.assertEqual(
             list(self.corroborate(SAME)),
             ["status", "recorded", "observed", "merged", "reason", "repair"],
@@ -114,13 +114,13 @@ class ScriptedGh(unittest.TestCase):
         sleeps: list[float] = []
         steps = list(script)
 
-        def fake_probe(root, argv, **kwargs):
+        def fake_run(root, argv, **kwargs):
             calls.append(list(argv))
             return steps.pop(0)
 
         which = "/usr/bin/gh" if installed else None
         with patch.object(sweep_isolation.shutil, "which", return_value=which), patch.object(
-            sweep_isolation, "probe", side_effect=fake_probe
+            sweep_isolation, "probe", side_effect=fake_run
         ), patch.object(sweep_isolation, "_sleep", side_effect=sleeps.append):
             try:
                 return sweep_isolation._run_gh_json(["user"], REPO_ROOT), None, calls, sleeps
@@ -158,7 +158,7 @@ class GitHubRetryTests(ScriptedGh):
                 self.assertIsNone(violation)
                 self.assertEqual((len(calls), sleeps), (2, [sweep_isolation.GH_RETRY_DELAYS[0]]))
 
-    def test_a_spent_schedule_reports_the_closed_reason_of_the_failure(self) -> None:
+    def test_a_spent_schedule_reports_the_closed_reason_of_the_last_failure(self) -> None:
         cases = (
             ("rate_limited", "GitHub rate limit persisted after retries",
              probed(1, stderr="API rate limit exceeded")),
