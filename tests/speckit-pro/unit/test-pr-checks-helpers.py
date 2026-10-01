@@ -132,7 +132,7 @@ class ActionlintHelperTests(unittest.TestCase):
             archive_path.write_bytes(archive_bytes)
             with self.assertRaisesRegex(
                 ACTIONLINT.ActionlintError,
-                "exactly one top-level actionlint member",
+                "exactly one actionlint member",
             ):
                 ACTIONLINT.extract_actionlint(archive_path, root / "actionlint")
 

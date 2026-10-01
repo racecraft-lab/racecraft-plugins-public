@@ -85,6 +85,7 @@ ack dead-code:new-symbol 00af726b7a483f4d 0 cid=9147841483bd5e1c unittest discov
 ack dead-code:new-symbol 00ca5261aefb8b6b 0 cid=54f8e73ba82d5af0 unittest discovers test_ methods and setUp by name, and fetch is the closure that fetch_with returns to its callers; nothing calls them by name, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 0151b7f5fbf30198 0 cid=a0bf95249ce64559 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 0208ce2243ddf47b 0 cid=e2d049e81da57dc0 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol 022f0e526bdbcf3a 0 cid=25870f0491230a3f by=tests/speckit-pro/unit/test-install-ripwire.py unittest discovers test_ methods and setUp by name; the runner calls them, not repository code
 ack dead-code:new-symbol 02eb202f80617763 0 cid=011a8c9ba6ef331b unittest discovers these test methods through loadTestsFromTestCase in main(); no direct caller is expected
 ack dead-code:new-symbol 02ecf758e14a7c60 0 cid=9002d525d0120328 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 03742b98bd2ad40c 0 cid=4bd0f943a9fd8a98 unittest discovers and runs test_ methods and setUp hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
@@ -104,10 +105,12 @@ ack dead-code:new-symbol 07a92cec3b9b5a1e 0 cid=485509ad91d6e7ed unittest discov
 ack dead-code:new-symbol 07e5d58a9860f26f 0 cid=9b1b57d4607d90a3 fake_probe_run is passed by name as the subprocess.run mock side_effect in two tests; the dead-code scan counts only direct calls
 ack dead-code:new-symbol 08168d678178627d 0 cid=b6d8efbeb2ccc1cd unittest discovers test_ methods by name through the counted runner, so no static caller exists; the methods are live tests
 ack dead-code:new-symbol 085aa6238139ad59 0 cid=3bb05a8c55ae25dc unittest discovers test_ methods by name through the counted runner, so no static caller exists; the methods are live tests
+ack dead-code:new-symbol 08c852bd58a724da 0 cid=6463b933438deebc by=tests/speckit-pro/unit/test-install-ripwire.py unittest discovers test_ methods and setUp by name; the runner calls them, not repository code
 ack dead-code:new-symbol 08f8630bad26ce28 0 cid=7fa1ac672d78ef8b Test methods are discovered by unittest, so a static call graph sees no caller.
 ack dead-code:new-symbol 08f9bb63229acf6e 0 cid=a8c1ab3236dd3895 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 0906c75d1e1bc569 0 cid=b9ec67ccbba6a1d5 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 0a27dc1508b7d898 0 cid=72d8f94156ba3140 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol 0a541b1e932503e4 0 cid=4d16d2aeed57c229 by=tests/speckit-pro/unit/test-install-ripwire.py unittest discovers test_ methods and setUp by name; the runner calls them, not repository code
 ack dead-code:new-symbol 0a6015fc3b53e8b5 0 cid=31208d260836f950 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 0b17a6acbec30d9d 0 cid=041efb2811647391 unittest discovers test_ methods through loadTestsFromTestCase, so they have no static caller
 ack dead-code:new-symbol 0b444b1f8cb010dd 0 cid=0e924e3523a6130f unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
@@ -222,6 +225,7 @@ ack dead-code:new-symbol 3453957f8d9d26f6 0 cid=e7a04037afc47248 unittest discov
 ack dead-code:new-symbol 34d7098954f47ec6 0 cid=046599c33aa92211 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 34f10f717328ee48 0 cid=e9c1424a2b4ae0b8 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 35241c81fccaeffd 0 cid=b49e807dee9e3c22 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol 35a5235991a00385 0 cid=2140d80dc047c11c by=tests/speckit-pro/unit/test-install-ripwire.py unittest discovers test_ methods and setUp by name; the runner calls them, not repository code
 ack dead-code:new-symbol 35edc10f890efdb6 0 cid=f05128a6a4df0323 unittest discovers test_ methods by name through loadTestsFromTestCase in main(); nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 36539398ecef01a7 0 cid=887c477cc6158b6e Handlers are registered as values in the PR_EMISSION_HANDLERS table in helpers/registry.py, and test_ methods are found by unittest by name; neither is a direct call the dead-code scan can see
 ack dead-code:new-symbol 36815bb4cc38ab6f 0 cid=4960d247b1da1f34 unittest discovers and runs test_ methods by name; nothing calls them directly, so the dead-code scan cannot see the use
@@ -323,6 +327,7 @@ ack dead-code:new-symbol 60d797cae86f512c 0 cid=50e6d14eb7dd1ea4 unittest discov
 ack dead-code:new-symbol 6121a1a79a04836f 0 cid=a0f0509e1ca41a86 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 62a11db76c8a04b5 0 cid=ec4b2d257a54a984 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 62ba979c02cbb6b4 0 cid=d850f6dd98f11db2 unittest discovers these test methods through loadTestsFromTestCase in main(); no direct caller is expected
+ack dead-code:new-symbol 6376a1cb49f0907c 0 cid=849cb95a665f4465 by=tests/speckit-pro/unit/test-install-ripwire.py unittest discovers test_ methods and setUp by name; the runner calls them, not repository code
 ack dead-code:new-symbol 6397ce284552a9ed 0 cid=cbb10152b04b446c Test methods are discovered by unittest, so a static call graph sees no caller.
 ack dead-code:new-symbol 63c191f3cf6e615b 0 cid=357f8ad564d27ce3 unittest discovers test_ methods through its test loader, so they have no static caller
 ack dead-code:new-symbol 6454e4eba4d42359 0 cid=d3adfc836d425e77 dead-code: unittest discovers test_ methods by name
@@ -365,6 +370,7 @@ ack dead-code:new-symbol 7226c38a6bea9eb7 0 cid=c66f78032dfcab49 unittest discov
 ack dead-code:new-symbol 724ec0e0f1d5b588 0 cid=0be519c72e51e48f unittest discovers test_ methods by name through the counted runner, so no static caller exists; the methods are live tests
 ack dead-code:new-symbol 725476e4ac9e22bc 0 cid=85f7fe32da5fc394 Test methods are discovered by unittest, so a static call graph sees no caller.
 ack dead-code:new-symbol 72c8430103f79a1f 0 cid=d40fbd29bddd15c4 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol 730e53bf8f3183b0 0 cid=f8aabace4c2c9596 by=tests/speckit-pro/unit/test-install-ripwire.py unittest discovers test_ methods and setUp by name; the runner calls them, not repository code
 ack dead-code:new-symbol 737ef779f7dde805 0 cid=f5955681734eb208 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 73bf0e6d67b3fd27 0 cid=2f4227ea51f6f6bb unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 73e47b9a99650e89 0 cid=3af0a79002d7d9b5 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
@@ -373,6 +379,7 @@ ack dead-code:new-symbol 7590b35e7138a08b 0 cid=1b734db1d8b9c1fb unittest discov
 ack dead-code:new-symbol 762f4041b96c6e04 0 cid=c09d27f76b8934c3 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 76bb065a27bdd41a 0 cid=7609f6d3b5cc5385 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 778e1a4b48d1ffd4 0 cid=d69a75390c95c378 unittest discovers test_ methods by name, and the nested fetch and superseded helpers are passed in as callbacks; nothing calls them by name, so the dead-code scan cannot see the use
+ack dead-code:new-symbol 77dec243d7930b64 0 cid=38481aacab66f3ca by=tests/speckit-pro/unit/test-install-ripwire.py unittest discovers test_ methods and setUp by name; the runner calls them, not repository code
 ack dead-code:new-symbol 77eab636df246d16 0 cid=2debc24cfb9b457c Handlers are registered as values in the PR_EMISSION_HANDLERS table in helpers/registry.py, and test_ methods are found by unittest by name; neither is a direct call the dead-code scan can see
 ack dead-code:new-symbol 786b3e28a4a5bb13 0 cid=64f5f82a0a7fb45e unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 79319a4582312f11 0 cid=16567e02016ef1f0 unittest discovers and runs test_ methods and setUp hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
@@ -495,6 +502,7 @@ ack dead-code:new-symbol 99d237908e04efce 0 cid=1be66a07c4234ea7 unittest discov
 ack dead-code:new-symbol 99eea90565aad4b9 0 cid=ebf0e747b9860e68 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 9a3a3f0ebdd00dc9 0 cid=7eb30fc6f939dda7 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 9b5e314f146086f1 0 cid=1870ff0ce1faff4c unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol 9b652037375035e0 0 cid=b8671fe33aa4bcfb by=tests/speckit-pro/unit/test-install-ripwire.py unittest discovers test_ methods and setUp by name; the runner calls them, not repository code
 ack dead-code:new-symbol 9be890a37f5ce5b6 0 cid=f42dedc9e5508028 Bound methods chosen in the conditional expression at test-corrective-authorization-runner-routes.py:218, which the dead-code scan does not follow
 ack dead-code:new-symbol 9c4a5de26703eff7 0 cid=e7c7c024390f47a3 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 9ddc1e75591743ba 0 cid=b0645a77ba40a60f unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
@@ -557,7 +565,9 @@ ack dead-code:new-symbol ad5418c1c0575f0a 0 cid=673e91bab9c30f3f Moved verbatim 
 ack dead-code:new-symbol ad8f3ca66e6f4656 0 cid=50f742afd7b55ee3 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol add5521656be5168 0 cid=1e38b369f7ed19e0 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol ae328320b737edf5 0 cid=fc7bed14af070b2a unittest discovers test_ methods by name through loadTestsFromTestCase or loadTestsFromModule, so no static caller exists
+ack dead-code:new-symbol ae79c97559fa5898 0 cid=5d20ff9c767d09eb by=tests/speckit-pro/unit/test-install-ripwire.py unittest discovers test_ methods and setUp by name; the runner calls them, not repository code
 ack dead-code:new-symbol aed6abf9e856019e 0 cid=8fa5612eb6982b2b unittest discovers and runs test_ methods by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol aefe6b1971432259 0 cid=74b4ddc0097bba4e by=tests/speckit-pro/unit/test-install-ripwire.py unittest discovers test_ methods and setUp by name; the runner calls them, not repository code
 ack dead-code:new-symbol af3f66b153a826e8 0 cid=0cb382bbb9217933 unittest discovers test_ methods by name through the counted runner, so no static caller exists; the methods are live tests
 ack dead-code:new-symbol af50187bb114d094 0 cid=b4160dfeeae7132a Test methods are discovered by unittest, so a static call graph sees no caller.
 ack dead-code:new-symbol afe5a8df9a0ef467 0 cid=d41102a9ff9050ea unittest discovers these test methods through loadTestsFromTestCase in main(); no direct caller is expected
@@ -566,6 +576,7 @@ ack dead-code:new-symbol b09d28f0d656827d 0 cid=ca60ea7fc2b92af1 unittest discov
 ack dead-code:new-symbol b0ba5a87d68508e5 0 cid=47c498c2d80defb7 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol b1392e9cbdac5032 0 cid=c82e2a295f4578c5 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol b141c5cd043e73a5 0 cid=498dc8b049db3866 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol b1732461ab398a9f 0 cid=52647ce31480204e by=tests/speckit-pro/unit/test-install-ripwire.py unittest discovers test_ methods and setUp by name; the runner calls them, not repository code
 ack dead-code:new-symbol b19c6ca14d9fa322 0 cid=6388962873523f5d unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol b1def5ca3d55ddf2 0 cid=10cf86220cc69d8b unittest discovers test_ methods by name through loadTestsFromTestCase, so no static caller exists
 ack dead-code:new-symbol b281192d8e2970d2 0 cid=56f36bb1b059289d unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
@@ -679,9 +690,11 @@ ack dead-code:new-symbol d9f5430873e06a62 0 cid=f599a2c6f0a4d015 unittest discov
 ack dead-code:new-symbol da231047ebaf8554 0 cid=6d76d8efb9064f6e unittest discovers and runs test_ methods by name, and a patched-in subprocess stand-in is passed as side_effect; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol db9d68c6740cf800 0 cid=9d91cf6652640a46 unittest discovers test_ methods through its test loader, so they have no static caller
 ack dead-code:new-symbol dbbd2b226409b1ef 0 cid=4f43d33305eebfa8 Imported by name and called from the split test files and the tests that share this fixture; the scan does not follow the cross-file imports
+ack dead-code:new-symbol dbd960e21b088f0f 0 cid=4602a4419a8f7a7d by=tests/speckit-pro/unit/test-install-ripwire.py unittest discovers test_ methods and setUp by name; the runner calls them, not repository code
 ack dead-code:new-symbol dbf047b552dbe694 0 cid=93a6dec542e3358a unittest discovers and runs test_ methods by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol dc73fba2823c243e 0 cid=5247dffdda57636f unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol dd1e53e9fd554131 0 cid=06464f841d9e434c unittest discovers test_ methods by name through loadTestsFromTestCase, so no static caller exists
+ack dead-code:new-symbol dd61cd90655cb3ad 0 cid=f6f5befffe54a36b by=tests/speckit-pro/unit/test-install-ripwire.py unittest discovers test_ methods and setUp by name; the runner calls them, not repository code
 ack dead-code:new-symbol dd6429ac0c86d6dc 0 cid=a141997546979c29 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol dd865e32a65455d2 0 cid=0c9b06074448e3ac unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol ddfbb0bb43f3e4a4 0 cid=791745fe5e770fd6 unittest discovers test_ methods by name, and the nested helpers are passed by value in a case table or as a mock side effect, so dead-code is a false positive
@@ -729,6 +742,7 @@ ack dead-code:new-symbol efc2b4c85ba7dc69 0 cid=00778ad7f9b62c31 unittest discov
 ack dead-code:new-symbol f02f70a994bfba8c 0 cid=7ab3ccac4b81fe51 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol f0d37b32331bcdc5 0 cid=012d3805e42f3cc6 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol f179d92101b445c4 0 cid=437c5eb9aea5fadf unittest discovers test_ methods by name, and the nested fetch and superseded helpers are passed in as callbacks; nothing calls them by name, so the dead-code scan cannot see the use
+ack dead-code:new-symbol f1a1245b0880e161 0 cid=1392b06da87aaf1e by=tests/speckit-pro/unit/test-install-ripwire.py unittest discovers test_ methods and setUp by name; the runner calls them, not repository code
 ack dead-code:new-symbol f2301cf1aae87ace 0 cid=f2c0c9faaf9bfa4b unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol f2f469db79995ac7 0 cid=863829c219c6676a unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol f347bc2f02d76e57 0 cid=cbd86254fd970049 unittest discovers these test methods through loadTestsFromTestCase in main(); no direct caller is expected
@@ -902,7 +916,7 @@ ack verbosity 7ac4c4e981d70f87 161 cid=30fafd21bffb1087 Moved unchanged from hel
 ack verbosity 7e93962aeefbfe46 1801 cid=681860a6a01e374c The bounded headless roster is a hand-listed data table; a new Claude scaffold eval adds one case row and one roster tuple
 ack verbosity 7f7753a3e05b6fed 184 cid=80e28c9bde867291 developer_instructions is a Codex agent's whole model prompt, generated prose from its Claude agent source rather than code, so its line count cannot be split
 ack verbosity 7fc3a593e1dc98fa 188 cid=28e18e5cd809d286 developer_instructions is a Codex agent's whole model prompt, generated prose from its Claude agent source rather than code, so its line count cannot be split
-ack verbosity 857aef1d7a13abe5 278 verbosity: suite-manifest.json must list each registered test file, one line | prior: Suite registry with one line per script; the growth is the split and new test scripts this change registers, and the manifest must list each
+ack verbosity 857aef1d7a13abe5 279 cid=c088bfdfa8818fd3 verbosity: suite-manifest.json must list each registered test file, one line; test-install-ripwire.py adds one | prior: verbosity: suite-manifest.json must list each registered test file, one line | prior: Suite registry with one line per script; the growth is the split and new test scripts this change registers, and the manifest must list each
 ack verbosity 8666a6724d3a8643 73 cid=8ea897b046e4f0e2 Moved unchanged from helpers/pr_emission.py into its own module; the measure is the same as before the split, and the module split is the change this issue asks for
 ack verbosity 895390fe23a2341d 80 cid=1d21106ce8692c0d Moved verbatim from helpers/read_only.py or helpers/mutation.py into a core module so core code can import it at module level; the body is AST-identical to the baseline, so this shape predates the change
 ack verbosity 8b2c02fdb63cfc6b 80 cid=118ec6c8e93f8547 Test class moved verbatim into a file named for its concern; its length is unchanged
