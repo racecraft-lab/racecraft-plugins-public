@@ -1062,6 +1062,43 @@ class ValidatePayloadLinksStayInside(unittest.TestCase):
                     self.assertTrue(resolved.is_relative_to(root), f'{target} leaves the installed {host} payload')
         self.assertTrue(checked, 'no payload links checked - refusing to pass vacuously')
 
+class ValidateScaffoldBlindSpotDeadline(unittest.TestCase):
+
+    def test_scaffold_blind_spot_deadline_is_enforced_on_each_host(self) -> None:
+        # A deadline stated only in prose idled a session for 12 minutes: each
+        # host must arm a wake at dispatch and stop the analyst when it fires.
+        def blind_spot_pass(view: Path) -> str:
+            skill = (view / 'speckit-scaffold-spec' / 'SKILL.md').read_text(encoding='utf-8')
+            section = skill.split('### 3.6 Blind-Spot Pass', 1)[-1].split('\n### ', 1)[0]
+            self.assertIn('**The bound.', section, 'expected the blind-spot pass section')
+            return ' '.join(section.split())
+
+        claude, codex = blind_spot_pass(CLAUDE_VIEW), blind_spot_pass(CODEX_VIEW)
+        for host, section in (('claude', claude), ('codex', codex)):
+            with self.subTest(host=host, check='one deadline value'):
+                minutes = re.findall(r'Pass execution deadline \| \*\*(\d+) minutes from dispatch\*\*', section)
+                self.assertEqual(1, len(minutes), 'expected one pass execution deadline in the bound table')
+            with self.subTest(host=host, check='analyst carries a tool-call budget'):
+                block = section.split('You are running a blindspot pass', 1)[-1].split('```', 1)[0]
+                self.assertRegex(block, r'Budget: at most \d+ tool calls\. When you reach it, stop exploring and return the findings you have')
+                self.assertIn('If you find nothing, reply exactly: The blindspot pass raised no unknown unknowns.', block)
+                self.assertIn('N. **<Title>** - the finding, plus a repo-relative file or path pointer.', block)
+        seconds = int(re.search(r'\*\*(\d+) minutes from dispatch\*\*', claude).group(1)) * 60
+        with self.subTest(host='claude', check='timer armed at dispatch'):
+            self.assertIn(f'background command (`run_in_background: true`) that runs `[resolved_python, "-c", "import time; time.sleep({seconds})"]`', claude)
+            self.assertIn('Arm the deadline in the same turn as the dispatch', claude)
+        with self.subTest(host='claude', check='deadline stops the analyst'):
+            self.assertIn('**The timer completes first:** the deadline has passed. Stop the analyst with `TaskStop` on its task id', claude)
+            self.assertIn('**The analyst replies first:** stop the timer with `TaskStop` on its task id', claude)
+        with self.subTest(host='codex', check='wait is capped at the deadline'):
+            self.assertIn('pass `timeout_ms` set to the time left until the pass execution deadline, never more', codex)
+        with self.subTest(host='codex', check='deadline closes the analyst'):
+            self.assertIn('When the deadline passes with no summary, call `close_agent` on the analyst when that action is exposed, otherwise `interrupt_agent` when exposed', codex)
+            self.assertNotIn('TaskStop', codex)
+        for host, section in (('claude', claude), ('codex', codex)):
+            with self.subTest(host=host, check='deadline records did not run'):
+                self.assertRegex(section, r'record `did not run` with reason `wait deadline expired`')
+
 def main() -> int:
     suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])
     return run_counted(suite, label="validate-skill-contracts")

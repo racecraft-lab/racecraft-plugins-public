@@ -218,6 +218,7 @@ ack dead-code:new-symbol 2ec6624fb338bb31 0 cid=607c5924ff652e56 Referenced only
 ack dead-code:new-symbol 2faf2b327e27ec04 0 cid=41cdbea0444fa678 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 30943d1d3fe4fabd 0 cid=9fd2ef20eec18e59 Test methods are discovered by unittest, so a static call graph sees no caller.
 ack dead-code:new-symbol 309986d4db0a7346 0 cid=569a502decc6af58 unittest discovers these test methods through loadTestsFromTestCase in main(); no direct caller is expected
+ack dead-code:new-symbol 30d5f944274e52d0 0 cid=0785f20eb3550d83 unittest discovers and runs test_ methods by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 326d7c49afa458bf 0 cid=2ea013b4f3214a9c unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 3328f8b4d16c562e 0 cid=9e365bd9059f28c3 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 338ac921a489bca1 0 cid=f11a3f9601224b5c unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
