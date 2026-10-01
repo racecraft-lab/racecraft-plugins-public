@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.39.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.39.0...speckit-pro-v2.39.1) (2026-10-01)
+
+
+### Bug Fixes
+
+* **speckit-pro:** enforce the scaffold blind-spot pass deadline on both hosts ([#996](https://github.com/racecraft-lab/racecraft-plugins-public/issues/996)) ([4c9bc3f](https://github.com/racecraft-lab/racecraft-plugins-public/commit/4c9bc3fd1100d17619d776a95ab8bcf905ff8fe8))
+* **speckit-pro:** make the helper replay command run from an installed plugin ([#995](https://github.com/racecraft-lab/racecraft-plugins-public/issues/995)) ([9cf1f5d](https://github.com/racecraft-lab/racecraft-plugins-public/commit/9cf1f5daa90e73c0e5f3ec871d905dae7bc5e19a))
+
 ## [2.39.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.38.2...speckit-pro-v2.39.0) (2026-10-01)
 
 
