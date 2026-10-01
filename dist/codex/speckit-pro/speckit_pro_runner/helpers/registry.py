@@ -46,7 +46,6 @@ class HelperEntry:
             "python_operation": self.operation,
             "promotion_status": self.promotion_status,
             "comparison_mode": self.comparison_mode,
-            "authoritative_command": self.authoritative_command,
             "out_of_scope_modes": list(self.out_of_scope_modes),
         }
         if self.script is not None:
@@ -76,7 +75,6 @@ class MutationEntry:
             "python_operation": self.operation if self.authoritative_command else None,
             "promotion_status": self.promotion_status,
             "comparison_mode": self.comparison_mode,
-            "authoritative_command": self.authoritative_command,
             "promotion": promotion_record(
                 self.helper_id,
                 promotion_status=self.promotion_status,
@@ -90,6 +88,8 @@ class MutationEntry:
         return record
 
 
+# Test-only: the request fixture each entry's `authoritative_command` names. The
+# plugin does not ship `tests/`, so no emitted record or envelope carries these paths.
 SCRIPT_BASE = "speckit-pro/skills/speckit-autopilot/scripts"
 REQUEST_FIXTURE_BASE = "tests/speckit-pro/unit/fixtures/read-only-helpers/requests"
 MUTATION_REQUEST_FIXTURE_BASE = "tests/speckit-pro/unit/fixtures/mutation-helpers/requests"

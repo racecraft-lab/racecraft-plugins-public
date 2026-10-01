@@ -8,6 +8,7 @@ import json
 import math
 import os
 import re
+import shlex
 import shutil
 import stat
 import subprocess
@@ -18,6 +19,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Callable, cast
 
 from ..agent_inventory import CLAUDE_REQUIRED_AGENT_NAMES
+from ..canonical_json import canonical_bytes
 from ..envelope import diagnostic, response
 from ..execution_control import is_implementation_notes
 from ..gate_discovery import DEFAULT_BASE_BRANCH, SLOTS as GATE_SLOTS, resolve_slots as resolve_gate_slots
@@ -280,6 +282,11 @@ def helper_stdin_request(entry: Any, inputs: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def replay_command(stdin_request: dict[str, Any]) -> str:
+    """A runner command that replays the request, runnable without any repository file."""
+    return f"printf '%s' {shlex.quote(canonical_bytes(stdin_request).decode('utf-8'))} | python -m speckit_pro_runner"
+
+
 def explicit_or_derived_args(helper_id: str, inputs: dict[str, Any], repo_root: Path) -> list[str] | dict[str, Any]:
     if helper_id in {"detect-commands", "detect-presets"}:
         return []
@@ -481,6 +488,7 @@ def helper_result_data(
             parsed_stdout = json.loads(stdout["text"])
         except json.JSONDecodeError:
             parsed_stdout = None
+    stdin_request = helper_stdin_request(entry, inputs)
     data = {
         "helper_id": entry.helper_id,
         "operation": entry.operation,
@@ -492,7 +500,7 @@ def helper_result_data(
         "execution_model": "direct_python_helper",
         "executed_in_process": True,
         "stdin_mode": "single_json_request",
-        "stdin_request": helper_stdin_request(entry, inputs),
+        "stdin_request": stdin_request,
         "invocation_contract": {
             "argv_executable_without_stdin": False,
             "stdin_required": True,
@@ -500,7 +508,7 @@ def helper_result_data(
             "actual_execution_uses_argv": False,
         },
         "python_operation": entry.operation,
-        "authoritative_command": entry.authoritative_command,
+        "authoritative_command": replay_command(stdin_request),
         "shell": False,
         "cwd": {"kind": "repo_relative", "value": ".", "display": "."},
         "exit_code": exit_code,

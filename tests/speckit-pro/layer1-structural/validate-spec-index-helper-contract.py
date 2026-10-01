@@ -94,7 +94,7 @@ class ValidateSpecIndexRegistry(unittest.TestCase):
             self.assertIn('"helper_id":"generate-spec-index-write"', mutation_registry_json)
         with self.subTest(msg='generate-spec-index-write is promoted with an authoritative request'):
             self.assertEqual(write_entry['promotion_status'], 'golden_only')
-            self.assertTrue(write_entry['authoritative_command'])
+            self.assertNotIn('authoritative_command', write_entry)
 
 
 class ValidateSpecIndexDeterminism(unittest.TestCase):

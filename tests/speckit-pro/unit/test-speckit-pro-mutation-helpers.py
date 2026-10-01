@@ -1208,10 +1208,13 @@ class MutationHelperTests(unittest.TestCase):
             self.assertNotEqual(record["promotion_status"], "python_authoritative")
             active_record = {key: value for key, value in record.items() if key != "inactive_provenance"}
             self.assertNotIn(".sh", json.dumps(active_record, sort_keys=True))
+            self.assertNotIn("authoritative_command", record)
+            self.assertNotIn("tests/", json.dumps(record))
+            fixture_command = registry.MUTATION_HELPERS[record["helper_id"]].authoritative_command
             if record["promotion_status"] in {"deferred", "out_of_scope"}:
-                self.assertEqual(record["authoritative_command"], "")
+                self.assertEqual(fixture_command, "")
             else:
-                self.assertTrue(command_stdin_fixture(record["authoritative_command"]).is_file())
+                self.assertTrue(command_stdin_fixture(fixture_command).is_file())
             promotion = record["promotion"]
             self.assertEqual(promotion["helper_id"], record["helper_id"])
             self.assertEqual(promotion["promotion_status"], record["promotion_status"])

@@ -9,6 +9,7 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -54,6 +55,7 @@ CONFIDENCE_GATE_RUNBOOKS = (
 import runner_invocation  # noqa: E402
 from runner_invocation import assert_runner_response, command_stdin_fixture  # noqa: E402
 
+from speckit_pro_runner.helpers import registry  # noqa: E402
 from speckit_pro_runner.pr_contract import PACKET_TITLE_SCOPE_PATTERN, PACKET_TITLE_VALUE_PATTERN  # noqa: E402
 
 EXPECTED_HELPERS = [
@@ -593,7 +595,7 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
         self.assertEqual(data["shell"], False)
         self.assertEqual(data["argv"][-2:], ["-m", "speckit_pro_runner"])
         self.assertEqual(data["python_operation"], helper_id)
-        self.assertEqual(data["authoritative_command"].split(" < ", 1)[0], "python -m speckit_pro_runner")
+        self.assertTrue(data["authoritative_command"].endswith("| python -m speckit_pro_runner"))
         self.assertEqual(completed.returncode, response["exit_code"])
         self.assertEqual([diag["code"] for diag in stderr_records], [diag["code"] for diag in response["diagnostics"]])
         return response
@@ -612,6 +614,20 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
             expected_json,
             f"FAIL detail: {helper_id} JSON stdout mismatch: actual_json={actual_json!r}; expected_json={expected_json!r}; actual={actual!r}; expected={expected!r}",
         )
+
+    def test_replay_command_is_runnable_from_an_install(self) -> None:
+        if self.helper_filter and self.helper_filter != "generate-spec-index-check":
+            self.skipTest("replay command test uses generate-spec-index-check")
+        _completed, response, _stderr_records = run_runner(
+            helper_request("generate-spec-index-check", HELPER_CASES["generate-spec-index-check"])
+        )
+        data = response["data"]
+        command = data["authoritative_command"]
+        self.assertNotIn("tests/", command)
+        words = shlex.split(command)
+        self.assertEqual(words[:2], ["printf", "%s"])
+        self.assertEqual(words[3:], ["|", "python", "-m", "speckit_pro_runner"])
+        self.assertEqual(json.loads(words[2]), data["stdin_request"])
 
     def test_registry_dispatch_lists_only_read_only_helpers(self) -> None:
         if self.helper_filter and self.helper_filter != "helper-registry-dispatch":
@@ -634,8 +650,11 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
             self.assertNotIn("restack.sh", str(record))
             active_record = {key: value for key, value in record.items() if key != "inactive_provenance"}
             self.assertNotIn(".sh", json.dumps(active_record, sort_keys=True))
-            fixture_path = command_stdin_fixture(record["authoritative_command"])
-            self.assertTrue(fixture_path.is_file(), record["authoritative_command"])
+            self.assertNotIn("authoritative_command", record)
+            self.assertNotIn("tests/", json.dumps(record))
+            fixture_command = registry.HELPERS[record["helper_id"]].authoritative_command
+            fixture_path = command_stdin_fixture(fixture_command)
+            self.assertTrue(fixture_path.is_file(), fixture_command)
             request = json.loads(fixture_path.read_text(encoding="utf-8"))
             self.assertEqual(request["helper_id"], record["helper_id"])
             self.assertEqual(request["operation"], record["operation"])
@@ -4372,7 +4391,7 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
                 self.assertEqual(data["shell"], False)
                 self.assertEqual(data["argv"][-2:], ["-m", "speckit_pro_runner"])
                 self.assertEqual(data["python_operation"], helper_id)
-                self.assertEqual(data["authoritative_command"].split(" < ", 1)[0], "python -m speckit_pro_runner")
+                self.assertTrue(data["authoritative_command"].endswith("| python -m speckit_pro_runner"))
                 expected_stdout_limit = (
                     PLAN_LAYERS_CAPTURE_LIMIT_BYTES
                     if helper_id in {"plan-layers-feature-dir", "render-plan-repair-context"}
