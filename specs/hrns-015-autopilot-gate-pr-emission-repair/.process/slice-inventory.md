@@ -29,8 +29,8 @@ The current marker contract uses `kind=user_story`, `id=usN` for an unsplit stor
 | B1b | `us5` | US5 | T011 | 2 | 23 | Source delta: 19 paths; 23 with four tracked process paths; 481 authored non-process changed lines; final PR base/head diff and LOC pending |
 | B2b | `us6` | US6 | T012–T013 | 1 | 23 | Source delta: 16 paths; 21 with four tracked process paths and index; 266 authored non-process changed lines; final PR base/head diff and LOC pending |
 | B3a | `us7` | US7 | T014 | 1 | 18 | Candidate only; actual diff/LOC unmeasured |
-| B3b | `us8` | US8 | T015–T016 | 2 | 24 | Candidate only; actual diff/LOC unmeasured |
-| C1a1 | `us9` | US9 | T017 | 1 | 21 | Candidate only; actual diff/LOC unmeasured |
+| B3b | `us8` | US8 | T015–T016 | 3 | 24 | Candidate only; actual diff/LOC unmeasured |
+| C1a1 | `us9` | US9 | T017 | 1 | 24 | Candidate only; actual diff/LOC unmeasured |
 | C1a2 | `us10-part1` | US10 | T018 | 1 | 18 | Candidate only; actual diff/LOC unmeasured |
 | C1b1 | `us10-part2` | US10 | T019 | 2 | 21 | Candidate only; actual diff/LOC unmeasured |
 | C1b2 | `us10-part3` | US10 | T020–T021 | 2 | 21 | Candidate only; actual diff/LOC unmeasured |
@@ -301,7 +301,7 @@ Tasks: T014. Requirements: FR-015, FR-026. **18 candidate paths; 1 production.**
 
 ### B3b — US8 declared quality commands
 
-Tasks: T015–T016. Requirements: FR-016, FR-026. **24 candidate paths; 2 production.**
+Tasks: T015–T016. Requirements: FR-016, FR-026. **24 candidate paths; 3 production.**
 
 | Class | Operation | Path | Basis |
 | --- | --- | --- | --- |
@@ -311,9 +311,9 @@ Tasks: T015–T016. Requirements: FR-016, FR-026. **24 candidate paths; 2 produc
 | generated | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/quality_gates.py` | existing quality configuration owner |
 | generated | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/helpers/read_only.py` | source payload |
 | generated | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/helpers/read_only.py` | source payload |
-| host/support | modify | `speckit-pro/skills/speckit-autopilot/references/gate-validation.md` | task |
-| generated | regenerate | `dist/claude/speckit-pro/skills/speckit-autopilot/references/gate-validation.md` | source payload |
-| generated | regenerate | `dist/codex/speckit-pro/skills/speckit-autopilot/references/gate-validation.md` | source payload |
+| production | modify | `speckit-pro/speckit_pro_runner/contracts/quality-gates.schema.json` | canonical declared-command contract |
+| generated | regenerate | `dist/claude/speckit-pro/speckit_pro_runner/contracts/quality-gates.schema.json` | canonical declared-command contract |
+| generated | regenerate | `dist/codex/speckit-pro/speckit_pro_runner/contracts/quality-gates.schema.json` | canonical declared-command contract |
 | test/manifest | add | `tests/speckit-pro/unit/test-declared-quality-commands.py` | task |
 | test/manifest | modify | `tests/speckit-pro/suite-manifest.json` | task |
 | generated trust | regenerate | `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | runner source edited |
@@ -332,7 +332,7 @@ Tasks: T015–T016. Requirements: FR-016, FR-026. **24 candidate paths; 2 produc
 
 ### C1a1 — US9 canonical Post list
 
-Tasks: T017. Requirements: FR-017, FR-026. **21 candidate paths; 1 production.**
+Tasks: T017. Requirements: FR-017, FR-026. **24 candidate paths; 1 production.**
 
 | Class | Operation | Path | Basis |
 | --- | --- | --- | --- |
@@ -357,6 +357,9 @@ Tasks: T017. Requirements: FR-017, FR-026. **21 candidate paths; 1 production.**
 | process/evidence | modify | `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json` | tasks source fingerprint |
 | process/evidence | modify | `specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md` | RED/GREEN and measured budget evidence |
 | generated index | regenerate | `specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md` | PR/index refresh candidate |
+| host/support | modify | `speckit-pro/skills/speckit-autopilot/references/gate-validation.md` | task |
+| generated | regenerate | `dist/claude/speckit-pro/skills/speckit-autopilot/references/gate-validation.md` | source payload |
+| generated | regenerate | `dist/codex/speckit-pro/skills/speckit-autopilot/references/gate-validation.md` | source payload |
 
 ### C1a2 — US10 persisted completion boundary
 

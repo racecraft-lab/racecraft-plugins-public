@@ -1,8 +1,8 @@
 {
   "fingerprints": {
-    "plan_sha256": "94238f91baabd64f578831f0affa6f93be8d7ab6e553215c4fbcd7b4d5a614ec",
+    "plan_sha256": "d413c38a88367005c25d555f09227c62c037a1a31043de1fc9f1250f635d9263",
     "spec_sha256": "18c93677aaaee5f73aa8399b2cea052cc58ed2724fe6e74d93be96a47eae7e58",
-    "tasks_sha256": "85a266966d25b07ca11790e0a272712661a9c888e104b4b519fc70bf13755f57"
+    "tasks_sha256": "5063d52b11cde1bb848e7b8d16bb15c1e98cf62576ac3ee7517df7b95ac7d00b"
   },
   "schema_version": "task-execution.v1",
   "tasks": {
@@ -418,9 +418,6 @@
         "speckit-pro/speckit_pro_runner/helpers/read_only.py",
         "dist/claude/speckit-pro/speckit_pro_runner/helpers/read_only.py",
         "dist/codex/speckit-pro/speckit_pro_runner/helpers/read_only.py",
-        "speckit-pro/skills/speckit-autopilot/references/gate-validation.md",
-        "dist/claude/speckit-pro/skills/speckit-autopilot/references/gate-validation.md",
-        "dist/codex/speckit-pro/skills/speckit-autopilot/references/gate-validation.md",
         "tests/speckit-pro/unit/test-declared-quality-commands.py",
         "tests/speckit-pro/suite-manifest.json",
         "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
@@ -438,7 +435,10 @@
         "specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md",
         "speckit-pro/speckit_pro_runner/quality_gates.py",
         "dist/claude/speckit-pro/speckit_pro_runner/quality_gates.py",
-        "dist/codex/speckit-pro/speckit_pro_runner/quality_gates.py"
+        "dist/codex/speckit-pro/speckit_pro_runner/quality_gates.py",
+        "speckit-pro/speckit_pro_runner/contracts/quality-gates.schema.json",
+        "dist/claude/speckit-pro/speckit_pro_runner/contracts/quality-gates.schema.json",
+        "dist/codex/speckit-pro/speckit_pro_runner/contracts/quality-gates.schema.json"
       ],
       "tdd_unit": "increment-b3b"
     },
@@ -451,9 +451,6 @@
         "speckit-pro/speckit_pro_runner/helpers/read_only.py",
         "dist/claude/speckit-pro/speckit_pro_runner/helpers/read_only.py",
         "dist/codex/speckit-pro/speckit_pro_runner/helpers/read_only.py",
-        "speckit-pro/skills/speckit-autopilot/references/gate-validation.md",
-        "dist/claude/speckit-pro/skills/speckit-autopilot/references/gate-validation.md",
-        "dist/codex/speckit-pro/skills/speckit-autopilot/references/gate-validation.md",
         "tests/speckit-pro/unit/test-declared-quality-commands.py",
         "tests/speckit-pro/suite-manifest.json",
         "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
@@ -471,7 +468,10 @@
         "specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md",
         "speckit-pro/speckit_pro_runner/quality_gates.py",
         "dist/claude/speckit-pro/speckit_pro_runner/quality_gates.py",
-        "dist/codex/speckit-pro/speckit_pro_runner/quality_gates.py"
+        "dist/codex/speckit-pro/speckit_pro_runner/quality_gates.py",
+        "speckit-pro/speckit_pro_runner/contracts/quality-gates.schema.json",
+        "dist/claude/speckit-pro/speckit_pro_runner/contracts/quality-gates.schema.json",
+        "dist/codex/speckit-pro/speckit_pro_runner/contracts/quality-gates.schema.json"
       ],
       "tdd_unit": "increment-b3b"
     },
@@ -501,7 +501,10 @@
         "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md",
         "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-execution.json",
         "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/slice-inventory.md",
-        "specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md"
+        "specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md",
+        "speckit-pro/skills/speckit-autopilot/references/gate-validation.md",
+        "dist/claude/speckit-pro/skills/speckit-autopilot/references/gate-validation.md",
+        "dist/codex/speckit-pro/skills/speckit-autopilot/references/gate-validation.md"
       ],
       "tdd_unit": "increment-c1a1"
     },

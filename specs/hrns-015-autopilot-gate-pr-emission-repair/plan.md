@@ -67,8 +67,8 @@ C2's stored union is 40; removing the six already-shipped link-only README/templ
 | B | B1b / US5 tracked index-refresh | 2 | 23 |
 | B | B2b / US6 split/greenfield budgets | 1 | 23 |
 | B | B3a / US7 refactor estimate | 1 | 18 |
-| B | B3b / US8 declared commands | 2 | 24 |
-| C1a | C1a1 / US9 Post names | 1 | 21 |
+| B | B3b / US8 declared commands | 3 | 24 |
+| C1a | C1a1 / US9 Post names | 1 | 24 |
 | C1a | C1a2 / US10 completion boundary | 1 | 18 |
 | C1b | C1b1 / US10 phase/analyze teardown | 2 | 21 |
 | C1b | C1b2 / US10 checklist/implement teardown | 2 | 21 |
@@ -166,6 +166,7 @@ These authored candidate operations are the estimator input for the remaining be
 - MODIFIED speckit-pro/speckit_pro_runner/helpers/pr_packet.py
 - MODIFIED speckit-pro/speckit_pro_runner/pr_contract.py
 - MODIFIED speckit-pro/speckit_pro_runner/quality_gates.py
+- MODIFIED speckit-pro/speckit_pro_runner/contracts/quality-gates.schema.json
 - MODIFIED speckit-pro/speckit_pro_runner/helpers/read_only.py
 - NEW tests/speckit-pro/layer1-structural/test-phase-analyze-teardown.py
 - NEW tests/speckit-pro/layer1-structural/test-checklist-implement-teardown.py
@@ -249,3 +250,5 @@ For each approved increment, the validated packet supplies changed behavior/caus
 ## Complexity Tracking
 
 No constitution violation or budget exception is approved. The owner delivery decision is resolved. Constitution 2.1.0 was checked before research and after design; no new violation is introduced. Official documentation and independent source/fixture behavior qualification remain explicit limits; the prior independent artifact audit corroborated the unchanged candidate arithmetic. Actual scope/LOC/checkpoint evidence remains pending until implementation and mandatory before emission. Preserve run identity and consumed repair history; only the owner-approved `begin-replan-epoch` creates the fresh correction allowance, with no other ledger reset.
+
+Operator-approved bounded allocation correction: B3b replaces the three gate-guidance paths with the quality-config schema and its two generated host copies; C1a1 owns the relocated guidance. This keeps the approved eighteen increments and strict 24-path cap. Scope, thresholds, basis, completed definitions and historical checkpoints stay intact.

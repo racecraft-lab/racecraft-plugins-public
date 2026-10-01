@@ -1236,3 +1236,7 @@ The main merge rehomes packet behavior into `helpers/pr_packet.py`, canonical pa
 The operator changed implementation routing to direct worktree edits. The reviewed packet-normalizer and parser refactors are committed at `96ee229c`; their focused checks passed 384 assertions, and the parser equivalence battery matched 15,732 cases. Remaining quality-delta findings belong to the final Step 3 gate.
 
 T014 has native accepted RED, GREEN and refactor evidence. The new estimator cases failed ten assertions before the change and passed 28/28 after it; the existing estimator cases passed 31/31. Additional distinct refactor files add 40 LOC each after the existing modify discount. Invalid or absent counts preserve the baseline, and spike precedence and slice ceilings are covered. B3a implementation is complete; its marker and broad qualification remain pending for the single final heavy run. B3b/T015 is next.
+
+### Approved command-schema allocation
+
+The operator approved replacing the three B3b gate-guidance paths with the canonical quality-config schema and its two generated copies. C1a1 now owns that guidance. B3b has three production and twenty-four candidate paths; C1a1 has one production and twenty-four candidate paths. Native metadata validation and guarded epoch5 passed; the successor journal retains the unchanged predecessor, T001–T014 definitions and all historical checkpoint evidence. The original run is preserved. No marker or threshold is waived. T015 remains in progress with the omitted schema case pending.

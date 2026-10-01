@@ -581,13 +581,13 @@
     "planning_fingerprints": {
       "plan_md": {
         "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/plan.md",
-        "size_bytes": 28242,
-        "sha256": "sha256:94238f91baabd64f578831f0affa6f93be8d7ab6e553215c4fbcd7b4d5a614ec"
+        "size_bytes": 28669,
+        "sha256": "sha256:d413c38a88367005c25d555f09227c62c037a1a31043de1fc9f1250f635d9263"
       },
       "tasks_md": {
         "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/tasks.md",
-        "size_bytes": 31041,
-        "sha256": "sha256:85a266966d25b07ca11790e0a272712661a9c888e104b4b519fc70bf13755f57"
+        "size_bytes": 31343,
+        "sha256": "sha256:5063d52b11cde1bb848e7b8d16bb15c1e98cf62576ac3ee7517df7b95ac7d00b"
       }
     },
     "schema_version": "autonomy-boundary-receipt.v1",
@@ -956,9 +956,9 @@
     "status": "checkpointing",
     "source_fingerprint": {
       "feature_spec_sha": "sha256:18c93677aaaee5f73aa8399b2cea052cc58ed2724fe6e74d93be96a47eae7e58",
-      "plan_declared_scope_sha": "sha256:94238f91baabd64f578831f0affa6f93be8d7ab6e553215c4fbcd7b4d5a614ec",
-      "tasks_sha": "sha256:e1c25aa2908c96660e76ca3e78b7bb57d2a9a8557c692f3796021751d87f9306",
-      "reviewability_sha": "sha256:742f5e9f9be8304f3d20b04aef1e576d5bc703cc9cc93abca141a577ee085eb9",
+      "plan_declared_scope_sha": "sha256:d413c38a88367005c25d555f09227c62c037a1a31043de1fc9f1250f635d9263",
+      "tasks_sha": "sha256:1b293c030a11c5ddbbdfc9d5d0d984374a338bb70f5153fb3cc531c8520ff349",
+      "reviewability_sha": "sha256:6e94cfe16fbb36f521058f5b04fbd121a1690f087d55eb87a61924a10d3b1418",
       "hazard_route_sha": "sha256:f4259204cb8f92f1978ddf3b70195aba948d317567082f50f585fb0f4e0ef9c4"
     },
     "markers": [
@@ -2280,18 +2280,6 @@
             "path": "dist/codex/speckit-pro/speckit_pro_runner/helpers/read_only.py"
           },
           {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/skills/speckit-autopilot/references/gate-validation.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "dist/claude/speckit-pro/skills/speckit-autopilot/references/gate-validation.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/gate-validation.md"
-          },
-          {
             "operation": "NEW",
             "path": "tests/speckit-pro/unit/test-declared-quality-commands.py"
           },
@@ -2362,6 +2350,18 @@
           {
             "operation": "MODIFIED",
             "path": "dist/codex/speckit-pro/speckit_pro_runner/quality_gates.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/contracts/quality-gates.schema.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/speckit_pro_runner/contracts/quality-gates.schema.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/speckit_pro_runner/contracts/quality-gates.schema.json"
           }
         ],
         "declared_tests": [
@@ -2372,7 +2372,7 @@
           "status": "pass",
           "mode": "planned_candidates",
           "scope": "B3b",
-          "production_files": 2,
+          "production_files": 3,
           "total_files": 24,
           "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
         },
@@ -2493,6 +2493,18 @@
           {
             "operation": "MODIFIED",
             "path": "specs/hrns-015-autopilot-gate-pr-emission-repair/SPEC-MOC.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/references/gate-validation.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/skills/speckit-autopilot/references/gate-validation.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/gate-validation.md"
           }
         ],
         "declared_tests": [
@@ -2503,7 +2515,7 @@
           "mode": "planned_candidates",
           "scope": "C1a1",
           "production_files": 1,
-          "total_files": 21,
+          "total_files": 24,
           "qualification": "Candidate budgets only; actual per-PR diffs, LOC and checkpoint evidence required before emission."
         },
         "hazards": [],
@@ -3447,9 +3459,9 @@
   },
   "current_source_fingerprint": {
     "feature_spec_sha": "sha256:18c93677aaaee5f73aa8399b2cea052cc58ed2724fe6e74d93be96a47eae7e58",
-    "plan_declared_scope_sha": "sha256:94238f91baabd64f578831f0affa6f93be8d7ab6e553215c4fbcd7b4d5a614ec",
-    "tasks_sha": "sha256:e1c25aa2908c96660e76ca3e78b7bb57d2a9a8557c692f3796021751d87f9306",
-    "reviewability_sha": "sha256:742f5e9f9be8304f3d20b04aef1e576d5bc703cc9cc93abca141a577ee085eb9",
+    "plan_declared_scope_sha": "sha256:d413c38a88367005c25d555f09227c62c037a1a31043de1fc9f1250f635d9263",
+    "tasks_sha": "sha256:1b293c030a11c5ddbbdfc9d5d0d984374a338bb70f5153fb3cc531c8520ff349",
+    "reviewability_sha": "sha256:6e94cfe16fbb36f521058f5b04fbd121a1690f087d55eb87a61924a10d3b1418",
     "hazard_route_sha": "sha256:f4259204cb8f92f1978ddf3b70195aba948d317567082f50f585fb0f4e0ef9c4"
   },
   "marker_plan_sources": {
@@ -3485,7 +3497,7 @@
         },
         "tool": "estimate-reviewable-loc"
       },
-      "inventory_sha256": "sha256:e4a9c3db8c3296b1d48025826559cd85db590813a86e352fc5f480ae224990a5",
+      "inventory_sha256": "sha256:592753417f23be00a29e63f6cda232b75ee34e731d1ab971d2a7e6e9ce43820e",
       "qualification": "Historical setup/estimator snapshots retained; current candidate ownership and counts reconciled after main. Actual final PR scope and heavy gates pending."
     },
     "hazard_route": {
@@ -3586,8 +3598,8 @@
       "implementation_started": true
     },
     "task_journal": {
-      "journal_file": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-results/main-paths-epoch4.json",
-      "parent_retained_partition_sha256": "6f399919e89975a7b5cf5bd621fd445ed2cf79864c19ca4c0ca20fc4507ad172",
+      "journal_file": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-results/command-scope-epoch5.json",
+      "parent_retained_partition_sha256": "f5feda1608e0250525279acbfabf026716db9c3d6034b7d14f24fe0e4af37d22",
       "completed_tasks": [
         "T001",
         "T002",
@@ -3601,9 +3613,10 @@
         "T010",
         "T011",
         "T012",
-        "T013"
+        "T013",
+        "T014"
       ],
-      "completion_basis": "preserved predecessor journal lineage and historical checkpoints"
+      "completion_basis": "native accepted lineage through T014; operator-approved remaining ownership"
     },
     "routing_replan": {
       "status": "completed",
@@ -3690,7 +3703,7 @@
       "actual_emission_qualification": "pending"
     },
     "active_batch": {
-      "batch_id": "B002",
+      "batch_id": "B001",
       "task_ids": [
         "T015",
         "T016"
@@ -4000,5 +4013,35 @@
     ],
     "current_heavy_gate_qualification": "pending_final_run",
     "prior_task_journal_sha256": "458841b52b0feb147c2aa6b6521d557e464618644e6c5fffd3491327bfd74ca1"
+  },
+  "command_scope_reconciliation": {
+    "status": "operator_approved_native_binding_reconciled",
+    "corrective_epoch": 5,
+    "task_journal": "specs/hrns-015-autopilot-gate-pr-emission-repair/.process/task-results/command-scope-epoch5.json",
+    "partition_sha256": "f5feda1608e0250525279acbfabf026716db9c3d6034b7d14f24fe0e4af37d22",
+    "preserved_completed_tasks": [
+      "T001",
+      "T002",
+      "T003",
+      "T004",
+      "T005",
+      "T006",
+      "T007",
+      "T008",
+      "T009",
+      "T010",
+      "T011",
+      "T012",
+      "T013",
+      "T014"
+    ],
+    "b3b_scope": {
+      "production_files": 3,
+      "total_files": 24
+    },
+    "c1a1_scope": {
+      "production_files": 1,
+      "total_files": 24
+    }
   }
 }
