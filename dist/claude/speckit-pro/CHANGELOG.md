@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.39.2](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.39.1...speckit-pro-v2.39.2) (2026-10-01)
+
+
+### Bug Fixes
+
+* **speckit-pro:** stop scaffold when the roadmap checkout is behind the remote ([#1001](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1001)) ([6386f6f](https://github.com/racecraft-lab/racecraft-plugins-public/commit/6386f6f62b1009ffc9fdbdf13a499535aae193e7))
+
 ## [2.39.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.39.0...speckit-pro-v2.39.1) (2026-10-01)
 
 
