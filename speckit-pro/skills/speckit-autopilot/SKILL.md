@@ -837,10 +837,24 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
      `match`, `no_record`, and `skipped` write nothing durable, and the scaffold
      workflow template ships no placeholder line.
    - **Corroboration reports; it never decides.** It never changes the resolved
-     stage, never blocks stage resolution, and never stops the run. It is
-     computed after the stage is decided and only ever appended to the envelope.
-     Every consequence of a discrepancy belongs to the terminal step, in
-     [Phase Execution](./references/phase-execution.md).
+     stage, never blocks stage resolution, and never stops the run at this
+     step. It is computed after the stage is decided and only ever appended to
+     the envelope. Every consequence of a discrepancy belongs to the terminal
+     step and the Phase 7 corroboration gate, in
+     [Phase Execution](./references/phase-execution.md), and both read one
+     policy. When exactly one open pull request answers for the branch, the
+     envelope's `corroboration.repair` names it, and the `Draft PR` row is
+     repaired instead of stopping. `pr_closed` stops with
+     `stop_reason:reopen_closed_pr`, because reopening a closed pull request
+     stays a human call. A `pr_missing`, or an `identity_mismatch` with no
+     repair, stops with `stop_reason:ambiguous_pr_record`.
+   - **Retry the observation before it counts as failed.** A rate limit, a
+     timeout, or output that cannot be parsed retakes it with backoff (2, 8,
+     and 30 seconds, four attempts), then `gh auth status` runs. Only an absent
+     `gh` or failed authentication stops a run, with
+     `stop_reason:tool_unavailable`. A rate limit or unparseable answer that
+     outlasts the retries is sent as `ok: false` with that reason. It reads as
+     `skipped` and does not stop the run.
 6d. **Reclaim the state slot if it names another workflow** — `autopilot-state.json`
    holds exactly one run. When this invocation targets a workflow file the state
    file does not currently name, **re-initialise the slot from the target

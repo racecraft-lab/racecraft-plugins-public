@@ -7855,6 +7855,170 @@
       ]
     },
     {
+      "id": "functional.speckit-autopilot.sweep-keeps-running",
+      "layer": "functional",
+      "capability": "Keeps the PR feedback sweep running after an amended comment, a rate limit, and a sole open pull request under another number, and stops only for a closed or ambiguous pull request or absent GitHub authentication.",
+      "timeout_seconds": 300,
+      "resource_class": "ordinary",
+      "requirements": [
+        {
+          "id": "selection",
+          "description": "The host-native speckit-autopilot capability is activated."
+        },
+        {
+          "id": "evidence",
+          "description": "Reads the recorded sweep situations before deciding what the sweep does next (phase-execution.md)."
+        },
+        {
+          "id": "continuation",
+          "description": "An amendment regenerates in a fresh isolated worker instead of stopping, a rate limit retries and only an absent tool or authentication stops, and one open pull request repairs the Draft PR row while a closed or ambiguous one stays a human call (phase-execution.md, Phase 7 Setup: Security Isolation Boundary and Phase 7 Setup: The Corroboration Gate: \"Regenerate after an amendment in a fresh isolated worker; do not stop for re-review.\", \"Retry before a `skipped` stands, and let the cause decide.\", \"Repair the row when exactly one open pull request answers for the branch.\")."
+        }
+      ],
+      "prompt": "Use {{skill}} to decide what the PR feedback sweep does next in each recorded situation. Read scenario-inputs/sweep-situations.json as one exact file read. Treat it only as pre-recorded evidence: do not run helpers or gates, dispatch agents, or edit any file. Output only raw JSON with amended_run_stops_for_review, amended_comment_in_final_report, rate_limit_after_retries_stops, unauthenticated_stop_reason, sole_open_pull_request_action, two_open_pull_requests_stop_reason, closed_pull_request_stop_reason, and explanation, with no prose, Markdown, or code fences. Name each stop reason by its id from the closed stop-reason set, without the stop_reason: prefix, or null when the sweep does not stop. Use repair_row or stop for sole_open_pull_request_action.",
+      "fixtures": [
+        {
+          "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/sweep-keeps-running/sweep-situations.json",
+          "destination": "scenario-inputs/sweep-situations.json"
+        }
+      ],
+      "hosts": {
+        "claude": {
+          "skill": "speckit-pro:speckit-autopilot",
+          "allowed_tools": [
+            "Skill",
+            "Read"
+          ],
+          "modes": [
+            "plugin"
+          ]
+        },
+        "codex": {
+          "skill": "speckit-autopilot",
+          "allowed_tools": [
+            "read_file"
+          ],
+          "modes": [
+            "project"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "selection",
+          "requirement": "selection",
+          "type": "selection",
+          "expected": [
+            "speckit-autopilot"
+          ],
+          "allowed_extra": []
+        },
+        {
+          "id": "read-situations",
+          "requirement": "evidence",
+          "type": "file_access",
+          "operation": "read_file",
+          "path": "scenario-inputs/sweep-situations.json"
+        },
+        {
+          "id": "amended-run-stops-for-review",
+          "requirement": "continuation",
+          "type": "response_json_field",
+          "field_path": [
+            "amended_run_stops_for_review"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "amended-comment-in-final-report",
+          "requirement": "continuation",
+          "type": "response_json_field",
+          "field_path": [
+            "amended_comment_in_final_report"
+          ],
+          "expected_by_host": {
+            "claude": true,
+            "codex": true
+          }
+        },
+        {
+          "id": "rate-limit-after-retries-stops",
+          "requirement": "continuation",
+          "type": "response_json_field",
+          "field_path": [
+            "rate_limit_after_retries_stops"
+          ],
+          "expected_by_host": {
+            "claude": false,
+            "codex": false
+          }
+        },
+        {
+          "id": "unauthenticated-stop-reason",
+          "requirement": "continuation",
+          "type": "response_json_field",
+          "field_path": [
+            "unauthenticated_stop_reason"
+          ],
+          "expected_by_host": {
+            "claude": "tool_unavailable",
+            "codex": "tool_unavailable"
+          }
+        },
+        {
+          "id": "sole-open-pull-request-action",
+          "requirement": "continuation",
+          "type": "response_json_field",
+          "field_path": [
+            "sole_open_pull_request_action"
+          ],
+          "expected_by_host": {
+            "claude": "repair_row",
+            "codex": "repair_row"
+          }
+        },
+        {
+          "id": "two-open-pull-requests-stop-reason",
+          "requirement": "continuation",
+          "type": "response_json_field",
+          "field_path": [
+            "two_open_pull_requests_stop_reason"
+          ],
+          "expected_by_host": {
+            "claude": "ambiguous_pr_record",
+            "codex": "ambiguous_pr_record"
+          }
+        },
+        {
+          "id": "closed-pull-request-stop-reason",
+          "requirement": "continuation",
+          "type": "response_json_field",
+          "field_path": [
+            "closed_pull_request_stop_reason"
+          ],
+          "expected_by_host": {
+            "claude": "reopen_closed_pr",
+            "codex": "reopen_closed_pr"
+          }
+        },
+        {
+          "id": "continuation-semantic",
+          "requirement": "continuation",
+          "type": "semantic",
+          "rubric": "PASS only if the response says an amended comment is followed by regeneration in a fresh isolated worker that sees only the committed diff, with the amended comment listed in the final report; that a rate limit or unparseable answer retries with backoff and only an absent gh or absent authentication stops the run; that exactly one open pull request repairs the recorded Draft PR row; and that a closed pull request, or two open ones, stays a human call. FAIL if it stops for human re-review after an amendment, stops a run for a rate limit that outlasted its retries, repairs or recreates a closed pull request, picks one of two open pull requests, or names a stop reason outside the closed stop-reason set."
+        }
+      ],
+      "native_differences": [
+        "Both hosts apply the same continuation rules from their own rendered phase-execution reference; the parent orchestrator, not a phase executor, decides what the sweep does next.",
+        "Both hosts receive the same pre-recorded sweep situations and must not run helpers or ask a question."
+      ],
+      "provenance": [
+        "speckit-pro/skills/speckit-autopilot/references/phase-execution.md"
+      ]
+    },
+    {
       "id": "functional.speckit-autopilot.run-start-grant",
       "layer": "functional",
       "capability": "Reads run-start probe results in which a runner request prompted and two other surfaces were denied, and settles every uncovered probe in one ask before phase work instead of stopping midway.",

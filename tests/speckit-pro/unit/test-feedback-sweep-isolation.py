@@ -1905,15 +1905,13 @@ class WorkflowAndEvalContractTests(unittest.TestCase):
             r"spawn_agent[^\n]{0,160}sweep-(?:classifier|analyst)",
         )
 
-    def test_amendment_run_stops_before_broader_artifact_regeneration(self) -> None:
-        for surface, source in (
-            ("Claude", self.claude_reference),
-            ("Codex", self.codex_reference),
-        ):
-            stop = source.index("Stop for human re-review before artifact regeneration")
-            resume = source.index("On a later resumed run")
+    def test_amendment_run_invalidates_the_session_before_regenerating(self) -> None:
+        for surface, source in (("Claude", self.claude_reference), ("Codex", self.codex_reference)):
+            regenerate = source.index("Regenerate after an amendment in a fresh isolated worker")
+            invalidate = source.index("0. Invalidate the private sweep session")
             with self.subTest(surface=surface):
-                self.assertLess(stop, resume)
+                self.assertLess(regenerate, invalidate)
+                self.assertLess(invalidate, source.index("2. On `stale`", invalidate))
 
     def test_both_surfaces_ship_the_same_adversarial_isolation_eval(self) -> None:
         paths = {

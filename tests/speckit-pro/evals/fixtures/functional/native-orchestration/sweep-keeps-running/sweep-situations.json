@@ -1,0 +1,61 @@
+{
+  "amendment": {
+    "comment_id": "c-41",
+    "class": "amended",
+    "artifact": "plan.md",
+    "amending_commit": "3f9c2ab",
+    "pushed": true,
+    "isolation_boundary_available": true
+  },
+  "observation_failures": [
+    {
+      "id": "rate-limited",
+      "cause": "rate_limited",
+      "retries_exhausted": true,
+      "gh_installed": true,
+      "gh_authenticated": true
+    },
+    {
+      "id": "not-authenticated",
+      "cause": "unauthenticated",
+      "retries_exhausted": false,
+      "gh_installed": true,
+      "gh_authenticated": false
+    }
+  ],
+  "draft_pr_rows": [
+    {
+      "id": "sole-open",
+      "corroboration": {
+        "status": "identity_mismatch",
+        "recorded": {"number": 471, "url": "https://github.example/owner/repo/pull/471"},
+        "observed": {"number": 508, "url": "https://github.example/owner/repo/pull/508", "state": "open"},
+        "merged": null,
+        "reason": null,
+        "repair": {"number": 508, "url": "https://github.example/owner/repo/pull/508"}
+      }
+    },
+    {
+      "id": "two-open",
+      "corroboration": {
+        "status": "identity_mismatch",
+        "recorded": {"number": 471, "url": "https://github.example/owner/repo/pull/471"},
+        "observed": {"number": 512, "url": "https://github.example/owner/repo/pull/512", "state": "open"},
+        "merged": null,
+        "reason": null,
+        "repair": null
+      }
+    },
+    {
+      "id": "closed",
+      "corroboration": {
+        "status": "pr_closed",
+        "recorded": {"number": 471, "url": "https://github.example/owner/repo/pull/471"},
+        "observed": {"number": 471, "url": "https://github.example/owner/repo/pull/471", "state": "closed"},
+        "merged": false,
+        "reason": null,
+        "repair": null
+      }
+    }
+  ]
+}

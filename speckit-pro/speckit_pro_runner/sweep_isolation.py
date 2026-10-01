@@ -114,7 +114,35 @@ class MutationViolation(ValueError):
 
 
 class CaptureViolation(RuntimeError):
-    """The private GitHub observation could not be captured completely."""
+    """The private GitHub observation could not be captured completely.
+
+    `reason` is the closed word the capture surface reports, so the orchestrator
+    can tell an absent tool or credential (a stop) from a spent retry schedule.
+    """
+
+    reason = "observation_failed"
+
+
+class GitHubUnavailable(CaptureViolation):
+    reason = "gh_unavailable"
+
+
+class GitHubUnauthenticated(CaptureViolation):
+    reason = "gh_not_authenticated"
+
+
+class GitHubRateLimited(CaptureViolation):
+    reason = "rate_limited"
+
+
+class GitHubMalformedOutput(CaptureViolation):
+    reason = "malformed_output"
+
+
+CAPTURE_REASONS = tuple(
+    violation.reason
+    for violation in (GitHubUnavailable, GitHubUnauthenticated, GitHubRateLimited, GitHubMalformedOutput, CaptureViolation)
+)
 
 
 @dataclass(frozen=True)
@@ -446,20 +474,73 @@ def default_state_root() -> Path:
     return Path(tempfile.gettempdir()) / f"speckit-pro-feedback-sweep-{uid}"
 
 
-def _run_gh(args: list[str], repo_root: Path) -> str:
-    if shutil.which("gh") is None:
-        raise CaptureViolation("GitHub CLI is unavailable")
+# Bounded backoff for a rate limit, a timeout, a server error, or output that
+# cannot be parsed: one first attempt plus one retry per delay. Only a missing
+# tool or missing credentials end a read without retrying.
+GH_RETRY_DELAYS = (2.0, 8.0, 30.0)
+_GH_RATE_LIMIT = re.compile(r"rate limit|abuse detection|HTTP 429", re.IGNORECASE)
+_GH_TRANSIENT = re.compile(r"HTTP 5\d\d|timed? ?out|temporar", re.IGNORECASE)
+
+
+def _sleep(seconds: float) -> None:
+    time.sleep(seconds)
+
+
+def _gh_authenticated(repo_root: Path) -> bool:
+    return probe(repo_root, ["gh", "auth", "status"], allowed=("gh",), timeout=GH_TIMEOUT_SECONDS)["exit_status"] == 0
+
+
+def _gh_attempt(args: list[str], repo_root: Path) -> tuple[Any, str]:
+    """One JSON read: (value, "") on success, else (None, failure kind).
+
+    The kind is a closed word, never gh's own text, so no stderr byte can reach
+    a violation message.
+    """
     result = probe(repo_root, ["gh", "api", *args], allowed=("gh",), timeout=GH_TIMEOUT_SECONDS)
-    if result["exit_status"] != 0 or len(result["stdout_tail"].encode("utf-8")) > MAX_GH_OUTPUT_BYTES:
+    if result["exit_status"] != 0:
+        stderr = str(result["stderr_tail"])
+        if _GH_RATE_LIMIT.search(stderr):
+            return None, "rate_limit"
+        return None, "transient" if _GH_TRANSIENT.search(stderr) else "failed"
+    stdout = str(result["stdout_tail"])
+    if len(stdout.encode("utf-8")) > MAX_GH_OUTPUT_BYTES:
         raise CaptureViolation("GitHub observation failed")
-    return str(result["stdout_tail"])
+    try:
+        return json.loads(stdout), ""
+    except json.JSONDecodeError:
+        return None, "malformed"
+
+
+def _capture_failure(kind: str, repo_root: Path) -> CaptureViolation:
+    """The violation for a read that failed on every attempt it was allowed."""
+    if kind == "failed" and not _gh_authenticated(repo_root):
+        return GitHubUnauthenticated("GitHub CLI is not authenticated")
+    if kind == "rate_limit":
+        return GitHubRateLimited("GitHub rate limit persisted after retries")
+    if kind == "malformed":
+        return GitHubMalformedOutput("GitHub observation returned malformed JSON")
+    return CaptureViolation("GitHub observation failed")
 
 
 def _run_gh_json(args: list[str], repo_root: Path) -> Any:
-    try:
-        return json.loads(_run_gh(args, repo_root))
-    except json.JSONDecodeError as exc:
-        raise CaptureViolation("GitHub observation returned malformed JSON") from exc
+    """Run one `gh api` JSON read, retrying transient failures with backoff.
+
+    Output is decoded inside the retry loop, so output that cannot be parsed
+    retries like a rate limit. A missing tool stops at once. A failure gh names
+    no cause for is not retried; `gh auth status` then tells missing
+    credentials from a plain failure.
+    """
+    if shutil.which("gh") is None:
+        raise GitHubUnavailable("GitHub CLI is unavailable")
+    kind = ""
+    for delay in (*GH_RETRY_DELAYS, None):
+        value, kind = _gh_attempt(args, repo_root)
+        if not kind:
+            return value
+        if kind == "failed" or delay is None:
+            break
+        _sleep(delay)
+    raise _capture_failure(kind, repo_root)
 
 
 THREADS_QUERY = """
