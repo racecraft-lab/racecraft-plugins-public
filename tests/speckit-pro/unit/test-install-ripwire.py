@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import os
 import re
 import stat
 import subprocess
@@ -190,6 +191,9 @@ class ReportTests(unittest.TestCase):
             [[".", "--arch=.ripwire_arch_rules"], [".", "--quality-delta=abc123..HEAD"], [".", "--doc-drift"]],
             [argv[1:] for argv in argvs[1:]],
         )
+        self.assertEqual(["ripwire"] * 3, [argv[0] for argv in argvs[1:]])
+        ripwire_path = runner.call_args_list[1].kwargs["env"]["PATH"].split(os.pathsep, 1)[0]
+        self.assertTrue(Path(ripwire_path, "ripwire").is_file())
         self.assertIn("advisory", summary.lower())
         self.assertRegex(summary, r"\| Layering \|.*\| 2 \|.*new_violations=1.*\| findings \|")
         self.assertRegex(summary, r"\| Quality delta \|.*\| 0 \|.*regressions=0.*\| clean \|")

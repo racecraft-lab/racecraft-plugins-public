@@ -111,22 +111,26 @@ def output_excerpt(output: str) -> str:
     return output[:MAX_OUTPUT_CHARS] + f"\n... truncated ({len(output) - MAX_OUTPUT_CHARS} more characters)"
 
 
-def _run(argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        list(argv),
-        capture_output=True,
-        text=True,
-        timeout=CHECK_TIMEOUT_SECONDS,
-        check=False,
-        shell=False,
-    )
+def _ripwire_environment(binary: Path) -> dict[str, str]:
+    """Put the installed binary first on PATH so the argv names it literally."""
+    environment = os.environ.copy()
+    existing_path = environment.get("PATH", "")
+    environment["PATH"] = str(binary.parent) + (os.pathsep + existing_path if existing_path else "")
+    return environment
 
 
 def merge_base(base_sha: str) -> str | None:
     if not base_sha:
         return None
     try:
-        result = _run(["git", "merge-base", base_sha, "HEAD"])
+        result = subprocess.run(
+            ["git", "merge-base", base_sha, "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=CHECK_TIMEOUT_SECONDS,
+            check=False,
+            shell=False,
+        )
     except (OSError, subprocess.SubprocessError):
         return None
     sha = result.stdout.strip()
@@ -145,7 +149,15 @@ def _run_check(binary: Path, kind: str, flag: str) -> tuple[str, str, str, str]:
     """Return (exit code, counts, status, output) for one ripwire check."""
     element, shown = next((c[2], c[3]) for c in CHECKS if c[0] == kind)
     try:
-        result = _run([str(binary), ".", flag])
+        result = subprocess.run(
+            ["ripwire", ".", flag],
+            capture_output=True,
+            text=True,
+            timeout=CHECK_TIMEOUT_SECONDS,
+            check=False,
+            shell=False,
+            env=_ripwire_environment(binary),
+        )
     except (OSError, subprocess.SubprocessError) as error:
         return "-", "", "error", f"unable to run ripwire: {error}"
     output = result.stdout + (f"\n[stderr]\n{result.stderr}" if result.stderr.strip() else "")
