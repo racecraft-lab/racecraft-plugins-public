@@ -226,8 +226,8 @@ Budget result: warn on total files as one PR; ships as three slices, each with a
 
 Already fixed or owned elsewhere, so out of scope: #637 (PR #694), #638
 (PR #699), the correct-but-halted turn (#531), git-ignored spec-index files
-(#568), and the "12-row" Post prose (#896). The scaffold blind-spot deadline is
-owned by #994 and PR #996.
+(#568), the "12-row" Post prose (#896), and the scaffold blind-spot deadline
+(#994, PR #996).
 
 **Scope:**
 
@@ -280,7 +280,6 @@ owned by #994 and PR #996.
 - Slice-row budget parsing and greenfield aggregation in the setup gate.
 - Markdown-visibility rules for markers.
 - Legacy roadmap-link repair; #699 fixed the template.
-- Blind-spot deadline enforcement (#994, PR #996).
 - Redesigning the PR-packet schema or the post-implementation sequence.
 - Changing any host repository's release-note policy.
 
@@ -560,8 +559,7 @@ Budget result: within budget
   helpers).
 - Generate helper reference pages and skill-facing request examples from the
   registry, with a drift check. This covers the envelope sweep beyond
-  `speckit-status` (HRNS-015 fixes that one skill) and the
-  `authoritative_command` that points at an unshipped fixture (#993).
+  `speckit-status` (HRNS-015 fixes that one skill).
 - Close the mutation fixture-manifest gap (17 dispatchable helpers, 14 in the
   manifest: `detect-stack-manager-plan`, `formal-check`, and
   `generate-spec-index-write` are missing).
