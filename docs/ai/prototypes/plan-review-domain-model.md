@@ -73,7 +73,7 @@ Planning corrections are checked against the requested change and repository con
 
 ## Boundary with prototype tools
 
-Fault injection, raw model actions, manual task dispatch and safeguard test cases belong in optional prototype tools. They are not steps in the operator's plan-review journey. Opening a test case must disclose that it resets the sample state.
+Fault injection, raw model actions, manual task dispatch and safeguard test cases belong in optional developer checks, reached through About. The main navigation contains Review and About. Before opening the checks, explain that they create sample failures and can reset sample choices. Opening the checks or returning to Review preserves the current review. Selecting or resetting a case changes the sample state and must disclose that effect.
 
 Setup, instructions and security qualification information remain separate from the review experience. Essential plan material and check evidence stay available within review. The existing artifact library remains the visual source of truth.
 
@@ -112,5 +112,7 @@ Those sources inform presentation. They do not decide this repository's readines
 The revised HTML implements this model with two fictional plan defects grounded in ADR 0012, changed revised inputs and explicit simulated planning results. The main form immediately presents two issues and their choices. Browser checks cover native radio navigation, custom-text focus and retention, actionable errors, read-only prompts, exact clipboard copies, alternative-specific revisions, further choices and refusal of unchecked custom requests. Both themes and a narrow layout were inspected. The model/DOM smoke covers all four built-in combinations, nine safeguard cases and 45 controls. Independent audit verifies pending requests block approval and task use, omitted remedies cannot reuse earlier checks, retained choices are not silently replaced and superseded runners remain blocked. These observations provide local interface evidence for human evaluation. They do not qualify protected signing, full accessibility conformance or the shipped runner.
 
 Human acceptance of the review experience is pending. Reconcile the all-findings-fixed requirement with ADR 0013 before shipped implementation. Real revised-package import, actual agent responses/check evidence, protected review/signing/enrollment and current authority enforcement remain separate implementation and qualification work.
+
+The current fixture supports exactly two findings. Arbitrary issue counts are not implemented or tested. A future dynamic list must preserve each choice, include every requested fix in one handoff and block approval until every finding is fixed and checked.
 
 This document is a proposal. It supplies no real agent messaging, approval authority, signing, enrollment or implementation execution.

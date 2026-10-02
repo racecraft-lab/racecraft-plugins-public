@@ -86,6 +86,18 @@ The focused smoke covers all three scripts, canonical blocks, all four built-in 
 
 Final privacy validation passes 14/14 cases and whitespace validation passes. The docs classifier reports no rendered-docs, generated-reference or docs-contract inputs; no shipped payload or docs-site generation is required for these prototype records. Ripwire quality-delta exits 0 with no regressions. Its test-gate exits 4 for three Markdown headings of zero cognitive complexity, with zero mapped tests and 136 unindexed files. A scoped map likewise lists the HTML among unindexed file references. That advisory does not exercise the embedded scripts; their evidence comes from the focused smoke, independent invariant/audit and actual Browser observations. The final preview bytes match the captured HTML source.
 
+## Handoff spacing and optional developer checks
+
+The handoff actions now reuse the existing artifact layout with an 8-pixel gap and wrapping. Before the change, rendered Copy, Select and Edit buttons touched: their measured horizontal gaps were zero. After the change, both repair and implementation actions have approximately 8-pixel horizontal gaps. Canonical inner button padding, the complete HTML head and the approval model bytes remain unchanged.
+
+Review and About are the only main navigation entries. About explains that optional developer checks create sample failures and can reset choices. The developer area provides Return to review and distinguishes opening the area from selecting or resetting a case. These checks are not part of choosing fixes or copying prompts.
+
+The Browser walkthrough verified that opening and leaving developer checks preserves both the exact repair request/prompt and the approved implementation prompt. Native Copy clicks produced clipboard text matching both read-only prompts. Both action groups wrapped with approximately 8-pixel vertical gaps at the 320-pixel viewport override; the existing zoom produced a 291-CSS-pixel inner width and a 277-pixel document area with no horizontal overflow. The override was reset. The updated preview uses a separate tab so the operator's earlier review is retained.
+
+The focused smoke verifies navigation, draft/request/prompt/approval preservation, both action groups, all three scripts, nine safeguard cases and 45 free controls. The fixture still supports exactly two findings; arbitrary issue counts remain unimplemented and untested. Human acceptance and protected qualification remain pending.
+
+Final local smoke and the independent unresolved-finding readiness invariant pass. Privacy validation passes 14/14 cases; whitespace validation passes. The Browser recorded no warnings or errors. The docs classifier requires no generated references or rendered-docs checks for these prototype-only paths. Ripwire quality-delta reports zero regressions; its test-gate again reports three unmapped Markdown headings and exits 4. That advisory does not cover the embedded HTML; the focused smoke and rendered Browser checks supply the relevant verification. Preview and source HTML bytes match.
+
 ## Observed environment
 
 Read-only local commands reported macOS 27.2 (build 26B5091g), Apple Git 2.54.0 (Apple Git-157), OpenSSH 10.5p1, Swift 6.4, Codex CLI 0.156.0 and Claude Code 2.1.287. These are observed versions, **not a supported or qualified profile**. Installed tool availability does not establish fresh biometric behavior, security-key support, protected deployment or a second-machine result.
