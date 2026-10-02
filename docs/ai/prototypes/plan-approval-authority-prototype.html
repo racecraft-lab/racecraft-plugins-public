@@ -521,112 +521,108 @@ details:focus-visible,
     .inspector > summary { font-size:18px; }
     @media(max-width:850px) { .columns { grid-template-columns:1fr; } .cards { grid-template-columns:repeat(2,1fr); } .steps li { grid-template-columns:1fr; gap:4px; } }
     @media(max-width:500px) { main { padding:18px 12px 40px; } .panel { padding:15px; } dl { grid-template-columns:1fr; gap:2px; } dd { margin-bottom:8px; } }
+
+    .view-tabs { flex-wrap:wrap; }
+    button[aria-current="page"] { background:var(--rc-surface-raised); border-color:var(--rc-link); box-shadow:inset 0 -3px var(--rc-accent); font-weight:600; }
+    .review-progress { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; list-style:none; padding:0; margin:0 0 16px; }
+    .review-progress li { border-top:4px solid var(--rc-border-strong); padding-top:8px; font-size:14px; color:var(--rc-text-muted); }
+    .review-progress li[aria-current="step"] { border-color:var(--rc-accent); color:var(--rc-text); font-weight:600; }
+    .review-progress .completed { border-color:var(--rc-accent); }
+    .journey-buttons { display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; }
+    .decision-status { padding:12px; background:var(--rc-surface-sunken); border:1px solid var(--rc-border-strong); border-radius:5px; }
+    .blocking-reason { border-left:4px solid var(--rc-brand-red); padding:10px 12px; background:var(--rc-surface-sunken); margin:12px 0; }
+    .blocking-reason strong { color:var(--rc-danger-text); }
+    .scenario-warning { padding:12px; background:var(--rc-surface-muted); border:1px solid var(--rc-border-strong); }
+    .decision-summary { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; align-items:center; border-bottom:1px solid var(--rc-border-strong); padding:12px 0; }
+    .receipt { padding:16px; background:var(--rc-surface-sunken); border:1px solid var(--rc-border-strong); border-radius:5px; }
+    .disabled-reason { color:var(--rc-text-muted); font-size:14px; margin-top:6px; }
+    @media(max-width:500px) { .review-progress { gap:6px; } .review-progress li { font-size:12px; } .decision-summary { grid-template-columns:1fr; } }
   </style>
 </head>
 <body>
 <main>
   <header class="app-header">
     <span data-rc-brand-mark></span>
-    <h1>Plan review prototype</h1>
+    <h1>Plan review</h1>
     <p class="simulation-note">Simulation — no real approval authority or security qualification.</p>
-    <nav class="view-tabs" role="tablist" aria-label="Prototype and supporting information">
-      <button type="button" id="prototype-tab" role="tab" aria-selected="true" aria-controls="prototype-view">Prototype</button>
-      <button type="button" id="guide-tab" role="tab" aria-selected="false" aria-controls="guide-view">Guide &amp; details</button>
+    <nav class="view-tabs" aria-label="Prototype areas">
+      <button type="button" id="review-tab" aria-current="page" aria-controls="review-view">Review</button>
+      <button type="button" id="implementation-tab" aria-current="false" aria-controls="implementation-view">Implementation</button>
+      <button type="button" id="scenarios-tab" aria-current="false" aria-controls="scenarios-view">Scenarios</button>
+      <button type="button" id="about-tab" aria-current="false" aria-controls="about-view">About</button>
     </nav>
   </header>
+  <div id="outcome" class="outcome" role="status" aria-live="polite" style="margin-top:18px" hidden></div>
 
-  <div id="prototype-view" role="tabpanel" aria-labelledby="prototype-tab">
-    <section class="panel" aria-labelledby="state-title">
-      <h2 id="state-title">Review status</h2>
-      <div id="state-cards" class="cards"></div>
-      <div id="outcome" class="outcome" role="status" aria-live="polite" style="margin:14px 0 0"></div>
+  <div id="review-view" role="region" aria-label="Reviewer journey">
+    <section class="panel">
+      <ol id="review-progress" class="review-progress" aria-label="Review chapters"></ol>
+      <p id="current-step" class="subtle"></p>
+      <h2 id="review-heading" tabindex="-1">You are the reviewer</h2>
+      <div id="review-screen"></div>
     </section>
-    <section class="panel" aria-labelledby="primary-review-title">
-      <div class="panel-heading">
-        <h2 id="primary-review-title">1. Review the final snapshot</h2>
-        <div class="buttons"><button type="button" id="primary-freeze" class="primary">Freeze snapshot for review</button><button type="button" id="inspect-bundle">Inspect full bundle</button></div>
-      </div>
-      <p id="primary-snapshot-note" class="subtle"></p>
-      <div id="primary-snapshot-content" class="review-content"></div>
-    </section>
-    <section class="panel" aria-labelledby="primary-findings-title">
-      <h2 id="primary-findings-title">2. Decide each remaining finding</h2>
-      <div id="primary-findings"></div>
-    </section>
-    <div class="columns">
-      <section class="panel" aria-labelledby="primary-confirm-title">
-        <h2 id="primary-confirm-title">3. Confirm the final review</h2>
-        <p class="subtle">Each finding needs its own acceptance first. Confirmation issues only a simulated record.</p>
-        <div class="buttons"><button type="button" id="primary-confirm" class="primary">Simulate final confirmation</button><button type="button" id="primary-cancel">Cancel / withdraw</button></div>
-        <p id="primary-record-note" class="subtle" style="margin-top:12px"></p>
-      </section>
-      <section class="panel" aria-labelledby="primary-implement-title">
-        <h2 id="primary-implement-title">4. Invoke implement separately</h2>
-        <div class="buttons"><button type="button" id="primary-admit">Invoke implement / admission</button><button type="button" id="primary-dispatch-t1">Simulate T1 dispatch</button><button type="button" id="primary-dispatch-t2">Simulate T2 dispatch</button></div>
-        <p id="primary-task-note" class="subtle" style="margin-top:12px"></p>
-      </section>
-    </div>
-    <div class="buttons" style="margin-top:18px"><button type="button" id="primary-reset">Reset prototype</button><button type="button" id="open-advanced">Advanced controls &amp; full state</button></div>
+    <details id="bundle-inspector" class="panel inspector">
+      <summary>Full plan, scope, tasks, settings and evidence</summary>
+      <p id="snapshot-note" class="subtle" style="margin-top:12px"></p>
+      <dl id="snapshot-state"></dl>
+      <div class="table-scroll" tabindex="0" role="group" aria-label="Frozen input inventory" data-rc-keyboard-scroll="horizontal"><table><thead><tr><th>Authoritative input</th><th>Simulated digest label</th><th>Exact literal content</th></tr></thead><tbody id="input-manifest"></tbody></table></div>
+      <h3 style="margin-top:18px">Effective settings</h3><dl id="settings-state"></dl>
+      <h3 style="margin-top:18px">Reviewed evidence</h3><dl id="evidence-state"></dl>
+      <p class="subtle" style="margin-top:14px">This artifact contains hostile fixture text. It is inert text and cannot answer a review control.</p>
+      <pre id="hostile-artifact"></pre>
+    </details>
   </div>
 
-  <div id="guide-view" role="tabpanel" aria-labelledby="guide-tab" hidden>
-    <div class="notice" style="margin-top:18px">
-      <strong>Design simulation — no real approval authority or security qualification</strong>
-      <p>Every reviewer, machine, input, digest label, evidence reference, status response, record, and task is synthetic. Clicking a button does not prove human presence, enroll a credential, sign anything, or authorize real implementation.</p>
-      <span class="subtle">Workflow state stays in memory. No credentials, real signing, service setup, or production runner access. The canonical gallery head saves only theme preference and requests its standard fonts; fonts have an offline fallback.</span>
-    </div>
+  <div id="implementation-view" role="region" aria-labelledby="implementation-heading" hidden>
     <section class="panel">
-      <h2>Question and scope</h2>
-      <p>Can one frozen planning bundle carry separate finding decisions and a final confirmation, while later admission and every task use still refuse stale inputs, lost trust, or unavailable current status?</p>
-      <p class="subtle">This explores ADRs 0013 and 0015. One reviewer is modeled. First signer candidate: Secure Enclave; fresh biometric or password confirmation (unqualified). The model treats the signer as opaque. Protected enrollment, status transport, isolation in the existing macOS account, encoding, and human qualification remain unresolved. Another machine is unavailable; transfer here is simulated only.</p>
-      <p class="subtle">The Prototype tab contains the main review flow. This tab contains walkthroughs, fault controls, the complete frozen bundle, and state inspection. Switching views preserves all state.</p>
-      <p class="subtle">Limit: a passing modeled path demonstrates only these interface transitions. It cannot establish protected capture, signer custody, current authentication, rollback resistance, independent enrollment, faithful protected presentation, host parity, or a safe real task route.</p>
+      <h2 id="implementation-heading" tabindex="-1">Test implementation separately</h2>
+      <p>You are testing whether the reviewed plan can be used. Review never starts implementation. Starting this simulation performs a separate approval-use check; each task requires its own action.</p>
+      <div id="implementation-content"></div>
     </section>
-    <section class="panel" aria-labelledby="guided-title">
-      <h2 id="guided-title">Guided cases</h2>
-      <p class="subtle">Selecting a case resets to a fresh synthetic fixture. Press each step in order and compare the outcome with its expected result. Free play can change the case; reset it to replay the original sequence.</p>
+  </div>
+
+  <div id="scenarios-view" role="region" aria-labelledby="scenarios-heading" hidden>
+    <section class="panel" aria-labelledby="scenarios-heading">
+      <h2 id="scenarios-heading" tabindex="-1">Test scenarios</h2>
+      <p class="scenario-warning"><strong>Selecting a case resets the current fixture and its review choices.</strong> Fault and free-play controls also change the shared simulation state. Switching areas alone preserves state.</p>
       <div id="scenario-tabs" class="tabs" role="tablist" aria-label="Approval scenarios"></div>
       <div id="scenario-panel" role="tabpanel"><h3 id="scenario-title"></h3><p id="scenario-description"></p><button type="button" id="restart-scenario">Reset this case</button><ol id="scenario-steps" class="steps"></ol></div>
       <p id="guide-outcome" class="subtle" role="status" aria-live="polite" style="margin-top:14px"></p>
     </section>
     <details id="advanced-controls" class="panel inspector">
-      <summary>Advanced free play and fault controls</summary>
-      <p class="subtle" style="margin-top:12px">Every action remains available. Illegal ordering produces a visible refusal. Trust and status controls are placeholders for design exploration; they establish no real assurance.</p>
+      <summary>Free play and fault controls</summary>
+      <p class="subtle" style="margin-top:12px">These deliberately expose actions in any order, including invalid ones. A refused action gives its exact reason. Trust and status controls establish no real assurance.</p>
       <div id="free-buttons"></div>
     </details>
-    <details id="bundle-inspector" class="panel inspector">
-      <summary>Complete frozen bundle, settings, and evidence</summary>
-      <p id="snapshot-note" class="subtle" style="margin-top:12px"></p>
-      <dl id="snapshot-state"></dl>
-      <div class="table-scroll" tabindex="0" role="group" aria-label="Frozen input inventory" data-rc-keyboard-scroll="horizontal"><table><thead><tr><th>Authoritative input</th><th>Simulated digest label</th><th>Literal reviewed content</th></tr></thead><tbody id="input-manifest"></tbody></table></div>
-      <h3 style="margin-top:18px">Effective settings in this snapshot</h3>
-      <dl id="settings-state"></dl>
-      <h3 style="margin-top:18px">Reviewed evidence</h3>
-      <dl id="evidence-state"></dl>
-      <p class="subtle" style="margin-top:14px">The artifact below contains hostile fixture text. It is displayed as text; it cannot execute or answer a review control.</p>
-      <pre id="hostile-artifact"></pre>
-    </details>
     <details class="panel inspector">
-      <summary>Immutable modeled record and finding dispositions</summary>
-      <p class="subtle" style="margin-top:12px">Issuance creates a separate record. It does not invoke implement, dispatch a task, change technical findings, or grant action-specific security consent.</p>
-      <dl id="record-state"></dl>
-      <h3 style="margin-top:18px">Finding dispositions</h3>
-      <p class="subtle">Each acceptance names its finding and frozen evidence revision. A final confirmation accepts no unanswered or rejected finding.</p>
-      <div class="table-scroll" tabindex="0" role="group" aria-label="Finding dispositions" data-rc-keyboard-scroll="horizontal"><table><thead><tr><th>Finding / technical status</th><th>Review disposition</th><th>Disposition in record</th></tr></thead><tbody id="findings-state"></tbody></table></div>
-      <h3 style="margin-top:18px">Task receipts</h3>
-      <div id="dispatch-state"></div>
-      <details><summary>Read exact modeled record and binding</summary><pre id="record-json"></pre></details>
+      <summary>Record, finding dispositions and task receipts</summary>
+      <dl id="record-state" style="margin-top:14px"></dl>
+      <div class="table-scroll" tabindex="0" role="group" aria-label="Finding dispositions" data-rc-keyboard-scroll="horizontal"><table><thead><tr><th>Finding / technical status</th><th>Review choice</th><th>Recorded disposition</th></tr></thead><tbody id="findings-state"></tbody></table></div>
+      <h3 style="margin-top:18px">Task receipts</h3><div id="dispatch-state"></div>
+      <details><summary>Exact modeled record</summary><pre id="record-json"></pre></details>
     </details>
     <details id="state-inspector" class="panel inspector">
-      <summary>Full observable state and action history</summary>
-      <div class="columns" style="margin-top:14px">
-        <div><h3>Inputs and review</h3><dl id="input-state"></dl></div>
-        <div><h3>Modeled authority and task use</h3><dl id="authority-state"></dl></div>
-      </div>
-      <h3 style="margin-top:18px">What changed after each action</h3>
-      <ol id="events" class="event-list"></ol>
-      <details><summary>Full in-memory state</summary><p class="subtle">This view includes every synthetic field and prior immutable record. It updates after every action.</p><pre id="full-state"></pre></details>
+      <summary>Full state and action history</summary>
+      <div id="state-cards" class="cards" style="margin-top:14px"></div>
+      <div class="columns" style="margin-top:14px"><div><h3>Inputs and review</h3><dl id="input-state"></dl></div><div><h3>Authority and task use</h3><dl id="authority-state"></dl></div></div>
+      <h3 style="margin-top:18px">Action history</h3><ol id="events" class="event-list"></ol>
+      <details><summary>Every in-memory field</summary><pre id="full-state"></pre></details>
     </details>
+  </div>
+
+  <div id="about-view" role="region" aria-labelledby="about-heading" hidden>
+    <section class="panel">
+      <h2 id="about-heading" tabindex="-1">About this simulation</h2>
+      <div class="notice"><strong>No real approval authority or security qualification</strong><p>Every reviewer, machine, input, digest label, evidence reference, status response, record and task is synthetic. A button cannot prove human presence, enroll a credential, sign anything or authorize real implementation.</p></div>
+      <h3 style="margin-top:18px">Question</h3>
+      <p>Can a reviewer understand the frozen plan, make each residual-finding decision, then explicitly confirm it while later use refuses changed inputs, lost trust or unavailable current status?</p>
+      <h3>Setup and use</h3>
+      <p>Open this single HTML file. In Review, read the plan, decide both findings and check your choices before confirming. Implementation is separate. Scenarios contains guided cases, invalid actions and full diagnostics.</p>
+      <p>Workflow state stays in memory. The canonical gallery head saves only theme preference and requests its standard fonts, with an offline fallback. This file accesses no credentials, real signer, service or production runner.</p>
+      <h3>Unqualified boundary</h3>
+      <p>This explores ADRs 0013 and 0015 with one synthetic reviewer. First signer candidate: Secure Enclave; fresh biometric or password confirmation (unqualified). The model treats signing as opaque. Protected enrollment, current-status transport, isolation in the existing macOS account, encoding and human qualification remain unresolved. Another machine is unavailable; transfer is simulated only.</p>
+      <p>A modeled pass shows interface transitions only. It cannot establish protected capture, signer custody, current authentication, rollback resistance, independent enrollment, faithful protected presentation, host parity or a safe real task route.</p>
+    </section>
   </div>
 </main>
 
@@ -920,7 +916,9 @@ const scenarios = [
 let state = ApprovalSimulation.initial();
 let selectedScenario = 0;
 let nextStep = 0;
-let selectedView = "prototype";
+let selectedView = "review";
+let reviewScreen = "start";
+let findingIndex = 0;
 const byId = id => document.getElementById(id);
 const addText = (parent, tag, text, className) => {
   const element = document.createElement(tag);
@@ -931,151 +929,245 @@ const addText = (parent, tag, text, className) => {
   return element;
 };
 function fields(id, rows) {
-  const parent = byId(id);
-  parent.replaceChildren();
+  const parent = byId(id); parent.replaceChildren();
   rows.forEach(([label,value]) => { addText(parent,"dt",label); addText(parent,"dd",String(value)); });
 }
+function preview(action) { return ApprovalSimulation.reduce(state,action).last; }
 function apply(action) { state = ApprovalSimulation.reduce(state,action); render(); }
-function showView(view) {
-  selectedView = view;
-  byId("prototype-view").hidden = view !== "prototype";
-  byId("guide-view").hidden = view !== "guide";
-  byId("prototype-tab").setAttribute("aria-selected",String(view === "prototype"));
-  byId("guide-tab").setAttribute("aria-selected",String(view === "guide"));
+function showView(view, focus=true) {
+  selectedView=view;
+  ["review","implementation","scenarios","about"].forEach(area => {
+    byId(area+"-view").hidden=area!==view;
+    byId(area+"-tab").setAttribute("aria-current",area===view ? "page" : "false");
+  });
+  if (focus) byId(view==="review" ? "review-heading" : view+"-heading").focus();
+}
+function changeScreen(screen,index=findingIndex) {
+  reviewScreen=screen; findingIndex=index; render(); byId("review-heading").focus();
+}
+function navigation(parent,label,id,handler,primary=false) {
+  const button=addText(parent,"button",label,primary ? "primary" : "");
+  button.id=id; button.addEventListener("click",handler); return button;
+}
+function modelControl(parent,label,id,action,primary=false,after=null) {
+  const result=preview(action);
+  const wrapper=addText(parent,"div","");
+  const button=navigation(wrapper,label,id,() => {
+    apply(action);
+    if (state.last.result!=="refused" && after) after();
+    else if (state.last.result==="refused") byId("outcome").focus();
+  },primary);
+  button.disabled=result.result==="refused";
+  if (button.disabled) {
+    const reason=addText(wrapper,"p",result.message,"disabled-reason"); reason.id=id+"-reason";
+    button.setAttribute("aria-describedby",reason.id);
+  }
+  return button;
+}
+function cancelControl(parent) {
+  const unfinished=Boolean(state.review && !state.review.issuedRecordId);
+  const priorActive=unfinished && state.activeRecordId && state.recordLifecycle[state.activeRecordId]==="active";
+  const label=unfinished ? (priorActive ? "Cancel review and withdraw approval" : "Cancel review") : "Withdraw approval";
+  const explanation=unfinished ? (priorActive ? "Cancels this unfinished review and withdraws the earlier active approval. Its receipt and history are preserved." : "Ends this unfinished review without issuing a new record. Any earlier receipt and history are preserved; cancellation leaves its modeled lifecycle withdrawn.") : "Withdraws this issued approval and prevents further modeled use. Its receipt and history are preserved.";
+  addText(parent,"p",explanation,"subtle");
+  modelControl(parent,label,"review-cancel",{type:"CANCEL"},false,() => changeScreen(unfinished ? "cancelled" : "complete"));
+}
+function recoveryControls(parent) {
+  const currentChanged=state.review && !ApprovalSimulation.equal(ApprovalSimulation.snapshot(state.current),state.review.snapshot);
+  const epochChanged=state.review && state.review.epoch!==state.currentReviewEpoch;
+  if(currentChanged || epochChanged || state.phase==="cancelled") {
+    addText(parent,"p","Start a new frozen review explicitly. Its earlier finding choices are cleared; existing records and action history are preserved.","subtle");
+    modelControl(parent,currentChanged ? "Review latest snapshot" : "Start new review","review-fresh",{type:"BEGIN_REVIEW"},false,()=>changeScreen("read",0));
+  } else if(state.phase==="interrupted") {
+    modelControl(parent,"Resume review","review-resume",{type:"RESUME_REVIEW"},false,()=>changeScreen("read"));
+  } else {
+    addText(parent,"p","No new approval is created while confirmation is blocked. Changing a review screen does not restore current status, trust or required evidence. Inspect the exact failing condition in the scenario controls.","subtle");
+  }
+  navigation(parent,"Inspect blocking state","review-inspect-block",()=>{byId("advanced-controls").open=true;byId("state-inspector").open=true;showView("scenarios");});
+  return Boolean(currentChanged || epochChanged || state.phase==="cancelled");
+}
+function planSummary(parent,shown) {
+  const box=addText(parent,"div","","review-content");
+  addText(box,"h3","Plan " + shown.bundleRevision + " — two synthetic tasks");
+  addText(box,"p","Frozen version: " + shown.simulatedDigestLabel + ". Source: " + shown.sourceReference + ".");
+  [["Scope","spec.md"],["Plan","plan.md"],["Task definitions","tasks.normalized.json"],["Task use","dispatch-metadata.json"]].forEach(([label,reference]) => {
+    const input=shown.inputManifest.find(item=>item.reference===reference);
+    const paragraph=addText(box,"p",""); addText(paragraph,"strong",label+": "); addText(paragraph,"span",input.literalContent);
+  });
+  addText(box,"p","Effective checks: " + shown.effectiveSettings.projectCommands.join(", ") + "; " + shown.effectiveSettings.verification + ".");
+  addText(box,"p","Reviewed evidence: " + shown.reviewedEvidence.revision + "; blocked-check evidence " + shown.reviewedEvidence.blockedGateEvidence + "; confidence evidence " + shown.reviewedEvidence.confidenceEvidence + ".");
+  addText(box,"p","Boundary: " + shown.effectiveSettings.executionBoundary + ". Review does not run tasks or authorize signing, account changes or any action-specific security consent.","subtle");
+}
+function decisionCount() { return state.review ? state.review.snapshot.findings.filter(f=>state.review.findingDispositions[f.id]).length : 0; }
+function renderReview(shown,record) {
+  const screen=byId("review-screen"); screen.replaceChildren();
+  if(state.phase==="cancelled" && reviewScreen!=="start") reviewScreen=state.review && state.review.issuedRecordId ? "complete" : "cancelled";
+  const chapter=reviewScreen==="read" ? 0 : reviewScreen==="findings" ? 1 : reviewScreen==="confirm" ? 2 : -1;
+  const progress=byId("review-progress"); progress.replaceChildren();
+  ["Read the plan","Decide two findings","Check and confirm"].forEach((label,index) => {
+    const item=addText(progress,"li",(index+1)+". "+label,reviewScreen==="complete" || index<chapter ? "completed" : "");
+    if(index===chapter) item.setAttribute("aria-current","step");
+  });
+  byId("review-progress").hidden=reviewScreen==="start" || reviewScreen==="cancelled";
+  byId("current-step").textContent=chapter>=0 ? "Step " + (chapter+1) + " of 3" : reviewScreen==="complete" ? "Review finished" : reviewScreen==="cancelled" ? "Review stopped" : "Your role and goal";
+  byId("bundle-inspector").hidden=!state.review;
+  if (reviewScreen==="start") {
+    byId("review-heading").textContent="You are the reviewer";
+    addText(screen,"p","Read this plan, decide whether to accept each of its two remaining findings, then check and explicitly confirm your review.");
+    addText(screen,"p","Your confirmation records this exact reviewed version in the simulation. It does not resolve the findings or start implementation.");
+    const buttons=addText(screen,"div","","journey-buttons");
+    if (state.review && state.review.issuedRecordId) {
+      navigation(buttons,"View review receipt","review-open-receipt",()=>changeScreen("complete"),true);
+      modelControl(buttons,"Start new review","review-start",{type:"BEGIN_REVIEW"},false,()=>changeScreen("read",0));
+    } else if (state.review && !state.review.cancelled) {
+      navigation(buttons,"Continue review","review-continue-existing",()=>changeScreen("read",0),true);
+      modelControl(buttons,"Start fresh review","review-start",{type:"BEGIN_REVIEW"},false,()=>changeScreen("read",0));
+    } else modelControl(buttons,"Start review","review-start",{type:"BEGIN_REVIEW"},true,()=>changeScreen("read",0));
+    return;
+  }
+  if (reviewScreen==="cancelled") {
+    byId("review-heading").textContent="Review cancelled";
+    addText(screen,"p","This unfinished review has ended. No new approval record was issued for this review. Cancellation does not start implementation. Its action history remains available in Scenarios.","receipt");
+    if(record) addText(screen,"p","Earlier receipt " + record.id + " for " + record.snapshot.bundleRevision + " (review epoch " + record.reviewEpoch + ") is retained as history. Its current lifecycle is " + state.recordLifecycle[record.id] + ". The cancelled review was epoch " + state.review.epoch + ".","subtle");
+    recoveryControls(screen);
+    return;
+  }
+  if (reviewScreen==="read") {
+    byId("review-heading").textContent="Read the plan";
+    addText(screen,"p","Review what this frozen version proposes. The full input inventory, settings and evidence are available below without leaving Review.");
+    planSummary(screen,shown);
+    const next=preview({type:"DISPOSITION",finding:"G01",decision:"accepted"});
+    const buttons=addText(screen,"div","","journey-buttons");
+    navigation(buttons,"Back","read-back",()=>changeScreen("start"));
+    const proceed=navigation(buttons,"Review findings","read-continue",()=>changeScreen("findings",0),true);
+    proceed.disabled=next.result==="refused";
+    if(proceed.disabled) {
+      const reason=addText(screen,"p","Review cannot proceed: " + next.message,"blocking-reason");reason.id="read-block-reason";proceed.setAttribute("aria-describedby",reason.id);
+      modelControl(screen,state.phase==="interrupted" ? "Resume review" : "Start fresh review","review-recover",{type:state.phase==="interrupted" ? "RESUME_REVIEW" : "BEGIN_REVIEW"},false,()=>changeScreen("read",0));
+      addText(screen,"p","A fresh review freezes current inputs and clears its earlier finding choices. Existing records and history are preserved.","subtle");
+    }
+    cancelControl(screen);
+    return;
+  }
+  if (reviewScreen==="findings") {
+    const finding=shown.findings[findingIndex];
+    const disposition=state.review && state.review.findingDispositions[finding.id];
+    byId("review-heading").textContent="Finding " + (findingIndex+1) + " of 2: " + (finding.id==="G01" ? "A planned check is still blocked" : "A plan assumption has low confidence");
+    addText(screen,"p",decisionCount()+" of 2 decisions made. Choose for this finding separately; nothing is accepted by default.","decision-status");
+    addText(screen,"p",finding.id==="G01" ? "A planned check remains blocked. Accepting this gap lets the modeled review proceed with that limitation. The check still has not passed, and blocked work is not completed." : "A design assumption remains uncertain. Accepting this finding carries that known uncertainty into the modeled review. It does not raise confidence or supply verification.");
+    addText(screen,"p","Finding: " + finding.id + ". Technical status: " + finding.technicalStatus + ". Frozen evidence: " + finding.evidenceBinding + ".");
+    addText(screen,"p","Rejecting prevents final confirmation. You can revise your decision or cancel the review. Accepting cannot replace missing plan or approval evidence.","subtle");
+    addText(screen,"p","Your current choice: " + (disposition ? disposition.decision : "unanswered") + ".","decision-status");
+    const choices=addText(screen,"div","","journey-buttons");
+    ["accepted","rejected"].forEach(decision => {
+      const id="decision-"+(decision==="accepted" ? "accept-" : "reject-")+finding.id;
+      modelControl(choices,(decision==="accepted" ? "Accept " : "Reject ")+finding.id,id,{type:"DISPOSITION",finding:finding.id,decision},false,()=>byId(id).focus());
+    });
+    if(disposition && disposition.decision==="rejected") addText(screen,"p","Confirmation is blocked by your rejection of " + finding.id + ". To change it, choose Accept explicitly. You can also continue to check the summary or cancel.","blocking-reason");
+    const buttons=addText(screen,"div","","journey-buttons");
+    navigation(buttons,"Back","finding-back",()=>findingIndex===0 ? changeScreen("read") : changeScreen("findings",0));
+    const next=navigation(buttons,findingIndex===0 ? "Next finding" : "Check my review","finding-continue",()=>findingIndex===0 ? changeScreen("findings",1) : changeScreen("confirm"),true);
+    next.disabled=!disposition;
+    if(next.disabled) {
+      const reason=addText(screen,"p","Choose Accept or Reject for " + finding.id + " before continuing.","disabled-reason");reason.id="finding-next-reason";next.setAttribute("aria-describedby",reason.id);
+    }
+    cancelControl(screen);
+    return;
+  }
+  if (reviewScreen==="confirm") {
+    byId("review-heading").textContent="Check and confirm your review";
+    addText(screen,"p","Check the exact version and both decisions. Continue and Back have supplied no approval; only your separate confirmation below issues a modeled record.");
+    planSummary(screen,shown);
+    shown.findings.forEach((finding,index) => {
+      const row=addText(screen,"div","","decision-summary");
+      const choice=state.review && state.review.findingDispositions[finding.id];
+      addText(row,"p",finding.id + ": " + (choice ? choice.decision : "unanswered") + " · " + finding.technicalStatus + " · evidence " + finding.evidenceBinding);
+      navigation(row,"Change " + finding.id,"change-"+finding.id,()=>changeScreen("findings",index));
+    });
+    addText(screen,"p","Confirmation binds this frozen planning bundle, effective settings, reviewed evidence and both explicit finding acceptances. Both technical findings stay unresolved. It grants no action-specific security consent and does not start implementation.");
+    const buttons=addText(screen,"div","","journey-buttons");
+    navigation(buttons,"Back","confirm-back",()=>changeScreen("findings",1));
+    modelControl(buttons,"Confirm review","review-confirm",{type:"CONFIRM"},true,()=>changeScreen("complete"));
+    if(preview({type:"CONFIRM"}).result==="refused") recoveryControls(screen);
+    cancelControl(screen);
+    return;
+  }
+  byId("review-heading").textContent=record && state.recordLifecycle[record.id]==="withdrawn" ? "Approval withdrawn" : "Review complete";
+  if(!record) { addText(screen,"p","No review receipt exists in the current fixture. A scenario may have reset it. No approval or implementation was created.","blocking-reason"); modelControl(screen,"Start review","review-start",{type:"BEGIN_REVIEW"},true,()=>changeScreen("read",0));return; }
+  const receipt=addText(screen,"div","","receipt");
+  addText(receipt,"h3","Reviewed " + record.snapshot.bundleRevision);
+  addText(receipt,"p","Receipt: " + record.id + ". Frozen version: " + record.snapshot.simulatedDigestLabel + ". Current lifecycle: " + state.recordLifecycle[record.id] + ".");
+  record.snapshot.findings.forEach(finding=>addText(receipt,"p",finding.id+": "+record.findingDispositions[finding.id].decision+"; technical status remains "+finding.technicalStatus+"."));
+  addText(screen,"p",state.admission ? "Review did not start implementation. A separate implementation invocation has since been modeled: " + state.admission.state + "." : "Review is finished. Implementation has not started.");
+  addText(screen,"p","This is a simulation receipt, not evidence of real human presence, signing or security authority.","subtle");
+  const eligible=preview({type:"ADMIT"});
+  let recoveryHasNewReview=false;
+  if(eligible.result==="refused") {
+    addText(screen,"p","The receipt cannot currently be used: " + eligible.message + " No history is silently reset.","blocking-reason");
+    recoveryHasNewReview=recoveryControls(screen);
+  }
+  const buttons=addText(screen,"div","","journey-buttons");
+  navigation(buttons,"Open implementation","review-open-implementation",()=>showView("implementation"),true);
+  if(!recoveryHasNewReview) modelControl(buttons,"Start new review","review-start-new",{type:"BEGIN_REVIEW"},false,()=>changeScreen("read",0));
+  if(state.phase!=="cancelled") cancelControl(screen);
+}
+function renderImplementation(record) {
+  const parent=byId("implementation-content");parent.replaceChildren();
+  addText(parent,"p",record ? "Reviewed version: " + record.snapshot.simulatedDigestLabel + ". Current record status: " + state.recordLifecycle[record.id] + "." : "No review has been recorded. Finish Review before starting this simulation.","decision-status");
+  addText(parent,"p","Current machine: " + state.machines[state.machine].label + ". Implementation state: " + (state.admission ? state.admission.state : "not started") + ".");
+  modelControl(parent,"Start implementation","implementation-start",{type:"ADMIT"},true);
+  addText(parent,"h3","Simulate tasks separately");
+  addText(parent,"p","Task 2 depends on Task 1. Each action rechecks current modeled authority and the exact admitted inputs. No real task runs.","subtle");
+  ["T1","T2"].forEach((task,index) => {
+    const taskBox=addText(parent,"div","","finding");
+    addText(taskBox,"p","Task " + (index+1) + " (" + task + "): " + (state.dispatches.some(item=>item.task===task && item.recordId===state.activeRecordId) ? "one simulated receipt exists" : "not dispatched") + ".");
+    modelControl(taskBox,"Simulate task " + (index+1),"implementation-"+task,{type:"DISPATCH",task});
+  });
+  const buttons=addText(parent,"div","","journey-buttons");navigation(buttons,"Return to review","implementation-return",()=>showView("review"));
 }
 function render() {
-  const current = ApprovalSimulation.snapshot(state.current);
-  const shown = state.review ? state.review.snapshot : current;
-  const record = state.records.find(item => item.id === state.activeRecordId);
-  byId("primary-snapshot-note").textContent = (state.review ? "Frozen " : "Preview ") + shown.bundleRevision + " · evidence " + shown.reviewedEvidence.revision + " · settings " + shown.effectiveSettings.revision + (state.review ? (ApprovalSimulation.equal(current,shown) ? ". Current inputs match this review." : ". Current inputs differ; this review keeps its original snapshot.") : ". Freeze this snapshot before deciding findings. The full bundle is in Guide & details.");
-  const reviewContent = byId("primary-snapshot-content"); reviewContent.replaceChildren();
-  [["Scope","spec.md"],["Plan","plan.md"],["Tasks","tasks.normalized.json"]].forEach(([label,reference]) => {
-    const input = shown.inputManifest.find(item => item.reference === reference);
-    const paragraph = addText(reviewContent,"p",""); addText(paragraph,"strong",label + ": "); addText(paragraph,"span",input.literalContent);
-  });
-  const primaryFindings = byId("primary-findings"); primaryFindings.replaceChildren();
-  shown.findings.forEach(finding => {
-    const section = addText(primaryFindings,"div","","finding");
-    addText(section,"h3",finding.id + " — " + finding.kind);
-    addText(section,"p",finding.text + " Technical status: " + finding.technicalStatus + ".","subtle");
-    const disposition = state.review && state.review.findingDispositions[finding.id];
-    addText(section,"p","Your modeled decision: " + (disposition ? disposition.decision : "unanswered") + ".","subtle");
-    const buttons = addText(section,"div","","buttons");
-    ["accepted","rejected"].forEach(decision => {
-      const button = addText(buttons,"button",(decision === "accepted" ? "Accept " : "Reject ") + finding.id);
-      button.id = "primary-" + (decision === "accepted" ? "accept-" : "reject-") + finding.id;
-      button.addEventListener("click",() => apply({type:"DISPOSITION",finding:finding.id,decision}));
-    });
-  });
-  byId("primary-record-note").textContent = record ? record.id + " · " + state.recordLifecycle[record.id] + ". Confirmation does not invoke implement." : "No modeled record has been issued.";
-  byId("primary-task-note").textContent = "Admission: " + (state.admission ? state.admission.state : "uninvoked") + ". " + ["T1","T2"].map(task => task + ": " + (state.dispatches.some(receipt => receipt.task === task && receipt.recordId === state.activeRecordId) ? "simulated receipt" : "not dispatched")).join(" · ") + ". No real task runs.";
-  byId("guide-outcome").textContent = state.last.result + " — " + state.last.message;
-  const outcome = byId("outcome");
-  outcome.replaceChildren();
-  outcome.className = "outcome" + (state.last.result === "refused" ? " refused" : "");
-  addText(outcome,"strong",state.last.result === "modeled pass" ? "Modeled pass — no real authority" : state.last.result.charAt(0).toUpperCase() + state.last.result.slice(1));
+  const current=ApprovalSimulation.snapshot(state.current);
+  const shown=state.review ? state.review.snapshot : current;
+  const record=state.records.find(item=>item.id===state.activeRecordId);
+  const outcome=byId("outcome");outcome.replaceChildren();outcome.hidden=!state.events.length;outcome.tabIndex=-1;
+  outcome.className="outcome"+(state.last.result==="refused" ? " refused" : "");
+  addText(outcome,"strong",state.last.result==="modeled pass" ? "Modeled pass — no real authority" : state.last.result);
   addText(outcome,"div",state.last.message);
-  const cards = byId("state-cards");
-  cards.replaceChildren();
-  [["Review",state.phase],["Immutable modeled record",record ? record.id : "None"],["Separate implement admission",state.admission ? state.admission.state : "Uninvoked"],["Simulated task receipts",state.dispatches.length + " / 2"]].forEach(([label,value]) => {
-    const card = addText(cards,"div","","card"); addText(card,"span",label); addText(card,"strong",value);
-  });
-  fields("input-state",[
-    ["Current fixture binding",current.simulatedDigestLabel + " (label only; no cryptographic digest)"],
-    ["Review epoch",state.review ? state.review.epoch + " captured / " + state.currentReviewEpoch + " current" : "No frozen review / current " + state.currentReviewEpoch],
-    ["Displayed snapshot",state.review ? shown.simulatedDigestLabel + " (frozen)" : "Current preview; not frozen for review"],
-    ["Current / displayed exact equality",state.review ? String(ApprovalSimulation.equal(current,shown)) : "Not reviewed"],
-    ["Snapshot / inventory",(state.current.snapshotKnown ? "Known" : "UNKNOWN") + " / " + (state.current.inventoryKnown ? "Known" : "UNKNOWN ENTRY")],
-    ["Reviewed / private evidence",(state.current.evidenceAvailable ? "Available" : "MISSING") + " / " + (state.current.privateEvidenceAvailable ? "Modeled available" : "UNVERIFIABLE")],
-    ["Selected / recognized policy","P" + state.current.policyRevision + " / fixed P1"],
-    ["Cancellation",state.review ? String(state.review.cancelled) : state.phase === "cancelled" ? "Cancelled" : "No review"]
-  ]);
-  fields("authority-state",[
-    ["Reviewer",state.reviewer.identity + " (single synthetic reviewer)"],
-    ["Signer / real assurance",state.reviewer.signer + " / none"],
-    ["Machine",state.machines[state.machine].label],
-    ["Receiving-machine trust",state.machines[state.machine].enrollmentModeled && state.machines[state.machine].issuerTrustModeled ? "Modeled enrolled + trusted only" : "NOT modeled enrolled / trusted"],
-    ["Current response",(state.status.available ? "Available" : "OUTAGE") + " / " + (state.status.authenticationModeled ? "authentication modeled" : "UNAUTHENTICATED")],
-    ["Reviewer credential",state.status.reviewerCredentialActive ? "Modeled active" : "REVOKED"],
-    ["Approval lifecycle",record ? state.recordLifecycle[record.id] : "No record"],
-    ["Fresh response checks","Issuance " + state.statusChecks.issuance + " · admission " + state.statusChecks.admission + " · dispatch " + state.statusChecks.dispatch],
-    ["Admitted machine",state.admission ? state.machines[state.admission.machine].label : "None"],
-    ["Record / current exact equality",record ? String(ApprovalSimulation.equal(current,record.snapshot)) : "No record"],
-    ["Admission / current exact equality",state.admission ? String(ApprovalSimulation.equal(current,state.admission.exactTaskInputs)) : "No admission"],
-    ["Real execution / action consent","None / none granted"]
-  ]);
-  byId("snapshot-note").textContent = state.review ? "This is the exact frozen display for review epoch " + state.review.epoch + ". Later input changes do not rewrite it. Equality uses exact serialized synthetic fixture values; digest labels are illustrative." : "This is a preview. Freeze the final bundle before finding acceptance and confirmation. Labels are synthetic; no cryptographic digest is calculated.";
-  fields("snapshot-state",[["Repository / feature",shown.repositoryIdentity + " / " + shown.featureIdentity],["Bundle / source",shown.bundleRevision + " / " + shown.sourceReference],["Display binding label",shown.simulatedDigestLabel],["Inventory schema",shown.schema],["Policy in display","P" + shown.policyRevision]]);
-  const manifest = byId("input-manifest"); manifest.replaceChildren();
-  shown.inputManifest.forEach(input => { const row = addText(manifest,"tr",""); [input.reference,input.simulatedDigestLabel,input.literalContent].forEach(text => addText(row,"td",text)); });
-  fields("settings-state",[["Settings revision",shown.effectiveSettings.revision],["Project commands",shown.effectiveSettings.projectCommands.join(", ")],["Verification",shown.effectiveSettings.verification],["Execution boundary",shown.effectiveSettings.executionBoundary]]);
+  renderReview(shown,record);renderImplementation(record);
+  byId("guide-outcome").textContent=state.last.result+" — "+state.last.message;
+  const cards=byId("state-cards");cards.replaceChildren();
+  [["Review",state.phase],["Record",record ? record.id : "None"],["Separate implement admission",state.admission ? state.admission.state : "Uninvoked"],["Simulated receipts",state.dispatches.length+" / 2"]].forEach(([label,value])=>{const card=addText(cards,"div","","card");addText(card,"span",label);addText(card,"strong",value);});
+  fields("input-state",[["Current fixture binding",current.simulatedDigestLabel],["Review epoch",state.review ? state.review.epoch+" captured / "+state.currentReviewEpoch+" current" : "No review"],["Current / display equality",state.review ? String(ApprovalSimulation.equal(current,shown)) : "Not frozen"],["Snapshot / inventory",String(state.current.snapshotKnown)+" / "+String(state.current.inventoryKnown)],["Reviewed / private evidence",String(state.current.evidenceAvailable)+" / "+String(state.current.privateEvidenceAvailable)],["Policy","P"+state.current.policyRevision+" / fixed P1"],["Cancelled",state.review ? String(state.review.cancelled) : "No review"]]);
+  fields("authority-state",[["Reviewer / signer",state.reviewer.identity+" / "+state.reviewer.signer],["Machine",state.machines[state.machine].label],["Modeled enrollment / trust",String(state.machines[state.machine].enrollmentModeled)+" / "+String(state.machines[state.machine].issuerTrustModeled)],["Current response available / authenticated",String(state.status.available)+" / "+String(state.status.authenticationModeled)],["Reviewer credential active",String(state.status.reviewerCredentialActive)],["Record lifecycle",record ? state.recordLifecycle[record.id] : "No record"],["Fresh status checks","Issuance "+state.statusChecks.issuance+" · admission "+state.statusChecks.admission+" · dispatch "+state.statusChecks.dispatch],["Record / current equality",record ? String(ApprovalSimulation.equal(current,record.snapshot)) : "No record"],["Admission / current equality",state.admission ? String(ApprovalSimulation.equal(current,state.admission.exactTaskInputs)) : "No admission"],["Real execution / consent","None / none"]]);
+  byId("snapshot-note").textContent=state.review ? "Exact frozen display for review epoch " + state.review.epoch + ". Later changes do not rewrite it. Equality compares serialized synthetic values; labels are not cryptographic digests." : "Current preview; not frozen for review.";
+  fields("snapshot-state",[["Repository / feature",shown.repositoryIdentity+" / "+shown.featureIdentity],["Bundle / source",shown.bundleRevision+" / "+shown.sourceReference],["Binding label",shown.simulatedDigestLabel],["Inventory schema",shown.schema],["Policy in display","P"+shown.policyRevision]]);
+  const manifest=byId("input-manifest");manifest.replaceChildren();shown.inputManifest.forEach(input=>{const row=addText(manifest,"tr","");[input.reference,input.simulatedDigestLabel,input.literalContent].forEach(value=>addText(row,"td",value));});
+  fields("settings-state",[["Settings revision",shown.effectiveSettings.revision],["Project commands",shown.effectiveSettings.projectCommands.join(", ")],["Verification",shown.effectiveSettings.verification],["Boundary",shown.effectiveSettings.executionBoundary]]);
   fields("evidence-state",[["Evidence revision",shown.reviewedEvidence.revision],["Artifact manifest",shown.reviewedEvidence.artifactManifest],["Draft source",shown.reviewedEvidence.draftSource],["Decisions list",shown.reviewedEvidence.decisionsList],["Blocked-gate evidence",shown.reviewedEvidence.blockedGateEvidence],["Confidence evidence",shown.reviewedEvidence.confidenceEvidence]]);
-  byId("hostile-artifact").textContent = shown.reviewedEvidence.literalArtifact;
-  fields("record-state",record ? [["Record ID / schema",record.id + " / " + record.schema],["Decision",record.decision],["Frozen record binding",record.snapshot.simulatedDigestLabel],["Reviewer / input reference",record.reviewerIdentity + " / " + record.originalInputReference],["Issuer / signer",record.issuer + " / " + record.signer],["Capture assurance",record.captureAssurance],["Protected evidence reference",record.protectedEvidenceReference],["Supersedes",record.supersedes || "None"],["Current lifecycle",state.recordLifecycle[record.id]],["Auto implement / security consent","false / false"],["Prior records preserved",state.records.length - 1]] : [["Record","No immutable modeled record has been issued."],["Implement invocation","Separate invocation required after valid modeled issuance."],["Security consent","None"]]);
-  const findingRows = byId("findings-state"); findingRows.replaceChildren();
-  shown.findings.forEach(finding => {
-    const row = addText(findingRows,"tr","");
-    addText(row,"td",finding.id + " — " + finding.kind + "; " + finding.technicalStatus + ". " + finding.text);
-    const disposition = state.review && state.review.findingDispositions[finding.id];
-    addText(row,"td",disposition ? disposition.decision + " · " + disposition.evidenceBinding + " · event " + disposition.event : "Unanswered");
-    const recorded = record && record.findingDispositions[finding.id];
-    addText(row,"td",recorded ? recorded.decision + " · " + recorded.evidenceBinding : "No recorded disposition");
-  });
-  const receipts = byId("dispatch-state"); receipts.replaceChildren();
-  if (!state.dispatches.length) addText(receipts,"p","No simulated dispatch receipt. No real task can run from this page.","subtle");
-  state.dispatches.forEach(receipt => addText(receipts,"p",receipt.task + " · " + receipt.recordId + " · " + state.machines[receipt.machine].label + " · bound " + receipt.exactTaskInputs.simulatedDigestLabel + " · event " + receipt.event + " · real execution false","pill"));
-  byId("record-json").textContent = JSON.stringify(record || null,null,2);
-  const events = byId("events"); events.replaceChildren();
-  state.events.forEach(event => addText(events,"li","#" + event.event + " " + event.result + " — " + event.message));
-  byId("full-state").textContent = JSON.stringify(state,null,2);
+  byId("hostile-artifact").textContent=shown.reviewedEvidence.literalArtifact;
+  fields("record-state",record ? [["Record / schema",record.id+" / "+record.schema],["Decision",record.decision],["Frozen binding",record.snapshot.simulatedDigestLabel],["Reviewer / input",record.reviewerIdentity+" / "+record.originalInputReference],["Issuer / signer",record.issuer+" / "+record.signer],["Capture assurance",record.captureAssurance],["Private evidence reference",record.protectedEvidenceReference],["Supersedes",record.supersedes||"None"],["Current lifecycle",state.recordLifecycle[record.id]],["Auto implement / consent","false / false"],["Preserved prior records",state.records.length-1]] : [["Record","None"],["Real consent","None"]]);
+  const findingRows=byId("findings-state");findingRows.replaceChildren();shown.findings.forEach(finding=>{const row=addText(findingRows,"tr","");const choice=state.review&&state.review.findingDispositions[finding.id];const recorded=record&&record.findingDispositions[finding.id];addText(row,"td",finding.id+"; "+finding.technicalStatus);addText(row,"td",choice ? choice.decision+" · "+choice.evidenceBinding+" · event "+choice.event : "Unanswered");addText(row,"td",recorded ? recorded.decision+" · "+recorded.evidenceBinding : "None");});
+  const receipts=byId("dispatch-state");receipts.replaceChildren();if(!state.dispatches.length)addText(receipts,"p","No simulated receipt. No real task ran.","subtle");state.dispatches.forEach(receipt=>addText(receipts,"p",receipt.task+" · "+receipt.recordId+" · "+receipt.machine+" · "+receipt.exactTaskInputs.simulatedDigestLabel+" · event "+receipt.event+" · real execution false","pill"));
+  byId("record-json").textContent=JSON.stringify(record||null,null,2);
+  const events=byId("events");events.replaceChildren();state.events.forEach(event=>addText(events,"li","#"+event.event+" "+event.result+" — "+event.message));
+  byId("full-state").textContent=JSON.stringify(state,null,2);
   renderScenario();
 }
 function renderScenario() {
-  const scenario = scenarios[selectedScenario];
-  byId("scenario-title").textContent = scenario.title;
-  byId("scenario-description").textContent = scenario.description;
-  byId("scenario-panel").setAttribute("aria-labelledby","tab-" + scenario.id);
-  const tabs = byId("scenario-tabs"); tabs.replaceChildren();
-  scenarios.forEach((item,index) => {
-    const button = addText(tabs,"button",item.title);
-    button.id = "tab-" + item.id;
-    button.setAttribute("role","tab"); button.setAttribute("aria-selected",String(index === selectedScenario)); button.setAttribute("aria-controls","scenario-panel");
-    button.addEventListener("click",() => { selectedScenario=index; nextStep=0; state=ApprovalSimulation.initial(); render(); });
-  });
-  const list = byId("scenario-steps"); list.replaceChildren();
-  scenario.steps.forEach((item,index) => {
-    const row = addText(list,"li","");
-    const button = addText(row,"button",(index < nextStep ? "Done · " : (index + 1) + ". ") + item.label);
-    button.disabled = index !== nextStep;
-    if (index === nextStep) button.className="primary";
-    button.addEventListener("click",() => { nextStep=index+1; apply(item.action); });
-    addText(row,"span",item.expected);
-  });
+  const scenario=scenarios[selectedScenario];
+  byId("scenario-title").textContent=scenario.title;byId("scenario-description").textContent=scenario.description;
+  byId("scenario-panel").setAttribute("aria-labelledby","tab-"+scenario.id);
+  const tabs=byId("scenario-tabs");tabs.replaceChildren();
+  scenarios.forEach((item,index)=>{const button=addText(tabs,"button",item.title);button.id="tab-"+item.id;button.setAttribute("role","tab");button.setAttribute("aria-selected",String(index===selectedScenario));button.setAttribute("aria-controls","scenario-panel");button.addEventListener("click",()=>{selectedScenario=index;nextStep=0;state=ApprovalSimulation.initial();reviewScreen="start";findingIndex=0;render();byId("scenario-title").tabIndex=-1;byId("scenario-title").focus();});});
+  const list=byId("scenario-steps");list.replaceChildren();scenario.steps.forEach((item,index)=>{const row=addText(list,"li","");const button=addText(row,"button",(index<nextStep ? "Done · " : (index+1)+". ")+item.label);button.disabled=index!==nextStep;if(index===nextStep)button.className="primary";button.addEventListener("click",()=>{nextStep=index+1;apply(item.action);});addText(row,"span",item.expected);});
 }
+function resetFixture() { state=ApprovalSimulation.initial();nextStep=0;reviewScreen="start";findingIndex=0;render(); }
 function initializeInterface() {
-  byId("prototype-tab").addEventListener("click",() => showView("prototype"));
-  byId("guide-tab").addEventListener("click",() => showView("guide"));
-  byId("inspect-bundle").addEventListener("click",() => { byId("bundle-inspector").open=true; showView("guide"); });
-  byId("open-advanced").addEventListener("click",() => { byId("advanced-controls").open=true; byId("state-inspector").open=true; showView("guide"); });
-  [
-    ["primary-freeze",{type:"BEGIN_REVIEW"}], ["primary-confirm",{type:"CONFIRM"}], ["primary-cancel",{type:"CANCEL"}],
-    ["primary-admit",{type:"ADMIT"}], ["primary-dispatch-t1",{type:"DISPATCH",task:"T1"}], ["primary-dispatch-t2",{type:"DISPATCH",task:"T2"}]
-  ].forEach(([id,action]) => byId(id).addEventListener("click",() => apply(action)));
-  byId("primary-reset").addEventListener("click",() => { state=ApprovalSimulation.initial(); nextStep=0; render(); });
-  const groups = [...new Set(actions.map(item => item.group))];
-  const parent = byId("free-buttons");
-  groups.forEach(group => {
-    const section = addText(parent,"div","","action-group"); addText(section,"h3",group);
-    const buttons = addText(section,"div","","buttons");
-    actions.filter(item => item.group === group).forEach(item => {
-      const button=addText(buttons,"button",item.label); button.addEventListener("click",() => apply(item.action));
-    });
-  });
-  const reset = addText(parent,"button","Reset all synthetic state"); reset.style.marginTop="18px";
-  reset.addEventListener("click",() => { state=ApprovalSimulation.initial(); nextStep=0; render(); });
-  byId("restart-scenario").addEventListener("click",() => { state=ApprovalSimulation.initial(); nextStep=0; render(); });
-  render();
-  showView("prototype");
+  ["review","implementation","scenarios","about"].forEach(area=>byId(area+"-tab").addEventListener("click",()=>showView(area)));
+  const parent=byId("free-buttons");[...new Set(actions.map(item=>item.group))].forEach(group=>{const section=addText(parent,"div","","action-group");addText(section,"h3",group);const buttons=addText(section,"div","","buttons");actions.filter(item=>item.group===group).forEach(item=>{const button=addText(buttons,"button",item.label);button.addEventListener("click",()=>apply(item.action));});});
+  const reset=addText(parent,"button","Reset all fixture state");reset.id="lab-reset";reset.addEventListener("click",resetFixture);
+  byId("restart-scenario").addEventListener("click",resetFixture);
+  render();showView("review",false);
 }
 initializeInterface();
 </script>
