@@ -14,3 +14,7 @@ _Avoid_: cross-platform support, Codex support
 **Progress block**:
 The fixed summary of an autopilot run's phases and tasks that the runner renders from autopilot state at every phase transition. It is the only place a run shows its progress.
 _Avoid_: task list, todo list, checklist
+
+**Retry ladder**:
+The fixed sequence of three repair attempts a failing check gets in an autopilot run, each with a stronger agent, before the work it covers is marked blocked. It is the only way a run responds to a failure; a check's count never resets within the run.
+_Avoid_: corrective budget, corrective cycle, replan epoch, escalation tier
