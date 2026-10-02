@@ -19,7 +19,7 @@ The fixture is a small Python CLI (standard library plus pytest) at a pinned tag
 Each run takes the full user path: scaffold from an answers file, planning, plan review, and implement as a separate invocation.
 
 - **Answers file.** Scaffold gains a public answers-file flag. Every interview question must be answered in the file. A missing or unknown answer fails scaffold; it never asks. The canary's file pre-answers the quality-gate confirmation (ADR 0007) and declines formal methods and verification Docker after the offer (ADR 0005).
-- **Plan review.** A scripted reviewer drives `speckit-plan-review`, and a canary-only test issuer signs the plan approval record. That issuer is trusted only inside the canary's isolated host homes, and every production verifier rejects it. The canary proves the approval flow and record handling, never the real authority; [Prototype: qualify the local plan-approval authority](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1034) owns that proof (ADR 0015).
+- **Plan review.** A scripted reviewer drives `speckit-plan-review`, and a canary-only test issuer signs the plan approval record. That issuer is trusted only inside the canary's isolated host homes, and every production verifier rejects it. The canary proves the approval flow and record handling, never the real authority; [Plan approval authority: resolve protection and qualification under one macOS login](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1037) owns that proof (ADR 0015).
 
 All five variants gate every release:
 
@@ -67,7 +67,7 @@ A red receipt opens an issue that links the failed assertion. The PR that closes
 - **GitHub-hosted runners with secrets.** Rejected: model cost in public CI, and no private runner pool.
 - **Run per release PR, or a daily host-version check.** Rejected for a weekly off-peak run; the cost is that releases ship at most weekly.
 - **Loosen the exact-commit binding for faster releases.** Rejected: it amends ADR 0003.
-- **Maintainer approves the plan live, or implement from a fixture plan.** Rejected: a live approval makes the canary attended and waits on #1034; a fixture plan never proves that the plan just produced can be approved and built.
+- **Maintainer approves the plan live, or implement from a fixture plan.** Rejected: a live approval makes the canary attended and waits on real-authority qualification; a fixture plan never proves that the plan just produced can be approved and built.
 - **Canary-only scaffold switch, or skip scaffold.** Rejected: the canary would test a path users never take, or not test scaffold at all.
 - **Some variants on a slower schedule.** Rejected: all five gate.
 - **Wall clock only, or auto-ratcheting limits.** Rejected: token burn goes unseen, or one lucky run turns normal runs red.

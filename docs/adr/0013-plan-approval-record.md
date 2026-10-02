@@ -10,7 +10,7 @@ Amended through [Prototype: qualify the local plan-approval authority](https://g
 
 Every plan gets a human review interview through a new `speckit-plan-review` skill after planning has produced its HTML artifacts and draft PR. The interview works through gaps and requested changes before the human explicitly approves the final planning revision. Approval is recorded by the runner and permits that revision to be built; implementation starts only on a separate human invocation.
 
-[ADR 0015](0015-local-plan-approval-authority.md) selects the protected local capture and enforcement boundary. Its signer, reviewer-enrollment profile and controlled host qualification remain behind [Prototype: qualify the local plan-approval authority](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1034); no approval capture profile is qualified by these planning decisions.
+[ADR 0015](0015-local-plan-approval-authority.md) selects the protected local capture and enforcement boundary. Its signer, reviewer-enrollment profile and controlled host qualification remain behind [Plan approval authority: resolve protection and qualification under one macOS login](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1037); no approval capture profile is qualified by these planning decisions.
 
 ## Review before approval
 
