@@ -21,7 +21,7 @@ A fixed small SPEC run end to end, unattended, on both hosts from a clean instal
 _Avoid_: smoke test, integration eval, dogfood run
 
 **Canary receipt**:
-The evidence one canary run leaves for one host: the commit, host and plugin versions, the verdict for each variant, and the measures it was judged on. Only a receipt from the scheduled canary can gate a release; a local dogfood receipt never does.
+The evidence one canary run leaves for one host: the commit, host and plugin versions, the verdict for each variant, and the measures it was judged on. Only a receipt from a canary CI run, scheduled or on demand, can gate a release; a local dogfood receipt never does.
 _Avoid_: canary log, test report
 
 **Decisions list**:
