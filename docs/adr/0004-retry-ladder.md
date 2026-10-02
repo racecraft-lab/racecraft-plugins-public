@@ -27,6 +27,6 @@ Metadata-only task rewording survives. The runner proves it scope-neutral agains
 ## Consequences
 
 - Which model and effort each rung uses on each host is still open, and goes with the ladder-size ticket.
-- How blocked-for-UAT is stored in the ledger, the PR body and the UAT runbook is still open.
+- Blocked-for-UAT storage, evidence, resume and review rendering are defined in [ADR 0012](0012-blocked-for-uat.md).
 - The mid-run stops that remain (`checkpoint_required`, ledger integrity errors, harm halts) belong to the stop-policy decision.
 - Whether a plan with a blocked planning gate can be approved belongs to the plan approval decision.

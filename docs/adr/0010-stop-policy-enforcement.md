@@ -80,4 +80,4 @@ The runner owns one file in run state as the single source. It renders first in 
 
 - The registry in `speckit_pro_runner/stop_policy.py`, `finalize-run` and the stop-policy reference change together; the parity test covers them.
 - The canary asserts zero unregistered stops and records decisions-list counts per kind.
-- How blocked-for-UAT renders is still open from ADR 0004.
+- [ADR 0012](0012-blocked-for-uat.md) defines blocked-for-UAT rendering immediately after the decisions list, preserving this ordering.

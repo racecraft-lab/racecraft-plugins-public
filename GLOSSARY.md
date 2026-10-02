@@ -4,6 +4,10 @@ The language of the speckit-pro plugin's workflow: how a SPEC is scaffolded, pla
 
 ## Language
 
+**Blocked-for-UAT**:
+Work a run cannot finish or verify and hands to human review with its reason and evidence, while independent safe work continues. Accepting a documented gap does not make that work complete.
+_Avoid_: completed with deferrals, failed run, waived completion
+
 **Decisions list**:
 The run's record of every judgment it made instead of asking the user: the option chosen, the rejected alternative and the evidence. It never asks for a reply; the reviewer accepts or overturns each entry at review.
 _Avoid_: end-of-run request, Decisions for you
