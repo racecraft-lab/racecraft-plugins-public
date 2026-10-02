@@ -1,4 +1,4 @@
-# Canary subscription auth on fireactions runners: research findings
+# Canary subscription auth on self-hosted runners: research findings
 
 > Status: research complete. Resolves
 > [#1035](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1035)
@@ -274,22 +274,22 @@ implement. On Claude Pro, or on ChatGPT Plus with a large model, five at once
 could exhaust a 5-hour window. Measure one variant's usage first and size from
 that.
 
-## 5. Getting a secret onto a fireactions VM
+## 5. Getting a secret onto a runner microVM
 
-**What fireactions offers** (v2.0.8, commit `6ae624e1`):
+**What the runner platform offers** (v2.0.8, commit `6ae624e1`):
 
 - Each VM boots from a rootfs built from an OCI image and is "destroyed after
   the job is finished, no state is preserved between jobs"
-  ([docs/index.md](https://github.com/hostinger/fireactions/blob/6ae624e176f1446288c5aa9d6be708692800fd31/docs/index.md),
-  [server/pool.go L473-478](https://github.com/hostinger/fireactions/blob/6ae624e176f1446288c5aa9d6be708692800fd31/server/pool.go#L473-L478)).
+  (docs/index.md, upstream runner source at `6ae624e1`,
+  server/pool.go L473-478, upstream runner source at `6ae624e1`).
   There is no volume or secret-mount feature.
 - Per-pool `metadata` from the host's YAML config goes to every VM in the pool
   through Firecracker MMDS at `169.254.169.254`, next to the runner's JIT config
-  ([configuration.md L150-156](https://github.com/hostinger/fireactions/blob/6ae624e176f1446288c5aa9d6be708692800fd31/docs/reference/configuration.md#L150-L156),
-  [pool.go L480-520](https://github.com/hostinger/fireactions/blob/6ae624e176f1446288c5aa9d6be708692800fd31/server/pool.go#L480-L520),
-  [agent/mmds/client.go L73-112](https://github.com/hostinger/fireactions/blob/6ae624e176f1446288c5aa9d6be708692800fd31/agent/mmds/client.go#L73-L112)).
+  (configuration.md L150-156, upstream runner source at `6ae624e1`,
+  pool.go L480-520, upstream runner source at `6ae624e1`,
+  agent/mmds/client.go L73-112, upstream runner source at `6ae624e1`).
 - Runners register as single-job JIT runners
-  ([pool.go L506-510](https://github.com/hostinger/fireactions/blob/6ae624e176f1446288c5aa9d6be708692800fd31/server/pool.go#L506-L510)).
+  (pool.go L506-510, upstream runner source at `6ae624e1`).
 
 **Do not use the image or MMDS for credentials.** A secret baked into the image
 sits in the registry and in every VM. A secret in pool metadata sits in
@@ -369,7 +369,7 @@ Rules the run must follow:
 - **Plan tiers.** Which Claude plan (Pro or Max) and ChatGPT plan (Plus or Pro)
   the owner holds, and no numeric Claude limits are published. Fit of five
   parallel runs needs a measured run.
-- **fireactions logging of MMDS metadata.** Firecracker runs at `Debug` log
-  level ([pool.go L488](https://github.com/hostinger/fireactions/blob/6ae624e176f1446288c5aa9d6be708692800fd31/server/pool.go#L488));
+- **Runner platform logging of MMDS metadata.** Firecracker runs at `Debug` log
+  level (pool.go L488, upstream runner source at `6ae624e1`);
   not checked whether metadata reaches that log. Moot if credentials stay out of
   metadata.
