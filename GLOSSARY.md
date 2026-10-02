@@ -36,7 +36,7 @@ The rule that a run gives the same outcomes and the same run experience (prompts
 _Avoid_: cross-platform support, Codex support
 
 **Plan approval authority**:
-The protected mechanism that establishes a human's final plan approval and its current validity independently of the coding agent. Its review interface records requested corrections and their checked results before final confirmation.
+The protected mechanism that establishes a human's final plan approval and its current validity independently of the coding agent. Its review interface records requested corrections and their checked results before final confirmation. Deferred to follow-on work; the health program uses a recorded approval (ADR 0017).
 _Avoid_: signing prompt, transcript proof, repository approval flag
 
 **Plan approval record**:

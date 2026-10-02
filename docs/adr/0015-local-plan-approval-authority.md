@@ -1,6 +1,6 @@
 # A protected local authority captures and enforces plan approval
 
-Status: accepted
+Status: deferred. [ADR 0017](0017-recorded-plan-approval.md) uses recorded plan approval for the health program and moves this protected authority to follow-on work. The boundary and qualification list below remain the starting point for that work.
 
 Implementation status: architecture decision only; no approval capture profile is qualified and no plugin runtime behavior changes. ADR 0013 remains the approval contract.
 
@@ -48,7 +48,7 @@ Reviewer identity mapping, trusted bootstrap, enrollment, rotation, revocation, 
 5. Controlled human-in-the-loop qualification on both agent products and another enrolled machine, with identical verdicts for valid approval, forged replies, untrusted signers, missing presence, injected display content, stale/replayed approvals, altered verification policy and races from reviewed bytes through actual task use.
 6. The shared ADR 0013 acceptance matrix, including absent private evidence: retain only independently verifiable redacted references in the portable record, and refuse if the selected profile requires evidence that is unavailable. Source inspection or synthetic replies cannot stand in for these live results.
 
-Until this gate is passed, the spec must state that the architecture is selected but feasibility and host acceptance remain unqualified. Unverifiable approval must refuse implement admission. Resolving this architecture ticket must preserve the Definition-of-done dependency on the qualification gate.
+Until this gate is passed, the spec must state that the architecture is selected but feasibility and host acceptance remain unqualified. ADR 0017 removes the Definition-of-done dependency on this gate for the health program.
 
 ## Alternatives and scope
 
