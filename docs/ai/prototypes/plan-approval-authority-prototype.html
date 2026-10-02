@@ -143,7 +143,7 @@
 </script>
 <!-- GALLERY-HEAD:END -->
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Plan approval authority — design simulation</title>
+  <title>Plan review demo</title>
   <style>
 /* BRAND-KIT:START */
 :root {
@@ -535,6 +535,7 @@ details:focus-visible,
     .scenario-warning { padding:12px; background:var(--rc-surface-muted); border:1px solid var(--rc-border-strong); }
     .decision-summary { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; align-items:center; border-bottom:1px solid var(--rc-border-strong); padding:12px 0; }
     .receipt { padding:16px; background:var(--rc-surface-sunken); border:1px solid var(--rc-border-strong); border-radius:5px; }
+    .change-draft { width:100%; box-sizing:border-box; min-height:240px; padding:13px; background:var(--rc-surface-sunken); color:var(--rc-text); border:1px solid var(--rc-border-strong); border-radius:5px; font:13px/1.5 var(--rc-font-mono); resize:vertical; }
     .disabled-reason { color:var(--rc-text-muted); font-size:14px; margin-top:6px; }
     @media(max-width:500px) { .review-progress { gap:6px; } .review-progress li { font-size:12px; } .decision-summary { grid-template-columns:1fr; } }
   </style>
@@ -544,7 +545,7 @@ details:focus-visible,
   <header class="app-header">
     <span data-rc-brand-mark></span>
     <h1>Plan review</h1>
-    <p class="simulation-note">Simulation — no real approval authority or security qualification.</p>
+    <p class="simulation-note">Demo only. This page gives no real approval and runs no real work.</p>
     <nav class="view-tabs" aria-label="Prototype areas">
       <button type="button" id="review-tab" aria-current="page" aria-controls="review-view">Review</button>
       <button type="button" id="implementation-tab" aria-current="false" aria-controls="implementation-view">Implementation</button>
@@ -562,21 +563,21 @@ details:focus-visible,
       <div id="review-screen"></div>
     </section>
     <details id="bundle-inspector" class="panel inspector">
-      <summary>Full plan, scope, tasks, settings and evidence</summary>
+      <summary>Full source: plan, scope, tasks, settings and evidence</summary>
       <p id="snapshot-note" class="subtle" style="margin-top:12px"></p>
       <dl id="snapshot-state"></dl>
-      <div class="table-scroll" tabindex="0" role="group" aria-label="Frozen input inventory" data-rc-keyboard-scroll="horizontal"><table><thead><tr><th>Authoritative input</th><th>Simulated digest label</th><th>Exact literal content</th></tr></thead><tbody id="input-manifest"></tbody></table></div>
-      <h3 style="margin-top:18px">Effective settings</h3><dl id="settings-state"></dl>
-      <h3 style="margin-top:18px">Reviewed evidence</h3><dl id="evidence-state"></dl>
-      <p class="subtle" style="margin-top:14px">This artifact contains hostile fixture text. It is inert text and cannot answer a review control.</p>
+      <div class="table-scroll" tabindex="0" role="group" aria-label="Exact plan files" data-rc-keyboard-scroll="horizontal"><table><thead><tr><th>Source file</th><th>Demo version label</th><th>Exact literal content</th></tr></thead><tbody id="input-manifest"></tbody></table></div>
+      <h3 style="margin-top:18px">Settings used for this version</h3><dl id="settings-state"></dl>
+      <h3 style="margin-top:18px">Supporting evidence</h3><dl id="evidence-state"></dl>
+      <p class="subtle" style="margin-top:14px">This source includes hostile sample text. The demo displays it as text. It cannot make a reviewer choice.</p>
       <pre id="hostile-artifact"></pre>
     </details>
   </div>
 
   <div id="implementation-view" role="region" aria-labelledby="implementation-heading" hidden>
     <section class="panel">
-      <h2 id="implementation-heading" tabindex="-1">Test implementation separately</h2>
-      <p>You are testing whether the reviewed plan can be used. Review never starts implementation. Starting this simulation performs a separate approval-use check; each task requires its own action.</p>
+      <h2 id="implementation-heading" tabindex="-1">Check and start demo tasks</h2>
+      <p>Check whether the current approval permits work. This check starts no task. Start each demo task with a separate action.</p>
       <div id="implementation-content"></div>
     </section>
   </div>
@@ -584,22 +585,22 @@ details:focus-visible,
   <div id="scenarios-view" role="region" aria-labelledby="scenarios-heading" hidden>
     <section class="panel" aria-labelledby="scenarios-heading">
       <h2 id="scenarios-heading" tabindex="-1">Test scenarios</h2>
-      <p class="scenario-warning"><strong>Selecting a case resets the current fixture and its review choices.</strong> Fault and free-play controls also change the shared simulation state. Switching areas alone preserves state.</p>
+      <p class="scenario-warning"><strong>Selecting a case resets this demo and its review choices.</strong> Fault controls also change the demo. Switching areas keeps your current state.</p>
       <div id="scenario-tabs" class="tabs" role="tablist" aria-label="Approval scenarios"></div>
       <div id="scenario-panel" role="tabpanel"><h3 id="scenario-title"></h3><p id="scenario-description"></p><button type="button" id="restart-scenario">Reset this case</button><ol id="scenario-steps" class="steps"></ol></div>
       <p id="guide-outcome" class="subtle" role="status" aria-live="polite" style="margin-top:14px"></p>
     </section>
     <details id="advanced-controls" class="panel inspector">
       <summary>Free play and fault controls</summary>
-      <p class="subtle" style="margin-top:12px">These deliberately expose actions in any order, including invalid ones. A refused action gives its exact reason. Trust and status controls establish no real assurance.</p>
+      <p class="subtle" style="margin-top:12px">Try actions in any order, including blocked actions. Read the reason for each block. These controls prove no real trust or permission.</p>
       <div id="free-buttons"></div>
     </details>
     <details class="panel inspector">
-      <summary>Record, finding dispositions and task receipts</summary>
+      <summary>Technical details: review records, choices and task starts</summary>
       <dl id="record-state" style="margin-top:14px"></dl>
-      <div class="table-scroll" tabindex="0" role="group" aria-label="Finding dispositions" data-rc-keyboard-scroll="horizontal"><table><thead><tr><th>Finding / technical status</th><th>Review choice</th><th>Recorded disposition</th></tr></thead><tbody id="findings-state"></tbody></table></div>
-      <h3 style="margin-top:18px">Task receipts</h3><div id="dispatch-state"></div>
-      <details><summary>Exact modeled record</summary><pre id="record-json"></pre></details>
+      <div class="table-scroll" tabindex="0" role="group" aria-label="Issue choices" data-rc-keyboard-scroll="horizontal"><table><thead><tr><th>Issue / exact technical status</th><th>Review choice</th><th>Recorded choice</th></tr></thead><tbody id="findings-state"></tbody></table></div>
+      <h3 style="margin-top:18px">Task-start records</h3><div id="dispatch-state"></div>
+      <details><summary>Exact model review record</summary><pre id="record-json"></pre></details>
     </details>
     <details id="state-inspector" class="panel inspector">
       <summary>Full state and action history</summary>
@@ -612,16 +613,17 @@ details:focus-visible,
 
   <div id="about-view" role="region" aria-labelledby="about-heading" hidden>
     <section class="panel">
-      <h2 id="about-heading" tabindex="-1">About this simulation</h2>
-      <div class="notice"><strong>No real approval authority or security qualification</strong><p>Every reviewer, machine, input, digest label, evidence reference, status response, record and task is synthetic. A button cannot prove human presence, enroll a credential, sign anything or authorize real implementation.</p></div>
+      <h2 id="about-heading" tabindex="-1">About this demo</h2>
+      <div class="notice"><strong>No real approval authority or security qualification</strong><p>All people, machines, files, version labels, evidence, status responses, records and tasks are samples. A button proves no human presence. It cannot enroll credentials, sign data or permit real work.</p></div>
       <h3 style="margin-top:18px">Question</h3>
-      <p>Can a reviewer understand the frozen plan, make each residual-finding decision, then explicitly confirm it while later use refuses changed inputs, lost trust or unavailable current status?</p>
+      <p>Can a reviewer understand this plan, choose for each issue, and approve the exact version? Can later checks block changed plans, lost trust or missing current status?</p>
       <h3>Setup and use</h3>
-      <p>Open this single HTML file. In Review, read the plan, decide both findings and check your choices before confirming. Implementation is separate. Scenarios contains guided cases, invalid actions and full diagnostics.</p>
-      <p>Workflow state stays in memory. The canonical gallery head saves only theme preference and requests its standard fonts, with an offline fallback. This file accesses no credentials, real signer, service or production runner.</p>
-      <h3>Unqualified boundary</h3>
-      <p>This explores ADRs 0013 and 0015 with one synthetic reviewer. First signer candidate: Secure Enclave; fresh biometric or password confirmation (unqualified). The model treats signing as opaque. Protected enrollment, current-status transport, isolation in the existing macOS account, encoding and human qualification remain unresolved. Another machine is unavailable; transfer is simulated only.</p>
-      <p>A modeled pass shows interface transitions only. It cannot establish protected capture, signer custody, current authentication, rollback resistance, independent enrollment, faithful protected presentation, host parity or a safe real task route.</p>
+      <p>Open this HTML file. Read the plan in Review. Choose for each issue. Check your choices before approval. Use Implementation for separate work checks. Use Scenarios for sample cases and technical details.</p>
+      <p>Demo state stays in memory. Closing or reloading the page loses that state. The gallery code stores only your theme preference. It requests standard fonts and has fallback fonts. This file accesses no credentials, real signer, approval service or production runner.</p>
+      <h3>What remains unproved</h3>
+      <p>This demo explores ADRs 0013 and 0015 with one sample reviewer. The signer candidate is Secure Enclave with fresh biometric or password confirmation. It remains unqualified. The model implements no signing. Protected enrollment, current-status delivery, data encoding and human verification remain unproved. Isolation on the same Mac and existing account remains unproved. No second computer is available. Transfer between machines is a demo only.</p>
+      <p>A passed demo check shows a state change only. It proves no protected approval, secure key custody, authentic current status, rollback protection or independent enrollment. It proves no protected display, consistent host behavior or safe real task start.</p>
+      <p>This text uses STE-inspired short sentences and consistent terms. It does not claim formal ASD-STE100 compliance or certification.</p>
     </section>
   </div>
 </main>
@@ -859,59 +861,59 @@ const ApprovalSimulation = (() => {
 <!-- Throwaway DOM shell: only textContent presents fixture content. -->
 <script id="approval-interface">
 const actions = [
-  { group:"Review the frozen bundle", label:"Show / freeze final bundle", action:{type:"BEGIN_REVIEW"} },
-  { group:"Review the frozen bundle", label:"Model separate acceptance of G01", action:{type:"DISPOSITION",finding:"G01",decision:"accepted"} },
-  { group:"Review the frozen bundle", label:"Model separate acceptance of LC01", action:{type:"DISPOSITION",finding:"LC01",decision:"accepted"} },
-  { group:"Review the frozen bundle", label:"Reject G01", action:{type:"DISPOSITION",finding:"G01",decision:"rejected"} },
-  { group:"Review the frozen bundle", label:"Reject LC01", action:{type:"DISPOSITION",finding:"LC01",decision:"rejected"} },
-  { group:"Review the frozen bundle", label:"Simulate final reviewer confirmation", action:{type:"CONFIRM"} },
-  { group:"Review the frozen bundle", label:"Cancel / withdraw", action:{type:"CANCEL"} },
-  { group:"Review the frozen bundle", label:"Interrupt review", action:{type:"INTERRUPT"} },
-  { group:"Review the frozen bundle", label:"Resume unchanged review", action:{type:"RESUME_REVIEW"} },
-  { group:"Separate invocation and task use", label:"Simulate implement invocation / admission", action:{type:"ADMIT"} },
-  { group:"Separate invocation and task use", label:"Check and model dispatch of T1", action:{type:"DISPATCH",task:"T1"} },
-  { group:"Separate invocation and task use", label:"Check and model dispatch of T2", action:{type:"DISPATCH",task:"T2"} },
-  { group:"Challenge input and provenance", label:"Submit fabricated agent approval", action:{type:"AGENT_REPLY"} },
-  { group:"Challenge input and provenance", label:"Change authoritative plan", action:{type:"CHANGE_PLAN"} },
-  { group:"Challenge input and provenance", label:"Change effective verification settings", action:{type:"CHANGE_SETTINGS"} },
-  { group:"Challenge input and provenance", label:"Change reviewed evidence revision", action:{type:"CHANGE_EVIDENCE"} },
-  { group:"Challenge input and provenance", label:"Alter selected policy", action:{type:"ALTER_POLICY"} },
-  { group:"Challenge input and provenance", label:"Concurrent review / epoch conflict", action:{type:"CONCURRENT_REVIEW"} },
-  { group:"Challenge input and provenance", label:"Make snapshot unknown", action:{type:"UNKNOWN_SNAPSHOT"} },
-  { group:"Challenge input and provenance", label:"Restore readable snapshot", action:{type:"KNOWN_SNAPSHOT"} },
-  { group:"Challenge input and provenance", label:"Add unknown inventory entry", action:{type:"UNKNOWN_INVENTORY"} },
-  { group:"Challenge input and provenance", label:"Remove reviewed evidence", action:{type:"MISSING_EVIDENCE"} },
-  { group:"Challenge input and provenance", label:"Restore reviewed evidence", action:{type:"RESTORE_EVIDENCE"} },
-  { group:"Challenge input and provenance", label:"Make required private evidence unavailable", action:{type:"MISSING_PRIVATE"} },
-  { group:"Challenge input and provenance", label:"Restore synthetic private-evidence flag", action:{type:"RESTORE_PRIVATE"} },
-  { group:"Challenge current status and independent trust", label:"Current status outage", action:{type:"STATUS_OUTAGE"} },
-  { group:"Challenge current status and independent trust", label:"Restore current status connection", action:{type:"STATUS_RESTORE"} },
-  { group:"Challenge current status and independent trust", label:"Unauthenticated status response", action:{type:"UNAUTHENTICATED_STATUS"} },
-  { group:"Challenge current status and independent trust", label:"Revoke current modeled approval", action:{type:"REVOKE_RECORD"} },
-  { group:"Challenge current status and independent trust", label:"Supersede current modeled approval", action:{type:"SUPERSEDE_RECORD"} },
-  { group:"Challenge current status and independent trust", label:"Revoke modeled reviewer credential", action:{type:"REVOKE_REVIEWER"} },
-  { group:"Challenge current status and independent trust", label:"Present same record on second machine", action:{type:"SECOND_MACHINE"} },
-  { group:"Challenge current status and independent trust", label:"Model second-machine enrollment", action:{type:"MODEL_SECOND_ENROLLMENT"} },
-  { group:"Challenge current status and independent trust", label:"Return to first machine", action:{type:"FIRST_MACHINE"} },
-  { group:"Challenge current status and independent trust", label:"Remove selected machine’s issuer trust", action:{type:"REMOVE_TRUST"} }
+  { group:"Review choices", label:"Start review of current version", action:{type:"BEGIN_REVIEW"} },
+  { group:"Review choices", label:"Accept issue G01", action:{type:"DISPOSITION",finding:"G01",decision:"accepted"} },
+  { group:"Review choices", label:"Accept issue LC01", action:{type:"DISPOSITION",finding:"LC01",decision:"accepted"} },
+  { group:"Review choices", label:"Do not accept issue G01", action:{type:"DISPOSITION",finding:"G01",decision:"rejected"} },
+  { group:"Review choices", label:"Do not accept issue LC01", action:{type:"DISPOSITION",finding:"LC01",decision:"rejected"} },
+  { group:"Review choices", label:"Try final approval", action:{type:"CONFIRM"} },
+  { group:"Review choices", label:"Cancel review / withdraw approval", action:{type:"CANCEL"} },
+  { group:"Review choices", label:"Pause review", action:{type:"INTERRUPT"} },
+  { group:"Review choices", label:"Resume unchanged review", action:{type:"RESUME_REVIEW"} },
+  { group:"Separate work checks", label:"Check whether work can start", action:{type:"ADMIT"} },
+  { group:"Separate work checks", label:"Try starting demo task 1", action:{type:"DISPATCH",task:"T1"} },
+  { group:"Separate work checks", label:"Try starting demo task 2", action:{type:"DISPATCH",task:"T2"} },
+  { group:"Change plan or evidence", label:"Try a coding agent's false approval", action:{type:"AGENT_REPLY"} },
+  { group:"Change plan or evidence", label:"Change demo plan version", action:{type:"CHANGE_PLAN"} },
+  { group:"Change plan or evidence", label:"Change checking settings", action:{type:"CHANGE_SETTINGS"} },
+  { group:"Change plan or evidence", label:"Change evidence version", action:{type:"CHANGE_EVIDENCE"} },
+  { group:"Change plan or evidence", label:"Change checking policy", action:{type:"ALTER_POLICY"} },
+  { group:"Change plan or evidence", label:"Simulate another review", action:{type:"CONCURRENT_REVIEW"} },
+  { group:"Change plan or evidence", label:"Make exact plan unavailable", action:{type:"UNKNOWN_SNAPSHOT"} },
+  { group:"Change plan or evidence", label:"Restore readable plan", action:{type:"KNOWN_SNAPSHOT"} },
+  { group:"Change plan or evidence", label:"Add unknown plan file", action:{type:"UNKNOWN_INVENTORY"} },
+  { group:"Change plan or evidence", label:"Remove supporting evidence", action:{type:"MISSING_EVIDENCE"} },
+  { group:"Change plan or evidence", label:"Restore supporting evidence", action:{type:"RESTORE_EVIDENCE"} },
+  { group:"Change plan or evidence", label:"Make required private evidence unavailable", action:{type:"MISSING_PRIVATE"} },
+  { group:"Change plan or evidence", label:"Restore demo private-evidence flag", action:{type:"RESTORE_PRIVATE"} },
+  { group:"Change current status or trust", label:"Disconnect current status", action:{type:"STATUS_OUTAGE"} },
+  { group:"Change current status or trust", label:"Restore current status response", action:{type:"STATUS_RESTORE"} },
+  { group:"Change current status or trust", label:"Remove status-response authentication", action:{type:"UNAUTHENTICATED_STATUS"} },
+  { group:"Change current status or trust", label:"Revoke demo approval", action:{type:"REVOKE_RECORD"} },
+  { group:"Change current status or trust", label:"Mark demo approval as replaced", action:{type:"SUPERSEDE_RECORD"} },
+  { group:"Change current status or trust", label:"Revoke demo reviewer credential", action:{type:"REVOKE_REVIEWER"} },
+  { group:"Change current status or trust", label:"Select second demo machine", action:{type:"SECOND_MACHINE"} },
+  { group:"Change current status or trust", label:"Set second-machine trust flags", action:{type:"MODEL_SECOND_ENROLLMENT"} },
+  { group:"Change current status or trust", label:"Select first demo machine", action:{type:"FIRST_MACHINE"} },
+  { group:"Change current status or trust", label:"Remove selected machine's issuer trust", action:{type:"REMOVE_TRUST"} }
 ];
 const step = (type, label, expected, extra={}) => ({ action:{type,...extra}, label, expected });
 const reviewSteps = () => [
-  step("BEGIN_REVIEW","Freeze the final bundle","Exact synthetic inputs, settings, and evidence become the review snapshot."),
-  step("DISPOSITION","Accept G01 separately","G01 remains technically blocked.",{finding:"G01",decision:"accepted"}),
-  step("DISPOSITION","Accept LC01 separately","LC01 remains technically low confidence.",{finding:"LC01",decision:"accepted"}),
-  step("CONFIRM","Simulate final confirmation","An immutable modeled record exists. Admission and task dispatch are still absent.")
+  step("BEGIN_REVIEW","Start review","This exact plan version, settings and evidence stay fixed for this review."),
+  step("DISPOSITION","Accept issue G01","The check still has not passed.",{finding:"G01",decision:"accepted"}),
+  step("DISPOSITION","Accept issue LC01","The assumption still needs proof.",{finding:"LC01",decision:"accepted"}),
+  step("CONFIRM","Approve the plan in this demo","A review record exists. No work check or task start occurred.")
 ];
 const scenarios = [
-  { id:"valid", title:"Valid modeled flow", description:"Separate finding acceptance, final confirmation, admission, and task dispatch. The modeled issuer is checked again at every use.", steps:[...reviewSteps(),step("ADMIT","Invoke implement separately","Admission passes; this action dispatches no task."),step("DISPATCH","Model T1 dispatch","The exact admitted inputs and current status are checked.",{task:"T1"}),step("DISPATCH","Model T2 dispatch","Status is checked anew; both task receipts retain immutable inputs.",{task:"T2"})] },
-  { id:"findings", title:"Missing / rejected finding", description:"A final confirmation cannot supply a separate residual-finding acceptance. A rejected finding keeps the revision unapproved.", steps:[step("BEGIN_REVIEW","Freeze bundle","Both findings start unanswered."),step("DISPOSITION","Accept only G01","LC01 remains unanswered.",{finding:"G01",decision:"accepted"}),step("CONFIRM","Attempt final confirmation","Refused: LC01 has no separate acceptance."),step("DISPOSITION","Reject LC01","LC01 now has an explicit rejection.",{finding:"LC01",decision:"rejected"}),step("CONFIRM","Try confirming rejected LC01","Refused: no modeled record is issued.")] },
-  { id:"agent", title:"Fabricated agent reply", description:"Literal hostile display content and fabricated agent approvals are data. They cannot answer a reviewer control or issue a record.", steps:[step("BEGIN_REVIEW","Display hostile fixture inertly","Script-like text is visible literally; both findings remain unanswered."),step("AGENT_REPLY","Submit agent’s fabricated approval","Refused: record and dispositions remain unchanged."),step("CONFIRM","Attempt final confirmation","Refused: G01 and LC01 still need separate acceptance.")] },
-  { id:"drift", title:"Plan changes after confirmation", description:"The earlier record and admitted task inputs stay frozen. A later plan change cannot move those bindings or obtain a task dispatch.", steps:[...reviewSteps(),step("ADMIT","Admit original revision","Admission binds original R1 input bytes."),step("CHANGE_PLAN","Change plan to R2","Current inputs diverge; the immutable record still contains R1."),step("DISPATCH","Attempt T1 using changed plan","Refused: undispatched tasks are blocked by unknown affected ownership.",{task:"T1"}),step("ADMIT","Attempt admission of R2","Refused: R1 approval cannot authorize R2.")] },
-  { id:"status", title:"Outage / revocation", description:"A previous good status observation supplies no fallback. Restoring the connection does not resurrect a revoked record.", steps:[...reviewSteps(),step("STATUS_OUTAGE","Make status unavailable","The record still exists, but current authority cannot be established."),step("ADMIT","Attempt admission during outage","Refused: there is no cached or offline fallback."),step("STATUS_RESTORE","Restore modeled current response","The next invocation must recheck current status."),step("ADMIT","Admit unchanged record","Fresh modeled status permits admission."),step("REVOKE_RECORD","Revoke approval","The original record is preserved; lifecycle status changes outside it."),step("DISPATCH","Attempt task after revocation","Refused: revoked authority cannot dispatch.",{task:"T1"}),step("STATUS_RESTORE","Reconnect again","Revocation remains in lifecycle state."),step("ADMIT","Try using revoked record again","Still refused.")] },
-  { id:"machine", title:"Second-machine trust", description:"The receiving machine validates the same record with its own modeled issuer trust and fresh status. The enrollment toggle is an unresolved design placeholder.", steps:[...reviewSteps(),step("SECOND_MACHINE","Move same record to second machine","No approval or trust copy is created."),step("ADMIT","Attempt admission without enrollment","Refused: receiving-machine trust is missing."),step("MODEL_SECOND_ENROLLMENT","Model independent enrollment","Only synthetic flags change; no real enrollment is qualified."),step("ADMIT","Independently admit same record","Exact record equality and a fresh modeled current response are required."),step("DISPATCH","Model receiving-machine T1 use","The same immutable record is rechecked before use.",{task:"T1"})] },
-  { id:"replay", title:"Replay / duplicate dispatch", description:"A final confirmation can issue one record. A task receipt consumes that dispatch once for this record; replay cannot create duplicate work.", steps:[...reviewSteps(),step("CONFIRM","Replay final confirmation","Refused: the original confirmation already issued its record."),step("ADMIT","Invoke implement separately","The original record remains usable while current and unchanged."),step("DISPATCH","Dispatch T1 once","One simulated task receipt is created.",{task:"T1"}),step("DISPATCH","Repeat T1 dispatch","Refused: receipt count remains one.",{task:"T1"})] },
-  { id:"cancel", title:"Concurrent review / cancellation", description:"Separate acceptances stay bound to their review epoch. Concurrent review or cancellation prevents stale confirmation.", steps:[step("BEGIN_REVIEW","Start review epoch 1","Snapshot is frozen."),step("DISPOSITION","Accept G01","Separate disposition binds epoch 1 evidence.",{finding:"G01",decision:"accepted"}),step("DISPOSITION","Accept LC01","Separate disposition binds epoch 1 evidence.",{finding:"LC01",decision:"accepted"}),step("CONCURRENT_REVIEW","Advance concurrent review epoch","The earlier review becomes stale."),step("CONFIRM","Attempt old confirmation","Refused: epoch conflict."),step("BEGIN_REVIEW","Begin a fresh review","Prior acceptances are not copied into the new review."),step("CANCEL","Cancel review","No record is created."),step("CONFIRM","Attempt confirmation after cancel","Refused: cancelled review supplies no authority.")] },
-  { id:"evidence", title:"Unknown evidence / altered policy", description:"Public labels, accepted gaps, or a new review cannot substitute for required evidence or the selected protected policy.", steps:[...reviewSteps(),step("UNKNOWN_SNAPSHOT","Make exact snapshot unknown","Record remains immutable; current binding cannot be established."),step("ADMIT","Try unknown snapshot","Refused."),step("KNOWN_SNAPSHOT","Restore readable snapshot","Fresh validation is still required."),step("MISSING_PRIVATE","Remove required private evidence","The public reference is still visible but insufficient."),step("ADMIT","Try without required evidence","Refused."),step("RESTORE_PRIVATE","Restore synthetic evidence flag","No real assurance is obtained by this toggle."),step("ALTER_POLICY","Change selected policy to P2","Fixed protected P1 is the only modeled recognized policy."),step("ADMIT","Try altered verification policy","Refused.")] }
+  { id:"valid", title:"Review to task starts", description:"Choose for each issue. Approve the exact plan. Check whether work can start. Start each demo task separately.", steps:[...reviewSteps(),step("ADMIT","Check whether work can start","The check passes. It starts no task."),step("DISPATCH","Start demo task 1","Current status and the exact plan are checked again.",{task:"T1"}),step("DISPATCH","Start demo task 2","Task 1 has a start record. Completion is not checked. Both starts retain the exact plan.",{task:"T2"})] },
+  { id:"findings", title:"Issue not accepted", description:"Final approval cannot replace a separate issue choice. An issue without acceptance blocks approval.", steps:[step("BEGIN_REVIEW","Start review","Both issues have no choice."),step("DISPOSITION","Accept only issue G01","Issue LC01 still has no choice.",{finding:"G01",decision:"accepted"}),step("CONFIRM","Try approval without both choices","Blocked: issue LC01 has not been accepted."),step("DISPOSITION","Do not accept issue LC01","LC01 now has an explicit choice: not accepted.",{finding:"LC01",decision:"rejected"}),step("CONFIRM","Try approval with LC01 not accepted","Blocked: no approval is created.")] },
+  { id:"agent", title:"Coding agent claims approval", description:"A coding agent's reply cannot make a human choice or approve the plan. Hostile sample text remains plain text.", steps:[step("BEGIN_REVIEW","Show the hostile sample text","Script-like source text is visible. Both issues still have no choice."),step("AGENT_REPLY","Try the coding agent's false approval","Blocked: no choices or review record changed."),step("CONFIRM","Try final approval","Blocked: both issues need separate acceptance.")] },
+  { id:"drift", title:"Plan changes after approval", description:"Earlier approval keeps its exact plan version. A later version needs a new review. It cannot use the earlier approval.", steps:[...reviewSteps(),step("ADMIT","Check the approved version","The check uses the original R1 plan."),step("CHANGE_PLAN","Change sample plan to R2","The current plan changes. The review record still contains R1."),step("DISPATCH","Try task 1 with the changed plan","Blocked: the demo cannot identify all affected tasks. No new task start occurs.",{task:"T1"}),step("ADMIT","Check whether R2 can use earlier approval","Blocked: R1 approval does not cover R2.")] },
+  { id:"status", title:"Status outage or revocation", description:"An earlier status response cannot replace current status. Reconnecting does not restore a revoked approval.", steps:[...reviewSteps(),step("STATUS_OUTAGE","Disconnect current status","The review record exists, but its current status cannot be checked."),step("ADMIT","Try a work check during the outage","Blocked: no earlier or offline response can replace current status."),step("STATUS_RESTORE","Restore the current demo response","The next work check must obtain current status again."),step("ADMIT","Check the unchanged approval","The check passes. No task starts."),step("REVOKE_RECORD","Revoke the demo approval","Its review record remains available. Its current status changes."),step("DISPATCH","Try a task start after revocation","Blocked: revoked approval cannot permit a task start.",{task:"T1"}),step("STATUS_RESTORE","Reconnect again","The approval remains revoked."),step("ADMIT","Try the revoked approval again","Still blocked.")] },
+  { id:"machine", title:"Second-machine trust", description:"The second demo machine needs its own trust and current status check. Its enrollment control proves no real enrollment or transfer.", steps:[...reviewSteps(),step("SECOND_MACHINE","Select the second demo machine","The same review record is present. No new approval is created."),step("ADMIT","Try a work check without trust","Blocked: the second machine lacks independent trust."),step("MODEL_SECOND_ENROLLMENT","Set the demo trust flags","Only sample flags change. No real enrollment is proved."),step("ADMIT","Check the same approval on this machine","The exact record and current status are checked. No task starts."),step("DISPATCH","Start demo task 1 on this machine","The approval and exact plan are checked again.",{task:"T1"})] },
+  { id:"replay", title:"Repeated approval or task start", description:"One final confirmation creates one review record. The demo blocks a repeated start for the same task and approval.", steps:[...reviewSteps(),step("CONFIRM","Repeat final approval","Blocked: this review already has a review record."),step("ADMIT","Check whether work can start","The original approval remains usable while current and unchanged. No task starts."),step("DISPATCH","Start demo task 1 once","One demo task-start record exists.",{task:"T1"}),step("DISPATCH","Try task 1 again","Blocked: only one start record remains.",{task:"T1"})] },
+  { id:"cancel", title:"Another review or cancellation", description:"Issue choices apply only to their review. Another review or cancellation blocks approval from the earlier review.", steps:[step("BEGIN_REVIEW","Start review 1","The plan version stays fixed."),step("DISPOSITION","Accept issue G01","The choice uses review 1 evidence.",{finding:"G01",decision:"accepted"}),step("DISPOSITION","Accept issue LC01","The choice uses review 1 evidence.",{finding:"LC01",decision:"accepted"}),step("CONCURRENT_REVIEW","Simulate another review","The earlier review number is no longer current."),step("CONFIRM","Try the earlier approval","Blocked: the review number changed."),step("BEGIN_REVIEW","Start a new review","Earlier choices are not copied."),step("CANCEL","Cancel this review","No approval is created."),step("CONFIRM","Try approval after cancellation","Blocked: the review was cancelled.")] },
+  { id:"evidence", title:"Missing evidence or changed policy", description:"Accepting an issue cannot replace required evidence or the checking policy. Public references cannot replace required private evidence.", steps:[...reviewSteps(),step("UNKNOWN_SNAPSHOT","Make the exact plan unavailable","The review record stays fixed. The current version cannot be checked."),step("ADMIT","Try a work check without the plan","Blocked."),step("KNOWN_SNAPSHOT","Restore the readable plan","A new check is still required."),step("MISSING_PRIVATE","Remove required private evidence","The public reference is visible but insufficient."),step("ADMIT","Try a work check without private evidence","Blocked."),step("RESTORE_PRIVATE","Restore the demo evidence flag","This flag proves no real protected evidence."),step("ALTER_POLICY","Change checking policy to P2","Only policy P1 is recognized in this demo."),step("ADMIT","Try a work check with changed policy","Blocked.")] }
 ];
 let state = ApprovalSimulation.initial();
 let selectedScenario = 0;
@@ -919,6 +921,7 @@ let nextStep = 0;
 let selectedView = "review";
 let reviewScreen = "start";
 let findingIndex = 0;
+let returnToSummary = false;
 const byId = id => document.getElementById(id);
 const addText = (parent, tag, text, className) => {
   const element = document.createElement(tag);
@@ -949,6 +952,102 @@ function navigation(parent,label,id,handler,primary=false) {
   const button=addText(parent,"button",label,primary ? "primary" : "");
   button.id=id; button.addEventListener("click",handler); return button;
 }
+function choiceLabel(choice) { return choice === "accepted" ? "Accepted" : choice === "rejected" ? "Not accepted" : "No choice yet"; }
+function issueName(id) { return id === "G01" ? "A planned check has not passed" : id === "LC01" ? "A plan assumption needs proof" : id; }
+function plainReason(message) {
+  const replacements = [
+    ["The exact current snapshot is unknown.", "The demo cannot read the exact current plan version."],
+    ["The authoritative inventory contains an unknown entry.", "The plan file list contains an unknown item."],
+    ["The modeled protected policy was altered; only the fixed P1 profile is recognized.", "The checking policy changed. This demo accepts only policy P1."],
+    ["Required reviewed evidence is unavailable.", "Required supporting evidence is missing."],
+    ["Required protected private-evidence reference cannot be verified.", "Required private evidence cannot be checked. Its public reference is insufficient."],
+    ["This machine has no modeled independent enrollment and issuer trust.", "This demo machine lacks its own enrollment and trust in the approval issuer."],
+    ["Current issuer status is unavailable. No offline or cached fallback exists.", "The approval issuer's current status is unavailable. An earlier response cannot replace it."],
+    ["The current issuer-status response has no modeled authentication.", "The demo cannot authenticate the issuer's current status response."],
+    ["The modeled reviewer credential is revoked.", "The reviewer's demo credential is revoked. This demo has no action to restore it."],
+    ["No modeled canonical approval record exists.", "No approval exists in this demo. Finish a review before checking whether work can start."],
+    ["The current exact inputs, reviewed evidence, or effective settings differ from the immutable record.", "The current plan, evidence or settings differ from the approved version. Review the current version before approval."],
+    ["A live, unconfirmed frozen review is required to change a finding disposition.", "Start or resume an unfinished review before changing a choice."],
+    ["The review is stale or has an epoch conflict; no disposition is captured.", "The plan or review changed. Start a new review before making choices."],
+    ["Unknown finding or disposition.", "The issue or choice is unknown. No choice was recorded."],
+    ["No frozen review exists.", "Start a review before approval."],
+    ["The review was cancelled.", "This review was cancelled. Start a new review before approval."],
+    ["The review is interrupted; it must resume against the same verified snapshot first.", "This review is paused. Resume it only if the plan version still matches."],
+    ["This final-confirmation event was already used. It cannot issue another record.", "This review already has an approval. Repeating confirmation cannot create another review record."],
+    ["Concurrent review changed the revision epoch; the old confirmation is refused.", "Another review changed the review number. Start a new review before approval."],
+    ["The current exact planning snapshot differs from the displayed frozen revision.", "The current plan differs from the version you reviewed. Review the latest version before approval."],
+    ["A separate successful implement admission is required.", "Check whether work can start before starting a demo task."],
+    ["Admission belongs to another machine; this machine must independently admit the same record.", "The work check belongs to another machine. Check this approval on the selected demo machine."],
+    ["Inputs or effective settings moved between admission and task use. All undispatched fixture tasks are blocked because affected ownership is not independently known.", "The plan or settings changed after the work check. The demo cannot identify all affected tasks. It blocks every new task start."],
+    ["Unknown task.", "The task is unknown. No task start was recorded."],
+    ["T2 depends on the modeled T1 dispatch receipt.", "Start demo task 1 before task 2. A task 1 start record is required; completion is not checked."],
+    ["The fixture agent says ‘approved=true’ and accepts both findings. Untrusted agent text supplies no human authority; no finding disposition, confirmation, or record changed.", "The sample coding agent claimed approval. Its reply cannot make a human choice or approve this plan. Nothing was approved."],
+    ["There is no modeled record to change lifecycle status.", "No review record exists to withdraw or revoke."],
+    ["There is no active review to interrupt.", "No unfinished review is available to pause."],
+    ["Only an interrupted, uncancelled review can resume.", "Only a paused review that was not cancelled can resume."],
+    ["The saved review no longer matches the exact current revision and epoch.", "The paused review no longer matches the current plan and review number. Start a new review."],
+    ["Unknown simulation action.", "The demo action is unknown. No action was accepted."]
+  ];
+  let result=message;
+  replacements.forEach(([exact,plain])=>{ result=result.split(exact).join(plain); });
+  result=result.replace(/Record (SIM-RECORD-\d+) has current status (\w+)\./g, "Review record $1 is $2. This approval cannot permit work.")
+    .replace(/Record lacks the required exact acceptance for (G01|LC01)\./g, "The review record lacks the required choice for issue $1.")
+    .replace(/(G01|LC01) has no separate acceptance\./g, "Issue $1 has not been accepted. Choose for this issue before approval.")
+    .replace(/(G01|LC01) has rejected\./g, "Issue $1 is not accepted. You cannot approve this plan while an issue is not accepted.")
+    .replace(/(T1|T2) already has a dispatch receipt for this record; duplicate dispatch is refused\./g, "$1 already has a start record for this approval. The demo blocks a duplicate start.");
+  return result;
+}
+function reasonText(parent,message,className="disabled-reason",id=null) {
+  const reason=addText(parent,"p",plainReason(message),className);
+  if(id) reason.id=id;
+  const details=addText(parent,"details","");
+  addText(details,"summary","Exact technical reason");addText(details,"pre",message);
+  return reason;
+}
+function outcomeText() {
+  if(state.last.result==="refused") return ["Action blocked",plainReason(state.last.message)];
+  const event=state.events[state.events.length-1];
+  if(!event) return ["Demo ready","Start a review or choose a sample case."];
+  if(state.last.result==="modeled pass") {
+    if(event.action==="CONFIRM") return ["Plan approved in the demo","The review record approves this exact plan version and both issue choices. No work started. The issues remain unresolved."];
+    if(event.action==="ADMIT") return ["Work check passed in the demo","The current approval, status and exact plan passed this check. No task started. Each task needs a separate start action."];
+    if(event.action==="DISPATCH") {
+      const receipt=state.dispatches[state.dispatches.length-1];
+      return ["Demo task start recorded",receipt.task+" has one demo start record. Current status and exact plan were checked. No real task ran. Completion is not checked."];
+    }
+  }
+  const changed = {
+    BEGIN_REVIEW:["Review started","The demo fixed this plan version, evidence and settings for your review. No approval exists for this new review."],
+    DISPOSITION:["Choice recorded in the demo","Your choice applies only to this issue and plan version. The issue remains unresolved. No approval was created."],
+    CANCEL:["Review stopped",state.review && state.review.issuedRecordId ? "The approval was withdrawn. Its record and task-start history remain available." : "This unfinished review was cancelled. No new approval was created. Any earlier approval is withdrawn; its history remains available."],
+    INTERRUPT:["Review paused","Your plan version and choices remain in this demo. Resume the review before approval."],
+    RESUME_REVIEW:["Review resumed","The same plan version and choices remain in this review. No approval was created."],
+    CHANGE_PLAN:["Demo plan version changed","Earlier review material keeps its exact version. Start a new review for the changed plan. This sample change fixes no issue."],
+    CHANGE_SETTINGS:["Demo settings changed","Earlier approval does not cover these settings. Review the current version before approval."],
+    CHANGE_EVIDENCE:["Demo evidence changed","Earlier choices keep their original evidence. Review the current version before approval."],
+    ALTER_POLICY:["Demo policy changed","This demo recognizes only policy P1. Approval and work checks will block the changed policy."],
+    UNKNOWN_SNAPSHOT:["Plan version unavailable","The demo cannot read the exact current plan. Approval and work checks will block it."],
+    KNOWN_SNAPSHOT:["Plan version readable again","Approval and work checks must still check the current version."],
+    UNKNOWN_INVENTORY:["Unknown plan file","The demo plan list includes an unknown file. Approval and work checks cannot omit it."],
+    MISSING_EVIDENCE:["Supporting evidence missing","Accepting an issue cannot replace required evidence. Approval and work checks will block."],
+    RESTORE_EVIDENCE:["Supporting evidence readable again","The demo must still check the evidence against the exact reviewed version."],
+    MISSING_PRIVATE:["Private evidence unavailable","The required private evidence cannot be checked. A public reference cannot replace it."],
+    RESTORE_PRIVATE:["Private-evidence flag restored","Only a demo flag changed. No real protected evidence was provided."],
+    STATUS_OUTAGE:["Current status unavailable","The issuer's earlier response cannot replace a current response. Approval and work checks will block."],
+    STATUS_RESTORE:["Current demo response restored","Each next check must obtain current status. Withdrawn, revoked and replaced approvals remain unusable."],
+    UNAUTHENTICATED_STATUS:["Status response cannot be trusted","The demo response lacks authentication. It cannot prove current approval status."],
+    REVOKE_RECORD:["Demo approval revoked","This approval cannot permit work. Its review record remains available."],
+    SUPERSEDE_RECORD:["Demo approval replaced","This approval cannot permit work. Its review record remains available."],
+    REVOKE_REVIEWER:["Demo reviewer credential revoked","No new approval or work can pass with this credential. The demo has no restore action."],
+    SECOND_MACHINE:["Second demo machine selected","The same review record is present. This machine must have independent trust and perform its own work check."],
+    MODEL_SECOND_ENROLLMENT:["Second-machine trust flags changed","Only demo flags changed. No actual enrollment, trust or transfer was proved."],
+    FIRST_MACHINE:["First demo machine selected","Each machine must perform its own work check. Existing task-start records remain available."],
+    REMOVE_TRUST:["Demo machine lost issuer trust","A copy of the review record cannot restore trust. Approval and work checks will block."],
+    CONCURRENT_REVIEW:["Another review changed the review number","Earlier choices cannot approve the new review. Start a new review before approval."]
+  };
+  if(state.last.result==="changed" && changed[event.action]) return changed[event.action];
+  return ["Unrecognized demo result",state.last.result+": "+state.last.message];
+}
 function modelControl(parent,label,id,action,primary=false,after=null) {
   const result=preview(action);
   const wrapper=addText(parent,"div","");
@@ -959,7 +1058,7 @@ function modelControl(parent,label,id,action,primary=false,after=null) {
   },primary);
   button.disabled=result.result==="refused";
   if (button.disabled) {
-    const reason=addText(wrapper,"p",result.message,"disabled-reason"); reason.id=id+"-reason";
+    const reason=reasonText(wrapper,result.message,"disabled-reason",id+"-reason");
     button.setAttribute("aria-describedby",reason.id);
   }
   return button;
@@ -968,160 +1067,211 @@ function cancelControl(parent) {
   const unfinished=Boolean(state.review && !state.review.issuedRecordId);
   const priorActive=unfinished && state.activeRecordId && state.recordLifecycle[state.activeRecordId]==="active";
   const label=unfinished ? (priorActive ? "Cancel review and withdraw approval" : "Cancel review") : "Withdraw approval";
-  const explanation=unfinished ? (priorActive ? "Cancels this unfinished review and withdraws the earlier active approval. Its receipt and history are preserved." : "Ends this unfinished review without issuing a new record. Any earlier receipt and history are preserved; cancellation leaves its modeled lifecycle withdrawn.") : "Withdraws this issued approval and prevents further modeled use. Its receipt and history are preserved.";
+  const explanation=unfinished ? (priorActive ? "This ends your unfinished review and withdraws the earlier approval. That approval cannot permit work afterward. Its history remains available." : "This ends your unfinished review without a new approval. Earlier review records remain as history; any earlier approval becomes withdrawn.") : "This withdraws the approval. It cannot permit further work. The review record and task-start history remain available.";
   addText(parent,"p",explanation,"subtle");
-  modelControl(parent,label,"review-cancel",{type:"CANCEL"},false,() => changeScreen(unfinished ? "cancelled" : "complete"));
+  modelControl(parent,label,"review-cancel",{type:"CANCEL"},false,() => {returnToSummary=false;changeScreen(unfinished ? "cancelled" : "complete");});
 }
 function recoveryControls(parent) {
   const currentChanged=state.review && !ApprovalSimulation.equal(ApprovalSimulation.snapshot(state.current),state.review.snapshot);
   const epochChanged=state.review && state.review.epoch!==state.currentReviewEpoch;
   if(currentChanged || epochChanged || state.phase==="cancelled") {
-    addText(parent,"p","Start a new frozen review explicitly. Its earlier finding choices are cleared; existing records and action history are preserved.","subtle");
-    modelControl(parent,currentChanged ? "Review latest snapshot" : "Start new review","review-fresh",{type:"BEGIN_REVIEW"},false,()=>changeScreen("read",0));
+    addText(parent,"p","A new review uses the current plan version and clears your earlier choices. Existing review records and history remain available.","subtle");
+    modelControl(parent,currentChanged ? "Review latest plan version" : "Start new review","review-fresh",{type:"BEGIN_REVIEW"},false,()=>{returnToSummary=false;changeScreen("read",0);});
   } else if(state.phase==="interrupted") {
     modelControl(parent,"Resume review","review-resume",{type:"RESUME_REVIEW"},false,()=>changeScreen("read"));
   } else {
-    addText(parent,"p","No new approval is created while confirmation is blocked. Changing a review screen does not restore current status, trust or required evidence. Inspect the exact failing condition in the scenario controls.","subtle");
+    addText(parent,"p","No new approval is created while a check blocks it. Changing screens cannot restore status, trust or evidence. Inspect the reason in Scenarios.","subtle");
   }
-  navigation(parent,"Inspect blocking state","review-inspect-block",()=>{byId("advanced-controls").open=true;byId("state-inspector").open=true;showView("scenarios");});
+  navigation(parent,"Inspect the blocked check","review-inspect-block",()=>{byId("advanced-controls").open=true;byId("state-inspector").open=true;showView("scenarios");});
   return Boolean(currentChanged || epochChanged || state.phase==="cancelled");
 }
 function planSummary(parent,shown) {
   const box=addText(parent,"div","","review-content");
-  addText(box,"h3","Plan " + shown.bundleRevision + " — two synthetic tasks");
-  addText(box,"p","Frozen version: " + shown.simulatedDigestLabel + ". Source: " + shown.sourceReference + ".");
-  [["Scope","spec.md"],["Plan","plan.md"],["Task definitions","tasks.normalized.json"],["Task use","dispatch-metadata.json"]].forEach(([label,reference]) => {
-    const input=shown.inputManifest.find(item=>item.reference===reference);
-    const paragraph=addText(box,"p",""); addText(paragraph,"strong",label+": "); addText(paragraph,"span",input.literalContent);
-  });
-  addText(box,"p","Effective checks: " + shown.effectiveSettings.projectCommands.join(", ") + "; " + shown.effectiveSettings.verification + ".");
-  addText(box,"p","Reviewed evidence: " + shown.reviewedEvidence.revision + "; blocked-check evidence " + shown.reviewedEvidence.blockedGateEvidence + "; confidence evidence " + shown.reviewedEvidence.confidenceEvidence + ".");
-  addText(box,"p","Boundary: " + shown.effectiveSettings.executionBoundary + ". Review does not run tasks or authorize signing, account changes or any action-specific security consent.","subtle");
+  addText(box,"h3","Plain summary: plan " + shown.bundleRevision);
+  addText(box,"p","You are reviewing plan version " + shown.bundleRevision + ".");
+  addText(box,"p","This sample plan defines two demo tasks: T1 and T2. Task 2 requires a recorded start for task 1; completion is not checked.");
+  addText(box,"p",shown.bundleRevision==="R1" ? "This is the original sample scope. Both tasks must use this exact reviewed plan, evidence and settings." : "The sample scope changed. Both tasks must use this exact reviewed plan, evidence and settings. The sample change fixes no issue.");
+  addText(box,"p","The plan requires checks on its assumptions and tasks. Settings version " + shown.effectiveSettings.revision + " uses the demo command " + shown.effectiveSettings.projectCommands.join(", ") + ".");
+  addText(box,"p","Supporting evidence version: " + shown.reviewedEvidence.revision + ". The check uses " + shown.reviewedEvidence.blockedGateEvidence + ". The assumption uses " + shown.reviewedEvidence.confidenceEvidence + ".");
+  addText(box,"p","Two issues remain: a check has not passed, and a plan assumption needs proof. Your choices do not fix these issues.");
+  addText(box,"p","Full version reference: " + shown.simulatedDigestLabel + ". Source: " + shown.sourceReference + ". Inspect the full source, task definitions, settings and evidence below.","subtle");
+  addText(box,"p","This demo runs no real task. Signing or changing an account still needs your separate permission.","subtle");
 }
 function decisionCount() { return state.review ? state.review.snapshot.findings.filter(f=>state.review.findingDispositions[f.id]).length : 0; }
+function renderChanges(screen,shown,record) {
+  byId("review-heading").textContent="Change request draft";
+  addText(screen,"p","Your review ended without a new approval. No request has been sent. Preparing this draft did not change the plan.","receipt");
+  const current=ApprovalSimulation.snapshot(state.current);
+  addText(screen,"p","Reviewed plan version: " + shown.bundleRevision + ". Current demo plan version: " + current.bundleRevision + ".");
+  addText(screen,"p","Reviewed version reference: " + shown.simulatedDigestLabel + ". Source: " + shown.sourceReference + ".", "subtle");
+  if(record) addText(screen,"p","Earlier review record " + record.id + " remains as history. Its current status is " + state.recordLifecycle[record.id] + ". It cannot permit work.","subtle");
+  addText(screen,"h3","Issues you did not accept");
+  shown.findings.filter(finding=>state.review.findingDispositions[finding.id]?.decision==="rejected").forEach(finding=>{
+    const issue=addText(screen,"div","","decision-summary");
+    addText(issue,"h4",issueName(finding.id)+" ("+finding.id+")");
+    addText(issue,"p","Ask the plan author to address this issue. Check their changes in a new review. Evidence reference: " + finding.evidenceBinding + ".");
+    addText(issue,"p","Original technical status: " + finding.technicalStatus + ". Acceptance or a request does not change that status.","subtle");
+  });
+  addText(screen,"h3","Both review choices");
+  shown.findings.forEach(finding=>addText(screen,"p",finding.id+": "+choiceLabel(state.review.findingDispositions[finding.id]?.decision)+". Evidence: "+finding.evidenceBinding+"."));
+  addText(screen,"h3","Who acts next");
+  addText(screen,"p","The plan author is the person or coding agent who wrote the plan. Give this draft to the plan author. Ask them to change the plan.");
+  addText(screen,"p","Changes happen outside this demo. Review a new version before approving it. A new review requires new choices for both issues.");
+  addText(screen,"h3","Give the draft to the plan author");
+  const label=addText(screen,"label","Change request draft text");label.setAttribute("for","changes-draft-text");
+  const packet=addText(screen,"textarea","","change-draft");packet.id="changes-draft-text";packet.readOnly=true;packet.rows=14;
+  const lines=["Change request draft — not sent", "Reviewed plan version: "+shown.bundleRevision, "Exact reviewed version reference: "+shown.simulatedDigestLabel, "Source reference: "+shown.sourceReference, "Current demo plan version: "+current.bundleRevision, "", "Review choices:"];
+  shown.findings.forEach(finding=>lines.push(finding.id+" — "+issueName(finding.id)+": "+choiceLabel(state.review.findingDispositions[finding.id]?.decision)+". Evidence: "+finding.evidenceBinding+"."));
+  lines.push("", "Issues to address:");
+  shown.findings.filter(finding=>state.review.findingDispositions[finding.id]?.decision==="rejected").forEach(finding=>lines.push(finding.id+" — "+issueName(finding.id)+". Original technical status: "+finding.technicalStatus+". Evidence: "+finding.evidenceBinding+"."));
+  if(record) lines.push("", "Earlier review record: "+record.id+". Current status: "+state.recordLifecycle[record.id]+". This approval cannot permit work.");
+  lines.push("", "The review ended without a new approval. No request has been sent.", "Preparing this draft did not change the plan. No real task started.", "Next actor: the person or coding agent who wrote the plan.", "Ask the plan author to address the rejected issues. Review their new plan version before approval.");
+  packet.value=lines.join("\n");
+  addText(screen,"p","Select the draft text. Copy it yourself. Give it to the plan author. This button sends nothing. Reloading the page loses this draft.","subtle");
+  navigation(screen,"Select draft text","changes-select-draft",()=>{packet.focus();packet.select();});
+  addText(screen,"h3","Try a new demo version");
+  addText(screen,"p","The next button changes only the sample plan version. It fixes no issue and proves no correction. It sends no request.","subtle");
+  modelControl(screen,"Show a new demo plan version","changes-demo-version",{type:"CHANGE_PLAN"});
+  recoveryControls(screen);
+}
 function renderReview(shown,record) {
   const screen=byId("review-screen"); screen.replaceChildren();
-  if(state.phase==="cancelled" && reviewScreen!=="start") reviewScreen=state.review && state.review.issuedRecordId ? "complete" : "cancelled";
+  if(state.phase==="cancelled" && !["start","changes"].includes(reviewScreen)) reviewScreen=state.review && state.review.issuedRecordId ? "complete" : "cancelled";
   const chapter=reviewScreen==="read" ? 0 : reviewScreen==="findings" ? 1 : reviewScreen==="confirm" ? 2 : -1;
   const progress=byId("review-progress"); progress.replaceChildren();
-  ["Read the plan","Decide two findings","Check and confirm"].forEach((label,index) => {
+  ["Read the plan","Decide two issues","Check and confirm"].forEach((label,index) => {
     const item=addText(progress,"li",(index+1)+". "+label,reviewScreen==="complete" || index<chapter ? "completed" : "");
     if(index===chapter) item.setAttribute("aria-current","step");
   });
-  byId("review-progress").hidden=reviewScreen==="start" || reviewScreen==="cancelled";
-  byId("current-step").textContent=chapter>=0 ? "Step " + (chapter+1) + " of 3" : reviewScreen==="complete" ? "Review finished" : reviewScreen==="cancelled" ? "Review stopped" : "Your role and goal";
+  progress.hidden=["start","cancelled","changes"].includes(reviewScreen);
+  byId("current-step").textContent=chapter>=0 ? "Step " + (chapter+1) + " of 3" : reviewScreen==="complete" ? "Review finished" : reviewScreen==="cancelled" ? "Review stopped" : reviewScreen==="changes" ? "Review ended; draft not sent" : "Your role and goal";
   byId("bundle-inspector").hidden=!state.review;
   if (reviewScreen==="start") {
     byId("review-heading").textContent="You are the reviewer";
-    addText(screen,"p","Read this plan, decide whether to accept each of its two remaining findings, then check and explicitly confirm your review.");
-    addText(screen,"p","Your confirmation records this exact reviewed version in the simulation. It does not resolve the findings or start implementation.");
+    addText(screen,"p","Decide whether to approve this exact plan version with its two unresolved issues. An issue is a check that has not passed or an assumption needing proof.");
+    addText(screen,"p","Read the plan. Choose for each issue. Check your choices before approval.");
+    addText(screen,"p","Approval can permit a separate work check in this demo. It fixes no issue and starts no task. Signing or changing an account still needs your separate permission.");
     const buttons=addText(screen,"div","","journey-buttons");
     if (state.review && state.review.issuedRecordId) {
-      navigation(buttons,"View review receipt","review-open-receipt",()=>changeScreen("complete"),true);
-      modelControl(buttons,"Start new review","review-start",{type:"BEGIN_REVIEW"},false,()=>changeScreen("read",0));
+      navigation(buttons,"View review record","review-open-receipt",()=>changeScreen("complete"),true);
+      modelControl(buttons,"Start new review","review-start",{type:"BEGIN_REVIEW"},false,()=>{returnToSummary=false;changeScreen("read",0);});
     } else if (state.review && !state.review.cancelled) {
       navigation(buttons,"Continue review","review-continue-existing",()=>changeScreen("read",0),true);
-      modelControl(buttons,"Start fresh review","review-start",{type:"BEGIN_REVIEW"},false,()=>changeScreen("read",0));
-    } else modelControl(buttons,"Start review","review-start",{type:"BEGIN_REVIEW"},true,()=>changeScreen("read",0));
+      modelControl(buttons,"Start new review","review-start",{type:"BEGIN_REVIEW"},false,()=>{returnToSummary=false;changeScreen("read",0);});
+    } else modelControl(buttons,"Start review","review-start",{type:"BEGIN_REVIEW"},true,()=>{returnToSummary=false;changeScreen("read",0);});
     return;
   }
   if (reviewScreen==="cancelled") {
     byId("review-heading").textContent="Review cancelled";
-    addText(screen,"p","This unfinished review has ended. No new approval record was issued for this review. Cancellation does not start implementation. Its action history remains available in Scenarios.","receipt");
-    if(record) addText(screen,"p","Earlier receipt " + record.id + " for " + record.snapshot.bundleRevision + " (review epoch " + record.reviewEpoch + ") is retained as history. Its current lifecycle is " + state.recordLifecycle[record.id] + ". The cancelled review was epoch " + state.review.epoch + ".","subtle");
-    recoveryControls(screen);
-    return;
+    addText(screen,"p","Your unfinished review ended. No new approval was created. Cancellation starts no task. Your review history remains available in Scenarios.","receipt");
+    if(record) addText(screen,"p","Earlier review record " + record.id + " for plan " + record.snapshot.bundleRevision + " remains as history. Its status is " + state.recordLifecycle[record.id] + ".", "subtle");
+    recoveryControls(screen);return;
   }
+  if (reviewScreen==="changes") { renderChanges(screen,shown,record);return; }
   if (reviewScreen==="read") {
     byId("review-heading").textContent="Read the plan";
-    addText(screen,"p","Review what this frozen version proposes. The full input inventory, settings and evidence are available below without leaving Review.");
+    addText(screen,"p","Read the proposal for this exact plan version. Open the full source below to inspect all files, settings and evidence.");
     planSummary(screen,shown);
     const next=preview({type:"DISPOSITION",finding:"G01",decision:"accepted"});
     const buttons=addText(screen,"div","","journey-buttons");
     navigation(buttons,"Back","read-back",()=>changeScreen("start"));
-    const proceed=navigation(buttons,"Review findings","read-continue",()=>changeScreen("findings",0),true);
+    const proceed=navigation(buttons,"Review the issues","read-continue",()=>changeScreen("findings",0),true);
     proceed.disabled=next.result==="refused";
     if(proceed.disabled) {
-      const reason=addText(screen,"p","Review cannot proceed: " + next.message,"blocking-reason");reason.id="read-block-reason";proceed.setAttribute("aria-describedby",reason.id);
-      modelControl(screen,state.phase==="interrupted" ? "Resume review" : "Start fresh review","review-recover",{type:state.phase==="interrupted" ? "RESUME_REVIEW" : "BEGIN_REVIEW"},false,()=>changeScreen("read",0));
-      addText(screen,"p","A fresh review freezes current inputs and clears its earlier finding choices. Existing records and history are preserved.","subtle");
+      const reason=reasonText(screen,next.message,"blocking-reason","read-block-reason");proceed.setAttribute("aria-describedby",reason.id);
+      modelControl(screen,state.phase==="interrupted" ? "Resume review" : "Start new review","review-recover",{type:state.phase==="interrupted" ? "RESUME_REVIEW" : "BEGIN_REVIEW"},false,()=>{returnToSummary=false;changeScreen("read",0);});
+      addText(screen,"p","A new review uses the current version and clears your earlier choices. Existing review records and history remain available.","subtle");
     }
-    cancelControl(screen);
-    return;
+    cancelControl(screen);return;
   }
   if (reviewScreen==="findings") {
     const finding=shown.findings[findingIndex];
     const disposition=state.review && state.review.findingDispositions[finding.id];
-    byId("review-heading").textContent="Finding " + (findingIndex+1) + " of 2: " + (finding.id==="G01" ? "A planned check is still blocked" : "A plan assumption has low confidence");
-    addText(screen,"p",decisionCount()+" of 2 decisions made. Choose for this finding separately; nothing is accepted by default.","decision-status");
-    addText(screen,"p",finding.id==="G01" ? "A planned check remains blocked. Accepting this gap lets the modeled review proceed with that limitation. The check still has not passed, and blocked work is not completed." : "A design assumption remains uncertain. Accepting this finding carries that known uncertainty into the modeled review. It does not raise confidence or supply verification.");
-    addText(screen,"p","Finding: " + finding.id + ". Technical status: " + finding.technicalStatus + ". Frozen evidence: " + finding.evidenceBinding + ".");
-    addText(screen,"p","Rejecting prevents final confirmation. You can revise your decision or cancel the review. Accepting cannot replace missing plan or approval evidence.","subtle");
-    addText(screen,"p","Your current choice: " + (disposition ? disposition.decision : "unanswered") + ".","decision-status");
+    byId("review-heading").textContent="Issue " + (findingIndex+1) + " of 2: " + issueName(finding.id);
+    addText(screen,"p",decisionCount()+" of 2 choices made. Choose for each issue. No issue is accepted by default.","decision-status");
+    addText(screen,"p",finding.id==="G01" ? "The planned check has not passed. Accepting this issue carries that risk into your approval. It does not pass the check or complete blocked work." : "The plan assumption needs proof. Accepting this issue carries that uncertainty into your approval. It provides no proof and does not increase confidence.");
+    addText(screen,"p","Issue " + finding.id + ". Original technical status: " + finding.technicalStatus + ". Evidence reference: " + finding.evidenceBinding + ".");
+    addText(screen,"p","If you do not accept an issue, approval is blocked. You can change your choice or end the review and prepare changes.","subtle");
+    addText(screen,"p","Accepting an issue cannot replace required plan files, evidence, trust or current approval status.","subtle");
+    addText(screen,"p","Your current choice: " + choiceLabel(disposition?.decision) + ".","decision-status");
     const choices=addText(screen,"div","","journey-buttons");
     ["accepted","rejected"].forEach(decision => {
       const id="decision-"+(decision==="accepted" ? "accept-" : "reject-")+finding.id;
-      modelControl(choices,(decision==="accepted" ? "Accept " : "Reject ")+finding.id,id,{type:"DISPOSITION",finding:finding.id,decision},false,()=>byId(id).focus());
+      modelControl(choices,decision==="accepted" ? "Accept this issue" : "Do not accept this issue",id,{type:"DISPOSITION",finding:finding.id,decision},false,()=>{
+        if(returnToSummary) {returnToSummary=false;changeScreen("confirm");} else byId(id).focus();
+      });
     });
-    if(disposition && disposition.decision==="rejected") addText(screen,"p","Confirmation is blocked by your rejection of " + finding.id + ". To change it, choose Accept explicitly. You can also continue to check the summary or cancel.","blocking-reason");
+    if(disposition && disposition.decision==="rejected") addText(screen,"p","You did not accept this issue. You cannot approve this plan while any issue is not accepted. Check your choices for next actions.","blocking-reason");
     const buttons=addText(screen,"div","","journey-buttons");
-    navigation(buttons,"Back","finding-back",()=>findingIndex===0 ? changeScreen("read") : changeScreen("findings",0));
-    const next=navigation(buttons,findingIndex===0 ? "Next finding" : "Check my review","finding-continue",()=>findingIndex===0 ? changeScreen("findings",1) : changeScreen("confirm"),true);
+    navigation(buttons,"Back","finding-back",()=>{if(returnToSummary){returnToSummary=false;changeScreen("confirm");}else findingIndex===0 ? changeScreen("read") : changeScreen("findings",0);});
+    const next=navigation(buttons,returnToSummary || findingIndex===1 ? "Check my choices" : "Next issue","finding-continue",()=>{if(returnToSummary){returnToSummary=false;changeScreen("confirm");}else findingIndex===0 ? changeScreen("findings",1) : changeScreen("confirm");},true);
     next.disabled=!disposition;
     if(next.disabled) {
-      const reason=addText(screen,"p","Choose Accept or Reject for " + finding.id + " before continuing.","disabled-reason");reason.id="finding-next-reason";next.setAttribute("aria-describedby",reason.id);
+      const reason=addText(screen,"p","Choose Accept this issue or Do not accept this issue before continuing.","disabled-reason");reason.id="finding-next-reason";next.setAttribute("aria-describedby",reason.id);
     }
-    cancelControl(screen);
-    return;
+    cancelControl(screen);return;
   }
   if (reviewScreen==="confirm") {
-    byId("review-heading").textContent="Check and confirm your review";
-    addText(screen,"p","Check the exact version and both decisions. Continue and Back have supplied no approval; only your separate confirmation below issues a modeled record.");
+    byId("review-heading").textContent="Check your choices before approval";
+    addText(screen,"p","Check the plan version and both choices. Back, Continue and Change do not approve the plan.");
     planSummary(screen,shown);
     shown.findings.forEach((finding,index) => {
       const row=addText(screen,"div","","decision-summary");
       const choice=state.review && state.review.findingDispositions[finding.id];
-      addText(row,"p",finding.id + ": " + (choice ? choice.decision : "unanswered") + " · " + finding.technicalStatus + " · evidence " + finding.evidenceBinding);
-      navigation(row,"Change " + finding.id,"change-"+finding.id,()=>changeScreen("findings",index));
+      addText(row,"h4",issueName(finding.id)+" ("+finding.id+")");
+      addText(row,"p","Your choice: "+choiceLabel(choice?.decision)+". Original status: "+finding.technicalStatus+". Evidence: "+finding.evidenceBinding+".");
+      navigation(row,"Change choice for issue " + (index+1),"change-"+finding.id,()=>{returnToSummary=true;changeScreen("findings",index);});
     });
-    addText(screen,"p","Confirmation binds this frozen planning bundle, effective settings, reviewed evidence and both explicit finding acceptances. Both technical findings stay unresolved. It grants no action-specific security consent and does not start implementation.");
+    const rejected=shown.findings.some(finding=>state.review?.findingDispositions[finding.id]?.decision==="rejected");
+    const priorActive=state.activeRecordId && state.recordLifecycle[state.activeRecordId]==="active";
+    if(rejected) {
+      addText(screen,"p","You cannot approve this plan while any issue is not accepted. Change a choice, or end this review to prepare changes.","blocking-reason");
+      addText(screen,"p",priorActive ? "The next action ends this review and withdraws the earlier approval. That approval cannot permit work afterward. It sends no request." : "The next action ends this review without approval and prepares a draft. It sends no request.","subtle");
+    } else {
+      addText(screen,"p","Approve this exact plan version, evidence, settings and both choices. Both issues stay unresolved. This approval can permit a later, separate work check.");
+      addText(screen,"p","Approval starts no task. Signing or changing an account still needs your separate permission.");
+    }
     const buttons=addText(screen,"div","","journey-buttons");
-    navigation(buttons,"Back","confirm-back",()=>changeScreen("findings",1));
-    modelControl(buttons,"Confirm review","review-confirm",{type:"CONFIRM"},true,()=>changeScreen("complete"));
-    if(preview({type:"CONFIRM"}).result==="refused") recoveryControls(screen);
-    cancelControl(screen);
-    return;
+    navigation(buttons,"Back","confirm-back",()=>{returnToSummary=false;changeScreen("findings",1);});
+    if(rejected) modelControl(buttons,priorActive ? "Withdraw approval and prepare changes" : "End review and prepare changes","review-prepare-changes",{type:"CANCEL"},true,()=>{returnToSummary=false;changeScreen("changes");});
+    else {
+      modelControl(buttons,"Approve this plan","review-confirm",{type:"CONFIRM"},true,()=>{returnToSummary=false;changeScreen("complete");});
+      if(preview({type:"CONFIRM"}).result==="refused") recoveryControls(screen);
+    }
+    cancelControl(screen);return;
   }
   byId("review-heading").textContent=record && state.recordLifecycle[record.id]==="withdrawn" ? "Approval withdrawn" : "Review complete";
-  if(!record) { addText(screen,"p","No review receipt exists in the current fixture. A scenario may have reset it. No approval or implementation was created.","blocking-reason"); modelControl(screen,"Start review","review-start",{type:"BEGIN_REVIEW"},true,()=>changeScreen("read",0));return; }
+  if(!record) { addText(screen,"p","No review record exists in this demo. A sample case may have reset it. No approval or task start was created.","blocking-reason");modelControl(screen,"Start review","review-start",{type:"BEGIN_REVIEW"},true,()=>changeScreen("read",0));return; }
   const receipt=addText(screen,"div","","receipt");
-  addText(receipt,"h3","Reviewed " + record.snapshot.bundleRevision);
-  addText(receipt,"p","Receipt: " + record.id + ". Frozen version: " + record.snapshot.simulatedDigestLabel + ". Current lifecycle: " + state.recordLifecycle[record.id] + ".");
-  record.snapshot.findings.forEach(finding=>addText(receipt,"p",finding.id+": "+record.findingDispositions[finding.id].decision+"; technical status remains "+finding.technicalStatus+"."));
-  addText(screen,"p",state.admission ? "Review did not start implementation. A separate implementation invocation has since been modeled: " + state.admission.state + "." : "Review is finished. Implementation has not started.");
-  addText(screen,"p","This is a simulation receipt, not evidence of real human presence, signing or security authority.","subtle");
+  addText(receipt,"h3","Plan " + record.snapshot.bundleRevision + " approved in the demo");
+  addText(receipt,"p","Review record: " + record.id + ". Plan version: " + record.snapshot.simulatedDigestLabel + ". Current status: " + state.recordLifecycle[record.id] + ".");
+  record.snapshot.findings.forEach(finding=>addText(receipt,"p",finding.id+": "+choiceLabel(record.findingDispositions[finding.id].decision)+". Original status remains "+finding.technicalStatus+"."));
+  addText(screen,"p",state.recordLifecycle[record.id]!=="active" ? "The review is finished. This approval is no longer active. Its review record remains as history; it cannot permit work." : state.admission ? "Approval started no task. A separate work check was performed later. Its current state is " + state.admission.state + "." : "The review is finished. This exact plan has a demo approval. No work check or task start was performed by approval.");
+  addText(screen,"p","This demo record proves no real human presence, signature or approval authority.","subtle");
   const eligible=preview({type:"ADMIT"});
   let recoveryHasNewReview=false;
   if(eligible.result==="refused") {
-    addText(screen,"p","The receipt cannot currently be used: " + eligible.message + " No history is silently reset.","blocking-reason");
+    reasonText(screen,eligible.message,"blocking-reason");
     recoveryHasNewReview=recoveryControls(screen);
   }
   const buttons=addText(screen,"div","","journey-buttons");
-  navigation(buttons,"Open implementation","review-open-implementation",()=>showView("implementation"),true);
-  if(!recoveryHasNewReview) modelControl(buttons,"Start new review","review-start-new",{type:"BEGIN_REVIEW"},false,()=>changeScreen("read",0));
+  navigation(buttons,"Continue to implementation","review-open-implementation",()=>showView("implementation"),true);
+  if(!recoveryHasNewReview) modelControl(buttons,"Start new review","review-start-new",{type:"BEGIN_REVIEW"},false,()=>{returnToSummary=false;changeScreen("read",0);});
   if(state.phase!=="cancelled") cancelControl(screen);
 }
 function renderImplementation(record) {
   const parent=byId("implementation-content");parent.replaceChildren();
-  addText(parent,"p",record ? "Reviewed version: " + record.snapshot.simulatedDigestLabel + ". Current record status: " + state.recordLifecycle[record.id] + "." : "No review has been recorded. Finish Review before starting this simulation.","decision-status");
-  addText(parent,"p","Current machine: " + state.machines[state.machine].label + ". Implementation state: " + (state.admission ? state.admission.state : "not started") + ".");
-  modelControl(parent,"Start implementation","implementation-start",{type:"ADMIT"},true);
-  addText(parent,"h3","Simulate tasks separately");
-  addText(parent,"p","Task 2 depends on Task 1. Each action rechecks current modeled authority and the exact admitted inputs. No real task runs.","subtle");
+  addText(parent,"p",record ? "Approved plan version: " + record.snapshot.simulatedDigestLabel + ". Review record status: " + state.recordLifecycle[record.id] + "." : "No approval exists in this demo. Finish the review before checking whether work can start.","decision-status");
+  addText(parent,"p","Selected machine: " + state.machines[state.machine].label + ". Work check: " + (state.admission ? state.admission.state==="admitted" ? "passed in the demo" : "blocked" : "not performed") + ".");
+  modelControl(parent,"Check whether work can start","implementation-start",{type:"ADMIT"},true);
+  addText(parent,"p","This checks the current approval, authentic status response and exact plan files, evidence and settings. The check starts no task.","subtle");
+  addText(parent,"h3","Start each demo task separately");
+  addText(parent,"p","Task 2 requires a recorded start for task 1. It does not require proof of completion. Each start rechecks current approval and exact inputs.","subtle");
+  addText(parent,"p","A demo task start creates a start record only. No real task runs. The demo checks no task completion.","subtle");
   ["T1","T2"].forEach((task,index) => {
     const taskBox=addText(parent,"div","","finding");
-    addText(taskBox,"p","Task " + (index+1) + " (" + task + "): " + (state.dispatches.some(item=>item.task===task && item.recordId===state.activeRecordId) ? "one simulated receipt exists" : "not dispatched") + ".");
-    modelControl(taskBox,"Simulate task " + (index+1),"implementation-"+task,{type:"DISPATCH",task});
+    addText(taskBox,"p","Task " + (index+1) + " (" + task + "): " + (state.dispatches.some(item=>item.task===task && item.recordId===state.activeRecordId) ? "one demo start recorded" : "no start recorded") + ".");
+    modelControl(taskBox,"Start demo task " + (index+1),"implementation-"+task,{type:"DISPATCH",task});
   });
   const buttons=addText(parent,"div","","journey-buttons");navigation(buttons,"Return to review","implementation-return",()=>showView("review"));
 }
@@ -1131,15 +1281,16 @@ function render() {
   const record=state.records.find(item=>item.id===state.activeRecordId);
   const outcome=byId("outcome");outcome.replaceChildren();outcome.hidden=!state.events.length;outcome.tabIndex=-1;
   outcome.className="outcome"+(state.last.result==="refused" ? " refused" : "");
-  addText(outcome,"strong",state.last.result==="modeled pass" ? "Modeled pass — no real authority" : state.last.result);
-  addText(outcome,"div",state.last.message);
+  const [title,message]=outcomeText();
+  addText(outcome,"strong",title);addText(outcome,"div",message);
+  const exact=addText(outcome,"details","");addText(exact,"summary","Exact technical result");addText(exact,"pre",state.last.result+" — "+state.last.message);
   renderReview(shown,record);renderImplementation(record);
-  byId("guide-outcome").textContent=state.last.result+" — "+state.last.message;
+  byId("guide-outcome").textContent="Exact technical result: "+state.last.result+" — "+state.last.message;
   const cards=byId("state-cards");cards.replaceChildren();
   [["Review",state.phase],["Record",record ? record.id : "None"],["Separate implement admission",state.admission ? state.admission.state : "Uninvoked"],["Simulated receipts",state.dispatches.length+" / 2"]].forEach(([label,value])=>{const card=addText(cards,"div","","card");addText(card,"span",label);addText(card,"strong",value);});
   fields("input-state",[["Current fixture binding",current.simulatedDigestLabel],["Review epoch",state.review ? state.review.epoch+" captured / "+state.currentReviewEpoch+" current" : "No review"],["Current / display equality",state.review ? String(ApprovalSimulation.equal(current,shown)) : "Not frozen"],["Snapshot / inventory",String(state.current.snapshotKnown)+" / "+String(state.current.inventoryKnown)],["Reviewed / private evidence",String(state.current.evidenceAvailable)+" / "+String(state.current.privateEvidenceAvailable)],["Policy","P"+state.current.policyRevision+" / fixed P1"],["Cancelled",state.review ? String(state.review.cancelled) : "No review"]]);
   fields("authority-state",[["Reviewer / signer",state.reviewer.identity+" / "+state.reviewer.signer],["Machine",state.machines[state.machine].label],["Modeled enrollment / trust",String(state.machines[state.machine].enrollmentModeled)+" / "+String(state.machines[state.machine].issuerTrustModeled)],["Current response available / authenticated",String(state.status.available)+" / "+String(state.status.authenticationModeled)],["Reviewer credential active",String(state.status.reviewerCredentialActive)],["Record lifecycle",record ? state.recordLifecycle[record.id] : "No record"],["Fresh status checks","Issuance "+state.statusChecks.issuance+" · admission "+state.statusChecks.admission+" · dispatch "+state.statusChecks.dispatch],["Record / current equality",record ? String(ApprovalSimulation.equal(current,record.snapshot)) : "No record"],["Admission / current equality",state.admission ? String(ApprovalSimulation.equal(current,state.admission.exactTaskInputs)) : "No admission"],["Real execution / consent","None / none"]]);
-  byId("snapshot-note").textContent=state.review ? "Exact frozen display for review epoch " + state.review.epoch + ". Later changes do not rewrite it. Equality compares serialized synthetic values; labels are not cryptographic digests." : "Current preview; not frozen for review.";
+  byId("snapshot-note").textContent=state.review ? "Exact source for review " + state.review.epoch + ". Later changes do not rewrite it. Version labels are not cryptographic digests." : "Current sample source. Start a review to fix the version you will review.";
   fields("snapshot-state",[["Repository / feature",shown.repositoryIdentity+" / "+shown.featureIdentity],["Bundle / source",shown.bundleRevision+" / "+shown.sourceReference],["Binding label",shown.simulatedDigestLabel],["Inventory schema",shown.schema],["Policy in display","P"+shown.policyRevision]]);
   const manifest=byId("input-manifest");manifest.replaceChildren();shown.inputManifest.forEach(input=>{const row=addText(manifest,"tr","");[input.reference,input.simulatedDigestLabel,input.literalContent].forEach(value=>addText(row,"td",value));});
   fields("settings-state",[["Settings revision",shown.effectiveSettings.revision],["Project commands",shown.effectiveSettings.projectCommands.join(", ")],["Verification",shown.effectiveSettings.verification],["Boundary",shown.effectiveSettings.executionBoundary]]);
@@ -1158,14 +1309,14 @@ function renderScenario() {
   byId("scenario-title").textContent=scenario.title;byId("scenario-description").textContent=scenario.description;
   byId("scenario-panel").setAttribute("aria-labelledby","tab-"+scenario.id);
   const tabs=byId("scenario-tabs");tabs.replaceChildren();
-  scenarios.forEach((item,index)=>{const button=addText(tabs,"button",item.title);button.id="tab-"+item.id;button.setAttribute("role","tab");button.setAttribute("aria-selected",String(index===selectedScenario));button.setAttribute("aria-controls","scenario-panel");button.addEventListener("click",()=>{selectedScenario=index;nextStep=0;state=ApprovalSimulation.initial();reviewScreen="start";findingIndex=0;render();byId("scenario-title").tabIndex=-1;byId("scenario-title").focus();});});
+  scenarios.forEach((item,index)=>{const button=addText(tabs,"button",item.title);button.id="tab-"+item.id;button.setAttribute("role","tab");button.setAttribute("aria-selected",String(index===selectedScenario));button.setAttribute("aria-controls","scenario-panel");button.addEventListener("click",()=>{selectedScenario=index;nextStep=0;state=ApprovalSimulation.initial();reviewScreen="start";findingIndex=0;returnToSummary=false;render();byId("scenario-title").tabIndex=-1;byId("scenario-title").focus();});});
   const list=byId("scenario-steps");list.replaceChildren();scenario.steps.forEach((item,index)=>{const row=addText(list,"li","");const button=addText(row,"button",(index<nextStep ? "Done · " : (index+1)+". ")+item.label);button.disabled=index!==nextStep;if(index===nextStep)button.className="primary";button.addEventListener("click",()=>{nextStep=index+1;apply(item.action);});addText(row,"span",item.expected);});
 }
-function resetFixture() { state=ApprovalSimulation.initial();nextStep=0;reviewScreen="start";findingIndex=0;render(); }
+function resetFixture() { state=ApprovalSimulation.initial();nextStep=0;reviewScreen="start";findingIndex=0;returnToSummary=false;render(); }
 function initializeInterface() {
   ["review","implementation","scenarios","about"].forEach(area=>byId(area+"-tab").addEventListener("click",()=>showView(area)));
   const parent=byId("free-buttons");[...new Set(actions.map(item=>item.group))].forEach(group=>{const section=addText(parent,"div","","action-group");addText(section,"h3",group);const buttons=addText(section,"div","","buttons");actions.filter(item=>item.group===group).forEach(item=>{const button=addText(buttons,"button",item.label);button.addEventListener("click",()=>apply(item.action));});});
-  const reset=addText(parent,"button","Reset all fixture state");reset.id="lab-reset";reset.addEventListener("click",resetFixture);
+  const reset=addText(parent,"button","Reset all demo state");reset.id="lab-reset";reset.addEventListener("click",resetFixture);
   byId("restart-scenario").addEventListener("click",resetFixture);
   render();showView("review",false);
 }
