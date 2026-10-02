@@ -177,46 +177,14 @@ The Continuous Goal Verification PRD's `VRFY-001` to `VRFY-012` identifiers
 and its `AC-1.*` to `AC-12.*` criteria are also retired; the crosswalk in §8
 names where each group went.
 
-### 3.15 Per-story Autopilot Execution *(-> HRNS-016)*
+### 3.15 Per-story Autopilot Execution *(retired, HRNS-016)*
 
-Heavy upfront planning followed by one large implementation pass is the
-failure mode the "Quality Gauntlet" memo names: do one story, check the
-architecture, repeat. SpecKit's own templates already shape the work this way.
-The spec template requires every user story to be independently testable
-(`.specify/templates/spec-template.md`: "Each user story/journey must be
-INDEPENDENTLY TESTABLE", with a per-story `**Independent Test**` line), and the
-tasks template groups tasks by story behind a Setup and a Foundational phase
-with a checkpoint after each story (`.specify/templates/tasks-template.md`:
-"Tasks MUST be organized by user story so each story can be: Implemented
-independently, Tested independently", `**Checkpoint**: At this point, User
-Story 1 should be fully functional and testable independently`). Phase 7 of
-autopilot flattens that structure into task groups and verifies once at the
-end. This feature makes the story the unit of execution, verification, and
-review.
-
-- **AC-15.1**: Phase 7 runs the Setup and Foundational task phases once, then
-  iterates the user stories in the priority order `tasks.md` records, one story
-  at a time; a story does not start until the previous story's checkpoint is
-  recorded.
-- **AC-15.2**: Each story runs the same sequence: implement its tasks, run the
-  automated checks and every populated quality-gate slot on the story's diff,
-  run the hardener when MUTATION is populated, run an architecture check
-  against the plan's Module and Interface Deltas and the dependency rules, then
-  record the story checkpoint in the workflow file.
-- **AC-15.3**: Each story opens its own pull request, emitted as one
-  increment through the existing marker plan and `ratify-pr-split`, with the
-  story's Independent Test as its verification section. When `gh-stack` and its skill
-  are installed, the spec is one stack rooted on trunk with one PR per story in
-  priority order; otherwise each story is an independent branch off trunk, and
-  the workflow file records which mode was selected and why.
-- **AC-15.4**: The loop continues while every check is green and stops on the
-  first failing check, naming the story, the check, and the evidence path; a
-  resume starts from the last recorded checkpoint, never from the beginning.
-- **AC-15.5**: The added review overhead of one PR per story is accepted and
-  stated in the PR body; reducing it (batching small stories, auto-merging
-  green stack layers) is out of scope and recorded as a follow-on.
-- **AC-15.6**: Claude Code and Codex run the same per-story loop with the same
-  checkpoint record, PR-per-story rule, and stop rule.
+Dropped. The identifier stays reserved and is never reused. Its
+stop-on-first-failure rule (former AC-15.4) contradicts the retry ladder
+(ADR 0004) and stop policy (ADR 0010), and one PR per story (former AC-15.3)
+contradicts the value unit (ADR 0009): one SPEC is one reviewable, acceptable
+unit. Story-ordered execution inside one run may return later as a fresh
+roadmap entry.
 
 ### 3.16 Autopilot, Gate, and PR-Emission Repair *(-> HRNS-015)*
 
@@ -761,8 +729,7 @@ review.
   HRNS-021 condition-bound guidance; HRNS-022 eval ladder and model refresh;
   HRNS-023 drift scanner; HRNS-039 runner-computed consensus tally; HRNS-040
   state and gate test depth.
-- **Tier 2:** HRNS-016 per-story autopilot after HRNS-015; HRNS-024 decision
-  contract after HRNS-017; HRNS-026 permission and egress policy after
+- **Tier 2:** HRNS-024 decision contract after HRNS-017; HRNS-026 permission and egress policy after
   HRNS-019; HRNS-028 and HRNS-029 context economy after HRNS-020; HRNS-037
   progress page after HRNS-018.
 - **Tier 3:** HRNS-025 run journal; HRNS-030 obligation and subgoal registry.
@@ -781,9 +748,6 @@ the dependencies above. Its Jev check is a later slice that waits for HRNS-027.
 | Feature (§3) | Module or interface | Delta | Note |
 |---|---|---|---|
 | Harness Surface Inventory (§3.1) | No module or interface changes. | - | Complete and archived |
-| Per-story Autopilot (§3.15) | `speckit-pro/skills/speckit-autopilot/references/phase-execution.md` and the Codex mirror | changed | Task-group loop becomes a story loop |
-| Per-story Autopilot (§3.15) | `speckit-pro/skills/speckit-autopilot/references/post-implementation.md` and the Codex mirror | changed | Per-story PR emission |
-| Per-story Autopilot (§3.15) | `speckit-pro/skills/speckit-coach/templates/workflow-template.md` | changed | Per-story checkpoint table |
 | Repair (§3.16) | `speckit-pro/speckit_pro_runner/helpers/pr_packet.py` | changed | Optional release-note fence; current Phase 6.5 verdict |
 | Repair (§3.16) | `speckit-pro/speckit_pro_runner/helpers/mutation.py` | changed | Current-packet untracked exemption |
 | Repair (§3.16) | `speckit-pro/speckit_pro_runner/helpers/pr_contract.py` | new | Canonical packet paths shared with `pr_packet.py` |
@@ -900,7 +864,7 @@ the dependencies above. Its Jev check is a later slice that waits for HRNS-027.
 | Feature (§3) | Acceptance Criteria | SPEC | Depends on | Priority |
 |---|---|---|---|---|
 | Harness Surface Inventory and Gap Taxonomy | AC-1.* | HRNS-001 | - | P1 (complete) |
-| Per-story Autopilot Execution | AC-15.* | HRNS-016 | HRNS-015 | P2 |
+| Per-story Autopilot Execution (retired) | - | HRNS-016 | - | Dropped |
 | Autopilot, Gate, and PR-Emission Repair | AC-16.* | HRNS-015 | - | P1 |
 | Host Capability Spike | AC-17.* | HRNS-017 | - | P1 |
 | Typed Workflow State | AC-18.* | HRNS-018 | - | P1 |
@@ -947,7 +911,7 @@ the dependencies above. Its Jev check is a later slice that waits for HRNS-027.
 
 ## 9. Success Criteria
 
-1. Every acceptance criterion in AC-15.* through AC-41.* passes, each spec
+1. Every acceptance criterion in AC-16.* through AC-41.* passes, each spec
    within its reviewability budget or with a typed exception.
 2. No observed autopilot, gate, or PR-emission defect remains without a
    failing-first fixture.

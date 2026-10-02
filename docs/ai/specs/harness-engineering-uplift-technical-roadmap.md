@@ -26,14 +26,16 @@ HRNS-022, HRNS-025, and HRNS-026.
 
 ## Roadmap Overview
 
-The active catalog holds **27 specifications** across **7 dependency tiers**.
+The active catalog holds **26 specifications** across **7 dependency tiers**.
 HRNS-001 is complete, and HRNS-002 to HRNS-014 are retired with their
-surviving criteria moved into the specs below.
+surviving criteria moved into the specs below. HRNS-016 is dropped: its
+stop-on-first-failure rule contradicts ADR 0004 and ADR 0010, and one PR per
+story contradicts the value unit in ADR 0009.
 
 | Tier | Specs | Purpose | Parallelization |
 |---|---|---|---|
 | 1 | HRNS-015, HRNS-017, HRNS-018, HRNS-019, HRNS-020, HRNS-021, HRNS-022, HRNS-023, HRNS-039, HRNS-040 | Repair, host facts, typed state, registry contract, token baseline, guidance, eval ladder, drift scanner, consensus tally, test depth | Fully parallel; no dependencies |
-| 2 | HRNS-016, HRNS-024, HRNS-026, HRNS-028, HRNS-029, HRNS-037 | Per-story autopilot, decision contract, permission policy, context economy, progress page | Parallel, each after its one Tier 1 predecessor |
+| 2 | HRNS-024, HRNS-026, HRNS-028, HRNS-029, HRNS-037 | Decision contract, permission policy, context economy, progress page | Parallel, each after its one Tier 1 predecessor |
 | 3 | HRNS-025, HRNS-030 | Run journal and obligation registry | Parallel after HRNS-024 |
 | 4 | HRNS-027, HRNS-041 | Dual-host Jev adapter, the only slice that touches the wire; ledger formal model | Parallel; HRNS-041 after HRNS-025 and HRNS-040 |
 | 5 | HRNS-031, HRNS-032, HRNS-033, HRNS-034 | Three shadow pilots and the phase-boundary verifier | Parallel after HRNS-027 |
@@ -48,8 +50,6 @@ land.
 
 **Dependency Constraints:**
 
-- HRNS-016 requires HRNS-015 because one PR per story repeats the packet
-  release-note and untracked-packet failures on every story.
 - HRNS-032 requires HRNS-015 for `speckit-resolve-pr` pagination and the
   pushed-SHA check, and HRNS-027 for the adapter.
 - HRNS-024 requires HRNS-017 because the contract binds to the result
@@ -114,8 +114,7 @@ is a forward guess, not the authoritative count.
 ## Dependency Graph
 
 ```text
-HRNS-015 Repair ─────────────────────► HRNS-016 Per-story autopilot
-         └─────────────────────────────► HRNS-032 Review-fix pilot (also needs HRNS-027)
+HRNS-015 Repair ─────────────────────► HRNS-032 Review-fix pilot (also needs HRNS-027)
 HRNS-017 Host spike ──► HRNS-024 Decision contract ─┬─► HRNS-025 Run journal ─┐
 HRNS-018 Typed state ─┬─────────────────────────────┴─► HRNS-030 Obligations ─┤
                       └─► HRNS-037 Progress page                               │
@@ -165,7 +164,7 @@ HRNS-025 Run journal ┘
 | HRNS-013 | Code-Intelligence and Vector-Index Interoperability | Retired | - | Dropped |
 | HRNS-014 | External OKF Exchange and Reviewable Reconciliation | Retired | - | Dropped |
 | HRNS-015 | Autopilot, Gate, and PR-Emission Repair | ⏳ Ready | - | Specify |
-| HRNS-016 | Per-story Autopilot Execution | ⏳ Pending | - | HRNS-015 |
+| HRNS-016 | Per-story Autopilot Execution | Retired | - | Dropped |
 | HRNS-017 | Host Capability Spike | ⏳ Ready | - | Specify |
 | HRNS-018 | Typed Workflow State | ⏳ Ready | - | Specify |
 | HRNS-019 | Helper Registry Contract and Tiered Disclosure | ⏳ Ready | - | Specify |
@@ -212,7 +211,7 @@ gap-to-spec mapping.
 
 ### HRNS-015: Autopilot, Gate, and PR-Emission Repair
 
-**Priority:** P1 | **Depends On:** none | **Enables:** HRNS-016, HRNS-032
+**Priority:** P1 | **Depends On:** none | **Enables:** HRNS-032
 
 **Goal:** Fix the defects from live autopilot runs that main still has, each
 with a failing-first fixture, so the documented happy path stops producing a
@@ -333,86 +332,6 @@ Already fixed or owned elsewhere, so out of scope: #637 (PR #694), #638
 - The structural test fails when any of the eight executor definitions loses
   its teardown obligation.
 - Each documented `speckit-status` envelope matches a passing fixture.
-
----
-
-### HRNS-016: Per-story Autopilot Execution
-
-**Priority:** P2 | **Depends On:** HRNS-015 (packet release-note and untracked-packet repairs), plus live `multi-pr-emission` apply | **Enables:** none
-
-**Goal:** Make the user story the unit of autopilot execution, verification,
-and review: Setup and Foundational once, then per story in priority order
-implement, gates, hardener, architecture check, checkpoint, and pull request,
-continuing while green and stopping on the first failing check.
-
-**Reviewability Budget:** Primary surface: harness/adapter |
-Projected reviewable LOC: 182 (estimate-spec-size: 3 stories, 6 FRs, 5 files, modify) |
-Production files: 5 |
-Total files: 12 |
-Budget result: within budget
-
-The "Quality Gauntlet" prerequisites are merged (#536, #537, #542). This entry
-records the accepted direction; it goes through `speckit-scaffold-spec` and a
-grill-me interview, where the design tree is walked branch by branch.
-
-One pull request per increment already exists on main: marker increments, the
-`ratify-pr-split` helper, and ready-for-review stacks (#763, #804, #814;
-`references/phase-execution.md`). This spec makes a story one increment of that
-machinery, with the story loop on top. It adds no second PR-splitting path.
-
-**Scope:**
-
-- Phase 7 restructured around the story phases `tasks.md` already carries:
-  Setup and Foundational run once, then each user story in the recorded
-  priority order, never the next before the previous checkpoint is recorded.
-- Per-story sequence: implement the story's tasks with the existing TDD
-  executors; run the automated checks and every populated quality-gate slot
-  with `{paths}` = the story's diff; run the hardener when MUTATION is
-  populated; run an architecture check that compares the story's diff against
-  the plan's Module and Interface Deltas and the `DEPENDENCY_RULES` slot;
-  record the checkpoint with the story's `**Independent Test**` and evidence
-  paths.
-- One pull request per story, emitted as one increment through the existing
-  marker plan and `ratify-pr-split`. With `gh-stack` installed, the spec is one
-  stack rooted on trunk with one layer per story; otherwise each story is an
-  independent branch. The selected mode and reason are recorded before the
-  first story PR.
-- Stop rule: continue while every check is green; stop on the first failing
-  check, naming the story, the check, and the evidence path. Resume from the
-  last recorded checkpoint.
-- Review overhead is accepted and stated in each PR body. Batching small
-  stories or auto-merging green layers is a recorded follow-on.
-- Both distributions run the same loop, checkpoint record, PR-per-story rule,
-  and stop rule.
-
-**Out of Scope:**
-
-- Changing how `spec.md` defines stories or how `tasks.md` groups them.
-- Reducing review overhead by batching or auto-merge (follow-on).
-- Changing the gate slots, thresholds file, or hardener; this spec calls them
-  per story instead of once per spec.
-
-**Module and Interface Deltas:**
-
-- `speckit-pro/skills/speckit-autopilot/references/phase-execution.md` and the Codex mirror — changed: task-group loop becomes a story loop with per-story verification and checkpoint.
-- `speckit-pro/skills/speckit-autopilot/references/post-implementation.md` and the Codex mirror — changed: per-story PR emission, stack or independent-branch mode.
-- `speckit-pro/skills/speckit-coach/templates/workflow-template.md` — changed: per-story checkpoint table.
-
-**Key Files:**
-
-- `.specify/templates/spec-template.md` and `.specify/templates/tasks-template.md` — the story and checkpoint structure this spec consumes.
-- `speckit-pro/speckit_pro_runner/helpers/stack_manager.py` — splits by marker slice today.
-- `speckit-pro/speckit_pro_runner/helpers/pr_emission.py`: a command-plan module of about 100 lines after #920; `multi-pr-emission` apply is deferred today (`helpers/registry.py`).
-
-**Done When:**
-
-- A spec with three stories runs Setup and Foundational once and then three
-  story iterations, each with its own gate run, checkpoint, and PR, on both
-  distributions.
-- With `gh-stack` the three PRs form one stack; without it, three branches;
-  the workflow file names the mode.
-- A failing check in story 2 stops the run with the story, check, and evidence
-  named, and a resume continues from story 2.
 
 ---
 
@@ -1594,8 +1513,6 @@ Budget result: within budget
 
 - Start Tier 1 in parallel; take HRNS-015 first when capacity is short,
   because every other slice's PRs pass through its repaired gates.
-- Scaffold HRNS-016 only after HRNS-015 lands and live `multi-pr-emission`
-  apply exists, and take it through grill-me first.
 - Do not scaffold HRNS-027 or any shadow slice before HRNS-024, HRNS-025, and
   HRNS-026 have merged.
 - Every shadow check starts disabled and records a baseline for its measure

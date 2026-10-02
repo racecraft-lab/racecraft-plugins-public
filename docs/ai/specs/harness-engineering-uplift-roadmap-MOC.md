@@ -36,11 +36,10 @@ another.
 
 ### Execution, Safety, and Context Economy
 
-Why: Once the foundations land, autopilot can work one story at a time,
-autonomous runs get one permission and egress policy, fan-out roles share
-evidence, handoffs keep their obligations, and operators can watch a run.
+Why: Once the foundations land, autonomous runs get one permission and egress
+policy, fan-out roles share evidence, handoffs keep their obligations, and
+operators can watch a run.
 
-- HRNS-016 Per-story Autopilot Execution
 - HRNS-026 Autonomous-Run Permission and Egress Policy
 - HRNS-028 Shared Retrieval Packet for Fan-Out Roles
 - HRNS-029 Visibility Ladder and Handoff Preservation
