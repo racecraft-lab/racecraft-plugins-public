@@ -34,3 +34,7 @@ _Avoid_: reviewability block, size gate
 **Unratified defaults**:
 The shipped quality-gate thresholds a run uses when the repository has no valid confirmed thresholds. A run on them never stops for it; the reviewer is told at UAT.
 _Avoid_: default gates, fallback config
+
+**Value unit**:
+The scope a SPEC commits to: one actor, one observable outcome, one primary surface, and one headline acceptance step a non-engineer can run at UAT. Every SPEC has exactly one; work that outgrows it is a recommended split for a later SPEC, never a reason to stop.
+_Avoid_: slice, story, scope budget
