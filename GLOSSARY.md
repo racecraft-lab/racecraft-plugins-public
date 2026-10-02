@@ -4,9 +4,21 @@ The language of the speckit-pro plugin's workflow: how a SPEC is scaffolded, pla
 
 ## Language
 
+**Answers file**:
+A file holding every scaffold interview answer in advance, so scaffold runs without asking. A missing or unknown answer fails scaffold rather than turning into a question.
+_Avoid_: pre-answered interview, scaffold script
+
 **Blocked-for-UAT**:
 Work a run cannot finish or verify and hands to human review with its reason and evidence, while independent safe work continues. Accepting a documented gap does not make that work complete.
 _Avoid_: completed with deferrals, failed run, waived completion
+
+**Canary**:
+A fixed small SPEC run end to end, unattended, on both hosts from a clean install: scaffold from an answers file, planning, plan review by a simulated reviewer, and implement. Its green result is what lets a release ship.
+_Avoid_: smoke test, integration eval, dogfood run
+
+**Canary receipt**:
+The evidence one canary run leaves for one host: the commit, host and plugin versions, the verdict for each variant, and the measures it was judged on. Only a receipt from the scheduled canary can gate a release; a local dogfood receipt never does.
+_Avoid_: canary log, test report
 
 **Decisions list**:
 The run's record of every judgment it made instead of asking the user: the option chosen, the rejected alternative and the evidence. It never asks for a reply; the reviewer accepts or overturns each entry at review.
