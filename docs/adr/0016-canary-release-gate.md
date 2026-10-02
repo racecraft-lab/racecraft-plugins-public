@@ -1,4 +1,4 @@
-# A weekly private canary gates every release
+# A private canary, weekly or on demand, gates every release
 
 Status: accepted
 
@@ -8,7 +8,9 @@ Decision ticket: [Canary: fixture, variants, receipt, budget, release gate](http
 
 The canary lives in a private fixture repo (for example `racecraft-lab/speckit-canary`) and runs on the self-hosted Linux runners. Their runner group admits selected private repos only, so the canary cannot run from this public repo.
 
-It runs once a week, Sunday 02:00 America/Chicago. It tests the open release PR's head commit, or main when no release PR is open. Each run is 5 variants on each host, 10 parallel jobs on fresh VMs. A GitHub App posts `canary / claude-code` and `canary / codex` commit statuses on the tested commit. Branch protection on the release PR requires both, so a release merges only after a green run on its exact head. Releases therefore ship at most weekly; a commit pushed after the run waits for the next one.
+It runs once a week, Sunday 02:00 America/Chicago. It tests the open release PR's head commit, or main when no release PR is open. Each run is 5 variants on each host, 10 parallel jobs on fresh VMs. A GitHub App posts `canary / claude-code` and `canary / codex` commit statuses on the tested commit. Branch protection on the release PR requires both, so a release merges only after a green run on its exact head. A commit pushed after the run waits for the next one.
+
+For a security fix or another urgent release, the owner can start an on-demand run instead of waiting for Sunday. It is a manual dispatch of the same workflow against the release PR's current head: the same 10 jobs, receipts, budgets and commit statuses, and the receipt records the trigger (`scheduled` or `on_demand`) and the stated reason. It is not a bypass; the release still merges only on a green run on its exact head (ADR 0003). Only one canary run may be active at a time, so the Codex auth-owner job never refreshes the same token chain twice; an on-demand run queues behind a run already in progress.
 
 A red result on either host blocks releases and, per ADR 0002, brings back the fix-vehicle ban.
 
@@ -59,13 +61,13 @@ The same harness runs on a developer's Mac against a local build, deployed to bo
 
 ## Failures become checks
 
-A red receipt opens an issue that links the failed assertion. The PR that closes the issue must add a deterministic test, in the layer suites or unit tests, that fails before the fix. A PR check enforces that a test was added. The issue closes only after the next weekly run is green.
+A red receipt opens an issue that links the failed assertion. The PR that closes the issue must add a deterministic test, in the layer suites or unit tests, that fails before the fix. A PR check enforces that a test was added. The issue closes only after the next green run, weekly or on demand.
 
 ## Considered Options
 
 - **Local run on an enrolled Mac, release CI checks committed receipts.** Rejected: the owner chose the HAL runners, and a gate should not depend on one person's machine.
 - **GitHub-hosted runners with secrets.** Rejected: model cost in public CI, and no private runner pool.
-- **Run per release PR, or a daily host-version check.** Rejected for a weekly off-peak run; the cost is that releases ship at most weekly.
+- **Run per release PR, or a daily host-version check.** Rejected for a weekly off-peak run plus on-demand runs for urgent releases.
 - **Loosen the exact-commit binding for faster releases.** Rejected: it amends ADR 0003.
 - **Maintainer approves the plan live, or implement from a fixture plan.** Rejected: a live approval makes the canary attended and waits on real-authority qualification; a fixture plan never proves that the plan just produced can be approved and built.
 - **Canary-only scaffold switch, or skip scaffold.** Rejected: the canary would test a path users never take, or not test scaffold at all.
@@ -77,7 +79,7 @@ A red receipt opens an issue that links the failed assertion. The PR that closes
 
 ## Consequences
 
-- Releases ship at most once a week, after Sunday's run.
+- Routine releases ship at most once a week, after Sunday's run. Security fixes and other urgent releases ship after an on-demand green run.
 - A private fixture repo, a GitHub App with commit-status permission on this repo, release-PR branch protection, and fixture-repo secrets must exist before the gate starts.
 - Scaffold gains a public answers-file flag.
 - A Codex auth prototype must pass before the canary gates releases.
