@@ -27,6 +27,10 @@ _Avoid_: cross-platform support, Codex support
 The record of a human's explicit approval of one full planning revision after a review interview, including separate acceptance of any remaining planning gaps. It permits that revision to be built but supplies neither security consent nor proof that blocked work is complete.
 _Avoid_: artifact sign-off, planning complete, implementation permission
 
+**Plan review**:
+The human interview between planning and implementation that examines the proposed work, closes gaps through revisions, and establishes whether the final planning revision is approved.
+_Avoid_: planning pause, implement preflight, artifact delivery
+
 **Progress block**:
 The fixed summary of an autopilot run's phases and tasks that the runner renders from autopilot state at every phase transition. It is the only place a run shows its progress.
 _Avoid_: task list, todo list, checklist
