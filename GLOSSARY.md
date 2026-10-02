@@ -39,6 +39,10 @@ _Avoid_: corrective budget, corrective cycle, replan epoch, escalation tier
 An advisory assessment of how much work a SPEC or one of its declared slices asks a human to review. It includes the size evidence and any unresolved uncertainty.
 _Avoid_: reviewability block, size gate
 
+**Security interrupt**:
+A planning-only pause for explicit consent to one necessary, otherwise permitted security action that has no safe authorized alternative. Refusal defers the affected work while independent safe work continues.
+_Avoid_: security approval, permission override, setup question
+
 **Unratified defaults**:
 The shipped quality-gate thresholds a run uses when the repository has no valid confirmed thresholds. A run on them never stops for it; the reviewer is told at UAT.
 _Avoid_: default gates, fallback config
