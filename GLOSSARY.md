@@ -15,6 +15,10 @@ _Avoid_: cross-platform support, Codex support
 The fixed summary of an autopilot run's phases and tasks that the runner renders from autopilot state at every phase transition. It is the only place a run shows its progress.
 _Avoid_: task list, todo list, checklist
 
+**Quality-gate thresholds**:
+The repository's user-confirmed limits that the complexity, mutation and dependency-rule checks judge changed code against, with the checks it skips or opts into. Only a user's confirmation makes them; an agent never sets them alone.
+_Avoid_: gate config, quality settings
+
 **Retry ladder**:
 The fixed sequence of three repair attempts a failing check gets in an autopilot run, each with a stronger agent, before the work it covers is marked blocked. It is the only way a run responds to a failure; a check's count never resets within the run.
 _Avoid_: corrective budget, corrective cycle, replan epoch, escalation tier
@@ -22,3 +26,7 @@ _Avoid_: corrective budget, corrective cycle, replan epoch, escalation tier
 **Reviewability report**:
 An advisory assessment of how much work a SPEC or one of its declared slices asks a human to review. It includes the size evidence and any unresolved uncertainty.
 _Avoid_: reviewability block, size gate
+
+**Unratified defaults**:
+The shipped quality-gate thresholds a run uses when the repository has no valid confirmed thresholds. A run on them never stops for it; the reviewer is told at UAT.
+_Avoid_: default gates, fallback config
