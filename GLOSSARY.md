@@ -36,11 +36,11 @@ The rule that a run gives the same outcomes and the same run experience (prompts
 _Avoid_: cross-platform support, Codex support
 
 **Plan approval authority**:
-The protected mechanism that establishes a human's final plan approval and its current validity independently of the coding agent. Its review interface captures separate decisions on remaining findings before final confirmation.
+The protected mechanism that establishes a human's final plan approval and its current validity independently of the coding agent. Its review interface records requested corrections and their checked results before final confirmation.
 _Avoid_: signing prompt, transcript proof, repository approval flag
 
 **Plan approval record**:
-The record of a human's explicit approval of one full planning revision after a review interview, including separate acceptance of any remaining planning gaps. It permits that revision to be built but supplies neither security consent nor proof that blocked work is complete.
+The record of a human's explicit approval of one full planning revision after all planning findings have been fixed and checked. It permits that revision to be built but supplies neither security consent nor proof that implementation work is complete.
 _Avoid_: artifact sign-off, planning complete, implementation permission
 
 **Plan review**:
