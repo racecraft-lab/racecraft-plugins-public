@@ -1,6 +1,6 @@
 # Plan-approval prototype: closeout draft
 
-Status: prepared for human review. No successor issue has been created and no ticket has been closed. Automatic approval review rejected the public issue-creation attempt; publication awaits explicit approval of this package.
+Status: the operator accepted the expanded prototype and explicitly approved this public closeout package on 2026-10-02. Publication and successor wiring are being completed. The earlier automatic approval rejection was resolved by this explicit authorization.
 
 ## Proposed resolution of the prototype ticket
 
@@ -15,7 +15,7 @@ The operator's confirmed workflow is:
 
 The existing speckit-pro artifact library supplies the style and brand. Developer checks and setup information remain separate from the operator journey. Original blocked work, evidence and spent attempts remain intact.
 
-The user expressed positive feedback on the current review experience, conditional on supporting more than two issues, and authorized the multiple-issue iteration. Final feedback on the generalized interface is still to be recorded; an agent cannot supply that acceptance.
+The user expressed positive feedback on the review experience, conditional on supporting more than two issues. After the three-/ten-issue iteration and final Browser walkthrough, the operator explicitly approved the expanded interface and this closeout package. This human acceptance concerns the simulated operator workflow; it does not qualify signing or enforcement.
 
 The default example now contains three distinct issues; About offers an explicit ten-issue reset. Each issue has its own correction and matching check definition. A frozen required inventory prevents missing, duplicate or unknown findings/results from borrowing another issue's success. Focused proof covers zero, one, three and ten findings, all built-in remedy strategies, custom refusal and three-/ten-issue handoff flows. Browser verification confirms the ten-issue recovery and final-review path, exact three-issue clipboard content, retained choices, spaced handoff actions, both themes, narrow layout and keyboard/pointer error recovery. The corrected hit areas and focus targets were rechecked. The preview and captured source share SHA-256 `3f1cb6ea7a74e6d4d59957cfc20f39c918867d5548a7be9830bca99864d138eb`.
 

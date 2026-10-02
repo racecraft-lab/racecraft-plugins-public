@@ -1,6 +1,6 @@
 # Plan review: operator domain model
 
-Status: repair cycle and simpler remediation choices implemented and locally checked. Human acceptance is pending.
+Status: repair cycle and simpler remediation choices implemented and locally checked. The operator accepted the expanded prototype on 2026-10-02. Protected qualification remains open.
 
 ## Goal and confirmed decisions
 
@@ -120,7 +120,7 @@ The revised HTML uses per-issue definitions for presentation, remedy instruction
 
 The Browser also verifies the ten-issue custom-instruction withdrawal and fresh-review cycle, exact three-issue clipboard content, spaced handoff actions, both themes and narrow layout. Missing-choice links have solid padded hit areas; keyboard and pointer activation focus the relevant choice below the measured sticky header. The [evidence record](plan-approval-authority-evidence.md#more-than-two-findings-and-closeout-preparation) records the limits and the exact captured HTML digest.
 
-The user expressed positive feedback on the review experience, conditional on support for more than two issues, and authorized that iteration. Final feedback on the generalized interface remains pending human review. Real revised-package import, actual agent responses/check evidence, protected review/signing/enrollment and current authority enforcement remain separate implementation and qualification work.
+The user expressed positive feedback on the review experience, conditional on support for more than two issues, and accepted the generalized three-/ten-issue prototype and its closeout package after the final Browser walkthrough. Real revised-package import, actual agent responses/check evidence, protected review/signing/enrollment and current authority enforcement remain separate implementation and qualification work.
 
 The interface has no two-issue special case. It renders the frozen finding list, preserves each choice, includes every requested fix in one handoff and blocks approval until every finding is fixed and checked. The public examples supply three and ten registered issue definitions. A real finding import and its authoritative inventory contract remain future work; the demo does not accept arbitrary agent-written issue records as approval evidence.
 
