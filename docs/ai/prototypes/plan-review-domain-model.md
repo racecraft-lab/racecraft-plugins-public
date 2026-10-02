@@ -73,7 +73,11 @@ Planning corrections are checked against the requested change and repository con
 
 ## Boundary with prototype tools
 
-Fault injection, raw model actions, manual task dispatch and safeguard test cases belong in optional developer checks, reached through About. The main navigation contains Review and About. Before opening the checks, explain that they create sample failures and can reset sample choices. Opening the checks or returning to Review preserves the current review. Selecting or resetting a case changes the sample state and must disclose that effect.
+Fault injection, raw model actions, manual task dispatch and safeguard test cases belong in optional developer checks, reached through About. The main navigation contains Review and About. Before opening the checks, explain that they create sample failures and can reset sample choices. Opening the checks or returning to Review preserves the current review.
+
+The intended guided sequence is choose a check, explicitly start it, run its steps and inspect its results. Choosing a check only previews it. Starting or restarting it resets the sample state; the control and nearby explanation must disclose that effect. Show the current step and its observed result together. Keep one stable action control for keyboard users. Completed and upcoming steps are a readable history, not a wall of disabled buttons.
+
+Expected and observed outcomes are simulator observations. A match must not imply real security qualification or operator acceptance. Manual actions belong in separate, optional groups. After they change the sample state, do not present unrelated state as a valid guided-check result. Give the operator a clear way to start a fresh guided check.
 
 Setup, instructions and security qualification information remain separate from the review experience. Essential plan material and check evidence stay available within review. The existing artifact library remains the visual source of truth.
 

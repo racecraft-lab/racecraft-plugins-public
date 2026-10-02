@@ -511,10 +511,6 @@ details:focus-visible,
     .primary:hover { background:var(--rc-brand-red); border-color:var(--rc-text); }
     button:disabled { opacity:.55; cursor:default; }
     .action-group + .action-group { margin-top:19px; }
-    .tabs { display:flex; gap:7px; flex-wrap:wrap; margin-bottom:15px; }
-    .steps { list-style:none; padding:0; margin:10px 0 0; display:grid; gap:8px; }
-    .steps li { display:grid; grid-template-columns:minmax(240px,40%) 1fr; gap:12px; align-items:center; }
-    .steps span { font-size:14px; color:var(--rc-text-muted); }
     .event-list { max-height:230px; overflow:auto; margin:0; padding-left:22px; font-size:14px; }
     .event-list li { margin-bottom:7px; }
     details { margin-top:14px; } summary { cursor:pointer; font-weight:600; }
@@ -530,7 +526,7 @@ details:focus-visible,
     .review-content { padding:14px; background:var(--rc-surface-sunken); border-radius:5px; }
     .review-content p:last-child { margin-bottom:0; }
     .inspector > summary { font-size:18px; }
-    @media(max-width:850px) { .columns { grid-template-columns:1fr; } .cards { grid-template-columns:repeat(2,1fr); } .steps li { grid-template-columns:1fr; gap:4px; } }
+    @media(max-width:850px) { .columns { grid-template-columns:1fr; } .cards { grid-template-columns:repeat(2,1fr); } }
     @media(max-width:500px) { main { padding:18px 12px 40px; } .panel { padding:15px; } dl { grid-template-columns:1fr; gap:2px; } dd { margin-bottom:8px; } }
 
     .view-tabs { flex-wrap:wrap; }
@@ -568,6 +564,45 @@ details:focus-visible,
     .field-error { color:var(--rc-danger-text); font-weight:600; }
     .error-summary h3 { margin-top:0; }
     @media(max-width:850px) { .issue-grid { grid-template-columns:1fr; } }
+    #test-view { min-width:0; }
+    #test-view .panel { min-width:0; }
+    #test-view button, #test-view select { min-height:44px; }
+    #test-view button { overflow-wrap:anywhere; }
+    #test-view summary { display:list-item; box-sizing:border-box; min-height:44px; padding:10px 0; }
+    #test-view details[open] > summary { margin-bottom:12px; }
+    .developer-header { display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:16px; }
+    .developer-header h2 { margin-bottom:8px; }
+    .developer-header p { margin-bottom:0; }
+    .developer-header .journey-buttons { margin-top:0; }
+    #test-view .scenario-warning { margin:18px 0; border-radius:6px; }
+    .test-picker { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:12px; }
+    .test-picker label { margin:0 0 8px; }
+    .test-picker select { width:100%; min-width:0; box-sizing:border-box; padding:10px 12px; border:1px solid var(--rc-border-strong); border-radius:6px; background:var(--rc-surface); color:var(--rc-text); font:inherit; }
+    .test-preview { padding:16px; margin-top:18px; border:1px solid var(--rc-border-strong); border-radius:6px; background:var(--rc-surface-sunken); }
+    .test-preview p:last-child { margin-bottom:0; }
+    .test-progress { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin:16px 0; }
+    .test-progress p { margin:0; }
+    .test-current { padding:16px; border:1px solid var(--rc-border-strong); border-radius:6px; background:var(--rc-surface-sunken); }
+    .test-current .journey-buttons { margin-top:12px; }
+    .test-result { padding:16px; margin-top:18px; border:1px solid var(--rc-border-strong); border-left:4px solid var(--rc-accent); border-radius:6px; }
+    .test-result.mismatch { border-left-color:var(--rc-brand-red); }
+    .test-observation-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; margin:12px 0; }
+    .test-observation-grid p { margin:6px 0 0; }
+    .test-feedback { padding:12px 14px; margin:16px 0 0; background:var(--rc-surface-sunken); border:1px solid var(--rc-border-strong); border-radius:6px; }
+    .test-history { display:grid; gap:12px; list-style:none; padding:0; margin:16px 0 0; }
+    .test-step { padding:14px; border:1px solid var(--rc-border-strong); border-radius:6px; overflow-wrap:anywhere; }
+    .test-step-heading { display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:10px; }
+    .test-step-heading h4 { margin:0; flex:1 1 220px; }
+    .test-step p { margin:6px 0 0; }
+    #free-buttons .action-group { margin-top:20px; }
+    #free-buttons .action-group h3 { margin-bottom:12px; }
+    #free-buttons .buttons { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; }
+    #free-buttons .buttons button { width:100%; }
+    #free-buttons .manual-reset { margin-top:24px; padding-top:20px; border-top:1px solid var(--rc-border-strong); }
+    #test-view .card { min-width:0; overflow-wrap:anywhere; }
+    #test-view .event-list { margin-top:12px; }
+    @media(max-width:640px) { .test-picker, .test-observation-grid { grid-template-columns:1fr; } .test-picker > button { justify-self:start; } }
+    @media(max-width:500px) { #free-buttons .buttons { grid-template-columns:1fr; } }
   </style>
 </head>
 <body>
@@ -608,31 +643,52 @@ details:focus-visible,
   </div>
   <div id="test-view" role="region" aria-labelledby="test-heading" hidden>
     <section class="panel" aria-labelledby="test-heading">
-      <h2 id="test-heading" tabindex="-1">Developer checks</h2>
-      <p>These optional controls create sample failures to check the demo’s approval rules.</p>
-      <div class="journey-buttons"><button type="button" id="test-return-review" aria-controls="review-view">Return to review</button></div>
-      <p class="scenario-warning"><strong>Selecting a case resets this demo and its review choices.</strong> Fault controls also change the demo. Switching areas keeps your current state.</p>
-      <div id="scenario-tabs" class="tabs" role="tablist" aria-label="Approval scenarios"></div>
-      <div id="scenario-panel" role="tabpanel"><h3 id="scenario-title"></h3><p id="scenario-description"></p><button type="button" id="restart-scenario">Reset this case</button><ol id="scenario-steps" class="steps"></ol></div>
-      <p id="guide-outcome" class="subtle" role="status" aria-live="polite" style="margin-top:14px"></p>
+      <div class="developer-header">
+        <div><h2 id="test-heading" tabindex="-1">Developer checks</h2><p>Try the demo’s approval rules with sample failures. These checks prove no real security.</p></div>
+        <div class="journey-buttons"><button type="button" id="test-return-review" aria-controls="review-view">Return to review</button></div>
+      </div>
+      <p class="scenario-warning" id="test-reset-warning"><strong>Starting or restarting a test replaces your sample choices, requests and approvals.</strong> Selecting a test only previews it. Returning to review keeps the current state.</p>
+      <div class="test-picker">
+        <div><label for="scenario-select">Choose a test</label><select id="scenario-select" aria-describedby="test-reset-warning scenario-description"></select></div>
+        <button type="button" id="start-scenario" class="primary" aria-describedby="test-reset-warning">Start test</button>
+      </div>
+      <div class="test-preview"><h3 id="scenario-preview-title">Test preview</h3><p id="scenario-description"></p><p><strong>Expected demo outcome:</strong> <span id="scenario-expected"></span></p></div>
+    </section>
+    <section id="scenario-panel" class="panel" aria-labelledby="scenario-title" hidden>
+      <h2 id="scenario-title" tabindex="-1">Active test</h2>
+      <div class="test-progress"><p id="scenario-progress"></p><button type="button" id="restart-scenario" aria-describedby="test-reset-warning">Restart active test</button></div>
+      <p id="scenario-interrupted" class="blocking-reason" hidden>Review or manual controls changed this test’s state. Restart the active test before continuing its guided steps.</p>
+      <div id="scenario-current" class="test-current">
+        <h3 id="current-test-heading" tabindex="-1"></h3><p id="scenario-next-expectation"></p>
+        <div class="journey-buttons"><button type="button" id="run-next-step" class="primary">Run next check</button></div>
+      </div>
+      <div id="scenario-result" class="test-result" hidden>
+        <h3 id="scenario-result-title"></h3>
+        <div class="test-observation-grid"><div><strong>Expected</strong><p id="scenario-result-expected"></p></div><div><strong>Observed</strong><p id="scenario-result-observed"></p></div></div>
+        <details><summary>Exact demo response</summary><pre id="scenario-result-detail"></pre></details>
+      </div>
+      <p id="guide-outcome" class="test-feedback" role="status" aria-live="polite" tabindex="-1"></p>
+      <details><summary>All steps and observed results</summary><ol id="scenario-steps" class="test-history"></ol></details>
     </section>
     <details id="advanced-controls" class="panel inspector">
-      <summary>Free play and fault controls</summary>
-      <p class="subtle" style="margin-top:12px">Try actions in any order, including blocked actions. Read the reason for each block. These controls prove no real trust or permission.</p>
+      <summary>Optional manual controls</summary>
+      <p class="subtle" style="margin-top:16px">These actions change the current sample state. They pause an active guided test. Restart it to run an unchanged sample.</p>
+      <p>Use these controls to explore refusals in any order. They prove no real trust, permission or task execution.</p>
+      <div id="manual-outcome" class="test-feedback" role="status" aria-live="polite" hidden></div>
       <div id="free-buttons"></div>
     </details>
     <details class="panel inspector">
-      <summary>Technical details: review records, choices and task starts</summary>
-      <dl id="record-state" style="margin-top:14px"></dl>
+      <summary>Technical details: review records, issue choices and task starts</summary>
+      <dl id="record-state" class="review-summary"></dl>
       <div class="table-scroll" tabindex="0" role="group" aria-label="Issue choices" data-rc-keyboard-scroll="horizontal"><table class="issue-table"><colgroup><col style="width:50%"><col style="width:25%"><col style="width:25%"></colgroup><thead><tr><th>Finding / technical status</th><th>Correction</th><th>Planning check</th></tr></thead><tbody id="findings-state"></tbody></table></div>
-      <h3 style="margin-top:18px">Task-start records</h3><div id="dispatch-state"></div>
+      <h3 style="margin-top:20px">Task-start records</h3><div id="dispatch-state"></div>
       <details><summary>Exact model review record</summary><pre id="record-json"></pre></details>
     </details>
     <details id="state-inspector" class="panel inspector">
       <summary>Full state and action history</summary>
-      <div id="state-cards" class="cards" style="margin-top:14px"></div>
-      <div class="columns" style="margin-top:14px"><div><h3>Inputs and review</h3><dl id="input-state"></dl></div><div><h3>Authority and task use</h3><dl id="authority-state"></dl></div></div>
-      <h3 style="margin-top:18px">Action history</h3><ol id="events" class="event-list"></ol>
+      <div id="state-cards" class="cards" style="margin-top:16px"></div>
+      <div class="columns" style="margin-top:20px"><div><h3>Inputs and review</h3><dl id="input-state" class="review-summary"></dl></div><div><h3>Authority and task use</h3><dl id="authority-state" class="review-summary"></dl></div></div>
+      <h3 style="margin-top:20px">Action history</h3><ol id="events" class="event-list"></ol>
       <details><summary>Every in-memory field</summary><pre id="full-state"></pre></details>
     </details>
   </div>
@@ -784,11 +840,11 @@ const ApprovalSimulation = (() => {
 <script id="approval-interface">
 const byId=id=>document.getElementById(id);
 const addText=(parent,tag,text,className)=>{const element=document.createElement(tag);element.textContent=text;if(tag==='button')element.type='button';if(className)element.className=className;parent.append(element);return element;};
-let state=ApprovalSimulation.initial(),selectedView='review',reviewScreen='start',reviewNotes={},selectedScenario=0,nextStep=0,remedyDraft={},choiceErrors={},choiceValidationShown=false;
-function fields(id,rows){const parent=byId(id);parent.replaceChildren();const summary=['snapshot-state','settings-state','evidence-state'].includes(id);rows.forEach(([label,value,meaning])=>{const row=summary?addText(parent,'div','','summary-row'):parent;addText(row,'dt',label);const dd=addText(row,'dd',summary?'':String(value));if(summary)addText(dd,'span',String(value));if(meaning)addText(dd,'p',meaning,'field-purpose');});}
+let state=ApprovalSimulation.initial(),selectedView='review',reviewScreen='start',reviewNotes={},selectedScenario=0,pendingScenario=0,scenarioStarted=false,nextStep=0,scenarioResults=[],manualResult=null,manualChanged=false,remedyDraft={},choiceErrors={},choiceValidationShown=false;
+function fields(id,rows){const parent=byId(id);parent.replaceChildren();const summary=['snapshot-state','settings-state','evidence-state','record-state','input-state','authority-state'].includes(id);rows.forEach(([label,value,meaning])=>{const row=summary?addText(parent,'div','','summary-row'):parent;addText(row,'dt',label);const dd=addText(row,'dd',summary?'':String(value));if(summary)addText(dd,'span',String(value));if(meaning)addText(dd,'p',meaning,'field-purpose');});}
 function preview(action){return ApprovalSimulation.reduce(state,action).last;}
-function apply(action){state=ApprovalSimulation.reduce(state,action);render();}
-function showView(view,focus=true){selectedView=view;byId('outcome').hidden=!state.events.length||(view!=='test'&&state.last.result!=='refused');['review','test','about'].forEach(area=>{byId(area+'-view').hidden=area!==view;});['review','about'].forEach(area=>byId(area+'-tab').setAttribute('aria-current',area===view||(area==='about'&&view==='test')?'page':'false'));byId('test-tab').setAttribute('aria-expanded',view==='test'?'true':'false');if(focus)byId(view==='review'?'review-heading':view+'-heading').focus();}
+function apply(action,guided=false){if(scenarioStarted&&!guided)manualChanged=true;state=ApprovalSimulation.reduce(state,action);render();}
+function showView(view,focus=true){selectedView=view;byId('outcome').hidden=view==='test'||!state.events.length||state.last.result!=='refused';['review','test','about'].forEach(area=>{byId(area+'-view').hidden=area!==view;});['review','about'].forEach(area=>byId(area+'-tab').setAttribute('aria-current',area===view||(area==='about'&&view==='test')?'page':'false'));byId('test-tab').setAttribute('aria-expanded',view==='test'?'true':'false');if(focus)byId(view==='review'?'review-heading':view+'-heading').focus();}
 function changeScreen(screen){reviewScreen=screen;render();byId('review-heading').focus();}
 function navigation(parent,label,id,handler,primary=false){const button=addText(parent,'button',label,primary?'primary':'');button.id=id;button.addEventListener('click',handler);return button;}
 function modelControl(parent,label,id,action,primary=false,after=null){const wrapper=addText(parent,'div',''),result=preview(action);const button=navigation(wrapper,label,id,()=>{apply(action);if(state.last.result!=='refused'&&after)after();else if(state.last.result==='refused')byId('outcome').focus();},primary);button.disabled=result.result==='refused';if(button.disabled){const reason=addText(wrapper,'p',result.message,'disabled-reason');reason.id=id+'-reason';button.setAttribute('aria-describedby',reason.id);}return button;}
@@ -817,13 +873,13 @@ function renderReview(shown,record){
  if(reviewScreen==='implementation-handoff'&&record){byId('review-heading').textContent='Give the implementation prompt to your coding session';addText(screen,'p','The next actor is your current Claude Code or Codex session. This prompt requests a separate implementation invocation after validation of actual approval.');addText(screen,'p','Preparing or copying this prompt starts no work. This demo review record is not valid real approval.','decision-status');packet(screen,'Separate implementation handoff prompt','implementation-prompt',implementationPrompt(record));navigation(byId('prompt-actions-implementation-prompt'),'Back to review record','handoff-back',()=>changeScreen('complete'));return;}
  byId('review-heading').textContent=record&&state.recordLifecycle[record.id]==='withdrawn'?'Approval withdrawn':'Plan approved in this demo';if(!record){addText(screen,'p','No review record exists. Start a fresh review.','blocking-reason');recovery(screen);return;}addText(screen,'p','Review record: '+record.id+'. Approved revision: '+record.snapshot.bundleRevision+'. Exact reference: '+record.snapshot.simulatedDigestLabel+'. Current status: '+state.recordLifecycle[record.id]+'.','receipt');addText(screen,'p','Both issues are fixed and planning-checked in the example. No runtime implementation test has passed. Approval started no work.');const permitted=preview({type:'ADMIT'});if(permitted.result==='refused'){addText(screen,'p',permitted.message,'blocking-reason');recovery(screen);}else navigation(screen,'Prepare implementation handoff','prepare-implementation-handoff',()=>changeScreen('implementation-handoff'),true);if(permitted.result!=='refused')modelControl(screen,'Start a new review','review-start-new',{type:'BEGIN_REVIEW'},false,freshReview);if(state.phase!=='cancelled')cancelControl(screen);
 }
-function render(){const current=ApprovalSimulation.snapshot(state.current),shown=state.review?state.review.snapshot:current,record=state.records.find(r=>r.id===state.activeRecordId);const outcome=byId('outcome');outcome.replaceChildren();outcome.hidden=!state.events.length||(selectedView!=='test'&&state.last.result!=='refused');outcome.tabIndex=-1;outcome.className='outcome'+(state.last.result==='refused'?' refused':'');addText(outcome,'strong',state.last.result==='refused'?'Action blocked':state.last.result==='modeled pass'?'Demo check passed':'Demo updated');addText(outcome,'div',state.last.message);renderReview(shown,record);
+function render(){const current=ApprovalSimulation.snapshot(state.current),shown=state.review?state.review.snapshot:current,record=state.records.find(r=>r.id===state.activeRecordId);const outcome=byId('outcome');outcome.replaceChildren();outcome.hidden=selectedView==='test'||!state.events.length||state.last.result!=='refused';outcome.tabIndex=-1;outcome.className='outcome'+(state.last.result==='refused'?' refused':'');addText(outcome,'strong',state.last.result==='refused'?'Action blocked':state.last.result==='modeled pass'?'Demo check passed':'Demo updated');addText(outcome,'div',state.last.message);renderReview(shown,record);
  byId('snapshot-note').textContent='Source inputs for '+shown.bundleRevision+'. Later changes do not rewrite this review. Version labels are simulated references, not cryptographic digests.';
  fields('snapshot-state',[['Repository',shown.repositoryIdentity],['Feature',shown.featureIdentity],['Plan version',shown.bundleRevision],['Source reference',shown.sourceReference],['Full version reference',shown.simulatedDigestLabel],['File list format',shown.schema],['Checking profile',shown.policyProfile]]);
  const manifest=byId('input-manifest');manifest.replaceChildren();shown.inputManifest.forEach(input=>{const row=addText(manifest,'tr','');[input.reference,input.simulatedDigestLabel,input.literalContent].forEach(v=>addText(row,'td',v));});
  fields('settings-state',[['Settings version',shown.effectiveSettings.revision,'Identifies the exact planning check settings.'],['Demo check command',shown.effectiveSettings.projectCommands.join(', '),'This names the simulated planning check. No command runs here.'],['Checks the plan requires',shown.effectiveSettings.verification,'These check plan declarations against ADR 0012. Runtime tests remain future work.'],['Work boundary',shown.effectiveSettings.executionBoundary,'Signing or account changes still need separate permission.']]);
  fields('evidence-state',[['Supporting information version',shown.reviewedEvidence.revision],['Supporting artifact list',shown.reviewedEvidence.artifactManifest,'A reference, not a passing test result.'],['Plan draft source',shown.reviewedEvidence.draftSource],['Decisions list reference',shown.reviewedEvidence.decisionsList],['Document consistency G01',shown.reviewedEvidence.blockedGateEvidence,'Issue: two independent lists. Its current planning check is '+shown.findings[0].checkStatus+'.'],['Resume history LC01',shown.reviewedEvidence.confidenceEvidence,'Issue: blocks and attempts would reset. Its current planning check is '+shown.findings[1].checkStatus+'.']]);byId('hostile-artifact').textContent=shown.reviewedEvidence.literalArtifact;byId('planning-report').textContent=JSON.stringify(shown.reviewedEvidence.checkReport,null,2);
- byId('guide-outcome').textContent='Exact model result: '+state.last.result+' — '+state.last.message;const cards=byId('state-cards');cards.replaceChildren();[['Review',state.phase],['Requests',state.requests.length],['Repairs / reports',state.repairs.length+' / '+state.checkReports.length],['Task starts',state.dispatches.length]].forEach(([label,v])=>{const c=addText(cards,'div','','card');addText(c,'span',label);addText(c,'strong',String(v));});fields('input-state',[['Current binding',current.simulatedDigestLabel],['Review binding',shown.simulatedDigestLabel],['Review number',state.review?state.review.epoch+' / '+state.currentReviewEpoch:'None'],['Current readiness',[...ApprovalSimulation.readinessProblems(current),...ApprovalSimulation.pendingRequestProblems(state)].join(' ')||'Zero unresolved findings'],['Active request',state.activeRequestId||'None'],['Active repair',state.activeRepairId||'None']]);fields('authority-state',[['Profile',ApprovalSimulation.profile],['Machine',state.machines[state.machine].label],['Trust / enrollment',state.machines[state.machine].issuerTrustModeled+' / '+state.machines[state.machine].enrollmentModeled],['Status available / authenticated',state.status.available+' / '+state.status.authenticationModeled],['Fresh observations',JSON.stringify(state.statusChecks)],['Admission',state.admission?state.admission.state:'None'],['Demo runner',state.runner?state.runner.phase:'None'],['Real execution / consent','None / none']]);fields('record-state',record?[['Record',record.id],['Schema / profile',record.schema+' / '+record.policyProfile],['Snapshot',record.snapshot.simulatedDigestLabel],['Linked repairs',record.linkedRepairRuns.join(', ')],['Lifecycle',state.recordLifecycle[record.id]],['Starts implement / protected consent','false / false']]:[['Record','None']]);const rows=byId('findings-state');rows.replaceChildren();shown.findings.forEach(f=>{const row=addText(rows,'tr','');[f.id+' — '+f.technicalStatus,f.fixStatus,f.checkStatus].forEach(v=>addText(row,'td',v));});const starts=byId('dispatch-state');starts.replaceChildren();if(!state.dispatches.length)addText(starts,'p','No demo task starts.');state.dispatches.forEach(r=>addText(starts,'p',r.task+' · '+r.recordId+' · '+r.machine+' · start only; real execution false'));byId('record-json').textContent=JSON.stringify(record||null,null,2);byId('full-state').textContent=JSON.stringify(state,null,2);const events=byId('events');events.replaceChildren();state.events.forEach(e=>addText(events,'li','#'+e.event+' '+e.action+' — '+e.result+' — '+e.message));renderScenario();}
+ const cards=byId('state-cards');cards.replaceChildren();[['Review',state.phase],['Requests',state.requests.length],['Repairs / reports',state.repairs.length+' / '+state.checkReports.length],['Task starts',state.dispatches.length]].forEach(([label,v])=>{const c=addText(cards,'div','','card');addText(c,'span',label);addText(c,'strong',String(v));});fields('input-state',[['Current binding',current.simulatedDigestLabel],['Review binding',shown.simulatedDigestLabel],['Review number',state.review?state.review.epoch+' / '+state.currentReviewEpoch:'None'],['Current readiness',[...ApprovalSimulation.readinessProblems(current),...ApprovalSimulation.pendingRequestProblems(state)].join(' ')||'Zero unresolved findings'],['Active request',state.activeRequestId||'None'],['Active repair',state.activeRepairId||'None']]);fields('authority-state',[['Profile',ApprovalSimulation.profile],['Machine',state.machines[state.machine].label],['Trust / enrollment',state.machines[state.machine].issuerTrustModeled+' / '+state.machines[state.machine].enrollmentModeled],['Status available / authenticated',state.status.available+' / '+state.status.authenticationModeled],['Fresh observations',JSON.stringify(state.statusChecks)],['Admission',state.admission?state.admission.state:'None'],['Demo runner',state.runner?state.runner.phase:'None'],['Real execution / consent','None / none']]);fields('record-state',record?[['Record',record.id],['Schema / profile',record.schema+' / '+record.policyProfile],['Snapshot',record.snapshot.simulatedDigestLabel],['Linked repairs',record.linkedRepairRuns.join(', ')],['Lifecycle',state.recordLifecycle[record.id]],['Starts implement / protected consent','false / false']]:[['Record','None']]);const rows=byId('findings-state');rows.replaceChildren();shown.findings.forEach(f=>{const row=addText(rows,'tr','');[f.id+' — '+f.technicalStatus,f.fixStatus,f.checkStatus].forEach(v=>addText(row,'td',v));});const starts=byId('dispatch-state');starts.replaceChildren();if(!state.dispatches.length)addText(starts,'p','No demo task starts.');state.dispatches.forEach(r=>addText(starts,'p',r.task+' · '+r.recordId+' · '+r.machine+' · start only; real execution false'));byId('record-json').textContent=JSON.stringify(record||null,null,2);byId('full-state').textContent=JSON.stringify(state,null,2);const events=byId('events');events.replaceChildren();state.events.forEach(e=>addText(events,'li','#'+e.event+' '+e.action+' — '+e.result+' — '+e.message));renderScenario();}
 const recommendedRemedies={G01:{id:'shared-record'},LC01:{id:'prepare-now'}};
 const step=(type,label,extra={})=>({action:{type,...(type==='REQUEST_CHANGES'?{remedies:recommendedRemedies}:{}),...extra},label});
 const repaired=()=>[step('BEGIN_REVIEW','Review the flawed example plan'),step('REQUEST_CHANGES','Prepare request for both findings'),step('RETURN_REPAIR','Load the changed example plan'),step('CHECK_REPAIR','Model planning consistency checks'),step('BEGIN_REVIEW','Freeze a fresh revised review'),step('CONFIRM','Explicitly approve the checked revision')];
@@ -845,9 +901,104 @@ const actions=[
  ['Input and evidence faults','Fabricated agent reply',{type:'AGENT_REPLY'}],['Input and evidence faults','Change plan',{type:'CHANGE_PLAN'}],['Input and evidence faults','Change settings',{type:'CHANGE_SETTINGS'}],['Input and evidence faults','Change evidence version',{type:'CHANGE_EVIDENCE'}],['Input and evidence faults','Alter selected policy',{type:'ALTER_POLICY'}],['Input and evidence faults','Concurrent review',{type:'CONCURRENT_REVIEW'}],['Input and evidence faults','Unknown exact plan',{type:'UNKNOWN_SNAPSHOT'}],['Input and evidence faults','Restore readable plan',{type:'KNOWN_SNAPSHOT'}],['Input and evidence faults','Unknown plan file',{type:'UNKNOWN_INVENTORY'}],['Input and evidence faults','Remove supporting evidence',{type:'MISSING_EVIDENCE'}],['Input and evidence faults','Restore supporting evidence',{type:'RESTORE_EVIDENCE'}],['Input and evidence faults','Remove private evidence',{type:'MISSING_PRIVATE'}],['Input and evidence faults','Restore private evidence flag',{type:'RESTORE_PRIVATE'}],['Input and evidence faults','Inject old approval profile',{type:'LEGACY_APPROVAL'}],
  ['Status and trust faults','Status outage',{type:'STATUS_OUTAGE'}],['Status and trust faults','Restore current status',{type:'STATUS_RESTORE'}],['Status and trust faults','Unauthenticated status',{type:'UNAUTHENTICATED_STATUS'}],['Status and trust faults','Revoke approval',{type:'REVOKE_RECORD'}],['Status and trust faults','Supersede approval',{type:'SUPERSEDE_RECORD'}],['Status and trust faults','Revoke reviewer credential',{type:'REVOKE_REVIEWER'}],['Status and trust faults','Select second machine',{type:'SECOND_MACHINE'}],['Status and trust faults','Model second-machine enrollment',{type:'MODEL_SECOND_ENROLLMENT'}],['Status and trust faults','Select first machine',{type:'FIRST_MACHINE'}],['Status and trust faults','Remove issuer trust',{type:'REMOVE_TRUST'}]
 ].map(([group,label,action])=>({group,label,action}));
-function renderScenario(){const scenario=scenarios[selectedScenario];byId('scenario-title').textContent=scenario.title;byId('scenario-description').textContent=scenario.description;const tabs=byId('scenario-tabs');tabs.replaceChildren();scenarios.forEach((item,i)=>{const b=addText(tabs,'button',item.title);b.id='tab-'+item.id;b.setAttribute('role','tab');b.setAttribute('aria-selected',String(i===selectedScenario));b.setAttribute('aria-controls','scenario-panel');b.addEventListener('click',()=>{selectedScenario=i;resetFixture();byId('scenario-title').tabIndex=-1;byId('scenario-title').focus();});});byId('scenario-panel').setAttribute('aria-labelledby','tab-'+scenario.id);const list=byId('scenario-steps');list.replaceChildren();scenario.steps.forEach((item,i)=>{const row=addText(list,'li','');const b=addText(row,'button',(i<nextStep?'Done · ':i+1+'. ')+item.label);b.disabled=i!==nextStep;b.addEventListener('click',()=>{nextStep=i+1;apply(item.action);});addText(row,'span','Action: '+item.action.type+' (demo only)');});}
-function resetFixture(){state=ApprovalSimulation.initial();reviewScreen='start';reviewNotes={};remedyDraft={};choiceErrors={};choiceValidationShown=false;nextStep=0;render();}
-function initializeInterface(){['review','test','about'].forEach(view=>byId(view+'-tab').addEventListener('click',()=>showView(view)));byId('test-return-review').addEventListener('click',()=>showView('review'));const parent=byId('free-buttons');[...new Set(actions.map(a=>a.group))].forEach(group=>{const section=addText(parent,'div','','action-group');addText(section,'h3',group);const buttons=addText(section,'div','','buttons');actions.filter(a=>a.group===group).forEach(item=>navigation(buttons,item.label,'free-'+actions.indexOf(item),()=>apply(item.action)));});navigation(parent,'Reset all demo state','lab-reset',resetFixture);byId('restart-scenario').addEventListener('click',resetFixture);render();showView('review',false);}
+// UI expectations are declared independently of reducer previews. They qualify no real security.
+const scenarioExpectations={
+ valid:{refusals:[],outcome:'Create one demo approval, then record T1 and T2 starts after fresh checks. No work runs.'},
+ findings:{refusals:[1,2,7],outcome:'Refuse approval while either issue lacks a correction or a matching planning check.'},
+ agent:{refusals:[1,2],outcome:'Refuse fabricated approval and approval without checked repairs.'},
+ drift:{refusals:[9],outcome:'Refuse T1 after the plan changes. Keep the original approval as history.'},
+ status:{refusals:[10],outcome:'Record one simulated T1 start. Refuse T2 when current status is unavailable.'},
+ machine:{refusals:[7],outcome:'Refuse admission without independent trust. Allow simulated starts after modeled enrollment.'},
+ replay:{refusals:[6,11,12],outcome:'Refuse duplicate approval, invocation and task starts. Create no duplicate records.'},
+ cancel:{refusals:[3,7],outcome:'Refuse stale or cancelled repair responses. Keep the original request history.'},
+ evidence:{refusals:[7,10],outcome:'Refuse admission with missing protected evidence or an earlier approval profile.'}
+};
+const actionExpectations={
+ BEGIN_REVIEW:'Record the current plan version for review. This creates no approval.',
+ REQUEST_CHANGES:'Prepare an unsent request for corrections. This changes no implementation.',
+ RETURN_REPAIR:'Load the simulated revised package that matches the current request.',
+ CHECK_REPAIR:'Record simulated planning checks. These are not runtime test results.',
+ CONFIRM:'Create one approval for the exact, fixed and planning-checked demo version. Start no work.',
+ START_IMPLEMENT:'Record a separate simulated invocation. No real task runs.',
+ RUNNER_STEP:'Recheck the bound approval and current status before admission or a simulated task start.',
+ SECOND_MACHINE:'Select the second demo machine. This establishes no real trust.',
+ MODEL_SECOND_ENROLLMENT:'Set the sample trust and enrollment flags. This qualifies no real authority.',
+ ADMIT:'Check the demo approval for admission. Start no task.',
+ CHANGE_PLAN:'Change the current sample plan without changing the earlier approval.',
+ STATUS_OUTAGE:'Make current status unavailable in the demo.',
+ CONCURRENT_REVIEW:'Change the review number so older responses are stale.',
+ CANCEL:'Cancel the request and withdraw any approval. Preserve history.',
+ MISSING_PRIVATE:'Mark required protected evidence unavailable.',
+ RESTORE_PRIVATE:'Restore only the sample evidence flag.',
+ LEGACY_APPROVAL:'Inject an earlier-profile sample record for the refusal check.'
+};
+function renderScenario(){
+ const pending=scenarios[pendingScenario];
+ byId('scenario-select').value=String(pendingScenario);
+ byId('scenario-preview-title').textContent=pending.title;
+ byId('scenario-description').textContent=pending.description;
+ byId('scenario-expected').textContent=scenarioExpectations[pending.id].outcome;
+ byId('scenario-panel').hidden=!scenarioStarted;
+ const manual=byId('manual-outcome');manual.hidden=!manualResult;
+ if(manualResult)manual.textContent='Last manual action: '+manualResult.label+'. '+(manualResult.result==='refused'?'The demo refused it. ':manualResult.result==='modeled pass'?'The demo allowed it. ':'The sample state changed. ')+manualResult.message;
+ if(!scenarioStarted)return;
+ const scenario=scenarios[selectedScenario],expectation=scenarioExpectations[scenario.id];
+ byId('scenario-title').textContent='Active test: '+scenario.title;
+ byId('scenario-progress').textContent=nextStep+' of '+scenario.steps.length+' steps completed';
+ byId('scenario-interrupted').hidden=!manualChanged;
+ byId('scenario-current').hidden=nextStep===scenario.steps.length;
+ byId('run-next-step').disabled=manualChanged||nextStep===scenario.steps.length;
+ if(nextStep<scenario.steps.length){
+  const item=scenario.steps[nextStep],refusal=expectation.refusals.includes(nextStep);
+  byId('current-test-heading').textContent='Step '+(nextStep+1)+': '+item.label;
+  byId('scenario-next-expectation').textContent=refusal?'Expected: the demo refuses this action. '+expectation.outcome:'Expected: '+actionExpectations[item.action.type];
+ }
+ const last=scenarioResults.at(-1),result=byId('scenario-result');result.hidden=!last;
+ if(last){
+  result.className='test-result'+(last.matched?'':' mismatch');
+  byId('scenario-result-title').textContent='Last check: step '+scenarioResults.length+' — '+scenario.steps[scenarioResults.length-1].label;
+  byId('scenario-result-expected').textContent=last.expectedRefusal?'The demo refuses this action.':'The demo allows this action or updates its sample state.';
+  byId('scenario-result-observed').textContent=(last.result==='refused'?'The demo refused it. ':last.result==='modeled pass'?'The demo allowed it. ':last.result==='changed'?'The sample state changed. ':'Unknown demo result. ')+(last.matched?'This matches the declared sample expectation.':'This differs from the declared sample expectation.');
+  byId('scenario-result-detail').textContent=last.result+' — '+last.message;
+ }
+ const unexpected=scenarioResults.filter(r=>!r.matched).length;
+ byId('guide-outcome').textContent=manualChanged?'Guided test paused. Other controls changed the sample. Restart this test to continue.':unexpected?'Observed results differ from the declared sample expectations. Inspect the results before continuing.':nextStep===scenario.steps.length?'Completed: all declared demo outcomes were observed. This does not qualify real approval or security.':last?'The last result matches the sample expectation. Run the next check when ready.':'Test started. Run each check to see the demo response. Nothing runs outside this page.';
+ const list=byId('scenario-steps');list.replaceChildren();
+ scenario.steps.forEach((item,i)=>{
+  const row=addText(list,'li','','test-step'),heading=addText(row,'div','','test-step-heading');
+  addText(heading,'h4','Step '+(i+1)+': '+item.label);
+  addText(heading,'span',i<nextStep?'Completed':i===nextStep?(manualChanged?'Paused':'Current'):'Waiting','pill');
+  if(i===nextStep&&!manualChanged)row.setAttribute('aria-current','step');
+  const refusal=expectation.refusals.includes(i);addText(row,'p','Expected: '+(refusal?'Refusal.':'Allowed action or sample update.'));
+  if(scenarioResults[i])addText(row,'p','Observed: '+scenarioResults[i].result+'. '+(scenarioResults[i].matched?'Matches sample expectation.':'Differs from sample expectation.'));
+  const exact=addText(row,'details','');addText(exact,'summary','Technical action and response');addText(exact,'pre',JSON.stringify(item.action,null,2)+(scenarioResults[i]?'\n'+scenarioResults[i].message:''));
+ });
+}
+function startScenario(index=pendingScenario){
+ selectedScenario=index;pendingScenario=index;resetFixture();scenarioStarted=true;renderScenario();byId('current-test-heading').focus();
+}
+function runScenarioStep(){
+ if(!scenarioStarted||manualChanged||nextStep>=scenarios[selectedScenario].steps.length)return;
+ const scenario=scenarios[selectedScenario],expectedRefusal=scenarioExpectations[scenario.id].refusals.includes(nextStep);
+ apply(scenario.steps[nextStep].action,true);
+ const result=state.last.result,matched=expectedRefusal?result==='refused':['modeled pass','changed'].includes(result);
+ scenarioResults.push({expectedRefusal,result,message:state.last.message,matched});nextStep++;renderScenario();
+ byId(nextStep===scenario.steps.length?'guide-outcome':'current-test-heading').focus();
+}
+function resetFixture(){state=ApprovalSimulation.initial();reviewScreen='start';reviewNotes={};remedyDraft={};choiceErrors={};choiceValidationShown=false;scenarioStarted=false;nextStep=0;scenarioResults=[];manualResult=null;manualChanged=false;render();}
+function initializeInterface(){
+ ['review','test','about'].forEach(view=>byId(view+'-tab').addEventListener('click',()=>showView(view)));
+ byId('test-return-review').addEventListener('click',()=>showView('review'));
+ const select=byId('scenario-select');scenarios.forEach((item,i)=>{const option=addText(select,'option',item.title);option.value=String(i);});
+ select.addEventListener('change',()=>{pendingScenario=Number(select.value);renderScenario();});
+ byId('start-scenario').addEventListener('click',()=>startScenario());
+ byId('restart-scenario').addEventListener('click',()=>startScenario(selectedScenario));
+ byId('run-next-step').addEventListener('click',runScenarioStep);
+ const parent=byId('free-buttons');
+ [...new Set(actions.map(a=>a.group))].forEach(group=>{const section=addText(parent,'div','','action-group');addText(section,'h3',group);const buttons=addText(section,'div','','buttons');actions.filter(a=>a.group===group).forEach(item=>navigation(buttons,item.label,'free-'+actions.indexOf(item),()=>{apply(item.action);manualResult={label:item.label,...state.last};renderScenario();}));});
+ const reset=addText(parent,'div','','manual-reset');addText(reset,'p','Resetting removes all sample choices, requests, approvals and guided progress. It changes no real project.','subtle');
+ navigation(reset,'Reset all demo state','lab-reset',resetFixture);render();showView('review',false);
+}
 initializeInterface();
 </script>
 </body>
