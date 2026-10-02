@@ -8,7 +8,7 @@ Parity means the same outcomes and the same run experience on both hosts. From t
 
 The gate tests each host's latest stable release at release time. The canary receipt records both host versions, and the plugin docs state them as the tested floor. A later host release that breaks the plugin is caught by the next canary run.
 
-The gate covers every speckit-pro release, with no hotfix bypass. It starts with the first release after the canary exists. Health-fix releases before that ship as today.
+The gate covers every speckit-pro release, with no hotfix bypass. Canary commit statuses post on every release PR from the moment the canary exists. Branch protection starts requiring them at the first fully green canary run (all variants, both hosts), and from then on every release needs green. Releases before that first green run, including the health program's early phase releases, ship with the statuses visible but not required. (Amended 2026-10-02: a red baseline cannot block the health releases that turn it green.)
 
 ## Considered Options
 

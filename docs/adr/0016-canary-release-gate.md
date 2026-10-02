@@ -21,7 +21,7 @@ The fixture is a small Python CLI (standard library plus pytest) at a pinned tag
 Each run takes the full user path: scaffold from an answers file, planning, plan review, and implement as a separate invocation.
 
 - **Answers file.** Scaffold gains a public answers-file flag. Every interview question must be answered in the file. A missing or unknown answer fails scaffold; it never asks. The canary's file pre-answers the quality-gate confirmation (ADR 0007) and declines formal methods and verification Docker after the offer (ADR 0005).
-- **Plan review.** A scripted reviewer drives `speckit-plan-review`, and a canary-only test issuer signs the plan approval record. That issuer is trusted only inside the canary's isolated host homes, and every production verifier rejects it. The canary proves the approval flow and record handling, never the real authority; [Plan approval authority: resolve protection and qualification under one macOS login](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1037) owns that proof (ADR 0015).
+- **Plan review.** A scripted reviewer drives `speckit-plan-review`, and the plan approval record is marked canary-issued by a canary-only test issuer (a recorded approval under ADR 0017; nothing is signed). That issuer is trusted only inside the canary's isolated host homes, and every production verifier rejects it. The canary proves the approval flow and record handling, never the real authority; [Plan approval authority: resolve protection and qualification under one macOS login](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1037) owns that proof (ADR 0015).
 
 All five variants gate every release:
 
