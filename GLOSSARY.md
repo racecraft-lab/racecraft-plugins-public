@@ -23,6 +23,10 @@ A coding-agent product that runs the plugin: Claude Code or Codex.
 The rule that a run gives the same outcomes and the same run experience (prompts, progress block, stop points) on every host. Only one-time host setup may differ. A release needs a green canary on both hosts.
 _Avoid_: cross-platform support, Codex support
 
+**Plan approval record**:
+The record of a human's explicit approval of one full planning revision after a review interview, including separate acceptance of any remaining planning gaps. It permits that revision to be built but supplies neither security consent nor proof that blocked work is complete.
+_Avoid_: artifact sign-off, planning complete, implementation permission
+
 **Progress block**:
 The fixed summary of an autopilot run's phases and tasks that the runner renders from autopilot state at every phase transition. It is the only place a run shows its progress.
 _Avoid_: task list, todo list, checklist
