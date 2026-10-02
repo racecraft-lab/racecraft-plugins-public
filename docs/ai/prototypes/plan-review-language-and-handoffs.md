@@ -1,5 +1,7 @@
 # Review language and next steps
 
+The [operator domain model](plan-review-domain-model.md) supersedes this proposal's residual-acceptance path. The human now requires all findings fixed and checked, bounded planning repairs, comparison of corrections and results, and copyable prompts for both handoffs. Earlier observations remain checkpoint evidence.
+
 ## Question and evidence
 
 Can a reviewer understand each choice and move from the review to changes or implementation without learning the internal approval terminology?

@@ -2,6 +2,8 @@
 
 Date: 2026-10-02. Status: implemented prototype proposal; human evaluation pending.
 
+The operator's later evaluation found that the simulation lacked meaningful repairs and that Implementation and Scenarios were unclear. The [operator domain model](plan-review-domain-model.md) now supersedes this revision's unresolved-finding acceptance journey and peer-area navigation. The observations below describe the earlier checkpoint, not acceptance of that design.
+
 This proposal responds to the reviewer's difficulty understanding what to do in the prototype. It applies the [primary-source research](../research/plan-review-information-architecture.md) to the [interactive review prototype](plan-approval-authority-prototype.html), preserving the existing artifact library's canonical brand and the approval model.
 
 ## Actor and goal
