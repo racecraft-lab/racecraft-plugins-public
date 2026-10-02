@@ -15,11 +15,11 @@ The operator wants a plan with its issues corrected and checked so implementatio
 
 The copy-and-paste instruction supersedes the earlier answers that suggested direct agent return or an implementation launch from this interface. Those answers described the desired outcome; the operator subsequently clarified the transport.
 
-The second decision is stricter than [ADR 0013](../../adr/0013-plan-approval-record.md), which permits explicit acceptance of remaining gaps. This prototype proposal records the new human requirement; the accepted ADR and shipped plugin have not been changed. Their policy must be reconciled before implementation.
+The second decision supersedes the earlier residual-gap acceptance option. [ADR 0013](../../adr/0013-plan-approval-record.md), ADR 0015 and the glossary now record the owner's all-findings-fixed-and-checked requirement and one final approval. Shipped plugin behavior is unchanged; the protected authority and runner must implement and qualify this intended contract separately.
 
 ## Simple issue-to-handoff refinement
 
-The operator requires the main experience to make each issue, its impact and its possible remedies clear immediately. Two compact issue cards are the working surface. Each contains a short problem statement, a short impact statement, a recommended remedy, a meaningful alternative and **Write my own instructions**. Plan context and exact source remain optional details.
+The operator requires the main experience to make each issue, its impact and its possible remedies clear immediately. One compact card per issue is the working surface. Each contains a short problem statement, a short impact statement, a recommended remedy, a meaningful alternative and **Write my own instructions**. Plan context and exact source remain optional details. The default example has three distinct issues; About offers an explicit ten-issue reset. Selecting an example size alone preserves the current review.
 
 The operator explicitly chooses a remedy for each issue. A recommendation is not selected automatically. One **Build handoff prompt** action validates the choices, retains them for editing and constructs the exact unsent request. Missing choices and empty custom instructions produce direct errors without losing other answers. Choosing a radio option neither navigates nor changes technical issue status.
 
@@ -27,10 +27,13 @@ The operator explicitly chooses a remedy for each issue. A recommendation is not
 | --- | --- | --- | --- |
 | The two review documents can disagree | Feed both documents the same snapshot of the shared task list. | Generate one immutable report from that shared list and feed both documents the report. | One runner-owned authority, the same source revision, all entries/status/evidence/order/counts and no independent edits. |
 | Resume would erase stopped-work history | Keep history and prepare an inert linked repair-request draft at handoff. | Keep history and prepare that draft only when the reviewer requests repair. | Original blocks, attempts and evidence; no automatic retry; a new linked repair run still needs explicit authorization. |
+| A skipped task borrows attempts | Record zero attempts and root-blocker links on the skipped task. | Link a separate typed skip record with zero attempts and all root links. | A task that never ran records no attempt; the actual root failure history remains intact. |
 
 The second issue's alternatives change when repair instructions are prepared. They do not offer permission to discard history. The first issue's report is a derived view, not another authoritative task list. These alternatives are design proposals consistent with ADR 0012, not additional accepted repository decisions.
 
 The request stores the selected remedy and its exact instructions. The example revised plan, affected tasks/contracts and planning report must distinguish the built-in options. A custom request remains **Not checked** until an actual response and matching checks address it. Matching a custom sentence to a catalog phrase cannot turn it into verified evidence. A copied prompt cannot supply protected plan approval or start implementation.
+
+An earlier custom instruction can be withdrawn only through a separate explicit action that shows its exact text and identifies its request and finding. Withdrawal preserves the request and records the disposition. It removes only that instruction from the active queue, keeps the finding required and its technical status unchanged, and invalidates earlier checks. A fresh replacement request, correction and matching checks are still required. Choosing an offered remedy alone does not silently withdraw the earlier instruction.
 
 Native radio groups, associated labels, simple conditional text areas, actionable errors, visible focus and large clickable labels support keyboard and assistive-technology use. Browser verification checks these behaviors and narrow layout. It does not establish complete WCAG or screen-reader conformance.
 
@@ -92,7 +95,7 @@ These examples use real repository decisions. Their flawed first plans, agent re
 
 The second example offers two concrete planning defects that can both be corrected, matching the operator's new requirement. The first combines a required correction with a disclosure of an unavoidable tradeoff.
 
-The second example is selected for the revised prototype. The initial plan, two defects, repair output and check reports remain fictional examples grounded in ADR 0012.
+The blocked-work example is selected for the revised prototype. It now includes ten distinct fictional defects grounded in ADR 0012: conflicting document lists, erased resume history, borrowed skip attempts, runnable indirect dependents, invented gate ownership, false completion markers, duplicate blocked counts, unsupported evidence passes, discarded safe partial work and false completion at handoff. The initial plan, repairs and check reports remain simulated rather than observed repository defects or runtime results.
 
 ## Interface research applied
 
@@ -113,10 +116,12 @@ Those sources inform presentation. They do not decide this repository's readines
 
 ## Verification and remaining decisions
 
-The revised HTML implements this model with two fictional plan defects grounded in ADR 0012, changed revised inputs and explicit simulated planning results. The main form immediately presents two issues and their choices. Browser checks cover native radio navigation, custom-text focus and retention, actionable errors, read-only prompts, exact clipboard copies, alternative-specific revisions, further choices and refusal of unchecked custom requests. Both themes and a narrow layout were inspected. The model/DOM smoke covers all four built-in combinations, nine safeguard cases and 45 controls. Independent audit verifies pending requests block approval and task use, omitted remedies cannot reuse earlier checks, retained choices are not silently replaced and superseded runners remain blocked. These observations provide local interface evidence for human evaluation. They do not qualify protected signing, full accessibility conformance or the shipped runner.
+The revised HTML uses per-issue definitions for presentation, remedy instructions, returned corrections and matching planning checks. The frozen required inventory is independent of supplied findings and results. Missing, duplicate and unknown IDs cannot omit an issue or borrow another issue's result. Model/DOM checks cover zero, one, three and ten findings, all twenty built-in strategies, each custom remedy remaining unchecked, exact prompt coverage, retained drafts and complete three- and ten-issue flows. Each larger fixture also exercises the nine safeguard cases and 45 manual controls. Independent audit verifies inventory completeness, third-issue refusals at approval/admission/dispatch, pending requests and superseded runners. Browser verification and the closeout record distinguish observed interface behavior from simulated planning results. These observations do not qualify protected signing, full accessibility conformance or the shipped runner.
 
-Human acceptance of the review experience is pending. Reconcile the all-findings-fixed requirement with ADR 0013 before shipped implementation. Real revised-package import, actual agent responses/check evidence, protected review/signing/enrollment and current authority enforcement remain separate implementation and qualification work.
+The Browser also verifies the ten-issue custom-instruction withdrawal and fresh-review cycle, exact three-issue clipboard content, spaced handoff actions, both themes and narrow layout. Missing-choice links have solid padded hit areas; keyboard and pointer activation focus the relevant choice below the measured sticky header. The [evidence record](plan-approval-authority-evidence.md#more-than-two-findings-and-closeout-preparation) records the limits and the exact captured HTML digest.
 
-The current fixture supports exactly two findings. Arbitrary issue counts are not implemented or tested. A future dynamic list must preserve each choice, include every requested fix in one handoff and block approval until every finding is fixed and checked.
+The user expressed positive feedback on the review experience, conditional on support for more than two issues, and authorized that iteration. Final feedback on the generalized interface remains pending human review. Real revised-package import, actual agent responses/check evidence, protected review/signing/enrollment and current authority enforcement remain separate implementation and qualification work.
+
+The interface has no two-issue special case. It renders the frozen finding list, preserves each choice, includes every requested fix in one handoff and blocks approval until every finding is fixed and checked. The public examples supply three and ten registered issue definitions. A real finding import and its authoritative inventory contract remain future work; the demo does not accept arbitrary agent-written issue records as approval evidence.
 
 This document is a proposal. It supplies no real agent messaging, approval authority, signing, enrollment or implementation execution.
