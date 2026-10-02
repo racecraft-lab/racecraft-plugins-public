@@ -4,6 +4,10 @@ The language of the speckit-pro plugin's workflow: how a SPEC is scaffolded, pla
 
 ## Language
 
+**Acceptance run**:
+One real SPEC taken end to end by speckit-pro on each host, from the same starting point and the same scaffold answers, then accepted by a human in UAT. It proves the plugin carries real work, where the canary proves it on a fixed fixture.
+_Avoid_: pilot run, evidence run, canary
+
 **Answers file**:
 A file holding every scaffold interview answer in advance, so scaffold runs without asking. A missing or unknown answer fails scaffold rather than turning into a question.
 _Avoid_: pre-answered interview, scaffold script
