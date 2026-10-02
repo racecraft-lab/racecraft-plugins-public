@@ -39,7 +39,7 @@ Reviewer identity mapping, trusted bootstrap, enrollment, rotation, revocation, 
 
 ## Named unresolved gate: local plan-approval qualification
 
-[Prototype: qualify the local plan-approval authority](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1034) owns the signer and reviewer choices and proof of the selected boundary. Before the health-program spec claims feasibility, a bounded prototype must establish:
+[Plan approval authority: resolve protection and qualification under one macOS login](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1037) owns the remaining profile choices and proof of the selected boundary. The preceding prototype resolved the operator workflow through its capability-gap route; it qualified no protected capture or enforcement property. Before the health-program spec claims feasibility, a bounded prototype must establish:
 
 1. A deployment/enforcement design on macOS that protects the entire boundary from the agent's allowed shell and filesystem powers, plus exact supported tools, versions and capture modes. The prototype stays outside the shipped plugin.
 2. Human-controlled enrollment and recovery, verifiable per-approval interaction, explicit signature-policy enforcement and an interoperable signed encoding. Unknown assurance or missing trust evidence refuses approval.

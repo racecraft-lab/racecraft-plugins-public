@@ -1,8 +1,8 @@
-# Plan-approval prototype: closeout draft
+# Plan-approval prototype: approved closeout package
 
-Status: the operator accepted the expanded prototype and explicitly approved this public closeout package on 2026-10-02. Publication and successor wiring are being completed. The earlier automatic approval rejection was resolved by this explicit authorization.
+Status: the operator accepted the expanded prototype and explicitly approved this public closeout package on 2026-10-02. The workflow assets are published. [Plan approval authority: resolve protection and qualification under one macOS login](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1037) is an open map child and a native completion blocker. The earlier automatic approval rejection was resolved by this explicit authorization.
 
-## Proposed resolution of the prototype ticket
+## Accepted resolution of the prototype ticket
 
 Resolve [Prototype: qualify the local plan-approval authority](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1034) through its **precise capability gap and successor decision** route, not as a qualified capture or enforcement profile.
 
@@ -28,7 +28,7 @@ Prototype and verification assets:
 
 The intended ADR 0013 and ADR 0015 contracts and glossary are amended on the planning branch to replace residual-risk acceptance with complete finding/remedy/correction/check binding and one final approval. Shipped runtime behavior is unchanged.
 
-## Publication sequence after acceptance
+## Authorized closeout operations
 
 1. Publish the captured prototype/evidence branch and the planning-record amendments.
 2. Create the successor decision below as an open child of [Wayfinder: speckit-pro health program](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1006). Add it as a native blocker of [Definition of done: confirm and complete](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1029) before closing the old prototype gate.
@@ -37,7 +37,9 @@ The intended ADR 0013 and ADR 0015 contracts and glossary are amended on the pla
 
 No protected authority property becomes qualified through this sequence. Health-program feasibility and completion remain gated by the successor. No keys, signing, authentication, enrollment, service installation, status transport or private-data scope is authorized.
 
-## Successor issue draft
+## Successor decision
+
+Created as [Plan approval authority: resolve protection and qualification under one macOS login](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1037). Its question and required evidence are recorded below; resolving the workflow prototype does not resolve this gate.
 
 Title: **Plan approval authority: resolve protection and qualification under one macOS login**
 
