@@ -51,6 +51,10 @@ _Avoid_: corrective budget, corrective cycle, replan epoch, escalation tier
 An advisory assessment of how much work a SPEC or one of its declared slices asks a human to review. It includes the size evidence and any unresolved uncertainty.
 _Avoid_: reviewability block, size gate
 
+**Security block**:
+A blocked-for-UAT condition when no safe authorized alternative can satisfy work requiring a security action that cannot proceed. It defers affected work without pausing implement for consent.
+_Avoid_: security interrupt during implement, consent retry, permission bypass
+
 **Security interrupt**:
 A planning-only pause for explicit consent to one necessary, otherwise permitted security action that has no safe authorized alternative. Refusal defers the affected work while independent safe work continues.
 _Avoid_: security approval, permission override, setup question

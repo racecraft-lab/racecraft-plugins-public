@@ -17,7 +17,7 @@ The blocked-work record contains typed entries for tasks and gates, linked to th
 | A failing check exhausts its three attempts | Its owning tasks become blocked-for-UAT, linked to the check's fingerprint and attempt evidence (ADR 0004). |
 | A task depends on blocked work | Skip it and mark it blocked-for-UAT without an attempt; link to its root blocker. Apply this to transitive dependents. |
 | A failing check has no owning task | Mark its gate blocked; do not invent a task owner or mark unrelated completed tasks blocked. |
-| Security or consent prevents work | Record the affected work as blocked-for-UAT with its security evidence and any dependent blocks. Classification and skip mechanics remain with ADR 0011 and the security-item-during-implement ticket. |
+| Security or consent prevents work | Record the affected work as blocked-for-UAT with its security evidence and any dependent blocks. [ADR 0011](0011-security-interrupt.md) owns classification; [ADR 0014](0014-security-items-during-implement.md) owns skip mechanics. |
 
 Every entry carries:
 

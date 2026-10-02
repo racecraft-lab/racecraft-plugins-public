@@ -65,7 +65,7 @@ Missing or failed evidence is a failing check on ADR 0004's retry ladder. Keep a
 - A refusal defers the affected work, records the refusal, and continues independent safe work. Do not retry the same consent request automatically.
 - An unanswered interactive request remains paused. There is no implicit-consent timeout; elapsed time is neither approval nor refusal.
 - If the host cannot collect a reply, including headless modes that reject question tools, planning defers the affected work and continues safely. It never fabricates a reply or claims an interrupt was presented.
-- Implement never issues a question permit or pauses for this consent. Missing consent makes affected work blocked-for-UAT; independent work continues. Dependency and handoff mechanics remain with [Security item during implement: skip-and-list mechanics](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1024) and [Blocked-for-UAT in the ledger, PR body and UAT runbook](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1023).
+- Implement never issues a question permit or pauses for this consent. Missing consent makes affected work blocked-for-UAT; independent work continues. [ADR 0014](0014-security-items-during-implement.md) defines immediate skip and dependency mechanics; [ADR 0012](0012-blocked-for-uat.md) owns the evidence, resume and handoff contract.
 
 ## Required parity evidence
 
