@@ -8,6 +8,8 @@ Decision: [Plan approval record](https://github.com/racecraft-lab/racecraft-plug
 
 Every plan gets a human review interview through a new `speckit-plan-review` skill after planning has produced its HTML artifacts and draft PR. The interview works through gaps and requested changes before the human explicitly approves the final planning revision. Approval is recorded by the runner and permits that revision to be built; implementation starts only on a separate human invocation.
 
+[ADR 0015](0015-local-plan-approval-authority.md) selects the protected local capture and enforcement boundary. Its signer, reviewer-enrollment profile and controlled host qualification remain behind [Prototype: qualify the local plan-approval authority](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1034); no approval capture profile is qualified by these planning decisions.
+
 ## Review before approval
 
 The interview is a separate, explicitly human-invoked workflow between the autonomous planning and implement runs. It uses grilling and domain-modeling to check the human's understanding, examine the decisions list, and work through every blocked planning gate and strict low-confidence finding. It runs even when planning reported no gaps. The owner requested this additional interactive skill; it is an explicit exception to the map's original scaffold-only heavy-interaction rule, outside unattended autopilot. It introduces no general question path inside autopilot and does not make unattended planning wait for plan approval.
