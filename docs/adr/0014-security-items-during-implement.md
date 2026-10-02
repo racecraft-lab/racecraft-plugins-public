@@ -32,6 +32,12 @@ Cancellation is not proof that an in-flight action stopped. Reconcile outcomes u
 
 Independent work continues only while its safety remains enforceable. An actual harm halt stops all dispatch and outward writes under ADR 0010, regardless of the narrower task block. Missing cancellation support or evidence is not a cancellation pass; hold work whose safety or independence cannot be established and handle its failing evidence or capability check through the existing ladder.
 
+## Late discovery after completion
+
+If a later check invalidates a completed task's required security evidence without triggering a registered harm halt, immediately append status corrections that mark the affected task, its inseparable completion unit and its direct/transitive dependents blocked-for-UAT, even when they were previously marked complete. Preserve the original completion observations and real attempt history; link each correction to the finding and its security root. Restore affected completion markers to unchecked and update current counts and review artifacts from the canonical record.
+
+Do not revalidate affected completed dependents within the same run as an alternative to blocking them. Ordinary resume preserves the corrected blocks; repair needs ADR 0012's explicitly authorized linked new run and applicable plan/security authority. Keep known safe code and valid unrelated completion evidence. A confirmed harm halt still takes precedence under ADR 0010.
+
 ## Evidence and human handoff
 
 [ADR 0012](0012-blocked-for-uat.md) remains the sole owner of blocked-work storage, status, resume and rendering. Extend its canonical record with references to the denied action scope, security classification, missing authority or guard/check evidence, affected task/unit/gate, dependency paths to each root, and any dispatch/cancellation/outcome evidence. Retain safe partial work, unfinished requirements, failed or unrun verification, and the exact prerequisite and verification needed for repair. Store cause evidence once, link affected entries, redact public evidence, and never fabricate a denied action's result or attempt.
@@ -49,7 +55,8 @@ Deterministic runner tests and real host-path tests on Claude Code and Codex mus
 3. Dependency chains, diamonds and multiple security roots preserve all root links and count each task once. Ownerless gates stay distinct, and no valid unrelated completion is rewritten as blocked.
 4. Missing or stale ownership, dependency, classification or guard evidence cannot authorize dispatch. Its check uses the fixed ladder while verified independent work continues; no repair attempt performs the denied action or changes approval scope.
 5. A block discovered after dispatch prevents further affected work. Cancellation records distinguish requested, observed and unavailable outcomes; unknown actions are not replayed, and an actual harm halt stops the whole run.
-6. Canonical security evidence, absence of fabricated attempts, retained partial work, persistent resume blocks, rendering order and linked repair-run history satisfy ADR 0012 on both hosts.
+6. A security finding after completion produces traceable corrections for the root, inseparable units and completed dependency chains or diamonds. Original observations and attempts remain intact, affected completion claims disappear from current PR/UAT counts, unrelated completion remains, and ordinary resume does not redispatch corrected blocks.
+7. Canonical security evidence, absence of fabricated attempts, retained partial work, persistent resume blocks, rendering order and linked repair-run history satisfy ADR 0012 on both hosts.
 
 These requirements feed [Canary: fixture, variants, receipt, budget, release gate](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1028). They do not resolve its fixture or harness design. A security block alone is not an unregistered stop; missing enforcement or other failed checks cannot be reported green.
 
@@ -57,4 +64,4 @@ These requirements feed [Canary: fixture, variants, receipt, budget, release gat
 
 The inspected runtime accepts only `complete` or `unfinished` task results and requires one TDD unit to have a consistent result/evidence set (`speckit-pro/speckit_pro_runner/task_results.py:148`, `:156`). `sidecar_dependencies` reads declared task dependencies (`speckit-pro/speckit_pro_runner/task_execution.py:348`); `make_batches` groups units into worker batches (`:205`), while `batch_waves` co-schedules proven-independent batches (`:249`). These owners provide existing unit/dependency evidence but do not implement the new security-block status and propagation described here. No live worker cancellation or security-block run was tested, and the entire dispatch path was not audited.
 
-The owner chose immediate task blocking over continuing safe parts within it, preserving inseparable completion units over introducing partial unit completion, stopping affected work over cancelling every worker in a wave, and holding uncertain work over immediately blocking all remaining work. These choices preserve honest completion evidence and authority while allowing verified independent progress.
+The owner chose immediate task blocking over continuing safe parts within it, preserving inseparable completion units over introducing partial unit completion, stopping affected work over cancelling every worker in a wave, and holding uncertain work over immediately blocking all remaining work. Follow-up grilling chose immediate corrections for affected completed dependents over revalidation within the same run, preserving the original history. These choices preserve honest completion evidence and authority while allowing verified independent progress.
