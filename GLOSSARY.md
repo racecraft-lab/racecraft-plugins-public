@@ -19,6 +19,10 @@ _Avoid_: task list, todo list, checklist
 The repository's user-confirmed limits that the complexity, mutation and dependency-rule checks judge changed code against, with the checks it skips or opts into. Only a user's confirmation makes them; an agent never sets them alone.
 _Avoid_: gate config, quality settings
 
+**Readiness record**:
+Scaffold's snapshot of a project's preparation for a particular host. Autopilot reads that snapshot; new run observations belong to the decisions list and run state.
+_Avoid_: preflight approval, readiness certificate
+
 **Retry ladder**:
 The fixed sequence of three repair attempts a failing check gets in an autopilot run, each with a stronger agent, before the work it covers is marked blocked. It is the only way a run responds to a failure; a check's count never resets within the run.
 _Avoid_: corrective budget, corrective cycle, replan epoch, escalation tier
