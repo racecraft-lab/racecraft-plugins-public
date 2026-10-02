@@ -18,3 +18,7 @@ _Avoid_: task list, todo list, checklist
 **Retry ladder**:
 The fixed sequence of three repair attempts a failing check gets in an autopilot run, each with a stronger agent, before the work it covers is marked blocked. It is the only way a run responds to a failure; a check's count never resets within the run.
 _Avoid_: corrective budget, corrective cycle, replan epoch, escalation tier
+
+**Reviewability report**:
+An advisory assessment of how much work a SPEC or one of its declared slices asks a human to review. It includes the size evidence and any unresolved uncertainty.
+_Avoid_: reviewability block, size gate
