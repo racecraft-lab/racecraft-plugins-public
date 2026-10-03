@@ -4668,6 +4668,62 @@ def receipt():
 class CanaryReceiptTests(unittest.TestCase):
     def setUp(self):
         self.validator = load_script("canary_receipt", REPO_ROOT / "tests/speckit-pro/layer6-integration/validate-canary-receipt.py")
+
+
+    def test_accepts_a_well_formed_local_receipt_for_each_host(self):
+        for host in ("claude-code", "codex"):
+            value = receipt()
+            value["host"] = host
+            if host == "claude-code":
+                value["install_probe"] = {"loaded_plugins": ["speckit-pro@1.0.0"], "evidence": "init.json"}
+            self.assertEqual([], self.validator.validate_receipt(value))
+
+
+    def test_rejects_questions_nonterminal_plan_missing_runbook_and_unregistered_stop(self):
+        for key, bad in (("questions_after_scaffold", 1), ("planning_end", "paused"),
+                         ("uat_runbook", ""), ("unregistered_stops", 1)):
+            with self.subTest(key=key):
+                value = copy.deepcopy(receipt())
+                value["variants"][0][key] = bad
+                self.assertTrue(self.validator.validate_receipt(value), key)
+
+
+    def test_rejects_base_tools_failures_and_local_release_status(self):
+        for key, bad in (("umask", "022"), ("task_list_calls", 1), ("verdict", "fail")):
+            with self.subTest(key=key):
+                value = receipt()
+                value["variants"][0][key] = bad
+                self.assertTrue(self.validator.validate_receipt(value), key)
+        value = receipt()
+        value["release_status_allowed"] = True
+        self.assertTrue(self.validator.validate_receipt(value))
+
+
+    def test_rejects_a_failed_codex_probe(self):
+        value = receipt()
+        value["install_probe"]["skill_expansion"] = "failed"
+        self.assertTrue(self.validator.validate_receipt(value))
+
+
+    def test_rejects_nonfinite_stage_evidence_through_api_and_cli(self):
+        for number in (float("nan"), float("inf"), -float("inf")):
+            value = receipt()
+            value["variants"][0]["stages"]["plan"]["wall_seconds"] = number
+            with self.subTest(number=str(number)), tempfile.TemporaryDirectory() as directory:
+                source = Path(directory) / "receipt.json"
+                source.write_text(json.dumps(value), encoding="utf-8")
+                completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
+                                           capture_output=True, text=True, check=False)
+                self.assertEqual(1, completed.returncode, completed.stdout)
+                self.assertTrue(self.validator.validate_receipt(value))
+
+
+
+class CanaryVariantCase(unittest.TestCase):
+    """Synthetic receipt evidence shared by the variant assertion and contract tests."""
+
+    def setUp(self):
+        self.validator = load_script("canary_receipt", REPO_ROOT / "tests/speckit-pro/layer6-integration/validate-canary-receipt.py")
         self.receipts = {host: receipt() for host in ("claude-code", "codex")}
         for host, value in self.receipts.items():
             value["host"] = host
@@ -4685,52 +4741,40 @@ class CanaryReceiptTests(unittest.TestCase):
             }},
         }
 
-    def test_oversized_plan_requires_split_full_build_and_no_stop(self):
+
+    def assert_variant_mutations(self, name, mutations):
         for host, value in self.receipts.items():
             variant = value["variants"][0]
-            variant.update(name="oversized_plan", **self.variant_evidence["oversized_plan"])
+            variant.update(name=name, **copy.deepcopy(self.variant_evidence[name]))
             with self.subTest(host=host):
                 self.assertEqual([], self.validator.validate_receipt(value))
-            for key, bad in (("split_recommendation_recorded", False), ("full_plan_built", False), ("stops", 1)):
-                previous = variant[key]
-                variant[key] = bad
-                with self.subTest(host=host, key=key):
-                    self.assertEqual([f"oversized_plan.{key}"], self.validator.validate_receipt(value))
-                variant[key] = previous
+            for path, bad, assertion in mutations:
+                evidence = variant[name] if path.startswith(name + ".") else variant
+                key = path.split(".")[-1]
+                previous = evidence[key]
+                evidence[key] = bad
+                with self.subTest(host=host, path=path, bad=bad):
+                    self.assertEqual([f"{name}.{assertion}"], self.validator.validate_receipt(value))
+                evidence[key] = previous
 
-    def test_accepts_a_well_formed_local_receipt_for_each_host(self):
-        for host in ("claude-code", "codex"):
-            value = receipt()
-            value["host"] = host
-            if host == "claude-code":
-                value["install_probe"] = {"loaded_plugins": ["speckit-pro@1.0.0"], "evidence": "init.json"}
-            self.assertEqual([], self.validator.validate_receipt(value))
+
+
+class CanaryVariantAssertionsTests(CanaryVariantCase):
+    def test_oversized_plan_requires_split_full_build_and_no_stop(self):
+        self.assert_variant_mutations("oversized_plan", [
+            ("split_recommendation_recorded", False, "split_recommendation_recorded"),
+            ("full_plan_built", False, "full_plan_built"), ("stops", 1, "stops"),
+        ])
 
     def test_security_interrupt_requires_one_permitted_answered_authorized_pause(self):
-        for host, value in self.receipts.items():
-            variant = value["variants"][0]
-            variant.update(name="security_interrupt", **copy.deepcopy(self.variant_evidence["security_interrupt"]))
-            with self.subTest(host=host):
-                self.assertEqual([], self.validator.validate_receipt(value))
-            for key, bad in (("runner_permit_verified", False), ("simulated_responder_answered", False),
-                             ("pause_classification", "unregistered"), ("pause_classification", "not_observed")):
-                previous = variant["security_interrupt"][key]
-                variant["security_interrupt"][key] = bad
-                with self.subTest(host=host, key=key, bad=bad):
-                    self.assertIn(f"security_interrupt.{key}", self.validator.validate_receipt(value))
-                variant["security_interrupt"][key] = previous
-            for questions in (0, 2):
-                variant["questions_after_scaffold"] = questions
-                with self.subTest(host=host, questions=questions):
-                    self.assertEqual(["security_interrupt.questions_after_scaffold"], self.validator.validate_receipt(value))
-
-    def test_rejects_questions_nonterminal_plan_missing_runbook_and_unregistered_stop(self):
-        for key, bad in (("questions_after_scaffold", 1), ("planning_end", "paused"),
-                         ("uat_runbook", ""), ("unregistered_stops", 1)):
-            with self.subTest(key=key):
-                value = copy.deepcopy(receipt())
-                value["variants"][0][key] = bad
-                self.assertTrue(self.validator.validate_receipt(value), key)
+        self.assert_variant_mutations("security_interrupt", [
+            ("security_interrupt.runner_permit_verified", False, "runner_permit_verified"),
+            ("security_interrupt.simulated_responder_answered", False, "simulated_responder_answered"),
+            ("security_interrupt.pause_classification", "unregistered", "pause_classification"),
+            ("security_interrupt.pause_classification", "not_observed", "pause_classification"),
+            ("questions_after_scaffold", 0, "questions_after_scaffold"),
+            ("questions_after_scaffold", 2, "questions_after_scaffold"),
+        ])
 
     def test_missing_question_guard_is_red_even_at_handoff(self):
         for host, value in self.receipts.items():
@@ -4741,34 +4785,21 @@ class CanaryReceiptTests(unittest.TestCase):
             with self.subTest(host=host, claimed_verdict="fail"):
                 self.assertIn("missing_question_guard.question_guard", self.validator.validate_receipt(value))
 
-    def test_rejects_base_tools_failures_and_local_release_status(self):
-        for key, bad in (("umask", "022"), ("task_list_calls", 1), ("verdict", "fail")):
-            with self.subTest(key=key):
-                value = receipt()
-                value["variants"][0][key] = bad
-                self.assertTrue(self.validator.validate_receipt(value), key)
-        value = receipt()
-        value["release_status_allowed"] = True
-        self.assertTrue(self.validator.validate_receipt(value))
 
     def test_security_block_requires_all_affected_blocked_and_all_independent_finished(self):
-        for host, value in self.receipts.items():
-            variant = value["variants"][0]
-            variant.update(name="security_block", **copy.deepcopy(self.variant_evidence["security_block"]))
-            with self.subTest(host=host):
-                self.assertEqual([], self.validator.validate_receipt(value))
-            for key, bad in (("affected_work", 0), ("affected_work_blocked_for_uat", 1),
-                             ("affected_work_blocked_for_uat", 3), ("independent_work", 0),
-                             ("independent_work_completed", 2), ("independent_work_completed", 4)):
-                previous = variant["security_block"][key]
-                variant["security_block"][key] = bad
-                with self.subTest(host=host, key=key, bad=bad):
-                    self.assertIn("security_block.security_block", self.validator.validate_receipt(value))
-                variant["security_block"][key] = previous
-            variant["blocked_for_uat"] = 1
-            with self.subTest(host=host, key="blocked_for_uat"):
-                self.assertEqual(["security_block.security_block"], self.validator.validate_receipt(value))
+        self.assert_variant_mutations("security_block", [
+            ("security_block.affected_work", 0, "security_block"),
+            ("security_block.affected_work_blocked_for_uat", 1, "security_block"),
+            ("security_block.affected_work_blocked_for_uat", 3, "security_block"),
+            ("security_block.independent_work", 0, "security_block"),
+            ("security_block.independent_work_completed", 2, "security_block"),
+            ("security_block.independent_work_completed", 4, "security_block"),
+            ("blocked_for_uat", 1, "security_block"),
+        ])
 
+
+
+class CanaryVariantContractTests(CanaryVariantCase):
     def test_variant_evidence_fails_closed_when_missing_or_malformed(self):
         for host, original in self.receipts.items():
             for name in ("oversized_plan", "security_interrupt", "security_block"):
@@ -4790,6 +4821,7 @@ class CanaryReceiptTests(unittest.TestCase):
                     with self.subTest(host=host, name=name, missing="object"):
                         self.assertTrue(self.validator.validate_receipt(value))
 
+
     def test_all_five_variants_keep_missing_guard_red_through_api_and_cli(self):
         for host, value in self.receipts.items():
             base = value["variants"][0]
@@ -4804,23 +4836,6 @@ class CanaryReceiptTests(unittest.TestCase):
                 report = json.loads(completed.stdout)
                 self.assertEqual((1, False, ["missing_question_guard.question_guard"]),
                                  (completed.returncode, report["valid"], report["failed_assertions"]))
-
-    def test_rejects_a_failed_codex_probe(self):
-        value = receipt()
-        value["install_probe"]["skill_expansion"] = "failed"
-        self.assertTrue(self.validator.validate_receipt(value))
-
-    def test_rejects_nonfinite_stage_evidence_through_api_and_cli(self):
-        for number in (float("nan"), float("inf"), -float("inf")):
-            value = receipt()
-            value["variants"][0]["stages"]["plan"]["wall_seconds"] = number
-            with self.subTest(number=str(number)), tempfile.TemporaryDirectory() as directory:
-                source = Path(directory) / "receipt.json"
-                source.write_text(json.dumps(value), encoding="utf-8")
-                completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
-                                           capture_output=True, text=True, check=False)
-                self.assertEqual(1, completed.returncode, completed.stdout)
-                self.assertTrue(self.validator.validate_receipt(value))
 
 class CanaryBudgetCase(unittest.TestCase):
     """Shared setup for the budget tests; it holds no tests of its own."""
@@ -4924,6 +4939,7 @@ def main() -> int:
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                                for case in (ReadOnlyHelperTests, PlanLayersRepairRouteTests, PlanLayersPlannerCaseTests,
                                             PacketTitlePatternTests, ScaffoldAnswersTests, CanaryReceiptTests,
+                                            CanaryVariantAssertionsTests, CanaryVariantContractTests,
                                             CanaryBudgetTests, CanaryBudgetFileTests))
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     total = result.testsRun
