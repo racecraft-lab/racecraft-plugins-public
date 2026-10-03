@@ -388,6 +388,11 @@ def move_after_copy_open_hook(real_open: object, destination: Path, moved: Path)
     return move_after_copy_open
 
 
+def fake_user_env(fake_home: Path, codex_home: Path | None = None) -> dict[str, str]:
+    """A fake user home; an empty CODEX_HOME counts as unset, so Codex falls back to fake_home/.codex."""
+    return {"HOME": str(fake_home), "USERPROFILE": str(fake_home), "CODEX_HOME": "" if codex_home is None else str(codex_home)}
+
+
 def helper_request(
     helper_id: str,
     *,
@@ -1680,7 +1685,7 @@ class MutationHelperTests(unittest.TestCase):
                         "codex_capability_snapshot": base_snapshot,
                         "codex_probe_results": probe_results,
                     }
-                    env = {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}
+                    env = fake_user_env(fake_home)
 
                     completed, response, stderr_records = run_runner(
                         helper_request("install-codex-agents", mode="apply", inputs=inputs),
@@ -1715,7 +1720,7 @@ class MutationHelperTests(unittest.TestCase):
             fake_home = Path(home_tmp).resolve()
             manifest_path = self.write_valid_route_policy_manifest(git_root)
             expected_snapshot = routing_capability_snapshot()
-            env = {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}
+            env = fake_user_env(fake_home)
 
             completed, response, stderr_records = run_runner(
                 helper_request(
@@ -1937,7 +1942,7 @@ class MutationHelperTests(unittest.TestCase):
             os.chdir(git_root)
             try:
                 with (
-                    patch.dict(os.environ, {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}),
+                    patch.dict(os.environ, fake_user_env(fake_home)),
                     patch.object(install, "write_codex_agent_atomic", side_effect=fail_second_required_write),
                 ):
                     response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
@@ -2025,7 +2030,7 @@ class MutationHelperTests(unittest.TestCase):
             os.chdir(git_root)
             try:
                 with (
-                    patch.dict(os.environ, {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}),
+                    patch.dict(os.environ, fake_user_env(fake_home)),
                     patch.object(install, "write_codex_agent_atomic", side_effect=fail_second_required_write_and_first_rollback),
                 ):
                     response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
@@ -2097,7 +2102,7 @@ class MutationHelperTests(unittest.TestCase):
             os.chdir(git_root)
             try:
                 with (
-                    patch.dict(os.environ, {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}),
+                    patch.dict(os.environ, fake_user_env(fake_home)),
                     patch.object(install, "write_codex_agent_atomic", side_effect=fail_second_write),
                 ):
                     response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
@@ -2163,7 +2168,7 @@ class MutationHelperTests(unittest.TestCase):
             os.chdir(git_root)
             try:
                 with (
-                    patch.dict(os.environ, {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}),
+                    patch.dict(os.environ, fake_user_env(fake_home)),
                     patch.object(install, "write_codex_agent_atomic", side_effect=fail_with_exact_owned_cleanup),
                 ):
                     response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
@@ -2266,7 +2271,7 @@ class MutationHelperTests(unittest.TestCase):
             os.chdir(git_root)
             try:
                 with (
-                    patch.dict(os.environ, {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}),
+                    patch.dict(os.environ, fake_user_env(fake_home)),
                     patch.object(install, "verify_codex_agent_install", return_value=[mismatch]),
                 ):
                     response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
@@ -6182,7 +6187,7 @@ class MutationHelperTests(unittest.TestCase):
             os.chdir(git_root)
             try:
                 with (
-                    patch.dict(os.environ, {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}),
+                    patch.dict(os.environ, fake_user_env(fake_home)),
                     patch.object(install, "codex_agent_state_matches", side_effect=change_before_match),
                 ):
                     response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
@@ -6262,7 +6267,7 @@ class MutationHelperTests(unittest.TestCase):
             os.chdir(git_root)
             try:
                 with (
-                    patch.dict(os.environ, {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}),
+                    patch.dict(os.environ, fake_user_env(fake_home)),
                     patch.object(install, "write_codex_agent_atomic", side_effect=fail_after_concurrent_edit),
                 ):
                     response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
@@ -6509,7 +6514,7 @@ class MutationHelperTests(unittest.TestCase):
                     helper_path.write_bytes(helper_bytes)
                     inputs = self.route_aware_inputs(manifest_path, git_root, destination=None)
                     inputs["test_overrides"] = {"codex_capability_snapshot": expected_snapshot}
-                    env = {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}
+                    env = fake_user_env(fake_home)
 
                     completed, response, stderr_records = run_runner(
                         helper_request("install-codex-agents", mode="apply", inputs=inputs),
@@ -6606,7 +6611,7 @@ class MutationHelperTests(unittest.TestCase):
                 (destination / f"{agent_name}.toml").write_bytes(content)
             inputs = self.route_aware_inputs(manifest_path, git_root, destination=None)
             inputs["test_overrides"] = {"codex_capability_snapshot": expected_snapshot}
-            env = {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}
+            env = fake_user_env(fake_home)
 
             completed, response, stderr_records = run_runner(
                 helper_request("install-codex-agents", mode="apply", inputs=inputs),
@@ -7153,7 +7158,7 @@ This line must not be copied.
             destination.mkdir(parents=True)
             unrelated = destination / "user-owned-agent.toml"
             unrelated.write_bytes(b"user owned\n")
-            env = {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}
+            env = fake_user_env(fake_home)
 
             completed, response, stderr_records = run_runner(
                 helper_request("install-codex-agents", mode="apply", inputs={"model": "gpt-6-sol"}),
@@ -7184,6 +7189,36 @@ This line must not be copied.
             self.assertEqual(stderr_records, [])
             self.assertEqual(response["data"]["mutation"]["mutation_status"], "no_op")
             self.assertFalse(response["data"]["restart_required"])
+
+    def test_install_codex_agents_default_follows_codex_home_and_leaves_home_untouched(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp, tempfile.TemporaryDirectory() as home_tmp, tempfile.TemporaryDirectory() as codex_tmp:
+            fake_home, codex_home = Path(home_tmp).resolve(), Path(codex_tmp).resolve()
+            destination = codex_home / "agents"
+            env = fake_user_env(fake_home, codex_home)
+
+            completed, response, stderr_records = run_runner(
+                helper_request("install-codex-agents", mode="apply", inputs={"model": "gpt-6-sol"}),
+                cwd=git_root,
+                extra_env=env,
+            )
+            self.assertEqual((completed.returncode, stderr_records), (0, []), completed.stderr)
+            self.assertEqual(response["data"]["destination"], destination.as_posix())
+            for source in sorted((PLUGIN_ROOT / "codex-agents").glob("*.toml")):
+                self.assertTrue((destination / source.name).is_file(), source.name)
+            self.assertFalse((fake_home / ".codex").exists())
+
+            def dry_run(destination_input: str) -> tuple[int, list[str]]:
+                completed, _, stderr_records = run_runner(
+                    helper_request("install-codex-agents", inputs={"model": "gpt-6-sol", "destination": destination_input}),
+                    cwd=git_root,
+                    extra_env=env,
+                )
+                return completed.returncode, [record["code"] for record in stderr_records]
+
+            self.assertEqual(dry_run(destination.as_posix()), (0, []))
+            self.assertEqual(dry_run("~/.codex/agents"), (2, ["invalid_destination"]))
+            self.assertFalse((fake_home / ".codex").exists())
 
     def test_install_codex_agents_applies_opt_in_astra_rewrite_to_sol_roles_only(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()

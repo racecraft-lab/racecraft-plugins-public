@@ -3354,8 +3354,14 @@ def load_codex_agent_bundle(source_dir: Path, inputs: dict[str, Any]) -> tuple[d
     return rendered, raw_model
 
 
+def codex_home() -> Path:
+    """The user Codex home Codex itself reads: ``$CODEX_HOME`` when set, else ``~/.codex``."""
+    configured = os.environ.get("CODEX_HOME", "")
+    return Path(configured).expanduser() if configured else Path.home() / ".codex"
+
+
 def codex_agent_destination(inputs: dict[str, Any]) -> Path | dict[str, Any]:
-    default = Path.home() / ".codex" / "agents"
+    default = codex_home() / "agents"
     raw = inputs.get("destination")
     if raw is None:
         candidate = default
@@ -3375,7 +3381,7 @@ def codex_agent_destination(inputs: dict[str, Any]) -> Path | dict[str, Any]:
             "invalid_destination",
             "destination must be the user or current-project Codex agents directory",
             details={"destination": candidate.as_posix()},
-            remediation_summary="Use ~/.codex/agents or .codex/agents.",
+            remediation_summary="Use $CODEX_HOME/agents (default ~/.codex/agents) or .codex/agents.",
             remediation_actions=["Retry with a Codex-native agent destination."],
         )
     return candidate

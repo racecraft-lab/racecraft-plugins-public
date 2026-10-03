@@ -139,14 +139,15 @@ or:
 $speckit-pro:install
 ```
 
-The default destination is `~/.codex/agents/`; `.codex/agents/` is the explicit
+The default destination is `$CODEX_HOME/agents/` when `CODEX_HOME` is set, else
+`~/.codex/agents/`; `.codex/agents/` is the explicit
 project-scoped destination override. The runner-owned catalog determines which
 bundled agents are required or optional; the install response's
 `data.agent_files` field supplies the concrete filenames to verify.
 
 Then restart Codex. Codex skills and custom agents are separate runtime
 surfaces: the plugin ships skills directly, while the install skill copies the
-named TOML templates into `.codex/agents/` or `~/.codex/agents/`.
+named TOML templates into `.codex/agents/` or `$CODEX_HOME/agents/`.
 
 Codex loads installed plugins from
 `~/.codex/plugins/cache/$MARKETPLACE_NAME/$PLUGIN_NAME/$VERSION/`. Treat that
@@ -159,7 +160,7 @@ custom-agent TOML files, then restart Codex.
 
 Install safety is bounded here: Codex sandbox, approval, and network policy
 still apply. Git-backed marketplace setup can require network access or network
-approval, and the default `~/.codex/agents/` write is outside most project
+approval, and the default `$CODEX_HOME/agents/` write is outside most project
 workspaces. Approve only the expected local write of the named SpecKit Pro TOML
 files, or rerun with `.codex/agents/` or narrower permissions. The generated
 Codex payload includes lifecycle hook configuration in `codex-hooks.json`:
@@ -377,7 +378,7 @@ $speckit-pro:install
 ```
 
 Then restart Codex. The plugin ships Codex skills directly, but custom agents
-must be copied into `.codex/agents/` or `~/.codex/agents/` before Codex can
+must be copied into `.codex/agents/` or `$CODEX_HOME/agents/` before Codex can
 spawn them by name. Verify the files reported in `data.agent_files`.
 
 If a plugin update changed bundled custom-agent TOML files, rerun

@@ -2,9 +2,9 @@
 name: install
 description: >
   Install or refresh the bundled SpecKit Pro Codex custom subagents.
-  Copies the plugin's TOML agent templates into ~/.codex/agents/ by
-  default, verifies the installed files, and tells the user to restart
-  Codex so the new subagents load.
+  Copies the plugin's TOML agent templates into $CODEX_HOME/agents/
+  (default ~/.codex/agents/), verifies the installed files, and tells
+  the user to restart Codex so the new subagents load.
 ---
 
 # SpecKit Install
@@ -20,9 +20,10 @@ The bundled source of truth lives in the plugin at:
 
 - `codex-agents/*.toml`
 
-The default user-scope Codex destination is:
+The default user-scope Codex destination is the agents directory of the
+Codex home that Codex itself reads:
 
-- `~/.codex/agents/`
+- `$CODEX_HOME/agents/` when `CODEX_HOME` is set, else `~/.codex/agents/`
 
 If the user explicitly asks for project scope, use `.codex/agents/` in the
 current project. Arbitrary destinations are rejected. Otherwise install to the
@@ -98,9 +99,9 @@ verification, recovery, `writes_state`, and `restart_required`.
 - Overwrite only same-named SpecKit Pro agent files in the target directory.
 - If the source bundle is missing or incomplete, STOP and report the exact
   missing files.
-- Route-aware fixture evidence is not live UAT. Use a fake HOME/USERPROFILE or
-  a temporary project `.codex/agents/` destination, never the operator's real
-  home directory.
+- Route-aware fixture evidence is not live UAT. Use a fake `CODEX_HOME` (or a fake
+  HOME/USERPROFILE with `CODEX_HOME` unset) or a temporary project
+  `.codex/agents/` destination, never the operator's real Codex home.
 - Follow the helper's `restart_required` result. When it is true, including
   after failed or uncertain recovery, tell the user to restart Codex; when it
   is false, do not require a restart.
@@ -115,7 +116,7 @@ Resolve all paths before mutating anything:
 2. Resolve the source directory at `../../codex-agents/` relative to this
    skill.
 3. Resolve the destination directory:
-   - default: `~/.codex/agents/`
+   - default: the user-scope destination from Scope
    - explicit project scope: `.codex/agents/` in the current project
 4. Resolve the request-level model for the `gpt-6-sol` agents:
    - default: `gpt-6-sol`
@@ -125,7 +126,7 @@ Resolve all paths before mutating anything:
      only when the user reports that `gpt-6-luna` is unavailable
 
 Do not infer a Claude path from a vague request. If the user says only
-"install the agents", use `~/.codex/agents/`.
+"install the agents", use the user-scope destination.
 
 ### 2. Validate the bundled source set
 
@@ -147,7 +148,7 @@ override. Use a non-default model or the Luna fallback only when requested.
 For static compatibility mode, omit `route_policy_manifest`. The structured
 request inputs are:
 
-- `destination`: omit for `~/.codex/agents/`, or set to `.codex/agents/` for
+- `destination`: omit for the user-scope destination, or set to `.codex/agents/` for
   current-project scope
 - `model`: `gpt-6-sol` (default), `gpt-6-luna`, or `gpt-6-astra`
 - `luna_fallback`: optional boolean; `true` installs the Luna agents on
@@ -155,7 +156,7 @@ request inputs are:
 
 For route-aware mode, use only an explicit trusted manifest path:
 
-- `destination`: omit for `~/.codex/agents/`, or set to `.codex/agents/` for
+- `destination`: omit for the user-scope destination, or set to `.codex/agents/` for
   current-project scope
 - `route_policy_manifest`: repository-local manifest path
 - `strict_model_override`: optional model string for strict route validation
@@ -217,7 +218,7 @@ Return a concise installation report like:
 ## SpecKit Codex Subagents Installed
 
 **Source:** /absolute/path/to/plugin/codex-agents
-**Destination:** <HOME>/.codex/agents
+**Destination:** <data.destination>
 
 **Installed files:** <render `data.agent_files`>
 

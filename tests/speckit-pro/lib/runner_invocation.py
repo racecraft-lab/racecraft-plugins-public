@@ -24,6 +24,8 @@ def runner_env(
     ``defaults`` fill keys the caller's environment leaves unset; ``overrides`` win.
     """
     env = os.environ.copy()
+    # A caller's own Codex home must never receive test installs; a test opts in through overrides.
+    env.pop("CODEX_HOME", None)
     existing = env.get("PYTHONPATH")
     env["PYTHONPATH"] = str(PLUGIN_ROOT) if not existing else f"{PLUGIN_ROOT}{os.pathsep}{existing}"
     for key, value in (defaults or {}).items():

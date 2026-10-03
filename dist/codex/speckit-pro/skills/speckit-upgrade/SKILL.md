@@ -25,7 +25,8 @@ skills.
 - Scaffolding a new spec from the technical roadmap. That is
   `$speckit-pro:speckit-scaffold-spec`.
 - Installing this plugin's own bundled Codex subagent TOML files
-  into `~/.codex/agents/`. That is `$speckit-pro:install`.
+  into `$CODEX_HOME/agents/` (default `~/.codex/agents/`). That is
+  `$speckit-pro:install`.
 - Upgrading the SpecKit CLI binary itself (`specify` package). The
   operator runs that with `uv tool install --force`; this skill
   detects when it's out of date and recommends the command, but
