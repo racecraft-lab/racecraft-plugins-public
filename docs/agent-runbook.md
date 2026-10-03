@@ -32,6 +32,25 @@ python3 scripts/refresh-release-artifacts.py
 pnpm --dir docs-site reference:generate
 ```
 
+## Running speckit-pro in a Scratch Clone
+
+Until the canary is green, a repo hook blocks every speckit-pro skill, typed or
+model-invoked, in any clone without the scratch mark (ADR 0002). The owner's
+checkout and its worktrees never carry the mark. Mark a scratch clone when you
+create it:
+
+```bash
+git clone https://github.com/racecraft-lab/racecraft-plugins-public.git <scratch-dir>
+git -C <scratch-dir> config speckit-health.scratch true
+```
+
+The mark is the clone-local git config key alone; environment variables never
+count. On Claude Code the hook loads from the tracked `.claude/settings.json`.
+On Codex it loads from `.codex/hooks.json`, which runs only after one-time
+trust: trust the project's `.codex/` layer, then review and trust the hooks in
+`/hooks`. Codex records trust against each hook's hash, so trust again after the
+hook changes. A hook error blocks the call rather than allowing it.
+
 ## Regenerating Spec Index Blocks
 
 The spec index blocks in `SPEC-MOC.md` and the roadmap MOC files come from a

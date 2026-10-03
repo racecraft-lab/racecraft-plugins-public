@@ -244,6 +244,9 @@ mirrors section 11; `speckit-pro/codex-agents/*.toml` are generated from
   `scripts/refresh-local-plugin.py` (`--dry-run` previews): it rebuilds `dist/`,
   reinstalls user-scope plugins, and stops if a marketplace points elsewhere,
   even at the main checkout.
+- speckit-pro skills run only in a scratch clone marked with
+  `git config speckit-health.scratch true`; a repo hook blocks them everywhere
+  else (ADR 0002). Setup and Codex hook trust: `docs/agent-runbook.md`.
 
 ## 9. Pull Requests
 
