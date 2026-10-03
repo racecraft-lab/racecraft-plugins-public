@@ -47,6 +47,33 @@ HOST_CASES = {
     },
 }
 
+# Work that never runs a speckit-pro skill, including reads of the clone's own skill sources.
+UNRELATED_CASES = {
+    "claude": [
+        {"hook_event_name": "UserPromptSubmit", "prompt": "fix /speckit-pro:speckit-autopilot resume"},
+        {"hook_event_name": "UserPromptSubmit", "user_input": "/speckit-plan"},
+        {"hook_event_name": "PreToolUse", "tool_name": "Skill", "tool_input": {"skill": "code-review"}},
+    ],
+    "codex": [
+        {"hook_event_name": "UserPromptSubmit", "prompt": "fix the autopilot resume path"},
+        {"hook_event_name": "PreToolUse", "tool_name": "Bash", "tool_input": {"command": "git status"}},
+        {
+            "hook_event_name": "PreToolUse",
+            "tool_name": "Bash",
+            "tool_input": {"command": "sed -n '1,80p' speckit-pro/skills/speckit-autopilot/SKILL.md"},
+        },
+    ],
+}
+
+# Environment variables that look like a scratch mark or inject git config.
+MARK_LOOKALIKES = {
+    "SPECKIT_HEALTH_SCRATCH": "true",
+    "GIT_CONFIG_COUNT": "1",
+    "GIT_CONFIG_KEY_0": SCRATCH_KEY,
+    "GIT_CONFIG_VALUE_0": "true",
+    "GIT_CONFIG_PARAMETERS": f"'{SCRATCH_KEY}'='true'",
+}
+
 
 def git(cwd: Path, *args: str) -> None:
     subprocess.run(["git", "-C", str(cwd), *args], check=True, capture_output=True, text=True)
@@ -85,27 +112,18 @@ def hook_commands(config: Path, event: str) -> list[tuple[str | None, str]]:
     ]
 
 
-class ScratchCloneGuardTests(unittest.TestCase):
-    def setUp(self) -> None:
-        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+def block_reason(stdout: str, event: str) -> str:
+    """The reason from the host's documented block shape for `event`, or "" for any other output."""
+    output = json.loads(stdout)
+    if event == "UserPromptSubmit":
+        return output["reason"] if output.get("decision") == "block" else ""
+    specific = output.get("hookSpecificOutput", {})
+    if (specific.get("hookEventName"), specific.get("permissionDecision")) != ("PreToolUse", "deny"):
+        return ""
+    return specific["permissionDecisionReason"]
 
-    def assert_blocked(self, result: subprocess.CompletedProcess[str], event: str) -> None:
-        self.assertEqual(0, result.returncode, result.stderr)
-        output = json.loads(result.stdout)
-        if event == "UserPromptSubmit":
-            self.assertEqual("block", output["decision"])
-            self.assertIn(SCRATCH_KEY, output["reason"])
-        else:
-            specific = output["hookSpecificOutput"]
-            self.assertEqual("PreToolUse", specific["hookEventName"])
-            self.assertEqual("deny", specific["permissionDecision"])
-            self.assertIn(SCRATCH_KEY, specific["permissionDecisionReason"])
 
-    def assert_exit(self, result: subprocess.CompletedProcess[str], code: int) -> None:
-        """Exit 0 with no output allows; exit 2 with a stderr reason blocks both events on both hosts."""
-        self.assertEqual(code, result.returncode, result.stdout + result.stderr)
-        self.assertEqual(code == 2, bool((result.stderr if code else result.stdout).strip()))
-
+class HostWiringTests(unittest.TestCase):
     def test_hosts_wire_the_guard(self) -> None:
         claude_prompt = hook_commands(CLAUDE_SETTINGS, "UserPromptSubmit")
         claude_tool = hook_commands(CLAUDE_SETTINGS, "PreToolUse")
@@ -117,6 +135,20 @@ class ScratchCloneGuardTests(unittest.TestCase):
         self.assertEqual([("Skill", claude_command)], claude_tool)
         self.assertEqual([(None, codex_command)], codex_prompt)
         self.assertEqual([("Bash", codex_command)], codex_tool)
+
+
+class ScratchCloneGuardTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+
+    def assert_blocked(self, result: subprocess.CompletedProcess[str], event: str) -> None:
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn(SCRATCH_KEY, block_reason(result.stdout, event))
+
+    def assert_exit(self, result: subprocess.CompletedProcess[str], code: int) -> None:
+        """Exit 0 with no output allows; exit 2 with a stderr reason blocks both events on both hosts."""
+        self.assertEqual(code, result.returncode, result.stdout + result.stderr)
+        self.assertEqual(code == 2, bool((result.stderr if code else result.stdout).strip()))
 
     def test_scratch_mark_decides_typed_and_model_calls_on_both_hosts(self) -> None:
         for marked in (False, True):
@@ -132,40 +164,17 @@ class ScratchCloneGuardTests(unittest.TestCase):
 
     def test_unmarked_clone_allows_work_that_does_not_run_speckit_pro(self) -> None:
         clone = make_clone(self.root)
-        allowed = {
-            "claude": [
-                {"hook_event_name": "UserPromptSubmit", "prompt": "fix /speckit-pro:speckit-autopilot resume"},
-                {"hook_event_name": "UserPromptSubmit", "user_input": "/speckit-plan"},
-                {"hook_event_name": "PreToolUse", "tool_name": "Skill", "tool_input": {"skill": "code-review"}},
-            ],
-            "codex": [
-                {"hook_event_name": "UserPromptSubmit", "prompt": "fix the autopilot resume path"},
-                {"hook_event_name": "PreToolUse", "tool_name": "Bash", "tool_input": {"command": "git status"}},
-                {
-                    "hook_event_name": "PreToolUse",
-                    "tool_name": "Bash",
-                    "tool_input": {"command": "sed -n '1,80p' speckit-pro/skills/speckit-autopilot/SKILL.md"},
-                },
-            ],
-        }
-        for host, payloads in allowed.items():
+        for host, payloads in UNRELATED_CASES.items():
             for payload in payloads:
                 with self.subTest(host=host, payload=payload):
                     self.assert_exit(run_guard(host, payload, clone), 0)
 
     def test_environment_variables_never_mark_a_clone(self) -> None:
         clone = make_clone(self.root)
-        lookalikes = {
-            "SPECKIT_HEALTH_SCRATCH": "true",
-            "GIT_CONFIG_COUNT": "1",
-            "GIT_CONFIG_KEY_0": SCRATCH_KEY,
-            "GIT_CONFIG_VALUE_0": "true",
-            "GIT_CONFIG_PARAMETERS": f"'{SCRATCH_KEY}'='true'",
-        }
         for host, cases in HOST_CASES.items():
             for kind, payload in cases.items():
                 with self.subTest(host=host, kind=kind):
-                    self.assert_blocked(run_guard(host, payload, clone, lookalikes), payload["hook_event_name"])
+                    self.assert_blocked(run_guard(host, payload, clone, MARK_LOOKALIKES), payload["hook_event_name"])
 
     def test_hook_errors_fail_closed_on_both_hosts(self) -> None:
         bad_mark = make_clone(self.root, marked="not-a-bool")
@@ -184,7 +193,8 @@ class ScratchCloneGuardTests(unittest.TestCase):
 
 
 def build_suite() -> unittest.TestSuite:
-    return unittest.defaultTestLoader.loadTestsFromTestCase(ScratchCloneGuardTests)
+    loader = unittest.defaultTestLoader
+    return unittest.TestSuite(loader.loadTestsFromTestCase(case) for case in (HostWiringTests, ScratchCloneGuardTests))
 
 
 def main() -> int:
