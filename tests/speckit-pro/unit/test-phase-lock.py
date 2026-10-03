@@ -7,9 +7,9 @@ import os
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 from typing import Any
-from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -77,9 +77,9 @@ class PhaseLockCheckTests(unittest.TestCase):
     def test_main_exits_one_on_any_error(self) -> None:
         env = {"GITHUB_REPOSITORY": "owner/repo", "PR_NUMBER": "7"}
         failure = phase_lock.PhaseLockError("gh api failed")
-        with mock.patch.dict(os.environ, env), mock.patch.object(phase_lock, "check_pr", side_effect=failure):
+        with unittest.mock.patch.dict(os.environ, env), unittest.mock.patch.object(phase_lock, "check_pr", side_effect=failure):
             self.assertEqual(phase_lock.main(["check-pr"]), 1)
-        with mock.patch.dict(os.environ, {**env, "PR_NUMBER": "seven"}):
+        with unittest.mock.patch.dict(os.environ, {**env, "PR_NUMBER": "seven"}):
             self.assertEqual(phase_lock.main(["check-pr"]), 1)
 
 
