@@ -147,7 +147,7 @@ Keep these three Codex surfaces separate:
 - OpenAI agent metadata sidecars such as `agents/openai.yaml` describe skill
   UI, invocation, and policy metadata. They are not custom-agent registration.
 - TOML custom-agent registration happens only when the install skill copies the
-  bundled TOML files into `~/.codex/agents/` or `.codex/agents/`. Those TOML
+  bundled TOML files into `$CODEX_HOME/agents/` or `.codex/agents/`. Those TOML
   custom-agent files are copied into the selected destination; they are not
   loaded directly from the plugin bundle.
 
@@ -165,7 +165,8 @@ $install
 
 The install skill copies the installer-copied SpecKit Pro TOML custom-agent
 files into the selected Codex agent directory. The default destination is
-`~/.codex/agents/`; `.codex/agents/` is the project-scoped destination when you
+`$CODEX_HOME/agents/` when `CODEX_HOME` is set, else `~/.codex/agents/`;
+`.codex/agents/` is the project-scoped destination when you
 explicitly choose a repo-local registration.
 
 SpecKit Pro requires the `typesafe-jev` plugin, and Codex has no plugin
@@ -183,7 +184,7 @@ Use this checklist:
 
 1. Invoke `@SpecKit Pro -> install` from the SpecKit Pro plugin card, or invoke
    the same skill directly with `$install`.
-2. Keep the default user destination, `~/.codex/agents/`, unless you want
+2. Keep the default user destination, `$CODEX_HOME/agents/`, unless you want
    repo-local custom agents.
 3. For an explicit project destination override, choose `.codex/agents/` in the
    repository you want to carry the custom-agent registration.
@@ -263,7 +264,7 @@ installation and custom-agent registration.
   path is `~/.codex/plugins/cache/$MARKETPLACE_NAME/$PLUGIN_NAME/$VERSION/`;
   update the marketplace source or generated payload instead of editing the
   installed cache.
-- The default user-scoped destination is `~/.codex/agents/`, an
+- The default user-scoped destination is `$CODEX_HOME/agents/`, an
   outside-workspace write for most projects that may require approval before
   Codex writes there.
   Approve only the expected local write of the named SpecKit Pro TOML

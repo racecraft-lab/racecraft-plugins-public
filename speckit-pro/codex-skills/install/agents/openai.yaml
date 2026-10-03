@@ -1,7 +1,7 @@
 interface:
   display_name: "Install SpecKit Codex Subagents"
-  short_description: "Install bundled Codex subagents into $CODEX_HOME/agents"
-  default_prompt: "Use $install to install or refresh the bundled SpecKit Pro Codex subagents into $CODEX_HOME/agents (default ~/.codex/agents) and tell me if I need to restart Codex"
+  short_description: "Install bundled Codex subagents into the Codex home"
+  default_prompt: "Use $install to install or refresh the bundled SpecKit Pro Codex subagents into the agents directory of my Codex home (CODEX_HOME, default ~/.codex) and tell me if I need to restart Codex"
 
 policy:
   allow_implicit_invocation: false

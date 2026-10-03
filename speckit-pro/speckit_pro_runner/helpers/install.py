@@ -3356,7 +3356,7 @@ def load_codex_agent_bundle(source_dir: Path, inputs: dict[str, Any]) -> tuple[d
 
 def codex_home() -> Path:
     """The user Codex home Codex itself reads: ``$CODEX_HOME`` when set, else ``~/.codex``."""
-    configured = os.environ.get("CODEX_HOME", "").strip()
+    configured = os.environ.get("CODEX_HOME", "")
     return Path(configured).expanduser() if configured else Path.home() / ".codex"
 
 
