@@ -1680,7 +1680,8 @@ capability, runs the observer under its own Codex permission profile with one
 broker tool and no network, and returns only the closed brokered observation.
 Under that profile the isolated process has no preview capability, so
 `unavailable` is the expected verdict; record it rather than substituting a
-parent-side judgement.
+parent-side judgement. Follow the runner's `resume_action` and retain the
+unverified disposition and blocker in the handoff report.
 <!-- /host -->
 
 **Read the [Artifact Review Handoff contract](./artifact-review.md) before this sequence.**
