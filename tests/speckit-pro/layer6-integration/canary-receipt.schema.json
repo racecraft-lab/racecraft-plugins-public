@@ -44,11 +44,28 @@
         "planning_end": {"type": "string"}, "implement_end": {"type": "string"}, "uat_runbook": {"type": "string"},
         "decisions_by_kind": {"type": "object", "additionalProperties": {"$ref": "#/$defs/count"}},
         "retry_attempts": {"$ref": "#/$defs/count"}, "blocked_for_uat": {"$ref": "#/$defs/count"},
+        "split_recommendation_recorded": {"type": "boolean"}, "full_plan_built": {"type": "boolean"}, "stops": {"$ref": "#/$defs/count"},
+        "security_interrupt": {
+          "type": "object", "additionalProperties": false,
+          "required": ["runner_permit_verified", "simulated_responder_answered", "pause_classification"],
+          "properties": {"runner_permit_verified": {"type": "boolean"}, "simulated_responder_answered": {"type": "boolean"},
+            "pause_classification": {"enum": ["authorized", "unregistered", "not_observed"]}}
+        },
+        "security_block": {
+          "type": "object", "additionalProperties": false,
+          "required": ["affected_work", "affected_work_blocked_for_uat", "independent_work", "independent_work_completed"],
+          "properties": {"affected_work": {"$ref": "#/$defs/count"}, "affected_work_blocked_for_uat": {"$ref": "#/$defs/count"},
+            "independent_work": {"$ref": "#/$defs/count"}, "independent_work_completed": {"$ref": "#/$defs/count"}}
+        },
         "stages": {
           "type": "object", "additionalProperties": false, "required": ["scaffold", "plan", "plan_review", "implement"],
           "properties": {"scaffold": {"$ref": "#/$defs/stage"}, "plan": {"$ref": "#/$defs/stage"}, "plan_review": {"$ref": "#/$defs/stage"}, "implement": {"$ref": "#/$defs/stage"}}
         }
-      }
+      },
+      "allOf": [{"if": {"properties": {"name": {"const": "oversized_plan"}}},
+        "then": {"required": ["split_recommendation_recorded", "full_plan_built", "stops"]}},
+        {"if": {"properties": {"name": {"const": "security_interrupt"}}}, "then": {"required": ["security_interrupt"]}},
+        {"if": {"properties": {"name": {"const": "security_block"}}}, "then": {"required": ["security_block"]}}]
     }
   }
 }
