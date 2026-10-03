@@ -4650,7 +4650,7 @@ class ScaffoldAnswersTests(unittest.TestCase):
 
 def receipt():
     return {
-        "schema_version": "canary-receipt/v1", "commit": "a" * 40, "host": "codex",
+        "schema_version": "canary-receipt/v2", "commit": "a" * 40, "host": "codex",
         "host_version": "0.1.0", "plugin_version": "1.0.0", "fixture_tag": "v1",
         "trigger": "local", "dirty_tree": True, "release_status_allowed": False,
         "install_probe": {"headless_install": "passed", "skill_expansion": "passed", "evidence": "probe.json"},
@@ -4660,8 +4660,7 @@ def receipt():
             "unregistered_stops": 0, "planning_end": "artifacts_and_draft_pr",
             "implement_end": "ready_for_uat", "uat_runbook": "uat.md",
             "decisions_by_kind": {"design": 2}, "retry_attempts": 0, "blocked_for_uat": 0,
-            "stages": {name: {"wall_seconds": 1, "tokens": 10, "wall_budget_seconds": 5, "token_budget": 100}
-                       for name in ("scaffold", "plan", "plan_review", "implement")},
+            "stages": {name: {"wall_seconds": 1, "tokens": 10} for name in ("scaffold", "plan", "plan_review", "implement")},
         }],
     }
 
@@ -4686,7 +4685,7 @@ class CanaryReceiptTests(unittest.TestCase):
                 value["variants"][0][key] = bad
                 self.assertTrue(self.validator.validate_receipt(value), key)
 
-    def test_rejects_base_tools_budget_failures_and_local_release_status(self):
+    def test_rejects_base_tools_failures_and_local_release_status(self):
         for key, bad in (("umask", "022"), ("task_list_calls", 1), ("verdict", "fail")):
             with self.subTest(key=key):
                 value = receipt()
@@ -4695,10 +4694,6 @@ class CanaryReceiptTests(unittest.TestCase):
         value = receipt()
         value["release_status_allowed"] = True
         self.assertTrue(self.validator.validate_receipt(value))
-        for key in ("wall_seconds", "tokens"):
-            value = receipt()
-            value["variants"][0]["stages"]["plan"][key] = 999
-            self.assertTrue(self.validator.validate_receipt(value), key)
 
     def test_rejects_a_failed_codex_probe(self):
         value = receipt()
@@ -4706,17 +4701,109 @@ class CanaryReceiptTests(unittest.TestCase):
         self.assertTrue(self.validator.validate_receipt(value))
 
     def test_rejects_nonfinite_stage_evidence_through_api_and_cli(self):
-        for key in ("wall_seconds", "wall_budget_seconds"):
-            for number in (float("nan"), float("inf"), -float("inf")):
-                value = receipt()
-                value["variants"][0]["stages"]["plan"][key] = number
-                with self.subTest(key=key, number=str(number)), tempfile.TemporaryDirectory() as directory:
-                    source = Path(directory) / "receipt.json"
-                    source.write_text(json.dumps(value), encoding="utf-8")
-                    completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
-                                               capture_output=True, text=True, check=False)
-                    self.assertEqual(1, completed.returncode, completed.stdout)
-                    self.assertTrue(self.validator.validate_receipt(value))
+        for number in (float("nan"), float("inf"), -float("inf")):
+            value = receipt()
+            value["variants"][0]["stages"]["plan"]["wall_seconds"] = number
+            with self.subTest(number=str(number)), tempfile.TemporaryDirectory() as directory:
+                source = Path(directory) / "receipt.json"
+                source.write_text(json.dumps(value), encoding="utf-8")
+                completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
+                                           capture_output=True, text=True, check=False)
+                self.assertEqual(1, completed.returncode, completed.stdout)
+                self.assertTrue(self.validator.validate_receipt(value))
+
+class CanaryBudgetCase(unittest.TestCase):
+    """Shared setup for the budget tests; it holds no tests of its own."""
+
+    def setUp(self):
+        self.validator = load_script("canary_receipt", REPO_ROOT / "tests/speckit-pro/layer6-integration/validate-canary-receipt.py")
+
+    def budget(self, wall_seconds, tokens):
+        """A complete budget whose limits are all ``wall_seconds`` and ``tokens``."""
+        stages = {stage: {"wall_seconds": wall_seconds, "tokens": tokens} for stage in self.validator.BUDGET_STAGES}
+        return {host: {variant: copy.deepcopy(stages) for variant in self.validator.VARIANTS} for host in self.validator.HOSTS}
+
+
+class CanaryBudgetTests(CanaryBudgetCase):
+    def test_a_stage_over_a_set_limit_fails_and_under_it_passes(self):
+        value = receipt()
+        self.assertEqual([], self.validator.validate_receipt(value, self.budget(5, 100)))
+        for key, actual in (("wall_seconds", 6), ("tokens", 101)):
+            value = receipt()
+            value["variants"][0]["stages"]["plan"][key] = actual
+            self.assertEqual([f"base.plan.{key}_budget"], self.validator.validate_receipt(value, self.budget(5, 100)), key)
+        value["variants"][0]["stages"]["plan"].update(wall_seconds=5, tokens=100)
+        self.assertEqual([], self.validator.validate_receipt(value, self.budget(5, 100)), "a stage at its limit is within budget")
+
+    def test_an_unset_limit_reports_unbudgeted_and_never_a_pass(self):
+        value = receipt()
+        value["variants"][0]["stages"]["plan"]["tokens"] = 10**9
+        unset = self.budget(5, None)
+        report = self.validator.receipt_report(value, unset)
+        self.assertEqual((True, []), (report["valid"], report["failed_assertions"]))
+        self.assertEqual([f"base.{stage}.tokens" for stage in self.validator.BUDGET_STAGES], report["unbudgeted"])
+        self.assertEqual([], self.validator.receipt_report(value, self.budget(5, 100))["unbudgeted"])
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "receipt.json"
+            source.write_text(json.dumps(receipt()), encoding="utf-8")
+            completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
+                                       capture_output=True, text=True, check=False)
+        output = json.loads(completed.stdout)
+        self.assertEqual((0, True), (completed.returncode, output["valid"]), completed.stdout)
+        self.assertEqual(len(self.validator.BUDGET_STAGES) * len(self.validator.METRICS), len(output["unbudgeted"]))
+
+    def test_plan_review_is_recorded_but_never_budgeted(self):
+        value = receipt()
+        value["variants"][0]["stages"]["plan_review"].update(wall_seconds=10**6, tokens=10**9)
+        self.assertEqual([], self.validator.validate_receipt(value, self.budget(5, 100)))
+
+
+
+class CanaryBudgetFileTests(CanaryBudgetCase):
+    def test_the_budget_file_covers_every_host_variant_and_stage_and_states_its_rule(self):
+        document = json.loads(self.validator.BUDGET_FILE.read_text(encoding="utf-8"))
+        limits = self.validator.load_budget()
+        self.assertEqual(set(self.validator.HOSTS), set(limits))
+        for host in self.validator.HOSTS:
+            self.assertEqual(set(self.validator.VARIANTS), set(limits[host]), host)
+            for stages in limits[host].values():
+                self.assertEqual(set(self.validator.BUDGET_STAGES), set(stages), host)
+        for phrase in ("median of the first three green runs plus 50%", "reviewed PR", "unbudgeted", "never stops a run"):
+            self.assertIn(phrase, document["policy"])
+
+    def test_a_malformed_budget_fails_closed(self):
+        def document(limits):
+            return {"schema_version": "canary-budget/v1", "policy": "rule", "limits": limits}
+
+        complete = self.budget(5, 100)
+        self.assertEqual(complete, self.validator.check_budget(document(complete)))
+        huge = self.budget(10**400, 10**400)
+        self.assertIs(huge, self.validator.check_budget(document(huge)), "a huge integer limit never overflows")
+        broken = []
+        for stage_limits in ({"wall_seconds": 0, "tokens": 1}, {"wall_seconds": 1, "tokens": 1.5},
+                             {"wall_seconds": True, "tokens": 1}, {"wall_seconds": 1, "tokens": 1, "extra": 1}, {"tokens": 1}):
+            limits = copy.deepcopy(complete)
+            limits["codex"]["base"]["plan"] = stage_limits
+            broken.append(document(limits))
+        extra = copy.deepcopy(complete)
+        extra["codex"]["base"]["plan_review"] = {"wall_seconds": 1, "tokens": 1}
+        broken += [document(extra), document({**complete, "codex": []}), {**document(complete), "schema_version": "v0"}, [], None]
+        for value in broken:
+            with self.assertRaises(ValueError, msg=value):
+                self.validator.check_budget(value)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "budget.json"
+            for text in ("[]", json.dumps(document(extra)), json.dumps(document(complete)).replace("100", "NaN", 1)):
+                path.write_text(text, encoding="utf-8")
+                with self.assertRaises(ValueError, msg=text):
+                    self.validator.load_budget(path)
+
+    def test_nothing_in_the_plugin_stops_a_run_on_budget(self):
+        stop_policy = load_script("stop_policy_for_budget", REPO_ROOT / "speckit-pro/speckit_pro_runner/stop_policy.py")
+        self.assertFalse([reason for reason in stop_policy.STOP_REASONS if "budget" in reason])
+        shipped = [path for path in (REPO_ROOT / "speckit-pro").rglob("*") if path.is_file()
+                   and self.validator.BUDGET_FILE.name in path.read_text(encoding="utf-8", errors="ignore")]
+        self.assertEqual([], shipped)
 
 
 def main() -> int:
@@ -4726,7 +4813,8 @@ def main() -> int:
     _ReadOnlyHelperRunner.helper_filter = args.helper
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                                for case in (ReadOnlyHelperTests, PlanLayersRepairRouteTests, PlanLayersPlannerCaseTests,
-                                            PacketTitlePatternTests, ScaffoldAnswersTests, CanaryReceiptTests))
+                                            PacketTitlePatternTests, ScaffoldAnswersTests, CanaryReceiptTests,
+                                            CanaryBudgetTests, CanaryBudgetFileTests))
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     total = result.testsRun
     failed = len(result.failures) + len(result.errors)

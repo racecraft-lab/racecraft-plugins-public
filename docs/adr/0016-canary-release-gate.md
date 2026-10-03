@@ -39,11 +39,11 @@ Draft PRs open in the fixture repo on a run-named branch. After the receipt is r
 
 ## Budget
 
-The budget file sets two limits for each host, variant and stage (scaffold, plan, implement): wall-clock time and total tokens. Each limit starts at the median of the first three green runs plus 50%. Limits change only through a reviewed PR, never by automatic ratchet. The budget is a pass condition only. It never stops a run, which keeps ADR 0004's rule that the retry ladder is the only failure path.
+The budget file (`tests/speckit-pro/layer6-integration/canary-budget.json`) sets two limits for each host, variant and stage (scaffold, plan, implement): wall-clock time and total tokens. Each limit starts at the median of the first three green runs plus 50%. Limits change only through a reviewed PR, never by automatic ratchet. The budget is a pass condition only. It never stops a run, which keeps ADR 0004's rule that the retry ladder is the only failure path.
 
 ## Receipt
 
-Each run leaves one JSON canary receipt per host. It records the commit, host and plugin versions, fixture tag, and each variant's verdict with its failed assertions. It also records per-stage time and tokens against budget, questions after scaffold, unregistered stops, decisions-list counts by kind, retry-ladder attempts and the blocked-for-UAT count. Receipts plus redacted transcripts and run state are stored as private-repo artifacts for 90 days. The receipt schema and its validator live in `tests/speckit-pro/layer6-integration/`.
+Each run leaves one JSON canary receipt per host. It records the commit, host and plugin versions, fixture tag, and each variant's verdict with its failed assertions. It also records per-stage time and tokens, which the validator checks against the budget file, questions after scaffold, unregistered stops, decisions-list counts by kind, retry-ladder attempts and the blocked-for-UAT count. Receipts plus redacted transcripts and run state are stored as private-repo artifacts for 90 days. The receipt schema and its validator live in `tests/speckit-pro/layer6-integration/`.
 
 ## Authentication
 
