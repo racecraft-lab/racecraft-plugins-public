@@ -4714,6 +4714,11 @@ class CanaryReceiptTests(unittest.TestCase):
                     self.assertTrue(self.validator.validate_receipt(value))
 
 
+
+class CanaryBudgetTests(unittest.TestCase):
+    def setUp(self):
+        self.validator = load_script("canary_receipt", REPO_ROOT / "tests/speckit-pro/layer6-integration/validate-canary-receipt.py")
+
     def budget(self, wall_seconds, tokens):
         """A complete budget whose limits are all ``wall_seconds`` and ``tokens``."""
         stages = {stage: {"wall_seconds": wall_seconds, "tokens": tokens} for stage in self.validator.BUDGET_STAGES}
@@ -4782,7 +4787,8 @@ def main() -> int:
     _ReadOnlyHelperRunner.helper_filter = args.helper
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                                for case in (ReadOnlyHelperTests, PlanLayersRepairRouteTests, PlanLayersPlannerCaseTests,
-                                            PacketTitlePatternTests, ScaffoldAnswersTests, CanaryReceiptTests))
+                                            PacketTitlePatternTests, ScaffoldAnswersTests, CanaryReceiptTests,
+                                            CanaryBudgetTests))
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     total = result.testsRun
     failed = len(result.failures) + len(result.errors)
