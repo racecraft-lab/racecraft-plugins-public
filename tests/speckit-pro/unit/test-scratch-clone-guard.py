@@ -23,7 +23,7 @@ from test_result import run_counted  # noqa: E402
 
 
 SCRATCH_KEY = "speckit-health.scratch"
-INSTALLED_SKILL = "/home/owner/.codex/plugins/cache/market/speckit-pro/9.9.9/skills/speckit-autopilot/SKILL.md"
+INSTALLED_SKILL = "/opt/codex/plugins/cache/market/speckit-pro/9.9.9/skills/speckit-autopilot/SKILL.md"
 
 # Typed commands and model skill calls, in each host's payload shape.
 HOST_CASES = {
