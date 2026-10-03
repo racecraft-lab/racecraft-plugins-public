@@ -6,7 +6,7 @@ Decision ticket: [Canary: fixture, variants, receipt, budget, release gate](http
 
 ## Where it runs and how it gates
 
-The canary lives in a private fixture repo (for example `racecraft-lab/speckit-canary`) and runs on the self-hosted Linux runners. Their runner group admits selected private repos only, so the canary cannot run from this public repo.
+The canary lives in a private fixture repo and runs on the self-hosted Linux runners. Their runner group admits selected private repos only, so the canary cannot run from this public repo.
 
 It runs once a week, Sunday 02:00 America/Chicago. It tests the open release PR's head commit, or main when no release PR is open. Each run is 5 variants on each host, 10 parallel jobs on fresh VMs. A GitHub App posts `canary / claude-code` and `canary / codex` commit statuses on the tested commit. Branch protection on the release PR requires both, so a release merges only after a green run on its exact head. A commit pushed after the run waits for the next one.
 
@@ -51,7 +51,7 @@ Both hosts run on the owner's subscriptions, never API keys, per [Research: subs
 
 - **Claude Code** uses a `claude setup-token` token as `CLAUDE_CODE_OAUTH_TOKEN`. It does not refresh, so all jobs share it.
 - **Codex** on a personal plan uses an `auth.json` round trip from a login dedicated to the canary, never the owner's own login. A serial auth-owner job restores the file, refreshes it, checks that it outlives the run, and writes it back as a secret. The variant jobs then use it read-only. This must hold over one stale-token week with two parallel runs before the canary gates. If it proves fragile, Codex alone moves to a Platform API key.
-- **Credential handling.** Credentials are GitHub environment secrets on the fixture repo, passed per step. They are never baked into the runner image or fireactions metadata, never passed as command-line arguments, and never logged or uploaded. A job fails if `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` or `CODEX_API_KEY` is set. A usage-limit hit fails the run. Claude usage credits stay off or capped.
+- **Credential handling.** Credentials are GitHub environment secrets on the fixture repo, passed per step. They are never baked into the runner image or microVM metadata, never passed as command-line arguments, and never logged or uploaded. A job fails if `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` or `CODEX_API_KEY` is set. A usage-limit hit fails the run. Claude usage credits stay off or capped.
 
 If the Codex probe shows headless plugin install or `$skill` expansion does not work, the plugin is fixed before the canary is declared ready, with no named exception. If the gap is in Codex itself, plugin install is one-time host setup, which ADR 0003 exempts, so the harness may run the documented install step.
 
