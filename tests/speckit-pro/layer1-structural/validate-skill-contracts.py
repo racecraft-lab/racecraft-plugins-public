@@ -61,9 +61,9 @@ class CodexSkillMentionTests(unittest.TestCase):
                            + r')(?![\w:-])')
         surfaces = list(CODEX_VIEW.rglob('*.md'))
         surfaces += list((PLUGIN_ROOT / 'codex-skills').rglob('*.yaml'))
-        surfaces += list((REPO_ROOT / 'docs-site/src/content/docs').rglob('*.md'))
-        surfaces += list((REPO_ROOT / 'docs-site/src/content/docs').rglob('*.mdx'))
-        surfaces += [PLUGIN_ROOT / 'README.md']
+        surfaces += [path for path in (REPO_ROOT / 'docs-site/src').rglob('*')
+                     if path.suffix in {'.md', '.mdx', '.ts', '.astro'}]
+        surfaces += [REPO_ROOT / 'README.md', PLUGIN_ROOT / 'README.md']
         for source in surfaces:
             with self.subTest(file=source.name):
                 self.assertEqual(short.findall(source.read_text(encoding='utf-8')), [])
