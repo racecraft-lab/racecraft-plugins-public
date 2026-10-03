@@ -4669,7 +4669,6 @@ class CanaryReceiptTests(unittest.TestCase):
     def setUp(self):
         self.validator = load_script("canary_receipt", REPO_ROOT / "tests/speckit-pro/layer6-integration/validate-canary-receipt.py")
 
-
     def test_accepts_a_well_formed_local_receipt_for_each_host(self):
         for host in ("claude-code", "codex"):
             value = receipt()
@@ -4678,7 +4677,6 @@ class CanaryReceiptTests(unittest.TestCase):
                 value["install_probe"] = {"loaded_plugins": ["speckit-pro@1.0.0"], "evidence": "init.json"}
             self.assertEqual([], self.validator.validate_receipt(value))
 
-
     def test_rejects_questions_nonterminal_plan_missing_runbook_and_unregistered_stop(self):
         for key, bad in (("questions_after_scaffold", 1), ("planning_end", "paused"),
                          ("uat_runbook", ""), ("unregistered_stops", 1)):
@@ -4686,7 +4684,6 @@ class CanaryReceiptTests(unittest.TestCase):
                 value = copy.deepcopy(receipt())
                 value["variants"][0][key] = bad
                 self.assertTrue(self.validator.validate_receipt(value), key)
-
 
     def test_rejects_base_tools_failures_and_local_release_status(self):
         for key, bad in (("umask", "022"), ("task_list_calls", 1), ("verdict", "fail")):
@@ -4698,12 +4695,10 @@ class CanaryReceiptTests(unittest.TestCase):
         value["release_status_allowed"] = True
         self.assertTrue(self.validator.validate_receipt(value))
 
-
     def test_rejects_a_failed_codex_probe(self):
         value = receipt()
         value["install_probe"]["skill_expansion"] = "failed"
         self.assertTrue(self.validator.validate_receipt(value))
-
 
     def test_rejects_nonfinite_stage_evidence_through_api_and_cli(self):
         for number in (float("nan"), float("inf"), -float("inf")):
@@ -4716,7 +4711,6 @@ class CanaryReceiptTests(unittest.TestCase):
                                            capture_output=True, text=True, check=False)
                 self.assertEqual(1, completed.returncode, completed.stdout)
                 self.assertTrue(self.validator.validate_receipt(value))
-
 
 
 class CanaryVariantCase(unittest.TestCase):
@@ -4741,39 +4735,37 @@ class CanaryVariantCase(unittest.TestCase):
             }},
         }
 
-
     def assert_variant_mutations(self, name, mutations):
         for host, value in self.receipts.items():
             variant = value["variants"][0]
             variant.update(name=name, **copy.deepcopy(self.variant_evidence[name]))
             with self.subTest(host=host):
                 self.assertEqual([], self.validator.validate_receipt(value))
-            for path, bad, assertion in mutations:
-                evidence = variant[name] if path.startswith(name + ".") else variant
-                key = path.split(".")[-1]
-                previous = evidence[key]
-                evidence[key] = bad
-                with self.subTest(host=host, path=path, bad=bad):
-                    self.assertEqual([f"{name}.{assertion}"], self.validator.validate_receipt(value))
-                evidence[key] = previous
-
+            for changes, assertion in mutations:
+                mutated = copy.deepcopy(value)
+                for path, bad in changes.items():
+                    *parent, key = path.split(".")
+                    target = mutated["variants"][0]
+                    (target[parent[0]] if parent else target)[key] = bad
+                with self.subTest(host=host, changes=changes):
+                    self.assertEqual([f"{name}.{assertion}"], self.validator.validate_receipt(mutated))
 
 
 class CanaryVariantAssertionsTests(CanaryVariantCase):
     def test_oversized_plan_requires_split_full_build_and_no_stop(self):
         self.assert_variant_mutations("oversized_plan", [
-            ("split_recommendation_recorded", False, "split_recommendation_recorded"),
-            ("full_plan_built", False, "full_plan_built"), ("stops", 1, "stops"),
+            ({"split_recommendation_recorded": False}, "split_recommendation_recorded"),
+            ({"full_plan_built": False}, "full_plan_built"), ({"stops": 1}, "stops"),
         ])
 
     def test_security_interrupt_requires_one_permitted_answered_authorized_pause(self):
         self.assert_variant_mutations("security_interrupt", [
-            ("security_interrupt.runner_permit_verified", False, "runner_permit_verified"),
-            ("security_interrupt.simulated_responder_answered", False, "simulated_responder_answered"),
-            ("security_interrupt.pause_classification", "unregistered", "pause_classification"),
-            ("security_interrupt.pause_classification", "not_observed", "pause_classification"),
-            ("questions_after_scaffold", 0, "questions_after_scaffold"),
-            ("questions_after_scaffold", 2, "questions_after_scaffold"),
+            ({"security_interrupt.runner_permit_verified": False}, "runner_permit_verified"),
+            ({"security_interrupt.simulated_responder_answered": False}, "simulated_responder_answered"),
+            ({"security_interrupt.pause_classification": "unregistered"}, "pause_classification"),
+            ({"security_interrupt.pause_classification": "not_observed"}, "pause_classification"),
+            ({"questions_after_scaffold": 0}, "questions_after_scaffold"),
+            ({"questions_after_scaffold": 2}, "questions_after_scaffold"),
         ])
 
     def test_missing_question_guard_is_red_even_at_handoff(self):
@@ -4783,20 +4775,20 @@ class CanaryVariantAssertionsTests(CanaryVariantCase):
                 self.assertEqual(["missing_question_guard.question_guard"], self.validator.validate_receipt(value))
             value["variants"][0].update(verdict="fail", failed_assertions=["question_guard"])
             with self.subTest(host=host, claimed_verdict="fail"):
-                self.assertIn("missing_question_guard.question_guard", self.validator.validate_receipt(value))
-
+                self.assertEqual(["missing_question_guard.verdict", "missing_question_guard.question_guard"],
+                                 self.validator.validate_receipt(value))
 
     def test_security_block_requires_all_affected_blocked_and_all_independent_finished(self):
         self.assert_variant_mutations("security_block", [
-            ("security_block.affected_work", 0, "security_block"),
-            ("security_block.affected_work_blocked_for_uat", 1, "security_block"),
-            ("security_block.affected_work_blocked_for_uat", 3, "security_block"),
-            ("security_block.independent_work", 0, "security_block"),
-            ("security_block.independent_work_completed", 2, "security_block"),
-            ("security_block.independent_work_completed", 4, "security_block"),
-            ("blocked_for_uat", 1, "security_block"),
+            # Zeroing a count with its matching count isolates each "> 0" guard from the equality checks.
+            ({"security_block.affected_work": 0, "security_block.affected_work_blocked_for_uat": 0}, "security_block"),
+            ({"security_block.affected_work_blocked_for_uat": 1}, "security_block"),
+            ({"security_block.affected_work_blocked_for_uat": 3}, "security_block"),
+            ({"security_block.independent_work": 0, "security_block.independent_work_completed": 0}, "security_block"),
+            ({"security_block.independent_work_completed": 2}, "security_block"),
+            ({"security_block.independent_work_completed": 4}, "security_block"),
+            ({"blocked_for_uat": 1}, "security_block"),
         ])
-
 
 
 class CanaryVariantContractTests(CanaryVariantCase):
@@ -4806,21 +4798,27 @@ class CanaryVariantContractTests(CanaryVariantCase):
                 value = copy.deepcopy(original)
                 variant = value["variants"][0]
                 variant.update(name=name, **copy.deepcopy(self.variant_evidence[name]))
-                evidence = variant[name] if name in variant else variant
-                fields = tuple(evidence) if name in variant else ("split_recommendation_recorded", "full_plan_built", "stops")
+                nested = name in self.variant_evidence[name]
+                evidence, prefix = (variant[name], f"receipt.variants[0].{name}") if nested else (variant, "receipt.variants[0]")
+                fields = tuple(evidence) if nested else tuple(self.variant_evidence[name])
                 for key in fields:
+                    field = f"{prefix}.{key}"
                     previous = evidence.pop(key)
                     with self.subTest(host=host, name=name, missing=key):
-                        self.assertTrue(self.validator.validate_receipt(value))
+                        self.assertEqual([f"{field}: Required schema field is missing: {field}."],
+                                         self.validator.validate_receipt(value))
                     evidence[key] = "unknown"
                     with self.subTest(host=host, name=name, malformed=key):
-                        self.assertTrue(self.validator.validate_receipt(value))
+                        failures = self.validator.validate_receipt(value)
+                        self.assertEqual(1, len(failures), failures)
+                        self.assertTrue(failures[0].startswith(f"{field}: "), failures)
                     evidence[key] = previous
-                if name in variant:
+                if nested:
                     del variant[name]
+                    field = f"receipt.variants[0].{name}"
                     with self.subTest(host=host, name=name, missing="object"):
-                        self.assertTrue(self.validator.validate_receipt(value))
-
+                        self.assertEqual([f"{field}: Required schema field is missing: {field}."],
+                                         self.validator.validate_receipt(value))
 
     def test_all_five_variants_keep_missing_guard_red_through_api_and_cli(self):
         for host, value in self.receipts.items():
@@ -4836,6 +4834,7 @@ class CanaryVariantContractTests(CanaryVariantCase):
                 report = json.loads(completed.stdout)
                 self.assertEqual((1, False, ["missing_question_guard.question_guard"]),
                                  (completed.returncode, report["valid"], report["failed_assertions"]))
+
 
 class CanaryBudgetCase(unittest.TestCase):
     """Shared setup for the budget tests; it holds no tests of its own."""
