@@ -84,7 +84,11 @@ CLOSED_STATUS = re.compile(r"^[^\w]*(?:complete(?:d)?|archived|retired|supersede
 
 def roadmap_entry_statuses(content: str) -> list[tuple[str, str]]:
     """Read statuses from progress rows and SPEC sections without changing them."""
-    rows = re.findall(rf"^[ \t]*\|?[ \t]*({SPEC_ID})[ \t]*\|[^|\n]*\|[ \t]*([^|\n]*?)[ \t]*(?:\||$)", content, re.M)
+    # GFM cell padding and outer pipes are optional; escaped pipes stay in a cell.
+    rows = re.findall(
+        rf"^[ \t]*\|?[ \t]*({SPEC_ID})[ \t]*\|(?:\\\||[^|\n])*\|"
+        r"[ \t]*((?:\\\||[^|\n])*?)[ \t]*(?:\||$)", content, re.M,
+    )
     statuses = dict(rows)
     entries = list(rows)
     sections = re.findall(rf"^### ({SPEC_ID})\b([^\n]*)(.*?)(?=^#{{1,3}} |\Z)", content, re.M | re.S)
@@ -131,6 +135,8 @@ class ValidateRoadmapFreeze(unittest.TestCase):
 
     def test_freeze_fixture_rejects_section_and_exemption_regressions(self) -> None:
         cases = (
+            (self.content.replace("| HRNS-015", "| TEST-006 | New\\|Complete | Ready | - | Specify |\n| HRNS-015", 1),
+             "TEST-006: open entry lacks 🧊 Frozen"),
             (self.content.replace("| HRNS-015", "|TEST-006|New open work|Ready|-|Specify|\n| HRNS-015", 1),
              "TEST-006: open entry lacks 🧊 Frozen"),
             (self.content.replace("| HRNS-015", "TEST-006|New open work|Ready|-|Specify\n| HRNS-015", 1),
