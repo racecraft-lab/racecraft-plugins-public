@@ -82,8 +82,8 @@ SPEC_ID = r"[A-Z][A-Z0-9]*-\d+[a-z]?"
 CLOSED_STATUS = re.compile(r"^[^\w]*(?:complete(?:d)?|archived|retired|superseded|dropped|shipped)\b", re.I)
 
 
-def roadmap_freeze_errors(content: str) -> list[str]:
-    """Check every catalog entry, including headings outside a progress table."""
+def roadmap_entry_statuses(content: str) -> list[tuple[str, str]]:
+    """Read statuses from progress rows and SPEC sections without changing them."""
     rows = re.findall(rf"^\| ({SPEC_ID}) \| [^|\n]* \| ([^|\n]*) \|", content, re.M)
     statuses = dict(rows)
     entries = list(rows)
@@ -91,6 +91,12 @@ def roadmap_freeze_errors(content: str) -> list[str]:
     for spec_id, heading, body in sections:
         status = re.search(r"^\*\*Status:\*\* (.+)$", body, re.M)
         entries.append((spec_id, status.group(1) if status else statuses.get(spec_id, heading.rsplit("·", 1)[-1].strip())))
+    return entries
+
+
+def roadmap_freeze_errors(content: str) -> list[str]:
+    """Check every catalog entry, including headings outside a progress table."""
+    entries = roadmap_entry_statuses(content)
     if not entries:
         return ["no roadmap SPEC entries found"]
     errors = []
@@ -123,20 +129,18 @@ class ValidateRoadmapFreeze(unittest.TestCase):
                 unfrozen = content.replace("⏳ Pending · 🧊 Frozen", status)
                 self.assertIn("TEST-001: open entry lacks 🧊 Frozen", roadmap_freeze_errors(unfrozen))
 
-    def test_freeze_fixture_rejects_unfrozen_spec_sections(self) -> None:
-        content = self.content
-        unfrozen = content.replace("**Status:** 🧊 Frozen — previously Pending.", "**Status:** Pending.")
-        self.assertIn("TEST-001: open entry lacks 🧊 Frozen", roadmap_freeze_errors(unfrozen))
-
-    def test_freeze_fixture_rejects_open_entries_outside_the_progress_table(self) -> None:
-        content = self.content
-        unfrozen = content + "\n### TEST-006: New open work\n\n**Status:** Ready\n"
-        self.assertIn("TEST-006: open entry lacks 🧊 Frozen", roadmap_freeze_errors(unfrozen))
-
-    def test_freeze_fixture_rejects_freezing_the_exempt_candidate(self) -> None:
-        content = self.content
-        frozen = content.replace("⏳ Ready", "⏳ Ready · 🧊 Frozen")
-        self.assertIn("HRNS-015 must remain exempt", roadmap_freeze_errors(frozen))
+    def test_freeze_fixture_rejects_section_and_exemption_regressions(self) -> None:
+        cases = (
+            (self.content.replace("**Status:** 🧊 Frozen — previously Pending.", "**Status:** Pending."),
+             "TEST-001: open entry lacks 🧊 Frozen"),
+            (self.content + "\n### TEST-006: New open work\n\n**Status:** Ready\n",
+             "TEST-006: open entry lacks 🧊 Frozen"),
+            (self.content.replace("⏳ Ready", "⏳ Ready · 🧊 Frozen"),
+             "HRNS-015 must remain exempt"),
+        )
+        for content, error in cases:
+            with self.subTest(error=error):
+                self.assertIn(error, roadmap_freeze_errors(content))
 
     def test_freeze_fixture_requires_the_health_program_link_and_eda_note(self) -> None:
         content = self.content
