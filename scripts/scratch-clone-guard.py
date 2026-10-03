@@ -3,7 +3,8 @@
 
 Claude Code runs it on UserPromptSubmit (typed commands) and PreToolUse on Skill
 (model calls). Codex runs it on UserPromptSubmit (typed `$skill` mentions) and
-PreToolUse on Bash (the model reading an installed speckit-pro SKILL.md).
+PreToolUse on Bash (a shell command touching an installed speckit-pro skill,
+which is how the Codex model loads one).
 
 The only scratch mark is the clone-local git config key `speckit-health.scratch`.
 Git runs with every `GIT_*` variable removed, so the environment can never set or
@@ -16,7 +17,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -32,6 +32,9 @@ BLOCK_REASON = (
 )
 CLAUDE_COMMAND = re.compile(r"\s*/(?P<name>[\w:-]+)")
 CODEX_MENTION = re.compile(r"(?<![\w$-])\$(?P<name>[\w:-]+)")
+# An installed plugin sits at <cache>/<marketplace>/speckit-pro/<version>/skills on both hosts;
+# the repo's own sources (speckit-pro/skills, dist/<host>/speckit-pro/skills) have no version segment.
+INSTALLED_SKILLS = re.compile(r"(?:^|[^\w.-])speckit-pro[/\\][^/\\\s'\"]+[/\\]skills(?![\w-])")
 
 
 class GuardError(Exception):
@@ -55,7 +58,7 @@ def is_plugin_skill(name: str, host: str) -> bool:
     return name.startswith(f"{PLUGIN}:") or name in skill_names(host)
 
 
-def typed_skill(host: str, payload: dict[str, Any]) -> bool:
+def is_typed_skill(host: str, payload: dict[str, Any]) -> bool:
     # Codex and Claude Code 2.1 send `prompt`; the current Claude Code reference names `user_input`.
     text = payload.get("prompt", payload.get("user_input"))
     if not isinstance(text, str):
@@ -78,40 +81,17 @@ def git(cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-def clone_root(cwd: Path) -> Path:
-    result = git(cwd, "rev-parse", "--show-toplevel")
-    if result.returncode != 0:
-        raise GuardError(f"{cwd} is not inside a git clone: {result.stderr.strip()}")
-    return Path(result.stdout.strip()).resolve()
-
-
-def installed_skill_read(command: Any, cwd: Path) -> bool:
-    """True when a shell command reads a speckit-pro SKILL.md outside this clone."""
-    if isinstance(command, list):
-        command = " ".join(str(part) for part in command)
+def installed_skill_access(command: Any) -> bool:
+    """True when a shell command names an installed speckit-pro skills directory."""
     if not isinstance(command, str):
-        raise GuardError("Bash payload has no command")
-    if "SKILL.md" not in command or PLUGIN not in command:
-        return False
-    try:
-        tokens = shlex.split(command)
-    except ValueError as exc:
-        raise GuardError(f"cannot parse Bash command: {exc}") from exc
-    root = clone_root(cwd)
-    for token in tokens:
-        path = Path(os.path.expanduser(token.rsplit("=", 1)[-1]))
-        parts = path.parts
-        if len(parts) < 3 or parts[-1] != "SKILL.md" or parts[-3] != "skills" or PLUGIN not in parts:
-            continue
-        if not (cwd / path).resolve().is_relative_to(root):
-            return True
-    return False
+        raise GuardError("Bash payload has no command string")
+    return INSTALLED_SKILLS.search(command) is not None
 
 
-def runs_plugin_skill(host: str, payload: dict[str, Any], cwd: Path) -> bool:
+def runs_plugin_skill(host: str, payload: dict[str, Any]) -> bool:
     event = payload.get("hook_event_name")
     if event == "UserPromptSubmit":
-        return typed_skill(host, payload)
+        return is_typed_skill(host, payload)
     if event != "PreToolUse":
         raise GuardError(f"unsupported hook event: {event!r}")
     tool_input = payload.get("tool_input")
@@ -124,7 +104,7 @@ def runs_plugin_skill(host: str, payload: dict[str, Any], cwd: Path) -> bool:
             raise GuardError("Skill payload has no skill name")
         return is_plugin_skill(skill, host)
     if tool == "Bash":
-        return installed_skill_read(tool_input.get("command"), cwd)
+        return installed_skill_access(tool_input.get("command"))
     return False
 
 
@@ -157,7 +137,7 @@ def decide(host: str, payload: Any) -> dict[str, Any] | None:
     if not isinstance(cwd_text, str) or not cwd_text:
         raise GuardError("hook payload has no cwd")
     cwd = Path(cwd_text)
-    if not runs_plugin_skill(host, payload, cwd) or scratch_marked(cwd):
+    if not runs_plugin_skill(host, payload) or scratch_marked(cwd):
         return None
     return block_output(payload["hook_event_name"])
 

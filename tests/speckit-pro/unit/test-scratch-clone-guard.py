@@ -39,11 +39,15 @@ HOST_CASES = {
     ],
     "codex": [
         {"hook_event_name": "UserPromptSubmit", "prompt": "$speckit-autopilot run the workflow"},
-        {
-            "hook_event_name": "PreToolUse",
-            "tool_name": "Bash",
-            "tool_input": {"command": f"sed -n '1,200p' {INSTALLED_SKILL}"},
-        },
+        *(
+            {"hook_event_name": "PreToolUse", "tool_name": "Bash", "tool_input": {"command": command}}
+            for command in (
+                f"sed -n '1,200p' {INSTALLED_SKILL}",
+                f'sh -c "cat {INSTALLED_SKILL}"',
+                f"cd {INSTALLED_SKILL.removesuffix('/SKILL.md')} && cat SKILL.md",
+                "cat $HOME/.codex/plugins/cache/market/speckit-pro/9.9.9/skills/speckit-status/*",
+            )
+        ),
     ],
 }
 
@@ -65,6 +69,7 @@ UNRELATED_CASES = {
             "tool_name": "Bash",
             "tool_input": {"command": "sed -n '1,80p' speckit-pro/skills/speckit-autopilot/SKILL.md"},
         },
+        {"hook_event_name": "PreToolUse", "tool_name": "Bash", "tool_input": {"command": "ls dist/codex/speckit-pro/skills"}},
     ],
 }
 
