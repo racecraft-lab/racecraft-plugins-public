@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.40.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.39.2...speckit-pro-v2.40.0) (2026-10-03)
+
+
+### Features
+
+* **speckit-pro:** add scaffold answers files and canary receipts ([#1104](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1104)) ([7de31e7](https://github.com/racecraft-lab/racecraft-plugins-public/commit/7de31e787893c4266b438694d74eeb48c10e1a6d))
+
+
+### Bug Fixes
+
+* **speckit-pro:** expand Codex plugin skill mentions on every surface ([#1134](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1134)) ([65f8587](https://github.com/racecraft-lab/racecraft-plugins-public/commit/65f8587bc0a41f4cedcfe65771d7c13ab9cf4b4a))
+* **speckit-pro:** install Codex agents under CODEX_HOME when it is set ([#1135](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1135)) ([4cff984](https://github.com/racecraft-lab/racecraft-plugins-public/commit/4cff984f9a622b3c5d4911b04e890096c3782f75))
+
 ## [2.39.2](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.39.1...speckit-pro-v2.39.2) (2026-10-01)
 
 
