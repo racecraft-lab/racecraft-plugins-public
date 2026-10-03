@@ -18,7 +18,7 @@ SCRIPT = Path(__file__).resolve().parents[3] / "speckit-pro/scripts/agent-memory
 REPO_ROOT = SCRIPT.parents[2]
 
 
-class AgentMemoryIgnoreTests(unittest.TestCase):
+class ConsumerRepoCase(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -33,6 +33,8 @@ class AgentMemoryIgnoreTests(unittest.TestCase):
         )
         return result.returncode, json.loads(result.stdout)
 
+
+class AgentMemoryIgnoreTests(ConsumerRepoCase):
     def test_apply_preserves_content_and_is_idempotent_for_root_and_nested_memory(self):
         (self.root / ".gitignore").write_text("# existing\n*.cache\n")
         nested = self.root / "feature/.claude/agent-memory-local"
@@ -98,6 +100,20 @@ class AgentMemoryIgnoreTests(unittest.TestCase):
         self.assertIn("symlink", str(report))
         self.assertFalse((self.root / ".gitignore").exists())
 
+    def test_both_clients_include_repair_in_setup_and_check_before_dispatch(self):
+        for host in ("claude", "codex"):
+            for operation in ("speckit-install", "speckit-upgrade"):
+                path = host_skill_root(host) / operation / "SKILL.md"
+                with self.subTest(path=path):
+                    body = path.read_text()
+                    self.assertIn("agent-memory-ignore.py", body)
+                    self.assertIn("--mode apply", body)
+        prerequisites = (REPO_ROOT / "speckit-pro/skills/speckit-autopilot/references/prerequisites.md").read_text()
+        self.assertIn("agent-memory-ignore.py", prerequisites)
+        self.assertIn("--mode check", prerequisites)
+
+
+class WorktreesIgnoreTests(ConsumerRepoCase):
     def worktrees_ignored(self):
         return subprocess.run(
             ["git", "check-ignore", "-q", ".worktrees/x"], cwd=self.root, check=False,
@@ -128,18 +144,10 @@ class AgentMemoryIgnoreTests(unittest.TestCase):
                 with self.subTest(path=path):
                     self.assertIn("--target worktrees", path.read_text())
 
-    def test_both_clients_include_repair_in_setup_and_check_before_dispatch(self):
-        for host in ("claude", "codex"):
-            for operation in ("speckit-install", "speckit-upgrade"):
-                path = host_skill_root(host) / operation / "SKILL.md"
-                with self.subTest(path=path):
-                    body = path.read_text()
-                    self.assertIn("agent-memory-ignore.py", body)
-                    self.assertIn("--mode apply", body)
-        prerequisites = (REPO_ROOT / "speckit-pro/skills/speckit-autopilot/references/prerequisites.md").read_text()
-        self.assertIn("agent-memory-ignore.py", prerequisites)
-        self.assertIn("--mode check", prerequisites)
-
 
 if __name__ == "__main__":
-    raise SystemExit(run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(AgentMemoryIgnoreTests), label="test-agent-memory-ignore"))
+    suite = unittest.TestSuite(
+        unittest.defaultTestLoader.loadTestsFromTestCase(case)
+        for case in (AgentMemoryIgnoreTests, WorktreesIgnoreTests)
+    )
+    raise SystemExit(run_counted(suite, label="test-agent-memory-ignore"))
