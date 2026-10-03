@@ -8,7 +8,7 @@ allowed-tools: Read Edit Write Skill Agent ToolSearch
 license: MIT
 <!-- /host -->
 <!-- host:codex: Codex names skills as $NAME -->
-description: "Use this skill when the user wants to set up, scaffold, bootstrap, prep, initialize, or prepare a SPEC-ID from the technical roadmap for autonomous execution. Triggers on: set up SPEC-XXX, scaffold SPEC-XXX, bootstrap SPEC-XXX for development, prep SPEC-XXX, initialize the workspace for SPEC-XXX, prepare SPEC-XXX for the autonomous run, create a spec branch and workflow for SPEC-XXX, generate the workflow file for SPEC-XXX, I need a workflow file generated for SPEC-XXX, fill the prompts from the roadmap, pre-fill the workflow template, start working on SPEC-XXX, populate the workflow file for SPEC-XXX. Opens with a blind-spot pass, creates the git worktree, spec branch, Design Concept doc, and populated workflow file, then hands off to planning. Accepts --answers-file for unattended setup; otherwise interviews the user. Not for checking roadmap status (use $speckit-status), running a populated workflow (use $speckit-autopilot), or SDD coaching (use $speckit-coach)."
+description: "Use this skill when the user wants to set up, scaffold, bootstrap, prep, initialize, or prepare a SPEC-ID from the technical roadmap for autonomous execution. Triggers on: set up SPEC-XXX, scaffold SPEC-XXX, bootstrap SPEC-XXX for development, prep SPEC-XXX, initialize the workspace for SPEC-XXX, prepare SPEC-XXX for the autonomous run, create a spec branch and workflow for SPEC-XXX, generate the workflow file for SPEC-XXX, I need a workflow file generated for SPEC-XXX, fill the prompts from the roadmap, pre-fill the workflow template, start working on SPEC-XXX, populate the workflow file for SPEC-XXX. Opens with a blind-spot pass, creates the git worktree, spec branch, Design Concept doc, and populated workflow file, then hands off to planning. Accepts --answers-file for unattended setup; otherwise interviews the user. Not for checking roadmap status (use $speckit-pro:speckit-status), running a populated workflow (use $speckit-pro:speckit-autopilot), or SDD coaching (use $speckit-pro:speckit-coach)."
 <!-- /host -->
 ---
 
@@ -37,7 +37,7 @@ Creates the worktree, branch, and workflow file — ready for
 `/speckit-pro:speckit-autopilot`.
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-`$speckit-autopilot`.
+`$speckit-pro:speckit-autopilot`.
 <!-- /host -->
 
 ## Scope
@@ -52,7 +52,7 @@ technical roadmap, or understand the SDD process, redirect them to
 `/speckit-pro:speckit-coach`.
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-`$speckit-coach`.
+`$speckit-pro:speckit-coach`.
 <!-- /host -->
 Do not invent roadmap data or phase prompts from vague requirements when the
 roadmap entry does not exist.
@@ -138,8 +138,8 @@ does not block the remaining scaffold workflow, but it must be recorded.
 /speckit-pro:speckit-scaffold-spec SPEC-008 --answers-file answers.json
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-$speckit-scaffold-spec SPEC-009
-$speckit-scaffold-spec SPEC-008 --answers-file answers.json
+$speckit-pro:speckit-scaffold-spec SPEC-009
+$speckit-pro:speckit-scaffold-spec SPEC-008 --answers-file answers.json
 <!-- /host -->
 ```
 
@@ -249,7 +249,7 @@ running the promoted `install-codex-agents` helper in `dry_run` mode against the
 selected `.codex/agents/` or `~/.codex/agents/` destination and its installed
 model and Luna fallback choice. The plan must show every bundled TOML, including
 `uat-runbook-author.toml`, as current. If any required file is missing or stale,
-STOP, instruct the user to run `$install`, restart Codex, and then retry
+STOP, instruct the user to run `$speckit-pro:install`, restart Codex, and then retry
 scaffold. Do not apply the repair inside scaffold because this process cannot
 reload changed custom agents safely.
 <!-- /host -->
@@ -285,7 +285,7 @@ one with
 `/speckit-pro:speckit-coach help me create a technical roadmap`."
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-`$speckit-coach help me create a technical roadmap`."
+`$speckit-pro:speckit-coach help me create a technical roadmap`."
 <!-- /host -->
 
 Before parsing the roadmap, run runner helper `check-roadmap-freshness` with
@@ -324,7 +324,7 @@ Offer to help the user add or correct the roadmap entry with
 `/speckit-pro:speckit-coach`; do not invent the entry or continue scaffolding.
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-`$speckit-coach`; do not invent the entry or continue scaffolding.
+`$speckit-pro:speckit-coach`; do not invent the entry or continue scaffolding.
 <!-- /host -->
 
 Run the reviewability setup gate before creating the worktree:
@@ -757,7 +757,7 @@ direct user interaction; never start a free-text interview there.
    ```
 <!-- /host -->
 <!-- host:codex: Codex invokes a sibling skill by its dollar-sign name -->
-   Invoke `$grill-me` with a setup-mode marker, the spec ID and name, the full
+   Invoke `$speckit-pro:grill-me` with a setup-mode marker, the spec ID and name, the full
    scope description from the technical roadmap (and any constraints,
    dependencies, or stated tools) with the step 3.6 BLIND-SPOT PASS FINDINGS
    block appended below it, and the output path
@@ -1027,7 +1027,7 @@ Report:
 <!-- /host -->
 <!-- host:codex: Codex runs the autopilot by its dollar-sign name in the same task -->
 **Next step:** continue in this same Codex task by running:
-$speckit-autopilot <absolute-workflow-file> --stage plan
+$speckit-pro:speckit-autopilot <absolute-workflow-file> --stage plan
 <!-- /host -->
 
 **Review both files** — the design concept doc captures the
@@ -1178,7 +1178,7 @@ autopilot from the parent checkout.
 **The hand-off has one command:**
 
 ```text
-$speckit-autopilot <absolute-workflow-file> --stage plan
+$speckit-pro:speckit-autopilot <absolute-workflow-file> --stage plan
 ```
 
 This is the ordinary same-task outcome. OpenAI documents worktrees as
@@ -1194,8 +1194,8 @@ fallback is a new Codex task rooted at the canonical worktree. A later user may
 explicitly select the absolute workflow path from the same Codex task; the
 autopilot checks that selection and permissions at invocation time.
 
-The leading `$speckit-autopilot` token is the invocation form this skill set
-uses: Codex skills are invoked via `$skill-name`, never via a
+The leading `$speckit-pro:speckit-autopilot` token is the invocation form this skill set
+uses: Codex plugin skills are invoked via `$speckit-pro:<skill-name>`, never via a
 `/<plugin>:<skill>` slash command.
 <!-- /host -->
 

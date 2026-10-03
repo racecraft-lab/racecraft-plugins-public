@@ -24,6 +24,7 @@ from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
 from speckit_pro_runner.agent_inventory import AGENT_INVENTORY
 from speckit_pro_runner.codex_agent_generator import generated_codex_files
 from speckit_pro_runner.gates.payloads import build_installed_plugin_payloads
+from speckit_pro_runner.host_parity import emit_host
 import agent_roster
 from host_skill_views import host_skill_root
 from structural_helpers import body as _body
@@ -52,6 +53,23 @@ def _description_value(frontmatter: str) -> str:
     return ''
 
 class ValidateSkills(unittest.TestCase):
+
+    def test_codex_skill_mentions_include_the_plugin_namespace(self) -> None:
+        names = discover_skill_names(CODEX_VIEW)
+        self.assertIn('speckit-scaffold-spec', names)
+        short = re.compile(r'\$(?:' + '|'.join(re.escape(name) for name in names)
+                           + r'|speckit-[\w<>*-]+)(?![\w:-])')
+        surfaces = list(CODEX_VIEW.rglob('*.md'))
+        surfaces += list((PLUGIN_ROOT / 'codex-skills').rglob('*.yaml'))
+        surfaces += list((REPO_ROOT / 'docs-site/src/content/docs').rglob('*.md'))
+        surfaces += list((REPO_ROOT / 'docs-site/src/content/docs').rglob('*.mdx'))
+        surfaces += [PLUGIN_ROOT / 'README.md']
+        for source in surfaces:
+            with self.subTest(file=source.name):
+                self.assertEqual(short.findall(source.read_text(encoding='utf-8')), [])
+        for source in (PLUGIN_ROOT / 'agents').glob('*.md'):
+            with self.subTest(agent=source.name):
+                self.assertEqual(short.findall(emit_host(source.read_text(encoding='utf-8'), 'codex')), [])
 
     def test_plan_ambiguity_repair_preserves_requirement_provenance(self) -> None:
         surfaces = (
@@ -462,7 +480,7 @@ class ValidateCodexSkills(unittest.TestCase):
             self.assertTrue('.codex/agents/' in body and '~/.codex/agents/' in body, 'expected both project and user Codex subagent paths in the autopilot skill')
         with self.subTest(msg='speckit-autopilot: fails closed to the install skill when subagents are missing'):
             prerequisites = _read(skill_dir / 'references' / 'prerequisites.md')
-            self.assertTrue('$install' in body and '$install' in prerequisites and ('install-codex-agents' in prerequisites) and ('dry_run' in prerequisites) and ('validate-agent-install' not in prerequisites) and ('--autoheal' not in prerequisites), 'expected read-only installer dry-run preflight and install/restart fail-closed guidance')
+            self.assertTrue('$speckit-pro:install' in body and '$speckit-pro:install' in prerequisites and ('install-codex-agents' in prerequisites) and ('dry_run' in prerequisites) and ('validate-agent-install' not in prerequisites) and ('--autoheal' not in prerequisites), 'expected read-only installer dry-run preflight and install/restart fail-closed guidance')
         with self.subTest(msg='speckit-autopilot: explicit external workflow binds to its registered worktree'):
             prerequisites = _read(skill_dir / 'references' / 'prerequisites.md')
             self.assertTrue('explicitly supplied the absolute workflow path' in prerequisites and 'relation=external' in prerequisites and 'registered worktree' in prerequisites and 'real sandbox denial' in prerequisites and ('Open a new Codex task rooted at <workflow_root>' not in prerequisites), 'expected explicit registered-worktree binding with permission failures reported at the actual operation')

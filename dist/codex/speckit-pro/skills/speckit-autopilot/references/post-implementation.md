@@ -42,16 +42,16 @@ in order; do not collapse or defer.
 
 | # | Item | Requires | Command |
 |---|------|----------|---------|
-| 10 | Doctor Extension Check | doctor / speckit-utils ext | `$speckit-speckit-utils-doctor` (or `$speckit-doctor`) |
-| 11 | Verify Implementation | verify ext | `$speckit-verify` |
-| 12 | Verify Tasks Phantom Check | verify-tasks ext | `$speckit-verify-tasks` |
+| 10 | Doctor Extension Check | doctor / speckit-utils ext | `$speckit-pro:speckit-speckit-utils-doctor` (or `$speckit-pro:speckit-doctor`) |
+| 11 | Verify Implementation | verify ext | `$speckit-pro:speckit-verify` |
+| 12 | Verify Tasks Phantom Check | verify-tasks ext | `$speckit-pro:speckit-verify-tasks` |
 | 13 | Code Review | (none) — built-in | spawn a subagent to independently review the diff `origin/main...HEAD`; report findings by severity |
 | 14 | Integration Suite | (none) | `PROJECT_COMMANDS.FULL_VERIFY` or detected full test command, then every populated quality-gate slot (`COMPLEXITY`, `MUTATION`, `DEPENDENCY_RULES`) with `{paths}` (space-separated) and `{paths_csv}` (comma-separated) = changed source files in `origin/main...HEAD` (when that list is empty, skip `COMPLEXITY` and `MUTATION` and record `n/a: no source files changed`); when `MUTATION` is populated, run the hardener once per spec between its run and its block decision per [Hardener Delegation](./hardener-delegation.md) (delegation gateway on `route: "auto"` when `delegate_health` is good, else the primary model; tests-only writes; stop at floor or cap; record the `Hardener` line); a populated slot that still fails blocks; record each result in the Quality Gates table |
 | 15 | Final Reviewability Backstop | (none) | deferred helper; use current committed evidence, or hold PR side effects and regenerate the committed reviewability evidence |
 | 16 | PR Packet/Body Generation | final backstop proceeded | emit or refresh current `specs/<feature>/.process/pr-packets/<packet-id>.json` with `pr-packet-output` `dry_run` then `apply`; on failure, regenerate the packet from the diagnostics and revalidate |
 | 17 | PR Creation | current packet validation passed | single-PR path only when no split route and no current `pr_marker_plan`; `multi-pr-emission` for split-PR routes or marker-ready plans |
 | 18 | Review Remediation | (none) | parent session loop — inspect PR feedback, dispatch fixes as needed |
-| 19 | Retrospective | retrospective ext | `$speckit-retrospective-analyze` (FINAL STEP) |
+| 19 | Retrospective | retrospective ext | `$speckit-pro:speckit-retrospective-analyze` (FINAL STEP) |
 
 ### Combined Durable Plan
 
@@ -73,7 +73,7 @@ or `PR Packet/Body Generation` because the supporting rows expose their work.
 
 Extension items (10 Doctor, 11 Verify, 12 Verify-Tasks, 19
 Retrospective): Spawn `phase-executor` with instructions to run the
-`$speckit-*` extension skill for SPEC-XXX and return a summary.
+`$speckit-pro:speckit-*` extension skill for SPEC-XXX and return a summary.
 Code Review (13) is built-in — no extension; it runs as the
 parallel-group Track B subagent (see below), reviewing the diff and
 reporting findings by severity.
@@ -84,8 +84,8 @@ parent session.)
 
 ## How Extension Commands Become Available
 
-Commands like `$speckit-verify`, `$speckit-verify-tasks`,
-`$speckit-doctor`, `$speckit-retrospective-analyze` are INSTALLED by
+Commands like `$speckit-pro:speckit-verify`, `$speckit-pro:speckit-verify-tasks`,
+`$speckit-pro:speckit-doctor`, `$speckit-pro:speckit-retrospective-analyze` are INSTALLED by
 `specify extension add <name>`. The CLI creates command files in the
 project's commands directory (`.codex/commands/` for Codex CLI,
 `.claude/commands/` for Claude Code). These commands then appear as
@@ -165,7 +165,7 @@ Codex CLI does not have Agent Teams primitives — Codex always uses the
 parallel `spawn_agent` pattern below:
 
 - **Track A:** Doctor (item 10) — spawn `phase-executor` for
-  `$speckit-doctor`
+  `$speckit-pro:speckit-doctor`
 - **Track B:** Code Review (item 13) — spawn the built-in `default` subagent to
   independently review the diff
   `origin/main...HEAD` and report findings by severity (no extension)
@@ -185,7 +185,7 @@ tail (15 → 16 → 17 → 18 → 19, with the supporting rows in plan order).
 
 ## Post Rules
 
-- Extension commands run in `phase-executor` with the exact `$speckit-*`
+- Extension commands run in `phase-executor` with the exact `$speckit-pro:speckit-*`
   skill sigil and SPEC context.
 - Built-in verification, git, push, PR creation, and review polling stay in the
   parent session so the orchestrator owns durable state and final reporting.

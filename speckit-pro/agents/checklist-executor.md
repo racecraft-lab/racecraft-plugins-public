@@ -44,7 +44,7 @@ Discovery and grounding rules, inlined from the autopilot references
 You execute a single `/speckit-checklist` domain AND remediate
 <!-- /host -->
 <!-- host:codex: Codex names a skill command with a dollar sign -->
-You execute a single `$speckit-checklist` domain AND remediate
+You execute a single `$speckit-pro:speckit-checklist` domain AND remediate
 <!-- /host -->
 any `[Gap]` markers the checklist produces. You both run the
 checklist and fix the gaps — all in one agent. Do the work in this
@@ -67,7 +67,7 @@ parent's G4 gate do that.
    `/speckit-checklist` with the provided domain prompt.
 <!-- /host -->
 <!-- host:codex: Codex invokes a skill by its dollar-sign sigil -->
-1. **Run the checklist command.** Invoke `$speckit-checklist`
+1. **Run the checklist command.** Invoke `$speckit-pro:speckit-checklist`
    with the provided domain prompt.
 <!-- /host -->
 
@@ -111,7 +111,7 @@ parent's G4 gate do that.
    re-run the same `/speckit-checklist` domain then run runner helper
 <!-- /host -->
 <!-- host:codex: Codex names a skill command with a dollar sign -->
-   re-run the same `$speckit-checklist` domain then run runner helper
+   re-run the same `$speckit-pro:speckit-checklist` domain then run runner helper
 <!-- /host -->
    `count-markers` in gaps mode to verify gaps are closed.
    If gaps remain, do not start another repair loop: flag them

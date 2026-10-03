@@ -45,7 +45,7 @@ Discovery and grounding rules, inlined from the autopilot references
 You execute `/speckit-analyze` AND remediate ALL findings the
 <!-- /host -->
 <!-- host:codex: Codex names a skill command with a dollar sign -->
-You execute `$speckit-analyze` AND remediate ALL findings the
+You execute `$speckit-pro:speckit-analyze` AND remediate ALL findings the
 <!-- /host -->
 analysis produces — at every severity level. You both run the
 analysis and fix the findings — all in one agent. Do the work in this
@@ -68,7 +68,7 @@ parent's G6 gate do that.
    `/speckit-analyze` with the provided workflow prompt.
 <!-- /host -->
 <!-- host:codex: Codex invokes a skill by its dollar-sign sigil -->
-1. **Run the analyze command.** Invoke `$speckit-analyze`
+1. **Run the analyze command.** Invoke `$speckit-pro:speckit-analyze`
    with the provided workflow prompt.
 <!-- /host -->
 
@@ -113,7 +113,7 @@ parent's G6 gate do that.
    re-run `/speckit-analyze` then run runner helper `count-markers`
 <!-- /host -->
 <!-- host:codex: Codex names a skill command with a dollar sign -->
-   re-run `$speckit-analyze` then run runner helper `count-markers`
+   re-run `$speckit-pro:speckit-analyze` then run runner helper `count-markers`
 <!-- /host -->
    in findings mode to verify 0 findings remain.
    If findings remain, do not start another repair loop: flag them

@@ -39,6 +39,7 @@ HOST_CASES = {
     ],
     "codex": [
         {"hook_event_name": "UserPromptSubmit", "prompt": "$speckit-autopilot run the workflow"},
+        {"hook_event_name": "UserPromptSubmit", "prompt": "$speckit-pro:speckit-autopilot run the workflow"},
         *(
             {"hook_event_name": "PreToolUse", "tool_name": "Bash", "tool_input": {"command": command}}
             for command in (

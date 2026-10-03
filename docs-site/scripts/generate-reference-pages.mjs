@@ -251,12 +251,12 @@ async function buildSkillsPage() {
       platformMapping: {
         concept: `SpecKit Pro ${name} skill`,
         claudeCode: claude ? `/speckit-pro:${name}` : 'No Claude Code source skill in this repository.',
-        codex: codex ? `$${name}` : 'No Codex source skill in this repository.',
+        codex: codex ? `$speckit-pro:${name}` : 'No Codex source skill in this repository.',
         runtimeDifference: claude && codex ? 'Both runtimes ship source skill instructions; invocation syntax and runtime guardrails differ.' : 'This skill is present in only one runtime source tree.',
       },
       commandSkillReference: {
         claudeInvocation: claude ? `/speckit-pro:${name}` : 'Not available in the Claude Code source tree.',
-        codexInvocation: codex ? `$${name}` : 'Not available in the Codex source tree.',
+        codexInvocation: codex ? `$speckit-pro:${name}` : 'Not available in the Codex source tree.',
         purpose: firstSentence(codex?.description || claude?.description, `SpecKit Pro skill ${name}`),
         prerequisites: skillPrerequisites(name),
         expectedOutputArtifact: commandExpectedArtifact(name),

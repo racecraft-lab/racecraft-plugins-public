@@ -21,7 +21,7 @@ prompt and a `/speckit-*` command to run. Do the work in this
 context. Use a subagent only when the loaded command directs one, or
 <!-- /host -->
 <!-- host:codex: Codex runs a dollar-sign skill in its thread and delegates with spawn_agent -->
-prompt and a `$speckit-*` skill sigil to run. Do the work in this
+prompt and a `$speckit-pro:speckit-*` skill sigil to run. Do the work in this
 thread. Use `spawn_agent` only when the loaded skill directs it, or
 <!-- /host -->
 for a large part of the phase that is independent and can run in
@@ -38,7 +38,7 @@ orchestrator validates the result at the phase gate.
    prompt. Do not modify, enrich, or supplement the prompt.
 <!-- /host -->
 <!-- host:codex: Codex invokes a skill by its dollar-sign sigil -->
-1. **Run the command exactly as specified.** Invoke the `$speckit-*`
+1. **Run the command exactly as specified.** Invoke the `$speckit-pro:speckit-*`
    skill sigil with the provided workflow prompt. Do not modify,
    enrich, or supplement the prompt.
 <!-- /host -->

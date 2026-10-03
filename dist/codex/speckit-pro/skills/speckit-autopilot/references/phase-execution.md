@@ -28,12 +28,12 @@ result.
 
 | Phase | Agent | Prompt prefix |
 | ----- | ----- | ------------- |
-| Specify | `phase-executor` | `Run $speckit-specify with:` |
+| Specify | `phase-executor` | `Run $speckit-pro:speckit-specify with:` |
 | Clarify | `clarify-executor` | `Prepare a Clarify Question Set for:` |
-| Plan | `phase-executor` | `Run $speckit-plan with:` |
-| Checklist | `checklist-executor` | `Run $speckit-checklist with:` |
-| Tasks | `phase-executor` | `Run $speckit-tasks with:` |
-| Analyze | `analyze-executor` | `Run $speckit-analyze with:` |
+| Plan | `phase-executor` | `Run $speckit-pro:speckit-plan with:` |
+| Checklist | `checklist-executor` | `Run $speckit-pro:speckit-checklist with:` |
+| Tasks | `phase-executor` | `Run $speckit-pro:speckit-tasks with:` |
+| Analyze | `analyze-executor` | `Run $speckit-pro:speckit-analyze with:` |
 | Implement | `implement-executor` or project implementation agent | Task-specific TDD prompt |
 
 Consensus uses `codebase-analyst`, `spec-context-analyst`, and
@@ -230,7 +230,7 @@ for phase in PHASES starting from first_pending:
        a. Resolve <executor>:
           use the matching installed SpecKit custom agent
        b. spawn_agent the resolved <executor>:
-          "Run $speckit-<phase> with: <prompt>"
+          "Run $speckit-pro:speckit-<phase> with: <prompt>"
        c. Loop bounded wait_agent calls until this executor's actual summary is
           delivered; a status update or timeout alone is not the result. Record
           the summary, then close_agent only when that action is exposed. On
@@ -1455,7 +1455,7 @@ The description begins with the matching H1 title, followed by exactly two H2 se
 ## Resume
 
 Stage: plan — stopped at the plan-stage boundary for review.
-Resume with: `$speckit-autopilot <workflow-file> --stage implement`
+Resume with: `$speckit-pro:speckit-autopilot <workflow-file> --stage implement`
 ```
 
 - **The artifacts index** is a table of three columns: the artifact, its purpose
@@ -1492,7 +1492,7 @@ draft packet. `inputs.mode_name` is not accepted.
     "title_description": "open an example draft",
     "changed_files": [],
     "verification_evidence": [],
-    "body": "# feat(speckit-pro): open an example draft\n\n## Artifacts\n\n| Artifact | Purpose | Open |\n| --- | --- | --- |\n| Implementation Plan | Describe the implementation phases | `open specs/example-feature/artifacts/implementation-plan.html` |\n\n## Resume\n\nStage: plan. Stopped at the plan-stage boundary for review.\nResume with: `$speckit-autopilot <workflow-file> --stage implement`\n"
+    "body": "# feat(speckit-pro): open an example draft\n\n## Artifacts\n\n| Artifact | Purpose | Open |\n| --- | --- | --- |\n| Implementation Plan | Describe the implementation phases | `open specs/example-feature/artifacts/implementation-plan.html` |\n\n## Resume\n\nStage: plan. Stopped at the plan-stage boundary for review.\nResume with: `$speckit-pro:speckit-autopilot <workflow-file> --stage implement`\n"
   }
 }
 ```
@@ -2922,7 +2922,7 @@ only that private cleanup completed, never its absolute path or contents.
 
 #### Phase 7 Setup: Record the Implement Checklist Gate
 
-Stock `$speckit-implement` stops when a domain checklist has unticked items.
+Stock `$speckit-pro:speckit-implement` stops when a domain checklist has unticked items.
 Spec Kit's checklist template makes those items reviewer-owned: a reviewer
 ticks a box, and implement must not change the markers. Autopilot does not run
 that stop. It records the gate decision instead, once, before the first Phase 7

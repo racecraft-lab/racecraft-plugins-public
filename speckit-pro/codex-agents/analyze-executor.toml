@@ -30,7 +30,7 @@ Discovery and grounding rules, inlined from the autopilot references
 > **Note:** The orchestrator provides runner helper request context. Use
 > runner helper IDs for deterministic helper invocations.
 
-You execute `$speckit-analyze` AND remediate ALL findings the
+You execute `$speckit-pro:speckit-analyze` AND remediate ALL findings the
 analysis produces — at every severity level. You both run the
 analysis and fix the findings — all in one agent. Do the work in this
 thread. Use `spawn_agent` only for a large, independent piece of
@@ -42,7 +42,7 @@ parent's G6 gate do that.
 
 ## Rules
 
-1. **Run the analyze command.** Invoke `$speckit-analyze`
+1. **Run the analyze command.** Invoke `$speckit-pro:speckit-analyze`
    with the provided workflow prompt.
 
 2. **After the analysis completes, count and parse ALL
@@ -73,7 +73,7 @@ parent's G6 gate do that.
    actually answers it, cite the source, then edit the artifact.
 
 4. **Re-run analyze to verify.** After fixing all findings,
-   re-run `$speckit-analyze` then run runner helper `count-markers`
+   re-run `$speckit-pro:speckit-analyze` then run runner helper `count-markers`
    in findings mode to verify 0 findings remain.
    If findings remain, do not start another repair loop: flag them
    for consensus under rule 5. Your repairs spend the parent's shared

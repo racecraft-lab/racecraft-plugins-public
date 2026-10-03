@@ -8,7 +8,7 @@ allowed-tools: Read Edit Write
 license: MIT
 <!-- /host -->
 <!-- host:codex: Codex keeps its own selection description -->
-description: "Install the SpecKit CLI and initialize the current repository for one or both coding-agent integrations (Claude Code, Codex CLI). Use when the operator says: 'install speckit', 'set up speckit', 'initialize speckit in this repo', 'add speckit to this project', 'specify init for me', 'install spec-kit', '$speckit-install', or has a repo with no .specify/ directory and wants to start using Spec-Driven Development. Detects existing installs and hands off to $speckit-upgrade rather than overwriting. Safe to run on any repo. Not for upgrading an existing speckit install ($speckit-upgrade), not for scaffolding a new spec on an already-installed repo ($speckit-scaffold-spec), and not for installing this plugin's own bundled Codex subagents (use $install for that)."
+description: "Install the SpecKit CLI and initialize the current repository for one or both coding-agent integrations (Claude Code, Codex CLI). Use when the operator says: 'install speckit', 'set up speckit', 'initialize speckit in this repo', 'add speckit to this project', 'specify init for me', 'install spec-kit', '$speckit-pro:speckit-install', or has a repo with no .specify/ directory and wants to start using Spec-Driven Development. Detects existing installs and hands off to $speckit-pro:speckit-upgrade rather than overwriting. Safe to run on any repo. Not for upgrading an existing speckit install ($speckit-pro:speckit-upgrade), not for scaffolding a new spec on an already-installed repo ($speckit-pro:speckit-scaffold-spec), and not for installing this plugin's own bundled Codex subagents (use $speckit-pro:install for that)."
 <!-- /host -->
 ---
 
@@ -22,7 +22,7 @@ existing `.specify/` directory and hands off to
 `/speckit-pro:speckit-upgrade` rather than overwriting it.
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-`$speckit-upgrade` rather than overwriting it.
+`$speckit-pro:speckit-upgrade` rather than overwriting it.
 <!-- /host -->
 
 This skill is **mutation-heavy** (it writes files to the repo and
@@ -41,14 +41,14 @@ other skills.
 - Methodology coaching. That is `/speckit-pro:speckit-coach`.
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign and ships an agent install skill -->
-- Upgrading an existing SpecKit install. That is `$speckit-upgrade`.
+- Upgrading an existing SpecKit install. That is `$speckit-pro:speckit-upgrade`.
   This skill hands off to it when `.specify/` is present.
 - Scaffolding a new spec from the technical roadmap. That is
-  `$speckit-scaffold-spec`.
+  `$speckit-pro:speckit-scaffold-spec`.
 - Installing this plugin's own bundled Codex subagent TOML files
   (`autopilot-fast-helper.toml`, `phase-executor.toml`, etc.) into
-  `~/.codex/agents/`. That is `$install`.
-- Methodology coaching. That is `$speckit-coach`.
+  `~/.codex/agents/`. That is `$speckit-pro:install`.
+- Methodology coaching. That is `$speckit-pro:speckit-coach`.
 <!-- /host -->
 
 ## Invocation
@@ -61,10 +61,10 @@ other skills.
 /speckit-pro:speckit-install claude codex       # both (dual-integration)
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-$speckit-install                    # interactive — asks which integrations
-$speckit-install claude             # claude only
-$speckit-install codex              # codex only
-$speckit-install claude codex       # both (dual-integration)
+$speckit-pro:speckit-install                    # interactive — asks which integrations
+$speckit-pro:speckit-install claude             # claude only
+$speckit-pro:speckit-install codex              # codex only
+$speckit-pro:speckit-install claude codex       # both (dual-integration)
 <!-- /host -->
 ```
 
@@ -94,7 +94,7 @@ prerequisite check looks.
     `uv` tool.
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-    `$speckit-install`. SpecKit CLI is distributed as a `uv` tool.
+    `$speckit-pro:speckit-install`. SpecKit CLI is distributed as a `uv` tool.
 <!-- /host -->
 
 Do not attempt other install methods (pipx, manual git clone) unless
@@ -120,12 +120,12 @@ If `.specify/` is **PRESENT**:
 4. On (a): STOP this skill and invoke `/speckit-pro:speckit-upgrade`.
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-   `$speckit-upgrade` (handles diff-aware upgrades and
+   `$speckit-pro:speckit-upgrade` (handles diff-aware upgrades and
    slash-command-to-skills migration safely)."
-3. Ask whether to (a) hand off to `$speckit-upgrade`, (b) add a new
+3. Ask whether to (a) hand off to `$speckit-pro:speckit-upgrade`, (b) add a new
    integration alongside the existing ones (e.g., adding `codex` to a
    `claude`-only repo), or (c) abort.
-4. On (a): STOP this skill and invoke `$speckit-upgrade`.
+4. On (a): STOP this skill and invoke `$speckit-pro:speckit-upgrade`.
 <!-- /host -->
 5. On (b): go directly to Step 4 with only the new integration(s) the
    operator wants to add, and skip its bootstrap `specify init`.
@@ -199,8 +199,8 @@ AskUserQuestion picker preset for `/speckit-clarify` and
 `/speckit-checklist`.
 <!-- /host -->
 <!-- host:codex: Codex names SpecKit skills with a dollar sign -->
-AskUserQuestion picker preset for `$speckit-clarify` and
-`$speckit-checklist`.
+AskUserQuestion picker preset for `$speckit-pro:speckit-clarify` and
+`$speckit-pro:speckit-checklist`.
 <!-- /host -->
 See [presets-extensions-guide.md → The curated set](../speckit-coach/references/presets-extensions-guide.md)
 for the full list and rationale.
@@ -224,7 +224,7 @@ Compare `.specify/extensions/` and `.specify/presets/` against the entries in
   installed later with `/speckit-pro:speckit-upgrade`.
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-  installed later with `$speckit-upgrade`.
+  installed later with `$speckit-pro:speckit-upgrade`.
 <!-- /host -->
 
 ### 6. Verify
@@ -319,10 +319,20 @@ Return a concise install summary:
    the new skills load.
 2. Create your project constitution:
    - Claude: `/speckit-constitution` or `/speckit-pro:speckit-coach create my project constitution`
+<!-- host:claude: retain the existing Claude guidance -->
    - Codex:  `$speckit-constitution` or `$speckit-coach`
+<!-- /host -->
+<!-- host:codex: installed plugin skills use namespaced dollar mentions -->
+   - Codex:  `$speckit-pro:speckit-constitution` or `$speckit-pro:speckit-coach`
+<!-- /host -->
 3. When you're ready to spec a feature, scaffold it from the technical
    roadmap with `/speckit-pro:speckit-scaffold-spec SPEC-ID` (Claude)
+<!-- host:claude: retain the existing Claude guidance -->
    or `$speckit-scaffold-spec SPEC-ID` (Codex).
+<!-- /host -->
+<!-- host:codex: installed plugin skills use namespaced dollar mentions -->
+   or `$speckit-pro:speckit-scaffold-spec SPEC-ID` (Codex).
+<!-- /host -->
 ```
 
 Do not continue into any other workflow in the same skill. Install

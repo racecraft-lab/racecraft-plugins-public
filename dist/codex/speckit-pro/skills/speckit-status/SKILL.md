@@ -33,9 +33,9 @@ Archive Sweep cleanup safety when the project has archive state.
 ## Invocation
 
 ```text
-$speckit-status          # Show full roadmap + active specs
-$speckit-status all      # Same as above
-$speckit-status SPEC-013 # Show specific spec detail
+$speckit-pro:speckit-status          # Show full roadmap + active specs
+$speckit-pro:speckit-status all      # Same as above
+$speckit-pro:speckit-status SPEC-013 # Show specific spec detail
 ```
 
 ## What to Do
@@ -160,12 +160,12 @@ If any spec has a workflow file with phases in progress, show the phase-level
 table. The **DC** column (Design Concept) shows ✅ if a `SPEC-<ID>-design-concept.md`
 exists for the spec, ⏳ otherwise. A workflow file without a corresponding design
 concept doc is a yellow flag — the phase prompts may be undercooked relative to
-what `$speckit-scaffold-spec` produces today:
+what `$speckit-pro:speckit-scaffold-spec` produces today:
 
 | Spec | Name | DC | Specify | Clarify | Plan | Check | Tasks | Analyze | Impl | Next |
 |------|------|----|---------|---------|------|-------|-------|---------|------|------|
 | SPEC-XXX | <name> | ✅ | ✅ | ✅ | 🔄 | ⏳ | ⏳ | ⏳ | ⏳ | Plan |
-| SPEC-YYY | <name> | ⏳ | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | Clarify (no design concept — re-run `$speckit-scaffold-spec` or grill manually) |
+| SPEC-YYY | <name> | ⏳ | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | Clarify (no design concept — re-run `$speckit-pro:speckit-scaffold-spec` or grill manually) |
 ```
 
 Include an Archive Sweep summary when archive state exists:
@@ -197,7 +197,7 @@ Surface a single freshness line in the dashboard from the exit code:
 
 - exit `0` → **index current**
 - exit `1` → **index stale — run regen** (the maps drifted from their
-  sources; the fix is `$speckit-autopilot`, whose phase gates
+  sources; the fix is `$speckit-pro:speckit-autopilot`, whose phase gates
   rebuild the zones — `speckit-status` does not regenerate them)
 - exit `2` → **index check error: `<message>`** — name the failure from the
   generator's stderr line (e.g. a malformed `prs.json` or a non-regular-file
@@ -266,11 +266,11 @@ taken from the spec's technical roadmap section.>
 To get started:
 
 ```text
-$speckit-scaffold-spec SPEC-XXX
+$speckit-pro:speckit-scaffold-spec SPEC-XXX
 ```
 
 This creates the worktree, branch, and populated workflow file.
-Then run `$speckit-autopilot` to execute it.
+Then run `$speckit-pro:speckit-autopilot` to execute it.
 
 **Alternatives** (if you prefer a smaller spec first):
 
@@ -312,7 +312,7 @@ technical roadmap scope and suggest creating a workflow file:
 ```text
 SPEC-008 (Perspectives) — ⏳ Not Started
 No workflow file found. To begin:
-$speckit-scaffold-spec SPEC-008
+$speckit-pro:speckit-scaffold-spec SPEC-008
 ```
 
 ### 7. If No Technical Roadmap or Workflow Files Found
@@ -321,7 +321,7 @@ Tell the user:
 
 - No technical roadmap or workflow files found in the project
 - Guide them to create a technical roadmap:
-  `$speckit-coach help me create a technical roadmap`
+  `$speckit-pro:speckit-coach help me create a technical roadmap`
 - Or create a single workflow: copy
   `skills/speckit-coach/templates/workflow-template.md`
 
@@ -331,7 +331,7 @@ This skill does not mutate the repo. Do not create branches, edit workflow
 files, or mark roadmap rows complete from inside the status skill. If the user
 wants to act on the recommendation, direct them to the matching skill:
 
-- $speckit-scaffold-spec to prepare a spec
-- $speckit-autopilot to execute a workflow
-- $speckit-resolve-pr to address review feedback
-- $speckit-coach for process guidance
+- $speckit-pro:speckit-scaffold-spec to prepare a spec
+- $speckit-pro:speckit-autopilot to execute a workflow
+- $speckit-pro:speckit-resolve-pr to address review feedback
+- $speckit-pro:speckit-coach for process guidance
