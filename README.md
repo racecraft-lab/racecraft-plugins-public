@@ -88,7 +88,7 @@ bundled custom-agent TOML files are copied into Codex's agent registry:
 or:
 
 ```text
-$install
+$speckit-pro:install
 ```
 
 The default destination is `~/.codex/agents/`; choose `.codex/agents/` only when
@@ -108,7 +108,7 @@ Codex loads installed plugins from the installed plugin cache at
 runtime state, not the source of truth. If SpecKit Pro looks stale after an
 update, check the marketplace source or copied personal payload, the generated
 payload, the installed plugin cache, the selected custom-agent destination, and
-whether Codex was restarted. Rerun `@SpecKit Pro -> install` or `$install` after
+whether Codex was restarted. Rerun `@SpecKit Pro -> install` or `$speckit-pro:install` after
 a plugin update that changes bundled custom-agent TOML files, then restart
 Codex again. Do not edit the installed plugin cache.
 

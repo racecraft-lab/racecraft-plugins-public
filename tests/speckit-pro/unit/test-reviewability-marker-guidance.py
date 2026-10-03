@@ -329,7 +329,7 @@ CODEX_AUTHORED_CHECKS = (
     (
         "Codex coach hands off with an explicit stage selector",
         "codex_coach",
-        "$speckit-autopilot <workflow-file> --stage plan|implement|full",
+        "$speckit-pro:speckit-autopilot <workflow-file> --stage plan|implement|full",
     ),
 )
 

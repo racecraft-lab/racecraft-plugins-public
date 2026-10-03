@@ -660,7 +660,7 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
         normalized_prerequisites = " ".join(prerequisites.split())
 
         self.assertIn("continue in this same Codex task", scaffold)
-        self.assertIn("$speckit-autopilot <absolute-workflow-file> --stage plan", scaffold)
+        self.assertIn("$speckit-pro:speckit-autopilot <absolute-workflow-file> --stage plan", scaffold)
         self.assertIn("`resolve-workflow-binding` runner helper", autopilot)
         self.assertIn("`binding_status`", prerequisites)
         self.assertIn("`relation=same` or `relation=descendant`", normalized_prerequisites)

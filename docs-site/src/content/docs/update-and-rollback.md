@@ -75,7 +75,7 @@ Keep these Codex surfaces separate:
 
 - Plugin installation loads the bundled plugin skills.
 - Marketplace commands manage marketplace sources and plugin entries.
-- `@SpecKit Pro -> install` or `$install` copies bundled SpecKit Pro TOML custom
+- `@SpecKit Pro -> install` or `$speckit-pro:install` copies bundled SpecKit Pro TOML custom
   agent files to the selected Codex agent directory.
 - Restarting Codex is needed before changed plugin, config, or custom-agent
   state can be judged reliably.
@@ -86,7 +86,7 @@ paths from repository docs, installer reports, or local runtime output as local
 runtime evidence unless current OpenAI docs document that exact path.
 
 After a plugin update that changes bundled custom-agent TOML files, run
-`@SpecKit Pro -> install` or `$install` as a manual action, approve only the
+`@SpecKit Pro -> install` or `$speckit-pro:install` as a manual action, approve only the
 expected TOML-file write, then restart Codex.
 
 ## Claude Code Recovery Notes

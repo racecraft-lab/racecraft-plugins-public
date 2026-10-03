@@ -1,7 +1,7 @@
 interface:
   display_name: "SpecKit Upgrade"
   short_description: "Safely upgrade an existing SpecKit install with backup/restore"
-  default_prompt: "Use $speckit-upgrade to upgrade SpecKit in this repository and preserve my customizations"
+  default_prompt: "Use $speckit-pro:speckit-upgrade to upgrade SpecKit in this repository and preserve my customizations"
 
 policy:
   allow_implicit_invocation: false

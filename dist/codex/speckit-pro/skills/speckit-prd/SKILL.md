@@ -1,6 +1,6 @@
 ---
 name: speckit-prd
-description: "Collaboratively create or update a lean PRD, its 1:1 technical-roadmap SPEC catalog, and a roadmap-MOC home note. Use when an active user asks to write a PRD, create a product requirements document, turn an idea or brief into a PRD and roadmap, plan a product, or invokes $speckit-prd. Read-only workflow status and next-spec recommendations belong to $speckit-status. Roadmap-only decomposition or dependency planning from an existing PRD, without creating or updating the PRD, belongs to $speckit-coach. Ask one grounded decision at a time, then hand off the resulting roadmap to $speckit-scaffold-spec. Not for per-spec scoping, worktree preparation, or general SDD coaching."
+description: "Collaboratively create or update a lean PRD, its 1:1 technical-roadmap SPEC catalog, and a roadmap-MOC home note. Use when an active user asks to write a PRD, create a product requirements document, turn an idea or brief into a PRD and roadmap, plan a product, or invokes $speckit-pro:speckit-prd. Read-only workflow status and next-spec recommendations belong to $speckit-pro:speckit-status. Roadmap-only decomposition or dependency planning from an existing PRD, without creating or updating the PRD, belongs to $speckit-pro:speckit-coach. Ask one grounded decision at a time, then hand off the resulting roadmap to $speckit-pro:speckit-scaffold-spec. Not for per-spec scoping, worktree preparation, or general SDD coaching."
 ---
 
 # SpecKit PRD
@@ -51,7 +51,7 @@ a new roadmap, [roadmap-MOC template](../speckit-coach/templates/roadmap-moc-tem
 If `docs/ai/specs/ubiquitous-language.md` exists, read it first and use its
 terms verbatim in the PRD. Apply the protocol's interview, update,
 slicing/estimation, MOC, index, and verification rules. Report created or updated paths and recommend
-`$speckit-scaffold-spec <SPEC-ID>` for the first ready entry.
+`$speckit-pro:speckit-scaffold-spec <SPEC-ID>` for the first ready entry.
 
 ## Output contract
 
@@ -65,7 +65,7 @@ slicing/estimation, MOC, index, and verification rules. Report created or update
 - `docs/ai/specs/<slug>-roadmap-MOC.md`: curated epics plus the generator-owned
   `GENERATED:INDEX` zone and a relative `up:` link to the roadmap.
 
-This skill does not scope an existing roadmap entry (`$grill-me`), prepare a
-worktree or workflow (`$speckit-scaffold-spec`), or teach SDD methodology
-(`$speckit-coach`). If the PRD already exists and
+This skill does not scope an existing roadmap entry (`$speckit-pro:grill-me`), prepare a
+worktree or workflow (`$speckit-pro:speckit-scaffold-spec`), or teach SDD methodology
+(`$speckit-pro:speckit-coach`). If the PRD already exists and
 the user wants only a new roadmap, hand off to the Coach roadmap workflow.

@@ -408,7 +408,7 @@ Read the workflow file's Prerequisites table. If already
 Before phase execution, validate that every bundled SpecKit Pro Codex custom
 agent is current on the selected official Codex runtime path. Run the promoted
 `install-codex-agents` runner helper in `dry_run` mode, using the same
-destination, `model`, and `luna_fallback` choice that `$install` used:
+destination, `model`, and `luna_fallback` choice that `$speckit-pro:install` used:
 
 ```text
 'runner helper install-codex-agents' mode=dry_run inputs={destination?, model?, luna_fallback?}
@@ -423,7 +423,7 @@ the rendered files with either selected runtime path:
 This check runs at setup or run start, before any phase work. Continue only
 when the helper returns `ok` with mutation status `no_op`. If it reports planned
 files, fails validation, or cannot inspect the selected path, STOP with its
-diagnostics. Tell the user to run `$install`, approve the expected local write,
+diagnostics. Tell the user to run `$speckit-pro:install`, approve the expected local write,
 restart Codex, and then retry autopilot. This pre-flight is read-only: never
 apply or autoheal agent files from inside autopilot.
 
@@ -521,7 +521,7 @@ with this message, verbatim, and STOP:
 
 ```text
 G0 blocked: .specify/quality-gates.json is <missing|invalid: first problem>.
-Run `$speckit-coach quality gates` to create it. Agents never edit this file.
+Run `$speckit-pro:speckit-coach quality gates` to create it. Agents never edit this file.
 ```
 
 With the file missing, the slot commands still show the shipped

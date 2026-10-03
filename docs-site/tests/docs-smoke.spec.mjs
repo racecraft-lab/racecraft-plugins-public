@@ -102,9 +102,21 @@ test.describe('DOC-010 route smoke', () => {
     await expect(safeAids.locator('#safe-aids-selector-status')).toContainText(
       'Selected path: Install speckit-pro from this repository in Codex.',
     );
+    await expect(safeAids.locator('#codex-repo-marketplace-codex-install-agents')).toHaveText(
+      '@SpecKit Pro -> install\n$speckit-pro:install',
+    );
+    await expect(safeAids.locator('#codex-repo-marketplace-codex-status-skill')).toHaveText(
+      '$speckit-pro:speckit-status',
+    );
     await expect(safeAids.getByRole('heading', { name: 'Static Selector Fallback' })).toBeVisible();
     await expect(safeAids.getByRole('button', { name: 'Copy' }).first()).toBeVisible();
     await expect(safeAids.getByRole('heading', { name: 'Repository Manifest Checker' })).toBeVisible();
+    await safeAids.getByRole('radio', {
+      name: 'Point a personal Codex marketplace at a copied generated payload',
+    }).check();
+    await expect(safeAids.locator('#codex-personal-local-codex-personal-install')).toHaveText(
+      '@SpecKit Pro -> install\n$speckit-pro:install',
+    );
   });
 
   test('LifecycleFlow exposes static fallback and phase evidence', async ({ page }, testInfo) => {

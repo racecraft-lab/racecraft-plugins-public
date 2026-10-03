@@ -45,7 +45,7 @@ Use the smallest relevant reference; do not load the whole library.
 | Create a PRD and roadmap from an unformed idea | Route to `/speckit-pro:speckit-prd`; use its PRD and roadmap templates. |
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-| Create a PRD and roadmap from an unformed idea | Route to `$speckit-prd`; use its PRD and roadmap templates. |
+| Create a PRD and roadmap from an unformed idea | Route to `$speckit-pro:speckit-prd`; use its PRD and roadmap templates. |
 <!-- /host -->
 | Track one spec through phases or understand scaffold-created workflow files | [Workflow template](./templates/workflow-template.md). For scaffold creation, population, inputs, or output locations, also read the [live scaffold skill](../speckit-scaffold-spec/SKILL.md) as a reference only; do not execute or invoke it. Keep artifacts, gates, and decisions current. |
 | Explain the roadmap home note | [Roadmap-MOC guide](./references/roadmap-moc-guide.md). The curated zone is author-owned; the generated index is regenerated, not hand-edited. |
@@ -57,9 +57,9 @@ Use the smallest relevant reference; do not load the whole library.
 | Archive merged-spec records or clean up archived specs | Route to `/speckit-pro:speckit-archive-cleanup`; do not copy or execute its cleanup workflow here. |
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign and ships an agent install skill -->
-| Scope a raw brief interactively | Route to `$grill-me`; do not conduct its interview here. |
-| Scaffold a roadmap item, inspect status, resolve a review, or repair Codex agents | Route respectively to `$speckit-scaffold-spec`, `$speckit-status`, `$speckit-resolve-pr`, or the SpecKit Pro `install` skill. |
-| Archive merged-spec records or clean up archived specs | Route to `$speckit-archive-cleanup`; do not copy or execute its cleanup workflow here. |
+| Scope a raw brief interactively | Route to `$speckit-pro:grill-me`; do not conduct its interview here. |
+| Scaffold a roadmap item, inspect status, resolve a review, or repair Codex agents | Route respectively to `$speckit-pro:speckit-scaffold-spec`, `$speckit-pro:speckit-status`, `$speckit-pro:speckit-resolve-pr`, or the SpecKit Pro `install` skill. |
+| Archive merged-spec records or clean up archived specs | Route to `$speckit-pro:speckit-archive-cleanup`; do not copy or execute its cleanup workflow here. |
 <!-- /host -->
 
 ## Bounded autopilot hand-off
@@ -76,7 +76,7 @@ explicit command bounded to the requested stage:
 /speckit-pro:speckit-autopilot <workflow-file> --stage plan|implement|full
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-$speckit-autopilot <workflow-file> --stage plan|implement|full
+$speckit-pro:speckit-autopilot <workflow-file> --stage plan|implement|full
 <!-- /host -->
 ```
 
@@ -93,7 +93,7 @@ route to
 `/speckit-pro:speckit-scaffold-spec`;
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-`$speckit-scaffold-spec`;
+`$speckit-pro:speckit-scaffold-spec`;
 <!-- /host -->
 if the path or requested stage is ambiguous, ask for that missing input instead
 of executing anything.

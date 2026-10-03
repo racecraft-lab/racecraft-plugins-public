@@ -1,7 +1,7 @@
 interface:
   display_name: "SpecKit Install"
   short_description: "Install SpecKit in this repo for Claude or Codex"
-  default_prompt: "Use $speckit-install to install SpecKit in this repository and ask which integrations to set up"
+  default_prompt: "Use $speckit-pro:speckit-install to install SpecKit in this repository and ask which integrations to set up"
 
 policy:
   allow_implicit_invocation: false

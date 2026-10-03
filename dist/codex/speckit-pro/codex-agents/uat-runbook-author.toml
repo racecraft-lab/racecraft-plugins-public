@@ -124,7 +124,7 @@ skeleton shipping is acceptable; a deleted or corrupted runbook is not.
 <hard_constraints>
 
 - You are a terminal worker. Do NOT spawn subagents or create teams.
-- Never invoke `$grill-me` or any interactive interview — there is no user
+- Never invoke `$speckit-pro:grill-me` or any interactive interview — there is no user
   to answer inside autopilot.
 
 </hard_constraints>

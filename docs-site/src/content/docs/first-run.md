@@ -13,11 +13,11 @@ artifacts, and a validation checkpoint.
 Complete the install route for your agent before starting this tutorial:
 
 - [Install SpecKit Pro for Claude Code](/racecraft-plugins-public/install/claude-code/) when your commands use `/speckit-pro:<skill>`.
-- [Install SpecKit Pro for Codex](/racecraft-plugins-public/install/codex/) when your commands use `$speckit-*` skills.
+- [Install SpecKit Pro for Codex](/racecraft-plugins-public/install/codex/) when your commands use `$speckit-pro:speckit-*` skills.
 - [Choose your platform path](/racecraft-plugins-public/choose-your-path/) when you are not sure which surface applies.
 
 Do not mix command surfaces. Claude Code plugin skills use
-`/speckit-pro:<skill>`. Codex skills use `$speckit-*`.
+`/speckit-pro:<skill>`. Codex skills use `$speckit-pro:speckit-*`.
 
 ## Check Prerequisites
 
@@ -51,11 +51,11 @@ full Codex setup path. Claude Code setup is separate and belongs in the
 
 | Role | Claude Code | Codex | Use it when |
 |---|---|---|---|
-| Scoping interview | `/speckit-pro:grill-me` | `$grill-me` | You need one decision at a time before a spec is written. |
-| PRD and roadmap | `/speckit-pro:speckit-prd` | `$speckit-prd` | You have a broad idea and need a PRD plus SPEC catalog. |
-| SPEC scaffold | `/speckit-pro:speckit-scaffold-spec EXAMPLE-001` | `$speckit-scaffold-spec EXAMPLE-001` | A SPEC exists in the roadmap and needs a worktree plus workflow file. |
-| Autopilot | `/speckit-pro:speckit-autopilot docs/ai/specs/.process/EXAMPLE-001-workflow.md` | `$speckit-autopilot docs/ai/specs/.process/EXAMPLE-001-workflow.md` | The workflow file is ready to run through the SpecKit phases. |
-| Status check | `/speckit-pro:speckit-status` | `$speckit-status` | You need the current roadmap, active spec, archive sweep, or next step. |
+| Scoping interview | `/speckit-pro:grill-me` | `$speckit-pro:grill-me` | You need one decision at a time before a spec is written. |
+| PRD and roadmap | `/speckit-pro:speckit-prd` | `$speckit-pro:speckit-prd` | You have a broad idea and need a PRD plus SPEC catalog. |
+| SPEC scaffold | `/speckit-pro:speckit-scaffold-spec EXAMPLE-001` | `$speckit-pro:speckit-scaffold-spec EXAMPLE-001` | A SPEC exists in the roadmap and needs a worktree plus workflow file. |
+| Autopilot | `/speckit-pro:speckit-autopilot docs/ai/specs/.process/EXAMPLE-001-workflow.md` | `$speckit-pro:speckit-autopilot docs/ai/specs/.process/EXAMPLE-001-workflow.md` | The workflow file is ready to run through the SpecKit phases. |
+| Status check | `/speckit-pro:speckit-status` | `$speckit-pro:speckit-status` | You need the current roadmap, active spec, archive sweep, or next step. |
 
 ## Walk The First Artifact Trail
 
@@ -66,7 +66,7 @@ support issue, a feature request, or a transcript.
 
 | Claude Code | Codex |
 |---|---|
-| `/speckit-pro:grill-me docs/raw-idea.md` | `$grill-me docs/raw-idea.md` |
+| `/speckit-pro:grill-me docs/raw-idea.md` | `$speckit-pro:grill-me docs/raw-idea.md` |
 
 **Checkpoint:** You have a short decision log or enough answers to create a
 PRD.
@@ -80,7 +80,7 @@ the source of truth for the SPEC-ID used by scaffold and autopilot.
 
 | Claude Code | Codex |
 |---|---|
-| `/speckit-pro:speckit-prd "first successful workflow tutorial"` | `$speckit-prd "first successful workflow tutorial"` |
+| `/speckit-pro:speckit-prd "first successful workflow tutorial"` | `$speckit-pro:speckit-prd "first successful workflow tutorial"` |
 
 **Checkpoint:** The artifact trail includes a PRD, a technical roadmap, and a
 SPEC-ID such as `EXAMPLE-001`.
@@ -94,7 +94,7 @@ file, spec folder, and `SPEC-MOC.md` for one roadmap item.
 
 | Claude Code | Codex |
 |---|---|
-| `/speckit-pro:speckit-scaffold-spec EXAMPLE-001` | `$speckit-scaffold-spec EXAMPLE-001` |
+| `/speckit-pro:speckit-scaffold-spec EXAMPLE-001` | `$speckit-pro:speckit-scaffold-spec EXAMPLE-001` |
 
 **Checkpoint:** Look for these artifacts:
 
@@ -112,7 +112,7 @@ artifacts before implementation starts.
 
 | Claude Code | Codex |
 |---|---|
-| `/speckit-pro:speckit-autopilot docs/ai/specs/.process/EXAMPLE-001-workflow.md` | `$speckit-autopilot docs/ai/specs/.process/EXAMPLE-001-workflow.md` |
+| `/speckit-pro:speckit-autopilot docs/ai/specs/.process/EXAMPLE-001-workflow.md` | `$speckit-pro:speckit-autopilot docs/ai/specs/.process/EXAMPLE-001-workflow.md` |
 
 **Checkpoint:** The artifact trail grows as each gate completes:
 
@@ -146,7 +146,7 @@ These are short first-run checks, not full troubleshooting procedures.
 
 | State | Inspect | Next action |
 |---|---|---|
-| Missing roadmap entry | PRD output, `docs/ai/specs/*.md`, and `$speckit-status` or `/speckit-pro:speckit-status` | Return to PRD or roadmap creation so the SPEC-ID exists before scaffold. |
+| Missing roadmap entry | PRD output, `docs/ai/specs/*.md`, and `$speckit-pro:speckit-status` or `/speckit-pro:speckit-status` | Return to PRD or roadmap creation so the SPEC-ID exists before scaffold. |
 | Missing scaffold output | Scaffold chat output, design concept path, workflow path, and `SPEC-MOC.md` | Re-open the scaffold evidence and confirm the roadmap target before continuing. |
 | Partial autopilot output | `autopilot-state.json`, phase artifacts, checklists, tasks, and PR packet evidence | Continue from the phase named in the state file after recording what already exists. |
 | Failed validation checkpoint | The validation command output and changed docs files | Record the failing check in the PR packet and use the troubleshooting route for deeper diagnosis. |

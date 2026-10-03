@@ -3,7 +3,7 @@
 ## Compact onboarding
 
 For a new repository, use the maintained installer for the active host:
-`/speckit-pro:speckit-install` on Claude or `$speckit-install` on Codex. It
+`/speckit-pro:speckit-install` on Claude or `$speckit-pro:speckit-install` on Codex. It
 selects the integration and verifies the installed state. For an existing
 `.specify/` installation, inspect it first and use the upgrade workflow instead
 of reinitializing it.
