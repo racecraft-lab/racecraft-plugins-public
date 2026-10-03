@@ -3,13 +3,15 @@
 
 from __future__ import annotations
 
-import json
 import os
 import re
-import subprocess
 import sys
 from collections.abc import Callable, Sequence
+from pathlib import Path
 from typing import Any
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from gh_json import run_gh_json  # noqa: E402
 
 
 RELEASE_BRANCH_PREFIX = "release-please--branches--"
@@ -41,20 +43,7 @@ class IntegrityError(RuntimeError):
 
 
 def run_gh(argv: Sequence[str]) -> dict[str, Any]:
-    completed = subprocess.run(
-        ["gh", *argv],
-        text=True,
-        capture_output=True,
-        check=False,
-        shell=False,
-    )
-    if completed.returncode != 0:
-        detail = completed.stderr.strip() or completed.stdout.strip() or "unknown gh error"
-        raise IntegrityError(f"gh {' '.join(argv[:2])} failed: {detail}")
-    try:
-        payload = json.loads(completed.stdout)
-    except json.JSONDecodeError as exc:
-        raise IntegrityError("gh returned malformed JSON") from exc
+    payload = run_gh_json(argv, IntegrityError)
     if not isinstance(payload, dict):
         raise IntegrityError("gh returned a non-object JSON response")
     return payload
