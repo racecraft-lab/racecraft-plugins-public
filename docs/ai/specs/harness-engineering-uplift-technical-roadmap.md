@@ -1,5 +1,12 @@
 # SpecKit Pro Harness Engineering Uplift Implementation Roadmap
 
+> **Feature-work freeze (2026-10-02):** All open SPECs are 🧊 Frozen for the
+> [speckit-pro health program (#1038)](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1038).
+> HRNS-015 alone is exempt as the known Part D candidate; EDA-001 is included
+> in the freeze. This notice takes precedence over readiness and sequencing
+> guidance below. Runbook D0 lifts the freeze for whichever SPEC Part D picks;
+> Part E lifts the rest. Unfreezing is outside this change.
+
 **Repair observed harness defects, make workflow state typed and replayable,
 cut the tokens autonomous runs spend finding things, and verify that work is
 actually complete, on both hosts, without granting any new authority.**
@@ -165,31 +172,31 @@ HRNS-025 Run journal ┘
 | HRNS-014 | External OKF Exchange and Reviewable Reconciliation | Retired | - | Dropped |
 | HRNS-015 | Autopilot, Gate, and PR-Emission Repair | ⏳ Ready | - | Specify |
 | HRNS-016 | Per-story Autopilot Execution | Retired | - | Dropped |
-| HRNS-017 | Host Capability Spike | ⏳ Ready | - | Specify |
-| HRNS-018 | Typed Workflow State | ⏳ Ready | - | Specify |
-| HRNS-019 | Helper Registry Contract and Tiered Disclosure | ⏳ Ready | - | Specify |
-| HRNS-020 | Autopilot Token Baseline | ⏳ Ready | - | Specify |
-| HRNS-021 | Condition-Bound Guidance and Lesson Promotion | ⏳ Ready | - | Specify |
-| HRNS-022 | Eval Ladder and Model Refresh | ⏳ Ready | - | Specify |
-| HRNS-023 | Harness Drift Scanner | ⏳ Ready | - | Specify |
-| HRNS-024 | Shared Typed-Decision Contract | ⏳ Pending | - | HRNS-017 |
-| HRNS-025 | Run Journal and PR Trace Summary | ⏳ Pending | - | HRNS-019, HRNS-024 |
-| HRNS-026 | Autonomous-Run Permission and Egress Policy | ⏳ Pending | - | HRNS-019 |
-| HRNS-027 | Dual-Host Jev Adapter | ⏳ Pending | - | HRNS-024, HRNS-025, HRNS-026 |
-| HRNS-028 | Shared Retrieval Packet for Fan-Out Roles | ⏳ Pending | - | HRNS-020 |
-| HRNS-029 | Visibility Ladder and Handoff Preservation | ⏳ Pending | - | HRNS-020 |
-| HRNS-030 | Obligation and Subgoal Registry | ⏳ Pending | - | HRNS-018, HRNS-024 |
-| HRNS-031 | Pilot: Requirement-to-Task Semantic Coverage | ⏳ Pending | - | HRNS-027 |
-| HRNS-032 | Pilot: Review-Fix Closure Verification | ⏳ Pending | - | HRNS-015, HRNS-027 |
-| HRNS-033 | Pilot: Claim-to-Source Support Annotation | ⏳ Pending | - | HRNS-027 |
-| HRNS-034 | Phase-Boundary Goal-Completion Verifier | ⏳ Pending | - | HRNS-025, HRNS-027, HRNS-030 |
-| HRNS-035 | Change-Triggered Scheduler and Invalidation | ⏳ Pending | - | HRNS-034 |
-| HRNS-036 | Premature-Stop and Redundant-Continuation Advice | ⏳ Pending | - | HRNS-035 |
-| HRNS-037 | Live Run Progress Page | ⏳ Pending | - | HRNS-018 |
-| HRNS-038 | Trajectory Calibration and Gated Live Evaluation | ⏳ Pending | - | HRNS-025, HRNS-031 to HRNS-033, HRNS-035 |
-| HRNS-039 | Runner-Computed Consensus Tally | ⏳ Ready | - | Specify |
-| HRNS-040 | State and Gate Test Depth | ⏳ Ready | - | Specify |
-| HRNS-041 | Ledger Formal Model and Trace Check | ⏳ Pending | - | HRNS-025, HRNS-040 |
+| HRNS-017 | Host Capability Spike | ⏳ Ready · 🧊 Frozen | - | Specify |
+| HRNS-018 | Typed Workflow State | ⏳ Ready · 🧊 Frozen | - | Specify |
+| HRNS-019 | Helper Registry Contract and Tiered Disclosure | ⏳ Ready · 🧊 Frozen | - | Specify |
+| HRNS-020 | Autopilot Token Baseline | ⏳ Ready · 🧊 Frozen | - | Specify |
+| HRNS-021 | Condition-Bound Guidance and Lesson Promotion | ⏳ Ready · 🧊 Frozen | - | Specify |
+| HRNS-022 | Eval Ladder and Model Refresh | ⏳ Ready · 🧊 Frozen | - | Specify |
+| HRNS-023 | Harness Drift Scanner | ⏳ Ready · 🧊 Frozen | - | Specify |
+| HRNS-024 | Shared Typed-Decision Contract | ⏳ Pending · 🧊 Frozen | - | HRNS-017 |
+| HRNS-025 | Run Journal and PR Trace Summary | ⏳ Pending · 🧊 Frozen | - | HRNS-019, HRNS-024 |
+| HRNS-026 | Autonomous-Run Permission and Egress Policy | ⏳ Pending · 🧊 Frozen | - | HRNS-019 |
+| HRNS-027 | Dual-Host Jev Adapter | ⏳ Pending · 🧊 Frozen | - | HRNS-024, HRNS-025, HRNS-026 |
+| HRNS-028 | Shared Retrieval Packet for Fan-Out Roles | ⏳ Pending · 🧊 Frozen | - | HRNS-020 |
+| HRNS-029 | Visibility Ladder and Handoff Preservation | ⏳ Pending · 🧊 Frozen | - | HRNS-020 |
+| HRNS-030 | Obligation and Subgoal Registry | ⏳ Pending · 🧊 Frozen | - | HRNS-018, HRNS-024 |
+| HRNS-031 | Pilot: Requirement-to-Task Semantic Coverage | ⏳ Pending · 🧊 Frozen | - | HRNS-027 |
+| HRNS-032 | Pilot: Review-Fix Closure Verification | ⏳ Pending · 🧊 Frozen | - | HRNS-015, HRNS-027 |
+| HRNS-033 | Pilot: Claim-to-Source Support Annotation | ⏳ Pending · 🧊 Frozen | - | HRNS-027 |
+| HRNS-034 | Phase-Boundary Goal-Completion Verifier | ⏳ Pending · 🧊 Frozen | - | HRNS-025, HRNS-027, HRNS-030 |
+| HRNS-035 | Change-Triggered Scheduler and Invalidation | ⏳ Pending · 🧊 Frozen | - | HRNS-034 |
+| HRNS-036 | Premature-Stop and Redundant-Continuation Advice | ⏳ Pending · 🧊 Frozen | - | HRNS-035 |
+| HRNS-037 | Live Run Progress Page | ⏳ Pending · 🧊 Frozen | - | HRNS-018 |
+| HRNS-038 | Trajectory Calibration and Gated Live Evaluation | ⏳ Pending · 🧊 Frozen | - | HRNS-025, HRNS-031 to HRNS-033, HRNS-035 |
+| HRNS-039 | Runner-Computed Consensus Tally | ⏳ Ready · 🧊 Frozen | - | Specify |
+| HRNS-040 | State and Gate Test Depth | ⏳ Ready · 🧊 Frozen | - | Specify |
+| HRNS-041 | Ledger Formal Model and Trace Check | ⏳ Pending · 🧊 Frozen | - | HRNS-025, HRNS-040 |
 
 **Status Legend:** ⏳ Pending | ⏳ Ready | 🔄 In Progress | ✅ Complete | ⚠️ Blocked | Retired (identifier reserved, never reused)
 
@@ -337,6 +344,8 @@ Already fixed or owned elsewhere, so out of scope: #637 (PR #694), #638
 
 ### HRNS-017: Host Capability Spike
 
+**Status:** 🧊 Frozen — previously ⏳ Ready.
+
 **Priority:** P1 | **Depends On:** none | **Enables:** HRNS-024, HRNS-027, HRNS-029, HRNS-036
 
 **Goal:** Observe, on both hosts, the facts every later slice depends on,
@@ -384,6 +393,8 @@ Budget result: within budget
 ---
 
 ### HRNS-018: Typed Workflow State
+
+**Status:** 🧊 Frozen — previously ⏳ Ready.
 
 **Priority:** P1 | **Depends On:** none | **Enables:** HRNS-030, HRNS-037
 
@@ -459,6 +470,8 @@ the stage-resolution tests (PRD OQ-8).
 
 ### HRNS-019: Helper Registry Contract and Tiered Disclosure
 
+**Status:** 🧊 Frozen — previously ⏳ Ready.
+
 **Priority:** P2 | **Depends On:** none | **Enables:** HRNS-025, HRNS-026
 
 **Goal:** Make the helper registry the single source for what each helper does,
@@ -530,6 +543,8 @@ committed schema stays the source either way.
 
 ### HRNS-020: Autopilot Token Baseline
 
+**Status:** 🧊 Frozen — previously ⏳ Ready.
+
 **Priority:** P1 | **Depends On:** none | **Enables:** HRNS-028, HRNS-029
 
 **Goal:** Measure where an autopilot run's tokens go, per host and per role,
@@ -569,6 +584,8 @@ Budget result: within budget
 ---
 
 ### HRNS-021: Condition-Bound Guidance and Lesson Promotion
+
+**Status:** 🧊 Frozen — previously ⏳ Ready.
 
 **Priority:** P2 | **Depends On:** none | **Enables:** none
 
@@ -615,6 +632,8 @@ Budget result: within budget
 ---
 
 ### HRNS-022: Eval Ladder and Model Refresh
+
+**Status:** 🧊 Frozen — previously ⏳ Ready.
 
 **Priority:** P1 | **Depends On:** none | **Enables:** HRNS-038
 
@@ -674,6 +693,8 @@ Budget result: within budget
 
 ### HRNS-023: Harness Drift Scanner
 
+**Status:** 🧊 Frozen — previously ⏳ Ready.
+
 **Priority:** P2 | **Depends On:** none | **Enables:** none
 
 **Goal:** Find roadmap-to-workflow status drift and orphaned process files with
@@ -715,6 +736,8 @@ Budget result: within budget
 ---
 
 ### HRNS-024: Shared Typed-Decision Contract
+
+**Status:** 🧊 Frozen — previously ⏳ Pending.
 
 **Priority:** P1 | **Depends On:** HRNS-017 | **Enables:** HRNS-025, HRNS-027, HRNS-030
 
@@ -769,6 +792,8 @@ Budget result: within budget
 ---
 
 ### HRNS-025: Run Journal and PR Trace Summary
+
+**Status:** 🧊 Frozen — previously ⏳ Pending.
 
 **Priority:** P1 | **Depends On:** HRNS-019, HRNS-024 | **Enables:** HRNS-027, HRNS-034, HRNS-038
 
@@ -836,6 +861,8 @@ Budget result: within budget
 
 ### HRNS-026: Autonomous-Run Permission and Egress Policy
 
+**Status:** 🧊 Frozen — previously ⏳ Pending.
+
 **Priority:** P1 | **Depends On:** HRNS-019 | **Enables:** HRNS-027
 
 **Goal:** Give autonomous runs one deterministic command and egress policy
@@ -898,6 +925,8 @@ harness-control file protection.
 
 ### HRNS-027: Dual-Host Jev Adapter
 
+**Status:** 🧊 Frozen — previously ⏳ Pending.
+
 **Priority:** P1 | **Depends On:** HRNS-017, HRNS-024, HRNS-025, HRNS-026 | **Enables:** HRNS-031, HRNS-032, HRNS-033, HRNS-034, and every optional shadow slice
 
 **Goal:** Let the trusted parent on each host call `evaluate` behind consent,
@@ -945,6 +974,8 @@ Budget result: within budget
 
 ### HRNS-028: Shared Retrieval Packet for Fan-Out Roles
 
+**Status:** 🧊 Frozen — previously ⏳ Pending.
+
 **Priority:** P2 | **Depends On:** HRNS-020 | **Enables:** none
 
 **Goal:** Stop each fan-out role from re-deriving the same evidence: one
@@ -987,6 +1018,8 @@ Budget result: within budget
 ---
 
 ### HRNS-029: Visibility Ladder and Handoff Preservation
+
+**Status:** 🧊 Frozen — previously ⏳ Pending.
 
 **Priority:** P2 | **Depends On:** HRNS-020 | **Enables:** none
 
@@ -1032,6 +1065,8 @@ Budget result: within budget
 
 ### HRNS-030: Obligation and Subgoal Registry
 
+**Status:** 🧊 Frozen — previously ⏳ Pending.
+
 **Priority:** P1 | **Depends On:** HRNS-018, HRNS-024 | **Enables:** HRNS-034
 
 **Goal:** Turn approved goals into frozen, versioned obligations, and never
@@ -1074,6 +1109,8 @@ Budget result: within budget
 
 ### HRNS-031: Pilot: Requirement-to-Task Semantic Coverage
 
+**Status:** 🧊 Frozen — previously ⏳ Pending.
+
 **Priority:** P1 | **Depends On:** HRNS-027 | **Enables:** HRNS-038
 
 **Goal:** Annotate each requirement with whether the task set really plans it,
@@ -1108,6 +1145,8 @@ Budget result: within budget
 ---
 
 ### HRNS-032: Pilot: Review-Fix Closure Verification
+
+**Status:** 🧊 Frozen — previously ⏳ Pending.
 
 **Priority:** P1 | **Depends On:** HRNS-015, HRNS-027 | **Enables:** HRNS-038
 
@@ -1145,6 +1184,8 @@ Budget result: within budget
 
 ### HRNS-033: Pilot: Claim-to-Source Support Annotation
 
+**Status:** 🧊 Frozen — previously ⏳ Pending.
+
 **Priority:** P2 | **Depends On:** HRNS-027 | **Enables:** HRNS-038
 
 **Goal:** Annotate analyst findings with whether their cited source actually
@@ -1177,6 +1218,8 @@ Budget result: within budget
 ---
 
 ### HRNS-034: Phase-Boundary Goal-Completion Verifier
+
+**Status:** 🧊 Frozen — previously ⏳ Pending.
 
 **Priority:** P1 | **Depends On:** HRNS-025, HRNS-027, HRNS-030 | **Enables:** HRNS-035, HRNS-037 (semantic health)
 
@@ -1217,6 +1260,8 @@ Budget result: within budget
 
 ### HRNS-035: Change-Triggered Scheduler and Invalidation
 
+**Status:** 🧊 Frozen — previously ⏳ Pending.
+
 **Priority:** P1 | **Depends On:** HRNS-034 | **Enables:** HRNS-036, HRNS-038
 
 **Goal:** Re-check only affected obligations when something relevant changes,
@@ -1252,6 +1297,8 @@ Budget result: within budget
 ---
 
 ### HRNS-036: Premature-Stop and Redundant-Continuation Advice
+
+**Status:** 🧊 Frozen — previously ⏳ Pending.
 
 **Priority:** P1 | **Depends On:** HRNS-035 | **Enables:** none
 
@@ -1296,6 +1343,8 @@ Budget result: within budget
 
 ### HRNS-037: Live Run Progress Page
 
+**Status:** 🧊 Frozen — previously ⏳ Pending.
+
 **Priority:** P2 | **Depends On:** HRNS-018 | **Enables:** none
 
 **Goal:** Let an operator check a long run's progress from anywhere, without
@@ -1327,6 +1376,8 @@ Budget result: within budget
 ---
 
 ### HRNS-038: Trajectory Calibration and Gated Live Evaluation
+
+**Status:** 🧊 Frozen — previously ⏳ Pending.
 
 **Priority:** P1 | **Depends On:** HRNS-025, HRNS-031, HRNS-032, HRNS-033, HRNS-035 | **Enables:** promotion of any check beyond shadow
 
@@ -1363,6 +1414,8 @@ Budget result: within budget
 ---
 
 ### HRNS-039: Runner-Computed Consensus Tally
+
+**Status:** 🧊 Frozen — previously ⏳ Ready.
 
 **Priority:** P1 | **Depends On:** none | **Enables:** fewer consensus routing defects
 
@@ -1414,6 +1467,8 @@ Budget result: within budget
 
 ### HRNS-040: State and Gate Test Depth
 
+**Status:** 🧊 Frozen — previously ⏳ Ready.
+
 **Priority:** P2 | **Depends On:** none | **Enables:** HRNS-041
 
 **Goal:** Find ledger, state, path, gate, and broker defects with generated
@@ -1460,6 +1515,8 @@ Budget result: within budget
 ---
 
 ### HRNS-041: Ledger Formal Model and Trace Check
+
+**Status:** 🧊 Frozen — previously ⏳ Pending.
 
 **Priority:** P3 | **Depends On:** HRNS-025, HRNS-040 | **Enables:** formal regression coverage of the ledger
 

@@ -76,6 +76,119 @@ class ValidateSpecTemplates(unittest.TestCase):
             with self.subTest(msg=name):
                 self.assertIn(needle, preset_plan_content)
 
+FROZEN_MARKER = "🧊 Frozen"
+HEALTH_PROGRAM = "https://github.com/racecraft-lab/racecraft-plugins-public/issues/1038"
+SPEC_ID = r"[A-Z][A-Z0-9]*-\d+[a-z]?"
+CLOSED_STATUS = re.compile(r"^[^\w]*(?:complete(?:d)?|archived|retired|superseded|dropped|shipped)\b", re.I)
+
+
+def roadmap_progress_statuses(content: str) -> list[tuple[str, str]]:
+    """Read SPEC rows only within a progress table, including omitted cells."""
+    # GFM permits optional outer pipes and fills omitted cells with empty values.
+    rows = []
+    status_column = None
+    for line in content.splitlines():
+        if not line.strip() or line.lstrip().startswith(("#", ">", "```", "~~~")):
+            status_column = None
+            continue
+        cells = [cell.strip() for cell in re.split(r"(?<!\\)\|", line.strip().removeprefix("|"))]
+        columns = [cell.casefold() for cell in cells]
+        if columns[0] == "spec" and "status" in columns:
+            status_column = columns.index("status")
+        elif status_column is not None and re.fullmatch(SPEC_ID, cells[0]):
+            rows.append((cells[0], cells[status_column] if len(cells) > status_column else ""))
+    return rows
+
+
+def roadmap_entry_statuses(content: str) -> list[tuple[str, str]]:
+    """Read statuses from progress rows and SPEC sections without changing them."""
+    rows = roadmap_progress_statuses(content)
+    statuses = dict(rows)
+    entries = list(rows)
+    sections = re.findall(rf"^### ({SPEC_ID})\b([^\n]*)(.*?)(?=^#{{1,3}} |\Z)", content, re.M | re.S)
+    for spec_id, heading, body in sections:
+        status = re.search(r"^\*\*Status:\*\* (.+)$", body, re.M)
+        entries.append((spec_id, status.group(1) if status else statuses.get(spec_id, heading.rsplit("·", 1)[-1].strip())))
+    return entries
+
+
+def roadmap_freeze_errors(content: str) -> list[str]:
+    """Check every catalog entry, including headings outside a progress table."""
+    entries = roadmap_entry_statuses(content)
+    if not entries:
+        return ["no roadmap SPEC entries found"]
+    errors = []
+    for spec_id, status in entries:
+        if spec_id == "HRNS-015":
+            if FROZEN_MARKER in status:
+                errors.append("HRNS-015 must remain exempt")
+        elif not CLOSED_STATUS.match(status) and FROZEN_MARKER not in status:
+            errors.append(f"{spec_id}: open entry lacks {FROZEN_MARKER}")
+    if any(FROZEN_MARKER in status for _, status in entries):
+        if f"]({HEALTH_PROGRAM})" not in content:
+            errors.append("freeze note must link the health program spec")
+        if "EDA-001" not in content:
+            errors.append("freeze note must name EDA-001")
+    return errors
+
+
+class ValidateRoadmapFreeze(unittest.TestCase):
+    def setUp(self) -> None:
+        self.content = (Path(__file__).parent / "fixtures/roadmap-freeze/catalog.txt").read_text(encoding="utf-8")
+
+    def test_freeze_fixture_accepts_closed_entries_and_the_exemption(self) -> None:
+        content = self.content
+        self.assertEqual([], roadmap_freeze_errors(content))
+
+    def test_freeze_fixture_rejects_unfrozen_progress_rows(self) -> None:
+        content = self.content
+        for status in ("Pending", "Ready", "In Progress", "In Review", "Blocked", "Unknown", ""):
+            with self.subTest(status=status):
+                unfrozen = content.replace("⏳ Pending · 🧊 Frozen", status)
+                self.assertIn("TEST-001: open entry lacks 🧊 Frozen", roadmap_freeze_errors(unfrozen))
+
+    def test_freeze_fixture_rejects_section_and_exemption_regressions(self) -> None:
+        cases = (
+            (self.content.replace("| HRNS-015", "TEST-006|New open work\n| HRNS-015", 1),
+             "TEST-006: open entry lacks 🧊 Frozen"),
+            (self.content.replace("| HRNS-015", "TEST-006|New\\|Complete\n| HRNS-015", 1),
+             "TEST-006: open entry lacks 🧊 Frozen"),
+            (self.content.replace("| HRNS-015", "| TEST-006 | New\\|Complete | Ready | - | Specify |\n| HRNS-015", 1),
+             "TEST-006: open entry lacks 🧊 Frozen"),
+            (self.content.replace("| HRNS-015", "|TEST-006|New open work|Ready|-|Specify|\n| HRNS-015", 1),
+             "TEST-006: open entry lacks 🧊 Frozen"),
+            (self.content.replace("| HRNS-015", "TEST-006|New open work|Ready|-|Specify\n| HRNS-015", 1),
+             "TEST-006: open entry lacks 🧊 Frozen"),
+            (self.content.replace("| HRNS-015", "|TEST-006|New open work|Ready\n| HRNS-015", 1),
+             "TEST-006: open entry lacks 🧊 Frozen"),
+            (self.content.replace("**Status:** 🧊 Frozen — previously Pending.", "**Status:** Pending."),
+             "TEST-001: open entry lacks 🧊 Frozen"),
+            (self.content + "\n### TEST-006: New open work\n\n**Status:** Ready\n",
+             "TEST-006: open entry lacks 🧊 Frozen"),
+            (self.content.replace("⏳ Ready", "⏳ Ready · 🧊 Frozen"),
+             "HRNS-015 must remain exempt"),
+        )
+        for content, error in cases:
+            with self.subTest(error=error):
+                self.assertIn(error, roadmap_freeze_errors(content))
+
+    def test_freeze_fixture_requires_the_health_program_link_and_eda_note(self) -> None:
+        content = self.content
+        for missing, error in ((HEALTH_PROGRAM, "freeze note must link the health program spec"),
+                               ("EDA-001", "freeze note must name EDA-001")):
+            with self.subTest(missing=missing):
+                self.assertIn(error, roadmap_freeze_errors(content.replace(missing, "removed")))
+
+    def test_freeze_check_rejects_an_empty_catalog(self) -> None:
+        self.assertEqual(["no roadmap SPEC entries found"], roadmap_freeze_errors("# Empty roadmap\n"))
+
+    def test_open_roadmap_specs_are_frozen(self) -> None:
+        roadmaps = sorted((REPO_ROOT / "docs/ai/specs").rglob("*technical-roadmap.md"))
+        self.assertTrue(roadmaps, "no technical roadmaps found")
+        for roadmap in roadmaps:
+            with self.subTest(roadmap=_rel_repo(roadmap)):
+                self.assertEqual([], roadmap_freeze_errors(roadmap.read_text(encoding="utf-8")))
+
 EXTENSIONS_ROOT = REPO_ROOT / '.specify' / 'extensions'
 REGISTRY_PATH = EXTENSIONS_ROOT / '.registry'
 HOOKS_PATH = REPO_ROOT / '.specify' / 'extensions.yml'

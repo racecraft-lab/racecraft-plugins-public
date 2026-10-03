@@ -1,5 +1,12 @@
 # Racecraft Identity System Implementation Roadmap
 
+> **Feature-work freeze (2026-10-02):** All open SPECs are 🧊 Frozen for the
+> [speckit-pro health program (#1038)](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1038).
+> HRNS-015 alone is exempt as the known Part D candidate; EDA-001 is included
+> in the freeze. This notice takes precedence over readiness and sequencing
+> guidance below. Runbook D0 lifts the freeze for whichever SPEC Part D picks;
+> Part E lifts the rest. Unfreezing is outside this change.
+
 This roadmap defines the cross-surface identity, asset pipeline, integration,
 plugin packaging, and version-safe rollout required for the Racecraft Plugins
 and SpecKit Pro public launch.
@@ -89,19 +96,21 @@ Repo + docs             Plugin + packaging
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
-| BRAND-001 | Brand brief and concept exploration | ⏳ Pending | `.process/BRAND-001-workflow.md` | Scaffolded 2026-07-16 and parked; all seven phases still pending. Unblocked and ready for autopilot from Phase 1 |
-| BRAND-002 | Rationale-blind critique and human selection | ⏳ Pending | — | Blocked by BRAND-001 |
-| BRAND-003 | Canonical SVG master production | ⏳ Pending | — | Blocked by BRAND-002 |
-| BRAND-004 | Deterministic SVG validation and export pipeline | ⏳ Pending | — | Blocked by BRAND-003 |
-| BRAND-005 | Repository and documentation presentation | ⏳ Pending | — | Blocked by BRAND-003/004 |
-| BRAND-006 | Plugin presentation and payload packaging | ⏳ Pending | — | Blocked by BRAND-003/004 |
-| BRAND-007 | Launch readiness and versioned rollout | ⏳ Pending | — | Blocked by BRAND-005/006 |
+| BRAND-001 | Brand brief and concept exploration | ⏳ Pending · 🧊 Frozen | `.process/BRAND-001-workflow.md` | Scaffolded 2026-07-16 and parked; all seven phases still pending. Unblocked and ready for autopilot from Phase 1 |
+| BRAND-002 | Rationale-blind critique and human selection | ⏳ Pending · 🧊 Frozen | — | Blocked by BRAND-001 |
+| BRAND-003 | Canonical SVG master production | ⏳ Pending · 🧊 Frozen | — | Blocked by BRAND-002 |
+| BRAND-004 | Deterministic SVG validation and export pipeline | ⏳ Pending · 🧊 Frozen | — | Blocked by BRAND-003 |
+| BRAND-005 | Repository and documentation presentation | ⏳ Pending · 🧊 Frozen | — | Blocked by BRAND-003/004 |
+| BRAND-006 | Plugin presentation and payload packaging | ⏳ Pending · 🧊 Frozen | — | Blocked by BRAND-003/004 |
+| BRAND-007 | Launch readiness and versioned rollout | ⏳ Pending · 🧊 Frozen | — | Blocked by BRAND-005/006 |
 
 **Status legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
 ## Specification Sections
 
 ### BRAND-001: Brand brief and concept exploration
+
+**Status:** 🧊 Frozen — previously ⏳ Pending.
 
 **Priority:** P1 | **Depends On:** None | **Enables:** BRAND-002
 
@@ -175,6 +184,8 @@ Budget result: expected warning below the 25-file block; no exception authorized
 
 ### BRAND-002: Rationale-blind critique and human selection
 
+**Status:** 🧊 Frozen — previously ⏳ Pending.
+
 **Priority:** P1 | **Depends On:** BRAND-001 | **Enables:** BRAND-003
 
 **Goal:** Evaluate all four families independently, preserve comparable
@@ -208,6 +219,8 @@ Budget result: expected within setup thresholds
 - `brand/review/trademark-flags.md`
 
 ### BRAND-003: Canonical SVG master production
+
+**Status:** 🧊 Frozen — previously ⏳ Pending.
 
 **Priority:** P1 | **Depends On:** BRAND-002 | **Enables:** BRAND-004
 
@@ -245,6 +258,8 @@ Budget result: expected within setup thresholds
 
 ### BRAND-004: Deterministic SVG validation and export pipeline
 
+**Status:** 🧊 Frozen — previously ⏳ Pending.
+
 **Priority:** P1 | **Depends On:** BRAND-003 | **Enables:** BRAND-005, BRAND-006
 
 **Goal:** Turn approved masters into secure, reproducible, platform-ready
@@ -280,6 +295,8 @@ Budget result: expected within budget or warning below block thresholds
 - `brand/asset-manifest.json`
 
 ### BRAND-005: Repository and documentation presentation
+
+**Status:** 🧊 Frozen — previously ⏳ Pending.
 
 **Priority:** P1 | **Depends On:** BRAND-003, BRAND-004 | **Enables:** BRAND-007
 
@@ -318,6 +335,8 @@ Budget result: expected warning below block thresholds
 - `docs-site/src/styles/brand.css`
 
 ### BRAND-006: Plugin presentation and payload packaging
+
+**Status:** 🧊 Frozen — previously ⏳ Pending.
 
 **Priority:** P1 | **Depends On:** BRAND-003, BRAND-004 | **Enables:** BRAND-007
 
@@ -360,6 +379,8 @@ Budget result: must split again unless generated mirrors alone justify a reviewe
 - generated `dist/**`, installed-cache, and reference artifacts
 
 ### BRAND-007: Launch readiness and versioned rollout
+
+**Status:** 🧊 Frozen — previously ⏳ Pending.
 
 **Priority:** P1 | **Depends On:** BRAND-005, BRAND-006 | **Enables:** DOC-012 public cutover
 

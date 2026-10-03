@@ -1,0 +1,27 @@
+# Fixture technical roadmap
+
+> Freeze for [health program](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1038).
+> EDA-001 is frozen; HRNS-015 is exempt.
+
+| Spec | Name | Status | Workflow File | Next Phase |
+|---|---|---|---|---|
+| TEST-001 | Open work | ⏳ Pending · 🧊 Frozen | - | Specify |
+| HRNS-015 | Acceptance candidate | ⏳ Ready | - | Specify |
+| HRNS-016 | Dropped work | Retired | - | Dropped |
+| TEST-002 | Shipped work | ✅ Complete / Archived | - | Shipped |
+| TEST-003 | Replaced work | ⏭️ Superseded / Shipped | - | Shipped |
+| TEST-004 | Historical work | Completed/archived | - | Shipped |
+
+### TEST-001: Open work
+
+**Status:** 🧊 Frozen — previously Pending.
+
+### HRNS-015: Acceptance candidate
+
+### TEST-002: Shipped work
+
+### TEST-003: Replaced work
+
+### TEST-004: Historical work
+
+### TEST-005 — Heading-only historical work · ✅ Complete

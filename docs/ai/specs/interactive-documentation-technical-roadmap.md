@@ -1,5 +1,12 @@
 # Racecraft Interactive Documentation Implementation Roadmap
 
+> **Feature-work freeze (2026-10-02):** All open SPECs are 🧊 Frozen for the
+> [speckit-pro health program (#1038)](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1038).
+> HRNS-015 alone is exempt as the known Part D candidate; EDA-001 is included
+> in the freeze. This notice takes precedence over readiness and sequencing
+> guidance below. Runbook D0 lifts the freeze for whichever SPEC Part D picks;
+> Part E lifts the rest. Unfreezing is outside this change.
+
 > **Authoritative SPEC catalog** for the Interactive Documentation initiative — the single source of truth for the DOC-001 through DOC-021 spec list, dependency tiers, dependency graph, and launch sequencing (SpecKit tools discover the catalog here). The [product-review companion](../../roadmap-interactive-documentation.md) carries the higher-level framing (autopilot-ready property, validation strategy, cut list) and points back here for the catalog.
 > **Source PRD:** [../../prd-interactive-documentation.md](../../prd-interactive-documentation.md)
 > **Roadmap-MOC home note:** [interactive-documentation-roadmap-MOC.md](interactive-documentation-roadmap-MOC.md)
@@ -70,16 +77,16 @@ DOC-007 -> DOC-008
 | DOC-009 | Maintainer and contributor release workflow | Completed/archived | `.process/DOC-009-workflow.md` | Archived after PR #219 |
 | DOC-010 | Search, accessibility, deep links, docs validation | Completed/archived | `.process/DOC-010-workflow.md` | Archived after PRs #232-#236 |
 | DOC-011 | GitHub Pages build-and-deploy pipeline | Completed/archived | `.process/DOC-011-workflow.md` | Archived after PR #243 |
-| DOC-012 | Custom domain + base-path migration to plugins.racecraft.co | ⏳ Pending | — | **LAST — public launch gate**; runs after all other DOC specs (P1) |
+| DOC-012 | Custom domain + base-path migration to plugins.racecraft.co | ⏳ Pending · 🧊 Frozen | — | **LAST — public launch gate**; runs after all other DOC specs (P1) |
 | DOC-013 | Brand identity and marketplace landing page | Completed/archived | `.process/DOC-013-workflow.md` | Archived after PR #246 |
 | DOC-014 | SEO and AI discoverability | Completed/archived | `.process/DOC-014-workflow.md` | Archived after PR #264; max-discoverability posture shipped, URLs finalize at DOC-012 launch (P1) |
-| DOC-015 | Editorial and content-QA pass | ⏳ Pending | — | Not started — production readiness (P1) |
-| DOC-016 | WCAG 2.1 AA accessibility hardening | ⏳ Pending | — | Not started — depends on DOC-013 (P2) |
-| DOC-017 | Performance budget and Lighthouse CI | ⏳ Pending | — | Not started — depends on DOC-013/014 plus the shipped DOC-011 deploy foundation (P2) |
-| DOC-018 | Launch hygiene: analytics, 404, legal, contributor onboarding | ⏳ Pending | — | Not started — uses the shipped DOC-011 deploy foundation and activates at DOC-012 launch (P3) |
-| DOC-019 | Content voice and ELI5 tone system | ⏳ Pending | — | Not started — depends on DOC-015 (P1) |
-| DOC-020 | Per-page value alignment and right-sizing | ⏳ Pending | — | Not started — depends on DOC-019 (P2) |
-| DOC-021 | Task-based information architecture and wayfinding | ⏳ Pending | — | Not started — depends on DOC-013 (P2) |
+| DOC-015 | Editorial and content-QA pass | ⏳ Pending · 🧊 Frozen | — | Not started — production readiness (P1) |
+| DOC-016 | WCAG 2.1 AA accessibility hardening | ⏳ Pending · 🧊 Frozen | — | Not started — depends on DOC-013 (P2) |
+| DOC-017 | Performance budget and Lighthouse CI | ⏳ Pending · 🧊 Frozen | — | Not started — depends on DOC-013/014 plus the shipped DOC-011 deploy foundation (P2) |
+| DOC-018 | Launch hygiene: analytics, 404, legal, contributor onboarding | ⏳ Pending · 🧊 Frozen | — | Not started — uses the shipped DOC-011 deploy foundation and activates at DOC-012 launch (P3) |
+| DOC-019 | Content voice and ELI5 tone system | ⏳ Pending · 🧊 Frozen | — | Not started — depends on DOC-015 (P1) |
+| DOC-020 | Per-page value alignment and right-sizing | ⏳ Pending · 🧊 Frozen | — | Not started — depends on DOC-019 (P2) |
+| DOC-021 | Task-based information architecture and wayfinding | ⏳ Pending · 🧊 Frozen | — | Not started — depends on DOC-013 (P2) |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -438,7 +445,7 @@ Budget result: archived as one review-remediation slice after PR #243
 
 **Priority:** P1 (LAST — public launch gate) | **Depends On:** DOC-011 and all content/branding/SEO/a11y specs (DOC-013 - DOC-021) launch-ready | **Enables:** public go-live
 
-**Status:** Pending. `astro.config.mjs` is pinned to `site: 'https://racecraft-lab.github.io'` and `base: '/racecraft-plugins-public'`. The base prefix is hardcoded across ~20 content files, in `generate-reference-pages.mjs` (the `Public path` line), and in `validate-docs-quality.mjs` fixtures (`SUPPORT_ANCHOR_INVENTORY`, `REQUIRED_SUPPORT_LINKS`). Target: serve at the root of `plugins.racecraft.co`; DNS will be a CNAME at Epik (decision: not Route53). **This spec is deliberately DEAD LAST** — it is the single go-live flip (attach the domain + remove the DOC-011 `noindex` guard), so it runs only after every other DOC spec is launch-ready, ensuring the site is not overtly public until then.
+**Status:** 🧊 Frozen — previously Pending. `astro.config.mjs` is pinned to `site: 'https://racecraft-lab.github.io'` and `base: '/racecraft-plugins-public'`. The base prefix is hardcoded across ~20 content files, in `generate-reference-pages.mjs` (the `Public path` line), and in `validate-docs-quality.mjs` fixtures (`SUPPORT_ANCHOR_INVENTORY`, `REQUIRED_SUPPORT_LINKS`). Target: serve at the root of `plugins.racecraft.co`; DNS will be a CNAME at Epik (decision: not Route53). **This spec is deliberately DEAD LAST** — it is the single go-live flip (attach the domain + remove the DOC-011 `noindex` guard), so it runs only after every other DOC spec is launch-ready, ensuring the site is not overtly public until then.
 
 **Goal:** Serve the docs at the root of `plugins.racecraft.co` with correct links, DNS, and validation.
 
@@ -549,7 +556,7 @@ Budget result: within block thresholds; total-file and surface counts cross the 
 
 **Priority:** P1 | **Depends On:** None | **Enables:** public launch
 
-**Status:** Pending. Visual review confirmed internal-authoring leakage in rendered pages: "Route Scope" / "Shell owner DOC: DOC-002" / "Full-content owner DOC" on the landing and `choose-your-path`, "Deferred Boundary" on `choose-your-path`, and generator mechanics ("Generated by ...", "Public path:", "Page Sources", title-cased "Speckit Prd") on the reference pages. Also: gate numbering shows G1-G7 while the autopilot source uses G0-G7; "Spec Kit" vs "SpecKit" drift; and `first-run.md` uses `specify version` vs the verified `specify --version`. `validate-docs-quality.mjs` checks structure, not prose.
+**Status:** 🧊 Frozen — previously Pending. Visual review confirmed internal-authoring leakage in rendered pages: "Route Scope" / "Shell owner DOC: DOC-002" / "Full-content owner DOC" on the landing and `choose-your-path`, "Deferred Boundary" on `choose-your-path`, and generator mechanics ("Generated by ...", "Public path:", "Page Sources", title-cased "Speckit Prd") on the reference pages. Also: gate numbering shows G1-G7 while the autopilot source uses G0-G7; "Spec Kit" vs "SpecKit" drift; and `first-run.md` uses `specify version` vs the verified `specify --version`. `validate-docs-quality.mjs` checks structure, not prose.
 
 **Goal:** Make the public docs read cleanly, accurately, and answer-first by removing internal scaffolding, fixing factual drift, and leading with the answer so content is cleanly retrievable by AI engines.
 
@@ -580,7 +587,7 @@ Budget result: within budget
 
 **Priority:** P2 | **Depends On:** DOC-013 (brand contrast), DOC-010 (smoke harness) | **Enables:** PRD AC-10.2
 
-**Status:** Pending. Today's a11y is smoke-tested only — no axe-core, no contrast verification. `SafeInstallAids.astro` reimplements radiogroup keyboard navigation with a custom `keydown` handler over loose `<input type=radio>` (no `role="radiogroup"`) and toggles `panel.hidden` with no `aria-controls` / `aria-expanded`. PRD AC-10.2 requires keyboard, focus, label, contrast, and static-fallback conformance; only static-fallback + basic keyboard are verified.
+**Status:** 🧊 Frozen — previously Pending. Today's a11y is smoke-tested only — no axe-core, no contrast verification. `SafeInstallAids.astro` reimplements radiogroup keyboard navigation with a custom `keydown` handler over loose `<input type=radio>` (no `role="radiogroup"`) and toggles `panel.hidden` with no `aria-controls` / `aria-expanded`. PRD AC-10.2 requires keyboard, focus, label, contrast, and static-fallback conformance; only static-fallback + basic keyboard are verified.
 
 **Goal:** Replace smoke-only a11y with verified WCAG 2.1 AA conformance and fix the custom-widget semantics.
 
@@ -608,7 +615,7 @@ Budget result: within budget
 
 **Priority:** P2 | **Depends On:** DOC-011, DOC-013, DOC-014 | **Enables:** PRD AC-10.7
 
-**Status:** Pending. No Lighthouse config or perf budget exists in `docs-site` (the sibling site has `lighthouserc.json`). Branding will add fonts/assets, so a budget is needed to prevent regression. PRD AC-10.7 ("visual regression or screenshot checks required once the site exists") is also unmet — the current smoke test checks element presence, not visual baselines.
+**Status:** 🧊 Frozen — previously Pending. No Lighthouse config or perf budget exists in `docs-site` (the sibling site has `lighthouserc.json`). Branding will add fonts/assets, so a budget is needed to prevent regression. PRD AC-10.7 ("visual regression or screenshot checks required once the site exists") is also unmet — the current smoke test checks element presence, not visual baselines.
 
 **Goal:** Guard load performance and core-web-vitals with a CI budget once branding/fonts land.
 
@@ -635,7 +642,7 @@ Budget result: within budget
 
 **Priority:** P3 | **Depends On:** DOC-011 (analytics is configured here but activates at DOC-012 go-live) | **Enables:** Feature complete
 
-**Status:** Pending. The PRD deferred analytics "until the site foundation and hosting path exist" — that precondition is now met but the work is unstarted. There is no branded 404 page, no repo `LICENSE` / privacy notice, and `contribute-and-release.md` has no docs-site contributor section (how to run/preview/add a page).
+**Status:** 🧊 Frozen — previously Pending. The PRD deferred analytics "until the site foundation and hosting path exist" — that precondition is now met but the work is unstarted. There is no branded 404 page, no repo `LICENSE` / privacy notice, and `contribute-and-release.md` has no docs-site contributor section (how to run/preview/add a page).
 
 **Goal:** Close the remaining production-hygiene items now that hosting and domain exist.
 
@@ -671,7 +678,7 @@ Budget result: within budget
 
 **Priority:** P1 | **Depends On:** DOC-015 (editorial cleanup) | **Enables:** public launch
 
-**Status:** Pending. A live per-route preview audit found 11 of 19 pages open with the templated, self-referential formula "Use this route when ..." / "Use this page to ...", leading with internal "route" jargon instead of the reader's goal; several pages repeat defensive disclaimers ("does not run local diagnostics, grant permissions, invoke plugin workflows ..."). This is neither ELI5 nor warm. Google's developer style guide prescribes a "knowledgeable friend" voice (conversational, friendly, respectful; not pedantic or pushy) and a concrete lint rule against "simply / easy / quickly / it's that simple."
+**Status:** 🧊 Frozen — previously Pending. A live per-route preview audit found 11 of 19 pages open with the templated, self-referential formula "Use this route when ..." / "Use this page to ...", leading with internal "route" jargon instead of the reader's goal; several pages repeat defensive disclaimers ("does not run local diagnostics, grant permissions, invoke plugin workflows ..."). This is neither ELI5 nor warm. Google's developer style guide prescribes a "knowledgeable friend" voice (conversational, friendly, respectful; not pedantic or pushy) and a concrete lint rule against "simply / easy / quickly / it's that simple."
 
 **Goal:** Establish and enforce one friendly-but-not-condescending voice so every page opens with the reader's outcome in plain language.
 
@@ -702,7 +709,7 @@ Budget result: within budget
 
 **Priority:** P2 | **Depends On:** DOC-019 | **Enables:** public launch
 
-**Status:** Pending. The per-route audit found uneven value delivery: generated reference pages are walls of data (`reference/tests` 5,844 words; `reference/skills` 2,058; `reference/agents` 1,455) with no "what is this / why you would care" framing or progressive disclosure, while others are thin (home 204 words; `reference/hooks` 304). No page consistently states what the reader will get, the prerequisites, and the next step.
+**Status:** 🧊 Frozen — previously Pending. The per-route audit found uneven value delivery: generated reference pages are walls of data (`reference/tests` 5,844 words; `reference/skills` 2,058; `reference/agents` 1,455) with no "what is this / why you would care" framing or progressive disclosure, while others are thin (home 204 words; `reference/hooks` 304). No page consistently states what the reader will get, the prerequisites, and the next step.
 
 **Goal:** Make every page deliver its promised value at the right depth, scannably.
 
@@ -733,7 +740,7 @@ Budget result: within budget
 
 **Priority:** P2 | **Depends On:** DOC-013 (landing), DOC-002 | **Enables:** public launch
 
-**Status:** Pending. The sidebar is grouped by raw Diátaxis mode labels (Tutorials / How-to / Reference / Explanation). Best-in-class docs (Stripe; Fern; Nielsen Norman Group) organize IA around user goals/tasks — not internal structure or Diátaxis labels — and add "where do I start" wayfinding plus progressive disclosure. The landing is a thin doc with no task-based quick-start (Stripe leads above the fold with use-case cards).
+**Status:** 🧊 Frozen — previously Pending. The sidebar is grouped by raw Diátaxis mode labels (Tutorials / How-to / Reference / Explanation). Best-in-class docs (Stripe; Fern; Nielsen Norman Group) organize IA around user goals/tasks — not internal structure or Diátaxis labels — and add "where do I start" wayfinding plus progressive disclosure. The landing is a thin doc with no task-based quick-start (Stripe leads above the fold with use-case cards).
 
 **Goal:** Restructure navigation and the landing around user goals with clear wayfinding.
 

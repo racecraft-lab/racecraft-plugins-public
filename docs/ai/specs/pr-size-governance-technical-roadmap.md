@@ -1,5 +1,12 @@
 # PR-Size Governance — Implementation Roadmap
 
+> **Feature-work freeze (2026-10-02):** All open SPECs are 🧊 Frozen for the
+> [speckit-pro health program (#1038)](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1038).
+> HRNS-015 alone is exempt as the known Part D candidate; EDA-001 is included
+> in the freeze. This notice takes precedence over readiness and sequencing
+> guidance below. Runbook D0 lifts the freeze for whichever SPEC Part D picks;
+> Part E lifts the rest. Unfreezing is outside this change.
+
 > Companion to the research synthesis at
 > [`../research/spec-pr-size-governance-research.md`](../research/spec-pr-size-governance-research.md).
 > **Source PRD:** [`../../prd-pr-size-governance.md`](../../prd-pr-size-governance.md).

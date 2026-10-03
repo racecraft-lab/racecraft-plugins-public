@@ -1,5 +1,12 @@
 # CI/CD & Release Pipeline Implementation Roadmap
 
+> **Feature-work freeze (2026-10-02):** All open SPECs are 🧊 Frozen for the
+> [speckit-pro health program (#1038)](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1038).
+> HRNS-015 alone is exempt as the known Part D candidate; EDA-001 is included
+> in the freeze. This notice takes precedence over readiness and sequencing
+> guidance below. Runbook D0 lifts the freeze for whichever SPEC Part D picks;
+> Part E lifts the rest. Unfreezing is outside this change.
+
 **Implement a CI/CD pipeline, trunk-based development workflow, and automated plugin versioning for the racecraft-plugins-public marketplace, aligned with official Anthropic plugin documentation.**
 
 This document defines the specification roadmap for the CI/CD & Release Pipeline. Each specification is executed end-to-end through the SpecKit workflow (specify → clarify → plan → checklist → tasks → analyze → implement) before moving to the next.
