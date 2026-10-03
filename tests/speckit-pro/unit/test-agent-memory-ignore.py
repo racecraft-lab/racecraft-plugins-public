@@ -18,7 +18,7 @@ SCRIPT = Path(__file__).resolve().parents[3] / "speckit-pro/scripts/agent-memory
 REPO_ROOT = SCRIPT.parents[2]
 
 
-class ConsumerRepoCase(unittest.TestCase):
+class AgentMemoryIgnoreTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -26,15 +26,13 @@ class ConsumerRepoCase(unittest.TestCase):
         self.root.mkdir()
         subprocess.run(["git", "init", "-q", str(self.root)], check=True)
 
-    def run_tool(self, mode, *extra):
+    def run_tool(self, mode):
         result = subprocess.run(
-            [sys.executable, str(SCRIPT), "--mode", mode, "--repo-root", str(self.root), *extra],
+            [sys.executable, str(SCRIPT), "--mode", mode, "--repo-root", str(self.root)],
             text=True, capture_output=True, check=False,
         )
         return result.returncode, json.loads(result.stdout)
 
-
-class AgentMemoryIgnoreTests(ConsumerRepoCase):
     def test_apply_preserves_content_and_is_idempotent_for_root_and_nested_memory(self):
         (self.root / ".gitignore").write_text("# existing\n*.cache\n")
         nested = self.root / "feature/.claude/agent-memory-local"
@@ -113,7 +111,19 @@ class AgentMemoryIgnoreTests(ConsumerRepoCase):
         self.assertIn("--mode check", prerequisites)
 
 
-class WorktreesIgnoreTests(ConsumerRepoCase):
+class WorktreesIgnoreTests(unittest.TestCase):
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.root = Path(temp.name) / "consumer"
+        self.root.mkdir()
+        subprocess.run(["git", "init", "-q", str(self.root)], check=True)
+
+    def run_tool(self, mode, *extra):
+        argv = [sys.executable, str(SCRIPT), "--mode", mode, "--repo-root", str(self.root), *extra]
+        done = subprocess.run(argv, text=True, capture_output=True, check=False)
+        return done.returncode, json.loads(done.stdout)
+
     def worktrees_ignored(self):
         return subprocess.run(
             ["git", "check-ignore", "-q", ".worktrees/x"], cwd=self.root, check=False,
