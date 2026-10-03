@@ -113,6 +113,7 @@
         { "path": "tests/speckit-pro/unit/test-docs-artifact.py", "label": "test-docs-artifact" },
         { "path": "tests/speckit-pro/unit/test-sync-marketplace-versions.py", "label": "test-sync-marketplace-versions" },
         { "path": "tests/speckit-pro/unit/test-claude-hooks.py", "label": "test-claude-hooks" },
+        { "path": "tests/speckit-pro/unit/test-gh-json.py", "label": "test-gh-json" },
         { "path": "tests/speckit-pro/unit/test-scratch-clone-guard.py", "label": "test-scratch-clone-guard" },
         { "path": "tests/speckit-pro/unit/test-active-path-guard-policy.py", "label": "test-active-path-guard-policy" },
         { "path": "tests/speckit-pro/unit/test-repo-bash-confinement.py", "label": "test-repo-bash-confinement" },
