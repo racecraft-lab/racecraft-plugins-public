@@ -736,25 +736,18 @@ def dispatch_helper(request: Any) -> dict[str, Any]:
             data=registry_report(HELPERS),
         )
 
-    if entry.helper_id == "formal-doctor":
-        return run_formal_helper(entry, request)
-    if entry.helper_id == "research-broker-preflight":
-        return run_research_broker_preflight_helper(entry, request)
-    if entry.helper_id == "render-egress-authorization":
-        return run_egress_authorization_helper(entry, request)
-    if entry.helper_id == "check-gate-preflight-coverage":
-        return run_gate_preflight_coverage_helper(entry, request)
-    if entry.helper_id == "finalize-run":
-        return run_run_finalization_helper(entry, request)
-    if entry.helper_id == "ratify-pr-split":
-        return run_pr_split_ratification_helper(entry, request)
-    if entry.helper_id == "list-archive-candidates":
-        return run_archive_sweep_helper(entry, request)
-    if entry.helper_id == "check-roadmap-freshness":
-        return run_roadmap_freshness_helper(entry, request)
-    if entry.helper_id == "scaffold-answers":
-        return run_scaffold_answers_helper(entry, request)
-    return run_registered_helper(entry, request)
+    handlers = {
+        "formal-doctor": run_formal_helper,
+        "research-broker-preflight": run_research_broker_preflight_helper,
+        "render-egress-authorization": run_egress_authorization_helper,
+        "check-gate-preflight-coverage": run_gate_preflight_coverage_helper,
+        "finalize-run": run_run_finalization_helper,
+        "ratify-pr-split": run_pr_split_ratification_helper,
+        "list-archive-candidates": run_archive_sweep_helper,
+        "check-roadmap-freshness": run_roadmap_freshness_helper,
+        "scaffold-answers": run_scaffold_answers_helper,
+    }
+    return handlers.get(entry.helper_id, run_registered_helper)(entry, request)
 
 
 def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, Any]:

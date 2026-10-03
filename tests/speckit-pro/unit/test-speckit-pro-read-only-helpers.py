@@ -4309,7 +4309,7 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
 
     def test_helper_python_authoritative_records(self) -> None:
         for helper_id in self.filtered_helpers():
-            if helper_id == "helper-registry-dispatch":
+            if helper_id in {"helper-registry-dispatch", "scaffold-answers"}:
                 continue
             with self.subTest(helper_id=helper_id):
                 completed, response, stderr_records = run_runner(helper_request(helper_id, HELPER_CASES[helper_id]))
@@ -4371,11 +4371,6 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
                     self.assertEqual(data["decision"], "autopilot_ratified")
                     self.assertEqual(data["ratified_by"], "autopilot")
                     self.assertEqual(stderr_records, [])
-                    continue
-                if helper_id == "scaffold-answers":
-                    self.assert_response(response, "expected_failure", 1)
-                    self.assertEqual(data["verdict"], "stop")
-                    self.assertFalse(data["questions_allowed"])
                     continue
                 if helper_id == "check-roadmap-freshness":
                     # A throwaway repository with no remote: the roadmap cannot be
@@ -4619,10 +4614,10 @@ class ScaffoldAnswersTests(unittest.TestCase):
 
     def check(self, **inputs):
         (self.root / "answers.json").write_text(json.dumps(self.document), encoding="utf-8")
-        return registry.dispatch_helper(SimpleNamespace(
-            helper_id="scaffold-answers", operation="scaffold-answers", mode="read_only",
-            request_id="scaffold-answers-test", inputs={"answers_file": "answers.json", "spec_id": "SPEC-009", **inputs},
-        ))
+        _, result, _ = run_runner(helper_request("scaffold-answers", {
+            "answers_file": "answers.json", "spec_id": "SPEC-009", **inputs,
+        }), cwd=self.root)
+        return result
 
     def test_missing_answer_names_the_key_and_stops(self):
         del self.document["answers"]["formal_methods"]
