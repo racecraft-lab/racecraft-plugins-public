@@ -166,6 +166,7 @@
         { "path": "tests/speckit-pro/unit/test-agent-inventory.py", "label": "test-agent-inventory" },
         { "path": "tests/speckit-pro/unit/test-host-parity-generator.py", "label": "test-host-parity-generator" },
         { "path": "tests/speckit-pro/unit/test-agent-memory-ignore.py", "label": "test-agent-memory-ignore" },
+        { "path": "tests/speckit-pro/unit/test-worktrees-ignore.py", "label": "test-worktrees-ignore" },
         { "path": "tests/speckit-pro/unit/test-agent-materialization.py", "label": "test-agent-materialization" },
         { "path": "tests/speckit-pro/unit/test-agent-terminal-contracts.py", "label": "test-agent-terminal-contracts" },
         { "path": "tests/speckit-pro/unit/test-parity-extractors.py", "label": "test-parity-extractors" },

@@ -111,53 +111,5 @@ class AgentMemoryIgnoreTests(unittest.TestCase):
         self.assertIn("--mode check", prerequisites)
 
 
-class WorktreesIgnoreTests(unittest.TestCase):
-    def setUp(self):
-        temp = tempfile.TemporaryDirectory()
-        self.addCleanup(temp.cleanup)
-        self.root = Path(temp.name) / "consumer"
-        self.root.mkdir()
-        subprocess.run(["git", "init", "-q", str(self.root)], check=True)
-
-    def run_tool(self, mode, *extra):
-        argv = [sys.executable, str(SCRIPT), "--mode", mode, "--repo-root", str(self.root), *extra]
-        done = subprocess.run(argv, text=True, capture_output=True, check=False)
-        return done.returncode, json.loads(done.stdout)
-
-    def worktrees_ignored(self):
-        return subprocess.run(
-            ["git", "check-ignore", "-q", ".worktrees/x"], cwd=self.root, check=False,
-        ).returncode == 0
-
-    def test_worktrees_target_ignores_scaffold_worktrees_and_is_idempotent(self):
-        (self.root / ".gitignore").write_text("*.cache\n")
-        self.assertFalse(self.worktrees_ignored())
-        code, report = self.run_tool("check", "--target", "worktrees")
-        self.assertNotEqual(code, 0)
-        self.assertEqual(report["unignored_paths"], [".worktrees/__speckit_worktree_probe__"])
-        self.assertEqual(self.run_tool("apply", "--target", "worktrees")[0], 0)
-        self.assertTrue(self.worktrees_ignored())
-        first = (self.root / ".gitignore").read_text()
-        self.assertEqual(first, "*.cache\n/.worktrees/\n")
-        code, report = self.run_tool("apply", "--target", "worktrees")
-        self.assertEqual((code, report["changed"]), (0, False))
-        self.assertEqual((self.root / ".gitignore").read_text(), first)
-
-    def test_worktrees_target_leaves_memory_rule_out(self):
-        self.assertEqual(self.run_tool("apply", "--target", "worktrees")[0], 0)
-        self.assertNotIn("agent-memory-local", (self.root / ".gitignore").read_text())
-
-    def test_both_clients_include_worktrees_repair_in_install_and_upgrade(self):
-        for host in ("claude", "codex"):
-            for operation in ("speckit-install", "speckit-upgrade"):
-                path = host_skill_root(host) / operation / "SKILL.md"
-                with self.subTest(path=path):
-                    self.assertIn("--target worktrees", path.read_text())
-
-
 if __name__ == "__main__":
-    suite = unittest.TestSuite(
-        unittest.defaultTestLoader.loadTestsFromTestCase(case)
-        for case in (AgentMemoryIgnoreTests, WorktreesIgnoreTests)
-    )
-    raise SystemExit(run_counted(suite, label="test-agent-memory-ignore"))
+    raise SystemExit(run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(AgentMemoryIgnoreTests), label="test-agent-memory-ignore"))
