@@ -17,42 +17,37 @@ BUDGET_FILE = Path(__file__).with_name("canary-budget.json")
 HOSTS = tuple(SCHEMA["properties"]["host"]["enum"])
 VARIANTS = tuple(SCHEMA["$defs"]["variant"]["properties"]["name"]["enum"])
 BUDGET_STAGES = ("scaffold", "plan", "implement")  # ADR 0016; plan_review is recorded, never budgeted
-METRICS = {"wall_seconds": (int, float), "tokens": (int,)}
+METRICS = ("wall_seconds", "tokens")
 
 
-def keyed(node, keys, where):
-    """``node`` when it is an object with exactly ``keys``; anything else raises ValueError."""
-    if not isinstance(node, dict) or set(node) != set(keys):
-        raise ValueError(f"{where}: needs exactly {sorted(keys)}")
-    return node
+def closed(properties):
+    return {"type": "object", "additionalProperties": False, "required": list(properties), "properties": properties}
 
 
-def valid_limit(value, types):
-    """True for an unset (None) limit or a positive number of the metric's type; floats must be finite."""
-    if value is None:
-        return True
-    if isinstance(value, bool) or not isinstance(value, types) or value <= 0:
-        return False
-    return not isinstance(value, float) or math.isfinite(value)
+# Every host, variant and budgeted stage needs both limits; null leaves a limit unset.
+STAGE_LIMITS = closed({"wall_seconds": {"type": ["number", "null"], "exclusiveMinimum": 0},
+                       "tokens": {"type": ["integer", "null"], "minimum": 1}})
+BUDGET_SCHEMA = closed({
+    "schema_version": {"const": "canary-budget/v1"}, "policy": {"type": "string", "minLength": 1},
+    "limits": closed({host: closed({variant: closed(dict.fromkeys(BUDGET_STAGES, STAGE_LIMITS)) for variant in VARIANTS})
+                      for host in HOSTS}),
+})
 
 
-def check_budget(limits):
-    """Return ``limits`` when it sets or leaves unset exactly the budgeted limits; anything else raises ValueError."""
-    for host in keyed(limits, HOSTS, "budget.limits"):
-        for variant in keyed(limits[host], VARIANTS, f"budget.{host}"):
-            for stage in keyed(limits[host][variant], BUDGET_STAGES, f"budget.{host}.{variant}"):
-                entry = keyed(limits[host][variant][stage], METRICS, f"budget.{host}.{variant}.{stage}")
-                for metric, types in METRICS.items():
-                    if not valid_limit(entry[metric], types):
-                        raise ValueError(f"budget.{host}.{variant}.{stage}.{metric}: must be null or a positive limit")
-    return limits
+def reject_nonfinite(constant):
+    raise ValueError(f"budget: {constant} is not a limit")
+
+
+def check_budget(document):
+    """The limits of a budget document that matches BUDGET_SCHEMA; anything else raises ValueError."""
+    for failure in json_schema_failures(document, BUDGET_SCHEMA, BUDGET_SCHEMA, "budget"):
+        raise ValueError(f"{failure['field']}: {failure['message']}")
+    return document["limits"]
 
 
 def load_budget(path=BUDGET_FILE):
-    document = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=unique_object)
-    if not isinstance(document, dict) or document.get("schema_version") != "canary-budget/v1":
-        raise ValueError("budget.schema_version: expected canary-budget/v1")
-    return check_budget(document.get("limits"))
+    return check_budget(json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=unique_object,
+                                   parse_constant=reject_nonfinite))
 
 
 def budget_checks(value, budget):

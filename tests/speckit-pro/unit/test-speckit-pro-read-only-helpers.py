@@ -4765,30 +4765,30 @@ class CanaryBudgetTests(unittest.TestCase):
             self.assertIn(phrase, document["policy"])
 
     def test_a_malformed_budget_fails_closed(self):
+        def document(limits):
+            return {"schema_version": "canary-budget/v1", "policy": "rule", "limits": limits}
+
         complete = self.budget(5, 100)
+        self.assertEqual(complete, self.validator.check_budget(document(complete)))
+        huge = self.budget(10**400, 10**400)
+        self.assertIs(huge, self.validator.check_budget(document(huge)), "a huge integer limit never overflows")
         broken = []
-        for path, bad in ((("codex", "base", "plan", "tokens"), 0), (("codex", "base", "plan", "wall_seconds"), float("inf")),
-                          (("codex", "base", "plan", "tokens"), 1.5), (("codex", "base", "plan", "extra"), 1)):
+        for stage_limits in ({"wall_seconds": 0, "tokens": 1}, {"wall_seconds": 1, "tokens": 1.5},
+                             {"wall_seconds": True, "tokens": 1}, {"wall_seconds": 1, "tokens": 1, "extra": 1}, {"tokens": 1}):
             limits = copy.deepcopy(complete)
-            limits[path[0]][path[1]][path[2]][path[3]] = bad
-            broken.append(limits)
-        missing = copy.deepcopy(complete)
-        del missing["claude-code"]["security_block"]["implement"]
-        broken.extend([missing, {**complete, "codex": []}, None])
+            limits["codex"]["base"]["plan"] = stage_limits
+            broken.append(document(limits))
         extra = copy.deepcopy(complete)
         extra["codex"]["base"]["plan_review"] = {"wall_seconds": 1, "tokens": 1}
-        broken.append(extra)
-        huge = copy.deepcopy(complete)
-        huge["codex"]["base"]["plan"]["wall_seconds"] = 10**400
-        self.assertIs(huge, self.validator.check_budget(huge), "a huge integer limit is valid and never overflows")
-        for limits in broken:
-            with self.assertRaises(ValueError):
-                self.validator.check_budget(limits)
+        broken += [document(extra), document({**complete, "codex": []}), {**document(complete), "schema_version": "v0"}, [], None]
+        for value in broken:
+            with self.assertRaises(ValueError, msg=value):
+                self.validator.check_budget(value)
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "budget.json"
-            for document in ([], {"schema_version": "canary-budget/v0", "limits": complete}, {"schema_version": "canary-budget/v1", "limits": extra}):
-                path.write_text(json.dumps(document), encoding="utf-8")
-                with self.assertRaises(ValueError, msg=document):
+            for text in ("[]", json.dumps(document(extra)), json.dumps(document(complete)).replace("100", "NaN", 1)):
+                path.write_text(text, encoding="utf-8")
+                with self.assertRaises(ValueError, msg=text):
                     self.validator.load_budget(path)
 
     def test_nothing_in_the_plugin_stops_a_run_on_budget(self):
