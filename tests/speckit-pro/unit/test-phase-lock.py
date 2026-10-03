@@ -24,15 +24,12 @@ WORKFLOWS = REPO_ROOT / ".github" / "workflows"
 DONE = {"hasNextPage": False}
 
 
-def labels(*names: str) -> dict[str, Any]:
-    return {"pageInfo": DONE, "nodes": [{"name": name} for name in names]}
-
-
 def pr_payload(*issues: tuple[int, list[str]], main_phase: str | None = None) -> dict[str, Any]:
     """A GraphQL response for a PR that closes ``issues`` (number, labels)."""
-    closing = {"pageInfo": DONE, "nodes": [{"number": n, "labels": labels(*names)} for n, names in issues]}
+    nodes = [{"number": n, "labels": {"pageInfo": DONE, "nodes": [{"name": x} for x in names]}} for n, names in issues]
     blob = None if main_phase is None else {"text": main_phase + "\n"}
-    return {"data": {"repository": {"object": blob, "pullRequest": {"closingIssuesReferences": closing}}}}
+    pr = {"closingIssuesReferences": {"pageInfo": DONE, "nodes": nodes}}
+    return {"data": {"repository": {"object": blob, "pullRequest": pr}}}
 
 
 class PhaseLockCheckTests(unittest.TestCase):
@@ -44,22 +41,19 @@ class PhaseLockCheckTests(unittest.TestCase):
             self.open_phase_file.write_text(open_phase + "\n", encoding="utf-8")
         return phase_lock.check_pr("owner/repo", 7, open_phase_file=self.open_phase_file, api=lambda _: payload)
 
-    def test_closing_a_later_phase_issue_fails(self) -> None:
-        self.assertEqual(self.check(pr_payload((12, ["phase-2"]))), 1)
+    # (case, closed issues, the PR's open-phase file, the default branch's file, exit code)
+    VERDICTS = [
+        ("a phase-2 issue while phase-1 is open fails", [(12, ["phase-2"])], "phase-1", None, 1),
+        ("open, earlier and phaseless issues pass", [(11, ["phase-1"]), (3, ["phase-0"]), (4, ["bug"])], "phase-1", None, 0),
+        ("a locked issue with no phase fails", [(12, ["phase-locked"])], "phase-1", None, 1),
+        ("a locked open-phase issue fails", [(12, ["phase-1", "phase-locked"])], "phase-1", None, 1),
+        ("part-d comes after phase-5", [(9, ["part-d"])], "phase-5", None, 1),
+        ("the PR cannot open a phase main keeps locked", [(12, ["phase-2"])], "phase-2", "phase-1", 1),
+    ]
 
-    def test_closing_an_open_or_earlier_unlocked_issue_passes(self) -> None:
-        payload = pr_payload((11, ["phase-1", "ready-for-agent"]), (3, ["phase-0"]), (4, ["bug"]))
-        self.assertEqual(self.check(payload), 0)
-
-    def test_closing_a_still_locked_issue_fails_whatever_its_phase(self) -> None:
-        for names in (["phase-locked"], ["phase-1", "phase-locked"]):
-            self.assertEqual(self.check(pr_payload((12, names))), 1, names)
-
-    def test_part_d_is_after_phase_5(self) -> None:
-        self.assertEqual(self.check(pr_payload((9, ["part-d"])), open_phase="phase-5"), 1)
-
-    def test_pr_cannot_open_a_phase_the_default_branch_keeps_locked(self) -> None:
-        self.assertEqual(self.check(pr_payload((12, ["phase-2"]), main_phase="phase-1"), open_phase="phase-2"), 1)
+    def test_verdicts(self) -> None:
+        for case, issues, open_phase, main_phase, code in self.VERDICTS:
+            self.assertEqual(self.check(pr_payload(*issues, main_phase=main_phase), open_phase), code, case)
 
     def test_missing_unreadable_or_unknown_open_phase_fails_closed(self) -> None:
         payload = pr_payload((11, ["phase-1"]))
