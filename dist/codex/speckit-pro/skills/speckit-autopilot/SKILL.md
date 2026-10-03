@@ -12,10 +12,10 @@ description: >
   speckit run", or hands over a populated SPEC-NNN-workflow.md file
   for end-to-end execution. Requires SpecKit CLI installed,
   constitution created, and a populated workflow file. Not for SDD
-  methodology questions ($speckit-coach), pre-spec scoping
-  ($grill-me), new-spec setup ($speckit-scaffold-spec), status
-  checks ($speckit-status), or PR comment resolution
-  ($speckit-resolve-pr).
+  methodology questions ($speckit-pro:speckit-coach), pre-spec scoping
+  ($speckit-pro:grill-me), new-spec setup ($speckit-pro:speckit-scaffold-spec), status
+  checks ($speckit-pro:speckit-status), or PR comment resolution
+  ($speckit-pro:speckit-resolve-pr).
 ---
 
 # SpecKit Autopilot — Autonomous Execution Engine
@@ -33,7 +33,7 @@ PowerShell-specific command-language requirement for installed workflows.
 This skill handles autonomous workflow EXECUTION. For methodology
 questions, SDD philosophy, comparisons, design rationale, deep dives, or
 learning how SpecKit works, redirect the user to
-`$speckit-coach`
+`$speckit-pro:speckit-coach`
 when the user is asking for explanation rather than execution. Do not redirect a real
 implementation request merely because it asks for detailed progress or uses
 the word "implement": when the user supplies or identifies a populated
@@ -174,7 +174,7 @@ task-list tools or legacy Claude agent/shell placeholders. Do not read the
 bundled TOML templates and inline them as ad hoc prompts. Validate that the
 required custom subagents are installed, then spawn them by agent name. Before
 any phase work, at setup or run start, if any required SpecKit Pro subagent is
-missing, STOP and instruct the user to run `$install` from the SpecKit Pro
+missing, STOP and instruct the user to run `$speckit-pro:install` from the SpecKit Pro
 plugin, then restart Codex. After phase work has begun, a plugin update or agent
 refresh is never a stop: follow §Plugin Update Mid-Run: Record, Re-resolve,
 Continue in [phase-execution.md](./references/phase-execution.md).
@@ -195,7 +195,7 @@ into expensive rework.
    `gpt-6-sol` when it is available in the Codex model picker; `gpt-6-astra`
    is also acceptable. If the session is on a mini, fast, Luna, or otherwise
    reduced-capability tier, warn the operator once and route gate and consensus
-   dispatches to the strongest available tier. `$install` owns bundled-agent
+   dispatches to the strongest available tier. `$speckit-pro:install` owns bundled-agent
    installation and fallback configuration.
 
 **Reasoning effort is inherited, never checked.** Run at whatever the
@@ -246,7 +246,7 @@ response is one of:
 - Run the `$speckit-clarify` skill (Phase 2) with the multi-agent consensus
   protocol — that is autopilot's only clarification mechanism.
 - Route the ambiguity to Clarify consensus, and defer it when consensus cannot settle it. Pre-workflow interviews
-  belong in `$speckit-scaffold-spec`, not autopilot.
+  belong in `$speckit-pro:speckit-scaffold-spec`, not autopilot.
 
 This rule applies to: the orchestrator, every phase subagent
 (`phase-executor`, `clarify-executor`, `checklist-executor`,
@@ -293,7 +293,7 @@ Concrete Codex mapping:
 - Resolve the installed agent from `.codex/agents/<agent>.toml` first, then
   `$CODEX_HOME/agents/<agent>.toml` (default `~/.codex/agents/`)
 - If the installed agent is missing at setup or run start, STOP and tell the
-  user to run `$install`, then restart Codex. Mid-run, follow §Plugin Update
+  user to run `$speckit-pro:install`, then restart Codex. Mid-run, follow §Plugin Update
   Mid-Run: Record, Re-resolve, Continue instead
 - Build the phase prompt in the parent session
 - Call `spawn_agent` with `agent_type="<installed-agent-name>"` plus the
@@ -478,7 +478,7 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
    project or user destination and its installed model and Luna fallback
    choice. This check runs at setup or run start, before any phase work. If any
    required file is missing or stale, STOP and instruct the user to run
-   `$install`, approve the expected local write, and restart Codex. Do not apply
+   `$speckit-pro:install`, approve the expected local write, and restart Codex. Do not apply
    the repair inside autopilot: Codex fixes its list of custom agents when the
    session starts. Once phase work has begun, a stale or refreshed agent file is
    recorded, never a stop: see §Plugin Update Mid-Run: Record, Re-resolve,
@@ -1093,7 +1093,7 @@ directions; do not infer a broader precedence rule.
 
 ## Error Recovery
 
-- **Resume:** `$speckit-autopilot workflow.md --from-phase
+- **Resume:** `$speckit-pro:speckit-autopilot workflow.md --from-phase
   <next-pending-phase>` — the workflow file persists all state.
 - **A gate or test fails: keep remediating while each round converges.**
   Diagnose the failure with the consensus agents, dispatch the fix through the

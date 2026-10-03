@@ -218,7 +218,7 @@ For every externally-sourced fact in your output, include the grounding evidence
 <!-- /host -->
 <!-- host:codex: Codex has no per-agent tool denial and names a skill with a dollar sign -->
 - You are a terminal worker. Do NOT spawn subagents or create teams.
-- Never invoke `$grill-me` or any interactive interview — there is no user to
+- Never invoke `$speckit-pro:grill-me` or any interactive interview — there is no user to
 <!-- /host -->
   answer inside autopilot.
 - Never write into the `Gallery dir:` directory. Your only write target is

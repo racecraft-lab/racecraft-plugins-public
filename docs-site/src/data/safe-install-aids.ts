@@ -329,7 +329,7 @@ export const selectorPaths = [
         id: 'codex-install-agents',
         platform: 'codex',
         label: 'Run the Codex install skill',
-        command: '@SpecKit Pro -> install\n$install',
+        command: '@SpecKit Pro -> install\n$speckit-pro:install',
         expectedSignal:
           'The install skill reports copied TOML filenames, the selected destination, and whether Codex must restart.',
         copyable: true,
@@ -338,7 +338,7 @@ export const selectorPaths = [
         id: 'codex-status-skill',
         platform: 'codex',
         label: 'Confirm the Codex skill surface in a new thread',
-        command: '$speckit-status',
+        command: '$speckit-pro:speckit-status',
         expectedSignal: 'A new Codex thread loads the SpecKit Pro skill surface.',
         copyable: true,
       },
@@ -346,7 +346,7 @@ export const selectorPaths = [
     successSignals: [
       'SpecKit Pro is visible in Codex plugin surfaces.',
       'The install skill reports expected TOML files and restart guidance.',
-      'A new thread can invoke `$speckit-*` skills.',
+      'A new thread can invoke `$speckit-pro:speckit-*` skills.',
     ],
     nextLinks: [
       docsLink('Open Codex install details', '/install/codex/'),
@@ -377,7 +377,7 @@ export const selectorPaths = [
         id: 'codex-personal-install',
         platform: 'codex',
         label: 'Install agents after plugin install',
-        command: '@SpecKit Pro -> install\n$install',
+        command: '@SpecKit Pro -> install\n$speckit-pro:install',
         expectedSignal: 'The installer reports copied TOML files and restart guidance.',
         copyable: true,
       },

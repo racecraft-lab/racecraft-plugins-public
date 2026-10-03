@@ -40,13 +40,13 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro grill-me skill
 - **Claude Code:** /speckit-pro:grill-me
-- **Codex:** $grill-me
+- **Codex:** $speckit-pro:grill-me
 - **Runtime difference:** Both runtimes ship source skill instructions; invocation syntax and runtime guardrails differ.
 
 #### Command Or Skill Reference
 
 - **Claude Code invocation:** `/speckit-pro:grill-me`
-- **Codex invocation:** `$grill-me`
+- **Codex invocation:** `$speckit-pro:grill-me`
 - **Purpose:** Run an interactive, one-question-at-a-time design interview before SpecKit specification work and produce a Design Concept record.
 - **Expected output artifact:** Scoping answers or a decision log that can feed PRD or SPEC work.
 
@@ -75,13 +75,13 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro install skill
 - **Claude Code:** No Claude Code source skill in this repository.
-- **Codex:** $install
+- **Codex:** $speckit-pro:install
 - **Runtime difference:** This skill is present in only one runtime source tree.
 
 #### Command Or Skill Reference
 
 - **Claude Code invocation:** `Not available in the Claude Code source tree.`
-- **Codex invocation:** `$install`
+- **Codex invocation:** `$speckit-pro:install`
 - **Purpose:** Install or refresh the bundled SpecKit Pro Codex custom subagents.
 - **Expected output artifact:** Copied Codex TOML custom-agent files plus restart guidance.
 
@@ -109,13 +109,13 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro speckit-archive-cleanup skill
 - **Claude Code:** /speckit-pro:speckit-archive-cleanup
-- **Codex:** $speckit-archive-cleanup
+- **Codex:** $speckit-pro:speckit-archive-cleanup
 - **Runtime difference:** Both runtimes ship source skill instructions; invocation syntax and runtime guardrails differ.
 
 #### Command Or Skill Reference
 
 - **Claude Code invocation:** `/speckit-pro:speckit-archive-cleanup`
-- **Codex invocation:** `$speckit-archive-cleanup`
+- **Codex invocation:** `$speckit-pro:speckit-archive-cleanup`
 - **Purpose:** Archive a merged SpecKit spec, remove completed active specs, refresh roadmap and project-memory state, and prepare the cleanup PR after merge.
 - **Expected output artifact:** Archive report, project-memory updates, cleaned active spec folder, refreshed generated indexes, and a cleanup PR.
 
@@ -144,13 +144,13 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro speckit-autopilot skill
 - **Claude Code:** /speckit-pro:speckit-autopilot
-- **Codex:** $speckit-autopilot
+- **Codex:** $speckit-pro:speckit-autopilot
 - **Runtime difference:** Both runtimes ship source skill instructions; invocation syntax and runtime guardrails differ.
 
 #### Command Or Skill Reference
 
 - **Claude Code invocation:** `/speckit-pro:speckit-autopilot`
-- **Codex invocation:** `$speckit-autopilot`
+- **Codex invocation:** `$speckit-pro:speckit-autopilot`
 - **Purpose:** Autonomous SpecKit workflow executor.
 - **Expected output artifact:** SpecKit phase artifacts, validation evidence, commits, and PR packet material.
 
@@ -179,13 +179,13 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro speckit-coach skill
 - **Claude Code:** /speckit-pro:speckit-coach
-- **Codex:** $speckit-coach
+- **Codex:** $speckit-pro:speckit-coach
 - **Runtime difference:** Both runtimes ship source skill instructions; invocation syntax and runtime guardrails differ.
 
 #### Command Or Skill Reference
 
 - **Claude Code invocation:** `/speckit-pro:speckit-coach`
-- **Codex invocation:** `$speckit-coach`
+- **Codex invocation:** `$speckit-pro:speckit-coach`
 - **Purpose:** Coach developers through Spec-Driven Development and SpecKit Pro.
 - **Expected output artifact:** SDD coaching guidance or next-step explanation.
 
@@ -214,13 +214,13 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro speckit-install skill
 - **Claude Code:** /speckit-pro:speckit-install
-- **Codex:** $speckit-install
+- **Codex:** $speckit-pro:speckit-install
 - **Runtime difference:** Both runtimes ship source skill instructions; invocation syntax and runtime guardrails differ.
 
 #### Command Or Skill Reference
 
 - **Claude Code invocation:** `/speckit-pro:speckit-install`
-- **Codex invocation:** `$speckit-install`
+- **Codex invocation:** `$speckit-pro:speckit-install`
 - **Purpose:** Install the SpecKit CLI and initialize the current repository for one or both coding-agent integrations (Claude Code, Codex CLI).
 - **Expected output artifact:** SpecKit setup guidance and install verification notes.
 
@@ -249,13 +249,13 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro speckit-prd skill
 - **Claude Code:** /speckit-pro:speckit-prd
-- **Codex:** $speckit-prd
+- **Codex:** $speckit-pro:speckit-prd
 - **Runtime difference:** Both runtimes ship source skill instructions; invocation syntax and runtime guardrails differ.
 
 #### Command Or Skill Reference
 
 - **Claude Code invocation:** `/speckit-pro:speckit-prd`
-- **Codex invocation:** `$speckit-prd`
+- **Codex invocation:** `$speckit-pro:speckit-prd`
 - **Purpose:** Collaboratively create or update a lean PRD, its 1:1 technical-roadmap SPEC catalog, and a roadmap-MOC home note.
 - **Expected output artifact:** A PRD and roadmap entry for later SPEC scaffolding.
 
@@ -284,13 +284,13 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro speckit-resolve-pr skill
 - **Claude Code:** /speckit-pro:speckit-resolve-pr
-- **Codex:** $speckit-resolve-pr
+- **Codex:** $speckit-pro:speckit-resolve-pr
 - **Runtime difference:** Both runtimes ship source skill instructions; invocation syntax and runtime guardrails differ.
 
 #### Command Or Skill Reference
 
 - **Claude Code invocation:** `/speckit-pro:speckit-resolve-pr`
-- **Codex invocation:** `$speckit-resolve-pr`
+- **Codex invocation:** `$speckit-pro:speckit-resolve-pr`
 - **Purpose:** Address actionable review feedback on a pull request, push the fixes, and resolve review threads.
 - **Expected output artifact:** PR review remediation summary and changed files when fixes are needed.
 
@@ -319,13 +319,13 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro speckit-scaffold-spec skill
 - **Claude Code:** /speckit-pro:speckit-scaffold-spec
-- **Codex:** $speckit-scaffold-spec
+- **Codex:** $speckit-pro:speckit-scaffold-spec
 - **Runtime difference:** Both runtimes ship source skill instructions; invocation syntax and runtime guardrails differ.
 
 #### Command Or Skill Reference
 
 - **Claude Code invocation:** `/speckit-pro:speckit-scaffold-spec`
-- **Codex invocation:** `$speckit-scaffold-spec`
+- **Codex invocation:** `$speckit-pro:speckit-scaffold-spec`
 - **Purpose:** Use this skill when the user wants to set up, scaffold, bootstrap, prep, initialize, or prepare a SPEC-ID from the technical roadmap for autonomous execution.
 - **Expected output artifact:** A feature worktree, workflow file, design concept, and spec folder.
 
@@ -354,13 +354,13 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro speckit-status skill
 - **Claude Code:** /speckit-pro:speckit-status
-- **Codex:** $speckit-status
+- **Codex:** $speckit-pro:speckit-status
 - **Runtime difference:** Both runtimes ship source skill instructions; invocation syntax and runtime guardrails differ.
 
 #### Command Or Skill Reference
 
 - **Claude Code invocation:** `/speckit-pro:speckit-status`
-- **Codex invocation:** `$speckit-status`
+- **Codex invocation:** `$speckit-pro:speckit-status`
 - **Purpose:** Show the current SpecKit roadmap and workflow status in Codex.
 - **Expected output artifact:** A read-only roadmap and workflow status dashboard.
 
@@ -388,13 +388,13 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro speckit-upgrade skill
 - **Claude Code:** /speckit-pro:speckit-upgrade
-- **Codex:** $speckit-upgrade
+- **Codex:** $speckit-pro:speckit-upgrade
 - **Runtime difference:** Both runtimes ship source skill instructions; invocation syntax and runtime guardrails differ.
 
 #### Command Or Skill Reference
 
 - **Claude Code invocation:** `/speckit-pro:speckit-upgrade`
-- **Codex invocation:** `$speckit-upgrade`
+- **Codex invocation:** `$speckit-pro:speckit-upgrade`
 - **Purpose:** Upgrade or migrate an existing SpecKit installation safely.
 - **Expected output artifact:** Upgrade guidance and local plugin refresh evidence.
 
@@ -423,13 +423,13 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro ubiquitous-language skill
 - **Claude Code:** /speckit-pro:ubiquitous-language
-- **Codex:** $ubiquitous-language
+- **Codex:** $speckit-pro:ubiquitous-language
 - **Runtime difference:** Both runtimes ship source skill instructions; invocation syntax and runtime guardrails differ.
 
 #### Command Or Skill Reference
 
 - **Claude Code invocation:** `/speckit-pro:ubiquitous-language`
-- **Codex invocation:** `$ubiquitous-language`
+- **Codex invocation:** `$speckit-pro:ubiquitous-language`
 - **Purpose:** Build or refresh the repository's ubiquitous-language terms document, a committed Markdown table of domain terms (term, meaning here, identifiers) that humans and agents read before designing.
 - **Expected output artifact:** A committed terms table (term, meaning here, identifiers) and an advisory identifier-lint report.
 

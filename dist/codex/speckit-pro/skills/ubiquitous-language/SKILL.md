@@ -1,6 +1,6 @@
 ---
 name: ubiquitous-language
-description: "Build or refresh the repository's ubiquitous-language terms document, a committed Markdown table of domain terms (term, meaning here, identifiers) that humans and agents read before designing. Use when the user asks to define domain terms, create or update a glossary or ubiquitous language, pin what a term means in this codebase, reconcile names between the spec and the code, or invokes $ubiquitous-language. Also runs the advisory identifier lint on a diff. Not for scoping interviews, PRD authoring, or general SDD coaching."
+description: "Build or refresh the repository's ubiquitous-language terms document, a committed Markdown table of domain terms (term, meaning here, identifiers) that humans and agents read before designing. Use when the user asks to define domain terms, create or update a glossary or ubiquitous language, pin what a term means in this codebase, reconcile names between the spec and the code, or invokes $speckit-pro:ubiquitous-language. Also runs the advisory identifier lint on a diff. Not for scoping interviews, PRD authoring, or general SDD coaching."
 ---
 
 # Ubiquitous Language
@@ -65,5 +65,5 @@ uncertainty and do not invent a definition.
 - A short report: terms added, changed, or kept; unmapped identifiers from
   the lint with a suggestion each.
 
-This skill does not conduct a scoping interview (`$grill-me`), author a PRD
-(`$speckit-prd`), or explain SDD (`$speckit-coach`).
+This skill does not conduct a scoping interview (`$speckit-pro:grill-me`), author a PRD
+(`$speckit-pro:speckit-prd`), or explain SDD (`$speckit-pro:speckit-coach`).

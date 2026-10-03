@@ -8,7 +8,7 @@ license: MIT
 compatibility: "Claude Code uses AskUserQuestion. The Codex variant prefers request_user_input and may use one-question free text only in an active user chat."
 <!-- /host -->
 <!-- host:codex: Codex names skills as $NAME -->
-description: "Collaboratively create or update a lean PRD, its 1:1 technical-roadmap SPEC catalog, and a roadmap-MOC home note. Use when an active user asks to write a PRD, create a product requirements document, turn an idea or brief into a PRD and roadmap, plan a product, or invokes $speckit-prd. Read-only workflow status and next-spec recommendations belong to $speckit-status. Roadmap-only decomposition or dependency planning from an existing PRD, without creating or updating the PRD, belongs to $speckit-coach. Ask one grounded decision at a time, then hand off the resulting roadmap to $speckit-scaffold-spec. Not for per-spec scoping, worktree preparation, or general SDD coaching."
+description: "Collaboratively create or update a lean PRD, its 1:1 technical-roadmap SPEC catalog, and a roadmap-MOC home note. Use when an active user asks to write a PRD, create a product requirements document, turn an idea or brief into a PRD and roadmap, plan a product, or invokes $speckit-pro:speckit-prd. Read-only workflow status and next-spec recommendations belong to $speckit-pro:speckit-status. Roadmap-only decomposition or dependency planning from an existing PRD, without creating or updating the PRD, belongs to $speckit-pro:speckit-coach. Ask one grounded decision at a time, then hand off the resulting roadmap to $speckit-pro:speckit-scaffold-spec. Not for per-spec scoping, worktree preparation, or general SDD coaching."
 <!-- /host -->
 ---
 
@@ -82,7 +82,7 @@ slicing/estimation, MOC, index, and verification rules. Report created or update
 `/speckit-pro:speckit-scaffold-spec <SPEC-ID>` for the first ready entry.
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-`$speckit-scaffold-spec <SPEC-ID>` for the first ready entry.
+`$speckit-pro:speckit-scaffold-spec <SPEC-ID>` for the first ready entry.
 <!-- /host -->
 
 ## Output contract
@@ -103,8 +103,8 @@ prepare a worktree or workflow (`/speckit-pro:speckit-scaffold-spec`), or teach
 SDD methodology (`/speckit-pro:speckit-coach`). If the PRD already exists and
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-This skill does not scope an existing roadmap entry (`$grill-me`), prepare a
-worktree or workflow (`$speckit-scaffold-spec`), or teach SDD methodology
-(`$speckit-coach`). If the PRD already exists and
+This skill does not scope an existing roadmap entry (`$speckit-pro:grill-me`), prepare a
+worktree or workflow (`$speckit-pro:speckit-scaffold-spec`), or teach SDD methodology
+(`$speckit-pro:speckit-coach`). If the PRD already exists and
 <!-- /host -->
 the user wants only a new roadmap, hand off to the Coach roadmap workflow.

@@ -1455,7 +1455,7 @@ The description begins with the matching H1 title, followed by exactly two H2 se
 ## Resume
 
 Stage: plan — stopped at the plan-stage boundary for review.
-Resume with: `$speckit-autopilot <workflow-file> --stage implement`
+Resume with: `$speckit-pro:speckit-autopilot <workflow-file> --stage implement`
 ```
 
 - **The artifacts index** is a table of three columns: the artifact, its purpose
@@ -1492,7 +1492,7 @@ draft packet. `inputs.mode_name` is not accepted.
     "title_description": "open an example draft",
     "changed_files": [],
     "verification_evidence": [],
-    "body": "# feat(speckit-pro): open an example draft\n\n## Artifacts\n\n| Artifact | Purpose | Open |\n| --- | --- | --- |\n| Implementation Plan | Describe the implementation phases | `open specs/example-feature/artifacts/implementation-plan.html` |\n\n## Resume\n\nStage: plan. Stopped at the plan-stage boundary for review.\nResume with: `$speckit-autopilot <workflow-file> --stage implement`\n"
+    "body": "# feat(speckit-pro): open an example draft\n\n## Artifacts\n\n| Artifact | Purpose | Open |\n| --- | --- | --- |\n| Implementation Plan | Describe the implementation phases | `open specs/example-feature/artifacts/implementation-plan.html` |\n\n## Resume\n\nStage: plan. Stopped at the plan-stage boundary for review.\nResume with: `$speckit-pro:speckit-autopilot <workflow-file> --stage implement`\n"
   }
 }
 ```

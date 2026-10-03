@@ -73,7 +73,7 @@ destination copies.
 
 ## Plugin Refresh and Route-aware Modes
 
-After the plugin is upgraded through its maintained plugin path, run `$install`.
+After the plugin is upgraded through its maintained plugin path, run `$speckit-pro:install`.
 Follow the helper's `restart_required` result, including after failed or
 uncertain recovery. The helper resolves the installed plugin's `codex-agents/`
 source and does not mutate plugin caches.

@@ -348,8 +348,23 @@ class HostSkillSourceTests(unittest.TestCase):
                 "codex-skills/grill-me/SKILL.md overlays a shared skill file; merge it into skills/ as host blocks",
             ])
 
+    def test_printed_scaffold_and_autopilot_commands_expand_on_each_host(self) -> None:
+        for host, sigil in (("claude", "/speckit-pro:"), ("codex", "$speckit-pro:")):
+            with self.subTest(host=host):
+                scaffold = self.view("skills/speckit-scaffold-spec/SKILL.md", host).split("### 9. Hand Off to the Planning Stage", 1)[1].split("### 10.", 1)[0]
+                autopilot = self.view("skills/speckit-autopilot/SKILL.md", host)
+                self.assertIn(f"{sigil}speckit-autopilot <absolute-workflow-file> --stage plan", scaffold)
+                self.assertIn(f"{sigil}speckit-autopilot workflow.md --from-phase", autopilot)
+                if host == "codex":
+                    phases = self.view("skills/speckit-autopilot/references/phase-execution.md", host)
+                    for stock in ("specify", "plan", "checklist", "tasks", "analyze"):
+                        self.assertIn(f"Run $speckit-{stock} with:", phases)
+                    extensions = self.view("skills/speckit-autopilot/references/post-implementation.md", host)
+                    for extension in ("doctor", "verify", "verify-tasks", "retrospective"):
+                        self.assertIn(f"$speckit-{extension}", extensions)
+
     def test_grill_me_sends_setup_alone_to_scaffold_spec_on_both_hosts(self) -> None:
-        for host, sigil in (("claude", "/speckit-pro:"), ("codex", "$")):
+        for host, sigil in (("claude", "/speckit-pro:"), ("codex", "$speckit-pro:")):
             with self.subTest(host=host):
                 fields, _ = split_frontmatter(emit_host(
                     (PLUGIN_ROOT / "skills/grill-me/SKILL.md").read_text(encoding="utf-8"), host))
@@ -441,7 +456,7 @@ class SetupSkillDriftTests(unittest.TestCase):
     """Install, upgrade and archive cleanup state the runner's behavior on both hosts."""
 
     def test_each_reconciled_statement_reads_the_same_on_both_hosts(self) -> None:
-        for host, sigil in (("claude", "/speckit-pro:"), ("codex", "$")):
+        for host, sigil in (("claude", "/speckit-pro:"), ("codex", "$speckit-pro:")):
             for skill, present, absent in SETUP_SKILL_DRIFT:
                 path = host_skill_root(host) / skill / "SKILL.md"
                 text = " ".join(path.read_text(encoding="utf-8").split())
