@@ -28,7 +28,9 @@ INSTALLED_SKILL = "/home/owner/.codex/plugins/cache/market/speckit-pro/9.9.9/ski
 # One typed command and one model skill call per host, in each host's payload shape.
 HOST_CASES = {
     "claude": {
-        "typed": {"hook_event_name": "UserPromptSubmit", "user_input": "/speckit-pro:speckit-autopilot docs/plan.md"},
+        # The shipping CLI sends `prompt`; the current hooks reference names `user_input`.
+        "typed": {"hook_event_name": "UserPromptSubmit", "prompt": "/speckit-pro:speckit-autopilot docs/plan.md"},
+        "typed-documented": {"hook_event_name": "UserPromptSubmit", "user_input": "/speckit-autopilot docs/plan.md"},
         "model": {
             "hook_event_name": "PreToolUse",
             "tool_name": "Skill",
@@ -142,7 +144,7 @@ class ScratchCloneGuardTests(unittest.TestCase):
         clone = make_clone(self.root)
         allowed = {
             "claude": [
-                {"hook_event_name": "UserPromptSubmit", "user_input": "fix /speckit-pro:speckit-autopilot resume"},
+                {"hook_event_name": "UserPromptSubmit", "prompt": "fix /speckit-pro:speckit-autopilot resume"},
                 {"hook_event_name": "UserPromptSubmit", "user_input": "/speckit-plan"},
                 {"hook_event_name": "PreToolUse", "tool_name": "Skill", "tool_input": {"skill": "code-review"}},
             ],

@@ -56,7 +56,8 @@ def is_plugin_skill(name: str, host: str) -> bool:
 
 
 def typed_skill(host: str, payload: dict[str, Any]) -> bool:
-    text = payload.get("user_input" if host == "claude" else "prompt")
+    # Codex and Claude Code 2.1 send `prompt`; the current Claude Code reference names `user_input`.
+    text = payload.get("prompt", payload.get("user_input"))
     if not isinstance(text, str):
         raise GuardError("UserPromptSubmit payload has no prompt text")
     if host == "claude":
