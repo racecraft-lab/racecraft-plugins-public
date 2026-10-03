@@ -4660,8 +4660,7 @@ def receipt():
             "unregistered_stops": 0, "planning_end": "artifacts_and_draft_pr",
             "implement_end": "ready_for_uat", "uat_runbook": "uat.md",
             "decisions_by_kind": {"design": 2}, "retry_attempts": 0, "blocked_for_uat": 0,
-            "stages": {name: {"wall_seconds": 1, "tokens": 10, "wall_budget_seconds": 5, "token_budget": 100}
-                       for name in ("scaffold", "plan", "plan_review", "implement")},
+            "stages": {name: {"wall_seconds": 1, "tokens": 10} for name in ("scaffold", "plan", "plan_review", "implement")},
         }],
     }
 
@@ -4695,10 +4694,6 @@ class CanaryReceiptTests(unittest.TestCase):
         value = receipt()
         value["release_status_allowed"] = True
         self.assertTrue(self.validator.validate_receipt(value))
-        for key in ("wall_seconds", "tokens"):
-            value = receipt()
-            value["variants"][0]["stages"]["plan"][key] = 999
-            self.assertTrue(self.validator.validate_receipt(value), key)
 
     def test_rejects_a_failed_codex_probe(self):
         value = receipt()
@@ -4706,7 +4701,7 @@ class CanaryReceiptTests(unittest.TestCase):
         self.assertTrue(self.validator.validate_receipt(value))
 
     def test_rejects_nonfinite_stage_evidence_through_api_and_cli(self):
-        for key in ("wall_seconds", "wall_budget_seconds"):
+        for key in ("wall_seconds",):
             for number in (float("nan"), float("inf"), -float("inf")):
                 value = receipt()
                 value["variants"][0]["stages"]["plan"][key] = number
@@ -4717,6 +4712,67 @@ class CanaryReceiptTests(unittest.TestCase):
                                                capture_output=True, text=True, check=False)
                     self.assertEqual(1, completed.returncode, completed.stdout)
                     self.assertTrue(self.validator.validate_receipt(value))
+
+
+    def budget(self, wall_seconds, tokens):
+        """A complete budget whose limits are all ``wall_seconds`` and ``tokens``."""
+        stages = {stage: {"wall_seconds": wall_seconds, "tokens": tokens} for stage in self.validator.BUDGET_STAGES}
+        return {host: {variant: copy.deepcopy(stages) for variant in self.validator.VARIANTS} for host in self.validator.HOSTS}
+
+    def test_a_stage_over_a_set_limit_fails_and_under_it_passes(self):
+        value = receipt()
+        self.assertEqual([], self.validator.validate_receipt(value, self.budget(5, 100)))
+        for key, actual in (("wall_seconds", 6), ("tokens", 101)):
+            value = receipt()
+            value["variants"][0]["stages"]["plan"][key] = actual
+            self.assertEqual([f"base.plan.{key}_budget"], self.validator.validate_receipt(value, self.budget(5, 100)), key)
+
+    def test_an_unset_limit_reports_unbudgeted_and_never_a_pass(self):
+        value = receipt()
+        value["variants"][0]["stages"]["plan"]["tokens"] = 10**9
+        unset = self.budget(5, None)
+        self.assertEqual([], self.validator.validate_receipt(value, unset))
+        self.assertEqual([f"base.{stage}.tokens" for stage in self.validator.BUDGET_STAGES],
+                         self.validator.unbudgeted_stages(value, unset))
+        self.assertEqual([], self.validator.unbudgeted_stages(value, self.budget(5, 100)))
+
+    def test_plan_review_is_recorded_but_never_budgeted(self):
+        value = receipt()
+        value["variants"][0]["stages"]["plan_review"].update(wall_seconds=10**6, tokens=10**9)
+        self.assertEqual([], self.validator.validate_receipt(value, self.budget(5, 100)))
+
+    def test_the_budget_file_covers_every_host_variant_and_stage_and_states_its_rule(self):
+        document = json.loads(self.validator.BUDGET_FILE.read_text(encoding="utf-8"))
+        limits = self.validator.load_budget()
+        self.assertEqual(set(self.validator.HOSTS), set(limits))
+        for host in self.validator.HOSTS:
+            self.assertEqual(set(self.validator.VARIANTS), set(limits[host]), host)
+            for stages in limits[host].values():
+                self.assertEqual(set(self.validator.BUDGET_STAGES), set(stages), host)
+        for phrase in ("median of the first three green runs plus 50%", "reviewed PR", "unbudgeted", "never stops a run"):
+            self.assertIn(phrase, document["policy"])
+
+    def test_a_malformed_budget_fails_closed(self):
+        complete = self.budget(5, 100)
+        broken = []
+        for path, bad in ((("codex", "base", "plan", "tokens"), 0), (("codex", "base", "plan", "wall_seconds"), float("inf")),
+                          (("codex", "base", "plan", "tokens"), 1.5), (("codex", "base", "plan", "extra"), 1)):
+            limits = copy.deepcopy(complete)
+            limits[path[0]][path[1]][path[2]][path[3]] = bad
+            broken.append(limits)
+        missing = copy.deepcopy(complete)
+        del missing["claude-code"]["security_block"]["implement"]
+        broken.extend([missing, {**complete, "codex": []}, None])
+        for limits in broken:
+            with self.assertRaises(ValueError):
+                self.validator.check_budget(limits)
+
+    def test_nothing_in_the_plugin_stops_a_run_on_budget(self):
+        stop_policy = load_script("stop_policy_for_budget", REPO_ROOT / "speckit-pro/speckit_pro_runner/stop_policy.py")
+        self.assertFalse([reason for reason in stop_policy.STOP_REASONS if "budget" in reason])
+        shipped = [path for path in (REPO_ROOT / "speckit-pro").rglob("*") if path.is_file()
+                   and self.validator.BUDGET_FILE.name in path.read_text(encoding="utf-8", errors="ignore")]
+        self.assertEqual([], shipped)
 
 
 def main() -> int:

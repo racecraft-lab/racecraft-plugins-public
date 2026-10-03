@@ -13,10 +13,58 @@ from speckit_pro_runner.json_schema import json_schema_failures  # noqa: E402
 from speckit_pro_runner.strict_input import unique_object  # noqa: E402
 
 SCHEMA = json.loads(Path(__file__).with_name("canary-receipt.schema.json").read_text(encoding="utf-8"))
+BUDGET_FILE = Path(__file__).with_name("canary-budget.json")
+HOSTS = tuple(SCHEMA["properties"]["host"]["enum"])
+VARIANTS = tuple(SCHEMA["$defs"]["variant"]["properties"]["name"]["enum"])
+BUDGET_STAGES = ("scaffold", "plan", "implement")  # ADR 0016; plan_review is recorded, never budgeted
+METRICS = {"wall_seconds": (int, float), "tokens": (int,)}
 
 
-def validate_receipt(value):
-    problems = [f"{failure['field']}: {failure['message']}" for failure in json_schema_failures(value, SCHEMA, SCHEMA, "receipt")]
+def check_budget(limits):
+    """Return ``limits`` when it sets or leaves unset every limit; anything else raises ValueError."""
+    for host in HOSTS:
+        for variant in VARIANTS:
+            for stage in BUDGET_STAGES:
+                entry = limits
+                for key in (host, variant, stage):
+                    entry = entry.get(key) if isinstance(entry, dict) else None
+                if not isinstance(entry, dict) or set(entry) != set(METRICS):
+                    raise ValueError(f"budget.{host}.{variant}.{stage}: needs exactly {sorted(METRICS)}")
+                for metric, types in METRICS.items():
+                    limit = entry[metric]
+                    if limit is not None and (isinstance(limit, bool) or not isinstance(limit, types)
+                                              or not math.isfinite(limit) or limit <= 0):
+                        raise ValueError(f"budget.{host}.{variant}.{stage}.{metric}: must be null or a positive limit")
+    return limits
+
+
+def load_budget(path=BUDGET_FILE):
+    document = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=unique_object)
+    if document.get("schema_version") != "canary-budget/v1":
+        raise ValueError("budget.schema_version: expected canary-budget/v1")
+    return check_budget(document.get("limits"))
+
+
+def budget_checks(value, budget):
+    """(label, actual, limit) for each budgeted stage metric; a None limit is unset."""
+    for variant in value["variants"]:
+        limits = budget[value["host"]][variant["name"]]
+        for stage in BUDGET_STAGES:
+            for metric in METRICS:
+                yield f"{variant['name']}.{stage}.{metric}", variant["stages"][stage][metric], limits[stage][metric]
+
+
+def unbudgeted_stages(value, budget=None):
+    budget = load_budget() if budget is None else budget
+    return [label for label, _actual, limit in budget_checks(value, budget) if limit is None]
+
+
+def schema_problems(value):
+    return [f"{failure['field']}: {failure['message']}" for failure in json_schema_failures(value, SCHEMA, SCHEMA, "receipt")]
+
+
+def validate_receipt(value, budget=None):
+    problems = schema_problems(value)
     if problems:
         return problems
     if value["trigger"] == "local" and value["release_status_allowed"]:
@@ -30,6 +78,9 @@ def validate_receipt(value):
         problems.append("install_probe.loaded_plugins")
     for variant in value["variants"]:
         problems.extend(variant_failures(variant))
+    budget = load_budget() if budget is None else budget
+    problems.extend(f"{label}_budget" for label, actual, limit in budget_checks(value, budget)
+                    if limit is not None and actual > limit)
     return problems
 
 
@@ -49,9 +100,8 @@ def variant_failures(variant):
         if not passed:
             failures.append(f"{variant['name']}.{key}")
     for name, stage in variant["stages"].items():
-        if (not all(math.isfinite(stage[key]) for key in ("wall_seconds", "wall_budget_seconds"))
-                or stage["wall_seconds"] > stage["wall_budget_seconds"] or stage["tokens"] > stage["token_budget"]):
-            failures.append(f"{variant['name']}.{name}.budget")
+        if not math.isfinite(stage["wall_seconds"]):
+            failures.append(f"{variant['name']}.{name}.wall_seconds")
     return failures
 
 
@@ -60,10 +110,13 @@ def main():
     parser.add_argument("receipt", type=Path)
     args = parser.parse_args()
     try:
-        problems = validate_receipt(json.loads(args.receipt.read_text(encoding="utf-8"), object_pairs_hook=unique_object))
+        value = json.loads(args.receipt.read_text(encoding="utf-8"), object_pairs_hook=unique_object)
+        budget = load_budget()
+        problems = validate_receipt(value, budget)
+        unbudgeted = [] if schema_problems(value) else unbudgeted_stages(value, budget)
     except (OSError, ValueError) as exc:
-        problems = [str(exc)]
-    print(json.dumps({"valid": not problems, "failed_assertions": problems}))
+        problems, unbudgeted = [str(exc)], []
+    print(json.dumps({"valid": not problems, "failed_assertions": problems, "unbudgeted": unbudgeted}))
     return int(bool(problems))
 
 

@@ -39,7 +39,7 @@ Draft PRs open in the fixture repo on a run-named branch. After the receipt is r
 
 ## Budget
 
-The budget file sets two limits for each host, variant and stage (scaffold, plan, implement): wall-clock time and total tokens. Each limit starts at the median of the first three green runs plus 50%. Limits change only through a reviewed PR, never by automatic ratchet. The budget is a pass condition only. It never stops a run, which keeps ADR 0004's rule that the retry ladder is the only failure path.
+The budget file (`tests/speckit-pro/layer6-integration/canary-budget.json`) sets two limits for each host, variant and stage (scaffold, plan, implement): wall-clock time and total tokens. Each limit starts at the median of the first three green runs plus 50%. Limits change only through a reviewed PR, never by automatic ratchet. The budget is a pass condition only. It never stops a run, which keeps ADR 0004's rule that the retry ladder is the only failure path.
 
 ## Receipt
 
