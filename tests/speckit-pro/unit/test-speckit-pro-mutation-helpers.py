@@ -1937,7 +1937,7 @@ class MutationHelperTests(unittest.TestCase):
             os.chdir(git_root)
             try:
                 with (
-                    patch.dict(os.environ, {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}),
+                    patch.dict(os.environ, {"HOME": str(fake_home), "USERPROFILE": str(fake_home), "CODEX_HOME": ""}),
                     patch.object(install, "write_codex_agent_atomic", side_effect=fail_second_required_write),
                 ):
                     response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
@@ -2025,7 +2025,7 @@ class MutationHelperTests(unittest.TestCase):
             os.chdir(git_root)
             try:
                 with (
-                    patch.dict(os.environ, {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}),
+                    patch.dict(os.environ, {"HOME": str(fake_home), "USERPROFILE": str(fake_home), "CODEX_HOME": ""}),
                     patch.object(install, "write_codex_agent_atomic", side_effect=fail_second_required_write_and_first_rollback),
                 ):
                     response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
@@ -2097,7 +2097,7 @@ class MutationHelperTests(unittest.TestCase):
             os.chdir(git_root)
             try:
                 with (
-                    patch.dict(os.environ, {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}),
+                    patch.dict(os.environ, {"HOME": str(fake_home), "USERPROFILE": str(fake_home), "CODEX_HOME": ""}),
                     patch.object(install, "write_codex_agent_atomic", side_effect=fail_second_write),
                 ):
                     response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
@@ -2163,7 +2163,7 @@ class MutationHelperTests(unittest.TestCase):
             os.chdir(git_root)
             try:
                 with (
-                    patch.dict(os.environ, {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}),
+                    patch.dict(os.environ, {"HOME": str(fake_home), "USERPROFILE": str(fake_home), "CODEX_HOME": ""}),
                     patch.object(install, "write_codex_agent_atomic", side_effect=fail_with_exact_owned_cleanup),
                 ):
                     response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
@@ -2266,7 +2266,7 @@ class MutationHelperTests(unittest.TestCase):
             os.chdir(git_root)
             try:
                 with (
-                    patch.dict(os.environ, {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}),
+                    patch.dict(os.environ, {"HOME": str(fake_home), "USERPROFILE": str(fake_home), "CODEX_HOME": ""}),
                     patch.object(install, "verify_codex_agent_install", return_value=[mismatch]),
                 ):
                     response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
@@ -6182,7 +6182,7 @@ class MutationHelperTests(unittest.TestCase):
             os.chdir(git_root)
             try:
                 with (
-                    patch.dict(os.environ, {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}),
+                    patch.dict(os.environ, {"HOME": str(fake_home), "USERPROFILE": str(fake_home), "CODEX_HOME": ""}),
                     patch.object(install, "codex_agent_state_matches", side_effect=change_before_match),
                 ):
                     response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
@@ -6262,7 +6262,7 @@ class MutationHelperTests(unittest.TestCase):
             os.chdir(git_root)
             try:
                 with (
-                    patch.dict(os.environ, {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}),
+                    patch.dict(os.environ, {"HOME": str(fake_home), "USERPROFILE": str(fake_home), "CODEX_HOME": ""}),
                     patch.object(install, "write_codex_agent_atomic", side_effect=fail_after_concurrent_edit),
                 ):
                     response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
@@ -7184,6 +7184,35 @@ This line must not be copied.
             self.assertEqual(stderr_records, [])
             self.assertEqual(response["data"]["mutation"]["mutation_status"], "no_op")
             self.assertFalse(response["data"]["restart_required"])
+
+    def test_install_codex_agents_default_follows_codex_home_and_leaves_home_untouched(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp, tempfile.TemporaryDirectory() as home_tmp, tempfile.TemporaryDirectory() as codex_tmp:
+            fake_home, codex_home = Path(home_tmp).resolve(), Path(codex_tmp).resolve()
+            destination = codex_home / "agents"
+            env = {"HOME": str(fake_home), "USERPROFILE": str(fake_home), "CODEX_HOME": str(codex_home)}
+
+            completed, response, stderr_records = run_runner(
+                helper_request("install-codex-agents", mode="apply", inputs={"model": "gpt-6-sol"}),
+                cwd=git_root,
+                extra_env=env,
+            )
+            self.assertEqual((completed.returncode, stderr_records), (0, []), completed.stderr)
+            self.assertEqual(response["data"]["destination"], destination.as_posix())
+            for source in sorted((PLUGIN_ROOT / "codex-agents").glob("*.toml")):
+                self.assertTrue((destination / source.name).is_file(), source.name)
+            self.assertFalse((fake_home / ".codex").exists())
+
+            for raw, code in ((destination.as_posix(), 0), ("~/.codex/agents", 2)):
+                completed, response, stderr_records = run_runner(
+                    helper_request("install-codex-agents", inputs={"model": "gpt-6-sol", "destination": raw}),
+                    cwd=git_root,
+                    extra_env=env,
+                )
+                self.assertEqual(completed.returncode, code, raw)
+                if code:
+                    self.assertEqual([record["code"] for record in stderr_records], ["invalid_destination"], raw)
+            self.assertFalse((fake_home / ".codex").exists())
 
     def test_install_codex_agents_applies_opt_in_astra_rewrite_to_sol_roles_only(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
