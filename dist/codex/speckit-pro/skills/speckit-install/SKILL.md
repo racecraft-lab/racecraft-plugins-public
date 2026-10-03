@@ -24,7 +24,7 @@ other skills.
   `$speckit-scaffold-spec`.
 - Installing this plugin's own bundled Codex subagent TOML files
   (`autopilot-fast-helper.toml`, `phase-executor.toml`, etc.) into
-  `~/.codex/agents/`. That is `$install`.
+  `$CODEX_HOME/agents/` (default `~/.codex/agents/`). That is `$install`.
 - Methodology coaching. That is `$speckit-coach`.
 
 ## Invocation

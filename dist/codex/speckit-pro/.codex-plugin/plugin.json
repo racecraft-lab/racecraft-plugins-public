@@ -25,7 +25,7 @@
   "interface": {
     "displayName": "SpecKit Pro",
     "shortDescription": "Spec-driven workflows and Codex subagent install support",
-    "longDescription": "Skill-backed Spec-Driven Development for Codex. Each Codex skill ships its own `agents/openai.yaml` metadata sidecar, and SpecKit Pro also bundles Codex custom-agent TOML templates plus a Codex-only install skill because Codex still registers custom agents from `.codex/agents/` or `~/.codex/agents/` rather than directly from the plugin bundle.",
+    "longDescription": "Skill-backed Spec-Driven Development for Codex. Each Codex skill ships its own `agents/openai.yaml` metadata sidecar, and SpecKit Pro also bundles Codex custom-agent TOML templates plus a Codex-only install skill because Codex still registers custom agents from `.codex/agents/` or `$CODEX_HOME/agents/` (default `~/.codex/agents/`) rather than directly from the plugin bundle.",
     "developerName": "Racecraft Lab",
     "category": "Coding",
     "capabilities": [

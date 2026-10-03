@@ -165,9 +165,9 @@ Bind the workflow to actual Codex primitives:
   `../../codex-agents/`. Those bundled TOML files are package assets, not
   runtime registrations.
 - Custom executor and consensus agents must be installed as real Codex
-  subagents under `.codex/agents/` (project scope) or `~/.codex/agents/`
-  (user scope). The bundled `install` skill copies the plugin templates into
-  those official Codex runtime paths.
+  subagents under `.codex/agents/` (project scope) or `$CODEX_HOME/agents/`
+  (user scope; default `~/.codex/agents/`). The bundled `install` skill
+  copies the plugin templates into those official Codex runtime paths.
 
 Do not translate this skill into Claude-only primitives such as legacy
 task-list tools or legacy Claude agent/shell placeholders. Do not read the
@@ -291,7 +291,7 @@ Concrete Codex mapping:
 - `./agents/openai.yaml` is skill metadata only. It does not register custom
   agents for Codex.
 - Resolve the installed agent from `.codex/agents/<agent>.toml` first, then
-  `~/.codex/agents/<agent>.toml`
+  `$CODEX_HOME/agents/<agent>.toml` (default `~/.codex/agents/`)
 - If the installed agent is missing at setup or run start, STOP and tell the
   user to run `$install`, then restart Codex. Mid-run, follow §Plugin Update
   Mid-Run: Record, Re-resolve, Continue instead

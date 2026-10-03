@@ -733,7 +733,7 @@ The helper validates the bundled `codex-agents/*.toml` contract and compares
 the rendered files with either selected runtime path:
 
 1. `.codex/agents/<agent>.toml`
-2. `~/.codex/agents/<agent>.toml`
+2. `$CODEX_HOME/agents/<agent>.toml` (default `~/.codex/agents/`)
 
 This check runs at setup or run start, before any phase work. Continue only
 when the helper returns `ok` with mutation status `no_op`. If it reports planned
@@ -773,7 +773,7 @@ names and makes the plugin work with any project.
 <!-- /host -->
 <!-- host:codex: Codex spawnable agents are TOML files under .codex/agents -->
 1. Search for all Codex custom-agent TOML files in the project's `.codex/agents/`
-   directory and the user's `~/.codex/agents/` directory.
+   directory and the user's `$CODEX_HOME/agents/` (default `~/.codex/agents/`) directory.
 2. Read `name`, `description`, and any model fields from those TOML files.
 <!-- /host -->
 3. Check the description for implementation keywords:
@@ -796,7 +796,7 @@ implementation agent (e.g., "my-project-developer" or
 Also check CLAUDE.md for references to a specific implementation
 agent as advisory context only. Do not set PROJECT_IMPLEMENTATION_AGENT
 from CLAUDE.md or `.claude/agents/` unless a same-named installed Codex
-TOML agent exists in `.codex/agents/` or `~/.codex/agents/`. A Claude
+TOML agent exists in `.codex/agents/` or `$CODEX_HOME/agents/` (default `~/.codex/agents/`). A Claude
 Markdown/YAML agent is not spawnable by Codex.
 <!-- /host -->
 
