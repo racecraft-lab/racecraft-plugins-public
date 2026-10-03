@@ -261,6 +261,20 @@ def _selection(record: dict[str, Any], read_file: FileReader) -> None:
         raise ValueError("artifact review includes a non-draft artifact")
 
 
+def _page_preview(page: dict[str, Any], generation_current: bool) -> dict[str, Any]:
+    """Retain denials and require current broker evidence for terminal unavailability."""
+    preview = page["preview"]
+    result = {"id": page["id"], "path": page["path"], "status": preview["status"], "blocker": preview["blocker"]}
+    if not generation_current:
+        if preview["status"] != "denied":
+            result.update(status="pending", blocker="Generation inputs or artifact bytes changed; revalidate generation")
+    elif preview["status"] == "unavailable":
+        observation = preview["observation"]
+        if observation is None or observation["artifact_sha256"] != page["sha256"]:
+            result.update(status="pending")
+    return result
+
+
 def _page_results(record: dict[str, Any], root: Path, read_file: FileReader) -> tuple[list[dict[str, Any]], list[str], bool]:
     inputs_current = _inputs_current(record, root, read_file)
     fresh = inputs_current
@@ -277,16 +291,7 @@ def _page_results(record: dict[str, Any], root: Path, read_file: FileReader) -> 
         if current:
             _generation_provenance(page, root, read_file)
         fresh = fresh and current
-        preview = page["preview"]
-        result = {"id": page["id"], "path": path, "status": preview["status"], "blocker": preview["blocker"]}
-        if not inputs_current or not current:
-            if preview["status"] != "denied":
-                result.update(status="pending", blocker="Generation inputs or artifact bytes changed; revalidate generation")
-        elif preview["status"] == "unavailable":
-            observation = preview["observation"]
-            if observation is None or observation["artifact_sha256"] != digest:
-                result.update(status="pending")
-        pages.append(result)
+        pages.append(_page_preview(page, inputs_current and current))
     return pages, gaps, fresh
 
 
