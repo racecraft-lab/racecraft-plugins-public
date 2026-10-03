@@ -4668,7 +4668,7 @@ def receipt():
 
 class CanaryReceiptTests(unittest.TestCase):
     def setUp(self):
-        self.validator = load_script("canary_receipt", REPO_ROOT / "tests/speckit-pro/layer7-integration/validate-canary-receipt.py")
+        self.validator = load_script("canary_receipt", REPO_ROOT / "tests/speckit-pro/layer6-integration/validate-canary-receipt.py")
 
     def test_accepts_a_well_formed_local_receipt_for_each_host(self):
         for host in ("claude-code", "codex"):
