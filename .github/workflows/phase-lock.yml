@@ -1,0 +1,38 @@
+# Phase Lock — fails a PR that closes an issue from a phase later than the one
+# named in .github/open-phase. Body edits rerun it, since closing keywords live
+# there. Draft PRs are skipped.
+#
+# Security notes:
+# - Read-only token; the PR number enters through env, never interpolated in
+#   run: blocks.
+
+name: Phase Lock
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, edited, ready_for_review]
+
+permissions: {}
+
+jobs:
+  phase-lock:
+    name: phase-lock
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.event.pull_request.draft == false
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check closed issues against the open phase
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: python3 scripts/phase-lock.py check-pr
