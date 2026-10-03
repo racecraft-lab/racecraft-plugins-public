@@ -82,15 +82,27 @@ SPEC_ID = r"[A-Z][A-Z0-9]*-\d+[a-z]?"
 CLOSED_STATUS = re.compile(r"^[^\w]*(?:complete(?:d)?|archived|retired|superseded|dropped|shipped)\b", re.I)
 
 
-def roadmap_entry_statuses(content: str) -> list[tuple[str, str]]:
-    """Read statuses from progress rows and SPEC sections without changing them."""
+def roadmap_progress_statuses(content: str) -> list[tuple[str, str]]:
+    """Read SPEC rows only within a progress table, including omitted cells."""
     # GFM permits optional outer pipes and fills omitted cells with empty values.
     rows = []
+    status_column = None
     for line in content.splitlines():
-        cells = [cell.strip() for cell in re.split(r"(?<!\\)\|", line.strip().removeprefix("|"))]
-        if not re.fullmatch(SPEC_ID, cells[0]):
+        if not line.strip() or line.lstrip().startswith(("#", ">", "```", "~~~")):
+            status_column = None
             continue
-        rows.append((cells[0], cells[2] if len(cells) > 2 else ""))
+        cells = [cell.strip() for cell in re.split(r"(?<!\\)\|", line.strip().removeprefix("|"))]
+        columns = [cell.casefold() for cell in cells]
+        if columns[0] == "spec" and "status" in columns:
+            status_column = columns.index("status")
+        elif status_column is not None and re.fullmatch(SPEC_ID, cells[0]):
+            rows.append((cells[0], cells[status_column] if len(cells) > status_column else ""))
+    return rows
+
+
+def roadmap_entry_statuses(content: str) -> list[tuple[str, str]]:
+    """Read statuses from progress rows and SPEC sections without changing them."""
+    rows = roadmap_progress_statuses(content)
     statuses = dict(rows)
     entries = list(rows)
     sections = re.findall(rf"^### ({SPEC_ID})\b([^\n]*)(.*?)(?=^#{{1,3}} |\Z)", content, re.M | re.S)
