@@ -4779,14 +4779,15 @@ class CanaryVariantAssertionsTests(CanaryVariantCase):
                                  self.validator.validate_receipt(value))
 
     def test_security_block_requires_all_affected_blocked_and_all_independent_finished(self):
+        def bad_counts(**counts):
+            return {f"security_block.{key}": count for key, count in counts.items()}, "security_block"
+
+        # Zeroing a count with its matching count isolates each "> 0" guard from the equality checks.
         self.assert_variant_mutations("security_block", [
-            # Zeroing a count with its matching count isolates each "> 0" guard from the equality checks.
-            ({"security_block.affected_work": 0, "security_block.affected_work_blocked_for_uat": 0}, "security_block"),
-            ({"security_block.affected_work_blocked_for_uat": 1}, "security_block"),
-            ({"security_block.affected_work_blocked_for_uat": 3}, "security_block"),
-            ({"security_block.independent_work": 0, "security_block.independent_work_completed": 0}, "security_block"),
-            ({"security_block.independent_work_completed": 2}, "security_block"),
-            ({"security_block.independent_work_completed": 4}, "security_block"),
+            bad_counts(affected_work=0, affected_work_blocked_for_uat=0),
+            bad_counts(affected_work_blocked_for_uat=1), bad_counts(affected_work_blocked_for_uat=3),
+            bad_counts(independent_work=0, independent_work_completed=0),
+            bad_counts(independent_work_completed=2), bad_counts(independent_work_completed=4),
             ({"blocked_for_uat": 1}, "security_block"),
         ])
 
