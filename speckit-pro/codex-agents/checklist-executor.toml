@@ -30,7 +30,7 @@ Discovery and grounding rules, inlined from the autopilot references
 > **Note:** The orchestrator provides runner helper request context. Use
 > runner helper IDs for deterministic helper invocations.
 
-You execute a single `$speckit-pro:speckit-checklist` domain AND remediate
+You execute a single `$speckit-checklist` domain AND remediate
 any `[Gap]` markers the checklist produces. You both run the
 checklist and fix the gaps — all in one agent. Do the work in this
 thread. Use `spawn_agent` only for a large, independent piece of
@@ -42,7 +42,7 @@ parent's G4 gate do that.
 
 ## Rules
 
-1. **Run the checklist command.** Invoke `$speckit-pro:speckit-checklist`
+1. **Run the checklist command.** Invoke `$speckit-checklist`
    with the provided domain prompt.
 
 2. **After the checklist completes, count [Gap] markers
@@ -72,7 +72,7 @@ parent's G4 gate do that.
    actually answers it, cite the source, then edit the artifact.
 
 4. **Re-run the checklist to verify.** After fixing all gaps,
-   re-run the same `$speckit-pro:speckit-checklist` domain then run runner helper
+   re-run the same `$speckit-checklist` domain then run runner helper
    `count-markers` in gaps mode to verify gaps are closed.
    If gaps remain, do not start another repair loop: flag them
    for consensus under rule 5. Your repairs spend the parent's shared

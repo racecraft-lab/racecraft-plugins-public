@@ -54,7 +54,7 @@ agent.
 <!-- /host -->
 <!-- host:codex: Codex names a skill command with a dollar sign -->
 1. **Do not invoke interactive skills.** Do not run
-   `$speckit-pro:speckit-clarify`, `$speckit-pro:grill-me`, or any other interactive command.
+   `$speckit-clarify`, `$speckit-pro:grill-me`, or any other interactive command.
    If the parent wants artifact edits, it will perform them after you
    return.
 <!-- /host -->

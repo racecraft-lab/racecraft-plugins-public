@@ -150,7 +150,7 @@ to archive previously merged specs.
      `speckit.archive.run` file relative to the archive extension directory,
      and verify that file exists before treating the extension as executable.
    - Read and follow that command contract directly from this Codex skill. Do
-     not require a generated `$speckit-pro:speckit-archive-run` skill, a slash command, or
+     not require a generated `$speckit-archive-run` skill, a slash command, or
      any file under `.claude/`; project extension registration may belong to a
      different integration.
    - Treat integration-specific frontmatter entries and manifest requirements

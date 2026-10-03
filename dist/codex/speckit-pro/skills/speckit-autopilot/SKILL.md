@@ -243,7 +243,7 @@ nothing — but the autopilot must not even attempt the call.
 If a phase encounters ambiguity that feels like it needs grill-me, the correct
 response is one of:
 
-- Run the `$speckit-pro:speckit-clarify` skill (Phase 2) with the multi-agent consensus
+- Run the `$speckit-clarify` skill (Phase 2) with the multi-agent consensus
   protocol — that is autopilot's only clarification mechanism.
 - Route the ambiguity to Clarify consensus, and defer it when consensus cannot settle it. Pre-workflow interviews
   belong in `$speckit-pro:speckit-scaffold-spec`, not autopilot.
@@ -346,7 +346,7 @@ Checklist) live in
 ### 5. Clarify — executor returns questions to parent
 
 The `clarify-executor` is read-only. It does not invoke
-`$speckit-pro:speckit-clarify`,
+`$speckit-clarify`,
 does not wait on a user, and does not edit
 artifacts. It inspects the workflow prompt, feature spec, and repo
 evidence, then returns a `Clarify Question Set` containing up to 5

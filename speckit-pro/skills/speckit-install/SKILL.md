@@ -199,8 +199,8 @@ AskUserQuestion picker preset for `/speckit-clarify` and
 `/speckit-checklist`.
 <!-- /host -->
 <!-- host:codex: Codex names SpecKit skills with a dollar sign -->
-AskUserQuestion picker preset for `$speckit-pro:speckit-clarify` and
-`$speckit-pro:speckit-checklist`.
+AskUserQuestion picker preset for `$speckit-clarify` and
+`$speckit-checklist`.
 <!-- /host -->
 See [presets-extensions-guide.md → The curated set](../speckit-coach/references/presets-extensions-guide.md)
 for the full list and rationale.
@@ -323,7 +323,7 @@ Return a concise install summary:
    - Codex:  `$speckit-constitution` or `$speckit-coach`
 <!-- /host -->
 <!-- host:codex: installed plugin skills use namespaced dollar mentions -->
-   - Codex:  `$speckit-pro:speckit-constitution` or `$speckit-pro:speckit-coach`
+   - Codex:  `$speckit-constitution` or `$speckit-pro:speckit-coach`
 <!-- /host -->
 3. When you're ready to spec a feature, scaffold it from the technical
    roadmap with `/speckit-pro:speckit-scaffold-spec SPEC-ID` (Claude)

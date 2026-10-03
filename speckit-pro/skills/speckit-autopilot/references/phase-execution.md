@@ -107,12 +107,12 @@ The `speckit-pro:phase-executor` handles summary formatting and the
 
 | Phase | Agent | Prompt prefix |
 | ----- | ----- | ------------- |
-| Specify | `phase-executor` | `Run $speckit-pro:speckit-specify with:` |
+| Specify | `phase-executor` | `Run $speckit-specify with:` |
 | Clarify | `clarify-executor` | `Prepare a Clarify Question Set for:` |
-| Plan | `phase-executor` | `Run $speckit-pro:speckit-plan with:` |
-| Checklist | `checklist-executor` | `Run $speckit-pro:speckit-checklist with:` |
-| Tasks | `phase-executor` | `Run $speckit-pro:speckit-tasks with:` |
-| Analyze | `analyze-executor` | `Run $speckit-pro:speckit-analyze with:` |
+| Plan | `phase-executor` | `Run $speckit-plan with:` |
+| Checklist | `checklist-executor` | `Run $speckit-checklist with:` |
+| Tasks | `phase-executor` | `Run $speckit-tasks with:` |
+| Analyze | `analyze-executor` | `Run $speckit-analyze with:` |
 | Implement | `implement-executor` or project implementation agent | Task-specific TDD prompt |
 
 Consensus uses `codebase-analyst`, `spec-context-analyst`, and
@@ -393,7 +393,7 @@ for phase in PHASES starting from first_pending:
        a. Resolve <executor>:
           use the matching installed SpecKit custom agent
        b. spawn_agent the resolved <executor>:
-          "Run $speckit-pro:speckit-<phase> with: <prompt>"
+          "Run $speckit-<phase> with: <prompt>"
        c. Loop bounded wait_agent calls until this executor's actual summary is
           delivered; a status update or timeout alone is not the result. Record
           the summary, then close_agent only when that action is exposed. On
@@ -3708,8 +3708,8 @@ only that private cleanup completed, never its absolute path or contents.
 <!-- host:claude: Claude invokes the SpecKit skill as /speckit-implement -->
 Stock `/speckit-implement` stops when a domain checklist has unticked items.
 <!-- /host -->
-<!-- host:codex: Codex invokes the SpecKit skill as $speckit-pro:speckit-implement -->
-Stock `$speckit-pro:speckit-implement` stops when a domain checklist has unticked items.
+<!-- host:codex: Codex invokes the SpecKit skill as $speckit-implement -->
+Stock `$speckit-implement` stops when a domain checklist has unticked items.
 <!-- /host -->
 Spec Kit's checklist template makes those items reviewer-owned: a reviewer
 ticks a box, and implement must not change the markers. Autopilot does not run

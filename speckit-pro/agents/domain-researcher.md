@@ -49,7 +49,7 @@ You will receive one of four types of input:
 3. **Analyze Finding**: An unresolved finding of any severity from `/speckit-analyze` that needs fixing
 <!-- /host -->
 <!-- host:codex: Codex names a skill command with a dollar sign -->
-3. **Analyze Finding**: An unresolved finding of any severity from `$speckit-pro:speckit-analyze` that needs fixing
+3. **Analyze Finding**: An unresolved finding of any severity from `$speckit-analyze` that needs fixing
 <!-- /host -->
 4. **Research Task**: A `tasks.md` task that Phase 7 routes here for research or API investigation, outside the consensus protocol, carrying the exact task description and the prior task results accumulated in the run
 

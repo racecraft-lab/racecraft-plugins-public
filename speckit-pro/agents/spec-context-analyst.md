@@ -70,7 +70,7 @@ You will receive one of three types of input:
 3. **Analyze Finding**: An unresolved finding of any severity from `/speckit-analyze` that needs fixing
 <!-- /host -->
 <!-- host:codex: Codex names a skill command with a dollar sign -->
-3. **Analyze Finding**: An unresolved finding of any severity from `$speckit-pro:speckit-analyze` that needs fixing
+3. **Analyze Finding**: An unresolved finding of any severity from `$speckit-analyze` that needs fixing
 <!-- /host -->
 
 Each input includes the relevant context (spec.md excerpt, question text, gap description, or finding details).

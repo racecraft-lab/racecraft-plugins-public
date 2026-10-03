@@ -366,7 +366,7 @@ response is one of:
   belong in `/speckit-pro:speckit-scaffold-spec` or `/speckit-pro:grill-me`, not autopilot.
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-- Run the `$speckit-pro:speckit-clarify` skill (Phase 2) with the multi-agent consensus
+- Run the `$speckit-clarify` skill (Phase 2) with the multi-agent consensus
   protocol — that is autopilot's only clarification mechanism.
 - Route the ambiguity to Clarify consensus, and defer it when consensus cannot settle it. Pre-workflow interviews
   belong in `$speckit-pro:speckit-scaffold-spec`, not autopilot.
@@ -538,7 +538,7 @@ The `clarify-executor` is read-only. It does not invoke
 `/speckit-clarify`,
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-`$speckit-pro:speckit-clarify`,
+`$speckit-clarify`,
 <!-- /host -->
 does not wait on a user, and does not edit
 artifacts. It inspects the workflow prompt, feature spec, and repo

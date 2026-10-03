@@ -355,6 +355,13 @@ class HostSkillSourceTests(unittest.TestCase):
                 autopilot = self.view("skills/speckit-autopilot/SKILL.md", host)
                 self.assertIn(f"{sigil}speckit-autopilot <absolute-workflow-file> --stage plan", scaffold)
                 self.assertIn(f"{sigil}speckit-autopilot workflow.md --from-phase", autopilot)
+                if host == "codex":
+                    phases = self.view("skills/speckit-autopilot/references/phase-execution.md", host)
+                    for stock in ("specify", "plan", "checklist", "tasks", "analyze"):
+                        self.assertIn(f"Run $speckit-{stock} with:", phases)
+                    extensions = self.view("skills/speckit-autopilot/references/post-implementation.md", host)
+                    for extension in ("doctor", "verify", "verify-tasks", "retrospective"):
+                        self.assertIn(f"$speckit-{extension}", extensions)
 
     def test_grill_me_sends_setup_alone_to_scaffold_spec_on_both_hosts(self) -> None:
         for host, sigil in (("claude", "/speckit-pro:"), ("codex", "$speckit-pro:")):

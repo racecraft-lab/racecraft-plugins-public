@@ -58,7 +58,7 @@ class CodexSkillMentionTests(unittest.TestCase):
         names = discover_skill_names(CODEX_VIEW)
         self.assertIn('speckit-scaffold-spec', names)
         short = re.compile(r'\$(?:' + '|'.join(re.escape(name) for name in names)
-                           + r'|speckit-[\w<>*-]+)(?![\w:-])')
+                           + r')(?![\w:-])')
         surfaces = list(CODEX_VIEW.rglob('*.md'))
         surfaces += list((PLUGIN_ROOT / 'codex-skills').rglob('*.yaml'))
         surfaces += list((REPO_ROOT / 'docs-site/src/content/docs').rglob('*.md'))

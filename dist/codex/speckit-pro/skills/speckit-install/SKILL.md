@@ -141,8 +141,8 @@ override, stop and report its paths; never remove memory automatically.
 
 speckit-pro recommends a small set of community extensions and presets
 that power the autopilot's post-implementation parallel group and the
-AskUserQuestion picker preset for `$speckit-pro:speckit-clarify` and
-`$speckit-pro:speckit-checklist`.
+AskUserQuestion picker preset for `$speckit-clarify` and
+`$speckit-checklist`.
 See [presets-extensions-guide.md → The curated set](../speckit-coach/references/presets-extensions-guide.md)
 for the full list and rationale.
 
@@ -241,7 +241,7 @@ Return a concise install summary:
    the new skills load.
 2. Create your project constitution:
    - Claude: `/speckit-constitution` or `/speckit-pro:speckit-coach create my project constitution`
-   - Codex:  `$speckit-pro:speckit-constitution` or `$speckit-pro:speckit-coach`
+   - Codex:  `$speckit-constitution` or `$speckit-pro:speckit-coach`
 3. When you're ready to spec a feature, scaffold it from the technical
    roadmap with `/speckit-pro:speckit-scaffold-spec SPEC-ID` (Claude)
    or `$speckit-pro:speckit-scaffold-spec SPEC-ID` (Codex).
