@@ -26,11 +26,8 @@ def load_script():
 
 class WorktreesIgnoreTests(unittest.TestCase):
     def setUp(self):
-        temp = tempfile.TemporaryDirectory()
-        self.addCleanup(temp.cleanup)
-        self.root = Path(temp.name) / "consumer"
-        self.root.mkdir()
-        subprocess.run(["git", "init", "-q", str(self.root)], check=True)
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        subprocess.run(["git", "init", "-q"], cwd=self.root, check=True)
         self.tool = load_script()
 
     def ignored(self):
