@@ -62,7 +62,7 @@ def typed_skill(host: str, payload: dict[str, Any]) -> bool:
         raise GuardError("UserPromptSubmit payload has no prompt text")
     if host == "claude":
         match = CLAUDE_COMMAND.match(text)
-        return bool(match) and is_plugin_skill(match["name"], host)
+        return match is not None and is_plugin_skill(match["name"], host)
     return any(is_plugin_skill(match["name"], host) for match in CODEX_MENTION.finditer(text))
 
 
