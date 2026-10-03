@@ -208,6 +208,7 @@ ack dead-code:new-symbol 2a6db0c5104ec90b 0 cid=c4471234255dd2a7 unittest discov
 ack dead-code:new-symbol 2ac3792c6dad1398 0 cid=bf561f9075c0db90 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 2b8ea8ed359d638a 0 cid=4cd14647fb27c15b unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 2bc7266034358a7d 0 cid=6db0680f23cdd978 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol 2c2ba291352f5ab8 0 unittest loader executes ValidateRoadmapFreeze.setUp; focused suite and execution profile prove this method runs; no direct static caller
 ack dead-code:new-symbol 2cc74a3d42379bfd 0 cid=6cf170d51f242712 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 2d49585b17b2b2fa 0 cid=d7e568e0be15385e unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 2d4a1e99e6193738 0 cid=6b641f5cd703bd53 unittest discovers test_ methods by name and the module's __main__ suite loads this class, so the method is not dead code
@@ -226,6 +227,7 @@ ack dead-code:new-symbol 3453957f8d9d26f6 0 cid=e7a04037afc47248 unittest discov
 ack dead-code:new-symbol 34d7098954f47ec6 0 cid=046599c33aa92211 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 34f10f717328ee48 0 cid=e9c1424a2b4ae0b8 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 35241c81fccaeffd 0 cid=b49e807dee9e3c22 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol 3581db9cf8a6f52f 0 unittest loader executes ValidateRoadmapFreeze.test_freeze_fixture_requires_the_health_program_link_and_eda_note; focused suite and execution profile prove this method runs; no direct static caller
 ack dead-code:new-symbol 35a5235991a00385 0 cid=2140d80dc047c11c by=tests/speckit-pro/unit/test-install-ripwire.py unittest discovers test_ methods and setUp by name; the runner calls them, not repository code
 ack dead-code:new-symbol 35edc10f890efdb6 0 cid=f05128a6a4df0323 unittest discovers test_ methods by name through loadTestsFromTestCase in main(); nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 36539398ecef01a7 0 cid=887c477cc6158b6e Handlers are registered as values in the PR_EMISSION_HANDLERS table in helpers/registry.py, and test_ methods are found by unittest by name; neither is a direct call the dead-code scan can see
@@ -236,6 +238,7 @@ ack dead-code:new-symbol 36b58c767f349949 0 cid=6d8351a3f4c0240c unittest-discov
 ack dead-code:new-symbol 36cfb9e9177b0d0b 0 cid=ea1a6f771ee515cf unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 373c6a9eac6dc44b 0 cid=fb7b08061d8a52a2 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 37df3693171bcd53 0 cid=222b2574f3fdd665 unittest methods and a patch side_effect closure are invoked by the runner and by mock, not by a call site
+ack dead-code:new-symbol 3840b4af8ee9b4e4 0 unittest loader executes ValidateRoadmapFreeze.test_freeze_fixture_rejects_unfrozen_progress_rows; focused suite and execution profile prove this method runs; no direct static caller
 ack dead-code:new-symbol 3847afd709859b7e 0 cid=9c297454ba0fae21 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 3849c54e7cb3b04f 0 cid=f50dd7dde9c6d2c4 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 38c591ca837f06eb 0 cid=07e67fcd5bb6c4df unittest discovers test_ methods by name through the counted runner, so no static caller exists; the methods are live tests
@@ -274,6 +277,7 @@ ack dead-code:new-symbol 493e81101c1e929c 0 cid=5f58effb636deded unittest discov
 ack dead-code:new-symbol 49f4a4eec3f93602 0 cid=6b4507d45befebe1 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 4a1ffc1797412e0b 0 cid=06a5dba1d7afdb29 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 4a43de986d31944d 0 cid=2735b27eca211481 unittest discovers test_ methods by name through the counted runner, so no static caller exists; the method is a live test
+ack dead-code:new-symbol 4a6649d5b3909685 0 unittest loader executes ValidateRoadmapFreeze.test_freeze_fixture_accepts_closed_entries_and_the_exemption; focused suite and execution profile prove this method runs; no direct static caller
 ack dead-code:new-symbol 4a6df317c3d9a05a 0 cid=7b27908dc7d3a237 unittest discovers these test methods through loadTestsFromTestCase in main(); no direct caller is expected
 ack dead-code:new-symbol 4b71f643341f274c 0 cid=b13c9ac493265096 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 4c0203f7ac30361d 0 cid=5883ea1bd683864a unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
@@ -291,6 +295,7 @@ ack dead-code:new-symbol 5101ea8a2ecfb0bc 0 cid=825e4e1767420fba unittest discov
 ack dead-code:new-symbol 51d3e0a8fcde45af 0 cid=1fcd3bbbe5a35c08 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 51e1cfcc70edc1c7 0 cid=ccb07291dc60dd92 unittest discovers test_ methods by name through loadTestsFromTestCase in main(); nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 5231d58114c1dbe8 0 cid=4e3679e5a5d5d6e1 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol 52c964e371984921 0 unittest loader executes ValidateRoadmapFreeze.test_freeze_check_rejects_an_empty_catalog; focused suite and execution profile prove this method runs; no direct static caller
 ack dead-code:new-symbol 534410e025722aee 0 cid=8215c7f5865a4483 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 53c6c6846c0f3744 0 cid=bd024ae3e27d09f3 unittest discovers test_ methods by name, and the nested fetch and superseded helpers are passed in as callbacks; nothing calls them by name, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 53f7722a635be12c 0 cid=75dfeaf61f7256e7 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
@@ -607,6 +612,7 @@ ack dead-code:new-symbol b98643e94902783c 0 cid=17a4ab65094ee7df unittest discov
 ack dead-code:new-symbol b9a7be287f2b9c16 0 cid=1b2ae9a03a43a104 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol b9f9561c4365d34a 0 cid=af6c71174463d2b7 unittest discovers these test methods through loadTestsFromTestCase in main(); no direct caller is expected
 ack dead-code:new-symbol ba8f4d8c610c4a01 0 cid=6fdf918e63e1e026 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol bb784a456b1f87dc 0 unittest loader executes ValidateRoadmapFreeze.test_open_roadmap_specs_are_frozen; focused suite and execution profile prove this method runs; no direct static caller
 ack dead-code:new-symbol bb7b4415bb6390de 0 cid=9124c55e2204d5a8 unittest discovers and runs test_ methods and setUp hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol bc5a5bb6773c3bbe 0 cid=68d514d506426462 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol bd5fb606bbb65ca1 0 cid=26b5c2ad334ba0ad unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
@@ -770,6 +776,7 @@ ack dead-code:new-symbol fa63d9f093e1563d 0 cid=753b12b69814ad36 unittest discov
 ack dead-code:new-symbol fa92d9f998356206 0 cid=8a9cfda936299b9b unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol fab2b0c334e6a8a5 0 cid=474e784c4a3603e7 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol fab3e4e7259f2fed 0 cid=8099edd4ba839db0 unittest discovers these test methods through loadTestsFromModule in main(); no direct caller is expected
+ack dead-code:new-symbol fc41352818a7f3c9 0 unittest loader executes ValidateRoadmapFreeze.test_freeze_fixture_rejects_section_and_exemption_regressions; focused suite and execution profile prove this method runs; no direct static caller
 ack dead-code:new-symbol fc4fc98ec422e476 0 cid=c412794f7ae2177d unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol fc6e2e7b5ed86d70 0 cid=91fdbfcd7d4af188 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol fca59c600d3544a0 0 cid=5025df56d036b492 unittest discovers test_ methods by name through the counted runner, so no static caller exists; the methods are live tests
