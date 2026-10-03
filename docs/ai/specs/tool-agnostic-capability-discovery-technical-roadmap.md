@@ -1,5 +1,12 @@
 # Tool-Agnostic Capability Discovery Implementation Roadmap
 
+> **Feature-work freeze (2026-10-02):** All open SPECs are 🧊 Frozen for the
+> [speckit-pro health program (#1038)](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1038).
+> HRNS-015 alone is exempt as the known Part D candidate; EDA-001 is included
+> in the freeze. This notice takes precedence over readiness and sequencing
+> guidance below. Runbook D0 lifts the freeze for whichever SPEC Part D picks;
+> Part E lifts the rest. Unfreezing is outside this change.
+
 **Replace named optional MCP preferences in SpecKit Pro with capability-first discovery across Claude and Codex agents.**
 
 This document defines the **SPEC catalog** for Tool-Agnostic Capability Discovery: an ordered set of specifications derived from the source PRD. Each SPEC corresponds 1:1 to a Feature / Acceptance-Criteria group in the PRD (`AC-N.*`), preserving traceability from PRD -> roadmap -> spec. Each specification is executed end-to-end through the SpecKit workflow before moving to the next, and is prepared for autopilot with `$speckit-scaffold-spec SPEC-NNN`, which reads this roadmap as its input.

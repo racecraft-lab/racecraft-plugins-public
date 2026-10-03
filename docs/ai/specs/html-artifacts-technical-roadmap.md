@@ -1,5 +1,12 @@
 # HTML Artifacts & Staged Review Workflow Implementation Roadmap
 
+> **Feature-work freeze (2026-10-02):** All open SPECs are 🧊 Frozen for the
+> [speckit-pro health program (#1038)](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1038).
+> HRNS-015 alone is exempt as the known Part D candidate; EDA-001 is included
+> in the freeze. This notice takes precedence over readiness and sequencing
+> guidance below. Runbook D0 lifts the freeze for whichever SPEC Part D picks;
+> Part E lifts the rest. Unfreezing is outside this change.
+
 **Refactor the SpecKit-Pro scaffold and autopilot skills into a staged,
 human-checkpointed workflow: the plan stage ends at a draft PR carrying
 Racecraft-branded, self-contained HTML artifacts the operator reviews before
@@ -135,19 +142,19 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-006 | Autopilot Staging | ✅ Complete / Archived | [.process/ART-006-workflow.md](.process/ART-006-workflow.md) | PR #422; archived 2026-08-09; re-audited and re-grilled 2026-08-03. Declared budget 382 reviewable LOC, one slice. `gh` corroboration deferred to ART-007 (see Scope). **Prerequisite discharged** — PRs #416/#417 shipped in speckit-pro 2.22.0, so durable stage state now has a reliable store; ready for autopilot from Phase 1 |
 | ART-007 | Draft-PR Emission | ✅ Complete / Archived | [.process/ART-007-workflow.md](.process/ART-007-workflow.md) | PR #445; archived 2026-08-18. Scoping absorbed the ART-006 `gh` corroboration limb, resolved OQ-1 (the draft becomes the first slice PR), and recorded the corpus deferral to ART-009 (see both Scope amendments). Acceptance evidence preserved at `.process/ART-007-manual-uat.md` |
 | ART-008 | Feedback Sweep | ✅ Complete / Archived | [.process/ART-008-workflow.md](.process/ART-008-workflow.md) | Shipped as two stacked slices; archived 2026-08-25. **Slice 1 (the checkpoint) in PR #464**, merged 2026-08-24 at `8db22a420`, 111/111 tasks and a 7983/7983 suite. **Slice 2 (artifact freshness) in PR #502**, merged 2026-08-25 at `32043c45a`, 81/81 tasks and a 14208/14208 suite. Both slices' shipped surfaces live outside `specs/**`. Slice 2's acceptance evidence is preserved at [.process/ART-008-slice-2-quickstart.md](.process/ART-008-slice-2-quickstart.md). **Slice 2's quickstart scenarios 3, 4 and 5 are undischarged** — they need an autopilot run reaching Phase 7 on a draft pull request and cannot execute against a working tree — and are carried to ART-009 |
-| ART-009 | UAT Walkthrough Replacement | ⏳ Ready | - | ART-006 dependency satisfied by PR #422. Also carries ART-008 slice 2's undischarged live UAT (quickstart scenarios 3, 4, 5), which needs a Phase 7 run on a draft PR and cannot execute against a working tree |
-| ART-010 | Final-PR Writeup, Companions & Ready Flip | ⏳ Ready | - | All three dependencies satisfied: ART-003 by PRs #435/#436/#439, ART-007 by PR #445, ART-012 by PR #426 |
+| ART-009 | UAT Walkthrough Replacement | ⏳ Ready · 🧊 Frozen | - | ART-006 dependency satisfied by PR #422. Also carries ART-008 slice 2's undischarged live UAT (quickstart scenarios 3, 4, 5), which needs a Phase 7 run on a draft PR and cannot execute against a working tree |
+| ART-010 | Final-PR Writeup, Companions & Ready Flip | ⏳ Ready · 🧊 Frozen | - | All three dependencies satisfied: ART-003 by PRs #435/#436/#439, ART-007 by PR #445, ART-012 by PR #426 |
 | ART-011 | Scaffold Integration | ✅ Complete / Archived | [.process/ART-011-workflow.md](.process/ART-011-workflow.md) | PR #434; archived 2026-08-13. The blind-spot pass and the planning hand-off live on both platforms outside `specs/**`. Shipped inverted from its design: scaffold cannot invoke the autopilot, which carries `disable-model-invocation: true`, so it prints the command instead — nine requirements amended, five superseded. Declared 162 reviewable LOC and estimated 322 at the final 31 FRs; shipped 1160 production changed lines across the two scaffold `SKILL.md` variants, a second data point for ART-015. Layer 2 trigger evaluation is still owed, and the 984-line result is what ART-019 slice D exists to repair |
 | ART-012 | Implementation-Notes Capture | ✅ Complete / Archived | [.process/ART-012-workflow.md](.process/ART-012-workflow.md) | PR #426; archived 2026-08-12. The record contract and the executor reporting field live on both platforms outside `specs/**`. Budget re-estimated at every amendment (115 at scaffold → 155 → 162 → 190 once the operator restored the literal per-task guarantee), and the final six production files matched the declaration exactly |
-| ART-013 | Documentation | ⏳ Pending | - | Blocked by ART-009 and ART-010, the only tiered specs still open |
+| ART-013 | Documentation | ⏳ Pending · 🧊 Frozen | - | Blocked by ART-009 and ART-010, the only tiered specs still open |
 | ART-014 | Phase-Guard Enforcement Repair | ✅ Complete / Archived | [.process/ART-014-workflow.md](.process/ART-014-workflow.md) | PR #433; archived 2026-08-13. The guard, its tests, and both platforms' authority documentation live outside `specs/**`. Declared 337 reviewable LOC and shipped 906 added across six authored files, 488 across the five production ones; the overrun is the classification record and the tests, and it argues for ART-015. Found during ART-006, which deliberately did not fix it. Opened ART-016, ART-017 and ART-018 |
-| ART-015 | Spec-Size Re-Estimation Trigger | ⏳ Ready | - | No dependencies; found during ART-006 — the estimator is sound but is never re-fed. HRNS-015 Slice B adds a required-refactor input; this entry keeps the re-invocation (reconciled 2026-09-25) |
-| ART-016 | Claude-Side Live PR Commit Authority | ⏳ Ready | - | No dependencies; opened from ART-014, which documents the gap and names this entry in the shipped Claude `SKILL.md` |
+| ART-015 | Spec-Size Re-Estimation Trigger | ⏳ Ready · 🧊 Frozen | - | No dependencies; found during ART-006 — the estimator is sound but is never re-fed. HRNS-015 Slice B adds a required-refactor input; this entry keeps the re-invocation (reconciled 2026-09-25) |
+| ART-016 | Claude-Side Live PR Commit Authority | ⏳ Ready · 🧊 Frozen | - | No dependencies; opened from ART-014, which documents the gap and names this entry in the shipped Claude `SKILL.md` |
 | ART-017 | Arm The Accidentally-Advisory State Bookkeeping Checks | ✅ Complete / Archived | [.process/ART-017-workflow.md](.process/ART-017-workflow.md) | PR #490, merged 2026-08-23 at `070a36c2b`; archived 2026-08-25. 31/31 tasks and 20/20 FRs, with a same-tree 7896/7896 suite. The guard, its contract and its tests live outside `specs/**`. Opened from ART-014's advisory audit; the defect was reproduced by execution rather than argued. A manual UAT executed all 9 acceptance scenarios and is preserved at [.process/ART-017-manual-uat.md](.process/ART-017-manual-uat.md) |
-| ART-018 | Repair The Silently-Clean Governance Matchers | ⏳ Ready | - | No dependencies; opened from ART-014's retrospective. Reconciled 2026-09-25: #600 fixed the clarification-marker and production-file matchers, the `[Gap]` counter moved to HRNS-015 Slice B, and the decorated task-ID counter plus every negative control remain |
-| ART-019 | Documented Best-Practice Alignment | ⏳ Ready | - | No dependencies; opened 2026-08-13 from a seven-surface audit against the live official docs. Zero documented rules broken; the gap is that the repo's gates are blind to the documented metrics. Ships as ordered child slices |
+| ART-018 | Repair The Silently-Clean Governance Matchers | ⏳ Ready · 🧊 Frozen | - | No dependencies; opened from ART-014's retrospective. Reconciled 2026-09-25: #600 fixed the clarification-marker and production-file matchers, the `[Gap]` counter moved to HRNS-015 Slice B, and the decorated task-ID counter plus every negative control remain |
+| ART-019 | Documented Best-Practice Alignment | ⏳ Ready · 🧊 Frozen | - | No dependencies; opened 2026-08-13 from a seven-surface audit against the live official docs. Zero documented rules broken; the gap is that the repo's gates are blind to the documented metrics. Ships as ordered child slices |
 | ART-020 | Keyboard-Reachable Scroll Containers In The Shipped Gallery | ⏭️ Superseded / Shipped | [.process/ART-004-workflow.md](.process/ART-004-workflow.md) | Superseded by ART-004 on 2026-08-17; its five existing-container fixes, accessible names, global Layer 4 assertion, negative fixture, keyboard UAT, and generated-artifact updates shipped in PR #450 |
-| ART-021 | Architecture Viewer | ⏳ Ready | - | Added 2026-09-25. Dependencies satisfied: ART-001 (single-file page contract), ART-007 (draft PR), and the DEPENDENCY_RULES quality-gate slot (2026-09-06). The data contract is [architecture-viewer-contract.md](architecture-viewer-contract.md) |
+| ART-021 | Architecture Viewer | ⏳ Ready · 🧊 Frozen | - | Added 2026-09-25. Dependencies satisfied: ART-001 (single-file page contract), ART-007 (draft PR), and the DEPENDENCY_RULES quality-gate slot (2026-09-06). The data contract is [architecture-viewer-contract.md](architecture-viewer-contract.md) |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Superseded | ⚠️ Blocked
 
@@ -730,6 +737,8 @@ recovery commands:
 
 ### ART-009: UAT Walkthrough Replacement
 
+**Status:** 🧊 Frozen — previously ⏳ Ready.
+
 **Priority:** P1 | **Depends On:** ART-001, ART-006 | **Enables:** ART-010 completeness
 
 **Goal:** Replace the markdown UAT runbook with an interactive UAT-walkthrough
@@ -800,6 +809,8 @@ carries over unchanged.
 ---
 
 ### ART-010: Final-PR Writeup, Companions & Ready Flip
+
+**Status:** 🧊 Frozen — previously ⏳ Ready.
 
 **Priority:** P1 | **Depends On:** ART-003, ART-007, ART-012 | **Enables:** complete delivery
 
@@ -955,6 +966,8 @@ its review-visible expression is the writeup's implementation-notes section.
 
 ### ART-013: Documentation
 
+**Status:** 🧊 Frozen — previously ⏳ Pending.
+
 **Priority:** P2 | **Depends On:** ART-001…012 | **Enables:** operator adoption
 
 **Goal:** Document the artifact gallery and the staged workflow on the docs
@@ -1080,6 +1093,8 @@ the pre-existing identity check was left out to keep ART-006 one slice.
 
 ### ART-015: Spec-Size Re-Estimation Trigger
 
+**Status:** 🧊 Frozen — previously ⏳ Ready.
+
 **Priority:** P3 | **Depends On:** none | **Enables:** honest slice budgets
 
 **Goal:** Re-invoke the size estimator at the gates where a spec's signals have
@@ -1159,6 +1174,8 @@ own scaffold is a second worked example: its roadmap budget of 292 LOC re-ran at
 ---
 
 ### ART-016: Claude-Side Live PR Commit Authority
+
+**Status:** 🧊 Frozen — previously ⏳ Ready.
 
 **Priority:** P3 | **Depends On:** none | **Enables:** the PR-head byte comparison on Claude
 
@@ -1252,6 +1269,8 @@ slice.
 
 ### ART-018: Repair The Silently-Clean Governance Matchers
 
+**Status:** 🧊 Frozen — previously ⏳ Ready.
+
 **Priority:** P2 | **Depends On:** none | **Enables:** governance checks that can prove they detect
 
 **Goal:** Give four checks that currently report clean on dirty input a matcher
@@ -1338,6 +1357,8 @@ had nothing to do with ART-014.
 ---
 
 ### ART-019: Documented Best-Practice Alignment
+
+**Status:** 🧊 Frozen — previously ⏳ Ready.
 
 **Priority:** P2 | **Depends On:** None | **Enables:** every future skill change, by restoring headroom and making the documented limits measurable
 
@@ -1545,6 +1566,8 @@ either.
 ---
 
 ### ART-021: Architecture Viewer
+
+**Status:** 🧊 Frozen — previously ⏳ Ready.
 
 **Priority:** P2 | **Depends On:** ART-001, ART-007, and the DEPENDENCY_RULES quality-gate slot (all shipped) | **Enables:** ART-013 documenting the page
 

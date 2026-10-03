@@ -76,6 +76,85 @@ class ValidateSpecTemplates(unittest.TestCase):
             with self.subTest(msg=name):
                 self.assertIn(needle, preset_plan_content)
 
+FROZEN_MARKER = "🧊 Frozen"
+HEALTH_PROGRAM = "https://github.com/racecraft-lab/racecraft-plugins-public/issues/1038"
+SPEC_ID = r"[A-Z][A-Z0-9]*-\d+[a-z]?"
+CLOSED_STATUS = re.compile(r"^[^\w]*(?:complete(?:d)?|archived|retired|superseded|dropped|shipped)\b", re.I)
+
+
+def roadmap_freeze_errors(content: str) -> list[str]:
+    """Check every catalog entry, including headings outside a progress table."""
+    rows = re.findall(rf"^\| ({SPEC_ID}) \| [^|\n]* \| ([^|\n]*) \|", content, re.M)
+    statuses = dict(rows)
+    entries = list(rows)
+    sections = re.findall(rf"^### ({SPEC_ID})\b([^\n]*)(.*?)(?=^#{{1,3}} |\Z)", content, re.M | re.S)
+    for spec_id, heading, body in sections:
+        status = re.search(r"^\*\*Status:\*\* (.+)$", body, re.M)
+        entries.append((spec_id, status.group(1) if status else statuses.get(spec_id, heading.rsplit("·", 1)[-1].strip())))
+    if not entries:
+        return ["no roadmap SPEC entries found"]
+    errors = []
+    for spec_id, status in entries:
+        if spec_id == "HRNS-015":
+            if FROZEN_MARKER in status:
+                errors.append("HRNS-015 must remain exempt")
+        elif not CLOSED_STATUS.match(status) and FROZEN_MARKER not in status:
+            errors.append(f"{spec_id}: open entry lacks {FROZEN_MARKER}")
+    if any(FROZEN_MARKER in status for _, status in entries):
+        if f"]({HEALTH_PROGRAM})" not in content:
+            errors.append("freeze note must link the health program spec")
+        if "EDA-001" not in content:
+            errors.append("freeze note must name EDA-001")
+    return errors
+
+
+class ValidateRoadmapFreeze(unittest.TestCase):
+    def setUp(self) -> None:
+        self.content = (Path(__file__).parent / "fixtures/roadmap-freeze/catalog.txt").read_text(encoding="utf-8")
+
+    def test_freeze_fixture_accepts_closed_entries_and_the_exemption(self) -> None:
+        content = self.content
+        self.assertEqual([], roadmap_freeze_errors(content))
+
+    def test_freeze_fixture_rejects_unfrozen_progress_rows(self) -> None:
+        content = self.content
+        for status in ("Pending", "Ready", "In Progress", "In Review", "Blocked", "Unknown", ""):
+            with self.subTest(status=status):
+                unfrozen = content.replace("⏳ Pending · 🧊 Frozen", status)
+                self.assertIn("TEST-001: open entry lacks 🧊 Frozen", roadmap_freeze_errors(unfrozen))
+
+    def test_freeze_fixture_rejects_unfrozen_spec_sections(self) -> None:
+        content = self.content
+        unfrozen = content.replace("**Status:** 🧊 Frozen — previously Pending.", "**Status:** Pending.")
+        self.assertIn("TEST-001: open entry lacks 🧊 Frozen", roadmap_freeze_errors(unfrozen))
+
+    def test_freeze_fixture_rejects_open_entries_outside_the_progress_table(self) -> None:
+        content = self.content
+        unfrozen = content + "\n### TEST-006: New open work\n\n**Status:** Ready\n"
+        self.assertIn("TEST-006: open entry lacks 🧊 Frozen", roadmap_freeze_errors(unfrozen))
+
+    def test_freeze_fixture_rejects_freezing_the_exempt_candidate(self) -> None:
+        content = self.content
+        frozen = content.replace("⏳ Ready", "⏳ Ready · 🧊 Frozen")
+        self.assertIn("HRNS-015 must remain exempt", roadmap_freeze_errors(frozen))
+
+    def test_freeze_fixture_requires_the_health_program_link_and_eda_note(self) -> None:
+        content = self.content
+        for missing, error in ((HEALTH_PROGRAM, "freeze note must link the health program spec"),
+                               ("EDA-001", "freeze note must name EDA-001")):
+            with self.subTest(missing=missing):
+                self.assertIn(error, roadmap_freeze_errors(content.replace(missing, "removed")))
+
+    def test_freeze_check_rejects_an_empty_catalog(self) -> None:
+        self.assertEqual(["no roadmap SPEC entries found"], roadmap_freeze_errors("# Empty roadmap\n"))
+
+    def test_open_roadmap_specs_are_frozen(self) -> None:
+        roadmaps = sorted((REPO_ROOT / "docs/ai/specs").rglob("*technical-roadmap.md"))
+        self.assertTrue(roadmaps, "no technical roadmaps found")
+        for roadmap in roadmaps:
+            with self.subTest(roadmap=_rel_repo(roadmap)):
+                self.assertEqual([], roadmap_freeze_errors(roadmap.read_text(encoding="utf-8")))
+
 EXTENSIONS_ROOT = REPO_ROOT / '.specify' / 'extensions'
 REGISTRY_PATH = EXTENSIONS_ROOT / '.registry'
 HOOKS_PATH = REPO_ROOT / '.specify' / 'extensions.yml'
