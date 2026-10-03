@@ -109,7 +109,8 @@ headings only; the runbook is for humans, not for anchor plumbing.
   print the runbook to stdout.
 - Return a short summary to the orchestrator: which three rewrites you
   applied, the story/check count, and any section you intentionally
-  removed.
+  removed. Include the repo-relative runbook path and whether the file exists
+  so unattended callers can bind their canary receipt to the actual output.
 
 For every externally-sourced fact in your output, include the grounding evidence note: `Capability path: <need> -> <selected capability/source>; Evidence: <citations or local file refs>; Confidence: <high|medium|low>`. If nothing grounds a claim, say so instead of asserting it.
 

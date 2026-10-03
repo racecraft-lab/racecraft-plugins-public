@@ -16,6 +16,7 @@ from .egress_authorization import run_egress_authorization_helper
 from .execution_requests import run_execution_helper
 from .gate_preflight_coverage import run_gate_preflight_coverage_helper
 from .roadmap_freshness import run_roadmap_freshness_helper
+from .scaffold_answers import run_scaffold_answers_helper
 from .run_finalization import run_run_finalization_helper
 from .mutation import empty_mutation, run_mutation_helper, run_spec_index_write, run_sweep_apply_result
 from .pr_emission import generate_pr_body, plan_commands
@@ -110,6 +111,10 @@ def deferred_authoritative_request() -> str:
 
 
 HELPERS: dict[str, HelperEntry] = {
+    "scaffold-answers": HelperEntry(
+        "scaffold-answers", "scaffold-answers", None, "python_authoritative", "python_contract",
+        authoritative_request("scaffold-answers"),
+    ),
     "formal-doctor": HelperEntry(
         "formal-doctor", "formal-doctor", None, "python_authoritative", "python_contract",
         authoritative_request("formal-doctor"),
@@ -747,6 +752,8 @@ def dispatch_helper(request: Any) -> dict[str, Any]:
         return run_archive_sweep_helper(entry, request)
     if entry.helper_id == "check-roadmap-freshness":
         return run_roadmap_freshness_helper(entry, request)
+    if entry.helper_id == "scaffold-answers":
+        return run_scaffold_answers_helper(entry, request)
     return run_registered_helper(entry, request)
 
 

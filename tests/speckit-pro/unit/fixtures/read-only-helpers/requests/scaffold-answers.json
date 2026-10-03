@@ -1,0 +1,5 @@
+{
+  "schema_version": "1.0", "request_id": "fixture-scaffold-answers",
+  "helper_id": "scaffold-answers", "operation": "scaffold-answers", "mode": "read_only",
+  "inputs": {"answers_file": "missing-answers.json", "spec_id": "SPEC-009"}
+}

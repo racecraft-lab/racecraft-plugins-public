@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Canary receipt v1", "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "commit", "host", "host_version", "plugin_version", "fixture_tag", "trigger", "dirty_tree", "release_status_allowed", "install_probe", "variants"],
+  "properties": {
+    "schema_version": {"const": "canary-receipt/v1"},
+    "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "host": {"enum": ["claude-code", "codex"]},
+    "host_version": {"$ref": "#/$defs/text"}, "plugin_version": {"$ref": "#/$defs/text"},
+    "fixture_tag": {"$ref": "#/$defs/text"}, "trigger": {"enum": ["local", "scheduled", "on_demand"]},
+    "dirty_tree": {"type": "boolean"}, "release_status_allowed": {"type": "boolean"},
+    "install_probe": {"type": "object"},
+    "variants": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/variant"}}
+  },
+  "allOf": [{"if": {"properties": {"host": {"const": "codex"}}},
+    "then": {"properties": {"install_probe": {"$ref": "#/$defs/codex_probe"}}},
+    "else": {"properties": {"install_probe": {"$ref": "#/$defs/claude_probe"}}}}],
+  "$defs": {
+    "text": {"type": "string", "minLength": 1, "pattern": "\\S"},
+    "count": {"type": "integer", "minimum": 0},
+    "probe_result": {"enum": ["passed", "failed", "not_run"]},
+    "codex_probe": {
+      "type": "object", "additionalProperties": false, "required": ["headless_install", "skill_expansion", "evidence"],
+      "properties": {"headless_install": {"$ref": "#/$defs/probe_result"}, "skill_expansion": {"$ref": "#/$defs/probe_result"}, "evidence": {"$ref": "#/$defs/text"}}
+    },
+    "claude_probe": {
+      "type": "object", "additionalProperties": false, "required": ["loaded_plugins", "evidence"],
+      "properties": {"loaded_plugins": {"type": "array", "items": {"$ref": "#/$defs/text"}}, "evidence": {"$ref": "#/$defs/text"}}
+    },
+    "stage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["wall_seconds", "tokens", "wall_budget_seconds", "token_budget"],
+      "properties": {
+        "wall_seconds": {"type": "number", "minimum": 0}, "tokens": {"$ref": "#/$defs/count"},
+        "wall_budget_seconds": {"type": "number", "exclusiveMinimum": 0}, "token_budget": {"type": "integer", "minimum": 1}
+      }
+    },
+    "variant": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "verdict", "failed_assertions", "umask", "task_list_calls", "questions_after_scaffold", "unregistered_stops", "planning_end", "implement_end", "uat_runbook", "decisions_by_kind", "retry_attempts", "blocked_for_uat", "stages"],
+      "properties": {
+        "name": {"enum": ["base", "oversized_plan", "security_interrupt", "missing_question_guard", "security_block"]},
+        "verdict": {"enum": ["pass", "fail"]},
+        "failed_assertions": {"type": "array", "items": {"$ref": "#/$defs/text"}, "uniqueItems": true},
+        "umask": {"type": "string"}, "task_list_calls": {"$ref": "#/$defs/count"},
+        "questions_after_scaffold": {"$ref": "#/$defs/count"}, "unregistered_stops": {"$ref": "#/$defs/count"},
+        "planning_end": {"type": "string"}, "implement_end": {"type": "string"}, "uat_runbook": {"type": "string"},
+        "decisions_by_kind": {"type": "object", "additionalProperties": {"$ref": "#/$defs/count"}},
+        "retry_attempts": {"$ref": "#/$defs/count"}, "blocked_for_uat": {"$ref": "#/$defs/count"},
+        "stages": {
+          "type": "object", "additionalProperties": false, "required": ["scaffold", "plan", "plan_review", "implement"],
+          "properties": {"scaffold": {"$ref": "#/$defs/stage"}, "plan": {"$ref": "#/$defs/stage"}, "plan_review": {"$ref": "#/$defs/stage"}, "implement": {"$ref": "#/$defs/stage"}}
+        }
+      }
+    }
+  }
+}

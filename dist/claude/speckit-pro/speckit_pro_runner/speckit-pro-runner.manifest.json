@@ -647,7 +647,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "a60a06474e1e71eb6c4f04cb01f6dc74412a69e6e1cd7085742bf766213ef761"
+      "sha256": "1d4b219abab6c341b283d5cf8c897340c9ac035d1a3d68a192d73682f3f85373"
     },
     {
       "path": {
@@ -672,6 +672,14 @@
         "display": "speckit_pro_runner/helpers/run_finalization.py"
       },
       "sha256": "957dbc73a0e853ffe0b512958a8c20b9baf195124d830e24e52ec338704efeca"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/scaffold_answers.py",
+        "display": "speckit_pro_runner/helpers/scaffold_answers.py"
+      },
+      "sha256": "8d3311c78b885faa572d6b6a27a81171cce05d1dcd851c5359374862dcafee8f"
     },
     {
       "path": {
