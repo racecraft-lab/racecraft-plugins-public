@@ -52,7 +52,7 @@ def _description_value(frontmatter: str) -> str:
         return (inline.group(1) or inline.group(2) or '').strip()
     return ''
 
-class ValidateSkills(unittest.TestCase):
+class CodexSkillMentionTests(unittest.TestCase):
 
     def test_codex_skill_mentions_include_the_plugin_namespace(self) -> None:
         names = discover_skill_names(CODEX_VIEW)
@@ -70,6 +70,9 @@ class ValidateSkills(unittest.TestCase):
         for source in (PLUGIN_ROOT / 'agents').glob('*.md'):
             with self.subTest(agent=source.name):
                 self.assertEqual(short.findall(emit_host(source.read_text(encoding='utf-8'), 'codex')), [])
+
+
+class ValidateSkills(unittest.TestCase):
 
     def test_plan_ambiguity_repair_preserves_requirement_provenance(self) -> None:
         surfaces = (
