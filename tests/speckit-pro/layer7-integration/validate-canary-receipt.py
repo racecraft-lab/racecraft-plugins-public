@@ -3,6 +3,7 @@
 
 import argparse
 import json
+import math
 from pathlib import Path
 import sys
 
@@ -48,7 +49,8 @@ def variant_failures(variant):
         if not passed:
             failures.append(f"{variant['name']}.{key}")
     for name, stage in variant["stages"].items():
-        if stage["wall_seconds"] > stage["wall_budget_seconds"] or stage["tokens"] > stage["token_budget"]:
+        if (not all(math.isfinite(stage[key]) for key in ("wall_seconds", "wall_budget_seconds"))
+                or stage["wall_seconds"] > stage["wall_budget_seconds"] or stage["tokens"] > stage["token_budget"]):
             failures.append(f"{variant['name']}.{name}.budget")
     return failures
 

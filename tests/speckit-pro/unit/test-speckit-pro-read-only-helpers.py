@@ -4706,6 +4706,19 @@ class CanaryReceiptTests(unittest.TestCase):
         value["install_probe"]["skill_expansion"] = "failed"
         self.assertTrue(self.validator.validate_receipt(value))
 
+    def test_rejects_nonfinite_stage_evidence_through_api_and_cli(self):
+        for key in ("wall_seconds", "wall_budget_seconds"):
+            for number in (float("nan"), float("inf"), -float("inf")):
+                value = receipt()
+                value["variants"][0]["stages"]["plan"][key] = number
+                with self.subTest(key=key, number=str(number)), tempfile.TemporaryDirectory() as directory:
+                    source = Path(directory) / "receipt.json"
+                    source.write_text(json.dumps(value), encoding="utf-8")
+                    completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
+                                               capture_output=True, text=True, check=False)
+                    self.assertEqual(1, completed.returncode, completed.stdout)
+                    self.assertTrue(self.validator.validate_receipt(value))
+
 
 def main() -> int:
     parser = argparse.ArgumentParser()
