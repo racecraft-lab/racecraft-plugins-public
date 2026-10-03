@@ -244,6 +244,18 @@ clean-worktree-gated helpers. Report tracked memory or overriding nested ignore
 rules separately; an ignore rule does not untrack files, and this command never
 deletes memory.
 
+For every upgraded project, also use the resolved Python 3.11+ interpreter to run
+<!-- host:claude: Claude resolves plugin files through CLAUDE_PLUGIN_ROOT -->
+`<resolved_python> "${CLAUDE_PLUGIN_ROOT}/scripts/agent-memory-ignore.py" --mode apply --target worktrees --repo-root "<repository-root>"`
+<!-- /host -->
+<!-- host:codex: Codex has no plugin-root variable and names the root in prose -->
+`<resolved_python> <plugin-root>/scripts/agent-memory-ignore.py --mode apply --target worktrees --repo-root <repository-root>`
+<!-- /host -->
+with argv-only execution. It ignores `.worktrees/`, where scaffold places each
+spec worktree. Commit any `.gitignore` change before clean-worktree-gated
+helpers. A nonzero exit means a nested ignore rule overrides it: stop and
+report the output.
+
 After upgrading, the new skills directories may now exist alongside
 the legacy slash-command files (if the prior install was in legacy
 mode). Use filesystem glob checks to detect legacy command/prompt

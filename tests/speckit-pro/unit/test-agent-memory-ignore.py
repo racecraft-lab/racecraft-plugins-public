@@ -26,9 +26,9 @@ class AgentMemoryIgnoreTests(unittest.TestCase):
         self.root.mkdir()
         subprocess.run(["git", "init", "-q", str(self.root)], check=True)
 
-    def run_tool(self, mode):
+    def run_tool(self, mode, *extra):
         result = subprocess.run(
-            [sys.executable, str(SCRIPT), "--mode", mode, "--repo-root", str(self.root)],
+            [sys.executable, str(SCRIPT), "--mode", mode, "--repo-root", str(self.root), *extra],
             text=True, capture_output=True, check=False,
         )
         return result.returncode, json.loads(result.stdout)
@@ -97,6 +97,36 @@ class AgentMemoryIgnoreTests(unittest.TestCase):
         self.assertNotEqual(code, 0)
         self.assertIn("symlink", str(report))
         self.assertFalse((self.root / ".gitignore").exists())
+
+    def worktrees_ignored(self):
+        return subprocess.run(
+            ["git", "check-ignore", "-q", ".worktrees/x"], cwd=self.root, check=False,
+        ).returncode == 0
+
+    def test_worktrees_target_ignores_scaffold_worktrees_and_is_idempotent(self):
+        (self.root / ".gitignore").write_text("*.cache\n")
+        self.assertFalse(self.worktrees_ignored())
+        code, report = self.run_tool("check", "--target", "worktrees")
+        self.assertNotEqual(code, 0)
+        self.assertEqual(report["unignored_paths"], [".worktrees/__speckit_worktree_probe__"])
+        self.assertEqual(self.run_tool("apply", "--target", "worktrees")[0], 0)
+        self.assertTrue(self.worktrees_ignored())
+        first = (self.root / ".gitignore").read_text()
+        self.assertEqual(first, "*.cache\n/.worktrees/\n")
+        code, report = self.run_tool("apply", "--target", "worktrees")
+        self.assertEqual((code, report["changed"]), (0, False))
+        self.assertEqual((self.root / ".gitignore").read_text(), first)
+
+    def test_worktrees_target_leaves_memory_rule_out(self):
+        self.assertEqual(self.run_tool("apply", "--target", "worktrees")[0], 0)
+        self.assertNotIn("agent-memory-local", (self.root / ".gitignore").read_text())
+
+    def test_both_clients_include_worktrees_repair_in_install_and_upgrade(self):
+        for host in ("claude", "codex"):
+            for operation in ("speckit-install", "speckit-upgrade"):
+                path = host_skill_root(host) / operation / "SKILL.md"
+                with self.subTest(path=path):
+                    self.assertIn("--target worktrees", path.read_text())
 
     def test_both_clients_include_repair_in_setup_and_check_before_dispatch(self):
         for host in ("claude", "codex"):

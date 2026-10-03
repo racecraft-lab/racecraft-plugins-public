@@ -137,6 +137,13 @@ the resulting `.gitignore` change in the setup commit before clean-worktree-gate
 helpers. If the command reports tracked memory or an ineffective nested
 override, stop and report its paths; never remove memory automatically.
 
+For every install, also use the resolved Python 3.11+ interpreter to run
+`<resolved_python> <plugin-root>/scripts/agent-memory-ignore.py --mode apply --target worktrees --repo-root <repository-root>`
+with argv-only execution. It ignores `.worktrees/`, where scaffold places each
+spec worktree, so the first scaffold does not stop on an unignored target.
+Include the `.gitignore` change in the same setup commit. A nonzero exit means a
+nested ignore rule overrides it: stop and report the output.
+
 ### 5. Offer to install the curated set of extensions and presets
 
 speckit-pro recommends a small set of community extensions and presets
