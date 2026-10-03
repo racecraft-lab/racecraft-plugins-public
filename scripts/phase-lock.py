@@ -2,27 +2,33 @@
 """Phase lock: keep agents on the open phase of the health program.
 
 `.github/open-phase` names the open phase. `check-pr` fails a pull request that
-closes an issue labelled with a later phase. `unlock` runs when the file changes
-on main: it swaps `phase-locked` for each newly open issue's pickup label.
+closes an issue still labelled `phase-locked` or labelled with a later phase.
+`unlock` runs when the file changes on main: it swaps `phase-locked` for the
+pickup label on every locked issue up to the open phase, so a skipped phase
+unlocks too.
 
-The check takes the earlier of the PR's file and the default branch's, so a pull
-request cannot open a phase for itself; the default branch may lack the file only
-before it first lands. Missing, unreadable or unknown evidence fails closed.
+The check takes the earlier of the PR's file and the default branch's, so editing
+the file cannot open a phase for the PR that edits it; the default branch may
+lack the file only before it first lands. Missing, unreadable or unknown evidence
+fails closed.
 """
 
 from __future__ import annotations
 
-import json
 import os
 import re
-import subprocess
 import sys
 from collections.abc import Callable, Sequence
+from functools import partial
 from pathlib import Path
 from typing import Any
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from gh_json import run_gh_json  # noqa: E402
+
 
 PHASES = ("phase-0", "phase-1", "phase-2", "phase-3", "phase-4", "phase-5", "part-d")
+PHASE_RANK = {phase: rank for rank, phase in enumerate(PHASES)}
 LOCK_LABEL = "phase-locked"
 PICKUP_LABELS = ("ready-for-agent", "ready-for-human")
 OPEN_PHASE_PATH = ".github/open-phase"
@@ -50,20 +56,13 @@ class PhaseLockError(RuntimeError):
     """Evidence the phase lock needs is missing, unreadable or unknown."""
 
 
-def run_gh(argv: Sequence[str]) -> Any:
-    completed = subprocess.run(["gh", *argv], text=True, capture_output=True, check=False, shell=False)
-    if completed.returncode != 0:
-        detail = completed.stderr.strip() or completed.stdout.strip() or "unknown gh error"
-        raise PhaseLockError(f"gh {' '.join(argv[:2])} failed: {detail}")
-    try:
-        return json.loads(completed.stdout)
-    except json.JSONDecodeError as exc:
-        raise PhaseLockError("gh returned malformed JSON") from exc
+Api = Callable[[Sequence[str]], Any]
+GH: Api = partial(run_gh_json, error=PhaseLockError)
 
 
 def parse_phase(text: str, source: str) -> str:
     phase = text.strip()
-    if phase not in PHASES:
+    if phase not in PHASE_RANK:
         raise PhaseLockError(f"{source} must name one of {', '.join(PHASES)}; found {phase!r}")
     return phase
 
@@ -75,10 +74,14 @@ def read_open_phase(path: Path) -> str:
         raise PhaseLockError(f"cannot read {path.name}: {exc}") from exc
 
 
+def label_names(labels: Sequence[Any]) -> list[str]:
+    return [str(label.get("name")) for label in labels if isinstance(label, dict)]
+
+
 def issue_phase(labels: Sequence[str]) -> str | None:
     """The latest phase among an issue's labels; None when it carries no phase."""
-    phases = [label for label in labels if label in PHASES]
-    return max(phases, key=PHASES.index) if phases else None
+    phases = [label for label in labels if label in PHASE_RANK]
+    return max(phases, key=PHASE_RANK.__getitem__) if phases else None
 
 
 def page_nodes(connection: Any, what: str) -> list[dict[str, Any]]:
@@ -90,40 +93,34 @@ def page_nodes(connection: Any, what: str) -> list[dict[str, Any]]:
     return [node for node in connection["nodes"] if isinstance(node, dict)]
 
 
-def check_pr(
-    repository: str,
-    pr_number: int,
-    *,
-    open_phase_file: Path = OPEN_PHASE_FILE,
-    api: Callable[[Sequence[str]], Any] = run_gh,
-) -> int:
-    try:
-        open_phase = read_open_phase(open_phase_file)
-        owner, name = repository.split("/", 1)
-        payload = api(
-            ["api", "graphql", "-f", f"query={CLOSING_ISSUES_QUERY}", "-f", f"owner={owner}",
-             "-f", f"name={name}", "-F", f"number={pr_number}"]
-        )
-        repo = (payload or {}).get("data", {}).get("repository") or {}
-        pr = repo.get("pullRequest")
-        if not isinstance(pr, dict):
-            raise PhaseLockError(f"pull request #{pr_number} was not found")
-        if repo.get("object") is not None:
-            main_phase = parse_phase(str(repo["object"].get("text")), "default-branch open-phase")
-            open_phase = min(open_phase, main_phase, key=PHASES.index)
-        locked = []
-        for issue in page_nodes(pr.get("closingIssuesReferences"), "closing issue"):
-            phase = issue_phase([str(label.get("name")) for label in page_nodes(issue.get("labels"), "label")])
-            if phase is not None and PHASES.index(phase) > PHASES.index(open_phase):
-                locked.append(f"#{issue.get('number')} ({phase})")
-    except PhaseLockError as exc:
-        print(f"phase-lock: {exc}", file=sys.stderr)
-        return 1
+def locked_closing_issues(pr: dict[str, Any], open_phase: str) -> list[str]:
+    locked = []
+    for issue in page_nodes(pr.get("closingIssuesReferences"), "closing issue"):
+        labels = label_names(page_nodes(issue.get("labels"), "label"))
+        phase = issue_phase(labels)
+        if LOCK_LABEL in labels or (phase is not None and PHASE_RANK[phase] > PHASE_RANK[open_phase]):
+            locked.append(f"#{issue.get('number')} ({phase or 'no phase'}{', ' + LOCK_LABEL if LOCK_LABEL in labels else ''})")
+    return locked
+
+
+def check_pr(repository: str, pr_number: int, *, open_phase_file: Path = OPEN_PHASE_FILE, api: Api = GH) -> int:
+    open_phase = read_open_phase(open_phase_file)
+    owner, name = repository.split("/", 1)
+    payload = api(["api", "graphql", "-f", f"query={CLOSING_ISSUES_QUERY}", "-f", f"owner={owner}",
+                   "-f", f"name={name}", "-F", f"number={pr_number}"])
+    repo = ((payload if isinstance(payload, dict) else {}).get("data") or {}).get("repository") or {}
+    pr = repo.get("pullRequest")
+    if not isinstance(pr, dict):
+        raise PhaseLockError(f"pull request #{pr_number} was not found")
+    if isinstance(repo.get("object"), dict):
+        main_phase = parse_phase(str(repo["object"].get("text")), "default-branch open-phase")
+        open_phase = min(open_phase, main_phase, key=PHASE_RANK.__getitem__)
+    locked = locked_closing_issues(pr, open_phase)
     if locked:
         print(f"phase-lock: the open phase is {open_phase}; this PR closes locked issue(s): "
               + ", ".join(locked), file=sys.stderr)
         return 1
-    print(f"phase-lock: every closed issue is in {open_phase} or earlier")
+    print(f"phase-lock: every closed issue is in {open_phase} or earlier and unlocked")
     return 0
 
 
@@ -135,26 +132,29 @@ def pickup_label(body: str) -> str:
     return label
 
 
-def unlock_plan(issues: Sequence[dict[str, Any]], open_phase: str) -> list[tuple[int, str]]:
-    """(issue number, pickup label) for each locked issue whose latest phase is the open one."""
+def unlock_plan(issues: Sequence[dict[str, Any]], open_phase: str) -> list[tuple[int, list[str]]]:
+    """(issue number, its new label set) for each locked issue at or before the open phase."""
     plan = []
     for issue in issues:
-        labels = [str(label.get("name")) for label in issue.get("labels", [])]
-        if LOCK_LABEL in labels and issue_phase(labels) == open_phase:
-            plan.append((int(issue["number"]), pickup_label(str(issue.get("body") or ""))))
+        labels = label_names(issue.get("labels", []))
+        phase = issue_phase(labels)
+        if LOCK_LABEL in labels and phase is not None and PHASE_RANK[phase] <= PHASE_RANK[open_phase]:
+            pickup = pickup_label(str(issue.get("body") or ""))
+            plan.append((int(issue["number"]), sorted({*labels, pickup} - {LOCK_LABEL})))
     return plan
 
 
-def unlock(repository: str, *, open_phase_file: Path = OPEN_PHASE_FILE, api: Callable[[Sequence[str]], Any] = run_gh) -> int:
+def unlock(repository: str, *, open_phase_file: Path = OPEN_PHASE_FILE, api: Api = GH) -> int:
     open_phase = read_open_phase(open_phase_file)
-    issues = api(["issue", "list", "--repo", repository, "--state", "open", "--label", open_phase,
-                  "--label", LOCK_LABEL, "--limit", str(UNLOCK_LIMIT), "--json", "number,body,labels"])
+    issues = api(["issue", "list", "--repo", repository, "--state", "open", "--label", LOCK_LABEL,
+                  "--limit", str(UNLOCK_LIMIT), "--json", "number,body,labels"])
     if not isinstance(issues, list) or len(issues) >= UNLOCK_LIMIT:
         raise PhaseLockError("issue list is missing or truncated")
-    for number, label in unlock_plan(issues, open_phase):
-        subprocess.run(["gh", "issue", "edit", str(number), "--repo", repository,
-                        "--remove-label", LOCK_LABEL, "--add-label", label], check=True, shell=False)
-        print(f"phase-lock: unlocked #{number} as {label}")
+    for number, labels in unlock_plan(issues, open_phase):
+        # One PUT replaces the whole label set, so an issue never holds both labels or neither.
+        api(["api", "-X", "PUT", f"repos/{repository}/issues/{number}/labels",
+             *(arg for label in labels for arg in ("-f", f"labels[]={label}"))])
+        print(f"phase-lock: unlocked #{number} as {', '.join(labels)}")
     return 0
 
 
@@ -166,11 +166,10 @@ def main(argv: Sequence[str]) -> int:
     try:
         if argv[0] == "unlock":
             return unlock(repository)
-        pr_number = int(os.environ.get("PR_NUMBER", ""))
-    except (PhaseLockError, ValueError, subprocess.CalledProcessError) as exc:
+        return check_pr(repository, int(os.environ.get("PR_NUMBER", "")))
+    except (PhaseLockError, ValueError) as exc:
         print(f"phase-lock: {exc}", file=sys.stderr)
         return 1
-    return check_pr(repository, pr_number)
 
 
 if __name__ == "__main__":
