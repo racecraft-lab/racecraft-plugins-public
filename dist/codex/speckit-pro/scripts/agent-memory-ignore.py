@@ -15,6 +15,8 @@ RULE = "**/.claude/agent-memory-local/"
 PROBE = "__speckit_agent_memory_probe__.md"
 WORKTREES_RULE = "/.worktrees/"
 WORKTREES_PROBE = ".worktrees/__speckit_worktree_probe__"
+MEMORY_REMEDIATION = "Add an effective recursive ignore rule; deliberately untrack listed memory files without deleting them."
+WORKTREES_REMEDIATION = "Add an effective ignore rule for .worktrees/ and remove any nested ignore rule that overrides it."
 
 
 def git(root: Path, *args: str) -> subprocess.CompletedProcess[bytes]:
@@ -109,8 +111,10 @@ def run(root: Path, mode: str, target: str = "memory") -> tuple[int, dict[str, o
     original, permissions = ignore_bytes(ignore)
     if target == "worktrees":
         rule, probes, tracked_check = WORKTREES_RULE, lambda: unignored_paths(root, [WORKTREES_PROBE]), lambda: []
+        remediation = WORKTREES_REMEDIATION
     else:
         rule, probes, tracked_check = RULE, lambda: unignored_probes(root), lambda: tracked_memory(root)
+        remediation = MEMORY_REMEDIATION
     missing = probes()
     changed = False
     if mode == "apply" and missing and rule.encode() not in original.splitlines():
@@ -124,7 +128,7 @@ def run(root: Path, mode: str, target: str = "memory") -> tuple[int, dict[str, o
         "changed": changed,
         "unignored_paths": missing,
         "tracked_memory": tracked,
-        "remediation": "Add an effective recursive ignore rule; deliberately untrack listed memory files without deleting them." if missing or tracked else "",
+        "remediation": remediation if missing or tracked else "",
     }
     return (0 if report["status"] == "ok" else 1), report
 

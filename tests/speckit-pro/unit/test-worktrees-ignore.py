@@ -41,6 +41,11 @@ class WorktreesIgnoreTests(unittest.TestCase):
         self.assertEqual((code, report["changed"]), (0, False))
         self.assertEqual((self.root / ".gitignore").read_text(), first)
 
+    def test_an_unfixed_check_reports_worktree_remediation_not_memory_text(self):
+        _, report = self.tool.run(self.root, "check", "worktrees")
+        self.assertIn(".worktrees/", report["remediation"])
+        self.assertNotIn("memory", report["remediation"])
+
     def test_apply_leaves_the_memory_rule_out(self):
         self.tool.run(self.root, "apply", "worktrees")
         self.assertNotIn("agent-memory-local", (self.root / ".gitignore").read_text())
