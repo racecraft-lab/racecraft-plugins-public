@@ -2,7 +2,6 @@
 """Setup leaves the scaffold worktree directory ignored in a consumer repository."""
 from __future__ import annotations
 
-import importlib.util
 import subprocess
 import sys
 import tempfile
@@ -12,23 +11,17 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 from test_result import run_counted
 from host_skill_views import host_skill_root
+from script_loader import load_script
 
 SCRIPT = Path(__file__).resolve().parents[3] / "speckit-pro/scripts/agent-memory-ignore.py"
 PROBE = ".worktrees/__speckit_worktree_probe__"
-
-
-def load_script():
-    spec = importlib.util.spec_from_file_location("agent_memory_ignore", SCRIPT)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 class WorktreesIgnoreTests(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         subprocess.run(["git", "init", "-q"], cwd=self.root, check=True)
-        self.tool = load_script()
+        self.tool = load_script("agent_memory_ignore", SCRIPT)
 
     def ignored(self):
         probe = subprocess.run(["git", "check-ignore", "-q", ".worktrees/x"], cwd=self.root, check=False)
