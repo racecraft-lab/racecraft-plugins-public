@@ -29,14 +29,14 @@ Use the smallest relevant reference; do not load the whole library.
 | Design a constitution | [Constitution guide](./references/constitution-guide.md). |
 | Create or repair `.specify/quality-gates.json`, pick gate thresholds, or record a permanent gate skip | [Quality gates guide](./references/quality-gates-guide.md). Measure the existing code before proposing a ceiling; write the file only after the operator confirms. |
 | Design a multi-spec roadmap or split a feature | Read the complete [technical-roadmap template](./templates/technical-roadmap-template.md) and [slicing heuristics](./references/slicing-heuristics.md), then instantiate the template without dropping required sections. `## Progress Tracking` is mandatory: scaffold and status use it as the shared lifecycle record. Derive independently executable vertical slices with observable outcomes and explicit real dependencies; review the graph before writing. |
-| Create a PRD and roadmap from an unformed idea | Route to `$speckit-prd`; use its PRD and roadmap templates. |
+| Create a PRD and roadmap from an unformed idea | Route to `$speckit-pro:speckit-prd`; use its PRD and roadmap templates. |
 | Track one spec through phases or understand scaffold-created workflow files | [Workflow template](./templates/workflow-template.md). For scaffold creation, population, inputs, or output locations, also read the [live scaffold skill](../speckit-scaffold-spec/SKILL.md) as a reference only; do not execute or invoke it. Keep artifacts, gates, and decisions current. |
 | Explain the roadmap home note | [Roadmap-MOC guide](./references/roadmap-moc-guide.md). The curated zone is author-owned; the generated index is regenerated, not hand-edited. |
 | Explain or configure presets, extensions, hooks, catalogs, or upgrade recovery | [Presets and extensions guide](./references/presets-extensions-guide.md). Discover and inspect first; confirm before any mutation. |
 | Explain autonomous execution, consensus, remediation, review loops, or configuration | Read [the live autopilot skill](../speckit-autopilot/SKILL.md) as a reference only; explain its current contract without executing or invoking it. When the user asks to run an existing workflow, use the bounded autopilot hand-off below. |
-| Scope a raw brief interactively | Route to `$grill-me`; do not conduct its interview here. |
-| Scaffold a roadmap item, inspect status, resolve a review, or repair Codex agents | Route respectively to `$speckit-scaffold-spec`, `$speckit-status`, `$speckit-resolve-pr`, or the SpecKit Pro `install` skill. |
-| Archive merged-spec records or clean up archived specs | Route to `$speckit-archive-cleanup`; do not copy or execute its cleanup workflow here. |
+| Scope a raw brief interactively | Route to `$speckit-pro:grill-me`; do not conduct its interview here. |
+| Scaffold a roadmap item, inspect status, resolve a review, or repair Codex agents | Route respectively to `$speckit-pro:speckit-scaffold-spec`, `$speckit-pro:speckit-status`, `$speckit-pro:speckit-resolve-pr`, or the SpecKit Pro `install` skill. |
+| Archive merged-spec records or clean up archived specs | Route to `$speckit-pro:speckit-archive-cleanup`; do not copy or execute its cleanup workflow here. |
 
 ## Bounded autopilot hand-off
 
@@ -48,7 +48,7 @@ operator-visible progress. When the user supplies the workflow path, return one
 explicit command bounded to the requested stage:
 
 ```text
-$speckit-autopilot <workflow-file> --stage plan|implement|full
+$speckit-pro:speckit-autopilot <workflow-file> --stage plan|implement|full
 ```
 
 Use `--stage full` only when the user asks for the full workflow; use
@@ -60,7 +60,7 @@ phase gates, durable state, and fail-closed stops; at a stop it preserves
 evidence and reports the exact action required to resume. Do not imply that
 Coach will run, monitor, or resume that lifecycle. If no workflow path exists,
 route to
-`$speckit-scaffold-spec`;
+`$speckit-pro:speckit-scaffold-spec`;
 if the path or requested stage is ambiguous, ask for that missing input instead
 of executing anything.
 

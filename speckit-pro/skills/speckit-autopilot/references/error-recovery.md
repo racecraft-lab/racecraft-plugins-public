@@ -17,7 +17,7 @@ The workflow file persists all state. To resume:
 <!-- /host -->
 <!-- host:codex: Codex names skills as $NAME -->
 ```text
-$speckit-autopilot workflow.md --from-phase <next-pending-phase>
+$speckit-pro:speckit-autopilot workflow.md --from-phase <next-pending-phase>
 ```
 <!-- /host -->
 

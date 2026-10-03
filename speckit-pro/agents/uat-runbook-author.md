@@ -154,7 +154,7 @@ skeleton shipping is acceptable; a deleted or corrupted runbook is not.
 <!-- /host -->
 <!-- host:codex: Codex has no per-agent tool denial and names a skill with a dollar sign -->
 - You are a terminal worker. Do NOT spawn subagents or create teams.
-- Never invoke `$grill-me` or any interactive interview — there is no user
+- Never invoke `$speckit-pro:grill-me` or any interactive interview — there is no user
 <!-- /host -->
   to answer inside autopilot.
 

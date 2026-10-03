@@ -43,7 +43,7 @@ they want to learn how the post-PR loop works, redirect to
 `/speckit-pro:speckit-coach`.
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-`$speckit-coach`.
+`$speckit-pro:speckit-coach`.
 <!-- /host -->
 This skill is for remediation and closure.
 

@@ -8,7 +8,7 @@ license: MIT
 compatibility: "Claude Code uses AskUserQuestion. The Codex variant prefers request_user_input and permits a one-question free-text fallback only in an active user chat."
 <!-- /host -->
 <!-- host:codex: Codex names skills as $NAME -->
-description: "Run an interactive, one-question-at-a-time design interview before SpecKit specification work and produce a Design Concept record. Use when an active user requests Grill Me—for example “grill me,” “interview me about,” “walk the design tree,” or “produce a Design Concept”—or invokes $grill-me, or when interactive $speckit-scaffold-spec delegates its required interview. SPEC setup, worktree creation, and workflow population belong to $speckit-scaffold-spec; a setup request alone is not an interview delegation. SDD methodology, checklist selection, and gate guidance without a requested design interview belong to $speckit-coach. Recommend one grounded answer first for every consequential choice. Not for autonomous, background, CI, autopilot, or subagent execution."
+description: "Run an interactive, one-question-at-a-time design interview before SpecKit specification work and produce a Design Concept record. Use when an active user requests Grill Me—for example “grill me,” “interview me about,” “walk the design tree,” or “produce a Design Concept”—or invokes $speckit-pro:grill-me, or when interactive $speckit-pro:speckit-scaffold-spec delegates its required interview. SPEC setup, worktree creation, and workflow population belong to $speckit-pro:speckit-scaffold-spec; a setup request alone is not an interview delegation. SDD methodology, checklist selection, and gate guidance without a requested design interview belong to $speckit-pro:speckit-coach. Recommend one grounded answer first for every consequential choice. Not for autonomous, background, CI, autopilot, or subagent execution."
 <!-- /host -->
 ---
 
@@ -42,7 +42,7 @@ or invoking `/speckit-pro:grill-me`, and an interactive
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign and asks in the active chat -->
 Allowed entry points are an active user requesting Grill Me by natural language
-or invoking `$grill-me`, and an interactive `$speckit-scaffold-spec` call. Before
+or invoking `$speckit-pro:grill-me`, and an interactive `$speckit-pro:speckit-scaffold-spec` call. Before
 any question or write, confirm this is an active user chat that can receive a
 direct reply.
 <!-- /host -->
@@ -93,7 +93,7 @@ Never use this fallback in background, CI, autopilot, or subagent execution.
      checkout.
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-     `$speckit-scaffold-spec`; never redirect the write to the primary checkout.
+     `$speckit-pro:speckit-scaffold-spec`; never redirect the write to the primary checkout.
 <!-- /host -->
 2. Read the [shared interview protocol](references/interview-protocol.md). Ground
    the initial model in applicable project instructions, constitution, roadmap,
@@ -130,6 +130,6 @@ remain owned by `/speckit-specify`, `/speckit-pro:speckit-scaffold-spec`, and
 `/speckit-pro:speckit-coach` respectively.
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-remain owned by `/speckit-specify`, `$speckit-scaffold-spec`, and `$speckit-coach`
+remain owned by `/speckit-specify`, `$speckit-pro:speckit-scaffold-spec`, and `$speckit-pro:speckit-coach`
 respectively.
 <!-- /host -->

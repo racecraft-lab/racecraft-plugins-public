@@ -25,7 +25,7 @@ reply to the review comments, and resolve the threads.
 
 If the user wants a fresh review of a PR, use a review workflow instead. If
 they want to learn how the post-PR loop works, redirect to
-`$speckit-coach`.
+`$speckit-pro:speckit-coach`.
 This skill is for remediation and closure.
 
 ## Input

@@ -88,10 +88,11 @@ bundled custom-agent TOML files are copied into Codex's agent registry:
 or:
 
 ```text
-$install
+$speckit-pro:install
 ```
 
-The default destination is `~/.codex/agents/`; choose `.codex/agents/` only when
+The default destination is `$CODEX_HOME/agents/` when `CODEX_HOME` is set, else
+`~/.codex/agents/`; choose `.codex/agents/` only when
 you intentionally want project-scoped custom agents. The installer copies one
 TOML file for every Codex custom agent that `agent_inventory.json` lists as
 `required` or `optional`, which today is every `.toml` file in
@@ -108,13 +109,13 @@ Codex loads installed plugins from the installed plugin cache at
 runtime state, not the source of truth. If SpecKit Pro looks stale after an
 update, check the marketplace source or copied personal payload, the generated
 payload, the installed plugin cache, the selected custom-agent destination, and
-whether Codex was restarted. Rerun `@SpecKit Pro -> install` or `$install` after
+whether Codex was restarted. Rerun `@SpecKit Pro -> install` or `$speckit-pro:install` after
 a plugin update that changes bundled custom-agent TOML files, then restart
 Codex again. Do not edit the installed plugin cache.
 
 Install safety stays bounded here: Codex sandbox, approval, and network policy
 still apply. Git-backed marketplace setup can require network access or network
-approval. Writing to `~/.codex/agents/` is outside most project workspaces, so
+approval. Writing to `$CODEX_HOME/agents/` is outside most project workspaces, so
 approve only the expected local write of the named SpecKit Pro TOML files, or
 rerun with `.codex/agents/` or narrower permissions. The generated Codex payload
 can include lifecycle hook configuration such as `codex-hooks.json`; hook

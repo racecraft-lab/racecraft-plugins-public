@@ -35,7 +35,7 @@ automation, and review helpers on top of the official Spec Kit workflow.
 | Spec scaffolding | `speckit-scaffold-spec` creates the worktree and workflow file for one SPEC. |
 | Autopilot execution | `speckit-autopilot` runs the SDD phases toward an implementation PR. |
 | Status and review helpers | `speckit-status` shows what is next; `speckit-resolve-pr` handles review comments. |
-| Codex agent install support | `$install` copies bundled Codex custom-agent templates into Codex's agent registry. |
+| Codex agent install support | `$speckit-pro:install` copies bundled Codex custom-agent templates into Codex's agent registry. |
 
 ## Before You Install
 
@@ -136,17 +136,18 @@ agents:
 or:
 
 ```text
-$install
+$speckit-pro:install
 ```
 
-The default destination is `~/.codex/agents/`; `.codex/agents/` is the explicit
+The default destination is `$CODEX_HOME/agents/` when `CODEX_HOME` is set, else
+`~/.codex/agents/`; `.codex/agents/` is the explicit
 project-scoped destination override. The runner-owned catalog determines which
 bundled agents are required or optional; the install response's
 `data.agent_files` field supplies the concrete filenames to verify.
 
 Then restart Codex. Codex skills and custom agents are separate runtime
 surfaces: the plugin ships skills directly, while the install skill copies the
-named TOML templates into `.codex/agents/` or `~/.codex/agents/`.
+named TOML templates into `.codex/agents/` or `$CODEX_HOME/agents/`.
 
 Codex loads installed plugins from
 `~/.codex/plugins/cache/$MARKETPLACE_NAME/$PLUGIN_NAME/$VERSION/`. Treat that
@@ -154,12 +155,12 @@ installed plugin cache as runtime state, not source of truth. If SpecKit Pro
 looks stale after an update, inspect the marketplace source or copied personal
 payload, the generated payload, the installed plugin cache, the selected
 custom-agent destination, and whether Codex was restarted. Rerun
-`@SpecKit Pro -> install` or `$install` after plugin updates that change bundled
+`@SpecKit Pro -> install` or `$speckit-pro:install` after plugin updates that change bundled
 custom-agent TOML files, then restart Codex.
 
 Install safety is bounded here: Codex sandbox, approval, and network policy
 still apply. Git-backed marketplace setup can require network access or network
-approval, and the default `~/.codex/agents/` write is outside most project
+approval, and the default `$CODEX_HOME/agents/` write is outside most project
 workspaces. Approve only the expected local write of the named SpecKit Pro TOML
 files, or rerun with `.codex/agents/` or narrower permissions. The generated
 Codex payload includes lifecycle hook configuration in `codex-hooks.json`:
@@ -182,13 +183,13 @@ invocations on the left or the Codex skill invocations on the right.
 
 | Step | Claude Code | Codex |
 |---|---|---|
-| Get coached | `/speckit-pro:speckit-coach walk me through SDD` | `$speckit-coach walk me through SDD` |
-| Pin domain terms | `/speckit-pro:ubiquitous-language` | `$ubiquitous-language` |
-| Scope a rough idea | `/speckit-pro:grill-me docs/raw-idea.md` | `$grill-me docs/raw-idea.md` |
-| Create PRD and roadmap | `/speckit-pro:speckit-prd "saved searches"` | `$speckit-prd "saved searches"` |
-| Check project status | `/speckit-pro:speckit-status` | `$speckit-status` |
-| Prepare one SPEC | `/speckit-pro:speckit-scaffold-spec SPEC-001` | `$speckit-scaffold-spec SPEC-001` |
-| Run autopilot | `/speckit-pro:speckit-autopilot docs/ai/specs/.process/SPEC-001-workflow.md` | `$speckit-autopilot docs/ai/specs/.process/SPEC-001-workflow.md` |
+| Get coached | `/speckit-pro:speckit-coach walk me through SDD` | `$speckit-pro:speckit-coach walk me through SDD` |
+| Pin domain terms | `/speckit-pro:ubiquitous-language` | `$speckit-pro:ubiquitous-language` |
+| Scope a rough idea | `/speckit-pro:grill-me docs/raw-idea.md` | `$speckit-pro:grill-me docs/raw-idea.md` |
+| Create PRD and roadmap | `/speckit-pro:speckit-prd "saved searches"` | `$speckit-pro:speckit-prd "saved searches"` |
+| Check project status | `/speckit-pro:speckit-status` | `$speckit-pro:speckit-status` |
+| Prepare one SPEC | `/speckit-pro:speckit-scaffold-spec SPEC-001` | `$speckit-pro:speckit-scaffold-spec SPEC-001` |
+| Run autopilot | `/speckit-pro:speckit-autopilot docs/ai/specs/.process/SPEC-001-workflow.md` | `$speckit-pro:speckit-autopilot docs/ai/specs/.process/SPEC-001-workflow.md` |
 
 Before autopilot, define your project's constitution with the command installed
 by Spec Kit for your runtime. The official Spec Kit workflow treats the
@@ -236,18 +237,18 @@ The core idea is simple:
 
 | Capability | Claude Code | Codex |
 |---|---|---|
-| PRD + roadmap authoring | `/speckit-pro:speckit-prd` | `$speckit-prd` |
-| SDD coaching | `/speckit-pro:speckit-coach` | `$speckit-coach` |
-| Iterative scoping interview | `/speckit-pro:grill-me` | `$grill-me` |
-| Domain terms table | `/speckit-pro:ubiquitous-language` | `$ubiquitous-language` |
-| Spec scaffolding | `/speckit-pro:speckit-scaffold-spec` | `$speckit-scaffold-spec` |
-| Autopilot execution | `/speckit-pro:speckit-autopilot` | `$speckit-autopilot` |
-| Project status | `/speckit-pro:speckit-status` | `$speckit-status` |
-| PR review resolution | `/speckit-pro:speckit-resolve-pr` | `$speckit-resolve-pr` |
-| SpecKit CLI install | `/speckit-pro:speckit-install` | `$speckit-install` |
-| SpecKit upgrade | `/speckit-pro:speckit-upgrade` | `$speckit-upgrade` |
-| Post-merge archive cleanup | `/speckit-pro:speckit-archive-cleanup` | `$speckit-archive-cleanup` |
-| Codex custom-agent install | Not applicable | `@SpecKit Pro -> install` or `$install` |
+| PRD + roadmap authoring | `/speckit-pro:speckit-prd` | `$speckit-pro:speckit-prd` |
+| SDD coaching | `/speckit-pro:speckit-coach` | `$speckit-pro:speckit-coach` |
+| Iterative scoping interview | `/speckit-pro:grill-me` | `$speckit-pro:grill-me` |
+| Domain terms table | `/speckit-pro:ubiquitous-language` | `$speckit-pro:ubiquitous-language` |
+| Spec scaffolding | `/speckit-pro:speckit-scaffold-spec` | `$speckit-pro:speckit-scaffold-spec` |
+| Autopilot execution | `/speckit-pro:speckit-autopilot` | `$speckit-pro:speckit-autopilot` |
+| Project status | `/speckit-pro:speckit-status` | `$speckit-pro:speckit-status` |
+| PR review resolution | `/speckit-pro:speckit-resolve-pr` | `$speckit-pro:speckit-resolve-pr` |
+| SpecKit CLI install | `/speckit-pro:speckit-install` | `$speckit-pro:speckit-install` |
+| SpecKit upgrade | `/speckit-pro:speckit-upgrade` | `$speckit-pro:speckit-upgrade` |
+| Post-merge archive cleanup | `/speckit-pro:speckit-archive-cleanup` | `$speckit-pro:speckit-archive-cleanup` |
+| Codex custom-agent install | Not applicable | `@SpecKit Pro -> install` or `$speckit-pro:install` |
 
 Some Codex environments also expose plugin skills through the `@SpecKit Pro`
 picker. Explicit `$skill-name` invocation is the most predictable form.
@@ -373,15 +374,15 @@ Run the plugin install skill:
 or:
 
 ```text
-$install
+$speckit-pro:install
 ```
 
 Then restart Codex. The plugin ships Codex skills directly, but custom agents
-must be copied into `.codex/agents/` or `~/.codex/agents/` before Codex can
+must be copied into `.codex/agents/` or `$CODEX_HOME/agents/` before Codex can
 spawn them by name. Verify the files reported in `data.agent_files`.
 
 If a plugin update changed bundled custom-agent TOML files, rerun
-`@SpecKit Pro -> install` or `$install`, verify the selected destination, and
+`@SpecKit Pro -> install` or `$speckit-pro:install`, verify the selected destination, and
 restart Codex again. If behavior still looks stale, check the marketplace source
 or copied personal payload, the generated payload, the installed plugin cache,
 the selected custom-agent destination, and restart state. Do not edit the

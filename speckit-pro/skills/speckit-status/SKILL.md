@@ -51,9 +51,9 @@ Archive Sweep cleanup safety when the project has archive state.
 /speckit-pro:speckit-status SPEC-013 # Show specific spec detail
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-$speckit-status          # Show full roadmap + active specs
-$speckit-status all      # Same as above
-$speckit-status SPEC-013 # Show specific spec detail
+$speckit-pro:speckit-status          # Show full roadmap + active specs
+$speckit-pro:speckit-status all      # Same as above
+$speckit-pro:speckit-status SPEC-013 # Show specific spec detail
 <!-- /host -->
 ```
 
@@ -183,7 +183,7 @@ concept doc is a yellow flag — the phase prompts may be undercooked relative t
 what `/speckit-pro:speckit-scaffold-spec` produces today:
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-what `$speckit-scaffold-spec` produces today:
+what `$speckit-pro:speckit-scaffold-spec` produces today:
 <!-- /host -->
 
 | Spec | Name | DC | Specify | Clarify | Plan | Check | Tasks | Analyze | Impl | Next |
@@ -193,7 +193,7 @@ what `$speckit-scaffold-spec` produces today:
 | SPEC-YYY | <name> | ⏳ | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | Clarify (no design concept — re-run `/speckit-pro:speckit-scaffold-spec` or grill manually) |
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-| SPEC-YYY | <name> | ⏳ | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | Clarify (no design concept — re-run `$speckit-scaffold-spec` or grill manually) |
+| SPEC-YYY | <name> | ⏳ | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | Clarify (no design concept — re-run `$speckit-pro:speckit-scaffold-spec` or grill manually) |
 <!-- /host -->
 ```
 
@@ -230,7 +230,7 @@ Surface a single freshness line in the dashboard from the exit code:
   sources; the fix is `/speckit-pro:speckit-autopilot`, whose phase gates
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-  sources; the fix is `$speckit-autopilot`, whose phase gates
+  sources; the fix is `$speckit-pro:speckit-autopilot`, whose phase gates
 <!-- /host -->
   rebuild the zones — `speckit-status` does not regenerate them)
 - exit `2` → **index check error: `<message>`** — name the failure from the
@@ -304,7 +304,7 @@ To get started:
 /speckit-pro:speckit-scaffold-spec SPEC-XXX
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-$speckit-scaffold-spec SPEC-XXX
+$speckit-pro:speckit-scaffold-spec SPEC-XXX
 <!-- /host -->
 ```
 
@@ -313,7 +313,7 @@ This creates the worktree, branch, and populated workflow file.
 Then run `/speckit-pro:speckit-autopilot` to execute it.
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-Then run `$speckit-autopilot` to execute it.
+Then run `$speckit-pro:speckit-autopilot` to execute it.
 <!-- /host -->
 
 **Alternatives** (if you prefer a smaller spec first):
@@ -360,7 +360,7 @@ No workflow file found. To begin:
 /speckit-pro:speckit-scaffold-spec SPEC-008
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-$speckit-scaffold-spec SPEC-008
+$speckit-pro:speckit-scaffold-spec SPEC-008
 <!-- /host -->
 ```
 
@@ -374,7 +374,7 @@ Tell the user:
   `/speckit-pro:speckit-coach help me create a technical roadmap`
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-  `$speckit-coach help me create a technical roadmap`
+  `$speckit-pro:speckit-coach help me create a technical roadmap`
 <!-- /host -->
 - Or create a single workflow: copy
   `skills/speckit-coach/templates/workflow-template.md`
@@ -392,8 +392,8 @@ wants to act on the recommendation, direct them to the matching skill:
 - /speckit-pro:speckit-coach for process guidance
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-- $speckit-scaffold-spec to prepare a spec
-- $speckit-autopilot to execute a workflow
-- $speckit-resolve-pr to address review feedback
-- $speckit-coach for process guidance
+- $speckit-pro:speckit-scaffold-spec to prepare a spec
+- $speckit-pro:speckit-autopilot to execute a workflow
+- $speckit-pro:speckit-resolve-pr to address review feedback
+- $speckit-pro:speckit-coach for process guidance
 <!-- /host -->

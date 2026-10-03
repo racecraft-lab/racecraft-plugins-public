@@ -2059,8 +2059,8 @@ Stage: plan — stopped at the plan-stage boundary for review.
 <!-- host:claude: Claude invokes the autopilot as /speckit-pro:speckit-autopilot -->
 Resume with: `/speckit-pro:speckit-autopilot <workflow-file> --stage implement`
 <!-- /host -->
-<!-- host:codex: Codex invokes the autopilot as $speckit-autopilot -->
-Resume with: `$speckit-autopilot <workflow-file> --stage implement`
+<!-- host:codex: Codex invokes the autopilot as $speckit-pro:speckit-autopilot -->
+Resume with: `$speckit-pro:speckit-autopilot <workflow-file> --stage implement`
 <!-- /host -->
 ```
 
@@ -2101,8 +2101,8 @@ draft packet. `inputs.mode_name` is not accepted.
 <!-- host:claude: Claude invokes the autopilot as /speckit-pro:speckit-autopilot -->
     "body": "# feat(speckit-pro): open an example draft\n\n## Artifacts\n\n| Artifact | Purpose | Open |\n| --- | --- | --- |\n| Implementation Plan | Describe the implementation phases | `open specs/example-feature/artifacts/implementation-plan.html` |\n\n## Resume\n\nStage: plan. Stopped at the plan-stage boundary for review.\nResume with: `/speckit-pro:speckit-autopilot <workflow-file> --stage implement`\n"
 <!-- /host -->
-<!-- host:codex: Codex invokes the autopilot as $speckit-autopilot -->
-    "body": "# feat(speckit-pro): open an example draft\n\n## Artifacts\n\n| Artifact | Purpose | Open |\n| --- | --- | --- |\n| Implementation Plan | Describe the implementation phases | `open specs/example-feature/artifacts/implementation-plan.html` |\n\n## Resume\n\nStage: plan. Stopped at the plan-stage boundary for review.\nResume with: `$speckit-autopilot <workflow-file> --stage implement`\n"
+<!-- host:codex: Codex invokes the autopilot as $speckit-pro:speckit-autopilot -->
+    "body": "# feat(speckit-pro): open an example draft\n\n## Artifacts\n\n| Artifact | Purpose | Open |\n| --- | --- | --- |\n| Implementation Plan | Describe the implementation phases | `open specs/example-feature/artifacts/implementation-plan.html` |\n\n## Resume\n\nStage: plan. Stopped at the plan-stage boundary for review.\nResume with: `$speckit-pro:speckit-autopilot <workflow-file> --stage implement`\n"
 <!-- /host -->
   }
 }

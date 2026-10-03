@@ -408,7 +408,7 @@ Read the workflow file's Prerequisites table. If already
 Before phase execution, validate that every bundled SpecKit Pro Codex custom
 agent is current on the selected official Codex runtime path. Run the promoted
 `install-codex-agents` runner helper in `dry_run` mode, using the same
-destination, `model`, and `luna_fallback` choice that `$install` used:
+destination, `model`, and `luna_fallback` choice that `$speckit-pro:install` used:
 
 ```text
 'runner helper install-codex-agents' mode=dry_run inputs={destination?, model?, luna_fallback?}
@@ -418,12 +418,12 @@ The helper validates the bundled `codex-agents/*.toml` contract and compares
 the rendered files with either selected runtime path:
 
 1. `.codex/agents/<agent>.toml`
-2. `~/.codex/agents/<agent>.toml`
+2. `$CODEX_HOME/agents/<agent>.toml` (default `~/.codex/agents/`)
 
 This check runs at setup or run start, before any phase work. Continue only
 when the helper returns `ok` with mutation status `no_op`. If it reports planned
 files, fails validation, or cannot inspect the selected path, STOP with its
-diagnostics. Tell the user to run `$install`, approve the expected local write,
+diagnostics. Tell the user to run `$speckit-pro:install`, approve the expected local write,
 restart Codex, and then retry autopilot. This pre-flight is read-only: never
 apply or autoheal agent files from inside autopilot.
 
@@ -449,7 +449,7 @@ names and makes the plugin work with any project.
 
 ```text
 1. Search for all Codex custom-agent TOML files in the project's `.codex/agents/`
-   directory and the user's `~/.codex/agents/` directory.
+   directory and the user's `$CODEX_HOME/agents/` (default `~/.codex/agents/`) directory.
 2. Read `name`, `description`, and any model fields from those TOML files.
 3. Check the description for implementation keywords:
    "implement", "TDD", "development", "developer",
@@ -465,7 +465,7 @@ names and makes the plugin work with any project.
 Also check CLAUDE.md for references to a specific implementation
 agent as advisory context only. Do not set PROJECT_IMPLEMENTATION_AGENT
 from CLAUDE.md or `.claude/agents/` unless a same-named installed Codex
-TOML agent exists in `.codex/agents/` or `~/.codex/agents/`. A Claude
+TOML agent exists in `.codex/agents/` or `$CODEX_HOME/agents/` (default `~/.codex/agents/`). A Claude
 Markdown/YAML agent is not spawnable by Codex.
 
 **Record the result** for use in Step 2's Implement phase.
@@ -521,7 +521,7 @@ with this message, verbatim, and STOP:
 
 ```text
 G0 blocked: .specify/quality-gates.json is <missing|invalid: first problem>.
-Run `$speckit-coach quality gates` to create it. Agents never edit this file.
+Run `$speckit-pro:speckit-coach quality gates` to create it. Agents never edit this file.
 ```
 
 With the file missing, the slot commands still show the shipped

@@ -8,7 +8,7 @@ allowed-tools: Read Edit Write
 license: MIT
 <!-- /host -->
 <!-- host:codex: Codex keeps its own selection description -->
-description: "Upgrade or migrate an existing SpecKit installation safely. Use when the operator asks to execute an upgrade or migration: 'upgrade speckit', 'update speckit', 'specify integration upgrade', 'speckit migration to skills', 'safely upgrade spec-kit', 'bump speckit version', '$speckit-upgrade', or moving an existing .specify/ installation to the current spec-kit release. Preserves customizations (constitution.md, template overrides) via backup-and-restore. Supports upgrading one or both integrations (Claude Code, Codex CLI). Hands off to $speckit-install when .specify/ is missing. Not for pre-upgrade project, template, or preset repair (use $speckit-coach), installing speckit for the first time (use $speckit-install), scaffolding a new spec ($speckit-scaffold-spec), or installing this plugin's bundled Codex subagents ($install)."
+description: "Upgrade or migrate an existing SpecKit installation safely. Use when the operator asks to execute an upgrade or migration: 'upgrade speckit', 'update speckit', 'specify integration upgrade', 'speckit migration to skills', 'safely upgrade spec-kit', 'bump speckit version', '$speckit-pro:speckit-upgrade', or moving an existing .specify/ installation to the current spec-kit release. Preserves customizations (constitution.md, template overrides) via backup-and-restore. Supports upgrading one or both integrations (Claude Code, Codex CLI). Hands off to $speckit-pro:speckit-install when .specify/ is missing. Not for pre-upgrade project, template, or preset repair (use $speckit-pro:speckit-coach), installing speckit for the first time (use $speckit-pro:speckit-install), scaffolding a new spec ($speckit-pro:speckit-scaffold-spec), or installing this plugin's bundled Codex subagents ($speckit-pro:install)."
 <!-- /host -->
 ---
 
@@ -23,7 +23,7 @@ upgrading one or both integrations (`claude`, `codex`).
 If `.specify/` is missing, hands off to `/speckit-pro:speckit-install`
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-If `.specify/` is missing, hands off to `$speckit-install`
+If `.specify/` is missing, hands off to `$speckit-pro:speckit-install`
 <!-- /host -->
 — upgrade only operates on existing installs.
 
@@ -42,11 +42,12 @@ skills.
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign and ships an agent install skill -->
 - Initial install (no `.specify/` directory yet). That is
-  `$speckit-install`. This skill hands off to it.
+  `$speckit-pro:speckit-install`. This skill hands off to it.
 - Scaffolding a new spec from the technical roadmap. That is
-  `$speckit-scaffold-spec`.
+  `$speckit-pro:speckit-scaffold-spec`.
 - Installing this plugin's own bundled Codex subagent TOML files
-  into `~/.codex/agents/`. That is `$install`.
+  into `$CODEX_HOME/agents/` (default `~/.codex/agents/`). That is
+  `$speckit-pro:install`.
 <!-- /host -->
 - Upgrading the SpecKit CLI binary itself (`specify` package). The
   operator runs that with `uv tool install --force`; this skill
@@ -76,10 +77,10 @@ deferred and unavailable. Do not recommend or auto-run either operation.
 /speckit-pro:speckit-upgrade claude codex       # both, explicit
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-$speckit-upgrade                    # upgrade all installed integrations
-$speckit-upgrade claude             # upgrade claude only
-$speckit-upgrade codex              # upgrade codex only
-$speckit-upgrade claude codex       # both, explicit
+$speckit-pro:speckit-upgrade                    # upgrade all installed integrations
+$speckit-pro:speckit-upgrade claude             # upgrade claude only
+$speckit-pro:speckit-upgrade codex              # upgrade codex only
+$speckit-pro:speckit-upgrade claude codex       # both, explicit
 <!-- /host -->
 ```
 
@@ -94,7 +95,7 @@ as PRESENT or ABSENT.
 If `.specify/` is **ABSENT**: STOP and invoke `/speckit-pro:speckit-install`
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-If `.specify/` is **ABSENT**: STOP and invoke `$speckit-install`
+If `.specify/` is **ABSENT**: STOP and invoke `$speckit-pro:speckit-install`
 <!-- /host -->
 — upgrade only operates on existing installs.
 
@@ -132,7 +133,7 @@ If the operator passed integration keys, use those. Otherwise ask:
 > `claude`-only repo), use `/speckit-pro:speckit-install <new-key>` instead.
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-> `claude`-only repo), use `$speckit-install <new-key>` instead.
+> `claude`-only repo), use `$speckit-pro:speckit-install <new-key>` instead.
 <!-- /host -->
 
 ### 4. Snapshot the repo state for safety
@@ -439,7 +440,7 @@ STOP and report — do not improvise — when:
   off to `/speckit-pro:speckit-install`).
 <!-- /host -->
 <!-- host:codex: Codex names skills with a dollar sign -->
-  off to `$speckit-install`).
+  off to `$speckit-pro:speckit-install`).
 <!-- /host -->
 - A `specify integration upgrade` call fails for non-diff reasons.
 - The backup directory could not be created (filesystem full,

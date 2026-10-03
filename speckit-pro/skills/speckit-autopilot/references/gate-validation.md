@@ -448,7 +448,12 @@ disagreement is named in `reason`.
 **Mode precedence (highest wins):**
 
 1. **Per-invocation flag:** `--strict` or `--advisory` passed to
+<!-- host:claude: retain the existing Claude guidance -->
    `/speckit-pro:speckit-autopilot` (or `$speckit-autopilot` in Codex)
+<!-- /host -->
+<!-- host:codex: installed plugin skills use namespaced dollar mentions -->
+   `/speckit-pro:speckit-autopilot` (or `$speckit-pro:speckit-autopilot` in Codex)
+<!-- /host -->
    overrides everything below. Passing both flags is a usage
    error — the autopilot stops with a clear message before Phase
    0 runs. Resolved by
