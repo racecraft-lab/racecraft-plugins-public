@@ -96,6 +96,27 @@ def variant_failures(variant):
     }
     if variant["name"] == "base":
         conditions.update(umask=variant["umask"] == "077", task_list_calls=variant["task_list_calls"] == 0)
+    elif variant["name"] == "oversized_plan":
+        conditions.update(split_recommendation_recorded=variant["split_recommendation_recorded"],
+                          full_plan_built=variant["full_plan_built"], stops=variant["stops"] == 0)
+    elif variant["name"] == "security_interrupt":
+        interrupt = variant["security_interrupt"]
+        conditions.update(questions_after_scaffold=variant["questions_after_scaffold"] == 1,
+                          runner_permit_verified=interrupt["runner_permit_verified"],
+                          simulated_responder_answered=interrupt["simulated_responder_answered"],
+                          pause_classification=interrupt["pause_classification"] == "authorized")
+    elif variant["name"] == "missing_question_guard":
+        # This fault-injection variant cannot certify enforcement, even at handoff.
+        conditions["question_guard"] = False
+    elif variant["name"] == "security_block":
+        block = variant["security_block"]
+        conditions["security_block"] = (
+            block["affected_work"] > 0
+            and block["affected_work_blocked_for_uat"] == block["affected_work"]
+            and variant["blocked_for_uat"] >= block["affected_work_blocked_for_uat"]
+            and block["independent_work"] > 0
+            and block["independent_work_completed"] == block["independent_work"]
+        )
     for key, passed in conditions.items():
         if not passed:
             failures.append(f"{variant['name']}.{key}")
