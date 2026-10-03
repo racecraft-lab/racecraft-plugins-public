@@ -4712,7 +4712,9 @@ class CanaryReceiptTests(unittest.TestCase):
                 self.assertEqual(1, completed.returncode, completed.stdout)
                 self.assertTrue(self.validator.validate_receipt(value))
 
-class CanaryBudgetTests(unittest.TestCase):
+class CanaryBudgetCase(unittest.TestCase):
+    """Shared setup for the budget tests; it holds no tests of its own."""
+
     def setUp(self):
         self.validator = load_script("canary_receipt", REPO_ROOT / "tests/speckit-pro/layer6-integration/validate-canary-receipt.py")
 
@@ -4721,6 +4723,8 @@ class CanaryBudgetTests(unittest.TestCase):
         stages = {stage: {"wall_seconds": wall_seconds, "tokens": tokens} for stage in self.validator.BUDGET_STAGES}
         return {host: {variant: copy.deepcopy(stages) for variant in self.validator.VARIANTS} for host in self.validator.HOSTS}
 
+
+class CanaryBudgetTests(CanaryBudgetCase):
     def test_a_stage_over_a_set_limit_fails_and_under_it_passes(self):
         value = receipt()
         self.assertEqual([], self.validator.validate_receipt(value, self.budget(5, 100)))
@@ -4753,6 +4757,9 @@ class CanaryBudgetTests(unittest.TestCase):
         value["variants"][0]["stages"]["plan_review"].update(wall_seconds=10**6, tokens=10**9)
         self.assertEqual([], self.validator.validate_receipt(value, self.budget(5, 100)))
 
+
+
+class CanaryBudgetFileTests(CanaryBudgetCase):
     def test_the_budget_file_covers_every_host_variant_and_stage_and_states_its_rule(self):
         document = json.loads(self.validator.BUDGET_FILE.read_text(encoding="utf-8"))
         limits = self.validator.load_budget()
@@ -4807,7 +4814,7 @@ def main() -> int:
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                                for case in (ReadOnlyHelperTests, PlanLayersRepairRouteTests, PlanLayersPlannerCaseTests,
                                             PacketTitlePatternTests, ScaffoldAnswersTests, CanaryReceiptTests,
-                                            CanaryBudgetTests))
+                                            CanaryBudgetTests, CanaryBudgetFileTests))
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     total = result.testsRun
     failed = len(result.failures) + len(result.errors)
