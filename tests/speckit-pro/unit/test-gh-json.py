@@ -6,8 +6,8 @@ from __future__ import annotations
 import subprocess
 import sys
 import unittest
+import unittest.mock
 from pathlib import Path
-from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -30,7 +30,7 @@ def completed(returncode: int, stdout: str = "", stderr: str = "") -> subprocess
 
 class RunGhJsonTests(unittest.TestCase):
     def run_with(self, result: subprocess.CompletedProcess[str]) -> object:
-        with mock.patch.object(gh_json.subprocess, "run", return_value=result) as run:
+        with unittest.mock.patch.object(gh_json.subprocess, "run", return_value=result) as run:
             value = gh_json.run_gh_json(["api", "graphql", "-f", "query=x"], CallerError)
         run.assert_called_once_with(
             ["gh", "api", "graphql", "-f", "query=x"], text=True, capture_output=True, check=False, shell=False
