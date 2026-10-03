@@ -27,7 +27,7 @@ shared block in one body is a real divergence and this file reports it.
 
 **One accepted cross-platform asymmetry**, recorded rather than fixed:
 
-1. The Codex TOMLs write ``$speckit-analyze`` where the Claude bodies write
+1. The Codex TOMLs write ``$speckit-pro:speckit-analyze`` where the Claude bodies write
    ``/speckit-analyze``. The Codex checks map the one to the other.
 
 The fourth ``Research Task`` input is domain-researcher's alone. Phase 7 routes
@@ -163,7 +163,7 @@ def _terminal_deliverable(text: str) -> str:
 
 def _codex_flavored(bullet: str) -> str:
     """The Claude bullet as the Codex TOMLs spell it (accepted asymmetry 1)."""
-    return bullet.replace("`/speckit-analyze`", "`$speckit-analyze`")
+    return bullet.replace("`/speckit-analyze`", "`$speckit-pro:speckit-analyze`")
 
 
 class ConsensusAnalystSharedProseTests(unittest.TestCase):
@@ -266,7 +266,7 @@ class ConsensusAnalystSharedProseTests(unittest.TestCase):
                         _codex_flavored(bullet),
                         section,
                         f"[{CODEX_GROUP}] {name}: the Codex Input block must mirror the "
-                        "Claude Input bullets, with `$speckit-analyze` for "
+                        "Claude Input bullets, with `$speckit-pro:speckit-analyze` for "
                         "`/speckit-analyze`",
                     )
 
