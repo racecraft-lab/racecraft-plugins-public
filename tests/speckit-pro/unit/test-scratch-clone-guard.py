@@ -25,27 +25,30 @@ from test_result import run_counted  # noqa: E402
 SCRATCH_KEY = "speckit-health.scratch"
 INSTALLED_SKILL = "/home/owner/.codex/plugins/cache/market/speckit-pro/9.9.9/skills/speckit-autopilot/SKILL.md"
 
-# One typed command and one model skill call per host, in each host's payload shape.
+# Typed commands and model skill calls, in each host's payload shape.
 HOST_CASES = {
-    "claude": {
+    "claude": [
         # The shipping CLI sends `prompt`; the current hooks reference names `user_input`.
-        "typed": {"hook_event_name": "UserPromptSubmit", "prompt": "/speckit-pro:speckit-autopilot docs/plan.md"},
-        "typed-documented": {"hook_event_name": "UserPromptSubmit", "user_input": "/speckit-autopilot docs/plan.md"},
-        "model": {
+        {"hook_event_name": "UserPromptSubmit", "prompt": "/speckit-pro:speckit-autopilot docs/plan.md"},
+        {"hook_event_name": "UserPromptSubmit", "user_input": "/speckit-autopilot docs/plan.md"},
+        {
             "hook_event_name": "PreToolUse",
             "tool_name": "Skill",
             "tool_input": {"skill": "speckit-pro:speckit-autopilot", "args": ""},
         },
-    },
-    "codex": {
-        "typed": {"hook_event_name": "UserPromptSubmit", "prompt": "$speckit-autopilot run the workflow"},
-        "model": {
+    ],
+    "codex": [
+        {"hook_event_name": "UserPromptSubmit", "prompt": "$speckit-autopilot run the workflow"},
+        {
             "hook_event_name": "PreToolUse",
             "tool_name": "Bash",
             "tool_input": {"command": f"sed -n '1,200p' {INSTALLED_SKILL}"},
         },
-    },
+    ],
 }
+
+# Payloads the guard cannot read: a parse failure and an event it does not handle.
+UNREADABLE_CASES = {host: ["{not json", {"hook_event_name": "Mystery"}] for host in HOST_CASES}
 
 # Work that never runs a speckit-pro skill, including reads of the clone's own skill sources.
 UNRELATED_CASES = {
@@ -141,55 +144,38 @@ class ScratchCloneGuardTests(unittest.TestCase):
     def setUp(self) -> None:
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
 
-    def assert_blocked(self, result: subprocess.CompletedProcess[str], event: str) -> None:
-        self.assertEqual(0, result.returncode, result.stderr)
-        self.assertIn(SCRATCH_KEY, block_reason(result.stdout, event))
-
-    def assert_exit(self, result: subprocess.CompletedProcess[str], code: int) -> None:
-        """Exit 0 with no output allows; exit 2 with a stderr reason blocks both events on both hosts."""
-        self.assertEqual(code, result.returncode, result.stdout + result.stderr)
-        self.assertEqual(code == 2, bool((result.stderr if code else result.stdout).strip()))
+    def assert_outcome(self, cases: dict, cwd: Path, outcome: str, env: dict[str, str] | None = None) -> None:
+        """Run every case from `cwd` and expect `outcome`: "allow", "block", or "error"."""
+        for host, payloads in cases.items():
+            for payload in payloads:
+                with self.subTest(host=host, payload=payload, cwd=cwd.name):
+                    result = run_guard(host, payload, cwd, env)
+                    if outcome == "block":
+                        self.assertEqual(0, result.returncode, result.stderr)
+                        self.assertIn(SCRATCH_KEY, block_reason(result.stdout, payload["hook_event_name"]))
+                        continue
+                    # Exit 2 with a stderr reason blocks both events on both hosts.
+                    code = 2 if outcome == "error" else 0
+                    self.assertEqual(code, result.returncode, result.stdout + result.stderr)
+                    self.assertEqual(code == 2, bool((result.stderr if code else result.stdout).strip()))
 
     def test_scratch_mark_decides_typed_and_model_calls_on_both_hosts(self) -> None:
-        for marked in (False, True):
-            clone = make_clone(self.root, marked=marked)
-            for host, cases in HOST_CASES.items():
-                for kind, payload in cases.items():
-                    with self.subTest(host=host, kind=kind, marked=marked):
-                        result = run_guard(host, payload, clone)
-                        if marked:
-                            self.assert_exit(result, 0)
-                        else:
-                            self.assert_blocked(result, payload["hook_event_name"])
+        self.assert_outcome(HOST_CASES, make_clone(self.root), "block")
+        self.assert_outcome(HOST_CASES, make_clone(self.root, marked=True), "allow")
 
     def test_unmarked_clone_allows_work_that_does_not_run_speckit_pro(self) -> None:
-        clone = make_clone(self.root)
-        for host, payloads in UNRELATED_CASES.items():
-            for payload in payloads:
-                with self.subTest(host=host, payload=payload):
-                    self.assert_exit(run_guard(host, payload, clone), 0)
+        self.assert_outcome(UNRELATED_CASES, make_clone(self.root), "allow")
 
     def test_environment_variables_never_mark_a_clone(self) -> None:
-        clone = make_clone(self.root)
-        for host, cases in HOST_CASES.items():
-            for kind, payload in cases.items():
-                with self.subTest(host=host, kind=kind):
-                    self.assert_blocked(run_guard(host, payload, clone, MARK_LOOKALIKES), payload["hook_event_name"])
+        self.assert_outcome(HOST_CASES, make_clone(self.root), "block", MARK_LOOKALIKES)
 
     def test_hook_errors_fail_closed_on_both_hosts(self) -> None:
         bad_mark = make_clone(self.root, marked="not-a-bool")
-        for host, cases in HOST_CASES.items():
-            with self.subTest(host=host, error="malformed payload"):
-                self.assert_exit(run_guard(host, "{not json", bad_mark), 2)
-            with self.subTest(host=host, error="unknown event"):
-                self.assert_exit(run_guard(host, {"hook_event_name": "Mystery"}, bad_mark), 2)
-            for kind, payload in cases.items():
-                with self.subTest(host=host, kind=kind, error="unreadable mark"):
-                    self.assert_exit(run_guard(host, payload, bad_mark), 2)
-                with self.subTest(host=host, kind=kind, error="not a clone"):
-                    outside = self.root / f"outside-{host}-{kind}"
-                    outside.mkdir()
-                    self.assert_exit(run_guard(host, payload, outside), 2)
+        outside = self.root / "outside"
+        outside.mkdir()
+        self.assert_outcome(UNREADABLE_CASES, bad_mark, "error")
+        self.assert_outcome(HOST_CASES, bad_mark, "error")
+        self.assert_outcome(HOST_CASES, outside, "error")
 
 
 def build_suite() -> unittest.TestSuite:
