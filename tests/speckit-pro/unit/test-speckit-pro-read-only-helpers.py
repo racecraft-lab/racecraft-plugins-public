@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import functools
 import hashlib
 import json
@@ -46,6 +47,7 @@ PR_PACKET_SCHEMA = (
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "tests" / "speckit-pro" / "lib"))
+from script_loader import load_script  # noqa: E402
 from host_skill_views import host_skill_root  # noqa: E402
 
 CONFIDENCE_GATE_RUNBOOKS = (
@@ -60,6 +62,7 @@ from speckit_pro_runner.pr_contract import PACKET_TITLE_SCOPE_PATTERN, PACKET_TI
 
 EXPECTED_HELPERS = [
     "formal-doctor",
+    "scaffold-answers",
     "helper-registry-dispatch",
     "check-prerequisites",
     "resolve-workflow-binding",
@@ -104,6 +107,7 @@ EXPECTED_HELPERS = [
 JSON_STDOUT_PARITY_HELPERS = {"atomicity-route"}
 
 HELPER_CASES: dict[str, dict[str, object]] = {
+    "scaffold-answers": {"answers_file": "missing-answers.json", "spec_id": "SPEC-009"},
     "formal-doctor": {"repo_root": ".", "workflow_file": "tests/speckit-pro/unit/fixtures/formal-methods/disabled-workflow.md"},
     "check-prerequisites": {"workflow_file": WORKFLOW_FILE},
     "resolve-workflow-binding": {"workflow_file": AUTOPILOT_STAGE_WORKFLOW_FILE},
@@ -4305,7 +4309,7 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
 
     def test_helper_python_authoritative_records(self) -> None:
         for helper_id in self.filtered_helpers():
-            if helper_id == "helper-registry-dispatch":
+            if helper_id in {"helper-registry-dispatch", "scaffold-answers"}:
                 continue
             with self.subTest(helper_id=helper_id):
                 completed, response, stderr_records = run_runner(helper_request(helper_id, HELPER_CASES[helper_id]))
@@ -4588,6 +4592,133 @@ class PlanLayersPlannerCaseTests(unittest.TestCase):
                 self.assertEqual(found, expected)
 
 
+class ScaffoldAnswersTests(unittest.TestCase):
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        previous = Path.cwd()
+        os.chdir(self.root)
+        self.addCleanup(os.chdir, previous)
+        self.document = {
+            "schema_version": "scaffold-answers/v1", "spec_id": "SPEC-009",
+            "answers": {
+                "goals": "List and inspect saved items.", "non_goals": "Network access.",
+                "module_interface_deltas": "Two CLI subcommands.", "terms": "Item: a saved entry.",
+                "verification_gates": "pytest", "design_tree": "Why CLI? Scriptable local use.",
+                "open_questions": "None.", "bootstrap_commands": [],
+                "quality_gate_confirmation": True, "formal_methods": False, "verification_docker": False,
+                "continue_to_planning": False,
+            },
+        }
+
+    def check(self, **inputs):
+        (self.root / "answers.json").write_text(json.dumps(self.document), encoding="utf-8")
+        _, result, _ = run_runner(helper_request("scaffold-answers", {
+            "answers_file": "answers.json", "spec_id": "SPEC-009", **inputs,
+        }), cwd=self.root)
+        return result
+
+    def test_missing_answer_names_the_key_and_stops(self):
+        del self.document["answers"]["formal_methods"]
+        result = self.check()
+        self.assertEqual("expected_failure", result["status"], result)
+        self.assertIn("formal_methods", result["data"]["problems"][0])
+        self.assertEqual("stop", result["data"]["verdict"])
+
+    def test_unknown_key_or_answer_names_the_key(self):
+        for key, value in (("surprise", True), ("goals", "unknown"), ("formal_methods", "maybe"),
+                           ("bootstrap_commands", ["python3 -m venv .venv"]),
+                           ("bootstrap_commands", ["python3 -c 'from pathlib import Path; Path(\"bootstrap-ran\").touch()'"])):
+            with self.subTest(key=key):
+                previous = self.document["answers"].copy()
+                self.document["answers"][key] = value
+                result = self.check()
+                self.assertEqual("expected_failure", result["status"])
+                self.assertIn(key, str(result["data"]["problems"]))
+                self.assertFalse(result["data"]["questions_allowed"])
+                self.assertFalse((self.root / "bootstrap-ran").exists())
+                self.document["answers"] = previous
+
+    def test_complete_file_returns_answers_without_questions_or_writes(self):
+        result = self.check()
+        self.assertEqual("ok", result["status"])
+        self.assertEqual(self.document["answers"], result["data"]["answers"])
+        self.assertFalse(result["data"]["questions_allowed"])
+        self.assertEqual(["answers.json"], sorted(path.name for path in self.root.iterdir()))
+
+
+def receipt():
+    return {
+        "schema_version": "canary-receipt/v1", "commit": "a" * 40, "host": "codex",
+        "host_version": "0.1.0", "plugin_version": "1.0.0", "fixture_tag": "v1",
+        "trigger": "local", "dirty_tree": True, "release_status_allowed": False,
+        "install_probe": {"headless_install": "passed", "skill_expansion": "passed", "evidence": "probe.json"},
+        "variants": [{
+            "name": "base", "verdict": "pass", "failed_assertions": [],
+            "umask": "077", "task_list_calls": 0, "questions_after_scaffold": 0,
+            "unregistered_stops": 0, "planning_end": "artifacts_and_draft_pr",
+            "implement_end": "ready_for_uat", "uat_runbook": "uat.md",
+            "decisions_by_kind": {"design": 2}, "retry_attempts": 0, "blocked_for_uat": 0,
+            "stages": {name: {"wall_seconds": 1, "tokens": 10, "wall_budget_seconds": 5, "token_budget": 100}
+                       for name in ("scaffold", "plan", "plan_review", "implement")},
+        }],
+    }
+
+
+class CanaryReceiptTests(unittest.TestCase):
+    def setUp(self):
+        self.validator = load_script("canary_receipt", REPO_ROOT / "tests/speckit-pro/layer6-integration/validate-canary-receipt.py")
+
+    def test_accepts_a_well_formed_local_receipt_for_each_host(self):
+        for host in ("claude-code", "codex"):
+            value = receipt()
+            value["host"] = host
+            if host == "claude-code":
+                value["install_probe"] = {"loaded_plugins": ["speckit-pro@1.0.0"], "evidence": "init.json"}
+            self.assertEqual([], self.validator.validate_receipt(value))
+
+    def test_rejects_questions_nonterminal_plan_missing_runbook_and_unregistered_stop(self):
+        for key, bad in (("questions_after_scaffold", 1), ("planning_end", "paused"),
+                         ("uat_runbook", ""), ("unregistered_stops", 1)):
+            with self.subTest(key=key):
+                value = copy.deepcopy(receipt())
+                value["variants"][0][key] = bad
+                self.assertTrue(self.validator.validate_receipt(value), key)
+
+    def test_rejects_base_tools_budget_failures_and_local_release_status(self):
+        for key, bad in (("umask", "022"), ("task_list_calls", 1), ("verdict", "fail")):
+            with self.subTest(key=key):
+                value = receipt()
+                value["variants"][0][key] = bad
+                self.assertTrue(self.validator.validate_receipt(value), key)
+        value = receipt()
+        value["release_status_allowed"] = True
+        self.assertTrue(self.validator.validate_receipt(value))
+        for key in ("wall_seconds", "tokens"):
+            value = receipt()
+            value["variants"][0]["stages"]["plan"][key] = 999
+            self.assertTrue(self.validator.validate_receipt(value), key)
+
+    def test_rejects_a_failed_codex_probe(self):
+        value = receipt()
+        value["install_probe"]["skill_expansion"] = "failed"
+        self.assertTrue(self.validator.validate_receipt(value))
+
+    def test_rejects_nonfinite_stage_evidence_through_api_and_cli(self):
+        for key in ("wall_seconds", "wall_budget_seconds"):
+            for number in (float("nan"), float("inf"), -float("inf")):
+                value = receipt()
+                value["variants"][0]["stages"]["plan"][key] = number
+                with self.subTest(key=key, number=str(number)), tempfile.TemporaryDirectory() as directory:
+                    source = Path(directory) / "receipt.json"
+                    source.write_text(json.dumps(value), encoding="utf-8")
+                    completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
+                                               capture_output=True, text=True, check=False)
+                    self.assertEqual(1, completed.returncode, completed.stdout)
+                    self.assertTrue(self.validator.validate_receipt(value))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--helper", choices=EXPECTED_HELPERS)
@@ -4595,7 +4726,7 @@ def main() -> int:
     _ReadOnlyHelperRunner.helper_filter = args.helper
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                                for case in (ReadOnlyHelperTests, PlanLayersRepairRouteTests, PlanLayersPlannerCaseTests,
-                                            PacketTitlePatternTests))
+                                            PacketTitlePatternTests, ScaffoldAnswersTests, CanaryReceiptTests))
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     total = result.testsRun
     failed = len(result.failures) + len(result.errors)

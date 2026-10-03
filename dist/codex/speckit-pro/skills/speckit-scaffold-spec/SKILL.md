@@ -1,6 +1,6 @@
 ---
 name: speckit-scaffold-spec
-description: "Use this skill when the user wants to set up, scaffold, bootstrap, prep, initialize, or prepare a SPEC-ID from the technical roadmap for autonomous execution. Triggers on: set up SPEC-XXX, scaffold SPEC-XXX, bootstrap SPEC-XXX for development, prep SPEC-XXX, initialize the workspace for SPEC-XXX, prepare SPEC-XXX for the autonomous run, create a spec branch and workflow for SPEC-XXX, generate the workflow file for SPEC-XXX, I need a workflow file generated for SPEC-XXX, fill the prompts from the roadmap, pre-fill the workflow template, start working on SPEC-XXX, populate the workflow file for SPEC-XXX. Opens with a blind-spot pass, creates the git worktree, spec branch, Design Concept doc, and populated workflow file, then hands off to planning. Strictly interactive — requires a human to answer the grill-me questions. Not for checking roadmap status (use $speckit-status), running a populated workflow (use $speckit-autopilot), or SDD coaching (use $speckit-coach)."
+description: "Use this skill when the user wants to set up, scaffold, bootstrap, prep, initialize, or prepare a SPEC-ID from the technical roadmap for autonomous execution. Triggers on: set up SPEC-XXX, scaffold SPEC-XXX, bootstrap SPEC-XXX for development, prep SPEC-XXX, initialize the workspace for SPEC-XXX, prepare SPEC-XXX for the autonomous run, create a spec branch and workflow for SPEC-XXX, generate the workflow file for SPEC-XXX, I need a workflow file generated for SPEC-XXX, fill the prompts from the roadmap, pre-fill the workflow template, start working on SPEC-XXX, populate the workflow file for SPEC-XXX. Opens with a blind-spot pass, creates the git worktree, spec branch, Design Concept doc, and populated workflow file, then hands off to planning. Accepts --answers-file for unattended setup; otherwise interviews the user. Not for checking roadmap status (use $speckit-status), running a populated workflow (use $speckit-autopilot), or SDD coaching (use $speckit-coach)."
 ---
 
 # SpecKit Scaffold Spec
@@ -110,7 +110,7 @@ does not block the remaining scaffold workflow, but it must be recorded.
 
 ```text
 $speckit-scaffold-spec SPEC-009
-$speckit-scaffold-spec SPEC-008
+$speckit-scaffold-spec SPEC-008 --answers-file answers.json
 ```
 
 ## Input
@@ -118,11 +118,12 @@ $speckit-scaffold-spec SPEC-008
 Accept:
 
 - a required `SPEC-ID` such as `SPEC-009`
+- an optional `--answers-file <repo-relative JSON path>` for unattended setup
 - an optional technical roadmap path if the user already knows it
 - an optional worktree root override if the repository uses a nonstandard
   location
 
-If the request does not include a SPEC-ID, stop and ask for it. Everything
+If the request does not include a SPEC-ID, stop; ask for it only in interactive mode. Everything
 else should be derived from the repository.
 
 ## Hard Constraints
@@ -142,7 +143,7 @@ else should be derived from the repository.
 - Never run the autopilot at the end. Setup stops once the workflow is ready,
   committed, and pushed, and prints the hand-off Step 9 defines. The operator
   runs it.
-- Always run the Grill Me interview before writing the workflow file. The
+- In interactive mode, always run the Grill Me interview before writing the workflow file. The
   Design Concept doc is a required setup output, not optional. Setup must not
   attempt to fabricate design-concept content if grill-me aborts.
 
@@ -160,6 +161,41 @@ The generated workflow's `Branch` field is the actual dedicated branch
 returned by `resolve-scaffold-worktree-placement` and verified inside the
 worktree. Never write `main`, a guessed branch, or a display label into that
 field.
+
+## Answers-file mode
+
+With `--answers-file`, first call runner helper `scaffold-answers` in
+`read_only` mode with `inputs.answers_file` and `inputs.spec_id`. Run it from
+the task checkout before any mutation, retain its returned answers across the
+worktree change, and proceed only on `status=ok`. On failure, print
+`data.problems[]` and end scaffold. `data.questions_allowed=false` applies to
+all later steps, including bootstrap, offers, artifact replacement and handoff.
+Report any additional required answer by its key and end rather than asking.
+
+The JSON contract is `schema_version: "scaffold-answers/v1"`, the invocation's
+`spec_id`, and an `answers` object. Its interview keys are `goals`, `non_goals`,
+`module_interface_deltas`, `terms`, `verification_gates`, `design_tree`, and
+`open_questions`, each holding the user's text for the corresponding Design
+Concept section. Supply explicit booleans for `quality_gate_confirmation`,
+`formal_methods`, `verification_docker`, and `continue_to_planning`.
+`bootstrap_commands` must be `[]`; the helper rejects supplied commands.
+Prepare dependencies through interactive approval before unattended scaffold.
+The helper owns validation of these keys and values.
+
+Continue the blind-spot pass. At Step 4, instead of invoking interactive
+Grill Me, write the Design Concept using the validated interview answers and
+the shared `grill-me/references/output-formats.md` layout. Preserve the supplied
+Q&A log, mark the source as the answers file, record zero questions asked, and
+carry the blind-spot header. Leave an existing Design Concept unchanged and
+report the replacement answer needed. Unanswered findings remain Open Questions.
+
+Use the prepared environment and skip Step 3.5 bootstrap. Present the quality-gate
+confirmation, formal-methods offer and verification-Docker offer, and record
+their file answers. Carry accepted selections from `verification_gates` into
+the workflow; a selection needing more details ends with the missing key.
+At Step 9, use `continue_to_planning` for the closing report and print the
+planning command. The operator still starts planning as a separate invocation.
+The interactive instructions below apply when `--answers-file` is absent.
 
 ## What to Do
 
@@ -592,7 +628,7 @@ continue/abort prompt** between the two.
 
 <hard_constraints>
 
-**This step is mandatory.** Every scaffold invocation runs grill-me before
+**This step is mandatory in interactive mode.** Every interactive scaffold invocation runs grill-me before
 the workflow file is written. There is no `--no-grill` flag and no skip
 path — the interview is what makes the workflow prompts good enough for
 autonomous execution.

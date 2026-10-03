@@ -166,6 +166,7 @@ ack dead-code:new-symbol 1db712eaf051d08e 0 cid=ead931b87488897f by=tests/specki
 ack dead-code:new-symbol 1dc068d7be8e3f77 0 cid=10f8321f9caf2ed3 Test methods are discovered by unittest, so a static call graph sees no caller.
 ack dead-code:new-symbol 1dd721e0ed56854e 0 cid=a04c2a6d86d5cea8 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 1ddf4a220675c476 0 cid=ae5f1a5273fc37c7 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol 1dfe7be03b644ca7 0 CanaryReceiptTests.setUp runs via unittest discovery; full read-only helper suite executes 163 tests without skips
 ack dead-code:new-symbol 1e47052ba2153d98 0 cid=0b847b4b6612e67b unittest discovers test_ methods through its test loader, so they have no static caller
 ack dead-code:new-symbol 1e57971015a15f21 0 cid=b68f5cbbf8c4ee50 Check functions are passed by value in the assert_dispatch_fixture check list, which the dead-code scan does not follow as a call
 ack dead-code:new-symbol 1e6999556a8566ec 0 cid=0be71e6339d1b1cb unittest discovers test_ methods by name and the module's __main__ suite loads this class, so the method is not dead code
@@ -287,6 +288,7 @@ ack dead-code:new-symbol 4ce1df5ebd18b517 0 cid=3e4822dede95b6ef unittest discov
 ack dead-code:new-symbol 4d187f78ffe44467 0 cid=bd233423466895c1 unittest discovers test_ methods by name, and the nested helpers are passed by value as mock side effects, so dead-code is a false positive
 ack dead-code:new-symbol 4d498de420060d46 0 cid=78e3dbd206e0e753 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 4dbb4a9a523992f9 0 cid=11c76972da971560 dead-code: unittest discovers test_ methods by name; verbosity: suite-manifest.json must list each registered test file, one line
+ack dead-code:new-symbol 4dd33f043dc9e1aa 0 ScaffoldAnswersTests.test_unknown_key_or_answer_names_the_key runs via unittest discovery and exercises the runner CLI
 ack dead-code:new-symbol 4eab2c161424d5a0 0 cid=d72be6abb4c1f750 Referenced only as entries in the _VALUE_CHECKS dispatch tuple in json_schema_failures, which the dead-code scan does not count as a call
 ack dead-code:new-symbol 4f652b9f39154941 0 cid=e87ce4aad69aaf1b Test methods are discovered by unittest, so a static call graph sees no caller.
 ack dead-code:new-symbol 4f90107c46cbc891 0 cid=401ec11d4cce2239 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
@@ -321,6 +323,7 @@ ack dead-code:new-symbol 59351005d8c5cad9 0 cid=eaa17f61108737a1 unittest discov
 ack dead-code:new-symbol 5983a6984c665a6f 0 cid=593731bf5ff1b607 unittest methods and a patch side_effect closure are invoked by the runner and by mock, not by a call site
 ack dead-code:new-symbol 5ae1bcf5a5539a06 0 cid=0c7053783e55da85 by=tests/speckit-pro/unit/test-gh-json.py unittest discovers and runs test_ methods by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 5af4050eeb941687 0 cid=7f4e25b389eacbc5 unittest discovers and runs test_ methods by name, and a patched-in subprocess stand-in is passed as side_effect; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol 5b87a24ee5f6a5e0 0 ScaffoldAnswersTests.test_missing_answer_names_the_key_and_stops runs via unittest discovery and exercises the runner CLI
 ack dead-code:new-symbol 5c0570951fc80ed0 0 cid=8e55e9b179857fcc unittest discovers these test methods through loadTestsFromTestCase in main(); no direct caller is expected
 ack dead-code:new-symbol 5c0ab2e53841f910 0 cid=ae2e21cfb41be4dd unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 5c273fc30b994ff2 0 cid=578d1b51c91d7dd5 Handlers are registered as values in the PR_EMISSION_HANDLERS table in helpers/registry.py, and test_ methods are found by unittest by name; neither is a direct call the dead-code scan can see
@@ -432,7 +435,9 @@ ack dead-code:new-symbol 8331c441ac388954 0 cid=1dca499566123c96 unittest method
 ack dead-code:new-symbol 834fc1e2495d25d4 0 cid=dd1a8d14022a272d by=tests/speckit-pro/unit/test-gh-json.py unittest discovers and runs test_ methods by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 83ace459b013ae3c 0 cid=3038e327e75c5481 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 83d8c87439081d4f 0 cid=aec54ae23f068cfc unittest discovers test_ methods by name through loadTestsFromTestCase or loadTestsFromModule, so no static caller exists
+ack dead-code:new-symbol 84081e72cf33c19a 0 ScaffoldAnswersTests.test_complete_file_returns_answers_without_questions_or_writes runs via unittest discovery and exercises the runner CLI
 ack dead-code:new-symbol 840f02331d3c95ee 0 cid=94ad8d92809c630b Test methods are discovered by unittest, so a static call graph sees no caller.
+ack dead-code:new-symbol 8425f2e0acba0020 0 CanaryReceiptTests.test_rejects_base_tools_budget_failures_and_local_release_status runs via unittest discovery
 ack dead-code:new-symbol 845e906687657975 0 cid=cc1e49ec697f30d7 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 8463435dd44c073c 0 cid=019ab343c1f3ec2d unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 8480996d36d5a476 0 cid=56eb6f0bc1437fd2 Called from test-feedback-sweep-isolation.py through a sys.path import that the dead-code scan does not resolve (--uses=git_stdout lists 11 call sites)
@@ -494,6 +499,7 @@ ack dead-code:new-symbol 92c2d100ef974bec 0 cid=750a90641ec8035e unittest discov
 ack dead-code:new-symbol 92ef6d4aa5b50bf6 0 cid=1220b2b10eadc08e unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 9339449996a71b8a 0 cid=9e4d27fa3651d824 unittest discovers and runs test_ methods and setUp hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 94108ba7ce8bfdeb 0 cid=42af7b134ca5b95c unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol 94624b00c9faf813 0 CanaryReceiptTests.test_rejects_nonfinite_stage_evidence_through_api_and_cli ran red with three failures, then green through discovery
 ack dead-code:new-symbol 95025f735435cc67 0 cid=97621b3f8024dd02 ast.NodeVisitor dispatches visit_<NodeType> methods by name, so nothing calls them directly
 ack dead-code:new-symbol 951faa0c38daf439 0 cid=dbb1025093097c11 Referenced only as entries in the _VALUE_CHECKS dispatch tuple in json_schema_failures, which the dead-code scan does not count as a call
 ack dead-code:new-symbol 9526cce331d67bec 0 cid=71e52009c6e9870a Referenced only as values in the VARIANTS dispatch table (test-ratify-pr-split.py), which the dead-code scan does not follow
@@ -568,6 +574,7 @@ ack dead-code:new-symbol a6fa55253f7260c8 0 cid=99ba5e0e4f1ca2c8 ast.NodeVisitor
 ack dead-code:new-symbol a702c9a15826e028 0 cid=79fa5e05ae1e3afd unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol a77fc793a76c213e 0 cid=143a2af488f7fa65 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol a80df95b21920a7b 0 cid=6e189e7fce446ed4 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol a81ca90ae5ab9a42 0 CanaryReceiptTests.test_rejects_a_failed_codex_probe runs via unittest discovery
 ack dead-code:new-symbol a8268697f36b86ee 0 cid=64978f99e3585a1a unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol a836df12ca16e4c7 0 cid=3629deb71cdedaac dead-code: unittest discovers test_ methods by name
 ack dead-code:new-symbol a9a97f8056584cdd 0 cid=92e249bb91a41a3f unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
@@ -625,6 +632,7 @@ ack dead-code:new-symbol b8b2ed790f2a48ab 0 cid=d5c6a445daa7bd5f unittest discov
 ack dead-code:new-symbol b8fee45f6334c7ca 0 cid=70f26bb3e7473a90 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol b98643e94902783c 0 cid=17a4ab65094ee7df unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol b9a7be287f2b9c16 0 cid=1b2ae9a03a43a104 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol b9de123f7348eb5a 0 CanaryReceiptTests.test_rejects_questions_nonterminal_plan_missing_runbook_and_unregistered_stop runs via unittest discovery
 ack dead-code:new-symbol b9f9561c4365d34a 0 cid=af6c71174463d2b7 unittest discovers these test methods through loadTestsFromTestCase in main(); no direct caller is expected
 ack dead-code:new-symbol ba8f4d8c610c4a01 0 cid=6fdf918e63e1e026 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol bb784a456b1f87dc 0 unittest loader executes ValidateRoadmapFreeze.test_open_roadmap_specs_are_frozen; focused suite and execution profile prove this method runs; no direct static caller
@@ -633,6 +641,7 @@ ack dead-code:new-symbol bc5a5bb6773c3bbe 0 cid=68d514d506426462 unittest discov
 ack dead-code:new-symbol bd5fb606bbb65ca1 0 cid=26b5c2ad334ba0ad unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol bd8ddca95aebe6f6 0 cid=6acdbf510a8a1bde unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol be01f046d03b2a83 0 cid=e5bae674b8496103 unittest discovers and runs test_ methods by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol be3f92602d4c6795 0 CanaryReceiptTests.test_accepts_a_well_formed_local_receipt_for_each_host runs via unittest discovery
 ack dead-code:new-symbol befdf94e443c8b44 0 cid=946ee972dd8f85f2 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol bf05449b1020ad42 0 cid=6c76c1b31fb71aab unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol bf8d760375b61d2e 0 cid=ddef8b6e6859aa3e unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
@@ -738,6 +747,7 @@ ack dead-code:new-symbol e35f45cc5e3dc691 0 cid=eb77c838f94a331e unittest discov
 ack dead-code:new-symbol e36a3db7fa43f7ea 0 cid=8e545f91a8fab369 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol e48bcf5d33752887 0 cid=e4a5c689dccc3643 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol e4f43fe9391fadea 0 cid=efef6d412c3f44a9 unittest discovers test_ methods by name through loadTestsFromTestCase, so no static caller exists
+ack dead-code:new-symbol e4f8071fd2c78bd4 0 ScaffoldAnswersTests.setUp runs via unittest discovery; full read-only helper suite executes 163 tests without skips
 ack dead-code:new-symbol e51ec396e2684e6e 0 cid=21bc322c5a414c02 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol e55447a98846f7f3 0 cid=a7eb281099f4c2e3 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol e6a771cd1383c9bb 0 cid=10f8561788570c9f unittest discovers test_ methods by name through loadTestsFromTestCase or loadTestsFromModule, so no static caller exists
@@ -911,9 +921,10 @@ ack verbosity 0edd831bc89ebf13 61 cid=77b6a3764b1d3fda generated data, not code:
 ack verbosity 0fae500ad05ce64b 69 cid=18f7db06f3cb06c9 Moved verbatim from native_eval_adapters.py by the per-host split; the body is AST-identical to the baseline except module-qualified references, so this shape predates the change
 ack verbosity 1230306e639aaa81 121 cid=db4dbce330809eba Roster of fixed-shape role records; the growth is the one required consensus-tiebreaker record the agent contract needs
 ack verbosity 13467dfb33da8f49 63 cid=d8b75398550bde6d Moved unchanged from speckit_pro_runner/gates/active_path_guard.py when that module was split into a package by guard; the body and its metrics match the baseline, so the finding is pre-existing, not new code
+ack verbosity 1807ced25b58c509 325 HELPERS is a declarative registration table; scaffold-answers adds one row checked by registry and fixture parity tests
 ack verbosity 1be0a284b35287da 63 cid=3c42e90bcd0179b3 Moved verbatim from helpers/read_only.py or helpers/mutation.py into a core module so core code can import it at module level; the body is AST-identical to the baseline, so this shape predates the change
 ack verbosity 1c0215987ad8c5e5 194 cid=3b36a346d081996a Moved unchanged from speckit_pro_runner/gates/active_path_guard.py when that module was split into a package by guard; the body and its metrics match the baseline, so the finding is pre-existing, not new code
-ack verbosity 241807e773bf3c6d 946 cid=83a98d21abaccebe generated runner inventory lists one row per shipped module; the new shared modules add rows | prior: Generated runner manifest: runner_files lists every shipped runner module, so it grows by one line per new module; the file is written by refresh-release-artifacts.py, not authored
+ack verbosity 241807e773bf3c6d 962 Generated runner inventory gains scaffold_answers.py; refresh-release-artifacts.py --check verifies the data table, not executable routine length
 ack verbosity 242676af6c52ed9e 86 cid=5c93eafd4f50ce4b Moved unchanged from speckit_pro_runner/gates/active_path_guard.py when that module was split into a package by guard; the body and its metrics match the baseline, so the finding is pre-existing, not new code
 ack verbosity 247794072c0b0593 63 cid=043733999d0b59a4 Moved unchanged from speckit_pro_runner/gates/active_path_guard.py when that module was split into a package by guard; the body and its metrics match the baseline, so the finding is pre-existing, not new code
 ack verbosity 25f35fa33649e4fe 73 cid=fcc60ddf0ce0962e Moved unchanged from speckit_pro_runner/gates/active_path_guard.py when that module was split into a package by guard; the body and its metrics match the baseline, so the finding is pre-existing, not new code
@@ -954,6 +965,7 @@ ack verbosity 8666a6724d3a8643 73 cid=8ea897b046e4f0e2 Moved unchanged from help
 ack verbosity 895390fe23a2341d 80 cid=1d21106ce8692c0d Moved verbatim from helpers/read_only.py or helpers/mutation.py into a core module so core code can import it at module level; the body is AST-identical to the baseline, so this shape predates the change
 ack verbosity 8b2c02fdb63cfc6b 80 cid=118ec6c8e93f8547 Test class moved verbatim into a file named for its concern; its length is unchanged
 ack verbosity 90ea9e57242fd3b3 67 cid=f34663148efa9be5 Moved verbatim from helpers/read_only.py or helpers/mutation.py into a core module so core code can import it at module level; the body is AST-identical to the baseline, so this shape predates the change
+ack verbosity 95102a9b44051593 499 Read-only helper fixture manifest is declarative data; scaffold-answers adds one record checked against the registry
 ack verbosity 96792ad7b4c5c7e1 78 cid=db7696fb1ab710dc Moved from helpers/install.py by the split by job: bodies are AST-identical to the baseline, and normalize_install_inventory and run_doctor_helper are the unchanged validation and doctor branches lifted out of inventory_from_inputs and run_install_helper
 ack verbosity 9b457342f56bfea0 168 cid=b699fceb4043a710 developer_instructions is a Codex agent's whole model prompt, generated prose from its Claude agent source rather than code, so its line count cannot be split
 ack verbosity a6e940f6b2ff3d7e 61 cid=40bea55988a8d13d Moved from helpers/install.py by the split by job: bodies are AST-identical to the baseline, and normalize_install_inventory and run_doctor_helper are the unchanged validation and doctor branches lifted out of inventory_from_inputs and run_install_helper
@@ -978,7 +990,7 @@ ack verbosity c3fd2c0f7cc51848 185 cid=ebe733c6ba322d13 Moved unchanged from run
 ack verbosity caa25c1a5c928653 823 cid=5320d4491203172e fixture and manifest data grow by one key per corroboration case and one manifest registration line; there is no code to shrink
 ack verbosity cd19ec5f6860ce83 111 cid=1cfc58ebef88c341 developer_instructions is a Codex agent's whole model prompt, generated prose from its Claude agent source rather than code, so its line count cannot be split
 ack verbosity d21649206add6538 235 cid=9db2ca56889ab962 Test class moved verbatim into a file named for its concern; its length is unchanged
-ack verbosity d3ce633fcd37f895 125 cid=bba0a0880da53804 developer_instructions is a Codex agent's whole model prompt, generated prose from its Claude agent source rather than code, so its line count cannot be split
+ack verbosity d3ce633fcd37f895 126 Generated UAT agent prompt gains output-path evidence; agent instructions are prose, not an executable routine to split
 ack verbosity d99f7daab517ba3b 99 cid=50af0e1886d3742d Moved unchanged from run_codex_evals.py or run-trigger-evals.py into a library module; the baseline body has the same metrics, so the change did not make it worse
 ack verbosity df1fa656aa74f6c4 83 cid=7b929993c4f605b0 Moved unchanged from speckit_pro_runner/gates/active_path_guard.py when that module was split into a package by guard; the body and its metrics match the baseline, so the finding is pre-existing, not new code
 ack verbosity e04fe099c68b375c 62 cid=515ed336b9992acd Moved unchanged from helpers/pr_emission.py into its own module; the measure is the same as before the split, and the module split is the change this issue asks for
@@ -989,3 +1001,4 @@ ack verbosity e9d61e2de4be26f6 69 cid=a0d1bb281b24d40c Moved unchanged from help
 ack verbosity ea3d11c338c002aa 124 cid=1bf465ef16e77adf Moved unchanged from run_codex_evals.py or run-trigger-evals.py into a library module; the baseline body has the same metrics, so the change did not make it worse
 ack verbosity f138e97d9c143aab 77 cid=b205b7afe99ab0f8 developer_instructions is a Codex agent's whole model prompt, generated prose from its Claude agent source rather than code, so its line count cannot be split
 ack verbosity f7f6a7ece1c05656 248 cid=5365e90753588269 Test method grew by one or two lines to read a host's rendered skill view or write a fixture SKILL.md; the host-parity change needs the added step
+ack verbosity f8202e3bceff1b13 122 HELPER_CASES is fixture data; one scaffold-answers request grows its table, not an executable routine
