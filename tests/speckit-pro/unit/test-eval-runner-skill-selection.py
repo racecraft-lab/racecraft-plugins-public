@@ -641,7 +641,7 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
         normalized = " ".join(prerequisites.split())
 
         self.assertIn("use its project-local command contract as the Codex invocation path", normalized)
-        self.assertIn("Do not require a generated `$speckit-pro:speckit-archive-run` skill", normalized)
+        self.assertIn("Do not require a generated `$speckit-archive-run` skill", normalized)
         self.assertIn("Treat integration-specific frontmatter entries and manifest requirements", normalized)
         self.assertIn("Do not resolve or execute those entries from the Codex plugin", normalized)
         self.assertIn("`prerequisite_mode=codex_native_worktree_binding`", normalized)
