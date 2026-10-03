@@ -19,6 +19,6 @@ A repo hook enforces the ban on both hosts. It blocks speckit-pro skills invoked
 
 ## Consequences
 
-- Building the hook is an execution item in the program spec, not a map decision. On Claude Code it is a tracked project settings hook (`UserPromptSubmit` for typed commands, `PreToolUse` on `Skill` for model calls). On Codex it is a project `UserPromptSubmit` hook, which needs one-time trust.
+- Building the hook is an execution item in the program spec, not a map decision. On Claude Code it is a tracked project settings hook (`UserPromptSubmit` for typed commands, `PreToolUse` on `Skill` for model calls). On Codex it is a project `UserPromptSubmit` hook for typed `$skill` mentions, plus `PreToolUse` on `Bash` for model calls: Codex has no skill tool, so the hook blocks the model reading an installed speckit-pro `SKILL.md`. Both need one-time trust.
 - A Part D acceptance SPEC in this repo (HRNS-015) starts from scratch in a marked scratch clone, not in a worktree of the owner's checkout.
 - Every speckit-pro change during the program, a user-reported bug included, goes through the same flow.
