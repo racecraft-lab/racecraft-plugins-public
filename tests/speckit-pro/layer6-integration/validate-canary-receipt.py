@@ -2,7 +2,6 @@
 """Validate private canary evidence; this command never posts a release status."""
 
 import argparse
-import itertools
 import json
 import math
 from pathlib import Path
@@ -21,35 +20,37 @@ BUDGET_STAGES = ("scaffold", "plan", "implement")  # ADR 0016; plan_review is re
 METRICS = {"wall_seconds": (int, float), "tokens": (int,)}
 
 
-def budget_entry(limits, host, variant, stage):
-    entry = limits
-    for key in (host, variant, stage):
-        entry = entry.get(key) if isinstance(entry, dict) else None
-    if not isinstance(entry, dict) or set(entry) != set(METRICS):
-        raise ValueError(f"budget.{host}.{variant}.{stage}: needs exactly {sorted(METRICS)}")
-    return entry
+def keyed(node, keys, where):
+    """``node`` when it is an object with exactly ``keys``; anything else raises ValueError."""
+    if not isinstance(node, dict) or set(node) != set(keys):
+        raise ValueError(f"{where}: needs exactly {sorted(keys)}")
+    return node
 
 
-def is_limit(value, types):
-    """True for an unset (None) limit or a finite positive number of the metric's type."""
+def valid_limit(value, types):
+    """True for an unset (None) limit or a positive number of the metric's type; floats must be finite."""
     if value is None:
         return True
-    return not isinstance(value, bool) and isinstance(value, types) and math.isfinite(value) and value > 0
+    if isinstance(value, bool) or not isinstance(value, types) or value <= 0:
+        return False
+    return not isinstance(value, float) or math.isfinite(value)
 
 
 def check_budget(limits):
-    """Return ``limits`` when it sets or leaves unset every limit; anything else raises ValueError."""
-    for host, variant, stage in itertools.product(HOSTS, VARIANTS, BUDGET_STAGES):
-        entry = budget_entry(limits, host, variant, stage)
-        for metric, types in METRICS.items():
-            if not is_limit(entry[metric], types):
-                raise ValueError(f"budget.{host}.{variant}.{stage}.{metric}: must be null or a positive limit")
+    """Return ``limits`` when it sets or leaves unset exactly the budgeted limits; anything else raises ValueError."""
+    for host in keyed(limits, HOSTS, "budget.limits"):
+        for variant in keyed(limits[host], VARIANTS, f"budget.{host}"):
+            for stage in keyed(limits[host][variant], BUDGET_STAGES, f"budget.{host}.{variant}"):
+                entry = keyed(limits[host][variant][stage], METRICS, f"budget.{host}.{variant}.{stage}")
+                for metric, types in METRICS.items():
+                    if not valid_limit(entry[metric], types):
+                        raise ValueError(f"budget.{host}.{variant}.{stage}.{metric}: must be null or a positive limit")
     return limits
 
 
 def load_budget(path=BUDGET_FILE):
     document = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=unique_object)
-    if document.get("schema_version") != "canary-budget/v1":
+    if not isinstance(document, dict) or document.get("schema_version") != "canary-budget/v1":
         raise ValueError("budget.schema_version: expected canary-budget/v1")
     return check_budget(document.get("limits"))
 
@@ -63,15 +64,11 @@ def budget_checks(value, budget):
                 yield f"{variant['name']}.{stage}.{metric}", variant["stages"][stage][metric], limits[stage][metric]
 
 
-def unbudgeted_stages(value, budget=None):
-    budget = load_budget() if budget is None else budget
-    return [label for label, _actual, limit in budget_checks(value, budget) if limit is None]
-
-
-def validate_receipt(value, budget=None):
+def receipt_report(value, budget=None):
+    """The validator's verdict: failed assertions, plus each budgeted limit that is still unset."""
     problems = [f"{failure['field']}: {failure['message']}" for failure in json_schema_failures(value, SCHEMA, SCHEMA, "receipt")]
     if problems:
-        return problems
+        return {"valid": False, "failed_assertions": problems, "unbudgeted": []}
     if value["trigger"] == "local" and value["release_status_allowed"]:
         problems.append("local.release_status_allowed")
     probe = value["install_probe"]
@@ -83,10 +80,13 @@ def validate_receipt(value, budget=None):
         problems.append("install_probe.loaded_plugins")
     for variant in value["variants"]:
         problems.extend(variant_failures(variant))
-    budget = load_budget() if budget is None else budget
-    problems.extend(f"{label}_budget" for label, actual, limit in budget_checks(value, budget)
-                    if limit is not None and actual > limit)
-    return problems
+    checks = list(budget_checks(value, load_budget() if budget is None else budget))
+    problems.extend(f"{label}_budget" for label, actual, limit in checks if limit is not None and actual > limit)
+    return {"valid": not problems, "failed_assertions": problems, "unbudgeted": [label for label, _, limit in checks if limit is None]}
+
+
+def validate_receipt(value, budget=None):
+    return receipt_report(value, budget)["failed_assertions"]
 
 
 def variant_failures(variant):
@@ -115,14 +115,11 @@ def main():
     parser.add_argument("receipt", type=Path)
     args = parser.parse_args()
     try:
-        value = json.loads(args.receipt.read_text(encoding="utf-8"), object_pairs_hook=unique_object)
-        budget = load_budget()
-        problems = validate_receipt(value, budget)
-        unbudgeted = [] if json_schema_failures(value, SCHEMA, SCHEMA, "receipt") else unbudgeted_stages(value, budget)
+        report = receipt_report(json.loads(args.receipt.read_text(encoding="utf-8"), object_pairs_hook=unique_object))
     except (OSError, ValueError) as exc:
-        problems, unbudgeted = [str(exc)], []
-    print(json.dumps({"valid": not problems, "failed_assertions": problems, "unbudgeted": unbudgeted}))
-    return int(bool(problems))
+        report = {"valid": False, "failed_assertions": [str(exc)], "unbudgeted": []}
+    print(json.dumps(report))
+    return int(not report["valid"])
 
 
 if __name__ == "__main__":

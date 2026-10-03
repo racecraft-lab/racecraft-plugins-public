@@ -1,9 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Canary receipt v1", "type": "object", "additionalProperties": false,
+  "title": "Canary receipt v2", "type": "object", "additionalProperties": false,
   "required": ["schema_version", "commit", "host", "host_version", "plugin_version", "fixture_tag", "trigger", "dirty_tree", "release_status_allowed", "install_probe", "variants"],
   "properties": {
-    "schema_version": {"const": "canary-receipt/v1"},
+    "schema_version": {"const": "canary-receipt/v2"},
     "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
     "host": {"enum": ["claude-code", "codex"]},
     "host_version": {"$ref": "#/$defs/text"}, "plugin_version": {"$ref": "#/$defs/text"},

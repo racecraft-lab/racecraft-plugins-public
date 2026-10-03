@@ -43,7 +43,7 @@ The budget file (`tests/speckit-pro/layer6-integration/canary-budget.json`) sets
 
 ## Receipt
 
-Each run leaves one JSON canary receipt per host. It records the commit, host and plugin versions, fixture tag, and each variant's verdict with its failed assertions. It also records per-stage time and tokens against budget, questions after scaffold, unregistered stops, decisions-list counts by kind, retry-ladder attempts and the blocked-for-UAT count. Receipts plus redacted transcripts and run state are stored as private-repo artifacts for 90 days. The receipt schema and its validator live in `tests/speckit-pro/layer6-integration/`.
+Each run leaves one JSON canary receipt per host. It records the commit, host and plugin versions, fixture tag, and each variant's verdict with its failed assertions. It also records per-stage time and tokens, which the validator checks against the budget file, questions after scaffold, unregistered stops, decisions-list counts by kind, retry-ladder attempts and the blocked-for-UAT count. Receipts plus redacted transcripts and run state are stored as private-repo artifacts for 90 days. The receipt schema and its validator live in `tests/speckit-pro/layer6-integration/`.
 
 ## Authentication
 
