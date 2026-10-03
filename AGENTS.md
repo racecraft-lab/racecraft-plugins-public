@@ -324,7 +324,7 @@ in step.
 - **Triage labels:** the five default role labels. See
   `docs/agents/triage-labels.md`.
 - **Phase lock:** take only `ready-for-agent` tickets. `.github/open-phase`
-  names the open phase; the `phase-lock` PR check fails a PR that closes a
+  names the open phase; the Phase Lock PR check fails a PR that closes a
   later-phase issue, and the Phase Unlock workflow swaps `phase-locked` for the
   pickup label when that file changes on main. Leave `phase-locked` for the
   workflow to remove; never remove it by hand.

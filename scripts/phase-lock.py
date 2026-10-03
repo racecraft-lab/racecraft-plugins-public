@@ -70,10 +70,9 @@ def parse_phase(text: str, source: str) -> str:
 
 def read_open_phase(path: Path) -> str:
     try:
-        text = path.read_text(encoding="utf-8")
+        return parse_phase(path.read_text(encoding="utf-8"), path.name)
     except (OSError, UnicodeDecodeError) as exc:
         raise PhaseLockError(f"cannot read {path.name}: {exc}") from exc
-    return parse_phase(text, path.name)
 
 
 def issue_phase(labels: Sequence[str]) -> str | None:

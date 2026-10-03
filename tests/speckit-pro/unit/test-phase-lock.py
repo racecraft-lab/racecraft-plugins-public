@@ -8,6 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from typing import Any
+from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -49,9 +50,7 @@ def pr_payload(*issues: tuple[int, list[str]], main_phase: str | None = None) ->
 
 class PhaseLockCheckTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.tmp.cleanup)
-        self.open_phase_file = Path(self.tmp.name) / "open-phase"
+        self.open_phase_file = Path(self.enterContext(tempfile.TemporaryDirectory())) / "open-phase"
 
     def check(self, payload: dict[str, Any], open_phase: str | None = "phase-1") -> int:
         if open_phase is not None:
@@ -84,9 +83,7 @@ class PhaseLockCheckTests(unittest.TestCase):
             self.assertEqual(self.check(payload, open_phase=text), 1, text)
 
     def test_api_failure_or_truncated_list_fails_closed(self) -> None:
-        def broken(_argv: Any) -> dict[str, Any]:
-            raise phase_lock.PhaseLockError("gh api failed")
-
+        broken = mock.Mock(side_effect=phase_lock.PhaseLockError("gh api failed"))
         self.open_phase_file.write_text("phase-1\n", encoding="utf-8")
         self.assertEqual(
             phase_lock.check_pr("owner/repo", 7, open_phase_file=self.open_phase_file, api=broken), 1
@@ -125,16 +122,16 @@ class UnlockPlanTests(unittest.TestCase):
 
 
 class WiringTests(unittest.TestCase):
-    def test_pr_metadata_runs_the_check_with_read_only_issue_access(self) -> None:
-        text = (WORKFLOWS / "pr-metadata.yml").read_text(encoding="utf-8")
-        job = text[text.index("  phase-lock:\n"):]
-        for needle in ("issues: read", "pull-requests: read", "run: python3 scripts/phase-lock.py check-pr"):
-            self.assertIn(needle, job)
+    WIRING = {
+        "phase-lock.yml": ("issues: read", "pull-requests: read", "run: python3 scripts/phase-lock.py check-pr"),
+        "phase-unlock.yml": ("branches: [main]", "paths: [.github/open-phase]", "run: python3 scripts/phase-lock.py unlock"),
+    }
 
-    def test_unlock_runs_when_the_open_phase_file_changes_on_main(self) -> None:
-        text = (WORKFLOWS / "phase-unlock.yml").read_text(encoding="utf-8")
-        for needle in ("branches: [main]", "paths: [.github/open-phase]", "run: python3 scripts/phase-lock.py unlock"):
-            self.assertIn(needle, text)
+    def test_workflows_run_the_check_on_prs_and_the_unlock_on_main(self) -> None:
+        for workflow, needles in self.WIRING.items():
+            text = (WORKFLOWS / workflow).read_text(encoding="utf-8")
+            for needle in needles:
+                self.assertIn(needle, text, workflow)
 
     def test_tracked_open_phase_file_is_valid(self) -> None:
         self.assertIn(phase_lock.read_open_phase(phase_lock.OPEN_PHASE_FILE), phase_lock.PHASES)
