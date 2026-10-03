@@ -1224,7 +1224,7 @@ def resolve_scaffold_worktree_placement(inputs: dict[str, Any], repo_root: Path)
                 task_root,
                 branch_name,
                 worktree_root=canonical_target,
-                problems=["descendant worktree target is not ignored by Git"],
+                problems=["descendant worktree target is not ignored by Git; run speckit-install (or speckit-upgrade for an existing install) to add the .worktrees/ ignore rule, commit it, then rerun scaffold"],
             )
             return make_result(json_text(payload), exit_code=1)
         if ignore_check.returncode != 0:
