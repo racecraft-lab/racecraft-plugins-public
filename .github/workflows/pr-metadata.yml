@@ -1,14 +1,15 @@
-# PR Metadata — validates the PR title and the release-note block.
+# PR Metadata — validates the PR title, the release-note block, and the phase
+# lock on the issues the PR closes.
 #
-# These two checks read only the title, body, and labels, so they live apart
+# These checks read only PR and issue metadata, so they live apart
 # from PR Checks. A title, body, or label edit reruns them in seconds without
-# rerunning the full test suite. The job names are the required status-check
-# contexts, so they must not change. Draft PRs are skipped.
+# rerunning the full test suite. The title and release-note job names are
+# required status-check contexts, so they must not change. Draft PRs are skipped.
 # Release automation also dispatches this workflow for release-please PRs
 # created or updated with GITHUB_TOKEN, because those pull_request events are
 # suppressed by GitHub's recursive workflow guard.
 #
-# No concurrency group: both jobs finish in seconds, and cancelling a same-SHA
+# No concurrency group: the jobs finish in seconds, and cancelling a same-SHA
 # run could leave a cancelled context beside the newer successful one.
 #
 # Security notes:
@@ -83,3 +84,27 @@ jobs:
           PR_LABELS_JSON: ${{ github.event_name == 'pull_request' && toJSON(github.event.pull_request.labels.*.name) || '[]' }}
           PR_DRAFT: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft || false }}
         run: python3 scripts/compose-release-notes.py --validate-pr
+
+  # Phase lock: fail a PR that closes an issue from a phase later than the one
+  # named in .github/open-phase. The PR number enters through env only.
+  phase-lock:
+    name: phase-lock
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check closed issues against the open phase
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event_name == 'pull_request' && github.event.pull_request.number || inputs.pr_number }}
+        run: python3 scripts/phase-lock.py check-pr

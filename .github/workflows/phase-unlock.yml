@@ -1,0 +1,38 @@
+# Phase Unlock — when .github/open-phase changes on main, swap `phase-locked`
+# for the pickup label on every open issue of the newly open phase.
+#
+# Runs only on trusted main pushes (or a manual rerun), so issue write access
+# never reaches pull request content.
+
+name: Phase Unlock
+
+on:
+  push:
+    branches: [main]
+    paths: [.github/open-phase]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: phase-unlock
+  cancel-in-progress: false
+
+jobs:
+  unlock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Unlock the open phase
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/phase-lock.py unlock
