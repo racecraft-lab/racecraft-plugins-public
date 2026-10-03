@@ -182,8 +182,9 @@ The JSON contract is `schema_version: "scaffold-answers/v1"`, the invocation's
 `open_questions`, each holding the user's text for the corresponding Design
 Concept section. Supply explicit booleans for `quality_gate_confirmation`,
 `formal_methods`, `verification_docker`, and `continue_to_planning`.
-`bootstrap_commands` lists the exact approved commands; an empty list declines
-bootstrap. The helper owns validation of these keys and values.
+`bootstrap_commands` must be `[]`; the helper rejects supplied commands.
+Prepare dependencies through interactive approval before unattended scaffold.
+The helper owns validation of these keys and values.
 
 Continue the blind-spot pass. At Step 4, instead of invoking interactive
 Grill Me, write the Design Concept using the validated interview answers and
@@ -192,7 +193,7 @@ Q&A log, mark the source as the answers file, record zero questions asked, and
 carry the blind-spot header. Leave an existing Design Concept unchanged and
 report the replacement answer needed. Unanswered findings remain Open Questions.
 
-At Step 3.5 use only the approved bootstrap commands. Present the quality-gate
+Use the prepared environment and skip Step 3.5 bootstrap. Present the quality-gate
 confirmation, formal-methods offer and verification-Docker offer, and record
 their file answers. Carry accepted selections from `verification_gates` into
 the workflow; a selection needing more details ends with the missing key.

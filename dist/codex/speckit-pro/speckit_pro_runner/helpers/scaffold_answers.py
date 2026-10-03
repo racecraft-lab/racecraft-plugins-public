@@ -40,10 +40,8 @@ def read_answers(inputs: dict[str, Any]) -> dict[str, Any]:
         if type(answers[key]) is not bool:
             raise SelectionError(f"{key} must be an explicit boolean answer")
     commands = answers["bootstrap_commands"]
-    if not isinstance(commands, list):
-        raise SelectionError("bootstrap_commands must be a list of explicitly approved commands")
-    for command in commands:
-        require_text(command, "bootstrap_commands entry")
+    if not isinstance(commands, list) or commands:
+        raise SelectionError("bootstrap_commands must be empty in answers-file mode; bootstrap requires interactive approval")
     return answers
 
 

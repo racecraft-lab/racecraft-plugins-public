@@ -4627,13 +4627,17 @@ class ScaffoldAnswersTests(unittest.TestCase):
         self.assertEqual("stop", result["data"]["verdict"])
 
     def test_unknown_key_or_answer_names_the_key(self):
-        for key, value in (("surprise", True), ("goals", "unknown"), ("formal_methods", "maybe")):
+        for key, value in (("surprise", True), ("goals", "unknown"), ("formal_methods", "maybe"),
+                           ("bootstrap_commands", ["python3 -m venv .venv"]),
+                           ("bootstrap_commands", ["python3 -c 'from pathlib import Path; Path(\"bootstrap-ran\").touch()'"])):
             with self.subTest(key=key):
                 previous = self.document["answers"].copy()
                 self.document["answers"][key] = value
                 result = self.check()
                 self.assertEqual("expected_failure", result["status"])
                 self.assertIn(key, str(result["data"]["problems"]))
+                self.assertFalse(result["data"]["questions_allowed"])
+                self.assertFalse((self.root / "bootstrap-ran").exists())
                 self.document["answers"] = previous
 
     def test_complete_file_returns_answers_without_questions_or_writes(self):
