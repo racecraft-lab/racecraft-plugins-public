@@ -3476,7 +3476,10 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
             workspace_binary.chmod(0o755)
             link = installed.parent / "specify.exe"
             link.symlink_to(workspace_binary)
-            for selected, candidate in ((installed, workspace_binary), (link, link)):
+            checkout_link = workspace / "bin" / "specify.exe"
+            checkout_link.parent.mkdir()
+            checkout_link.symlink_to(installed)
+            for selected, candidate in ((installed, workspace_binary), (link, link), (checkout_link, checkout_link)):
                 with self.subTest(selected=selected.name), patch(
                     "speckit_pro_runner.helpers.read_only.Path.cwd", return_value=workspace,
                 ), patch("speckit_pro_runner.helpers.read_only.sys.platform", "win32"), patch(
