@@ -636,12 +636,11 @@ class _ProviderBreaker:
         self._failures: dict[str, str] = {}
         self._decisions: list[dict[str, str]] = []
 
-    def fetch(self, http: HttpClient, method: str, url: str, headers: dict[str, str], body: bytes | None, timeout: float) -> HttpResult:
-        provider = "tavily" if url == TAVILY_SEARCH_URL else "context7"
+    def fetch(self, provider: str, request: Callable[[], HttpResult]) -> HttpResult:
         if provider in self._failures:
             raise FetchFailed(self._failures[provider])
         try:
-            result = http(method, url, headers, body, timeout)
+            result = request()
         except FetchFailed as exc:
             if str(exc) in ("network_error", "timeout"):
                 self._trip_provider(provider, str(exc))
@@ -726,7 +725,10 @@ class ResearchBroker:
         remaining = self._remaining()
         if remaining <= 1.0:
             raise FetchFailed("timeout")
-        return self._providers.fetch(self.http, method, url, headers, body, min(HTTP_TIMEOUT_SECONDS, remaining))
+        provider = "tavily" if url == TAVILY_SEARCH_URL else "context7"
+        return self._providers.fetch(
+            provider, lambda: self.http(method, url, headers, body, min(HTTP_TIMEOUT_SECONDS, remaining))
+        )
 
     # -- mode -----------------------------------------------------------------
 
