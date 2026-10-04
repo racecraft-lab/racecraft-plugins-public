@@ -369,8 +369,8 @@ roadmap entry.
 Inherit the [decision-model evaluation (#1148)](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1148)
 as directed by [ADR 0020](adr/0020-plan-stage-routing-uses-runner-rules.md):
 question wording, state shapes, audit fields (question-set hash, state digest,
-model, backend, probabilities, thresholds, and decision), and the finding that
-derived features alone fail.
+model, backend, probabilities, and thresholds, plus the decision that #1148
+also logs), and the finding that derived features alone fail.
 
 - **AC-24.1**: A language-neutral JSON contract defines decision identity and
   version, projection, rubric, normalizer, and policy identities with hashes,
@@ -477,8 +477,8 @@ derived features alone fail.
 Inherit the [decision-model evaluation (#1148)](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1148)
 as directed by [ADR 0020](adr/0020-plan-stage-routing-uses-runner-rules.md):
 question wording, state shapes, audit fields (question-set hash, state digest,
-model, backend, probabilities, thresholds, and decision), and the finding that
-derived features alone fail.
+model, backend, probabilities, and thresholds, plus the decision that #1148
+also logs), and the finding that derived features alone fail.
 
 - **AC-27.1**: Capability discovery lists an optional typed-judgment
   capability without a hardcoded vendor preference, and the trusted parent on
