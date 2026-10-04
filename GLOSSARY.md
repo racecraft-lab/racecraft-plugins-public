@@ -24,6 +24,10 @@ _Avoid_: smoke test, integration eval, dogfood run
 The evidence one canary run leaves for one host: the commit, host and plugin versions, the verdict for each variant, and the measures it was judged on. Only a receipt from a canary CI run, scheduled or on demand, can gate a release; a local dogfood receipt never does.
 _Avoid_: canary log, test report
 
+**Decision model**:
+A model that returns a typed judgment with probabilities (a yes or no, one option from a fixed list, or a position on a scale) rather than text.
+_Avoid_: classifier, LLM judge
+
 **Decisions list**:
 The run's record of every judgment it made instead of asking the user: the option chosen, the rejected alternative and the evidence. It never asks for a reply; the reviewer accepts or overturns each entry at review.
 _Avoid_: end-of-run request, Decisions for you
