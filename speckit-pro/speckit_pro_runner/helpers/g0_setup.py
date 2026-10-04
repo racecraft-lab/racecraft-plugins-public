@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +14,7 @@ from .read_only import (
     EXIT_STATUS, check_prerequisites, detect_commands, detect_presets, helper_failure_diagnostic, output_capture,
 )
 
+UNSAFE_TEXT = re.compile(r"[^A-Za-z0-9 _.,:;'=>()-]")
 SHIPPED_DEFAULTS = "complexity 10, CRAP 30, mutation-score floor 60, no skips, no opt-in slots"
 PROBES = {
     "prerequisites": ("check-prerequisites", check_prerequisites),
@@ -49,7 +51,9 @@ def g0_setup(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
 
 def unratified_defaults(quality: dict[str, Any], surface: str) -> dict[str, Any]:
     """The observation for a missing or invalid file: G0 runs on the shipped defaults (ADR 0007)."""
-    problem = " ".join(str(quality.get("problems", [""])[0]).split())[:300] or "no detail"
+    # The problem text can quote keys from the file. Keep plain words only, so it
+    # cannot carry markup, links, mentions, control characters, or paths into the PR.
+    problem = " ".join(UNSAFE_TEXT.sub("?", str(quality.get("problems", [""])[0])).split())[:300] or "no detail"
     detail = "missing" if quality["status"] == "missing" else f"invalid: {problem}"
     sigil = "/" if surface == "claude" else "$"
     return {
