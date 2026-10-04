@@ -63,6 +63,7 @@ from speckit_pro_runner.pr_contract import PACKET_TITLE_SCOPE_PATTERN, PACKET_TI
 EXPECTED_HELPERS = [
     "formal-doctor",
     "scaffold-answers",
+    "phase-brief",
     "helper-registry-dispatch",
     "check-prerequisites",
     "resolve-workflow-binding",
@@ -4310,7 +4311,7 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
 
     def test_helper_python_authoritative_records(self) -> None:
         for helper_id in self.filtered_helpers():
-            if helper_id in {"helper-registry-dispatch", "scaffold-answers"}:
+            if helper_id in {"helper-registry-dispatch", "scaffold-answers", "phase-brief"}:
                 continue
             with self.subTest(helper_id=helper_id):
                 completed, response, stderr_records = run_runner(helper_request(helper_id, HELPER_CASES[helper_id]))
