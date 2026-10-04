@@ -1,0 +1,233 @@
+"""Scaffold's readiness record (ADR 0008): one local, git-ignored snapshot per host and worktree.
+
+Scaffold observes the shared preparation items and hands each observation to
+this helper, which stamps it, fingerprints the inputs it names, and writes
+`.specify/readiness/<host>.json` owner-only. The runner observes two items
+itself: local capability health and the quality-gates source. Missing
+evidence is recorded `unknown`; an `unavailable` or `unknown` item must name
+the action the user takes, so scaffold finishes after a declined or failed
+fix. The record has no overall verdict, stores no credential, and holds no
+absolute local path: text that looks like either is refused, and inputs are
+kept only as digests.
+"""
+
+from __future__ import annotations
+
+import os
+import re
+import stat
+import tempfile
+from datetime import datetime, timezone
+from pathlib import Path, PurePosixPath
+from typing import Any
+
+from .. import quality_gates
+from ..agent_materialization import digest
+from ..envelope import diagnostic, response
+from ..private_state import ensure_private_directory, write_private_json
+from ..strict_input import SelectionError, require_text
+from ..sweep_isolation import secret_matches
+from ..trusted_io import find_repo_root, trusted_bytes
+
+SCHEMA_VERSION = "readiness-record/v1"
+HOSTS = ("claude", "codex")
+STATUSES = ("verified", "unavailable", "unknown", "not_applicable")
+NEEDS_ACTION = ("unavailable", "unknown")
+# Items scaffold observes and passes in. The runner observes the rest.
+CALLER_ITEMS = ("plugin_payload", "project_integration", "github_auth", "mcp_servers", "typesafe_jev",
+                "reviewability_report")
+RUNNER_ITEMS = ("local_capability", "quality_gates")
+RECORD_DIRECTORY = ".specify/readiness"
+INPUT_KEYS = frozenset({"host", "host_version", "execution_mode", "plugin_revision", "observations"})
+OBSERVATION_KEYS = frozenset({"item", "status", "evidence_source", "action", "files", "values"})
+VALUE_NAME_RE = re.compile(r"[a-z][a-z0-9_]{0,40}")
+LOCAL_PATH_RE = re.compile(r"(?:^|[\s\"'(=:])(?:/[^\s/]|~[/\\]|[A-Za-z]:[\\/]|file://)")
+MAX_TEXT = 400
+NOT_OBSERVED_ACTION = "Run the preparation check for this item, then rerun scaffold."
+
+
+def now() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def clean_text(value: Any, label: str) -> str:
+    """Text that may be written to the record: one short line, no credential, no absolute path."""
+    text = require_text(value, label).strip()
+    if len(text) > MAX_TEXT or "\n" in text or "\r" in text:
+        raise SelectionError(f"{label} must be one line of at most {MAX_TEXT} characters")
+    if secret_matches(text):
+        raise SelectionError(f"{label} looks like a credential; the record never stores one")
+    if LOCAL_PATH_RE.search(text):
+        raise SelectionError(f"{label} holds an absolute local path; use a repository-relative path")
+    return text
+
+
+def make_item(status: str, evidence_source: str, observed_at: str, fingerprints: dict[str, str],
+              action: str | None = None) -> dict[str, Any]:
+    item: dict[str, Any] = {"status": status, "evidence_source": evidence_source,
+                            "observed_at": observed_at, "fingerprints": fingerprints}
+    if action is not None:
+        item["action"] = action
+    return item
+
+
+def fingerprint_files(paths: Any, root: Path, label: str) -> dict[str, str]:
+    if not isinstance(paths, list):
+        raise SelectionError(f"{label}.files must be a list of repository-relative paths")
+    prints: dict[str, str] = {}
+    for raw in paths:
+        text = clean_text(raw, f"{label}.files entry")
+        relative = PurePosixPath(text)
+        if relative.is_absolute() or ".." in relative.parts or "\\" in text:
+            raise SelectionError(f"{label}.files entry {text!r} must stay inside the repository")
+        content = trusted_bytes(root / relative, root)
+        prints[f"file:{relative.as_posix()}"] = "missing" if content is None else digest(content)
+    return prints
+
+
+def fingerprint_values(values: Any, label: str) -> dict[str, str]:
+    if not isinstance(values, dict):
+        raise SelectionError(f"{label}.values must map names to text")
+    prints: dict[str, str] = {}
+    for name, value in values.items():
+        if not isinstance(name, str) or not VALUE_NAME_RE.fullmatch(name) or not isinstance(value, str):
+            raise SelectionError(f"{label}.values needs lowercase names and text values")
+        prints[f"value:{name}"] = digest(value)
+    return prints
+
+
+def caller_item(raw: Any, root: Path, observed_at: str) -> tuple[str, dict[str, Any]]:
+    if not isinstance(raw, dict) or not raw.keys() <= OBSERVATION_KEYS:
+        raise SelectionError(f"each observation takes only {sorted(OBSERVATION_KEYS)}")
+    name = raw.get("item")
+    if name not in CALLER_ITEMS:
+        raise SelectionError(f"item must be one of {list(CALLER_ITEMS)}; the runner observes {list(RUNNER_ITEMS)}")
+    status = raw.get("status")
+    if status not in STATUSES:
+        raise SelectionError(f"{name}: status must be one of {list(STATUSES)}")
+    action = clean_text(raw["action"], f"{name}.action") if "action" in raw else None
+    if status in NEEDS_ACTION and action is None:
+        raise SelectionError(f"{name}: a {status} item must name the action the user takes")
+    if status not in NEEDS_ACTION:
+        action = None
+    fingerprints = {**fingerprint_files(raw.get("files", []), root, name),
+                    **fingerprint_values(raw.get("values", {}), name)}
+    return name, make_item(status, clean_text(raw.get("evidence_source"), f"{name}.evidence_source"),
+                           observed_at, fingerprints, action)
+
+
+def observe_local_capability() -> dict[str, Any]:
+    """Probe temporary storage: one private file is written, its mode read, and it is removed."""
+    observed_at = now()
+    action = "Make the temporary directory writable by this user, then rerun scaffold."
+    try:
+        directory = Path(tempfile.gettempdir())
+        descriptor, name = tempfile.mkstemp(prefix="speckit-readiness-", dir=directory)
+    except OSError as error:
+        return make_item("unavailable", f"temporary storage probe failed: {type(error).__name__}",
+                         observed_at, {}, action)
+    try:
+        os.write(descriptor, b"probe")
+        mode = stat.S_IMODE(os.fstat(descriptor).st_mode)
+    except OSError as error:
+        return make_item("unavailable", f"temporary file probe failed: {type(error).__name__}",
+                         observed_at, {}, action)
+    finally:
+        os.close(descriptor)
+        os.unlink(name)
+    umask = os.umask(0)
+    os.umask(umask)
+    fingerprints = {"value:temp_dir": digest(str(directory)), "value:umask": digest(f"{umask:03o}")}
+    if mode & 0o077:
+        return make_item("unavailable", f"a temporary file is readable beyond its owner (mode {mode:03o})",
+                         observed_at, fingerprints, "Fix the temporary directory so new files stay owner-only.")
+    return make_item("verified", "temporary file write and owner-only mode probe", observed_at, fingerprints)
+
+
+def observe_quality_gates(root: Path) -> dict[str, Any]:
+    """The confirmed file and its digest, or the shipped defaults with the reason they apply."""
+    observed_at = now()
+    content = trusted_bytes(root / quality_gates.FILE_PATH, root)
+    status, problems, _ = quality_gates.observe(None if content is None else content.decode("utf-8", "replace"))
+    key = f"file:{quality_gates.FILE_PATH}"
+    if status == "present":
+        return make_item("verified", "confirmed quality-gates file", observed_at, {key: digest(content or b"")})
+    reason = f"{quality_gates.FILE_PATH} is missing" if status == "missing" else problems[0]
+    try:
+        reason = clean_text(reason, "reason")
+    except SelectionError:
+        reason = "the first validation problem was withheld because it held a path or a credential"
+    fingerprints = {key: "missing" if content is None else digest(content)}
+    return make_item("unavailable", f"shipped defaults in use: {reason}", observed_at, fingerprints,
+                     "Confirm a quality-gates proposal when scaffold offers one, or run the speckit-coach "
+                     "quality gates flow.")
+
+
+def build_record(inputs: dict[str, Any], root: Path) -> dict[str, Any]:
+    if not isinstance(inputs, dict) or not {"host", "execution_mode", "plugin_revision", "observations"} <= inputs.keys() \
+            or not inputs.keys() <= INPUT_KEYS:
+        raise SelectionError(f"inputs take {sorted(INPUT_KEYS)}; host_version may be omitted when unobservable")
+    if inputs["host"] not in HOSTS:
+        raise SelectionError(f"host must be one of {list(HOSTS)}")
+    observations = inputs["observations"]
+    if not isinstance(observations, list):
+        raise SelectionError("observations must be a list")
+    observed_at = now()
+    items: dict[str, dict[str, Any]] = {}
+    for raw in observations:
+        name, item = caller_item(raw, root, observed_at)
+        if name in items:
+            raise SelectionError(f"{name} is observed twice")
+        items[name] = item
+    for name in CALLER_ITEMS:
+        items.setdefault(name, make_item("unknown", "not observed by scaffold", observed_at, {}, NOT_OBSERVED_ACTION))
+    items["local_capability"] = observe_local_capability()
+    items["quality_gates"] = observe_quality_gates(root)
+    host_version = inputs.get("host_version")
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "binding": {"worktree": digest(str(root))},
+        "host": inputs["host"],
+        "host_version": None if host_version is None else clean_text(host_version, "host_version"),
+        "execution_mode": clean_text(inputs["execution_mode"], "execution_mode"),
+        "plugin_revision": clean_text(inputs["plugin_revision"], "plugin_revision"),
+        "observed_at": observed_at,
+        "items": {name: items[name] for name in sorted(items)},
+    }
+
+
+def write_record(root: Path, record: dict[str, Any]) -> str:
+    directory = root / RECORD_DIRECTORY
+    ensure_private_directory(directory, label="readiness directory", violation=SelectionError)
+    # A self-ignoring directory keeps the record out of git in every worktree without editing a tracked file.
+    (directory / ".gitignore").write_text("*\n", encoding="utf-8")
+    write_private_json(directory / f"{record['host']}.json", record)
+    return f"{RECORD_DIRECTORY}/{record['host']}.json"
+
+
+def run_readiness_record_helper(entry: Any, request: Any) -> dict[str, Any]:
+    root = find_repo_root(Path.cwd())
+    if root is None or not (root / ".specify").is_dir():
+        return response("missing_prerequisite", request_id=request.request_id, diagnostics=[diagnostic(
+            "missing_prerequisite", "the readiness record needs a SpecKit project with a .specify directory",
+            remediation_summary="Initialize SpecKit in this project, then rerun scaffold.",
+            remediation_actions=["Run the SpecKit install flow.", "Rerun scaffold."])])
+    try:
+        record = build_record(request.inputs, root)
+    except SelectionError as error:
+        return response("input_error", request_id=request.request_id, diagnostics=[diagnostic(
+            "invalid_input", str(error), remediation_summary="Send observations the record can hold.",
+            remediation_actions=["Correct the named field.", "Retry the request."])])
+    data: dict[str, Any] = {"helper_id": entry.helper_id, "operation": entry.operation, "mode": request.mode,
+                            "writes_state": False, "record": record}
+    if request.mode == "apply":
+        try:
+            data["record_path"] = write_record(root, record)
+        except (OSError, SelectionError) as error:
+            return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diagnostic(
+                "write_failure", f"the readiness record could not be written: {type(error).__name__}",
+                remediation_summary="Scaffold continues; autopilot treats a missing record as no evidence.",
+                remediation_actions=["Report the failure in the scaffold closing report.",
+                                     "Fix the .specify directory permissions and rerun scaffold."])])
+        data["writes_state"] = True
+    return response("ok", request_id=request.request_id, data=data)

@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-write-readiness-record",
+  "helper_id": "write-readiness-record",
+  "operation": "write-readiness-record",
+  "mode": "dry_run",
+  "inputs": {
+    "host": "claude",
+    "host_version": "2.1.0",
+    "execution_mode": "interactive",
+    "plugin_revision": "2.40.0",
+    "observations": [
+      {"item": "github_auth", "status": "unavailable", "evidence_source": "gh auth status", "action": "Run gh auth login, then rerun scaffold."}
+    ]
+  }
+}

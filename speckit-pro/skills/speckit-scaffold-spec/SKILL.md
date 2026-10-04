@@ -967,6 +967,48 @@ user hand-editing obvious missing context. If a critical detail cannot be
 derived from the roadmap or the design concept, stop and report the gap rather
 than filling it with fiction.
 
+### 6.5 Write the Readiness Record (IN the Worktree)
+
+Record what this run observed, so autopilot reads evidence instead of
+stopping to ask (ADR 0008). From the worktree root, run helper
+`write-readiness-record` with the request fields above. The step is done when
+the response is `ok` with a `record_path`, or a failed write is reported.
+
+<!-- host:claude: Claude names its own host and reads the plugin manifest through the plugin root -->
+Set `host` to `claude`. Set `plugin_revision` to the `version` in
+`${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json`.
+<!-- /host -->
+<!-- host:codex: Codex names its own host and reads the plugin manifest relative to this skill -->
+Set `host` to `codex`. Set `plugin_revision` to the `version` in
+`../../.codex-plugin/plugin.json`.
+<!-- /host -->
+Set `execution_mode` to `answers-file` or `interactive`. Send one observation
+per item:
+
+| `item` | Observed from |
+| --- | --- |
+| `plugin_payload` | the agent check at the start of this run and the revision above |
+| `project_integration` | the Specify, bootstrap and detect-commands results |
+| `github_auth` | one bounded GitHub authentication check |
+| `mcp_servers` | the `research-broker-preflight` result |
+| `typesafe_jev` | whether this session exposes the Jev `evaluate` tool |
+| `reviewability_report` | the setup gate result, cited by roadmap path and SPEC-ID |
+
+- Record `verified` for a check that passed in this run. Record `unavailable`
+  for a failed check or a declined fix, `unknown` for what this session cannot
+  observe, and `not_applicable` for a capability this workflow does not need.
+- Give every `unavailable` or `unknown` item an `action`: what the user does
+  next.
+- Send `files` as repository-relative paths and `values` as named text; the
+  helper stores digests only. Send `evidence_source` as one plain line.
+- The helper observes `local_capability` and `quality_gates` itself. Omit
+  `host_version` when the host does not report it.
+- Print one line per `unavailable` or `unknown` item with its action, then
+  continue. A declined fix, a failed fix, or a failed write leaves scaffold
+  finishing normally.
+
+The record is git-ignored; leave it unstaged.
+
 ### 7. Commit and Verify (IN the Worktree)
 
 All commits happen on the worktree branch (see hard constraints).

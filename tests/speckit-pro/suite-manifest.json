@@ -59,6 +59,7 @@
         { "path": "tests/speckit-pro/unit/test-check-toolchain.py", "label": "test-check-toolchain" },
         { "path": "tests/speckit-pro/unit/test-post-implementation-reference.py", "label": "test-post-implementation-reference" },
         { "path": "tests/speckit-pro/unit/test-reviewability-marker-guidance.py", "label": "test-reviewability-marker-guidance" },
+        { "path": "tests/speckit-pro/unit/test-readiness-record.py", "label": "test-readiness-record" },
         { "path": "tests/speckit-pro/unit/test-atomicity-additive-routing.py", "label": "test-atomicity-additive-routing" },
         { "path": "tests/speckit-pro/unit/test-eval-runner-skill-selection.py", "label": "test-eval-runner-skill-selection" },
         { "path": "tests/speckit-pro/unit/test-functional-headless-runner.py", "label": "test-functional-headless-runner" },
