@@ -72,7 +72,7 @@
       "rejected_stdout_schema": {"status": "input_error", "data": "object"},
       "deterministic_remediation": {"summary": "Correct the phase and its context inputs.", "actions": ["Use a supported planning phase with workflow_file and feature_dir."]},
       "subprocess_policy": {"shell": false, "spawns": false},
-      "path_boundary_policy": {"boundary": "metadata_only", "rejects": []},
+      "path_boundary_policy": {"boundary": "lexical_metadata_only", "rejects": ["parent_traversal", "absolute_feature_dir", "control_characters"]},
       "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/read-only-helpers/requests/phase-brief.json",
       "rollback": "Remove phase-brief consumption and registration together."
     },

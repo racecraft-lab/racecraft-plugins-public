@@ -65,6 +65,47 @@ class PhaseBriefTests(unittest.TestCase):
                 self.assertEqual(result["status"], "input_error")
                 self.assertEqual(result["data"], {})
 
+    def test_unsafe_paths_return_no_dispatch_facts(self):
+        valid = {"phase": "Plan", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
+        cases = [("feature_dir", value) for value in (
+            "../example", "specs/../../example", "specs/..", r"specs\..\example",
+            "/specs/example", "//server/specs", r"C:\specs\example", r"C:specs\example", r"\specs\example",
+        )]
+        cases += [("workflow_file", value) for value in ("../workflow.md", "docs/../workflow.md", r"docs\..\workflow.md")]
+        for key in ("feature_dir", "workflow_file"):
+            for control in ("\n", "\r", "\t", "\x00", "\x1f", "\x7f", "\x85", "\u2028", "\u2029"):
+                cases.extend((key, value) for value in (control + valid[key], valid[key] + control, "docs/" + control + "example"))
+        for key, value in cases:
+            with self.subTest(key=key, value=value):
+                result = dispatch_helper(SimpleNamespace(helper_id="phase-brief", operation="phase-brief",
+                                                        mode="read_only", request_id="unsafe-path", inputs={**valid, key: value}))
+                self.assertEqual(result["status"], "input_error")
+                self.assertEqual(result["data"], {})
+                self.assertEqual(result["request_id"], "unsafe-path")
+                self.assertEqual(result["diagnostics"][0]["code"], "invalid_phase_brief")
+
+    def test_loaded_commands_can_read_extension_configuration(self):
+        for phase in ("Specify", "Clarify", "Plan", "Checklist", "Tasks", "Analyze"):
+            with self.subTest(phase=phase):
+                result = dispatch_helper(SimpleNamespace(
+                    helper_id="phase-brief", operation="phase-brief", mode="read_only", request_id=None,
+                    inputs={"phase": phase, "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"},
+                ))
+                self.assertIn(".specify/extensions.yml", result["data"]["readable_files"])
+
+    def test_safe_path_text_is_preserved(self):
+        for feature, workflow in (("specs/example/", "docs/workflow.md"),
+                                  ("specs/version..two", "/workflow.md"),
+                                  (r"specs\example", r"C:\docs\workflow.md")):
+            with self.subTest(feature=feature, workflow=workflow):
+                result = dispatch_helper(SimpleNamespace(
+                    helper_id="phase-brief", operation="phase-brief", mode="read_only", request_id=None,
+                    inputs={"phase": "Plan", "workflow_file": workflow, "feature_dir": feature},
+                ))
+                self.assertEqual(result["status"], "ok")
+                self.assertEqual(result["data"]["inputs"]["feature_dir"], feature.rstrip("/"))
+                self.assertEqual(result["data"]["inputs"]["workflow_file"], workflow)
+
     def test_prompt_sections_match_the_workflow_template(self):
         template = (REPO / "speckit-pro/skills/speckit-coach/templates/workflow-template.md").read_text()
         for phase in ("Specify", "Clarify", "Plan", "Checklist", "Tasks", "Analyze"):
@@ -109,11 +150,16 @@ class PhaseBriefTests(unittest.TestCase):
                 ))
                 self.assertEqual(result["status"], "ok", result)
                 brief = result["data"]
+                self.assertEqual(set(brief), {"schema_version", "phase", "agent", "inputs", "readable_files",
+                                              "gate", "slices", "waves", "model", "hooks"})
+                self.assertEqual(brief["schema_version"], "phase-brief/v1")
+                self.assertEqual(brief["phase"], phase)
+                self.assertEqual(set(brief["inputs"]), {"workflow_file", "feature_dir", "instruction", "skill", "prompt_section"})
                 self.assertEqual(brief["agent"], agent)
                 self.assertEqual(brief["gate"], gate)
                 self.assertEqual(brief["inputs"]["workflow_file"], "docs/workflow.md")
                 self.assertEqual(brief["inputs"]["feature_dir"], "specs/example")
-                self.assertEqual(brief["readable_files"], ["docs/workflow.md", ".specify/memory/constitution.md"] + ["specs/example/" + name for name in artifacts])
+                self.assertEqual(brief["readable_files"], ["docs/workflow.md", ".specify/memory/constitution.md", ".specify/extensions.yml"] + ["specs/example/" + name for name in artifacts])
                 self.assertEqual([brief[key] for key in ("slices", "waves", "model", "hooks")], [[], [], None, []])
 
 

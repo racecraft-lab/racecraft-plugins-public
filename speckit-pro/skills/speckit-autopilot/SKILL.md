@@ -1132,7 +1132,7 @@ stable fields, shared by both hosts:
 | `phase` | Requested title-case planning phase |
 | `agent` | Host-neutral installed executor role |
 | `inputs` | `workflow_file`, `feature_dir`, `instruction`, `skill` (the loaded command's skill name; null for Clarify), and `prompt_section` (including its session/domain prompts) |
-| `readable_files` | The paths the phase may read when present, relative to the bound workflow root unless absolute; trailing slash includes directory contents |
+| `readable_files` | The paths the phase may read when present, including extension configuration; relative to the bound workflow root unless absolute; trailing slash includes directory contents |
 | `gate` | Gate id for the parent's `validate-gate` request |
 | `slices` | Empty list, reserved for reference slices (#1182) |
 | `waves` | Empty list, reserved for dispatch waves (#1183) |
