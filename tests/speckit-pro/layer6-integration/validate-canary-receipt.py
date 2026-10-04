@@ -50,13 +50,11 @@ def load_budget(path=BUDGET_FILE):
                                    parse_constant=reject_nonfinite))
 
 
-def budget_checks(value, budget):
-    """(label, actual, limit) for each budgeted stage metric; a None limit is unset."""
-    for variant in value["variants"]:
-        limits = budget[value["host"]][variant["name"]]
-        for stage in BUDGET_STAGES:
-            for metric in METRICS:
-                yield f"{variant['name']}.{stage}.{metric}", variant["stages"][stage][metric], limits[stage][metric]
+def budget_checks(variant, limits):
+    """(label, actual, limit) for each budgeted stage metric of one variant entry; a None limit is unset."""
+    for stage in BUDGET_STAGES:
+        for metric in METRICS:
+            yield f"{variant['name']}.{stage}.{metric}", variant["stages"][stage][metric], limits[stage][metric]
 
 
 def receipt_report(value, budget=None):
@@ -75,14 +73,15 @@ def receipt_report(value, budget=None):
                 problems.append(f"install_probe.{key}")
     elif f"speckit-pro@{value['plugin_version']}" not in probe["loaded_plugins"]:
         problems.append("install_probe.loaded_plugins")
-    checks = list(budget_checks(value, load_budget() if budget is None else budget))
-    results = []
+    limits = (load_budget() if budget is None else budget)[value["host"]]
+    results, unbudgeted = [], []
     for variant in value["variants"]:
+        checks = list(budget_checks(variant, limits[variant["name"]]))
         result = variant_report(variant, checks)
         problems.extend(result["gate_failed_assertions"])
         results.append(result)
-    return {"valid": not problems, "failed_assertions": problems, "variants": results,
-            "unbudgeted": [label for label, _, limit in checks if limit is None]}
+        unbudgeted.extend(label for label, _, limit in checks if limit is None)
+    return {"valid": not problems, "failed_assertions": problems, "variants": results, "unbudgeted": unbudgeted}
 
 
 def validate_receipt(value, budget=None):
@@ -90,11 +89,10 @@ def validate_receipt(value, budget=None):
 
 
 def variant_report(variant, checks):
-    """One variant's assertions and gate result, including its budget failures."""
+    """One variant entry's assertions and gate result, including its own budget failures."""
     failures = variant_failures(variant)
     gate = gate_failures(variant, failures)
-    gate.extend(f"{label}_budget" for label, actual, limit in checks
-                if label.startswith(f"{variant['name']}.") and limit is not None and actual > limit)
+    gate.extend(f"{label}_budget" for label, actual, limit in checks if limit is not None and actual > limit)
     return {"name": variant["name"], "verdict": "fail" if failures else "pass",
             "failed_assertions": failures, "gate_verdict": "fail" if gate else "pass",
             "gate_failed_assertions": gate}

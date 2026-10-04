@@ -4934,6 +4934,14 @@ class CanaryBudgetTests(CanaryBudgetCase):
         value["variants"][0]["stages"]["plan"].update(wall_seconds=5, tokens=100)
         self.assertEqual([], self.validator.validate_receipt(value, self.budget(5, 100)), "a stage at its limit is within budget")
 
+    def test_an_overrun_belongs_only_to_the_variant_entry_that_ran_over(self):
+        value = receipt()
+        value["variants"].append(copy.deepcopy(value["variants"][0]))
+        value["variants"][1]["stages"]["plan"]["wall_seconds"] = 6
+        report = self.validator.receipt_report(value, self.budget(5, 100))
+        self.assertEqual(["base.plan.wall_seconds_budget"], report["failed_assertions"])
+        self.assertEqual(["pass", "fail"], [variant["gate_verdict"] for variant in report["variants"]])
+
     def test_an_unset_limit_reports_unbudgeted_and_never_a_pass(self):
         value = receipt()
         value["variants"][0]["stages"]["plan"]["tokens"] = 10**9
