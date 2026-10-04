@@ -298,8 +298,9 @@ Parse the JSON result:
   (a missing workflow directory, a stale binding), and the implement-executor repairs a failing project check; rerun the helper,
   then defer per the Failure Escalation Protocol when repair fails
 - `spec_kit.status`: `older`, `newer` or `unreadable` against `spec_kit.pinned_version`
-  is one entry under "Decisions for you" (the installed version beside the pinned one,
-  and `spec_kit.install_argv` as the fix); the run continues on the installed CLI
+  is one entry under "Decisions for you" (the installed version beside the pinned one;
+  `spec_kit.install_argv` is an optional fix, and a `newer` CLI may be deliberate);
+  the run continues on the installed CLI
 - `branch`: current git branch name
 - `on_feature_branch`: if `true`, Specify must skip branch creation
 - `is_worktree`: if `true`, already in an isolated worktree

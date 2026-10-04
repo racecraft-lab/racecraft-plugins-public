@@ -258,12 +258,8 @@ reload changed custom agents safely.
 
 Check for the official SpecKit CLI before parsing or mutating the repository:
 
-Use command execution to confirm `command -v specify` finds the official
-`specify` CLI after including common user-local binary directories
-(`$HOME/.local/bin`, `/opt/homebrew/bin`, `/usr/local/bin`) on PATH.
-
 Send the `check-prerequisites` helper request (`workflow_file` empty) and read
-the `spec_kit` object in its output. `status` is `missing`, `older`, `newer`,
+the `spec_kit` object in its output; it is the only source for whether the CLI is present. `status` is `missing`, `older`, `newer`,
 `unreadable` or `match`; `install_argv` is the pinned install.
 
 If `status` is `missing` and `uv` exists, run `install_argv`. If `status` is

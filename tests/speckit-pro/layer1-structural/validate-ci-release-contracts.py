@@ -1275,6 +1275,13 @@ class ValidateSpecKitPin(unittest.TestCase):
                     self.assertIsNone(unpinned.search(path.read_text(encoding='utf-8')))
         self.assertGreater(scanned, 0, 'the scan found no guidance files')
 
+    def test_install_skills_take_the_pin_from_the_runner(self) -> None:
+        for skill in ('speckit-install', 'speckit-upgrade', 'speckit-scaffold-spec'):
+            with self.subTest(skill=skill):
+                text = (PLUGIN_ROOT / 'skills' / skill / 'SKILL.md').read_text(encoding='utf-8')
+                self.assertIn('install_argv', text)
+                self.assertIn('spec_kit', text)
+
 # yaml_syntax_sane is shared by both workflow owners and regression tests.
 
 def main() -> int:

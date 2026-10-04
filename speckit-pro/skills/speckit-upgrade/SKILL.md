@@ -113,9 +113,9 @@ Surface to the operator:
 - Whether `specify self check` reports a newer release available.
 - Each installed integration with its current status.
 
-If the CLI is not the pinned version, recommend that the operator run
-`install_argv` from the `spec_kit` object of the runner's
-`check-prerequisites` result (the request in step 5a) and then
+Send the `check-prerequisites` request shown in step 5a now and read the
+`spec_kit` object of its result. If `spec_kit.status` is not `match`, recommend that
+the operator run `install_argv` from it and then
 re-invoke this skill. This skill does not run it. Ask the operator to either upgrade
 the CLI first or confirm they want to proceed with the current CLI
 version, and wait for the answer before continuing.
