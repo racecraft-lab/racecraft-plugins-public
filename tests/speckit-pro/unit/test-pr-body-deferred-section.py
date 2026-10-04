@@ -75,13 +75,8 @@ class DeferredSectionInPrBodyTests(unittest.TestCase):
          "finish": "Follow steps 4 to 6 of the UAT runbook and record the result on the pull request."},
     ]
 
-    def render(self, **overrides: object) -> dict[str, object]:
-        from speckit_pro_runner.helpers.pr_packet import normalize_packet_input
-
-        return normalize_packet_input(SimpleNamespace(inputs=_packet_inputs(**overrides)))
-
     def test_body_opens_with_the_deferred_section_and_still_validates(self) -> None:
-        rendered = self.render(deferred_items=self.ITEMS)
+        rendered = _render(deferred_items=self.ITEMS)
         self.assertNotIn("diagnostic", rendered, rendered)
         body = str(rendered["body"])
         headings = [line for line in body.splitlines() if line.startswith("#")]
@@ -94,15 +89,15 @@ class DeferredSectionInPrBodyTests(unittest.TestCase):
         _assert_validates(self, rendered)
 
     def test_the_section_is_protected_by_the_body_fingerprint(self) -> None:
-        with_items = self.render(deferred_items=self.ITEMS)["packet"]
-        other = self.render(deferred_items=[dict(self.ITEMS[0], reason="Different reason.")])["packet"]
+        with_items = _render(deferred_items=self.ITEMS)["packet"]
+        other = _render(deferred_items=[dict(self.ITEMS[0], reason="Different reason.")])["packet"]
         assert isinstance(with_items, dict) and isinstance(other, dict)
         self.assertNotEqual(with_items["protected_body_fingerprint"]["value"],
                             other["protected_body_fingerprint"]["value"])
 
     def test_no_deferred_items_leaves_the_body_unchanged(self) -> None:
-        self.assertEqual(self.render()["body"], self.render(deferred_items=[])["body"])
-        self.assertNotIn("Deferred / not verified", str(self.render()["body"]))
+        self.assertEqual(_render()["body"], _render(deferred_items=[])["body"])
+        self.assertNotIn("Deferred / not verified", str(_render()["body"]))
 
     def test_malformed_items_and_draft_mode_are_refused(self) -> None:
         for override in (
@@ -115,7 +110,7 @@ class DeferredSectionInPrBodyTests(unittest.TestCase):
             {"unratified_defaults": "A flag.", "mode": "draft"},
         ):
             with self.subTest(override=override):
-                self.assertIn("diagnostic", self.render(**override))
+                self.assertIn("diagnostic", _render(**override))
 
 
 class UnratifiedDefaultsInPrBodyTests(unittest.TestCase):
