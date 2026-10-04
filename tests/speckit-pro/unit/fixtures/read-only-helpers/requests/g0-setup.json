@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-g0-setup",
+  "helper_id": "g0-setup",
+  "operation": "g0-setup",
+  "mode": "read_only",
+  "inputs": {
+    "probe": "commands",
+    "surface": "codex",
+    "workflow_file": "tests/speckit-pro/unit/fixtures/autopilot-stage/workflow.md"
+  }
+}

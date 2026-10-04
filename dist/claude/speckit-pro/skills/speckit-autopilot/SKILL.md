@@ -102,6 +102,12 @@ plugin agent caveat in Step 0 and
 
 ## Prerequisites — Model
 
+For every research-agent dispatch, pass **Research run id:** from the genuine
+execution-control `result.data.ledger.run_id`; use it as broker `run_id`.
+Copy **Research provider decisions** into the workflow's decisions list once per `id`,
+preserving the broker's decision, alternative, provider, and reason. Cached failures
+add no rows; continue independent work and record any research left unverified.
+
 The orchestrator makes gate decisions, coordinates consensus synthesis, and
 manages a 7-phase workflow. After every analyst round it dispatches the named
 synthesizer (`speckit-pro:consensus-synthesizer` on Claude Code,
@@ -377,12 +383,13 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
    repair/install guidance under "Decisions for you". A failed archive run is
    retried once, then deferred the same way. Never silently treat a missing
    archive command as an absent extension.
-3. **Run prereq helper operations** and parse the JSON output of each:
-   ```text
-   helper_id=check-prerequisites operation=check-prerequisites mode=read_only
-   helper_id=detect-commands operation=detect-commands mode=read_only
-   helper_id=detect-presets operation=detect-presets mode=read_only
-   ```
+3. **Run the G0 setup seam** — call runner helper `g0-setup` in `read_only`
+   mode once per `inputs.probe`, in order: `prerequisites`, `commands`,
+   `presets`. Each call carries `inputs.workflow_file` and `inputs.surface`.
+   Set `G0_SURFACE` and `inputs.surface` to `claude`.
+   Read each unchanged probe report from `data.result.stdout_json`, its exit
+   code from `data.result.exit_code`, and its error from `data.result.stderr`.
+   Consume `data.quality_gate` only at Step 0.11, after the earlier setup work.
    Record `on_feature_branch`, `PROJECT_COMMANDS` (including the
    quality-gate slots and their `gates` metadata, per
    `references/prerequisites.md` Step 0.11, and the missing-tool default: the
