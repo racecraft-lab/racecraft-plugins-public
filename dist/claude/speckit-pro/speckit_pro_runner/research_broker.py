@@ -685,6 +685,10 @@ def _resolve_context7_library(
     raise FetchFailed("library_not_found")
 
 
+def _drop_chunk(chunk_id: str, chunk: Chunk, reason: str, detail: str) -> dict[str, str]:
+    return {"id": chunk_id, "source_host": chunk.host, "reason": reason, "detail": detail}
+
+
 class ResearchBroker:
     def __init__(
         self,
@@ -823,10 +827,10 @@ class ResearchBroker:
                 text = text[:MAX_CHUNK_CHARS]
                 chunk.flags.append("truncated")
             if not text:
-                envelope["dropped"].append(self._drop(chunk_id, chunk, "empty", ""))
+                envelope["dropped"].append(_drop_chunk(chunk_id, chunk, "empty", ""))
                 continue
             if total + len(text) > MAX_TOTAL_CHARS:
-                envelope["dropped"].append(self._drop(chunk_id, chunk, "size_cap", ""))
+                envelope["dropped"].append(_drop_chunk(chunk_id, chunk, "size_cap", ""))
                 continue
             total += len(text)
             chunk.text = text
@@ -838,14 +842,14 @@ class ResearchBroker:
             for chunk_id, chunk in prepared:
                 patterns = [flag for flag in chunk.flags if flag != "truncated"]
                 if patterns:
-                    envelope["dropped"].append(self._drop(chunk_id, chunk, "instruction_pattern", patterns[0]))
+                    envelope["dropped"].append(_drop_chunk(chunk_id, chunk, "instruction_pattern", patterns[0]))
                 else:
                     envelope["chunks"].append(self._keep(chunk_id, chunk, tool, {"route": "pass", "flags": chunk.flags}))
             return envelope
         if not jev["usable"]:
             reason = "jev_credential_unusable" if jev["state"] == "credential_unusable" else "jev_unavailable"
             for chunk_id, chunk in prepared:
-                envelope["dropped"].append(self._drop(chunk_id, chunk, reason, jev["state"]))
+                envelope["dropped"].append(_drop_chunk(chunk_id, chunk, reason, jev["state"]))
             return envelope
 
         results = self._screen_with_jev(prepared)
@@ -865,7 +869,7 @@ class ResearchBroker:
                     )
                 )
             else:
-                envelope["dropped"].append(self._drop(chunk_id, chunk, result.reason, result.detail))
+                envelope["dropped"].append(_drop_chunk(chunk_id, chunk, result.reason, result.detail))
         return envelope
 
     def _screen_with_jev(self, prepared: list[tuple[str, Chunk]]) -> dict[str, Screening]:
@@ -887,9 +891,6 @@ class ResearchBroker:
         finally:
             executor.shutdown(wait=False, cancel_futures=True)
         return results
-
-    def _drop(self, chunk_id: str, chunk: Chunk, reason: str, detail: str) -> dict[str, str]:
-        return {"id": chunk_id, "source_host": chunk.host, "reason": reason, "detail": detail}
 
     def _keep(self, chunk_id: str, chunk: Chunk, tool: str, screening: dict[str, Any]) -> dict[str, Any]:
         retrieved = datetime.fromtimestamp(self.clock(), tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
