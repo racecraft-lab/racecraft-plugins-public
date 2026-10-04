@@ -232,8 +232,8 @@ Bind the workflow to actual Codex primitives:
   (user scope; default `~/.codex/agents/`). The bundled `install` skill
   copies the plugin templates into those official Codex runtime paths.
 
-Do not translate this skill into legacy Claude agent/shell placeholders.
-Do not read the
+Do not translate this skill into Claude-only primitives such as legacy
+Claude agent/shell placeholders. Do not read the
 bundled TOML templates and inline them as ad hoc prompts. Validate that the
 required custom subagents are installed, then spawn them by agent name. Before
 any phase work, at setup or run start, if any required SpecKit Pro subagent is
