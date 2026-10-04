@@ -22,5 +22,5 @@ In the measured canary runs, 7 items reached consensus. All 7 ended with the exe
 
 - The retry ladder's second rung keeps its consensus diagnosis (ADR 0004). This ADR covers plan-stage items only.
 - Security handling is unchanged: all-three consensus, and the security interrupt rules of ADR 0011.
-- How an untagged low-confidence item is routed remains open for the build ticket; this decision defines no fallback.
+- Owner decision (2026-10-04): an untagged low-confidence item routes to one analyst with the generic domain, as required by [#1185](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1185).
 - Analyst effort drops from max to high (per [Model and effort per plan-stage agent](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1150)), and the synthesizer runs only on security rounds.
