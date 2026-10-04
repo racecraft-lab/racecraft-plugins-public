@@ -4797,7 +4797,7 @@ class CanaryVariantAssertionsTests(CanaryVariantCase):
         ])
 
 
-class CanaryVariantContractTests(CanaryVariantCase):
+class CanaryGateVerdictTests(CanaryVariantCase):
     def test_expected_red_missing_guard_passes_gate_for_both_hosts(self):
         for host, value in self.receipts.items():
             base = value["variants"][0]
@@ -4816,19 +4816,20 @@ class CanaryVariantContractTests(CanaryVariantCase):
                 self.assertTrue(all(result["gate_verdict"] == "pass" for result in results.values()))
                 self.assertEqual("fail", results["missing_question_guard"]["verdict"])
                 self.assertIn("missing_question_guard.question_guard", results["missing_question_guard"]["failed_assertions"])
-            for trigger in ("scheduled", "on_demand"):
+            release_cases = ((trigger, index, duplicate) for trigger in ("scheduled", "on_demand")
+                             for index in range(len(value["variants"])) for duplicate in (False, True))
+            for trigger, index, duplicate in release_cases:
                 release = copy.deepcopy(value)
                 release.update(trigger=trigger, dirty_tree=False, release_status_allowed=True)
                 self.assertEqual([], self.validator.validate_receipt(release))
-                for index in range(len(release["variants"])):
-                    for duplicate in (False, True):
-                        incomplete = copy.deepcopy(release)
-                        removed = incomplete["variants"].pop(index)
-                        if duplicate:
-                            incomplete["variants"].extend([removed, copy.deepcopy(removed)])
-                        with self.subTest(host=host, trigger=trigger, index=index, duplicate=duplicate):
-                            self.assertIn("release.variants", self.validator.validate_receipt(incomplete))
+                removed = release["variants"].pop(index)
+                if duplicate:
+                    release["variants"].extend([removed, copy.deepcopy(removed)])
+                with self.subTest(host=host, trigger=trigger, index=index, duplicate=duplicate):
+                    self.assertIn("release.variants", self.validator.validate_receipt(release))
 
+
+class CanaryGuardGapContractTests(CanaryVariantCase):
     def test_expected_red_rejects_clean_claims_and_other_failures(self):
         for host, value in self.receipts.items():
             value["variants"][0].update(name="missing_question_guard", **copy.deepcopy(self.variant_evidence["missing_question_guard"]))
@@ -4862,6 +4863,8 @@ class CanaryVariantContractTests(CanaryVariantCase):
             self.assertEqual("fail", report["variants"][0]["gate_verdict"])
             self.assertIn("missing_question_guard.plan.wall_seconds_budget", report["failed_assertions"])
 
+
+class CanaryVariantContractTests(CanaryVariantCase):
     def test_variant_evidence_fails_closed_when_missing_or_malformed(self):
         for host, original in self.receipts.items():
             for name in ("oversized_plan", "security_interrupt", "security_block"):
@@ -5011,6 +5014,7 @@ def main() -> int:
                                for case in (ReadOnlyHelperTests, PlanLayersRepairRouteTests, PlanLayersPlannerCaseTests,
                                             PacketTitlePatternTests, ScaffoldAnswersTests, CanaryReceiptTests,
                                             CanaryVariantAssertionsTests, CanaryVariantContractTests,
+                                            CanaryGateVerdictTests, CanaryGuardGapContractTests,
                                             CanaryBudgetTests, CanaryBudgetFileTests))
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     total = result.testsRun

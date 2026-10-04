@@ -78,20 +78,26 @@ def receipt_report(value, budget=None):
     checks = list(budget_checks(value, load_budget() if budget is None else budget))
     results = []
     for variant in value["variants"]:
-        failures = variant_failures(variant)
-        gate = gate_failures(variant, failures)
-        gate.extend(f"{label}_budget" for label, actual, limit in checks
-                    if label.startswith(f"{variant['name']}.") and limit is not None and actual > limit)
-        problems.extend(gate)
-        results.append({"name": variant["name"], "verdict": "fail" if failures else "pass",
-                        "failed_assertions": failures, "gate_verdict": "fail" if gate else "pass",
-                        "gate_failed_assertions": gate})
+        result = variant_report(variant, checks)
+        problems.extend(result["gate_failed_assertions"])
+        results.append(result)
     return {"valid": not problems, "failed_assertions": problems, "variants": results,
             "unbudgeted": [label for label, _, limit in checks if limit is None]}
 
 
 def validate_receipt(value, budget=None):
     return receipt_report(value, budget)["failed_assertions"]
+
+
+def variant_report(variant, checks):
+    """One variant's assertions and gate result, including its budget failures."""
+    failures = variant_failures(variant)
+    gate = gate_failures(variant, failures)
+    gate.extend(f"{label}_budget" for label, actual, limit in checks
+                if label.startswith(f"{variant['name']}.") and limit is not None and actual > limit)
+    return {"name": variant["name"], "verdict": "fail" if failures else "pass",
+            "failed_assertions": failures, "gate_verdict": "fail" if gate else "pass",
+            "gate_failed_assertions": gate}
 
 
 def gate_failures(variant, failures):
