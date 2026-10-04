@@ -213,6 +213,14 @@ class ReadinessRecordTest(unittest.TestCase):
         self.assertNotIn(str(self.root), text)
         self.assertNotIn(tempfile.gettempdir(), text)
 
+    def test_credential_shaped_value_names_are_refused_without_writing(self) -> None:
+        credential_name = "ghp_" + "a1" * 18
+        response = self.run_helper([observation("plugin_payload", values={credential_name: "passed"})])
+        self.assertEqual("input_error", response["status"])
+        assert_runner_response(self, response, "input_error", 2)
+        self.assertFalse(self.record_path().exists())
+        self.assertNotIn(credential_name, json.dumps(response))
+
     def test_quality_gates_source_is_a_file_digest_or_defaults_with_the_reason(self) -> None:
         def quality() -> dict:
             response = self.run_helper(self.all_verified())

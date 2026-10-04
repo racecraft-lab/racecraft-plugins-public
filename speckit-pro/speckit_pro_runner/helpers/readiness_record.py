@@ -103,6 +103,7 @@ def fingerprint_values(values: Any, label: str) -> dict[str, str]:
     for name, value in values.items():
         if not isinstance(name, str) or not VALUE_NAME_RE.fullmatch(name) or not isinstance(value, str):
             raise SelectionError(f"{label}.values needs lowercase names and text values")
+        clean_text(name, f"{label}.values name")
         prints[f"value:{name}"] = digest(value)
     return prints
 
