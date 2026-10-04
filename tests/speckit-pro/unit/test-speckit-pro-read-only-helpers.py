@@ -4836,29 +4836,6 @@ class G0SetupTests(unittest.TestCase):
                     after = self.fixture_files(root)
                     self.assertEqual(before, after, "G0 setup probes must not write")
 
-    def test_g0_setup_preserves_advisory_version_statuses(self) -> None:
-        from speckit_pro_runner.helpers.g0_setup import g0_setup
-
-        cases = (("1.1.0", "match"), ("1.0.0", "older"), ("1.10.0", "newer"),
-                 (None, "unreadable"), (None, "missing"))
-        for surface in ("claude", "codex"):
-            for version, status in cases:
-                with self.subTest(surface=surface, status=status), helper_project() as root:
-                    self.prepare_fixture(root, None)
-                    found = status != "missing"
-                    with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value="specify" if found else None), \
-                            patch("speckit_pro_runner.helpers.read_only.installed_specify_version", return_value=version):
-                        data = g0_setup({"surface": surface, "probe": "prerequisites", "workflow_file": "workflow.md"}, root)
-                    result = data["result"]
-                    report = result["stdout_json"]
-                    self.assertEqual(status, report["spec_kit"]["status"])
-                    self.assertEqual(version, report["spec_kit"]["installed_version"])
-                    self.assertEqual(found, report["all_pass"])
-                    self.assertEqual(0 if found else 1, result["exit_code"])
-                    if found:
-                        row = next(row for row in report["checks"] if row["check"] == "speckit_cli_version")
-                        self.assertTrue(row["pass"], "G0 must preserve advisory version checks")
-
     def test_g0_setup_runner_rejects_invalid_requests_and_routes_both_hosts(self) -> None:
         base = {"probe": "commands", "surface": "codex", "workflow_file": WORKFLOW_FILE}
         for inputs in ({}, {**base, "probe": "unknown"}, {**base, "surface": "unknown"},
@@ -4878,6 +4855,31 @@ class G0SetupTests(unittest.TestCase):
             self.assertEqual(3, prereqs.count('"helper_id":"g0-setup"'))
             self.assertIn("data.quality_gate", prereqs)
             self.assertNotIn("G0 blocked:", prereqs)
+
+
+class G0PinTests(unittest.TestCase):
+    def test_g0_setup_preserves_advisory_version_statuses(self) -> None:
+        from speckit_pro_runner.helpers.g0_setup import g0_setup
+
+        cases = (("1.1.0", "match"), ("1.0.0", "older"), ("1.10.0", "newer"),
+                 (None, "unreadable"), (None, "missing"))
+        for surface in ("claude", "codex"):
+            for version, status in cases:
+                with self.subTest(surface=surface, status=status), helper_project() as root:
+                    G0SetupTests.prepare_fixture(root, None)
+                    found = status != "missing"
+                    with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value="specify" if found else None), \
+                            patch("speckit_pro_runner.helpers.read_only.installed_specify_version", return_value=version):
+                        data = g0_setup({"surface": surface, "probe": "prerequisites", "workflow_file": "workflow.md"}, root)
+                    result = data["result"]
+                    report = result["stdout_json"]
+                    self.assertEqual(status, report["spec_kit"]["status"])
+                    self.assertEqual(version, report["spec_kit"]["installed_version"])
+                    self.assertEqual(found, report["all_pass"])
+                    self.assertEqual(0 if found else 1, result["exit_code"])
+                    if found:
+                        row = next(row for row in report["checks"] if row["check"] == "speckit_cli_version")
+                        self.assertTrue(row["pass"], "G0 must preserve advisory version checks")
 
 
 class G0SetupFailureTests(unittest.TestCase):
@@ -5339,7 +5341,7 @@ def main() -> int:
     _ReadOnlyHelperRunner.helper_filter = args.helper
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                                for case in (ReadOnlyHelperTests, PlanLayersRepairRouteTests, PlanLayersPlannerCaseTests,
-                                            PacketTitlePatternTests, G0SetupTests, G0SetupFailureTests, ScaffoldAnswersTests, CanaryReceiptTests,
+                                            PacketTitlePatternTests, G0SetupTests, G0PinTests, G0SetupFailureTests, ScaffoldAnswersTests, CanaryReceiptTests,
                                             CanaryVariantAssertionsTests, CanaryVariantContractTests,
                                             CanaryGateVerdictTests, CanaryGuardGapContractTests,
                                             CanaryBudgetTests, CanaryBudgetFileTests))
