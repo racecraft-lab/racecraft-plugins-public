@@ -121,8 +121,115 @@ class StopReasonParityTests(unittest.TestCase):
         self.assertNotIn(MARKER.findall(sample)[0], _runner_set())
 
 
+def _h4_body(text: str, title: str) -> str:
+    """The lines under the first `####` heading whose title contains `title`.
+
+    A `####` line inside a code fence is content, not a heading.
+    """
+    kept: list[str] = []
+    inside = fenced = False
+    for line in text.splitlines():
+        if line.startswith("```"):
+            fenced = not fenced
+        if line.startswith("#### ") and not fenced:
+            if inside:
+                break
+            inside = title in line
+        elif inside:
+            kept.append(line)
+    if not kept:
+        raise ValueError(f"no section titled like {title!r}")
+    return "\n".join(kept)
+
+
+def _printed(reason: str) -> re.Pattern[str]:
+    """An instruction to print the literal marker `stop_reason:<reason>`."""
+    return re.compile(rf"\b[Pp]rint\b[^\n]*`stop_reason:{reason}`")
+
+
+# The plan-stage stop report maps each shape that can end a plan-stage run to its marker.
+PLAN_STAGE_SHAPES = {
+    "Emission ran": "plan_stage_boundary",
+    "The stage-boundary commit or a PR-packet step failed": "plan_stage_boundary",
+    "The pull request could not be opened": "plan_stage_boundary",
+    "The branch push failed": "plan_stage_boundary",
+    "The bookkeeping commit or its push failed": "plan_stage_boundary",
+    "The gate blocked in strict mode": "strict_confidence_opt_in",
+    "The recorded pull request is closed or merged": "reopen_closed_pr",
+    "The recorded pull request is missing, or several open pull requests match": "ambiguous_pr_record",
+    "The PR tool is absent or unauthenticated": "tool_unavailable",
+    "An artifact-integrity failure": "integrity_failure",
+    "A push requires protected-branch authority": "protected_push",
+}
+
+
+PRINT_RULE = re.compile(r"[Pp]rint exactly one marker for that reason,\s+copied verbatim from the Reason column, as the last line")
+
+
+class StopReasonPrintTests(unittest.TestCase):
+    """The canary judges a run by the marker its final message prints.
+
+    Naming a reason is not enough: each host's guidance must tell the agent
+    to print it.
+    """
+
+    def _phase_execution(self, host: str) -> str:
+        return (HOST_SKILLS[host] / "references" / "phase-execution.md").read_text(encoding="utf-8")
+
+    def test_plan_stage_terminal_step_prints_the_boundary_reason(self) -> None:
+        for host in HOST_SKILLS:
+            steps = _h4_body(self._phase_execution(host), "terminal-step sequence")
+            self.assertRegex(
+                steps,
+                re.compile(r"^\d+\. Print the stop report, then print exactly one `stop_reason:plan_stage_boundary` as the last line of your final message, and stop\.", re.M),
+                f"{host}: a numbered terminal step must print the plan stage boundary reason",
+            )
+
+    def _assert_stop_report(self, report: str, host: str) -> None:
+        self.assertIn("**Print exactly one stop reason as the last line of the final message**", report)
+        self.assertIn("Specific stop-policy reasons take precedence over the general report shapes", report)
+        rows = [line.split("|")[1:3] for line in report.splitlines() if line.startswith("| ")]
+        for shape, reason in PLAN_STAGE_SHAPES.items():
+            self.assertIn(reason, _runner_set())
+            matches = [cell for label, cell in rows if label.strip() == shape]
+            self.assertEqual(len(matches), 1, f"{host}: one mapping for {shape}")
+            self.assertEqual(MARKER.findall(matches[0]), [reason], f"{host}: one registered marker for {shape}")
+            self.assertRegex(matches[0], _printed(reason))
+
+    def test_plan_stage_stop_report_prints_each_shape_marker(self) -> None:
+        for host in HOST_SKILLS:
+            self._assert_stop_report(_h4_body(self._phase_execution(host), "The plan-stage stop report"), host)
+
+    def test_stop_report_guard_rejects_duplicates_trailing_output_and_wrong_mappings(self) -> None:
+        for host in HOST_SKILLS:
+            report = _h4_body(self._phase_execution(host), "The plan-stage stop report")
+            self._assert_stop_report(report, host)
+            mutations = (
+                report.replace("Print exactly one stop reason", "Print two stop reasons"),
+                report.replace("as the last line of the final message", "before the resume command"),
+                report.replace("Print `stop_reason:tool_unavailable`", "Print `stop_reason:plan_stage_boundary`"),
+                report.replace("Print `stop_reason:tool_unavailable`", "Print `stop_reason:tool_unavailable` and `stop_reason:plan_stage_boundary`"),
+            )
+            for index, mutated in enumerate(mutations):
+                with self.subTest(host=host, mutation=index), self.assertRaises(AssertionError):
+                    self._assert_stop_report(mutated, host)
+
+    def test_early_terminal_failure_report_preserves_actual_commit_state(self) -> None:
+        for host in HOST_SKILLS:
+            report = _h4_body(self._phase_execution(host), "The plan-stage stop report")
+            self.assertIn("**The stage-boundary commit or a PR-packet step failed.**", report)
+            self.assertIn("Do not claim the boundary or packet was committed when that step failed", report)
+
+    def test_stop_policy_tells_every_host_to_print_the_marker_of_a_run_ending_stop(self) -> None:
+        policies = {host: skill / "references" / "stop-policy.md" for host, skill in HOST_SKILLS.items()}
+        missing = [host for host, path in policies.items() if not PRINT_RULE.search(path.read_text(encoding="utf-8"))]
+        self.assertEqual(missing, [], "hosts whose stop-policy lacks the print rule")
+
+
 def build_suite() -> unittest.TestSuite:
-    return unittest.defaultTestLoader.loadTestsFromTestCase(StopReasonParityTests)
+    loader = unittest.defaultTestLoader
+    return unittest.TestSuite([loader.loadTestsFromTestCase(StopReasonParityTests),
+                               loader.loadTestsFromTestCase(StopReasonPrintTests)])
 
 
 def main() -> int:
