@@ -31,7 +31,7 @@ These examples name the runner's contract; the steps below determine when a chec
 | `resolve-workflow-binding` | `read_only` | `{"workflow_file": "<absolute-workflow-path>"}` |
 | `resolve-scaffold-worktree-placement` | `read_only` | `{"branch_name": "<branch-name>"}` (add `worktree_root_override` only when the user supplied one) |
 | `scaffold-answers` | `read_only` | `{"answers_file": "<answers-file>", "spec_id": "<SPEC-ID>"}` |
-| `write-readiness-record` | `apply` | `{"host": "<host>", "execution_mode": "<mode>", "plugin_revision": "<version>", "observations": [{"item": "<item>", "status": "<status>", "evidence_source": "<one line>"}]}` (add `action`, `files`, `values` per observation; add `host_version` when reported) |
+| `write-readiness-record` | `apply` | `{"host": "<host>", "execution_mode": "<mode>", "plugin_revision": "<version>", "observations": [{"item": "<item>", "status": "<status>", "evidence_source": "<one line>", "values": {"probe": "<observed-result>"}}]}` (add `action` and `files` per observation; add `host_version` when reported) |
 
 ## Capability discovery & grounding
 
@@ -241,9 +241,10 @@ its user-scope destination when `destination` was omitted. Route-aware verificat
 reuses the selected manifest and optional override instead of static model defaults.
 The plan must show every bundled TOML, including
 `uat-runbook-author.toml`, as current. If any required file is missing or stale,
-STOP, instruct the user to run `$speckit-pro:install`, restart Codex, and then retry
-scaffold. Do not apply the repair inside scaffold because this process cannot
-reload changed custom agents safely.
+keep `plugin_payload` `unavailable` with the action to run `$speckit-pro:install`,
+restart Codex, and retry. Carry that gap to Step 6.5 and continue independent
+scaffold steps after a declined or failed repair. The repair belongs to a new
+session because this process cannot reload changed custom agents safely.
 
 ### 0. Ensure SpecKit CLI
 
@@ -898,12 +899,12 @@ per item:
 
 | `item` | Observe it now by |
 | --- | --- |
-| `plugin_payload` | reusing the agent check at the start of this run, with the revision above |
-| `project_integration` | reusing the Specify and bootstrap results, then running helper `detect-commands` |
+| `plugin_payload` | retaining any agent gap from the start of this run; fingerprint the revision and selected installation/routing inputs; verify the session's loaded revision, since disk inventory alone does not prove it; otherwise record `unknown` with a reload/restart action |
+| `project_integration` | reusing the Specify and bootstrap results, then running helper `detect-commands` with empty `inputs={}`; fingerprint the project assets and confirmed command sources |
 | `github_auth` | running one bounded GitHub authentication status check; keep only its pass or fail |
-| `mcp_servers` | running helper `research-broker-preflight` |
+| `mcp_servers` | running helper `research-broker-preflight` with empty `inputs={}`, then bounded live observations of required MCP tools/startup/auth; configuration alone does not prove connectivity, so record `unknown` when live evidence is absent |
 | `typesafe_jev` | checking whether this session exposes the Jev `evaluate` tool |
-| `reviewability_report` | reusing the setup gate result, cited by roadmap path and SPEC-ID |
+| `reviewability_report` | reusing the setup gate result, with its report or roadmap path in `files` and SPEC-ID as `values.spec_id` |
 
 - Record `verified` for a check that passed in this run. Record `unavailable`
   for a failed check or a declined fix, `unknown` for what this session cannot
@@ -912,6 +913,8 @@ per item:
   next.
 - Send `files` as repository-relative paths and `values` as named text; the
   helper stores digests only. Send `evidence_source` as one plain line.
+  A `verified` item needs an input fingerprint; verified reviewability also
+  needs its report or roadmap file and `spec_id`.
 - The helper observes `local_capability` and `quality_gates` itself. Omit
   `host_version` when the host does not report it.
 - When the response is `input_error`, correct the field its diagnostic names

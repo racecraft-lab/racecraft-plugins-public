@@ -121,6 +121,11 @@ def caller_item(raw: Any, root: Path, observed_at: str) -> tuple[str, dict[str, 
         action = clean_text(raw["action"], f"{name}.action")
     fingerprints = {**fingerprint_files(raw.get("files", []), root, name),
                     **fingerprint_values(raw.get("values", {}), name)}
+    if status == "verified" and not any(value.startswith("sha256:") for value in fingerprints.values()):
+        raise SelectionError(f"{name}: verified evidence needs an input fingerprint")
+    if name == "reviewability_report" and status == "verified" and (
+            "value:spec_id" not in fingerprints or not any(key.startswith("file:") for key in fingerprints)):
+        raise SelectionError("reviewability_report: verified evidence needs a report or roadmap file and spec_id")
     return name, make_item(status, clean_text(raw.get("evidence_source"), f"{name}.evidence_source"),
                            observed_at, fingerprints, action)
 
@@ -157,6 +162,9 @@ def observe_local_capability() -> dict[str, Any]:
     if problem is not None:
         return make_item("unavailable", problem, observed_at, fingerprints,
                          "Fix the temporary directory so sensitive files stay owner-only.")
+    if os.name == "nt":
+        return make_item("unknown", "temporary write passed; owner-only modes are unobservable", observed_at, fingerprints,
+                         "Verify the record and sensitive temporary files have owner-only access, then rerun scaffold.")
     return make_item("verified", "temporary file write and owner-only mode probe", observed_at, fingerprints)
 
 
