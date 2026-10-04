@@ -248,9 +248,9 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
             field="body",
         )
 
-    if unratified_defaults and f"\n## {UNRATIFIED_HEADING}\n" not in rendered_body:
+    if unratified_defaults and f"\n## {UNRATIFIED_HEADING}\n\n{unratified_defaults.strip()}\n" not in rendered_body:
         return invalid_packet_input(
-            f"a body for a run on unratified defaults must carry the ## {UNRATIFIED_HEADING} section",
+            f"a body for a run on unratified defaults must carry the ## {UNRATIFIED_HEADING} section holding the flag",
             field="body",
         )
 

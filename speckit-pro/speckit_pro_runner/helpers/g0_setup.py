@@ -49,8 +49,8 @@ def g0_setup(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
 
 def unratified_defaults(quality: dict[str, Any], surface: str) -> dict[str, Any]:
     """The observation for a missing or invalid file: G0 runs on the shipped defaults (ADR 0007)."""
-    problem = "" if quality["status"] == "missing" else " ".join(quality["problems"][0].split())[:300]
-    detail = f"invalid: {problem}" if problem else "missing"
+    problem = " ".join(str(quality.get("problems", [""])[0]).split())[:300] or "no detail"
+    detail = "missing" if quality["status"] == "missing" else f"invalid: {problem}"
     sigil = "/" if surface == "claude" else "$"
     return {
         "flag": (f"Unratified quality-gate defaults: .specify/quality-gates.json is {detail}; "
