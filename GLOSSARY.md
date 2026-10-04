@@ -37,7 +37,7 @@ The run's record of every judgment it made instead of asking the user: the optio
 _Avoid_: end-of-run request, Decisions for you
 
 **Gate**:
-The checkpoint the runner validates after a planning phase or implement, numbered G0 to G7 with G6.5. A gate is a check, never a phase.
+A checkpoint the runner validates at a fixed point in a run, numbered G0 to G7 with G6.5. A gate is a check, never a phase.
 _Avoid_: quality gate, phase
 
 **Harm halt**:
