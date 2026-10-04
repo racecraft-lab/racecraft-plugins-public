@@ -78,9 +78,9 @@ below the confidence threshold it stops before Phase 7
 
 ## Stop reasons
 
-Each reason has one class. Whenever a run stops for one, print the marker
-(`stop_reason:` followed by the id from this table) as the last line of the final
-message, on its own line.
+Each reason has one class. When a stop ends the run, print that reason's marker,
+copied verbatim from the Reason column, as the last line of the final message, on
+its own line. A deferred item does not end the run and prints no marker.
 
 | Reason | Class | Meaning |
 | ------ | ----- | ------- |

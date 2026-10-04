@@ -1669,7 +1669,7 @@ does not end at the boundary commit above. It runs this sequence, in this order:
 7. Take a separate bookkeeping commit carrying that record, and push it.
 8. The parent dispatches `artifact-preview-observer` for each generated artifact preview; the isolated observer never inherits general repository tools.
 9. Validate and commit/push the workflow-only preview evidence.
-10. Print `stop_reason:plan_stage_boundary` as the last line of your final message, after the stop report, and stop.
+10. Print the stop report, then print `stop_reason:plan_stage_boundary` as the last line of your final message, and stop. A step that fails above ends the sequence there; print the stop report for that shape and its marker from the table under the stop report.
 ```
 
 <!-- host:codex: Codex runs the preview observer through attest_codex and observe_codex under its own permission profile -->
@@ -2057,7 +2057,7 @@ The description begins with the matching H1 title, followed by exactly two H2 se
 
 ## Resume
 
-Stage: plan — stopped at the plan-stage boundary for review (`stop_reason:plan_stage_boundary`).
+Stage: plan — stopped at the plan-stage boundary for review.
 <!-- host:claude: Claude invokes the autopilot as /speckit-pro:speckit-autopilot -->
 Resume with: `/speckit-pro:speckit-autopilot <workflow-file> --stage implement`
 <!-- /host -->
@@ -2068,8 +2068,8 @@ Resume with: `$speckit-pro:speckit-autopilot <workflow-file> --stage implement`
 
 - **The artifacts index** is a table of three columns: the artifact, its purpose
   in one line, and a copy-paste command that opens it locally.
-- **The resume/status block** names the stage the run stopped at, the stop
-  reason marker, and the exact command that resumes it.
+- **The resume/status block** names the stage the run stopped at and the exact
+  command that resumes it.
 
 **Forbidden in a draft description**: a release-note fence, any verification
 section, any scope or UAT section, and any placeholder final-writeup content. The
@@ -2101,10 +2101,10 @@ draft packet. `inputs.mode_name` is not accepted.
     "changed_files": [],
     "verification_evidence": [],
 <!-- host:claude: Claude invokes the autopilot as /speckit-pro:speckit-autopilot -->
-    "body": "# feat(speckit-pro): open an example draft\n\n## Artifacts\n\n| Artifact | Purpose | Open |\n| --- | --- | --- |\n| Implementation Plan | Describe the implementation phases | `open specs/example-feature/artifacts/implementation-plan.html` |\n\n## Resume\n\nStage: plan. Stopped at the plan-stage boundary for review (`stop_reason:plan_stage_boundary`).\nResume with: `/speckit-pro:speckit-autopilot <workflow-file> --stage implement`\n"
+    "body": "# feat(speckit-pro): open an example draft\n\n## Artifacts\n\n| Artifact | Purpose | Open |\n| --- | --- | --- |\n| Implementation Plan | Describe the implementation phases | `open specs/example-feature/artifacts/implementation-plan.html` |\n\n## Resume\n\nStage: plan. Stopped at the plan-stage boundary for review.\nResume with: `/speckit-pro:speckit-autopilot <workflow-file> --stage implement`\n"
 <!-- /host -->
 <!-- host:codex: Codex invokes the autopilot as $speckit-pro:speckit-autopilot -->
-    "body": "# feat(speckit-pro): open an example draft\n\n## Artifacts\n\n| Artifact | Purpose | Open |\n| --- | --- | --- |\n| Implementation Plan | Describe the implementation phases | `open specs/example-feature/artifacts/implementation-plan.html` |\n\n## Resume\n\nStage: plan. Stopped at the plan-stage boundary for review (`stop_reason:plan_stage_boundary`).\nResume with: `$speckit-pro:speckit-autopilot <workflow-file> --stage implement`\n"
+    "body": "# feat(speckit-pro): open an example draft\n\n## Artifacts\n\n| Artifact | Purpose | Open |\n| --- | --- | --- |\n| Implementation Plan | Describe the implementation phases | `open specs/example-feature/artifacts/implementation-plan.html` |\n\n## Resume\n\nStage: plan. Stopped at the plan-stage boundary for review.\nResume with: `$speckit-pro:speckit-autopilot <workflow-file> --stage implement`\n"
 <!-- /host -->
   }
 }
@@ -2204,8 +2204,10 @@ and after the report, as the literal marker for the shape:
 | The recorded pull request is closed or merged | Print `stop_reason:reopen_closed_pr` |
 | The recorded pull request is missing, or several open pull requests match | Print `stop_reason:ambiguous_pr_record` |
 
-The run is not finished until that line is printed; the operator and the canary
-read the run's end from it.
+Any other reason that ends the run takes its marker from the stop-policy table.
+The marker names where the run stopped, not whether it succeeded; the report
+above it says which shape occurred. The run is not finished until the line is
+printed; the operator and the canary read the run's end from it.
 
 #### The `Draft PR` row
 
