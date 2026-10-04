@@ -24,7 +24,7 @@ For every top-level directory at the repo root that contains a `.claude-plugin/p
 5. **Manifest key parity** — does every key in `.release-please-manifest.json` have a corresponding entry in `release-please-config.json` `packages`? (and vice-versa)
 
 If the current branch is a PR branch, also:
-6. **PR title** — fetch the open PR via `gh pr view --json title` and validate it with the release-readiness gate that the `validate-pr-title` job runs: `TITLE='<title>' PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/validate-pr-title-live.json`. The gate requires `<type>(<lowercase-scope>): <description>` with type `feat`, `fix`, `chore`, `docs`, `refactor`, or `test`.
+6. **PR title** — fetch the open PR via `gh pr view --json title` and validate it with the release-readiness gate that the `validate-pr-title` job runs: `python3 scripts/check-pr-title.py '<title>'`. The gate requires `<type>(<lowercase-scope>): <description>` with type `feat`, `fix`, `chore`, `docs`, `refactor`, or `test`.
 
 ## How to do it
 
