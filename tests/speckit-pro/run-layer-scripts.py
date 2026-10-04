@@ -35,10 +35,11 @@ from test_result import child_check_status, failure_report  # noqa: E402
 SUITE_MANIFEST = "tests/speckit-pro/suite-manifest.json"
 LAYER_WORKERS_VARIABLE = "SPECKIT_LAYER_WORKERS"
 DEFAULT_LAYER_WORKERS = 4
-# Scripts that run alone, after the parallel batch, because their scheduling and
-# timing assertions fail under a loaded host. Each costs a few seconds.
+# Scripts that run alone after the parallel batch: timing assertions and
+# snapshots of shared generated output need a stable host and tree.
 SERIAL_SCRIPTS = frozenset({
     "tests/speckit-pro/unit/test-native-eval-execution.py",
+    "tests/speckit-pro/unit/test-native-eval-runtime.py",
 })
 
 
