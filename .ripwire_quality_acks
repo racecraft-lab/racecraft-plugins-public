@@ -331,6 +331,7 @@ ack dead-code:new-symbol 588ab8c85a038009 0 cid=12c6b0135f30b188 unittest discov
 ack dead-code:new-symbol 58916268f5880be5 0 cid=ec0e5ff2805b24a6 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 59351005d8c5cad9 0 cid=eaa17f61108737a1 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 5983a6984c665a6f 0 cid=593731bf5ff1b607 unittest methods and a patch side_effect closure are invoked by the runner and by mock, not by a call site
+ack dead-code:new-symbol 59aa552e60f00a8b 0 cid=89a1978ef088458f now=0 was=0 p=tests/speckit-pro/unit/test-autopilot-execution-contract.py:38 unittest discovery invokes this regression test; suite-manifest selects its module and green execution was observed
 ack dead-code:new-symbol 5ae1bcf5a5539a06 0 cid=0c7053783e55da85 by=tests/speckit-pro/unit/test-gh-json.py unittest discovers and runs test_ methods by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 5af4050eeb941687 0 cid=7f4e25b389eacbc5 unittest discovers and runs test_ methods by name, and a patched-in subprocess stand-in is passed as side_effect; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 5b87a24ee5f6a5e0 0 ScaffoldAnswersTests.test_missing_answer_names_the_key_and_stops runs via unittest discovery and exercises the runner CLI
@@ -358,6 +359,7 @@ ack dead-code:new-symbol 6454e4eba4d42359 0 cid=d3adfc836d425e77 dead-code: unit
 ack dead-code:new-symbol 64dada13abbe49b2 0 cid=b60fa19d27bbf81d Referenced only as entries in the _VALUE_CHECKS dispatch tuple in json_schema_failures, which the dead-code scan does not count as a call
 ack dead-code:new-symbol 65267ab4c07f8fb0 0 cid=19c1beae9a1b4fc7 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 654468ecb6fcb98e 0 cid=c66f78032dfcab49 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol 6550387e1b734a82 0 cid=a62dbeca3b2a78c2 now=0 was=0 p=tests/speckit-pro/layer1-structural/validate-skill-contracts.py:77 unittest discovery invokes this regression test; suite-manifest selects its module and red execution was observed
 ack dead-code:new-symbol 65ddc97b1d3ada7e 0 cid=1e7ca05161557756 unittest-discovered test methods, run by loadTestsFromTestCase
 ack dead-code:new-symbol 666f98274e1091cf 0 cid=7d5563d107fcf7d6 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 668217f466cfbb26 0 cid=12ef32b01a0a4c9c unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
