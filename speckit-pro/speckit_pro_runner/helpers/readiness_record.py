@@ -2,8 +2,8 @@
 
 Scaffold observes the shared preparation items and hands each observation to
 this helper, which stamps it, fingerprints the inputs it names, and writes
-`.specify/readiness/<host>.json` owner-only. The runner observes two items
-itself: local capability health and the quality-gates source. Missing
+`.specify/readiness/<host>.json` owner-only. The runner observes three items
+itself: local capability health, the quality-gates source and the verification-Docker fit. Missing
 evidence is recorded `unknown`; an `unavailable` or `unknown` item must name
 the action the user takes, so scaffold finishes after a declined or failed
 fix. The record has no overall verdict, stores no credential, and holds no
@@ -15,7 +15,9 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 import stat
+import subprocess
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
@@ -30,6 +32,7 @@ from ..private_state import ensure_private_directory
 from ..strict_input import SelectionError, require_text
 from ..sweep_isolation import secret_matches
 from ..trusted_io import find_repo_root, trusted_bytes
+from ..verification_docker import DAEMON_ARCHITECTURES, PLATFORM, PLATFORM_OS
 
 SCHEMA_VERSION = "readiness-record/v1"
 HOSTS = ("claude", "codex")
@@ -37,8 +40,8 @@ STATUSES = ("verified", "unavailable", "unknown", "not_applicable")
 NEEDS_ACTION = ("unavailable", "unknown")
 # Items scaffold observes and passes in. The runner observes the rest.
 CALLER_ITEMS = ("plugin_payload", "project_integration", "github_auth", "mcp_servers", "typesafe_jev",
-                "reviewability_report")
-RUNNER_ITEMS = ("local_capability", "quality_gates")
+                "reviewability_report", "formal_methods")
+RUNNER_ITEMS = ("local_capability", "quality_gates", "verification_docker")
 RECORD_DIRECTORY = ".specify/readiness"
 INPUT_KEYS = frozenset({"host", "host_version", "execution_mode", "plugin_revision", "observations"})
 OBSERVATION_KEYS = frozenset({"item", "status", "evidence_source", "action", "files", "values"})
@@ -47,6 +50,7 @@ VALUE_NAME_RE = re.compile(r"[a-z][a-z0-9_]{0,40}")
 LOCAL_PATH_RE = re.compile(r"(?:^|[\s\"'(=:])(?:/[^\s/]+/|~[/\\]|[A-Za-z]:[\\/]|file://)")
 EXECUTION_MODES = ("interactive", "answers-file")
 MAX_TEXT = 400
+DOCKER_PROBE_SECONDS = 10
 NOT_OBSERVED_ACTION = "Run the preparation check for this item, then rerun scaffold."
 
 
@@ -182,6 +186,34 @@ def observe_quality_gates(root: Path) -> dict[str, Any]:
                      "quality gates flow.")
 
 
+def observe_verification_docker() -> dict[str, Any]:
+    """Ask a present Docker CLI one read-only question: does a Linux/arm64 daemon answer (ADR 0005)?
+
+    Nothing is installed or started. The daemon's own words are never recorded.
+    """
+    observed_at = now()
+
+    def unavailable(evidence: str, action: str) -> dict[str, Any]:
+        return make_item("unavailable", evidence, observed_at, {}, action)
+
+    if shutil.which("docker") is None:
+        return unavailable("the Docker CLI is not installed",
+                           f"Opt in to verification Docker later from a host with a {PLATFORM} Docker daemon.")
+    try:
+        probe = subprocess.run(["docker", "info", "--format", "{{.OSType}}/{{.Architecture}}"], capture_output=True,
+                               text=True, timeout=DOCKER_PROBE_SECONDS, stdin=subprocess.DEVNULL, check=False)
+    except (OSError, subprocess.SubprocessError) as error:
+        return unavailable(f"the Docker daemon probe failed: {type(error).__name__}",
+                           "Start Docker or fix the CLI, then rerun scaffold to offer verification Docker again.")
+    if probe.returncode != 0:
+        return unavailable("no Docker daemon answered", "Start the Docker daemon, then rerun scaffold.")
+    os_type, _, architecture = probe.stdout.strip().partition("/")
+    if os_type == PLATFORM_OS and architecture in DAEMON_ARCHITECTURES:
+        return make_item("verified", f"a {PLATFORM} Docker daemon answered", observed_at, {})
+    return unavailable(f"the Docker daemon does not report {PLATFORM}",
+                       f"Opt in to verification Docker later from a host with a {PLATFORM} Docker daemon.")
+
+
 def build_record(inputs: dict[str, Any], root: Path) -> dict[str, Any]:
     if not isinstance(inputs, dict) or not {"host", "execution_mode", "plugin_revision", "observations"} <= inputs.keys() \
             or not inputs.keys() <= INPUT_KEYS:
@@ -204,6 +236,7 @@ def build_record(inputs: dict[str, Any], root: Path) -> dict[str, Any]:
         items.setdefault(name, make_item("unknown", "not observed by scaffold", observed_at, {}, NOT_OBSERVED_ACTION))
     items["local_capability"] = observe_local_capability()
     items["quality_gates"] = observe_quality_gates(root)
+    items["verification_docker"] = observe_verification_docker()
     host_version = inputs.get("host_version")
     return {
         "schema_version": SCHEMA_VERSION,

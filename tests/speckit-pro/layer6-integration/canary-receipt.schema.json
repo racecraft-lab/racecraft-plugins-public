@@ -27,6 +27,10 @@
       "type": "object", "additionalProperties": false, "required": ["loaded_plugins", "evidence"],
       "properties": {"loaded_plugins": {"type": "array", "items": {"$ref": "#/$defs/text"}}, "evidence": {"$ref": "#/$defs/text"}}
     },
+    "offer": {
+      "type": "object", "additionalProperties": false, "required": ["evaluated", "offered", "answer"],
+      "properties": {"evaluated": {"type": "boolean"}, "offered": {"type": "boolean"}, "answer": {"enum": ["accepted", "declined"]}}
+    },
     "stage": {
       "type": "object", "additionalProperties": false,
       "required": ["wall_seconds", "tokens"],
@@ -44,6 +48,10 @@
         "planning_end": {"type": "string"}, "implement_end": {"type": "string"}, "uat_runbook": {"type": "string"},
         "decisions_by_kind": {"type": "object", "additionalProperties": {"$ref": "#/$defs/count"}},
         "retry_attempts": {"$ref": "#/$defs/count"}, "blocked_for_uat": {"$ref": "#/$defs/count"},
+        "feature_offers": {
+          "type": "object", "additionalProperties": false, "required": ["formal_methods", "verification_docker"],
+          "properties": {"formal_methods": {"$ref": "#/$defs/offer"}, "verification_docker": {"$ref": "#/$defs/offer"}}
+        },
         "split_recommendation_recorded": {"type": "boolean"}, "full_plan_built": {"type": "boolean"}, "stops": {"$ref": "#/$defs/count"},
         "question_guard": {
           "type": "object", "additionalProperties": false,
@@ -68,7 +76,8 @@
           "properties": {"scaffold": {"$ref": "#/$defs/stage"}, "plan": {"$ref": "#/$defs/stage"}, "plan_review": {"$ref": "#/$defs/stage"}, "implement": {"$ref": "#/$defs/stage"}}
         }
       },
-      "allOf": [{"if": {"properties": {"name": {"const": "oversized_plan"}}},
+      "allOf": [{"if": {"properties": {"name": {"const": "base"}}}, "then": {"required": ["feature_offers"]}},
+        {"if": {"properties": {"name": {"const": "oversized_plan"}}},
         "then": {"required": ["split_recommendation_recorded", "full_plan_built", "stops"]}},
         {"if": {"properties": {"name": {"const": "security_interrupt"}}}, "then": {"required": ["security_interrupt"]}},
         {"if": {"properties": {"name": {"const": "security_block"}}}, "then": {"required": ["security_block"]}}]

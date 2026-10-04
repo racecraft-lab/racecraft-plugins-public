@@ -123,7 +123,10 @@ def variant_failures(variant):
         "verdict": variant["verdict"] == "pass" and not variant["failed_assertions"],
     }
     if variant["name"] == "base":
-        conditions.update(umask=variant["umask"] == "077", task_list_calls=variant["task_list_calls"] == 0)
+        # ADR 0005: scaffold evaluates and offers both features, then the answers file declines them.
+        conditions.update(umask=variant["umask"] == "077", task_list_calls=variant["task_list_calls"] == 0,
+                          feature_offers=all(offer == {"evaluated": True, "offered": True, "answer": "declined"}
+                                             for offer in variant["feature_offers"].values()))
     elif variant["name"] == "oversized_plan":
         conditions.update(split_recommendation_recorded=variant["split_recommendation_recorded"],
                           full_plan_built=variant["full_plan_built"], stops=variant["stops"] == 0)
