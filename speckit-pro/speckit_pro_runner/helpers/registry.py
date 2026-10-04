@@ -16,6 +16,7 @@ from .decisions_list import run_decisions_list_helper
 from .egress_authorization import run_egress_authorization_helper
 from .execution_requests import run_execution_helper
 from .gate_preflight_coverage import run_gate_preflight_coverage_helper
+from .g0_setup import run_g0_setup_helper
 from .roadmap_freshness import run_roadmap_freshness_helper
 from .readiness_record import run_readiness_record_helper
 from .scaffold_answers import run_scaffold_answers_helper
@@ -113,6 +114,10 @@ def deferred_authoritative_request() -> str:
 
 
 HELPERS: dict[str, HelperEntry] = {
+    "g0-setup": HelperEntry(
+        "g0-setup", "g0-setup", None, "python_authoritative", "python_contract",
+        authoritative_request("g0-setup"),
+    ),
     "scaffold-answers": HelperEntry(
         "scaffold-answers", "scaffold-answers", None, "python_authoritative", "python_contract",
         authoritative_request("scaffold-answers"),
@@ -698,6 +703,21 @@ def mutation_registry_report() -> dict[str, Any]:
     }
 
 
+# Helpers with their own response contracts share one dispatch path.
+SPECIAL_HELPER_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
+    "formal-doctor": run_formal_helper,
+    "research-broker-preflight": run_research_broker_preflight_helper,
+    "render-egress-authorization": run_egress_authorization_helper,
+    "check-gate-preflight-coverage": run_gate_preflight_coverage_helper,
+    "finalize-run": run_run_finalization_helper,
+    "ratify-pr-split": run_pr_split_ratification_helper,
+    "list-archive-candidates": run_archive_sweep_helper,
+    "check-roadmap-freshness": run_roadmap_freshness_helper,
+    "scaffold-answers": run_scaffold_answers_helper,
+    "g0-setup": run_g0_setup_helper,
+}
+
+
 def dispatch_helper(request: Any) -> dict[str, Any]:
     entry = HELPERS.get(request.helper_id)
     if entry is None and request.helper_id in MUTATION_HELPERS:
@@ -749,24 +769,9 @@ def dispatch_helper(request: Any) -> dict[str, Any]:
 
     if entry.helper_id == "helper-registry-dispatch":
         return response("ok", request_id=request.request_id, data=registry_report(HELPERS))
-    if entry.helper_id == "formal-doctor":
-        return run_formal_helper(entry, request)
-    if entry.helper_id == "research-broker-preflight":
-        return run_research_broker_preflight_helper(entry, request)
-    if entry.helper_id == "render-egress-authorization":
-        return run_egress_authorization_helper(entry, request)
-    if entry.helper_id == "check-gate-preflight-coverage":
-        return run_gate_preflight_coverage_helper(entry, request)
-    if entry.helper_id == "finalize-run":
-        return run_run_finalization_helper(entry, request)
-    if entry.helper_id == "ratify-pr-split":
-        return run_pr_split_ratification_helper(entry, request)
-    if entry.helper_id == "list-archive-candidates":
-        return run_archive_sweep_helper(entry, request)
-    if entry.helper_id == "check-roadmap-freshness":
-        return run_roadmap_freshness_helper(entry, request)
-    if entry.helper_id == "scaffold-answers":
-        return run_scaffold_answers_helper(entry, request)
+    handler = SPECIAL_HELPER_HANDLERS.get(entry.helper_id)
+    if handler is not None:
+        return handler(entry, request)
     return run_registered_helper(entry, request)
 
 

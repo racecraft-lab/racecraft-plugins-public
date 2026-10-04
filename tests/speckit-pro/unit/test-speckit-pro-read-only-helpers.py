@@ -61,6 +61,7 @@ from speckit_pro_runner.helpers import registry  # noqa: E402
 from speckit_pro_runner.pr_contract import PACKET_TITLE_SCOPE_PATTERN, PACKET_TITLE_VALUE_PATTERN  # noqa: E402
 
 EXPECTED_HELPERS = [
+    "g0-setup",
     "formal-doctor",
     "scaffold-answers",
     "helper-registry-dispatch",
@@ -107,6 +108,7 @@ EXPECTED_HELPERS = [
 JSON_STDOUT_PARITY_HELPERS = {"atomicity-route"}
 
 HELPER_CASES: dict[str, dict[str, object]] = {
+    "g0-setup": {"probe": "commands", "surface": "codex", "workflow_file": WORKFLOW_FILE},
     "scaffold-answers": {"answers_file": "missing-answers.json", "spec_id": "SPEC-009"},
     "formal-doctor": {"repo_root": ".", "workflow_file": "tests/speckit-pro/unit/fixtures/formal-methods/disabled-workflow.md"},
     "check-prerequisites": {"workflow_file": WORKFLOW_FILE},
@@ -4310,7 +4312,7 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
 
     def test_helper_python_authoritative_records(self) -> None:
         for helper_id in self.filtered_helpers():
-            if helper_id in {"helper-registry-dispatch", "scaffold-answers"}:
+            if helper_id in {"helper-registry-dispatch", "scaffold-answers", "g0-setup"}:
                 continue
             with self.subTest(helper_id=helper_id):
                 completed, response, stderr_records = run_runner(helper_request(helper_id, HELPER_CASES[helper_id]))
@@ -4593,6 +4595,87 @@ class PlanLayersPlannerCaseTests(unittest.TestCase):
                 self.assertEqual(found, expected)
 
 
+class G0SetupTests(unittest.TestCase):
+    @staticmethod
+    def fixture_files(root: Path) -> dict[str, bytes]:
+        return {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}
+
+    @staticmethod
+    def prepare_fixture(root: Path, quality_text: str | None) -> None:
+        subprocess.run(["git", "init", "-q", "-b", "test-g0", str(root)], check=True)
+        for name in ("speckit-specify", "speckit-plan", "speckit-tasks", "speckit-implement"):
+            skill = root / ".agents" / "skills" / name / "SKILL.md"
+            skill.parent.mkdir(parents=True)
+            skill.write_text("fixture", encoding="utf-8")
+        constitution = root / ".specify" / "memory" / "constitution.md"
+        constitution.parent.mkdir()
+        constitution.write_text("fixture", encoding="utf-8")
+        (root / "workflow.md").write_text("fixture", encoding="utf-8")
+        if quality_text is not None:
+            (root / ".specify" / "quality-gates.json").write_text(quality_text, encoding="utf-8")
+
+    def test_g0_setup_matches_golden_outcomes(self) -> None:
+        from speckit_pro_runner.helpers.g0_setup import g0_setup
+
+        manifest = json.loads((FIXTURE_DIR / "fixture-manifest.json").read_text(encoding="utf-8"))
+        cases = next(row["golden_outcomes"] for row in manifest["helpers"] if row["helper_id"] == "g0-setup")
+        for case in cases:
+            for surface in ("claude", "codex"):
+                with self.subTest(case=case["name"], surface=surface), helper_project() as root:
+                    self.prepare_fixture(root, case["quality_text"])
+                    before = self.fixture_files(root)
+                    for probe in ("prerequisites", "commands", "presets"):
+                        with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value=case["specify"]):
+                            actual = g0_setup({"surface": surface, "probe": probe, "workflow_file": "workflow.md"}, root)
+                        actual = json.loads(json.dumps(actual).replace(str(PLUGIN_ROOT), "<plugin-root>"))
+                        self.assertEqual(case["probes"][probe], actual["result"])
+                        if probe == "commands":
+                            self.assertEqual(case["quality_gate"][surface], actual["quality_gate"])
+                    after = self.fixture_files(root)
+                    self.assertEqual(before, after, "G0 setup probes must not write")
+
+    def test_g0_setup_runner_rejects_invalid_requests_and_routes_both_hosts(self) -> None:
+        base = {"probe": "commands", "surface": "codex", "workflow_file": WORKFLOW_FILE}
+        for inputs in ({}, {**base, "probe": "unknown"}, {**base, "surface": "unknown"},
+                       {**base, "extra": True}, {**base, "workflow_file": "../outside.md"}):
+            with self.subTest(inputs=inputs):
+                completed, report, _ = run_runner(helper_request("g0-setup", inputs))
+                self.assertEqual(2, completed.returncode)
+                self.assertEqual("input_error", report["status"])
+        for surface in ("claude", "codex"):
+            completed, report, _ = run_runner(helper_request("g0-setup", {**base, "surface": surface}))
+            self.assertEqual(0, completed.returncode)
+            self.assertEqual("commands", report["data"]["probe"])
+            view = host_skill_root(surface) / "speckit-autopilot"
+            skill = (view / "SKILL.md").read_text(encoding="utf-8")
+            prereqs = (view / "references" / "prerequisites.md").read_text(encoding="utf-8")
+            self.assertIn(f"to `{surface}`", skill)
+            self.assertEqual(3, prereqs.count('"helper_id":"g0-setup"'))
+            self.assertIn("data.quality_gate", prereqs)
+            self.assertNotIn("G0 blocked:", prereqs)
+
+
+class G0SetupFailureTests(unittest.TestCase):
+    def test_g0_setup_failed_probe_keeps_standalone_status_and_diagnostic(self) -> None:
+        from types import SimpleNamespace
+        from speckit_pro_runner.helpers.g0_setup import run_g0_setup_helper
+
+        with helper_project() as root:
+            G0SetupTests.prepare_fixture(root, None)
+            inputs = {"probe": "prerequisites", "surface": "claude", "workflow_file": "workflow.md"}
+            request = SimpleNamespace(request_id="g0", inputs=inputs)
+            previous = Path.cwd()
+            os.chdir(root)
+            try:
+                with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value=None):
+                    report = run_g0_setup_helper(None, request)
+            finally:
+                os.chdir(previous)
+        self.assertEqual("expected_failure", report["status"], report)
+        self.assertEqual(["validation_failure"], [row["code"] for row in report["diagnostics"]])
+        self.assertEqual("check-prerequisites", report["diagnostics"][0]["details"]["helper_id"])
+
+
 class ScaffoldAnswersTests(unittest.TestCase):
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()
@@ -4663,7 +4746,8 @@ def receipt():
             "decisions_by_kind": {"design": 2}, "retry_attempts": 0, "blocked_for_uat": 0,
             "feature_offers": {feature: {"evaluated": True, "offered": True, "answer": "declined"}
                                for feature in ("formal_methods", "verification_docker")},
-            "stages": {name: {"wall_seconds": 1, "tokens": 10} for name in ("scaffold", "plan", "plan_review", "implement")},
+            "plan_target": {"wall_seconds_limit": 1800, "tokens_limit": 15000000, "target_met": True},
+            "stages": {name: {"wall_seconds": 1, "tokens": 10, "codex_tokens": {"root_tokens": 10, "child_rollout_tokens": []}} for name in ("scaffold", "plan", "plan_review", "implement")},
         }],
     }
 
@@ -4679,6 +4763,17 @@ class CanaryReceiptTests(unittest.TestCase):
             if host == "claude-code":
                 value["install_probe"] = {"loaded_plugins": ["speckit-pro@1.0.0"], "evidence": "init.json"}
             self.assertEqual([], self.validator.validate_receipt(value))
+
+    def test_base_receipt_without_plan_target_fails_schema_validation(self):
+        for host in ("claude-code", "codex"):
+            value = receipt()
+            value["host"] = host
+            if host == "claude-code":
+                value["install_probe"] = {"loaded_plugins": ["speckit-pro@1.0.0"], "evidence": "init.json"}
+            del value["variants"][0]["plan_target"]
+            with self.subTest(host=host):
+                failures = self.validator.json_schema_failures(value, self.validator.SCHEMA, self.validator.SCHEMA, "receipt")
+                self.assertTrue(any("plan_target" in failure["message"] for failure in failures), failures)
 
     def test_rejects_questions_nonterminal_plan_missing_runbook_and_unregistered_stop(self):
         for key, bad in (("questions_after_scaffold", 1), ("planning_end", "paused"),
@@ -4940,6 +5035,132 @@ class CanaryVariantContractTests(CanaryVariantCase):
                                  (completed.returncode, report["valid"], report["failed_assertions"]))
 
 
+class CanaryPlanTargetTests(CanaryVariantCase):
+    def test_over_target_reports_false_without_failing_the_gate_for_either_host(self):
+        for host, value in self.receipts.items():
+            variant = value["variants"][0]
+            for metric, actual in (("wall_seconds", 1801), ("tokens", 15000001)):
+                with self.subTest(host=host, metric=metric):
+                    variant["stages"]["plan"].update(wall_seconds=1, tokens=10)
+                    variant["stages"]["plan"][metric] = actual
+                    variant["stages"]["plan"]["codex_tokens"]["root_tokens"] = variant["stages"]["plan"]["tokens"]
+                    variant["plan_target"]["target_met"] = False
+                    report = self.validator.receipt_report(value)
+                    self.assertTrue(report["valid"], report)
+                    result = report["variants"][0]
+                    self.assertEqual("pass", result["gate_verdict"])
+                    self.assertFalse(result["plan_target"]["target_met"])
+                    self.assertEqual(actual, result["plan_target"][metric])
+
+
+    def test_target_boundaries_and_claims_are_checked_independently_of_budget(self):
+        for host, value in self.receipts.items():
+            variant = value["variants"][0]
+            plan = variant["stages"]["plan"]
+            plan.update(wall_seconds=1800, tokens=15000000,
+                        codex_tokens={"root_tokens": 15000000, "child_rollout_tokens": []})
+            with self.subTest(host=host):
+                report = self.validator.receipt_report(value)
+                self.assertTrue(report["valid"], report)
+                self.assertTrue(report["variants"][0]["plan_target"]["target_met"])
+                variant["plan_target"]["target_met"] = False
+                self.assertIn("base.plan_target", self.validator.validate_receipt(value))
+                plan["wall_seconds"] = 1801
+                self.assertEqual([], self.validator.validate_receipt(value))
+                variant["plan_target"]["target_met"] = True
+                self.assertIn("base.plan_target", self.validator.validate_receipt(value))
+
+    def test_cli_reports_an_over_target_receipt_as_valid_for_both_hosts(self):
+        for host, value in self.receipts.items():
+            value["variants"][0]["stages"]["plan"]["wall_seconds"] = 1801
+            value["variants"][0]["plan_target"]["target_met"] = False
+            with self.subTest(host=host), tempfile.TemporaryDirectory() as directory:
+                source = Path(directory) / "receipt.json"
+                source.write_text(json.dumps(value), encoding="utf-8")
+                completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
+                                           capture_output=True, text=True, check=False)
+                report = json.loads(completed.stdout)
+                self.assertEqual(0, completed.returncode, report)
+                self.assertEqual("pass", report["variants"][0]["gate_verdict"])
+                self.assertFalse(report["variants"][0]["plan_target"]["target_met"])
+
+
+class CanaryPlanTargetContractTests(CanaryVariantCase):
+    def test_target_fields_fail_closed_when_missing_malformed_or_changed(self):
+        for host, original in self.receipts.items():
+            for field, bad in (("wall_seconds_limit", 1801), ("tokens_limit", 15000001),
+                               ("target_met", "false"), ("unexpected", True)):
+                value = copy.deepcopy(original)
+                value["variants"][0]["plan_target"][field] = bad
+                with self.subTest(host=host, field=field):
+                    self.assertTrue(self.validator.validate_receipt(value))
+            for field in ("wall_seconds_limit", "tokens_limit", "target_met"):
+                value = copy.deepcopy(original)
+                del value["variants"][0]["plan_target"][field]
+                with self.subTest(host=host, missing=field):
+                    self.assertTrue(self.validator.validate_receipt(value))
+
+    def test_only_the_base_variant_reports_the_target(self):
+        for host, value in self.receipts.items():
+            variant = value["variants"][0]
+            variant.update(name="oversized_plan", **self.variant_evidence["oversized_plan"])
+            del variant["plan_target"]
+            with self.subTest(host=host):
+                report = self.validator.receipt_report(value)
+                self.assertTrue(report["valid"], report)
+                self.assertNotIn("plan_target", report["variants"][0])
+
+
+class CanaryCodexTokenTests(CanaryVariantCase):
+    def test_child_rollouts_are_included_in_the_plan_total_and_target(self):
+        value = self.receipts["codex"]
+        plan = value["variants"][0]["stages"]["plan"]
+        plan.update(tokens=16000000, codex_tokens={"root_tokens": 9000000, "child_rollout_tokens": [4000000, 3000000]})
+        value["variants"][0]["plan_target"]["target_met"] = False
+        report = self.validator.receipt_report(value)
+        self.assertTrue(report["valid"], report)
+        target = report["variants"][0]["plan_target"]
+        self.assertEqual(16000000, target["tokens"])
+        self.assertFalse(target["target_met"])
+        plan["tokens"] = 9000000
+        value["variants"][0]["plan_target"]["target_met"] = True
+        self.assertIn("base.plan.tokens_sum", self.validator.validate_receipt(value))
+
+
+    def test_each_codex_stage_checks_its_sum_and_allows_equal_child_counts(self):
+        for name in ("scaffold", "plan", "plan_review", "implement"):
+            value = self.receipts["codex"]
+            stage = value["variants"][0]["stages"][name]
+            stage.update(tokens=27, codex_tokens={"root_tokens": 7, "child_rollout_tokens": [10, 10]})
+            with self.subTest(stage=name):
+                self.assertEqual([], self.validator.validate_receipt(value))
+                stage["tokens"] = 7
+                self.assertIn(f"base.{name}.tokens_sum", self.validator.validate_receipt(value))
+                stage["tokens"] = 27
+
+    def test_codex_breakdown_fails_closed_when_missing_or_malformed(self):
+        for name in ("scaffold", "plan", "plan_review", "implement"):
+            for bad in (None, {}, {"root_tokens": 10}, {"root_tokens": True, "child_rollout_tokens": []},
+                        {"root_tokens": 10, "child_rollout_tokens": [-1]},
+                        {"root_tokens": 10, "child_rollout_tokens": [1.5]}):
+                value = copy.deepcopy(self.receipts["codex"])
+                stage = value["variants"][0]["stages"][name]
+                if bad is None:
+                    del stage["codex_tokens"]
+                else:
+                    stage["codex_tokens"] = bad
+                with self.subTest(stage=name, bad=bad):
+                    self.assertTrue(self.validator.validate_receipt(value))
+
+    def test_claude_uses_its_stage_total_without_a_codex_breakdown(self):
+        value = self.receipts["claude-code"]
+        for stage in value["variants"][0]["stages"].values():
+            del stage["codex_tokens"]
+        report = self.validator.receipt_report(value)
+        self.assertTrue(report["valid"], report)
+        self.assertEqual(10, report["variants"][0]["plan_target"]["tokens"])
+
+
 class CanaryBudgetCase(unittest.TestCase):
     """Shared setup for the budget tests; it holds no tests of its own."""
 
@@ -4959,8 +5180,9 @@ class CanaryBudgetTests(CanaryBudgetCase):
         for key, actual in (("wall_seconds", 6), ("tokens", 101)):
             value = receipt()
             value["variants"][0]["stages"]["plan"][key] = actual
+            value["variants"][0]["stages"]["plan"]["codex_tokens"]["root_tokens"] = value["variants"][0]["stages"]["plan"]["tokens"]
             self.assertEqual([f"base.plan.{key}_budget"], self.validator.validate_receipt(value, self.budget(5, 100)), key)
-        value["variants"][0]["stages"]["plan"].update(wall_seconds=5, tokens=100)
+        value["variants"][0]["stages"]["plan"].update(wall_seconds=5, tokens=100, codex_tokens={"root_tokens": 100, "child_rollout_tokens": []})
         self.assertEqual([], self.validator.validate_receipt(value, self.budget(5, 100)), "a stage at its limit is within budget")
 
     def test_an_overrun_belongs_only_to_the_variant_entry_that_ran_over(self):
@@ -4974,6 +5196,8 @@ class CanaryBudgetTests(CanaryBudgetCase):
     def test_an_unset_limit_reports_unbudgeted_and_never_a_pass(self):
         value = receipt()
         value["variants"][0]["stages"]["plan"]["tokens"] = 10**9
+        value["variants"][0]["plan_target"]["target_met"] = False
+        value["variants"][0]["stages"]["plan"]["codex_tokens"]["root_tokens"] = 10**9
         unset = self.budget(5, None)
         report = self.validator.receipt_report(value, unset)
         self.assertEqual((True, []), (report["valid"], report["failed_assertions"]))
@@ -4990,7 +5214,7 @@ class CanaryBudgetTests(CanaryBudgetCase):
 
     def test_plan_review_is_recorded_but_never_budgeted(self):
         value = receipt()
-        value["variants"][0]["stages"]["plan_review"].update(wall_seconds=10**6, tokens=10**9)
+        value["variants"][0]["stages"]["plan_review"].update(wall_seconds=10**6, tokens=10**9, codex_tokens={"root_tokens": 10**9, "child_rollout_tokens": []})
         self.assertEqual([], self.validator.validate_receipt(value, self.budget(5, 100)))
 
 
@@ -5049,9 +5273,10 @@ def main() -> int:
     _ReadOnlyHelperRunner.helper_filter = args.helper
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                                for case in (ReadOnlyHelperTests, PlanLayersRepairRouteTests, PlanLayersPlannerCaseTests,
-                                            PacketTitlePatternTests, ScaffoldAnswersTests, CanaryReceiptTests,
+                                            PacketTitlePatternTests, G0SetupTests, G0SetupFailureTests, ScaffoldAnswersTests, CanaryReceiptTests,
                                             CanaryVariantAssertionsTests, CanaryVariantContractTests,
                                             CanaryGateVerdictTests, CanaryGuardGapContractTests,
+                                            CanaryPlanTargetTests, CanaryPlanTargetContractTests, CanaryCodexTokenTests,
                                             CanaryBudgetTests, CanaryBudgetFileTests))
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     total = result.testsRun

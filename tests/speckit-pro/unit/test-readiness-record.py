@@ -11,8 +11,8 @@ import stat
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
-from unittest import mock
 
 TEST_DIR = Path(__file__).resolve().parent
 REPO_ROOT = TEST_DIR.parents[2]
@@ -34,6 +34,10 @@ GATES = {"schema_version": "1.0", "thresholds": {"complexity": 10, "crap": 30, "
 
 def observation(item: str, status: str = "verified", **extra: object) -> dict[str, object]:
     record: dict[str, object] = {"item": item, "status": status, "evidence_source": f"{item} probe"}
+    if status == "verified":
+        record["values"] = {"probe": "passed"}
+        if item == "reviewability_report":
+            record.update(files=[".specify/roadmap.md"], values={"spec_id": "TEST-001"})
     if status in {"unavailable", "unknown"}:
         record["action"] = f"Fix {item}, then rerun scaffold."
     record.update(extra)
@@ -51,6 +55,7 @@ class ReadinessRecordTest(unittest.TestCase):
     def setUp(self) -> None:
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
         self.root.joinpath(".specify").mkdir()
+        self.root.joinpath(".specify", "roadmap.md").write_text("TEST-001\n", encoding="utf-8")
         # An empty tool directory keeps every helper run off the real Docker daemon.
         self.tools = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
 
@@ -143,6 +148,24 @@ class ReadinessRecordTest(unittest.TestCase):
         self.assertFalse(response["data"]["writes_state"])
         self.assertFalse(self.record_path().parent.exists())
 
+    def test_verified_items_require_fingerprints_and_reviewability_references(self) -> None:
+        cases = [observation("plugin_payload", values={}),
+                 observation("reviewability_report", files=[]),
+                 observation("reviewability_report", values={"probe": "passed"}),
+                 observation("reviewability_report", files=[".specify/missing.md"])]
+        self.root.joinpath(".specify", "linked-report.md").symlink_to(self.root / ".specify" / "roadmap.md")
+        cases.append(observation("reviewability_report", files=[".specify/linked-report.md"]))
+        for supplied in cases:
+            with self.subTest(observation=supplied):
+                response = self.run_helper([supplied])
+                assert_runner_response(self, response, "input_error", 2)
+                self.assertFalse(self.record_path().exists())
+
+        response = self.run_helper([observation("plugin_payload", values={"revision": "2.40.0"}),
+                                    observation("reviewability_report", files=[".specify/roadmap.md"],
+                                                values={"spec_id": "TEST-001"})])
+        assert_runner_response(self, response, "ok", 0)
+
     def test_record_and_directory_modes_under_umask_077_and_a_loose_umask(self) -> None:
         for umask in (0o077, 0o000):
             with self.subTest(umask=oct(umask)):
@@ -170,6 +193,14 @@ class ReadinessRecordTest(unittest.TestCase):
             "tmp path": "wrote " + SCRATCH + "/claude-1/probe",
             "windows path": "C:\\" + "Users\\someone\\probe",
             "tilde path": "see ~/.config/tool",
+            "single segment path": "see " + "/" + "tmp",
+            "root path": "see " + "/",
+            "unc path": "see " + chr(92) * 2 + "server" + chr(92) + "share",
+            "native root path": "see " + chr(92) + "Windows" + chr(92) + "Temp",
+            "code path": "read `" + "/" + "tmp`",
+            "link path": "read [" + "/" + "tmp]",
+            "angle path": "read <" + "/" + "tmp>",
+            "quoted path": "read \u201c" + "/" + "tmp\u201d",
         }
         for label, text in leaks.items():
             with self.subTest(label):
@@ -209,33 +240,74 @@ class ReadinessRecordTest(unittest.TestCase):
     def test_local_capability_is_unavailable_when_temporary_storage_fails(self) -> None:
         from speckit_pro_runner.helpers import readiness_record
 
-        with mock.patch("tempfile.gettempdir", side_effect=FileNotFoundError("no usable temporary directory")):
+        with unittest.mock.patch("tempfile.gettempdir", side_effect=FileNotFoundError("no usable temporary directory")):
             item = readiness_record.observe_local_capability()
         self.assertEqual("unavailable", item["status"])
         self.assertTrue(item["action"])
         self.assertNotIn(str(self.root), json.dumps(item))
 
+    def test_local_capability_is_unknown_when_owner_only_modes_are_unobservable(self) -> None:
+        from speckit_pro_runner.helpers import readiness_record
+
+        with unittest.mock.patch.object(readiness_record, "os", wraps=os) as platform:
+            platform.name = "nt"
+            item = readiness_record.observe_local_capability()
+        self.assertEqual("unknown", item["status"])
+        self.assertTrue(item["action"])
+        self.assertIn("unobservable", item["evidence_source"])
+
     def test_scaffold_documents_the_exact_request_and_the_step_on_each_host(self) -> None:
-        manifests = {"claude": ".claude-plugin/plugin.json", "codex": ".codex-plugin/plugin.json"}
-        for host, manifest in manifests.items():
+        for host in ("claude", "codex"):
             with self.subTest(host=host):
                 skill = (host_skill_root(host) / "speckit-scaffold-spec" / "SKILL.md").read_text(encoding="utf-8")
                 rows = re.findall(r"\| `write-readiness-record` \| `apply` \| `(\{[^`]*\})`", skill)
                 self.assertEqual(1, len(rows))
                 documented = json.loads(rows[0])
                 self.assertEqual({"host", "execution_mode", "plugin_revision", "observations"}, set(documented))
-                self.assertEqual({"item", "status", "evidence_source"}, set(documented["observations"][0]))
-                replay = request([observation("github_auth")], "dry_run", host=host)
+                self.assertEqual({"item", "status", "evidence_source", "values"}, set(documented["observations"][0]))
+                step = skill.split("### 6.5 Write the Readiness Record", 1)[1].split("\n### ", 1)[0]
+                field, source = re.findall(r"Set `plugin_revision` to the `([^`]+)` in\n`([^`]+)`\.", step)[0]
+                relative = source.removeprefix("${CLAUDE_PLUGIN_ROOT}/").removeprefix("../../")
+                metadata = json.loads((REPO_ROOT / "dist" / host / "speckit-pro" / relative).read_text(encoding="utf-8"))
+                replay = request([observation("github_auth")], "dry_run", host=host, plugin_revision=metadata[field])
                 for key in documented:
                     self.assertIn(key, replay["inputs"])
                 _, response, _ = run_runner(replay, cwd=self.root)
                 assert_runner_response(self, response, "ok", 0)
-                step = skill.split("### 6.5 Write the Readiness Record", 1)[1].split("\n### ", 1)[0]
                 self.assertIn(f"Set `host` to `{host}`", step)
-                self.assertIn(manifest, step)
-                self.assertTrue((REPO_ROOT / "speckit-pro" / manifest).is_file())
+                self.assertEqual(metadata[field], response["data"]["record"]["plugin_revision"])
                 for item in (*CALLER_ITEMS,):
                     self.assertIn(f"`{item}`", step)
+
+    def test_each_host_records_agent_repair_gaps_and_continues_to_the_writer(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                skill = (host_skill_root(host) / "speckit-scaffold-spec" / "SKILL.md").read_text(encoding="utf-8")
+                setup = skill.split("### -0.5 ", 1)[1].split("### 0.", 1)[0]
+                self.assertNotRegex(setup, r"\bSTOP\b")
+                self.assertIn("`plugin_payload`", setup)
+                self.assertIn("`unavailable`", setup)
+                self.assertIn("continue", setup)
+                self.assertIn("Step 6.5", setup)
+
+    def test_each_host_requires_loaded_revision_evidence(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                skill = (host_skill_root(host) / "speckit-scaffold-spec" / "SKILL.md").read_text(encoding="utf-8")
+                step = skill.split("### 6.5 Write the Readiness Record", 1)[1].split("\n### ", 1)[0]
+                self.assertIn("loaded revision", step)
+                self.assertIn("disk inventory alone", step)
+                self.assertIn("record `unknown`", step)
+
+    def test_each_host_requires_live_mcp_observations_after_configuration_preflight(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                skill = (host_skill_root(host) / "speckit-scaffold-spec" / "SKILL.md").read_text(encoding="utf-8")
+                step = skill.split("### 6.5 Write the Readiness Record", 1)[1].split("\n### ", 1)[0]
+                self.assertIn("bounded live", step)
+                self.assertIn("configuration alone", step)
+                self.assertIn("empty `inputs={}`", step)
+                self.assertIn("record `unknown`", step)
 
     def test_slash_command_actions_pass_and_stray_actions_are_dropped(self) -> None:
         observations = self.all_verified()
@@ -247,6 +319,11 @@ class ReadinessRecordTest(unittest.TestCase):
         items = response["data"]["record"]["items"]
         self.assertIn("/speckit-pro:speckit-install", items["plugin_payload"]["action"])
         self.assertNotIn("action", items["project_integration"])
+        for action in ("Run `/speckit-pro:speckit-install`, then retry.", "Run \u201c/reload-plugins\u201d, then retry."):
+            with self.subTest(action=action):
+                response = self.run_helper([observation("plugin_payload", "unavailable", action=action)])
+                assert_runner_response(self, response, "ok", 0)
+                self.assertEqual(action, response["data"]["record"]["items"]["plugin_payload"]["action"])
         bad_mode = request(self.all_verified(), execution_mode="answer-file")
         _, response, _ = run_runner(bad_mode, cwd=self.root)
         assert_runner_response(self, response, "input_error", 2)
@@ -262,18 +339,18 @@ class ReadinessRecordTest(unittest.TestCase):
     def test_local_capability_reports_cleanup_failures_and_shared_directories(self) -> None:
         from speckit_pro_runner.helpers import readiness_record
 
-        with mock.patch("os.unlink", side_effect=PermissionError("denied")):
+        with unittest.mock.patch("os.unlink", side_effect=PermissionError("denied")):
             item = readiness_record.observe_local_capability()
         self.assertEqual("unavailable", item["status"])
         shared = self.root / "shared"
         shared.mkdir()
         shared.chmod(0o777)
-        with mock.patch("tempfile.gettempdir", return_value=str(shared)):
+        with unittest.mock.patch("tempfile.gettempdir", return_value=str(shared)):
             item = readiness_record.observe_local_capability()
         self.assertEqual("unavailable", item["status"])
         self.assertIn("world-writable", item["evidence_source"])
         shared.chmod(0o1777)
-        with mock.patch("tempfile.gettempdir", return_value=str(shared)):
+        with unittest.mock.patch("tempfile.gettempdir", return_value=str(shared)):
             self.assertEqual("verified", readiness_record.observe_local_capability()["status"])
 
     def test_write_refuses_a_planted_symlink_and_leaves_the_outside_untouched(self) -> None:
@@ -287,7 +364,8 @@ class ReadinessRecordTest(unittest.TestCase):
             "gitignore file link": lambda: (readiness.mkdir(), (readiness / ".gitignore").symlink_to(secret)),
             "record file link": lambda: (readiness.mkdir(), (readiness / "claude.json").symlink_to(secret)),
             "readiness directory link": lambda: readiness.symlink_to(outside),
-            "specify directory link": lambda: (specify.rmdir(), specify.symlink_to(outside)),
+            "specify directory link": lambda: (specify.joinpath("roadmap.md").unlink(missing_ok=True),
+                                                specify.rmdir(), specify.symlink_to(outside)),
         }
         for label, plant in plants.items():
             with self.subTest(label):

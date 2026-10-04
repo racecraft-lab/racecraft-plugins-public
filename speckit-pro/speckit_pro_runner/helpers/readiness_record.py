@@ -45,8 +45,10 @@ RECORD_DIRECTORY = ".specify/readiness"
 INPUT_KEYS = frozenset({"host", "host_version", "execution_mode", "plugin_revision", "observations"})
 OBSERVATION_KEYS = frozenset({"item", "status", "evidence_source", "action", "files", "values"})
 VALUE_NAME_RE = re.compile(r"[a-z][a-z0-9_]{0,40}")
-# A path has a second segment; a slash command such as "/plugin install" does not.
-LOCAL_PATH_RE = re.compile(r"(?:^|[\s\"'(=:])(?:/[^\s/]+/|~[/\\]|[A-Za-z]:[\\/]|file://)")
+# Keep the supported scaffold slash commands; refuse absolute paths, including roots and UNC paths.
+LOCAL_PATH_RE = re.compile(
+    r"(?<![\w./\\-])(?:/(?!speckit-pro:[a-z][a-z0-9-]*(?=[^\w/\\-]|$)|"
+    r"(?:plugin|reload-plugins)(?=[^\w/\\-]|$))[^\s]*|~[/\\]|[A-Za-z]:[\\/]|\\|file://)")
 EXECUTION_MODES = ("interactive", "answers-file")
 MAX_TEXT = 400
 DOCKER_PROBE_SECONDS = 10
@@ -124,6 +126,12 @@ def caller_item(raw: Any, root: Path, observed_at: str) -> tuple[str, dict[str, 
         action = clean_text(raw["action"], f"{name}.action")
     fingerprints = {**fingerprint_files(raw.get("files", []), root, name),
                     **fingerprint_values(raw.get("values", {}), name)}
+    if status == "verified" and not any(value.startswith("sha256:") for value in fingerprints.values()):
+        raise SelectionError(f"{name}: verified evidence needs an input fingerprint")
+    if name == "reviewability_report" and status == "verified" and (
+            "value:spec_id" not in fingerprints or not any(key.startswith("file:") and value.startswith("sha256:")
+                                                          for key, value in fingerprints.items())):
+        raise SelectionError("reviewability_report: verified evidence needs a report or roadmap file and spec_id")
     return name, make_item(status, clean_text(raw.get("evidence_source"), f"{name}.evidence_source"),
                            observed_at, fingerprints, action)
 
@@ -160,6 +168,9 @@ def observe_local_capability() -> dict[str, Any]:
     if problem is not None:
         return make_item("unavailable", problem, observed_at, fingerprints,
                          "Fix the temporary directory so sensitive files stay owner-only.")
+    if os.name == "nt":
+        return make_item("unknown", "temporary write passed; owner-only modes are unobservable", observed_at, fingerprints,
+                         "Verify the record and sensitive temporary files have owner-only access, then rerun scaffold.")
     return make_item("verified", "temporary file write and owner-only mode probe", observed_at, fingerprints)
 
 

@@ -77,7 +77,7 @@ def receipt_report(value, budget=None):
     results, unbudgeted = [], []
     for variant in value["variants"]:
         checks = list(budget_checks(variant, limits[variant["name"]]))
-        result = variant_report(variant, checks)
+        result = variant_report(variant, checks, value["host"])
         problems.extend(result["gate_failed_assertions"])
         results.append(result)
         unbudgeted.extend(label for label, _, limit in checks if limit is None)
@@ -88,14 +88,37 @@ def validate_receipt(value, budget=None):
     return receipt_report(value, budget)["failed_assertions"]
 
 
-def variant_report(variant, checks):
+def stage_tokens(stage, host):
+    """Codex stage usage includes the root and every stage-scoped descendant rollout once."""
+    if host != "codex":
+        return stage["tokens"]
+    usage = stage["codex_tokens"]
+    return usage["root_tokens"] + sum(usage["child_rollout_tokens"])
+
+
+def plan_target_report(variant, host):
+    """ADR 0023's base-variant target is reported independently of the release budget."""
+    if variant["name"] != "base":
+        return None
+    target = variant["plan_target"]
+    plan = {**variant["stages"]["plan"], "tokens": stage_tokens(variant["stages"]["plan"], host)}
+    met = all(plan[metric] <= target[f"{metric}_limit"] for metric in METRICS)
+    return {**target, "wall_seconds": plan["wall_seconds"], "tokens": plan["tokens"], "target_met": met}
+
+
+def variant_report(variant, checks, host):
     """One variant entry's assertions and gate result, including its own budget failures."""
     failures = variant_failures(variant)
+    failures.extend(f"{variant['name']}.{name}.tokens_sum" for name, stage in variant["stages"].items()
+                    if stage["tokens"] != stage_tokens(stage, host))
+    target = plan_target_report(variant, host)
+    if target is not None and target["target_met"] != variant["plan_target"]["target_met"]:
+        failures.append(f"{variant['name']}.plan_target")
     gate = gate_failures(variant, failures)
     gate.extend(f"{label}_budget" for label, actual, limit in checks if limit is not None and actual > limit)
     return {"name": variant["name"], "verdict": "fail" if failures else "pass",
             "failed_assertions": failures, "gate_verdict": "fail" if gate else "pass",
-            "gate_failed_assertions": gate}
+            "gate_failed_assertions": gate, **({"plan_target": target} if target is not None else {})}
 
 
 def gate_failures(variant, failures):
