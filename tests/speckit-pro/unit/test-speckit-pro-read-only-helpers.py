@@ -4655,6 +4655,27 @@ class G0SetupTests(unittest.TestCase):
             self.assertNotIn("G0 blocked:", prereqs)
 
 
+class G0SetupFailureTests(unittest.TestCase):
+    def test_g0_setup_failed_probe_keeps_standalone_status_and_diagnostic(self) -> None:
+        from types import SimpleNamespace
+        from speckit_pro_runner.helpers.g0_setup import run_g0_setup_helper
+
+        with helper_project() as root:
+            G0SetupTests.prepare_fixture(root, None)
+            inputs = {"probe": "prerequisites", "surface": "claude", "workflow_file": "workflow.md"}
+            request = SimpleNamespace(request_id="g0", inputs=inputs)
+            previous = Path.cwd()
+            os.chdir(root)
+            try:
+                with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value=None):
+                    report = run_g0_setup_helper(None, request)
+            finally:
+                os.chdir(previous)
+        self.assertEqual("expected_failure", report["status"], report)
+        self.assertEqual(["validation_failure"], [row["code"] for row in report["diagnostics"]])
+        self.assertEqual("check-prerequisites", report["diagnostics"][0]["details"]["helper_id"])
+
+
 class ScaffoldAnswersTests(unittest.TestCase):
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()
@@ -5093,7 +5114,7 @@ def main() -> int:
     _ReadOnlyHelperRunner.helper_filter = args.helper
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                                for case in (ReadOnlyHelperTests, PlanLayersRepairRouteTests, PlanLayersPlannerCaseTests,
-                                            PacketTitlePatternTests, G0SetupTests, ScaffoldAnswersTests, CanaryReceiptTests,
+                                            PacketTitlePatternTests, G0SetupTests, G0SetupFailureTests, ScaffoldAnswersTests, CanaryReceiptTests,
                                             CanaryVariantAssertionsTests, CanaryVariantContractTests,
                                             CanaryGateVerdictTests, CanaryGuardGapContractTests,
                                             CanaryBudgetTests, CanaryBudgetFileTests))

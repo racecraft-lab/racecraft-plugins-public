@@ -9,7 +9,9 @@ from typing import Any
 from ..envelope import response
 from ..strict_input import SelectionError, require_fields, require_text
 from ..trusted_io import resolve_repo_root, validate_bounded_inputs
-from .read_only import check_prerequisites, detect_commands, detect_presets
+from .read_only import (
+    EXIT_STATUS, check_prerequisites, detect_commands, detect_presets, helper_failure_diagnostic, output_capture,
+)
 
 PROBES = {
     "prerequisites": ("check-prerequisites", check_prerequisites),
@@ -60,5 +62,14 @@ def run_g0_setup_helper(entry: Any, request: Any) -> dict[str, Any]:
         return response("input_error", request_id=request.request_id, data={"problems": [str(exc)]})
     # Prerequisite failures still go to repair. The quality stop is consumed
     # at Step 0.11, after the same earlier setup work as before this seam.
-    status = "ok" if data["result"]["exit_code"] == 0 else "expected_failure"
-    return response(status, request_id=request.request_id, data=data)
+    exit_code = int(data["result"]["exit_code"])
+    if exit_code == 0:
+        return response("ok", request_id=request.request_id, data=data)
+    # Same status and diagnostic the standalone probe reported for a failure.
+    stdout = output_capture(json.dumps(data["result"]["stdout_json"]))
+    stderr = output_capture(data["result"]["stderr"])
+    helper_id = PROBES[data["probe"]][0]
+    return response(
+        EXIT_STATUS.get(exit_code, "subprocess_failure"), request_id=request.request_id, data=data,
+        diagnostics=[helper_failure_diagnostic(helper_id, exit_code, stdout, stderr)],
+    )
