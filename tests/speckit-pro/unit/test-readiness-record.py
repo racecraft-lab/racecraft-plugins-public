@@ -148,7 +148,10 @@ class ReadinessRecordTest(unittest.TestCase):
     def test_verified_items_require_fingerprints_and_reviewability_references(self) -> None:
         cases = [observation("plugin_payload", values={}),
                  observation("reviewability_report", files=[]),
-                 observation("reviewability_report", values={"probe": "passed"})]
+                 observation("reviewability_report", values={"probe": "passed"}),
+                 observation("reviewability_report", files=[".specify/missing.md"])]
+        self.root.joinpath(".specify", "linked-report.md").symlink_to(self.root / ".specify" / "roadmap.md")
+        cases.append(observation("reviewability_report", files=[".specify/linked-report.md"]))
         for supplied in cases:
             with self.subTest(observation=supplied):
                 response = self.run_helper([supplied])
@@ -187,6 +190,9 @@ class ReadinessRecordTest(unittest.TestCase):
             "tmp path": "wrote " + SCRATCH + "/claude-1/probe",
             "windows path": "C:\\" + "Users\\someone\\probe",
             "tilde path": "see ~/.config/tool",
+            "single segment path": "see " + "/" + "tmp",
+            "root path": "see " + "/",
+            "unc path": "see " + chr(92) * 2 + "server" + chr(92) + "share",
         }
         for label, text in leaks.items():
             with self.subTest(label):
