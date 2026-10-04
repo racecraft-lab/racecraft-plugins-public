@@ -46,10 +46,8 @@ def request(observations: list[dict[str, object]], mode: str = "apply", **inputs
 
 class ReadinessRecordTest(unittest.TestCase):
     def setUp(self) -> None:
-        self._tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(self._tmp.cleanup)
-        self.root = Path(self._tmp.name).resolve()
-        (self.root / ".specify").mkdir()
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
+        self.root.joinpath(".specify").mkdir()
 
     def record_path(self, host: str = "claude") -> Path:
         return self.root / ".specify" / "readiness" / f"{host}.json"

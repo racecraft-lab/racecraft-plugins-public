@@ -66,11 +66,9 @@ def clean_text(value: Any, label: str) -> str:
 
 def make_item(status: str, evidence_source: str, observed_at: str, fingerprints: dict[str, str],
               action: str | None = None) -> dict[str, Any]:
-    item: dict[str, Any] = {"status": status, "evidence_source": evidence_source,
-                            "observed_at": observed_at, "fingerprints": fingerprints}
-    if action is not None:
-        item["action"] = action
-    return item
+    required = {"action": action} if action is not None else {}
+    return {"status": status, "evidence_source": evidence_source, "observed_at": observed_at,
+            "fingerprints": fingerprints, **required}
 
 
 def fingerprint_files(paths: Any, root: Path, label: str) -> dict[str, str]:
