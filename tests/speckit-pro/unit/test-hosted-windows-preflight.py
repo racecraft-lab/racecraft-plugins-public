@@ -397,6 +397,14 @@ class HostedWindowsPreflightTests(unittest.TestCase):
 
 
 class ContainerPreflightDispatchTests(unittest.TestCase):
+    @contextlib.contextmanager
+    def windows_environment(self, environment):
+        with mock.patch.dict(os.environ, environment, clear=True), mock.patch.object(
+            dispatch_helper.platform, "python_version",
+            return_value=dispatch_helper.HOSTED_PYTHON_VERSION,
+        ):
+            yield
+
     def run_pull_change_detection(
         self,
         diff_output: str,
@@ -545,14 +553,7 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
                 "REPO_X64_ENABLED": "false",
                 "REPO_ARM64_ENABLED": "false",
             }
-            with (
-                mock.patch.dict(os.environ, environment, clear=True),
-                mock.patch.object(
-                    dispatch_helper.platform,
-                    "python_version",
-                    return_value=dispatch_helper.HOSTED_PYTHON_VERSION,
-                ),
-            ):
+            with self.windows_environment(environment):
                 return_code = dispatch_helper._windows_availability()
 
             x64 = json.loads(
@@ -732,12 +733,7 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
                 "SPEC_KIT_GIT_REF": IMMUTABLE_SPEC_KIT_REF,
             }
             with (
-                mock.patch.dict(os.environ, environment, clear=True),
-                mock.patch.object(
-                    dispatch_helper.platform,
-                    "python_version",
-                    return_value=dispatch_helper.HOSTED_PYTHON_VERSION,
-                ),
+                self.windows_environment(environment),
                 mock.patch.object(dispatch_helper.shutil, "which", return_value=None),
                 mock.patch.object(dispatch_helper.subprocess, "run") as run_mock,
             ):
@@ -778,12 +774,7 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
                 }
             ]
             with (
-                mock.patch.dict(os.environ, environment, clear=True),
-                mock.patch.object(
-                    dispatch_helper.platform,
-                    "python_version",
-                    return_value=dispatch_helper.HOSTED_PYTHON_VERSION,
-                ),
+                self.windows_environment(environment),
                 mock.patch.object(
                     dispatch_helper,
                     "probe_interpreters",
