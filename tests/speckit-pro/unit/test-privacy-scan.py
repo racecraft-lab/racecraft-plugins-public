@@ -61,6 +61,7 @@ GENERIC_LOCAL_TERMS = {
     "build",
     "cache",
     "claude",
+    "clones",
     "codex",
     "clones",
     "documents",
@@ -333,9 +334,9 @@ class CheckoutPathTermTests(unittest.TestCase):
                 self.assertIsNotNone(pattern.search("merged by zebrafinchoperator"))
 
     def test_user_name_above_the_checkout_is_still_an_identity_term(self) -> None:
-        for container in ("code", "clones"):
+        for container in (Path("code"), Path("clones"), Path(".cache") / "clones"):
             with self.subTest(container=container):
-                checkout = Path("/", "Users", "quokkaoperator", container, "shopfront")
+                checkout = Path("/", "Users", "quokkaoperator") / container / "shopfront"
                 worktree = checkout / ".worktrees" / "shop-015-autopilot-byproduct"
                 pattern = self.pattern_for(worktree, checkout, {})
                 self.assertIsNotNone(pattern)

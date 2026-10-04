@@ -13,6 +13,25 @@ stdin, read one JSON response from stdout, and surface stderr diagnostics.
 Do not add a shell fallback, `jq` parsing path, Git Bash, WSL, or
 PowerShell-specific command-language requirement for installed workflows.
 
+### Helper request fields
+
+Use these exact runner request fields for the corresponding checks. `mode`
+belongs to the request envelope; the last column is its `inputs` object.
+Substitute repository-relative paths and the requested SPEC-ID for placeholders.
+These examples name the runner's contract; the steps below determine when a check runs.
+
+| Helper | `mode` | `inputs` |
+| --- | --- | --- |
+| `reviewability-gate` | `read_only` | `{"mode_name": "setup", "target": "<technical-roadmap-path>", "spec_id": "<SPEC-ID>"}` |
+| `check-prerequisites` | `read_only` | `{"workflow_file": "<workflow-file>"}` |
+| `check-roadmap-freshness` | `read_only` | `{"roadmap_path": "<technical-roadmap-path>"}` |
+| `detect-commands` | `read_only` | `{}` |
+| `research-broker-preflight` | `read_only` | `{}` |
+| `o5-topology` | `read_only` | `{"target": "specs/<parent-branch>"}` |
+| `resolve-workflow-binding` | `read_only` | `{"workflow_file": "<absolute-workflow-path>"}` |
+| `resolve-scaffold-worktree-placement` | `read_only` | `{"branch_name": "<branch-name>"}` (add `worktree_root_override` only when the user supplied one) |
+| `scaffold-answers` | `read_only` | `{"answers_file": "<answers-file>", "spec_id": "<SPEC-ID>"}` |
+
 ## Capability discovery & grounding
 
 Before researching or recommending, enumerate the tools and skills your session actually exposes — do not assume a fixed set; the user may have installed anything — and select the best fit per `../speckit-autopilot/references/capability-discovery.md`. Ground every external fact you assert in a real tool, skill, or file result per `../speckit-autopilot/references/grounding.md`, and abstain when nothing grounds it.
@@ -63,7 +82,7 @@ from the parent scaffold — each child is scaffolded independently.
 Before presenting O5 as ready, validate the manifest with:
 
 ```text
-Run runner helper o5-topology for specs/<parent-branch>.
+Run runner helper o5-topology with the request fields above.
 ```
 
 If topology is invalid, report the JSON `problems[]` and keep the operator on
@@ -201,10 +220,25 @@ The interactive instructions below apply when `--answers-file` is absent.
 
 ### -0.5 Verify Codex Agent Install
 
-Before parsing or mutating the repository, resolve the plugin root and verify by
-running the promoted `install-codex-agents` helper in `dry_run` mode against the
-selected `.codex/agents/` or `$CODEX_HOME/agents/` (default `~/.codex/agents/`) destination and its installed
-model and Luna fallback choice. The plan must show every bundled TOML, including
+Before parsing or mutating the repository, resolve the plugin root and verify
+with the promoted `install-codex-agents` helper. Replay the selected installation inputs
+with request-envelope `mode="dry_run"`. For a static installation, use these request fields:
+
+```json
+{"mode": "dry_run", "inputs": {"destination": "<selected-destination>", "model": "<selected-model>", "luna_fallback": false}}
+```
+
+For a route-aware installation, use these request fields instead:
+
+```json
+{"mode": "dry_run", "inputs": {"destination": "<selected-destination>", "route_policy_manifest": "<selected-route-manifest>", "strict_model_override": "<selected-override>"}}
+```
+
+Substitute the actual selected values, including the selected `luna_fallback` boolean.
+Omit optional fields that were absent from the selected installation, preserving
+its user-scope destination when `destination` was omitted. Route-aware verification
+reuses the selected manifest and optional override instead of static model defaults.
+The plan must show every bundled TOML, including
 `uat-runbook-author.toml`, as current. If any required file is missing or stale,
 STOP, instruct the user to run `$speckit-pro:install`, restart Codex, and then retry
 scaffold. Do not apply the repair inside scaffold because this process cannot
@@ -277,8 +311,9 @@ Offer to help the user add or correct the roadmap entry with
 Run the reviewability setup gate before creating the worktree:
 
 ```text
-Run runner helper reviewability-gate in setup mode for <technical-roadmap-path>
-with spec_id <SPEC-ID>.
+Run runner helper reviewability-gate with the request fields above.
+Set `target` to the repository-relative technical roadmap path and `spec_id`
+to the requested SPEC-ID.
 ```
 
 If it returns an unexcepted `block`, STOP and split the spec first. Tell the
