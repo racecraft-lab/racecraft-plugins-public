@@ -1127,6 +1127,7 @@ does not end at the boundary commit above. It runs this sequence, in this order:
 7. Take a separate bookkeeping commit carrying that record, and push it.
 8. The parent dispatches `artifact-preview-observer` for each generated artifact preview; the isolated observer never inherits general repository tools.
 9. Validate and commit/push the workflow-only preview evidence.
+10. Print the stop report, then print exactly one `stop_reason:plan_stage_boundary` as the last line of your final message, and stop. A step that fails above ends the sequence there; print the stop report for that shape and exactly one marker selected by the precedence rule and table under the stop report.
 ```
 
 Dispatch step 8 through the runner, never by running the observer yourself:
@@ -1556,6 +1557,10 @@ the report alone is enough to hand off.
   or push preview evidence separately, preserving the valid PR and artifacts.
 - **The gate blocked.** Name the blocked gate in place of a URL, and say that no
   pull request was opened.
+- **The stage-boundary commit or a PR-packet step failed.** Name the failed
+  commit, packet generation, validation, or packet commit; state which outputs
+  remain local and which commits exist; and name the resume path. No push or
+  create-or-refresh follows the failed step. Do not claim the boundary or packet was committed when that step failed.
 - **The pull request could not be opened.** Say so and name the step that
   refused — title self-validation, an existence query that could not answer, or
   creation itself. Note that the artifacts and the boundary commit are already
@@ -1578,9 +1583,38 @@ the report alone is enough to hand off.
   and the boundary commit are already committed and pushed, so no planning work
   is lost.
 
-That is six shapes, and the set is closed. Every one of them names the step that
+That is seven shapes, and the set is closed. Every one of them names the step that
 failed, the state it left behind, and the resume path, so an operator can act on
 the report without reading the run's logs.
+
+**Print exactly one stop reason as the last line of the final message**, on its own line
+and after the report, as the literal marker for the shape:
+
+Specific stop-policy reasons take precedence over the general report shapes.
+If the runner or stop policy names a specific reason for the failure, print that
+marker instead of `stop_reason:plan_stage_boundary`. The specific rows below
+cover unavailable PR tooling, artifact-integrity failures, and protected pushes.
+Otherwise use the general shape row. Do not repeat the marker in the report or
+append any text after its final line.
+
+| Shape | Last line |
+| --- | --- |
+| Emission ran | Print `stop_reason:plan_stage_boundary` |
+| The stage-boundary commit or a PR-packet step failed | Print `stop_reason:plan_stage_boundary` |
+| The pull request could not be opened | Print `stop_reason:plan_stage_boundary` |
+| The branch push failed | Print `stop_reason:plan_stage_boundary` |
+| The bookkeeping commit or its push failed | Print `stop_reason:plan_stage_boundary` |
+| The gate blocked in strict mode | Print `stop_reason:strict_confidence_opt_in` |
+| The recorded pull request is closed or merged | Print `stop_reason:reopen_closed_pr` |
+| The recorded pull request is missing, or several open pull requests match | Print `stop_reason:ambiguous_pr_record` |
+| The PR tool is absent or unauthenticated | Print `stop_reason:tool_unavailable` |
+| An artifact-integrity failure | Print `stop_reason:integrity_failure` |
+| A push requires protected-branch authority | Print `stop_reason:protected_push` |
+
+Any other reason that ends the run takes its marker from the stop-policy table.
+The marker names where the run stopped, not whether it succeeded; the report
+above it says which shape occurred. The run is not finished until the line is
+printed; the operator and the canary read the run's end from it.
 
 #### The `Draft PR` row
 
