@@ -86,16 +86,18 @@ def decisions_list(root: Any, inputs: dict[str, Any], mode: str) -> dict[str, An
 
 
 def run_decisions_list_helper(entry: Any, request: Any) -> dict[str, Any]:
-    inputs = request.inputs if isinstance(request.inputs, dict) else {}
-    root = resolve_repo_root(inputs)
-    if isinstance(root, dict):
-        return response("input_error", request_id=request.request_id, diagnostics=[root])
     try:
-        data = decisions_list(root, inputs, request.mode)
+        root = resolve_repo_root(request.inputs)
+        if isinstance(root, dict):
+            raise OSError(root["message"])
+        data = decisions_list(root, request.inputs, request.mode)
     except (ValueError, OSError) as error:
-        return response("input_error", request_id=request.request_id, diagnostics=[diagnostic(
-            "invalid_decisions_list_request", str(error),
+        refusal = diagnostic(
+            "invalid_decisions_list_request",
+            str(error),
             remediation_summary="Send the workflow file and, to record, a non-empty list of well-formed entries.",
-            remediation_actions=["Correct the named field.", "Rerun decisions-list; nothing was written."])])
-    data.update(helper_id=entry.helper_id, operation=entry.operation, mode=request.mode)
-    return response("ok", request_id=request.request_id, data=data)
+            remediation_actions=["Correct the named field.", "Rerun decisions-list; nothing was written."],
+        )
+        return response("input_error", request_id=request.request_id, diagnostics=[refusal])
+    identity = {"helper_id": entry.helper_id, "operation": entry.operation, "mode": request.mode}
+    return response("ok", request_id=request.request_id, data={**data, **identity})

@@ -24,17 +24,12 @@ from test_result import run_counted  # noqa: E402
 HELPER_ID = "decisions-list"
 WORKFLOW = "specs/001-feature/.process/workflow.md"
 LIST_FILE = "specs/001-feature/.process/decisions-list/decisions.json"
-FIELDS = {"seq", "kind", "option_chosen", "rejected_alternative", "evidence", "affected_unit"}
+TEXT_FIELDS = ("option_chosen", "rejected_alternative", "evidence", "affected_unit")
+FIXTURE = REPO / "tests/speckit-pro/unit/fixtures/mutation-helpers/requests" / f"{HELPER_ID}.json"
 
 
 def entry(kind: str, tag: str) -> dict[str, str]:
-    return {
-        "kind": kind,
-        "option_chosen": f"chose {tag}",
-        "rejected_alternative": f"rejected {tag}",
-        "evidence": f"evidence {tag}",
-        "affected_unit": f"unit {tag}",
-    }
+    return {"kind": kind, **{name: f"{name} {tag}" for name in TEXT_FIELDS}}
 
 
 NOTE = entry("readiness_stale", "note")
@@ -56,13 +51,10 @@ class DecisionsListTests(unittest.TestCase):
         self.addCleanup(os.chdir, previous)
 
     def call(self, mode: str, **inputs: object) -> dict[str, Any]:
-        request = SimpleNamespace(
-            helper_id=HELPER_ID,
-            operation=HELPER_ID,
-            request_id="decisions-list-test",
-            mode=mode,
-            inputs={"workflow_file": WORKFLOW, **inputs},
-        )
+        """Replay the committed request fixture with this test's mode and inputs."""
+        document = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        document["inputs"] = {**document["inputs"], "workflow_file": WORKFLOW, **inputs}
+        request = SimpleNamespace(**{**document, "mode": mode})
         return dispatch_helper(request)
 
     def append(self, *entries: Mapping[str, object] | str) -> dict[str, Any]:
@@ -74,11 +66,10 @@ class DecisionsListTests(unittest.TestCase):
         return result["data"]
 
     def test_registered_with_a_request_fixture(self) -> None:
-        fixture = REPO / "tests/speckit-pro/unit/fixtures/mutation-helpers/requests" / f"{HELPER_ID}.json"
-        request = json.loads(fixture.read_text(encoding="utf-8"))
+        document = json.loads(FIXTURE.read_text(encoding="utf-8"))
         registered = MUTATION_HELPERS[HELPER_ID]
-        self.assertEqual((registered.helper_id, registered.operation), (request["helper_id"], request["operation"]))
-        self.assertIn(request["mode"], registered.modes)
+        self.assertEqual((registered.helper_id, registered.operation), (document["helper_id"], document["operation"]))
+        self.assertIn(document["mode"], registered.modes)
 
     def test_entries_come_back_spec_affecting_then_authority_then_notes(self) -> None:
         first = self.append(NOTE, SKIP, SCOPE)
@@ -91,13 +82,9 @@ class DecisionsListTests(unittest.TestCase):
         )
         self.assertEqual(4, data["count"])
         for item in data["entries"]:
-            self.assertEqual(FIELDS, set(item))
-            tag = item["option_chosen"].removeprefix("chose ")
-            self.assertEqual(
-                {"rejected_alternative": f"rejected {tag}", "evidence": f"evidence {tag}",
-                 "affected_unit": f"unit {tag}"},
-                {key: item[key] for key in ("rejected_alternative", "evidence", "affected_unit")},
-            )
+            self.assertEqual({"seq", "kind", *TEXT_FIELDS}, set(item))
+            sent = next(each for each in (NOTE, SKIP, SCOPE, SPLIT) if each["kind"] == item["kind"])
+            self.assertEqual(sent, {key: value for key, value in item.items() if key != "seq"})
 
     def test_entries_of_one_class_keep_the_order_they_were_appended(self) -> None:
         self.append(SPLIT)
@@ -154,7 +141,7 @@ class DecisionsListTests(unittest.TestCase):
         self.assertEqual(LIST_FILE, data["link"])
         self.assertEqual(f"3 decisions recorded: {LIST_FILE}", data["message"])
         for item in data["entries"]:
-            for key in ("option_chosen", "rejected_alternative", "evidence", "affected_unit"):
+            for key in TEXT_FIELDS:
                 self.assertNotIn(item[key], data["message"])
 
     def test_the_list_file_stays_out_of_commits(self) -> None:
