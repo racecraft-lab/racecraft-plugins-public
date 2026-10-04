@@ -85,6 +85,13 @@ def hook_counter_failures(counters):
     return failures
 
 
+def hook_problems(value, hook_counters):
+    """A release receipt needs its run's counters; a local one checks them only when given."""
+    if hook_counters is not None:
+        return hook_counter_failures(hook_counters)
+    return ["hook_counters.missing"] if value["trigger"] != "local" else []
+
+
 def plan_quality_failures(variant):
     """ADR 0023 artifact checks: every item still open at the end of planning must be blocked for UAT and listed."""
     quality, name = variant["plan_quality"], variant["name"]
@@ -117,10 +124,7 @@ def receipt_report(value, budget=None, hook_counters=None):
                 problems.append(f"install_probe.{key}")
     elif f"speckit-pro@{value['plugin_version']}" not in probe["loaded_plugins"]:
         problems.append("install_probe.loaded_plugins")
-    if hook_counters is not None:
-        problems.extend(hook_counter_failures(hook_counters))
-    elif value["trigger"] != "local":
-        problems.append("hook_counters.missing")
+    problems.extend(hook_problems(value, hook_counters))
     limits = (load_budget() if budget is None else budget)[value["host"]]
     results, unbudgeted = [], []
     for variant in value["variants"]:

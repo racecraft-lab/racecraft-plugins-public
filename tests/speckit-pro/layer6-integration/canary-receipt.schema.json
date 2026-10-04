@@ -52,22 +52,18 @@
         "target_met": {"type": "boolean"}}
     },
     "plan_quality": {
-      "description": "ADR 0023 artifact checks at the end of planning. Each list names items by id; an open item passes only when it is also in blocked_for_uat_listed.",
+      "description": "ADR 0023 artifact checks at the end of planning; an open item passes only when it is also in blocked_for_uat_listed.",
       "type": "object", "additionalProperties": false,
       "required": ["phases_run", "clarify_sessions", "requirements_total", "untraced_requirements", "open_gaps", "open_findings", "open_clarifications", "blocked_for_uat_listed", "decisions"],
       "properties": {
-        "phases_run": {"type": "array", "uniqueItems": true,
-          "items": {"enum": ["specify", "clarify", "plan", "checklist", "tasks", "analyze"]}},
-        "clarify_sessions": {"$ref": "#/$defs/count"},
-        "requirements_total": {"type": "integer", "minimum": 1},
+        "phases_run": {"type": "array", "uniqueItems": true, "items": {"enum": ["specify", "clarify", "plan", "checklist", "tasks", "analyze"]}},
+        "clarify_sessions": {"$ref": "#/$defs/count"}, "requirements_total": {"type": "integer", "minimum": 1},
         "untraced_requirements": {"$ref": "#/$defs/ids"}, "open_gaps": {"$ref": "#/$defs/ids"},
         "open_findings": {"$ref": "#/$defs/ids"}, "open_clarifications": {"$ref": "#/$defs/ids"},
         "blocked_for_uat_listed": {"$ref": "#/$defs/ids"},
-        "decisions": {
-          "type": "object", "additionalProperties": false, "required": ["total", "low_confidence", "consensus_rounds_by_kind"],
+        "decisions": {"type": "object", "additionalProperties": false, "required": ["total", "low_confidence", "consensus_rounds_by_kind"],
           "properties": {"total": {"$ref": "#/$defs/count"}, "low_confidence": {"$ref": "#/$defs/count"},
-            "consensus_rounds_by_kind": {"type": "object", "additionalProperties": {"$ref": "#/$defs/count"}}}
-        }
+            "consensus_rounds_by_kind": {"type": "object", "additionalProperties": {"$ref": "#/$defs/count"}}}}
       }
     },
     "ids": {"type": "array", "items": {"$ref": "#/$defs/text"}, "uniqueItems": true},
