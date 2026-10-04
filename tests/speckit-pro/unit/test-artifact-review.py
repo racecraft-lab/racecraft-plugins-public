@@ -127,6 +127,47 @@ class ArtifactReviewTests(unittest.TestCase):
         self.assertEqual(self.review()["status"], "verified")
         self.assertEqual(self.review()["verified"], 2)
 
+    def test_closed_unavailability_finishes_handoff_without_claiming_verification(self) -> None:
+        for unavailable_indexes in ((0, 1), (1,)):
+            with self.subTest(unavailable_indexes=unavailable_indexes):
+                self.verify(0)
+                self.verify(1)
+                for index in unavailable_indexes:
+                    preview = self.record["pages"][index]["preview"]
+                    preview.update(status="unavailable", blocker="No preview capability")
+                    preview["observation"]["verdict"] = "unavailable"
+                result = self.review()
+                self.assertEqual(result["status"], "unavailable")
+                self.assertEqual(result["resume_action"], "none")
+                self.assertEqual(result["verified"], 2 - len(unavailable_indexes))
+                self.assertTrue(result["reuse_artifacts"])
+                for index in unavailable_indexes:
+                    self.assertEqual(result["pages"][index]["status"], "unavailable")
+                    self.assertEqual(result["pages"][index]["blocker"], "No preview capability")
+                    self.assertEqual(result["pages"][index]["path"], self.record["pages"][index]["path"])
+                data = json.loads(self.resolve()["stdout"])
+                self.assertEqual(data["stage"], "implement")
+                self.assertTrue(data["planning_complete"])
+                self.assertEqual(data["artifact_review"]["resume_action"], "none")
+
+    def test_unavailability_without_matching_broker_observation_stays_pending(self) -> None:
+        self.verify(0)
+        preview = self.record["pages"][1]["preview"]
+        preview.update(status="unavailable", blocker="No preview capability")
+        for observation in (None, {
+            "kind": "brokered", "verdict": "unavailable",
+            "artifact_sha256": "0" * 64, "observed_at": "2026-09-10T18:00:00Z",
+        }):
+            with self.subTest(observation=observation):
+                preview["observation"] = observation
+                result = self.review()
+                self.assertEqual(result["status"], "pending")
+                self.assertEqual(result["resume_action"], "preview")
+                self.assertEqual(result["pages"][1]["status"], "pending")
+                self.assertTrue(result["pages"][1]["blocker"])
+                self.assertEqual(result["verified"], 1)
+                self.assertTrue(result["reuse_artifacts"])
+
     def test_partial_success_preserves_per_page_dispositions(self) -> None:
         self.verify()
         self.record["pages"][1]["preview"]["blocker"] = "queued"
@@ -134,6 +175,30 @@ class ArtifactReviewTests(unittest.TestCase):
         self.assertEqual(result["status"], "pending")
         self.assertEqual(result["verified"], 1)
         self.assertEqual([page["status"] for page in result["pages"]], ["verified", "pending"])
+
+    def test_unfinished_or_stale_delivery_cannot_become_terminal_unavailability(self) -> None:
+        self.verify(0)
+        self.verify(1)
+        preview = self.record["pages"][1]["preview"]
+        preview.update(status="unavailable", blocker="No preview capability")
+        preview["observation"]["verdict"] = "unavailable"
+        original = copy.deepcopy(self.record)
+        for state in ("pending", "denied", "changed-artifact", "changed-inputs"):
+            with self.subTest(state=state):
+                self.record = copy.deepcopy(original)
+                if state in ("pending", "denied"):
+                    self.record["pages"][0]["preview"] = {
+                        "status": state, "blocker": "Preview unresolved", "observation": None,
+                    }
+                elif state == "changed-artifact":
+                    self.record["pages"][1]["sha256"] = "0" * 64
+                else:
+                    self.record["input_hashes"][f"{self.feature}/plan.md"] = "0" * 64
+                result = self.review()
+                self.assertEqual(result["status"], "pending")
+                self.assertEqual(result["resume_action"], "preview" if state in ("pending", "denied") else "generate")
+                data = json.loads(self.resolve()["stdout"])
+                self.assertEqual(data["stage"], "plan")
 
     def test_non_brokered_receipts_never_verify_a_page(self) -> None:
         for kind in ("rendered", "queued", "open", "http", "file", "tab"):
@@ -314,6 +379,11 @@ class ArtifactReviewTests(unittest.TestCase):
         self.assertIn("`unavailable` is its normal verdict", codex)
         self.assertNotIn("The observer has only the `Artifact` tool", codex)
         self.assertIn("Never create `observed_at` in the parent", codex)
+        for text in (claude, codex):
+            normalized = " ".join(text.split())
+            self.assertIn("terminal `unavailable` with `resume_action: none`", normalized)
+            self.assertIn("`denied` remains pending and retained on resume", normalized)
+            self.assertIn("each unverified page's disposition and exact blocker", normalized)
 
     def test_default_resume_returns_to_preview_without_redefining_planning_complete(self) -> None:
         result = self.resolve()
