@@ -472,6 +472,7 @@ ack dead-code:new-symbol 8463435dd44c073c 0 cid=019ab343c1f3ec2d unittest discov
 ack dead-code:new-symbol 8480996d36d5a476 0 cid=56eb6f0bc1437fd2 Called from test-feedback-sweep-isolation.py through a sys.path import that the dead-code scan does not resolve (--uses=git_stdout lists 11 call sites)
 ack dead-code:new-symbol 8576a74115dea108 0 cid=b0bb560d05e87c2f unittest discovers test_ methods through loadTestsFromTestCase in main(); no direct caller is expected
 ack dead-code:new-symbol 85913ae26272967e 0 cid=eb89c1fa9789e589 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol 859fbc69d7faa264 0 cid=4982c182582ddd13 by=tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py Registered test class is executed by main through unittest.
 ack dead-code:new-symbol 85a95a78db3f6771 0 cid=b984335012f985ef unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 85e49b76c67e5435 0 cid=e3aff03ab31f4628 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 85e4b25235970f77 0 cid=d70a59a01242aa75 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
