@@ -5278,11 +5278,12 @@ class CanaryPlanQualityTests(CanaryVariantCase):
 
     def test_a_blocked_and_listed_item_passes_but_an_unlisted_one_fails(self):
         for host, value in self.receipts.items():
-            for field in ("open_gaps", "open_findings", "open_clarifications"):
+            for field, item_id in (("open_gaps", "checklists/requirements.md:L12"),
+                                   ("open_findings", "F001"), ("open_clarifications", "spec.md:L24")):
                 mutated = copy.deepcopy(value)
                 quality = self.quality(mutated)
-                quality[field] = ["item-1"]
-                quality["blocked_for_uat_listed"] = ["item-1"]
+                quality[field] = [item_id]
+                quality["blocked_for_uat_listed"] = [item_id]
                 mutated["variants"][0]["blocked_for_uat"] = 1
                 with self.subTest(host=host, field=field, listed=True):
                     self.assertEqual([], self.validator.validate_receipt(mutated))
@@ -5290,7 +5291,7 @@ class CanaryPlanQualityTests(CanaryVariantCase):
                 with self.subTest(host=host, field=field, listed="not counted"):
                     self.assertEqual(["base.plan_quality.blocked_for_uat_listed"], self.validator.validate_receipt(mutated))
                 mutated["variants"][0]["blocked_for_uat"] = 1
-                quality["blocked_for_uat_listed"] = ["item-2"]
+                quality["blocked_for_uat_listed"] = ["T001"]
                 with self.subTest(host=host, field=field, listed=False):
                     self.assertEqual(1, len(self.validator.validate_receipt(mutated)))
 
@@ -5301,6 +5302,18 @@ class CanaryPlanQualityTests(CanaryVariantCase):
                 self.quality(mutated)["phases_run"].remove(phase)
                 with self.subTest(host=host, missing=phase):
                     self.assertEqual(["base.plan_quality.phases_run"], self.validator.validate_receipt(mutated))
+
+    def test_a_variant_that_never_reached_specify_fails(self):
+        for host, value in self.receipts.items():
+            mutated = copy.deepcopy(value)
+            quality = self.quality(mutated)
+            quality["phases_run"] = []
+            with self.subTest(host=host, requirements=quality["requirements_total"]):
+                self.assertEqual(["base.plan_quality.phases_run"], self.validator.validate_receipt(mutated))
+            quality["requirements_total"] = 0
+            with self.subTest(host=host, requirements=0):
+                failures = self.validator.validate_receipt(mutated)
+                self.assertTrue(failures and "requirements_total" in failures[0], failures)
 
     def test_the_clarify_session_count_and_decisions_are_required_evidence(self):
         for host, value in self.receipts.items():

@@ -52,7 +52,7 @@
         "target_met": {"type": "boolean"}}
     },
     "plan_quality": {
-      "description": "ADR 0023 artifact checks at the end of planning; an open gap, finding or clarification passes only when it is in blocked_for_uat_listed, and the list cannot exceed the variant's blocked_for_uat count. Untraced requirements have no exemption.",
+      "description": "ADR 0023 artifact checks at the end of planning; an open gap, finding or clarification passes only when it is in blocked_for_uat_listed, and the list cannot exceed the variant's blocked_for_uat count. Open items and blocked_for_uat_listed entries use the same item id: a repository-relative artifact location path:Lnn (for example spec.md:L24) or an analyze finding id (for example F001), never a blocked task or gate id. Untraced requirements have no exemption. requirements_total is at least 1; a variant that never reached Specify fails rather than reporting an empty plan as passing.",
       "type": "object", "additionalProperties": false,
       "required": ["phases_run", "clarify_sessions", "requirements_total", "untraced_requirements", "open_gaps", "open_findings", "open_clarifications", "blocked_for_uat_listed", "decisions"],
       "properties": {
