@@ -688,10 +688,10 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
 3. **Run the G0 setup seam** — call runner helper `g0-setup` in `read_only`
    mode once per `inputs.probe`, in order: `prerequisites`, `commands`,
    `presets`. Each call carries `inputs.workflow_file` and `inputs.surface`.
-<!-- host:claude: Claude's G0 stop message names a slash-command skill -->
+<!-- host:claude: Claude's G0 unratified-defaults flag names a slash-command skill -->
    Set `G0_SURFACE` and `inputs.surface` to `claude`.
 <!-- /host -->
-<!-- host:codex: Codex's G0 stop message names a dollar-sign skill -->
+<!-- host:codex: Codex's G0 unratified-defaults flag names a dollar-sign skill -->
    Set `G0_SURFACE` and `inputs.surface` to `codex`.
 <!-- /host -->
    Read each unchanged probe report from `data.result.stdout_json`, its exit
