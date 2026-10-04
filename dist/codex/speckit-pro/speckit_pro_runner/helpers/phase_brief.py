@@ -25,17 +25,21 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
         phase = require_text(inputs["phase"], "phase")
         workflow = require_text(inputs["workflow_file"], "workflow_file")
         feature = require_text(inputs["feature_dir"], "feature_dir").rstrip("/")
+        if not feature:
+            raise ValueError("feature_dir must name a directory")
         if phase not in PHASES:
             raise ValueError("phase must be Specify, Clarify, Plan, Checklist, Tasks or Analyze")
     except ValueError as exc:
         return response("input_error", request_id=request.request_id,
                         diagnostics=[diagnostic("invalid_phase_brief", str(exc))])
     agent, gate, artifacts = PHASES[phase]
-    instruction = "Prepare a Clarify Question Set for:" if phase == "Clarify" else f"Run the speckit-{phase.lower()} skill with:"
+    skill = None if phase == "Clarify" else f"speckit-{phase.lower()}"
+    instruction = f"Run the {skill} skill with:" if skill else "Prepare a Clarify Question Set for:"
     return response("ok", request_id=request.request_id, data={
         "schema_version": "phase-brief/v1", "phase": phase, "agent": agent,
         "inputs": {"workflow_file": workflow, "feature_dir": feature,
-                   "prompt_section": PROMPT_SECTIONS.get(phase, phase + " Prompt"), "instruction": instruction},
+                   "prompt_section": PROMPT_SECTIONS.get(phase, phase + " Prompt"), "instruction": instruction,
+                   "skill": skill},
         "readable_files": [workflow, ".specify/memory/constitution.md"] + [feature + "/" + name for name in artifacts],
         "gate": gate, "slices": [], "waves": [], "model": None, "hooks": [],
     })

@@ -442,9 +442,9 @@ For planning, use the runner's phase brief in Step 2 as the dispatch authority.
 | Analyze | `speckit-pro:analyze-executor` | Resolve required defects at every severity using relevant evidence and the shared repair reservation |
 | Implement | per-task routing | Route tasks with TDD; dispatch validated capability batches or legacy singletons |
 
-Implementation `Agent(...)` prompt templates and remediation context live in
-[`references/phase-execution.md`](./references/phase-execution.md)
-§Subagent Delegation.
+The per-dispatch context lines (`Workflow root:` and the Specify branch
+prefix) live in [`references/phase-execution.md`](./references/phase-execution.md)
+§Subagent Delegation; implementation dispatch lives in its §Phase 7: Implement.
 
 **Agent-type namespacing (required):** the prefix requirement applies to every
 speckit-pro **bundled agent id** used as a `subagent_type` value — the
@@ -1109,9 +1109,13 @@ For each planning phase, request
 Use the successful response's data as `brief`: dispatch `brief.agent`,
 read the exact workflow prompt(s) under `brief.inputs.prompt_section`, and
 prefix each with `brief.inputs.instruction`. Pass `brief.inputs` and
-`brief.readable_files` in the executor prompt, alongside the existing branch,
-workflow-root, protocol and corrective-reservation context.
+`brief.readable_files` in the executor prompt, alongside the per-dispatch
+context lines: `Workflow root:`, the Specify branch prefix when
+`ON_FEATURE_BRANCH` is true, the consensus executors' `Protocol:` and
+`Reference dir:` lines (`references/consensus-protocol.md`), and the
+corrective reservation.
 Run `validate-gate` with `brief.gate` afterward; the brief is not gate evidence.
+Clarify still runs only when G1 found `[NEEDS CLARIFICATION]` markers.
 Use the brief for phase dispatch facts instead of re-reading `phase-execution.md`
 for each planning phase. Keep the existing remediation and bookkeeping steps.
 Implement retains its existing agent, inputs and gate; it never requests a
@@ -1127,8 +1131,8 @@ stable fields, shared by both hosts:
 | --- | --- |
 | `phase` | Requested title-case planning phase |
 | `agent` | Host-neutral installed executor role |
-| `inputs` | `workflow_file`, `feature_dir`, `instruction`, and `prompt_section` (including its session/domain prompts) |
-| `readable_files` | Phase context paths, relative to the bound workflow root unless absolute; trailing slash includes directory contents |
+| `inputs` | `workflow_file`, `feature_dir`, `instruction`, `skill` (the loaded command's skill name; null for Clarify), and `prompt_section` (including its session/domain prompts) |
+| `readable_files` | The paths the phase may read when present, relative to the bound workflow root unless absolute; trailing slash includes directory contents |
 | `gate` | Gate id for the parent's `validate-gate` request |
 | `slices` | Empty list, reserved for reference slices (#1182) |
 | `waves` | Empty list, reserved for dispatch waves (#1183) |
@@ -1164,7 +1168,8 @@ for phase in PHASES starting from first_pending:
     3. For each workflow prompt in this phase:
          Planning:
          spawn_agent(agent_type=brief.agent,
-                     message=<brief.inputs.instruction + workflow prompt + brief context>) then wait_agent
+                     message=<"$" + brief.inputs.skill (omitted when null) + newline +
+                              brief.inputs.instruction + workflow prompt + brief context>) then wait_agent
          Implement: use the implementation executor and task-specific TDD prompt.
 <!-- /host -->
     4. Run consensus (Clarify/Checklist/Analyze only) — see Rule 6

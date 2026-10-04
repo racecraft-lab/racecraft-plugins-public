@@ -32,8 +32,9 @@ orchestrator validates the result at the phase gate.
 
 ## Rules
 
-For a planning dispatch, use the parent's phase brief inputs and readable
-files as phase context. Keep the workflow prompt verbatim when invoking the
+For a planning dispatch, the parent's phase brief names the inputs and the
+files the phase may read. Do not pre-read them; they bound what the loaded
+command reads (Rule 2). Keep the workflow prompt verbatim when invoking the
 loaded command. The parent executes the brief's gate; a brief is not a pass
 or permission to end the run. A null model preserves this agent's configuration.
 

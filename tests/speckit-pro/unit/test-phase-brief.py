@@ -31,6 +31,8 @@ class PhaseBriefTests(unittest.TestCase):
                     inputs={"phase": phase, "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"},
                 ))
                 self.assertEqual(result["data"]["inputs"].get("instruction"), instruction)
+                skill = None if phase == "Clarify" else "speckit-" + phase.lower()
+                self.assertEqual(result["data"]["inputs"].get("skill"), skill)
 
     def test_payload_hosts_return_identical_briefs(self):
         for phase in ("Specify", "Clarify", "Plan", "Checklist", "Tasks", "Analyze"):
@@ -53,6 +55,7 @@ class PhaseBriefTests(unittest.TestCase):
         valid = {"phase": "Plan", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
         invalid = [{**valid, "phase": value} for value in ("Implement", "", "plan", [], None)]
         invalid += [{**valid, key: ""} for key in ("workflow_file", "feature_dir")]
+        invalid += [{**valid, "feature_dir": value} for value in ("/", "///")]
         invalid += [{key: value for key, value in valid.items() if key != missing} for missing in valid]
         invalid += [{**valid, "model": "override"}]
         for inputs in invalid:
@@ -86,6 +89,8 @@ class PhaseBriefTests(unittest.TestCase):
                             else "spawn_agent(agent_type=brief.agent")
                 self.assertIn(dispatch, loop)
                 self.assertIn("brief.inputs.instruction + workflow prompt", loop)
+                if host == "codex":
+                    self.assertIn('"$" + brief.inputs.skill', loop)
 
     def test_six_planning_briefs(self):
         cases = (
