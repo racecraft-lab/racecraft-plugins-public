@@ -311,7 +311,7 @@ ORCHESTRATION_IDS = set(ORCHESTRATION_REQUIRING_TEXT)
 SCAFFOLD_REVIEWABILITY_FIXTURE_ROOT = "tests/speckit-pro/evals/fixtures/functional/scaffold-reviewability/"
 SCAFFOLD_REVIEWABILITY_REQUIRING_TEXT = (
     ("speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
-     "Run runner helper reviewability-gate in setup mode for <technical-roadmap-path> with spec_id <SPEC-ID>."),
+     "Run runner helper reviewability-gate with the request fields above. Set `target` to the repository-relative technical roadmap path and `spec_id` to the requested SPEC-ID."),
     ("speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
      "If it returns an unexcepted `block`, STOP and split the spec first."),
     ("speckit-pro/skills/speckit-scaffold-spec/SKILL.md",

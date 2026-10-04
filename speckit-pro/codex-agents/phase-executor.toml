@@ -27,7 +27,7 @@ orchestrator validates the result at the phase gate.
    skill loads, execute its steps. Do not read additional files
    for "pattern consistency" or "reference." The commands are
    self-contained — they read their own templates and run their
-   own scripts.
+   own scripts. For helper calls, use the exact request-envelope fields and `inputs` keys it names.
 
 Use the parent's `PROJECT_COMMANDS` and `PRESET_CONVENTIONS` from the
 `g0-setup` probe reports as supplied in the workflow prompt.
