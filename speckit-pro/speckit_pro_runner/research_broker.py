@@ -726,9 +726,7 @@ class ResearchBroker:
         if remaining <= 1.0:
             raise FetchFailed("timeout")
         provider = "tavily" if url == TAVILY_SEARCH_URL else "context7"
-        return self._providers.fetch(
-            provider, lambda: self.http(method, url, headers, body, min(HTTP_TIMEOUT_SECONDS, remaining))
-        )
+        return self._providers.fetch(provider, lambda: self.http(method, url, headers, body, min(HTTP_TIMEOUT_SECONDS, remaining)))
 
     # -- mode -----------------------------------------------------------------
 
