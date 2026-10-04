@@ -1437,22 +1437,9 @@ def render_plan_repair_context(inputs: dict[str, Any], repo_root: Path) -> dict[
 
 def check_prerequisites(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     workflow = normalize_path_input(inputs.get("workflow_file") or "")
-    checks: list[dict[str, Any]] = []
-    all_pass = True
 
-    specify_path = find_specify()
-    installed_version = installed_specify_version(specify_path) if specify_path else None
-    version_state = spec_kit_pin.version_status(installed_version, cli_found=specify_path is not None)
-    if specify_path:
-        checks.append(check("speckit_cli", True, "SpecKit CLI installed", f"{specify_path} ({installed_version or 'version unreadable'})"))
-        # Advisory by design: a version mismatch never stops a run (ADR 0010).
-        checks.append(check(
-            "speckit_cli_version", True,
-            f"SpecKit CLI is {version_state} against the pinned {spec_kit_pin.PINNED_VERSION}",
-            "" if version_state == "match" else f"install the pin: {shlex.join(spec_kit_pin.INSTALL_ARGV)}"))
-    else:
-        checks.append(check("speckit_cli", False, f"SpecKit CLI not found. Install: {shlex.join(spec_kit_pin.INSTALL_ARGV)}", ""))
-        all_pass = False
+    checks, spec_kit = spec_kit_cli_state(find_specify())
+    all_pass = all(row["pass"] for row in checks)
     if trusted_dir_exists(repo_root / ".specify", repo_root):
         checks.append(check("project_init", True, "Project initialized", ""))
     else:
@@ -1518,12 +1505,6 @@ def check_prerequisites(inputs: dict[str, Any], repo_root: Path) -> dict[str, An
             "Covers codebase context, library documentation, web/domain research, and source extraction. Missing optional coverage may lower confidence or require fallback evidence notes, but escalation is reserved for no acceptable evidence path or a true prerequisite/gate failure.",
         )
     )
-    spec_kit = {
-        "pinned_version": spec_kit_pin.PINNED_VERSION,
-        "installed_version": installed_version,
-        "status": version_state,
-        "install_argv": spec_kit_pin.INSTALL_ARGV,
-    }
     return make_result(json_text({"all_pass": all_pass, "branch": branch, "is_worktree": is_worktree, "on_feature_branch": on_feature, "spec_kit": spec_kit, "checks": checks}), exit_code=0 if all_pass else 1)
 
 
@@ -6252,6 +6233,30 @@ def find_specify() -> str | None:
         return None
     local = home / ".local" / "bin" / "specify"
     return str(local) if local.is_file() else None
+
+
+def spec_kit_cli_state(specify_path: str | None) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """The CLI rows for `check-prerequisites` and the `spec_kit` object skills read the pin from."""
+    installed_version = installed_specify_version(specify_path) if specify_path else None
+    status = spec_kit_pin.version_status(installed_version, cli_found=specify_path is not None)
+    spec_kit = {
+        "pinned_version": spec_kit_pin.PINNED_VERSION,
+        "installed_version": installed_version,
+        "status": status,
+        "install_argv": spec_kit_pin.INSTALL_ARGV,
+    }
+    install = shlex.join(spec_kit_pin.INSTALL_ARGV)
+    if not specify_path:
+        return [check("speckit_cli", False, f"SpecKit CLI not found. Install: {install}", "")], spec_kit
+    return [
+        check("speckit_cli", True, "SpecKit CLI installed", f"{specify_path} ({installed_version or 'version unreadable'})"),
+        # Advisory by design: a version mismatch never stops a run (ADR 0010).
+        check(
+            "speckit_cli_version", True,
+            f"SpecKit CLI is {status} against the pinned {spec_kit_pin.PINNED_VERSION}",
+            "" if status == "match" else f"install the pin: {install}",
+        ),
+    ], spec_kit
 
 
 def installed_specify_version(specify_path: str) -> str | None:
