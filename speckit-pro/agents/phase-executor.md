@@ -47,7 +47,7 @@ orchestrator validates the result at the phase gate.
    skill loads, execute its steps. Do not read additional files
    for "pattern consistency" or "reference." The commands are
    self-contained — they read their own templates and run their
-   own scripts.
+   own scripts. For helper calls, use the exact request-envelope fields and `inputs` keys it names.
 
 3. **Return only a summary.** When the command completes, return
    a concise summary to the parent. Do not recommend next steps,

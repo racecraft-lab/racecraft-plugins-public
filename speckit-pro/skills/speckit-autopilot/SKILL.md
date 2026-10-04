@@ -245,6 +245,12 @@ Continue in [phase-execution.md](./references/phase-execution.md).
 
 ## Prerequisites — Model
 
+For every research-agent dispatch, pass **Research run id:** from the genuine
+execution-control `result.data.ledger.run_id`; use it as broker `run_id`.
+Copy **Research provider decisions** into the workflow's decisions list once per `id`,
+preserving the broker's decision, alternative, provider, and reason. Cached failures
+add no rows; continue independent work and record any research left unverified.
+
 The orchestrator makes gate decisions, coordinates consensus synthesis, and
 manages a 7-phase workflow. After every analyst round it dispatches the named
 synthesizer (`speckit-pro:consensus-synthesizer` on Claude Code,

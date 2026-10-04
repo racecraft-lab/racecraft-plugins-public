@@ -93,8 +93,8 @@ Root scripts and SpecKit Pro helper scripts with repository-role classification.
 - **Purpose:** Root scripts used for payload building and marketplace version synchronization.
 - **Classification:** `release-infrastructure`
 - **Platform concept:** Repository script group
-- **Claude Code:** scripts/audit-release-notes.py, scripts/build-typesafe-jev-release.py, scripts/changed_files.py, scripts/check-go-module.py, scripts/check-pr-workflow-results.py, scripts/classify-docs-validation.py, scripts/compose-release-notes.py, scripts/dispatch-release-pr-checks.py, scripts/docs-artifact.py, scripts/emit-plugin-matrix.py, scripts/gh_json.py, scripts/install-actionlint.py, scripts/install-ripwire.py, scripts/phase-lock.py, scripts/pinned_archive.py, scripts/refresh-local-plugin.py, scripts/refresh-release-artifacts.py, scripts/release_note_policy.py, scripts/release-pr-lifecycle.py, scripts/resolve_release_prs.py, scripts/run-plugin-evals.py, scripts/run-python-lint.py, scripts/run-runner-requests.py, scripts/scratch-clone-guard.py, scripts/superseded_run.py, scripts/sync_release_pr.py, scripts/sync-marketplace-versions.py, scripts/validate-release-pr-integrity.py
-- **Codex:** scripts/audit-release-notes.py, scripts/build-typesafe-jev-release.py, scripts/changed_files.py, scripts/check-go-module.py, scripts/check-pr-workflow-results.py, scripts/classify-docs-validation.py, scripts/compose-release-notes.py, scripts/dispatch-release-pr-checks.py, scripts/docs-artifact.py, scripts/emit-plugin-matrix.py, scripts/gh_json.py, scripts/install-actionlint.py, scripts/install-ripwire.py, scripts/phase-lock.py, scripts/pinned_archive.py, scripts/refresh-local-plugin.py, scripts/refresh-release-artifacts.py, scripts/release_note_policy.py, scripts/release-pr-lifecycle.py, scripts/resolve_release_prs.py, scripts/run-plugin-evals.py, scripts/run-python-lint.py, scripts/run-runner-requests.py, scripts/scratch-clone-guard.py, scripts/superseded_run.py, scripts/sync_release_pr.py, scripts/sync-marketplace-versions.py, scripts/validate-release-pr-integrity.py
+- **Claude Code:** scripts/audit-release-notes.py, scripts/build-typesafe-jev-release.py, scripts/changed_files.py, scripts/check-go-module.py, scripts/check-pr-title.py, scripts/check-pr-workflow-results.py, scripts/classify-docs-validation.py, scripts/compose-release-notes.py, scripts/dispatch-release-pr-checks.py, scripts/docs-artifact.py, scripts/emit-plugin-matrix.py, scripts/gh_json.py, scripts/install-actionlint.py, scripts/install-ripwire.py, scripts/phase-lock.py, scripts/pinned_archive.py, scripts/process_status.py, scripts/refresh-local-plugin.py, scripts/refresh-release-artifacts.py, scripts/release_note_policy.py, scripts/release-pr-lifecycle.py, scripts/resolve_release_prs.py, scripts/run-ci-suite.py, scripts/run-plugin-evals.py, scripts/run-python-lint.py, scripts/run-runner-requests.py, scripts/scratch-clone-guard.py, scripts/superseded_run.py, scripts/sync_release_pr.py, scripts/sync-marketplace-versions.py, scripts/validate-release-pr-integrity.py
+- **Codex:** scripts/audit-release-notes.py, scripts/build-typesafe-jev-release.py, scripts/changed_files.py, scripts/check-go-module.py, scripts/check-pr-title.py, scripts/check-pr-workflow-results.py, scripts/classify-docs-validation.py, scripts/compose-release-notes.py, scripts/dispatch-release-pr-checks.py, scripts/docs-artifact.py, scripts/emit-plugin-matrix.py, scripts/gh_json.py, scripts/install-actionlint.py, scripts/install-ripwire.py, scripts/phase-lock.py, scripts/pinned_archive.py, scripts/process_status.py, scripts/refresh-local-plugin.py, scripts/refresh-release-artifacts.py, scripts/release_note_policy.py, scripts/release-pr-lifecycle.py, scripts/resolve_release_prs.py, scripts/run-ci-suite.py, scripts/run-plugin-evals.py, scripts/run-python-lint.py, scripts/run-runner-requests.py, scripts/scratch-clone-guard.py, scripts/superseded_run.py, scripts/sync_release_pr.py, scripts/sync-marketplace-versions.py, scripts/validate-release-pr-integrity.py
 - **Runtime difference:** Script groups are repository role inventories; paths are shared unless an individual script name or source file declares a runtime-specific purpose.
 
 #### Source Facts
@@ -103,6 +103,7 @@ Root scripts and SpecKit Pro helper scripts with repository-role classification.
 - scripts/build-typesafe-jev-release.py is a checked-in release-infrastructure file. Source refs: `scripts/build-typesafe-jev-release.py`.
 - scripts/changed_files.py is a checked-in release-infrastructure file. Source refs: `scripts/changed_files.py`.
 - scripts/check-go-module.py is a checked-in release-infrastructure file. Source refs: `scripts/check-go-module.py`.
+- scripts/check-pr-title.py is a checked-in release-infrastructure file. Source refs: `scripts/check-pr-title.py`.
 - scripts/check-pr-workflow-results.py is a checked-in release-infrastructure file. Source refs: `scripts/check-pr-workflow-results.py`.
 - scripts/classify-docs-validation.py is a checked-in release-infrastructure file. Source refs: `scripts/classify-docs-validation.py`.
 - scripts/compose-release-notes.py is a checked-in release-infrastructure file. Source refs: `scripts/compose-release-notes.py`.
@@ -114,11 +115,13 @@ Root scripts and SpecKit Pro helper scripts with repository-role classification.
 - scripts/install-ripwire.py is a checked-in release-infrastructure file. Source refs: `scripts/install-ripwire.py`.
 - scripts/phase-lock.py is a checked-in release-infrastructure file. Source refs: `scripts/phase-lock.py`.
 - scripts/pinned_archive.py is a checked-in release-infrastructure file. Source refs: `scripts/pinned_archive.py`.
+- scripts/process_status.py is a checked-in release-infrastructure file. Source refs: `scripts/process_status.py`.
 - scripts/refresh-local-plugin.py is a checked-in release-infrastructure file. Source refs: `scripts/refresh-local-plugin.py`.
 - scripts/refresh-release-artifacts.py is a checked-in release-infrastructure file. Source refs: `scripts/refresh-release-artifacts.py`.
 - scripts/release_note_policy.py is a checked-in release-infrastructure file. Source refs: `scripts/release_note_policy.py`.
 - scripts/release-pr-lifecycle.py is a checked-in release-infrastructure file. Source refs: `scripts/release-pr-lifecycle.py`.
 - scripts/resolve_release_prs.py is a checked-in release-infrastructure file. Source refs: `scripts/resolve_release_prs.py`.
+- scripts/run-ci-suite.py is a checked-in release-infrastructure file. Source refs: `scripts/run-ci-suite.py`.
 - scripts/run-plugin-evals.py is a checked-in release-infrastructure file. Source refs: `scripts/run-plugin-evals.py`.
 - scripts/run-python-lint.py is a checked-in release-infrastructure file. Source refs: `scripts/run-python-lint.py`.
 - scripts/run-runner-requests.py is a checked-in release-infrastructure file. Source refs: `scripts/run-runner-requests.py`.
@@ -134,6 +137,7 @@ Root scripts and SpecKit Pro helper scripts with repository-role classification.
 - [scripts/build-typesafe-jev-release.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/build-typesafe-jev-release.py)
 - [scripts/changed_files.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/changed_files.py)
 - [scripts/check-go-module.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/check-go-module.py)
+- [scripts/check-pr-title.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/check-pr-title.py)
 - [scripts/check-pr-workflow-results.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/check-pr-workflow-results.py)
 - [scripts/classify-docs-validation.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/classify-docs-validation.py)
 - [scripts/compose-release-notes.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/compose-release-notes.py)
@@ -145,11 +149,13 @@ Root scripts and SpecKit Pro helper scripts with repository-role classification.
 - [scripts/install-ripwire.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/install-ripwire.py)
 - [scripts/phase-lock.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/phase-lock.py)
 - [scripts/pinned_archive.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/pinned_archive.py)
+- [scripts/process_status.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/process_status.py)
 - [scripts/refresh-local-plugin.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/refresh-local-plugin.py)
 - [scripts/refresh-release-artifacts.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/refresh-release-artifacts.py)
 - [scripts/release_note_policy.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/release_note_policy.py)
 - [scripts/release-pr-lifecycle.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/release-pr-lifecycle.py)
 - [scripts/resolve_release_prs.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/resolve_release_prs.py)
+- [scripts/run-ci-suite.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/run-ci-suite.py)
 - [scripts/run-plugin-evals.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/run-plugin-evals.py)
 - [scripts/run-python-lint.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/run-python-lint.py)
 - [scripts/run-runner-requests.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/run-runner-requests.py)
@@ -162,4 +168,4 @@ Root scripts and SpecKit Pro helper scripts with repository-role classification.
 #### Inferred Notes
 
 - Review script behavior in its owning source files before changing generated docs that describe the group.
-  - Based on: `scripts/audit-release-notes.py`, `scripts/build-typesafe-jev-release.py`, `scripts/changed_files.py`, `scripts/check-go-module.py`, `scripts/check-pr-workflow-results.py`, `scripts/classify-docs-validation.py`, `scripts/compose-release-notes.py`, `scripts/dispatch-release-pr-checks.py`, `scripts/docs-artifact.py`, `scripts/emit-plugin-matrix.py`, `scripts/gh_json.py`, `scripts/install-actionlint.py`, `scripts/install-ripwire.py`, `scripts/phase-lock.py`, `scripts/pinned_archive.py`, `scripts/refresh-local-plugin.py`, `scripts/refresh-release-artifacts.py`, `scripts/release_note_policy.py`, `scripts/release-pr-lifecycle.py`, `scripts/resolve_release_prs.py`, `scripts/run-plugin-evals.py`, `scripts/run-python-lint.py`, `scripts/run-runner-requests.py`, `scripts/scratch-clone-guard.py`, `scripts/superseded_run.py`, `scripts/sync_release_pr.py`, `scripts/sync-marketplace-versions.py`, `scripts/validate-release-pr-integrity.py`
+  - Based on: `scripts/audit-release-notes.py`, `scripts/build-typesafe-jev-release.py`, `scripts/changed_files.py`, `scripts/check-go-module.py`, `scripts/check-pr-title.py`, `scripts/check-pr-workflow-results.py`, `scripts/classify-docs-validation.py`, `scripts/compose-release-notes.py`, `scripts/dispatch-release-pr-checks.py`, `scripts/docs-artifact.py`, `scripts/emit-plugin-matrix.py`, `scripts/gh_json.py`, `scripts/install-actionlint.py`, `scripts/install-ripwire.py`, `scripts/phase-lock.py`, `scripts/pinned_archive.py`, `scripts/process_status.py`, `scripts/refresh-local-plugin.py`, `scripts/refresh-release-artifacts.py`, `scripts/release_note_policy.py`, `scripts/release-pr-lifecycle.py`, `scripts/resolve_release_prs.py`, `scripts/run-ci-suite.py`, `scripts/run-plugin-evals.py`, `scripts/run-python-lint.py`, `scripts/run-runner-requests.py`, `scripts/scratch-clone-guard.py`, `scripts/superseded_run.py`, `scripts/sync_release_pr.py`, `scripts/sync-marketplace-versions.py`, `scripts/validate-release-pr-integrity.py`
