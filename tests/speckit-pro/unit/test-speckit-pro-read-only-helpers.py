@@ -3325,20 +3325,66 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
         self.assertEqual(exit_code, 2)
         self.assertIn("SPEC-009", payload["error"])
 
-    def test_check_prerequisites_does_not_invent_a_cli_version(self) -> None:
+    def test_check_prerequisites_compares_the_cli_version_with_the_pin(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
-            self.skipTest("CLI presence case uses check-prerequisites")
+            self.skipTest("CLI version case uses check-prerequisites")
+        cases = (
+            ("/fixture/bin/specify", "1.1.0", "match"),
+            ("/fixture/bin/specify", "1.0.12", "older"),
+            ("/fixture/bin/specify", "1.2.0", "newer"),
+            ("/fixture/bin/specify", "1.10.0", "newer"),
+            ("/fixture/bin/specify", "1.1.0.dev0", "unreadable"),
+            ("/fixture/bin/specify", None, "unreadable"),
+            (None, None, "missing"),
+        )
         with tempfile.TemporaryDirectory(prefix="read-only-helper-project-") as project:
-            for executable in ("/fixture/bin/specify", "/fixture/other/specify", None):
-                with self.subTest(executable=executable), patch(
+            for executable, version, status in cases:
+                with self.subTest(executable=executable, version=version), patch(
                     "speckit_pro_runner.helpers.read_only.find_specify", return_value=executable,
+                ), patch(
+                    "speckit_pro_runner.helpers.read_only.installed_specify_version",
+                    return_value=version,
                 ):
                     payload = self._feature_state(Path(project))
                     row = next(item for item in payload["checks"] if item["check"] == "speckit_cli")
                     self.assertEqual(row["pass"], executable is not None)
+                    spec_kit = payload["spec_kit"]
+                    self.assertEqual(spec_kit["status"], status)
+                    self.assertEqual(spec_kit["pinned_version"], "1.1.0")
+                    self.assertEqual(spec_kit["installed_version"], version)
                     self.assertEqual(
-                        row["detail"], f"{executable} (version not checked)" if executable else "",
+                        spec_kit["install_argv"],
+                        [
+                            "uv", "tool", "install", "specify-cli", "--force", "--from",
+                            "git+https://github.com/github/spec-kit.git"
+                            "@f1d3a4f8337ebbd3ae22760a9c12e3352b93a175",
+                        ],
                     )
+                    if executable is not None:
+                        version_row = next(
+                            item for item in payload["checks"] if item["check"] == "speckit_cli_version"
+                        )
+                        self.assertTrue(version_row["pass"], "a version mismatch never stops a run")
+
+    def test_installed_specify_version_reads_the_cli_version_row(self) -> None:
+        if self.helper_filter and self.helper_filter != "check-prerequisites":
+            self.skipTest("CLI version case uses check-prerequisites")
+        from speckit_pro_runner.helpers.read_only import installed_specify_version
+
+        panel = (
+            "╭──── Specify CLI Information ────╮\n"
+            "│                                 │\n"
+            "│     CLI Version    1.0.12       │\n"
+            "│          Python    3.13.13      │\n"
+        )
+        for stdout, returncode, expected in ((panel, 0, "1.0.12"), ("no row", 0, None), (panel, 2, None)):
+            with self.subTest(returncode=returncode, stdout=stdout[:8]), patch(
+                "speckit_pro_runner.helpers.read_only.subprocess.run",
+                return_value=SimpleNamespace(stdout=stdout, returncode=returncode),
+            ):
+                self.assertEqual(installed_specify_version("/fixture/bin/specify"), expected)
+        with patch("speckit_pro_runner.helpers.read_only.subprocess.run", side_effect=OSError):
+            self.assertIsNone(installed_specify_version("/fixture/bin/specify"))
 
     def test_check_prerequisites_honors_specify_feature_directory_env(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":

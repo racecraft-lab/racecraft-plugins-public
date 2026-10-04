@@ -218,12 +218,17 @@ Use command execution to confirm `command -v specify` finds the official
 `specify` CLI after including common user-local binary directories
 (`$HOME/.local/bin`, `/opt/homebrew/bin`, `/usr/local/bin`) on PATH.
 
-If missing and `uv` exists, install it:
+Send the `check-prerequisites` helper request (`workflow_file` empty) and read
+the `spec_kit` object in its output. `status` is `missing`, `older`, `newer`,
+`unreadable` or `match`; `install_argv` is the pinned install.
 
-Run `uv tool install specify-cli --from git+https://github.com/github/spec-kit.git`.
+If `status` is `missing` and `uv` exists, run `install_argv`. If `status` is
+`older`, `newer` or `unreadable`, record the mismatch as a readiness item
+(`installed_version` beside `pinned_version`) and offer the operator
+`install_argv`; continue on the installed CLI when they decline.
 
-If `uv` is unavailable or install fails, STOP and tell the operator to install
-SpecKit with that command. Do not continue with setup without the `specify`
+If `uv` is unavailable or the install fails, STOP and give the operator
+`install_argv` to run. Do not continue with setup without the `specify`
 command. Do not run `specify init --here --force` automatically: project
 initialization and forced refreshes can overwrite managed files. Recommend it
 only when `.specify/` is absent and the operator explicitly approves project

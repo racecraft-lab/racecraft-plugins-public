@@ -49,14 +49,23 @@ parsing: first on `PATH`, then at `~/.local/bin/specify`, where
 `uv tool install` puts it. This is where the runner's own
 prerequisite check looks.
 
-- If it is found, capture the version (for example, `specify 0.8.13`)
-  and move on.
-- If the CLI is missing:
+The runner owns the pinned Spec Kit version. Invoke
+`[resolved_python, "-m", "speckit_pro_runner"]` with this request on
+stdin, parse `data.stdout.text` as JSON, and read its `spec_kit` object
+(`status`, `installed_version`, `pinned_version`, `install_argv`):
+
+```json
+{"schema_version":"1.0","request_id":"install-spec-kit-pin","helper_id":"check-prerequisites","operation":"check-prerequisites","mode":"read_only","inputs":{"workflow_file":""}}
+```
+
+- If it is found, record `installed_version`. When `status` is `match`,
+  move on. When it is `older`, `newer` or `unreadable`, tell the
+  operator the installed version and the pinned one, and ask before
+  running `install_argv` (it replaces the CLI).
+- If the CLI is missing (`status` is `missing`):
   - Look up `uv` the same way.
-  - If `uv` is present, install the official SpecKit CLI by invoking
-    the equivalent of `uv tool install specify-cli --from
-    git+https://github.com/github/spec-kit.git` with argv-only
-    execution.
+  - If `uv` is present, install the pinned CLI by invoking
+    `install_argv` with argv-only execution.
   - If `uv` is missing, STOP and tell the operator to install `uv`
     from the official Astral documentation, then re-run
     `/speckit-pro:speckit-install`. SpecKit CLI is distributed as a

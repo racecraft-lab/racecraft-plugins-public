@@ -113,10 +113,10 @@ Surface to the operator:
 - Whether `specify self check` reports a newer release available.
 - Each installed integration with its current status.
 
-If the CLI itself is outdated, recommend that the operator run
-`uv tool install specify-cli --force --from
-git+https://github.com/github/spec-kit.git` and then re-invoke this
-skill. This skill does not run it. Ask the operator to either upgrade
+If the CLI is not the pinned version, recommend that the operator run
+`install_argv` from the `spec_kit` object of the runner's
+`check-prerequisites` result (the request in step 5a) and then
+re-invoke this skill. This skill does not run it. Ask the operator to either upgrade
 the CLI first or confirm they want to proceed with the current CLI
 version, and wait for the answer before continuing.
 

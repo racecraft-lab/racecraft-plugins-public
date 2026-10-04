@@ -26,6 +26,7 @@ from ..gate_discovery import DEFAULT_BASE_BRANCH, SLOTS as GATE_SLOTS, resolve_s
 from .. import quality_gates
 from ..json_schema import json_schema_failures
 from ..runtime import detect_plugin_root
+from .. import spec_kit_pin
 from ..strict_input import unique_object
 from .formal_policy import apply_resume_guard, gate_checkpoint
 from .feedback_sweep import (
@@ -1440,10 +1441,17 @@ def check_prerequisites(inputs: dict[str, Any], repo_root: Path) -> dict[str, An
     all_pass = True
 
     specify_path = find_specify()
+    installed_version = installed_specify_version(specify_path) if specify_path else None
+    version_state = spec_kit_pin.version_status(installed_version, cli_found=specify_path is not None)
     if specify_path:
-        checks.append(check("speckit_cli", True, "SpecKit CLI installed", f"{specify_path} (version not checked)"))
+        checks.append(check("speckit_cli", True, "SpecKit CLI installed", f"{specify_path} ({installed_version or 'version unreadable'})"))
+        # Advisory by design: a version mismatch never stops a run (ADR 0010).
+        checks.append(check(
+            "speckit_cli_version", True,
+            f"SpecKit CLI is {version_state} against the pinned {spec_kit_pin.PINNED_VERSION}",
+            "" if version_state == "match" else f"install the pin: {shlex.join(spec_kit_pin.INSTALL_ARGV)}"))
     else:
-        checks.append(check("speckit_cli", False, "SpecKit CLI not found. Install: uv tool install specify-cli --from git+https://github.com/github/spec-kit.git", ""))
+        checks.append(check("speckit_cli", False, f"SpecKit CLI not found. Install: {shlex.join(spec_kit_pin.INSTALL_ARGV)}", ""))
         all_pass = False
     if trusted_dir_exists(repo_root / ".specify", repo_root):
         checks.append(check("project_init", True, "Project initialized", ""))
@@ -1510,7 +1518,13 @@ def check_prerequisites(inputs: dict[str, Any], repo_root: Path) -> dict[str, An
             "Covers codebase context, library documentation, web/domain research, and source extraction. Missing optional coverage may lower confidence or require fallback evidence notes, but escalation is reserved for no acceptable evidence path or a true prerequisite/gate failure.",
         )
     )
-    return make_result(json_text({"all_pass": all_pass, "branch": branch, "is_worktree": is_worktree, "on_feature_branch": on_feature, "checks": checks}), exit_code=0 if all_pass else 1)
+    spec_kit = {
+        "pinned_version": spec_kit_pin.PINNED_VERSION,
+        "installed_version": installed_version,
+        "status": version_state,
+        "install_argv": spec_kit_pin.INSTALL_ARGV,
+    }
+    return make_result(json_text({"all_pass": all_pass, "branch": branch, "is_worktree": is_worktree, "on_feature_branch": on_feature, "spec_kit": spec_kit, "checks": checks}), exit_code=0 if all_pass else 1)
 
 
 SETUP_SCRIPT_CALL_RE = re.compile(r"`\.specify/scripts/bash/([A-Za-z0-9_.-]+\.sh)((?:\s+[^`\s]+)*)`")
@@ -6238,6 +6252,18 @@ def find_specify() -> str | None:
         return None
     local = home / ".local" / "bin" / "specify"
     return str(local) if local.is_file() else None
+
+
+def installed_specify_version(specify_path: str) -> str | None:
+    """The version `specify version` reports, or None when it cannot run or has no version row."""
+    try:
+        result = subprocess.run(
+            [specify_path, "version"], text=True, capture_output=True, shell=False,
+            check=False, timeout=SUBPROCESS_TIMEOUT_SECONDS, stdin=subprocess.DEVNULL,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return spec_kit_pin.parse_cli_version(result.stdout) if result.returncode == 0 else None
 
 
 def git_diff_changed_paths(repo_root: Path) -> list[str] | None:
