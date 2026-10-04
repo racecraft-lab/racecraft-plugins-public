@@ -366,6 +366,12 @@ roadmap entry.
 
 ### 3.24 Shared Typed-Decision Contract *(-> HRNS-024)*
 
+Inherit the [decision-model evaluation (#1148)](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1148)
+as directed by [ADR 0020](adr/0020-plan-stage-routing-uses-runner-rules.md):
+question wording, state shapes, audit fields (question-set hash, state digest,
+model, backend, probabilities, thresholds, and decision), and the finding that
+derived features alone fail.
+
 - **AC-24.1**: A language-neutral JSON contract defines decision identity and
   version, projection, rubric, normalizer, and policy identities with hashes,
   preconditions, and `authority_owner`. Its schema and conformance fixtures
@@ -467,6 +473,12 @@ roadmap entry.
   deny, or ask, with a reason) to both hosts' hooks.
 
 ### 3.27 Dual-Host Jev Adapter *(-> HRNS-027)*
+
+Inherit the [decision-model evaluation (#1148)](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1148)
+as directed by [ADR 0020](adr/0020-plan-stage-routing-uses-runner-rules.md):
+question wording, state shapes, audit fields (question-set hash, state digest,
+model, backend, probabilities, thresholds, and decision), and the finding that
+derived features alone fail.
 
 - **AC-27.1**: Capability discovery lists an optional typed-judgment
   capability without a hardcoded vendor preference, and the trusted parent on
