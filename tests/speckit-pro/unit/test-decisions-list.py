@@ -36,6 +36,9 @@ NOTE = entry("readiness_stale", "note")
 SKIP = entry("authority_action_skipped", "skip")
 SCOPE = entry("scope_answer", "scope")
 SPLIT = entry("split_recommendation", "split")
+DEFAULT = entry("unratified_default", "default")
+PR_PROBLEM = entry("pr_record_problem", "pr")
+STOP = entry("unregistered_stop", "stop")
 
 
 class DecisionsListTests(unittest.TestCase):
@@ -70,18 +73,20 @@ class DecisionsListTests(unittest.TestCase):
         self.assertEqual(0, self.listed()["count"])
 
     def test_entries_come_back_spec_affecting_then_authority_then_notes(self) -> None:
-        first = self.append(NOTE, SKIP, SCOPE)
+        first = self.append(NOTE, SKIP, SCOPE, PR_PROBLEM)
         self.assertEqual("ok", first["status"], first)
-        self.assertEqual("ok", self.append(SPLIT)["status"])
+        self.assertEqual("ok", self.append(SPLIT, DEFAULT, STOP)["status"])
         data = self.listed()
         order = [item["kind"] for item in data["entries"]]
         self.assertEqual(
-            ["scope_answer", "split_recommendation", "authority_action_skipped", "readiness_stale"], order
+            ["scope_answer", "split_recommendation", "unratified_default", "authority_action_skipped",
+             "readiness_stale", "pr_record_problem", "unregistered_stop"], order
         )
-        self.assertEqual(4, data["count"])
+        self.assertEqual(7, data["count"])
         for item in data["entries"]:
             self.assertEqual({"seq", "kind", *TEXT_FIELDS}, set(item))
-            sent = next(each for each in (NOTE, SKIP, SCOPE, SPLIT) if each["kind"] == item["kind"])
+            sent = next(each for each in (NOTE, SKIP, SCOPE, SPLIT, DEFAULT, PR_PROBLEM, STOP)
+                        if each["kind"] == item["kind"])
             self.assertEqual(sent, {key: value for key, value in item.items() if key != "seq"})
 
     def test_entries_of_one_class_keep_the_order_they_were_appended(self) -> None:
@@ -98,6 +103,8 @@ class DecisionsListTests(unittest.TestCase):
         missing = {key: value for key, value in SCOPE.items() if key != "evidence"}
         malformed = {
             "unknown kind": {**SCOPE, "kind": "vibes"},
+            "array kind": {**SCOPE, "kind": []},
+            "object kind": {**SCOPE, "kind": {}},
             "missing field": missing,
             "unknown field": {**SCOPE, "mood": "calm"},
             "empty text": {**SCOPE, "evidence": "  "},
@@ -133,6 +140,36 @@ class DecisionsListTests(unittest.TestCase):
         target = self.root / LIST_FILE
         target.write_text(target.read_text(encoding="utf-8").replace('"seq": 1', '"seq": true'), encoding="utf-8")
         self.assertEqual("input_error", self.call("read_only")["status"])
+
+    def test_a_stored_non_string_kind_is_refused_not_replaced(self) -> None:
+        self.append(SCOPE)
+        target = self.root / LIST_FILE
+        document = json.loads(target.read_text(encoding="utf-8"))
+        for kind in ([], {}):
+            with self.subTest(kind=kind):
+                document["entries"][0]["kind"] = kind
+                original = json.dumps(document)
+                target.write_text(original, encoding="utf-8")
+                self.assertEqual("input_error", self.call("read_only")["status"])
+                self.assertEqual("input_error", self.append(NOTE)["status"])
+                self.assertEqual(original, target.read_text(encoding="utf-8"))
+
+    def test_each_repeated_stop_occurrence_is_recorded(self) -> None:
+        self.append(STOP)
+        self.append(STOP)
+        data = self.listed()
+        self.assertEqual(2, data["count"])
+        self.assertEqual([1, 2], [item["seq"] for item in data["entries"]])
+
+    def test_an_existing_lock_is_refused_without_stealing_it(self) -> None:
+        self.append(SCOPE)
+        target = self.root / LIST_FILE
+        original = target.read_bytes()
+        lock = target.with_suffix(".lock")
+        lock.mkdir()
+        self.assertEqual("input_error", self.append(NOTE)["status"])
+        self.assertTrue(lock.is_dir())
+        self.assertEqual(original, target.read_bytes())
 
     def test_dry_run_plans_without_writing(self) -> None:
         result = self.call("dry_run", entries=[SCOPE])

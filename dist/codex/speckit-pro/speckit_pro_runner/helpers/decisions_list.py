@@ -35,7 +35,7 @@ KINDS = {
 def checked_entry(value: Any) -> dict[str, str]:
     """One entry exactly as the contract states it; anything else raises."""
     fields = require_fields(value, {"kind", *TEXT_FIELDS}, "entry")
-    if fields["kind"] not in KINDS:
+    if not isinstance(fields["kind"], str) or fields["kind"] not in KINDS:
         raise SelectionError(f"entry: kind must be one of {sorted(KINDS)}")
     if any(len(fields[name]) > MAX_TEXT for name in TEXT_FIELDS if isinstance(fields[name], str)):
         raise SelectionError(f"entry: text fields are limited to {MAX_TEXT} characters")
