@@ -5200,8 +5200,13 @@ class CanaryPlanQualityTests(CanaryVariantCase):
                 quality = self.quality(mutated)
                 quality[field] = ["item-1"]
                 quality["blocked_for_uat_listed"] = ["item-1"]
+                mutated["variants"][0]["blocked_for_uat"] = 1
                 with self.subTest(host=host, field=field, listed=True):
                     self.assertEqual([], self.validator.validate_receipt(mutated))
+                mutated["variants"][0]["blocked_for_uat"] = 0
+                with self.subTest(host=host, field=field, listed="not counted"):
+                    self.assertEqual(["base.plan_quality.blocked_for_uat_listed"], self.validator.validate_receipt(mutated))
+                mutated["variants"][0]["blocked_for_uat"] = 1
                 quality["blocked_for_uat_listed"] = ["item-2"]
                 with self.subTest(host=host, field=field, listed=False):
                     self.assertEqual(1, len(self.validator.validate_receipt(mutated)))
@@ -5249,6 +5254,7 @@ class CanaryHookCounterTests(CanaryVariantCase):
                 for event, fires in (("after_specify", 2), ("after_plan", 0), ("after_tasks", 2)):
                     counters = hook_counters()
                     counters["hooks"][kind]["phases"][event] = fires
+                    counters["hooks"][kind]["fires"] = sum(counters["hooks"][kind]["phases"].values())
                     with self.subTest(host=host, kind=kind, event=event, fires=fires):
                         self.assertEqual([f"hook_counters.{kind}.{event}"],
                                          self.validator.validate_receipt(value, hook_counters=counters))
@@ -5256,8 +5262,16 @@ class CanaryHookCounterTests(CanaryVariantCase):
     def test_unattributed_fires_fail_the_receipt(self):
         counters = hook_counters()
         counters["hooks"]["optional"]["unattributed_fires"] = 1
+        counters["hooks"]["optional"]["fires"] = 4
         self.assertEqual(["hook_counters.optional.unattributed_fires"],
                          self.validator.validate_receipt(self.receipts["codex"], hook_counters=counters))
+
+    def test_inconsistent_totals_or_a_swapped_optional_flag_fail_the_receipt(self):
+        for field, bad in (("fires", 0), ("optional", True)):
+            counters = hook_counters()
+            counters["hooks"]["mandatory"][field] = bad
+            self.assertEqual([f"hook_counters.mandatory.{field}"],
+                             self.validator.validate_receipt(self.receipts["codex"], hook_counters=counters))
 
     def test_malformed_counters_fail_closed(self):
         for mutate in (lambda c: c["hooks"].pop("optional"), lambda c: c.update(schema_version="other"),

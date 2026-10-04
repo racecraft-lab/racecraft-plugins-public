@@ -80,6 +80,10 @@ def hook_counter_failures(counters):
     failures = []
     for kind, record in counters["hooks"].items():
         failures.extend(f"hook_counters.{kind}.{event}" for event in HOOK_EVENTS if record["phases"][event] != 1)
+        if record["optional"] != (kind == "optional"):
+            failures.append(f"hook_counters.{kind}.optional")
+        if record["fires"] != sum(record["phases"].values()) + record["unattributed_fires"]:
+            failures.append(f"hook_counters.{kind}.fires")
         if record["unattributed_fires"]:
             failures.append(f"hook_counters.{kind}.unattributed_fires")
     return failures
@@ -101,6 +105,8 @@ def plan_quality_failures(variant):
     if quality["untraced_requirements"]:
         failures.append(f"{name}.plan_quality.untraced_requirements")
     listed = set(quality["blocked_for_uat_listed"])
+    if len(listed) > variant["blocked_for_uat"]:
+        failures.append(f"{name}.plan_quality.blocked_for_uat_listed")
     for field, label in (("open_gaps", "open_gap"), ("open_findings", "open_finding"),
                          ("open_clarifications", "open_clarification")):
         if not listed.issuperset(quality[field]):

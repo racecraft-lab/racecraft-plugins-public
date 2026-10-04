@@ -52,7 +52,7 @@
         "target_met": {"type": "boolean"}}
     },
     "plan_quality": {
-      "description": "ADR 0023 artifact checks at the end of planning; an open item passes only when it is also in blocked_for_uat_listed.",
+      "description": "ADR 0023 artifact checks at the end of planning; an open gap, finding or clarification passes only when it is in blocked_for_uat_listed, and the list cannot exceed the variant's blocked_for_uat count. Untraced requirements have no exemption.",
       "type": "object", "additionalProperties": false,
       "required": ["phases_run", "clarify_sessions", "requirements_total", "untraced_requirements", "open_gaps", "open_findings", "open_clarifications", "blocked_for_uat_listed", "decisions"],
       "properties": {
