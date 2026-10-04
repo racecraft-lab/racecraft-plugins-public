@@ -1,0 +1,172 @@
+#!/usr/bin/env python3
+"""The runner-owned decisions list: one run-state file of judgments made instead of asking.
+
+The helper is the only writer. Entries come back spec-affecting first, then
+authority skips, then notes, each with every field; a malformed entry refuses
+the whole batch; the terminal message carries the count and a link only.
+"""
+
+import json
+import os
+from collections.abc import Mapping
+from pathlib import Path
+import sys
+import tempfile
+from types import SimpleNamespace
+from typing import Any
+import unittest
+
+REPO = Path(__file__).resolve().parents[3]
+sys.path[:0] = [str(REPO / "speckit-pro"), str(REPO / "tests/speckit-pro/lib")]
+from speckit_pro_runner.helpers.registry import MUTATION_HELPERS, dispatch_helper  # noqa: E402
+from test_result import run_counted  # noqa: E402
+
+HELPER_ID = "decisions-list"
+WORKFLOW = "specs/001-feature/.process/workflow.md"
+LIST_FILE = "specs/001-feature/.process/decisions-list/decisions.json"
+FIELDS = {"seq", "kind", "option_chosen", "rejected_alternative", "evidence", "affected_unit"}
+
+
+def entry(kind: str, tag: str) -> dict[str, str]:
+    return {
+        "kind": kind,
+        "option_chosen": f"chose {tag}",
+        "rejected_alternative": f"rejected {tag}",
+        "evidence": f"evidence {tag}",
+        "affected_unit": f"unit {tag}",
+    }
+
+
+NOTE = entry("readiness_stale", "note")
+SKIP = entry("authority_action_skipped", "skip")
+SCOPE = entry("scope_answer", "scope")
+SPLIT = entry("split_recommendation", "split")
+
+
+class DecisionsListTests(unittest.TestCase):
+    def setUp(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name).resolve()
+        (self.root / ".specify").mkdir()
+        (self.root / WORKFLOW).parent.mkdir(parents=True)
+        (self.root / WORKFLOW).write_text("# Workflow\n", encoding="utf-8")
+        previous = Path.cwd()
+        os.chdir(self.root)
+        self.addCleanup(os.chdir, previous)
+
+    def call(self, mode: str, **inputs: object) -> dict[str, Any]:
+        request = SimpleNamespace(
+            helper_id=HELPER_ID,
+            operation=HELPER_ID,
+            request_id="decisions-list-test",
+            mode=mode,
+            inputs={"workflow_file": WORKFLOW, **inputs},
+        )
+        return dispatch_helper(request)
+
+    def append(self, *entries: Mapping[str, object] | str) -> dict[str, Any]:
+        return self.call("apply", entries=list(entries))
+
+    def listed(self) -> dict[str, Any]:
+        result = self.call("read_only")
+        self.assertEqual("ok", result["status"], result)
+        return result["data"]
+
+    def test_registered_with_a_request_fixture(self) -> None:
+        fixture = REPO / "tests/speckit-pro/unit/fixtures/mutation-helpers/requests" / f"{HELPER_ID}.json"
+        request = json.loads(fixture.read_text(encoding="utf-8"))
+        registered = MUTATION_HELPERS[HELPER_ID]
+        self.assertEqual((registered.helper_id, registered.operation), (request["helper_id"], request["operation"]))
+        self.assertIn(request["mode"], registered.modes)
+
+    def test_entries_come_back_spec_affecting_then_authority_then_notes(self) -> None:
+        first = self.append(NOTE, SKIP, SCOPE)
+        self.assertEqual("ok", first["status"], first)
+        self.assertEqual("ok", self.append(SPLIT)["status"])
+        data = self.listed()
+        order = [item["kind"] for item in data["entries"]]
+        self.assertEqual(
+            ["scope_answer", "split_recommendation", "authority_action_skipped", "readiness_stale"], order
+        )
+        self.assertEqual(4, data["count"])
+        for item in data["entries"]:
+            self.assertEqual(FIELDS, set(item))
+            tag = item["option_chosen"].removeprefix("chose ")
+            self.assertEqual(
+                {"rejected_alternative": f"rejected {tag}", "evidence": f"evidence {tag}",
+                 "affected_unit": f"unit {tag}"},
+                {key: item[key] for key in ("rejected_alternative", "evidence", "affected_unit")},
+            )
+
+    def test_entries_of_one_class_keep_the_order_they_were_appended(self) -> None:
+        self.append(SPLIT)
+        self.append(SCOPE)
+        kinds = [item["kind"] for item in self.listed()["entries"]]
+        self.assertEqual(["split_recommendation", "scope_answer"], kinds)
+
+    def test_apply_response_matches_the_stored_list(self) -> None:
+        applied = self.append(SKIP, SCOPE)["data"]
+        self.assertEqual(self.listed()["entries"], applied["entries"])
+
+    def test_malformed_entries_are_refused_and_nothing_is_written(self) -> None:
+        missing = {key: value for key, value in SCOPE.items() if key != "evidence"}
+        malformed = {
+            "unknown kind": {**SCOPE, "kind": "vibes"},
+            "missing field": missing,
+            "unknown field": {**SCOPE, "mood": "calm"},
+            "empty text": {**SCOPE, "evidence": "  "},
+            "non-string": {**SCOPE, "affected_unit": 7},
+            "not an object": "scope_answer",
+        }
+        for label, bad in malformed.items():
+            with self.subTest(label):
+                result = self.append(NOTE, bad)
+                self.assertEqual("input_error", result["status"], result)
+                self.assertFalse((self.root / LIST_FILE).exists())
+        for label, entries in (("empty batch", []), ("not a list", "x")):
+            with self.subTest(label):
+                result = self.call("apply", entries=entries)
+                self.assertEqual("input_error", result["status"], result)
+
+    def test_a_bad_entry_never_drops_the_good_ones_already_stored(self) -> None:
+        self.append(SCOPE)
+        self.assertEqual("input_error", self.append({**NOTE, "kind": "vibes"})["status"])
+        self.assertEqual(1, self.listed()["count"])
+
+    def test_an_unreadable_stored_list_is_refused_not_replaced(self) -> None:
+        target = self.root / LIST_FILE
+        target.parent.mkdir(parents=True)
+        target.write_text("{not json", encoding="utf-8")
+        self.assertEqual("input_error", self.append(SCOPE)["status"])
+        self.assertEqual("input_error", self.call("read_only")["status"])
+        self.assertEqual("{not json", target.read_text(encoding="utf-8"))
+
+    def test_dry_run_plans_without_writing(self) -> None:
+        result = self.call("dry_run", entries=[SCOPE])
+        self.assertEqual("ok", result["status"], result)
+        self.assertFalse((self.root / LIST_FILE).exists())
+
+    def test_terminal_message_is_the_count_and_a_link_only(self) -> None:
+        self.assertEqual(0, self.listed()["count"])
+        self.append(SCOPE, SKIP, NOTE)
+        data = self.listed()
+        self.assertEqual(LIST_FILE, data["link"])
+        self.assertEqual(f"3 decisions recorded: {LIST_FILE}", data["message"])
+        for item in data["entries"]:
+            for key in ("option_chosen", "rejected_alternative", "evidence", "affected_unit"):
+                self.assertNotIn(item[key], data["message"])
+
+    def test_the_list_file_stays_out_of_commits(self) -> None:
+        self.append(SCOPE)
+        ignore = self.root / Path(LIST_FILE).parent / ".gitignore"
+        self.assertEqual("*\n", ignore.read_text(encoding="utf-8"))
+
+
+if __name__ == "__main__":
+    sys.exit(
+        run_counted(
+            unittest.defaultTestLoader.loadTestsFromTestCase(DecisionsListTests),
+            label="test-decisions-list",
+        )
+    )
