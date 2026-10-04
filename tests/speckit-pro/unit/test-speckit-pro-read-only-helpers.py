@@ -1186,6 +1186,7 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
             payload, exit_code = self.placement_result(task_root, "fixture-unignored")
             self.assertEqual((payload["placement_status"], exit_code), ("conflict", 1))
             self.assertTrue(any("ignored" in problem for problem in payload["problems"]))
+            self.assertTrue(any("speckit-install" in problem and "speckit-upgrade" in problem for problem in payload["problems"]))
 
         with tempfile.TemporaryDirectory() as temp:
             _, task_root = self.build_scaffold_placement_worktrees(Path(temp))

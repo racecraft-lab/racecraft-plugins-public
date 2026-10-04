@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check or repair a consumer repository's Claude local-memory ignore rule."""
+"""Check or repair a consumer repository's Claude local-memory or scaffold-worktree ignore rule."""
 from __future__ import annotations
 
 import argparse
@@ -13,6 +13,10 @@ from pathlib import Path
 
 RULE = "**/.claude/agent-memory-local/"
 PROBE = "__speckit_agent_memory_probe__.md"
+WORKTREES_RULE = "/.worktrees/"
+WORKTREES_PROBE = ".worktrees/__speckit_worktree_probe__"
+MEMORY_REMEDIATION = "Add an effective recursive ignore rule; deliberately untrack listed memory files without deleting them."
+WORKTREES_REMEDIATION = "Add an effective ignore rule for .worktrees/ and remove any nested ignore rule that overrides it."
 
 
 def git(root: Path, *args: str) -> subprocess.CompletedProcess[bytes]:
@@ -76,8 +80,12 @@ def probe_locations(root: Path) -> list[str]:
 
 
 def unignored_probes(root: Path) -> list[str]:
+    return unignored_paths(root, probe_locations(root))
+
+
+def unignored_paths(root: Path, paths: list[str]) -> list[str]:
     unignored: list[str] = []
-    for path in probe_locations(root):
+    for path in paths:
         result = git(root, "check-ignore", "--no-index", "-q", "--", path)
         if result.returncode == 1:
             unignored.append(path)
@@ -94,27 +102,33 @@ def tracked_memory(root: Path) -> list[str]:
     ))
 
 
-def run(root: Path, mode: str) -> tuple[int, dict[str, object]]:
+def run(root: Path, mode: str, target: str = "memory") -> tuple[int, dict[str, object]]:
     root = root.resolve(strict=True)
     actual = git(root, "rev-parse", "--show-toplevel")
     if actual.returncode != 0 or Path(os.fsdecode(actual.stdout).strip()).resolve() != root:
         raise RuntimeError("--repo-root must name the Git worktree root")
     ignore = root / ".gitignore"
     original, permissions = ignore_bytes(ignore)
-    missing = unignored_probes(root)
+    if target == "worktrees":
+        rule, probes, tracked_check = WORKTREES_RULE, lambda: unignored_paths(root, [WORKTREES_PROBE]), lambda: []
+        remediation = WORKTREES_REMEDIATION
+    else:
+        rule, probes, tracked_check = RULE, lambda: unignored_probes(root), lambda: tracked_memory(root)
+        remediation = MEMORY_REMEDIATION
+    missing = probes()
     changed = False
-    if mode == "apply" and missing and RULE.encode() not in original.splitlines():
+    if mode == "apply" and missing and rule.encode() not in original.splitlines():
         separator = b"" if not original or original.endswith(b"\n") else b"\n"
-        write_ignore(ignore, original + separator + RULE.encode() + b"\n", permissions)
+        write_ignore(ignore, original + separator + rule.encode() + b"\n", permissions)
         changed = True
-        missing = unignored_probes(root)
-    tracked = tracked_memory(root)
+        missing = probes()
+    tracked = tracked_check()
     report: dict[str, object] = {
         "status": "ok" if not missing and not tracked else "needs_attention",
         "changed": changed,
         "unignored_paths": missing,
         "tracked_memory": tracked,
-        "remediation": "Add an effective recursive ignore rule; deliberately untrack listed memory files without deleting them." if missing or tracked else "",
+        "remediation": remediation if missing or tracked else "",
     }
     return (0 if report["status"] == "ok" else 1), report
 
@@ -123,9 +137,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mode", choices=("check", "apply"), required=True)
     parser.add_argument("--repo-root", type=Path, required=True)
+    parser.add_argument("--target", choices=("memory", "worktrees"), default="memory")
     args = parser.parse_args()
     try:
-        code, result = run(args.repo_root, args.mode)
+        code, result = run(args.repo_root, args.mode, args.target)
     except (OSError, RuntimeError, subprocess.TimeoutExpired) as exc:
         code, result = 2, {"status": "error", "error": str(exc)}
     print(json.dumps(result, sort_keys=True))
