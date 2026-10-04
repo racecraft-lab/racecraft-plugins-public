@@ -108,6 +108,7 @@
         { "path": "tests/speckit-pro/unit/test-hosted-windows-preflight.py", "label": "test-hosted-windows-preflight" },
         { "path": "tests/speckit-pro/unit/test-preflight-interpreters.py", "label": "test-preflight-interpreters" },
         { "path": "tests/speckit-pro/unit/test-pr-checks-helpers.py", "label": "test-pr-checks-helpers" },
+        { "path": "tests/speckit-pro/unit/test-plain-ci-entry-points.py", "label": "test-plain-ci-entry-points" },
         { "path": "tests/speckit-pro/unit/test-install-ripwire.py", "label": "test-install-ripwire" },
         { "path": "tests/speckit-pro/unit/test-typesafe-jev-release-build.py", "label": "test-typesafe-jev-release-build" },
         { "path": "tests/speckit-pro/unit/test-docs-artifact.py", "label": "test-docs-artifact" },
