@@ -101,6 +101,7 @@ class DecisionsListTests(unittest.TestCase):
             "missing field": missing,
             "unknown field": {**SCOPE, "mood": "calm"},
             "empty text": {**SCOPE, "evidence": "  "},
+            "oversized": {**SCOPE, "evidence": "x" * 1001},
             "non-string": {**SCOPE, "affected_unit": 7},
             "not an object": "scope_answer",
         }
@@ -126,6 +127,12 @@ class DecisionsListTests(unittest.TestCase):
         self.assertEqual("input_error", self.append(SCOPE)["status"])
         self.assertEqual("input_error", self.call("read_only")["status"])
         self.assertEqual("{not json", target.read_text(encoding="utf-8"))
+
+    def test_a_stored_entry_numbered_with_a_non_integer_is_refused(self) -> None:
+        self.append(SCOPE)
+        target = self.root / LIST_FILE
+        target.write_text(target.read_text(encoding="utf-8").replace('"seq": 1', '"seq": true'), encoding="utf-8")
+        self.assertEqual("input_error", self.call("read_only")["status"])
 
     def test_dry_run_plans_without_writing(self) -> None:
         result = self.call("dry_run", entries=[SCOPE])

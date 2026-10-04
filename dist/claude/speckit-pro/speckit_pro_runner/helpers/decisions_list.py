@@ -17,6 +17,7 @@ from ..strict_input import SelectionError, require_fields, require_text, unique_
 from ..trusted_io import resolve_repo_root
 
 SCHEMA_VERSION = "decisions-list/v1"
+MAX_TEXT = 1000
 TEXT_FIELDS = ("option_chosen", "rejected_alternative", "evidence", "affected_unit")
 SPEC_AFFECTING, AUTHORITY_SKIP, NOTE = 0, 1, 2
 # The closed set of kinds, each with its sort class.
@@ -36,6 +37,8 @@ def checked_entry(value: Any) -> dict[str, str]:
     fields = require_fields(value, {"kind", *TEXT_FIELDS}, "entry")
     if fields["kind"] not in KINDS:
         raise SelectionError(f"entry: kind must be one of {sorted(KINDS)}")
+    if any(len(fields[name]) > MAX_TEXT for name in TEXT_FIELDS if isinstance(fields[name], str)):
+        raise SelectionError(f"entry: text fields are limited to {MAX_TEXT} characters")
     return {"kind": fields["kind"], **{name: require_text(fields[name], name) for name in TEXT_FIELDS}}
 
 
@@ -57,7 +60,7 @@ def _stored(path: Any) -> list[dict[str, Any]]:
     stored = []
     for index, item in enumerate(document["entries"], start=1):
         seq = require_fields(item, {"seq", "kind", *TEXT_FIELDS}, "stored entry").get("seq")
-        if seq != index:
+        if type(seq) is not int or seq != index:
             raise SelectionError("stored entries must be numbered 1..n in order")
         stored.append({"seq": seq, **checked_entry({key: item[key] for key in item if key != "seq"})})
     return stored
