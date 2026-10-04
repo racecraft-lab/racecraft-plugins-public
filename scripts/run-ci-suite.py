@@ -7,6 +7,7 @@ the child process only and sends the same runner request.
 
 from __future__ import annotations
 
+import argparse
 import os
 import subprocess
 import sys
@@ -35,9 +36,7 @@ def build_environment(base: Mapping[str, str]) -> dict[str, str]:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    if argv:
-        print("run-ci-suite: takes no arguments", file=sys.stderr)
-        return 2
+    argparse.ArgumentParser(description="Run the CI suite.").parse_args(argv)
     try:
         request = REQUEST_FILE.read_bytes()
     except OSError as exc:

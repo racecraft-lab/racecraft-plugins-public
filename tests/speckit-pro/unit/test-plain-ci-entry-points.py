@@ -3,11 +3,12 @@
 
 from __future__ import annotations
 
-import json
+import io
 import os
 import subprocess
 import sys
 import unittest
+from contextlib import redirect_stderr
 from pathlib import Path
 from unittest import mock
 
@@ -66,7 +67,9 @@ class PlainEntryPointCase(unittest.TestCase):
         for key, value in raw_env.items():
             self.assertEqual(env[key], value)
         self.assertEqual(env["KEEP_ME"], "yes")
-        # Variables outside the raw command's set must not appear.
+        # Everything else is inherited unchanged; nothing extra is added.
+        for key in set(env) - set(raw_env) - {"KEEP_ME"}:
+            self.assertEqual(env[key], os.environ[key])
         unexpected = set(env) - set(os.environ) - {"KEEP_ME"} - set(raw_env)
         self.assertEqual(unexpected, set())
 
@@ -98,8 +101,7 @@ class CheckPrTitleTests(PlainEntryPointCase):
 
     def test_builds_the_request_the_raw_command_reads(self) -> None:
         _, run = self.run_script([TITLE])
-        sent = json.loads(run.call_args.kwargs["input"])
-        self.assertEqual(sent, json.loads(TITLE_REQUEST.read_text()))
+        self.assertEqual(run.call_args.kwargs["input"], TITLE_REQUEST.read_bytes())
 
     def test_child_environment_sets_exactly_the_raw_command_variables(self) -> None:
         _, run = self.run_script([TITLE])
@@ -114,8 +116,9 @@ class CheckPrTitleTests(PlainEntryPointCase):
         self.assertEqual(status, 1)
 
     def test_requires_exactly_one_title(self) -> None:
-        with self.assertRaises(SystemExit):
-            self.module.main([])
+        for argv in ([], [TITLE, TITLE]):
+            with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                self.module.main(argv)
 
 
 if __name__ == "__main__":
