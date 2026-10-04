@@ -127,6 +127,14 @@ def planted_catch_failures(catches):
             if catches.get(catch) != "fixed" or catch not in PLANTED_CATCH_IDS]
 
 
+def release_failures(value):
+    """A release receipt covers all five variants and reads against the pinned fixture tag."""
+    if value["trigger"] == "local":
+        return []
+    return [name for name, ok in (("release.variants", sorted(v["name"] for v in value["variants"]) == sorted(VARIANTS)),
+                                  ("release.fixture_tag", value["fixture_tag"] == FIXTURE_TAG)) if not ok]
+
+
 def receipt_report(value, budget=None, hook_counters=MISSING_HOOK_COUNTERS):
     """Gate failures, separate variant verdicts, and budgeted limits that are still unset."""
     problems = [f"{failure['field']}: {failure['message']}" for failure in json_schema_failures(value, SCHEMA, SCHEMA, "receipt")]
@@ -134,10 +142,7 @@ def receipt_report(value, budget=None, hook_counters=MISSING_HOOK_COUNTERS):
         return {"valid": False, "failed_assertions": problems, "unbudgeted": [], "variants": []}
     if value["trigger"] == "local" and value["release_status_allowed"]:
         problems.append("local.release_status_allowed")
-    if value["trigger"] != "local" and sorted(variant["name"] for variant in value["variants"]) != sorted(VARIANTS):
-        problems.append("release.variants")
-    if value["trigger"] != "local" and value["fixture_tag"] != FIXTURE_TAG:
-        problems.append("release.fixture_tag")
+    problems.extend(release_failures(value))
     probe = value["install_probe"]
     if value["host"] == "codex":
         for key in ("headless_install", "skill_expansion"):

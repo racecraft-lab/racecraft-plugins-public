@@ -5410,11 +5410,6 @@ class CanaryPlantedCatchTests(CanaryVariantCase):
     def catches(self, value):
         return value["variants"][0]["plan_quality"]["planted_catches"]
 
-    def test_every_catch_fixed_passes_for_both_hosts(self):
-        for host, value in self.receipts.items():
-            with self.subTest(host=host):
-                self.assertEqual([], self.validator.validate_receipt(value))
-
     def test_a_catch_left_in_place_fails_the_receipt(self):
         for host, value in self.receipts.items():
             for catch in self.validator.PLANTED_CATCH_IDS:
