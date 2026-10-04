@@ -63,7 +63,6 @@ GENERIC_LOCAL_TERMS = {
     "claude",
     "clones",
     "codex",
-    "clones",
     "documents",
     "downloads",
     "github",
