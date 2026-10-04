@@ -3383,10 +3383,14 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
                 return_value=SimpleNamespace(stdout=stdout, returncode=returncode),
             ), patch(
                 "speckit_pro_runner.helpers.read_only.shutil.which", return_value="/fixture/bin/specify",
+            ), patch(
+                "speckit_pro_runner.helpers.read_only.trusted_executable", return_value=Path("/fixture/bin/specify"),
             ):
                 self.assertEqual(installed_specify_version("/fixture/bin/specify"), expected)
         with patch("speckit_pro_runner.helpers.read_only.subprocess.run", side_effect=OSError), patch(
             "speckit_pro_runner.helpers.read_only.shutil.which", return_value="/fixture/bin/specify",
+        ), patch(
+            "speckit_pro_runner.helpers.read_only.trusted_executable", return_value=Path("/fixture/bin/specify"),
         ):
             self.assertIsNone(installed_specify_version("/fixture/bin/specify"))
 
@@ -3398,6 +3402,7 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
             binary = home / ".local" / "bin" / "specify.exe"
             binary.parent.mkdir(parents=True)
             binary.touch()
+            binary.chmod(0o755)
             with patch("speckit_pro_runner.helpers.read_only.Path.home", return_value=home), patch(
                 "speckit_pro_runner.helpers.read_only.shutil.which",
                 side_effect=[None, str(binary), str(binary)],
@@ -3413,12 +3418,79 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
             self.assertFalse(run.call_args.kwargs["shell"])
             self.assertEqual(run.call_args.kwargs["stdin"], subprocess.DEVNULL)
 
+    def test_installed_specify_version_never_probes_a_workspace_executable(self) -> None:
+        from speckit_pro_runner.helpers.read_only import installed_specify_version
+
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary).resolve()
+            binary = workspace / "specify.exe"
+            binary.touch()
+            binary.chmod(0o755)
+            for candidate in (str(binary), "specify.exe"):
+                with self.subTest(candidate=candidate), patch(
+                    "speckit_pro_runner.helpers.read_only.Path.cwd", return_value=workspace,
+                ), patch(
+                    "speckit_pro_runner.helpers.read_only.shutil.which", return_value=candidate,
+                ), patch(
+                    "speckit_pro_runner.helpers.read_only.subprocess.run",
+                    return_value=SimpleNamespace(stdout="CLI Version    1.1.0", returncode=0),
+                ) as run:
+                    self.assertIsNone(installed_specify_version(candidate))
+                    run.assert_not_called()
+
+    def test_installed_specify_version_rejects_a_reselected_or_symlinked_workspace_binary(self) -> None:
+        from speckit_pro_runner.helpers.read_only import installed_specify_version
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            workspace = root / "checkout"
+            workspace.mkdir()
+            installed = root / "bin" / "specify"
+            installed.parent.mkdir()
+            installed.touch()
+            installed.chmod(0o755)
+            workspace_binary = workspace / "specify.exe"
+            workspace_binary.touch()
+            workspace_binary.chmod(0o755)
+            link = installed.parent / "specify.exe"
+            link.symlink_to(workspace_binary)
+            for selected, candidate in ((installed, workspace_binary), (link, link)):
+                with self.subTest(selected=selected.name), patch(
+                    "speckit_pro_runner.helpers.read_only.Path.cwd", return_value=workspace,
+                ), patch(
+                    "speckit_pro_runner.helpers.read_only.shutil.which", return_value=str(candidate),
+                ), patch("speckit_pro_runner.helpers.read_only.subprocess.run") as run:
+                    self.assertIsNone(installed_specify_version(str(selected)))
+                    run.assert_not_called()
+
+    def test_spec_kit_cli_state_rejects_workspace_and_cwd_probes_without_blocking(self) -> None:
+        from speckit_pro_runner.helpers.read_only import spec_kit_cli_state
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            workspace = root / "checkout"
+            workspace.mkdir()
+            for binary in (workspace / "specify.exe", root / "specify.exe"):
+                binary.touch()
+                binary.chmod(0o755)
+                with self.subTest(parent=binary.parent.name), patch(
+                    "speckit_pro_runner.helpers.read_only.Path.cwd", return_value=root,
+                ), patch(
+                    "speckit_pro_runner.helpers.read_only.shutil.which", return_value=str(binary),
+                ), patch("speckit_pro_runner.helpers.read_only.subprocess.run") as run:
+                    rows, state = spec_kit_cli_state(str(binary), workspace)
+                    self.assertEqual(state["status"], "unreadable")
+                    self.assertTrue(all(row["pass"] for row in rows))
+                    run.assert_not_called()
+
     def test_installed_specify_version_treats_decoding_failure_as_unreadable(self) -> None:
         from speckit_pro_runner.helpers.read_only import installed_specify_version, spec_kit_cli_state
 
         error = UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid start byte")
         with patch("speckit_pro_runner.helpers.read_only.subprocess.run", side_effect=error), patch(
             "speckit_pro_runner.helpers.read_only.shutil.which", return_value="/fixture/bin/specify",
+        ), patch(
+            "speckit_pro_runner.helpers.read_only.trusted_executable", return_value=Path("/fixture/bin/specify"),
         ):
             self.assertIsNone(installed_specify_version("/fixture/bin/specify"))
             rows, state = spec_kit_cli_state("/fixture/bin/specify")

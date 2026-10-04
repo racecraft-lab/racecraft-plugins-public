@@ -20,6 +20,7 @@ from typing import Any, Callable, cast
 
 from ..agent_inventory import CLAUDE_REQUIRED_AGENT_NAMES
 from ..canonical_json import canonical_bytes
+from ..codex_launch import trusted_executable
 from ..envelope import diagnostic, response
 from ..execution_control import is_implementation_notes
 from ..gate_discovery import DEFAULT_BASE_BRANCH, SLOTS as GATE_SLOTS, resolve_slots as resolve_gate_slots
@@ -1438,7 +1439,7 @@ def render_plan_repair_context(inputs: dict[str, Any], repo_root: Path) -> dict[
 def check_prerequisites(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     workflow = normalize_path_input(inputs.get("workflow_file") or "")
 
-    checks, spec_kit = spec_kit_cli_state(find_specify())
+    checks, spec_kit = spec_kit_cli_state(find_specify(), repo_root)
     all_pass = all(row["pass"] for row in checks)
     if trusted_dir_exists(repo_root / ".specify", repo_root):
         checks.append(check("project_init", True, "Project initialized", ""))
@@ -6234,9 +6235,11 @@ def find_specify() -> str | None:
     return shutil.which("specify", path=str(home / ".local" / "bin"))
 
 
-def spec_kit_cli_state(specify_path: str | None) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+def spec_kit_cli_state(
+    specify_path: str | None, repo_root: Path | None = None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """The CLI rows for `check-prerequisites` and the `spec_kit` object skills read the pin from."""
-    installed_version = installed_specify_version(specify_path) if specify_path else None
+    installed_version = installed_specify_version(specify_path, repo_root) if specify_path else None
     status = spec_kit_pin.version_status(installed_version, cli_found=specify_path is not None)
     spec_kit = {
         "pinned_version": spec_kit_pin.PINNED_VERSION,
@@ -6258,7 +6261,7 @@ def spec_kit_cli_state(specify_path: str | None) -> tuple[list[dict[str, Any]], 
     ], spec_kit
 
 
-def installed_specify_version(specify_path: str) -> str | None:
+def installed_specify_version(specify_path: str, repo_root: Path | None = None) -> str | None:
     """The version `specify version` reports, or None when it cannot run or has no version row."""
     # Windows does not use the child's PATH to locate an executable. Resolve in
     # the selected directory before launching, including user-local installs.
@@ -6266,11 +6269,21 @@ def installed_specify_version(specify_path: str) -> str | None:
     if executable is None:
         return None
     try:
+        # Python 3.11 on Windows prepends cwd even with an explicit lookup path.
+        # Attest both paths so that shadowing cannot select a different runtime.
+        selected = trusted_executable(specify_path, "Spec Kit")
+        resolved = trusted_executable(executable, "Spec Kit")
+        if (
+            resolved != selected
+            or resolved.parent == Path.cwd().resolve()
+            or resolved.is_relative_to((repo_root or Path.cwd()).resolve())
+        ):
+            return None
         result = subprocess.run(
             [executable, "version"], text=True, encoding="utf-8", capture_output=True, shell=False,
             check=False, timeout=SUBPROCESS_TIMEOUT_SECONDS, stdin=subprocess.DEVNULL,
         )
-    except (OSError, subprocess.SubprocessError, UnicodeError):
+    except (OSError, subprocess.SubprocessError, UnicodeError, RuntimeError, ValueError):
         return None
     return spec_kit_pin.parse_cli_version(result.stdout) if result.returncode == 0 else None
 
