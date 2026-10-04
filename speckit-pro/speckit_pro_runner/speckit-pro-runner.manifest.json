@@ -612,6 +612,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/phase_brief.py",
+        "display": "speckit_pro_runner/helpers/phase_brief.py"
+      },
+      "sha256": "54405eaaf576bb08ec1ec9ea4e80b96a02492960e789092f02b099c8e112ce5b"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/helpers/pr_emission.py",
         "display": "speckit_pro_runner/helpers/pr_emission.py"
       },
@@ -655,7 +663,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "deba289bc909117a95f08a92550a65167bd3a10411d2fbc9719f019c232a337c"
+      "sha256": "acb9a3e978c985429fd90478bf6fa598162d9dfbd33cb1c9111c2c8e2d4ef90a"
     },
     {
       "path": {

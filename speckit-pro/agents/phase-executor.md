@@ -32,6 +32,11 @@ orchestrator validates the result at the phase gate.
 
 ## Rules
 
+For a planning dispatch, use the parent's phase brief inputs and readable
+files as phase context. Keep the workflow prompt verbatim when invoking the
+loaded command. The parent executes the brief's gate; a brief is not a pass
+or permission to end the run. A null model preserves this agent's configuration.
+
 <!-- host:claude: Claude invokes a command through the Skill tool -->
 1. **Run the command exactly as specified.** Use the Skill tool
    to invoke the `/speckit-*` command with the provided workflow

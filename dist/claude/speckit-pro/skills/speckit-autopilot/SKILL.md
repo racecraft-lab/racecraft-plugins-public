@@ -237,6 +237,7 @@ own terminal output.
 
 Each phase type has its own specialized executor agent. All noise
 stays in the subagent's context; the parent receives only a summary.
+For planning, use the runner's phase brief in Step 2 as the dispatch authority.
 
 | Phase | Agent | Why specialized |
 | ----- | ----- | --------------- |
@@ -246,7 +247,7 @@ stays in the subagent's context; the parent receives only a summary.
 | Analyze | `speckit-pro:analyze-executor` | Resolve required defects at every severity using relevant evidence and the shared repair reservation |
 | Implement | per-task routing | Route tasks with TDD; dispatch validated capability batches or legacy singletons |
 
-Full `Agent(...)` prompt template + per-phase prefixes live in
+Implementation `Agent(...)` prompt templates and remediation context live in
 [`references/phase-execution.md`](./references/phase-execution.md)
 §Subagent Delegation.
 
@@ -711,6 +712,43 @@ Before Phase 1 starts, validate all of the following or repair it through the ow
 
 ## Step 2: Main Execution Loop
 
+For each planning phase, request
+`helper_id=phase-brief operation=phase-brief mode=read_only` with inputs
+`phase` (Specify, Clarify, Plan, Checklist, Tasks or Analyze),
+`workflow_file=WORKFLOW_FILE` and `feature_dir=<feature-dir>`.
+Use the successful response's data as `brief`: dispatch `brief.agent`,
+read the exact workflow prompt(s) under `brief.inputs.prompt_section`, and
+prefix each with `brief.inputs.instruction`. Pass `brief.inputs` and
+`brief.readable_files` in the executor prompt, alongside the existing branch,
+workflow-root, protocol and corrective-reservation context.
+Run `validate-gate` with `brief.gate` afterward; the brief is not gate evidence.
+Use the brief for phase dispatch facts instead of re-reading `phase-execution.md`
+for each planning phase. Keep the existing remediation and bookkeeping steps.
+Implement retains its existing agent, inputs and gate; it never requests a
+planning brief. A failed helper request goes through runner error recovery,
+not a guessed dispatch or stop decision.
+
+### Phase brief contract
+
+The successful response data has `schema_version: phase-brief/v1` and these
+stable fields, shared by both hosts:
+
+| Field | Meaning |
+| --- | --- |
+| `phase` | Requested title-case planning phase |
+| `agent` | Host-neutral installed executor role |
+| `inputs` | `workflow_file`, `feature_dir`, `instruction`, and `prompt_section` (including its session/domain prompts) |
+| `readable_files` | Phase context paths, relative to the bound workflow root unless absolute; trailing slash includes directory contents |
+| `gate` | Gate id for the parent's `validate-gate` request |
+| `slices` | Empty list, reserved for reference slices (#1182) |
+| `waves` | Empty list, reserved for dispatch waves (#1183) |
+| `model` | Null; use the installed agent configuration until #1184 |
+| `hooks` | Empty list, reserved for optional hooks (#1188) |
+
+Loaded commands still read their own instructions, templates and scripts.
+Empty reserved fields add no behavior; existing hook handling and sequential
+session/domain dispatch remain. Runner stop policy remains authoritative.
+
 For each pending phase, spawn a subagent, collect the result, validate
 the gate, advance. Every step is a tool call.
 
@@ -724,12 +762,15 @@ for phase in PHASES starting from first_pending:
     1. TaskUpdate: phase task → in_progress
     2. Run before_<phase> hooks from .specify/extensions.yml
     3. For each workflow prompt in this phase:
-         Agent(subagent_type: <phase executor>, run_in_background: false, prompt: ...)
+         Planning:
+         Agent(subagent_type: "speckit-pro:" + brief.agent, run_in_background: false,
+               prompt: <brief.inputs.instruction + workflow prompt + brief context>)
+         Implement: use the implementation executor and task-specific TDD prompt.
     4. Run consensus (Clarify/Checklist/Analyze only) — see Rule 6
     5. Run after_<phase> hooks
     6. Validate the gate (G1-G7): run runner helper
        `helper_id=validate-gate operation=validate-gate mode=read_only`
-       with `gate=G<N>`, `feature_dir=<feature-dir>`, and
+       with `gate=brief.gate` for planning (`G7` for Implement), `feature_dir=<feature-dir>`, and
        `workflow_file=<workflow-file>`, then branch on the JSON `pass` field
        On FAIL: reserve a corrective cycle through execution-control;
        honor its shared family/spec budget and checkpoint disposition
@@ -808,9 +849,9 @@ for phase in PHASES starting from first_pending:
     9. Advance
 ```
 
-**Full per-phase prompts, dispatch templates, gate validation
-details, hook events, and the dispatcher-agent table:**
-see [`references/phase-execution.md`](./references/phase-execution.md).
+Planning dispatch facts come from the phase brief above. Consult
+[`references/phase-execution.md`](./references/phase-execution.md) for
+remediation, formal checkpoints, hook events and implementation dispatch.
 Before performing the post-G5 steps (8 through 8e), read
 [`references/phase-execution.md`](./references/phase-execution.md)
 §Phase 5: Tasks for the authoritative placeholder, reviewability, marker
