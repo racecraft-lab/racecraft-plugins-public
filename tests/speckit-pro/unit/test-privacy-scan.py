@@ -61,6 +61,7 @@ GENERIC_LOCAL_TERMS = {
     "build",
     "cache",
     "claude",
+    "clones",
     "codex",
     "documents",
     "downloads",
@@ -332,12 +333,14 @@ class CheckoutPathTermTests(unittest.TestCase):
                 self.assertIsNotNone(pattern.search("merged by zebrafinchoperator"))
 
     def test_user_name_above_the_checkout_is_still_an_identity_term(self) -> None:
-        checkout = Path("/", "Users", "quokkaoperator", "code", "shopfront")
-        worktree = checkout / ".worktrees" / "shop-015-autopilot-byproduct"
-        pattern = self.pattern_for(worktree, checkout, {})
-        self.assertIsNotNone(pattern)
-        self.assertIsNotNone(pattern.search("owned by quokkaoperator"))
-        self.assertIsNone(pattern.search("the autopilot byproduct"))
+        for container in (Path("code"), Path(".cache") / "clones"):
+            with self.subTest(container=container):
+                checkout = Path("/", "Users", "quokkaoperator") / container / "shopfront"
+                worktree = checkout / ".worktrees" / "shop-015-autopilot-byproduct"
+                pattern = self.pattern_for(worktree, checkout, {})
+                self.assertIsNotNone(pattern)
+                self.assertIsNotNone(pattern.search("owned by quokkaoperator"))
+                self.assertIsNone(pattern.search("the autopilot byproduct and scratch clones"))
 
 
 class PrivacyScanTests(unittest.TestCase):

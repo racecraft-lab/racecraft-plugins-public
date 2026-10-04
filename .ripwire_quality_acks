@@ -659,6 +659,7 @@ ack dead-code:new-symbol b98643e94902783c 0 cid=17a4ab65094ee7df unittest discov
 ack dead-code:new-symbol b9a7be287f2b9c16 0 cid=1b2ae9a03a43a104 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol b9de123f7348eb5a 0 CanaryReceiptTests.test_rejects_questions_nonterminal_plan_missing_runbook_and_unregistered_stop runs via unittest discovery
 ack dead-code:new-symbol b9f9561c4365d34a 0 cid=af6c71174463d2b7 unittest discovers these test methods through loadTestsFromTestCase in main(); no direct caller is expected
+ack dead-code:new-symbol ba29007f06047bfe 0 cid=0c195f5941e13ab0 by=tests/speckit-pro/layer1-structural/validate-skill-contracts.py unittest discovery executes this regression test; its named run passed on both rendered hosts
 ack dead-code:new-symbol ba8f4d8c610c4a01 0 cid=6fdf918e63e1e026 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol bb784a456b1f87dc 0 unittest loader executes ValidateRoadmapFreeze.test_open_roadmap_specs_are_frozen; focused suite and execution profile prove this method runs; no direct static caller
 ack dead-code:new-symbol bb7b4415bb6390de 0 cid=9124c55e2204d5a8 unittest discovers and runs test_ methods and setUp hooks by name; nothing calls them directly, so the dead-code scan cannot see the use

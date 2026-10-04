@@ -13264,7 +13264,7 @@
         },
         {
           "id": "gate",
-          "description": "Runs the reviewability setup gate for the roadmap with spec_id SPEC-841 exactly once and preserves its result (scaffold SKILL.md and Codex SKILL.md: \"Run runner helper reviewability-gate in setup mode for <technical-roadmap-path> with spec_id <SPEC-ID>\"; gate-validation.md: \"The gate then reads only that `### <SPEC-ID>:` section\")."
+          "description": "Runs the reviewability setup gate for the roadmap with spec_id SPEC-841 exactly once and preserves its result (scaffold SKILL.md and Codex SKILL.md: \"Set `target` to the repository-relative technical roadmap path and `spec_id` to the requested SPEC-ID\"; gate-validation.md: \"The gate then reads only that `### <SPEC-ID>:` section\")."
         },
         {
           "id": "target",
@@ -13433,7 +13433,7 @@
         },
         {
           "id": "gate",
-          "description": "Runs the reviewability setup gate for the roadmap with spec_id SPEC-841 exactly once and preserves its result (scaffold SKILL.md and Codex SKILL.md: \"Run runner helper reviewability-gate in setup mode for <technical-roadmap-path> with spec_id <SPEC-ID>\"; gate-validation.md: \"The gate then reads only that `### <SPEC-ID>:` section\")."
+          "description": "Runs the reviewability setup gate for the roadmap with spec_id SPEC-841 exactly once and preserves its result (scaffold SKILL.md and Codex SKILL.md: \"Set `target` to the repository-relative technical roadmap path and `spec_id` to the requested SPEC-ID\"; gate-validation.md: \"The gate then reads only that `### <SPEC-ID>:` section\")."
         },
         {
           "id": "target",

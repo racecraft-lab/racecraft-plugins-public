@@ -78,7 +78,10 @@ below the confidence threshold it stops before Phase 7
 
 ## Stop reasons
 
-Each reason has one class.
+Each reason has one class. When a stop ends the run, print exactly one marker for that reason,
+copied verbatim from the Reason column, as the last line of the final message, on
+its own line. Do not repeat it in the report or append text after it. A deferred
+item does not end the run and prints no marker.
 
 | Reason | Class | Meaning |
 | ------ | ----- | ------- |
