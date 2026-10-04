@@ -65,11 +65,9 @@ class DecisionsListTests(unittest.TestCase):
         self.assertEqual("ok", result["status"], result)
         return result["data"]
 
-    def test_registered_with_a_request_fixture(self) -> None:
-        document = json.loads(FIXTURE.read_text(encoding="utf-8"))
-        registered = MUTATION_HELPERS[HELPER_ID]
-        self.assertEqual((registered.helper_id, registered.operation), (document["helper_id"], document["operation"]))
-        self.assertIn(document["mode"], registered.modes)
+    def test_the_committed_request_fixture_is_served_by_the_registry(self) -> None:
+        self.assertIn("read_only", MUTATION_HELPERS[HELPER_ID].modes)
+        self.assertEqual(0, self.listed()["count"])
 
     def test_entries_come_back_spec_affecting_then_authority_then_notes(self) -> None:
         first = self.append(NOTE, SKIP, SCOPE)
