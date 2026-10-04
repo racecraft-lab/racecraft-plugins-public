@@ -18,15 +18,14 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
-def build_request() -> dict[str, object]:
-    return {
-        "schema_version": "1.0",
-        "request_id": "validate-pr-title-live",
-        "helper_id": "release-readiness",
-        "operation": "validate-pr-title",
-        "mode": "read_only",
-        "inputs": {"title_env": "TITLE"},
-    }
+REQUEST = {
+    "schema_version": "1.0",
+    "request_id": "validate-pr-title-live",
+    "helper_id": "release-readiness",
+    "operation": "validate-pr-title",
+    "mode": "read_only",
+    "inputs": {"title_env": "TITLE"},
+}
 
 
 def build_environment(base: Mapping[str, str], title: str) -> dict[str, str]:
@@ -42,7 +41,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     completed = subprocess.run(
         [sys.executable, "-m", "speckit_pro_runner"],
-        input=json.dumps(build_request()).encode(),
+        input=json.dumps(REQUEST).encode(),
         cwd=str(REPO_ROOT),
         env=build_environment(os.environ, args.title),
         check=False,
