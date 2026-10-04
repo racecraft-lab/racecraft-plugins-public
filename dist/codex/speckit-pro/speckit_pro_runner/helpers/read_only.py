@@ -20,7 +20,7 @@ from typing import Any, Callable, cast
 
 from ..agent_inventory import CLAUDE_REQUIRED_AGENT_NAMES
 from ..canonical_json import canonical_bytes
-from ..codex_launch import trusted_executable
+from ..codex_launch import executable_path, trusted_executable
 from ..envelope import diagnostic, response
 from ..execution_control import is_implementation_notes
 from ..gate_discovery import DEFAULT_BASE_BRANCH, SLOTS as GATE_SLOTS, resolve_slots as resolve_gate_slots
@@ -6271,8 +6271,10 @@ def installed_specify_version(specify_path: str, repo_root: Path | None = None) 
     try:
         # Python 3.11 on Windows prepends cwd even with an explicit lookup path.
         # Attest both paths so that shadowing cannot select a different runtime.
-        selected = trusted_executable(specify_path, "Spec Kit")
-        resolved = trusted_executable(executable, "Spec Kit")
+        # Windows write flags do not represent POSIX group/other permissions.
+        validate = executable_path if sys.platform == "win32" else trusted_executable
+        selected = validate(specify_path, "Spec Kit")
+        resolved = validate(executable, "Spec Kit")
         if (
             resolved != selected
             or resolved.parent == Path.cwd().resolve()

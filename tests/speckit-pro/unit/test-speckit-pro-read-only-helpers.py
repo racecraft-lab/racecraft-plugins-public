@@ -3385,12 +3385,16 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
                 "speckit_pro_runner.helpers.read_only.shutil.which", return_value="/fixture/bin/specify",
             ), patch(
                 "speckit_pro_runner.helpers.read_only.trusted_executable", return_value=Path("/fixture/bin/specify"),
+            ), patch(
+                "speckit_pro_runner.helpers.read_only.executable_path", return_value=Path("/fixture/bin/specify"),
             ):
                 self.assertEqual(installed_specify_version("/fixture/bin/specify"), expected)
         with patch("speckit_pro_runner.helpers.read_only.subprocess.run", side_effect=OSError), patch(
             "speckit_pro_runner.helpers.read_only.shutil.which", return_value="/fixture/bin/specify",
         ), patch(
             "speckit_pro_runner.helpers.read_only.trusted_executable", return_value=Path("/fixture/bin/specify"),
+        ), patch(
+            "speckit_pro_runner.helpers.read_only.executable_path", return_value=Path("/fixture/bin/specify"),
         ):
             self.assertIsNone(installed_specify_version("/fixture/bin/specify"))
 
@@ -3429,7 +3433,7 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
             for candidate in (str(binary), "specify.exe"):
                 with self.subTest(candidate=candidate), patch(
                     "speckit_pro_runner.helpers.read_only.Path.cwd", return_value=workspace,
-                ), patch(
+                ), patch("speckit_pro_runner.helpers.read_only.sys.platform", "win32"), patch(
                     "speckit_pro_runner.helpers.read_only.shutil.which", return_value=candidate,
                 ), patch(
                     "speckit_pro_runner.helpers.read_only.subprocess.run",
@@ -3437,6 +3441,24 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
                 ) as run:
                     self.assertIsNone(installed_specify_version(candidate))
                     run.assert_not_called()
+
+    def test_installed_specify_version_accepts_windows_file_modes(self) -> None:
+        from speckit_pro_runner.helpers.read_only import installed_specify_version
+
+        with tempfile.TemporaryDirectory() as temporary:
+            binary = Path(temporary).resolve() / "specify.exe"
+            binary.touch()
+            binary.chmod(0o755)
+            with patch("speckit_pro_runner.helpers.read_only.sys.platform", "win32"), patch(
+                "speckit_pro_runner.helpers.read_only.shutil.which", return_value=str(binary),
+            ), patch(
+                "speckit_pro_runner.codex_launch.Path.stat", return_value=SimpleNamespace(st_mode=0o100666),
+            ), patch(
+                "speckit_pro_runner.helpers.read_only.subprocess.run",
+                return_value=SimpleNamespace(stdout="CLI Version    1.1.0", returncode=0),
+            ) as run:
+                self.assertEqual(installed_specify_version(str(binary)), "1.1.0")
+                self.assertEqual(run.call_args.args[0], [str(binary), "version"])
 
     def test_installed_specify_version_rejects_a_reselected_or_symlinked_workspace_binary(self) -> None:
         from speckit_pro_runner.helpers.read_only import installed_specify_version
@@ -3457,7 +3479,7 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
             for selected, candidate in ((installed, workspace_binary), (link, link)):
                 with self.subTest(selected=selected.name), patch(
                     "speckit_pro_runner.helpers.read_only.Path.cwd", return_value=workspace,
-                ), patch(
+                ), patch("speckit_pro_runner.helpers.read_only.sys.platform", "win32"), patch(
                     "speckit_pro_runner.helpers.read_only.shutil.which", return_value=str(candidate),
                 ), patch("speckit_pro_runner.helpers.read_only.subprocess.run") as run:
                     self.assertIsNone(installed_specify_version(str(selected)))
@@ -3491,6 +3513,8 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
             "speckit_pro_runner.helpers.read_only.shutil.which", return_value="/fixture/bin/specify",
         ), patch(
             "speckit_pro_runner.helpers.read_only.trusted_executable", return_value=Path("/fixture/bin/specify"),
+        ), patch(
+            "speckit_pro_runner.helpers.read_only.executable_path", return_value=Path("/fixture/bin/specify"),
         ):
             self.assertIsNone(installed_specify_version("/fixture/bin/specify"))
             rows, state = spec_kit_cli_state("/fixture/bin/specify")
