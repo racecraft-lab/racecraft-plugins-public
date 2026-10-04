@@ -231,6 +231,45 @@ class ReadinessRecordTest(unittest.TestCase):
                 for item in (*CALLER_ITEMS,):
                     self.assertIn(f"`{item}`", step)
 
+    def test_slash_command_actions_pass_and_stray_actions_are_dropped(self) -> None:
+        observations = self.all_verified()
+        observations[0] = observation("plugin_payload", "unavailable",
+                                      action="Run /speckit-pro:speckit-install, then rerun scaffold.")
+        observations[1] = observation("project_integration", action="/Users/someone/stray")
+        response = self.run_helper(observations)
+        assert_runner_response(self, response, "ok", 0)
+        items = response["data"]["record"]["items"]
+        self.assertIn("/speckit-pro:speckit-install", items["plugin_payload"]["action"])
+        self.assertNotIn("action", items["project_integration"])
+        bad_mode = request(self.all_verified(), execution_mode="answer-file")
+        _, response, _ = run_runner(bad_mode, cwd=self.root)
+        assert_runner_response(self, response, "input_error", 2)
+
+    def test_unreadable_files_are_not_reported_missing(self) -> None:
+        outside = self.root / "target.txt"
+        outside.write_text("x\n", encoding="utf-8")
+        (self.root / ".specify" / "link.md").symlink_to(outside)
+        response = self.run_helper([observation("project_integration", files=[".specify/link.md"])])
+        prints = response["data"]["record"]["items"]["project_integration"]["fingerprints"]
+        self.assertEqual("unreadable", prints["file:.specify/link.md"])
+
+    def test_local_capability_reports_cleanup_failures_and_shared_directories(self) -> None:
+        from speckit_pro_runner.helpers import readiness_record
+
+        with mock.patch("os.unlink", side_effect=PermissionError("denied")):
+            item = readiness_record.observe_local_capability()
+        self.assertEqual("unavailable", item["status"])
+        shared = self.root / "shared"
+        shared.mkdir()
+        shared.chmod(0o777)
+        with mock.patch("tempfile.gettempdir", return_value=str(shared)):
+            item = readiness_record.observe_local_capability()
+        self.assertEqual("unavailable", item["status"])
+        self.assertIn("world-writable", item["evidence_source"])
+        shared.chmod(0o1777)
+        with mock.patch("tempfile.gettempdir", return_value=str(shared)):
+            self.assertEqual("verified", readiness_record.observe_local_capability()["status"])
+
     def test_write_refuses_a_planted_symlink_and_leaves_the_outside_untouched(self) -> None:
         outside = Path(tempfile.mkdtemp(dir=self.root.parent, prefix="outside-")).resolve()
         self.addCleanup(lambda: shutil.rmtree(outside, ignore_errors=True))

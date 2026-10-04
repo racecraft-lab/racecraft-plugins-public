@@ -43,7 +43,9 @@ RECORD_DIRECTORY = ".specify/readiness"
 INPUT_KEYS = frozenset({"host", "host_version", "execution_mode", "plugin_revision", "observations"})
 OBSERVATION_KEYS = frozenset({"item", "status", "evidence_source", "action", "files", "values"})
 VALUE_NAME_RE = re.compile(r"[a-z][a-z0-9_]{0,40}")
-LOCAL_PATH_RE = re.compile(r"(?:^|[\s\"'(=:])(?:/[^\s/]|~[/\\]|[A-Za-z]:[\\/]|file://)")
+# A path has a second segment; a slash command such as "/plugin install" does not.
+LOCAL_PATH_RE = re.compile(r"(?:^|[\s\"'(=:])(?:/[^\s/]+/|~[/\\]|[A-Za-z]:[\\/]|file://)")
+EXECUTION_MODES = ("interactive", "answers-file")
 MAX_TEXT = 400
 NOT_OBSERVED_ACTION = "Run the preparation check for this item, then rerun scaffold."
 
@@ -80,9 +82,16 @@ def fingerprint_files(paths: Any, root: Path, label: str) -> dict[str, str]:
         relative = PurePosixPath(text)
         if relative.is_absolute() or ".." in relative.parts or "\\" in text:
             raise SelectionError(f"{label}.files entry {text!r} must stay inside the repository")
-        content = trusted_bytes(root / relative, root)
-        prints[f"file:{relative.as_posix()}"] = "missing" if content is None else digest(content)
+        prints[f"file:{relative.as_posix()}"] = fingerprint_file(root, relative)
     return prints
+
+
+def fingerprint_file(root: Path, relative: PurePosixPath) -> str:
+    """A digest, `missing` for an absent file, or `unreadable` for one the runner cannot read safely."""
+    content = trusted_bytes(root / relative, root)
+    if content is not None:
+        return digest(content)
+    return "unreadable" if os.path.lexists(root / relative) else "missing"
 
 
 def fingerprint_values(values: Any, label: str) -> dict[str, str]:
@@ -105,42 +114,49 @@ def caller_item(raw: Any, root: Path, observed_at: str) -> tuple[str, dict[str, 
     status = raw.get("status")
     if status not in STATUSES:
         raise SelectionError(f"{name}: status must be one of {list(STATUSES)}")
-    action = clean_text(raw["action"], f"{name}.action") if "action" in raw else None
-    if status in NEEDS_ACTION and action is None:
-        raise SelectionError(f"{name}: a {status} item must name the action the user takes")
-    if status not in NEEDS_ACTION:
-        action = None
+    action = None
+    if status in NEEDS_ACTION:
+        if "action" not in raw:
+            raise SelectionError(f"{name}: a {status} item must name the action the user takes")
+        action = clean_text(raw["action"], f"{name}.action")
     fingerprints = {**fingerprint_files(raw.get("files", []), root, name),
                     **fingerprint_values(raw.get("values", {}), name)}
     return name, make_item(status, clean_text(raw.get("evidence_source"), f"{name}.evidence_source"),
                            observed_at, fingerprints, action)
 
 
-def observe_local_capability() -> dict[str, Any]:
-    """Probe temporary storage: one private file is written, its mode read, and it is removed."""
-    observed_at = now()
-    action = "Make the temporary directory writable by this user, then rerun scaffold."
-    try:
-        directory = Path(tempfile.gettempdir())
-        descriptor, name = tempfile.mkstemp(prefix="speckit-readiness-", dir=directory)
-    except OSError as error:
-        return make_item("unavailable", f"temporary storage probe failed: {type(error).__name__}",
-                         observed_at, {}, action)
+def probe_temporary_directory(directory: Path) -> str | None:
+    """The first problem with `directory` as scratch space for sensitive files, or None."""
+    descriptor, name = tempfile.mkstemp(prefix="speckit-readiness-", dir=directory)
     try:
         os.write(descriptor, b"probe")
         mode = stat.S_IMODE(os.fstat(descriptor).st_mode)
-    except OSError as error:
-        return make_item("unavailable", f"temporary file probe failed: {type(error).__name__}",
-                         observed_at, {}, action)
     finally:
         os.close(descriptor)
         os.unlink(name)
-    umask = os.umask(0)
-    os.umask(umask)
-    fingerprints = {"value:temp_dir": digest(str(directory)), "value:umask": digest(f"{umask:03o}")}
+    if os.name == "nt":
+        return None  # POSIX modes are not observable here, so only the write is proven.
     if mode & 0o077:
-        return make_item("unavailable", f"a temporary file is readable beyond its owner (mode {mode:03o})",
-                         observed_at, fingerprints, "Fix the temporary directory so new files stay owner-only.")
+        return f"a temporary file is readable beyond its owner (mode {mode:03o})"
+    directory_mode = stat.S_IMODE(directory.stat().st_mode)
+    if directory_mode & 0o002 and not directory_mode & stat.S_ISVTX:
+        return "the temporary directory is world-writable without the sticky bit"
+    return None
+
+
+def observe_local_capability() -> dict[str, Any]:
+    """Probe temporary storage with one write, a mode read and a directory check."""
+    observed_at = now()
+    try:
+        directory = Path(tempfile.gettempdir())
+        problem = probe_temporary_directory(directory)
+    except OSError as error:
+        return make_item("unavailable", f"temporary storage probe failed: {type(error).__name__}", observed_at, {},
+                         "Make the temporary directory writable by this user, then rerun scaffold.")
+    fingerprints = {"value:temp_dir": digest(str(directory))}
+    if problem is not None:
+        return make_item("unavailable", problem, observed_at, fingerprints,
+                         "Fix the temporary directory so sensitive files stay owner-only.")
     return make_item("verified", "temporary file write and owner-only mode probe", observed_at, fingerprints)
 
 
@@ -152,12 +168,15 @@ def observe_quality_gates(root: Path) -> dict[str, Any]:
     key = f"file:{quality_gates.FILE_PATH}"
     if status == "present":
         return make_item("verified", "confirmed quality-gates file", observed_at, {key: digest(content or b"")})
-    reason = f"{quality_gates.FILE_PATH} is missing" if status == "missing" else problems[0]
+    fingerprints = {key: fingerprint_file(root, PurePosixPath(quality_gates.FILE_PATH))}
+    if status == "invalid":
+        reason = problems[0]
+    else:
+        reason = f"{quality_gates.FILE_PATH} is {fingerprints[key]}"
     try:
         reason = clean_text(reason, "reason")
     except SelectionError:
         reason = "the first validation problem was withheld because it held a path or a credential"
-    fingerprints = {key: "missing" if content is None else digest(content)}
     return make_item("unavailable", f"shipped defaults in use: {reason}", observed_at, fingerprints,
                      "Confirm a quality-gates proposal when scaffold offers one, or run the speckit-coach "
                      "quality gates flow.")
@@ -169,6 +188,8 @@ def build_record(inputs: dict[str, Any], root: Path) -> dict[str, Any]:
         raise SelectionError(f"inputs take {sorted(INPUT_KEYS)}; host_version may be omitted when unobservable")
     if inputs["host"] not in HOSTS:
         raise SelectionError(f"host must be one of {list(HOSTS)}")
+    if inputs["execution_mode"] not in EXECUTION_MODES:
+        raise SelectionError(f"execution_mode must be one of {list(EXECUTION_MODES)}")
     observations = inputs["observations"]
     if not isinstance(observations, list):
         raise SelectionError("observations must be a list")
@@ -189,7 +210,7 @@ def build_record(inputs: dict[str, Any], root: Path) -> dict[str, Any]:
         "binding": {"worktree": digest(str(root))},
         "host": inputs["host"],
         "host_version": None if host_version is None else clean_text(host_version, "host_version"),
-        "execution_mode": clean_text(inputs["execution_mode"], "execution_mode"),
+        "execution_mode": inputs["execution_mode"],
         "plugin_revision": clean_text(inputs["plugin_revision"], "plugin_revision"),
         "observed_at": observed_at,
         "items": {name: items[name] for name in sorted(items)},

@@ -1021,14 +1021,14 @@ Set `host` to `codex`. Set `plugin_revision` to the `version` in
 Set `execution_mode` to `answers-file` or `interactive`. Send one observation
 per item:
 
-| `item` | Observed from |
+| `item` | Observe it now by |
 | --- | --- |
-| `plugin_payload` | the agent check at the start of this run and the revision above |
-| `project_integration` | the Specify, bootstrap and detect-commands results |
-| `github_auth` | one bounded GitHub authentication check |
-| `mcp_servers` | the `research-broker-preflight` result |
-| `typesafe_jev` | whether this session exposes the Jev `evaluate` tool |
-| `reviewability_report` | the setup gate result, cited by roadmap path and SPEC-ID |
+| `plugin_payload` | reusing the agent check at the start of this run, with the revision above |
+| `project_integration` | reusing the Specify and bootstrap results, then running helper `detect-commands` |
+| `github_auth` | running one bounded GitHub authentication status check; keep only its pass or fail |
+| `mcp_servers` | running helper `research-broker-preflight` |
+| `typesafe_jev` | checking whether this session exposes the Jev `evaluate` tool |
+| `reviewability_report` | reusing the setup gate result, cited by roadmap path and SPEC-ID |
 
 - Record `verified` for a check that passed in this run. Record `unavailable`
   for a failed check or a declined fix, `unknown` for what this session cannot
@@ -1039,6 +1039,8 @@ per item:
   helper stores digests only. Send `evidence_source` as one plain line.
 - The helper observes `local_capability` and `quality_gates` itself. Omit
   `host_version` when the host does not report it.
+- When the response is `input_error`, correct the field its diagnostic names
+  and send the request once more.
 - Print one line per `unavailable` or `unknown` item with its action, then
   continue. A declined fix, a failed fix, or a failed write leaves scaffold
   finishing normally.
