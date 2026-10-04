@@ -4821,11 +4821,11 @@ class CanaryGateVerdictTests(CanaryVariantCase):
             for trigger, index, duplicate in release_cases:
                 release = copy.deepcopy(value)
                 release.update(trigger=trigger, dirty_tree=False, release_status_allowed=True)
-                self.assertEqual([], self.validator.validate_receipt(release))
-                removed = release["variants"].pop(index)
-                if duplicate:
-                    release["variants"].extend([removed, copy.deepcopy(removed)])
                 with self.subTest(host=host, trigger=trigger, index=index, duplicate=duplicate):
+                    self.assertEqual([], self.validator.validate_receipt(release))
+                    removed = release["variants"].pop(index)
+                    if duplicate:
+                        release["variants"].extend([removed, copy.deepcopy(removed)])
                     self.assertIn("release.variants", self.validator.validate_receipt(release))
 
 
@@ -4834,18 +4834,24 @@ class CanaryGuardGapContractTests(CanaryVariantCase):
         for host, value in self.receipts.items():
             value["variants"][0].update(name="missing_question_guard", **copy.deepcopy(self.variant_evidence["missing_question_guard"]))
             self.assertEqual([], self.validator.validate_receipt(value))
-            mutations = [("verdict", "pass"), ("failed_assertions", []),
-                         ("failed_assertions", ["question_guard", "other_failure"]),
-                         ("question_guard", None), ("unregistered_stops", 1),
-                         ("questions_after_scaffold", 1), ("planning_end", "paused"),
-                         ("implement_end", "paused"), ("uat_runbook", "")]
-            mutations.extend((f"question_guard.{key}", bad) for key, bad in (
-                ("gap_recorded", False), ("guarded_work_completed", 1), ("guarded_work_passed", 1)))
-            mutations.extend((f"question_guard.{key}", bad) for key in value["variants"][0]["question_guard"]
-                             for bad in (None, "unknown"))
-            mutations.extend((f"question_guard.{key}", bad) for key in ("guarded_work_completed", "guarded_work_passed")
+            red = ["missing_question_guard.verdict", "missing_question_guard.question_guard"]
+            # A clean-looking variant or missing gap evidence loses the exception: both own failures reach the gate.
+            mutations = [(path, bad, red) for path, bad in (
+                ("verdict", "pass"), ("failed_assertions", []),
+                ("failed_assertions", ["question_guard", "other_failure"]), ("question_guard", None),
+                ("question_guard.gap_recorded", False), ("question_guard.guarded_work_completed", 1),
+                ("question_guard.guarded_work_passed", 1))]
+            # Any other failed assertion still gates on its own.
+            mutations.extend((key, bad, [f"missing_question_guard.{key}"]) for key, bad in (
+                ("unregistered_stops", 1), ("questions_after_scaffold", 1), ("planning_end", "paused"),
+                ("implement_end", "paused"), ("uat_runbook", "")))
+            # Malformed evidence fails closed at the schema.
+            malformed = [(f"question_guard.{key}", bad) for key in value["variants"][0]["question_guard"]
+                         for bad in (None, "unknown")]
+            malformed.extend((f"question_guard.{key}", bad) for key in ("guarded_work_completed", "guarded_work_passed")
                              for bad in (-1, True, 0.5))
-            for path, bad in mutations:
+            mutations.extend((path, bad, f"receipt.variants[0].{path}: ") for path, bad in malformed)
+            for path, bad, expected in mutations:
                 mutated = copy.deepcopy(value)
                 *parent, key = path.split(".")
                 target = mutated["variants"][0]
@@ -4855,7 +4861,12 @@ class CanaryGuardGapContractTests(CanaryVariantCase):
                 else:
                     target[key] = bad
                 with self.subTest(host=host, path=path, bad=bad):
-                    self.assertTrue(self.validator.validate_receipt(mutated))
+                    failures = self.validator.validate_receipt(mutated)
+                    if isinstance(expected, str):
+                        self.assertEqual(1, len(failures), failures)
+                        self.assertTrue(failures[0].startswith(expected), failures)
+                    else:
+                        self.assertEqual(expected, failures)
             budget = copy.deepcopy(self.validator.load_budget())
             budget[host]["missing_question_guard"]["plan"]["wall_seconds"] = 0.5
             report = self.validator.receipt_report(value, budget)
