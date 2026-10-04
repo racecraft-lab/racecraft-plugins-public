@@ -4595,6 +4595,16 @@ class PlanLayersPlannerCaseTests(unittest.TestCase):
                 self.assertEqual(found, expected)
 
 
+def assert_g0_guidance(case: unittest.TestCase, skills: Path) -> None:
+    guide = (skills / "speckit-coach/references/quality-gates-guide.md").read_text(encoding="utf-8")
+    workflow = (skills / "speckit-coach/templates/workflow-template.md").read_text(encoding="utf-8")
+    case.assertIn("G0 continues on the", guide)
+    case.assertIn("invalid file is ignored whole", guide)
+    case.assertIn("G0 runs on unratified defaults in memory", workflow)
+    source = (PLUGIN_ROOT / "skills/speckit-autopilot/SKILL.md").read_text(encoding="utf-8")
+    case.assertNotIn("G0 stop message", source)
+
+
 class G0SetupTests(unittest.TestCase):
     @staticmethod
     def fixture_files(root: Path) -> dict[str, bytes]:
@@ -4653,13 +4663,7 @@ class G0SetupTests(unittest.TestCase):
             self.assertEqual(3, prereqs.count('"helper_id":"g0-setup"'))
             self.assertIn("data.quality_gate", prereqs)
             self.assertNotIn("G0 blocked:", prereqs)
-            guide = (host_skill_root(surface) / "speckit-coach/references/quality-gates-guide.md").read_text(encoding="utf-8")
-            workflow = (host_skill_root(surface) / "speckit-coach/templates/workflow-template.md").read_text(encoding="utf-8")
-            self.assertIn("G0 continues on the", guide)
-            self.assertIn("invalid file is ignored whole", guide)
-            self.assertIn("G0 runs on unratified defaults in memory", workflow)
-        source = (PLUGIN_ROOT / "skills/speckit-autopilot/SKILL.md").read_text(encoding="utf-8")
-        self.assertNotIn("G0 stop message", source)
+            assert_g0_guidance(self, host_skill_root(surface))
 
 
 class G0UnratifiedDefaultsTests(unittest.TestCase):
