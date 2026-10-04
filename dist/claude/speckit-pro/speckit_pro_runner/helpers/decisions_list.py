@@ -92,7 +92,7 @@ def run_decisions_list_helper(entry: Any, request: Any) -> dict[str, Any]:
     try:
         root = resolve_repo_root(request.inputs)
         if isinstance(root, dict):
-            raise OSError(root["message"])
+            return response("input_error", request_id=request.request_id, diagnostics=[root])
         data = decisions_list(root, request.inputs, request.mode)
     except (ValueError, OSError) as error:
         refusal = diagnostic(

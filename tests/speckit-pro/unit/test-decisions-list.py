@@ -15,10 +15,12 @@ import tempfile
 from types import SimpleNamespace
 from typing import Any
 import unittest
+from unittest.mock import patch
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO / "speckit-pro"), str(REPO / "tests/speckit-pro/lib")]
 from speckit_pro_runner.helpers.registry import MUTATION_HELPERS, dispatch_helper  # noqa: E402
+from speckit_pro_runner.trusted_io import resolve_repo_root  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 HELPER_ID = "decisions-list"
@@ -71,6 +73,21 @@ class DecisionsListTests(unittest.TestCase):
     def test_the_committed_request_fixture_is_served_by_the_registry(self) -> None:
         self.assertIn("read_only", MUTATION_HELPERS[HELPER_ID].modes)
         self.assertEqual(0, self.listed()["count"])
+
+    def test_repo_root_resolution_diagnostics_are_preserved(self) -> None:
+        for repo_root in (7, "../outside"):
+            with self.subTest(repo_root=repo_root):
+                expected = resolve_repo_root({"repo_root": repo_root})
+                self.assertIsInstance(expected, dict)
+                result = self.call("apply", repo_root=repo_root, entries=[SCOPE])
+                self.assertEqual("input_error", result["status"])
+                self.assertEqual([expected], result["diagnostics"])
+                self.assertFalse((self.root / LIST_FILE).exists())
+        with patch("speckit_pro_runner.trusted_io.find_repo_root", return_value=None):
+            expected = resolve_repo_root({})
+            result = self.call("read_only")
+            self.assertEqual("input_error", result["status"])
+            self.assertEqual([expected], result["diagnostics"])
 
     def test_entries_come_back_spec_affecting_then_authority_then_notes(self) -> None:
         first = self.append(NOTE, SKIP, SCOPE, PR_PROBLEM)
