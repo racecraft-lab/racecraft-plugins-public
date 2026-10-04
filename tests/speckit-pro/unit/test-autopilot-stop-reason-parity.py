@@ -121,8 +121,63 @@ class StopReasonParityTests(unittest.TestCase):
         self.assertNotIn(MARKER.findall(sample)[0], _runner_set())
 
 
+def _section(text: str, heading: str) -> str:
+    """The body of the `####` section whose heading contains `heading`."""
+    match = re.search(rf"^#### [^\n]*{re.escape(heading)}[^\n]*\n(.*?)(?=^#### |\Z)", text, re.S | re.M)
+    assert match, f"no section titled like {heading!r}"
+    return match.group(1)
+
+
+def _printed(reason: str) -> re.Pattern[str]:
+    """An instruction to print the literal marker `stop_reason:<reason>`."""
+    return re.compile(rf"\b[Pp]rint\b[^\n]*`stop_reason:{reason}`")
+
+
+class StopReasonPrintTests(unittest.TestCase):
+    """The canary judges a run by the marker its final message prints.
+
+    Naming a reason is not enough: each host's guidance must tell the agent
+    to print it.
+    """
+
+    def _phase_execution(self, host: str) -> str:
+        return (HOST_SKILLS[host] / "references" / "phase-execution.md").read_text(encoding="utf-8")
+
+    def test_plan_stage_terminal_step_prints_the_boundary_reason(self) -> None:
+        for host in HOST_SKILLS:
+            steps = _section(self._phase_execution(host), "terminal-step sequence")
+            self.assertRegex(
+                steps,
+                re.compile(rf"^\d+\. [^\n]*\b[Pp]rint\b[^\n]*`stop_reason:plan_stage_boundary`", re.M),
+                f"{host}: a numbered terminal step must print the plan stage boundary reason",
+            )
+
+    def test_plan_stage_stop_report_prints_the_boundary_reason(self) -> None:
+        for host in HOST_SKILLS:
+            report = _section(self._phase_execution(host), "The plan-stage stop report")
+            self.assertRegex(report, _printed("plan_stage_boundary"), f"{host}: stop report")
+
+    def test_draft_description_resume_block_carries_the_boundary_reason(self) -> None:
+        for host in HOST_SKILLS:
+            body = _section(self._phase_execution(host), "The draft description")
+            self.assertIn("`stop_reason:plan_stage_boundary`", body, f"{host}: draft description")
+
+    def test_stop_policy_tells_every_host_to_print_each_registered_reason(self) -> None:
+        for host, skill in HOST_SKILLS.items():
+            text = (skill / "references" / "stop-policy.md").read_text(encoding="utf-8")
+            self.assertRegex(text, r"[Pp]rint the marker\s+\(`stop_reason:` followed by the id[^)]*\) as the last line", f"{host}: print rule")
+            for reason in _runner_set():
+                self.assertRegex(
+                    text,
+                    re.compile(rf"^\| `stop_reason:{reason}` \|", re.M),
+                    f"{host}: stop-policy must list {reason} so the print rule covers it",
+                )
+
+
 def build_suite() -> unittest.TestSuite:
-    return unittest.defaultTestLoader.loadTestsFromTestCase(StopReasonParityTests)
+    loader = unittest.defaultTestLoader
+    return unittest.TestSuite([loader.loadTestsFromTestCase(StopReasonParityTests),
+                               loader.loadTestsFromTestCase(StopReasonPrintTests)])
 
 
 def main() -> int:
