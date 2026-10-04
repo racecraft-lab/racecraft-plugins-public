@@ -64,8 +64,8 @@ The part of an autopilot run that takes a SPEC from specify through analyze and 
 _Avoid_: planning run, planning phase
 
 **Planning phase**:
-One of the six steps inside the plan stage: specify, clarify, plan, checklist, tasks and analyze.
-_Avoid_: stage, step, gate
+One of the six steps inside the plan stage: specify, clarify, plan, checklist, tasks and analyze. Every SPEC runs all six.
+_Avoid_: stage, step, gate, quality gate, optional phase
 
 **Progress block**:
 The fixed summary of an autopilot run's phases and tasks that the runner renders from autopilot state at every phase transition. It is the only place a run shows its progress.
