@@ -4826,7 +4826,8 @@ class G0SetupTests(unittest.TestCase):
                     self.prepare_fixture(root, case["quality_text"])
                     before = self.fixture_files(root)
                     for probe in ("prerequisites", "commands", "presets"):
-                        with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value=case["specify"]):
+                        with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value=case["specify"]), \
+                                patch("speckit_pro_runner.helpers.read_only.installed_specify_version", return_value=None):
                             actual = g0_setup({"surface": surface, "probe": probe, "workflow_file": "workflow.md"}, root)
                         actual = json.loads(json.dumps(actual).replace(str(PLUGIN_ROOT), "<plugin-root>"))
                         self.assertEqual(case["probes"][probe], actual["result"])
@@ -4834,6 +4835,29 @@ class G0SetupTests(unittest.TestCase):
                             self.assertEqual(case["quality_gate"][surface], actual["quality_gate"])
                     after = self.fixture_files(root)
                     self.assertEqual(before, after, "G0 setup probes must not write")
+
+    def test_g0_setup_preserves_advisory_version_statuses(self) -> None:
+        from speckit_pro_runner.helpers.g0_setup import g0_setup
+
+        cases = (("1.1.0", "match"), ("1.0.0", "older"), ("1.10.0", "newer"),
+                 (None, "unreadable"), (None, "missing"))
+        for surface in ("claude", "codex"):
+            for version, status in cases:
+                with self.subTest(surface=surface, status=status), helper_project() as root:
+                    self.prepare_fixture(root, None)
+                    found = status != "missing"
+                    with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value="specify" if found else None), \
+                            patch("speckit_pro_runner.helpers.read_only.installed_specify_version", return_value=version):
+                        data = g0_setup({"surface": surface, "probe": "prerequisites", "workflow_file": "workflow.md"}, root)
+                    result = data["result"]
+                    report = result["stdout_json"]
+                    self.assertEqual(status, report["spec_kit"]["status"])
+                    self.assertEqual(version, report["spec_kit"]["installed_version"])
+                    self.assertEqual(found, report["all_pass"])
+                    self.assertEqual(0 if found else 1, result["exit_code"])
+                    if found:
+                        row = next(row for row in report["checks"] if row["check"] == "speckit_cli_version")
+                        self.assertTrue(row["pass"], "G0 must preserve advisory version checks")
 
     def test_g0_setup_runner_rejects_invalid_requests_and_routes_both_hosts(self) -> None:
         base = {"probe": "commands", "surface": "codex", "workflow_file": WORKFLOW_FILE}
