@@ -307,56 +307,6 @@ class _ReadOnlyHelperRunner:
 
 
 class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
-    def test_g0_setup_matches_golden_outcomes(self) -> None:
-        from speckit_pro_runner.helpers.g0_setup import g0_setup
-
-        manifest = json.loads((FIXTURE_DIR / "fixture-manifest.json").read_text(encoding="utf-8"))
-        cases = next(row["golden_outcomes"] for row in manifest["helpers"] if row["helper_id"] == "g0-setup")
-        for case in cases:
-            for surface in ("claude", "codex"):
-                with self.subTest(case=case["name"], surface=surface), helper_project() as root:
-                    subprocess.run(["git", "init", "-q", "-b", "test-g0", str(root)], check=True)
-                    for name in ("speckit-specify", "speckit-plan", "speckit-tasks", "speckit-implement"):
-                        skill = root / ".agents" / "skills" / name / "SKILL.md"
-                        skill.parent.mkdir(parents=True)
-                        skill.write_text("fixture", encoding="utf-8")
-                    constitution = root / ".specify" / "memory" / "constitution.md"
-                    constitution.parent.mkdir()
-                    constitution.write_text("fixture", encoding="utf-8")
-                    (root / "workflow.md").write_text("fixture", encoding="utf-8")
-                    if case["quality_text"] is not None:
-                        (root / ".specify" / "quality-gates.json").write_text(case["quality_text"], encoding="utf-8")
-                    before = {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}
-                    for probe in ("prerequisites", "commands", "presets"):
-                        with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value=case["specify"]):
-                            actual = g0_setup({"surface": surface, "probe": probe, "workflow_file": "workflow.md"}, root)
-                        actual = json.loads(json.dumps(actual).replace(str(PLUGIN_ROOT), "<plugin-root>"))
-                        self.assertEqual(case["probes"][probe], actual["result"])
-                        if probe == "commands":
-                            self.assertEqual(case["quality_gate"][surface], actual["quality_gate"])
-                    after = {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}
-                    self.assertEqual(before, after, "G0 setup probes must not write")
-
-    def test_g0_setup_runner_rejects_invalid_requests_and_routes_both_hosts(self) -> None:
-        base = {"probe": "commands", "surface": "codex", "workflow_file": WORKFLOW_FILE}
-        for inputs in ({}, {**base, "probe": "unknown"}, {**base, "surface": "unknown"},
-                       {**base, "extra": True}, {**base, "workflow_file": "../outside.md"}):
-            with self.subTest(inputs=inputs):
-                completed, report, _ = run_runner(helper_request("g0-setup", inputs))
-                self.assertEqual(2, completed.returncode)
-                self.assertEqual("input_error", report["status"])
-        for surface in ("claude", "codex"):
-            completed, report, _ = run_runner(helper_request("g0-setup", {**base, "surface": surface}))
-            self.assertEqual(0, completed.returncode)
-            self.assertEqual("commands", report["data"]["probe"])
-            view = host_skill_root(surface) / "speckit-autopilot"
-            skill = (view / "SKILL.md").read_text(encoding="utf-8")
-            prereqs = (view / "references" / "prerequisites.md").read_text(encoding="utf-8")
-            self.assertIn(f"to `{surface}`", skill)
-            self.assertEqual(3, prereqs.count('"helper_id":"g0-setup"'))
-            self.assertIn("data.quality_gate", prereqs)
-            self.assertNotIn("G0 blocked:", prereqs)
-
     def test_validate_agent_install_rejects_invalid_surface_or_loaded_root(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-agent-install":
             self.skipTest("validate-agent-install cases use validate-agent-install")
@@ -4362,7 +4312,7 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
 
     def test_helper_python_authoritative_records(self) -> None:
         for helper_id in self.filtered_helpers():
-            if helper_id in {"helper-registry-dispatch", "scaffold-answers"}:
+            if helper_id in {"helper-registry-dispatch", "scaffold-answers", "g0-setup"}:
                 continue
             with self.subTest(helper_id=helper_id):
                 completed, response, stderr_records = run_runner(helper_request(helper_id, HELPER_CASES[helper_id]))
@@ -4463,11 +4413,6 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
                     self.assertEqual(data["excluded_current_spec"], "specs/001-current-feature")
                     self.assertEqual(data["archive_order"], [])
                     self.assertEqual(data["unknown"], ["specs/000-prior-feature"])
-                    continue
-                if helper_id == "g0-setup":
-                    self.assertEqual("commands", data["probe"])
-                    self.assertEqual(0, data["result"]["exit_code"])
-                    self.assertIn(data["quality_gate"]["verdict"], {"proceed", "stop"})
                     continue
                 self.assertEqual(data["shell"], False)
                 self.assertEqual(data["argv"][-2:], ["-m", "speckit_pro_runner"])
@@ -4648,6 +4593,62 @@ class PlanLayersPlannerCaseTests(unittest.TestCase):
                 found = [(w["code"], w["details"].get("reference") or w["details"].get("task_id"))
                          for w in planner["warnings"]]
                 self.assertEqual(found, expected)
+
+
+class G0SetupTests(unittest.TestCase):
+    @staticmethod
+    def fixture_files(root: Path) -> dict[str, bytes]:
+        return {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}
+
+    def test_g0_setup_matches_golden_outcomes(self) -> None:
+        from speckit_pro_runner.helpers.g0_setup import g0_setup
+
+        manifest = json.loads((FIXTURE_DIR / "fixture-manifest.json").read_text(encoding="utf-8"))
+        cases = next(row["golden_outcomes"] for row in manifest["helpers"] if row["helper_id"] == "g0-setup")
+        for case in cases:
+            for surface in ("claude", "codex"):
+                with self.subTest(case=case["name"], surface=surface), helper_project() as root:
+                    subprocess.run(["git", "init", "-q", "-b", "test-g0", str(root)], check=True)
+                    for name in ("speckit-specify", "speckit-plan", "speckit-tasks", "speckit-implement"):
+                        skill = root / ".agents" / "skills" / name / "SKILL.md"
+                        skill.parent.mkdir(parents=True)
+                        skill.write_text("fixture", encoding="utf-8")
+                    constitution = root / ".specify" / "memory" / "constitution.md"
+                    constitution.parent.mkdir()
+                    constitution.write_text("fixture", encoding="utf-8")
+                    (root / "workflow.md").write_text("fixture", encoding="utf-8")
+                    if case["quality_text"] is not None:
+                        (root / ".specify" / "quality-gates.json").write_text(case["quality_text"], encoding="utf-8")
+                    before = self.fixture_files(root)
+                    for probe in ("prerequisites", "commands", "presets"):
+                        with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value=case["specify"]):
+                            actual = g0_setup({"surface": surface, "probe": probe, "workflow_file": "workflow.md"}, root)
+                        actual = json.loads(json.dumps(actual).replace(str(PLUGIN_ROOT), "<plugin-root>"))
+                        self.assertEqual(case["probes"][probe], actual["result"])
+                        if probe == "commands":
+                            self.assertEqual(case["quality_gate"][surface], actual["quality_gate"])
+                    after = self.fixture_files(root)
+                    self.assertEqual(before, after, "G0 setup probes must not write")
+
+    def test_g0_setup_runner_rejects_invalid_requests_and_routes_both_hosts(self) -> None:
+        base = {"probe": "commands", "surface": "codex", "workflow_file": WORKFLOW_FILE}
+        for inputs in ({}, {**base, "probe": "unknown"}, {**base, "surface": "unknown"},
+                       {**base, "extra": True}, {**base, "workflow_file": "../outside.md"}):
+            with self.subTest(inputs=inputs):
+                completed, report, _ = run_runner(helper_request("g0-setup", inputs))
+                self.assertEqual(2, completed.returncode)
+                self.assertEqual("input_error", report["status"])
+        for surface in ("claude", "codex"):
+            completed, report, _ = run_runner(helper_request("g0-setup", {**base, "surface": surface}))
+            self.assertEqual(0, completed.returncode)
+            self.assertEqual("commands", report["data"]["probe"])
+            view = host_skill_root(surface) / "speckit-autopilot"
+            skill = (view / "SKILL.md").read_text(encoding="utf-8")
+            prereqs = (view / "references" / "prerequisites.md").read_text(encoding="utf-8")
+            self.assertIn(f"to `{surface}`", skill)
+            self.assertEqual(3, prereqs.count('"helper_id":"g0-setup"'))
+            self.assertIn("data.quality_gate", prereqs)
+            self.assertNotIn("G0 blocked:", prereqs)
 
 
 class ScaffoldAnswersTests(unittest.TestCase):
@@ -5088,7 +5089,7 @@ def main() -> int:
     _ReadOnlyHelperRunner.helper_filter = args.helper
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                                for case in (ReadOnlyHelperTests, PlanLayersRepairRouteTests, PlanLayersPlannerCaseTests,
-                                            PacketTitlePatternTests, ScaffoldAnswersTests, CanaryReceiptTests,
+                                            PacketTitlePatternTests, G0SetupTests, ScaffoldAnswersTests, CanaryReceiptTests,
                                             CanaryVariantAssertionsTests, CanaryVariantContractTests,
                                             CanaryGateVerdictTests, CanaryGuardGapContractTests,
                                             CanaryBudgetTests, CanaryBudgetFileTests))
