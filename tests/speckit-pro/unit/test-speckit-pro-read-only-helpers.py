@@ -4745,7 +4745,8 @@ def receipt():
             "unregistered_stops": 0, "planning_end": "artifacts_and_draft_pr",
             "implement_end": "ready_for_uat", "uat_runbook": "uat.md",
             "decisions_by_kind": {"design": 2}, "retry_attempts": 0, "blocked_for_uat": 0,
-            "stages": {name: {"wall_seconds": 1, "tokens": 10} for name in ("scaffold", "plan", "plan_review", "implement")},
+            "plan_target": {"wall_seconds_limit": 1800, "tokens_limit": 15000000, "target_met": True},
+            "stages": {name: {"wall_seconds": 1, "tokens": 10, "codex_tokens": {"root_tokens": 10, "child_rollout_tokens": []}} for name in ("scaffold", "plan", "plan_review", "implement")},
         }],
     }
 
@@ -4761,6 +4762,17 @@ class CanaryReceiptTests(unittest.TestCase):
             if host == "claude-code":
                 value["install_probe"] = {"loaded_plugins": ["speckit-pro@1.0.0"], "evidence": "init.json"}
             self.assertEqual([], self.validator.validate_receipt(value))
+
+    def test_base_receipt_without_plan_target_fails_schema_validation(self):
+        for host in ("claude-code", "codex"):
+            value = receipt()
+            value["host"] = host
+            if host == "claude-code":
+                value["install_probe"] = {"loaded_plugins": ["speckit-pro@1.0.0"], "evidence": "init.json"}
+            del value["variants"][0]["plan_target"]
+            with self.subTest(host=host):
+                failures = self.validator.json_schema_failures(value, self.validator.SCHEMA, self.validator.SCHEMA, "receipt")
+                self.assertTrue(any("plan_target" in failure["message"] for failure in failures), failures)
 
     def test_rejects_questions_nonterminal_plan_missing_runbook_and_unregistered_stop(self):
         for key, bad in (("questions_after_scaffold", 1), ("planning_end", "paused"),
@@ -5006,6 +5018,132 @@ class CanaryVariantContractTests(CanaryVariantCase):
                                  (completed.returncode, report["valid"], report["failed_assertions"]))
 
 
+class CanaryPlanTargetTests(CanaryVariantCase):
+    def test_over_target_reports_false_without_failing_the_gate_for_either_host(self):
+        for host, value in self.receipts.items():
+            variant = value["variants"][0]
+            for metric, actual in (("wall_seconds", 1801), ("tokens", 15000001)):
+                with self.subTest(host=host, metric=metric):
+                    variant["stages"]["plan"].update(wall_seconds=1, tokens=10)
+                    variant["stages"]["plan"][metric] = actual
+                    variant["stages"]["plan"]["codex_tokens"]["root_tokens"] = variant["stages"]["plan"]["tokens"]
+                    variant["plan_target"]["target_met"] = False
+                    report = self.validator.receipt_report(value)
+                    self.assertTrue(report["valid"], report)
+                    result = report["variants"][0]
+                    self.assertEqual("pass", result["gate_verdict"])
+                    self.assertFalse(result["plan_target"]["target_met"])
+                    self.assertEqual(actual, result["plan_target"][metric])
+
+
+    def test_target_boundaries_and_claims_are_checked_independently_of_budget(self):
+        for host, value in self.receipts.items():
+            variant = value["variants"][0]
+            plan = variant["stages"]["plan"]
+            plan.update(wall_seconds=1800, tokens=15000000,
+                        codex_tokens={"root_tokens": 15000000, "child_rollout_tokens": []})
+            with self.subTest(host=host):
+                report = self.validator.receipt_report(value)
+                self.assertTrue(report["valid"], report)
+                self.assertTrue(report["variants"][0]["plan_target"]["target_met"])
+                variant["plan_target"]["target_met"] = False
+                self.assertIn("base.plan_target", self.validator.validate_receipt(value))
+                plan["wall_seconds"] = 1801
+                self.assertEqual([], self.validator.validate_receipt(value))
+                variant["plan_target"]["target_met"] = True
+                self.assertIn("base.plan_target", self.validator.validate_receipt(value))
+
+    def test_cli_reports_an_over_target_receipt_as_valid_for_both_hosts(self):
+        for host, value in self.receipts.items():
+            value["variants"][0]["stages"]["plan"]["wall_seconds"] = 1801
+            value["variants"][0]["plan_target"]["target_met"] = False
+            with self.subTest(host=host), tempfile.TemporaryDirectory() as directory:
+                source = Path(directory) / "receipt.json"
+                source.write_text(json.dumps(value), encoding="utf-8")
+                completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
+                                           capture_output=True, text=True, check=False)
+                report = json.loads(completed.stdout)
+                self.assertEqual(0, completed.returncode, report)
+                self.assertEqual("pass", report["variants"][0]["gate_verdict"])
+                self.assertFalse(report["variants"][0]["plan_target"]["target_met"])
+
+
+class CanaryPlanTargetContractTests(CanaryVariantCase):
+    def test_target_fields_fail_closed_when_missing_malformed_or_changed(self):
+        for host, original in self.receipts.items():
+            for field, bad in (("wall_seconds_limit", 1801), ("tokens_limit", 15000001),
+                               ("target_met", "false"), ("unexpected", True)):
+                value = copy.deepcopy(original)
+                value["variants"][0]["plan_target"][field] = bad
+                with self.subTest(host=host, field=field):
+                    self.assertTrue(self.validator.validate_receipt(value))
+            for field in ("wall_seconds_limit", "tokens_limit", "target_met"):
+                value = copy.deepcopy(original)
+                del value["variants"][0]["plan_target"][field]
+                with self.subTest(host=host, missing=field):
+                    self.assertTrue(self.validator.validate_receipt(value))
+
+    def test_only_the_base_variant_reports_the_target(self):
+        for host, value in self.receipts.items():
+            variant = value["variants"][0]
+            variant.update(name="oversized_plan", **self.variant_evidence["oversized_plan"])
+            del variant["plan_target"]
+            with self.subTest(host=host):
+                report = self.validator.receipt_report(value)
+                self.assertTrue(report["valid"], report)
+                self.assertNotIn("plan_target", report["variants"][0])
+
+
+class CanaryCodexTokenTests(CanaryVariantCase):
+    def test_child_rollouts_are_included_in_the_plan_total_and_target(self):
+        value = self.receipts["codex"]
+        plan = value["variants"][0]["stages"]["plan"]
+        plan.update(tokens=16000000, codex_tokens={"root_tokens": 9000000, "child_rollout_tokens": [4000000, 3000000]})
+        value["variants"][0]["plan_target"]["target_met"] = False
+        report = self.validator.receipt_report(value)
+        self.assertTrue(report["valid"], report)
+        target = report["variants"][0]["plan_target"]
+        self.assertEqual(16000000, target["tokens"])
+        self.assertFalse(target["target_met"])
+        plan["tokens"] = 9000000
+        value["variants"][0]["plan_target"]["target_met"] = True
+        self.assertIn("base.plan.tokens_sum", self.validator.validate_receipt(value))
+
+
+    def test_each_codex_stage_checks_its_sum_and_allows_equal_child_counts(self):
+        for name in ("scaffold", "plan", "plan_review", "implement"):
+            value = self.receipts["codex"]
+            stage = value["variants"][0]["stages"][name]
+            stage.update(tokens=27, codex_tokens={"root_tokens": 7, "child_rollout_tokens": [10, 10]})
+            with self.subTest(stage=name):
+                self.assertEqual([], self.validator.validate_receipt(value))
+                stage["tokens"] = 7
+                self.assertIn(f"base.{name}.tokens_sum", self.validator.validate_receipt(value))
+                stage["tokens"] = 27
+
+    def test_codex_breakdown_fails_closed_when_missing_or_malformed(self):
+        for name in ("scaffold", "plan", "plan_review", "implement"):
+            for bad in (None, {}, {"root_tokens": 10}, {"root_tokens": True, "child_rollout_tokens": []},
+                        {"root_tokens": 10, "child_rollout_tokens": [-1]},
+                        {"root_tokens": 10, "child_rollout_tokens": [1.5]}):
+                value = copy.deepcopy(self.receipts["codex"])
+                stage = value["variants"][0]["stages"][name]
+                if bad is None:
+                    del stage["codex_tokens"]
+                else:
+                    stage["codex_tokens"] = bad
+                with self.subTest(stage=name, bad=bad):
+                    self.assertTrue(self.validator.validate_receipt(value))
+
+    def test_claude_uses_its_stage_total_without_a_codex_breakdown(self):
+        value = self.receipts["claude-code"]
+        for stage in value["variants"][0]["stages"].values():
+            del stage["codex_tokens"]
+        report = self.validator.receipt_report(value)
+        self.assertTrue(report["valid"], report)
+        self.assertEqual(10, report["variants"][0]["plan_target"]["tokens"])
+
+
 class CanaryBudgetCase(unittest.TestCase):
     """Shared setup for the budget tests; it holds no tests of its own."""
 
@@ -5025,8 +5163,9 @@ class CanaryBudgetTests(CanaryBudgetCase):
         for key, actual in (("wall_seconds", 6), ("tokens", 101)):
             value = receipt()
             value["variants"][0]["stages"]["plan"][key] = actual
+            value["variants"][0]["stages"]["plan"]["codex_tokens"]["root_tokens"] = value["variants"][0]["stages"]["plan"]["tokens"]
             self.assertEqual([f"base.plan.{key}_budget"], self.validator.validate_receipt(value, self.budget(5, 100)), key)
-        value["variants"][0]["stages"]["plan"].update(wall_seconds=5, tokens=100)
+        value["variants"][0]["stages"]["plan"].update(wall_seconds=5, tokens=100, codex_tokens={"root_tokens": 100, "child_rollout_tokens": []})
         self.assertEqual([], self.validator.validate_receipt(value, self.budget(5, 100)), "a stage at its limit is within budget")
 
     def test_an_overrun_belongs_only_to_the_variant_entry_that_ran_over(self):
@@ -5040,6 +5179,8 @@ class CanaryBudgetTests(CanaryBudgetCase):
     def test_an_unset_limit_reports_unbudgeted_and_never_a_pass(self):
         value = receipt()
         value["variants"][0]["stages"]["plan"]["tokens"] = 10**9
+        value["variants"][0]["plan_target"]["target_met"] = False
+        value["variants"][0]["stages"]["plan"]["codex_tokens"]["root_tokens"] = 10**9
         unset = self.budget(5, None)
         report = self.validator.receipt_report(value, unset)
         self.assertEqual((True, []), (report["valid"], report["failed_assertions"]))
@@ -5056,7 +5197,7 @@ class CanaryBudgetTests(CanaryBudgetCase):
 
     def test_plan_review_is_recorded_but_never_budgeted(self):
         value = receipt()
-        value["variants"][0]["stages"]["plan_review"].update(wall_seconds=10**6, tokens=10**9)
+        value["variants"][0]["stages"]["plan_review"].update(wall_seconds=10**6, tokens=10**9, codex_tokens={"root_tokens": 10**9, "child_rollout_tokens": []})
         self.assertEqual([], self.validator.validate_receipt(value, self.budget(5, 100)))
 
 
@@ -5118,6 +5259,7 @@ def main() -> int:
                                             PacketTitlePatternTests, G0SetupTests, G0SetupFailureTests, ScaffoldAnswersTests, CanaryReceiptTests,
                                             CanaryVariantAssertionsTests, CanaryVariantContractTests,
                                             CanaryGateVerdictTests, CanaryGuardGapContractTests,
+                                            CanaryPlanTargetTests, CanaryPlanTargetContractTests, CanaryCodexTokenTests,
                                             CanaryBudgetTests, CanaryBudgetFileTests))
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     total = result.testsRun
