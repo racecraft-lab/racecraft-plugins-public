@@ -31,10 +31,10 @@ fresh worktree holds only tracked files; before any docs command, run
 | Check | Command | CI job (required?) |
 | --- | --- | --- |
 | Quick suite: toolchain, layers 1, 4, 5 (`--layer 1`, `4`, `5`, or `6` for one) | `python3 tests/speckit-pro/run-all.py` | none |
-| CI suite: adds layers 6 and 7 (`run-all.py` cannot select 7; `python3 tests/speckit-pro/run-layer-scripts.py --layer 7` runs it alone) | `SPECKIT_SKIP_TOOLCHAIN_CHECK=1 GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null GIT_CONFIG_NOSYSTEM=1 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-ci-suite.json` | `test` (yes, via `validate-plugins`) |
+| CI suite: adds layers 6 and 7 (`run-all.py` cannot select 7; `python3 tests/speckit-pro/run-layer-scripts.py --layer 7` runs it alone) | `python3 scripts/run-ci-suite.py` (sets the env and sends the request itself; worktree-isolated agents must use it). CI runs the raw env-prefixed `python3 -m speckit_pro_runner` command on `run-ci-suite.json` | `test` (yes, via `validate-plugins`) |
 | typesafe-jev Go checks | `python3 scripts/check-go-module.py check` | `go` (yes, via `validate-plugins`) |
 | Generated-artifact drift; commit first, since any uncommitted change under its paths fails it | `python3 scripts/refresh-release-artifacts.py --check` | `artifact-consistency` (yes, via `validate-plugins`) |
-| PR title | `TITLE='<title>' PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/validate-pr-title-live.json` | `validate-pr-title` (yes) |
+| PR title | `python3 scripts/check-pr-title.py '<title>'` (CI runs the raw runner command on `validate-pr-title-live.json`) | `validate-pr-title` (yes) |
 | Release-note fence | `PR_TITLE='<title>' PR_BODY='<body>' PR_LABELS_JSON='[]' python3 scripts/compose-release-notes.py --validate-pr` | `validate-release-note` (yes) |
 | Docs, reference mode: reference inputs changed | `pnpm --dir docs-site reference:check`, then `pnpm --dir docs-site validate:quality` | `validate-docs` (no) |
 | Docs, full mode: `docs-site/`, the artifact gallery, or a docs contract file changed (`scripts/classify-docs-validation.py`) | `pnpm --dir docs-site exec playwright install --with-deps chromium` once, then `pnpm --dir docs-site validate` | `validate-docs` (no) |
