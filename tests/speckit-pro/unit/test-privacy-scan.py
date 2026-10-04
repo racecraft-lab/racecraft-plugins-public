@@ -62,6 +62,7 @@ GENERIC_LOCAL_TERMS = {
     "cache",
     "claude",
     "codex",
+    "clones",
     "documents",
     "downloads",
     "github",
@@ -338,6 +339,13 @@ class CheckoutPathTermTests(unittest.TestCase):
         self.assertIsNotNone(pattern)
         self.assertIsNotNone(pattern.search("owned by quokkaoperator"))
         self.assertIsNone(pattern.search("the autopilot byproduct"))
+
+    def test_clone_container_words_are_not_identity_terms(self) -> None:
+        checkout = Path("/", "Users", "quokkaoperator", "clones", "shopfront")
+        pattern = self.pattern_for(checkout, checkout, {})
+        self.assertIsNotNone(pattern)
+        self.assertIsNone(pattern.search("run the checks in scratch clones"))
+        self.assertIsNotNone(pattern.search("owned by quokkaoperator"))
 
 
 class PrivacyScanTests(unittest.TestCase):
