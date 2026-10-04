@@ -28,6 +28,10 @@ _Avoid_: canary log, test report
 The run's record of every judgment it made instead of asking the user: the option chosen, the rejected alternative and the evidence. It never asks for a reply; the reviewer accepts or overturns each entry at review.
 _Avoid_: end-of-run request, Decisions for you
 
+**Gate**:
+The checkpoint the runner validates after a planning phase or implement, numbered G0 to G7 with G6.5. A gate is a check, never a phase.
+_Avoid_: quality gate, phase
+
 **Harm halt**:
 The only reason a run ends before a terminal state: the next action could cause damage a later review cannot undo, such as an exposed secret, forged evidence, or a write to the wrong branch. Nothing leaves the machine after it, and a human must clear it before resume.
 _Avoid_: integrity failure, hard stop
@@ -50,6 +54,14 @@ _Avoid_: artifact sign-off, planning complete, implementation permission
 **Plan review**:
 The human interview between planning and implementation that examines the proposed work, closes gaps through revisions, and establishes whether the final planning revision is approved.
 _Avoid_: planning pause, implement preflight, artifact delivery
+
+**Plan stage**:
+The part of an autopilot run that takes a SPEC from specify through analyze and ends when the review artifacts and the draft PR are ready. The other stages are implement and full.
+_Avoid_: planning run, planning phase
+
+**Planning phase**:
+One of the six steps inside the plan stage: specify, clarify, plan, checklist, tasks and analyze.
+_Avoid_: stage, step, gate
 
 **Progress block**:
 The fixed summary of an autopilot run's phases and tasks that the runner renders from autopilot state at every phase transition. It is the only place a run shows its progress.
