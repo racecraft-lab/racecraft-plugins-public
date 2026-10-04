@@ -6275,16 +6275,19 @@ def installed_specify_version(specify_path: str, repo_root: Path | None = None) 
         validate = executable_path if sys.platform == "win32" else trusted_executable
         selected = validate(specify_path, "Spec Kit")
         resolved = validate(executable, "Spec Kit")
+        launch_path = shutil.which("specify", path=str(resolved.parent))
         workspace = (repo_root or Path.cwd()).resolve()
         if (
-            resolved != selected
+            launch_path is None
+            or Path(launch_path) != resolved
+            or resolved != selected
             or Path(executable).parent.resolve() == Path.cwd().resolve()
             or resolved.is_relative_to(workspace)
             or any(parent.resolve() == workspace for parent in Path(executable).parents)
         ):
             return None
         result = subprocess.run(
-            [executable, "version"], text=True, encoding="utf-8", capture_output=True, shell=False,
+            [launch_path, "version"], text=True, encoding="utf-8", capture_output=True, shell=False,
             check=False, timeout=SUBPROCESS_TIMEOUT_SECONDS, stdin=subprocess.DEVNULL,
         )
     except (OSError, subprocess.SubprocessError, UnicodeError, RuntimeError, ValueError):

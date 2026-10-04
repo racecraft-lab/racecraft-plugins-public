@@ -3403,22 +3403,26 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temporary:
             home = Path(temporary)
-            binary = home / ".local" / "bin" / "specify.exe"
-            binary.parent.mkdir(parents=True)
-            binary.touch()
-            binary.chmod(0o755)
+            alias = home / ".local" / "bin" / "specify.exe"
+            attested = home / "trusted" / "bin" / "specify.exe"
             with patch("speckit_pro_runner.helpers.read_only.Path.home", return_value=home), patch(
+                "speckit_pro_runner.helpers.read_only.sys.platform", "linux",
+            ), patch(
                 "speckit_pro_runner.helpers.read_only.shutil.which",
-                side_effect=[None, str(binary), str(binary)],
+                side_effect=[None, str(alias), str(alias), str(attested)],
             ) as which, patch(
+                "speckit_pro_runner.helpers.read_only.trusted_executable",
+                side_effect=[attested, attested],
+            ), patch(
                 "speckit_pro_runner.helpers.read_only.subprocess.run",
                 return_value=SimpleNamespace(stdout="CLI Version    1.1.0", returncode=0),
             ) as run:
                 selected = find_specify()
-                self.assertEqual(selected, str(binary))
+                self.assertEqual(selected, str(alias))
                 self.assertEqual(installed_specify_version(selected), "1.1.0")
-            self.assertEqual(which.call_args.kwargs["path"], str(binary.parent))
-            self.assertEqual(run.call_args.args[0], [str(binary), "version"])
+            self.assertEqual(which.call_args.kwargs["path"], str(attested.parent))
+            self.assertEqual(run.call_args.args[0], [str(attested), "version"])
+            self.assertNotIn("executable", run.call_args.kwargs)
             self.assertFalse(run.call_args.kwargs["shell"])
             self.assertEqual(run.call_args.kwargs["stdin"], subprocess.DEVNULL)
 
@@ -3459,6 +3463,7 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
             ) as run:
                 self.assertEqual(installed_specify_version(str(binary)), "1.1.0")
                 self.assertEqual(run.call_args.args[0], [str(binary), "version"])
+                self.assertNotIn("executable", run.call_args.kwargs)
 
     def test_installed_specify_version_rejects_a_reselected_or_symlinked_workspace_binary(self) -> None:
         from speckit_pro_runner.helpers.read_only import installed_specify_version
