@@ -121,11 +121,19 @@ class StopReasonParityTests(unittest.TestCase):
         self.assertNotIn(MARKER.findall(sample)[0], _runner_set())
 
 
-def _section(text: str, heading: str) -> str:
-    """The body of the `####` section whose heading contains `heading`."""
-    match = re.search(rf"^#### [^\n]*{re.escape(heading)}[^\n]*\n(.*?)(?=^#### |\Z)", text, re.S | re.M)
-    assert match, f"no section titled like {heading!r}"
-    return match.group(1)
+def _h4_body(text: str, title: str) -> str:
+    """The lines under the first `####` heading whose title contains `title`."""
+    kept: list[str] = []
+    inside = False
+    for line in text.splitlines():
+        if line.startswith("#### "):
+            if inside:
+                break
+            inside = title in line
+        elif inside:
+            kept.append(line)
+    assert kept, f"no section titled like {title!r}"
+    return "\n".join(kept)
 
 
 def _printed(reason: str) -> re.Pattern[str]:
@@ -145,7 +153,7 @@ class StopReasonPrintTests(unittest.TestCase):
 
     def test_plan_stage_terminal_step_prints_the_boundary_reason(self) -> None:
         for host in HOST_SKILLS:
-            steps = _section(self._phase_execution(host), "terminal-step sequence")
+            steps = _h4_body(self._phase_execution(host), "terminal-step sequence")
             self.assertRegex(
                 steps,
                 re.compile(r"^\d+\. [^\n]*\b[Pp]rint\b[^\n]*`stop_reason:plan_stage_boundary`", re.M),
@@ -154,12 +162,12 @@ class StopReasonPrintTests(unittest.TestCase):
 
     def test_plan_stage_stop_report_prints_the_boundary_reason(self) -> None:
         for host in HOST_SKILLS:
-            report = _section(self._phase_execution(host), "The plan-stage stop report")
+            report = _h4_body(self._phase_execution(host), "The plan-stage stop report")
             self.assertRegex(report, _printed("plan_stage_boundary"), f"{host}: stop report")
 
     def test_draft_description_resume_block_carries_the_boundary_reason(self) -> None:
         for host in HOST_SKILLS:
-            body = _section(self._phase_execution(host), "The draft description")
+            body = _h4_body(self._phase_execution(host), "The draft description")
             self.assertIn("`stop_reason:plan_stage_boundary`", body, f"{host}: draft description")
 
     def test_stop_policy_tells_every_host_to_print_each_registered_reason(self) -> None:
