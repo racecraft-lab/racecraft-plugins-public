@@ -693,10 +693,6 @@ def _resolve_context7_library(
     raise FetchFailed("library_not_found")
 
 
-def _drop_chunk(chunk_id: str, chunk: Chunk, reason: str, detail: str) -> dict[str, str]:
-    return {"id": chunk_id, "source_host": chunk.host, "reason": reason, "detail": detail}
-
-
 class ResearchBroker:
     def __init__(
         self,
@@ -727,8 +723,7 @@ class ResearchBroker:
 
     # -- time budget ----------------------------------------------------------
 
-    def _start_call(self, run_id: Any = None) -> None:
-        self._providers.start_run(run_id)
+    def _start_call(self) -> None:
         self._deadline = time.monotonic() + TOOL_BUDGET_SECONDS
 
     def _remaining(self) -> float:
@@ -836,10 +831,10 @@ class ResearchBroker:
                 text = text[:MAX_CHUNK_CHARS]
                 chunk.flags.append("truncated")
             if not text:
-                envelope["dropped"].append(_drop_chunk(chunk_id, chunk, "empty", ""))
+                envelope["dropped"].append(self._drop(chunk_id, chunk, "empty", ""))
                 continue
             if total + len(text) > MAX_TOTAL_CHARS:
-                envelope["dropped"].append(_drop_chunk(chunk_id, chunk, "size_cap", ""))
+                envelope["dropped"].append(self._drop(chunk_id, chunk, "size_cap", ""))
                 continue
             total += len(text)
             chunk.text = text
@@ -851,14 +846,14 @@ class ResearchBroker:
             for chunk_id, chunk in prepared:
                 patterns = [flag for flag in chunk.flags if flag != "truncated"]
                 if patterns:
-                    envelope["dropped"].append(_drop_chunk(chunk_id, chunk, "instruction_pattern", patterns[0]))
+                    envelope["dropped"].append(self._drop(chunk_id, chunk, "instruction_pattern", patterns[0]))
                 else:
                     envelope["chunks"].append(self._keep(chunk_id, chunk, tool, {"route": "pass", "flags": chunk.flags}))
             return envelope
         if not jev["usable"]:
             reason = "jev_credential_unusable" if jev["state"] == "credential_unusable" else "jev_unavailable"
             for chunk_id, chunk in prepared:
-                envelope["dropped"].append(_drop_chunk(chunk_id, chunk, reason, jev["state"]))
+                envelope["dropped"].append(self._drop(chunk_id, chunk, reason, jev["state"]))
             return envelope
 
         results = self._screen_with_jev(prepared)
@@ -878,7 +873,7 @@ class ResearchBroker:
                     )
                 )
             else:
-                envelope["dropped"].append(_drop_chunk(chunk_id, chunk, result.reason, result.detail))
+                envelope["dropped"].append(self._drop(chunk_id, chunk, result.reason, result.detail))
         return envelope
 
     def _screen_with_jev(self, prepared: list[tuple[str, Chunk]]) -> dict[str, Screening]:
@@ -901,6 +896,9 @@ class ResearchBroker:
             executor.shutdown(wait=False, cancel_futures=True)
         return results
 
+    def _drop(self, chunk_id: str, chunk: Chunk, reason: str, detail: str) -> dict[str, str]:
+        return {"id": chunk_id, "source_host": chunk.host, "reason": reason, "detail": detail}
+
     def _keep(self, chunk_id: str, chunk: Chunk, tool: str, screening: dict[str, Any]) -> dict[str, Any]:
         retrieved = datetime.fromtimestamp(self.clock(), tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         return {
@@ -918,9 +916,9 @@ class ResearchBroker:
 
     # -- tools ----------------------------------------------------------------
 
-    def research_search(self, *, query: Any, max_results: Any = 5, run_id: Any = None) -> dict[str, Any]:
+    def research_search(self, *, query: Any, max_results: Any = 5) -> dict[str, Any]:
         tool = "research_search"
-        self._start_call(run_id)
+        self._start_call()
         query = _text_argument(query, "query", MAX_QUERY_INPUT_CHARS)
         max_results = _int_argument(max_results, "max_results", 1, 10)
         failed = self._providers.failure("tavily")
@@ -969,9 +967,9 @@ class ResearchBroker:
             chunks.append(Chunk(f"{title}\n\n{content}", "tavily", url, host, []))
         return self._screen(tool, chunks)
 
-    def docs_query(self, *, library: Any, query: Any, max_chunks: Any = 6, run_id: Any = None) -> dict[str, Any]:
+    def docs_query(self, *, library: Any, query: Any, max_chunks: Any = 6) -> dict[str, Any]:
         tool = "docs_query"
-        self._start_call(run_id)
+        self._start_call()
         library = _text_argument(library, "library", MAX_LIBRARY_CHARS)
         query = _text_argument(query, "query", MAX_QUERY_INPUT_CHARS)
         max_chunks = _int_argument(max_chunks, "max_chunks", 1, 10)
@@ -1110,6 +1108,8 @@ def call_tool(name: Any, arguments: Any, instance: ResearchBroker | None = None)
         raise BrokerViolation("unexpected arguments")
     if "run_id" in arguments and arguments["run_id"] is None:
         raise BrokerViolation("run_id must be text")
+    arguments = dict(arguments)
+    instance._providers.start_run(arguments.pop("run_id", None))
     if name == "research_search":
         return instance.research_search(**arguments)
     return instance.docs_query(**arguments)

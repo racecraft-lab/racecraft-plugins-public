@@ -476,8 +476,8 @@ class ModeTests(BrokerCase):
         observed: list[float] = []
         original = broker._start_call
 
-        def start(run_id=None) -> None:
-            original(run_id)
+        def start() -> None:
+            original()
             observed.append(broker._remaining())
 
         broker._start_call = start  # type: ignore[method-assign]
