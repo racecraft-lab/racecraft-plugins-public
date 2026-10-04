@@ -1120,7 +1120,7 @@ class ValidateScaffoldBlindSpotDeadline(unittest.TestCase):
             with self.subTest(host=host, check='deadline records did not run'):
                 self.assertRegex(section, r'record `did not run` with reason `wait deadline expired`')
 
-class ValidateScaffoldRoadmapFreshness(unittest.TestCase):
+class ValidateScaffoldHelperInputs(unittest.TestCase):
 
     def test_scaffold_names_exact_helper_inputs_on_each_host(self) -> None:
         # ADR 0008: guessed mode/setup keys caused a real scaffold failure.
@@ -1153,6 +1153,8 @@ class ValidateScaffoldRoadmapFreshness(unittest.TestCase):
                 self.assertIn('Replay the selected installation inputs', section)
                 self.assertIn('Omit optional fields that were absent from the selected installation', section)
                 self.assertNotIn('routing_mode', skill)
+
+class ValidateScaffoldRoadmapFreshness(unittest.TestCase):
 
     def test_scaffold_checks_roadmap_freshness_before_parsing_on_each_host(self) -> None:
         # A stale checkout once fed scaffold an old roadmap entry: each host must
