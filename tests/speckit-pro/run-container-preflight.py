@@ -14,6 +14,8 @@ from pathlib import Path
 from typing import Any, Callable
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "speckit-pro"))
+from speckit_pro_runner import spec_kit_pin  # noqa: E402
 from preflight_architecture import architecture_family as _architecture_family  # noqa: E402
 from evidence_files import write_json as _write_json  # noqa: E402
 from preflight_interpreters import (  # noqa: E402
@@ -506,8 +508,8 @@ def _windows_smoke() -> int:
                 "interpreter": "missing-compatible-python-3.11",
                 "interpreter_candidates": list(INTERPRETER_CANDIDATES),
                 "probe_count": len(probe_records),
-                "spec_kit_version_expected": _required_env("SPEC_KIT_VERSION"),
-                "spec_kit_git_ref": _required_env("SPEC_KIT_GIT_REF"),
+                "spec_kit_version_expected": f"v{spec_kit_pin.PINNED_VERSION}",
+                "spec_kit_git_ref": spec_kit_pin.PINNED_SOURCE,
                 "status": "fail",
                 "native_installed_uat": False,
             },
@@ -523,9 +525,9 @@ def _windows_smoke() -> int:
         "--pipx-version",
         _required_env("PIPX_VERSION"),
         "--spec-kit-version",
-        _required_env("SPEC_KIT_VERSION"),
+        f"v{spec_kit_pin.PINNED_VERSION}",
         "--spec-kit-ref",
-        _required_env("SPEC_KIT_GIT_REF"),
+        spec_kit_pin.PINNED_SOURCE,
     ]
     child_env = os.environ.copy()
     selected_candidate = str(selected_record["candidate"])

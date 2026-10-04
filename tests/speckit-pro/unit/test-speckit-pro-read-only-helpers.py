@@ -3381,10 +3381,61 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
             with self.subTest(returncode=returncode, stdout=stdout[:8]), patch(
                 "speckit_pro_runner.helpers.read_only.subprocess.run",
                 return_value=SimpleNamespace(stdout=stdout, returncode=returncode),
+            ), patch(
+                "speckit_pro_runner.helpers.read_only.shutil.which", return_value="/fixture/bin/specify",
             ):
                 self.assertEqual(installed_specify_version("/fixture/bin/specify"), expected)
-        with patch("speckit_pro_runner.helpers.read_only.subprocess.run", side_effect=OSError):
+        with patch("speckit_pro_runner.helpers.read_only.subprocess.run", side_effect=OSError), patch(
+            "speckit_pro_runner.helpers.read_only.shutil.which", return_value="/fixture/bin/specify",
+        ):
             self.assertIsNone(installed_specify_version("/fixture/bin/specify"))
+
+    def test_installed_specify_version_probes_the_resolved_fallback_binary(self) -> None:
+        from speckit_pro_runner.helpers.read_only import find_specify, installed_specify_version
+
+        with tempfile.TemporaryDirectory() as temporary:
+            home = Path(temporary)
+            binary = home / ".local" / "bin" / "specify.exe"
+            binary.parent.mkdir(parents=True)
+            binary.touch()
+            with patch("speckit_pro_runner.helpers.read_only.Path.home", return_value=home), patch(
+                "speckit_pro_runner.helpers.read_only.shutil.which",
+                side_effect=[None, str(binary), str(binary)],
+            ) as which, patch(
+                "speckit_pro_runner.helpers.read_only.subprocess.run",
+                return_value=SimpleNamespace(stdout="CLI Version    1.1.0", returncode=0),
+            ) as run:
+                selected = find_specify()
+                self.assertEqual(selected, str(binary))
+                self.assertEqual(installed_specify_version(selected), "1.1.0")
+            self.assertEqual(which.call_args.kwargs["path"], str(binary.parent))
+            self.assertEqual(run.call_args.args[0], [str(binary), "version"])
+            self.assertFalse(run.call_args.kwargs["shell"])
+            self.assertEqual(run.call_args.kwargs["stdin"], subprocess.DEVNULL)
+
+    def test_installed_specify_version_treats_decoding_failure_as_unreadable(self) -> None:
+        from speckit_pro_runner.helpers.read_only import installed_specify_version, spec_kit_cli_state
+
+        error = UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid start byte")
+        with patch("speckit_pro_runner.helpers.read_only.subprocess.run", side_effect=error), patch(
+            "speckit_pro_runner.helpers.read_only.shutil.which", return_value="/fixture/bin/specify",
+        ):
+            self.assertIsNone(installed_specify_version("/fixture/bin/specify"))
+            rows, state = spec_kit_cli_state("/fixture/bin/specify")
+        self.assertEqual(state["status"], "unreadable")
+        self.assertTrue(all(row["pass"] for row in rows))
+
+    def test_spec_kit_version_ordering_compares_numeric_components(self) -> None:
+        from speckit_pro_runner import spec_kit_pin
+
+        for pinned, installed, status in (
+            ("1.9.9", "1.10.0", "newer"),
+            ("1.10.0", "1.9.99", "older"),
+        ):
+            with self.subTest(pinned=pinned, installed=installed), patch.object(
+                spec_kit_pin, "PINNED_VERSION", pinned,
+            ):
+                self.assertEqual(spec_kit_pin.version_status(installed, cli_found=True), status)
 
     def test_check_prerequisites_honors_specify_feature_directory_env(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":

@@ -11,7 +11,9 @@ import posixpath
 import re
 import shlex
 import sys
+import tempfile
 import unittest
+from unittest.mock import patch
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
@@ -205,8 +207,6 @@ SETUP_PYTHON_COMMENTED_PIN_RE = re.compile('uses: actions/setup-python@[0-9a-f]{
 HOSTED_PYTHON_VERSION = 'HOSTED_PYTHON_VERSION: "3.13.14"'
 CONTAINER_IMAGE_PIN = 'python:3.11.15-bookworm@sha256:b7ae8a4dcc0ab327e333c5e46a3eaa6c1b0ff585bed77e01cd6de4be1325837e'
 CONTAINER_DISPATCH = 'run: import runpy; runpy.run_path("tests/speckit-pro/run-container-preflight.py", run_name="__main__")'
-SPEC_KIT_VERSION_PIN = f'SPEC_KIT_VERSION: v{spec_kit_pin.PINNED_VERSION}'
-SPEC_KIT_REF_PIN = f'SPEC_KIT_GIT_REF: {spec_kit_pin.PINNED_SOURCE} # v{spec_kit_pin.PINNED_VERSION}'
 PR_CHECKS_EVENTS_LITERAL = '[opened, reopened, synchronize, ready_for_review]'
 PR_CONCURRENCY_LINES = ('  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}', "  cancel-in-progress: ${{ github.event_name == 'pull_request' }}")
 UNIQUE_ARTIFACT_SUFFIX = '-${{ github.run_id }}-${{ github.run_attempt }}'
@@ -566,9 +566,11 @@ class ValidatePrChecksSentinel(unittest.TestCase):
             self.assertRegex(content, SETUP_PYTHON_PIN_RE)
             self.assertIn('3.13.14-27320626148', content)
             self.assertIn('PIPX_VERSION: "1.15.0"', content)
-            self.assertIn(SPEC_KIT_VERSION_PIN, content)
-            self.assertIn(SPEC_KIT_REF_PIN, content)
-            self.assertNotIn(f'spec-kit.git@v{spec_kit_pin.PINNED_VERSION}', content)
+            self.assertNotIn('SPEC_KIT_VERSION:', content)
+            self.assertNotIn('SPEC_KIT_GIT_REF:', content)
+            self.assertIn('from speckit_pro_runner import spec_kit_pin', dispatch_content)
+            self.assertIn('f"v{spec_kit_pin.PINNED_VERSION}"', dispatch_content)
+            self.assertIn('spec_kit_pin.PINNED_SOURCE', dispatch_content)
             for job_id in ('windows-x64-smoke', 'windows-arm64-smoke'):
                 block = _job_block(content, job_id)
                 self.assertRegex(block, SETUP_PYTHON_PIN_RE)
@@ -1264,7 +1266,13 @@ class ValidateSpecKitPin(unittest.TestCase):
     """The pinned Spec Kit source has one owner; no skill or agent names another."""
 
     def test_no_guidance_names_an_unpinned_spec_kit_source(self) -> None:
-        unpinned = re.compile(r'spec-kit\.git(?!@' + spec_kit_pin.PINNED_COMMIT + ')|uv tool install specify-cli')
+        sources = re.compile(
+            r'(?:git\+https?://github\.com/github/spec-kit|'
+            r'https?://github\.com/github/spec-kit(?:\.git|/archive/|/releases/download/)|'
+            r'https?://codeload\.github\.com/github/spec-kit/)'
+            r'[^\s`\'"<>)]*'
+        )
+        direct_install = re.compile(r'uv\s+tool\s+install\s+specify-cli')
         scanned = 0
         for tree in ('skills', 'codex-skills', 'agents', 'codex-agents'):
             for path in sorted((PLUGIN_ROOT / tree).rglob('*')):
@@ -1272,7 +1280,10 @@ class ValidateSpecKitPin(unittest.TestCase):
                     continue
                 scanned += 1
                 with self.subTest(path=path.relative_to(PLUGIN_ROOT).as_posix()):
-                    self.assertIsNone(unpinned.search(path.read_text(encoding='utf-8')))
+                    text = path.read_text(encoding='utf-8')
+                    self.assertIsNone(direct_install.search(text))
+                    for source in sources.findall(text):
+                        self.assertEqual(source, spec_kit_pin.PINNED_SOURCE)
         self.assertGreater(scanned, 0, 'the scan found no guidance files')
 
     def test_install_skills_take_the_pin_from_the_runner(self) -> None:
@@ -1281,6 +1292,36 @@ class ValidateSpecKitPin(unittest.TestCase):
                 text = (PLUGIN_ROOT / 'skills' / skill / 'SKILL.md').read_text(encoding='utf-8')
                 self.assertIn('install_argv', text)
                 self.assertIn('spec_kit', text)
+
+    def test_readme_install_command_matches_the_runner_pin(self) -> None:
+        text = (PLUGIN_ROOT / 'README.md').read_text(encoding='utf-8')
+        self.assertIn(shlex.join(spec_kit_pin.INSTALL_ARGV), text)
+
+    def test_dogfood_integrations_use_the_runner_pin(self) -> None:
+        for integration in ('speckit', 'claude', 'codex'):
+            with self.subTest(integration=integration):
+                path = REPO_ROOT / '.specify' / 'integrations' / f'{integration}.manifest.json'
+                self.assertEqual(json.loads(path.read_text(encoding='utf-8'))['version'], spec_kit_pin.PINNED_VERSION)
+
+    def test_pin_scan_rejects_mutated_skill_and_agent_sources(self) -> None:
+        sources = (
+            'git+https://github.com/github/spec-kit@main',
+            spec_kit_pin.PINNED_SOURCE + 'bad',
+            'https://github.com/github/spec-kit/archive/refs/heads/main.zip',
+            'https://codeload.github.com/github/spec-kit/zip/refs/heads/main',
+        )
+        for tree, suffix in (('skills', '.md'), ('agents', '.md'), ('codex-agents', '.toml')):
+            for source in sources:
+                with self.subTest(tree=tree, source=source), tempfile.TemporaryDirectory() as temporary:
+                    root = Path(temporary)
+                    for directory in ('skills', 'codex-skills', 'agents', 'codex-agents'):
+                        (root / directory).mkdir()
+                        (root / directory / 'safe.md').write_text('Read install_argv from the runner.\n', encoding='utf-8')
+                    (root / tree / f'fixture{suffix}').write_text(f'Install: pipx install {source}\n', encoding='utf-8')
+                    with patch.dict(globals(), PLUGIN_ROOT=root):
+                        result = unittest.TestResult()
+                        ValidateSpecKitPin('test_no_guidance_names_an_unpinned_spec_kit_source').run(result)
+                    self.assertTrue(result.failures, 'the structural scan accepted an unpinned source')
 
 # yaml_syntax_sane is shared by both workflow owners and regression tests.
 

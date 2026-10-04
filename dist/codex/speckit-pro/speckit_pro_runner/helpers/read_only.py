@@ -6231,8 +6231,7 @@ def find_specify() -> str | None:
         home = Path.home()
     except RuntimeError:
         return None
-    local = home / ".local" / "bin" / "specify"
-    return str(local) if local.is_file() else None
+    return shutil.which("specify", path=str(home / ".local" / "bin"))
 
 
 def spec_kit_cli_state(specify_path: str | None) -> tuple[list[dict[str, Any]], dict[str, Any]]:
@@ -6261,16 +6260,17 @@ def spec_kit_cli_state(specify_path: str | None) -> tuple[list[dict[str, Any]], 
 
 def installed_specify_version(specify_path: str) -> str | None:
     """The version `specify version` reports, or None when it cannot run or has no version row."""
-    # The executable stays a literal so the Bash-confinement guard can prove it Bash-free; the
-    # directory of the binary `find_specify` chose leads PATH, so the same binary answers.
-    search_path = os.pathsep.join([str(Path(specify_path).parent), os.environ.get("PATH", "")])
+    # Windows does not use the child's PATH to locate an executable. Resolve in
+    # the selected directory before launching, including user-local installs.
+    executable = shutil.which("specify", path=str(Path(specify_path).parent))
+    if executable is None:
+        return None
     try:
         result = subprocess.run(
-            ["specify", "version"], text=True, capture_output=True, shell=False,
+            [executable, "version"], text=True, encoding="utf-8", capture_output=True, shell=False,
             check=False, timeout=SUBPROCESS_TIMEOUT_SECONDS, stdin=subprocess.DEVNULL,
-            env={**os.environ, "PATH": search_path},
         )
-    except (OSError, subprocess.SubprocessError):
+    except (OSError, subprocess.SubprocessError, UnicodeError):
         return None
     return spec_kit_pin.parse_cli_version(result.stdout) if result.returncode == 0 else None
 
