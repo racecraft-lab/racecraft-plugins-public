@@ -476,8 +476,8 @@ class ModeTests(BrokerCase):
         observed: list[float] = []
         original = broker._start_call
 
-        def start() -> None:
-            original()
+        def start(run_id=None) -> None:
+            original(run_id)
             observed.append(broker._remaining())
 
         broker._start_call = start  # type: ignore[method-assign]
@@ -623,6 +623,56 @@ class ProviderRecoveryTests(BrokerCase):
         self.assertEqual(broker.research_search(query="timeouts")["status"], "ok")
         self.assertEqual(len(http.requests), 1)
 
+
+
+class ProviderRunTests(BrokerCase):
+    def test_new_workflow_is_fresh_and_resuming_failed_run_stays_cached(self) -> None:
+        for provider, tool in (("tavily", "research_search"), ("context7", "docs_query")):
+            with self.subTest(provider=provider):
+                http = default_http()
+                url = rb.TAVILY_SEARCH_URL if provider == "tavily" else rb.CONTEXT7_CONTEXT_URL
+                http.routes[url] = rb.HttpResult(429, b"")
+                broker = self.broker(self.env(TAVILY_API_KEY=TAVILY_VALUE), http=http)
+                arguments = {"query": "timeouts", "run_id": "workflow-a"}
+                if provider == "context7":
+                    arguments["library"] = "/psf/requests"
+                first = rb.call_tool(tool, arguments, broker)
+                self.assertEqual((first["reason"], len(first["decisions"])), ("rate_limited", 1))
+                http.routes[url] = default_http().routes[url]
+                fresh = rb.call_tool(tool, dict(arguments, run_id="workflow-b"), broker)
+                self.assertEqual((fresh["status"], fresh["decisions"]), ("ok", []))
+                resumed = rb.call_tool(tool, arguments, broker)
+                self.assertEqual((resumed["reason"], resumed["decisions"]), ("rate_limited", []))
+                self.assertEqual(len(http.requests), 2)
+                for request in http.requests:
+                    self.assertNotIn("workflow-", repr(request))
+                http.routes[url] = rb.HttpResult(429, b"")
+                second_run = rb.call_tool(tool, dict(arguments, run_id="workflow-b"), broker)
+                self.assertEqual(len(second_run["decisions"]), 1)
+                self.assertEqual(rb.call_tool(tool, dict(arguments, run_id="workflow-b"), broker)["decisions"], [])
+                self.assertEqual(len(http.requests), 3)
+
+    def test_invalid_run_id_fails_before_network(self) -> None:
+        http = default_http()
+        broker = self.broker(self.env(TAVILY_API_KEY=TAVILY_VALUE), http=http)
+        for run_id in ("", " ", 123, "r" * (rb.MAX_RUN_ID_CHARS + 1), None):
+            with self.subTest(run_id=run_id), self.assertRaises(rb.BrokerViolation):
+                rb.call_tool("research_search", {"query": "timeouts", "run_id": run_id}, broker)
+        self.assertEqual(http.requests, [])
+
+    def test_fetch_retry_seam_never_calls_a_tripped_provider(self) -> None:
+        for provider in ("tavily", "context7"):
+            for failure, reason in ((rb.HttpResult(429, b""), "rate_limited"),
+                                    (rb.HttpResult(503, b""), "http_error"),
+                                    (rb.FetchFailed("timeout"), "timeout")):
+                with self.subTest(provider=provider, reason=reason):
+                    url = rb.TAVILY_SEARCH_URL if provider == "tavily" else rb.CONTEXT7_CONTEXT_URL
+                    http = FakeHttp({url: failure}) if isinstance(failure, rb.HttpResult) else FakeHttp(raises=failure)
+                    broker = self.broker(http=http)
+                    for _ in range(2):
+                        with self.assertRaisesRegex(rb.FetchFailed, reason):
+                            rb._json_body(broker._fetch("GET", url, {}, None))
+                    self.assertEqual(len(http.requests), 1)
 
 
 class ProviderTests(BrokerCase):
@@ -898,6 +948,7 @@ if __name__ == "__main__":
             loader.loadTestsFromTestCase(ProviderBreakerTests),
             loader.loadTestsFromTestCase(ProviderDecisionTests),
             loader.loadTestsFromTestCase(ProviderRecoveryTests),
+            loader.loadTestsFromTestCase(ProviderRunTests),
             loader.loadTestsFromTestCase(ProviderTests),
             loader.loadTestsFromTestCase(RedactionAndProtocolTests),
             loader.loadTestsFromTestCase(RealProcessTests),

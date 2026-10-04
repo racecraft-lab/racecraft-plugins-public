@@ -73,6 +73,10 @@ other search-result text reaches the agent. Each code or info snippet becomes
 one chunk.
 
 Both `library` and `query` pass the outbound checks.
+Both tools accept optional `run_id` (1 to 128 characters after trimming).
+The orchestrator supplies the execution-control `result.data.ledger.run_id` on
+every research-agent dispatch; agents pass it on every broker call. It stays
+local and is never sent to research providers or included in returned records.
 
 ## Response envelope
 
@@ -106,8 +110,8 @@ record to the workflow's decisions list once per stable `id`.
 
 ## Provider circuit breaker
 
-The broker owns one breaker per research provider for its process lifetime
-(one `ResearchBroker` instance in tests). A new broker starts with both closed.
+The broker owns one breaker per research provider and workflow `run_id`.
+A new run starts with both closed; resuming an earlier run preserves its state.
 The first `rate_limited` reply (HTTP 429, or Tavily's existing 432/433 mapping),
 HTTP 5xx, or transport `network_error`/`timeout` opens that provider's breaker.
 Later tool calls return the same failure status, reason, message, screening
@@ -120,8 +124,8 @@ send another request after a trip. The provider retry work in #1119 must use
 that boundary. Authentication rejections remain eligible for its keyless
 Context7 retry. Request errors, invalid responses, unknown libraries, missing
 credentials, Jev failures, and a tool budget exhausted before fetch do not
-mark a provider down. There is no disk state or reset within a broker process;
-a new workflow reusing that process inherits its breakers.
+mark a provider down. State is in memory, so restarting the broker clears it.
+Legacy callers omitting `run_id` share the broker's default process scope.
 
 HTTP meanings are grounded in [Tavily's error guide](https://help.tavily.com/articles/8645538886-understanding-http-errors)
 and [Context7's API guide](https://github.com/upstash/context7/blob/master/docs/api-guide.mdx).
