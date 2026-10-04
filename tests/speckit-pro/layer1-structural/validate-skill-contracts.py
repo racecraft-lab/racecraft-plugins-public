@@ -293,7 +293,7 @@ class ValidateSkills(unittest.TestCase):
                     self.assertIn('retry the push from that same existing worktree', normalized)
                     self.assertIn('Do not recreate the branch or worktree, regenerate the workflow, or replace the existing commit', normalized)
                 with self.subTest(msg='speckit-scaffold-spec: reviewability setup gate is scoped to the SPEC-ID'):
-                    self.assertIn('Run runner helper reviewability-gate in setup mode for <technical-roadmap-path> with spec_id <SPEC-ID>.', normalized)
+                    self.assertIn('Run runner helper reviewability-gate with the request fields above. Set `target` to the repository-relative technical roadmap path and `spec_id` to the requested SPEC-ID.', normalized)
                 with self.subTest(msg='speckit-scaffold-spec: resolver ordering gates mutation and interview'):
                     self.assertIn('the first resolver result comes before `git worktree add`, artifact writes, or roadmap mutation', normalized)
                     self.assertIn('A second resolver check then runs after creation or reuse and immediately before bootstrap or Grill Me', normalized)
@@ -370,7 +370,7 @@ class ValidateCodexSkills(unittest.TestCase):
                 with self.subTest(msg='speckit-scaffold-spec: blind-spot custom agent uses an isolated fork'):
                     self.assertTrue('`agent_type: "codebase-analyst"`' in dispatch_section and '`fork_turns: "none"`' in dispatch_section and ('`fork_turns: "all"`' in dispatch_section) and ('self-contained' in dispatch_section), 'expected blind-spot dispatch to select codebase-analyst with an explicit isolated fork')
                 with self.subTest(msg='speckit-scaffold-spec: Codex reviewability setup gate is scoped to the SPEC-ID'):
-                    self.assertIn('Run runner helper reviewability-gate in setup mode for <technical-roadmap-path> with spec_id <SPEC-ID>.', ' '.join(content.split()))
+                    self.assertIn('Run runner helper reviewability-gate with the request fields above. Set `target` to the repository-relative technical roadmap path and `spec_id` to the requested SPEC-ID.', ' '.join(content.split()))
                 with self.subTest(msg='speckit-scaffold-spec: placement is task-root-bound before mutation'):
                     self.assertTrue('resolve-scaffold-worktree-placement' in content and 'Before `git worktree add` or any artifact or roadmap write' in content and ('`TASK_ROOT/.worktrees/<branch-name>`' in content) and ('Never derive worktree placement from' in content) and ('`git rev-parse --git-common-dir`' in content) and ('the primary checkout, or the first' in content) and ('`placement_status=resolved`' in content) and ('`relation=same` or `relation=descendant`' in content), 'expected scaffold to resolve task-root placement before any mutation')
                 with self.subTest(msg='speckit-scaffold-spec: placement is revalidated before bootstrap'):
@@ -1121,6 +1121,38 @@ class ValidateScaffoldBlindSpotDeadline(unittest.TestCase):
                 self.assertRegex(section, r'record `did not run` with reason `wait deadline expired`')
 
 class ValidateScaffoldRoadmapFreshness(unittest.TestCase):
+
+    def test_scaffold_names_exact_helper_inputs_on_each_host(self) -> None:
+        # ADR 0008: guessed mode/setup keys caused a real scaffold failure.
+        expected_inputs = {
+            'reviewability-gate': {'mode_name': 'setup', 'target': '<technical-roadmap-path>', 'spec_id': '<SPEC-ID>'},
+            'check-prerequisites': {'workflow_file': '<workflow-file>'},
+            'check-roadmap-freshness': {'roadmap_path': '<technical-roadmap-path>'},
+            'detect-commands': {},
+            'research-broker-preflight': {},
+        }
+        for host, view in (('claude', CLAUDE_VIEW), ('codex', CODEX_VIEW)):
+            skill = (view / 'speckit-scaffold-spec' / 'SKILL.md').read_text(encoding='utf-8')
+            for helper, inputs in expected_inputs.items():
+                with self.subTest(host=host, helper=helper):
+                    rows = re.findall(r'\| `' + re.escape(helper) + r'` \| `read_only` \| `(\{[^\n]*\})` \|', skill)
+                    self.assertEqual(1, len(rows), f'{helper}: expected one explicit request-input example')
+                    self.assertEqual(inputs, json.loads(rows[0]))
+            if host == 'codex':
+                section = skill.split('### -0.5 Verify Codex Agent Install', 1)[1].split('\n### ', 1)[0]
+                examples = [json.loads(block) for block in re.findall(r'```json\n(.*?)\n```', section, re.DOTALL)]
+                self.assertEqual(2, len(examples), 'verification must document static and routed request fields')
+                for example, keys in zip(examples, (
+                    {'destination', 'model', 'luna_fallback'},
+                    {'destination', 'route_policy_manifest', 'strict_model_override'},
+                ), strict=True):
+                    with self.subTest(host=host, helper='install-codex-agents', keys=keys):
+                        self.assertEqual({'mode', 'inputs'}, set(example))
+                        self.assertEqual('dry_run', example['mode'])
+                        self.assertEqual(keys, set(example['inputs']))
+                self.assertIn('Replay the selected installation inputs', section)
+                self.assertIn('Omit optional fields that were absent from the selected installation', section)
+                self.assertNotIn('routing_mode', skill)
 
     def test_scaffold_checks_roadmap_freshness_before_parsing_on_each_host(self) -> None:
         # A stale checkout once fed scaffold an old roadmap entry: each host must

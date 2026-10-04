@@ -1,6 +1,6 @@
 interface:
   display_name: "SpecKit Scaffold Spec"
-  short_description: "Scaffold interactively or from an answers file"
+  short_description: "Scaffold with exact runner helper inputs"
   default_prompt: "Scaffold a SPEC-ID from the technical roadmap for SpecKit autopilot"
 
 policy:
