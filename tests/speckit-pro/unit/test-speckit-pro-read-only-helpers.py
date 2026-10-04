@@ -4969,32 +4969,6 @@ class CanaryPlanTargetTests(CanaryVariantCase):
                 variant["plan_target"]["target_met"] = True
                 self.assertIn("base.plan_target", self.validator.validate_receipt(value))
 
-    def test_target_fields_fail_closed_when_missing_malformed_or_changed(self):
-        for host, original in self.receipts.items():
-            for field, bad in (("wall_seconds_limit", 1801), ("tokens_limit", 15000001),
-                               ("target_met", "false"), ("unexpected", True)):
-                for remove in (False, True):
-                    value = copy.deepcopy(original)
-                    target = value["variants"][0]["plan_target"]
-                    if remove:
-                        target.pop(field, None)
-                        if field == "unexpected":
-                            continue
-                    else:
-                        target[field] = bad
-                    with self.subTest(host=host, field=field, remove=remove):
-                        self.assertTrue(self.validator.validate_receipt(value))
-
-    def test_only_the_base_variant_reports_the_target(self):
-        for host, value in self.receipts.items():
-            variant = value["variants"][0]
-            variant.update(name="oversized_plan", **self.variant_evidence["oversized_plan"])
-            del variant["plan_target"]
-            with self.subTest(host=host):
-                report = self.validator.receipt_report(value)
-                self.assertTrue(report["valid"], report)
-                self.assertNotIn("plan_target", report["variants"][0])
-
     def test_cli_reports_an_over_target_receipt_as_valid_for_both_hosts(self):
         for host, value in self.receipts.items():
             value["variants"][0]["stages"]["plan"]["wall_seconds"] = 1801
@@ -5008,6 +4982,32 @@ class CanaryPlanTargetTests(CanaryVariantCase):
                 self.assertEqual(0, completed.returncode, report)
                 self.assertEqual("pass", report["variants"][0]["gate_verdict"])
                 self.assertFalse(report["variants"][0]["plan_target"]["target_met"])
+
+
+class CanaryPlanTargetContractTests(CanaryVariantCase):
+    def test_target_fields_fail_closed_when_missing_malformed_or_changed(self):
+        for host, original in self.receipts.items():
+            for field, bad in (("wall_seconds_limit", 1801), ("tokens_limit", 15000001),
+                               ("target_met", "false"), ("unexpected", True)):
+                value = copy.deepcopy(original)
+                value["variants"][0]["plan_target"][field] = bad
+                with self.subTest(host=host, field=field):
+                    self.assertTrue(self.validator.validate_receipt(value))
+            for field in ("wall_seconds_limit", "tokens_limit", "target_met"):
+                value = copy.deepcopy(original)
+                del value["variants"][0]["plan_target"][field]
+                with self.subTest(host=host, missing=field):
+                    self.assertTrue(self.validator.validate_receipt(value))
+
+    def test_only_the_base_variant_reports_the_target(self):
+        for host, value in self.receipts.items():
+            variant = value["variants"][0]
+            variant.update(name="oversized_plan", **self.variant_evidence["oversized_plan"])
+            del variant["plan_target"]
+            with self.subTest(host=host):
+                report = self.validator.receipt_report(value)
+                self.assertTrue(report["valid"], report)
+                self.assertNotIn("plan_target", report["variants"][0])
 
 
 class CanaryCodexTokenTests(CanaryVariantCase):
@@ -5175,7 +5175,8 @@ def main() -> int:
                                             PacketTitlePatternTests, ScaffoldAnswersTests, CanaryReceiptTests,
                                             CanaryVariantAssertionsTests, CanaryVariantContractTests,
                                             CanaryGateVerdictTests, CanaryGuardGapContractTests,
-                                            CanaryPlanTargetTests, CanaryCodexTokenTests, CanaryBudgetTests, CanaryBudgetFileTests))
+                                            CanaryPlanTargetTests, CanaryPlanTargetContractTests, CanaryCodexTokenTests,
+                                            CanaryBudgetTests, CanaryBudgetFileTests))
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     total = result.testsRun
     failed = len(result.failures) + len(result.errors)
