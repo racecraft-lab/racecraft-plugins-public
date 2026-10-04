@@ -629,6 +629,63 @@ class Chunk:
     code: str = ""
 
 
+class _ProviderBreaker:
+    """Provider failure state; fresh for each broker instance."""
+
+    def __init__(self) -> None:
+        self._failures: dict[str, str] = {}
+        self._decisions: list[dict[str, str]] = []
+
+    def fetch(self, http: HttpClient, method: str, url: str, headers: dict[str, str], body: bytes | None, timeout: float) -> HttpResult:
+        provider = "tavily" if url == TAVILY_SEARCH_URL else "context7"
+        if provider in self._failures:
+            raise FetchFailed(self._failures[provider])
+        try:
+            result = http(method, url, headers, body, timeout)
+        except FetchFailed as exc:
+            if str(exc) in ("network_error", "timeout"):
+                self._trip_provider(provider, str(exc))
+            raise
+        code = _status_code(result.status)
+        if code == "rate_limited" or 500 <= result.status < 600:
+            self._trip_provider(provider, code or "http_error")
+        return result
+
+    def _trip_provider(self, provider: str, reason: str) -> None:
+        if provider not in self._failures:
+            self._failures[provider] = reason
+            self._decisions.append({
+                "id": f"research-provider:{provider}", "provider": provider, "reason": reason,
+                "decision": f"Skip {provider} for the rest of this broker run.",
+                "alternative": "Retry the failed provider.",
+            })
+
+    def failure(self, provider: str) -> dict[str, Any] | None:
+        reason = self._failures.get(provider)
+        if reason is None:
+            return None
+        return {"status": "fetch_failed", "reason": reason, "message": _fetch_message(reason)}
+
+    def decisions(self) -> list[dict[str, str]]:
+        decisions, self._decisions = self._decisions, []
+        return decisions
+
+
+def _resolve_context7_library(
+    fetch: Callable[[str, str, dict[str, str], bytes | None], HttpResult],
+    library: str, query: str, headers: dict[str, str],
+) -> str:
+    params = urllib.parse.urlencode({"libraryName": library, "query": query})
+    document = _json_body(fetch("GET", f"{CONTEXT7_SEARCH_URL}?{params}", headers, None))
+    results = document.get("results") if isinstance(document, dict) else None
+    if isinstance(results, list):
+        for item in results:
+            candidate = item.get("id") if isinstance(item, dict) else None
+            if isinstance(candidate, str) and LIBRARY_ID_RE.fullmatch(candidate):
+                return candidate
+    raise FetchFailed("library_not_found")
+
+
 class ResearchBroker:
     def __init__(
         self,
@@ -654,8 +711,7 @@ class ResearchBroker:
         else:
             self._root = root
         self._jev: dict[str, Any] | None = None
-        self._provider_failures: dict[str, str] = {}
-        self._provider_decisions: list[dict[str, str]] = []
+        self._providers = _ProviderBreaker()
         self._deadline = time.monotonic() + TOOL_BUDGET_SECONDS
 
     # -- time budget ----------------------------------------------------------
@@ -667,37 +723,10 @@ class ResearchBroker:
         return self._deadline - time.monotonic()
 
     def _fetch(self, method: str, url: str, headers: dict[str, str], body: bytes | None) -> HttpResult:
-        provider = "tavily" if url == TAVILY_SEARCH_URL else "context7"
-        if provider in self._provider_failures:
-            raise FetchFailed(self._provider_failures[provider])
         remaining = self._remaining()
         if remaining <= 1.0:
             raise FetchFailed("timeout")
-        try:
-            result = self.http(method, url, headers, body, min(HTTP_TIMEOUT_SECONDS, remaining))
-        except FetchFailed as exc:
-            if str(exc) in ("network_error", "timeout"):
-                self._trip_provider(provider, str(exc))
-            raise
-        code = _status_code(result.status)
-        if code == "rate_limited" or 500 <= result.status < 600:
-            self._trip_provider(provider, code or "http_error")
-        return result
-
-    def _trip_provider(self, provider: str, reason: str) -> None:
-        if provider not in self._provider_failures:
-            self._provider_failures[provider] = reason
-            self._provider_decisions.append({
-                "id": f"research-provider:{provider}", "provider": provider, "reason": reason,
-                "decision": f"Skip {provider} for the rest of this broker run.",
-                "alternative": "Retry the failed provider.",
-            })
-
-    def _provider_failure(self, tool: str, provider: str) -> dict[str, Any] | None:
-        reason = self._provider_failures.get(provider)
-        if reason is None:
-            return None
-        return self._envelope(tool, "fetch_failed", reason=reason, message=_fetch_message(reason))
+        return self._providers.fetch(self.http, method, url, headers, body, min(HTTP_TIMEOUT_SECONDS, remaining))
 
     # -- mode -----------------------------------------------------------------
 
@@ -720,10 +749,9 @@ class ResearchBroker:
             "policy": self.policy_name,
             "chunks": [],
             "dropped": [],
-            "decisions": self._provider_decisions,
+            "decisions": self._providers.decisions(),
             "notice": NOTICE,
         }
-        self._provider_decisions = []
         envelope.update(extra)
         return envelope
 
@@ -885,9 +913,9 @@ class ResearchBroker:
         self._start_call()
         query = _text_argument(query, "query", MAX_QUERY_INPUT_CHARS)
         max_results = _int_argument(max_results, "max_results", 1, 10)
-        failed = self._provider_failure(tool, "tavily")
+        failed = self._providers.failure("tavily")
         if failed is not None:
-            return failed
+            return self._envelope(tool, **failed)
         blocked = self._outbound(tool, [query])
         if blocked is not None:
             return blocked
@@ -937,9 +965,9 @@ class ResearchBroker:
         library = _text_argument(library, "library", MAX_LIBRARY_CHARS)
         query = _text_argument(query, "query", MAX_QUERY_INPUT_CHARS)
         max_chunks = _int_argument(max_chunks, "max_chunks", 1, 10)
-        failed = self._provider_failure(tool, "context7")
+        failed = self._providers.failure("context7")
         if failed is not None:
-            return failed
+            return self._envelope(tool, **failed)
         blocked = self._outbound(tool, [library, query])
         if blocked is not None:
             return blocked
@@ -951,7 +979,7 @@ class ResearchBroker:
             ))
         headers = {"Authorization": f"Bearer {key}"} if key else {}
         try:
-            library_id = library if LIBRARY_ID_RE.fullmatch(library) else self._resolve_library(library, query, headers)
+            library_id = library if LIBRARY_ID_RE.fullmatch(library) else _resolve_context7_library(self._fetch, library, query, headers)
             params = urllib.parse.urlencode({"libraryId": library_id, "query": query, "type": "json"})
             document = _json_body(self._fetch("GET", f"{CONTEXT7_CONTEXT_URL}?{params}", headers, None))
             if not isinstance(document, dict):
@@ -960,16 +988,6 @@ class ResearchBroker:
             return self._envelope(tool, "fetch_failed", reason=str(exc), message=_fetch_message(str(exc)))
         return self._screen(tool, context7_chunks(document)[:max_chunks])
 
-    def _resolve_library(self, library: str, query: str, headers: dict[str, str]) -> str:
-        params = urllib.parse.urlencode({"libraryName": library, "query": query})
-        document = _json_body(self._fetch("GET", f"{CONTEXT7_SEARCH_URL}?{params}", headers, None))
-        results = document.get("results") if isinstance(document, dict) else None
-        if isinstance(results, list):
-            for item in results:
-                candidate = item.get("id") if isinstance(item, dict) else None
-                if isinstance(candidate, str) and LIBRARY_ID_RE.fullmatch(candidate):
-                    return candidate
-        raise FetchFailed("library_not_found")
 
 
 def context7_chunks(document: Mapping[str, Any]) -> list[Chunk]:

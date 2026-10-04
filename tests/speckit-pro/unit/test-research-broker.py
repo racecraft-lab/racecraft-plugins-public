@@ -517,7 +517,7 @@ class ModeTests(BrokerCase):
         self.assertIn("truncated", result["chunks"][0]["screening"]["flags"])
 
 
-class ProviderTests(BrokerCase):
+class ProviderBreakerTests(BrokerCase):
     def test_unavailable_provider_is_not_called_again(self) -> None:
         failures = [(rb.HttpResult(500, b""), "http_error"), (rb.HttpResult(503, b""), "http_error"),
                     (rb.FetchFailed("network_error"), "network_error"), (rb.FetchFailed("timeout"), "timeout")]
@@ -537,6 +537,7 @@ class ProviderTests(BrokerCase):
                     self.assertEqual({k: v for k, v in second.items() if k != "decisions"},
                                      {k: v for k, v in first.items() if k != "decisions"})
                     self.assertEqual(len(http.requests), 1)
+
 
     def test_failed_provider_is_not_called_again_and_other_provider_still_works(self) -> None:
         for manifest in (".mcp.json", ".codex-plugin/sweep-mcp.json"):
@@ -563,6 +564,9 @@ class ProviderTests(BrokerCase):
                     self.assertTrue(other["chunks"])
                     self.assertEqual(len(http.requests), 3 if provider == "tavily" else 2)
 
+
+
+class ProviderDecisionTests(BrokerCase):
     def test_breaker_reports_one_decision_and_skips_later_screening(self) -> None:
         self.jev_ready()
         jev = FakeJev()
@@ -581,22 +585,6 @@ class ProviderTests(BrokerCase):
         self.assertEqual(len(jev.calls), calls)
         self.assertEqual(len(http.requests), 1)
 
-    def test_request_errors_and_local_budget_exhaustion_do_not_trip_provider(self) -> None:
-        for status in (400, 401, 403, 404, 302):
-            with self.subTest(status=status):
-                http = FakeHttp({rb.TAVILY_SEARCH_URL: rb.HttpResult(status, b"")})
-                broker = self.broker(self.env(TAVILY_API_KEY=TAVILY_VALUE), http=http)
-                failure = broker.research_search(query="timeouts")
-                self.assertEqual(failure.get("decisions"), [])
-                http.routes[rb.TAVILY_SEARCH_URL] = rb.HttpResult(200, TAVILY_RESPONSE)
-                self.assertEqual(broker.research_search(query="timeouts")["status"], "ok")
-                self.assertEqual(len(http.requests), 2)
-        http = default_http()
-        broker = self.broker(self.env(TAVILY_API_KEY=TAVILY_VALUE), http=http)
-        with unittest.mock.patch.object(rb, "TOOL_BUDGET_SECONDS", 0.5):
-            self.assertEqual(broker.research_search(query="timeouts")["reason"], "timeout")
-        self.assertEqual(broker.research_search(query="timeouts")["status"], "ok")
-        self.assertEqual(len(http.requests), 1)
 
     def test_each_provider_reports_once_and_a_new_broker_starts_fresh(self) -> None:
         http = default_http()
@@ -615,6 +603,29 @@ class ProviderTests(BrokerCase):
         self.assertEqual(fresh.research_search(query="timeouts")["status"], "ok")
         self.assertEqual(fresh.docs_query(library="/psf/requests", query="timeout")["status"], "ok")
 
+
+
+class ProviderRecoveryTests(BrokerCase):
+    def test_request_errors_and_local_budget_exhaustion_do_not_trip_provider(self) -> None:
+        for status in (400, 401, 403, 404, 302):
+            with self.subTest(status=status):
+                http = FakeHttp({rb.TAVILY_SEARCH_URL: rb.HttpResult(status, b"")})
+                broker = self.broker(self.env(TAVILY_API_KEY=TAVILY_VALUE), http=http)
+                failure = broker.research_search(query="timeouts")
+                self.assertEqual(failure.get("decisions"), [])
+                http.routes[rb.TAVILY_SEARCH_URL] = rb.HttpResult(200, TAVILY_RESPONSE)
+                self.assertEqual(broker.research_search(query="timeouts")["status"], "ok")
+                self.assertEqual(len(http.requests), 2)
+        http = default_http()
+        broker = self.broker(self.env(TAVILY_API_KEY=TAVILY_VALUE), http=http)
+        with unittest.mock.patch.object(rb, "TOOL_BUDGET_SECONDS", 0.5):
+            self.assertEqual(broker.research_search(query="timeouts")["reason"], "timeout")
+        self.assertEqual(broker.research_search(query="timeouts")["status"], "ok")
+        self.assertEqual(len(http.requests), 1)
+
+
+
+class ProviderTests(BrokerCase):
     def test_no_tavily_key_returns_search_unavailable_and_docs_still_work_keyless(self) -> None:
         http = default_http()
         broker = self.broker(http=http)
@@ -884,6 +895,9 @@ if __name__ == "__main__":
             loader.loadTestsFromTestCase(OutboundTests),
             loader.loadTestsFromTestCase(RoutingTests),
             loader.loadTestsFromTestCase(ModeTests),
+            loader.loadTestsFromTestCase(ProviderBreakerTests),
+            loader.loadTestsFromTestCase(ProviderDecisionTests),
+            loader.loadTestsFromTestCase(ProviderRecoveryTests),
             loader.loadTestsFromTestCase(ProviderTests),
             loader.loadTestsFromTestCase(RedactionAndProtocolTests),
             loader.loadTestsFromTestCase(RealProcessTests),
