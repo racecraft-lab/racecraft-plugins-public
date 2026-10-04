@@ -11,10 +11,7 @@ from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-
-def shell_compatible_status(returncode: int) -> int:
-    """Convert subprocess signal return codes to conventional shell statuses."""
-    return 128 + abs(returncode) if returncode < 0 else returncode or 1
+from process_status import shell_compatible_status
 
 
 def run_runner_requests(
