@@ -4735,7 +4735,7 @@ class ScaffoldAnswersTests(unittest.TestCase):
 def receipt():
     return {
         "schema_version": "canary-receipt/v2", "commit": "a" * 40, "host": "codex",
-        "host_version": "0.1.0", "plugin_version": "1.0.0", "fixture_tag": "v1",
+        "host_version": "0.1.0", "plugin_version": "1.0.0", "fixture_tag": "fixture-v5",
         "trigger": "local", "dirty_tree": True, "release_status_allowed": False,
         "install_probe": {"headless_install": "passed", "skill_expansion": "passed", "evidence": "probe.json"},
         "variants": [{
@@ -4749,6 +4749,7 @@ def receipt():
                 "phases_run": ["specify", "clarify", "plan", "checklist", "tasks", "analyze"], "clarify_sessions": 1,
                 "requirements_total": 4, "untraced_requirements": [], "open_gaps": [], "open_findings": [],
                 "open_clarifications": [], "blocked_for_uat_listed": [],
+                "planted_catches": {"catch-1": "fixed", "catch-2": "fixed", "catch-3": "fixed"},
                 "decisions": {"total": 5, "low_confidence": 1, "consensus_rounds_by_kind": {"security": 1, "low_confidence": 1}},
             },
             "stages": {name: {"wall_seconds": 1, "tokens": 10, "codex_tokens": {"root_tokens": 10, "child_rollout_tokens": []}} for name in ("scaffold", "plan", "plan_review", "implement")},
@@ -5403,6 +5404,66 @@ class CanaryHookCounterTests(CanaryVariantCase):
                 self.assertEqual(expected, completed.returncode, completed.stdout)
 
 
+class CanaryPlantedCatchTests(CanaryVariantCase):
+    """ADR 0023: the base receipt asserts the plan fixed each planted catch, read against the pinned fixture tag."""
+
+    def catches(self, value):
+        return value["variants"][0]["plan_quality"]["planted_catches"]
+
+    def test_every_catch_fixed_passes_for_both_hosts(self):
+        for host, value in self.receipts.items():
+            with self.subTest(host=host):
+                self.assertEqual([], self.validator.validate_receipt(value))
+
+    def test_a_catch_left_in_place_fails_the_receipt(self):
+        for host, value in self.receipts.items():
+            for catch in self.validator.PLANTED_CATCH_IDS:
+                mutated = copy.deepcopy(value)
+                self.catches(mutated)[catch] = "left_in_place"
+                with self.subTest(host=host, catch=catch):
+                    self.assertEqual([f"base.plan_quality.planted_catches.{catch}"],
+                                     self.validator.validate_receipt(mutated))
+
+    def test_a_missing_or_unknown_catch_record_fails_closed(self):
+        for host, value in self.receipts.items():
+            missing = copy.deepcopy(value)
+            del self.catches(missing)["catch-2"]
+            unknown = copy.deepcopy(value)
+            self.catches(unknown)["catch-9"] = "fixed"
+            absent = copy.deepcopy(value)
+            del absent["variants"][0]["plan_quality"]["planted_catches"]
+            with self.subTest(host=host, case="missing"):
+                self.assertEqual(["base.plan_quality.planted_catches.catch-2"], self.validator.validate_receipt(missing))
+            with self.subTest(host=host, case="unknown"):
+                self.assertEqual(["base.plan_quality.planted_catches.catch-9"], self.validator.validate_receipt(unknown))
+            with self.subTest(host=host, case="absent"):
+                self.assertEqual(["base.plan_quality.planted_catches"], self.validator.validate_receipt(absent))
+
+    def test_an_unrecognised_status_fails_schema_validation(self):
+        for host, value in self.receipts.items():
+            self.catches(value)["catch-1"] = "maybe"
+            with self.subTest(host=host):
+                self.assertTrue(any("planted_catches" in failure for failure in self.validator.validate_receipt(value)))
+
+    def test_a_release_receipt_must_name_the_pinned_fixture_tag(self):
+        self.assertEqual("fixture-v5", self.validator.FIXTURE_TAG)
+        for host, value in self.receipts.items():
+            value.update(trigger="scheduled", dirty_tree=False, release_status_allowed=True)
+            with self.subTest(host=host, tag="pinned"):
+                self.assertNotIn("release.fixture_tag", self.validator.validate_receipt(value, hook_counters=hook_counters()))
+            value["fixture_tag"] = "fixture-v4"
+            with self.subTest(host=host, tag="older"):
+                self.assertIn("release.fixture_tag", self.validator.validate_receipt(value, hook_counters=hook_counters()))
+            value.update(trigger="local", dirty_tree=True, release_status_allowed=False)
+            with self.subTest(host=host, tag="local"):
+                self.assertEqual([], self.validator.validate_receipt(value))
+
+    def test_the_budget_note_names_the_tag_and_the_lock_ticket(self):
+        policy = json.loads(self.validator.BUDGET_FILE.read_text(encoding="utf-8"))["policy"]
+        self.assertIn(self.validator.FIXTURE_TAG, policy)
+        self.assertIn("#1199", policy)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--helper", choices=EXPECTED_HELPERS)
@@ -5414,7 +5475,7 @@ def main() -> int:
                                             CanaryVariantAssertionsTests, CanaryVariantContractTests,
                                             CanaryGateVerdictTests, CanaryGuardGapContractTests,
                                             CanaryPlanTargetTests, CanaryPlanTargetContractTests, CanaryCodexTokenTests,
-                                            CanaryPlanQualityTests, CanaryHookCounterTests, CanaryBudgetTests, CanaryBudgetFileTests))
+                                            CanaryPlanQualityTests, CanaryPlantedCatchTests, CanaryHookCounterTests, CanaryBudgetTests, CanaryBudgetFileTests))
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     total = result.testsRun
     failed = len(result.failures) + len(result.errors)

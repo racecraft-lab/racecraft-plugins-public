@@ -21,6 +21,8 @@ METRICS = ("wall_seconds", "tokens")
 PLANNING_PHASES = frozenset(SCHEMA["$defs"]["plan_quality"]["properties"]["phases_run"]["items"]["enum"])  # ADR 0021
 HOOK_EVENTS = ("after_specify", "after_plan", "after_tasks")  # the phases the fixture registers its hooks on
 HOOK_KINDS = ("mandatory", "optional")
+FIXTURE_TAG = "fixture-v5"  # the fixture tag every release receipt reads against; a new tag re-baselines the budget (ADR 0016)
+PLANTED_CATCH_IDS = ("catch-1", "catch-2", "catch-3")  # opaque ids only; ADR 0023 keeps the catches themselves out of public text
 MISSING_HOOK_COUNTERS = object()
 
 
@@ -112,7 +114,17 @@ def plan_quality_failures(variant):
                          ("open_clarifications", "open_clarification")):
         if not listed.issuperset(quality[field]):
             failures.append(f"{name}.plan_quality.{label}")
+    if name == "base":
+        failures.extend(planted_catch_failures(quality.get("planted_catches")))
     return failures
+
+
+def planted_catch_failures(catches):
+    """ADR 0023: the base plan must have fixed every planted catch; a missing or unknown record fails closed."""
+    if catches is None:
+        return ["base.plan_quality.planted_catches"]
+    return [f"base.plan_quality.planted_catches.{catch}" for catch in sorted(set(PLANTED_CATCH_IDS) | set(catches))
+            if catches.get(catch) != "fixed" or catch not in PLANTED_CATCH_IDS]
 
 
 def receipt_report(value, budget=None, hook_counters=MISSING_HOOK_COUNTERS):
@@ -124,6 +136,8 @@ def receipt_report(value, budget=None, hook_counters=MISSING_HOOK_COUNTERS):
         problems.append("local.release_status_allowed")
     if value["trigger"] != "local" and sorted(variant["name"] for variant in value["variants"]) != sorted(VARIANTS):
         problems.append("release.variants")
+    if value["trigger"] != "local" and value["fixture_tag"] != FIXTURE_TAG:
+        problems.append("release.fixture_tag")
     probe = value["install_probe"]
     if value["host"] == "codex":
         for key in ("headless_install", "skill_expansion"):

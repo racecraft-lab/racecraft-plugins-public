@@ -52,7 +52,7 @@
         "target_met": {"type": "boolean"}}
     },
     "plan_quality": {
-      "description": "ADR 0023 artifact checks at the end of planning; an open gap, finding or clarification passes only when it is in blocked_for_uat_listed, and the list cannot exceed the variant's blocked_for_uat count. Open items and blocked_for_uat_listed entries use the same item id: a repository-relative artifact location path:Lnn (for example spec.md:L24) or an analyze finding id (for example F001), never a blocked task or gate id. Untraced requirements have no exemption. requirements_total is at least 1; a variant that never reached Specify fails rather than reporting an empty plan as passing.",
+      "description": "ADR 0023 artifact checks at the end of planning; an open gap, finding or clarification passes only when it is in blocked_for_uat_listed, and the list cannot exceed the variant's blocked_for_uat count. Open items and blocked_for_uat_listed entries use the same item id: a repository-relative artifact location path:Lnn (for example spec.md:L24) or an analyze finding id (for example F001), never a blocked task or gate id. Untraced requirements have no exemption. The base variant also records planted_catches: one opaque id per planted catch, each fixed or left_in_place (the validator holds the id list). requirements_total is at least 1; a variant that never reached Specify fails rather than reporting an empty plan as passing.",
       "type": "object", "additionalProperties": false,
       "required": ["phases_run", "clarify_sessions", "requirements_total", "untraced_requirements", "open_gaps", "open_findings", "open_clarifications", "blocked_for_uat_listed", "decisions"],
       "properties": {
@@ -61,6 +61,7 @@
         "untraced_requirements": {"$ref": "#/$defs/ids"}, "open_gaps": {"$ref": "#/$defs/ids"},
         "open_findings": {"$ref": "#/$defs/ids"}, "open_clarifications": {"$ref": "#/$defs/ids"},
         "blocked_for_uat_listed": {"$ref": "#/$defs/ids"},
+        "planted_catches": {"type": "object", "additionalProperties": {"enum": ["fixed", "left_in_place"]}},
         "decisions": {"type": "object", "additionalProperties": false, "required": ["total", "low_confidence", "consensus_rounds_by_kind"],
           "properties": {"total": {"$ref": "#/$defs/count"}, "low_confidence": {"$ref": "#/$defs/count"},
             "consensus_rounds_by_kind": {"type": "object", "additionalProperties": {"$ref": "#/$defs/count"}}}}
