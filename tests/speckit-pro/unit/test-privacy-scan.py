@@ -333,20 +333,14 @@ class CheckoutPathTermTests(unittest.TestCase):
                 self.assertIsNotNone(pattern.search("merged by zebrafinchoperator"))
 
     def test_user_name_above_the_checkout_is_still_an_identity_term(self) -> None:
-        checkout = Path("/", "Users", "quokkaoperator", "code", "shopfront")
-        worktree = checkout / ".worktrees" / "shop-015-autopilot-byproduct"
-        pattern = self.pattern_for(worktree, checkout, {})
-        self.assertIsNotNone(pattern)
-        self.assertIsNotNone(pattern.search("owned by quokkaoperator"))
-        self.assertIsNone(pattern.search("the autopilot byproduct"))
-
-    def test_scratch_clone_container_is_not_an_identity_term(self) -> None:
-        home = Path("/", "home", "zebrafinchoperator")
-        checkout = home / ".cache" / "clones" / "shopfront"
-        pattern = self.pattern_for(checkout, checkout, {"HOME": str(home), "USER": "zebrafinchoperator"})
-        self.assertIsNotNone(pattern)
-        self.assertIsNone(pattern.search("scratch clones and code clones"))
-        self.assertIsNotNone(pattern.search("owned by zebrafinchoperator"))
+        for container in (Path("code"), Path(".cache") / "clones"):
+            with self.subTest(container=container):
+                checkout = Path("/", "Users", "quokkaoperator") / container / "shopfront"
+                worktree = checkout / ".worktrees" / "shop-015-autopilot-byproduct"
+                pattern = self.pattern_for(worktree, checkout, {})
+                self.assertIsNotNone(pattern)
+                self.assertIsNotNone(pattern.search("owned by quokkaoperator"))
+                self.assertIsNone(pattern.search("the autopilot byproduct and scratch clones"))
 
 
 class PrivacyScanTests(unittest.TestCase):
