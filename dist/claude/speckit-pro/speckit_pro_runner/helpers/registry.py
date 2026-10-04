@@ -15,6 +15,7 @@ from .install import CODEX_OPTIONAL_HELPER_NAME, CODEX_REQUIRED_AGENT_NAMES, run
 from .egress_authorization import run_egress_authorization_helper
 from .execution_requests import run_execution_helper
 from .gate_preflight_coverage import run_gate_preflight_coverage_helper
+from .g0_setup import run_g0_setup_helper
 from .roadmap_freshness import run_roadmap_freshness_helper
 from .scaffold_answers import run_scaffold_answers_helper
 from .run_finalization import run_run_finalization_helper
@@ -111,6 +112,10 @@ def deferred_authoritative_request() -> str:
 
 
 HELPERS: dict[str, HelperEntry] = {
+    "g0-setup": HelperEntry(
+        "g0-setup", "g0-setup", None, "python_authoritative", "python_contract",
+        authoritative_request("g0-setup"),
+    ),
     "scaffold-answers": HelperEntry(
         "scaffold-answers", "scaffold-answers", None, "python_authoritative", "python_contract",
         authoritative_request("scaffold-answers"),
@@ -749,6 +754,8 @@ def dispatch_helper(request: Any) -> dict[str, Any]:
         return run_roadmap_freshness_helper(entry, request)
     if entry.helper_id == "scaffold-answers":
         return run_scaffold_answers_helper(entry, request)
+    if entry.helper_id == "g0-setup":
+        return run_g0_setup_helper(entry, request)
     return run_registered_helper(entry, request)
 
 
