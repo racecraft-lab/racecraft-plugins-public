@@ -1,4 +1,4 @@
-"""G0's existing setup probes and quality-gates stop, without setup writes."""
+"""G0's setup probes and its unratified quality-gate defaults observation, without setup writes."""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ from .read_only import (
     EXIT_STATUS, check_prerequisites, detect_commands, detect_presets, helper_failure_diagnostic, output_capture,
 )
 
+SHIPPED_DEFAULTS = "complexity 10, CRAP 30, mutation-score floor 60, no skips, no opt-in slots"
 PROBES = {
     "prerequisites": ("check-prerequisites", check_prerequisites),
     "commands": ("detect-commands", detect_commands),
@@ -21,7 +22,7 @@ PROBES = {
 
 
 def g0_setup(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
-    """Preserve each probe's result; commands also reports the current G0 stop."""
+    """Preserve each probe's result; commands also reports an unratified-defaults observation."""
     require_fields({key: value for key, value in inputs.items() if key != "repo_root"},
                    {"probe", "surface", "workflow_file"}, "g0-setup inputs")
     probe = require_text(inputs["probe"], "probe")
@@ -39,16 +40,30 @@ def g0_setup(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     data: dict[str, Any] = {"probe": probe, "result": result}
     if probe == "commands":
         quality = result["stdout_json"]["quality_gates"]
-        gate = {"verdict": "proceed", "message": ""}
+        gate: dict[str, Any] = {"verdict": "proceed", "message": ""}
         if quality["status"] != "present":
-            detail = "missing" if quality["status"] == "missing" else f"invalid: {quality['problems'][0]}"
-            sigil = "/" if surface == "claude" else "$"
-            gate = {"verdict": "stop", "message": (
-                f"G0 blocked: .specify/quality-gates.json is {detail}.\n"
-                f"Run `{sigil}speckit-pro:speckit-coach quality gates` to create it. Agents never edit this file."
-            )}
+            gate["unratified_defaults"] = unratified_defaults(quality, surface)
         data["quality_gate"] = gate
     return data
+
+
+def unratified_defaults(quality: dict[str, Any], surface: str) -> dict[str, Any]:
+    """The observation for a missing or invalid file: G0 runs on the shipped defaults (ADR 0007)."""
+    problem = "" if quality["status"] == "missing" else " ".join(quality["problems"][0].split())[:300]
+    detail = f"invalid: {problem}" if problem else "missing"
+    sigil = "/" if surface == "claude" else "$"
+    return {
+        "flag": (f"Unratified quality-gate defaults: .specify/quality-gates.json is {detail}; "
+                 f"this run used the shipped defaults ({SHIPPED_DEFAULTS}). "
+                 f"Run `{sigil}speckit-pro:speckit-coach quality gates` to ratify them."),
+        "decision": {
+            "kind": "unratified_default",
+            "option_chosen": f"Ran G0 on the shipped quality-gate defaults ({SHIPPED_DEFAULTS}).",
+            "rejected_alternative": "Stopping G0 until the quality-gates file is created.",
+            "evidence": f".specify/quality-gates.json is {detail}.",
+            "affected_unit": ".specify/quality-gates.json",
+        },
+    }
 
 
 def run_g0_setup_helper(entry: Any, request: Any) -> dict[str, Any]:
@@ -60,8 +75,8 @@ def run_g0_setup_helper(entry: Any, request: Any) -> dict[str, Any]:
         data = g0_setup(request.inputs, root)
     except SelectionError as exc:
         return response("input_error", request_id=request.request_id, data={"problems": [str(exc)]})
-    # Prerequisite failures still go to repair. The quality stop is consumed
-    # at Step 0.11, after the same earlier setup work as before this seam.
+    # Prerequisite failures still go to repair. The quality observation is
+    # consumed at Step 0.11, after the same earlier setup work as before this seam.
     exit_code = int(data["result"]["exit_code"])
     if exit_code == 0:
         return response("ok", request_id=request.request_id, data=data)

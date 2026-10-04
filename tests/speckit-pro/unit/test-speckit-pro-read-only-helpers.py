@@ -4634,6 +4634,39 @@ class G0SetupTests(unittest.TestCase):
                     after = self.fixture_files(root)
                     self.assertEqual(before, after, "G0 setup probes must not write")
 
+    def test_g0_continues_on_unratified_defaults_and_never_writes_the_file(self) -> None:
+        from speckit_pro_runner.helpers.decisions_list import checked_entry, decisions_list
+        from speckit_pro_runner.helpers.g0_setup import g0_setup
+
+        for name, text, detail in (("missing", None, "missing"), ("invalid", "{", "invalid: cannot parse JSON")):
+            with self.subTest(case=name), helper_project() as root:
+                self.prepare_fixture(root, text)
+                inputs = {"surface": "claude", "probe": "commands", "workflow_file": "workflow.md"}
+                with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value="specify"):
+                    gate = g0_setup(inputs, root)["quality_gate"]
+                self.assertEqual(("proceed", ""), (gate["verdict"], gate["message"]))
+                observed = gate["unratified_defaults"]
+                self.assertNotIn("\n", observed["flag"])
+                self.assertIn(detail, observed["flag"])
+                self.assertIn(detail, observed["decision"]["evidence"])
+                self.assertEqual(observed["decision"], checked_entry(observed["decision"]))
+                self.assertEqual(text is not None, (root / ".specify" / "quality-gates.json").exists())
+                if text is not None:
+                    self.assertEqual(text, (root / ".specify" / "quality-gates.json").read_text(encoding="utf-8"))
+                recorded = decisions_list(
+                    root, {"workflow_file": "workflow.md", "entries": [observed["decision"]]}, "apply")
+                self.assertEqual(["unratified_default"], [item["kind"] for item in recorded["entries"]])
+
+    def test_g0_present_file_raises_no_unratified_observation(self) -> None:
+        from speckit_pro_runner.helpers.g0_setup import g0_setup
+
+        valid = '{"schema_version": "1.0", "thresholds": {"complexity": 8, "crap": 30, "mutation_score_floor": 60}}'
+        with helper_project() as root:
+            self.prepare_fixture(root, valid)
+            with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value="specify"):
+                gate = g0_setup({"surface": "codex", "probe": "commands", "workflow_file": "workflow.md"}, root)
+        self.assertNotIn("unratified_defaults", gate["quality_gate"])
+
     def test_g0_setup_runner_rejects_invalid_requests_and_routes_both_hosts(self) -> None:
         base = {"probe": "commands", "surface": "codex", "workflow_file": WORKFLOW_FILE}
         for inputs in ({}, {**base, "probe": "unknown"}, {**base, "surface": "unknown"},

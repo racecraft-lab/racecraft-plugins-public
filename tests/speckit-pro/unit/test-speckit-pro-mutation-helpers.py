@@ -6905,6 +6905,55 @@ This line must not be copied.
                 runbook,
             )
 
+    def test_uat_runbook_flags_unratified_quality_gate_defaults(self) -> None:
+        template = uat_skeleton.UAT_TEMPLATE_PATH.read_text(encoding="utf-8")
+        flag = "Unratified quality-gate defaults: .specify/quality-gates.json is missing; ratify it."
+        spec = "# Spec\n\n### User Story 1 - Flag\n\nText.\n"
+        for spec_text in (spec, "# Spec\n"):
+            with self.subTest(spec=spec_text.splitlines()[-1]):
+                def render(**extra: object) -> str:
+                    return uat_skeleton.render_uat_runbook(
+                        template, spec_text=spec_text, spec_id="sample", spec_source="specs/sample/spec.md",
+                        workflow_text=None, plan_text=None, project_commands={}, **extra)[0]
+
+                flagged = render(unratified_defaults=flag)
+                self.assertIn(f"> **WARN:** {flag}", flagged)
+                self.assertLess(flagged.index(flag), flagged.index("## Env Setup"))
+                self.assertNotIn("Unratified", render())
+                self.assertNotIn("Unratified", render(unratified_defaults=None))
+
+    def test_generate_uat_skeleton_refuses_a_malformed_unratified_flag(self) -> None:
+        from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            spec_path = git_root / "specs" / "flagged" / "spec.md"
+            spec_path.parent.mkdir(parents=True)
+            spec_path.write_text("# Feature Specification: Flagged\n", encoding="utf-8")
+            self.run_git(git_root, "add", "specs/flagged/spec.md")
+            self.run_git(git_root, "commit", "--quiet", "-m", "add flagged spec")
+            old_cwd = Path.cwd()
+            os.chdir(git_root)
+            try:
+                for value in ("two\nlines", "", 7):
+                    request = RunnerRequest(
+                        request_id="test-uat-unratified-flag",
+                        helper_id="generate-uat-skeleton",
+                        operation="generate-uat-skeleton",
+                        mode="dry_run",
+                        inputs={
+                            "spec_path": "specs/flagged/spec.md",
+                            "output_path": "specs/flagged/.process/uat-runbook.md",
+                            "unratified_defaults": value,
+                        },
+                    )
+                    response = uat_skeleton.generate_uat_skeleton(MUTATION_HELPERS["generate-uat-skeleton"], request)
+                    with self.subTest(value=value):
+                        self.assert_response(response, "input_error", 2)
+                        self.assertIn("unratified_defaults", response["diagnostics"][0]["message"])
+            finally:
+                os.chdir(old_cwd)
+
     def test_generate_uat_skeleton_handles_zero_stories_and_missing_spec(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:

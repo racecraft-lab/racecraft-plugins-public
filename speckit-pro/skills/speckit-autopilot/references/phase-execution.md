@@ -331,13 +331,12 @@ it does NOT invoke a `/speckit-*` command.
    table
 5. Set the "Constitution Check" summary line
 
-**Gate:** G0 — `quality_gates.status` from Step 0.11 must be
-`present`, all automated checks must pass, `DEPENDENCY_RULES`
-must pass, and no blocking slot may exit 2. A `COMPLEXITY` baseline over
+**Gate:** G0 — all automated checks must pass, `DEPENDENCY_RULES`
+must pass, and no blocking slot may exit 2. A missing or invalid
+`.specify/quality-gates.json` is not a failure: G0 runs on the unratified
+defaults that Step 0.11 records. A `COMPLEXITY` baseline over
 the ceiling is recorded, not a block. If any fail, route the failing gate to the implement-executor, which repairs
 it (a red baseline included); run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
-A missing or invalid `.specify/quality-gates.json` stops with the Step 0.11
-message naming the file and the coach flow.
 
 **Doctor Health Check (ALWAYS — plugin skill):**
 After G0 passes, run `/speckit.speckit-utils.doctor` for a full

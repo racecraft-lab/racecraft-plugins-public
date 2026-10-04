@@ -583,7 +583,7 @@
         "value": "speckit_pro_runner/helpers/g0_setup.py",
         "display": "speckit_pro_runner/helpers/g0_setup.py"
       },
-      "sha256": "f4ae3f795fe430161ff1e609f46c22e0b9ea959e75f21de9a22d0b15a02e0ba0"
+      "sha256": "8477a9df8ac162311d41b3946030b4a82900a32f16330451fbeaf4b426e83307"
     },
     {
       "path": {
@@ -631,7 +631,7 @@
         "value": "speckit_pro_runner/helpers/pr_packet.py",
         "display": "speckit_pro_runner/helpers/pr_packet.py"
       },
-      "sha256": "04b2f758986f3c3977bc584281eb2d174c75c72fcd14b6917ebff69a47955b4a"
+      "sha256": "6576bc1df111a68137e28995084a8b96e1bd0c0679a56122208094a38fc63925"
     },
     {
       "path": {
@@ -711,7 +711,7 @@
         "value": "speckit_pro_runner/helpers/uat_skeleton.py",
         "display": "speckit_pro_runner/helpers/uat_skeleton.py"
       },
-      "sha256": "5da21e6dd1630508e191504814d5f31942d8ebba2280aa72fc6007456001f430"
+      "sha256": "5dc57bd3985cfbd7c1eca21aba8193b3be276c97341bc298846363676fbc7f24"
     },
     {
       "path": {

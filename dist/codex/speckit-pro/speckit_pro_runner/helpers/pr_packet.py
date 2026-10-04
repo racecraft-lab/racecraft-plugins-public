@@ -31,6 +31,8 @@ PACKET_SLUG = r"[a-z0-9][a-z0-9._-]*"
 SOURCE_FEATURE_PATTERN = re.compile(rf"^specs/(?P<feature>{PACKET_SLUG})$")
 # A run that finished with deferred items opens its top PR body with this section.
 DEFERRED_HEADING = "Deferred / not verified"
+# A run that used the shipped quality-gate defaults (ADR 0007) says so in the next section.
+UNRATIFIED_HEADING = "Unratified quality-gate defaults"
 PACKET_PATH_PATTERN = re.compile(
     rf"^(?P<source_feature_dir>specs/{PACKET_SLUG})/\.process/pr-packets/(?P<packet_id>{PACKET_SLUG})\.json$"
 )
@@ -182,6 +184,15 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
     if isinstance(deferred_items, dict):
         return deferred_items
 
+    unratified_defaults = inputs.get("unratified_defaults")
+    if unratified_defaults is not None and (
+        not isinstance(unratified_defaults, str) or not is_one_line(unratified_defaults) or mode == "draft"
+    ):
+        return invalid_packet_input(
+            "unratified_defaults must be one non-blank line, and a draft body carries none",
+            field="unratified_defaults",
+        )
+
     scope_evidence = normalize_scope_evidence(inputs, mode)
     if isinstance(scope_evidence, dict) and "diagnostic" in scope_evidence:
         return scope_evidence
@@ -229,10 +240,17 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
             scope=markdown_list(inputs.get("scope"), scope_evidence["changed_files"]),
             known_gaps=markdown_list(inputs.get("known_gaps"), ["No known gaps for this PR."]),
             deferred_items=deferred_items,
+            unratified_defaults=unratified_defaults,
         )
     if deferred_items and first_section_heading(rendered_body) != DEFERRED_HEADING:
         return invalid_packet_input(
             f"a body for a run with deferred items must open with the ## {DEFERRED_HEADING} section",
+            field="body",
+        )
+
+    if unratified_defaults and f"\n## {UNRATIFIED_HEADING}\n" not in rendered_body:
+        return invalid_packet_input(
+            f"a body for a run on unratified defaults must carry the ## {UNRATIFIED_HEADING} section",
             field="body",
         )
 
@@ -622,6 +640,7 @@ def build_packet_body(
     scope: str,
     known_gaps: str,
     deferred_items: list[dict[str, str]] | None = None,
+    unratified_defaults: str | None = None,
 ) -> str:
     parts = [f"# {title}", ""]
     if deferred_items:
@@ -633,6 +652,8 @@ def build_packet_body(
             *(f"- **{item['item']}**: {item['reason']} To finish it: {item['finish']}" for item in deferred_items),
             "",
         ])
+    if unratified_defaults:
+        parts.extend([f"## {UNRATIFIED_HEADING}", "", unratified_defaults.strip(), ""])
     parts += [
         "## Summary",
         "",

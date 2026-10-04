@@ -72,6 +72,11 @@ def generate_uat_skeleton(entry: Any, request: Any) -> dict[str, Any]:
 
     plan_path = spec_path.parent / "plan.md"
     plan_text = trusted_text(plan_path, repo_root)
+    unratified_defaults = request.inputs.get("unratified_defaults")
+    if unratified_defaults is not None and (
+        not isinstance(unratified_defaults, str) or re.search(r"[\r\n]", unratified_defaults) or not unratified_defaults.strip()
+    ):
+        return input_error(request, "unratified_defaults must be one non-blank line when provided")
     project_commands = request.inputs.get("project_commands")
     if not isinstance(project_commands, dict):
         project_commands = {}
@@ -90,6 +95,7 @@ def generate_uat_skeleton(entry: Any, request: Any) -> dict[str, Any]:
         workflow_text=workflow_text,
         plan_text=plan_text,
         project_commands=project_commands,
+        unratified_defaults=unratified_defaults,
     )
     fingerprints = {
         "spec": source_fingerprint(spec_path, spec_text, repo_root),
@@ -128,10 +134,11 @@ def render_uat_runbook(
     workflow_text: str | None,
     plan_text: str | None,
     project_commands: dict[str, str],
+    unratified_defaults: str | None = None,
 ) -> tuple[str, list[str]]:
     stories = user_story_titles(spec_text)
     duplicate_ids: list[str] = []
-    header_note = ""
+    header_note = f"> **WARN:** {unratified_defaults.strip()}\n\n" if unratified_defaults else ""
     if stories:
         per_story = "\n\n".join(
             f"### {title}\n\n- [ ] Walk this story end to end and confirm the observable behavior the spec promises."
@@ -141,7 +148,7 @@ def render_uat_runbook(
         matrix_rows.extend(f"| {title} | see the Per-Story Acceptance Tests block above |" for title in stories)
         fr_matrix = "\n".join(matrix_rows)
     else:
-        header_note = "> This spec has no user stories; tests are keyed by FR/SC."
+        header_note += "> This spec has no user stories; tests are keyed by FR/SC."
         requirements = dedupe_requirement_ids(
             extract_heading_section(spec_text, "Functional Requirements", preserve_blanks=True),
             duplicate_ids,

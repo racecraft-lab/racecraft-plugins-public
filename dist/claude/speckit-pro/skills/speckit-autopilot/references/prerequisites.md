@@ -468,15 +468,21 @@ files exists in the repository, otherwise `unconfigured` and
 
 **`.specify/quality-gates.json` is the threshold authority.** The probe's
 `quality_gates.status` remains `present`, `missing`, or `invalid` (with
-`problems`). Read the seam's `data.quality_gate` at this step: on `stop`,
-print its `message` verbatim and STOP; on `proceed`, continue. The runner
-owns this decision and the host-specific coach command. Agents never edit
-this file.
+`problems`). Read the seam's `data.quality_gate` at this step. It always
+carries `verdict: proceed`; G0 never stops for this file. A missing or
+invalid file makes the runner add `unratified_defaults`: the file is ignored
+whole, and the slots run on the shipped defaults (complexity 10, CRAP 30,
+mutation-score floor 60, no skips, no opt-in slots) in memory. Agents never
+create or edit the file.
 
-With the file missing, the slot commands still show the shipped
-defaults (complexity 10, CRAP 30, mutation-score floor 60) so the
-operator can see what would run; they are not authoritative and
-do not unblock G0.
+When `data.quality_gate.unratified_defaults` is present:
+
+1. Read the decisions list (`decisions-list`, `read_only`). When it holds no
+   `unratified_default` entry, record `unratified_defaults.decision` with
+   `decisions-list` in `apply` mode, so a resume adds no second entry.
+2. Keep `unratified_defaults.flag` as `UNRATIFIED_FLAG` in the workflow
+   file's run notes. The UAT runbook helper and the PR packet helper take it
+   as `inputs.unratified_defaults` (see `post-implementation.md`).
 
 Three placeholders stay literal in the recorded command and are
 filled at every run:
