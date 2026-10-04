@@ -4679,6 +4679,18 @@ class G0UnratifiedDefaultsTests(unittest.TestCase):
                     root, {"workflow_file": "workflow.md", "entries": [observed["decision"]]}, "apply")
                 self.assertEqual(["unratified_default"], [item["kind"] for item in recorded["entries"]])
 
+    def test_unratified_flag_carries_no_markup_or_paths_from_file_content(self) -> None:
+        from speckit_pro_runner import quality_gates
+        from speckit_pro_runner.helpers.g0_setup import unratified_defaults
+
+        hostile = "![x](https://evil.example/p.png) <img src=//evil/x> @org/admins \x1b[31m ‮ /Users/bob/.ssh `x`"
+        problems = quality_gates.validate({hostile: 1})
+        observed = unratified_defaults({"status": "invalid", "problems": problems}, "claude")
+        text = observed["flag"] + observed["decision"]["evidence"]
+        for fragment in ("![", "](", "<", "@", "\x1b", "‮", "/Users", "`x`"):
+            self.assertNotIn(fragment, text)
+        self.assertIn("unknown top-level keys", observed["flag"])
+
     def test_g0_present_file_raises_no_unratified_observation(self) -> None:
         from speckit_pro_runner.helpers.g0_setup import g0_setup
 
