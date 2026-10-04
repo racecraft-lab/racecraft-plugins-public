@@ -436,7 +436,10 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
    write it as `sha256:<digest>` or omit it. The guard fails on a raw id in marker checkpoint or
    verification evidence as `marker_evidence_privacy_errors`, naming the file and field; those records
    are bound by their checkpoint digests, so write the digest before the checkpoint is recorded. Keep optional `artifact_review` for
-   terminal-step routing and print its unresolved preview dispositions. A pending
+   terminal-step routing and print every unverified preview disposition, including
+   terminal `unavailable` pages, with its blocker and manual-review link. Follow
+   the runner's `resume_action`; `none` completes preview work without asserting
+   verified delivery. A pending
    handoff can auto-resolve `plan` even when `planning_complete` is true; explicit
    stages still win and started implementation is never routed backward. An explicit `--stage`
    always wins; with none given the stage is resolved from the workflow
