@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import json
 import os
+import re
+import shutil
 import stat
 import sys
 import tempfile
@@ -18,6 +20,7 @@ LIB_DIR = TEST_DIR.parent / "lib"
 sys.path.insert(0, str(LIB_DIR))
 sys.path.insert(0, str(REPO_ROOT / "speckit-pro"))
 
+from host_skill_views import host_skill_root  # noqa: E402
 from runner_invocation import assert_runner_response, run_runner  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
@@ -53,7 +56,7 @@ class ReadinessRecordTest(unittest.TestCase):
 
     def run_helper(self, observations: list[dict[str, object]], mode: str = "apply", **inputs: object) -> dict:
         completed, response, _ = run_runner(request(observations, mode, **inputs), cwd=self.root)
-        self.assertIn(completed.returncode, (0, 1, 2), completed.stderr)
+        self.assertIn(completed.returncode, (0, 1, 2, 3), completed.stderr)
         return response
 
     def all_verified(self) -> list[dict[str, object]]:
@@ -207,6 +210,62 @@ class ReadinessRecordTest(unittest.TestCase):
         self.assertEqual("unavailable", item["status"])
         self.assertTrue(item["action"])
         self.assertNotIn(str(self.root), json.dumps(item))
+
+    def test_scaffold_documents_the_exact_request_and_the_step_on_each_host(self) -> None:
+        manifests = {"claude": ".claude-plugin/plugin.json", "codex": ".codex-plugin/plugin.json"}
+        for host, manifest in manifests.items():
+            with self.subTest(host=host):
+                skill = (host_skill_root(host) / "speckit-scaffold-spec" / "SKILL.md").read_text(encoding="utf-8")
+                rows = re.findall(r"\| `write-readiness-record` \| `apply` \| `(\{[^`]*\})`", skill)
+                self.assertEqual(1, len(rows))
+                documented = json.loads(rows[0])
+                self.assertEqual({"host", "execution_mode", "plugin_revision", "observations"}, set(documented))
+                self.assertEqual({"item", "status", "evidence_source"}, set(documented["observations"][0]))
+                replay = request([observation("github_auth")], "dry_run", host=host)
+                for key in documented:
+                    self.assertIn(key, replay["inputs"])
+                _, response, _ = run_runner(replay, cwd=self.root)
+                assert_runner_response(self, response, "ok", 0)
+                step = skill.split("### 6.5 Write the Readiness Record", 1)[1].split("\n### ", 1)[0]
+                self.assertIn(f"Set `host` to `{host}`", step)
+                self.assertIn(manifest, step)
+                self.assertTrue((REPO_ROOT / "speckit-pro" / manifest).is_file())
+                for item in (*CALLER_ITEMS,):
+                    self.assertIn(f"`{item}`", step)
+
+    def test_write_refuses_a_planted_symlink_and_leaves_the_outside_untouched(self) -> None:
+        outside = Path(tempfile.mkdtemp(dir=self.root.parent, prefix="outside-")).resolve()
+        self.addCleanup(lambda: shutil.rmtree(outside, ignore_errors=True))
+        secret = outside / "victim.txt"
+        secret.write_text("keep\n", encoding="utf-8")
+        specify = self.root / ".specify"
+        readiness = specify / "readiness"
+        plants = {
+            "gitignore file link": lambda: (readiness.mkdir(), (readiness / ".gitignore").symlink_to(secret)),
+            "record file link": lambda: (readiness.mkdir(), (readiness / "claude.json").symlink_to(secret)),
+            "readiness directory link": lambda: readiness.symlink_to(outside),
+            "specify directory link": lambda: (specify.rmdir(), specify.symlink_to(outside)),
+        }
+        for label, plant in plants.items():
+            with self.subTest(label):
+                plant()
+                response = self.run_helper(self.all_verified())
+                if specify.is_symlink():
+                    # Project discovery refuses a .specify link that leaves the project.
+                    assert_runner_response(self, response, "missing_prerequisite", 3)
+                else:
+                    assert_runner_response(self, response, "expected_failure", 1)
+                    self.assertEqual("write_failure", response["diagnostics"][0]["code"])
+                    self.assertIn("unsafe", response["diagnostics"][0]["message"])
+                self.assertEqual("keep\n", secret.read_text(encoding="utf-8"))
+                self.assertEqual(["victim.txt"], sorted(p.name for p in outside.iterdir()))
+                if specify.is_symlink():
+                    specify.unlink()
+                    specify.mkdir()
+                elif readiness.is_symlink():
+                    readiness.unlink()
+                else:
+                    shutil.rmtree(readiness, ignore_errors=True)
 
 
 def build_suite() -> unittest.TestSuite:
