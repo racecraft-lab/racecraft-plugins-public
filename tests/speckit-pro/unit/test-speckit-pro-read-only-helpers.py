@@ -4600,6 +4600,20 @@ class G0SetupTests(unittest.TestCase):
     def fixture_files(root: Path) -> dict[str, bytes]:
         return {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}
 
+    @staticmethod
+    def prepare_fixture(root: Path, quality_text: str | None) -> None:
+        subprocess.run(["git", "init", "-q", "-b", "test-g0", str(root)], check=True)
+        for name in ("speckit-specify", "speckit-plan", "speckit-tasks", "speckit-implement"):
+            skill = root / ".agents" / "skills" / name / "SKILL.md"
+            skill.parent.mkdir(parents=True)
+            skill.write_text("fixture", encoding="utf-8")
+        constitution = root / ".specify" / "memory" / "constitution.md"
+        constitution.parent.mkdir()
+        constitution.write_text("fixture", encoding="utf-8")
+        (root / "workflow.md").write_text("fixture", encoding="utf-8")
+        if quality_text is not None:
+            (root / ".specify" / "quality-gates.json").write_text(quality_text, encoding="utf-8")
+
     def test_g0_setup_matches_golden_outcomes(self) -> None:
         from speckit_pro_runner.helpers.g0_setup import g0_setup
 
@@ -4608,17 +4622,7 @@ class G0SetupTests(unittest.TestCase):
         for case in cases:
             for surface in ("claude", "codex"):
                 with self.subTest(case=case["name"], surface=surface), helper_project() as root:
-                    subprocess.run(["git", "init", "-q", "-b", "test-g0", str(root)], check=True)
-                    for name in ("speckit-specify", "speckit-plan", "speckit-tasks", "speckit-implement"):
-                        skill = root / ".agents" / "skills" / name / "SKILL.md"
-                        skill.parent.mkdir(parents=True)
-                        skill.write_text("fixture", encoding="utf-8")
-                    constitution = root / ".specify" / "memory" / "constitution.md"
-                    constitution.parent.mkdir()
-                    constitution.write_text("fixture", encoding="utf-8")
-                    (root / "workflow.md").write_text("fixture", encoding="utf-8")
-                    if case["quality_text"] is not None:
-                        (root / ".specify" / "quality-gates.json").write_text(case["quality_text"], encoding="utf-8")
+                    self.prepare_fixture(root, case["quality_text"])
                     before = self.fixture_files(root)
                     for probe in ("prerequisites", "commands", "presets"):
                         with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value=case["specify"]):
