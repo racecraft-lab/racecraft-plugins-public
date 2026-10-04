@@ -17,7 +17,7 @@ speckit-pro builds on upstream Spec Kit (github/spec-kit, tag v1.1.0, commit f1d
 | `lean` preset | Reject | It drops `research.md`, which G3 needs, and the hooks; its specify asks the user a question ([#1147](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1147)) |
 | Workflow engine (`specify workflow run`) | Reject | Fan-out trips the ledger lock and the engine would be a second ledger; it adds no speed (ADR 0018) |
 | Extension hooks | Adopt upstream ownership | Upstream commands run mandatory hooks; the runner brief lists optional ones (ADR 0018) |
-| Preset `replace` strategy | Adopt (today) | The reviewability preset ships as three replace forks, now installed by the plugin with `specify preset add` |
+| Preset `replace` strategy | Adopt | Ship the three replace forks and install the preset with `specify preset add`; the amendment's build ticket fixes the missing-preset bug ([#1176](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1176)) |
 | Preset `prepend`, `append`, `wrap` | Defer | `append` reproduces the reviewability preset within 1%, but moves its sections to the end of each template. Adopt after a canary run shows plan quality and G3 hold ([#1173](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1173)) |
 | `specify artifact` | Reject | It inventories commands and templates, not feature files, so it cannot back the planning manifest or the phase brief |
 | Bundles | Defer | Hooks are not bundle components, non-catalog presets fail to install, and the saving is operator confirmations only |

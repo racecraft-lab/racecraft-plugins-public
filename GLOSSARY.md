@@ -25,7 +25,7 @@ The evidence one canary run leaves for one host: the commit, host and plugin ver
 _Avoid_: canary log, test report
 
 **Consensus**:
-A second opinion on one planning item from independent analysts. It runs only for security items (all three analysts) and items the executor marks low-confidence (one analyst); every other item takes the executor's recommended answer.
+A judgment reached with input from independent analysts.
 _Avoid_: voting, review, consensus tier
 
 **Decision model**:
@@ -37,7 +37,7 @@ The run's record of every judgment it made instead of asking the user: the optio
 _Avoid_: end-of-run request, Decisions for you
 
 **Gate**:
-A checkpoint the runner validates at a fixed point in a run, numbered G0 to G7 with G6.5. A gate is a check, never a phase.
+A checkpoint that validates whether a run meets its requirements at a fixed point. A gate is a check, never a phase.
 _Avoid_: quality gate, phase
 
 **Harm halt**:

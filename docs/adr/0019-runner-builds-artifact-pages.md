@@ -8,7 +8,7 @@ The HTML review artifacts stay ready when the plan stage ends (the promise is fi
 - selects the pages by rule: a module map when Declared File Operations has any `MODIFIED` entry, and a code-approaches page when the research or design concept records alternatives;
 - fills every region it can derive from the planning files;
 - emits the skeleton and a lifted-text fallback for regions that mix structure and prose;
-- validates and publishes each page.
+- validates and publishes each page atomically.
 
 One model dispatch writes only short prose slots for the narrative regions, and may polish the mixed ones. Authoring stays fail-open. When the readiness record shows the host has no preview surface, the run records one "preview unavailable" note instead of spawning a preview observer per page.
 
