@@ -6256,10 +6256,14 @@ def find_specify() -> str | None:
 
 def installed_specify_version(specify_path: str) -> str | None:
     """The version `specify version` reports, or None when it cannot run or has no version row."""
+    # The executable stays a literal so the Bash-confinement guard can prove it Bash-free; the
+    # directory of the binary `find_specify` chose leads PATH, so the same binary answers.
+    search_path = os.pathsep.join([str(Path(specify_path).parent), os.environ.get("PATH", "")])
     try:
         result = subprocess.run(
-            [specify_path, "version"], text=True, capture_output=True, shell=False,
+            ["specify", "version"], text=True, capture_output=True, shell=False,
             check=False, timeout=SUBPROCESS_TIMEOUT_SECONDS, stdin=subprocess.DEVNULL,
+            env={**os.environ, "PATH": search_path},
         )
     except (OSError, subprocess.SubprocessError):
         return None
