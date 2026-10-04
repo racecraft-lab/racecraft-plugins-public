@@ -113,6 +113,7 @@ ack dead-code:new-symbol 0906c75d1e1bc569 0 cid=b9ec67ccbba6a1d5 unittest discov
 ack dead-code:new-symbol 0a27dc1508b7d898 0 cid=72d8f94156ba3140 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 0a541b1e932503e4 0 cid=4d16d2aeed57c229 by=tests/speckit-pro/unit/test-install-ripwire.py unittest discovers test_ methods and setUp by name; the runner calls them, not repository code
 ack dead-code:new-symbol 0a6015fc3b53e8b5 0 cid=31208d260836f950 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol 0aa913391b17e308 0 cid=fab841d68f42693a by=tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py Registered CanaryPlanTargetTests is executed by main through unittest.loadTestsFromTestCase; the focused receipt run executes this method
 ack dead-code:new-symbol 0b17a6acbec30d9d 0 cid=041efb2811647391 unittest discovers test_ methods through loadTestsFromTestCase, so they have no static caller
 ack dead-code:new-symbol 0b444b1f8cb010dd 0 cid=0e924e3523a6130f unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 0b601c45b85acc3d 0 cid=06206c12671b0a1d unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
@@ -158,6 +159,7 @@ ack dead-code:new-symbol 1b0f945a802a3a4a 0 cid=eeaf32d80d1f2037 unittest discov
 ack dead-code:new-symbol 1b5337fbd50a4bb0 0 cid=7e83d84295d55a05 unittest discovers and runs test_ methods by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 1b6b83874a4b2f72 0 cid=dfe1418185db277f by=tests/speckit-pro/unit/test-scratch-clone-guard.py unittest discovers and runs test_ methods and setUp hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 1bac64bab440853b 0 cid=0bb9fe4c0717d567 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol 1befa5912db0b41e 0 cid=4e9c7658a75bbcdc by=tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py Registered CanaryCodexTokenTests is executed by main through unittest.loadTestsFromTestCase; the focused receipt run executes this method
 ack dead-code:new-symbol 1c5030a46c5883d7 0 cid=928f55bfe81bb77e unittest discovers test_ methods by name through loadTestsFromTestCase in main(); nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 1c5cf758ddacb3d8 0 cid=43897900ac7d8ebb dead-code: unittest discovers test_ methods by name
 ack dead-code:new-symbol 1c66b35639772146 0 cid=ec60febf2b14b297 Callback passed to json.loads as an object_pairs_hook and a parse_constant hook; the dead-code scan cannot see a function passed by reference
@@ -211,6 +213,7 @@ ack dead-code:new-symbol 2a02fc5f523f875c 0 cid=d5c6a445daa7bd5f unittest discov
 ack dead-code:new-symbol 2a05275d36c143a9 0 cid=bf5caf79c50d433a unittest discovers test_ methods and setUp by name, and fetch is the closure that fetch_with returns to its callers; nothing calls them by name, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 2a6db0c5104ec90b 0 cid=c4471234255dd2a7 unittest discovers test_ methods through loadTestsFromModule, so they have no static caller
 ack dead-code:new-symbol 2ac3792c6dad1398 0 cid=bf561f9075c0db90 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol 2b87e205366cc776 0 cid=dc2163fb436e3e8b by=tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py Registered CanaryCodexTokenTests is executed by main through unittest.loadTestsFromTestCase; the focused receipt run executes this method
 ack dead-code:new-symbol 2b8ea8ed359d638a 0 cid=4cd14647fb27c15b unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 2bc7266034358a7d 0 cid=6db0680f23cdd978 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 2c2ba291352f5ab8 0 unittest loader executes ValidateRoadmapFreeze.setUp; focused suite and execution profile prove this method runs; no direct static caller
@@ -264,6 +267,7 @@ ack dead-code:new-symbol 3ddd59b980188dd9 0 cid=092df3c28e17ba25 Referenced only
 ack dead-code:new-symbol 3e870d4b9b312c34 0 cid=54d185e5c7ddefd7 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 3ed0fa51842356d3 0 cid=c2d045da31c30bf5 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 3ee7076739fc3ae6 0 cid=dc8304fd9ceab0f9 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol 40ce80cca5d035bb 0 cid=3440f67eb593ab5b by=tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py Registered CanaryPlanTargetTests is executed by main through unittest.loadTestsFromTestCase; the focused receipt run executes this method
 ack dead-code:new-symbol 4114aa7e094cf1bc 0 cid=05976b3969cfed9a unittest discovers test_ methods by name through loadTestsFromTestCase in main(); nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 416dfd6d56e02892 0 cid=975127b4951f8749 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 418e18583522a3af 0 cid=a794cf0ad408d88a unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
@@ -355,6 +359,7 @@ ack dead-code:new-symbol 6397ce284552a9ed 0 cid=cbb10152b04b446c Test methods ar
 ack dead-code:new-symbol 63c191f3cf6e615b 0 cid=357f8ad564d27ce3 unittest discovers test_ methods through its test loader, so they have no static caller
 ack dead-code:new-symbol 63f432e8c4bbc3f3 0 cid=17c4d9a56b421d37 unittest discovered and executed the terminal unavailability regression through loadTestsFromTestCase; its dynamic invocation has no static caller
 ack dead-code:new-symbol 6454e4eba4d42359 0 cid=d3adfc836d425e77 dead-code: unittest discovers test_ methods by name
+ack dead-code:new-symbol 6483267906c58fac 0 cid=ecb3000113a6f2c0 by=tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py Registered CanaryCodexTokenTests is executed by main through unittest.loadTestsFromTestCase; the focused receipt run executes this method
 ack dead-code:new-symbol 64dada13abbe49b2 0 cid=b60fa19d27bbf81d Referenced only as entries in the _VALUE_CHECKS dispatch tuple in json_schema_failures, which the dead-code scan does not count as a call
 ack dead-code:new-symbol 65267ab4c07f8fb0 0 cid=19c1beae9a1b4fc7 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 654468ecb6fcb98e 0 cid=c66f78032dfcab49 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
@@ -370,6 +375,7 @@ ack dead-code:new-symbol 67a1b13e89290927 0 cid=30a5a15c317f3a1b unittest discov
 ack dead-code:new-symbol 67de6db21bd08f48 0 cid=c6611e59341b7b11 unittest discovers these test methods; loaded by module loader
 ack dead-code:new-symbol 67e05fd495f68d2d 0 cid=72c5b7a28c62f464 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 68b0d9d5bbb7ad98 0 cid=4e6977ff841a520d unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol 69104a3253d07d53 0 cid=979bb98eed7611ac by=tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py Registered CanaryPlanTargetTests is executed by main through unittest.loadTestsFromTestCase; the focused receipt run executes this method
 ack dead-code:new-symbol 694096cab91cd043 0 cid=a8ebf72e3726c8f3 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 69af42d46f2696cf 0 cid=c4618cdcab1c88d7 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 6a24635cc0aff9cc 0 cid=563fff0e78d2bb8c Test methods are discovered by unittest, so a static call graph sees no caller.
@@ -379,10 +385,12 @@ ack dead-code:new-symbol 6b9b2e09e383f726 0 cid=ea38fba216153073 unittest discov
 ack dead-code:new-symbol 6ca093b960b4615f 0 cid=a2ab914a27c1dafc unittest discovers and runs test_ methods by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 6d034c6dff7bcb26 0 cid=58562e984487e6b6 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 6d3a16bde6d0c653 0 cid=c78da3e7d0611775 unittest discovers test_ methods through its test loader, so they have no static caller
+ack dead-code:new-symbol 6d620e5bafa5afeb 0 cid=e9f6dff214912829 by=tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py Registered CanaryReceiptTests is executed by main through unittest.loadTestsFromTestCase; the red and green schema runs execute this method
 ack dead-code:new-symbol 6e1cf8bcf382b1ae 0 cid=3f786e33c98518e0 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 6e3ffb5d42ce3bb3 0 cid=fc8431f96905940c unittest discovers and runs test_ methods and setUp hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 6e4eda3ecd1953eb 0 cid=8e288ea8f17cc425 unittest discovers these test methods through loadTestsFromTestCase in main(); no direct caller is expected
 ack dead-code:new-symbol 6e5cdd30db1e6ceb 0 cid=f09eebaa7720a8c7 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol 6e7e4e5e54df9831 0 cid=8cc5179ca939a0c0 by=tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py Registered CanaryPlanTargetContractTests is executed by main through unittest.loadTestsFromTestCase; the focused receipt run executes this method
 ack dead-code:new-symbol 6eacb42ba50fa307 0 cid=29e056ae8d3dad9c unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 6fc827bee9d9cf4b 0 cid=788ad43e9771bb26 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 7028b7f932e8e3a8 0 cid=595bf1e89b83a377 unittest methods and a patch side_effect closure are invoked by the runner and by mock, not by a call site
@@ -485,6 +493,7 @@ ack dead-code:new-symbol 8c7caa5817bdd64e 0 cid=1cf7f7a925b13ed6 unittest discov
 ack dead-code:new-symbol 8caee01bd0a78a43 0 cid=6feeeb94b2fce7c7 Referenced only as entries in the _VALUE_CHECKS dispatch tuple in json_schema_failures, which the dead-code scan does not count as a call
 ack dead-code:new-symbol 8d26ea827be0d165 0 cid=827afa3ad1f73758 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 8d468712bf22653c 0 cid=ea84eb5af828ee75 by=tests/speckit-pro/unit/test-phase-lock.py the nested api fake is passed to unlock() as its api callback; the scan does not count a passed function as a use
+ack dead-code:new-symbol 8d481646a42c2f7a 0 cid=392ab311d2f8cc0b by=tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py Registered CanaryCodexTokenTests is executed by main through unittest.loadTestsFromTestCase; the focused receipt run executes this method
 ack dead-code:new-symbol 8d6af1e7f936d5f5 0 cid=2b7f6350d2727f8d unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 8d6e67a1e1f05361 0 cid=f020bbedb5af2af9 by=tests/speckit-pro/unit/test-phase-lock.py unittest discovers and runs test_ methods and setUp hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 8da55ff2734e4f83 0 cid=456f3c86fe83cc9b unittest discovers these test methods through loadTestsFromTestCase in main(); no direct caller is expected
@@ -704,6 +713,7 @@ ack dead-code:new-symbol cbdb5aab4b90bcd8 0 cid=713e43598d8684e6 now=0 was=0 p=t
 ack dead-code:new-symbol cbe32c686b0e1b84 0 cid=e72a2ed022d80331 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol cc18af4fce73fac6 0 cid=7c01613c1fa8613f unittest discovers and runs test_ methods and setUp hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol cc297924fd1e31c1 0 cid=3bc657071aa24d0b unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol cd1aab4bbc68a779 0 cid=51e37caf23b3a472 by=tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py Registered CanaryPlanTargetContractTests is executed by main through unittest.loadTestsFromTestCase; the focused receipt run executes this method
 ack dead-code:new-symbol cd718e26bce06b4d 0 cid=6e25720f4d9c8cc7 unittest methods and a patch side_effect closure are invoked by the runner and by mock, not by a call site
 ack dead-code:new-symbol cd785f0ee0231a76 0 cid=1bfa2a3120284fe4 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol cd8305bbb1de47b6 0 cid=62b1a0b9bb9d1ae4 now=0 was=0 p=tests/speckit-pro/unit/test-research-broker.py:629 Executed by unittest loadTestsFromTestCase in test-research-broker.py; the 148-case broker suite executes this method. Static calls cannot see reflected test methods.
@@ -988,6 +998,7 @@ ack verbosity 78bfb12c4859ab29 103 cid=f5c09586717405b7 Moved verbatim from help
 ack verbosity 79999e46168e8169 86 cid=ef627d5267b1f33f developer_instructions is a Codex agent's whole model prompt, generated prose from its Claude agent source rather than code, so its line count cannot be split
 ack verbosity 7a5b02eb0ccbfb24 173 cid=deeeac68a486c08e developer_instructions is a Codex agent's whole model prompt, generated prose from its Claude agent source rather than code, so its line count cannot be split
 ack verbosity 7ac4c4e981d70f87 161 cid=30fafd21bffb1087 Moved unchanged from helpers/pr_emission.py into its own module; the measure is the same as before the split, and the module split is the change this issue asks for
+ack verbosity 7db1f29b8ad3106c 76 cid=a797d7f3f7cab832 by=tests/speckit-pro/layer6-integration/canary-receipt.schema.json Declarative $defs aggregate grows for reused token and target contracts, not a procedural unit; receipt tests exercise each definition and conditional requirement
 ack verbosity 7e93962aeefbfe46 1801 cid=681860a6a01e374c The bounded headless roster is a hand-listed data table; a new Claude scaffold eval adds one case row and one roster tuple
 ack verbosity 7f7753a3e05b6fed 184 cid=80e28c9bde867291 developer_instructions is a Codex agent's whole model prompt, generated prose from its Claude agent source rather than code, so its line count cannot be split
 ack verbosity 7fc3a593e1dc98fa 188 cid=28e18e5cd809d286 developer_instructions is a Codex agent's whole model prompt, generated prose from its Claude agent source rather than code, so its line count cannot be split

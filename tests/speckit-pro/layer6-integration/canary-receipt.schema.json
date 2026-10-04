@@ -13,7 +13,11 @@
     "variants": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/variant"}}
   },
   "allOf": [{"if": {"properties": {"host": {"const": "codex"}}},
-    "then": {"properties": {"install_probe": {"$ref": "#/$defs/codex_probe"}}},
+    "then": {"properties": {"install_probe": {"$ref": "#/$defs/codex_probe"},
+      "variants": {"items": {"properties": {"stages": {"properties": {
+        "scaffold": {"$ref": "#/$defs/codex_stage"}, "plan": {"$ref": "#/$defs/codex_stage"},
+        "plan_review": {"$ref": "#/$defs/codex_stage"}, "implement": {"$ref": "#/$defs/codex_stage"}
+      }}}}}}},
     "else": {"properties": {"install_probe": {"$ref": "#/$defs/claude_probe"}}}}],
   "$defs": {
     "text": {"type": "string", "minLength": 1, "pattern": "\\S"},
@@ -30,7 +34,22 @@
     "stage": {
       "type": "object", "additionalProperties": false,
       "required": ["wall_seconds", "tokens"],
-      "properties": {"wall_seconds": {"type": "number", "minimum": 0}, "tokens": {"$ref": "#/$defs/count"}}
+      "properties": {"wall_seconds": {"type": "number", "minimum": 0}, "tokens": {"$ref": "#/$defs/count"},
+        "codex_tokens": {"$ref": "#/$defs/codex_tokens"}}
+    },
+    "codex_tokens": {
+      "description": "Stage-scoped root usage and one token count per descendant rollout, including nested children. Each count excludes inherited history and usage outside this stage; repeated cumulative snapshots are not separate counts.",
+      "type": "object", "additionalProperties": false,
+      "required": ["root_tokens", "child_rollout_tokens"],
+      "properties": {"root_tokens": {"$ref": "#/$defs/count"},
+        "child_rollout_tokens": {"type": "array", "items": {"$ref": "#/$defs/count"}}}
+    },
+    "codex_stage": {"allOf": [{"$ref": "#/$defs/stage"}, {"required": ["codex_tokens"]}]},
+    "plan_target": {
+      "type": "object", "additionalProperties": false,
+      "required": ["wall_seconds_limit", "tokens_limit", "target_met"],
+      "properties": {"wall_seconds_limit": {"const": 1800}, "tokens_limit": {"const": 15000000},
+        "target_met": {"type": "boolean"}}
     },
     "variant": {
       "type": "object", "additionalProperties": false,
@@ -63,12 +82,14 @@
           "properties": {"affected_work": {"$ref": "#/$defs/count"}, "affected_work_blocked_for_uat": {"$ref": "#/$defs/count"},
             "independent_work": {"$ref": "#/$defs/count"}, "independent_work_completed": {"$ref": "#/$defs/count"}}
         },
+        "plan_target": {"$ref": "#/$defs/plan_target"},
         "stages": {
           "type": "object", "additionalProperties": false, "required": ["scaffold", "plan", "plan_review", "implement"],
           "properties": {"scaffold": {"$ref": "#/$defs/stage"}, "plan": {"$ref": "#/$defs/stage"}, "plan_review": {"$ref": "#/$defs/stage"}, "implement": {"$ref": "#/$defs/stage"}}
         }
       },
-      "allOf": [{"if": {"properties": {"name": {"const": "oversized_plan"}}},
+      "allOf": [{"if": {"properties": {"name": {"const": "base"}}}, "then": {"required": ["plan_target"]}},
+        {"if": {"properties": {"name": {"const": "oversized_plan"}}},
         "then": {"required": ["split_recommendation_recorded", "full_plan_built", "stops"]}},
         {"if": {"properties": {"name": {"const": "security_interrupt"}}}, "then": {"required": ["security_interrupt"]}},
         {"if": {"properties": {"name": {"const": "security_block"}}}, "then": {"required": ["security_block"]}}]
