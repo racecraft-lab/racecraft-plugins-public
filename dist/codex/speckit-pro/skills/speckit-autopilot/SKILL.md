@@ -457,12 +457,13 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
    agent context files out of scope; none on `main` or a protected branch), use the Codex-native worktree binding for path
    prerequisites, and fail closed on a broken installed extension: defer the
    Archive Sweep with the exact failed path or operation and continue to Phase 0.
-3. **Run prereq helper operations** and parse the JSON output of each:
-   ```text
-   helper_id=check-prerequisites operation=check-prerequisites mode=read_only
-   helper_id=detect-commands operation=detect-commands mode=read_only
-   helper_id=detect-presets operation=detect-presets mode=read_only
-   ```
+3. **Run the G0 setup seam** — call runner helper `g0-setup` in `read_only`
+   mode once per `inputs.probe`, in order: `prerequisites`, `commands`,
+   `presets`. Each call carries `inputs.workflow_file` and `inputs.surface`.
+   Set `G0_SURFACE` and `inputs.surface` to `codex`.
+   Read each unchanged probe report from `data.result.stdout_json`, its exit
+   code from `data.result.exit_code`, and its error from `data.result.stderr`.
+   Consume `data.quality_gate` only at Step 0.11, after the earlier setup work.
    Record `on_feature_branch`, `PROJECT_COMMANDS` (including the
    quality-gate slots and their `gates` metadata, per
    `references/prerequisites.md` Step 0.11, and the missing-tool default: the

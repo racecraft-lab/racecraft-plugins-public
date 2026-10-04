@@ -16,6 +16,7 @@ from .decisions_list import run_decisions_list_helper
 from .egress_authorization import run_egress_authorization_helper
 from .execution_requests import run_execution_helper
 from .gate_preflight_coverage import run_gate_preflight_coverage_helper
+from .g0_setup import run_g0_setup_helper
 from .roadmap_freshness import run_roadmap_freshness_helper
 from .scaffold_answers import run_scaffold_answers_helper
 from .phase_brief import run_phase_brief_helper
@@ -116,6 +117,10 @@ HELPERS: dict[str, HelperEntry] = {
     "phase-brief": HelperEntry(
         "phase-brief", "phase-brief", None, "python_authoritative", "python_contract",
         authoritative_request("phase-brief"),
+    ),
+    "g0-setup": HelperEntry(
+        "g0-setup", "g0-setup", None, "python_authoritative", "python_contract",
+        authoritative_request("g0-setup"),
     ),
     "scaffold-answers": HelperEntry(
         "scaffold-answers", "scaffold-answers", None, "python_authoritative", "python_contract",
@@ -696,6 +701,22 @@ def mutation_registry_report() -> dict[str, Any]:
     }
 
 
+# Helpers with their own response contracts share one dispatch path.
+SPECIAL_HELPER_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
+    "formal-doctor": run_formal_helper,
+    "research-broker-preflight": run_research_broker_preflight_helper,
+    "render-egress-authorization": run_egress_authorization_helper,
+    "check-gate-preflight-coverage": run_gate_preflight_coverage_helper,
+    "finalize-run": run_run_finalization_helper,
+    "ratify-pr-split": run_pr_split_ratification_helper,
+    "list-archive-candidates": run_archive_sweep_helper,
+    "check-roadmap-freshness": run_roadmap_freshness_helper,
+    "scaffold-answers": run_scaffold_answers_helper,
+    "g0-setup": run_g0_setup_helper,
+    "phase-brief": run_phase_brief_helper,
+}
+
+
 def dispatch_helper(request: Any) -> dict[str, Any]:
     entry = HELPERS.get(request.helper_id)
     if entry is None and request.helper_id in MUTATION_HELPERS:
@@ -747,19 +768,10 @@ def dispatch_helper(request: Any) -> dict[str, Any]:
 
     if entry.helper_id == "helper-registry-dispatch":
         return response("ok", request_id=request.request_id, data=registry_report(HELPERS))
-    handlers = {
-        "formal-doctor": run_formal_helper,
-        "research-broker-preflight": run_research_broker_preflight_helper,
-        "render-egress-authorization": run_egress_authorization_helper,
-        "check-gate-preflight-coverage": run_gate_preflight_coverage_helper,
-        "finalize-run": run_run_finalization_helper,
-        "ratify-pr-split": run_pr_split_ratification_helper,
-        "list-archive-candidates": run_archive_sweep_helper,
-        "check-roadmap-freshness": run_roadmap_freshness_helper,
-        "scaffold-answers": run_scaffold_answers_helper,
-        "phase-brief": run_phase_brief_helper,
-    }
-    return handlers.get(entry.helper_id, run_registered_helper)(entry, request)
+    handler = SPECIAL_HELPER_HANDLERS.get(entry.helper_id)
+    if handler is not None:
+        return handler(entry, request)
+    return run_registered_helper(entry, request)
 
 
 def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, Any]:

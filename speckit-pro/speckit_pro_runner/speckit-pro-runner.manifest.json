@@ -580,6 +580,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/g0_setup.py",
+        "display": "speckit_pro_runner/helpers/g0_setup.py"
+      },
+      "sha256": "f4ae3f795fe430161ff1e609f46c22e0b9ea959e75f21de9a22d0b15a02e0ba0"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/helpers/gate_preflight_coverage.py",
         "display": "speckit_pro_runner/helpers/gate_preflight_coverage.py"
       },
@@ -663,7 +671,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "fddc4b450a524f965efe03989e30a1a6f4c351a69defb5024dc25a07de5122dc"
+      "sha256": "5cb55e92244dc124a31092af54714a62710426a927c9c4feef845e28c8bd20ba"
     },
     {
       "path": {

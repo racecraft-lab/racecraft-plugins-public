@@ -54,6 +54,9 @@ or permission to end the run. A null model preserves this agent's configuration.
    self-contained — they read their own templates and run their
    own scripts. For helper calls, use the exact request-envelope fields and `inputs` keys it names.
 
+Use the parent's `PROJECT_COMMANDS` and `PRESET_CONVENTIONS` from the
+`g0-setup` probe reports as supplied in the workflow prompt.
+
 3. **Return only a summary.** When the command completes, return
    a concise summary to the parent. Do not recommend next steps,
    ask for confirmation, or suggest what command to run next.

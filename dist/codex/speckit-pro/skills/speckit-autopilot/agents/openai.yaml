@@ -1,7 +1,7 @@
 interface:
   display_name: "SpecKit Autopilot"
   short_description: "Archive-aware autonomous SDD workflow executor"
-  default_prompt: "Run a SpecKit autopilot workflow, starting with Archive Sweep when available, passing its research run id and recording broker decisions; dispatch planning phases from the runner phase-brief"
+  default_prompt: "Run a SpecKit autopilot workflow, starting with Archive Sweep when available, using g0-setup for prerequisite probes and passing its research run id and recording broker decisions; dispatch planning phases from the runner phase-brief"
 
 policy:
   allow_implicit_invocation: false
