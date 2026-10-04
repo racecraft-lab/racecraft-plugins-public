@@ -36,6 +36,10 @@ These examples name the runner's contract; the steps below determine when a chec
 | `check-roadmap-freshness` | `read_only` | `{"roadmap_path": "<technical-roadmap-path>"}` |
 | `detect-commands` | `read_only` | `{}` |
 | `research-broker-preflight` | `read_only` | `{}` |
+| `o5-topology` | `read_only` | `{"target": "specs/<parent-branch>"}` |
+| `resolve-workflow-binding` | `read_only` | `{"workflow_file": "<absolute-workflow-path>"}` |
+| `resolve-scaffold-worktree-placement` | `read_only` | `{"branch_name": "<branch-name>"}` (add `worktree_root_override` only when the user supplied one) |
+| `scaffold-answers` | `read_only` | `{"answers_file": "<answers-file>", "spec_id": "<SPEC-ID>"}` |
 
 ## Capability discovery & grounding
 
@@ -102,7 +106,7 @@ from the parent scaffold — each child is scaffolded independently.
 Before presenting O5 as ready, validate the manifest with:
 
 ```text
-Run runner helper o5-topology for specs/<parent-branch>.
+Run runner helper o5-topology with the request fields above.
 ```
 
 If topology is invalid, report the JSON `problems[]` and keep the operator on

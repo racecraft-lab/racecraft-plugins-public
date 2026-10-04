@@ -9,6 +9,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -1130,14 +1131,19 @@ class ValidateScaffoldHelperInputs(unittest.TestCase):
             'check-roadmap-freshness': {'roadmap_path': '<technical-roadmap-path>'},
             'detect-commands': {},
             'research-broker-preflight': {},
+            'o5-topology': {'target': 'specs/<parent-branch>'},
+            'resolve-workflow-binding': {'workflow_file': '<absolute-workflow-path>'},
+            'resolve-scaffold-worktree-placement': {'branch_name': '<branch-name>'},
+            'scaffold-answers': {'answers_file': '<answers-file>', 'spec_id': '<SPEC-ID>'},
         }
         for host, view in (('claude', CLAUDE_VIEW), ('codex', CODEX_VIEW)):
             skill = (view / 'speckit-scaffold-spec' / 'SKILL.md').read_text(encoding='utf-8')
             for helper, inputs in expected_inputs.items():
                 with self.subTest(host=host, helper=helper):
-                    rows = re.findall(r'\| `' + re.escape(helper) + r'` \| `read_only` \| `(\{[^\n]*\})` \|', skill)
+                    rows = re.findall(r'\| `' + re.escape(helper) + r'` \| `read_only` \| `(\{[^\n`]*\})`', skill)
                     self.assertEqual(1, len(rows), f'{helper}: expected one explicit request-input example')
                     self.assertEqual(inputs, json.loads(rows[0]))
+                    self._assert_runner_accepts_keys(helper, rows[0])
             if host == 'codex':
                 section = skill.split('### -0.5 Verify Codex Agent Install', 1)[1].split('\n### ', 1)[0]
                 examples = [json.loads(block) for block in re.findall(r'```json\n(.*?)\n```', section, re.DOTALL)]
@@ -1153,6 +1159,22 @@ class ValidateScaffoldHelperInputs(unittest.TestCase):
                 self.assertIn('Replay the selected installation inputs', section)
                 self.assertIn('Omit optional fields that were absent from the selected installation', section)
                 self.assertNotIn('routing_mode', skill)
+
+    def _assert_runner_accepts_keys(self, helper: str, example: str) -> None:
+        # Drift guard: replay the documented keys through the real runner. A key the
+        # helper no longer accepts (or a new required key) surfaces as one of these
+        # input-schema diagnostics.
+        samples = {'mode_name': 'setup', 'spec_id': 'SPEC-1', 'branch_name': 'scaffold-helper-inputs'}
+        inputs = {key: samples.get(key, 'README.md') for key in json.loads(example)}
+        request = {'schema_version': '1.0', 'helper_id': helper, 'operation': helper, 'mode': 'read_only', 'inputs': inputs}
+        with tempfile.TemporaryDirectory() as tmp:
+            Path(tmp, 'README.md').write_text('# roadmap\n', encoding='utf-8')
+            proc = subprocess.run([sys.executable, '-m', 'speckit_pro_runner'], input=json.dumps(request), capture_output=True, text=True, cwd=tmp,
+                                  env={**os.environ, 'PYTHONPATH': str(REPO_ROOT / 'speckit-pro')}, check=False, timeout=120)
+        response = json.loads(proc.stdout.strip().splitlines()[-1])
+        text = json.dumps(response.get('diagnostics', [])) + json.dumps(response.get('data', {}).get('stderr', ''))
+        for phrase in ('is required', 'unknown inputs', 'takes no inputs', 'unexpected_inputs'):
+            self.assertNotIn(phrase, text, f'{helper}: runner rejected documented inputs {inputs}')
 
 class ValidateScaffoldRoadmapFreshness(unittest.TestCase):
 
