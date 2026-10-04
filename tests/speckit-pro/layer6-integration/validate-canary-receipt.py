@@ -21,6 +21,7 @@ METRICS = ("wall_seconds", "tokens")
 PLANNING_PHASES = frozenset(SCHEMA["$defs"]["plan_quality"]["properties"]["phases_run"]["items"]["enum"])  # ADR 0021
 HOOK_EVENTS = ("after_specify", "after_plan", "after_tasks")  # the phases the fixture registers its hooks on
 HOOK_KINDS = ("mandatory", "optional")
+MISSING_HOOK_COUNTERS = object()
 
 
 def closed(properties):
@@ -91,7 +92,7 @@ def hook_counter_failures(counters):
 
 def hook_problems(value, hook_counters):
     """A release receipt needs its run's counters; a local one checks them only when given."""
-    if hook_counters is not None:
+    if hook_counters is not MISSING_HOOK_COUNTERS:
         return hook_counter_failures(hook_counters)
     return ["hook_counters.missing"] if value["trigger"] != "local" else []
 
@@ -114,7 +115,7 @@ def plan_quality_failures(variant):
     return failures
 
 
-def receipt_report(value, budget=None, hook_counters=None):
+def receipt_report(value, budget=None, hook_counters=MISSING_HOOK_COUNTERS):
     """Gate failures, separate variant verdicts, and budgeted limits that are still unset."""
     problems = [f"{failure['field']}: {failure['message']}" for failure in json_schema_failures(value, SCHEMA, SCHEMA, "receipt")]
     if problems:
@@ -142,7 +143,7 @@ def receipt_report(value, budget=None, hook_counters=None):
     return {"valid": not problems, "failed_assertions": problems, "variants": results, "unbudgeted": unbudgeted}
 
 
-def validate_receipt(value, budget=None, hook_counters=None):
+def validate_receipt(value, budget=None, hook_counters=MISSING_HOOK_COUNTERS):
     return receipt_report(value, budget, hook_counters)["failed_assertions"]
 
 
@@ -241,7 +242,7 @@ def main():
     parser.add_argument("--hook-counters", type=Path, help="the run's hook-counters-receipt.json; required for release triggers")
     args = parser.parse_args()
     try:
-        counters = None if args.hook_counters is None else json.loads(
+        counters = MISSING_HOOK_COUNTERS if args.hook_counters is None else json.loads(
             args.hook_counters.read_text(encoding="utf-8"), object_pairs_hook=unique_object)
         report = receipt_report(json.loads(args.receipt.read_text(encoding="utf-8"), object_pairs_hook=unique_object),
                                 hook_counters=counters)

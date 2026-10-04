@@ -5357,6 +5357,9 @@ class CanaryHookCounterTests(CanaryVariantCase):
                              self.validator.validate_receipt(self.receipts["codex"], hook_counters=counters))
 
     def test_malformed_counters_fail_closed(self):
+        for host, value in self.receipts.items():
+            with self.subTest(host=host, counters=None):
+                self.assertTrue(self.validator.validate_receipt(value, hook_counters=None))
         for mutate in (lambda c: c["hooks"].pop("optional"), lambda c: c.update(schema_version="other"),
                        lambda c: c["hooks"]["mandatory"]["phases"].pop("after_tasks")):
             counters = hook_counters()
@@ -5373,9 +5376,10 @@ class CanaryHookCounterTests(CanaryVariantCase):
 
     def test_cli_reads_the_companion_receipt(self):
         value = self.receipts["claude-code"]
-        for fires, expected in ((1, 0), (2, 1)):
-            counters = hook_counters()
-            counters["hooks"]["mandatory"]["phases"]["after_plan"] = fires
+        for fires, expected in ((1, 0), (2, 1), (None, 1)):
+            counters = None if fires is None else hook_counters()
+            if counters is not None:
+                counters["hooks"]["mandatory"]["phases"]["after_plan"] = fires
             with self.subTest(fires=fires), tempfile.TemporaryDirectory() as directory:
                 source, companion = Path(directory) / "receipt.json", Path(directory) / "hook-counters-receipt.json"
                 source.write_text(json.dumps(value), encoding="utf-8")
