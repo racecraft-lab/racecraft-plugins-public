@@ -211,16 +211,20 @@ def observe_verification_docker(root: Path) -> dict[str, Any]:
 
     if shutil.which("docker") is None:
         return unavailable("the Docker CLI is not installed")
+    # Reject a remote override before any CLI call can contact its daemon.
+    host = os.environ.get("DOCKER_HOST")
+    if host and not host.startswith("unix://"):
+        return unavailable("the Docker daemon is not reached over a local socket")
     endpoint = cli_probe.probe(root, ["docker", "context", "inspect", "--format", "{{.Endpoints.docker.Host}}"],
                                allowed=("docker",), timeout=DOCKER_PROBE_SECONDS)
+    if endpoint["exit_status"] != 0:
+        return unavailable("no Docker daemon answered", "Start the Docker daemon, then rerun scaffold.")
+    if not endpoint["stdout_tail"].startswith("unix://"):
+        return unavailable("the Docker daemon is not reached over a local socket")
     platform = cli_probe.probe(root, ["docker", "info", "--format", "{{.OSType}}/{{.Architecture}}"],
                                allowed=("docker",), timeout=DOCKER_PROBE_SECONDS)
-    if endpoint["exit_status"] != 0 or platform["exit_status"] != 0:
+    if platform["exit_status"] != 0:
         return unavailable("no Docker daemon answered", "Start the Docker daemon, then rerun scaffold.")
-    # DOCKER_HOST overrides the context, so both must name a local socket.
-    host = os.environ.get("DOCKER_HOST")
-    if not endpoint["stdout_tail"].startswith("unix://") or (host and not host.startswith("unix://")):
-        return unavailable("the Docker daemon is not reached over a local socket")
     os_type, _, architecture = platform["stdout_tail"].partition("/")
     if os_type == PLATFORM_OS and architecture in DAEMON_ARCHITECTURES:
         return make_item("verified", f"a local {PLATFORM} Docker daemon answered", observed_at, {})

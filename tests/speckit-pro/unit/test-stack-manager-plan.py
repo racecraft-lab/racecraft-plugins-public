@@ -314,6 +314,13 @@ class BoundedProbeTests(unittest.TestCase):
                                   "stderr_tail": "x" * 2048})
         self.assertFalse(call.call_args.kwargs["shell"])
 
+    def test_large_stdout_is_capped_like_stderr(self):
+        done = subprocess.CompletedProcess(["git"], 0, stdout="x" * 5000 + "tail", stderr="x" * 5000)
+        record, _ = self.run_probe(stack_manager, ["git", "rev-parse", "HEAD"], [done])
+        self.assertEqual(2048, len(record["stdout_tail"]))
+        self.assertEqual("x" * 2044 + "tail", record["stdout_tail"])
+        self.assertEqual(2048, len(record["stderr_tail"]))
+
 
 if __name__ == "__main__":
     loader = unittest.defaultTestLoader

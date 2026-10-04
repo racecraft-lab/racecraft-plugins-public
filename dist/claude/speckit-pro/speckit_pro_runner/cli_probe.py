@@ -10,7 +10,7 @@ from typing import Any
 
 # A branch name that could be read as an option, or that git would reject, is never passed to a CLI.
 BRANCH = re.compile(r"(?!-)(?!.*\.\.)(?!.*//)[A-Za-z0-9._/-]{1,255}\Z")
-STDERR_TAIL_CHARS = 2048
+OUTPUT_TAIL_CHARS = 2048
 CLIS = ("gh", "git", "docker")
 
 
@@ -35,8 +35,8 @@ def probe(root: Path, argv: list[str], *, allowed: Collection[str], timeout: flo
         return {
             "argv": argv,
             "exit_status": result.returncode,
-            "stdout_tail": result.stdout.strip(),
-            "stderr_tail": result.stderr[-STDERR_TAIL_CHARS:].strip(),
+            "stdout_tail": result.stdout[-OUTPUT_TAIL_CHARS:].strip(),
+            "stderr_tail": result.stderr[-OUTPUT_TAIL_CHARS:].strip(),
         }
     except (OSError, ValueError, subprocess.SubprocessError) as exc:
         return {"argv": argv, "exit_status": None, "stdout_tail": "", "stderr_tail": str(exc)}

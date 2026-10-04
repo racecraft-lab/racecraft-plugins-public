@@ -442,6 +442,19 @@ class FeasibilityTest(unittest.TestCase):
         self.tool_env["DOCKER_HOST"] = "unix:///run/docker.sock"
         self.assertEqual("verified", self.record_items()["verification_docker"]["status"])
 
+    def test_remote_docker_host_is_rejected_before_any_probe_runs(self) -> None:
+        self.fake_docker("linux/arm64")
+        calls = self.root / "docker-calls.txt"
+        script = self.tools / "docker"
+        script.write_text(f"#!{sys.executable}\nfrom pathlib import Path\nPath({str(calls)!r}).write_text('called')\nprint('linux/arm64')\n", encoding="utf-8")
+        for endpoint in ("tcp://remote.example:2375", "ssh://remote.example"):
+            self.tool_env["DOCKER_HOST"] = endpoint
+            with self.subTest(endpoint=endpoint):
+                item = self.record_items()["verification_docker"]
+                self.assertEqual("unavailable", item["status"])
+                self.assertTrue(item["action"])
+                self.assertFalse(calls.exists(), "a remote Docker host must not be probed")
+
     def test_docker_without_a_daemon_or_cli_is_unavailable_with_an_action(self) -> None:
         item = self.record_items()["verification_docker"]
         self.assertEqual("unavailable", item["status"])
