@@ -18,4 +18,5 @@ The measured cost drove this. On the canary fixture, the orchestrator's median c
 
 - The phase 5 prose tickets cut what the brief makes redundant. Trimming `phase-execution.md` (#1091) waits on the brief.
 - Concurrency (which agents a brief launches together) is decided separately in [Parallel dispatch on the plan stage](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1158).
+- The brief also names the model for each dispatch, because Claude Code's Agent tool takes a per-call model but not a per-call effort; effort stays in the agent file. Codex sets both per spawn. The per-agent table is in [Model and effort per plan-stage agent on each host](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1150).
 - The brief carries policy facts only. The runner still owns the stop policy (ADR 0010), and the brief never stands in for a gate check.
