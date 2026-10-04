@@ -74,6 +74,18 @@ class CodexSkillMentionTests(unittest.TestCase):
 
 class ValidateSkills(unittest.TestCase):
 
+    def test_host_guidance_uses_no_task_list_tools(self) -> None:
+        forbidden = re.compile(r'\b(?:TaskCreate|TaskGet|TaskUpdate|TaskList|TodoWrite|update_plan|CLAUDE_CODE_ENABLE_TASKS)\b')
+        for host, root in (('claude', CLAUDE_VIEW), ('codex', CODEX_VIEW)):
+            sources = sorted(root.rglob('*.md')) + sorted(root.rglob('*.yaml'))
+            self.assertTrue(sources, f'{host}: missing rendered skill guidance')
+            agents = sorted((PLUGIN_ROOT / ('agents' if host == 'claude' else 'codex-agents')).glob('*.md' if host == 'claude' else '*.toml'))
+            self.assertTrue(agents, f'{host}: missing agent guidance')
+            sources += agents
+            for source in sources:
+                with self.subTest(host=host, file=source.relative_to(source.parent.parent)):
+                    self.assertEqual(forbidden.findall(_read(source)), [], 'host guidance names a task-list tool or opt-in')
+
     def test_plan_ambiguity_repair_preserves_requirement_provenance(self) -> None:
         surfaces = (
             (
@@ -402,8 +414,6 @@ class ValidateCodexSkills(unittest.TestCase):
         post_implementation = _read(skill_dir / 'references' / 'post-implementation.md')
         error_recovery = _read(skill_dir / 'references' / 'error-recovery.md')
         runtime_doc = f"{body}\n{phase_execution}\n{post_implementation}\n{error_recovery}"
-        with self.subTest(msg='speckit-autopilot: requires update_plan as the progress contract'):
-            self.assertIn('update_plan', runtime_doc)
         with self.subTest(msg='speckit-autopilot: requires durable autopilot-state.json persistence'):
             self.assertIn('autopilot-state.json', runtime_doc)
         with self.subTest(msg='speckit-autopilot: names Codex-native delegation tools'):
@@ -473,7 +483,7 @@ class ValidateCodexSkills(unittest.TestCase):
                 and 'execution_control.disposition=checkpoint_required' in body
                 and 'run is **not complete**' in body
                 and 'never mark them completed to stop' in body
-                and 'set the first\nincomplete item to `in_progress` in both state stores and continue the\nautopilot loop instead of summarizing.' in body
+                and 'set the first\nincomplete item to `in_progress` in `autopilot-state.json` and continue the\nautopilot loop instead of summarizing.' in body
                 and '`Post: Retrospective` is the final\nPost item; it must be completed or explicitly skipped before the\nautopilot can report completion.' in body,
                 'expected the direct final audit to forbid completion, continue the first incomplete Post item, and require Retrospective',
             )
