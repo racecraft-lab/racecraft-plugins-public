@@ -72,7 +72,7 @@ class CodexSkillMentionTests(unittest.TestCase):
                 self.assertEqual(short.findall(emit_host(source.read_text(encoding='utf-8'), 'codex')), [])
 
 
-class ValidateSkills(unittest.TestCase):
+class ValidateHostProgressGuidance(unittest.TestCase):
 
     def test_host_guidance_uses_no_task_list_tools(self) -> None:
         forbidden = re.compile(r'\b(?:TaskCreate|TaskGet|TaskUpdate|TaskList|TodoWrite|update_plan|CLAUDE_CODE_ENABLE_TASKS)\b')
@@ -85,6 +85,9 @@ class ValidateSkills(unittest.TestCase):
             for source in sources:
                 with self.subTest(host=host, file=source.relative_to(source.parent.parent)):
                     self.assertEqual(forbidden.findall(_read(source)), [], 'host guidance names a task-list tool or opt-in')
+
+
+class ValidateSkills(unittest.TestCase):
 
     def test_plan_ambiguity_repair_preserves_requirement_provenance(self) -> None:
         surfaces = (
