@@ -50,22 +50,22 @@ def load_budget(path=BUDGET_FILE):
                                    parse_constant=reject_nonfinite))
 
 
-def budget_checks(value, budget):
-    """(label, actual, limit) for each budgeted stage metric; a None limit is unset."""
-    for variant in value["variants"]:
-        limits = budget[value["host"]][variant["name"]]
-        for stage in BUDGET_STAGES:
-            for metric in METRICS:
-                yield f"{variant['name']}.{stage}.{metric}", variant["stages"][stage][metric], limits[stage][metric]
+def budget_checks(variant, limits):
+    """(label, actual, limit) for each budgeted stage metric of one variant entry; a None limit is unset."""
+    for stage in BUDGET_STAGES:
+        for metric in METRICS:
+            yield f"{variant['name']}.{stage}.{metric}", variant["stages"][stage][metric], limits[stage][metric]
 
 
 def receipt_report(value, budget=None):
-    """The validator's verdict: failed assertions, plus each budgeted limit that is still unset."""
+    """Gate failures, separate variant verdicts, and budgeted limits that are still unset."""
     problems = [f"{failure['field']}: {failure['message']}" for failure in json_schema_failures(value, SCHEMA, SCHEMA, "receipt")]
     if problems:
-        return {"valid": False, "failed_assertions": problems, "unbudgeted": []}
+        return {"valid": False, "failed_assertions": problems, "unbudgeted": [], "variants": []}
     if value["trigger"] == "local" and value["release_status_allowed"]:
         problems.append("local.release_status_allowed")
+    if value["trigger"] != "local" and sorted(variant["name"] for variant in value["variants"]) != sorted(VARIANTS):
+        problems.append("release.variants")
     probe = value["install_probe"]
     if value["host"] == "codex":
         for key in ("headless_install", "skill_expansion"):
@@ -73,15 +73,43 @@ def receipt_report(value, budget=None):
                 problems.append(f"install_probe.{key}")
     elif f"speckit-pro@{value['plugin_version']}" not in probe["loaded_plugins"]:
         problems.append("install_probe.loaded_plugins")
+    limits = (load_budget() if budget is None else budget)[value["host"]]
+    results, unbudgeted = [], []
     for variant in value["variants"]:
-        problems.extend(variant_failures(variant))
-    checks = list(budget_checks(value, load_budget() if budget is None else budget))
-    problems.extend(f"{label}_budget" for label, actual, limit in checks if limit is not None and actual > limit)
-    return {"valid": not problems, "failed_assertions": problems, "unbudgeted": [label for label, _, limit in checks if limit is None]}
+        checks = list(budget_checks(variant, limits[variant["name"]]))
+        result = variant_report(variant, checks)
+        problems.extend(result["gate_failed_assertions"])
+        results.append(result)
+        unbudgeted.extend(label for label, _, limit in checks if limit is None)
+    return {"valid": not problems, "failed_assertions": problems, "variants": results, "unbudgeted": unbudgeted}
 
 
 def validate_receipt(value, budget=None):
     return receipt_report(value, budget)["failed_assertions"]
+
+
+def variant_report(variant, checks):
+    """One variant entry's assertions and gate result, including its own budget failures."""
+    failures = variant_failures(variant)
+    gate = gate_failures(variant, failures)
+    gate.extend(f"{label}_budget" for label, actual, limit in checks if limit is not None and actual > limit)
+    return {"name": variant["name"], "verdict": "fail" if failures else "pass",
+            "failed_assertions": failures, "gate_verdict": "fail" if gate else "pass",
+            "gate_failed_assertions": gate}
+
+
+def gate_failures(variant, failures):
+    """ADR 0016 accepts only the recorded guard failure, without guarded success claims."""
+    expected_red = (
+        variant["name"] == "missing_question_guard"
+        and variant["verdict"] == "fail"
+        and variant["failed_assertions"] == ["question_guard"]
+        and variant.get("question_guard") == {
+            "gap_recorded": True, "guarded_work_completed": 0, "guarded_work_passed": 0,
+        }
+    )
+    expected = {"missing_question_guard.verdict", "missing_question_guard.question_guard"} if expected_red else set()
+    return [failure for failure in failures if failure not in expected]
 
 
 def variant_failures(variant):
@@ -133,7 +161,7 @@ def main():
     try:
         report = receipt_report(json.loads(args.receipt.read_text(encoding="utf-8"), object_pairs_hook=unique_object))
     except (OSError, ValueError) as exc:
-        report = {"valid": False, "failed_assertions": [str(exc)], "unbudgeted": []}
+        report = {"valid": False, "failed_assertions": [str(exc)], "unbudgeted": [], "variants": []}
     print(json.dumps(report))
     return int(not report["valid"])
 
