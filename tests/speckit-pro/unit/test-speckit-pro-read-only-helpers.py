@@ -4793,22 +4793,6 @@ class CanaryReceiptTests(unittest.TestCase):
         value["release_status_allowed"] = True
         self.assertTrue(self.validator.validate_receipt(value))
 
-    def test_base_requires_both_features_evaluated_offered_and_declined(self):
-        for feature in ("formal_methods", "verification_docker"):
-            for key, bad in (("evaluated", False), ("offered", False), ("answer", "accepted")):
-                with self.subTest(feature=feature, key=key):
-                    value = receipt()
-                    value["variants"][0]["feature_offers"][feature][key] = bad
-                    self.assertEqual(["base.feature_offers"], self.validator.validate_receipt(value))
-        for broken in ({}, {"formal_methods": receipt()["variants"][0]["feature_offers"]["formal_methods"]}):
-            with self.subTest(offers=sorted(broken)):
-                value = receipt()
-                value["variants"][0]["feature_offers"] = broken
-                self.assertTrue(self.validator.validate_receipt(value))
-        value = receipt()
-        del value["variants"][0]["feature_offers"]
-        self.assertTrue(self.validator.validate_receipt(value))
-
     def test_rejects_a_failed_codex_probe(self):
         value = receipt()
         value["install_probe"]["skill_expansion"] = "failed"
@@ -4867,6 +4851,24 @@ class CanaryVariantCase(unittest.TestCase):
                     (target[parent[0]] if parent else target)[key] = bad
                 with self.subTest(host=host, changes=changes):
                     self.assertEqual([f"{name}.{assertion}"], self.validator.validate_receipt(mutated))
+
+
+class CanaryFeatureOfferTests(CanaryVariantCase):
+    def test_base_requires_both_features_evaluated_offered_and_declined(self):
+        for feature in ("formal_methods", "verification_docker"):
+            for key, bad in (("evaluated", False), ("offered", False), ("answer", "accepted")):
+                with self.subTest(feature=feature, key=key):
+                    value = receipt()
+                    value["variants"][0]["feature_offers"][feature][key] = bad
+                    self.assertEqual(["base.feature_offers"], self.validator.validate_receipt(value))
+        for broken in ({}, {"formal_methods": receipt()["variants"][0]["feature_offers"]["formal_methods"]}):
+            with self.subTest(offers=sorted(broken)):
+                value = receipt()
+                value["variants"][0]["feature_offers"] = broken
+                self.assertTrue(self.validator.validate_receipt(value))
+        value = receipt()
+        del value["variants"][0]["feature_offers"]
+        self.assertTrue(self.validator.validate_receipt(value))
 
 
 class CanaryVariantAssertionsTests(CanaryVariantCase):
@@ -5274,7 +5276,7 @@ def main() -> int:
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                                for case in (ReadOnlyHelperTests, PlanLayersRepairRouteTests, PlanLayersPlannerCaseTests,
                                             PacketTitlePatternTests, G0SetupTests, G0SetupFailureTests, ScaffoldAnswersTests, CanaryReceiptTests,
-                                            CanaryVariantAssertionsTests, CanaryVariantContractTests,
+                                            CanaryFeatureOfferTests, CanaryVariantAssertionsTests, CanaryVariantContractTests,
                                             CanaryGateVerdictTests, CanaryGuardGapContractTests,
                                             CanaryPlanTargetTests, CanaryPlanTargetContractTests, CanaryCodexTokenTests,
                                             CanaryBudgetTests, CanaryBudgetFileTests))

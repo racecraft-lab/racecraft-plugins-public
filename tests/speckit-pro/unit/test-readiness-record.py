@@ -51,6 +51,10 @@ def request(observations: list[dict[str, object]], mode: str = "apply", **inputs
             "operation": "write-readiness-record", "mode": mode, "inputs": body}
 
 
+def scaffold_skill(host: str) -> str:
+    return (host_skill_root(host) / "speckit-scaffold-spec" / "SKILL.md").read_text(encoding="utf-8")
+
+
 class ReadinessRecordTest(unittest.TestCase):
     def setUp(self) -> None:
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
@@ -259,7 +263,7 @@ class ReadinessRecordTest(unittest.TestCase):
     def test_scaffold_documents_the_exact_request_and_the_step_on_each_host(self) -> None:
         for host in ("claude", "codex"):
             with self.subTest(host=host):
-                skill = (host_skill_root(host) / "speckit-scaffold-spec" / "SKILL.md").read_text(encoding="utf-8")
+                skill = scaffold_skill(host)
                 rows = re.findall(r"\| `write-readiness-record` \| `apply` \| `(\{[^`]*\})`", skill)
                 self.assertEqual(1, len(rows))
                 documented = json.loads(rows[0])
@@ -282,7 +286,7 @@ class ReadinessRecordTest(unittest.TestCase):
     def test_each_host_records_agent_repair_gaps_and_continues_to_the_writer(self) -> None:
         for host in ("claude", "codex"):
             with self.subTest(host=host):
-                skill = (host_skill_root(host) / "speckit-scaffold-spec" / "SKILL.md").read_text(encoding="utf-8")
+                skill = scaffold_skill(host)
                 setup = skill.split("### -0.5 ", 1)[1].split("### 0.", 1)[0]
                 self.assertNotRegex(setup, r"\bSTOP\b")
                 self.assertIn("`plugin_payload`", setup)
@@ -293,7 +297,7 @@ class ReadinessRecordTest(unittest.TestCase):
     def test_each_host_requires_loaded_revision_evidence(self) -> None:
         for host in ("claude", "codex"):
             with self.subTest(host=host):
-                skill = (host_skill_root(host) / "speckit-scaffold-spec" / "SKILL.md").read_text(encoding="utf-8")
+                skill = scaffold_skill(host)
                 step = skill.split("### 6.5 Write the Readiness Record", 1)[1].split("\n### ", 1)[0]
                 self.assertIn("loaded revision", step)
                 self.assertIn("disk inventory alone", step)
@@ -302,7 +306,7 @@ class ReadinessRecordTest(unittest.TestCase):
     def test_each_host_requires_live_mcp_observations_after_configuration_preflight(self) -> None:
         for host in ("claude", "codex"):
             with self.subTest(host=host):
-                skill = (host_skill_root(host) / "speckit-scaffold-spec" / "SKILL.md").read_text(encoding="utf-8")
+                skill = scaffold_skill(host)
                 step = skill.split("### 6.5 Write the Readiness Record", 1)[1].split("\n### ", 1)[0]
                 self.assertIn("bounded live", step)
                 self.assertIn("configuration alone", step)
@@ -456,7 +460,7 @@ class FeasibilityTest(unittest.TestCase):
     def test_scaffold_offers_both_features_on_each_host_with_their_recorded_results(self) -> None:
         for host in ("claude", "codex"):
             with self.subTest(host=host):
-                skill = (host_skill_root(host) / "speckit-scaffold-spec" / "SKILL.md").read_text(encoding="utf-8")
+                skill = scaffold_skill(host)
                 offer = skill.split("### 6.6 Offer Formal Methods and Verification Docker", 1)[1].split("\n### ", 1)[0]
                 for needle in ("data.record.items.formal_methods", "data.record.items.verification_docker",
                                "whatever its feasibility result", "booleans; ask nothing"):
