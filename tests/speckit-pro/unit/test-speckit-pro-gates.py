@@ -2304,7 +2304,7 @@ class GateFoundationTests(unittest.TestCase):
             patch.object(dispatcher, "ThreadPoolExecutor") as executor,
         ):
             pool = executor.return_value.__enter__.return_value
-            pool.map.side_effect = lambda function, paths, roots: map(function, paths, roots)
+            pool.map.side_effect = map
             executor.return_value.__exit__.side_effect = lambda *args: events.append("pool-closed")
             self.assertEqual(dispatcher.run_script_suite("layer", [runtime, ordinary], REPO_ROOT), 0)
             self.assertEqual(pool.map.call_args.args[1], [ordinary])
