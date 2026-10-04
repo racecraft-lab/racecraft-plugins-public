@@ -148,7 +148,7 @@ class StopReasonPrintTests(unittest.TestCase):
             steps = _section(self._phase_execution(host), "terminal-step sequence")
             self.assertRegex(
                 steps,
-                re.compile(rf"^\d+\. [^\n]*\b[Pp]rint\b[^\n]*`stop_reason:plan_stage_boundary`", re.M),
+                re.compile(r"^\d+\. [^\n]*\b[Pp]rint\b[^\n]*`stop_reason:plan_stage_boundary`", re.M),
                 f"{host}: a numbered terminal step must print the plan stage boundary reason",
             )
 
