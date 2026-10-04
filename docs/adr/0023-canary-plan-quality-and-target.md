@@ -9,6 +9,8 @@ The planning speed-ups (ADRs 0018 to 0022) remove most consensus, move executors
 - **Artifact checks.** Every functional requirement traces to at least one task. At the end of planning there are zero `[Gap]` markers, zero open analyze findings and zero `[NEEDS CLARIFICATION]` markers, or each remaining one is blocked-for-UAT through the retry ladder and listed. The receipt also records decisions-list counts, including low-confidence items and consensus rounds by kind.
 - **Planted catches.** The base SPEC carries a small set of known traps, modelled on what planning really caught on the fixture: for example, a test method that would pass wrongly, or a done-gate that fails on parallel red tests. The receipt asserts the plan fixed each one. Adding them is a reviewed fixture PR with a new tag, which re-baselines the budget (ADR 0016).
 
+- **Hooks fire once.** The base fixture registers one mandatory and one optional Spec Kit extension hook, each appending to a counter. The receipt asserts each fired exactly once per phase ([Hook double dispatch](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1175)).
+
 The plan-stage target (at most 30 minutes and 15M tokens per host on the base variant) is reported, not gated. Each receipt records the plan stage's time and tokens against it. On Codex, the token total includes child agents' rollouts, not just the root thread. The target counts as met after three consecutive green base-variant runs per host under it. A reviewed PR then sets the plan-stage budget no higher than the target, so planning cannot drift back above it.
 
 ## Considered Options
