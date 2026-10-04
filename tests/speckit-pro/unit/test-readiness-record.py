@@ -193,6 +193,11 @@ class ReadinessRecordTest(unittest.TestCase):
             "single segment path": "see " + "/" + "tmp",
             "root path": "see " + "/",
             "unc path": "see " + chr(92) * 2 + "server" + chr(92) + "share",
+            "native root path": "see " + chr(92) + "Windows" + chr(92) + "Temp",
+            "code path": "read `" + "/" + "tmp`",
+            "link path": "read [" + "/" + "tmp]",
+            "angle path": "read <" + "/" + "tmp>",
+            "quoted path": "read \u201c" + "/" + "tmp\u201d",
         }
         for label, text in leaks.items():
             with self.subTest(label):
@@ -311,6 +316,11 @@ class ReadinessRecordTest(unittest.TestCase):
         items = response["data"]["record"]["items"]
         self.assertIn("/speckit-pro:speckit-install", items["plugin_payload"]["action"])
         self.assertNotIn("action", items["project_integration"])
+        for action in ("Run `/speckit-pro:speckit-install`, then retry.", "Run \u201c/reload-plugins\u201d, then retry."):
+            with self.subTest(action=action):
+                response = self.run_helper([observation("plugin_payload", "unavailable", action=action)])
+                assert_runner_response(self, response, "ok", 0)
+                self.assertEqual(action, response["data"]["record"]["items"]["plugin_payload"]["action"])
         bad_mode = request(self.all_verified(), execution_mode="answer-file")
         _, response, _ = run_runner(bad_mode, cwd=self.root)
         assert_runner_response(self, response, "input_error", 2)

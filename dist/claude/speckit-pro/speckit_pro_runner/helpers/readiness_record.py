@@ -45,8 +45,8 @@ OBSERVATION_KEYS = frozenset({"item", "status", "evidence_source", "action", "fi
 VALUE_NAME_RE = re.compile(r"[a-z][a-z0-9_]{0,40}")
 # Keep the supported scaffold slash commands; refuse absolute paths, including roots and UNC paths.
 LOCAL_PATH_RE = re.compile(
-    r"(?:^|[\s\"'(=:])(?:/(?!speckit-pro:[a-z][a-z0-9-]*(?=[\s,.]|$)|"
-    r"(?:plugin|reload-plugins)(?=[\s,.]|$))[^\s]*|~[/\\]|[A-Za-z]:[\\/]|\\{2}|file://)")
+    r"(?<![\w./\\-])(?:/(?!speckit-pro:[a-z][a-z0-9-]*(?=[^\w/\\-]|$)|"
+    r"(?:plugin|reload-plugins)(?=[^\w/\\-]|$))[^\s]*|~[/\\]|[A-Za-z]:[\\/]|\\|file://)")
 EXECUTION_MODES = ("interactive", "answers-file")
 MAX_TEXT = 400
 NOT_OBSERVED_ACTION = "Run the preparation check for this item, then rerun scaffold."
