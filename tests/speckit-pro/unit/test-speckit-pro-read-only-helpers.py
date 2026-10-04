@@ -4725,7 +4725,11 @@ class CanaryVariantCase(unittest.TestCase):
             if host == "claude-code":
                 value["install_probe"] = {"loaded_plugins": ["speckit-pro@1.0.0"], "evidence": "init.json"}
         self.variant_evidence = {
-            "base": {}, "missing_question_guard": {},
+            "base": {}, "missing_question_guard": {
+                "verdict": "fail", "failed_assertions": ["question_guard"], "question_guard": {
+                    "gap_recorded": True, "guarded_work_completed": 0, "guarded_work_passed": 0,
+                },
+            },
             "oversized_plan": {"split_recommendation_recorded": True, "full_plan_built": True, "stops": 0},
             "security_interrupt": {"questions_after_scaffold": 1, "security_interrupt": {
                 "runner_permit_verified": True, "simulated_responder_answered": True, "pause_classification": "authorized",
@@ -4794,6 +4798,70 @@ class CanaryVariantAssertionsTests(CanaryVariantCase):
 
 
 class CanaryVariantContractTests(CanaryVariantCase):
+    def test_expected_red_missing_guard_passes_gate_for_both_hosts(self):
+        for host, value in self.receipts.items():
+            base = value["variants"][0]
+            value["variants"] = [dict(copy.deepcopy(base), name=name, **copy.deepcopy(evidence))
+                                 for name, evidence in self.variant_evidence.items()]
+            with self.subTest(host=host), tempfile.TemporaryDirectory() as directory:
+                self.assertEqual([], self.validator.validate_receipt(value))
+                source = Path(directory) / "receipt.json"
+                source.write_text(json.dumps(value), encoding="utf-8")
+                completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
+                                           capture_output=True, text=True, check=False)
+                report = json.loads(completed.stdout)
+                self.assertEqual((0, True, []), (completed.returncode, report["valid"], report["failed_assertions"]))
+                results = {variant["name"]: variant for variant in report["variants"]}
+                self.assertEqual(set(self.variant_evidence), set(results))
+                self.assertTrue(all(result["gate_verdict"] == "pass" for result in results.values()))
+                self.assertEqual("fail", results["missing_question_guard"]["verdict"])
+                self.assertIn("missing_question_guard.question_guard", results["missing_question_guard"]["failed_assertions"])
+            for trigger in ("scheduled", "on_demand"):
+                release = copy.deepcopy(value)
+                release.update(trigger=trigger, dirty_tree=False, release_status_allowed=True)
+                self.assertEqual([], self.validator.validate_receipt(release))
+                for index in range(len(release["variants"])):
+                    for duplicate in (False, True):
+                        incomplete = copy.deepcopy(release)
+                        removed = incomplete["variants"].pop(index)
+                        if duplicate:
+                            incomplete["variants"].extend([removed, copy.deepcopy(removed)])
+                        with self.subTest(host=host, trigger=trigger, index=index, duplicate=duplicate):
+                            self.assertIn("release.variants", self.validator.validate_receipt(incomplete))
+
+    def test_expected_red_rejects_clean_claims_and_other_failures(self):
+        for host, value in self.receipts.items():
+            value["variants"][0].update(name="missing_question_guard", **copy.deepcopy(self.variant_evidence["missing_question_guard"]))
+            self.assertEqual([], self.validator.validate_receipt(value))
+            mutations = [("verdict", "pass"), ("failed_assertions", []),
+                         ("failed_assertions", ["question_guard", "other_failure"]),
+                         ("question_guard", None), ("unregistered_stops", 1),
+                         ("questions_after_scaffold", 1), ("planning_end", "paused"),
+                         ("implement_end", "paused"), ("uat_runbook", "")]
+            mutations.extend((f"question_guard.{key}", bad) for key, bad in (
+                ("gap_recorded", False), ("guarded_work_completed", 1), ("guarded_work_passed", 1)))
+            mutations.extend((f"question_guard.{key}", bad) for key in value["variants"][0]["question_guard"]
+                             for bad in (None, "unknown"))
+            mutations.extend((f"question_guard.{key}", bad) for key in ("guarded_work_completed", "guarded_work_passed")
+                             for bad in (-1, True, 0.5))
+            for path, bad in mutations:
+                mutated = copy.deepcopy(value)
+                *parent, key = path.split(".")
+                target = mutated["variants"][0]
+                target = target[parent[0]] if parent else target
+                if bad is None:
+                    del target[key]
+                else:
+                    target[key] = bad
+                with self.subTest(host=host, path=path, bad=bad):
+                    self.assertTrue(self.validator.validate_receipt(mutated))
+            budget = copy.deepcopy(self.validator.load_budget())
+            budget[host]["missing_question_guard"]["plan"]["wall_seconds"] = 0.5
+            report = self.validator.receipt_report(value, budget)
+            self.assertFalse(report["valid"])
+            self.assertEqual("fail", report["variants"][0]["gate_verdict"])
+            self.assertIn("missing_question_guard.plan.wall_seconds_budget", report["failed_assertions"])
+
     def test_variant_evidence_fails_closed_when_missing_or_malformed(self):
         for host, original in self.receipts.items():
             for name in ("oversized_plan", "security_interrupt", "security_block"):
@@ -4827,6 +4895,8 @@ class CanaryVariantContractTests(CanaryVariantCase):
             base = value["variants"][0]
             value["variants"] = [dict(copy.deepcopy(base), name=name, **copy.deepcopy(evidence))
                                  for name, evidence in self.variant_evidence.items()]
+            value["variants"][1].update(verdict="pass", failed_assertions=[])
+            del value["variants"][1]["question_guard"]
             with self.subTest(host=host), tempfile.TemporaryDirectory() as directory:
                 self.assertEqual(["missing_question_guard.question_guard"], self.validator.validate_receipt(value))
                 source = Path(directory) / "receipt.json"

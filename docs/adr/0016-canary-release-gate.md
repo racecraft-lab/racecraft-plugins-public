@@ -30,10 +30,12 @@ All five variants gate every release:
 | Base, with umask 077 and no task-list tools | The pass conditions below (ADR 0001) |
 | Oversized plan | A split recommendation is recorded, the full plan is built, no stop (ADR 0009) |
 | Security interrupt | A simulated responder answers under a runner permit; it reads as an authorized pause, not an unregistered stop (ADR 0011) |
-| Missing question guard | The run may reach handoff, but the receipt is red (ADR 0011) |
+| Missing question guard | Expected red: the variant stays red, with the guard assertion recorded by the run and no guard-dependent work claimed completed or passed; those conditions make its release-gate verdict green (ADR 0011) |
 | Security block in implement | Affected work is blocked-for-UAT and independent work finishes (ADR 0012, 0014) |
 
-A run passes when there are zero questions after scaffold, planning ends at artifacts plus a draft PR, implement ends ready for UAT with a runbook, every stage is within budget, and there are zero unregistered stops (ADR 0010).
+A run passes when all five release-gate verdicts are green, planning ends at artifacts plus a draft PR, implement ends ready for UAT with a runbook, every stage is within budget, and there are zero unregistered stops (ADR 0010). There are zero questions after scaffold except the single permitted, answered security interrupt.
+
+The missing-question-guard variant remains red under [ADR 0011](0011-security-interrupt.md), even at handoff. Its release-gate verdict is green only when the run itself recorded the guard gap, claimed no guard-dependent work completed or passed, and emitted `verdict="fail"` with `failed_assertions=["question_guard"]`. A clean-looking variant, absent gap evidence, any guarded success claim, or another failed assertion keeps the gate red. This expected-red rule preserves all other assertion and budget checks; all five variants still gate every release.
 
 Draft PRs open in the fixture repo on a run-named branch. After the receipt is recorded, the harness closes the PR and deletes the branch.
 
@@ -43,7 +45,9 @@ The budget file (`tests/speckit-pro/layer6-integration/canary-budget.json`) sets
 
 ## Receipt
 
-Each run leaves one JSON canary receipt per host. It records the commit, host and plugin versions, fixture tag, and each variant's verdict with its failed assertions. It also records per-stage time and tokens, which the validator checks against the budget file, questions after scaffold, unregistered stops, decisions-list counts by kind, retry-ladder attempts and the blocked-for-UAT count. Receipts plus redacted transcripts and run state are stored as private-repo artifacts for 90 days. The receipt schema and its validator live in `tests/speckit-pro/layer6-integration/`.
+Each run leaves one JSON canary receipt per host. It records the commit, host and plugin versions, fixture tag, and each variant's verdict with its failed assertions. The missing-question-guard variant also records `question_guard`: `gap_recorded` states whether the run itself recorded the gap, and `guarded_work_completed` and `guarded_work_passed` count guard-dependent work claimed completed or passed. These counts include dependent work and checks. Missing or malformed evidence fails closed. The validator reports each variant's own verdict separately from its release-gate verdict, and the overall result uses the gate verdicts.
+
+The receipt also records per-stage time and tokens, which the validator checks against the budget file, questions after scaffold, unregistered stops, decisions-list counts by kind, retry-ladder attempts and the blocked-for-UAT count. Receipts plus redacted transcripts and run state are stored as private-repo artifacts for 90 days. The receipt schema and its validator live in `tests/speckit-pro/layer6-integration/`.
 
 ## Authentication
 
