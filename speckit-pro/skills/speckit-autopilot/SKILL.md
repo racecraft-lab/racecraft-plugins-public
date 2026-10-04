@@ -249,6 +249,11 @@ Continue in [phase-execution.md](./references/phase-execution.md).
 
 ## Prerequisites — Model
 
+For research-agent output, copy the broker's **Research provider decisions**
+records into the workflow's decisions list once per record `id`. Preserve the
+broker's decision, alternative, provider, and reason. Cached failures add no
+rows; continue independent work and record any research left unverified.
+
 The orchestrator makes gate decisions, coordinates consensus synthesis, and
 manages a 7-phase workflow. After every analyst round it dispatches the named
 synthesizer (`speckit-pro:consensus-synthesizer` on Claude Code,

@@ -654,6 +654,8 @@ class ResearchBroker:
         else:
             self._root = root
         self._jev: dict[str, Any] | None = None
+        self._provider_failures: dict[str, str] = {}
+        self._provider_decisions: list[dict[str, str]] = []
         self._deadline = time.monotonic() + TOOL_BUDGET_SECONDS
 
     # -- time budget ----------------------------------------------------------
@@ -665,10 +667,37 @@ class ResearchBroker:
         return self._deadline - time.monotonic()
 
     def _fetch(self, method: str, url: str, headers: dict[str, str], body: bytes | None) -> HttpResult:
+        provider = "tavily" if url == TAVILY_SEARCH_URL else "context7"
+        if provider in self._provider_failures:
+            raise FetchFailed(self._provider_failures[provider])
         remaining = self._remaining()
         if remaining <= 1.0:
             raise FetchFailed("timeout")
-        return self.http(method, url, headers, body, min(HTTP_TIMEOUT_SECONDS, remaining))
+        try:
+            result = self.http(method, url, headers, body, min(HTTP_TIMEOUT_SECONDS, remaining))
+        except FetchFailed as exc:
+            if str(exc) in ("network_error", "timeout"):
+                self._trip_provider(provider, str(exc))
+            raise
+        code = _status_code(result.status)
+        if code == "rate_limited" or 500 <= result.status < 600:
+            self._trip_provider(provider, code or "http_error")
+        return result
+
+    def _trip_provider(self, provider: str, reason: str) -> None:
+        if provider not in self._provider_failures:
+            self._provider_failures[provider] = reason
+            self._provider_decisions.append({
+                "id": f"research-provider:{provider}", "provider": provider, "reason": reason,
+                "decision": f"Skip {provider} for the rest of this broker run.",
+                "alternative": "Retry the failed provider.",
+            })
+
+    def _provider_failure(self, tool: str, provider: str) -> dict[str, Any] | None:
+        reason = self._provider_failures.get(provider)
+        if reason is None:
+            return None
+        return self._envelope(tool, "fetch_failed", reason=reason, message=_fetch_message(reason))
 
     # -- mode -----------------------------------------------------------------
 
@@ -691,8 +720,10 @@ class ResearchBroker:
             "policy": self.policy_name,
             "chunks": [],
             "dropped": [],
+            "decisions": self._provider_decisions,
             "notice": NOTICE,
         }
+        self._provider_decisions = []
         envelope.update(extra)
         return envelope
 
@@ -854,6 +885,9 @@ class ResearchBroker:
         self._start_call()
         query = _text_argument(query, "query", MAX_QUERY_INPUT_CHARS)
         max_results = _int_argument(max_results, "max_results", 1, 10)
+        failed = self._provider_failure(tool, "tavily")
+        if failed is not None:
+            return failed
         blocked = self._outbound(tool, [query])
         if blocked is not None:
             return blocked
@@ -903,6 +937,9 @@ class ResearchBroker:
         library = _text_argument(library, "library", MAX_LIBRARY_CHARS)
         query = _text_argument(query, "query", MAX_QUERY_INPUT_CHARS)
         max_chunks = _int_argument(max_chunks, "max_chunks", 1, 10)
+        failed = self._provider_failure(tool, "context7")
+        if failed is not None:
+            return failed
         blocked = self._outbound(tool, [library, query])
         if blocked is not None:
             return blocked

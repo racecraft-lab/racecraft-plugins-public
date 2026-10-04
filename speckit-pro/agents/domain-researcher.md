@@ -85,6 +85,10 @@ and lower your confidence. Keep queries generic: no secrets, local paths,
 or copied spec text.
 When the broker returns nothing usable, fall back to local referenced
 documents.
+Relay any broker `decisions[]` unchanged under **Research provider decisions**
+in your output, once per returned record. The orchestrator records them in the
+workflow's decisions list. A cached provider failure adds no new decision;
+continue with the other provider or local evidence and report missing research.
 
 ## Output Format
 

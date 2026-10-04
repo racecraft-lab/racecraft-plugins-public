@@ -518,6 +518,103 @@ class ModeTests(BrokerCase):
 
 
 class ProviderTests(BrokerCase):
+    def test_unavailable_provider_is_not_called_again(self) -> None:
+        failures = [(rb.HttpResult(500, b""), "http_error"), (rb.HttpResult(503, b""), "http_error"),
+                    (rb.FetchFailed("network_error"), "network_error"), (rb.FetchFailed("timeout"), "timeout")]
+        for provider in ("tavily", "context7"):
+            for failure, reason in failures:
+                with self.subTest(provider=provider, reason=reason):
+                    url = rb.TAVILY_SEARCH_URL if provider == "tavily" else rb.CONTEXT7_CONTEXT_URL
+                    http = FakeHttp({url: failure}) if isinstance(failure, rb.HttpResult) else FakeHttp(raises=failure)
+                    broker = self.broker(self.env(TAVILY_API_KEY=TAVILY_VALUE), http=http)
+                    arguments = {"query": "timeouts"}
+                    tool = "research_search" if provider == "tavily" else "docs_query"
+                    if provider == "context7":
+                        arguments["library"] = "/psf/requests"
+                    first = rb.call_tool(tool, arguments, broker)
+                    self.assertEqual((first["status"], first["reason"]), ("fetch_failed", reason))
+                    second = rb.call_tool(tool, arguments, broker)
+                    self.assertEqual({k: v for k, v in second.items() if k != "decisions"},
+                                     {k: v for k, v in first.items() if k != "decisions"})
+                    self.assertEqual(len(http.requests), 1)
+
+    def test_failed_provider_is_not_called_again_and_other_provider_still_works(self) -> None:
+        for manifest in (".mcp.json", ".codex-plugin/sweep-mcp.json"):
+            launch = json.loads((PLUGIN_ROOT / manifest).read_text(encoding="utf-8"))["mcpServers"]["research-broker"]
+            self.assertEqual(launch["args"], ["-m", rb.__name__])
+            for provider in ("tavily", "context7"):
+                with self.subTest(host=manifest, provider=provider):
+                    http = default_http()
+                    url = rb.TAVILY_SEARCH_URL if provider == "tavily" else rb.CONTEXT7_SEARCH_URL
+                    http.routes[url] = rb.HttpResult(429, b"")
+                    broker = self.broker(self.env(TAVILY_API_KEY=TAVILY_VALUE), http=http)
+                    if provider == "tavily":
+                        first = broker.research_search(query="timeouts")
+                        second = broker.research_search(query="retries", max_results=1)
+                        other = broker.docs_query(library="requests", query="timeout")
+                    else:
+                        first = broker.docs_query(library="requests", query="timeout")
+                        second = broker.docs_query(library="/psf/requests", query="retries", max_chunks=1)
+                        other = broker.research_search(query="timeouts")
+                    self.assertEqual((first["status"], first["reason"]), ("fetch_failed", "rate_limited"))
+                    self.assertEqual({k: v for k, v in second.items() if k != "decisions"},
+                                     {k: v for k, v in first.items() if k != "decisions"})
+                    self.assertEqual(other["status"], "ok")
+                    self.assertTrue(other["chunks"])
+                    self.assertEqual(len(http.requests), 3 if provider == "tavily" else 2)
+
+    def test_breaker_reports_one_decision_and_skips_later_screening(self) -> None:
+        self.jev_ready()
+        jev = FakeJev()
+        http = FakeHttp({rb.TAVILY_SEARCH_URL: rb.HttpResult(429, b"")})
+        broker = self.broker(self.env(TAVILY_API_KEY=TAVILY_VALUE), jev=jev, http=http)
+        first = broker.research_search(query="timeouts")
+        self.assertEqual(first.get("decisions"), [{
+            "id": "research-provider:tavily", "provider": "tavily", "reason": "rate_limited",
+            "decision": "Skip tavily for the rest of this broker run.",
+            "alternative": "Retry the failed provider.",
+        }])
+        calls = len(jev.calls)
+        second = broker.research_search(query="retries")
+        self.assertEqual(second["reason"], "rate_limited")
+        self.assertEqual(second.get("decisions"), [])
+        self.assertEqual(len(jev.calls), calls)
+        self.assertEqual(len(http.requests), 1)
+
+    def test_request_errors_and_local_budget_exhaustion_do_not_trip_provider(self) -> None:
+        for status in (400, 401, 403, 404, 302):
+            with self.subTest(status=status):
+                http = FakeHttp({rb.TAVILY_SEARCH_URL: rb.HttpResult(status, b"")})
+                broker = self.broker(self.env(TAVILY_API_KEY=TAVILY_VALUE), http=http)
+                failure = broker.research_search(query="timeouts")
+                self.assertEqual(failure.get("decisions"), [])
+                http.routes[rb.TAVILY_SEARCH_URL] = rb.HttpResult(200, TAVILY_RESPONSE)
+                self.assertEqual(broker.research_search(query="timeouts")["status"], "ok")
+                self.assertEqual(len(http.requests), 2)
+        http = default_http()
+        broker = self.broker(self.env(TAVILY_API_KEY=TAVILY_VALUE), http=http)
+        with unittest.mock.patch.object(rb, "TOOL_BUDGET_SECONDS", 0.5):
+            self.assertEqual(broker.research_search(query="timeouts")["reason"], "timeout")
+        self.assertEqual(broker.research_search(query="timeouts")["status"], "ok")
+        self.assertEqual(len(http.requests), 1)
+
+    def test_each_provider_reports_once_and_a_new_broker_starts_fresh(self) -> None:
+        http = default_http()
+        http.routes[rb.TAVILY_SEARCH_URL] = rb.HttpResult(429, b"")
+        http.routes[rb.CONTEXT7_CONTEXT_URL] = rb.HttpResult(503, b"")
+        env = self.env(TAVILY_API_KEY=TAVILY_VALUE)
+        broker = self.broker(env, http=http)
+        search = broker.research_search(query="timeouts")
+        docs = broker.docs_query(library="/psf/requests", query="timeout")
+        self.assertEqual([d["provider"] for d in search["decisions"] + docs["decisions"]], ["tavily", "context7"])
+        search["reason"] = "caller mutation"
+        self.assertEqual(broker.research_search(query="timeouts")["reason"], "rate_limited")
+        self.assertEqual(broker.docs_query(library="/psf/requests", query="timeout")["decisions"], [])
+        self.assertEqual(len(http.requests), 2)
+        fresh = self.broker(env, http=default_http())
+        self.assertEqual(fresh.research_search(query="timeouts")["status"], "ok")
+        self.assertEqual(fresh.docs_query(library="/psf/requests", query="timeout")["status"], "ok")
+
     def test_no_tavily_key_returns_search_unavailable_and_docs_still_work_keyless(self) -> None:
         http = default_http()
         broker = self.broker(http=http)
