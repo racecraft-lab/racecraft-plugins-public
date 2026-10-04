@@ -4662,9 +4662,22 @@ def receipt():
             "implement_end": "ready_for_uat", "uat_runbook": "uat.md",
             "decisions_by_kind": {"design": 2}, "retry_attempts": 0, "blocked_for_uat": 0,
             "plan_target": {"wall_seconds_limit": 1800, "tokens_limit": 15000000, "target_met": True},
+            "plan_quality": {
+                "phases_run": ["specify", "clarify", "plan", "checklist", "tasks", "analyze"], "clarify_sessions": 1,
+                "requirements_total": 4, "untraced_requirements": [], "open_gaps": [], "open_findings": [],
+                "open_clarifications": [], "blocked_for_uat_listed": [],
+                "decisions": {"total": 5, "low_confidence": 1, "consensus_rounds_by_kind": {"security": 1, "low_confidence": 1}},
+            },
             "stages": {name: {"wall_seconds": 1, "tokens": 10, "codex_tokens": {"root_tokens": 10, "child_rollout_tokens": []}} for name in ("scaffold", "plan", "plan_review", "implement")},
         }],
     }
+
+
+def hook_counters():
+    phases = {"after_specify": 1, "after_plan": 1, "after_tasks": 1}
+    return {"schema_version": "hook-counters/v1", "hooks": {
+        kind: {"command": f"speckit.canary.{kind}", "optional": kind == "optional", "fires": 3,
+               "phases": dict(phases), "unattributed_fires": 0} for kind in ("mandatory", "optional")}}
 
 
 class CanaryReceiptTests(unittest.TestCase):
@@ -4834,11 +4847,11 @@ class CanaryGateVerdictTests(CanaryVariantCase):
                 release = copy.deepcopy(value)
                 release.update(trigger=trigger, dirty_tree=False, release_status_allowed=True)
                 with self.subTest(host=host, trigger=trigger, index=index, duplicate=duplicate):
-                    self.assertEqual([], self.validator.validate_receipt(release))
+                    self.assertEqual([], self.validator.validate_receipt(release, hook_counters=hook_counters()))
                     removed = release["variants"].pop(index)
                     if duplicate:
                         release["variants"].extend([removed, copy.deepcopy(removed)])
-                    self.assertIn("release.variants", self.validator.validate_receipt(release))
+                    self.assertIn("release.variants", self.validator.validate_receipt(release, hook_counters=hook_counters()))
 
 
 class CanaryGuardGapContractTests(CanaryVariantCase):
@@ -5165,6 +5178,117 @@ class CanaryBudgetFileTests(CanaryBudgetCase):
         self.assertEqual([], shipped)
 
 
+class CanaryPlanQualityTests(CanaryVariantCase):
+    """ADR 0023 artifact checks and ADR 0021's six planning phases, for both hosts."""
+
+    def quality(self, value):
+        return value["variants"][0]["plan_quality"]
+
+    def test_each_open_planning_item_fails_the_receipt(self):
+        for host, value in self.receipts.items():
+            for field, label in (("untraced_requirements", "untraced_requirements"), ("open_gaps", "open_gap"),
+                                 ("open_findings", "open_finding"), ("open_clarifications", "open_clarification")):
+                mutated = copy.deepcopy(value)
+                self.quality(mutated)[field] = ["item-1"]
+                with self.subTest(host=host, field=field):
+                    self.assertEqual([f"base.plan_quality.{label}"], self.validator.validate_receipt(mutated))
+
+    def test_a_blocked_and_listed_item_passes_but_an_unlisted_one_fails(self):
+        for host, value in self.receipts.items():
+            for field in ("open_gaps", "open_findings", "open_clarifications"):
+                mutated = copy.deepcopy(value)
+                quality = self.quality(mutated)
+                quality[field] = ["item-1"]
+                quality["blocked_for_uat_listed"] = ["item-1"]
+                with self.subTest(host=host, field=field, listed=True):
+                    self.assertEqual([], self.validator.validate_receipt(mutated))
+                quality["blocked_for_uat_listed"] = ["item-2"]
+                with self.subTest(host=host, field=field, listed=False):
+                    self.assertEqual(1, len(self.validator.validate_receipt(mutated)))
+
+    def test_every_planning_phase_must_have_run(self):
+        for host, value in self.receipts.items():
+            for phase in self.quality(value)["phases_run"]:
+                mutated = copy.deepcopy(value)
+                self.quality(mutated)["phases_run"].remove(phase)
+                with self.subTest(host=host, missing=phase):
+                    self.assertEqual(["base.plan_quality.phases_run"], self.validator.validate_receipt(mutated))
+
+    def test_the_clarify_session_count_and_decisions_are_required_evidence(self):
+        for host, value in self.receipts.items():
+            for field, bad in (("clarify_sessions", None), ("clarify_sessions", -1), ("decisions", None),
+                               ("requirements_total", 0)):
+                mutated = copy.deepcopy(value)
+                if bad is None:
+                    del self.quality(mutated)[field]
+                else:
+                    self.quality(mutated)[field] = bad
+                with self.subTest(host=host, field=field, bad=bad):
+                    failures = self.validator.validate_receipt(mutated)
+                    self.assertTrue(failures and "plan_quality" in failures[0], failures)
+
+    def test_plan_quality_is_required_on_every_variant(self):
+        for host, value in self.receipts.items():
+            mutated = copy.deepcopy(value)
+            del mutated["variants"][0]["plan_quality"]
+            with self.subTest(host=host):
+                self.assertTrue(self.validator.validate_receipt(mutated))
+
+
+class CanaryHookCounterTests(CanaryVariantCase):
+    """ADR 0023: each registered hook fires exactly once per phase."""
+
+    def test_one_fire_per_hook_per_phase_passes_for_both_hosts(self):
+        for host, value in self.receipts.items():
+            with self.subTest(host=host):
+                self.assertEqual([], self.validator.validate_receipt(value, hook_counters=hook_counters()))
+
+    def test_a_hook_fired_twice_or_never_fails_the_receipt(self):
+        for host, value in self.receipts.items():
+            for kind in ("mandatory", "optional"):
+                for event, fires in (("after_specify", 2), ("after_plan", 0), ("after_tasks", 2)):
+                    counters = hook_counters()
+                    counters["hooks"][kind]["phases"][event] = fires
+                    with self.subTest(host=host, kind=kind, event=event, fires=fires):
+                        self.assertEqual([f"hook_counters.{kind}.{event}"],
+                                         self.validator.validate_receipt(value, hook_counters=counters))
+
+    def test_unattributed_fires_fail_the_receipt(self):
+        counters = hook_counters()
+        counters["hooks"]["optional"]["unattributed_fires"] = 1
+        self.assertEqual(["hook_counters.optional.unattributed_fires"],
+                         self.validator.validate_receipt(self.receipts["codex"], hook_counters=counters))
+
+    def test_malformed_counters_fail_closed(self):
+        for mutate in (lambda c: c["hooks"].pop("optional"), lambda c: c.update(schema_version="other"),
+                       lambda c: c["hooks"]["mandatory"]["phases"].pop("after_tasks")):
+            counters = hook_counters()
+            mutate(counters)
+            failures = self.validator.validate_receipt(self.receipts["codex"], hook_counters=counters)
+            self.assertTrue(failures and failures[0].startswith("hook_counters"), failures)
+
+    def test_a_release_receipt_without_counters_fails_but_a_local_one_does_not(self):
+        value = self.receipts["codex"]
+        self.assertEqual([], self.validator.validate_receipt(value))
+        value.update(trigger="scheduled", dirty_tree=False, release_status_allowed=True)
+        self.assertIn("hook_counters.missing", self.validator.validate_receipt(value))
+        self.assertNotIn("hook_counters.missing", self.validator.validate_receipt(value, hook_counters=hook_counters()))
+
+    def test_cli_reads_the_companion_receipt(self):
+        value = self.receipts["claude-code"]
+        for fires, expected in ((1, 0), (2, 1)):
+            counters = hook_counters()
+            counters["hooks"]["mandatory"]["phases"]["after_plan"] = fires
+            with self.subTest(fires=fires), tempfile.TemporaryDirectory() as directory:
+                source, companion = Path(directory) / "receipt.json", Path(directory) / "hook-counters-receipt.json"
+                source.write_text(json.dumps(value), encoding="utf-8")
+                companion.write_text(json.dumps(counters), encoding="utf-8")
+                completed = subprocess.run([sys.executable, self.validator.__file__, str(source),
+                                            "--hook-counters", str(companion)],
+                                           capture_output=True, text=True, check=False)
+                self.assertEqual(expected, completed.returncode, completed.stdout)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--helper", choices=EXPECTED_HELPERS)
@@ -5176,7 +5300,7 @@ def main() -> int:
                                             CanaryVariantAssertionsTests, CanaryVariantContractTests,
                                             CanaryGateVerdictTests, CanaryGuardGapContractTests,
                                             CanaryPlanTargetTests, CanaryPlanTargetContractTests, CanaryCodexTokenTests,
-                                            CanaryBudgetTests, CanaryBudgetFileTests))
+                                            CanaryPlanQualityTests, CanaryHookCounterTests, CanaryBudgetTests, CanaryBudgetFileTests))
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     total = result.testsRun
     failed = len(result.failures) + len(result.errors)

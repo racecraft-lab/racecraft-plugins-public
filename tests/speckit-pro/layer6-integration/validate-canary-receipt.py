@@ -18,6 +18,9 @@ HOSTS = tuple(SCHEMA["properties"]["host"]["enum"])
 VARIANTS = tuple(SCHEMA["$defs"]["variant"]["properties"]["name"]["enum"])
 BUDGET_STAGES = ("scaffold", "plan", "implement")  # ADR 0016; plan_review is recorded, never budgeted
 METRICS = ("wall_seconds", "tokens")
+PLANNING_PHASES = frozenset(SCHEMA["$defs"]["plan_quality"]["properties"]["phases_run"]["items"]["enum"])  # ADR 0021
+HOOK_EVENTS = ("after_specify", "after_plan", "after_tasks")  # the phases the fixture registers its hooks on
+HOOK_KINDS = ("mandatory", "optional")
 
 
 def closed(properties):
@@ -31,6 +34,17 @@ BUDGET_SCHEMA = closed({
     "schema_version": {"const": "canary-budget/v1"}, "policy": {"type": "string", "minLength": 1},
     "limits": closed({host: closed({variant: closed(dict.fromkeys(BUDGET_STAGES, STAGE_LIMITS)) for variant in VARIANTS})
                       for host in HOSTS}),
+})
+
+
+# The fixture harness's companion receipt (hook-counters/v1); it stays out of the public receipt schema.
+HOOK_COUNTERS_SCHEMA = closed({
+    "schema_version": {"const": "hook-counters/v1"},
+    "hooks": closed({kind: closed({
+        "command": {"type": "string", "minLength": 1}, "optional": {"type": "boolean"},
+        "fires": {"type": "integer", "minimum": 0}, "unattributed_fires": {"type": "integer", "minimum": 0},
+        "phases": closed({event: {"type": "integer", "minimum": 0} for event in HOOK_EVENTS}),
+    }) for kind in HOOK_KINDS}),
 })
 
 
@@ -57,7 +71,37 @@ def budget_checks(variant, limits):
             yield f"{variant['name']}.{stage}.{metric}", variant["stages"][stage][metric], limits[stage][metric]
 
 
-def receipt_report(value, budget=None):
+def hook_counter_failures(counters):
+    """ADR 0023: each registered hook fires exactly once per phase, with no fire left unattributed."""
+    schema = [f"hook_counters.{failure['field']}: {failure['message']}"
+              for failure in json_schema_failures(counters, HOOK_COUNTERS_SCHEMA, HOOK_COUNTERS_SCHEMA, "hooks")]
+    if schema:
+        return schema
+    failures = []
+    for kind, record in counters["hooks"].items():
+        failures.extend(f"hook_counters.{kind}.{event}" for event in HOOK_EVENTS if record["phases"][event] != 1)
+        if record["unattributed_fires"]:
+            failures.append(f"hook_counters.{kind}.unattributed_fires")
+    return failures
+
+
+def plan_quality_failures(variant):
+    """ADR 0023 artifact checks: every item still open at the end of planning must be blocked for UAT and listed."""
+    quality, name = variant["plan_quality"], variant["name"]
+    failures = []
+    if set(quality["phases_run"]) != PLANNING_PHASES:
+        failures.append(f"{name}.plan_quality.phases_run")
+    if quality["untraced_requirements"]:
+        failures.append(f"{name}.plan_quality.untraced_requirements")
+    listed = set(quality["blocked_for_uat_listed"])
+    for field, label in (("open_gaps", "open_gap"), ("open_findings", "open_finding"),
+                         ("open_clarifications", "open_clarification")):
+        if not listed.issuperset(quality[field]):
+            failures.append(f"{name}.plan_quality.{label}")
+    return failures
+
+
+def receipt_report(value, budget=None, hook_counters=None):
     """Gate failures, separate variant verdicts, and budgeted limits that are still unset."""
     problems = [f"{failure['field']}: {failure['message']}" for failure in json_schema_failures(value, SCHEMA, SCHEMA, "receipt")]
     if problems:
@@ -73,6 +117,10 @@ def receipt_report(value, budget=None):
                 problems.append(f"install_probe.{key}")
     elif f"speckit-pro@{value['plugin_version']}" not in probe["loaded_plugins"]:
         problems.append("install_probe.loaded_plugins")
+    if hook_counters is not None:
+        problems.extend(hook_counter_failures(hook_counters))
+    elif value["trigger"] != "local":
+        problems.append("hook_counters.missing")
     limits = (load_budget() if budget is None else budget)[value["host"]]
     results, unbudgeted = [], []
     for variant in value["variants"]:
@@ -84,8 +132,8 @@ def receipt_report(value, budget=None):
     return {"valid": not problems, "failed_assertions": problems, "variants": results, "unbudgeted": unbudgeted}
 
 
-def validate_receipt(value, budget=None):
-    return receipt_report(value, budget)["failed_assertions"]
+def validate_receipt(value, budget=None, hook_counters=None):
+    return receipt_report(value, budget, hook_counters)["failed_assertions"]
 
 
 def stage_tokens(stage, host):
@@ -108,7 +156,7 @@ def plan_target_report(variant, host):
 
 def variant_report(variant, checks, host):
     """One variant entry's assertions and gate result, including its own budget failures."""
-    failures = variant_failures(variant)
+    failures = variant_failures(variant) + plan_quality_failures(variant)
     failures.extend(f"{variant['name']}.{name}.tokens_sum" for name, stage in variant["stages"].items()
                     if stage["tokens"] != stage_tokens(stage, host))
     target = plan_target_report(variant, host)
@@ -180,9 +228,13 @@ def variant_failures(variant):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("receipt", type=Path)
+    parser.add_argument("--hook-counters", type=Path, help="the run's hook-counters-receipt.json; required for release triggers")
     args = parser.parse_args()
     try:
-        report = receipt_report(json.loads(args.receipt.read_text(encoding="utf-8"), object_pairs_hook=unique_object))
+        counters = None if args.hook_counters is None else json.loads(
+            args.hook_counters.read_text(encoding="utf-8"), object_pairs_hook=unique_object)
+        report = receipt_report(json.loads(args.receipt.read_text(encoding="utf-8"), object_pairs_hook=unique_object),
+                                hook_counters=counters)
     except (OSError, ValueError) as exc:
         report = {"valid": False, "failed_assertions": [str(exc)], "unbudgeted": [], "variants": []}
     print(json.dumps(report))
