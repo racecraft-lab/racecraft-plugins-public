@@ -151,6 +151,9 @@ def _printed(reason: str) -> re.Pattern[str]:
 PLAN_STAGE_MARKERS = ("plan_stage_boundary", "strict_confidence_opt_in", "reopen_closed_pr", "ambiguous_pr_record")
 
 
+PRINT_RULE = re.compile(r"[Pp]rint that reason's marker,\s+copied verbatim from the Reason column, as the last line")
+
+
 class StopReasonPrintTests(unittest.TestCase):
     """The canary judges a run by the marker its final message prints.
 
@@ -178,14 +181,9 @@ class StopReasonPrintTests(unittest.TestCase):
                 self.assertRegex(report, _printed(reason), f"{host}: stop report must print {reason}")
 
     def test_stop_policy_tells_every_host_to_print_the_marker_of_a_run_ending_stop(self) -> None:
-        for host, skill in HOST_SKILLS.items():
-            text = (skill / "references" / "stop-policy.md").read_text(encoding="utf-8")
-            self.assertRegex(
-                text,
-                r"[Pp]rint that reason's marker,\s+copied verbatim from the Reason column, as the last line",
-                f"{host}: print rule",
-            )
-
+        policies = {host: skill / "references" / "stop-policy.md" for host, skill in HOST_SKILLS.items()}
+        missing = [host for host, path in policies.items() if not PRINT_RULE.search(path.read_text(encoding="utf-8"))]
+        self.assertEqual(missing, [], "hosts whose stop-policy lacks the print rule")
 
 
 def build_suite() -> unittest.TestSuite:
