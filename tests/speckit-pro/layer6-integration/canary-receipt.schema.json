@@ -45,6 +45,12 @@
         "decisions_by_kind": {"type": "object", "additionalProperties": {"$ref": "#/$defs/count"}},
         "retry_attempts": {"$ref": "#/$defs/count"}, "blocked_for_uat": {"$ref": "#/$defs/count"},
         "split_recommendation_recorded": {"type": "boolean"}, "full_plan_built": {"type": "boolean"}, "stops": {"$ref": "#/$defs/count"},
+        "question_guard": {
+          "type": "object", "additionalProperties": false,
+          "required": ["gap_recorded", "guarded_work_completed", "guarded_work_passed"],
+          "properties": {"gap_recorded": {"type": "boolean"}, "guarded_work_completed": {"$ref": "#/$defs/count"},
+            "guarded_work_passed": {"$ref": "#/$defs/count"}}
+        },
         "security_interrupt": {
           "type": "object", "additionalProperties": false,
           "required": ["runner_permit_verified", "simulated_responder_answered", "pause_classification"],

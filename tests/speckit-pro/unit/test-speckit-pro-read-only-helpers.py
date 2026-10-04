@@ -4725,7 +4725,11 @@ class CanaryVariantCase(unittest.TestCase):
             if host == "claude-code":
                 value["install_probe"] = {"loaded_plugins": ["speckit-pro@1.0.0"], "evidence": "init.json"}
         self.variant_evidence = {
-            "base": {}, "missing_question_guard": {},
+            "base": {}, "missing_question_guard": {
+                "verdict": "fail", "failed_assertions": ["question_guard"], "question_guard": {
+                    "gap_recorded": True, "guarded_work_completed": 0, "guarded_work_passed": 0,
+                },
+            },
             "oversized_plan": {"split_recommendation_recorded": True, "full_plan_built": True, "stops": 0},
             "security_interrupt": {"questions_after_scaffold": 1, "security_interrupt": {
                 "runner_permit_verified": True, "simulated_responder_answered": True, "pause_classification": "authorized",
@@ -4793,6 +4797,84 @@ class CanaryVariantAssertionsTests(CanaryVariantCase):
         ])
 
 
+class CanaryGateVerdictTests(CanaryVariantCase):
+    def test_expected_red_missing_guard_passes_gate_for_both_hosts(self):
+        for host, value in self.receipts.items():
+            base = value["variants"][0]
+            value["variants"] = [dict(copy.deepcopy(base), name=name, **copy.deepcopy(evidence))
+                                 for name, evidence in self.variant_evidence.items()]
+            with self.subTest(host=host), tempfile.TemporaryDirectory() as directory:
+                self.assertEqual([], self.validator.validate_receipt(value))
+                source = Path(directory) / "receipt.json"
+                source.write_text(json.dumps(value), encoding="utf-8")
+                completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
+                                           capture_output=True, text=True, check=False)
+                report = json.loads(completed.stdout)
+                self.assertEqual((0, True, []), (completed.returncode, report["valid"], report["failed_assertions"]))
+                results = {variant["name"]: variant for variant in report["variants"]}
+                self.assertEqual(set(self.variant_evidence), set(results))
+                self.assertTrue(all(result["gate_verdict"] == "pass" for result in results.values()))
+                self.assertEqual("fail", results["missing_question_guard"]["verdict"])
+                self.assertIn("missing_question_guard.question_guard", results["missing_question_guard"]["failed_assertions"])
+            release_cases = ((trigger, index, duplicate) for trigger in ("scheduled", "on_demand")
+                             for index in range(len(value["variants"])) for duplicate in (False, True))
+            for trigger, index, duplicate in release_cases:
+                release = copy.deepcopy(value)
+                release.update(trigger=trigger, dirty_tree=False, release_status_allowed=True)
+                with self.subTest(host=host, trigger=trigger, index=index, duplicate=duplicate):
+                    self.assertEqual([], self.validator.validate_receipt(release))
+                    removed = release["variants"].pop(index)
+                    if duplicate:
+                        release["variants"].extend([removed, copy.deepcopy(removed)])
+                    self.assertIn("release.variants", self.validator.validate_receipt(release))
+
+
+class CanaryGuardGapContractTests(CanaryVariantCase):
+    def test_expected_red_rejects_clean_claims_and_other_failures(self):
+        for host, value in self.receipts.items():
+            value["variants"][0].update(name="missing_question_guard", **copy.deepcopy(self.variant_evidence["missing_question_guard"]))
+            self.assertEqual([], self.validator.validate_receipt(value))
+            red = ["missing_question_guard.verdict", "missing_question_guard.question_guard"]
+            # A clean-looking variant or missing gap evidence loses the exception: both own failures reach the gate.
+            mutations = [(path, bad, red) for path, bad in (
+                ("verdict", "pass"), ("failed_assertions", []),
+                ("failed_assertions", ["question_guard", "other_failure"]), ("question_guard", None),
+                ("question_guard.gap_recorded", False), ("question_guard.guarded_work_completed", 1),
+                ("question_guard.guarded_work_passed", 1))]
+            # Any other failed assertion still gates on its own.
+            mutations.extend((key, bad, [f"missing_question_guard.{key}"]) for key, bad in (
+                ("unregistered_stops", 1), ("questions_after_scaffold", 1), ("planning_end", "paused"),
+                ("implement_end", "paused"), ("uat_runbook", "")))
+            # Malformed evidence fails closed at the schema.
+            malformed = [(f"question_guard.{key}", bad) for key in value["variants"][0]["question_guard"]
+                         for bad in (None, "unknown")]
+            malformed.extend((f"question_guard.{key}", bad) for key in ("guarded_work_completed", "guarded_work_passed")
+                             for bad in (-1, True, 0.5))
+            mutations.extend((path, bad, f"receipt.variants[0].{path}: ") for path, bad in malformed)
+            for path, bad, expected in mutations:
+                mutated = copy.deepcopy(value)
+                *parent, key = path.split(".")
+                target = mutated["variants"][0]
+                target = target[parent[0]] if parent else target
+                if bad is None:
+                    del target[key]
+                else:
+                    target[key] = bad
+                with self.subTest(host=host, path=path, bad=bad):
+                    failures = self.validator.validate_receipt(mutated)
+                    if isinstance(expected, str):
+                        self.assertEqual(1, len(failures), failures)
+                        self.assertTrue(failures[0].startswith(expected), failures)
+                    else:
+                        self.assertEqual(expected, failures)
+            budget = copy.deepcopy(self.validator.load_budget())
+            budget[host]["missing_question_guard"]["plan"]["wall_seconds"] = 0.5
+            report = self.validator.receipt_report(value, budget)
+            self.assertFalse(report["valid"])
+            self.assertEqual("fail", report["variants"][0]["gate_verdict"])
+            self.assertIn("missing_question_guard.plan.wall_seconds_budget", report["failed_assertions"])
+
+
 class CanaryVariantContractTests(CanaryVariantCase):
     def test_variant_evidence_fails_closed_when_missing_or_malformed(self):
         for host, original in self.receipts.items():
@@ -4827,6 +4909,8 @@ class CanaryVariantContractTests(CanaryVariantCase):
             base = value["variants"][0]
             value["variants"] = [dict(copy.deepcopy(base), name=name, **copy.deepcopy(evidence))
                                  for name, evidence in self.variant_evidence.items()]
+            value["variants"][1].update(verdict="pass", failed_assertions=[])
+            del value["variants"][1]["question_guard"]
             with self.subTest(host=host), tempfile.TemporaryDirectory() as directory:
                 self.assertEqual(["missing_question_guard.question_guard"], self.validator.validate_receipt(value))
                 source = Path(directory) / "receipt.json"
@@ -4860,6 +4944,14 @@ class CanaryBudgetTests(CanaryBudgetCase):
             self.assertEqual([f"base.plan.{key}_budget"], self.validator.validate_receipt(value, self.budget(5, 100)), key)
         value["variants"][0]["stages"]["plan"].update(wall_seconds=5, tokens=100)
         self.assertEqual([], self.validator.validate_receipt(value, self.budget(5, 100)), "a stage at its limit is within budget")
+
+    def test_an_overrun_belongs_only_to_the_variant_entry_that_ran_over(self):
+        value = receipt()
+        value["variants"].append(copy.deepcopy(value["variants"][0]))
+        value["variants"][1]["stages"]["plan"]["wall_seconds"] = 6
+        report = self.validator.receipt_report(value, self.budget(5, 100))
+        self.assertEqual(["base.plan.wall_seconds_budget"], report["failed_assertions"])
+        self.assertEqual(["pass", "fail"], [variant["gate_verdict"] for variant in report["variants"]])
 
     def test_an_unset_limit_reports_unbudgeted_and_never_a_pass(self):
         value = receipt()
@@ -4941,6 +5033,7 @@ def main() -> int:
                                for case in (ReadOnlyHelperTests, PlanLayersRepairRouteTests, PlanLayersPlannerCaseTests,
                                             PacketTitlePatternTests, ScaffoldAnswersTests, CanaryReceiptTests,
                                             CanaryVariantAssertionsTests, CanaryVariantContractTests,
+                                            CanaryGateVerdictTests, CanaryGuardGapContractTests,
                                             CanaryBudgetTests, CanaryBudgetFileTests))
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     total = result.testsRun
