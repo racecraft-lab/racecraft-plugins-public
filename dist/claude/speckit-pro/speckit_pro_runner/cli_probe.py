@@ -1,4 +1,4 @@
-"""One bounded, read-only `gh` or `git` query with a fixed argv, a per-caller allowlist and a timeout."""
+"""One bounded, read-only `gh`, `git` or `docker` query with a fixed argv, a per-caller allowlist and a timeout."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from typing import Any
 # A branch name that could be read as an option, or that git would reject, is never passed to a CLI.
 BRANCH = re.compile(r"(?!-)(?!.*\.\.)(?!.*//)[A-Za-z0-9._/-]{1,255}\Z")
 STDERR_TAIL_CHARS = 2048
-CLIS = ("gh", "git")
+CLIS = ("gh", "git", "docker")
 
 
 def probe(root: Path, argv: list[str], *, allowed: Collection[str], timeout: float) -> dict[str, Any]:
@@ -28,6 +28,8 @@ def probe(root: Path, argv: list[str], *, allowed: Collection[str], timeout: flo
                                    "stdin": subprocess.DEVNULL, "shell": False}
         if argv[0] == "gh":
             result = subprocess.run(["gh", *argv[1:]], **options)
+        elif argv[0] == "docker":
+            result = subprocess.run(["docker", *argv[1:]], **options)
         else:
             result = subprocess.run(["git", *argv[1:]], **options)
         return {

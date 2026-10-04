@@ -95,7 +95,7 @@
         "value": "speckit_pro_runner/cli_probe.py",
         "display": "speckit_pro_runner/cli_probe.py"
       },
-      "sha256": "1b40ff08fdd135fe67bbfa67ad4a4f068bc268e6bfc6637b1adb0561228e084d"
+      "sha256": "2aeb3e1509f252761cfa874808aa24a6d73d3947bc7604514552706beb04ce0a"
     },
     {
       "path": {
@@ -655,7 +655,7 @@
         "value": "speckit_pro_runner/helpers/readiness_record.py",
         "display": "speckit_pro_runner/helpers/readiness_record.py"
       },
-      "sha256": "e471f71ab7f9def2543c299dce60e27e116bf28225c4a3d855513e2085434063"
+      "sha256": "2b10f353f3871b086d041f40f1bf3cee9603cd4bb280d2fea578254ba4af5c80"
     },
     {
       "path": {

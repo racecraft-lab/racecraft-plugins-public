@@ -17,13 +17,12 @@ import os
 import re
 import shutil
 import stat
-import subprocess
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from .. import quality_gates
+from .. import cli_probe, quality_gates
 from ..agent_materialization import digest
 from ..envelope import diagnostic, response
 from ..atomic_write import write_bytes_atomic
@@ -186,32 +185,35 @@ def observe_quality_gates(root: Path) -> dict[str, Any]:
                      "quality gates flow.")
 
 
-def observe_verification_docker() -> dict[str, Any]:
-    """Ask a present Docker CLI one read-only question: does a Linux/arm64 daemon answer (ADR 0005)?
+def observe_verification_docker(root: Path) -> dict[str, Any]:
+    """Ask a present Docker CLI two read-only questions: is its endpoint local, and is the daemon Linux/arm64?
 
-    Nothing is installed or started. The daemon's own words are never recorded.
+    Verification Docker runs only against a local Unix socket (ADR 0005), so a remote
+    context or host never counts as a fit. Nothing is installed or started, and the
+    daemon's own words are never recorded.
     """
     observed_at = now()
+    no_fit_action = f"Verification Docker needs a local {PLATFORM} Docker daemon; this host has none."
 
-    def unavailable(evidence: str, action: str) -> dict[str, Any]:
+    def unavailable(evidence: str, action: str = no_fit_action) -> dict[str, Any]:
         return make_item("unavailable", evidence, observed_at, {}, action)
 
     if shutil.which("docker") is None:
-        return unavailable("the Docker CLI is not installed",
-                           f"Opt in to verification Docker later from a host with a {PLATFORM} Docker daemon.")
-    try:
-        probe = subprocess.run(["docker", "info", "--format", "{{.OSType}}/{{.Architecture}}"], capture_output=True,
-                               text=True, timeout=DOCKER_PROBE_SECONDS, stdin=subprocess.DEVNULL, check=False)
-    except (OSError, subprocess.SubprocessError) as error:
-        return unavailable(f"the Docker daemon probe failed: {type(error).__name__}",
-                           "Start Docker or fix the CLI, then rerun scaffold to offer verification Docker again.")
-    if probe.returncode != 0:
+        return unavailable("the Docker CLI is not installed")
+    endpoint = cli_probe.probe(root, ["docker", "context", "inspect", "--format", "{{.Endpoints.docker.Host}}"],
+                               allowed=("docker",), timeout=DOCKER_PROBE_SECONDS)
+    platform = cli_probe.probe(root, ["docker", "info", "--format", "{{.OSType}}/{{.Architecture}}"],
+                               allowed=("docker",), timeout=DOCKER_PROBE_SECONDS)
+    if endpoint["exit_status"] != 0 or platform["exit_status"] != 0:
         return unavailable("no Docker daemon answered", "Start the Docker daemon, then rerun scaffold.")
-    os_type, _, architecture = probe.stdout.strip().partition("/")
+    # DOCKER_HOST overrides the context, so both must name a local socket.
+    host = os.environ.get("DOCKER_HOST")
+    if not endpoint["stdout_tail"].startswith("unix://") or (host and not host.startswith("unix://")):
+        return unavailable("the Docker daemon is not reached over a local socket")
+    os_type, _, architecture = platform["stdout_tail"].partition("/")
     if os_type == PLATFORM_OS and architecture in DAEMON_ARCHITECTURES:
-        return make_item("verified", f"a {PLATFORM} Docker daemon answered", observed_at, {})
-    return unavailable(f"the Docker daemon does not report {PLATFORM}",
-                       f"Opt in to verification Docker later from a host with a {PLATFORM} Docker daemon.")
+        return make_item("verified", f"a local {PLATFORM} Docker daemon answered", observed_at, {})
+    return unavailable(f"the Docker daemon does not report {PLATFORM}")
 
 
 def build_record(inputs: dict[str, Any], root: Path) -> dict[str, Any]:
@@ -236,7 +238,7 @@ def build_record(inputs: dict[str, Any], root: Path) -> dict[str, Any]:
         items.setdefault(name, make_item("unknown", "not observed by scaffold", observed_at, {}, NOT_OBSERVED_ACTION))
     items["local_capability"] = observe_local_capability()
     items["quality_gates"] = observe_quality_gates(root)
-    items["verification_docker"] = observe_verification_docker()
+    items["verification_docker"] = observe_verification_docker(root)
     host_version = inputs.get("host_version")
     return {
         "schema_version": SCHEMA_VERSION,

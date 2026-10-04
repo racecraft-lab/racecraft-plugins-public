@@ -1054,8 +1054,9 @@ The record is git-ignored; leave it unstaged.
 Every SPEC gets both offers, whatever its feasibility result, so the user
 learns each capability exists even when declining (ADR 0005). Read the two
 results from the Step 6.5 response: `data.record.items.formal_methods` and
-`data.record.items.verification_docker`. The step is done when each offer was
-shown with its result and its answer is printed.
+`data.record.items.verification_docker`. When the response holds no record,
+show both as `unknown`. The step is done when each offer was shown with its
+result and its answer is printed.
 
 For each feature, print one line: the feature, its `status`, its
 `evidence_source`, and the `action` when present. Then collect one answer per
@@ -1065,16 +1066,16 @@ feature:
   booleans; ask nothing.
 <!-- host:claude: Claude asks through AskUserQuestion -->
 - Interactive mode: ask both with one `AskUserQuestion`, recommending the
-  decline for a feature whose status is `unavailable`.
+  decline for a feature whose status is not `verified`.
 <!-- /host -->
 <!-- host:codex: Codex asks through request_user_input, with a foreground chat fallback -->
 - Interactive mode: ask both with one `request_user_input` call, or in free text
   in an active foreground chat; recommend the decline for a feature whose
-  status is `unavailable`.
+  status is not `verified`.
 <!-- /host -->
 
-Print `accepted` or `declined` beside each feature. An accepted offer is
-printed for the closing report and changes nothing in this run: the opt-in setup
+Print `accepted` or `declined` beside each feature. An accepted offer
+changes nothing in this run: the opt-in setup
 flow ships in a later release, so scaffold installs nothing and leaves the
 workflow's Formal Methods selection as the Design Concept decided.
 

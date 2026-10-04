@@ -237,17 +237,6 @@ class ReadinessRecordTest(unittest.TestCase):
                 for item in (*CALLER_ITEMS,):
                     self.assertIn(f"`{item}`", step)
 
-    def test_scaffold_offers_both_features_on_each_host_with_their_recorded_results(self) -> None:
-        for host in ("claude", "codex"):
-            with self.subTest(host=host):
-                skill = (host_skill_root(host) / "speckit-scaffold-spec" / "SKILL.md").read_text(encoding="utf-8")
-                offer = skill.split("### 6.6 Offer Formal Methods and Verification Docker", 1)[1].split("\n### ", 1)[0]
-                for needle in ("data.record.items.formal_methods", "data.record.items.verification_docker",
-                               "whatever its feasibility result", "booleans; ask nothing"):
-                    self.assertIn(needle, offer)
-                self.assertIn("AskUserQuestion" if host == "claude" else "request_user_input", offer)
-                self.assertNotIn("request_user_input" if host == "claude" else "AskUserQuestion", offer)
-
     def test_slash_command_actions_pass_and_stray_actions_are_dropped(self) -> None:
         observations = self.all_verified()
         observations[0] = observation("plugin_payload", "unavailable",
@@ -322,28 +311,38 @@ class ReadinessRecordTest(unittest.TestCase):
                     shutil.rmtree(readiness, ignore_errors=True)
 
 
-    def fake_docker(self, output: str, exit_code: int = 0) -> None:
-        """A `docker` that answers `info` with `output`, standing in for a daemon."""
-        script = self.tools / "docker"
-        script.write_text(f"#!{sys.executable}\nimport sys\nprint({output!r})\nsys.exit({exit_code})\n", encoding="utf-8")
-        script.chmod(0o755)
+class FeasibilityTest(unittest.TestCase):
+    """Scaffold's feasibility results for formal methods and verification Docker (ADR 0005)."""
 
-    def feasibility(self) -> dict:
-        items = self.run_helper(self.all_verified())["data"]["record"]["items"]
-        return {name: items[name] for name in ("formal_methods", "verification_docker")}
+    def setUp(self) -> None:
+        ReadinessRecordTest.setUp(self)  # a project root and an empty tool directory that a script can fill
+        self.tool_env = {"DOCKER_HOST": "unix:///run/docker.sock"}  # a developer's own endpoint must not leak in
+
+    def record_items(self, observations: list[dict[str, object]] | None = None, mode: str = "dry_run") -> dict:
+        observations = [observation(item) for item in CALLER_ITEMS] if observations is None else observations
+        _, response, _ = run_runner(request(observations, mode), cwd=self.root,
+                                    extra_env={"PATH": str(self.tools), **self.tool_env})
+        return response["data"]["record"]["items"]
+
+    def fake_docker(self, output: str, exit_code: int = 0, endpoint: str = "unix:///run/docker.sock") -> None:
+        """A `docker` that answers `info` with `output` and `context inspect` with `endpoint`."""
+        script = self.tools / "docker"
+        body = f"import sys\nprint({endpoint!r} if sys.argv[1] == 'context' else {output!r})\nsys.exit({exit_code})\n"
+        script.write_text(f"#!{sys.executable}\n{body}", encoding="utf-8")
+        script.chmod(0o755)
 
     def test_feasibility_is_recorded_for_both_features(self) -> None:
         self.fake_docker("linux/arm64")
         observations = [observation(item) for item in CALLER_ITEMS if item != "formal_methods"]
         observations.append(observation("formal_methods", evidence_source="design has a stateful protocol"))
-        items = self.run_helper(observations)["data"]["record"]["items"]
+        items = self.record_items(observations)
         self.assertEqual("verified", items["formal_methods"]["status"])
         self.assertEqual("verified", items["verification_docker"]["status"])
         self.assertEqual("design has a stateful protocol", items["formal_methods"]["evidence_source"])
         self.assertNotIn("action", items["verification_docker"])
 
     def test_formal_methods_not_observed_is_unknown_with_an_action(self) -> None:
-        items = self.run_helper([observation("github_auth")])["data"]["record"]["items"]
+        items = self.record_items([observation("github_auth")])
         self.assertEqual("unknown", items["formal_methods"]["status"])
         self.assertTrue(items["formal_methods"]["action"])
 
@@ -352,24 +351,45 @@ class ReadinessRecordTest(unittest.TestCase):
                                  ("linux/x86_64", "unavailable"), ("windows/arm64", "unavailable")):
             with self.subTest(reported=reported):
                 self.fake_docker(reported)
-                item = self.feasibility()["verification_docker"]
+                item = self.record_items()["verification_docker"]
                 self.assertEqual(status, item["status"])
                 self.assertEqual("action" in item, status == "unavailable")
 
+    def test_docker_reached_over_the_network_is_not_a_local_fit(self) -> None:
+        self.fake_docker("linux/arm64", endpoint="ssh://builder")
+        self.assertEqual("unavailable", self.record_items()["verification_docker"]["status"])
+        self.fake_docker("linux/arm64")
+        self.tool_env["DOCKER_HOST"] = "tcp://builder:2375"
+        self.assertEqual("unavailable", self.record_items()["verification_docker"]["status"])
+        self.tool_env["DOCKER_HOST"] = "unix:///run/docker.sock"
+        self.assertEqual("verified", self.record_items()["verification_docker"]["status"])
+
     def test_docker_without_a_daemon_or_cli_is_unavailable_with_an_action(self) -> None:
-        item = self.feasibility()["verification_docker"]
+        item = self.record_items()["verification_docker"]
         self.assertEqual("unavailable", item["status"])
         self.assertIn("not installed", item["evidence_source"])
         self.assertTrue(item["action"])
         self.fake_docker("Cannot connect to the Docker daemon", exit_code=1)
-        item = self.feasibility()["verification_docker"]
+        item = self.record_items()["verification_docker"]
         self.assertEqual("unavailable", item["status"])
         self.assertIn("daemon", item["evidence_source"])
         self.assertNotIn(str(self.tools), json.dumps(item))
 
+    def test_scaffold_offers_both_features_on_each_host_with_their_recorded_results(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                skill = (host_skill_root(host) / "speckit-scaffold-spec" / "SKILL.md").read_text(encoding="utf-8")
+                offer = skill.split("### 6.6 Offer Formal Methods and Verification Docker", 1)[1].split("\n### ", 1)[0]
+                for needle in ("data.record.items.formal_methods", "data.record.items.verification_docker",
+                               "whatever its feasibility result", "booleans; ask nothing"):
+                    self.assertIn(needle, offer)
+                self.assertIn("AskUserQuestion" if host == "claude" else "request_user_input", offer)
+                self.assertNotIn("request_user_input" if host == "claude" else "AskUserQuestion", offer)
+
 
 def build_suite() -> unittest.TestSuite:
-    return unittest.defaultTestLoader.loadTestsFromTestCase(ReadinessRecordTest)
+    loader = unittest.defaultTestLoader
+    return unittest.TestSuite([loader.loadTestsFromTestCase(case) for case in (ReadinessRecordTest, FeasibilityTest)])
 
 
 def main() -> int:
