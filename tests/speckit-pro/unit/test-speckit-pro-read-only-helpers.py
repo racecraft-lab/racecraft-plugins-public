@@ -3325,20 +3325,216 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
         self.assertEqual(exit_code, 2)
         self.assertIn("SPEC-009", payload["error"])
 
-    def test_check_prerequisites_does_not_invent_a_cli_version(self) -> None:
+    def test_check_prerequisites_compares_the_cli_version_with_the_pin(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
-            self.skipTest("CLI presence case uses check-prerequisites")
+            self.skipTest("CLI version case uses check-prerequisites")
+        cases = (
+            ("/fixture/bin/specify", "1.1.0", "match"),
+            ("/fixture/bin/specify", "1.0.12", "older"),
+            ("/fixture/bin/specify", "1.2.0", "newer"),
+            ("/fixture/bin/specify", "1.10.0", "newer"),
+            ("/fixture/bin/specify", "1.1.0.dev0", "unreadable"),
+            ("/fixture/bin/specify", None, "unreadable"),
+            (None, None, "missing"),
+        )
         with tempfile.TemporaryDirectory(prefix="read-only-helper-project-") as project:
-            for executable in ("/fixture/bin/specify", "/fixture/other/specify", None):
-                with self.subTest(executable=executable), patch(
+            for executable, version, status in cases:
+                with self.subTest(executable=executable, version=version), patch(
                     "speckit_pro_runner.helpers.read_only.find_specify", return_value=executable,
+                ), patch(
+                    "speckit_pro_runner.helpers.read_only.installed_specify_version",
+                    return_value=version,
                 ):
                     payload = self._feature_state(Path(project))
                     row = next(item for item in payload["checks"] if item["check"] == "speckit_cli")
                     self.assertEqual(row["pass"], executable is not None)
+                    spec_kit = payload["spec_kit"]
+                    self.assertEqual(spec_kit["status"], status)
+                    self.assertEqual(spec_kit["pinned_version"], "1.1.0")
+                    self.assertEqual(spec_kit["installed_version"], version)
                     self.assertEqual(
-                        row["detail"], f"{executable} (version not checked)" if executable else "",
+                        spec_kit["install_argv"],
+                        [
+                            "uv", "tool", "install", "specify-cli", "--force", "--from",
+                            "git+https://github.com/github/spec-kit.git"
+                            "@f1d3a4f8337ebbd3ae22760a9c12e3352b93a175",
+                        ],
                     )
+                    if executable is not None:
+                        version_row = next(
+                            item for item in payload["checks"] if item["check"] == "speckit_cli_version"
+                        )
+                        self.assertTrue(version_row["pass"], "a version mismatch never stops a run")
+
+    def test_installed_specify_version_reads_the_cli_version_row(self) -> None:
+        if self.helper_filter and self.helper_filter != "check-prerequisites":
+            self.skipTest("CLI version case uses check-prerequisites")
+        from speckit_pro_runner.helpers.read_only import installed_specify_version
+
+        panel = (
+            "╭──── Specify CLI Information ────╮\n"
+            "│                                 │\n"
+            "│     CLI Version    1.0.12       │\n"
+            "│          Python    3.13.13      │\n"
+        )
+        for stdout, returncode, expected in ((panel, 0, "1.0.12"), ("no row", 0, None), (panel, 2, None)):
+            with self.subTest(returncode=returncode, stdout=stdout[:8]), patch(
+                "speckit_pro_runner.helpers.read_only.subprocess.run",
+                return_value=SimpleNamespace(stdout=stdout, returncode=returncode),
+            ), patch(
+                "speckit_pro_runner.helpers.read_only.shutil.which", return_value="/fixture/bin/specify",
+            ), patch(
+                "speckit_pro_runner.helpers.read_only.trusted_executable", return_value=Path("/fixture/bin/specify"),
+            ), patch(
+                "speckit_pro_runner.helpers.read_only.executable_path", return_value=Path("/fixture/bin/specify"),
+            ):
+                self.assertEqual(installed_specify_version("/fixture/bin/specify"), expected)
+        with patch("speckit_pro_runner.helpers.read_only.subprocess.run", side_effect=OSError), patch(
+            "speckit_pro_runner.helpers.read_only.shutil.which", return_value="/fixture/bin/specify",
+        ), patch(
+            "speckit_pro_runner.helpers.read_only.trusted_executable", return_value=Path("/fixture/bin/specify"),
+        ), patch(
+            "speckit_pro_runner.helpers.read_only.executable_path", return_value=Path("/fixture/bin/specify"),
+        ):
+            self.assertIsNone(installed_specify_version("/fixture/bin/specify"))
+
+    def test_installed_specify_version_probes_the_resolved_fallback_binary(self) -> None:
+        from speckit_pro_runner.helpers.read_only import find_specify, installed_specify_version
+
+        with tempfile.TemporaryDirectory() as temporary:
+            home = Path(temporary)
+            binary = home / ".local" / "bin" / "specify.exe"
+            binary.parent.mkdir(parents=True)
+            binary.touch()
+            binary.chmod(0o755)
+            with patch("speckit_pro_runner.helpers.read_only.Path.home", return_value=home), patch(
+                "speckit_pro_runner.helpers.read_only.shutil.which",
+                side_effect=[None, str(binary), str(binary)],
+            ) as which, patch(
+                "speckit_pro_runner.helpers.read_only.subprocess.run",
+                return_value=SimpleNamespace(stdout="CLI Version    1.1.0", returncode=0),
+            ) as run:
+                selected = find_specify()
+                self.assertEqual(selected, str(binary))
+                self.assertEqual(installed_specify_version(selected), "1.1.0")
+            self.assertEqual(which.call_args.kwargs["path"], str(binary.parent))
+            self.assertEqual(run.call_args.args[0], [str(binary), "version"])
+            self.assertFalse(run.call_args.kwargs["shell"])
+            self.assertEqual(run.call_args.kwargs["stdin"], subprocess.DEVNULL)
+
+    def test_installed_specify_version_never_probes_a_workspace_executable(self) -> None:
+        from speckit_pro_runner.helpers.read_only import installed_specify_version
+
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary).resolve()
+            binary = workspace / "specify.exe"
+            binary.touch()
+            binary.chmod(0o755)
+            for candidate in (str(binary), "specify.exe"):
+                with self.subTest(candidate=candidate), patch(
+                    "speckit_pro_runner.helpers.read_only.Path.cwd", return_value=workspace,
+                ), patch("speckit_pro_runner.helpers.read_only.sys.platform", "win32"), patch(
+                    "speckit_pro_runner.helpers.read_only.shutil.which", return_value=candidate,
+                ), patch(
+                    "speckit_pro_runner.helpers.read_only.subprocess.run",
+                    return_value=SimpleNamespace(stdout="CLI Version    1.1.0", returncode=0),
+                ) as run:
+                    self.assertIsNone(installed_specify_version(candidate))
+                    run.assert_not_called()
+
+    def test_installed_specify_version_accepts_windows_file_modes(self) -> None:
+        from speckit_pro_runner.helpers.read_only import installed_specify_version
+
+        with tempfile.TemporaryDirectory() as temporary:
+            binary = Path(temporary).resolve() / "specify.exe"
+            binary.touch()
+            binary.chmod(0o755)
+            with patch("speckit_pro_runner.helpers.read_only.sys.platform", "win32"), patch(
+                "speckit_pro_runner.helpers.read_only.shutil.which", return_value=str(binary),
+            ), patch(
+                "speckit_pro_runner.codex_launch.Path.stat", return_value=SimpleNamespace(st_mode=0o100666),
+            ), patch(
+                "speckit_pro_runner.helpers.read_only.subprocess.run",
+                return_value=SimpleNamespace(stdout="CLI Version    1.1.0", returncode=0),
+            ) as run:
+                self.assertEqual(installed_specify_version(str(binary)), "1.1.0")
+                self.assertEqual(run.call_args.args[0], [str(binary), "version"])
+
+    def test_installed_specify_version_rejects_a_reselected_or_symlinked_workspace_binary(self) -> None:
+        from speckit_pro_runner.helpers.read_only import installed_specify_version
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            workspace = root / "checkout"
+            workspace.mkdir()
+            installed = root / "bin" / "specify"
+            installed.parent.mkdir()
+            installed.touch()
+            installed.chmod(0o755)
+            workspace_binary = workspace / "specify.exe"
+            workspace_binary.touch()
+            workspace_binary.chmod(0o755)
+            link = installed.parent / "specify.exe"
+            link.symlink_to(workspace_binary)
+            checkout_link = workspace / "bin" / "specify.exe"
+            checkout_link.parent.mkdir()
+            checkout_link.symlink_to(installed)
+            for selected, candidate in ((installed, workspace_binary), (link, link), (checkout_link, checkout_link)):
+                with self.subTest(selected=selected.name), patch(
+                    "speckit_pro_runner.helpers.read_only.Path.cwd", return_value=workspace,
+                ), patch("speckit_pro_runner.helpers.read_only.sys.platform", "win32"), patch(
+                    "speckit_pro_runner.helpers.read_only.shutil.which", return_value=str(candidate),
+                ), patch("speckit_pro_runner.helpers.read_only.subprocess.run") as run:
+                    self.assertIsNone(installed_specify_version(str(selected)))
+                    run.assert_not_called()
+
+    def test_spec_kit_cli_state_rejects_workspace_and_cwd_probes_without_blocking(self) -> None:
+        from speckit_pro_runner.helpers.read_only import spec_kit_cli_state
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            workspace = root / "checkout"
+            workspace.mkdir()
+            for binary in (workspace / "specify.exe", root / "specify.exe"):
+                binary.touch()
+                binary.chmod(0o755)
+                with self.subTest(parent=binary.parent.name), patch(
+                    "speckit_pro_runner.helpers.read_only.Path.cwd", return_value=root,
+                ), patch(
+                    "speckit_pro_runner.helpers.read_only.shutil.which", return_value=str(binary),
+                ), patch("speckit_pro_runner.helpers.read_only.subprocess.run") as run:
+                    rows, state = spec_kit_cli_state(str(binary), workspace)
+                    self.assertEqual(state["status"], "unreadable")
+                    self.assertTrue(all(row["pass"] for row in rows))
+                    run.assert_not_called()
+
+    def test_installed_specify_version_treats_decoding_failure_as_unreadable(self) -> None:
+        from speckit_pro_runner.helpers.read_only import installed_specify_version, spec_kit_cli_state
+
+        error = UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid start byte")
+        with patch("speckit_pro_runner.helpers.read_only.subprocess.run", side_effect=error), patch(
+            "speckit_pro_runner.helpers.read_only.shutil.which", return_value="/fixture/bin/specify",
+        ), patch(
+            "speckit_pro_runner.helpers.read_only.trusted_executable", return_value=Path("/fixture/bin/specify"),
+        ), patch(
+            "speckit_pro_runner.helpers.read_only.executable_path", return_value=Path("/fixture/bin/specify"),
+        ):
+            self.assertIsNone(installed_specify_version("/fixture/bin/specify"))
+            rows, state = spec_kit_cli_state("/fixture/bin/specify")
+        self.assertEqual(state["status"], "unreadable")
+        self.assertTrue(all(row["pass"] for row in rows))
+
+    def test_spec_kit_version_ordering_compares_numeric_components(self) -> None:
+        from speckit_pro_runner import spec_kit_pin
+
+        for pinned, installed, status in (
+            ("1.9.9", "1.10.0", "newer"),
+            ("1.10.0", "1.9.99", "older"),
+        ):
+            with self.subTest(pinned=pinned, installed=installed), patch.object(
+                spec_kit_pin, "PINNED_VERSION", pinned,
+            ):
+                self.assertEqual(spec_kit_pin.version_status(installed, cli_found=True), status)
 
     def test_check_prerequisites_honors_specify_feature_directory_env(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":

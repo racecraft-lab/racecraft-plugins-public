@@ -20,12 +20,14 @@ from typing import Any, Callable, cast
 
 from ..agent_inventory import CLAUDE_REQUIRED_AGENT_NAMES
 from ..canonical_json import canonical_bytes
+from ..codex_launch import executable_path, trusted_executable
 from ..envelope import diagnostic, response
 from ..execution_control import is_implementation_notes
 from ..gate_discovery import DEFAULT_BASE_BRANCH, SLOTS as GATE_SLOTS, resolve_slots as resolve_gate_slots
 from .. import quality_gates
 from ..json_schema import json_schema_failures
 from ..runtime import detect_plugin_root
+from .. import spec_kit_pin
 from ..strict_input import unique_object
 from .formal_policy import apply_resume_guard, gate_checkpoint
 from .feedback_sweep import (
@@ -1436,15 +1438,9 @@ def render_plan_repair_context(inputs: dict[str, Any], repo_root: Path) -> dict[
 
 def check_prerequisites(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     workflow = normalize_path_input(inputs.get("workflow_file") or "")
-    checks: list[dict[str, Any]] = []
-    all_pass = True
 
-    specify_path = find_specify()
-    if specify_path:
-        checks.append(check("speckit_cli", True, "SpecKit CLI installed", f"{specify_path} (version not checked)"))
-    else:
-        checks.append(check("speckit_cli", False, "SpecKit CLI not found. Install: uv tool install specify-cli --from git+https://github.com/github/spec-kit.git", ""))
-        all_pass = False
+    checks, spec_kit = spec_kit_cli_state(find_specify(), repo_root)
+    all_pass = all(row["pass"] for row in checks)
     if trusted_dir_exists(repo_root / ".specify", repo_root):
         checks.append(check("project_init", True, "Project initialized", ""))
     else:
@@ -1510,7 +1506,7 @@ def check_prerequisites(inputs: dict[str, Any], repo_root: Path) -> dict[str, An
             "Covers codebase context, library documentation, web/domain research, and source extraction. Missing optional coverage may lower confidence or require fallback evidence notes, but escalation is reserved for no acceptable evidence path or a true prerequisite/gate failure.",
         )
     )
-    return make_result(json_text({"all_pass": all_pass, "branch": branch, "is_worktree": is_worktree, "on_feature_branch": on_feature, "checks": checks}), exit_code=0 if all_pass else 1)
+    return make_result(json_text({"all_pass": all_pass, "branch": branch, "is_worktree": is_worktree, "on_feature_branch": on_feature, "spec_kit": spec_kit, "checks": checks}), exit_code=0 if all_pass else 1)
 
 
 SETUP_SCRIPT_CALL_RE = re.compile(r"`\.specify/scripts/bash/([A-Za-z0-9_.-]+\.sh)((?:\s+[^`\s]+)*)`")
@@ -6236,8 +6232,64 @@ def find_specify() -> str | None:
         home = Path.home()
     except RuntimeError:
         return None
-    local = home / ".local" / "bin" / "specify"
-    return str(local) if local.is_file() else None
+    return shutil.which("specify", path=str(home / ".local" / "bin"))
+
+
+def spec_kit_cli_state(
+    specify_path: str | None, repo_root: Path | None = None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """The CLI rows for `check-prerequisites` and the `spec_kit` object skills read the pin from."""
+    installed_version = installed_specify_version(specify_path, repo_root) if specify_path else None
+    status = spec_kit_pin.version_status(installed_version, cli_found=specify_path is not None)
+    spec_kit = {
+        "pinned_version": spec_kit_pin.PINNED_VERSION,
+        "installed_version": installed_version,
+        "status": status,
+        "install_argv": spec_kit_pin.INSTALL_ARGV,
+    }
+    install = shlex.join(spec_kit_pin.INSTALL_ARGV)
+    if not specify_path:
+        return [check("speckit_cli", False, f"SpecKit CLI not found. Install: {install}", "")], spec_kit
+    return [
+        check("speckit_cli", True, "SpecKit CLI installed", f"{specify_path} ({installed_version or 'version unreadable'})"),
+        # Advisory by design: a version mismatch never stops a run (ADR 0010).
+        check(
+            "speckit_cli_version", True,
+            f"SpecKit CLI is {status} against the pinned {spec_kit_pin.PINNED_VERSION}",
+            "" if status == "match" else f"install the pin: {install}",
+        ),
+    ], spec_kit
+
+
+def installed_specify_version(specify_path: str, repo_root: Path | None = None) -> str | None:
+    """The version `specify version` reports, or None when it cannot run or has no version row."""
+    # Windows does not use the child's PATH to locate an executable. Resolve in
+    # the selected directory before launching, including user-local installs.
+    executable = shutil.which("specify", path=str(Path(specify_path).parent))
+    if executable is None:
+        return None
+    try:
+        # Python 3.11 on Windows prepends cwd even with an explicit lookup path.
+        # Attest both paths so that shadowing cannot select a different runtime.
+        # Windows write flags do not represent POSIX group/other permissions.
+        validate = executable_path if sys.platform == "win32" else trusted_executable
+        selected = validate(specify_path, "Spec Kit")
+        resolved = validate(executable, "Spec Kit")
+        workspace = (repo_root or Path.cwd()).resolve()
+        if (
+            resolved != selected
+            or Path(executable).parent.resolve() == Path.cwd().resolve()
+            or resolved.is_relative_to(workspace)
+            or any(parent.resolve() == workspace for parent in Path(executable).parents)
+        ):
+            return None
+        result = subprocess.run(
+            [executable, "version"], text=True, encoding="utf-8", capture_output=True, shell=False,
+            check=False, timeout=SUBPROCESS_TIMEOUT_SECONDS, stdin=subprocess.DEVNULL,
+        )
+    except (OSError, subprocess.SubprocessError, UnicodeError, RuntimeError, ValueError):
+        return None
+    return spec_kit_pin.parse_cli_version(result.stdout) if result.returncode == 0 else None
 
 
 def git_diff_changed_paths(repo_root: Path) -> list[str] | None:

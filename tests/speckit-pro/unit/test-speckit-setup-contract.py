@@ -108,7 +108,7 @@ class TemplateResolution(unittest.TestCase):
             return subprocess.CompletedProcess(argv, code, "", "")
 
         which = {"python3": python3, "python": "/tools/python"}.get
-        return calls, patch("speckit_pro_runner.helpers.read_only.shutil.which", side_effect=lambda name: which(name)), \
+        return calls, patch("speckit_pro_runner.helpers.read_only.shutil.which", side_effect=lambda name, **kwargs: which(name)), \
             patch("speckit_pro_runner.helpers.read_only.subprocess.run", side_effect=run)
 
     def test_a_preset_manifest_needs_pyyaml_in_the_path_python(self) -> None:

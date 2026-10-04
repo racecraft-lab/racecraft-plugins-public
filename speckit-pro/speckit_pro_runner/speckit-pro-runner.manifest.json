@@ -119,7 +119,7 @@
         "value": "speckit_pro_runner/codex_launch.py",
         "display": "speckit_pro_runner/codex_launch.py"
       },
-      "sha256": "9504b7daaef99f787aaf8f8f577431fbc9313f06bee96336435a25b5a700268e"
+      "sha256": "fb01bec520e72a4a4b76a236fd8b8b8fbc058cf8dfb09d10e995014d5cf29f93"
     },
     {
       "path": {
@@ -647,7 +647,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "6964f9843869fbf752c685567f312112e14dd24ebf9cfb2d345e7a92aa437152"
+      "sha256": "36f7cd8bc5b6b1c5171926ee065089d28b651c4c901edc36d859ee700f664bcb"
     },
     {
       "path": {
@@ -808,6 +808,14 @@
         "display": "speckit_pro_runner/runtime.py"
       },
       "sha256": "db5e75d86b816b435fe4a2b57e0216b182a3ddaa0b3edbfc5a797b43c7972c1a"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/spec_kit_pin.py",
+        "display": "speckit_pro_runner/spec_kit_pin.py"
+      },
+      "sha256": "68b245d2609e8649f65d04024420a45f08be24e8d9476e02f0c9ede56fad499c"
     },
     {
       "path": {
