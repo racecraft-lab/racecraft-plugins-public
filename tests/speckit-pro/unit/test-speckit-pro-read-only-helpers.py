@@ -4656,6 +4656,50 @@ class G0SetupTests(unittest.TestCase):
 
 
 class G0UnratifiedDefaultsTests(unittest.TestCase):
+    def test_g0_records_each_current_observation_once_on_resume(self) -> None:
+        from speckit_pro_runner.helpers.decisions_list import decisions_list
+        from speckit_pro_runner.helpers.g0_setup import g0_setup, unratified_defaults
+
+        with helper_project() as root:
+            G0SetupTests.prepare_fixture(root, None)
+            unrelated = dict(unratified_defaults({"status": "missing"}, "claude")["decision"],
+                             affected_unit="deployment-region")
+            decisions_list(root, {"workflow_file": "workflow.md", "entries": [unrelated]}, "apply")
+            for text, should_record in ((None, True), (None, False), ("{", True), ("{", False)):
+                with self.subTest(text=text, should_record=should_record):
+                    if text is not None:
+                        (root / ".specify/quality-gates.json").write_text(text, encoding="utf-8")
+                    with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value="specify"):
+                        observed = g0_setup({"surface": "claude", "probe": "commands",
+                                             "workflow_file": "workflow.md"}, root)["quality_gate"]["unratified_defaults"]
+                    self.assertEqual(should_record, observed["record_decision"])
+                    if observed["record_decision"]:
+                        decisions_list(root, {"workflow_file": "workflow.md", "entries": [observed["decision"]]}, "apply")
+            entries = decisions_list(root, {"workflow_file": "workflow.md"}, "read_only")["entries"]
+            self.assertEqual(3, len(entries))
+            self.assertIn("invalid: cannot parse JSON", entries[-1]["evidence"])
+
+    def test_g0_summary_uses_the_threshold_owner(self) -> None:
+        from speckit_pro_runner.helpers.g0_setup import unratified_defaults
+
+        defaults = {"complexity": 7, "crap": 25, "mutation_score_floor": 70}
+        with patch("speckit_pro_runner.helpers.g0_setup.SHIPPED_DEFAULTS", defaults):
+            observed = unratified_defaults({"status": "missing"}, "codex")
+        for text in ("complexity 7", "CRAP 25", "mutation-score floor 70"):
+            self.assertIn(text, observed["flag"])
+            self.assertIn(text, observed["decision"]["option_chosen"])
+
+    def test_g0_observation_is_persisted_in_both_host_run_states(self) -> None:
+        from speckit_pro_runner.host_parity import emit_host
+
+        source = REPO_ROOT / "speckit-pro/skills/speckit-autopilot/references/prerequisites.md"
+        for host in ("claude", "codex"):
+            rendered = emit_host(source.read_text(encoding="utf-8"), host)
+            with self.subTest(host=host):
+                self.assertIn("record_decision", rendered)
+                self.assertIn("as `quality_gate_observation` in `autopilot-state.json`", rendered)
+                self.assertIn("Clear that key and `UNRATIFIED_FLAG`", rendered)
+
     def test_g0_continues_on_unratified_defaults_and_never_writes_the_file(self) -> None:
         from speckit_pro_runner.helpers.decisions_list import checked_entry, decisions_list
         from speckit_pro_runner.helpers.g0_setup import g0_setup

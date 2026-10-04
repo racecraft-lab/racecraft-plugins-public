@@ -525,12 +525,17 @@ create or edit the file.
 
 When `data.quality_gate.unratified_defaults` is present:
 
-1. Read the decisions list (`decisions-list`, `read_only`). When it holds no
-   `unratified_default` entry, record `unratified_defaults.decision` with
-   `decisions-list` in `apply` mode, so a resume adds no second entry.
-2. Keep `unratified_defaults.flag` as `UNRATIFIED_FLAG` in the workflow
-   file's run notes. The UAT runbook helper and the PR packet helper take it
-   as `inputs.unratified_defaults` (see `post-implementation.md`).
+1. When the runner returns `unratified_defaults.record_decision: true`, record
+   `unratified_defaults.decision` with `decisions-list` in `apply` mode.
+   The runner matches the complete current observation, so an identical resume
+   adds no second entry and a changed problem gets its own entry.
+2. Persist the complete observation as `quality_gate_observation` in `autopilot-state.json`
+   beside the workflow file, and keep `unratified_defaults.flag` as `UNRATIFIED_FLAG`
+   in the workflow file's run notes. On resume, restore the flag from this state;
+   Step 0.11 refreshes it from the current probe. Clear that key and `UNRATIFIED_FLAG`
+   when the current probe reports a present file. The UAT runbook helper and the
+   PR packet helper take the flag as `inputs.unratified_defaults`
+   (see `post-implementation.md`).
 
 Three placeholders stay literal in the recorded command and are
 filled at every run:

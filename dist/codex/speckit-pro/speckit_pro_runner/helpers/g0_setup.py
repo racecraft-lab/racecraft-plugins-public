@@ -8,14 +8,15 @@ from pathlib import Path
 from typing import Any
 
 from ..envelope import response
+from ..quality_gates import SHIPPED_DEFAULTS
 from ..strict_input import SelectionError, require_fields, require_text
 from ..trusted_io import resolve_repo_root, validate_bounded_inputs
+from .decisions_list import decisions_list
 from .read_only import (
     EXIT_STATUS, check_prerequisites, detect_commands, detect_presets, helper_failure_diagnostic, output_capture,
 )
 
 UNSAFE_TEXT = re.compile(r"[^A-Za-z0-9 _.,:;'=>()-]")
-SHIPPED_DEFAULTS = "complexity 10, CRAP 30, mutation-score floor 60, no skips, no opt-in slots"
 PROBES = {
     "prerequisites": ("check-prerequisites", check_prerequisites),
     "commands": ("detect-commands", detect_commands),
@@ -44,7 +45,13 @@ def g0_setup(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
         quality = result["stdout_json"]["quality_gates"]
         gate: dict[str, Any] = {"verdict": "proceed", "message": ""}
         if quality["status"] != "present":
-            gate["unratified_defaults"] = unratified_defaults(quality, surface)
+            observed = unratified_defaults(quality, surface)
+            entries = decisions_list(repo_root, {"workflow_file": workflow}, "read_only")["entries"]
+            observed["record_decision"] = not any(
+                all(previous.get(field) == value for field, value in observed["decision"].items())
+                for previous in entries
+            )
+            gate["unratified_defaults"] = observed
         data["quality_gate"] = gate
     return data
 
@@ -56,13 +63,15 @@ def unratified_defaults(quality: dict[str, Any], surface: str) -> dict[str, Any]
     problem = " ".join(UNSAFE_TEXT.sub("?", str(quality.get("problems", [""])[0])).split())[:300] or "no detail"
     detail = "missing" if quality["status"] == "missing" else f"invalid: {problem}"
     sigil = "/" if surface == "claude" else "$"
+    defaults = (f"complexity {SHIPPED_DEFAULTS['complexity']}, CRAP {SHIPPED_DEFAULTS['crap']}, "
+                f"mutation-score floor {SHIPPED_DEFAULTS['mutation_score_floor']}, no skips, no opt-in slots")
     return {
         "flag": (f"Unratified quality-gate defaults: .specify/quality-gates.json is {detail}; "
-                 f"this run used the shipped defaults ({SHIPPED_DEFAULTS}). "
+                 f"this run used the shipped defaults ({defaults}). "
                  f"Run `{sigil}speckit-pro:speckit-coach quality gates` to ratify them."),
         "decision": {
             "kind": "unratified_default",
-            "option_chosen": f"Ran G0 on the shipped quality-gate defaults ({SHIPPED_DEFAULTS}).",
+            "option_chosen": f"Ran G0 on the shipped quality-gate defaults ({defaults}).",
             "rejected_alternative": "Stopping G0 until the quality-gates file is created.",
             "evidence": f".specify/quality-gates.json is {detail}.",
             "affected_unit": ".specify/quality-gates.json",
