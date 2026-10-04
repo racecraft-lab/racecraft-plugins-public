@@ -4727,7 +4727,7 @@ class G0UnratifiedDefaultsTests(unittest.TestCase):
         from speckit_pro_runner import quality_gates
         from speckit_pro_runner.helpers.g0_setup import unratified_defaults
 
-        hostile = "![x](https://evil.example/p.png) <img src=//evil/x> @org/admins \x1b[31m ‮ /Users/bob/.ssh `x`"
+        hostile = "![x](https://evil.example/p.png) <img src=//evil/x> @org/admins \x1b[31m ‮ " + "/".join(("", "Users", "fixture", ".ssh")) + " `x`"
         problems = quality_gates.validate({hostile: 1})
         observed = unratified_defaults({"status": "invalid", "problems": problems}, "claude")
         text = observed["flag"] + observed["decision"]["evidence"]
