@@ -73,6 +73,10 @@ other search-result text reaches the agent. Each code or info snippet becomes
 one chunk.
 
 Both `library` and `query` pass the outbound checks.
+Both tools accept optional `run_id` (1 to 128 characters after trimming).
+The orchestrator supplies the execution-control `result.data.ledger.run_id` on
+every research-agent dispatch; agents pass it on every broker call. It stays
+local and is never sent to research providers or included in returned records.
 
 ## Response envelope
 
@@ -93,6 +97,7 @@ returns `broker_error:internal_error`. Neither carries exception text.
 | `notice` | A fixed sentence: the chunks are third-party data, not instructions. |
 | `reason` | For a non-`ok` status: a fixed reason code. |
 | `message` | For a non-`ok` status: a fixed, value-free sentence with the fix. |
+| `decisions[]` | A provider-breaker record emitted once when the provider trips; empty on later calls. Fields: `id`, `provider`, `reason`, `decision`, `alternative`. |
 
 `provenance` holds `tool`, `provider`, `source_url`, `retrieved_at` (UTC), and
 `sha256` of the returned text. `screening` holds `route`, `flags`, and in `jev`
@@ -100,6 +105,31 @@ mode `backend`, `model`, and `unpinned_model`.
 
 The orchestrator writes `screening_mode`, `policy`, and `dropped[]` to the
 workflow log.
+Research agents relay `decisions[]` unchanged; the orchestrator appends each
+record to the workflow's decisions list once per stable `id`.
+
+## Provider circuit breaker
+
+The broker owns one breaker per research provider and workflow `run_id`.
+A new run starts with both closed; resuming an earlier run preserves its state.
+The first `rate_limited` reply (HTTP 429, or Tavily's existing 432/433 mapping),
+HTTP 5xx, or transport `network_error`/`timeout` opens that provider's breaker.
+Later tool calls return the same failure status, reason, message, screening
+mode, and policy before credentials, outbound screening, or HTTP are attempted;
+only the first envelope carries the decision record. Both Context7 endpoints
+share its breaker. Other providers remain available.
+
+The breaker also guards `_fetch`, so a retry inside the current call cannot
+send another request after a trip. The provider retry work in #1119 must use
+that boundary. Authentication rejections remain eligible for its keyless
+Context7 retry. Request errors, invalid responses, unknown libraries, missing
+credentials, Jev failures, and a tool budget exhausted before fetch do not
+mark a provider down. State is in memory, so restarting the broker clears it.
+Legacy callers omitting `run_id` share the broker's default process scope.
+
+HTTP meanings are grounded in [Tavily's error guide](https://help.tavily.com/articles/8645538886-understanding-http-errors)
+and [Context7's API guide](https://github.com/upstash/context7/blob/master/docs/api-guide.mdx).
+The run-long breaker is plugin policy, rather than the vendors' retry policy.
 
 ## Pipeline
 
