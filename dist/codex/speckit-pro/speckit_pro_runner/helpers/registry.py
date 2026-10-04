@@ -12,6 +12,7 @@ from ..research_preflight import run_research_broker_preflight_helper
 from .archive_sweep import run_archive_sweep_helper
 # The two CODEX_ names are re-exported: tests read them through the registry.
 from .install import CODEX_OPTIONAL_HELPER_NAME, CODEX_REQUIRED_AGENT_NAMES, run_install_helper  # noqa: F401
+from .decisions_list import run_decisions_list_helper
 from .egress_authorization import run_egress_authorization_helper
 from .execution_requests import run_execution_helper
 from .gate_preflight_coverage import run_gate_preflight_coverage_helper
@@ -653,6 +654,16 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         ("validate-pr-packet",),
         "Retry validate-pr-packet-write from a clean worktree; apply mode reruns read-only validation before persisting.",
     ),
+    "decisions-list": MutationEntry(
+        "decisions-list",
+        "decisions-list",
+        ("read_only", "dry_run", "apply"),
+        None,
+        "golden_only",
+        "golden_fixture",
+        mutation_authoritative_request("decisions-list"),
+        rollback="Appends are all-or-nothing; a refused batch writes nothing, so rerun it corrected.",
+    ),
     "detect-stack-manager-plan": MutationEntry(
         "detect-stack-manager-plan",
         "detect-stack-manager-plan",
@@ -791,6 +802,9 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
 
     if entry.helper_id in {"execution-control", "execute-verification", "task-results"}:
         return run_execution_helper(entry, request)
+
+    if entry.helper_id == "decisions-list":
+        return run_decisions_list_helper(entry, request)
 
     if entry.helper_id == "formal-check":
         return run_formal_helper(entry, request)

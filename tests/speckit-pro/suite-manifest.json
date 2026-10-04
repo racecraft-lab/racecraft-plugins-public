@@ -159,6 +159,7 @@
         { "path": "tests/speckit-pro/unit/test-stack-manager-plan.py", "label": "test-stack-manager-plan" },
         { "path": "tests/speckit-pro/unit/test-archive-sweep-candidates.py", "label": "test-archive-sweep-candidates" },
         { "path": "tests/speckit-pro/unit/test-roadmap-freshness.py", "label": "test-roadmap-freshness" },
+        { "path": "tests/speckit-pro/unit/test-decisions-list.py", "label": "test-decisions-list" },
         { "path": "tests/speckit-pro/unit/test-archive-invocation-contract.py", "label": "test-archive-invocation-contract" },
         { "path": "tests/speckit-pro/unit/test-workflow-guard-hook.py", "label": "test-workflow-guard-hook" },
         { "path": "tests/speckit-pro/unit/test-ubiquitous-language-lint.py", "label": "test-ubiquitous-language-lint" },
