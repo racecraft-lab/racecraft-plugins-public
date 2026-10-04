@@ -4634,13 +4634,35 @@ class G0SetupTests(unittest.TestCase):
                     after = self.fixture_files(root)
                     self.assertEqual(before, after, "G0 setup probes must not write")
 
+    def test_g0_setup_runner_rejects_invalid_requests_and_routes_both_hosts(self) -> None:
+        base = {"probe": "commands", "surface": "codex", "workflow_file": WORKFLOW_FILE}
+        for inputs in ({}, {**base, "probe": "unknown"}, {**base, "surface": "unknown"},
+                       {**base, "extra": True}, {**base, "workflow_file": "../outside.md"}):
+            with self.subTest(inputs=inputs):
+                completed, report, _ = run_runner(helper_request("g0-setup", inputs))
+                self.assertEqual(2, completed.returncode)
+                self.assertEqual("input_error", report["status"])
+        for surface in ("claude", "codex"):
+            completed, report, _ = run_runner(helper_request("g0-setup", {**base, "surface": surface}))
+            self.assertEqual(0, completed.returncode)
+            self.assertEqual("commands", report["data"]["probe"])
+            view = host_skill_root(surface) / "speckit-autopilot"
+            skill = (view / "SKILL.md").read_text(encoding="utf-8")
+            prereqs = (view / "references" / "prerequisites.md").read_text(encoding="utf-8")
+            self.assertIn(f"to `{surface}`", skill)
+            self.assertEqual(3, prereqs.count('"helper_id":"g0-setup"'))
+            self.assertIn("data.quality_gate", prereqs)
+            self.assertNotIn("G0 blocked:", prereqs)
+
+
+class G0UnratifiedDefaultsTests(unittest.TestCase):
     def test_g0_continues_on_unratified_defaults_and_never_writes_the_file(self) -> None:
         from speckit_pro_runner.helpers.decisions_list import checked_entry, decisions_list
         from speckit_pro_runner.helpers.g0_setup import g0_setup
 
         for name, text, detail in (("missing", None, "missing"), ("invalid", "{", "invalid: cannot parse JSON")):
             with self.subTest(case=name), helper_project() as root:
-                self.prepare_fixture(root, text)
+                G0SetupTests.prepare_fixture(root, text)
                 inputs = {"surface": "claude", "probe": "commands", "workflow_file": "workflow.md"}
                 with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value="specify"):
                     gate = g0_setup(inputs, root)["quality_gate"]
@@ -4662,30 +4684,10 @@ class G0SetupTests(unittest.TestCase):
 
         valid = '{"schema_version": "1.0", "thresholds": {"complexity": 8, "crap": 30, "mutation_score_floor": 60}}'
         with helper_project() as root:
-            self.prepare_fixture(root, valid)
+            G0SetupTests.prepare_fixture(root, valid)
             with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value="specify"):
                 gate = g0_setup({"surface": "codex", "probe": "commands", "workflow_file": "workflow.md"}, root)
         self.assertNotIn("unratified_defaults", gate["quality_gate"])
-
-    def test_g0_setup_runner_rejects_invalid_requests_and_routes_both_hosts(self) -> None:
-        base = {"probe": "commands", "surface": "codex", "workflow_file": WORKFLOW_FILE}
-        for inputs in ({}, {**base, "probe": "unknown"}, {**base, "surface": "unknown"},
-                       {**base, "extra": True}, {**base, "workflow_file": "../outside.md"}):
-            with self.subTest(inputs=inputs):
-                completed, report, _ = run_runner(helper_request("g0-setup", inputs))
-                self.assertEqual(2, completed.returncode)
-                self.assertEqual("input_error", report["status"])
-        for surface in ("claude", "codex"):
-            completed, report, _ = run_runner(helper_request("g0-setup", {**base, "surface": surface}))
-            self.assertEqual(0, completed.returncode)
-            self.assertEqual("commands", report["data"]["probe"])
-            view = host_skill_root(surface) / "speckit-autopilot"
-            skill = (view / "SKILL.md").read_text(encoding="utf-8")
-            prereqs = (view / "references" / "prerequisites.md").read_text(encoding="utf-8")
-            self.assertIn(f"to `{surface}`", skill)
-            self.assertEqual(3, prereqs.count('"helper_id":"g0-setup"'))
-            self.assertIn("data.quality_gate", prereqs)
-            self.assertNotIn("G0 blocked:", prereqs)
 
 
 class G0SetupFailureTests(unittest.TestCase):
@@ -5147,7 +5149,7 @@ def main() -> int:
     _ReadOnlyHelperRunner.helper_filter = args.helper
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                                for case in (ReadOnlyHelperTests, PlanLayersRepairRouteTests, PlanLayersPlannerCaseTests,
-                                            PacketTitlePatternTests, G0SetupTests, G0SetupFailureTests, ScaffoldAnswersTests, CanaryReceiptTests,
+                                            PacketTitlePatternTests, G0SetupTests, G0UnratifiedDefaultsTests, G0SetupFailureTests, ScaffoldAnswersTests, CanaryReceiptTests,
                                             CanaryVariantAssertionsTests, CanaryVariantContractTests,
                                             CanaryGateVerdictTests, CanaryGuardGapContractTests,
                                             CanaryBudgetTests, CanaryBudgetFileTests))

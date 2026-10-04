@@ -57,8 +57,6 @@ class DeferredSectionInPrBodyTests(unittest.TestCase):
         return normalize_packet_input(SimpleNamespace(inputs=_packet_inputs(**overrides)))
 
     def test_body_opens_with_the_deferred_section_and_still_validates(self) -> None:
-        from speckit_pro_runner.helpers.read_only import validate_pr_packet_read_only
-
         rendered = self.render(deferred_items=self.ITEMS)
         self.assertNotIn("diagnostic", rendered, rendered)
         body = str(rendered["body"])
@@ -69,11 +67,16 @@ class DeferredSectionInPrBodyTests(unittest.TestCase):
         for item in self.ITEMS:
             for value in item.values():
                 self.assertIn(value, section)
+        self.assert_validates(rendered)
+
+    def assert_validates(self, rendered: dict[str, object]) -> None:
+        from speckit_pro_runner.helpers.read_only import validate_pr_packet_read_only
+
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp).resolve()
             packet = rendered["packet"]
             assert isinstance(packet, dict)
-            for relative, content in ((packet["body_file"], body),
+            for relative, content in ((packet["body_file"], str(rendered["body"])),
                                       (rendered["packet_path"], json.dumps(packet, indent=2) + "\n")):
                 path = root / str(relative)
                 path.parent.mkdir(parents=True, exist_ok=True)
@@ -82,6 +85,23 @@ class DeferredSectionInPrBodyTests(unittest.TestCase):
             result = validate_pr_packet_read_only({"packet_path": rendered["packet_path"]}, root)
             verdict = json.loads(str(result["stdout"]))
             self.assertEqual((result["exit_code"], verdict["status"]), (0, "passed"), verdict)
+
+    def test_body_carries_the_unratified_flag_after_deferred_items(self) -> None:
+        flag = "Unratified quality-gate defaults: .specify/quality-gates.json is missing; ratify it."
+        rendered = self.render(unratified_defaults=flag, deferred_items=self.ITEMS[:1])
+        self.assertNotIn("diagnostic", rendered, rendered)
+        body = str(rendered["body"])
+        headings = [line for line in body.splitlines() if line.startswith("#")]
+        self.assertEqual(headings[1:4], ["## Deferred / not verified", "## Unratified quality-gate defaults",
+                                         "## Summary"])
+        self.assertIn(flag, body.split("## Unratified quality-gate defaults", 1)[1].split("## Summary", 1)[0])
+        self.assert_validates(rendered)
+        other = self.render(unratified_defaults=flag + " More.")["packet"]
+        assert isinstance(other, dict)
+        self.assertNotEqual(self.render(unratified_defaults=flag)["packet"]["protected_body_fingerprint"],
+                            other["protected_body_fingerprint"])
+        self.assertEqual(self.render()["body"], self.render(unratified_defaults=None)["body"])
+        self.assertNotIn("Unratified", str(self.render()["body"]))
 
     def test_the_section_is_protected_by_the_body_fingerprint(self) -> None:
         with_items = self.render(deferred_items=self.ITEMS)["packet"]
@@ -99,56 +119,11 @@ class DeferredSectionInPrBodyTests(unittest.TestCase):
             {"deferred_items": [{"item": "T042", "reason": "veto"}]},
             {"deferred_items": "T042"},
             {"deferred_items": self.ITEMS, "mode": "draft"},
+            {"unratified_defaults": "two\nlines"},
+            {"unratified_defaults": ""},
+            {"unratified_defaults": 7},
+            {"unratified_defaults": "A flag.", "mode": "draft"},
         ):
-            with self.subTest(override=override):
-                self.assertIn("diagnostic", self.render(**override))
-
-
-class UnratifiedDefaultsInPrBodyTests(unittest.TestCase):
-    FLAG = "Unratified quality-gate defaults: .specify/quality-gates.json is missing; ratify it."
-    ITEM = {"item": "UAT story 1", "reason": "It needs a person.", "finish": "Follow the runbook."}
-
-    def render(self, **overrides: object) -> dict[str, object]:
-        from speckit_pro_runner.helpers.pr_packet import normalize_packet_input
-
-        return normalize_packet_input(SimpleNamespace(inputs=_packet_inputs(**overrides)))
-
-    def test_body_carries_the_flag_after_deferred_items_and_still_validates(self) -> None:
-        from speckit_pro_runner.helpers.read_only import validate_pr_packet_read_only
-
-        rendered = self.render(unratified_defaults=self.FLAG, deferred_items=[self.ITEM])
-        self.assertNotIn("diagnostic", rendered, rendered)
-        body = str(rendered["body"])
-        headings = [line for line in body.splitlines() if line.startswith("#")]
-        self.assertEqual(headings[1:4], ["## Deferred / not verified", "## Unratified quality-gate defaults",
-                                         "## Summary"])
-        self.assertIn(self.FLAG, body.split("## Unratified quality-gate defaults", 1)[1].split("## Summary", 1)[0])
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp).resolve()
-            packet = rendered["packet"]
-            assert isinstance(packet, dict)
-            for relative, content in ((packet["body_file"], body),
-                                      (rendered["packet_path"], json.dumps(packet, indent=2) + "\n")):
-                path = root / str(relative)
-                path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_text(content, encoding="utf-8")
-            (root / "speckit-pro/speckit_pro_runner").mkdir(parents=True)
-            result = validate_pr_packet_read_only({"packet_path": rendered["packet_path"]}, root)
-            verdict = json.loads(str(result["stdout"]))
-            self.assertEqual((result["exit_code"], verdict["status"]), (0, "passed"), verdict)
-
-    def test_flag_is_protected_and_absent_input_leaves_the_body_unchanged(self) -> None:
-        flagged = self.render(unratified_defaults=self.FLAG)["packet"]
-        other = self.render(unratified_defaults=self.FLAG + " More.")["packet"]
-        assert isinstance(flagged, dict) and isinstance(other, dict)
-        self.assertNotEqual(flagged["protected_body_fingerprint"]["value"],
-                            other["protected_body_fingerprint"]["value"])
-        self.assertEqual(self.render()["body"], self.render(unratified_defaults=None)["body"])
-        self.assertNotIn("Unratified", str(self.render()["body"]))
-
-    def test_malformed_flag_and_draft_mode_are_refused(self) -> None:
-        for override in ({"unratified_defaults": "two\nlines"}, {"unratified_defaults": ""},
-                         {"unratified_defaults": 7}, {"unratified_defaults": self.FLAG, "mode": "draft"}):
             with self.subTest(override=override):
                 self.assertIn("diagnostic", self.render(**override))
 
