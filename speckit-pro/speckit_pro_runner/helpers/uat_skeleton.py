@@ -7,6 +7,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from ..pr_contract import is_one_line
 from .mutation import run_mutation_helper
 from .pr_emission import ensure_final_newline, input_error
 from .read_only import (
@@ -72,16 +73,10 @@ def generate_uat_skeleton(entry: Any, request: Any) -> dict[str, Any]:
 
     plan_path = spec_path.parent / "plan.md"
     plan_text = trusted_text(plan_path, repo_root)
-    unratified_defaults = request.inputs.get("unratified_defaults")
-    if unratified_defaults is not None and (
-        not isinstance(unratified_defaults, str) or re.search(r"[\r\n]", unratified_defaults) or not unratified_defaults.strip()
-    ):
-        return input_error(request, "unratified_defaults must be one non-blank line when provided")
-    project_commands = request.inputs.get("project_commands")
-    if not isinstance(project_commands, dict):
-        project_commands = {}
-    elif not all(isinstance(key, str) and isinstance(value, str) for key, value in project_commands.items()):
-        return input_error(request, "project_commands must map string command names to string values")
+    try:
+        options = uat_render_options(request.inputs)
+    except ValueError as exc:
+        return input_error(request, str(exc))
 
     template = trusted_text(UAT_TEMPLATE_PATH, UAT_PAYLOAD_ROOT)
     if template is None:
@@ -92,10 +87,8 @@ def generate_uat_skeleton(entry: Any, request: Any) -> dict[str, Any]:
         spec_text=spec_text,
         spec_id=spec_path.parent.name,
         spec_source=repo_relative(spec_path, repo_root),
-        workflow_text=workflow_text,
         plan_text=plan_text,
-        project_commands=project_commands,
-        unratified_defaults=unratified_defaults,
+        **options,
     )
     fingerprints = {
         "spec": source_fingerprint(spec_path, spec_text, repo_root),
@@ -125,20 +118,36 @@ def generate_uat_skeleton(entry: Any, request: Any) -> dict[str, Any]:
     )
 
 
+def uat_render_options(inputs: dict[str, Any]) -> dict[str, Any]:
+    flag = inputs.get("unratified_defaults")
+    if flag is not None and (not isinstance(flag, str) or not is_one_line(flag)):
+        raise ValueError("unratified_defaults must be one non-blank line when provided")
+    commands = inputs.get("project_commands")
+    if not isinstance(commands, dict):
+        commands = {}
+    elif not all(isinstance(key, str) and isinstance(value, str) for key, value in commands.items()):
+        raise ValueError("project_commands must map string command names to string values")
+    return {"unratified_defaults": flag, "project_commands": commands}
+
+
+def uat_header_note(stories: list[str], flag: str | None) -> str:
+    warning = f"> **WARN:** {flag.strip()}\n\n" if flag else ""
+    return warning + ("" if stories else "> This spec has no user stories; tests are keyed by FR/SC.")
+
+
 def render_uat_runbook(
     template: str,
     *,
     spec_text: str,
     spec_id: str,
     spec_source: str,
-    workflow_text: str | None,
     plan_text: str | None,
     project_commands: dict[str, str],
     unratified_defaults: str | None = None,
 ) -> tuple[str, list[str]]:
     stories = user_story_titles(spec_text)
     duplicate_ids: list[str] = []
-    header_note = f"> **WARN:** {unratified_defaults.strip()}\n\n" if unratified_defaults else ""
+    header_note = uat_header_note(stories, unratified_defaults)
     if stories:
         per_story = "\n\n".join(
             f"### {title}\n\n- [ ] Walk this story end to end and confirm the observable behavior the spec promises."
@@ -148,7 +157,6 @@ def render_uat_runbook(
         matrix_rows.extend(f"| {title} | see the Per-Story Acceptance Tests block above |" for title in stories)
         fr_matrix = "\n".join(matrix_rows)
     else:
-        header_note += "> This spec has no user stories; tests are keyed by FR/SC."
         requirements = dedupe_requirement_ids(
             extract_heading_section(spec_text, "Functional Requirements", preserve_blanks=True),
             duplicate_ids,

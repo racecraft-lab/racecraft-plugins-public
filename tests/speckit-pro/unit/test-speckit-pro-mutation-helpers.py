@@ -6914,7 +6914,7 @@ This line must not be copied.
                 def render(**extra: object) -> str:
                     return uat_skeleton.render_uat_runbook(
                         template, spec_text=spec_text, spec_id="sample", spec_source="specs/sample/spec.md",
-                        workflow_text=None, plan_text=None, project_commands={}, **extra)[0]
+                        plan_text=None, project_commands={}, **extra)[0]
 
                 flagged = render(unratified_defaults=flag)
                 self.assertIn(f"> **WARN:** {flag}", flagged)
@@ -9037,15 +9037,12 @@ This line must not be copied.
         }
         body_without_uat_runbook = build_packet_body(
             "feat(packet-999): Generate reviewer packet",
-            summary="Summary.",
-            what_changed="- Change.",
-            why_it_matters="Reason.",
-            how_to_review="- Review.",
-            how_to_uat="No manual UAT.",
-            uat_heading="## UAT Runbook",
-            verification="- Tests passed.",
-            scope="- specs/packet-999-packet/spec.md",
-            known_gaps="- None.",
+            sections={
+                "summary": "Summary.", "what_changed": "- Change.", "why_it_matters": "Reason.",
+                "how_to_review": "- Review.", "how_to_uat": "No manual UAT.",
+                "uat_heading": "## UAT Runbook", "verification": "- Tests passed.",
+                "scope": "- specs/packet-999-packet/spec.md", "known_gaps": "- None.",
+            },
         ).replace("\n## UAT Runbook\n\nNo manual UAT.\n", "\n", 1)
         cases = {
             "feature_mismatch": {"source_feature_dir": "specs/other-feature"},
@@ -9479,9 +9476,13 @@ class PrEmissionCohesionTests(unittest.TestCase):
 
     def test_the_uat_runbook_heading_comes_from_the_uat_record(self) -> None:
         body = pr_packet.build_packet_body(
-            "feat(packet-997): Generate reviewer packet", summary="Summary.", what_changed="- Change.",
-            why_it_matters="Reason.", how_to_review="- Review.", how_to_uat="Walk the flow.",
-            uat_heading="## Manual Acceptance", verification="- Tests passed.", scope="- a", known_gaps="- None.",
+            "feat(packet-997): Generate reviewer packet",
+            sections={
+                "summary": "Summary.", "what_changed": "- Change.", "why_it_matters": "Reason.",
+                "how_to_review": "- Review.", "how_to_uat": "Walk the flow.",
+                "uat_heading": "## Manual Acceptance", "verification": "- Tests passed.",
+                "scope": "- a", "known_gaps": "- None.",
+            },
         )
         self.assertIn("\n## Manual Acceptance\n\nWalk the flow.\n", body)
         self.assertNotIn("## UAT Runbook", body)
