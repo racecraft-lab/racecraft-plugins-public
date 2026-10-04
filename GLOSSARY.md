@@ -24,9 +24,21 @@ _Avoid_: smoke test, integration eval, dogfood run
 The evidence one canary run leaves for one host: the commit, host and plugin versions, the verdict for each variant, and the measures it was judged on. Only a receipt from a canary CI run, scheduled or on demand, can gate a release; a local dogfood receipt never does.
 _Avoid_: canary log, test report
 
+**Consensus**:
+A judgment reached with input from independent analysts.
+_Avoid_: voting, review, consensus tier
+
+**Decision model**:
+A model that returns a typed judgment with probabilities (a yes or no, one option from a fixed list, or a position on a scale) rather than text.
+_Avoid_: classifier, LLM judge
+
 **Decisions list**:
 The run's record of every judgment it made instead of asking the user: the option chosen, the rejected alternative and the evidence. It never asks for a reply; the reviewer accepts or overturns each entry at review.
 _Avoid_: end-of-run request, Decisions for you
+
+**Gate**:
+A checkpoint that validates whether a run meets its requirements at a fixed point. A gate is a check, never a phase.
+_Avoid_: quality gate, phase
 
 **Harm halt**:
 The only reason a run ends before a terminal state: the next action could cause damage a later review cannot undo, such as an exposed secret, forged evidence, or a write to the wrong branch. Nothing leaves the machine after it, and a human must clear it before resume.
@@ -50,6 +62,14 @@ _Avoid_: artifact sign-off, planning complete, implementation permission
 **Plan review**:
 The human interview between planning and implementation that examines the proposed work, closes gaps through revisions, and establishes whether the final planning revision is approved.
 _Avoid_: planning pause, implement preflight, artifact delivery
+
+**Plan stage**:
+The part of an autopilot run that takes a SPEC from specify through analyze and ends when the review artifacts and the draft PR are ready. The other stages are implement and full.
+_Avoid_: planning run, planning phase
+
+**Planning phase**:
+One of the six steps inside the plan stage: specify, clarify, plan, checklist, tasks and analyze. Every SPEC runs all six.
+_Avoid_: stage, step, gate, quality gate, optional phase
 
 **Progress block**:
 The fixed summary of an autopilot run's phases and tasks that the runner renders from autopilot state at every phase transition. It is the only place a run shows its progress.
