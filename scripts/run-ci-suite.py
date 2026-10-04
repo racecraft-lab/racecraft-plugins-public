@@ -14,6 +14,8 @@ import sys
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
+from process_status import shell_compatible_status
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 REQUEST_FILE = (
     REPO_ROOT
@@ -50,7 +52,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         check=False,
         shell=False,
     )
-    return completed.returncode
+    return shell_compatible_status(completed.returncode)
 
 
 if __name__ == "__main__":
