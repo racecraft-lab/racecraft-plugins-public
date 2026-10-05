@@ -132,10 +132,28 @@ def cleanup_child(
             time.sleep(0.01)
     signaled = False
     for signum in (signal.SIGTERM, signal.SIGKILL):
-        if not running():
+        if not signal_delivered and os.name != "nt":
+            # macOS answers EPERM while a group forks or tears down. Settle on
+            # the probe before any signal; never signal on an unresolved probe.
+            settle_deadline = time.monotonic() + timeout
+            while True:
+                if not running(natural_grace=True):
+                    return signaled
+                if last_probe_error is None:
+                    break
+                if time.monotonic() >= settle_deadline:
+                    raise last_probe_error
+                time.sleep(0.01)
+        elif not running():
             return signaled
         signaled = True
         signal_delivered = terminate(child, signum)
+        if not signal_delivered and os.name != "nt" and signum != signal.SIGKILL:
+            # ESRCH on SIGTERM proves the owned group is gone; its PGID may be
+            # reused, so never signal it again. SIGKILL is the last signal.
+            if observations is not None:
+                observations.append({"pgid": child.pid, "errno": errno.ESRCH, "elapsed_seconds": time.monotonic() - started})
+            return signaled
         deadline = time.monotonic() + timeout
         while running() and time.monotonic() < deadline:
             time.sleep(0.05)

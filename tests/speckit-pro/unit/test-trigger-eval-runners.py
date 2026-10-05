@@ -761,7 +761,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             mock.patch.object(claude.os, "getpgrp", return_value=child.pid + 1),
             mock.patch.object(claude.os, "killpg", side_effect=PermissionError(1, "probe denied")) as killpg,
             mock.patch.object(claude, "DESCENDANT_EXIT_GRACE", 0.05),
-            mock.patch.object(claude.time, "monotonic", side_effect=[i / 100 for i in range(100)]),
+            mock.patch.object(claude.time, "monotonic", side_effect=(i / 100 for i in range(100000))),
             mock.patch.object(claude.time, "sleep"),
         ):
             with self.assertRaises(PermissionError) as caught:
@@ -793,7 +793,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 ProcessLookupError(3, "group absent"),
             ]) as killpg,
             mock.patch.object(claude, "DESCENDANT_EXIT_GRACE", 0.2),
-            mock.patch.object(claude.time, "monotonic", side_effect=[i / 100 for i in range(100)]),
+            mock.patch.object(claude.time, "monotonic", side_effect=(i / 100 for i in range(100000))),
             mock.patch.object(claude.time, "sleep"),
         ):
             self.assertFalse(claude.cleanup_child(child, observations=observations))
@@ -818,7 +818,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             mock.patch.object(claude.os, "getpgrp", return_value=child.pid + 1),
             mock.patch.object(claude.os, "killpg", side_effect=probe),
             mock.patch.object(claude, "DESCENDANT_EXIT_GRACE", 0.05),
-            mock.patch.object(claude.time, "monotonic", side_effect=[i / 100 for i in range(100)]),
+            mock.patch.object(claude.time, "monotonic", side_effect=(i / 100 for i in range(100000))),
             mock.patch.object(claude.time, "sleep"),
         ):
             self.assertTrue(claude.cleanup_child(child, observations=observations))
@@ -838,6 +838,59 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             self.assertFalse(claude.cleanup_child(child))
         self.assertTrue(all(call.args == (child.pid, 0) for call in killpg.call_args_list))
 
+
+    @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
+    def test_claude_sigterm_esrch_is_terminal_and_never_signals_reused_pgid(self) -> None:
+        claude = import_script(CLAUDE_RUNNER, "layer2_claude_esrch_pgid_reuse")
+        child = FakePopen(b"", returncode=0)
+        sent = []
+
+        def killpg(_pgid: int, signum: int) -> None:
+            if signum:
+                sent.append(signum)
+                if signum == signal.SIGTERM:
+                    raise ProcessLookupError(3, "group exited before delivery")
+            # Probes succeed: an unrelated group has since reused this PGID.
+
+        with (
+            mock.patch.object(claude.os, "getpgrp", return_value=child.pid + 1),
+            mock.patch.object(claude.os, "killpg", side_effect=killpg),
+            mock.patch.object(claude, "DESCENDANT_EXIT_GRACE", 0.05),
+            mock.patch.object(claude.time, "monotonic", side_effect=(i / 100 for i in range(100000))),
+            mock.patch.object(claude.time, "sleep"),
+        ):
+            try:
+                claude.cleanup_child(child)
+            except OSError:
+                pass
+        self.assertEqual(sent, [signal.SIGTERM])
+
+    @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
+    def test_claude_transient_eperm_with_unreaped_leader_settles_before_signaling(self) -> None:
+        claude = import_script(CLAUDE_RUNNER, "layer2_claude_unreaped_leader_eperm")
+        child = FakePopen(b"", returncode=0)
+        child.timeout = True  # poll() stays None: the leader is unreaped and the PGID is ours.
+        sent, probes = [], []
+
+        def killpg(_pgid: int, signum: int) -> None:
+            if signum:
+                sent.append(signum)
+                return
+            probes.append(signum)
+            if not sent and len(probes) <= 3:
+                raise PermissionError(1, "group is forking or tearing down")
+            if sent:
+                raise ProcessLookupError(3, "group absent")
+
+        with (
+            mock.patch.object(claude.os, "getpgrp", return_value=child.pid + 1),
+            mock.patch.object(claude.os, "killpg", side_effect=killpg),
+            mock.patch.object(claude.time, "monotonic", side_effect=(i / 100 for i in range(100000))),
+            mock.patch.object(claude.time, "sleep"),
+        ):
+            self.assertTrue(claude.cleanup_child(child))
+        self.assertEqual(sent, [signal.SIGTERM])
+        self.assertGreaterEqual(len(probes), 4)
 
     @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
     def test_claude_only_post_successful_signal_eperm_may_settle(self) -> None:
@@ -872,7 +925,10 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 ):
                     with self.assertRaises(PermissionError):
                         claude.cleanup_child(child)
-                self.assertLessEqual(len(failed_probes), 1, "an ineligible permission error entered settling polls")
+                if fault == "initial":
+                    self.assertEqual(attempted, [], "an unresolved probe must never lead to a signal")
+                else:
+                    self.assertLessEqual(len(failed_probes), 1, "an ineligible permission error entered settling polls")
 
     def test_claude_finally_cleanup_covers_normal_timeout_and_interruption(self) -> None:
         claude = import_script(CLAUDE_RUNNER, "layer2_claude_finally_cleanup")
