@@ -62,22 +62,6 @@ class PhaseBriefTests(unittest.TestCase):
                 self.assertEqual(reports[0], reports[1])
                 self.assertEqual(reports[0], dispatch_brief(request["inputs"])["data"])
 
-    def test_payload_hosts_reject_directory_and_format_paths(self):
-        valid = {"phase": "Plan", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
-        for key, value in (("workflow_file", "docs/"), ("workflow_file", "docs\\"),
-                           ("workflow_file", "docs/\u202eworkflow.md"), ("feature_dir", "specs/\u200bexample")):
-            for host in ("claude", "codex"):
-                with self.subTest(host=host, key=key, value=value):
-                    request = {"schema_version": "1.0", "helper_id": "phase-brief", "operation": "phase-brief",
-                               "mode": "read_only", "inputs": {**valid, key: value}}
-                    payload = REPO / "dist" / host / "speckit-pro"
-                    done = subprocess.run([sys.executable, "-m", "speckit_pro_runner"],
-                                          cwd=payload, env={**os.environ, "PYTHONPATH": str(payload)},
-                                          input=json.dumps(request), text=True, capture_output=True, check=False)
-                    report = json.loads(done.stdout)
-                    self.assertEqual(report["status"], "input_error")
-                    self.assertEqual(report["data"], {})
-
     def test_invalid_requests_return_no_dispatch_facts(self):
         valid = {"phase": "Plan", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
         invalid = [{**valid, "phase": value} for value in ("Implement", "", "plan", [], None)]
@@ -181,6 +165,24 @@ class PhaseBriefTests(unittest.TestCase):
                 self.assertEqual(bool(brief["slices"]), agent in SLICE_AGENTS)
 
 
+class PhaseBriefPathTests(unittest.TestCase):
+    def test_payload_hosts_reject_directory_and_format_paths(self):
+        valid = {"phase": "Plan", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
+        for key, value in (("workflow_file", "docs/"), ("workflow_file", "docs\\"),
+                           ("workflow_file", "docs/\u202eworkflow.md"), ("feature_dir", "specs/\u200bexample")):
+            for host in ("claude", "codex"):
+                with self.subTest(host=host, key=key, value=value):
+                    request = {"schema_version": "1.0", "helper_id": "phase-brief", "operation": "phase-brief",
+                               "mode": "read_only", "inputs": {**valid, key: value}}
+                    payload = REPO / "dist" / host / "speckit-pro"
+                    done = subprocess.run([sys.executable, "-m", "speckit_pro_runner"],
+                                          cwd=payload, env={**os.environ, "PYTHONPATH": str(payload)},
+                                          input=json.dumps(request), text=True, capture_output=True, check=False)
+                    report = json.loads(done.stdout)
+                    self.assertEqual(report["status"], "input_error")
+                    self.assertEqual(report["data"], {})
+
+
 class PhaseBriefSliceTests(unittest.TestCase):
     def test_unreadable_reference_diagnostic_is_relative(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(phase_brief, "REFERENCES", Path(directory)):
@@ -249,5 +251,5 @@ class PhaseBriefSliceTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, PhaseBriefSliceTests))
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, PhaseBriefPathTests, PhaseBriefSliceTests))
     sys.exit(run_counted(suite, label="test-phase-brief"))
