@@ -122,51 +122,75 @@ Rules:
 - Leave no placeholder text behind.
 - Content comes from the planning record. Never invent it.
 
-Publish one finished page per selected entry through the loaded runner.
+Write one finished page per selected entry to its runner-returned final path.
 
 ### Publish last, one page at a time
 
 Process selected entries in manifest order. Read only the current entry's
-template; never batch-read, prefetch, or read templates in parallel. Read the
-next only after the current page is recorded as `generated`
-or `gap`. Keep the rendered page and its replacement map in memory.
+template; never batch-read, prefetch, or read templates in parallel. Reading a
+later template is not preparation for the current page.
+
+Do not read the next template until the current page is completely rendered,
+validated as a closed sibling temporary file, atomically published, re-read and
+validated at the final path, and recorded as `generated`. On a recoverable
+failure, complete the cleanup below and record that page's `gap` before reading
+the next template. Never pre-copy raw templates to their final artifact paths
+and never create all destination files up front.
+
+The per-page sequence is: Read the current template, render and Write the
+sibling temporary file from that Read, validate the temporary file, publish by
+renaming the closed temporary file, Read and validate the final page at its
+final path, record the outcome. Never use `cp` or `mv` with a shipped template
+as the source; the only permitted move is the atomic rename of the rendered
+sibling temporary file to its final path. Reading or validating the temporary
+file does not satisfy the final-path re-read.
 
 For the current page, build a replacement map whose keys equal the template's
-slot inventory exactly. Verify the complete rendered page before publication:
+declared slot inventory exactly: no missing slot, extra slot, or duplicate
+replacement. Render the complete page in memory. Before exposing it at the
+final path, verify that every rendered region equals its planned replacement
+and differs byte-for-byte from the corresponding shipped-template region.
 
-1. the page differs from the shipped template, and every filled region differs
-   from its corresponding shipped-template region;
-2. it contains no sample-banner element using `sample-notice`, `notice`, or `note`;
-3. every declared `FILL` marker pair appears exactly once and in order;
-4. its slot set equals the inventory and every region matches its replacement.
+Write the rendered page to a uniquely named sibling
+`.artifact-author-<entry-id>.<nonce>.tmp` file, close it, and validate that
+temporary file. Require all of these conditions:
 
-Invoke the loaded runner's `publish-artifact-page` helper, with operation
-`publish-artifact-page` and mode `apply`. Send the same repository-relative
-planning inputs used for selection, the current `page_id`, and the complete
-`rendered_html` string. Its default action is `publish`; `dry_run` validates the
-request without creating output. All artifact output I/O belongs to this helper:
-use runner-owned temporary creation, publication, final read and cleanup.
-Never create, write, rename, read or delete artifact output paths through native
-file tools. A pathname preflight or post-write snapshot is not a publication
-receipt: swap-and-restore can make either approve an untouched old page.
+1. its bytes differ from the shipped template;
+2. it contains no sample-banner element using any recognized template class:
+   `sample-notice`, `notice`, or `note`;
+3. every declared `FILL` marker pair still appears exactly once and in order;
+4. its slot set equals the inventory exactly, and every marked region matches
+   the replacement map rather than the shipped-template region.
 
-The runner exclusively creates and closes a sibling temporary, validates its
-bytes, replaces the destination relative to its anchored directory descriptor,
-and re-reads the final regular file through no-follow descriptors. It verifies
-the written inode, exact rendered bytes and current directory binding. Consume
-`data.verified_html` as the final read and confirm the same four checks against
-that returned content. Require `ok` and `data.outcome == "generated"` before
-recording `generated`; record `data.path`, `data.sha256` and `data.file_identity`
-as its publication receipt. A non-`ok` result is an artifact gap, never success.
+Immediately before each temporary creation, write, publish, final-path read,
+or cleanup, invoke `select-artifact-pages` again with the same planning inputs
+and `candidate_paths` listing the temporary and final repository-relative paths.
+Proceed only on `ok`, using its `checked_paths`. On a confinement error, perform
+no file operation, report the diagnostic as a gap, and leave unsafe paths alone.
+Create the owned temporary exclusively; an existing name requires a fresh name
+and a fresh confinement check.
 
-The runner cleans its owned temporary and failed publication. If final-content
-validation fails, or interruption leaves an unreported page, use the same helper
-in `apply` mode with `action: "cleanup"`, the planning inputs and `page_id`.
-Omit `rendered_html`; include `expected_sha256` when a receipt is available.
-Cleanup covers that selected final page and its interrupted atomic temporaries
-through the directory descriptor. A refused cleanup remains a reported gap;
-leave unsafe paths alone. The orchestrator uses this cleanup action for pages
-without a complete current-run `generated` outcome before the boundary commit.
+After writing and closing the temporary, and again after publishing and
+validating the final page, invoke `select-artifact-pages` with
+`verify_written_paths: true` and `candidate_paths` containing only that written
+path. Require `ok` and its path in `verified_paths` before continuing or
+recording `generated`. The runner opens the artifact directory through
+no-follow descriptors and checks its entries without following symlinks or
+opening special files.
+On verification failure, report a gap and leave the unsafe paths alone.
+Native tool writes retain a check/use race: this post-write snapshot detects
+unsafe paths but cannot prevent redirected writes or make native cleanup safe.
+Report that residual when using native tools for publication.
+
+Only after every check passes, atomically replace the final `.html` with that
+closed sibling file, re-read the final file, and confirm the same checks before
+reporting `generated`. On any recoverable failure, delete the owned temporary
+file and the page written by this attempt only while their confinement checks
+succeed, report its gap, and continue. Never
+publish by writing directly to the final path. This order is load-bearing: an
+interrupted author can leave an owned temporary file, but never a partial page
+at the final path; the orchestrator removes owned temporaries and any final page
+without a complete current-run `generated` outcome before its boundary commit.
 
 ## Result — one outcome per selected page
 

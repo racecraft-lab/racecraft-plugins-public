@@ -93,14 +93,11 @@ def sequential_template_errors(value: str) -> list[str]:
     required = (
         "Process selected entries in manifest order.",
         "Read only the current entry's template; never batch-read, prefetch, or read templates in parallel.",
-        "Read the next only after the current page is recorded as `generated` or `gap`.",
-        "The runner exclusively creates and closes a sibling temporary, validates its "
-        "bytes, replaces the destination relative to its anchored directory descriptor, "
-        "and re-reads the final regular file through no-follow descriptors.",
-        "Consume `data.verified_html` as the final read and confirm the same four checks "
-        "against that returned content.",
-        "Require `ok` and `data.outcome == \"generated\"` before recording `generated`;",
-        "A non-`ok` result is an artifact gap, never success.",
+        "Do not read the next template until the current page is completely rendered, "
+        "validated as a closed sibling temporary file, atomically published, re-read and "
+        "validated at the final path, and recorded as `generated`.",
+        "On a recoverable failure, complete the cleanup below and record that page's `gap` "
+        "before reading the next template.",
     )
     return [clause for clause in required if clause not in policy]
 
@@ -153,19 +150,18 @@ class ArtifactGalleryTests(unittest.TestCase):
 
     def test_sequential_template_guard_rejects_missing_or_reordered_boundaries(self) -> None:
         for path in ("agents/artifact-author.md", "codex-agents/artifact-author.toml"):
-            value = " ".join(read(REPO_ROOT / "speckit-pro" / path).split())
+            value = read(REPO_ROOT / "speckit-pro" / path)
             for old, new in (
                 ("never batch-read, prefetch, or read templates in parallel", "batch-read templates"),
                 ("manifest order", "any order"),
-                ("Read the next only after", "Read the next before"),
-                ("recorded as `generated` or `gap`", "considered ready"),
-                ("creates and closes a sibling temporary", "writes directly"),
-                ("validates its bytes", "assumes its bytes"),
-                ("replaces the destination relative to its anchored directory descriptor", "replaces a pathname"),
-                ("re-reads the final regular file through no-follow descriptors", "reads a pathname"),
-                ("confirm the same four checks", "assume the content"),
-                ('data.outcome == "generated"', 'data.outcome == "dry_run"'),
-                ("A non-`ok` result is an artifact gap, never success.", "Any result is success."),
+                ("completely rendered", "partly rendered"),
+                ("validated as a closed sibling temporary file", "validated in memory"),
+                ("atomically published", "written directly"),
+                ("re-read and", ""),
+                ("validated at the final path", "assumed valid at the final path"),
+                ("recorded as `generated`", "considered ready"),
+                ("before reading", "after reading"),
+                ("atomically published, re-read and", "re-read and atomically published,"),
             ):
                 with self.subTest(path=path, mutation=old):
                     self.assertIn(old, value)
