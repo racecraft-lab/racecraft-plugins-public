@@ -59,7 +59,7 @@ def external_probe_path(path: Path, worktree: Path, links: int = 40, *, host: bo
 def validate_probe_directory(directory: Path, worktree: Path, *, host: bool, cli: str) -> None:
     """Check the selected CLI; hosts also authenticate every interpreter/helper name."""
     external_probe_path(directory, worktree, host=host)
-    for entry in directory.iterdir() if host else (directory / cli,):
+    for entry in directory.iterdir() if host else directory.glob(cli):
         info = entry.lstat()
         if stat.S_ISLNK(info.st_mode):
             target = external_probe_path(entry, worktree, host=host)

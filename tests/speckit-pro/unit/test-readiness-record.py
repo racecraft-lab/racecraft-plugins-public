@@ -885,6 +885,22 @@ class HostProbePathSecurityTest(unittest.TestCase):
                 finally:
                     target.unlink()
 
+    def test_other_cli_probes_retain_helper_only_path_directories(self) -> None:
+        helpers = self.area / "helpers"
+        helpers.mkdir()
+        (helpers / "python3").symlink_to(sys.executable)
+        for cli in ("git", "gh", "docker"):
+            with self.subTest(cli=cli):
+                launcher = self.tools / cli
+                launcher.write_text("#!/usr/bin/env python3\nprint('2.1.0')\n", encoding="utf-8")
+                launcher.chmod(0o755)
+                try:
+                    with unittest.mock.patch.dict(os.environ, {"PATH": os.pathsep.join(map(str, (self.tools, helpers)))}):
+                        result = self.probe(self.root, [cli, "--version"], allowed=(cli,), timeout=2)
+                    self.assertEqual((0, "2.1.0"), (result["exit_status"], result["stdout_tail"]))
+                finally:
+                    launcher.unlink()
+
     def test_trusted_installed_hosts_survive_poisoned_path(self) -> None:
         for host in ("codex", "claude"):
             with self.subTest(host=host):
