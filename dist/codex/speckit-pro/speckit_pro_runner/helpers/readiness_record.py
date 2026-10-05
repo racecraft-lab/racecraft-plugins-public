@@ -219,11 +219,12 @@ def build_record(inputs: dict[str, Any], root: Path) -> dict[str, Any]:
     observations = inputs["observations"]
     if not isinstance(observations, list):
         raise SelectionError("observations must be a list")
+    plugin_revision = clean_text(inputs["plugin_revision"], "plugin_revision")
     observed_at = now()
     items: dict[str, dict[str, Any]] = {}
     for raw in observations:
         if isinstance(raw, dict) and raw.get("item") in host_items.HOST_ITEMS:
-            name, item = host_items.host_item(raw, inputs["host"], observed_at)
+            name, item = host_items.host_item(raw, inputs["host"], observed_at, plugin_revision)
         else:
             name, item = caller_item(raw, root, observed_at)
         if name in items:
@@ -242,7 +243,7 @@ def build_record(inputs: dict[str, Any], root: Path) -> dict[str, Any]:
         "host": inputs["host"],
         "host_version": None if host_version is None else clean_text(host_version, "host_version"),
         "execution_mode": inputs["execution_mode"],
-        "plugin_revision": clean_text(inputs["plugin_revision"], "plugin_revision"),
+        "plugin_revision": plugin_revision,
         "observed_at": observed_at,
         "items": {name: items[name] for name in sorted(items)},
     }

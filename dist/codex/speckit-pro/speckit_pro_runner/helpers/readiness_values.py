@@ -13,7 +13,7 @@ NOT_OBSERVED_ACTION = "Run the preparation check for this item, then rerun scaff
 # Keep the supported scaffold slash commands; refuse absolute paths, including roots and UNC paths.
 LOCAL_PATH_RE = re.compile(
     r"(?<![\w./\\-])(?:/(?!speckit-pro:[a-z][a-z0-9-]*(?=[^\w/\\-]|$)|"
-    r"(?:plugin|reload-plugins|hooks|mcp)(?=[^\w/\\-]|$))[^\s]*|~[/\\]|[A-Za-z]:[\\/]|\\|file://)")
+    r"(?:plugin|reload-plugins|hooks|mcp)(?=[\s`\"”’,;)]|$))[^\s]*|~[/\\]|[A-Za-z]:[\\/]|\\|file://)")
 
 
 def clean_text(value: Any, label: str) -> str:
