@@ -555,6 +555,5 @@ class ArtifactReviewTests(_ReviewFixture):
 
 
 if __name__ == "__main__":
-    loader = unittest.defaultTestLoader
-    suite = unittest.TestSuite(loader.loadTestsFromTestCase(case) for case in (FillContentReviewTests, ArtifactReviewTests))
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (FillContentReviewTests, ArtifactReviewTests))
     raise SystemExit(run_counted(suite, label="test-artifact-review"))
