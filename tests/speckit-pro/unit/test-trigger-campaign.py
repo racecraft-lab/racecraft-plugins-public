@@ -735,6 +735,18 @@ class DraftIdentityTests(unittest.TestCase):
             self.assertTrue(link.is_symlink())
 
 
+def draft_folders(case: unittest.TestCase, payload: bytes | None = None) -> Path:
+    """Create sibling drafts/ and outside/ folders, each holding payload as reviewed.draft.json when given."""
+    temporary = tempfile.TemporaryDirectory()
+    case.addCleanup(temporary.cleanup)
+    base = Path(temporary.name).resolve()
+    for folder in ("drafts", "outside"):
+        (base / folder).mkdir()
+        if payload is not None:
+            (base / folder / "reviewed.draft.json").write_bytes(payload)
+    return base
+
+
 class DraftComponentSwapTests(unittest.TestCase):
     """A directory swapped for a symlink mid-open must not move a draft read or refresh outside."""
 
@@ -754,12 +766,7 @@ class DraftComponentSwapTests(unittest.TestCase):
         return swapping_open, swapped
 
     def draft_pair(self, payload: bytes) -> tuple[Path, Path]:
-        temporary = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        base = Path(temporary.name).resolve()
-        for folder in ("drafts", "outside"):
-            (base / folder).mkdir()
-            (base / folder / "reviewed.draft.json").write_bytes(payload)
+        base = draft_folders(self, payload)
         return base, base / "drafts/reviewed.draft.json"
 
     def test_read_refuses_a_directory_swapped_before_the_draft_opens(self):
@@ -790,37 +797,25 @@ class DraftConfinementTests(unittest.TestCase):
 
     SOURCE = ROOT / "layer2-trigger/campaign-drafts/issue-573-pilot.draft.json"
 
-    def base(self) -> Path:
-        temporary = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        base = Path(temporary.name).resolve()
-        for folder in ("drafts", "outside"):
-            (base / folder).mkdir()
-        return base
-
     def stale_payload(self) -> bytes:
         stale = comparison.bind_template(json.loads(self.SOURCE.read_bytes()))
         stale["identities"]["observer"] = "0" * 64
         return (json.dumps(stale, indent=2) + "\n").encode()
 
-    def test_read_refuses_a_hard_linked_template(self):
-        base = self.base()
-        (base / "outside/reviewed.draft.json").write_bytes(self.SOURCE.read_bytes())
-        os.link(base / "outside/reviewed.draft.json", base / "drafts/reviewed.draft.json")
-        with self.assertRaisesRegex(ValueError, "hard link"):
-            comparison.rebind_identities(base / "drafts/reviewed.draft.json", base / "bound.json")
-        self.assertFalse((base / "bound.json").exists())
-
-    def test_in_place_refresh_refuses_a_hard_linked_draft(self):
-        base, payload = self.base(), self.stale_payload()
-        (base / "outside/reviewed.draft.json").write_bytes(payload)
-        os.link(base / "outside/reviewed.draft.json", base / "drafts/reviewed.draft.json")
-        with self.assertRaisesRegex(ValueError, "hard link"):
-            comparison.rebind_identities(base / "drafts/reviewed.draft.json")
-        self.assertEqual((base / "outside/reviewed.draft.json").read_bytes(), payload)
+    def test_template_read_and_in_place_refresh_refuse_a_hard_linked_draft(self):
+        for mode, payload, out in (("template", self.SOURCE.read_bytes(), "bound.json"),
+                                   ("in-place", self.stale_payload(), None)):
+            with self.subTest(mode=mode):
+                base = draft_folders(self)
+                (base / "outside/reviewed.draft.json").write_bytes(payload)
+                os.link(base / "outside/reviewed.draft.json", base / "drafts/reviewed.draft.json")
+                with self.assertRaisesRegex(ValueError, "hard link"):
+                    comparison.rebind_identities(base / "drafts/reviewed.draft.json", out and base / out)
+                self.assertEqual((base / "outside/reviewed.draft.json").read_bytes(), payload)
+                self.assertFalse((base / "bound.json").exists())
 
     def test_in_place_refresh_refuses_a_hard_link_added_after_the_read(self):
-        base, payload = self.base(), self.stale_payload()
+        base, payload = draft_folders(self), self.stale_payload()
         draft = base / "drafts/reviewed.draft.json"
         draft.write_bytes(payload)
         real_open = os.open
@@ -835,7 +830,7 @@ class DraftConfinementTests(unittest.TestCase):
         self.assertEqual(draft.read_bytes(), payload)
 
     def test_a_directory_named_as_the_draft_releases_every_descriptor(self):
-        base = self.base()
+        base = draft_folders(self)
         (base / "drafts/reviewed.draft.json").mkdir()
         before = len(os.listdir("/dev/fd"))
         for _ in range(3):
