@@ -563,7 +563,8 @@ def cleanup_process_group(process: subprocess.Popen, *, natural_exit_grace: bool
         "error": None,
     }
 
-    observations: list[dict[str, object]] = []
+    evidence = trigger_process.CleanupEvidence()
+    observations = evidence.observations
     kill_probe_start: int | None = None
 
     def send_owned_signal(child: subprocess.Popen, sent: int) -> bool:
@@ -580,15 +581,14 @@ def cleanup_process_group(process: subprocess.Popen, *, natural_exit_grace: bool
             record["error"] = "refusing invalid or self-owned process group identity"
             return record
         trigger_process.cleanup_child(
-            process, observations=observations, timeout=1,
+            process, observations=evidence, timeout=1,
             grace=0.2 if natural_exit_grace else 0, terminate=send_owned_signal,
         )
         record["verified_absent"] = True
     except (OSError, KeyboardInterrupt) as error:
         record["error"] = f"owned process-group cleanup could not be verified: {type(error).__name__}: {error}"
     finally:
-        if observations:
-            record["initially_present"] = observations[0]["errno"] != errno.ESRCH
+        record["initially_present"] = evidence.initially_present
         record["probe_errors"] = [item for item in observations if item["errno"] == errno.EPERM]
         if kill_probe_start is not None:
             record["post_kill_probe_errors"] = [item for item in observations[kill_probe_start:] if item["errno"] == errno.EPERM]

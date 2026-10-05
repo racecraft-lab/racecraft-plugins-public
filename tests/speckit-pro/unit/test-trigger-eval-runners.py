@@ -3937,6 +3937,15 @@ class HostSkillViewConcurrencyTests(unittest.TestCase):
 
 
 class ProcessGroupProbeTests(unittest.TestCase):
+    def test_cleanup_observations_preserve_terminal_absence_contract(self) -> None:
+        import trigger_process as processes
+        child = FakePopen(b"", returncode=0)
+        observations = []
+        with mock.patch.object(processes.os, "killpg", side_effect=itertools.chain([None], itertools.repeat(ProcessLookupError()))):
+            self.assertFalse(processes.cleanup_child(child, observations=observations))
+        self.assertTrue(observations)
+        self.assertTrue(all(item["errno"] == 3 for item in observations))
+
     @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
     def test_claude_post_signal_permission_probe_requires_later_absence(self) -> None:
         # macOS answers EPERM for a group whose last member died from a signal
@@ -3978,8 +3987,7 @@ class ProcessGroupProbeTests(unittest.TestCase):
                 settled_after_term = delivered == signal.SIGTERM and not persistent
                 self.assertEqual(sent, [signal.SIGTERM] if settled_after_term else [signal.SIGTERM, signal.SIGKILL])
                 self.assertGreaterEqual(settling_probes, 2)
-                self.assertEqual(observations[0]["errno"], 0)
-                self.assertIn(1, [item["errno"] for item in observations])
+                self.assertEqual(observations[0]["errno"], 1)
                 self.assertEqual(observations[0]["pgid"], child.pid)
                 self.assertEqual(observations[-1]["errno"], 1 if persistent else 3)
 

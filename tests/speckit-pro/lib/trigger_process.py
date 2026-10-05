@@ -5,6 +5,7 @@ scope is the direct child only; callers must not claim descendant containment.
 """
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 import errno
 import os
 import signal
@@ -14,6 +15,13 @@ from typing import Callable
 
 CLEANUP_TIMEOUT = 5
 DESCENDANT_EXIT_GRACE = 0.2
+
+@dataclass
+class CleanupEvidence:
+    """Presence metadata alongside the legacy permission/absence probe stream."""
+
+    initially_present: bool | None = None
+    observations: list[dict[str, object]] = field(default_factory=list)
 
 class QueryError(OSError):
     """Stop the evaluation without discarding a failed child's raw evidence."""
@@ -71,7 +79,7 @@ def terminate_child(child: subprocess.Popen[bytes] | None, signum: int = signal.
 
 
 def cleanup_child(
-    child: subprocess.Popen[bytes], *, observations: list[dict[str, object]] | None = None,
+    child: subprocess.Popen[bytes], *, observations: list[dict[str, object]] | CleanupEvidence | None = None,
     timeout: float | None = None, grace: float | None = None,
     terminate: Callable[..., bool] = terminate_child,
 ) -> bool:
@@ -79,6 +87,8 @@ def cleanup_child(
     timeout = CLEANUP_TIMEOUT if timeout is None else timeout
     grace = DESCENDANT_EXIT_GRACE if grace is None else grace
     started = time.monotonic()
+    evidence = observations if isinstance(observations, CleanupEvidence) else None
+    observations = observations.observations if isinstance(observations, CleanupEvidence) else observations
     # After the latest signal reached the group, macOS answers EPERM until its
     # zombie members are reaped, so an EPERM probe then is unresolved, not fatal.
     signal_delivered = False
@@ -92,11 +102,11 @@ def cleanup_child(
         if child.pid <= 0 or child.pid == os.getpgrp():
             raise OSError("refusing to inspect an unowned process group")
         last_probe_error = None
+        group_present = True
         try:
             os.killpg(child.pid, 0)
-            if observations is not None:
-                observations.append({"pgid": child.pid, "errno": 0, "elapsed_seconds": time.monotonic() - started})
         except ProcessLookupError:
+            group_present = False
             if observations is not None:
                 observations.append({"pgid": child.pid, "errno": errno.ESRCH, "elapsed_seconds": time.monotonic() - started})
             return False
@@ -107,6 +117,9 @@ def cleanup_child(
                 raise
             # Permission denial is unresolved, never proof of absence.
             last_probe_error = exc
+        finally:
+            if evidence is not None and evidence.initially_present is None:
+                evidence.initially_present = group_present
         return True
 
     if child.poll() is not None:
