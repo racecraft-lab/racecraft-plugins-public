@@ -282,8 +282,9 @@ class PublicationRaceTests(PublicationFixture):
                     self.assertEqual(result["status"], "ok", result)
                     self.assertEqual(result["data"]["verified_html"], self.page.read_text())
                     self.assertEqual(result["data"]["outcome"], "generated")
-                    self.assertTrue(all(event["anchored"] for event in json.loads(
-                        (self.root / "probe-events.json").read_text())))
+                    events = json.loads((self.root / "probe-events.json").read_text())
+                    self.assertTrue(events)
+                    self.assertTrue(all(event["anchored"] for event in events))
                     self.assertEqual((self.root / "outside/implementation-plan.html").read_text(), "outside sentinel")
 
     def test_temporary_basename_rename_fails_closed_without_attacker_final(self) -> None:
@@ -366,8 +367,10 @@ class PublicationRaceTests(PublicationFixture):
                 result = self.publish("temporary-collision", plugin)
                 self.assertEqual(result["status"], "expected_failure", result)
                 self.assertEqual(self.page.read_text(), "untouched original")
-                self.assertTrue(all(path.read_text() == "foreign collision"
-                                    for path in self.page.parent.glob(".implementation-plan.html.tmp-*")))
+                temporaries = list(self.page.parent.glob(".implementation-plan.html.tmp-*"))
+                self.assertTrue(temporaries)
+                self.assertEqual(len(temporaries), ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro").index(plugin) + 1)
+                self.assertTrue(all(path.read_text() == "foreign collision" for path in temporaries))
                 self.assertEqual(json.loads((self.root / "probe-events.json").read_text()),
                                  [{"event": "temporary-collision", "anchored": True}])
 
@@ -384,18 +387,25 @@ class PublicationRaceTests(PublicationFixture):
                                  [{"event": "captured-entry", "anchored": True}])
 
     def test_open_temporary_tampering_is_rejected(self) -> None:
-        result = self.publish("tamper-temp")
-        self.assertEqual(result["status"], "expected_failure", result)
-        self.assertEqual(self.page.read_text(), "untouched original")
-        self.assertEqual(list(self.page.parent.glob(".*.tmp-*")), [])
+        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            with self.subTest(plugin=plugin):
+                result = self.publish("tamper-temp", plugin)
+                self.assertEqual(result["status"], "expected_failure", result)
+                self.assertEqual(self.page.read_text(), "untouched original")
+                self.assertEqual(list(self.page.parent.glob(".*.tmp-*")), [])
+                self.assertEqual(json.loads((self.root / "probe-events.json").read_text()),
+                                 [{"event": "temporary-bytes", "anchored": True}])
 
     def test_cleanup_swap_never_removes_outside_file(self) -> None:
-        result = self.publish("cleanup-swap", action="cleanup")
-        self.assertEqual(result["status"], "ok", result)
-        self.assertFalse(self.page.exists())
-        self.assertEqual((self.root / "outside/implementation-plan.html").read_text(), "outside sentinel")
-        self.assertEqual(json.loads((self.root / "probe-events.json").read_text()),
-                         [{"event": "cleanup", "anchored": True}])
+        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            with self.subTest(plugin=plugin):
+                self.page.write_text("untouched original")
+                result = self.publish("cleanup-swap", plugin, action="cleanup")
+                self.assertEqual(result["status"], "ok", result)
+                self.assertFalse(self.page.exists())
+                self.assertEqual((self.root / "outside/implementation-plan.html").read_text(), "outside sentinel")
+                self.assertEqual(json.loads((self.root / "probe-events.json").read_text()),
+                                 [{"event": "cleanup", "anchored": True}])
 
     def test_cleanup_preserves_unreceipted_temporaries(self) -> None:
         owned = self.root / ("artifacts/.implementation-plan.html.tmp-42-" + "a" * 32)
