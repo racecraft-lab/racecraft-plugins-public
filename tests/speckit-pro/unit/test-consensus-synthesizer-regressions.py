@@ -153,15 +153,15 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
                 self.assertIn("A security keyword alone needs no tag", flat)
 
     def test_orchestrator_passes_the_active_protocol_path(self) -> None:
-        # Every synthesizer and every analyze or checklist executor prompt
-        # carries the protocol path resolved from the loaded plugin root.
+        # Every synthesizer prompt carries the protocol path resolved from the loaded plugin root.
         protocol = PROTOCOL.read_text(encoding="utf-8")
         self.assertIn(f"**Protocol:** {ACTIVE_PROTOCOL}", protocol)
         phase = phase_execution_text()
-        self.assertIn(f'prompt: "Run /speckit-checklist with: <domain prompt>\\nProtocol: {ACTIVE_PROTOCOL}\\n', phase)
-        self.assertIn(f'prompt: "Run /speckit-analyze with: <prompt>\\nProtocol: {ACTIVE_PROTOCOL}\\n', phase)
+        # The clarify, checklist and analyze executors take reference slices from the phase brief instead.
+        self.assertIn('prompt: "Run /speckit-checklist with: <domain prompt>\\nReference slices: <brief.slices, verbatim>")', phase)
+        self.assertIn('prompt: "Run /speckit-analyze with: <prompt>\\nReference slices: <brief.slices, verbatim>")', phase)
         flat = " ".join(phase.split())
-        self.assertIn(f"Prepare a Clarify Question Set for: <session prompt> Protocol: {ACTIVE_PROTOCOL}", flat)
+        self.assertIn("Prepare a Clarify Question Set for: <session prompt> Reference slices: <brief.slices, verbatim>", flat)
         self.assertIn("Workflow root: <WORKFLOW_ROOT>", phase)
         self.assertIn("consensus-synthesizer agent (single fan-out), with the `Protocol:` line,", flat)
         self.assertIn("never the checkout that launched the run", flat)
@@ -176,9 +176,6 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
         # root, so the agent never searches the plugin cache for a copy.
         sites = {
             "phase-execution.md": (
-                'subagent_type: "speckit-pro:clarify-executor"',
-                'subagent_type: "speckit-pro:checklist-executor"',
-                'subagent_type: "speckit-pro:analyze-executor"',
                 'subagent_type: "speckit-pro:artifact-author"',
                 'subagent_type: "<batch.agent>"',
             ),

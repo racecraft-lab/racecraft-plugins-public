@@ -21,11 +21,12 @@ sys.path.insert(0, str(LIB_DIR))
 sys.path.insert(0, str(REPO_ROOT / "speckit-pro"))
 
 from host_skill_views import host_skill_root  # noqa: E402
+from readiness_case import readiness_request  # noqa: E402
 from runner_invocation import assert_runner_response, run_runner  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 CALLER_ITEMS = ("plugin_payload", "project_integration", "github_auth", "mcp_servers", "typesafe_jev",
-                "reviewability_report", "formal_methods")
+                "reviewability_report", "formal_methods", "git_write")
 # Built from parts so the repository privacy scan does not flag these deliberate leak samples.
 HOME = "/" + "Users"
 SCRATCH = "/private" + "/tmp"
@@ -45,10 +46,7 @@ def observation(item: str, status: str = "verified", **extra: object) -> dict[st
 
 
 def request(observations: list[dict[str, object]], mode: str = "apply", **inputs: object) -> dict[str, object]:
-    body = {"host": "claude", "host_version": "2.1.0", "execution_mode": "interactive",
-            "plugin_revision": "2.40.0", "observations": observations, **inputs}
-    return {"schema_version": "1.0", "request_id": "test-readiness", "helper_id": "write-readiness-record",
-            "operation": "write-readiness-record", "mode": mode, "inputs": body}
+    return readiness_request(observations, mode=mode, **{"host_version": "2.1.0", **inputs})
 
 
 class ReadinessRecordTest(unittest.TestCase):
@@ -348,6 +346,38 @@ class ReadinessRecordTest(unittest.TestCase):
                 with self.subTest(command=command, suffix=suffix):
                     with self.assertRaises(SelectionError):
                         clean_text(f"Run {command}{suffix}", "action")
+
+    def test_slash_command_punctuation_cannot_hide_a_path_suffix(self) -> None:
+        from speckit_pro_runner.helpers.readiness_values import clean_text
+        from speckit_pro_runner.strict_input import SelectionError
+
+        for command in ("/mcp", "/hooks", "/plugin", "/reload-plugins",
+                        "/speckit-pro:speckit-install", "/speckit-pro:speckit-scaffold-spec"):
+            for punctuation in ('`', '"', '\u201d', '\u2019', ',', ';', ')', '`,', '\u201d,', '.', ':', ']', '}'):
+                for suffix in ("private/data", ".json"):
+                    with self.subTest(command=command, punctuation=punctuation, suffix=suffix):
+                        with self.assertRaises(SelectionError):
+                            clean_text(f"Run {command}{punctuation}{suffix}", "action")
+            for ending in ("", ".", "`.", ").", " to inspect.", "\u00a0to inspect.", "`, then retry.", "\u201d, then retry."):
+                with self.subTest(command=command, ending=ending):
+                    action = f"Run {command}{ending}"
+                    self.assertEqual(action, clean_text(action, "action"))
+
+    def test_readiness_text_rejects_controls_and_bidirectional_formatting(self) -> None:
+        from speckit_pro_runner.helpers.readiness_values import clean_text
+        from speckit_pro_runner.strict_input import SelectionError
+
+        characters = (*map(chr, range(32)), *map(chr, range(127, 160)),
+                      "\u2028", "\u2029", "\u061c", "\u200e", "\u200f",
+                      *map(chr, range(0x202A, 0x202F)), *map(chr, range(0x2066, 0x206A)))
+        for character in characters:
+            for template in ("{}probe", "probe{}result", "probe{}"):
+                with self.subTest(character=ascii(character), template=template):
+                    with self.assertRaises(SelectionError):
+                        clean_text(template.format(character), "evidence_source")
+        for text in ("MCP probe passed", "\u00e9tat v\u00e9rifi\u00e9", "\u0646\u062c\u062d \u0627\u0644\u0641\u062d\u0635"):
+            with self.subTest(text=text):
+                self.assertEqual(text, clean_text(text, "evidence_source"))
 
     def test_unreadable_files_are_not_reported_missing(self) -> None:
         outside = self.root / "target.txt"

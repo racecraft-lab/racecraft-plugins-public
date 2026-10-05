@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-propose-quality-gates",
+  "helper_id": "propose-quality-gates",
+  "operation": "propose-quality-gates",
+  "mode": "dry_run",
+  "inputs": {
+    "measured": false
+  }
+}

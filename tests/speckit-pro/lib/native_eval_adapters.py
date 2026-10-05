@@ -1091,9 +1091,7 @@ def _verify_prepared_identity(prepared: adapter_common.PreparedTrial) -> None:
                  and isinstance(settings, dict)
                  and settings.get("project_instruction_parent_traversal") is False
                  and settings.get("project_root_markers") == expected_project_root_markers
-                 and settings.get("global_instructions_disabled") is False
-                 and (prepared.mode != "project"
-                      or settings.get("update_plan_enabled") is True),
+                 and settings.get("global_instructions_disabled") is False,
                  "prepared Codex instruction discovery settings are malformed")
         adapter_common._require(codex_adapter._codex_instruction_inputs(
                     prepared.environment, prepared.cwd,

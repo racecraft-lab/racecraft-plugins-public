@@ -31,6 +31,9 @@ These examples name the runner's contract; the steps below determine when a chec
 | `resolve-workflow-binding` | `read_only` | `{"workflow_file": "<absolute-workflow-path>"}` |
 | `resolve-scaffold-worktree-placement` | `read_only` | `{"branch_name": "<branch-name>"}` (add `worktree_root_override` only when the user supplied one) |
 | `scaffold-answers` | `read_only` | `{"answers_file": "<answers-file>", "spec_id": "<SPEC-ID>"}` |
+| `probe-git-write` | `read_only` | `{}` |
+| `propose-quality-gates` | `dry_run` | `{"measured": true}` (`false` when nothing was measured) |
+| `propose-quality-gates` | `apply` | `{"measured": true, "confirmed": true, "proposal_digest": "<dry-run digest>"}` (`confirmed` is `false` after a decline) |
 | `write-readiness-record` | `apply` | `{"host": "<host>", "execution_mode": "<mode>", "plugin_revision": "<version>", "observations": [{"item": "<item>", "status": "<status>", "evidence_source": "<one line>", "values": {"probe": "<observed-result>"}}]}` (add `action` and `files` per observation; add `host_version` when reported) |
 
 ## Capability discovery & grounding
@@ -181,6 +184,25 @@ The generated workflow's `Branch` field is the actual dedicated branch
 returned by `resolve-scaffold-worktree-placement` and verified inside the
 worktree. Never write `main`, a guessed branch, or a display label into that
 field.
+
+## Git Write Probe
+
+Run this first, before any gate or branch step (and before the answers-file
+helper and Step -0.5). Call helper `probe-git-write` in `read_only` mode with
+empty `inputs={}` from the task checkout. It creates and removes random probe
+files where branch creation and worktree metadata write. When `data.verdict`
+is `stop`, call `write-readiness-record` in `apply` mode from this checkout
+with `host="codex"`, the invocation's `execution_mode` (`answers-file` or
+`interactive`), the installed `plugin_revision` as in Step 6.5, and
+`observations=[data.observation]`. This records the denied capability without
+running a gate or creating a branch/worktree. If recording fails, append that
+fact to `data.message`; never treat an old record as current evidence. Print
+`data.message` as the one stop message and end scaffold: no gate runs, and no
+branch or worktree is created.
+In every other case keep `data.observation` for Step 6.5 and display any
+nonempty `data.message`, including leftover probe cleanup failures. Do not retry the
+probe after a stop; the fix is the user's (approve git writes, or add the
+repository's `.git` to `sandbox_workspace_write.writable_roots`).
 
 ## Answers-file mode
 
@@ -885,6 +907,56 @@ user hand-editing obvious missing context. If a critical detail cannot be
 derived from the roadmap or the design concept, stop and report the gap rather
 than filling it with fiction.
 
+### 6.4 Propose the Quality Gates (IN the Worktree)
+
+Every scaffold checks `.specify/quality-gates.json` (ADR 0007). When it is
+missing or invalid, measure the codebase, propose thresholds, ask once, and
+write the file only on a yes. The step is done when one line states the
+outcome.
+
+1. Run helper `propose-quality-gates` in `dry_run` with `measured: false`.
+   When `data.status` is `present`, print that the file is confirmed and go on
+   to Step 6.5.
+2. Measure with the tools already installed. Run steps 1 and 2 of the
+   [coach's complexity-ceiling measurement](../speckit-coach/references/quality-gates-guide.md),
+   set `--report` to `.specify/quality-gates-report.json`, and skip the install
+   offers and skip the coverage run: scaffold installs nothing and executes no
+   repository tests. Reuse existing coverage data; for Python, pass an empty
+   coverage JSON when none exists, and disclose that CRAP then assumes zero
+   coverage. A missing tool, an unsupported language,
+   or a failed run means `measured: false`.
+3. Run `propose-quality-gates` in `dry_run` again with that `measured` value.
+   Print `data.proposal` (the thresholds, `basis.method` and
+   `basis.measured_functions`), `data.failing_file_count`, and each file in
+   `data.failing_files` with its functions. Say that COMPLEXITY and MUTATION
+   judge every function in a changed file, so a SPEC touching a listed file
+   plans its refactor. For `nist-235`, say the ceiling of 10 was not measured.
+   When `data.status` is `invalid`, print `data.problems` and say that a yes
+   replaces the whole file, skips and opt-in slots included.
+4. Ask once whether to write the proposal.
+   Interactive mode: ask with `request_user_input`, or in free text in an
+   active foreground chat, recommending yes. Use one question with id
+   `quality_gate_confirmation`, header `Quality gate`, and Yes/No options
+   with descriptions. Convert only an explicit Yes to `confirmed: true`;
+   an empty, cancelled, or unavailable response authorizes no write. In an
+   unattended run, use answers-file mode; never open an interactive question.
+   Answers-file mode: use the file's `quality_gate_confirmation` boolean and
+   ask nothing.
+5. Run `propose-quality-gates` in `apply` with the same `measured` value and
+   `confirmed` set to the answer and `proposal_digest` from the dry run whose
+   proposal was displayed (also in answers-file mode). On `data.outcome` of
+   `proposal_changed`, report that nothing was written and continue on shipped
+   defaults; the next scaffold offers again. On `written`, tell the user
+   the file is theirs to edit through the coach flow. On `declined`, tell the
+   user autopilot runs on the shipped defaults and the next scaffold offers
+   again. A decline writes nothing and stores nothing; do not record it.
+6. On `input_error`, correct the named field and send the request once more.
+   On a write failure, report it and continue: scaffold finishes on the shipped
+   defaults. When `data.report_removed` is false, tell the user to delete
+   `.specify/quality-gates-report.json`.
+
+Step 6.5 then records the source this step left in place.
+
 ### 6.5 Write the Readiness Record (IN the Worktree)
 
 Record what this run observed, so autopilot reads evidence instead of
@@ -905,10 +977,20 @@ per item:
 | `mcp_servers` | running helper `research-broker-preflight` with empty `inputs={}`, then bounded live observations of required MCP tools/startup/auth; configuration alone does not prove connectivity, so record `unknown` when live evidence is absent |
 | `typesafe_jev` | checking whether this session exposes the Jev `evaluate` tool |
 | `reviewability_report` | reusing the setup gate result, with its report or roadmap path in `files` and SPEC-ID as `values.spec_id` |
+| `git_write` | sending `data.observation` from the Git Write Probe unchanged |
 | `formal_methods` | judging whether the Design Concept's design suits a formal model, by the [coach's formal-methods guide](../speckit-coach/references/formal-methods-guide.md): `verified` when it suits one, `not_applicable` when it does not; cite the deciding behavior as `evidence_source` |
 
 The helper records `permission_probe`, `plugin_scope` and `mcp_authentication`
 as `not_applicable` on Codex (Claude Code only). Do not send them.
+
+Codex items. Send only the raw observation (`item`, `evidence_source`, and the
+detail key); the helper derives `status` and `action`, and rejects a `status`
+you send for these.
+
+| `item` | Detail key | Observe it now by |
+| --- | --- | --- |
+| `codex_agents` | `agents`: `{"installation": {...}, "inventory": [{"agent": "<name>", "state": "current", "stale" or "missing", "repair": "none", "applied", "declined" or "failed"}], "expected_revision": "<plugin_revision>", "loaded_revision": "<version>"}` | reusing the `install-codex-agents` `mode="dry_run"` plan from step -0.5 for `inventory`, and its repair outcome in `repair`; copy the selected installation inputs into `installation` exactly as that request sent them, with no added keys; omit `loaded_revision` unless this session reports the revision it loaded, since a repaired agent loads only after a restart |
+| `extension_versions` | `extensions`: `{"extension": "<id>", "installed": "<version>" or null, "expected": "<version>" or null}` | reading each required extension's version from `specify extension list`; `expected` is its project pin or curated-set version, and a drifted or missing extension is flagged |
 
 Hook items, on both hosts:
 
@@ -929,7 +1011,9 @@ Hook items, on both hosts:
   `verification_docker` (whether a Linux/arm64 Docker daemon answers) itself.
   Omit `host_version` when the host does not report it.
 - When the response is `input_error`, correct the field its diagnostic names
-  and send the request once more.
+  and send the request once more. Keep evidence and action text subject to
+  the helper's privacy validation; never write the readiness record directly
+  to bypass a rejected field.
 - Print one line per `unavailable` or `unknown` item with its action, then
   continue. A declined fix, a failed fix, or a failed write leaves scaffold
   finishing normally.
@@ -975,6 +1059,7 @@ equal the resolver's `branch_name` and must not be `main`; otherwise STOP.
    `docs/ai/specs/.process/SPEC-<ID>-workflow.md`, and
    `specs/<branch-name>/SPEC-MOC.md`, then commit with
    `chore(SPEC-XXX): add design concept and workflow for autopilot`.
+   When Step 6.4 wrote `.specify/quality-gates.json`, add it to the same commit.
 
 2. Push the WORKTREE BRANCH to the detected remote:
    From `<worktree_root>/`, run `git push -u <remote> <branch-name>`.
