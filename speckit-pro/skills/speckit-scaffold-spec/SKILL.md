@@ -1048,8 +1048,9 @@ When the response lists `allow_rules`, print them once as `permissions.allow`
 entries for `.claude/settings.local.json` or the user settings. Never add a
 rule yourself.
 
-The helper records `codex_agents` and `extension_versions` as `not_applicable`
-on Claude Code (Codex only). Do not send them.
+The helper records `codex_agents`, `extension_versions`, `codex_approval_posture`,
+`codex_hook_trust` and `codex_local_access` as `not_applicable` on Claude Code
+(Codex only). Do not send them.
 <!-- /host -->
 <!-- host:codex: Codex records the Claude-only items itself and reports its own hook trust -->
 The helper records `permission_probe`, `plugin_scope` and `mcp_authentication`
@@ -1063,6 +1064,12 @@ you send for these.
 | --- | --- | --- |
 | `codex_agents` | `agents`: `{"installation": {...}, "inventory": [{"agent": "<name>", "state": "current", "stale" or "missing", "repair": "none", "applied", "declined" or "failed"}], "expected_revision": "<plugin_revision>", "loaded_revision": "<version>"}` | reusing the `install-codex-agents` `mode="dry_run"` plan from step -0.5 for `inventory`, and its repair outcome in `repair`; copy the selected installation inputs into `installation` exactly as that request sent them, with no added keys; omit `loaded_revision` unless this session reports the revision it loaded, since a repaired agent loads only after a restart |
 | `extension_versions` | `extensions`: `{"extension": "<id>", "installed": "<version>" or null, "expected": "<version>" or null}` | reading each required extension's version from `specify extension list`; `expected` is its project pin or curated-set version, and a drifted or missing extension is flagged |
+| `codex_approval_posture` | `posture`: `{"approval_policy": "on-request", "never" or "granular", "sandbox_mode": "read-only", "workspace-write" or "danger-full-access", "approvals_reviewer": "user" or "auto_review", "mcp_approval_mode": "auto", "prompt", "writes" or "approve", "mcp_consent": "granted" or "not_granted", "mcp_startup_timeout_sec": <seconds> or null, "mcp_tool_timeout_sec": <seconds> or null, "external_delegation": "allowed" or "blocked"}` | reading the effective values in this session with `/status` and `/permissions`, and the MCP settings in the Codex configuration; send `"unobservable"` (or null for a timeout) for what you cannot read, since a file on disk does not prove a launch override or the permissions of the running thread |
+| `codex_hook_trust` | `hooks`: `{"hook": "<event name>", "state": "trusted", "untrusted" or "unobservable", "hash": "<hex digest>" or null}` | reviewing each hook this plugin ships in `/hooks`, which shows what Codex trusts; copy the exact hash it reports, and send a `trusted` entry only with the hash that was trusted. When a hook is untrusted, ask the user to review and trust it in `/hooks`; never trust it for them |
+| `codex_local_access` | `access`: `{"loopback": "allowed", "blocked" or "unobservable", "temp_dir": "healthy", "leaky" or "unobservable", "egress_policy_ref": "<name>" or null, "egress_policy_digest": "<hex digest>" or null}` | running one bounded loopback connection to a local port you open, reusing the `local_capability` temporary directory probe result, and naming the applicable egress policy by reference and digest only; do not copy its entries |
+
+These three record facts, never consent. Scaffold never broadens a permission,
+grants egress consent or disables a control to make an item pass.
 <!-- /host -->
 
 Hook items, on both hosts:
