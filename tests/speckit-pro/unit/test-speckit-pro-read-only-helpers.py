@@ -5755,6 +5755,28 @@ class CanaryVariantIdentityTests(CanaryTargetValidityCase):
                         self.assertEqual(sorted(self.validator.VARIANTS), sorted(names))
                         self.assertEqual(1, sum("plan_target" in result for result in report["variants"]))
 
+    def test_api_reports_from_one_snapshot_of_a_list_that_changes_between_reads(self):
+        """A list that yields different entries to each read must not pass the identity check with one
+        roster and report another."""
+        for host in self.receipts:
+            base = self.complete_receipt(host)["variants"][0]
+            over = copy.deepcopy(base)
+            self.set_plan(over, "wall_seconds", 1801)
+
+            class ShiftingVariants(list):
+                reads = 0
+
+                def __iter__(self):
+                    ShiftingVariants.reads += 1
+                    return iter([base] if ShiftingVariants.reads < 4 else [over, base])
+
+            value = dict(self.receipts[host], variants=ShiftingVariants([base]))
+            report = self.validator.receipt_report(value)
+            with self.subTest(host=host):
+                targets = [result["plan_target"] for result in report["variants"] if "plan_target" in result]
+                self.assertEqual(1, len(targets), report)
+                self.assertEqual(report["valid"], targets[0]["target_met"], report)
+
     def test_duplicate_json_keys_on_every_target_selection_key_fail_closed_in_the_cli(self):
         """The CLI is the only seam that can see a repeated key; each one the target reads must fail closed."""
         repeats = (("host", "claude-code"), ("trigger", "scheduled"), ("variants", []), ("name", "oversized_plan"),

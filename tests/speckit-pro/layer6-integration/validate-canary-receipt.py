@@ -155,15 +155,20 @@ def planted_catch_input_failures(value):
     return [f"unknown planted-catch id: {unknown}"] if unknown else []
 
 
-def receipt_input_failures(value):
-    """Bound planted-catch evidence, then reject non-JSON numbers before any are reported."""
+def receipt_snapshot(value):
+    """(problems, snapshot): bound planted-catch evidence, then take one plain-JSON copy.
+
+    Every later check and report reads that one copy, so a caller's object cannot show one
+    roster to a check and another to the report. Non-JSON numbers fail here, before any are reported.
+    """
     problems = planted_catch_input_failures(value)
-    if not problems:
-        try:
-            json.dumps(value, allow_nan=False)  # also catches numeric overflow such as JSON 1e400
-        except ValueError:
-            problems = ["receipt.invalid_json"]
-    return problems
+    if problems:
+        return problems, None
+    try:
+        snapshot = json.loads(json.dumps(value, allow_nan=False))  # also catches numeric overflow such as JSON 1e400
+    except ValueError:
+        return ["receipt.invalid_json"], None
+    return planted_catch_input_failures(snapshot), snapshot
 
 
 def variant_identity_failures(value):
@@ -174,7 +179,7 @@ def variant_identity_failures(value):
 
 def receipt_report(value, budget=None, hook_counters=MISSING_HOOK_COUNTERS):
     """Gate failures, separate variant verdicts, and budgeted limits that are still unset."""
-    problems = receipt_input_failures(value)
+    problems, value = receipt_snapshot(value)
     if not problems:
         schema = json_schema_failures(value, SCHEMA, SCHEMA, "receipt")
         problems = [f"receipt.schema: {len(schema)}"] if schema else variant_identity_failures(value)
