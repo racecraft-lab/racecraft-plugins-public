@@ -101,6 +101,10 @@ class ValidateHostProgressGuidance(unittest.TestCase):
                 self.assertTrue(cases, f'{source.name}: empty eval cases')
                 with self.subTest(catalog=catalog, file=source.name):
                     self.assertEqual(self.forbidden.findall(json.dumps(cases)), [], 'eval case names a task-list tool or opt-in')
+        for relative in ('evals/catalog.json', 'evals/fixtures/functional/legacy-selection.json'):
+            source = REPO_ROOT / 'tests/speckit-pro' / relative
+            with self.subTest(file=relative):
+                self.assertEqual(self.forbidden.findall(json.dumps(json.loads(_read(source)))), [], 'native eval contract names a task-list tool or opt-in')
 
     def test_host_eval_adapters_use_no_task_list_tools(self) -> None:
         sources = sorted(LIB_DIR.glob('native_eval*adapter*.py'))
