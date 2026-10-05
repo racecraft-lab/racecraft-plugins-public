@@ -7,6 +7,7 @@ import ast
 import base64
 import copy
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from dataclasses import replace
 import hashlib
 import json
@@ -19,6 +20,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import tomllib
 from typing import Any
 import unittest
 from unittest import mock
@@ -30,6 +32,7 @@ sys.path.insert(0, str(TEST_ROOT / "lib"))
 
 import agent_roster  # noqa: E402
 import host_skill_views  # noqa: E402
+from host_progress_contract import codex_config_overrides, forbidden_task_tools  # noqa: E402
 import native_eval_adapter_common as adapter_common  # noqa: E402
 import native_eval_adapters as adapters  # noqa: E402
 import native_eval_claude_adapter as claude_adapter  # noqa: E402
@@ -52,6 +55,50 @@ NATIVE_CODEX_SANDBOX_PROBES = (
     os.name == "posix" and hasattr(os, "O_NOFOLLOW")
     and Path("/bin/cat").is_file() and Path("/bin/mkdir").is_file()
 )
+
+
+def assert_prepared_codex_progress_contract(test: unittest.TestCase, prepared: adapter_common.PreparedTrial) -> None:
+    command = list(prepared.command)
+    overrides = codex_config_overrides(command)
+    test.assertTrue(overrides)
+    test.assertEqual(forbidden_task_tools(overrides), [])
+    project_config = tomllib.loads((prepared.cwd / ".codex/config.toml").read_text(encoding="utf-8"))
+    test.assertEqual(forbidden_task_tools(project_config), [])
+    tool = "update" + "_plan"
+    for override in (
+        f"tools.{tool}.enabled=true",
+        'tools={update_plan={enabled=true}}',
+        r'tools."\u0075pdate_plan".enabled=true',
+        'tools.UPDATE_PLAN.enabled=true',
+    ):
+        for option in ("--config", "-c"):
+            with test.subTest(option=option, override=override):
+                test.assertTrue(forbidden_task_tools(codex_config_overrides(
+                    [*command[:-1], option, override, command[-1]],
+                )))
+                test.assertTrue(forbidden_task_tools(codex_config_overrides(
+                    [*command[:-1], f"{option}={override}", command[-1]],
+                )))
+        with test.subTest(attached_short=override):
+            test.assertTrue(forbidden_task_tools(codex_config_overrides(
+                [*command[:-1], f"-c{override}", command[-1]],
+            )))
+    for invalid in (["--config"], ["-c", "tools={"]):
+        with test.subTest(invalid=invalid), test.assertRaises(ValueError):
+            codex_config_overrides(invalid)
+
+
+@contextmanager
+def isolated_codex_host_inputs(workspace: Path, codex_home: Path):
+    """Keep host inputs synthetic while executing the real config-producing helpers."""
+    with mock.patch.object(codex_adapter, "_CODEX_HELPERS", None):
+        helpers = codex_adapter._codex_helpers()
+        with mock.patch.object(helpers, "codex_executable", return_value=str(Path(sys.executable).resolve())), \
+                mock.patch.object(helpers, "enumerate_non_target_skills", return_value=(Path("/user/other/SKILL.md"),)) as discover, \
+                mock.patch.object(helpers, "codex_environment", return_value={
+                    "PATH": "/bin", "HOME": str(workspace), "CODEX_HOME": str(codex_home),
+                }):
+            yield discover
 
 
 def make_directory(path: Path, mode: int) -> None:
@@ -2089,14 +2136,7 @@ class AdapterPreparationTests(unittest.TestCase):
         codex_home = self.temp / "codex-home"
         codex_home.mkdir()
         (codex_home / "AGENTS.md").write_text("global native guidance\n", encoding="utf-8")
-        fake_helpers = mock.Mock()
-        fake_helpers.codex_executable.return_value = str(Path(sys.executable).resolve())
-        fake_helpers.enumerate_non_target_skills.return_value = (Path("/user/other/SKILL.md"),)
-        fake_helpers.skill_isolation_args.return_value = ["--disable", "plugins", "-c", "web_search=\"disabled\""]
-        fake_helpers.codex_environment.return_value = {
-            "PATH": "/bin", "HOME": str(attempt / "workspace"), "CODEX_HOME": str(codex_home),
-        }
-        with mock.patch.object(codex_adapter, "_codex_helpers", return_value=fake_helpers), \
+        with isolated_codex_host_inputs(attempt / "workspace", codex_home) as discover, \
                 mock.patch.object(adapters.subprocess, "Popen") as launch:
             prepared = adapters.prepare_trial(
                 self.case, "codex", "project", self.repo, attempt, "gpt-5.6-sol",
@@ -2107,7 +2147,9 @@ class AdapterPreparationTests(unittest.TestCase):
                          "--ignore-rules", "--skip-git-repo-check", "--model", "gpt-5.6-sol"):
             self.assertIn(required, command)
         self.assertIn('project_root_markers=[".codex"]', command)
-        self.assertEqual(command.count("tools.update_plan.enabled=true"), 1)
+        self.assertIn('skills.bundled.enabled=false', command)
+        self.assertIn('skills.config=[{path="/user/other/SKILL.md",enabled=false}]', command)
+        assert_prepared_codex_progress_contract(self, prepared)
         self.assertNotIn("--ephemeral", command)
         self.assertIn("--disable", command)
         self.assertIn("multi_agent", command)
@@ -2150,7 +2192,7 @@ class AdapterPreparationTests(unittest.TestCase):
             prepared.runtime_identity["settings"]["project_root_markers"],
             [".codex"],
         )
-        self.assertTrue(prepared.runtime_identity["settings"]["update_plan_enabled"])
+        self.assertNotIn("update_plan_enabled", prepared.runtime_identity["settings"])
         self.assertFalse(prepared.runtime_identity["settings"]["global_instructions_disabled"])
         runtime = prepared.runtime_identity["settings"]["codex_runtime"]
         self.assertEqual(runtime["schema_version"], adapters.native_eval_runtime.SCHEMA_VERSION)
@@ -2169,8 +2211,7 @@ class AdapterPreparationTests(unittest.TestCase):
         self.runtime_stage_mock.assert_called_once_with(
             self.repo.resolve(), attempt.resolve() / "runtime-build", workspace.resolve(),
         )
-        fake_helpers.enumerate_non_target_skills.assert_called_once()
-        fake_helpers.skill_isolation_args.assert_called_once()
+        discover.assert_called_once()
 
     def test_codex_protected_git_is_declarative_hermetic_and_fail_closed(self) -> None:
         plain = copy.deepcopy(self.case)
