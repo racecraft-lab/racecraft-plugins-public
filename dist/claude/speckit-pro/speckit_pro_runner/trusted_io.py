@@ -386,27 +386,33 @@ def trusted_text(path: Path, repo_root: Path | None = None) -> str | None:
     return None if content is None else content.decode("utf-8", errors="replace")
 
 
-def trusted_bytes(path: Path, repo_root: Path | None = None) -> bytes | None:
+def trusted_bytes(path: Path, repo_root: Path | None = None, *, limit: int | None = None) -> bytes | None:
     if repo_root is not None:
-        return trusted_bytes_descriptor(path, repo_root)
+        return trusted_bytes_descriptor(path, repo_root, limit=limit)
     try:
         if not path.is_file():
             return None
-        return path.read_bytes()
+        with path.open("rb") as stream:
+            content = stream.read() if limit is None else stream.read(limit + 1)
+        return content if limit is None or len(content) <= limit else None
     except OSError:
         return None
 
 
-def trusted_bytes_descriptor(path: Path, repo_root: Path) -> bytes | None:
+def trusted_bytes_descriptor(path: Path, repo_root: Path, *, limit: int | None = None) -> bytes | None:
     fd = trusted_open_regular_file(path, repo_root)
     if fd is None:
         return None
     try:
         chunks: list[bytes] = []
+        size = 0
         while True:
-            chunk = os.read(fd, 1024 * 1024)
+            chunk = os.read(fd, 1024 * 1024 if limit is None else min(1024 * 1024, limit + 1 - size))
             if not chunk:
                 break
+            size += len(chunk)
+            if limit is not None and size > limit:
+                return None
             chunks.append(chunk)
         return b"".join(chunks)
     except OSError:

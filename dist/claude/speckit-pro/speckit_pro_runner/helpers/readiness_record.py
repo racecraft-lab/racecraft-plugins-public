@@ -29,7 +29,7 @@ from ..envelope import diagnostic, response
 from ..atomic_write import write_bytes_atomic
 from ..canonical_json import canonical_bytes
 from ..private_state import ensure_private_directory
-from ..strict_input import SelectionError
+from ..strict_input import SelectionError, unique_object
 from ..trusted_io import find_repo_root, trusted_bytes
 from ..verification_docker import DAEMON_ARCHITECTURES, PLATFORM, PLATFORM_OS
 from . import readiness_host_items as host_items
@@ -53,6 +53,11 @@ RECORD_KEYS = frozenset({"schema_version", "binding", "host", "host_version", "e
 ITEM_KEYS = frozenset({"status", "evidence_source", "observed_at", "fingerprints"})
 TIMESTAMP_RE = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z")
 DOCKER_PROBE_SECONDS = 10
+RECORD_LIMIT_BYTES = 1024 * 1024
+FINGERPRINT_LIMIT_BYTES = 1024 * 1024
+MAX_FINGERPRINT_FILES = 64
+DIGEST_RE = re.compile(r"sha256:[0-9a-f]{64}")
+HOST_VERSION_RE = re.compile(r"(?:codex-cli )?([0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?)(?: \(Claude Code\))?")
 
 
 def now() -> str:
@@ -77,9 +82,9 @@ def inside_repository(text: str) -> bool:
     return bool(text) and not relative.is_absolute() and ".." not in relative.parts and "\\" not in text
 
 
-def fingerprint_file(root: Path, relative: PurePosixPath) -> str:
+def fingerprint_file(root: Path, relative: PurePosixPath, *, limit: int | None = None) -> str:
     """A digest, `missing` for an absent file, or `unreadable` for one the runner cannot read safely."""
-    content = trusted_bytes(root / relative, root)
+    content = trusted_bytes(root / relative, root, limit=limit)
     if content is not None:
         return digest(content)
     return "unreadable" if os.path.lexists(root / relative) else "missing"
@@ -281,15 +286,18 @@ def preview_surface(root: Path, host: str) -> str:
     fingerprints still match, can speak; anything else is `unknown`, never a guess, because ADR 0008 treats a
     missing, malformed or stale record as no evidence.
     """
-    content = trusted_bytes(root / RECORD_DIRECTORY / f"{host}.json", root)
+    if host not in HOSTS:
+        return "unknown"
+    content = trusted_bytes(root / RECORD_DIRECTORY / f"{host}.json", root, limit=RECORD_LIMIT_BYTES)
     try:
-        record = json.loads(content) if content is not None else None
-    except ValueError:
+        record = json.loads(content, object_pairs_hook=unique_object) if content is not None else None
+    except (ValueError, RecursionError):
         return "unknown"
     if not current_record(record, root, host):
         return "unknown"
     item = record["items"].get("preview_surface")
-    if not sound_item(item) or not current_fingerprints(item["fingerprints"], root):
+    # Missing/unreadable sentinels and an empty observation cannot prove a terminal surface answer.
+    if not item["fingerprints"] or not all(DIGEST_RE.fullmatch(value) for value in item["fingerprints"].values()):
         return "unknown"
     return {"verified": "available", "unavailable": "unavailable"}.get(item["status"], "unknown")
 
@@ -297,16 +305,49 @@ def preview_surface(root: Path, host: str) -> str:
 def current_record(record: Any, root: Path, host: str) -> TypeGuard[dict[str, Any]]:
     if not isinstance(record, dict) or record.keys() != RECORD_KEYS:
         return False
-    return record["schema_version"] == SCHEMA_VERSION and record["host"] == host \
-        and record["binding"] == {"worktree": digest(str(root))} and timestamp(record["observed_at"]) \
-        and isinstance(record["items"], dict)
+    if record["schema_version"] != SCHEMA_VERSION or record["host"] != host \
+            or record["binding"] != {"worktree": digest(str(root))} or not timestamp(record["observed_at"]) \
+            or record["execution_mode"] not in EXECUTION_MODES:
+        return False
+    items = record["items"]
+    if not isinstance(items, dict) or items.keys() != set((*CALLER_ITEMS, *RUNNER_ITEMS, *host_items.HOST_ITEMS)):
+        return False
+    cache: dict[str, str] = {}
+    return all(sound_item(item, needs_digest=name in CALLER_ITEMS)
+               and current_fingerprints(item["fingerprints"], root, cache)
+               for name, item in items.items()) and current_versions(record, root, host)
+
+
+def current_versions(record: dict[str, Any], root: Path, host: str) -> bool:
+    """Bind to the executing plugin and an observable current host; unobservable is no evidence."""
+    try:
+        version = clean_text(record["host_version"], "host_version")
+        revision = clean_text(record["plugin_revision"], "plugin_revision")
+        package = Path(__file__).resolve().parents[1]
+        content = trusted_bytes(package / "speckit-pro-runner.manifest.json", package, limit=RECORD_LIMIT_BYTES)
+        manifest = json.loads(content, object_pairs_hook=unique_object) if content is not None else None
+    except (SelectionError, ValueError, RecursionError):
+        return False
+    if not isinstance(manifest, dict) or manifest.get("plugin_version") != revision:
+        return False
+    probe = cli_probe.probe(root, [host, "--version"], allowed=(host,), timeout=DOCKER_PROBE_SECONDS)
+    match = HOST_VERSION_RE.fullmatch(probe["stdout_tail"])
+    recorded = HOST_VERSION_RE.fullmatch(version)
+    return probe["exit_status"] == 0 and match is not None and recorded is not None \
+        and match[1] == recorded[1]
 
 
 def timestamp(value: Any) -> bool:
-    return isinstance(value, str) and TIMESTAMP_RE.fullmatch(value) is not None
+    if not isinstance(value, str) or not TIMESTAMP_RE.fullmatch(value):
+        return False
+    try:
+        datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
+    except ValueError:
+        return False
+    return True
 
 
-def sound_item(item: Any) -> bool:
+def sound_item(item: Any, *, needs_digest: bool = True) -> bool:
     """The shape `make_item` writes: a known status, clean evidence, a time, digests, and an action when one is due."""
     if not isinstance(item, dict) or item.get("status") not in STATUSES:
         return False
@@ -319,17 +360,34 @@ def sound_item(item: Any) -> bool:
     except SelectionError:
         return False
     prints = item["fingerprints"]
-    return isinstance(prints, dict) and all(isinstance(value, str) for value in prints.values()) \
-        and (item["status"] != "verified" or any(value.startswith("sha256:") for value in prints.values()))
+    return isinstance(prints, dict) and all(sound_fingerprint(key, value) for key, value in prints.items()) \
+        and (not needs_digest or item["status"] != "verified" or any(DIGEST_RE.fullmatch(value) for value in prints.values()))
 
 
-def current_fingerprints(prints: dict[str, str], root: Path) -> bool:
+def sound_fingerprint(key: Any, value: Any) -> bool:
+    if not isinstance(key, str) or not isinstance(value, str):
+        return False
+    kind, _, name = key.partition(":")
+    if kind == "value":
+        return VALUE_NAME_RE.fullmatch(name) is not None and DIGEST_RE.fullmatch(value) is not None
+    return kind == "file" and inside_repository(name) and PurePosixPath(name).as_posix() == name \
+        and name != "." and (DIGEST_RE.fullmatch(value) is not None or value in ("missing", "unreadable"))
+
+
+def current_fingerprints(prints: dict[str, str], root: Path, cache: dict[str, str] | None = None) -> bool:
     """Every key is a value name or a repository file whose fingerprint has not changed since it was observed."""
+    cache = {} if cache is None else cache
     for key, value in prints.items():
+        if not sound_fingerprint(key, value):
+            return False
         kind, _, name = key.partition(":")
-        if kind == "value" and VALUE_NAME_RE.fullmatch(name):
+        if kind == "value":
             continue
-        if kind != "file" or not inside_repository(name) or fingerprint_file(root, PurePosixPath(name)) != value:
+        if name not in cache:
+            if len(cache) >= MAX_FINGERPRINT_FILES:
+                return False
+            cache[name] = fingerprint_file(root, PurePosixPath(name), limit=FINGERPRINT_LIMIT_BYTES)
+        if cache[name] != value:
             return False
     return True
 

@@ -19,6 +19,7 @@ sys.path.insert(0, str(ROOT / "speckit-pro"))
 sys.path.insert(0, str(ROOT / "tests/speckit-pro/lib"))
 
 from speckit_pro_runner import artifact_review
+from speckit_pro_runner.helpers import readiness_record
 from speckit_pro_runner.agent_materialization import digest
 from speckit_pro_runner.helpers.read_only import resolve_autopilot_stage, trusted_bytes
 from guide_text import guide_text, host_source
@@ -158,7 +159,8 @@ class ArtifactReviewTests(unittest.TestCase):
         for surface in ("headless", "", "Available"):
             self.assertRaisesRegex(ValueError, "preview_surface must be one of", self.review, preview_surface=surface)
 
-    def test_the_stage_helper_reads_the_surface_from_the_readiness_record(self) -> None:
+    @unittest.mock.patch.object(readiness_record.cli_probe, "probe", return_value={"exit_status": 0, "stdout_tail": "2.1.0"})
+    def test_the_stage_helper_reads_the_surface_from_the_readiness_record(self, _probe) -> None:
         def stage(host: str | None) -> dict:
             (self.root / "workflow.md").write_text(self.workflow(self.record))
             inputs = {"workflow_file": "workflow.md", "autopilot_args": [], **({"host": host} if host else {})}
@@ -189,12 +191,27 @@ class ArtifactReviewTests(unittest.TestCase):
 
     def readiness(self, host: str, status: str, action: str | None = "Run autopilot where a preview pane exists.") -> dict:
         """A record shaped like the writer's, so only the field under test differs."""
-        item = {"status": status, "evidence_source": "session tools", "observed_at": "2026-10-05T00:00:00Z",
-                "fingerprints": {"value:surface": digest("pane")} if status == "verified" else {},
-                **({"action": action} if status != "verified" and action is not None else {})}
-        return {"schema_version": "readiness-record/v1", "binding": {"worktree": digest(str(self.root))}, "host": host,
-                "host_version": None, "execution_mode": "interactive", "plugin_revision": "test",
-                "observed_at": "2026-10-05T00:00:00Z", "items": {"preview_surface": item}}
+        inputs = {"host": host, "host_version": "2.1.0", "execution_mode": "interactive", "plugin_revision": "2.40.0",
+                  "observations": [{"item": "preview_surface", "status": status, "evidence_source": "session tools",
+                                    "values": {"surface": "pane"}, **({"action": action or "Rerun scaffold."} if status != "verified" else {})}]}
+        with unittest.mock.patch.object(readiness_record.shutil, "which", return_value=None):
+            record = readiness_record.build_record(inputs, self.root)
+        if action is None:
+            record["items"]["preview_surface"].pop("action", None)
+        return record
+
+    @unittest.mock.patch.object(readiness_record.cli_probe, "probe", return_value={"exit_status": 0, "stdout_tail": "2.1.0"})
+    def test_stale_or_incomplete_snapshot_keeps_dispatch_for_both_hosts(self, _probe) -> None:
+        (self.root / "workflow.md").write_text(self.workflow(self.record))
+        for host in ("claude", "codex"):
+            for field, value in (("host_version", "1.0.0"), ("plugin_revision", "1.0.0"), ("items", None)):
+                with self.subTest(host=host, field=field):
+                    record = self.readiness(host, "unavailable")
+                    record[field] = value if field != "items" else {"preview_surface": record["items"]["preview_surface"]}
+                    self.write_readiness(host, "unavailable", record)
+                    review = json.loads(resolve_autopilot_stage({"workflow_file": "workflow.md", "autopilot_args": [], "host": host}, self.root)["stdout"])["artifact_review"]
+                    self.assertEqual(["implementation-plan", "spec-explainer"], review["observer_dispatches"])
+                    self.assertNotIn("preview_note", review)
 
     def write_readiness(self, host: str, status: str, record: dict | None = None) -> None:
         directory = self.root / ".specify/readiness"

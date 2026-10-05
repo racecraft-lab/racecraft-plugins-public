@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import copy
 import os
 import re
 import shutil
@@ -120,11 +121,12 @@ class ReadinessRecordTest(unittest.TestCase):
             self.assertEqual("unknown", items[item]["status"])
             self.assertTrue(items[item]["action"])
 
-    def test_preview_surface_reads_back_as_a_closed_answer(self) -> None:
+    @unittest.mock.patch.object(readiness_record.cli_probe, "probe", return_value={"exit_status": 0, "stdout_tail": "2.1.0"})
+    def test_preview_surface_reads_back_as_a_closed_answer(self, _probe) -> None:
         for status, surface in (("verified", "available"), ("unavailable", "unavailable"),
                                 ("unknown", "unknown"), ("not_applicable", "unknown")):
             with self.subTest(status=status):
-                response = self.run_helper([observation("preview_surface", status)])
+                response = self.run_helper([observation("preview_surface", status, values={"probe": "observed"})])
                 assert_runner_response(self, response, "ok", 0)
                 self.assertEqual(surface, readiness_record.preview_surface(self.root, "claude"))
         self.assertEqual("unknown", readiness_record.preview_surface(self.root, "codex"))
@@ -143,7 +145,8 @@ class ReadinessRecordTest(unittest.TestCase):
         path.unlink()
         self.assertEqual("unknown", readiness_record.preview_surface(self.root, "claude"))
 
-    def test_preview_surface_is_unknown_when_the_item_evidence_is_malformed_or_stale(self) -> None:
+    @unittest.mock.patch.object(readiness_record.cli_probe, "probe", return_value={"exit_status": 0, "stdout_tail": "2.1.0"})
+    def test_preview_surface_is_unknown_when_the_item_evidence_is_malformed_or_stale(self, _probe) -> None:
         (self.root / ".specify" / "surface.md").write_text("headless\n", encoding="utf-8")
         self.run_helper([observation("preview_surface", "unavailable", files=[".specify/surface.md"])])
         path = self.record_path()
@@ -497,6 +500,185 @@ class ReadinessRecordTest(unittest.TestCase):
                     shutil.rmtree(readiness, ignore_errors=True)
 
 
+class PreviewEvidenceSecurityTest(unittest.TestCase):
+    """The reader must fail closed on the entire snapshot, on both supported hosts."""
+
+    def setUp(self) -> None:
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
+        self.root.joinpath(".specify").mkdir()
+        self.root.joinpath("surface.txt").write_text("no preview tools")
+        self.directory = self.root / ".specify/readiness"
+        self.directory.mkdir()
+        self.records = {}
+        with unittest.mock.patch.object(readiness_record.shutil, "which", return_value=None):
+            for host in ("claude", "codex"):
+                inputs = request([observation("preview_surface", "unavailable", files=["surface.txt"])],
+                                 host=host)["inputs"]
+                self.records[host] = readiness_record.build_record(inputs, self.root)
+        self.probe = readiness_record.cli_probe.probe
+        self.enterContext(unittest.mock.patch.object(readiness_record.cli_probe, "probe", return_value={
+            "exit_status": 0, "stdout_tail": "2.1.0", "stderr_tail": ""}))
+
+    def assert_unknown(self, change) -> None:
+        for host, good in self.records.items():
+            with self.subTest(host=host):
+                record = copy.deepcopy(good)
+                change(record)
+                (self.directory / f"{host}.json").write_text(json.dumps(record))
+                self.assertEqual("unknown", readiness_record.preview_surface(self.root, host))
+
+    def test_complete_current_records_for_both_hosts(self) -> None:
+        for host, record in self.records.items():
+            with self.subTest(host=host):
+                (self.directory / f"{host}.json").write_text(json.dumps(record))
+                self.assertEqual("unavailable", readiness_record.preview_surface(self.root, host))
+
+    def test_preview_surface_only_inventory(self) -> None:
+        self.assert_unknown(lambda record: record.update(items={"preview_surface": record["items"]["preview_surface"]}))
+
+    def test_malformed_sibling_item(self) -> None:
+        for name in self.records["claude"]["items"]:
+            if name != "preview_surface":
+                with self.subTest(item=name):
+                    self.assert_unknown(lambda record: record["items"].update({name: {"status": "unknown"}}))
+
+    def test_invalid_execution_mode(self) -> None:
+        self.assert_unknown(lambda record: record.update(execution_mode="headless"))
+
+    def test_non_text_host_version(self) -> None:
+        self.assert_unknown(lambda record: record.update(host_version=["2.1.0"]))
+
+    def test_non_text_plugin_revision(self) -> None:
+        self.assert_unknown(lambda record: record.update(plugin_revision={"version": "2.40.0"}))
+
+    def test_impossible_record_timestamp(self) -> None:
+        for time in ("2026-02-30T00:00:00Z", "2026-10-05T25:00:00Z", "0000-01-01T00:00:00Z"):
+            with self.subTest(time=time):
+                self.assert_unknown(lambda record: record.update(observed_at=time))
+
+    def test_impossible_item_timestamp(self) -> None:
+        for name in self.records["claude"]["items"]:
+            with self.subTest(item=name):
+                self.assert_unknown(lambda record: record["items"][name].update(observed_at="2026-13-05T00:00:00Z"))
+
+    def test_non_digest_value_fingerprint(self) -> None:
+        for name in self.records["claude"]["items"]:
+            for value in ("trust me", "sha256:xyz", "sha256:" + "g" * 64):
+                with self.subTest(item=name, value=value):
+                    self.assert_unknown(lambda record: record["items"][name].update(fingerprints={"value:probe": value}))
+
+    def test_duplicate_json_keys(self) -> None:
+        for host, record in self.records.items():
+            text = json.dumps(record)
+            for key, value in (("host", host), ("status", "unavailable"), ("file:surface.txt", record["items"]["preview_surface"]["fingerprints"]["file:surface.txt"])):
+                with self.subTest(host=host, key=key):
+                    field = json.dumps(key) + ": " + json.dumps(value)
+                    (self.directory / f"{host}.json").write_text(text.replace(field, field + ", " + field, 1))
+                    self.assertEqual("unknown", readiness_record.preview_surface(self.root, host))
+
+    def test_stale_host_version(self) -> None:
+        self.assert_unknown(lambda record: record.update(host_version="1.0.0"))
+
+    def test_stale_plugin_revision(self) -> None:
+        self.assert_unknown(lambda record: record.update(plugin_revision="1.0.0"))
+
+    def test_empty_preview_fingerprints(self) -> None:
+        self.assert_unknown(lambda record: record["items"]["preview_surface"].update(fingerprints={}))
+
+    def test_missing_file_fingerprint_sentinel(self) -> None:
+        self.assert_unknown(lambda record: record["items"]["preview_surface"].update(fingerprints={"file:absent": "missing"}))
+
+    def test_unreadable_symlink_fingerprint_sentinel(self) -> None:
+        (self.root / "linked").symlink_to(self.root / "surface.txt")
+        self.assert_unknown(lambda record: record["items"]["preview_surface"].update(fingerprints={"file:linked": "unreadable"}))
+
+    def test_deeply_nested_json(self) -> None:
+        for host, good in self.records.items():
+            with self.subTest(host=host):
+                text = json.dumps(good)[:-1] + ', "extra": ' + "[" * 2000 + "0" + "]" * 2000 + "}"
+                (self.directory / f"{host}.json").write_text(text)
+                self.assertEqual("unknown", readiness_record.preview_surface(self.root, host))
+
+    def test_oversized_flat_json(self) -> None:
+        for host, good in self.records.items():
+            with self.subTest(host=host):
+                (self.directory / f"{host}.json").write_text(json.dumps(good) + " " * (1024 * 1024))
+                self.assertEqual("unknown", readiness_record.preview_surface(self.root, host))
+
+    def test_repeated_normalized_file_aliases(self) -> None:
+        prints = {"file:" + "./" * n + "surface.txt": readiness_record.digest(b"no preview tools") for n in range(100)}
+        self.assert_unknown(lambda record: record["items"]["preview_surface"].update(fingerprints=prints))
+
+    def test_other_inventory_and_item_fields(self) -> None:
+        for name in self.records["claude"]["items"]:
+            for field, value in (("status", []), ("evidence_source", {}), ("fingerprints", []), ("action", "")):
+                with self.subTest(item=name, field=field):
+                    self.assert_unknown(lambda record: record["items"][name].update({field: value}))
+        self.assert_unknown(lambda record: record["items"].update(extra=record["items"]["preview_surface"]))
+
+    def test_stale_sibling_file_and_preview_rename(self) -> None:
+        self.assert_unknown(lambda record: record["items"]["github_auth"].update(fingerprints={"file:surface.txt": "sha256:" + "0" * 64}))
+        (self.root / "surface.txt").rename(self.root / "renamed.txt")
+        self.assert_unknown(lambda record: None)
+
+    def test_record_and_evidence_symlinks(self) -> None:
+        for host, record in self.records.items():
+            with self.subTest(host=host):
+                (self.root / "record.json").write_text(json.dumps(record))
+                (self.directory / f"{host}.json").symlink_to(self.root / "record.json")
+                self.assertEqual("unknown", readiness_record.preview_surface(self.root, host))
+                (self.directory / f"{host}.json").unlink()
+        (self.root / "surface.txt").unlink()
+        (self.root / "surface.txt").symlink_to(self.root / "record.json")
+        self.assert_unknown(lambda record: None)
+
+    def test_unobservable_or_failed_host_version(self) -> None:
+        self.assert_unknown(lambda record: record.update(host_version=None))
+        for result in ({"exit_status": None, "stdout_tail": ""}, {"exit_status": 1, "stdout_tail": "2.1.0"},
+                       {"exit_status": 0, "stdout_tail": "unparseable"}):
+            with self.subTest(result=result), unittest.mock.patch.object(readiness_record.cli_probe, "probe", return_value=result):
+                self.assert_unknown(lambda record: None)
+
+    def test_current_host_cli_version_formats(self) -> None:
+        for host, text in (("claude", "2.1.0 (Claude Code)"), ("codex", "codex-cli 2.1.0")):
+            with self.subTest(host=host), unittest.mock.patch.object(readiness_record.cli_probe, "probe", return_value={"exit_status": 0, "stdout_tail": text}):
+                (self.directory / f"{host}.json").write_text(json.dumps(self.records[host]))
+                self.assertEqual("unavailable", readiness_record.preview_surface(self.root, host))
+
+    def test_file_fingerprint_budget(self) -> None:
+        (self.root / "surface.txt").write_bytes(b"a" * (1024 * 1024 + 1))
+        prints = {"file:surface.txt": readiness_record.digest((self.root / "surface.txt").read_bytes())}
+        self.assert_unknown(lambda record: record["items"]["preview_surface"].update(fingerprints=prints))
+        for n in range(65):
+            (self.root / f"evidence{n}").write_bytes(b"small")
+        prints = {f"file:evidence{n}": readiness_record.digest(b"small") for n in range(65)}
+        self.assert_unknown(lambda record: record["items"]["preview_surface"].update(fingerprints=prints))
+
+    def test_duplicate_file_evidence_is_read_once(self) -> None:
+        record = copy.deepcopy(self.records["claude"])
+        record["items"]["github_auth"]["fingerprints"] = record["items"]["preview_surface"]["fingerprints"]
+        (self.directory / "claude.json").write_text(json.dumps(record))
+        with unittest.mock.patch.object(readiness_record, "fingerprint_file", wraps=readiness_record.fingerprint_file) as read:
+            self.assertEqual("unavailable", readiness_record.preview_surface(self.root, "claude"))
+            self.assertEqual(1, sum(call.args[1].as_posix() == "surface.txt" for call in read.call_args_list))
+
+    def test_host_probe_is_limited_to_version(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host), unittest.mock.patch.object(readiness_record.cli_probe.subprocess, "run") as run:
+                run.return_value = unittest.mock.Mock(returncode=0, stdout="2.1.0", stderr="")
+                self.assertEqual(0, self.probe(self.root, [host, "--version"], allowed=(host,), timeout=1)["exit_status"])
+                self.assertEqual([host, "--version"], run.call_args.args[0])
+                run.reset_mock()
+                self.assertIsNone(self.probe(self.root, [host, "exec"], allowed=(host,), timeout=1)["exit_status"])
+                run.assert_not_called()
+
+    def test_record_reader_stops_at_byte_limit(self) -> None:
+        (self.directory / "claude.json").write_bytes(b" " * (2 * 1024 * 1024))
+        with unittest.mock.patch.object(readiness_record.os, "read", wraps=os.read) as read:
+            self.assertEqual("unknown", readiness_record.preview_surface(self.root, "claude"))
+            self.assertLessEqual(sum(call.args[1] for call in read.call_args_list), 1024 * 1024 + 1)
+
+
 class FeasibilityTest(unittest.TestCase):
     """Scaffold's feasibility results for formal methods and verification Docker (ADR 0005)."""
 
@@ -590,7 +772,8 @@ class FeasibilityTest(unittest.TestCase):
 
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
-    return unittest.TestSuite([loader.loadTestsFromTestCase(case) for case in (ReadinessRecordTest, FeasibilityTest)])
+    return unittest.TestSuite([loader.loadTestsFromTestCase(case) for case in (
+        ReadinessRecordTest, PreviewEvidenceSecurityTest, FeasibilityTest)])
 
 
 def main() -> int:

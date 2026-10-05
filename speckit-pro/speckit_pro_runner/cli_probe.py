@@ -13,7 +13,7 @@ BRANCH = re.compile(r"(?!-)(?!.*\.\.)(?!.*//)[A-Za-z0-9._/-]{1,255}\Z")
 STDERR_TAIL_CHARS = 2048
 STDOUT_TAIL_CHARS = 1024 * 1024
 DOCKER_STDOUT_TAIL_CHARS = STDERR_TAIL_CHARS
-CLIS = ("gh", "git", "docker")
+CLIS = ("gh", "git", "docker", "claude", "codex")
 
 
 def probe(root: Path, argv: list[str], *, allowed: Collection[str], timeout: float) -> dict[str, Any]:
@@ -27,6 +27,8 @@ def probe(root: Path, argv: list[str], *, allowed: Collection[str], timeout: flo
     try:
         if not argv or argv[0] not in allowed or argv[0] not in CLIS:
             raise ValueError(f"only {', '.join(sorted(allowed))} may run here")
+        if argv[0] in ("claude", "codex") and argv[1:] != ["--version"]:
+            raise ValueError("host probes take only --version")
         # Each executable is a literal, so the repository Bash-confinement guard can prove it Bash-free.
         options: dict[str, Any] = {"cwd": root, "capture_output": True, "text": True, "timeout": timeout,
                                    "stdin": subprocess.DEVNULL, "shell": False}
@@ -34,6 +36,10 @@ def probe(root: Path, argv: list[str], *, allowed: Collection[str], timeout: flo
             result = subprocess.run(["gh", *argv[1:]], **options)
         elif argv[0] == "docker":
             result = subprocess.run(["docker", *argv[1:]], **options)
+        elif argv[0] == "claude":
+            result = subprocess.run(["claude", "--version"], **options)
+        elif argv[0] == "codex":
+            result = subprocess.run(["codex", "--version"], **options)
         else:
             result = subprocess.run(["git", *argv[1:]], **options)
         stdout_limit = DOCKER_STDOUT_TAIL_CHARS if argv[0] == "docker" else STDOUT_TAIL_CHARS
