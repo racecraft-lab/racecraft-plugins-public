@@ -1444,7 +1444,7 @@ def check_prerequisites(inputs: dict[str, Any], repo_root: Path) -> dict[str, An
     if trusted_dir_exists(repo_root / ".specify", repo_root):
         checks.append(check("project_init", True, "Project initialized", ""))
     else:
-        checks.append(check("project_init", False, "SpecKit not initialized. Run: specify init --ai claude", ""))
+        checks.append(check("project_init", False, "SpecKit not initialized. Use speckit-install to verify the CLI and initialize the project.", ""))
         all_pass = False
     if trusted_file_exists(repo_root / ".specify" / "memory" / "constitution.md", repo_root):
         checks.append(check("constitution", True, "Constitution exists", ""))
@@ -1457,7 +1457,7 @@ def check_prerequisites(inputs: dict[str, Any], repo_root: Path) -> dict[str, An
         if not any(trusted_file_exists(repo_root / root / "skills" / cmd / "SKILL.md", repo_root) for root in (".claude", ".codex", ".agents")):
             missing.append(cmd)
     if missing:
-        checks.append(check("commands", False, f"Missing commands: {' '.join(missing)}. Run: specify integration install <claude|codex>", ""))
+        checks.append(check("commands", False, f"Missing commands: {' '.join(missing)}. Use speckit-install to verify the CLI and add integrations.", ""))
         all_pass = False
     else:
         checks.append(check("commands", True, "All SpecKit commands installed", ""))
@@ -1466,7 +1466,7 @@ def check_prerequisites(inputs: dict[str, Any], repo_root: Path) -> dict[str, An
         checks.append(check(
             "setup_contract", False,
             "SpecKit skills call script options their .specify scripts reject. Refresh shared infrastructure: "
-            "specify integration upgrade <key> --force --script sh, then restore local edits",
+            "use speckit-upgrade to verify the CLI and preserve local edits",
             "; ".join(setup_mismatches)))
         all_pass = False
     else:

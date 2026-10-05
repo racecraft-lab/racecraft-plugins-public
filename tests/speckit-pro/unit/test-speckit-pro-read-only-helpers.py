@@ -438,6 +438,31 @@ class SpecKitExecutableReuseTests(unittest.TestCase):
                         body = text[text.index("\n---", 4) + 4:]
                         self.assertNotRegex(body, r"`specify\s")
 
+    def test_prerequisite_repair_fields_delegate_to_verified_launch_skills(self) -> None:
+        from speckit_pro_runner.helpers.read_only import check_prerequisites
+
+        with tempfile.TemporaryDirectory() as temporary:
+            checkout = Path(temporary).resolve()
+            local = checkout / "specify.exe"
+            local.touch()
+            local.chmod(0o755)
+            skill = checkout / ".claude" / "skills" / "speckit-checklist" / "SKILL.md"
+            skill.parent.mkdir(parents=True)
+            skill.write_text("Run `.specify/scripts/bash/check-prerequisites.sh --template spec`.\n", encoding="utf-8")
+            for selected in (local, Path(sys.executable).resolve()):
+                with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value=str(selected)), patch(
+                    "speckit_pro_runner.helpers.read_only.shutil.which", return_value=str(selected),
+                ):
+                    report = json.loads(check_prerequisites({"workflow_file": ""}, checkout)["stdout"])
+                for name, repair_skill in (("project_init", "speckit-install"),
+                                           ("commands", "speckit-install"),
+                                           ("setup_contract", "speckit-upgrade")):
+                    with self.subTest(accepted=selected != local, field=name):
+                        row = next(item for item in report["checks"] if item["check"] == name)
+                        self.assertFalse(row["pass"])
+                        self.assertNotRegex(row["message"] + row["detail"], r"\bspecify(?:\.exe)?\s+(?:init|integration)")
+                        self.assertIn(repair_skill, row["message"])
+
 
 class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
     def test_validate_agent_install_rejects_invalid_surface_or_loaded_root(self) -> None:
