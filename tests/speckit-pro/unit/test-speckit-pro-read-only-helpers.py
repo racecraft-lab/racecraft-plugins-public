@@ -380,8 +380,12 @@ class SpecKitExecutableReuseTests(unittest.TestCase):
             root = Path(temporary).resolve()
             checkout = root / "checkout"
             checkout.mkdir()
-            # A harmless native executable keeps actual launches portable to Windows.
-            trusted = Path(sys.executable).resolve()
+            # A private 0755 stub, not the interpreter: hosted Linux runners ship interpreters
+            # with group-write bits, which the trust check rightly rejects.
+            trusted = root / "trusted" / "specify"
+            trusted.parent.mkdir()
+            trusted.touch()
+            trusted.chmod(0o755)
             hostile = checkout / "specify.exe"
             hostile.write_text("rejected checkout executable\n", encoding="utf-8")
             hostile.chmod(0o755)
@@ -403,9 +407,6 @@ class SpecKitExecutableReuseTests(unittest.TestCase):
                         rows, state = spec_kit_cli_state(str(alias), checkout)
                     self.assertTrue(rows[0]["pass"])
                     self.assertEqual(state.get("cli_argv"), [str(trusted)])
-                    # The attested launch is the interpreter itself, so launching it by its
-                    # static name keeps this test inside the repository Bash-confinement gate.
-                    self.assertTrue(Path(state["cli_argv"][0]).samefile(sys.executable))
                     alias.unlink()
                     if replacement == "link":
                         alias.symlink_to(hostile)
