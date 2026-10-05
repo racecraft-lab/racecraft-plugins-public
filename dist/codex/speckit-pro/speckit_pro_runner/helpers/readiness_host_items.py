@@ -290,11 +290,15 @@ def installation_digest(raw: Any) -> str:
     return digest(json.dumps(raw, sort_keys=True))
 
 
-def revision_text(value: Any, label: str) -> str:
-    """A version string for the record; anything else, such as a path or a sentence, is refused."""
-    if isinstance(value, str) and VERSION_RE.fullmatch(value):
+def pattern_text(value: Any, pattern: re.Pattern[str], what: str, label: str) -> str:
+    """`value` when it is text that fully matches `pattern`; anything else, such as a path or a sentence, is refused."""
+    if isinstance(value, str) and pattern.fullmatch(value):
         return value
-    raise SelectionError(f"{label} must be a version string")
+    raise SelectionError(f"{label} must be {what}")
+
+
+def revision_text(value: Any, label: str) -> str:
+    return pattern_text(value, VERSION_RE, "a version string", label)
 
 
 def observe_codex_agents(raw: dict[str, Any], observed_at: str, source: str) -> dict[str, Any]:
@@ -390,9 +394,7 @@ POSTURE_ACTIONS = {
 
 def hash_text(value: Any, label: str) -> str:
     """An exact digest as the host printed it: lowercase hex, optionally `sha256:`-prefixed."""
-    if isinstance(value, str) and HASH_RE.fullmatch(value):
-        return value
-    raise SelectionError(f"{label} must be a lowercase hex digest")
+    return pattern_text(value, HASH_RE, "a lowercase hex digest", label)
 
 
 def optional_hash(value: Any, label: str) -> str | None:

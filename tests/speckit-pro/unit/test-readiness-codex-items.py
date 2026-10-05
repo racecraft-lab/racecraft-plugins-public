@@ -41,9 +41,6 @@ class ReadinessCodexItemsTest(ReadinessCase):
     default_host = "codex"
     request_id = "test-codex-items"
 
-    def item(self, observation: dict[str, object], host: str = "codex") -> dict:
-        return self.items(self.run_helper([observation], host))[str(observation["item"])]
-
     def test_stale_installed_agent_is_detected_and_unrepaired_stays_unavailable(self) -> None:
         item = self.item(agents(STALE))
         self.assertEqual("unavailable", item["status"])
@@ -141,31 +138,17 @@ class ReadinessCodexItemsTest(ReadinessCase):
         self.assertIn("specify extension update", item["action"])
 
     def test_extension_observations_with_unsafe_text_are_refused(self) -> None:
-        for entry in ({"extension": "a b", "installed": "1", "expected": "1"},
-                      {"extension": "archive; rm", "installed": "1", "expected": "1"},
-                      {"extension": "archive", "installed": "/" + "tmp/x", "expected": "1"},
-                      {"extension": "archive", "installed": "1", "expected": "1\nx"}):
-            with self.subTest(entry=entry):
-                assert_runner_response(self, self.run_helper([extensions([entry])]), "input_error", 2)
+        self.refuse_each([extensions([entry]) for entry in (
+            {"extension": "a b", "installed": "1", "expected": "1"},
+            {"extension": "archive; rm", "installed": "1", "expected": "1"},
+            {"extension": "archive", "installed": "/" + "tmp/x", "expected": "1"},
+            {"extension": "archive", "installed": "1", "expected": "1\nx"})])
 
-    def test_claude_records_the_codex_items_as_not_applicable(self) -> None:
-        items = self.items(self.run_helper([], "claude"))
-        for name in CODEX_ONLY:
-            self.assertEqual("not_applicable", items[name]["status"], name)
-            self.assertNotIn("action", items[name])
-        for observation in (agents(CURRENT), extensions([])):
-            assert_runner_response(self, self.run_helper([observation], "claude"), "input_error", 2)
-
-    def test_codex_without_observations_records_unknown_with_an_action(self) -> None:
-        items = self.items(self.run_helper([], "codex"))
-        for name in CODEX_ONLY:
-            self.assertEqual("unknown", items[name]["status"], name)
-            self.assertTrue(items[name]["action"])
+    def test_claude_records_the_codex_items_as_not_applicable_and_codex_defaults_to_unknown(self) -> None:
+        self.check_codex_only(CODEX_ONLY, [agents(CURRENT), extensions([])])
 
     def test_scaffold_documents_the_codex_items_on_each_host(self) -> None:
-        self.assertEqual({"claude": dict.fromkeys(CODEX_ONLY, False), "codex": dict.fromkeys(CODEX_ONLY, True)},
-                         self.documented_rows(CODEX_ONLY))
-        self.assertIn("`not_applicable`", scaffold_step("claude"))
+        self.check_documented(CODEX_ONLY)
         self.assertIn('mode="dry_run"', scaffold_step("codex"))
 
 

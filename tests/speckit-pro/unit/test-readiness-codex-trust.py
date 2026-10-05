@@ -47,9 +47,6 @@ class ReadinessCodexTrustTest(ReadinessCase):
     default_host = "codex"
     request_id = "test-codex-trust"
 
-    def item(self, observation: dict[str, object], host: str = "codex") -> dict:
-        return self.items(self.run_helper([observation], host))[str(observation["item"])]
-
     def test_each_posture_observation_lands_as_an_item_with_evidence(self) -> None:
         item = self.item(posture())
         self.assertEqual("verified", item["status"])
@@ -83,16 +80,13 @@ class ReadinessCodexTrustTest(ReadinessCase):
 
     def test_trusted_hook_records_the_exact_hash(self) -> None:
         item = self.item(hook_trust(hook()))
-        self.assertEqual("verified", item["status"])
-        self.assertIn(f"PreToolUse=trusted {HASH}", item["evidence_source"])
+        self.assert_item(item, "verified", (f"PreToolUse=trusted {HASH}",))
         self.assertTrue(item["fingerprints"]["value:hook_hashes"].startswith("sha256:"))
 
     def test_untrusted_hook_is_recorded_untrusted_with_its_exact_hash(self) -> None:
         item = self.item(hook_trust(hook(), hook("untrusted", OTHER_HASH, "Stop")))
-        self.assertEqual("unavailable", item["status"])
-        self.assertIn(f"Stop=untrusted {OTHER_HASH}", item["evidence_source"])
-        self.assertIn("Review and trust the hooks in /hooks", item["action"])
-        self.assertIn("restart Codex", item["action"])
+        self.assert_item(item, "unavailable", (f"Stop=untrusted {OTHER_HASH}",),
+                         ("Review and trust the hooks in /hooks", "restart Codex"))
 
     def test_hook_trust_without_a_readable_hash_is_unknown_and_trust_needs_a_hash(self) -> None:
         item = self.item(hook_trust(hook("unobservable", None)))
@@ -105,18 +99,13 @@ class ReadinessCodexTrustTest(ReadinessCase):
 
     def test_blocked_loopback_is_unavailable_with_the_action(self) -> None:
         item = self.item(access(loopback="blocked"))
-        self.assertEqual("unavailable", item["status"])
-        self.assertIn("loopback=blocked", item["evidence_source"])
-        self.assertIn("loopback", item["action"])
+        self.assert_item(item, "unavailable", ("loopback=blocked",), ("loopback",))
 
     def test_leaky_temporary_directory_is_unavailable_with_the_action(self) -> None:
         item = self.item(access(temp_dir="leaky"))
-        self.assertEqual("unavailable", item["status"])
-        self.assertIn("temp_dir=leaky", item["evidence_source"])
-        self.assertIn("temporary directory", item["action"])
+        self.assert_item(item, "unavailable", ("temp_dir=leaky",), ("temporary directory",))
         both = self.item(access(loopback="blocked", temp_dir="leaky"))
-        self.assertIn("loopback", both["action"])
-        self.assertIn("temporary directory", both["action"])
+        self.assert_item(both, "unavailable", (), ("loopback", "temporary directory"))
 
     def test_healthy_access_records_the_egress_reference_and_digest_only(self) -> None:
         response = self.run_helper([access()])
@@ -128,29 +117,15 @@ class ReadinessCodexTrustTest(ReadinessCase):
         self.assertNotIn("entries", json.dumps(response["data"]["record"]))
 
     def test_malformed_access_is_refused(self) -> None:
-        for change in ({"loopback": "maybe"}, {"temp_dir": "ok"}, {"egress_policy_ref": "/" + "etc/policy"},
-                       {"egress_policy_ref": "a b"}, {"egress_policy_digest": "nothex"}, {"entries": ["x"]}):
-            with self.subTest(change=change):
-                assert_runner_response(self, self.run_helper([access(**change)]), "input_error", 2)
+        self.refuse_each([access(**change) for change in (
+            {"loopback": "maybe"}, {"temp_dir": "ok"}, {"egress_policy_ref": "/" + "etc/policy"},
+            {"egress_policy_ref": "a b"}, {"egress_policy_digest": "nothex"}, {"entries": ["x"]})])
 
-    def test_claude_records_the_codex_items_as_not_applicable(self) -> None:
-        items = self.items(self.run_helper([], "claude"))
-        for name in TRUST_ITEMS:
-            self.assertEqual("not_applicable", items[name]["status"], name)
-            self.assertNotIn("action", items[name])
-        for observation in (posture(), hook_trust(hook()), access()):
-            assert_runner_response(self, self.run_helper([observation], "claude"), "input_error", 2)
-
-    def test_codex_without_observations_records_unknown_with_an_action(self) -> None:
-        items = self.items(self.run_helper([], "codex"))
-        for name in TRUST_ITEMS:
-            self.assertEqual("unknown", items[name]["status"], name)
-            self.assertTrue(items[name]["action"])
+    def test_claude_records_the_codex_items_as_not_applicable_and_codex_defaults_to_unknown(self) -> None:
+        self.check_codex_only(TRUST_ITEMS, [posture(), hook_trust(hook()), access()])
 
     def test_scaffold_documents_the_items_on_each_host(self) -> None:
-        self.assertEqual({"claude": dict.fromkeys(TRUST_ITEMS, False), "codex": dict.fromkeys(TRUST_ITEMS, True)},
-                         self.documented_rows(TRUST_ITEMS))
-        self.assertIn("`not_applicable`", scaffold_step("claude"))
+        self.check_documented(TRUST_ITEMS)
         self.assertIn("never broaden", scaffold_step("codex"))
 
 

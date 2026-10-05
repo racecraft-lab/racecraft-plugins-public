@@ -43,3 +43,37 @@ class ReadinessCase(unittest.TestCase):
         """For each host, whether scaffold step 6.5 has a table row for each item."""
         return {host: {name: f"| `{name}` |" in scaffold_step(host) for name in names}
                 for host in ("claude", "codex")}
+
+    def item(self, observation: dict[str, object], host: str | None = None) -> dict:
+        """The record item one observation produces."""
+        return self.items(self.run_helper([observation], host))[str(observation["item"])]
+
+    def refuse_each(self, observations: list[dict[str, object]], host: str | None = None) -> None:
+        for observation in observations:
+            with self.subTest(observation=observation):
+                assert_runner_response(self, self.run_helper([observation], host), "input_error", 2)
+
+    def assert_item(self, item: dict, status: str, evidence: tuple[str, ...] = (), action: tuple[str, ...] = ()) -> None:
+        self.assertEqual(status, item["status"])
+        for text in evidence:
+            self.assertIn(text, item["evidence_source"])
+        for text in action:
+            self.assertIn(text, item["action"])
+
+    def check_codex_only(self, names: tuple[str, ...], observations: list[dict[str, object]]) -> None:
+        """Claude records `names` not_applicable and refuses their observations; Codex without any records unknown."""
+        for name, item in self.items(self.run_helper([], "claude")).items():
+            if name in names:
+                self.assertEqual("not_applicable", item["status"], name)
+                self.assertNotIn("action", item)
+        self.refuse_each(observations, "claude")
+        recorded = self.items(self.run_helper([], "codex"))
+        for name in names:
+            self.assertEqual("unknown", recorded[name]["status"], name)
+            self.assertTrue(recorded[name]["action"])
+
+    def check_documented(self, names: tuple[str, ...]) -> None:
+        """Only the Codex scaffold step documents `names`; the Claude step says they are `not_applicable`."""
+        self.assertEqual({"claude": dict.fromkeys(names, False), "codex": dict.fromkeys(names, True)},
+                         self.documented_rows(names))
+        self.assertIn("`not_applicable`", scaffold_step("claude"))
