@@ -6,6 +6,7 @@ from __future__ import annotations
 import copy
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -23,7 +24,6 @@ class SelectionFixture(unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
         self.gallery: Path | None = None
-        self.swap_on_read = False
         self.timeout = 30
         (self.root / ".specify").mkdir()
         (self.root / "plan.md").write_text("## Declared File Operations\n\n- NEW src/new.py\n", encoding="utf-8")
@@ -33,22 +33,12 @@ class SelectionFixture(unittest.TestCase):
                    "helper_id": "select-artifact-pages", "operation": "select-artifact-pages",
                    "mode": "read_only", "inputs": {"plan_file": "plan.md", **inputs}}
         done = subprocess.run([
-            sys.executable, "-c", "import os, runpy, sys\nfrom pathlib import Path\n"
+            sys.executable, "-c", "import runpy, sys\nfrom pathlib import Path\n"
             "from speckit_pro_runner.helpers import artifact_selection\n"
             "artifact_selection.GALLERY = Path(sys.argv[1]) if sys.argv[1] != 'None' else artifact_selection.GALLERY\n"
-            "swap_requested = sys.argv[2] == 'True'\nreal_open = os.open\n"
-            "def swap_open(path, *args, **kwargs):\n"
-            "    global swap_requested\n"
-            "    if swap_requested and str(path) == 'artifacts' and kwargs.get('dir_fd') is not None:\n"
-            "        Path('artifacts').rename('held-artifacts')\n"
-            "        Path('artifacts').symlink_to('outside', target_is_directory=True)\n"
-            "        swap_requested = False\n"
-            "    return real_open(path, *args, **kwargs)\n"
-            "os.open = swap_open\nsys.argv = sys.argv[:1]\n"
-            "runpy.run_module('speckit_pro_runner', run_name='__main__')", str(self.gallery), str(self.swap_on_read),
-        ],
-                              input=json.dumps(request), text=True, capture_output=True, check=False,
-                              cwd=self.root, env={**os.environ, "PYTHONPATH": str(ROOT / plugin)}, timeout=self.timeout)
+            "sys.argv = sys.argv[:1]\nrunpy.run_module('speckit_pro_runner', run_name='__main__')", str(self.gallery),
+        ], input=json.dumps(request), text=True, capture_output=True, check=False,
+            cwd=self.root, env={**os.environ, "PYTHONPATH": str(ROOT / plugin)}, timeout=self.timeout)
         result = json.loads(done.stdout.splitlines()[-1])
         self.assertEqual(done.returncode, 0 if status == "ok" else 2, result)
         self.assertEqual(result["status"], status, result)
@@ -99,74 +89,17 @@ class ManifestSecurityTests(SelectionFixture):
                 self.assertEqual(self.select(status="input_error"), {})
 
 
-class WrittenOutputSecurityTests(SelectionFixture):
-    def test_written_file_verification_fails_closed_at_the_descriptor_read(self) -> None:
-        artifacts = self.root / "artifacts"
-        outside = self.root / "outside"
-        artifacts.mkdir()
-        outside.mkdir()
-        final = "artifacts/implementation-plan.html"
-        (self.root / final).write_text("owned page", encoding="utf-8")
-        (outside / "implementation-plan.html").write_text("outside page", encoding="utf-8")
-        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
-            with self.subTest(plugin=plugin):
-                self.swap_on_read = True
-                self.assertEqual(self.select(status="input_error", plugin=plugin, candidate_paths=[final],
-                                             verify_written_paths=True), {})
-                self.swap_on_read = False
-                self.assertTrue(artifacts.is_symlink(), "the race probe must actually swap the directory")
-                artifacts.unlink()
-                (self.root / "held-artifacts").rename(artifacts)
-        (self.root / final).unlink()
-        self.assertEqual(self.select(status="input_error", candidate_paths=[final], verify_written_paths=True), {})
-        (self.root / final).mkdir()
-        self.assertEqual(self.select(status="input_error", candidate_paths=[final], verify_written_paths=True), {})
-        self.assertEqual(self.select(status="input_error", verify_written_paths=1), {})
-        (self.root / final).rmdir()
-        os.mkfifo(self.root / final)
-        self.timeout = 10
-        self.assertEqual(self.select(status="input_error", candidate_paths=[final],
-                                     verify_written_paths=True), {})
-
-    def test_post_write_verification_rejects_a_swapped_artifact_directory(self) -> None:
-        artifacts = self.root / "artifacts"
-        outside = self.root / "outside"
-        artifacts.mkdir()
-        outside.mkdir()
-        final = "artifacts/implementation-plan.html"
-        temporary = "artifacts/.artifact-author-implementation-plan.race.tmp"
-        (self.root / final).write_text("owned page", encoding="utf-8")
-        verified = self.select(candidate_paths=[final], verify_written_paths=True)
-        self.assertEqual(verified["verified_paths"], [final])
-        self.assertEqual(self.select(candidate_paths=[temporary, final])["checked_paths"], [temporary, final])
-        artifacts.rename(self.root / "held-artifacts")
-        artifacts.symlink_to(outside, target_is_directory=True)
-        # Exercise the documented native-tool check/use window, including exclusive create.
-        with (self.root / temporary).open("x", encoding="utf-8") as stream:
-            stream.write("redirected page")
-        os.replace(self.root / temporary, self.root / final)
-        self.assertEqual(self.select(status="input_error", candidate_paths=[final], verify_written_paths=True), {})
-        self.assertEqual((outside / "implementation-plan.html").read_text(encoding="utf-8"), "redirected page")
-        self.assertEqual((self.root / "held-artifacts/implementation-plan.html").read_text(encoding="utf-8"), "owned page")
-
-
 class OutputSecurityTests(SelectionFixture):
-    def test_temporary_and_final_outputs_require_a_fresh_confinement_check(self) -> None:
-        artifacts = self.root / "artifacts"
-        artifacts.mkdir()
-        paths = ["artifacts/.artifact-author-implementation-plan.probe.tmp", "artifacts/implementation-plan.html"]
-        self.assertEqual(self.select(candidate_paths=paths)["checked_paths"], paths)
-        for raw in ("../../escape", "/absolute-target", str(artifacts / "absolute.html"),
-                    "elsewhere.html", "artifacts/../escape.html", "artifacts/sub/page.html", "C:\\escape"):
-            with self.subTest(raw=raw):
-                self.assertEqual(self.select(status="input_error", candidate_paths=[raw]), {})
-        temporary = self.root / paths[0]
-        temporary.symlink_to(self.root / "escape.html")
-        self.assertEqual(self.select(status="input_error", candidate_paths=paths), {})
-        temporary.unlink()
-        for invalid in ([], "artifacts/page.html", [1]):
-            with self.subTest(invalid=invalid):
-                self.assertEqual(self.select(status="input_error", candidate_paths=invalid), {})
+    def test_selection_no_longer_hands_out_pathname_checks(self) -> None:
+        (self.root / "artifacts").mkdir()
+        final = "artifacts/implementation-plan.html"
+        for inputs in ({"candidate_paths": [final]}, {"verify_written_paths": True},
+                       {"candidate_paths": [final], "verify_written_paths": True}):
+            with self.subTest(inputs=inputs):
+                self.assertEqual(self.select(status="input_error", **inputs), {})
+        result = self.select()
+        self.assertNotIn("checked_paths", result)
+        self.assertNotIn("verified_paths", result)
 
     def test_symlinked_artifact_components_reject_selection(self) -> None:
         artifacts = self.root / "artifacts"
@@ -184,6 +117,248 @@ class OutputSecurityTests(SelectionFixture):
                 final.symlink_to(target)
                 self.assertEqual(self.select(status="input_error"), {})
                 final.unlink()
+
+
+# Runs the runner with one-shot hooks that race the artifact directory at a named point:
+# "open:<name>#<n>" (before the nth descriptor-relative open of <name>), "mkdir" (after
+# the feature directory is held, before artifacts/ is opened), "create" (before the
+# temporary is created), "written" (after the temporary is written, before its entry is
+# re-checked), "publish" (inside the last window, just before the rename), and "readback"
+# (before the final page is reopened). Unfired hooks are written out so a test can prove its race ran.
+RACE_RUNNER = """
+import atexit, json, os, runpy, sys
+from pathlib import Path
+plan = json.loads(sys.argv[1])
+sys.argv = sys.argv[:1]
+atexit.register(lambda: Path('race-unfired.json').write_text(json.dumps(plan), encoding='utf-8'))
+real_open, real_rename, real_replace, real_mkdir = os.open, os.rename, os.replace, os.mkdir
+state = {'published': False}
+opened = {}
+def act(point, name):
+    for action in plan.pop(point, []):
+        entry = Path('artifacts', name)
+        if action == 'swap':
+            Path('artifacts').rename('held-artifacts')
+            Path('artifacts').symlink_to('outside', target_is_directory=True)
+        elif action == 'restore':
+            Path('artifacts').unlink()
+            Path('held-artifacts').rename('artifacts')
+        elif action == 'swap-feature':
+            Path('specs/feat').rename('held-feat')
+            Path('specs/feat').symlink_to(Path('outside-feat').resolve(), target_is_directory=True)
+        elif action == 'move':
+            Path('artifacts').rename('moved-artifacts')
+            Path('artifacts').mkdir()
+        elif action == 'leaf-symlink':
+            entry.unlink()
+            entry.symlink_to(Path('outside/victim.html').resolve())
+        elif action == 'leaf-hardlink':
+            os.link(entry, Path('outside/linked.html'))
+        elif action == 'leaf-overwrite':
+            with entry.open('a', encoding='utf-8') as stream:
+                stream.write('<script>injected</script>')
+        elif action == 'leaf-replace':
+            entry.unlink()
+            entry.write_text('foreign page', encoding='utf-8')
+def hooked_open(path, flags, *args, **kwargs):
+    name = str(path)
+    if kwargs.get('dir_fd') is not None:
+        opened[name] = opened.get(name, 0) + 1
+        act(f'open:{name}#{opened[name]}', name)
+        if flags & os.O_CREAT and name.startswith('.artifact-author-'):
+            act('create', name)
+            state['temporary'] = name
+        elif state['published'] and name.endswith('.html') and not flags & os.O_CREAT:
+            act('readback', name)
+    return real_open(path, flags, *args, **kwargs)
+def hooked(real):
+    def move(src, dst, *args, **kwargs):
+        act('publish', str(src))
+        result = real(src, dst, *args, **kwargs)
+        state['published'] = True
+        return result
+    return move
+real_fsync = os.fsync
+def hooked_fsync(fd):
+    result = real_fsync(fd)
+    if 'temporary' in state:
+        act('written', state['temporary'])
+    return result
+os.fsync = hooked_fsync
+def hooked_mkdir(path, *args, **kwargs):
+    if str(path) == 'artifacts' and kwargs.get('dir_fd') is not None:
+        act('mkdir', str(path))
+    return real_mkdir(path, *args, **kwargs)
+os.open, os.rename, os.replace, os.mkdir = hooked_open, hooked(real_rename), hooked(real_replace), hooked_mkdir
+runpy.run_module('speckit_pro_runner', run_name='__main__')
+"""
+PLUGINS = ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro")
+FILL = re.compile(r"(<!-- FILL:([a-z0-9-]+):START -->)(.*?)(<!-- FILL:\2:END -->)", re.DOTALL)
+
+
+def rendered_page(entry_id: str) -> str:
+    template = (ROOT / f"speckit-pro/artifact-gallery/templates/{entry_id}.html").read_text(encoding="utf-8")
+    return FILL.sub(lambda match: f"{match.group(1)}<p>Real {match.group(2)}.</p>{match.group(4)}", template)
+
+
+class PublicationFixture(SelectionFixture):
+    def setUp(self) -> None:
+        super().setUp()
+        (self.root / "artifacts").mkdir()
+        (self.root / "outside").mkdir()
+        (self.root / "artifacts/implementation-plan.html").write_text("old page", encoding="utf-8")
+        (self.root / "outside/victim.html").write_text("outside page", encoding="utf-8")
+        self.page = rendered_page("implementation-plan")
+
+    def publish(self, *, status: str = "ok", race: dict | None = None, plugin: str = "speckit-pro",
+                mode: str = "apply", **inputs: object) -> dict:
+        request = {"schema_version": "1.0", "request_id": "artifact-publication-test",
+                   "helper_id": "publish-artifact-page", "operation": "publish-artifact-page", "mode": mode,
+                   "inputs": {"plan_file": "plan.md", "entry_id": "implementation-plan", "content": self.page,
+                              **inputs}}
+        done = subprocess.run([sys.executable, "-c", RACE_RUNNER, json.dumps(race or {})],
+                              input=json.dumps(request), text=True, capture_output=True, check=False,
+                              cwd=self.root, env={**os.environ, "PYTHONPATH": str(ROOT / plugin)}, timeout=30)
+        self.assertTrue(done.stdout, done.stderr)
+        result = json.loads(done.stdout.splitlines()[-1])
+        self.assertEqual(result["status"], status, result)
+        unfired = json.loads((self.root / "race-unfired.json").read_text(encoding="utf-8"))
+        self.assertEqual(unfired, {}, "every scripted race step must actually run")
+        return result
+
+    def tree(self) -> dict[str, str]:
+        return {path.relative_to(self.root).as_posix(): ("-> link" if path.is_symlink() else path.read_text(encoding="utf-8"))
+                for path in sorted(self.root.rglob("*")) if path.is_symlink() or path.is_file()
+                if path.suffix in {".html", ".tmp"}}
+
+    def assert_outside_untouched(self) -> None:
+        self.assertEqual({name: text for name, text in self.tree().items() if name.startswith("outside/")},
+                         {"outside/victim.html": "outside page"})
+
+
+class PublicationSecurityTests(PublicationFixture):
+    """F1249-f4c3e846: no pathname check is ever followed by a separate native operation."""
+
+    def test_publication_writes_through_the_held_directory_and_reads_back_the_same_object(self) -> None:
+        for plugin in PLUGINS:
+            with self.subTest(plugin=plugin):
+                data = self.publish(plugin=plugin)["data"]
+                self.assertTrue(data["writes_state"])
+                self.assertEqual(data["output_path"], "artifacts/implementation-plan.html")
+                self.assertEqual(self.tree(), {"artifacts/implementation-plan.html": self.page,
+                                               "outside/victim.html": "outside page"})
+                self.assertEqual(data["sha256"], __import__("hashlib").sha256(self.page.encode()).hexdigest())
+
+    def test_parent_swap_before_temporary_create_or_write_never_redirects(self) -> None:
+        for plugin in PLUGINS:
+            with self.subTest(plugin=plugin):
+                self.setUp()
+                self.publish(status="expected_failure", plugin=plugin, race={"create": ["swap"]})
+                self.assert_outside_untouched()
+                self.assertNotIn(self.page, self.tree().values())
+
+    def test_parent_swap_between_temporary_verification_and_publish_never_redirects(self) -> None:
+        for plugin in PLUGINS:
+            with self.subTest(plugin=plugin):
+                self.setUp()
+                self.publish(status="expected_failure", plugin=plugin, race={"publish": ["swap"]})
+                self.assert_outside_untouched()
+                self.assertNotIn(self.page, self.tree().values())
+
+    def test_parent_swap_between_publish_and_final_read_withdraws_only_the_owned_page(self) -> None:
+        (self.root / "outside/implementation-plan.html").write_text("outside final", encoding="utf-8")
+        self.publish(status="expected_failure", race={"readback": ["swap"]})
+        tree = self.tree()
+        self.assertEqual(tree["outside/implementation-plan.html"], "outside final")
+        self.assertEqual(tree["outside/victim.html"], "outside page")
+        self.assertNotIn(self.page, tree.values())
+
+    def test_swap_and_restore_cannot_approve_an_old_page_or_leave_a_redirected_one(self) -> None:
+        for plugin in PLUGINS:
+            with self.subTest(plugin=plugin):
+                self.setUp()
+                self.publish(plugin=plugin, race={"create": ["swap"], "readback": ["restore"]})
+                self.assertEqual(self.tree(), {"artifacts/implementation-plan.html": self.page,
+                                               "outside/victim.html": "outside page"})
+
+    def test_directory_moved_after_snapshot_is_detected_and_the_page_withdrawn(self) -> None:
+        self.publish(status="expected_failure", race={"readback": ["move"]})
+        self.assertNotIn(self.page, self.tree().values())
+        self.assert_outside_untouched()
+
+    def test_leaf_substitution_and_hard_links_break_the_object_binding(self) -> None:
+        cases = (("symlinked temporary", {"written": ["leaf-symlink"]}),
+                 ("hard-linked temporary", {"written": ["leaf-hardlink"]}),
+                 ("temporary symlinked inside the rename window", {"publish": ["leaf-symlink"]}),
+                 ("temporary hard-linked inside the rename window", {"publish": ["leaf-hardlink"]}),
+                 ("replaced final page", {"readback": ["leaf-replace"]}),
+                 ("final page rewritten in place", {"readback": ["leaf-overwrite"]}),
+                 ("symlinked final page", {"readback": ["leaf-symlink"]}))
+        for label, race in cases:
+            with self.subTest(case=label):
+                self.setUp()
+                self.publish(status="expected_failure", race=race)
+                tree = self.tree()
+                self.assertEqual(tree["outside/victim.html"], "outside page")
+                self.assertNotIn(self.page, [text for name, text in tree.items() if name.startswith("artifacts/")])
+                self.assertFalse([name for name in tree if name.endswith(".tmp") and tree[name] == self.page])
+                if "written" in race:
+                    self.assertEqual(tree["artifacts/implementation-plan.html"], "old page",
+                                     "a substituted temporary must never be renamed over the final page")
+
+    def test_cleanup_never_unlinks_an_entry_it_did_not_create(self) -> None:
+        self.publish(status="expected_failure", race={"readback": ["leaf-replace"]})
+        self.assertEqual(self.tree()["artifacts/implementation-plan.html"], "foreign page")
+        self.setUp()
+        self.publish(status="expected_failure", race={"publish": ["leaf-symlink"]})
+        self.assertTrue([path for path in (self.root / "artifacts").iterdir() if path.is_symlink()])
+        self.assert_outside_untouched()
+
+    def test_parent_swap_after_selection_before_the_directory_open_is_refused(self) -> None:
+        for plugin in PLUGINS:
+            with self.subTest(plugin=plugin):
+                self.setUp()
+                self.publish(status="expected_failure", plugin=plugin, race={"mkdir": ["swap"]})
+                self.assert_outside_untouched()
+
+    def test_feature_directory_swap_before_the_descriptor_walk_is_refused(self) -> None:
+        feature = self.root / "specs/feat"
+        feature.mkdir(parents=True)
+        (self.root / "plan.md").rename(feature / "plan.md")
+        (self.root / "outside-feat").mkdir()
+        (self.root / "outside-feat/plan.md").write_text((feature / "plan.md").read_text(encoding="utf-8"),
+                                                       encoding="utf-8")
+        self.publish(status="expected_failure", plan_file="specs/feat/plan.md", race={"open:feat#2": ["swap-feature"]})
+        self.assertEqual(sorted(path.name for path in (self.root / "outside-feat").iterdir()), ["plan.md"])
+        self.assertNotIn(self.page, self.tree().values())
+
+    def test_symlinked_artifact_directory_is_refused_before_any_write(self) -> None:
+        (self.root / "artifacts/implementation-plan.html").unlink()
+        (self.root / "artifacts").rmdir()
+        (self.root / "artifacts").symlink_to(self.root / "outside", target_is_directory=True)
+        self.publish(status="input_error")
+        self.assert_outside_untouched()
+
+
+class PublicationContentTests(PublicationFixture):
+    def test_unselected_template_identical_and_partial_pages_are_refused(self) -> None:
+        template = (ROOT / "speckit-pro/artifact-gallery/templates/implementation-plan.html").read_text(encoding="utf-8")
+        first_region = FILL.search(template)
+        assert first_region is not None
+        partial = self.page.replace(f"<p>Real {first_region.group(2)}.</p>", first_region.group(3), 1)
+        cases = ({"entry_id": "module-map", "content": rendered_page("module-map")}, {"entry_id": "../escape"},
+                 {"content": template}, {"content": partial}, {"content": self.page + '<p class="note">x</p>'},
+                 {"content": self.page.replace("<!-- FILL:phases:END -->", "", 1)}, {"content": ""},
+                 {"unknown": True})
+        for inputs in cases:
+            with self.subTest(inputs=sorted(inputs)):
+                self.publish(status="input_error", **inputs)
+                self.assertEqual(self.tree()["artifacts/implementation-plan.html"], "old page")
+
+    def test_dry_run_validates_without_writing(self) -> None:
+        data = self.publish(mode="dry_run")["data"]
+        self.assertFalse(data["writes_state"])
+        self.assertEqual(self.tree()["artifacts/implementation-plan.html"], "old page")
 
 
 class ArtifactSelectionTests(SelectionFixture):
@@ -295,14 +470,17 @@ class ArtifactHostSelectionTests(SelectionFixture):
                     self.assertIn("select-artifact-pages", text)
                     self.assertIn("selected_pages", text)
                 self.assertNotIn("Apply each surviving entry's `trigger`", (plugin / agent).read_text(encoding="utf-8"))
-                author = (plugin / agent).read_text(encoding="utf-8")
-                self.assertIn("output_paths[entry-id]", author)
-                self.assertIn("candidate_paths", author)
-                self.assertIn("checked_paths", author)
-                self.assertIn("verify_written_paths", author)
-                self.assertIn("verified_paths", author)
-                self.assertIn("Native tool writes retain a check/use race", author)
 
+    def test_both_author_roles_route_every_artifact_operation_through_the_runner(self) -> None:
+        for host, agent in (("claude", "agents/artifact-author.md"), ("codex", "codex-agents/artifact-author.toml")):
+            for root in (ROOT / "speckit-pro", ROOT / f"dist/{host}/speckit-pro"):
+                with self.subTest(host=host, root=root.relative_to(ROOT).as_posix()):
+                    author = " ".join((root / agent).read_text(encoding="utf-8").split())
+                    self.assertIn("publish-artifact-page", author)
+                    self.assertIn("Never create, write, rename, read, or delete anything in the `artifacts/`", author)
+                    for retired in ("candidate_paths", "checked_paths", "verify_written_paths", "verified_paths",
+                                    ".artifact-author-<entry-id>", "Native tool writes retain a check/use race"):
+                        self.assertNotIn(retired, author)
 
 if __name__ == "__main__":
     raise SystemExit(run_counted(unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__]),

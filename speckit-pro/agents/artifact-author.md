@@ -1,8 +1,8 @@
 ---
 name: artifact-author
 description: >
-  Fills the shipped HTML artifact-gallery templates for a feature and writes
-  the finished pages into the feature's `artifacts/` directory. Use at draft
+  Fills the shipped HTML artifact-gallery templates for a feature and publishes
+  the finished pages into the feature's `artifacts/` directory through the runner. Use at draft
   pull-request time, after `tasks.md` exists and before the pull request is
   created or refreshed. Uses the runner-selected draft-stage pages and
   fills each selected template's marked
@@ -45,8 +45,9 @@ created or refreshed.
 
 ## Inputs (provided in your prompt)
 
-Planning and gallery inputs. Every one of them is read-only; the only place you write is the
-feature's `artifacts/` directory.
+Planning and gallery inputs. Every one of them is read-only. Pages reach the
+feature's `artifacts/` directory only through the runner's
+`publish-artifact-page` helper; you never touch that directory yourself.
 
 | Input | Path |
 | --- | --- |
@@ -93,9 +94,10 @@ optional files. The loaded runner reads its own shipped gallery manifest.
 
 The helper owns the signals and the page list. Consume its `selected_pages`
 in order. A `planned` entry has no template yet, so it is never selected and never reported as a gap.
-Consume `output_paths[entry-id]` as each final destination. The runner validates
-the manifest contract, safe entry IDs, and resolved output confinement to the
-`artifacts/` directory beside the plan, rejecting symlinked components.
+`output_paths[entry-id]` names each page's destination for your report only;
+you never open, write, or check that path yourself. The runner validates
+the manifest contract, safe entry IDs, and output confinement to the
+`artifacts/` directory beside the plan.
 On a non-`ok` result, write nothing and report a whole-set selection gap with
 the diagnostic reason. Selection failure remains fail-open for PR creation.
 
@@ -122,7 +124,7 @@ Rules:
 - Leave no placeholder text behind.
 - Content comes from the planning record. Never invent it.
 
-Write one finished page per selected entry to its runner-returned final path.
+Publish one finished page per selected entry through `publish-artifact-page`.
 
 ### Publish last, one page at a time
 
@@ -134,63 +136,58 @@ Do not read the next template until the current page is completely rendered,
 validated as a closed sibling temporary file, atomically published, re-read and
 validated at the final path, and recorded as `generated`. On a recoverable
 failure, complete the cleanup below and record that page's `gap` before reading
-the next template. Never pre-copy raw templates to their final artifact paths
-and never create all destination files up front.
+the next template. One `publish-artifact-page` call performs the temporary-file,
+publish, and final re-read steps. Never pre-copy raw templates to their final
+artifact paths and never create all destination files up front.
 
-The per-page sequence is: Read the current template, render and Write the
-sibling temporary file from that Read, validate the temporary file, publish by
-renaming the closed temporary file, Read and validate the final page at its
-final path, record the outcome. Never use `cp` or `mv` with a shipped template
-as the source; the only permitted move is the atomic rename of the rendered
-sibling temporary file to its final path. Reading or validating the temporary
-file does not satisfy the final-path re-read.
+The per-page sequence is: Read the current template, render the page in
+memory, validate it in memory, hand it to `publish-artifact-page`, record the
+outcome. Never use `cp` or `mv` with a shipped template as the source.
 
 For the current page, build a replacement map whose keys equal the template's
 declared slot inventory exactly: no missing slot, extra slot, or duplicate
-replacement. Render the complete page in memory. Before exposing it at the
-final path, verify that every rendered region equals its planned replacement
-and differs byte-for-byte from the corresponding shipped-template region.
+replacement. Render the complete page in memory. Before publishing it, verify
+that every rendered region equals its planned replacement and differs
+byte-for-byte from the corresponding shipped-template region.
 
-Write the rendered page to a uniquely named sibling
-`.artifact-author-<entry-id>.<nonce>.tmp` file, close it, and validate that
-temporary file. Require all of these conditions:
+**The runner owns every artifact file operation.** Never create, write,
+rename, read, or delete anything in the `artifacts/` directory with a native
+tool (`Write`, `Edit`, `Read`, `cp`, `mv`, `rm`, or a script). A path check handed back to you cannot bind the file your tool later
+touches: a link or rename between the check and the operation would redirect
+it. So the runner never hands out such a check, and you never act on a path.
 
-1. its bytes differ from the shipped template;
-2. it contains no sample-banner element using any recognized template class:
-   `sample-notice`, `notice`, or `note`;
-3. every declared `FILL` marker pair still appears exactly once and in order;
-4. its slot set equals the inventory exactly, and every marked region matches
-   the replacement map rather than the shipped-template region.
+Invoke the loaded runner's `publish-artifact-page` helper in `apply` mode from
+the feature repository root, once per page. Its operation is also
+`publish-artifact-page`. Send the same planning inputs you sent to
+`select-artifact-pages`, plus `entry_id` and `content`: the complete rendered
+page as one string inside the JSON request on standard input. If you stage that
+request in a file first, put it in a private temporary directory outside the
+repository, never in `artifacts/`. You may send the same request in `dry_run`
+mode first; it validates without writing.
 
-Immediately before each temporary creation, write, publish, final-path read,
-or cleanup, invoke `select-artifact-pages` again with the same planning inputs
-and `candidate_paths` listing the temporary and final repository-relative paths.
-Proceed only on `ok`, using its `checked_paths`. On a confinement error, perform
-no file operation, report the diagnostic as a gap, and leave unsafe paths alone.
-Create the owned temporary exclusively; an existing name requires a fresh name
-and a fresh confinement check.
+In one call, through one directory descriptor it opened without following
+links, the runner:
 
-After writing and closing the temporary, and again after publishing and
-validating the final page, invoke `select-artifact-pages` with
-`verify_written_paths: true` and `candidate_paths` containing only that written
-path. Require `ok` and its path in `verified_paths` before continuing or
-recording `generated`. The runner opens the artifact directory through
-no-follow descriptors and checks its entries without following symlinks or
-opening special files.
-On verification failure, report a gap and leave the unsafe paths alone.
-Native tool writes retain a check/use race: this post-write snapshot detects
-unsafe paths but cannot prevent redirected writes or make native cleanup safe.
-Report that residual when using native tools for publication.
+1. refuses an `entry_id` its own selection did not return, and content that
+   equals the shipped template, carries a sample banner (`sample-notice`,
+   `notice`, or `note`), moves or duplicates a `FILL` marker, or leaves a slot
+   holding its shipped sample region;
+2. creates a sibling temporary file exclusively, writes and closes it, and
+   confirms the entry is still the object it created;
+3. atomically renames it over the final page, re-reads the final page, and
+   confirms it is the same object holding the same bytes;
+4. confirms the directory it wrote through is still the one the repository
+   path names;
+5. on any failure, withdraws only the object it created and leaves any
+   substituted entry alone.
 
-Only after every check passes, atomically replace the final `.html` with that
-closed sibling file, re-read the final file, and confirm the same checks before
-reporting `generated`. On any recoverable failure, delete the owned temporary
-file and the page written by this attempt only while their confinement checks
-succeed, report its gap, and continue. Never
-publish by writing directly to the final path. This order is load-bearing: an
-interrupted author can leave an owned temporary file, but never a partial page
-at the final path; the orchestrator removes owned temporaries and any final page
-without a complete current-run `generated` outcome before its boundary commit.
+Record `generated` only on an `ok` result with `writes_state: true`; report its
+`sha256` with the outcome. Any other result is that page's `gap` with the
+diagnostic reason. The cleanup for a failed page is the runner's withdrawal:
+you delete nothing yourself. An interrupted author can leave a runner temporary
+file, but never a partial page at the final path; the orchestrator removes
+owned temporaries and any final page without a complete current-run
+`generated` outcome before its boundary commit.
 
 ## Result — one outcome per selected page
 
@@ -239,8 +236,9 @@ For every externally-sourced fact in your output, include the grounding evidence
 - Never invoke `$speckit-pro:grill-me` or any interactive interview — there is no user to
 <!-- /host -->
   answer inside autopilot.
-- Never write into the `Gallery dir:` directory. Your only write target is
-  the feature's `artifacts/` directory.
+- Never write into the `Gallery dir:` directory. Never touch the feature's
+  `artifacts/` directory with a native tool; `publish-artifact-page` is its
+  only writer.
 
 </hard_constraints>
 <!-- host:codex: exec_command and write_stdin are Codex tools with no Claude equivalent -->

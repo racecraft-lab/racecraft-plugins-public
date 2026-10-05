@@ -1278,7 +1278,10 @@ workflow root. Require the author to invoke the loaded runner's
 per its agent instructions. The helper owns selection; the author consumes
 `selected_pages` in returned order and reports one outcome per selected page.
 A non-`ok` selection is a whole-set artifact gap under the existing fail-open
-reporting protocol.
+reporting protocol. The author publishes each page only through the runner's
+`publish-artifact-page` helper, which performs every artifact file operation
+through one held directory descriptor; the author never touches `artifacts/`
+with a native tool.
 
 <!-- host:claude: Claude supplies inputs through the Agent tool's prompt -->
 Pass those planning inputs in the `speckit-pro:artifact-author` Agent prompt.
