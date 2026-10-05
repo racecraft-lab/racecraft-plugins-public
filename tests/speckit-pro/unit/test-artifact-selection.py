@@ -294,11 +294,11 @@ class ArtifactHostSelectionTests(SelectionFixture):
                 self.assertNotIn("Apply each surviving entry's `trigger`", (plugin / agent).read_text(encoding="utf-8"))
                 author = (plugin / agent).read_text(encoding="utf-8")
                 self.assertIn("output_paths[entry-id]", author)
-                self.assertIn("candidate_paths", author)
-                self.assertIn("checked_paths", author)
-                self.assertIn("verify_written_paths", author)
-                self.assertIn("verified_paths", author)
-                self.assertIn("Native tool writes retain a check/use race", author)
+                self.assertIn("publish-artifact-page", author)
+                self.assertIn("data.verified_html", author)
+                self.assertIn("data.file_identity", author)
+                self.assertNotIn("verify_written_paths", author)
+                self.assertNotIn("Native tool writes retain a check/use race", author)
 
 
 if __name__ == "__main__":
