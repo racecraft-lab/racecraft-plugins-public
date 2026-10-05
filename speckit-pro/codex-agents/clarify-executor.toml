@@ -107,14 +107,12 @@ agent.
    perspective routes the one analyst. Untagged items route like
    `[ambiguous]`, but explicit tagging is the discipline. Add a
    `Confidence: low|high` line to every item.
-   For full routing rules, read the consensus protocol
-   only from the absolute path on your prompt's `Protocol:` line,
-   which the orchestrator resolves from the loaded plugin root, and
-   never search the plugin cache for another copy. Report it as
-   `**Protocol:**` in your summary in its plugin-relative form,
-   `skills/speckit-autopilot/references/consensus-protocol.md`, never the absolute path, because
-   the orchestrator copies your summary into committed records; report
-   `not provided` when the prompt has none.
+   The routing table is in your prompt's reference slices; never read the
+   consensus protocol itself. Report `**Protocol:**` in your summary as the plugin-relative path
+   `skills/speckit-autopilot/references/consensus-protocol.md` when your
+   prompt names a protocol file, never the absolute path, because the
+   orchestrator copies your summary into committed records; otherwise
+   report `not provided`.
 
    Still answer the question with your best guess. A security item
    goes to consensus; a low-confidence item gets one analyst whose

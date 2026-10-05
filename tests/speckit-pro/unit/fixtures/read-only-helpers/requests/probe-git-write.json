@@ -1,0 +1,5 @@
+{
+  "schema_version": "1.0", "request_id": "fixture-probe-git-write",
+  "helper_id": "probe-git-write", "operation": "probe-git-write", "mode": "read_only",
+  "inputs": {}
+}
