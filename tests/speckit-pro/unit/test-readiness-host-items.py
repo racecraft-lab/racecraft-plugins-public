@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import json
 import sys
-import tempfile
 import unittest
 from pathlib import Path
 
@@ -13,8 +12,8 @@ TEST_DIR = Path(__file__).resolve().parent
 LIB_DIR = TEST_DIR.parent / "lib"
 sys.path.insert(0, str(LIB_DIR))
 
-from host_skill_views import host_skill_root  # noqa: E402
-from runner_invocation import assert_runner_response, run_runner  # noqa: E402
+from readiness_case import ReadinessCase, scaffold_step  # noqa: E402
+from runner_invocation import assert_runner_response  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 CLAUDE_ONLY = ("permission_probe", "plugin_scope", "mcp_authentication")
@@ -26,30 +25,8 @@ def detail(item: str, key: str, value: object, **extra: object) -> dict[str, obj
     return {"item": item, "evidence_source": f"{item} observation", key: value, **extra}
 
 
-def request(observations: list[dict[str, object]], host: str = "claude") -> dict[str, object]:
-    body = {"host": host, "execution_mode": "interactive", "plugin_revision": "2.40.0",
-            "observations": observations}
-    return {"schema_version": "1.0", "request_id": "test-host-items", "helper_id": "write-readiness-record",
-            "operation": "write-readiness-record", "mode": "apply", "inputs": body}
-
-
-def scaffold_step(host: str) -> str:
-    path = host_skill_root(host) / "speckit-scaffold-spec" / "SKILL.md"
-    return path.read_text(encoding="utf-8").split("### 6.5 Write the Readiness Record", 1)[1].split("\n### ", 1)[0]
-
-
-class ReadinessHostItemsTest(unittest.TestCase):
-    def setUp(self) -> None:
-        self.root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
-        self.root.joinpath(".specify").mkdir()
-
-    def run_helper(self, observations: list[dict[str, object]], host: str = "claude") -> dict:
-        _, response, _ = run_runner(request(observations, host), cwd=self.root)
-        return response
-
-    def items(self, response: dict) -> dict:
-        assert_runner_response(self, response, "ok", 0)
-        return response["data"]["record"]["items"]
+class ReadinessHostItemsTest(ReadinessCase):
+    request_id = "test-host-items"
 
     def test_denied_probe_prints_the_needed_allow_rules(self) -> None:
         probes = [{"probe": "runner_request", "outcome": "denied", "command": "python3"},
@@ -234,14 +211,13 @@ class ReadinessHostItemsTest(unittest.TestCase):
         self.assertEqual(3, len(rules))
 
     def test_scaffold_documents_the_host_items_on_each_host(self) -> None:
-        steps = {host: scaffold_step(host) for host in ("claude", "codex")}
-        for host, step in steps.items():
-            rows = {name: f"| `{name}` |" in step for name in (*CLAUDE_ONLY, "hooks")}
-            self.assertEqual({"permission_probe": host == "claude", "plugin_scope": host == "claude",
-                              "mcp_authentication": host == "claude", "hooks": True}, rows, host)
-        self.assertIn("allow_rules", steps["claude"])
-        self.assertIn("Claude Code only", steps["codex"])
-        self.assertIn("`not_applicable`", steps["codex"])
+        names = (*CLAUDE_ONLY, "hooks")
+        self.assertEqual({"claude": dict.fromkeys(names, True),
+                          "codex": {**dict.fromkeys(CLAUDE_ONLY, False), "hooks": True}},
+                         self.documented_rows(names))
+        self.assertIn("allow_rules", scaffold_step("claude"))
+        self.assertIn("Claude Code only", scaffold_step("codex"))
+        self.assertIn("`not_applicable`", scaffold_step("codex"))
 
 
 def build_suite() -> unittest.TestSuite:
