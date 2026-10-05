@@ -13,6 +13,7 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import shutil
+import signal
 import stat
 import subprocess
 import sys
@@ -4238,17 +4239,21 @@ class AdapterExecutionTests(unittest.TestCase):
         timeout_dir = self.temp / "timeout"
         timeout_dir.mkdir()
         codex = adapter_common.PreparedTrial(
-            command=[sys.executable, "-c", "import time; print('partial', flush=True); time.sleep(10)"],
+            command=[sys.executable, "-c", "import signal, time; signal.signal(signal.SIGTERM, signal.SIG_IGN); print('partial', flush=True); time.sleep(10)"],
             cwd=timeout_dir, environment=dict(os.environ), host="codex", mode="project",
             attempt_dir=timeout_dir, trace_path=timeout_dir / "timed-out.jsonl", result_path=None,
             artifact_root=timeout_dir, runtime_identity={"digest": "d" * 64},
         )
-        # Leave enough startup time for the interpreter to establish its process group under
-        # concurrent CI load while still exercising the timeout-and-cleanup path.
-        timed_out = adapters.execute_prepared(codex, 1.0)
+        # Force the kill path instead of racing a TERM-exited group: macOS may briefly
+        # deny its presence probe. The supervisor still requires explicit group absence.
+        with mock.patch.object(adapters.trigger_process, "CLEANUP_TIMEOUT", 0.2):
+            timed_out = adapters.execute_prepared(codex, 1.0)
         self.assertTrue(timed_out.timed_out)
         self.assertEqual(timed_out.exit_code, -1)
         self.assertTrue(timed_out.process_evidence["cleanup_verified"])
+        if os.name != "nt":
+            self.assertEqual(timed_out.process_evidence["provider_exit_code"], -signal.SIGKILL)
+            self.assertEqual(timed_out.process_evidence["cleanup_observations"][-1]["errno"], 3)
 
         malformed_dir = self.temp / "malformed"
         malformed_dir.mkdir()
