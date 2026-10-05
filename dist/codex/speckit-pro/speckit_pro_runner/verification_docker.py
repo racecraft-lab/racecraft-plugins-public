@@ -25,6 +25,8 @@ EXECUTION_ID = re.compile(r"[0-9a-f]{32}")
 # base-image and daemon checks, and the in-container filter all assume Linux/arm64.
 PLATFORM = "linux/arm64"
 PLATFORM_OS, PLATFORM_ARCHITECTURE = PLATFORM.split("/")
+# A daemon reports the kernel's name for the architecture, so aarch64 is the same platform.
+DAEMON_ARCHITECTURES = (PLATFORM_ARCHITECTURE, "aarch64")
 MAX_SNAPSHOT_ENTRIES = 50000
 MAX_SNAPSHOT_BYTES = 512 * 1024 * 1024
 OUTPUT_TMPFS = "rw,nosuid,nodev,noexec,size=16777216,uid=65532,gid=65532,mode=0700"

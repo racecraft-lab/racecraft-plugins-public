@@ -314,6 +314,28 @@ class BoundedProbeTests(unittest.TestCase):
                                   "stderr_tail": "x" * 2048})
         self.assertFalse(call.call_args.kwargs["shell"])
 
+    def test_docker_stdout_is_capped_like_stderr(self):
+        from speckit_pro_runner import cli_probe
+        done = subprocess.CompletedProcess(["docker"], 0, stdout="x" * 5000 + "tail", stderr="x" * 5000)
+        with tempfile.TemporaryDirectory() as root, patch("subprocess.run", return_value=done):
+            record = cli_probe.probe(Path(root), ["docker", "info"], allowed=("docker",), timeout=10)
+        self.assertIsNone(record["exit_status"])
+        self.assertEqual("x" * 2044 + "tail", record["stdout_tail"])
+        self.assertIn("stdout exceeded", record["stderr_tail"])
+
+    def test_complete_github_json_survives_the_stdout_limit(self):
+        document = {"full_name": "example/project", "description": "x" * 9000}
+        done = subprocess.CompletedProcess(["gh"], 0, stdout=json.dumps(document), stderr="")
+        record, _ = self.run_probe(stack_manager, ["gh", "api", "repos/example/project"], [done])
+        self.assertEqual(document, json.loads(record["stdout_tail"]))
+
+    def test_github_stdout_over_the_limit_is_reported_as_a_failed_probe(self):
+        done = subprocess.CompletedProcess(["gh"], 0, stdout="x" * (1048576 + 1), stderr="y" * 5000)
+        record, _ = self.run_probe(stack_manager, ["gh", "api", "repos/example/project"], [done])
+        self.assertIsNone(record["exit_status"])
+        self.assertEqual(1048576, len(record["stdout_tail"]))
+        self.assertIn("stdout exceeded", record["stderr_tail"])
+
 
 if __name__ == "__main__":
     loader = unittest.defaultTestLoader
