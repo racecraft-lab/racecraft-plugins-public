@@ -146,15 +146,18 @@ class _FillMarkup(HTMLParser):
     """Collects active content in one fill region; build it with convert_charrefs=False so "&lt;" stays text."""
 
     findings: list[str]
+    start_positions: set[tuple[int, int]]
 
     def reset(self) -> None:
         super().reset()
         self.findings = []
+        self.start_positions = set()
 
     def set_cdata_mode(self, *args: object, **kwargs: object) -> None:
         """Never hide text from inspection: raw-text rules differ inside SVG and across Python versions."""
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.start_positions.add(self.getpos())
         if tag in _ACTIVE_ELEMENTS:
             self.findings.append(f"<{tag}> element")
         for name, value in attrs:
@@ -172,9 +175,13 @@ class _FillMarkup(HTMLParser):
             self.findings.append("unescaped <")
 
 
-def _raw_text_holds_markup(text: str) -> bool:
+def _raw_text_holds_markup(text: str, start_positions: set[tuple[int, int]]) -> bool:
     """A raw-text element is inert only when it closes in the same region with no "<" before its end tag."""
     for start in _RAW_TEXT_START.finditer(text):
+        position = (text.count("\n", 0, start.start()) + 1, start.start() - text.rfind("\n", 0, start.start()) - 1)
+        # Tag-shaped text inside a parsed comment or attribute is not an element.
+        if position not in start_positions:
+            continue
         following = text.find("<", start.end())
         end = re.compile(rf"</{start.group(1)}[\t\n\f\r />]", re.IGNORECASE | re.ASCII)
         if following < 0 or not end.match(text, following):
@@ -185,10 +192,10 @@ def _raw_text_holds_markup(text: str) -> bool:
 def _active_content(fill: bytes) -> list[str]:
     text = fill.decode("utf-8", errors="replace")
     findings = ["markup declaration or nonstandard comment"] if _UNPARSEABLE_FILL.search(text) else []
-    if _raw_text_holds_markup(text):
-        findings.append("raw-text element holding markup")
     parser = _FillMarkup(convert_charrefs=False)
     parser.feed(text)
+    if _raw_text_holds_markup(text, parser.start_positions):
+        findings.append("raw-text element holding markup")
     if "<" in parser.rawdata:
         findings.append("unterminated markup")
     return findings + parser.findings

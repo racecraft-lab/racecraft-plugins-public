@@ -209,6 +209,8 @@ class FillContentReviewTests(_ReviewFixture):
             '<textarea></textareaı><a title="</textarea><img src=x onerror=alert(1)>"></a>',
             '<title></tıtle><a title="</title><img src=x onerror=alert(1)>"></a>',
             '<title\x00><img src=x onerror=alert(1)></title>',
+            '<span title="<!--"><title>left open for the next region -->',
+            '<title><!-- </title><a title="--><img src=x onerror=alert(1)>"></a>',
         ):
             with self.subTest(content=content):
                 self.fill("implementation-plan", "plan-stats", content)
@@ -221,6 +223,16 @@ class FillContentReviewTests(_ReviewFixture):
             '<p title="Data: a JavaScript: aside"><a href="#phase-1">Phase 1</a></p>',
             "<!-- a reviewer note --><img src=\"data:image/png;base64,AA\" alt=\"\">",
             "<p>Run <code>--check</code> -- then compare</p><textarea>&lt;b&gt;</textarea>",
+        ):
+            with self.subTest(content=content):
+                self.fill("implementation-plan", "plan-stats", content)
+                self.assertEqual(self.review()["status"], "pending")
+
+    def test_inert_comments_and_attributes_can_mention_raw_text_tags(self) -> None:
+        for content in (
+            "<!-- reviewer note: <title> -->",
+            "<p>Summary</p>\n<!-- reviewer note:\n<textarea> -->",
+            '<span title="<title>">Summary</span>',
         ):
             with self.subTest(content=content):
                 self.fill("implementation-plan", "plan-stats", content)
