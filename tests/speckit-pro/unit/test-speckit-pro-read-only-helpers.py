@@ -3563,6 +3563,24 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
         self.assertEqual(state["status"], "unreadable")
         self.assertTrue(all(row["pass"] for row in rows))
 
+    def test_spec_kit_release_version_accepts_only_short_ascii_components(self) -> None:
+        from speckit_pro_runner import spec_kit_pin
+
+        for hostile in ("\u0661.\u0661.\u0660", "\uff11.\uff11.\uff10", "1." + "1" * 3000 + ".0", "1.1.1234567"):
+            with self.subTest(version=hostile[:12]):
+                self.assertIsNone(spec_kit_pin.release_version(hostile))
+                self.assertEqual(spec_kit_pin.version_status(hostile, cli_found=True), "unreadable")
+        self.assertEqual(spec_kit_pin.release_version("1.1.0"), "1.1.0")
+        self.assertEqual(spec_kit_pin.release_version("123456.0.1"), "123456.0.1")
+
+    def test_cli_path_detail_never_shows_another_users_path(self) -> None:
+        from speckit_pro_runner.helpers.read_only import _home_relative
+
+        home = Path.home()
+        self.assertEqual(_home_relative(str(home / ".local" / "bin" / "specify")), "~/.local/bin/specify")
+        self.assertEqual(_home_relative("/Users/other-person/bin/specify"), "specify")
+        self.assertEqual(_home_relative(str(home / ".." / "other-person" / "bin" / "specify")), "specify")
+
     def test_spec_kit_version_ordering_compares_numeric_components(self) -> None:
         from speckit_pro_runner import spec_kit_pin
 

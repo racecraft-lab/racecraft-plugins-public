@@ -6257,11 +6257,16 @@ def spec_kit_cli_state(
 
 
 def _home_relative(path: str) -> str:
-    """The path with the home directory shown as ~, so reports carry no user name."""
+    """The path, `..` collapsed, as ~/<relative> under home, else only its basename.
+
+    Reports then carry no user name, whether the CLI sits in another user's home or a
+    `..` path points out of this one.
+    """
     try:
-        return "~/" + Path(path).relative_to(Path.home()).as_posix()
-    except (ValueError, RuntimeError):
-        return path
+        normalized = Path(os.path.abspath(path))
+        return "~/" + normalized.relative_to(Path(os.path.abspath(Path.home()))).as_posix()
+    except (ValueError, RuntimeError, OSError):
+        return Path(path).name or "specify"
 
 
 def installed_specify_version(specify_path: str, repo_root: Path | None = None) -> str | None:

@@ -15,7 +15,8 @@ PINNED_SOURCE = f"git+https://github.com/github/spec-kit.git@{PINNED_COMMIT}"
 INSTALL_ARGV = ["uv", "tool", "install", "specify-cli", "--force", "--from", PINNED_SOURCE]
 
 _CLI_VERSION_ROW = re.compile(r"CLI Version\s+(\S+)")
-_RELEASE = re.compile(r"(\d+)\.(\d+)\.(\d+)\Z")
+# ASCII digits only, 1 to 6 per component: CLI output is untrusted and the match is echoed.
+_RELEASE = re.compile(r"([0-9]{1,6})\.([0-9]{1,6})\.([0-9]{1,6})\Z")
 
 
 def parse_cli_version(output: str) -> str | None:
