@@ -50,6 +50,8 @@ class QualityGatesProposalTest(unittest.TestCase):
         return [*simple, function("src/legacy.py", "tangle", 40)]
 
     def run_helper(self, mode: str, **inputs: object) -> dict:
+        if inputs.get("confirmed") is True and "proposal_digest" not in inputs:
+            inputs["proposal_digest"] = self.run_helper("dry_run", measured=inputs.get("measured", True))["data"].get("proposal_digest", "")
         body = envelope("propose-quality-gates", mode, {"measured": True, **inputs})
         return run_runner(body, cwd=self.root, extra_env={"PATH": str(self.tools)})[1]
 
@@ -68,7 +70,7 @@ class QualityGatesProposalTest(unittest.TestCase):
         self.assertEqual({"complexity": 9, "crap": 30, "mutation_score_floor": 60}, proposal["thresholds"])
         self.assertEqual("percentile-90", proposal["basis"]["method"])
         self.assertEqual(10, proposal["basis"]["measured_functions"])
-        self.assertEqual([{"file": "src/legacy.py", "functions": [{"name": "tangle", "complexity": 40}]}],
+        self.assertEqual([{"file": "src/legacy.py", "functions": [{"name": "tangle", "complexity": 40}], "functions_truncated": False}],
                          data["failing_files"])
         self.assertEqual(1, data["failing_function_count"])
         self.assertEqual(before, self.listing(), "a dry run writes nothing")
@@ -157,6 +159,55 @@ class QualityGatesProposalTest(unittest.TestCase):
         self.assertTrue(data["failing_files_truncated"])
         self.assertEqual(26, data["failing_file_count"])
 
+    def test_paths_and_display_are_bounded_to_the_checkout(self) -> None:
+        outside = self.tools / "secret.py"
+        outside.touch()
+        (self.root / "escape.py").symlink_to(outside)
+        bad = [outside.as_posix(), "../secret.py", "escape.py", "src/" + "a" * 5000, "src/evil\\path.py"]
+        rows = [function(path, "bad", 40) for path in bad]
+        rows += [function("src/legacy.py", "x" * 5000, 40) for _ in range(100)]
+        self.write_report([*[function("src/ok.py", "ok", 1)] * 2000, *rows])
+        data = self.run_helper("dry_run")["data"]
+        self.assertEqual(["src/legacy.py"], [row["file"] for row in data["failing_files"]])
+        self.assertLessEqual(len(data["failing_files"][0]["functions"]), 20)
+        self.assertLessEqual(len(data["failing_files"][0]["functions"][0]["name"]), 200)
+
+    def test_unbounded_complexities_do_not_raise_the_proposed_ceiling(self) -> None:
+        self.write_report([function("src/bad.py", "bad", 10**100)] * 10)
+        data = self.run_helper("dry_run")["data"]
+        self.assertEqual(10, data["proposal"]["thresholds"]["complexity"])
+        self.assertEqual("nist-235", data["proposal"]["basis"]["method"])
+
+    def test_malformed_functions_fall_back_and_apply_consumes_the_report(self) -> None:
+        for functions in (None, 5, "bad", {}, [None, 4, "bad"]):
+            with self.subTest(functions=functions):
+                (self.root / REPORT_FILE).write_text(json.dumps({"functions": functions}), encoding="utf-8")
+                dry = self.run_helper("dry_run")
+                assert_runner_response(self, dry, "ok", 0)
+                self.assertEqual("nist-235", dry["data"]["proposal"]["basis"]["method"])
+                response = self.run_helper("apply", confirmed=False)
+                assert_runner_response(self, response, "ok", 0)
+                self.assertTrue(response["data"]["report_removed"])
+                self.assertFalse((self.root / REPORT_FILE).exists())
+
+    def test_preview_includes_measured_crap_failures(self) -> None:
+        rows = self.ten_functions()
+        rows[0]["crap"] = 90
+        rows[0]["file"] = "src/uncovered.py"
+        self.write_report(rows)
+        data = self.run_helper("dry_run")["data"]
+        self.assertIn("src/uncovered.py", [row["file"] for row in data["failing_files"]])
+
+    def test_a_yes_cannot_write_a_changed_proposal(self) -> None:
+        self.write_report(self.ten_functions())
+        shown = self.run_helper("dry_run")["data"]
+        self.write_report([function("src/changed.py", "changed", 20)] * 10)
+        response = self.run_helper("apply", confirmed=True, proposal_digest=shown.get("proposal_digest", "missing"))
+        self.assertEqual("expected_failure", response["status"])
+        self.assertEqual("proposal_changed", response["data"]["outcome"])
+        self.assertFalse((self.root / GATES_FILE).exists())
+        self.assertFalse((self.root / REPORT_FILE).exists())
+
     def test_the_readiness_record_carries_the_observed_quality_gates_source(self) -> None:
         def source() -> dict:
             record = envelope("write-readiness-record", "dry_run", {
@@ -182,9 +233,10 @@ class QualityGatesProposalTest(unittest.TestCase):
                 rows = re.findall(r"\| `propose-quality-gates` \| `(dry_run|apply)` \| `(\{[^`]*\})`", skill)
                 self.assertEqual({"dry_run", "apply"}, {mode for mode, _ in rows})
                 for _, body in rows:
-                    self.assertLessEqual(set(json.loads(body)), {"measured", "confirmed"})
+                    self.assertLessEqual(set(json.loads(body)), {"measured", "confirmed", "proposal_digest"})
                 step = skill.split("### 6.4 Propose the Quality Gates", 1)[1].split("\n### ", 1)[0]
                 self.assertLess(skill.index("### 6.4 "), skill.index("### 6.5 "))
+                self.assertIn("skip the coverage run", step)
                 for phrase in ("quality_gate_confirmation", "writes nothing", "Ask once"):
                     self.assertIn(phrase, step)
                 question = {"claude": "AskUserQuestion", "codex": "request_user_input"}
@@ -193,7 +245,25 @@ class QualityGatesProposalTest(unittest.TestCase):
 
 
 def build_suite() -> unittest.TestSuite:
-    return unittest.TestSuite([unittest.defaultTestLoader.loadTestsFromTestCase(QualityGatesProposalTest)])
+    tests = (
+        QualityGatesProposalTest.test_proposal_lets_about_ninety_percent_of_measured_functions_pass_and_names_the_failures,
+        QualityGatesProposalTest.test_nothing_measured_proposes_the_nist_ceiling_of_ten,
+        QualityGatesProposalTest.test_the_file_is_written_only_on_a_yes_and_validates,
+        QualityGatesProposalTest.test_a_decline_writes_nothing_and_stores_no_decline,
+        QualityGatesProposalTest.test_only_a_boolean_yes_confirms,
+        QualityGatesProposalTest.test_a_confirmed_file_is_never_overwritten_and_an_invalid_one_is_replaced_only_on_a_yes,
+        QualityGatesProposalTest.test_a_symlinked_target_is_refused_and_the_linked_file_stays_untouched,
+        QualityGatesProposalTest.test_the_worst_files_come_first_when_the_list_is_capped,
+        QualityGatesProposalTest.test_paths_and_display_are_bounded_to_the_checkout,
+        QualityGatesProposalTest.test_unbounded_complexities_do_not_raise_the_proposed_ceiling,
+        QualityGatesProposalTest.test_malformed_functions_fall_back_and_apply_consumes_the_report,
+        QualityGatesProposalTest.test_preview_includes_measured_crap_failures,
+        QualityGatesProposalTest.test_a_yes_cannot_write_a_changed_proposal,
+        QualityGatesProposalTest.test_the_readiness_record_carries_the_observed_quality_gates_source,
+        QualityGatesProposalTest.test_scaffold_documents_the_request_and_the_step_on_each_host,
+    )
+    assert {test.__name__ for test in tests} == set(unittest.defaultTestLoader.getTestCaseNames(QualityGatesProposalTest))
+    return unittest.TestSuite(QualityGatesProposalTest(test.__name__) for test in tests)
 
 
 def main() -> int:

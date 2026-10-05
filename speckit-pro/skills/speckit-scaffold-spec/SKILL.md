@@ -41,7 +41,7 @@ These examples name the runner's contract; the steps below determine when a chec
 | `resolve-scaffold-worktree-placement` | `read_only` | `{"branch_name": "<branch-name>"}` (add `worktree_root_override` only when the user supplied one) |
 | `scaffold-answers` | `read_only` | `{"answers_file": "<answers-file>", "spec_id": "<SPEC-ID>"}` |
 | `propose-quality-gates` | `dry_run` | `{"measured": true}` (`false` when nothing was measured) |
-| `propose-quality-gates` | `apply` | `{"measured": true, "confirmed": true}` (`confirmed` is `false` after a decline) |
+| `propose-quality-gates` | `apply` | `{"measured": true, "confirmed": true, "proposal_digest": "<dry-run digest>"}` (`confirmed` is `false` after a decline) |
 | `write-readiness-record` | `apply` | `{"host": "<host>", "execution_mode": "<mode>", "plugin_revision": "<version>", "observations": [{"item": "<item>", "status": "<status>", "evidence_source": "<one line>", "values": {"probe": "<observed-result>"}}]}` (add `action` and `files` per observation; add `host_version` when reported) |
 
 ## Capability discovery & grounding
@@ -1020,7 +1020,10 @@ outcome.
 2. Measure with the tools already installed. Run steps 1 and 2 of the
    [coach's complexity-ceiling measurement](../speckit-coach/references/quality-gates-guide.md),
    set `--report` to `.specify/quality-gates-report.json`, and skip the install
-   offers: scaffold installs nothing. A missing tool, an unsupported language,
+   offers and skip the coverage run: scaffold installs nothing and executes no
+   repository tests. Reuse existing coverage data; for Python, pass an empty
+   coverage JSON when none exists, and disclose that CRAP then assumes zero
+   coverage. A missing tool, an unsupported language,
    or a failed run means `measured: false`.
 3. Run `propose-quality-gates` in `dry_run` again with that `measured` value.
    Print `data.proposal` (the thresholds, `basis.method` and
@@ -1036,12 +1039,19 @@ outcome.
 <!-- /host -->
 <!-- host:codex: Codex asks through request_user_input, with a foreground chat fallback -->
    Interactive mode: ask with `request_user_input`, or in free text in an
-   active foreground chat, recommending yes.
+   active foreground chat, recommending yes. Use one question with id
+   `quality_gate_confirmation`, header `Quality gates`, and Yes/No options
+   with descriptions. Convert only an explicit Yes to `confirmed: true`;
+   an empty, cancelled, or unavailable response authorizes no write. In an
+   unattended run, use answers-file mode; never open an interactive question.
 <!-- /host -->
    Answers-file mode: use the file's `quality_gate_confirmation` boolean and
    ask nothing.
 5. Run `propose-quality-gates` in `apply` with the same `measured` value and
-   `confirmed` set to the answer. On `data.outcome` of `written`, tell the user
+   `confirmed` set to the answer and `proposal_digest` from the dry run whose
+   proposal was displayed (also in answers-file mode). On `data.outcome` of
+   `proposal_changed`, report that nothing was written and continue on shipped
+   defaults; the next scaffold offers again. On `written`, tell the user
    the file is theirs to edit through the coach flow. On `declined`, tell the
    user autopilot runs on the shipped defaults and the next scaffold offers
    again. A decline writes nothing and stores nothing; do not record it.

@@ -655,7 +655,7 @@
         "value": "speckit_pro_runner/helpers/quality_gates_proposal.py",
         "display": "speckit_pro_runner/helpers/quality_gates_proposal.py"
       },
-      "sha256": "931333d74f447a616f1db1101a17407bb038a51af37e7759947f3e5c1024ee66"
+      "sha256": "e2a34f0ed189d9efd15565930f0cc0d5dc7153bd3d6548984f7fac0aec9bb255"
     },
     {
       "path": {
@@ -807,7 +807,7 @@
         "value": "speckit_pro_runner/quality_gates.py",
         "display": "speckit_pro_runner/quality_gates.py"
       },
-      "sha256": "ef5f9661467a565b0828b4adb9be2454d19218be896e7fc015fe858ec54c19f5"
+      "sha256": "14164a46656dad2774366a3d899ed13cf00a76ab3c2ba01e29d4491bbeed7ce5"
     },
     {
       "path": {

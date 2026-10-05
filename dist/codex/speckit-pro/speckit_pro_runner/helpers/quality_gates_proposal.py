@@ -11,6 +11,7 @@ file that is already valid is never overwritten.
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,13 +19,17 @@ from typing import Any
 
 from .. import quality_gates
 from ..atomic_write import write_bytes_atomic
+from ..canonical_json import canonical_bytes
 from ..envelope import diagnostic, response
 from ..strict_input import SelectionError
 from ..trusted_io import find_repo_root, trusted_text
 
 REPORT_FILE = ".specify/quality-gates-report.json"
-INPUT_KEYS = frozenset({"measured", "confirmed"})
+INPUT_KEYS = frozenset({"measured", "confirmed", "proposal_digest"})
 MAX_FAILING_FILES = 20
+MAX_FAILING_FUNCTIONS = 20
+MAX_PATH_LENGTH = 400
+MAX_NAME_LENGTH = 200
 
 
 def measured_report(root: Path, measured: bool) -> Any:
@@ -36,21 +41,38 @@ def measured_report(root: Path, measured: bool) -> Any:
         return {}
 
 
+def report_path(value: Any, root: Path) -> str | None:
+    """Return a bounded checkout-relative display path, including for in-checkout absolute inputs."""
+    if (not isinstance(value, str) or not value or len(value) > MAX_PATH_LENGTH
+            or "\\" in value or any(ord(char) < 32 or ord(char) == 127 for char in value)):
+        return None
+    path = Path(value)
+    if ".." in path.parts:
+        return None
+    try:
+        return (root / path).resolve().relative_to(root.resolve()).as_posix()
+    except (OSError, ValueError, RuntimeError):
+        return None
+
+
 def failing_files(report: Any, ceiling: int, root: Path) -> list[dict[str, Any]]:
     """Group the measured functions above ``ceiling`` by repository-relative file."""
     groups: dict[str, list[dict[str, Any]]] = {}
-    for fn in report.get("functions", []) if isinstance(report, dict) else []:
-        complexity = fn.get("complexity") if isinstance(fn, dict) else None
-        if (not isinstance(complexity, int) or isinstance(complexity, bool) or complexity <= ceiling
-                or not isinstance(fn.get("file"), str)):
+    for fn in quality_gates.measured_functions(report):
+        complexity = fn["complexity"]
+        crap = fn.get("crap")
+        crap_failure = (isinstance(crap, (int, float)) and not isinstance(crap, bool)
+                        and quality_gates.SHIPPED_DEFAULTS["crap"] < crap <= 10**18)
+        path = report_path(fn.get("file"), root)
+        if path is None or (complexity <= ceiling and not crap_failure):
             continue
-        # crap-score runs from the repository root, so a relative path is relative to it.
-        path = Path(fn["file"])
-        try:
-            path = (path if path.is_absolute() else root / path).resolve().relative_to(root.resolve())
-        except (OSError, ValueError):
-            path = Path(fn["file"])
-        groups.setdefault(path.as_posix(), []).append({"name": str(fn.get("name", "?")), "complexity": complexity})
+        name = fn.get("name")
+        name = name if isinstance(name, str) else "?"
+        row: dict[str, Any] = {"name": "".join(char for char in name[:MAX_NAME_LENGTH] if char.isprintable()),
+               "complexity": complexity}
+        if crap_failure:
+            row["crap"] = crap
+        groups.setdefault(path, []).append(row)
     rows: list[dict[str, Any]] = [{"file": name, "functions": sorted(groups[name], key=lambda row: -row["complexity"])}
             for name in groups]
     return sorted(rows, key=lambda row: (-row["functions"][0]["complexity"], row["file"]))
@@ -70,6 +92,8 @@ def input_problem(request: Any) -> str | None:
         return "apply needs confirmed: true after a yes, false after a decline"
     if request.mode == "dry_run" and "confirmed" in inputs:
         return "a dry run takes no confirmed answer"
+    if request.mode == "apply" and inputs.get("confirmed") is True and not isinstance(inputs.get("proposal_digest"), str):
+        return "a yes needs proposal_digest from the displayed dry run"
     return None
 
 
@@ -82,11 +106,15 @@ def describe(root: Path, entry: Any, request: Any) -> tuple[dict[str, Any], Any]
                             "writes_state": False, "file": quality_gates.FILE_PATH, "status": status,
                             "problems": problems, "proposal": proposal}
     if proposal is not None:
+        data["proposal_digest"] = hashlib.sha256(canonical_bytes(proposal)).hexdigest()
         rows = failing_files(report, proposal["thresholds"]["complexity"], root)
         data["failing_files"] = rows[:MAX_FAILING_FILES]  # worst offenders first
         data["failing_files_truncated"] = len(rows) > MAX_FAILING_FILES
         data["failing_file_count"] = len(rows)
         data["failing_function_count"] = sum(len(row["functions"]) for row in rows)
+        for row in data["failing_files"]:
+            row["functions_truncated"] = len(row["functions"]) > MAX_FAILING_FUNCTIONS
+            row["functions"] = row["functions"][:MAX_FAILING_FUNCTIONS]
     return data, proposal
 
 
@@ -112,6 +140,13 @@ def run_quality_gates_proposal_helper(entry: Any, request: Any) -> dict[str, Any
         return response("ok", request_id=request.request_id, data=data)
     data["outcome"] = "already_present" if proposal is None else "declined"
     if proposal is not None and request.inputs["confirmed"]:
+        if request.inputs["proposal_digest"] != data["proposal_digest"]:
+            data["outcome"] = "proposal_changed"
+            data["report_removed"] = consume_report(root)
+            return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diagnostic(
+                "proposal_changed", "The proposal changed after confirmation; no file was written.",
+                remediation_summary="Continue on shipped defaults; the next scaffold offers again.",
+                remediation_actions=["Report the changed proposal.", "Rerun scaffold to confirm a fresh proposal."])])
         try:
             write_proposal(root, proposal)
         except (OSError, SelectionError) as error:
