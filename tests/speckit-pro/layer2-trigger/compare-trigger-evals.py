@@ -12,24 +12,6 @@ import trigger_comparison as comparison
 from trigger_evidence import write_json_once
 
 
-def rebind_identities(path: Path, out: Path | None = None) -> dict:
-    """Replace each identity digest in a draft with the current one, changing nothing else."""
-    text = path.read_text(encoding="utf-8")
-    manifest = comparison.read_json(path)
-    if manifest.get("schema_version") == "trigger-experiment-template/v1":
-        comparison._require(out is not None, "template binding requires a separate --out manifest")
-        bound = comparison.bind_template(manifest)
-        write_json_once(out, bound)
-        return {"rebound": True, "identities": bound["identities"]}
-    comparison._require(out is None, "--out is only supported for unbound templates")
-    current = comparison.snapshot_identities(comparison.measurement_snapshot())
-    for key, old in json.loads(text)["identities"].items():
-        comparison._require(text.count(old) == 1, f"{key} identity digest is not unique in the draft")
-        text = text.replace(old, current[key])
-    path.write_text(text, encoding="utf-8")
-    return {"rebound": True, "identities": current}
-
-
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -58,14 +40,10 @@ def main(argv=None) -> int:
             snapshot = comparison.measurement_snapshot()
             result = {"identities": comparison.snapshot_identities(snapshot), "input_snapshot": snapshot}
         elif args.command == "rebind":
-            result = rebind_identities(args.manifest, args.out)
+            result = comparison.rebind_identities(args.manifest, args.out)
         elif args.command == "validate":
             manifest = comparison.read_json(args.manifest)
-            cases = comparison.validate_inventory_binding(manifest, comparison.read_json(args.inventory))
-            import hashlib
-            comparison._require(hashlib.sha256(args.inventory.read_bytes()).hexdigest() == manifest["inventory_sha256"], "inventory digest mismatch")
-            comparison._require(manifest["identities"] == comparison.snapshot_identities(comparison.measurement_snapshot()),
-                                "stale experiment identities; bind a fresh draft before approval")
+            cases = comparison.validate_current_manifest(manifest, args.inventory)
             result = {"manifest_valid": True, "cases": len(cases), "identities_current": True,
                       "output_directory_bound": isinstance(manifest.get("output_directory"), str), "native_launch_authorized": False}
         elif args.command == "index":

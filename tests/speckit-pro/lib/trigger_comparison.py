@@ -65,6 +65,24 @@ def snapshot_identities(snapshot: dict) -> dict:
     return {key: json_digest(snapshot[key]) for key in ("observer", "catalog", "fixture")}
 
 
+def rebind_identities(path: Path, out: Path | None = None) -> dict:
+    """Materialize a template, or refresh only the identities of a concrete draft."""
+    text = path.read_text(encoding="utf-8")
+    manifest = read_json(path)
+    if manifest.get("schema_version") == "trigger-experiment-template/v1":
+        _require(out is not None, "template binding requires a separate --out manifest")
+        bound = bind_template(manifest)
+        evidence.write_json_once(out, bound)
+        return {"rebound": True, "identities": bound["identities"]}
+    _require(out is None, "--out is only supported for unbound templates")
+    current = snapshot_identities(measurement_snapshot())
+    for key, old in json.loads(text)["identities"].items():
+        _require(text.count(old) == 1, f"{key} identity digest is not unique in the draft")
+        text = text.replace(old, current[key])
+    path.write_text(text, encoding="utf-8")
+    return {"rebound": True, "identities": current}
+
+
 def bind_template(template: dict) -> dict:
     """Freeze an unbound planning template without changing its reviewed inputs."""
     _require(template.get("schema_version") == "trigger-experiment-template/v1",
@@ -203,6 +221,16 @@ def validate_inventory_binding(manifest: dict, inventory: dict) -> dict:
     _require(all(active_roster.get(key) == row for key, row in cases.items()), "selected roster is not contained in frozen inventory")
     if manifest["qualification_scope"] == "full":
         _require(set(cases) == set(active_roster) and {row["host"] for row in cases.values()} == {"claude", "codex"}, "full qualification requires the entire dual-host inventory")
+    return cases
+
+
+def validate_current_manifest(manifest: dict, inventory_path: Path) -> dict:
+    """Check a concrete draft against the retained inventory and current inputs."""
+    cases = validate_inventory_binding(manifest, read_json(inventory_path))
+    _require(hashlib.sha256(inventory_path.read_bytes()).hexdigest() == manifest["inventory_sha256"],
+             "inventory digest mismatch")
+    _require(manifest["identities"] == snapshot_identities(measurement_snapshot()),
+             "stale experiment identities; bind a fresh draft before approval")
     return cases
 
 
