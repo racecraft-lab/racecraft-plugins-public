@@ -167,10 +167,22 @@ def publication_probe(plugin: str, attack: str) -> None:
         if attack.startswith("rollback-link") and not fired and source == "previous":
             fired = True
             fd = kwargs["src_dir_fd"]
-            original_replace(source, "saved-previous", src_dir_fd=fd, dst_dir_fd=fd)
+            if attack in {"rollback-link-bytes-before", "rollback-link-bytes-after"}:
+                if attack == "rollback-link-bytes-after":
+                    result = original_link(source, destination, **kwargs)
+                changed = original_open(source, os.O_WRONLY | os.O_TRUNC, dir_fd=fd)
+                try:
+                    os.write(changed, b"attacker backup bytes")
+                finally:
+                    os.close(changed)
+                if attack == "rollback-link-bytes-after":
+                    events.append({"event": "rollback-link", "anchored": True})
+                    return result
+            else:
+                original_replace(source, "saved-previous", src_dir_fd=fd, dst_dir_fd=fd)
             if attack == "rollback-link-symlink":
                 os.symlink("../../outside/implementation-plan.html", source, dir_fd=fd)
-            else:
+            elif attack not in {"rollback-link-bytes-before", "rollback-link-bytes-after"}:
                 changed = original_open(source, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600, dir_fd=fd)
                 try:
                     os.write(changed, b"attacker rollback bytes")
@@ -187,7 +199,7 @@ def publication_probe(plugin: str, attack: str) -> None:
         os.replace = replaced_basename
     if attack == "rename-cleanup":
         os.stat = statted
-    if attack == "post-replace-failure" or attack.startswith("rollback-link"):
+    if attack in {"post-replace-failure", "rollback-bytes"} or attack.startswith("rollback-link"):
         from speckit_pro_runner.helpers import artifact_publication
         original_binding = artifact_publication.verify_directory_binding
         binding_calls = 0
@@ -196,7 +208,12 @@ def publication_probe(plugin: str, attack: str) -> None:
             nonlocal binding_calls
             binding_calls += 1
             if binding_calls == 2:
-                events.append({"event": "post-replace-failure", "anchored": True})
+                if attack == "rollback-bytes":
+                    for backup in Path("artifacts").glob(".artifact-recovery-*/previous"):
+                        backup.write_text("attacker backup bytes")
+                    events.append({"event": "rollback-bytes", "anchored": True})
+                else:
+                    events.append({"event": "post-replace-failure", "anchored": True})
                 raise ValueError("injected final directory validation failure")
             return original_binding(*args)
 
@@ -461,6 +478,32 @@ class PublicationInputTests(PublicationFixture):
                     expected = "expected_failure" if identity == [0, 0] else "input_error"
                     self.assertEqual(result["status"], expected, result)
                     self.assertEqual(self.page.read_text(), "untouched original")
+
+    def test_rollback_binds_bytes_through_the_link_boundary(self) -> None:
+        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            for attack in ("rollback-link-bytes-before", "rollback-link-bytes-after"):
+                with self.subTest(plugin=plugin, attack=attack):
+                    self.page.write_text("untouched original")
+                    result = self.publish(attack, plugin)
+                    self.assertEqual(result["status"], "expected_failure", result)
+                    self.assertFalse(self.page.exists())
+                    self.assertTrue(any(path.read_text() == "untouched original"
+                                        for path in self.page.parent.glob(".artifact-recovery-*/previous")))
+                    self.assertEqual(json.loads((self.root / "probe-events.json").read_text()),
+                                     [{"event": "post-replace-failure", "anchored": True},
+                                      {"event": "rollback-link", "anchored": True}])
+
+    def test_rollback_rejects_same_inode_backup_tampering(self) -> None:
+        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            with self.subTest(plugin=plugin):
+                self.page.write_text("untouched original")
+                result = self.publish("rollback-bytes", plugin)
+                self.assertEqual(result["status"], "expected_failure", result)
+                self.assertFalse(self.page.exists())
+                self.assertTrue(any(path.read_text() == "untouched original"
+                                    for path in self.page.parent.glob(".artifact-recovery-*/previous")))
+                self.assertEqual(json.loads((self.root / "probe-events.json").read_text()),
+                                 [{"event": "rollback-bytes", "anchored": True}])
 
     def test_post_replace_failure_restores_the_previous_page(self) -> None:
         for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):

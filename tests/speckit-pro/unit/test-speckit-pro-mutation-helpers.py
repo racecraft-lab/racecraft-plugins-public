@@ -8479,6 +8479,22 @@ This line must not be copied.
             self.assertFalse((git_root / "nested").exists())
             self.assertFalse(response["data"]["writes_state"])
 
+    def test_failed_atomic_write_reports_retained_state_to_existing_callers(self) -> None:
+        from speckit_pro_runner import atomic_write
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            git_root = git_root.resolve()
+            target = git_root / "target.md"
+            target.write_bytes(b"previous bytes")
+            with self.assertRaises(atomic_write.WritePreconditionChanged) as caught:
+                atomic_write.write_bytes_atomic(target, b"proposed bytes", trust_root=git_root,
+                                                expected_snapshot={"exists": True, "digest": "stale", "mode": 0o644})
+            self.assertTrue(atomic_write.atomic_write_cleanup_errors(caught.exception))
+            self.assertEqual(target.read_bytes(), b"previous bytes")
+            self.assertTrue(any(path.read_bytes() == b"proposed bytes"
+                                for path in git_root.glob(".artifact-recovery-*/entry")))
+
     def test_apply_reports_temp_capture_failure_after_failed_replace(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:

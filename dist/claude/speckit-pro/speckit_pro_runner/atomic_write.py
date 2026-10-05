@@ -6,10 +6,9 @@ import hashlib
 import os
 import stat
 import uuid
-from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from .trusted_io import (
     is_relative_to,
@@ -209,7 +208,9 @@ def write_bytes_atomic_at(parent_fd: int, target_name: str, content: bytes,
             os.close(previous[0])
         try:
             if written_stat is not None:
-                quarantine_entry_at(parent_fd, tmp_name, [written_stat.st_dev, written_stat.st_ino])
+                retained = quarantine_entry_at(parent_fd, tmp_name, [written_stat.st_dev, written_stat.st_ino])
+                if retained is not None:
+                    tmp_cleanup_errors.append(f"{retained}:retained")
         except OSError:
             tmp_cleanup_errors.append(f"{tmp_name}:OSError")
         if tmp_fd >= 0:
@@ -289,6 +290,8 @@ def restore_quarantined_entry_at(source_fd: int, source: str, parent_fd: int, na
 
 
 def write_open_file(fd: int, content: bytes) -> None:
+    os.lseek(fd, 0, os.SEEK_SET)
+    os.ftruncate(fd, 0)
     with os.fdopen(os.dup(fd), "wb") as stream:
         stream.write(content)
         stream.flush()
@@ -315,7 +318,7 @@ def read_open_file(fd: int, limit: int | None = None) -> bytes:
     return content
 
 
-def preserve_previous_bytes_at(parent_fd: int, name: str) -> tuple[int, int] | None:
+def preserve_previous_bytes_at(parent_fd: int, name: str) -> tuple[int, int, bytes] | None:
     snapshot = read_file_snapshot_at(parent_fd, name)
     if not snapshot["exists"]:
         return None
@@ -325,7 +328,7 @@ def preserve_previous_bytes_at(parent_fd: int, name: str) -> tuple[int, int] | N
                      snapshot["mode"], dir_fd=held)
         try:
             write_open_file(fd, snapshot["content"])
-            return held, fd
+            return held, fd, snapshot["content"]
         except BaseException:
             os.close(fd)
             raise
@@ -334,25 +337,31 @@ def preserve_previous_bytes_at(parent_fd: int, name: str) -> tuple[int, int] | N
         raise
 
 
-def recover_failed_publication_at(parent_fd: int, name: str, previous: tuple[int, int] | None) -> None:
+def recover_failed_publication_at(parent_fd: int, name: str, previous: tuple[int, int, bytes] | None) -> None:
     # Capture untrusted final bytes without deleting them, then restore only into an absent slot.
     quarantine_entry_at(parent_fd, name)
     if previous is not None:
-        source_fd, file_fd = previous
-        restore_quarantined_entry_at(source_fd, "previous", parent_fd, name)
+        source_fd, file_fd, content = previous
         try:
-            verify_restored_file_at(parent_fd, name, file_fd)
+            if read_open_file(file_fd, len(content)) != content:
+                raise WritePreconditionChanged("previous page bytes changed; original retained in recovery")
+            restore_quarantined_entry_at(source_fd, "previous", parent_fd, name)
+            verify_restored_file_at(parent_fd, name, file_fd, content)
         except OSError:
+            write_open_file(file_fd, content)
+            if read_open_file(file_fd, len(content)) != content:
+                raise WritePreconditionChanged("previous page repair failed") from None
             quarantine_entry_at(parent_fd, name)
             raise
 
 
-def verify_restored_file_at(parent_fd: int, name: str, file_fd: int) -> None:
+def verify_restored_file_at(parent_fd: int, name: str, file_fd: int, content: bytes) -> None:
     final = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=parent_fd)
     try:
         written, observed = os.fstat(file_fd), os.fstat(final)
-        if (written.st_dev, written.st_ino) != (observed.st_dev, observed.st_ino):
-            raise WritePreconditionChanged("rollback slot changed; previous page retained in recovery")
+        if ((written.st_dev, written.st_ino) != (observed.st_dev, observed.st_ino)
+                or read_open_file(final, len(content)) != content):
+            raise WritePreconditionChanged("rollback slot identity or bytes changed; previous page retained in recovery")
     finally:
         os.close(final)
 
