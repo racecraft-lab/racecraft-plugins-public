@@ -159,13 +159,11 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
         applies to the top-level agent only, never every wave member;
         null preserves installed agent defaults until #1184. Claude consumes
         model per call and keeps effort in the agent; Codex consumes both.
-    hooks: list[{extension: str, command: str}], the project's optional
-        extension commands registered for the phase's before_<phase> then
-        after_<phase> events in .specify/extensions.yml (enabled, condition
-        met), by priority within an event, each once, to run after the phase
-        and record in the decisions list. Only env conditions are evaluated;
-        any other condition is an error. Mandatory hooks belong to the loaded
-        command, never listed; Clarify loads no command and lists none.
+    hooks: list[{extension: str, command: str}], the phase's optional hooks from
+        .specify/extensions.yml: before_<phase> then after_<phase>, enabled,
+        condition met (env conditions only; any other raises), each once, to
+        run after the phase and record in the decisions list. Mandatory hooks
+        belong to the loaded command; Clarify loads none and lists none.
 
     Empty reserved fields activate no new behavior. Input errors return no data;
     an uninterpretable hook file is internal_failure, never a guessed list.
