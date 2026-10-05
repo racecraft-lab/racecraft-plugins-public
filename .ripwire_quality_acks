@@ -185,6 +185,7 @@ ack dead-code:new-symbol 207d7d54ac9b23f6 0 cid=540d202eb4541283 unittest discov
 ack dead-code:new-symbol 20c7472b4068cce6 0 cid=ed6f4c434285c7a8 Referenced as a GuardPolicy field value (PATH_GUARD_POLICY in path_guard.py, RUNTIME_GUARD_POLICY in runtime_guard.py) and called through the policy by the shared scan; the dead-code scan does not follow a function passed as a keyword argument
 ack dead-code:new-symbol 2124217de4c0d1cf 0 cid=2a3b8935b49039b0 unittest discovers these test methods through loadTestsFromTestCase in main(); no direct caller is expected
 ack dead-code:new-symbol 218dfa21eafb17e1 0 cid=4bdd3f199287800f unittest discovers these test methods through loadTestsFromTestCase in main(); no direct caller is expected
+ack dead-code:new-symbol 222c0601354f1231 0 cid=b24fa1adeb131d50 unittest discovers test_ methods by name, and the nested walk helper is passed as a mock side effect, so dead-code is a false positive
 ack dead-code:new-symbol 22931f4f928ebfcb 0 cid=837b46cee75a413d Referenced only as values in the _SEPARATE_DERIVATIONS dispatch table (test-native-functional-catalog.py:893-894), which the dead-code scan does not follow
 ack dead-code:new-symbol 22ac1a9aa7cd30b1 0 cid=9d711a0bb198057c unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 23162b065674f774 0 cid=41626097e320b46f unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
@@ -463,6 +464,7 @@ ack dead-code:new-symbol 840f02331d3c95ee 0 cid=94ad8d92809c630b Test methods ar
 ack dead-code:new-symbol 845e906687657975 0 cid=cc1e49ec697f30d7 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 8463435dd44c073c 0 cid=019ab343c1f3ec2d unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 8480996d36d5a476 0 cid=56eb6f0bc1437fd2 Called from test-feedback-sweep-isolation.py through a sys.path import that the dead-code scan does not resolve (--uses=git_stdout lists 11 call sites)
+ack dead-code:new-symbol 8554bd0fe6cc4af8 0 cid=b8877a9a5463b6f5 unittest discovers test_ methods by name, and the nested walk helper is passed as a mock side effect, so dead-code is a false positive
 ack dead-code:new-symbol 8576a74115dea108 0 cid=b0bb560d05e87c2f unittest discovers test_ methods through loadTestsFromTestCase in main(); no direct caller is expected
 ack dead-code:new-symbol 85913ae26272967e 0 cid=eb89c1fa9789e589 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 85a95a78db3f6771 0 cid=b984335012f985ef unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
@@ -610,6 +612,7 @@ ack dead-code:new-symbol aa3681a3827cda59 0 cid=b42b01e07e182144 unittest discov
 ack dead-code:new-symbol aa4bd971b3d68832 0 cid=eba9ee1a70bb88b3 Handlers are registered as values in the PR_EMISSION_HANDLERS table in helpers/registry.py, and test_ methods are found by unittest by name; neither is a direct call the dead-code scan can see
 ack dead-code:new-symbol aaeea3b96a598c31 0 cid=d8ccc54b8f9c88aa unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol ab1235ead503cc0e 0 cid=ec0152cef6f55666 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol ab1936854b772882 0 cid=b8693fc6d804b47a unittest discovers test_ methods by name, and the nested walk helper is passed as a mock side effect, so dead-code is a false positive
 ack dead-code:new-symbol ab4f9b874611d0e1 0 cid=b9502373361eb402 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol abf840655f2f9dee 0 cid=c548a6b79cbee142 by=tests/speckit-pro/unit/test-phase-lock.py unittest discovers and runs test_ methods by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol acb7f82add63a34b 0 cid=a9257fd836ddad3b unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
@@ -623,6 +626,7 @@ ack dead-code:new-symbol aefe6b1971432259 0 cid=74b4ddc0097bba4e by=tests/specki
 ack dead-code:new-symbol af3f66b153a826e8 0 cid=0cb382bbb9217933 unittest discovers test_ methods by name through the counted runner, so no static caller exists; the methods are live tests
 ack dead-code:new-symbol af50187bb114d094 0 cid=b4160dfeeae7132a Test methods are discovered by unittest, so a static call graph sees no caller.
 ack dead-code:new-symbol afe5a8df9a0ef467 0 cid=d41102a9ff9050ea unittest discovers these test methods through loadTestsFromTestCase in main(); no direct caller is expected
+ack dead-code:new-symbol b0234865b0b6531c 0 cid=2b0f60089243374e unittest discovers test_ methods by name, and the nested walk helper is passed as a mock side effect, so dead-code is a false positive
 ack dead-code:new-symbol b05744b0d6ab44f4 0 cid=47e234ababcc3916 unittest discovers test_ methods through its test loader, so they have no static caller
 ack dead-code:new-symbol b09d28f0d656827d 0 cid=ca60ea7fc2b92af1 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol b0ba5a87d68508e5 0 cid=47c498c2d80defb7 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
@@ -825,6 +829,7 @@ ack dead-code:new-symbol f7aefef0f8d2bd83 0 cid=7e939ba1f6e3f43e unittest discov
 ack dead-code:new-symbol f80a935473e41ac6 0 cid=c2f0587a21c0146e unittest discovers and runs test_ methods by name, and a patched-in subprocess stand-in is passed as side_effect; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol f84d3c72e9bdebbe 0 cid=06800fc7f0e2d193 dead-code: unittest discovers test_ methods by name
 ack dead-code:new-symbol f898e85221887feb 0 cid=552f4af49f875e96 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol f8ca30f65015777e 0 cid=b40827dd106f5c78 unittest discovers test_ methods by name, and the nested walk helper is passed as a mock side effect, so dead-code is a false positive
 ack dead-code:new-symbol f920da978a9b5f86 0 cid=310427494407b2f2 unittest discovers test_ methods by name and the module's __main__ suite loads this class, so the method is not dead code
 ack dead-code:new-symbol f99278f0c5678b0d 0 cid=e3ac1c49d9ad6895 by=tests/speckit-pro/unit/test-phase-lock.py unittest discovers and runs test_ methods and setUp hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol f99aca674960d6dd 0 cid=414f8fa68a0d0212 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
