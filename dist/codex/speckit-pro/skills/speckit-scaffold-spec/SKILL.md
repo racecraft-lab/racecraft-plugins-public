@@ -916,7 +916,7 @@ outcome.
 4. Ask once whether to write the proposal.
    Interactive mode: ask with `request_user_input`, or in free text in an
    active foreground chat, recommending yes. Use one question with id
-   `quality_gate_confirmation`, header `Quality gates`, and Yes/No options
+   `quality_gate_confirmation`, header `Quality gate`, and Yes/No options
    with descriptions. Convert only an explicit Yes to `confirmed: true`;
    an empty, cancelled, or unavailable response authorizes no write. In an
    unattended run, use answers-file mode; never open an interactive question.

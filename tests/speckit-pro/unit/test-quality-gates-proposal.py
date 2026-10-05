@@ -98,6 +98,11 @@ def ten_functions() -> list[dict[str, object]]:
     return [*simple, function("src/legacy.py", "tangle", 40)]
 
 
+def listing(root) -> dict[str, bytes]:
+    return {path.relative_to(root).as_posix(): path.read_bytes()
+            for path in sorted(root.rglob("*")) if path.is_file() and not path.is_symlink()}
+
+
 class QualityGatesProposalTest(unittest.TestCase):
     def setUp(self) -> None:
         scratch = [self.enterContext(tempfile.TemporaryDirectory()) for _ in range(2)]
@@ -114,13 +119,10 @@ class QualityGatesProposalTest(unittest.TestCase):
         body = envelope("propose-quality-gates", mode, {"measured": True, **inputs})
         return run_runner(body, cwd=self.root, extra_env={"PATH": str(self.tools)})[1]
 
-    def listing(self) -> dict[str, bytes]:
-        return {path.relative_to(self.root).as_posix(): path.read_bytes()
-                for path in sorted(self.root.rglob("*")) if path.is_file() and not path.is_symlink()}
 
     def test_proposal_lets_about_ninety_percent_of_measured_functions_pass_and_names_the_failures(self) -> None:
         self.write_report(ten_functions())
-        before = self.listing()
+        before = listing(self.root)
         response = self.run_helper("dry_run")
         assert_runner_response(self, response, "ok", 0)
         data = response["data"]
@@ -132,7 +134,7 @@ class QualityGatesProposalTest(unittest.TestCase):
         self.assertEqual([{"file": "src/legacy.py", "functions": [{"name": "tangle", "complexity": 40}], "functions_truncated": False}],
                          data["failing_files"])
         self.assertEqual(1, data["failing_function_count"])
-        self.assertEqual(before, self.listing(), "a dry run writes nothing")
+        self.assertEqual(before, listing(self.root), "a dry run writes nothing")
         assert_preview_includes_measured_crap_failures(self)
 
     def test_nothing_measured_proposes_the_nist_ceiling_of_ten(self) -> None:
@@ -168,22 +170,22 @@ class QualityGatesProposalTest(unittest.TestCase):
 
     def test_a_decline_writes_nothing_and_stores_no_decline(self) -> None:
         self.write_report(ten_functions())
-        untouched = {path: content for path, content in self.listing().items() if path != REPORT_FILE}
+        untouched = {path: content for path, content in listing(self.root).items() if path != REPORT_FILE}
         response = self.run_helper("apply", confirmed=False)
         assert_runner_response(self, response, "ok", 0)
         self.assertEqual("declined", response["data"]["outcome"])
         self.assertFalse(response["data"]["writes_state"])
-        self.assertEqual(untouched, self.listing(), "only the scratch report may disappear")
+        self.assertEqual(untouched, listing(self.root), "only the scratch report may disappear")
 
     def test_only_a_boolean_yes_confirms(self) -> None:
         self.write_report(ten_functions())
-        before = self.listing()
+        before = listing(self.root)
         for value in ("yes", 1, None):
             with self.subTest(confirmed=value):
                 response = self.run_helper("apply", confirmed=value)
                 assert_runner_response(self, response, "input_error", 2)
         assert_runner_response(self, self.run_helper("apply"), "input_error", 2)
-        self.assertEqual(before, self.listing())
+        self.assertEqual(before, listing(self.root))
 
     def test_a_confirmed_file_is_never_overwritten_and_an_invalid_one_is_replaced_only_on_a_yes(self) -> None:
         gates = self.root / GATES_FILE
@@ -256,6 +258,8 @@ class QualityGatesProposalTest(unittest.TestCase):
                 self.assertIn("skip the coverage run", step)
                 for phrase in ("quality_gate_confirmation", "writes nothing", "Ask once"):
                     self.assertIn(phrase, step)
+                if host == "codex":
+                    self.assertLessEqual(len(re.search(r"header `([^`]+)`", step).group(1)), 12)
                 question = {"claude": "AskUserQuestion", "codex": "request_user_input"}
                 self.assertIn(question[host], step)
                 self.assertNotIn(question["codex" if host == "claude" else "claude"], step)
