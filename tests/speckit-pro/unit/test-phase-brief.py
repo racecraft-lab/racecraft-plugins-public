@@ -6,11 +6,14 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
+from unittest.mock import patch
 from types import SimpleNamespace
 import unittest
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO / "speckit-pro"), str(REPO / "tests/speckit-pro/lib")]
+from speckit_pro_runner.helpers import phase_brief
 from speckit_pro_runner.helpers.registry import dispatch_helper  # noqa: E402
 from test_result import run_counted  # noqa: E402
 from host_skill_views import host_skill_root  # noqa: E402
@@ -20,6 +23,11 @@ def dispatch_brief(inputs, request_id=None):
     """Exercise the public dispatch seam with a complete caller-owned input set."""
     return dispatch_helper(SimpleNamespace(helper_id="phase-brief", operation="phase-brief",
                                            mode="read_only", request_id=request_id, inputs=inputs))
+
+
+REFERENCES = REPO / "speckit-pro/skills/speckit-autopilot/references"
+WHOLE_REFERENCES = ("capability-discovery.md", "grounding.md", "execution-efficiency.md", "consensus-protocol.md")
+SLICE_AGENTS = ("clarify-executor", "checklist-executor", "analyze-executor")
 
 
 class PhaseBriefTests(unittest.TestCase):
@@ -149,8 +157,77 @@ class PhaseBriefTests(unittest.TestCase):
                 self.assertEqual(brief["inputs"]["workflow_file"], "docs/workflow.md")
                 self.assertEqual(brief["inputs"]["feature_dir"], "specs/example")
                 self.assertEqual(brief["readable_files"], ["docs/workflow.md", ".specify/memory/constitution.md", ".specify/extensions.yml"] + ["specs/example/" + name for name in artifacts])
-                self.assertEqual([brief[key] for key in ("slices", "waves", "model", "hooks")], [[], [], None, []])
+                self.assertEqual([brief[key] for key in ("waves", "model", "hooks")], [[], None, []])
+                self.assertEqual(bool(brief["slices"]), agent in SLICE_AGENTS)
+
+
+class PhaseBriefSliceTests(unittest.TestCase):
+    def test_unreadable_reference_diagnostic_is_relative(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(phase_brief, "REFERENCES", Path(directory)):
+            result = dispatch_brief({"phase": "Clarify", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"})
+        self.assertEqual(result["status"], "internal_failure")
+        message = result["diagnostics"][0]["message"]
+        self.assertNotIn(directory, message)
+        self.assertIn("capability-discovery.md", message)
+        self.assertIn("Capability Categories", message)
+
+    def test_section_fences_and_heading_boundaries(self):
+        # CommonMark 0.31.2 sections 4.2 and 4.5; return original bytes as lines.
+        cases = (
+            ("## Target", "```", "~~~\n## inside", "```"),
+            ("## Target", "~~~~", "~~~\n## inside", "~~~~~"),
+            ("## Target", "````", "```\n## inside", "`````"),
+            ("## Target", "```", "``` info\n## inside", "```"),
+            ("## Target", "```", "    ```\n## inside", "```"),
+            (" ## Target", " ```python", "  ### inside", "   ``` \t"),
+            ("  ##\tTarget ###", "   ~~~info", "## inside", " ~~~~"),
+            ("   ## Target", "    ```", "    ## code", ""),
+            ("## Target", "```bad`info", "body", ""),
+        )
+        with tempfile.TemporaryDirectory() as directory, patch.object(phase_brief, "REFERENCES", Path(directory)):
+            for heading, opener, content, closer in cases:
+                with self.subTest(heading=heading, opener=opener, content=content):
+                    expected = "\n".join((heading, opener, content, closer)).rstrip()
+                    (Path(directory) / "sample.md").write_text(expected + "\n  ## Next\nexcluded\n")
+                    self.assertEqual(phase_brief.reference_section("sample.md", "Target"), expected)
+            for boundary in ("#", "##\tNext", "   ## Next ###"):
+                with self.subTest(boundary=boundary):
+                    (Path(directory) / "sample.md").write_text("## Target\nbody\n" + boundary + "\nexcluded\n")
+                    self.assertEqual(phase_brief.reference_section("sample.md", "Target"), "## Target\nbody")
+
+    def test_unclosed_reference_fence_fails_closed(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(phase_brief, "REFERENCES", Path(directory)):
+            for opener, false_close in (("````", "```"), ("~~~", "```"), ("```", "``` info")):
+                with self.subTest(opener=opener, false_close=false_close):
+                    (Path(directory) / "sample.md").write_text("## Target\n" + opener + "\n" + false_close + "\n## Next\nexcluded\n")
+                    with self.assertRaisesRegex(ValueError, "unclosed fence"):
+                        phase_brief.reference_section("sample.md", "Target")
+
+    def test_executor_briefs_carry_their_slices(self):
+        sources = [(REFERENCES / name).read_text() for name in WHOLE_REFERENCES]
+        for phase in ("Clarify", "Checklist", "Analyze"):
+            with self.subTest(phase=phase):
+                slices = dispatch_brief({"phase": phase, "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"})["data"]["slices"]
+                self.assertGreaterEqual(len(slices), 3)
+                for text in slices:
+                    self.assertIsInstance(text, str)
+                    self.assertTrue(any(text in source for source in sources), "slice is not a verbatim excerpt: " + text[:60])
+                    self.assertFalse(any(text.strip() == source.strip() for source in sources), "slice is a whole reference")
+                joined = "\n".join(slices)
+                for needle in ("## Research Broker Rule", "## Discovery Step", "## Inventory Disclosure", "## Security Keywords", "## G1", "### Category tags"):
+                    self.assertIn(needle, joined)
+                whole = sum(len(source.splitlines()) for source in sources)
+                self.assertLess(len(joined.splitlines()), whole // 8)
+
+    def test_both_hosts_insert_the_slices_verbatim(self):
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                skill = (host_skill_root(host) / "speckit-autopilot/SKILL.md").read_text()
+                loop = skill.split("## Step 2: Main Execution Loop", 1)[1]
+                self.assertIn("brief.slices", loop)
+                self.assertIn("verbatim", loop.split("brief.slices", 1)[1][:400])
 
 
 if __name__ == "__main__":
-    sys.exit(run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(PhaseBriefTests), label="test-phase-brief"))
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, PhaseBriefSliceTests))
+    sys.exit(run_counted(suite, label="test-phase-brief"))
