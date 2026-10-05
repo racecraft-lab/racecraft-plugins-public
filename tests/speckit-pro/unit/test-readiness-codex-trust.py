@@ -99,20 +99,11 @@ class ReadinessCodexTrustTest(ReadinessCase):
         legacy = {"item": "hooks", "evidence_source": "definition review",
                   "hooks": [dict(hook="PreToolUse", defined=True, trust="untrusted")]}
         assert_runner_response(self, self.run_helper([legacy, shipped_trust()]), "input_error", 2)
-
-    def test_empty_legacy_codex_hooks_are_refused_beside_exact_evidence(self) -> None:
-        for legacy in ({"item": "hooks", "evidence_source": "definition review", "hooks": []},
-                       {"item": "hooks", "evidence_source": "definition review"}):
-            with self.subTest(legacy=legacy):
-                assert_runner_response(self, self.run_helper([legacy, shipped_trust()]), "input_error", 2)
-                self.assertEqual("unknown", self.items(self.run_helper([legacy]))["hooks"]["status"])
-
-    def test_untrusted_legacy_codex_hooks_never_recommend_trusting_them(self) -> None:
-        legacy = {"item": "hooks", "evidence_source": "definition review",
-                  "hooks": [dict(hook="PreToolUse", defined=True, trust="untrusted")]}
-        item = self.item(legacy)
-        self.assertEqual("unavailable", item["status"])
-        self.assertEqual(LEGACY_HOOK_ACTION, item["action"])
+        for empty in ({"item": "hooks", "evidence_source": "definition review", "hooks": []},
+                      {"item": "hooks", "evidence_source": "definition review"}):
+            with self.subTest(empty=empty):
+                assert_runner_response(self, self.run_helper([empty, shipped_trust()]), "input_error", 2)
+                self.assertEqual("unknown", self.items(self.run_helper([empty]))["hooks"]["status"])
 
     def test_legacy_codex_hooks_cannot_verify_without_handler_hashes(self) -> None:
         from speckit_pro_runner.helpers import readiness_host_items
@@ -121,6 +112,9 @@ class ReadinessCodexTrustTest(ReadinessCase):
         _, observed = readiness_host_items.host_item(legacy, "codex", "2026-01-01T00:00:00Z", "revision")
         self.assertEqual("unknown", observed["status"])
         self.assertEqual("unknown", self.items(self.run_helper([legacy]))["hooks"]["status"])
+        legacy["hooks"][0]["trust"] = "untrusted"  # an unverified hook is never told to be trusted
+        self.assertEqual(("unavailable", LEGACY_HOOK_ACTION), tuple(
+            self.items(self.run_helper([legacy]))["hooks"][key] for key in ("status", "action")))
 
     def test_blocked_delegation_and_denied_consent_actions_preserve_controls(self) -> None:
         for field, value, action in (
