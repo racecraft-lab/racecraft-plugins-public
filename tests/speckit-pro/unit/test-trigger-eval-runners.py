@@ -801,8 +801,8 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             mock.patch.object(claude.time, "sleep"),
         ):
             self.assertFalse(claude.cleanup_child(child, observations=observations))
-        self.assertEqual(killpg.call_args_list, [mock.call(child.pid, 0)] * 3)
-        self.assertEqual([item["errno"] for item in observations], [1, 3, 3])
+        self.assertEqual(killpg.call_args_list, [mock.call(child.pid, 0)] * 2)
+        self.assertEqual([item["errno"] for item in observations], [1, 3])
 
     @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
     def test_claude_initial_eperm_then_presence_uses_existing_cleanup(self) -> None:
@@ -841,6 +841,45 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
         ):
             self.assertFalse(claude.cleanup_child(child))
         self.assertTrue(all(call.args == (child.pid, 0) for call in killpg.call_args_list))
+
+    @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
+    def test_claude_cleanup_esrch_is_terminal_across_all_windows(self) -> None:
+        # A completed/reaped leader permits PGID reuse, unlike an unreaped leader.
+        windows = (
+            ("natural-grace", [0]),
+            ("initial-probe", [0]),
+            ("term-send", [0, signal.SIGTERM]),
+            ("term-wait", [0, signal.SIGTERM, 0]),
+            ("kill-entry", [0, signal.SIGTERM, 0, 0]),
+            ("kill-send", [0, signal.SIGTERM, 0, 0, signal.SIGKILL]),
+            ("kill-wait", [0, signal.SIGTERM, 0, 0, signal.SIGKILL, 0]),
+            ("final-probe", [0, signal.SIGTERM, 0, 0, signal.SIGKILL, 0, 0]),
+        )
+        for window, original_calls in windows:
+            with self.subTest(window=window):
+                child = FakePopen(b"", returncode=0)
+                calls, observations = [], []
+
+                def reused_group(pgid: int, signum: int) -> None:
+                    self.assertEqual(pgid, child.pid)
+                    self.assertEqual(child.poll(), 0, "leader must be reaped before reuse")
+                    calls.append(signum)
+                    if len(calls) == len(original_calls):
+                        raise ProcessLookupError(3, "original group absent")
+                    # Subsequent probes and sends succeed against an unrelated group.
+
+                with (
+                    mock.patch.object(trigger_process.os, "getpgrp", return_value=child.pid + 1),
+                    mock.patch.object(trigger_process.os, "killpg", side_effect=reused_group),
+                    mock.patch.object(trigger_process.time, "sleep"),
+                ):
+                    signaled = trigger_process.cleanup_child(
+                        child, observations=observations, timeout=0,
+                        grace=1 if window == "natural-grace" else 0,
+                    )
+                self.assertEqual(calls, original_calls, "no probe or signal may follow ESRCH")
+                self.assertEqual(signaled, any(original_calls))
+                self.assertEqual([item["errno"] for item in observations], [3])
 
     @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
     def test_claude_post_signal_permission_probe_requires_later_absence(self) -> None:
@@ -888,9 +927,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
         cases = (
             ("initial", None, None, [], 1),
             ("term-send", signal.SIGTERM, PermissionError(1, "signal send denied"), None, 1),
-            ("term-absent", signal.SIGTERM, ProcessLookupError(3, "signal target absent"), [signal.SIGTERM], 1),
             ("kill-send", signal.SIGKILL, PermissionError(1, "signal send denied"), None, 1),
-            ("kill-absent", signal.SIGKILL, ProcessLookupError(3, "signal target absent"), [signal.SIGTERM, signal.SIGKILL], 1),
             ("post-kill-eacces", None, None, [signal.SIGTERM, signal.SIGKILL], 13),
         )
         for fault, failed_signal, signal_error, probe_after, probe_errno in cases:

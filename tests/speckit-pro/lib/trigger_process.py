@@ -83,9 +83,12 @@ def cleanup_child(
     # zombie members are reaped, so an EPERM probe then is unresolved, not fatal.
     signal_delivered = False
     last_probe_error: PermissionError | None = None
+    absent = False  # The first ESRCH is terminal; a later answer may be a reused PGID.
 
     def running(*, natural_grace: bool = False) -> bool:
-        nonlocal last_probe_error
+        nonlocal last_probe_error, absent
+        if absent:
+            return False
         child.poll()
         if os.name == "nt":
             return child.returncode is None
@@ -95,6 +98,7 @@ def cleanup_child(
         try:
             os.killpg(child.pid, 0)
         except ProcessLookupError:
+            absent = True
             if observations is not None:
                 observations.append({"pgid": child.pid, "errno": errno.ESRCH, "elapsed_seconds": time.monotonic() - started})
             return False
@@ -119,6 +123,11 @@ def cleanup_child(
         # SIGTERM can race with zombie reaping just as SIGKILL can; only the
         # latest signal's delivery licenses treating EPERM as unresolved.
         signal_delivered = terminate(child, signum)
+        if not signal_delivered:
+            # An ESRCH send ends all phases, including later probes.
+            if observations is not None and os.name != "nt":
+                observations.append({"pgid": child.pid, "errno": errno.ESRCH, "elapsed_seconds": time.monotonic() - started})
+            return signaled
         deadline = time.monotonic() + timeout
         while running() and time.monotonic() < deadline:
             time.sleep(0.05)
