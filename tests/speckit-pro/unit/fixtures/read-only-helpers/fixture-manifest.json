@@ -67,6 +67,16 @@
       "rollback": "Remove the answers-file flag and helper together."
     },
     {
+      "helper_id": "phase-brief", "operation": "phase-brief",
+      "promotion_status": "python_authoritative", "failure_classes": ["invalid_input"],
+      "rejected_stdout_schema": {"status": "input_error", "data": "object"},
+      "deterministic_remediation": {"summary": "Correct the phase and its context inputs.", "actions": ["Use a supported planning phase with workflow_file and feature_dir."]},
+      "subprocess_policy": {"shell": false, "spawns": false},
+      "path_boundary_policy": {"boundary": "lexical_metadata_only", "rejects": ["parent_traversal", "absolute_feature_dir", "control_characters"]},
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/read-only-helpers/requests/phase-brief.json",
+      "rollback": "Remove phase-brief consumption and registration together."
+    },
+    {
       "helper_id": "helper-registry-dispatch",
       "operation": "helper-registry-dispatch",
       "promotion_status": "python_authoritative",
