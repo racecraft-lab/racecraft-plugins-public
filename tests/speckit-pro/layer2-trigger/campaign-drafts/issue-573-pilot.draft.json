@@ -76,8 +76,8 @@
     }
   },
   "identities": {
-    "observer": "42f97166e63f49487099556ce9915954b1873d9d1e5c8e29ab5e7a315273ab5d",
-    "catalog": "a21bf9afb66b85e58e35472800bd1075d1623d95bddc026bbd108642ad776771",
+    "observer": "13095f4639bc9dbbc71fb2881d8caafb6e33fa9d617ee4963dc189da7dbf7cf9",
+    "catalog": "5c73a4bbf53c1a7d7854d79f23412efea546d4746bef47fc4e13c3125fa3e617",
     "fixture": "c094071e16a77dab28275236262066f77b78fd9ee7cdc3cbfbcb78147b36edfe"
   },
   "controlled_difference": {
