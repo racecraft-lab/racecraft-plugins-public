@@ -52,6 +52,21 @@ def actor_environment(root: Path) -> dict[str, str]:
     return env
 
 
+def supervisor_actor_absent(record: dict, actor_group: int | None) -> bool:
+    try:
+        cleanup = record["process_group_cleanup"]
+        return cleanup["verified_absent"] is True and cleanup["pgid"] == actor_group
+    except (KeyError, TypeError):
+        return False
+
+
+def supervisor_record_absence(result_path: Path, actor_group: int | None) -> bool:
+    try:
+        return supervisor_actor_absent(json.loads(result_path.read_bytes()), actor_group)
+    except (OSError, ValueError, RecursionError):
+        return False
+
+
 def finish_supervisor_groups(actor_group: int | None, actor_absent: bool, process: subprocess.Popen) -> None:
     for owned_group in dict.fromkeys((actor_group, process.pid)):
         if owned_group == actor_group and actor_absent:
@@ -1105,8 +1120,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                     stdout, stderr = process.communicate(timeout=8)
                     self.assertEqual(process.returncode, 0, (stdout, stderr))
                     result = json.loads(result_path.read_text())
-                    actor_absent = result["process_group_cleanup"]["verified_absent"] is True and (
-                        result["process_group_cleanup"]["pgid"] == actor_group)
+                    actor_absent = supervisor_actor_absent(result, actor_group)
                     self.assertEqual(result["interruption_signal"], sent.name)
                     self.assertEqual(result["status"], "interrupted", json.dumps(result, sort_keys=True))
                     self.assertIs(result["handlers_restored"], True)
@@ -1114,6 +1128,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                     self.assertEqual(result["process_group_cleanup"]["pgid"], actor_group)
                     self.assertIn(b"before supervisor signal", (root / "evidence/stdout.bin").read_bytes())
                 finally:
+                    actor_absent = actor_absent or supervisor_record_absence(result_path, actor_group)
                     finish_supervisor_groups(actor_group, actor_absent, process)
 
     def test_capture_signal_handler_installation_failure_stops_before_launch(self) -> None:
@@ -1365,6 +1380,20 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
         )
 
 
+class SupervisorReceiptTests(unittest.TestCase):
+    def test_unknown_receipts_do_not_supply_absence(self) -> None:
+        records = ("{", "[]", "{}", "[" * 1100 + "0" + "]" * 1100, json.dumps({"process_group_cleanup": None}),
+                   json.dumps({"process_group_cleanup": {"verified_absent": True, "pgid": FAKE_PGID + 1}}),
+                   json.dumps({"process_group_cleanup": {"verified_absent": 1, "pgid": FAKE_PGID}}))
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "result.json"
+            self.assertFalse(supervisor_record_absence(path, FAKE_PGID))
+            for record in records:
+                with self.subTest(record=record):
+                    path.write_text(record)
+                    self.assertFalse(supervisor_record_absence(path, FAKE_PGID))
+
+
 class SupervisorFixtureAbsenceTests(unittest.TestCase):
     def test_supervisor_finalizer_deduplicates_group_identity(self) -> None:
         process = mock.Mock(pid=FAKE_PGID)
@@ -1404,9 +1433,14 @@ class SupervisorFixtureAbsenceTests(unittest.TestCase):
         variants = (("matching", FAKE_PGID, True, "interrupted", []),
                     ("other-group", FAKE_PGID + 9, True, "interrupted", [signal.SIGKILL]),
                     ("failed-assertion", FAKE_PGID, True, "invalid", []),
+                    ("nonzero-supervisor", FAKE_PGID, True, "interrupted", []),
+                    ("failed-communicate", FAKE_PGID, True, "interrupted", []),
                     ("not-absent", FAKE_PGID, False, "interrupted", [signal.SIGKILL]))
         for variant, pgid, absent, status, expected in variants:
             state.update(pgid=pgid, absent=absent, status=status)
+            process.returncode = 1 if variant == "nonzero-supervisor" else 0
+            process.communicate.side_effect = [subprocess.TimeoutExpired("supervisor", 8), (b"", b"")] if (
+                variant == "failed-communicate") else None
             actor_calls.clear()
             with (
                 self.subTest(variant=variant),
@@ -1419,7 +1453,7 @@ class SupervisorFixtureAbsenceTests(unittest.TestCase):
                 if variant == "matching":
                     case.test_real_supervisor_signals_preserve_raw_evidence_and_restore_handlers()
                 else:
-                    with self.assertRaises(AssertionError):
+                    with self.assertRaises(subprocess.TimeoutExpired if variant == "failed-communicate" else AssertionError):
                         case.test_real_supervisor_signals_preserve_raw_evidence_and_restore_handlers()
                 self.assertEqual(actor_calls, expected, "only this actor's verified absence is terminal")
 
@@ -1511,6 +1545,7 @@ def main() -> int:
     suite = unittest.TestSuite([
         unittest.defaultTestLoader.loadTestsFromTestCase(FunctionalHeadlessRunnerTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(SupervisorFixtureAbsenceTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(SupervisorReceiptTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(SharedCodexIsolationTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(HeadlessCaseCatalogContractTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(RunCaseTests),
