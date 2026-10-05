@@ -781,7 +781,8 @@ for phase in PHASES starting from first_pending:
                prompt: <brief.inputs.instruction + workflow prompt + brief context + brief.slices>)
          Implement: use the implementation executor and task-specific TDD prompt.
     4. Run consensus (Clarify/Checklist/Analyze only) — see Rule 6
-    5. Run each brief.hooks entry once and record the batch in the decisions list.
+    5. Specify, Plan, Checklist, Tasks and Analyze only: run each brief.hooks entry once
+       and record the batch in the decisions list.
        Clarify and Implement only: run after_<phase> hooks from .specify/extensions.yml
     6. Validate the gate (G1-G7): run runner helper
        `helper_id=validate-gate operation=validate-gate mode=read_only`

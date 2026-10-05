@@ -413,6 +413,10 @@ class PhaseBriefHookTests(unittest.TestCase):
                 loop = skill.split("## Step 2: Main Execution Loop", 1)[1].split("\n## ", 1)[0]
                 steps = loop.split("for phase in PHASES starting from first_pending:", 1)[1].split("6. Validate the gate", 1)[0]
                 self.assertIn("brief.hooks", steps)
+                self.assertIn("Specify, Plan, Checklist, Tasks and Analyze only: run each brief.hooks entry once", steps)
+                if host == "codex":
+                    self.assertIn("Specify, Plan, Checklist, Tasks and Analyze only: run each brief.hooks entry once",
+                                  (root / "references/phase-execution.md").read_text())
                 self.assertNotRegex(steps, r"(?m)^\s*2\. Run before_<phase> hooks\s*from")
                 self.assertNotRegex(steps, r"(?m)^\s*5\. Run after_<phase> hooks\s*$")
                 for text in (skill, (root / "references/phase-execution.md").read_text()):
