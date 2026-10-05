@@ -103,7 +103,7 @@
         "value": "speckit_pro_runner/codex_agent_generator.py",
         "display": "speckit_pro_runner/codex_agent_generator.py"
       },
-      "sha256": "15491ab8dcf8cc6f133834bee193ec47fd052f8f22440aae3398495f94d0c01c"
+      "sha256": "43158370aa0ff67bfb994ac2bfa7afb5f56fc6c8978410431831c31b2182b73e"
     },
     {
       "path": {
@@ -631,7 +631,7 @@
         "value": "speckit_pro_runner/helpers/phase_brief.py",
         "display": "speckit_pro_runner/helpers/phase_brief.py"
       },
-      "sha256": "d9b5309fa119788d3973b16fef62fc1e919b2a541c425888d793d60be543a5ec"
+      "sha256": "9797eea2afa90c92a1065d5d7a99b459cda3461cfb90c1d87ce7ea1e34c6e9e6"
     },
     {
       "path": {

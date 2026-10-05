@@ -79,7 +79,8 @@ def render_codex_agent(name: str, claude_text: str, codex_record: dict[str, Any]
         "developer_instructions": instructions,
     }
     if values["model_reasoning_effort"] is None:
-        # Codex applies a file's effort over the spawn value, so a null inventory effort leaves it unset for the brief.
+        # Custom-file effort takes precedence; omit it so the brief's explicit spawn effort can apply.
+        # https://learn.chatgpt.com/docs/agent-configuration/subagents#custom-agents
         del values["model_reasoning_effort"]
     lines = [f"{key} = {_basic_string(value)}" for key, value in values.items() if key != "developer_instructions"]
     text = GENERATED_NOTICE.format(source=source) + "\n".join(lines)

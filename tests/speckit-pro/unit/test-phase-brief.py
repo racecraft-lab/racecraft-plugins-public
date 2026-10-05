@@ -189,8 +189,9 @@ class PhaseBriefModelTests(unittest.TestCase):
 
 class CodexEffectiveEffortTests(unittest.TestCase):
     def test_codex_dispatch_runs_the_effort_the_table_names(self):
-        # Codex applies an agent file's effort over the spawn value (OpenAI subagent docs), so the effort a
-        # dispatch actually runs is the file's when it sets one and the brief's spawn value otherwise.
+        # Custom-file effort wins over explicit spawn effort, which wins over [agents] defaults.
+        # https://learn.chatgpt.com/docs/agent-configuration/subagents#custom-agents
+        # This is a static configuration check, not a live Codex runtime precedence test.
         table = {"Specify": "medium", "Clarify": "medium", "Plan": "high", "Checklist": "medium", "Tasks": "medium", "Analyze": "medium"}
         for phase, expected in table.items():
             with self.subTest(phase=phase):

@@ -20,7 +20,9 @@ PHASES = {
     "Analyze": ("analyze-executor", "G6", ("spec.md", "plan.md", "tasks.md", "checklists/")),
 }
 # The shared phase-executor serves three phases at different efforts (issue 1150). Its Codex file sets no
-# effort, since a file effort overrides the spawn value, so the brief names the Codex effort per phase;
+# effort: custom-file values take precedence over explicit spawn values (which override [agents] defaults).
+# https://learn.chatgpt.com/docs/agent-configuration/subagents#custom-agents
+# The brief therefore names the Codex effort per phase;
 # Specify and Tasks follow a written spec and also run Sonnet on Claude Code. Other phases use their agent's inventory row.
 SPEC_DRIVEN_MODEL = {"claude": {"model": "sonnet", "effort": "high"}, "codex": {"model": "gpt-6-sol", "effort": "medium"}}
 PHASE_MODEL_OVERRIDES = {"Specify": SPEC_DRIVEN_MODEL, "Tasks": SPEC_DRIVEN_MODEL, "Plan": {"codex": {"model": "gpt-6-sol", "effort": "high"}}}
