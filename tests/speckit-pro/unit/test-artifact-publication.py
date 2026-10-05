@@ -78,9 +78,7 @@ def publication_probe(plugin: str, attack: str) -> None:
 
 class PublicationFixture(unittest.TestCase):
     def setUp(self) -> None:
-        scratch = ROOT / ".git/scratch"
-        scratch.mkdir(exist_ok=True)
-        temporary = tempfile.TemporaryDirectory(dir=scratch)
+        temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
         (self.root / ".specify").mkdir()

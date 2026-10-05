@@ -21,7 +21,8 @@ INPUTS = frozenset({"repo_root", "plan_file", "research_file", "design_concept_f
                     "verify_written_paths"})
 INPUT_ERRORS = (ValueError, KeyError, TypeError, OSError, RuntimeError)
 ALTERNATIVES_TITLE = re.compile(r"Alternatives(?: considered| offered)?\s*:?", re.IGNORECASE)
-ALTERNATIVES_FIELD = re.compile(r"^\*\*Alternatives(?: considered| offered)?\s*:?\*\*\s*:?\s*(.*)$", re.IGNORECASE)
+ALTERNATIVES_FIELD = re.compile(r"^(?:[-*+]\s+)?(?:\*\*Alternatives(?: considered| offered)?\s*:?\*\*\s*:?|"
+                                r"Alternatives(?: considered| offered)?\s*:)\s*(.*)$", re.IGNORECASE)
 HEADING = re.compile(r"^(#{1,6})\s+(.+)$")
 EMPTY_ALTERNATIVE = re.compile(r"^(?:none\b|no alternatives\b|n/a\b|not applicable\b|tbd\b|todo\b|<|"
                                r"\[(?:TODO|TBD|NEEDS CLARIFICATION)\]$)", re.IGNORECASE)
@@ -54,10 +55,32 @@ MANIFEST_SCHEMA = {"type": "object", "properties": MANIFEST_FIELDS,
                    "required": list(MANIFEST_FIELDS), "additionalProperties": False}
 
 
+def visible_text(line: str, commented: bool) -> tuple[str, bool]:
+    """Drop HTML comment spans; the flag carries an open comment to the next line."""
+    kept = []
+    while line:
+        if commented:
+            end = line.find("-->")
+            if end < 0:
+                break
+            line, commented = line[end + 3:], False
+        else:
+            start = line.find("<!--")
+            if start < 0:
+                kept.append(line)
+                break
+            kept.append(line[:start])
+            line, commented = line[start + 4:], True
+    return "".join(kept), commented
+
+
 def planning_lines(text: str) -> Iterator[str]:
-    """Planning records exclude fenced examples from both selection signals."""
+    """Planning records exclude fenced and commented examples from both selection signals."""
     fence: str | None = None
+    commented = False
     for raw in text.splitlines():
+        if fence is None:
+            raw, commented = visible_text(raw, commented)
         previous = fence
         fence = next_fence(fence, raw)
         if previous is None and fence is None:

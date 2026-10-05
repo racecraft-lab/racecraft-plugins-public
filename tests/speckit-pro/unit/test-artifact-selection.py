@@ -19,9 +19,7 @@ from test_result import run_counted  # noqa: E402
 
 class SelectionFixture(unittest.TestCase):
     def setUp(self) -> None:
-        scratch = ROOT / ".git/scratch"
-        scratch.mkdir(exist_ok=True)
-        temporary = tempfile.TemporaryDirectory(dir=scratch)
+        temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
         self.gallery: Path | None = None
@@ -209,6 +207,8 @@ class ArtifactSelectionTests(SelectionFixture):
              ["implementation-plan", "spec-explainer"]),
             ("plan_file", "plan.md", "## Declared File Operations\n- NEW src/new.py\n"
              "```markdown\n- MODIFIED src/example.py\n```\n", [], ["implementation-plan", "spec-explainer"]),
+            ("plan_file", "plan.md", "## Declared File Operations\n- NEW src/new.py\n<!--\n  - MODIFIED <path>\n-->\n"
+             "<!-- - MODIFIED src/inline.py -->\n", [], ["implementation-plan", "spec-explainer"]),
             ("research_file", "research.md", "**Alternatives considered**: a separate schema.\n",
              ["competing_approaches"], ["implementation-plan", "spec-explainer", "code-approaches"]),
             ("design_concept_file", "design.md", "**Alternatives offered:**\n- Keep the old schema.\n",
@@ -222,7 +222,9 @@ class ArtifactSelectionTests(SelectionFixture):
 
     def test_links_and_subheadings_record_real_alternatives(self) -> None:
         for text in ("**Alternatives considered**:\n- [Separate schema](https://example.com/schema)\n",
-                     "## Alternatives considered\n### Separate schema\nKeep a dedicated schema.\n"):
+                     "## Alternatives considered\n### Separate schema\nKeep a dedicated schema.\n",
+                     "- Decision: reuse\n- Alternatives considered: a separate schema.\n",
+                     "- **Alternatives considered**: a separate schema.\n", "Alternatives considered: a separate schema.\n"):
             with self.subTest(text=text):
                 (self.root / "research.md").write_text(text, encoding="utf-8")
                 self.assertEqual(self.select(research_file="research.md")["signals"], ["competing_approaches"])
@@ -233,7 +235,8 @@ class ArtifactSelectionTests(SelectionFixture):
                      "**Alternatives considered**: None.\n", "**Alternatives offered:**\n- N/A\n",
                      "**Alternatives considered**: None.\nCompatibility requires the existing approach.\n",
                      "## Alternatives considered\nNone.\nCompatibility requires the existing approach.\n",
-                     "## Alternatives\n[TODO]\n", "```markdown\n**Alternatives considered**: Example.\n```\n"):
+                     "## Alternatives\n[TODO]\n", "- Alternatives considered: None\n",
+                     "Alternatives were weighed in review.\n", "```markdown\n**Alternatives considered**: Example.\n```\n"):
             with self.subTest(text=text):
                 (self.root / "research.md").write_text(text, encoding="utf-8")
                 (self.root / "design.md").write_text(text, encoding="utf-8")
