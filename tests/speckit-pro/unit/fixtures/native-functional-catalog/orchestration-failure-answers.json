@@ -11,6 +11,6 @@
   "functional.speckit-autopilot.test-only-fix-no-replan": {"first_test_fix_allowance": "run_wide", "replan_required": true, "operator_event_required": true, "second_test_fix_allowance": "increment", "second_test_fix_ineligible": "none", "product_code_fix_ineligible": "none"},
   "functional.speckit-autopilot.resolved-deferral-leaves-request": {"deferral_unit": "FR-002", "resolved_by": null, "entry_kept_in_ledger": false, "finalize_outcome": "human_stop", "stack_ready": false, "resolved_unit_in_request": true, "second_exception_refused": false},
   "functional.speckit-autopilot.missing-quality-tool-install-hint": {"question_offered": true, "install_commands_run": [], "outcomes": {"COMPLEXITY": "unanswered", "MUTATION": "unanswered", "DEPENDENCY_RULES": "unanswered"}, "decisions_for_you": []},
-  "functional.speckit-autopilot.red-baseline-repaired-by-implement-executor": {"repair_allowance_spent": true, "owner": "operator", "next_action": "stop", "rerun_command": "", "phase_one_starts": true, "question_offered": true},
+  "functional.speckit-autopilot.red-baseline-repaired-by-implement-executor": {"repair_allowance_spent": true, "owner": "operator", "next_action": "stop", "rerun_command": "", "first_task_starts": true, "question_offered": true},
   "functional.speckit-autopilot.blocked-action-defers": {"deferred_tasks": ["T007"], "continuing_tasks": [], "fallback_applied": true, "mid_run_question": true}
 }
