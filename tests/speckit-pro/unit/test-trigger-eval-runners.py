@@ -7,6 +7,7 @@ import ast
 import contextlib
 import hashlib
 import io
+import itertools
 import json
 import os
 import shutil
@@ -837,24 +838,28 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
         self.assertTrue(all(call.args == (child.pid, 0) for call in killpg.call_args_list))
 
     @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
-    def test_claude_post_kill_permission_probe_requires_later_absence(self) -> None:
-        claude = import_script(CLAUDE_RUNNER, "layer2_claude_post_kill_probe")
-        for persistent in (False, True):
-            with self.subTest(persistent=persistent):
+    def test_claude_post_signal_permission_probe_requires_later_absence(self) -> None:
+        # macOS answers EPERM for a group whose last member died from a signal
+        # but is not yet reaped; only a later absence settles the cleanup.
+        claude = import_script(CLAUDE_RUNNER, "layer2_claude_post_signal_probe")
+        for delivered, persistent in itertools.product((signal.SIGTERM, signal.SIGKILL), (False, True)):
+            with self.subTest(signal=delivered.name, persistent=persistent):
                 child = FakePopen(b"", returncode=0)
                 sent = []
-                post_kill_probes = 0
+                settling_probes = 0
                 observations = []
 
                 def probe(pgid: int, signum: int) -> None:
-                    nonlocal post_kill_probes
+                    nonlocal settling_probes
                     self.assertEqual(pgid, child.pid)
                     if signum:
                         sent.append(signum)
-                    elif signal.SIGKILL in sent:
-                        post_kill_probes += 1
-                        if persistent or post_kill_probes == 1:
-                            raise PermissionError(1, "post-kill probe unresolved")
+                        if signum == signal.SIGKILL and delivered in sent[:-1] and persistent:
+                            raise PermissionError(1, "zombie-only group refuses the signal")
+                    elif delivered in sent:
+                        settling_probes += 1
+                        if persistent or settling_probes == 1:
+                            raise PermissionError(1, "post-signal probe unresolved")
                         raise ProcessLookupError(3, "group absent")
 
                 with (
@@ -866,53 +871,15 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     mock.patch.object(claude.time, "sleep"),
                 ):
                     if persistent:
-                        with self.assertRaisesRegex(OSError, "post-kill probe unresolved"):
+                        with self.assertRaisesRegex(OSError, "unresolved|refuses the signal"):
                             claude.cleanup_child(child, observations=observations)
                     else:
                         self.assertTrue(claude.cleanup_child(child, observations=observations))
-                self.assertEqual(sent, [signal.SIGTERM, signal.SIGKILL])
-                self.assertGreaterEqual(post_kill_probes, 2)
+                settled_after_term = delivered == signal.SIGTERM and not persistent
+                self.assertEqual(sent, [signal.SIGTERM] if settled_after_term else [signal.SIGTERM, signal.SIGKILL])
+                self.assertGreaterEqual(settling_probes, 2)
                 self.assertEqual(observations[0]["errno"], 1)
                 self.assertEqual(observations[0]["pgid"], child.pid)
-                self.assertEqual(observations[-1]["errno"], 1 if persistent else 3)
-
-    @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
-    def test_claude_post_term_zombie_group_eperm_requires_later_absence(self) -> None:
-        # macOS answers EPERM for a group whose last member died from SIGTERM
-        # but is not yet reaped; only a later absence settles the cleanup.
-        claude = import_script(CLAUDE_RUNNER, "layer2_claude_post_term_zombie_probe")
-        for persistent in (False, True):
-            with self.subTest(persistent=persistent):
-                child = FakePopen(b"", returncode=0)
-                sent = []
-                observations = []
-
-                def probe(pgid: int, signum: int) -> None:
-                    self.assertEqual(pgid, child.pid)
-                    if signum:
-                        sent.append(signum)
-                        if persistent and signum == signal.SIGKILL:
-                            raise PermissionError(1, "zombie-only group refuses the signal")
-                    elif sent:
-                        if persistent or not observations:
-                            raise PermissionError(1, "zombie-only group")
-                        raise ProcessLookupError(3, "group absent")
-
-                with (
-                    mock.patch.object(claude.os, "getpgrp", return_value=child.pid + 1),
-                    mock.patch.object(claude.os, "killpg", side_effect=probe),
-                    mock.patch.object(claude, "CLEANUP_TIMEOUT", 0.5),
-                    mock.patch.object(claude, "DESCENDANT_EXIT_GRACE", 0),
-                    mock.patch.object(claude.time, "monotonic", side_effect=[i / 10 for i in range(100)]),
-                    mock.patch.object(claude.time, "sleep"),
-                ):
-                    if persistent:
-                        with self.assertRaises(PermissionError):
-                            claude.cleanup_child(child, observations=observations)
-                    else:
-                        self.assertTrue(claude.cleanup_child(child, observations=observations))
-                self.assertEqual(sent, [signal.SIGTERM, signal.SIGKILL] if persistent else [signal.SIGTERM])
-                self.assertEqual(observations[0]["errno"], 1)
                 self.assertEqual(observations[-1]["errno"], 1 if persistent else 3)
 
     @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
