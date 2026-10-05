@@ -32,20 +32,33 @@ STOP_ACTION = ("Approve git writes, or add the repository's .git directory to "
 DENIED = frozenset({errno.EACCES, errno.EPERM, errno.EROFS})
 ANCHORED_PROBE_SUPPORTED = (
     hasattr(os, "O_NOFOLLOW") and hasattr(os, "O_DIRECTORY")
-    and {os.open, os.stat, os.unlink} <= os.supports_dir_fd
+    and {os.open, os.stat, os.unlink, os.rename, os.link, os.mkdir, os.rmdir} <= os.supports_dir_fd
     and os.stat in os.supports_follow_symlinks
 )
 
 
+def probe_error(errors: list[OSError]) -> OSError | None:
+    """A known permission denial takes priority over unrelated storage or teardown errors."""
+    return next((error for error in errors if error.errno in DENIED), next(iter(errors), None))
+
+
+def close_probe_descriptor(fd: int, errors: list[OSError]) -> None:
+    """Record teardown errors without masking the probe's earlier observations."""
+    try:
+        os.close(fd)
+    except OSError as error:
+        errors.append(error)
+
+
 @contextmanager
-def probe_directory(common: Path, directory: Path) -> Iterator[int]:
+def probe_directory(common: Path, directory: Path, errors: list[OSError]) -> Iterator[int]:
     """Hold each component below the canonical Git directory without following links."""
     if not ANCHORED_PROBE_SUPPORTED:
         raise OSError(errno.ENOTSUP, "descriptor-relative git write probe unavailable")
     flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
     with ExitStack() as stack:
         fd = os.open(common, flags)
-        stack.callback(os.close, fd)
+        stack.callback(close_probe_descriptor, fd, errors)
         for component in directory.relative_to(common).parts:
             try:
                 fd = os.open(component, flags, dir_fd=fd)
@@ -53,7 +66,7 @@ def probe_directory(common: Path, directory: Path) -> Iterator[int]:
                 if error.errno in {errno.ELOOP, errno.ENOTDIR}:
                     raise PermissionError(errno.EACCES, "unsafe git directory component") from error
                 raise
-            stack.callback(os.close, fd)
+            stack.callback(close_probe_descriptor, fd, errors)
         yield fd
 
 
@@ -70,7 +83,7 @@ def create_probe_lock(directory_fd: int) -> tuple[int, str]:
 
 
 def remove_probe_lock(lock: str, directory_fd: int, created: os.stat_result) -> OSError | None:
-    """Check the created inode before each cleanup attempt; never follow a replacement link."""
+    """Retry deletion only inside the probe's private cleanup directory."""
     blocked = None
     for _ in range(2):
         try:
@@ -87,20 +100,61 @@ def remove_probe_lock(lock: str, directory_fd: int, created: os.stat_result) -> 
     return blocked
 
 
+def retire_probe_lock(lock: str, directory_fd: int, created: os.stat_result) -> tuple[OSError | None, str | None]:
+    """Capture the public name before checking identity; never unlink that public name."""
+    private = lock + ".cleanup"
+    errors: list[OSError] = []
+    leftover = lock
+    private_fd = None
+    private_created = False
+    try:
+        os.mkdir(private, 0o700, dir_fd=directory_fd)
+        private_created = True
+        private_fd = os.open(private, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=directory_fd)
+        os.rename(lock, lock, src_dir_fd=directory_fd, dst_dir_fd=private_fd)
+        leftover = f"{private} ({lock})"
+        current = os.stat(lock, dir_fd=private_fd, follow_symlinks=False)
+        if (current.st_dev, current.st_ino) != (created.st_dev, created.st_ino):
+            # Exclusive link restores a captured replacement without overwriting a new public entry.
+            os.link(lock, lock, src_dir_fd=private_fd, dst_dir_fd=directory_fd, follow_symlinks=False)
+            os.unlink(lock, dir_fd=private_fd)
+            errors.append(OSError(errno.ESTALE, "git write probe was replaced"))
+        else:
+            cleanup = remove_probe_lock(lock, private_fd, created)
+            if cleanup is not None:
+                raise cleanup
+        leftover = ""
+    except OSError as error:
+        errors.append(error)
+    finally:
+        if private_fd is not None:
+            close_probe_descriptor(private_fd, errors)
+        if private_created:
+            try:
+                os.rmdir(private, dir_fd=directory_fd)
+            except OSError as error:
+                errors.append(error)
+                leftover = leftover or private
+    return probe_error(errors), leftover or None
+
+
 def create_and_remove_lock(directory: Path, common: Path) -> tuple[OSError | None, str | None]:
     """Create exclusively with fresh random names, returning any error and leftover basename."""
     leftover = None
+    errors: list[OSError] = []
     try:
-        with probe_directory(common, directory) as directory_fd:
+        with probe_directory(common, directory, errors) as directory_fd:
             fd, lock = create_probe_lock(directory_fd)
+            leftover = lock
             try:
-                cleanup = remove_probe_lock(lock, directory_fd, os.fstat(fd))
-                leftover = lock if cleanup is not None and cleanup.errno != errno.ESTALE else None
+                cleanup, leftover = retire_probe_lock(lock, directory_fd, os.fstat(fd))
+                if cleanup is not None:
+                    errors.append(cleanup)
             finally:
-                os.close(fd)
-            return cleanup, leftover
+                close_probe_descriptor(fd, errors)
     except OSError as error:
-        return error, leftover
+        errors.append(error)
+    return probe_error(errors), leftover
 
 
 def probe_directories(common: Path) -> list[Path]:
@@ -143,7 +197,7 @@ def run_git_write_probe_helper(entry: Any, request: Any) -> dict[str, Any]:
         common = None
     results = [] if common is None else [create_and_remove_lock(directory, common) for directory in probe_directories(common)]
     errors = [error for error, _ in results if error is not None]
-    blocked = next((error for error in errors if error.errno in DENIED), next(iter(errors), None))
+    blocked = probe_error(errors)
     verdict, message, item = probe_result(blocked, common is not None)
     leftovers = [name for _, name in results if name is not None]
     if leftovers:

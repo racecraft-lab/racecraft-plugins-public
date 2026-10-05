@@ -95,6 +95,41 @@ class GitWriteProbeTest(unittest.TestCase):
         self.assertEqual("replacement belongs to someone else", replacement.read_text(encoding="utf-8"))
         self.assertEqual("unknown", result["data"]["observation"]["status"])
 
+    def test_cleanup_preserves_replacement_inserted_after_identity_check(self) -> None:
+        stat_file = os.stat
+        replacement = None
+
+        def replace_after_stat(path, *args, **kwargs):
+            nonlocal replacement
+            metadata = stat_file(path, *args, **kwargs)
+            name = Path(path).name
+            if kwargs.get("dir_fd") is not None and name.endswith(".lock") and replacement is None:
+                public = self.heads / name
+                replacement = public
+                if public.exists():
+                    public.rename(self.heads / "held-original")
+                public.write_text("replacement after stat", encoding="utf-8")
+            return metadata
+
+        with patch.object(probe.os, "stat", side_effect=replace_after_stat):
+            self.probe_current_repository()
+        self.assertIsNotNone(replacement)
+        self.assertTrue(replacement.exists(), "cleanup raced and deleted the replacement")
+        self.assertEqual("replacement after stat", replacement.read_text(encoding="utf-8"))
+
+    def test_close_failure_does_not_mask_cleanup_permission_denial(self) -> None:
+        close = os.close
+
+        def fail_close(fd: int) -> None:
+            close(fd)
+            raise OSError(errno.EIO, "close failed")
+
+        with patch.object(probe.os, "unlink", side_effect=PermissionError(errno.EACCES, "denied")):
+            with patch.object(probe.os, "close", side_effect=fail_close):
+                result = self.probe_current_repository()
+        self.assertEqual("stop", result["data"]["verdict"])
+        self.assertEqual("unavailable", result["data"]["observation"]["status"])
+
     def directory_denial_result(self, directory: Path) -> dict:
         if os.name != "nt" and hasattr(os, "geteuid") and os.geteuid() != 0:
             mode = directory.stat().st_mode
