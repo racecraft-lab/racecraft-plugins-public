@@ -10,11 +10,12 @@ from host_skill_views import host_skill_root
 from runner_invocation import assert_runner_response, run_runner
 
 
-def readiness_request(observations: list[dict[str, object]], host: str, request_id: str) -> dict[str, object]:
+def readiness_request(observations: list[dict[str, object]], host: str = "claude", request_id: str = "test-readiness",
+                      mode: str = "apply", **inputs: object) -> dict[str, object]:
     body = {"host": host, "execution_mode": "interactive", "plugin_revision": "2.40.0",
-            "observations": observations}
+            "observations": observations, **inputs}
     return {"schema_version": "1.0", "request_id": request_id, "helper_id": "write-readiness-record",
-            "operation": "write-readiness-record", "mode": "apply", "inputs": body}
+            "operation": "write-readiness-record", "mode": mode, "inputs": body}
 
 
 def scaffold_step(host: str) -> str:
