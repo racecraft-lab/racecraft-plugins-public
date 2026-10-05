@@ -3945,6 +3945,8 @@ class ProcessGroupProbeTests(unittest.TestCase):
             with (
                 self.subTest(platform=platform),
                 mock.patch.object(processes.os, "name", platform),
+                mock.patch.object(processes.time, "monotonic", side_effect=itertools.count(step=0.01)),
+                mock.patch.object(processes.time, "sleep", return_value=None),
                 mock.patch.object(processes.os, "getpgrp", return_value=child.pid + 1, create=True),
                 mock.patch.object(processes.os, "killpg", create=True, side_effect=itertools.chain([None], itertools.repeat(ProcessLookupError()))) as probe,
             ):
