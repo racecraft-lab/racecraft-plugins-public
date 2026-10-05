@@ -623,7 +623,7 @@
         "value": "speckit_pro_runner/helpers/phase_brief.py",
         "display": "speckit_pro_runner/helpers/phase_brief.py"
       },
-      "sha256": "d10467ce05bf70a98f12abac37739599850539ecdf3f57409b0d75385f360cf8"
+      "sha256": "dc4837a86110a0b1a827a6176788f638c4c17e5df8817c0a81cfdb71ad0cc5c8"
     },
     {
       "path": {
@@ -656,6 +656,14 @@
         "display": "speckit_pro_runner/helpers/promotion.py"
       },
       "sha256": "124f2aa4595247c27976f2894b5f36a4c79405641ca53eea6fb9412013776819"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/quality_gates_proposal.py",
+        "display": "speckit_pro_runner/helpers/quality_gates_proposal.py"
+      },
+      "sha256": "e2a34f0ed189d9efd15565930f0cc0d5dc7153bd3d6548984f7fac0aec9bb255"
     },
     {
       "path": {
@@ -695,7 +703,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "8caebf6a5772ef6f8b6c5983c5bd9ea47c7442bdddd91672f64998979e0cd57c"
+      "sha256": "6876fbc32c8c4428e09c4fafdffc1956e7276d5c062a47585e2bd59ae889b078"
     },
     {
       "path": {
@@ -823,7 +831,7 @@
         "value": "speckit_pro_runner/quality_gates.py",
         "display": "speckit_pro_runner/quality_gates.py"
       },
-      "sha256": "ef5f9661467a565b0828b4adb9be2454d19218be896e7fc015fe858ec54c19f5"
+      "sha256": "14164a46656dad2774366a3d899ed13cf00a76ab3c2ba01e29d4491bbeed7ce5"
     },
     {
       "path": {
