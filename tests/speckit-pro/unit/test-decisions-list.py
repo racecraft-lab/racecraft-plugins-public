@@ -93,24 +93,19 @@ class DecisionsListTests(unittest.TestCase):
     def test_entries_come_back_spec_affecting_then_authority_then_notes(self) -> None:
         first = self.append(NOTE, SKIP, SCOPE, PR_PROBLEM)
         self.assertEqual("ok", first["status"], first)
-        self.assertEqual("ok", self.append(SPLIT, DEFAULT, STOP)["status"])
+        self.assertEqual("ok", self.append(SPLIT, DEFAULT, STOP, HOOK)["status"])
         data = self.listed()
         order = [item["kind"] for item in data["entries"]]
         self.assertEqual(
             ["scope_answer", "split_recommendation", "unratified_default", "authority_action_skipped",
-             "readiness_stale", "pr_record_problem", "unregistered_stop"], order
+             "readiness_stale", "pr_record_problem", "unregistered_stop", "optional_hook_run"], order
         )
-        self.assertEqual(7, data["count"])
+        self.assertEqual(8, data["count"])
         for item in data["entries"]:
             self.assertEqual({"seq", "kind", *TEXT_FIELDS}, set(item))
-            sent = next(each for each in (NOTE, SKIP, SCOPE, SPLIT, DEFAULT, PR_PROBLEM, STOP)
+            sent = next(each for each in (NOTE, SKIP, SCOPE, SPLIT, DEFAULT, PR_PROBLEM, STOP, HOOK)
                         if each["kind"] == item["kind"])
             self.assertEqual(sent, {key: value for key, value in item.items() if key != "seq"})
-
-    def test_an_optional_hook_run_is_recorded_as_a_note(self) -> None:
-        self.assertEqual("ok", self.append(HOOK, SCOPE, HOOK)["status"])
-        kinds = [item["kind"] for item in self.listed()["entries"]]
-        self.assertEqual(["scope_answer", "optional_hook_run", "optional_hook_run"], kinds)
 
     def test_entries_of_one_class_keep_the_order_they_were_appended(self) -> None:
         self.append(SPLIT)

@@ -60,6 +60,18 @@ def extensions_yml(*entries):
         "\n".join([head, *rest]) for head, rest in events.items()) + "\n"
 
 
+def payload_briefs(inputs):
+    """The brief each shipped payload returns, run from the current project directory."""
+    request = {"schema_version": "1.0", "helper_id": "phase-brief", "operation": "phase-brief", "mode": "read_only", "inputs": inputs}
+    reports = []
+    for host in ("claude", "codex"):
+        payload = REPO / "dist" / host / "speckit-pro"
+        done = subprocess.run([sys.executable, "-m", "speckit_pro_runner"], cwd=Path.cwd(), env={**os.environ, "PYTHONPATH": str(payload)},
+                              input=json.dumps(request), text=True, capture_output=True, check=False)
+        reports.append(json.loads(done.stdout)["data"] if done.returncode == 0 else done.stderr + done.stdout)
+    return reports
+
+
 REFERENCES = REPO / "speckit-pro/skills/speckit-autopilot/references"
 WHOLE_REFERENCES = ("capability-discovery.md", "grounding.md", "execution-efficiency.md", "consensus-protocol.md")
 SLICE_AGENTS = ("clarify-executor", "checklist-executor", "analyze-executor")
@@ -92,19 +104,10 @@ class PhaseBriefTests(InProjectCase):
     def test_payload_hosts_return_identical_briefs(self):
         for phase in ("Specify", "Clarify", "Plan", "Checklist", "Tasks", "Analyze"):
             with self.subTest(phase=phase):
-                request = {"schema_version": "1.0", "helper_id": "phase-brief",
-                           "operation": "phase-brief", "mode": "read_only",
-                           "inputs": {"phase": phase, "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}}
-                reports = []
-                for host in ("claude", "codex"):
-                    payload = REPO / "dist" / host / "speckit-pro"
-                    done = subprocess.run([sys.executable, "-m", "speckit_pro_runner"],
-                                          cwd=Path.cwd(), env={**os.environ, "PYTHONPATH": str(payload)},
-                                          input=json.dumps(request), text=True, capture_output=True, check=False)
-                    self.assertEqual(done.returncode, 0, done.stderr + done.stdout)
-                    reports.append(json.loads(done.stdout)["data"])
+                inputs = {"phase": phase, "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
+                reports = payload_briefs(inputs)
                 self.assertEqual(reports[0], reports[1])
-                self.assertEqual(reports[0], dispatch_brief(request["inputs"])["data"])
+                self.assertEqual(reports[0], dispatch_brief(inputs)["data"])
 
     def test_invalid_requests_return_no_dispatch_facts(self):
         valid = {"phase": "Plan", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
@@ -357,18 +360,9 @@ class PhaseBriefHookTests(unittest.TestCase):
 
     def test_both_payload_hosts_list_the_same_hooks(self):
         text = extensions_yml(hook("after_plan", "speckit.git.commit", "git"), hook("after_plan", "speckit.m.run", "m", optional="false"))
-        request = {"schema_version": "1.0", "helper_id": "phase-brief", "operation": "phase-brief", "mode": "read_only",
-                   "inputs": {"phase": "Plan", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}}
-        with project(text) as root:
-            reports = []
-            for host in ("claude", "codex"):
-                payload = REPO / "dist" / host / "speckit-pro"
-                done = subprocess.run([sys.executable, "-m", "speckit_pro_runner"], cwd=root,
-                                      env={**os.environ, "PYTHONPATH": str(payload)},
-                                      input=json.dumps(request), text=True, capture_output=True, check=False)
-                self.assertEqual(done.returncode, 0, done.stderr + done.stdout)
-                reports.append(json.loads(done.stdout)["data"]["hooks"])
-        self.assertEqual(reports, [[{"extension": "git", "command": "speckit.git.commit"}]] * 2)
+        with project(text):
+            reports = payload_briefs({"phase": "Plan", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"})
+        self.assertEqual([report["hooks"] for report in reports], [[{"extension": "git", "command": "speckit.git.commit"}]] * 2)
 
     def test_both_hosts_leave_mandatory_hooks_to_upstream_commands(self):
         for host in ("claude", "codex"):

@@ -106,6 +106,19 @@ def brief_data(phase: str, workflow: str, feature: str) -> dict[str, Any]:
     }
 
 
+def checked_request(raw: Any) -> tuple[str, str, str]:
+    """The closed phase-brief inputs as (phase, workflow_file, feature_dir); anything else raises ValueError."""
+    inputs = require_fields(raw, {"phase", "workflow_file", "feature_dir"}, "phase-brief inputs")
+    phase = require_text(inputs["phase"], "phase")
+    workflow = brief_path(inputs["workflow_file"], "workflow_file")
+    feature = brief_path(inputs["feature_dir"], "feature_dir").rstrip("/")
+    if not feature:
+        raise ValueError("feature_dir must name a directory")
+    if phase not in PHASES:
+        raise ValueError("phase must be Specify, Clarify, Plan, Checklist, Tasks or Analyze")
+    return phase, workflow, feature
+
+
 def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     """Return phase-brief/v1 dispatch data; gate and stop decisions stay separate.
 
@@ -154,14 +167,7 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     with phase_brief_hooks_unavailable, never a guessed list.
     """
     try:
-        inputs = require_fields(request.inputs, {"phase", "workflow_file", "feature_dir"}, "phase-brief inputs")
-        phase = require_text(inputs["phase"], "phase")
-        workflow = brief_path(inputs["workflow_file"], "workflow_file")
-        feature = brief_path(inputs["feature_dir"], "feature_dir").rstrip("/")
-        if not feature:
-            raise ValueError("feature_dir must name a directory")
-        if phase not in PHASES:
-            raise ValueError("phase must be Specify, Clarify, Plan, Checklist, Tasks or Analyze")
+        phase, workflow, feature = checked_request(request.inputs)
     except ValueError as exc:
         return response("input_error", request_id=request.request_id,
                         diagnostics=[diagnostic("invalid_phase_brief", str(exc))])
