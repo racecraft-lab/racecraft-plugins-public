@@ -403,7 +403,9 @@ Command("ls '<SKILL_SCRIPTS>/'")
 ```
 
 If it does not exist, log `readiness stale: plugin_payload` naming the
-missing directory (Step 0.0a) and continue.
+missing directory (Step 0.0a) and continue. The Step 1.1 coverage guard runs
+from this directory, so a missing payload fails that guard closed and no phase
+is marked done.
 <!-- /host -->
 <!-- host:codex: Codex prints no skill base directory, so it resolves the path relative to this reference -->
 to the scripts directory. The scripts live at `../scripts/`, relative to this
@@ -412,7 +414,9 @@ reference file. Resolve this to an absolute path and store it as
 
 Verify the directory exists by listing its contents. If it does
 not exist, log `readiness stale: plugin_payload` naming the missing
-directory (Step 0.0a) and continue.
+directory (Step 0.0a) and continue. The Step 1.1 coverage guard runs from this
+directory, so a missing payload fails that guard closed and no phase is marked
+done.
 <!-- /host -->
 
 **All script invocations below use the resolved `SKILL_SCRIPTS`
@@ -456,7 +460,9 @@ changed plugin revision or input file, or an `unavailable` or `unknown` item.
 
 A setup gap a later G0 step finds is logged the same way: one `readiness_stale`
 entry shaped like the runner's, whose `evidence` starts `readiness stale: <item>: `
-and names the gap and its fix. Then continue on the safe default the step names. Work that needs the
+and names the gap and its fix. Read the list with `decisions-list` in
+`read_only` mode first, and record the entry only when the list does not
+already hold it word for word, so a resume logs it once. Then continue on the safe default the step names. Work that needs the
 missing capability defers through the Failure Escalation Protocol and is never
 marked done without it. The fix belongs to the next scaffold run and the UAT
 handoff.
