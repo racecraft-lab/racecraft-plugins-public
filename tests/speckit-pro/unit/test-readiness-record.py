@@ -792,16 +792,17 @@ class HostProbePathSecurityTest(unittest.TestCase):
     def test_codex_and_claude_absolute_worktree_path(self) -> None:
         self.reject_path(str(self.root / "bin"), self.root / "bin")
 
-    def test_regular_and_renamed_copy_host_executables(self) -> None:
-        for form in ("regular", "renamed-copy"):
+    def reject_forms(self, forms: tuple[str, ...]) -> None:
+        for form in forms:
             for entry, directory in ((".", self.root), ("", self.root), ("bin", self.root / "bin"),
                                      (str(self.root / "bin"), self.root / "bin")):
                 self.reject_path(entry, directory, form)
 
+    def test_regular_and_renamed_copy_host_executables(self) -> None:
+        self.reject_forms(("regular", "renamed-copy"))
+
     def test_symlink_host_executables(self) -> None:
-        for entry, directory in ((".", self.root), ("", self.root), ("bin", self.root / "bin"),
-                                 (str(self.root / "bin"), self.root / "bin")):
-            self.reject_path(entry, directory, "symlink")
+        self.reject_forms(("symlink",))
 
     def test_external_executable_symlink_into_worktree(self) -> None:
         self.reject_path(str(self.tools), self.tools, "symlink")
