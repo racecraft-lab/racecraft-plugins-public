@@ -279,11 +279,12 @@ See Step 1.1 for the full naming pattern and rules.
 
 ### 4. Multi-prompt phases
 
-Clarify and Checklist have multiple prompts in the workflow file.
+Clarify has one prompt in the workflow file: one session of at most 5
+questions. Checklist has one prompt per domain.
 Spawn a **separate subagent for each prompt**, consume its result, and run the
 two-layer resolution (Rule 6) after each one BEFORE spawning the next — later
-sessions/domains may depend on earlier resolved items. Do not batch
-all sessions and check for markers only at the end.
+domains may depend on earlier resolved items. Do not batch
+all domains and check for markers only at the end.
 
 Per-phase flow templates (per-session for Clarify, per-domain for
 Checklist) live in
@@ -720,7 +721,7 @@ context lines: `Workflow root:`, the Specify branch prefix when
 corrective reservation. Insert each entry of `brief.slices` verbatim, in
 order, after those lines under a `Reference slices:` line.
 Run `validate-gate` with `brief.gate` afterward; the brief is not gate evidence.
-Clarify still runs only when G1 found `[NEEDS CLARIFICATION]` markers.
+Clarify runs for every SPEC, whatever G1's marker count.
 Use the brief for phase dispatch facts instead of re-reading `phase-execution.md`
 for each planning phase. Keep the existing remediation and bookkeeping steps.
 Implement retains its existing agent, inputs and gate; it never requests a

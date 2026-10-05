@@ -51,11 +51,10 @@ gate never becomes a pass.
 
 ```
 Search spec.md for "[NEEDS CLARIFICATION]" and "[NEEDS CLARIFICATION: ...]" markers.
-- If markers found → Proceed to Clarify phase
-- If no markers → Skip Clarify, proceed to Plan
+- Record the marker count; Clarify runs next either way (one session, at most 5 questions)
 ```
 
-This is a routing decision, not a pass/fail gate. The presence of markers is expected and normal.
+G1 records the count. It does not route: every SPEC runs Clarify. Markers are expected and normal.
 
 ### G2 — After Clarify
 
@@ -589,7 +588,7 @@ unexcepted block or gate error holds PR preparation and records the
 
 | Gate | After | Check | Auto-Fix Strategy | Repair allowance |
 |------|-------|-------|-------------------|--------------|
-| G1 | Specify | NEEDS CLARIFICATION markers | N/A (routing) | N/A |
+| G1 | Specify | NEEDS CLARIFICATION markers (recorded; Clarify always runs) | N/A | N/A |
 | G2 | Clarify | 0 markers remain | Re-run clarify | Gate's own 2 rounds for planning documents; else Shared |
 | G3 | Plan | Artifacts exist, gates pass | Re-run plan | Gate's own 2 rounds for planning documents; else Shared |
 | G4 | Checklist | 0 [Gap] markers | Research + consensus remediation | Gate's own 2 rounds for planning documents; else Shared |
