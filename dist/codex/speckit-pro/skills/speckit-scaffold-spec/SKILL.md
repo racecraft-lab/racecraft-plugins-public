@@ -928,6 +928,15 @@ per item:
 | `git_write` | sending `data.observation` from the Git Write Probe unchanged |
 | `formal_methods` | judging whether the Design Concept's design suits a formal model, by the [coach's formal-methods guide](../speckit-coach/references/formal-methods-guide.md): `verified` when it suits one, `not_applicable` when it does not; cite the deciding behavior as `evidence_source` |
 
+The helper records `permission_probe`, `plugin_scope` and `mcp_authentication`
+as `not_applicable` on Codex (Claude Code only). Do not send them.
+
+Hook items, on both hosts:
+
+| `item` | Detail key | Observe it now by |
+| --- | --- | --- |
+| `hooks` | `hooks`: `{"hook": "<event name>", "defined": true or false, "trust": "trusted", "untrusted" or "unobservable"}` | listing each hook this plugin requires in `/hooks`; hook discovery alone does not prove it runs, so send `unobservable` when trust cannot be read |
+
 - Record `verified` for a check that passed in this run. Record `unavailable`
   for a failed check or a declined fix, `unknown` for what this session cannot
   observe, and `not_applicable` for a capability this workflow does not need.

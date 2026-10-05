@@ -28,10 +28,11 @@ from ..envelope import diagnostic, response
 from ..atomic_write import write_bytes_atomic
 from ..canonical_json import canonical_bytes
 from ..private_state import ensure_private_directory
-from ..strict_input import SelectionError, require_text
-from ..sweep_isolation import secret_matches
+from ..strict_input import SelectionError
 from ..trusted_io import find_repo_root, trusted_bytes
 from ..verification_docker import DAEMON_ARCHITECTURES, PLATFORM, PLATFORM_OS
+from . import readiness_host_items as host_items
+from .readiness_values import NOT_OBSERVED_ACTION, clean_text, make_item
 
 SCHEMA_VERSION = "readiness-record/v1"
 HOSTS = ("claude", "codex")
@@ -47,37 +48,12 @@ RECORD_DIRECTORY = ".specify/readiness"
 INPUT_KEYS = frozenset({"host", "host_version", "execution_mode", "plugin_revision", "observations"})
 OBSERVATION_KEYS = frozenset({"item", "status", "evidence_source", "action", "files", "values"})
 VALUE_NAME_RE = re.compile(r"[a-z][a-z0-9_]{0,40}")
-# Keep the supported scaffold slash commands; refuse absolute paths, including roots and UNC paths.
-LOCAL_PATH_RE = re.compile(
-    r"(?<![\w./\\-])(?:/(?!speckit-pro:[a-z][a-z0-9-]*(?=[^\w/\\-]|$)|"
-    r"(?:plugin|reload-plugins)(?=[^\w/\\-]|$))[^\s]*|~[/\\]|[A-Za-z]:[\\/]|\\|file://)")
 EXECUTION_MODES = ("interactive", "answers-file")
-MAX_TEXT = 400
 DOCKER_PROBE_SECONDS = 10
-NOT_OBSERVED_ACTION = "Run the preparation check for this item, then rerun scaffold."
 
 
 def now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def clean_text(value: Any, label: str) -> str:
-    """Text that may be written to the record: one short line, no credential, no absolute path."""
-    text = require_text(value, label).strip()
-    if len(text) > MAX_TEXT or "\n" in text or "\r" in text:
-        raise SelectionError(f"{label} must be one line of at most {MAX_TEXT} characters")
-    if secret_matches(text):
-        raise SelectionError(f"{label} looks like a credential; the record never stores one")
-    if LOCAL_PATH_RE.search(text):
-        raise SelectionError(f"{label} holds an absolute local path; use a repository-relative path")
-    return text
-
-
-def make_item(status: str, evidence_source: str, observed_at: str, fingerprints: dict[str, str],
-              action: str | None = None) -> dict[str, Any]:
-    required = {"action": action} if action is not None else {}
-    return {"status": status, "evidence_source": evidence_source, "observed_at": observed_at,
-            "fingerprints": fingerprints, **required}
 
 
 def fingerprint_files(paths: Any, root: Path, label: str) -> dict[str, str]:
@@ -245,13 +221,18 @@ def build_record(inputs: dict[str, Any], root: Path) -> dict[str, Any]:
     observations = inputs["observations"]
     if not isinstance(observations, list):
         raise SelectionError("observations must be a list")
+    plugin_revision = clean_text(inputs["plugin_revision"], "plugin_revision")
     observed_at = now()
     items: dict[str, dict[str, Any]] = {}
     for raw in observations:
-        name, item = caller_item(raw, root, observed_at)
+        if isinstance(raw, dict) and raw.get("item") in host_items.HOST_ITEMS:
+            name, item = host_items.host_item(raw, inputs["host"], observed_at, plugin_revision)
+        else:
+            name, item = caller_item(raw, root, observed_at)
         if name in items:
             raise SelectionError(f"{name} is observed twice")
         items[name] = item
+    host_items.fill_missing(items, inputs["host"], observed_at)
     for name in CALLER_ITEMS:
         items.setdefault(name, make_item("unknown", "not observed by scaffold", observed_at, {}, NOT_OBSERVED_ACTION))
     items["local_capability"] = observe_local_capability()
@@ -264,7 +245,7 @@ def build_record(inputs: dict[str, Any], root: Path) -> dict[str, Any]:
         "host": inputs["host"],
         "host_version": None if host_version is None else clean_text(host_version, "host_version"),
         "execution_mode": inputs["execution_mode"],
-        "plugin_revision": clean_text(inputs["plugin_revision"], "plugin_revision"),
+        "plugin_revision": plugin_revision,
         "observed_at": observed_at,
         "items": {name: items[name] for name in sorted(items)},
     }
@@ -299,7 +280,8 @@ def run_readiness_record_helper(entry: Any, request: Any) -> dict[str, Any]:
             "invalid_input", str(error), remediation_summary="Send observations the record can hold.",
             remediation_actions=["Correct the named field.", "Retry the request."])])
     data: dict[str, Any] = {"helper_id": entry.helper_id, "operation": entry.operation, "mode": request.mode,
-                            "writes_state": False, "record": record}
+                            "writes_state": False, "record": record,
+                            "allow_rules": host_items.allow_rules(request.inputs)}
     if request.mode == "apply":
         try:
             data["record_path"] = write_record(root, record)

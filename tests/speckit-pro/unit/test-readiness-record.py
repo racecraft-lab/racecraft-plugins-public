@@ -336,6 +336,19 @@ class ReadinessRecordTest(unittest.TestCase):
         _, response, _ = run_runner(bad_mode, cwd=self.root)
         assert_runner_response(self, response, "input_error", 2)
 
+    def test_slash_command_exemptions_require_exact_tokens(self) -> None:
+        from speckit_pro_runner.helpers.readiness_values import clean_text
+        from speckit_pro_runner.strict_input import SelectionError
+
+        for command in ("/mcp", "/hooks", "/plugin", "/reload-plugins"):
+            for template in ("Run {}", "Run `{}`, then retry.", "Run “{}”, then retry.", "Run {} to inspect."):
+                action = template.format(command)
+                self.assertEqual(action, clean_text(action, "action"))
+            for suffix in (".json", ":x", ".d", "/private", "-extra", "_extra"):
+                with self.subTest(command=command, suffix=suffix):
+                    with self.assertRaises(SelectionError):
+                        clean_text(f"Run {command}{suffix}", "action")
+
     def test_unreadable_files_are_not_reported_missing(self) -> None:
         outside = self.root / "target.txt"
         outside.write_text("x\n", encoding="utf-8")
