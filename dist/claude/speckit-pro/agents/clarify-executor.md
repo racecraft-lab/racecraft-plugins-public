@@ -73,13 +73,15 @@ agent.
    - the sections the parent should edit if it accepts the answer
 
 5. **Flag items needing consensus, with a category prefix.** If a
-   question meets ANY of these criteria, include it in the
+   question meets EITHER of these criteria, include it in the
    "Unresolved for consensus" section of your summary:
-   - Your research sources disagree (conflicting answers)
    - You have low confidence in the answer you gave
    - The question contains security keywords (auth, token, secret,
      encryption, PII, credential, permission, password, authentication,
      authorization, session, cookie, jwt, api-key, access-control)
+
+   Sources that disagree are not a trigger: state your recommended
+   answer and its confidence, and the recommendation stands.
 
    **Tag every unresolved item with a category prefix in square
    brackets** so the orchestrator can route consensus to only the
@@ -95,11 +97,12 @@ agent.
      routes to all 3 analysts). A security keyword alone needs no tag;
      the runner widens keyword items to all 3 by itself
    - `[ambiguous]` — you genuinely don't know which perspective
-     applies (routes to all 3)
+     applies (routes to the generic domain analyst)
 
-   Multi-category tags are allowed: `[codebase, domain]` spawns
-   both `codebase-analyst` and `domain-researcher`. Untagged items
-   default to `[ambiguous]` but explicit tagging is the discipline.
+   Multi-category tags are allowed: the first tag that names a
+   perspective routes the one analyst. Untagged items route like
+   `[ambiguous]`, but explicit tagging is the discipline. Add a
+   `Confidence: low|high` line to every item.
    For full routing rules, read the consensus protocol
    only from the absolute path on your prompt's `Protocol:` line,
    which the orchestrator resolves from the loaded plugin root, and
@@ -109,8 +112,9 @@ agent.
    the orchestrator copies your summary into committed records; report
    `not provided` when the prompt has none.
 
-   Still answer the question with your best guess — the consensus
-   may confirm or override your answer.
+   Still answer the question with your best guess. A security item
+   goes to consensus; a low-confidence item gets one analyst whose
+   high-confidence answer may replace yours.
 
 6. **Return a summary with citations.** Return a compact, complete
    question set to the parent. Do not recommend next steps beyond the
@@ -178,7 +182,8 @@ agent.
 **Unresolved for consensus:**
 - [<categories>] Q3: <question text>
   Recommended answer: <your best-guess answer>
-  Why unresolved: <conflicting sources / low confidence / security keyword>
+  Why: <low confidence / security keyword>
+  Confidence: <low|high>
   (Example: `[codebase, domain] Q3: Should we use bcrypt or argon2?`)
 (or "None — all resolved with high confidence")
 

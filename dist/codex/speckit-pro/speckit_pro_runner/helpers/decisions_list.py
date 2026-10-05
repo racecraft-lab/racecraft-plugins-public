@@ -1,8 +1,8 @@
 """The decisions list: every judgment a run made instead of asking, in one runner-owned file.
 
-The runner is the only writer. Entries sort spec-affecting first, then authority
-skips, then notes; one malformed entry refuses the whole batch. The terminal
-message is the count and a link, nothing else (ADR 0010).
+The runner is the only writer. Entries sort low-confidence answers first (ADR 0022),
+then spec-affecting, then authority skips, then notes; one malformed entry refuses the
+whole batch. The terminal message is the count and a link, nothing else (ADR 0010).
 """
 
 from __future__ import annotations
@@ -19,9 +19,10 @@ from ..trusted_io import resolve_repo_root
 SCHEMA_VERSION = "decisions-list/v1"
 MAX_TEXT = 1000
 TEXT_FIELDS = ("option_chosen", "rejected_alternative", "evidence", "affected_unit")
-SPEC_AFFECTING, AUTHORITY_SKIP, NOTE = 0, 1, 2
+LOW_CONFIDENCE, SPEC_AFFECTING, AUTHORITY_SKIP, NOTE = 0, 1, 2, 3
 # The closed set of kinds, each with its sort class.
 KINDS = {
+    "low_confidence_answer": LOW_CONFIDENCE,
     "scope_answer": SPEC_AFFECTING,
     "split_recommendation": SPEC_AFFECTING,
     "unratified_default": SPEC_AFFECTING,

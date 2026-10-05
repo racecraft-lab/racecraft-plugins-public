@@ -3498,53 +3498,49 @@ def consensus_category_tags(line: str) -> list[str]:
 
 
 def parse_consensus_categories(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
-    """The Tier A routing table from consensus-protocol.md, executed.
+    """Plan-stage consensus tier for one executor item (ADR 0022), executed.
 
-    Every widening rule fails toward all three analysts, so a tag the table does
-    not define costs a wider fan-out and never a narrower one. The table defines
-    `[security]` by the keywords the item text carries, so the text is scanned
-    too: an executor that tags a keyword-bearing item narrowly still gets all
-    three, which is the defense in depth the reference promises.
+    Three tiers, decided in this order:
+    - `security`: an explicit `[security]` tag or a Security Keyword in the item
+      text, whatever the executor's confidence. All three analysts, every round.
+    - `low_confidence`: the executor doubts its own answer. One analyst, picked by
+      the first tag that names a perspective, else the generic domain analyst. No
+      synthesizer: a high-confidence analyst answer replaces the recommendation.
+    - `recommendation`: every other item. No analyst; the recommendation stands.
 
-    `security_route` says which security rule widened the item: `tag` for an
-    explicit `[security]` tag, `keyword` for a keyword in the text alone, and
-    None otherwise. The synthesizer keeps a tag at unanimous agreement and lets
-    a keyword-only route use the item's own rule when no analyst finds security
-    content in it.
+    `security_route` says which security rule fired: `tag` for an explicit tag,
+    `keyword` for a keyword in the text alone, None otherwise. The synthesizer keeps
+    a tag at unanimous agreement and lets a keyword-only route use the item's own
+    rule when no analyst finds security content in it. A missing `confidence` counts
+    as `low`, so an item never skips its second opinion by omission.
     """
+    confidence = "low" if inputs.get("confidence") is None else str(inputs["confidence"]).strip().casefold()
+    if confidence not in ("low", "high"):
+        return make_result(json_text({"error": "confidence must be low or high"}), exit_code=2)
     line = str(inputs.get("line") or "")
     tags = consensus_category_tags(line)
-    unknown = next((tag for tag in tags if tag not in CONSENSUS_ROUTED_ANALYSTS), None)
     keyword = CONSENSUS_SECURITY_RE.search(line)
     security_route: str | None = None
     if "security" in tags:
         security_route = "tag"
-        reason = "security tag: all three analysts (defense in depth)"
+        tier, reason = "security", "security tag: all three analysts (defense in depth)"
     elif keyword is not None:
         security_route = "keyword"
-        reason = f"security keyword {keyword.group(0).casefold()} in item text: all three analysts (defense in depth)"
-    elif not tags:
-        reason = "no category prefix: all three analysts (safe default)"
-    elif "ambiguous" in tags:
-        reason = "ambiguous tag: all three analysts (safe default)"
-    elif unknown is not None:
-        reason = f"unknown category tag {unknown}: all three analysts (safe default)"
+        tier, reason = "security", f"security keyword {keyword.group(0).casefold()} in item text: all three analysts (defense in depth)"
+    elif confidence == "high":
+        tier, reason = "recommendation", "high confidence: the executor's recommendation stands"
     else:
-        routed = {CONSENSUS_ROUTED_ANALYSTS[tag] for tag in tags}
-        analysts = [name for name in CONSENSUS_ALL_ANALYSTS if name in routed]
-        return make_result(
-            json_text(
-                {"tags": tags, "analysts": analysts, "reason": "category-routed dispatch", "security_route": None}
-            )
-        )
+        tier = "low_confidence"
+        tag = next((tag for tag in tags if tag in CONSENSUS_ROUTED_ANALYSTS), "domain")
+        reason = f"low confidence: one {tag} analyst" + ("" if tag in tags else " (no usable tag: generic domain)")
+    analysts = {
+        "security": list(CONSENSUS_ALL_ANALYSTS),
+        "low_confidence": [CONSENSUS_ROUTED_ANALYSTS[tag]] if tier == "low_confidence" else [],
+        "recommendation": [],
+    }[tier]
     return make_result(
         json_text(
-            {
-                "tags": tags,
-                "analysts": list(CONSENSUS_ALL_ANALYSTS),
-                "reason": reason,
-                "security_route": security_route,
-            }
+            {"tags": tags, "tier": tier, "analysts": analysts, "reason": reason, "security_route": security_route}
         )
     )
 

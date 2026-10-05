@@ -595,9 +595,10 @@ codebase exploration, and local file analysis. It does not
 edit artifacts. It returns questions and recommendations to the parent.
 
 **Layer 2 (consensus):** For items the executor flagged
-(low confidence, conflicting sources, security keywords),
-the main session spawns 3 consensus agents to get distinct
-perspectives and applies consensus rules. An item that ends in
+(low confidence, security tag or keyword), the main session follows the
+`tier` that `parse-consensus-categories` returns: 3 consensus agents and the
+consensus rules for a security item, one analyst for a low-confidence item.
+An item that ends in
 `[ROUND_3_TIEBREAK]` takes the Round 3 agent tiebreak in
 [consensus-protocol.md](./consensus-protocol.md#round-3-tiebreak), in an
 interactive and an unattended run alike; it never asks the operator and never
@@ -808,9 +809,9 @@ For each checklist domain in the workflow file:
 gap research and remediation internally using the research
 broker's web search and library docs, and codebase exploration.
 
-**Layer 2 (consensus):** For gaps the executor couldn't
-resolve (shared reservation exhausted, low confidence, security
-keywords), the main session spawns 3 consensus agents.
+**Layer 2 (consensus):** For gaps the executor flagged (low
+confidence, security tag or keyword), the main session follows the
+`tier` that `parse-consensus-categories` returns.
 
 **Why after each domain:** Domain 2 may depend on Domain
 1's gap fixes. Both layers complete before the next

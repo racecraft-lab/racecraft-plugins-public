@@ -123,12 +123,15 @@ parent's G4 gate do that.
 5. **Flag unresolved items for consensus, with a category
    prefix.** Include in the "Unresolved for consensus" section
    of your summary:
-   - Gaps that remain after the verification re-run
    - Gaps where your fix has low confidence (conflicting
      research, no clear precedent, multiple valid approaches)
    - Gaps containing security keywords (auth, token, secret,
      encryption, PII, credential, permission, password, authentication,
      authorization, session, cookie, jwt, api-key, access-control)
+
+   A gap that stays open after the re-run, or where your sources
+   disagreed, is not a consensus trigger: state your recommended fix and
+   its confidence, and the recommendation stands.
 
    **Tag every unresolved gap with a category prefix in square
    brackets** so the orchestrator can route consensus to only the
@@ -144,12 +147,12 @@ parent's G4 gate do that.
      routes to all 3 analysts). A security keyword alone needs no tag;
      the runner widens keyword items to all 3 by itself
    - `[ambiguous]` — you genuinely don't know which perspective
-     applies (routes to all 3)
+     applies (routes to the generic domain analyst)
 
-   Multi-category tags are allowed: `[codebase, spec]` spawns
-   both `codebase-analyst` and `spec-context-analyst`. Untagged
-   items default to `[ambiguous]` but explicit tagging is the
-   discipline. For full routing rules, read the consensus protocol
+   Multi-category tags are allowed: the first tag that names a
+   perspective routes the one analyst. Untagged items route like
+   `[ambiguous]`, but explicit tagging is the discipline. Add a
+   `Confidence: low|high` line to every item. For full routing rules, read the consensus protocol
    only from the absolute path on your prompt's `Protocol:` line,
    which the orchestrator resolves from the loaded plugin root, and
    never search the plugin cache for another copy. Report it as
@@ -202,12 +205,13 @@ counts from them to decide whether the next gate can run.
 - <actual repo-relative checklist path> (checklist output)
 
 **Verification:** Gaps closed after the re-run
-(or "N gaps remain after the re-run — escalate to consensus")
+(or "N gaps remain after the re-run — recommended fix stated")
 
 **Unresolved for consensus:**
 - [<categories>] Gap 3: <gap description>
   Attempted fix: <what you tried, if anything>
-  Why unresolved: <remained after the re-run / low confidence / security keyword>
+  Why: <low confidence / security keyword>
+  Confidence: <low|high>
   (Example: `[codebase] Gap 3: error-handling pattern unclear in payment flow`)
 (or "None — all gaps resolved with high confidence")
 

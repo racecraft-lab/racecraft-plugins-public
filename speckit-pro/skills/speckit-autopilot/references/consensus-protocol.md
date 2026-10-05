@@ -10,6 +10,7 @@ Consensus dispatch runs as batched ordinary subagents; see
 ## Contents
 
 - [Two-Layer Resolution Architecture](#two-layer-resolution-architecture) — executor first-pass then consensus second-pass
+- [Plan-Stage Tiers](#plan-stage-tiers) — security, low-confidence and recommendation routing (ADR 0022)
 - [Category-Routed Dispatch (Tier A)](#category-routed-dispatch-tier-a) — `[codebase|spec|domain|security|ambiguous]` routing rules + escape-hatch
 - [Batched Dispatch](#batched-dispatch) — multi-item fan-out in ONE tool turn
 - [Three-Analyst Consensus Rules (Round 2 / N=3)](#three-analyst-consensus-rules-round-2--n3) — full fan-out behavior
@@ -35,56 +36,78 @@ and repo-local helpers. Follow
 ([capability-discovery.md](./capability-discovery.md)) for selection,
 fallback, evidence, inventory, and metadata rules. The executor
 resolves most items directly (~80%) and applies fixes to
-artifacts. Items it can't resolve with high confidence are
-flagged in its "Unresolved for consensus" summary section,
-with a category prefix (see "Category-Routed Dispatch" below).
+artifacts. Items it doubts, and items that carry a security tag or
+keyword, are flagged in its "Unresolved for consensus" summary
+section with a category prefix and a `Confidence: low|high` line
+(see "Category-Routed Dispatch" below). Every other item takes the
+executor's recommendation.
 
 **Layer 2 — Consensus agents (second pass):** The main
-session (not the executor) routes each unresolved item to the
-relevant analyst(s) based on the executor's category prefix.
-Single-analyst paths apply when one perspective is sufficient;
-all-three paths apply for security keywords, untagged items,
-multi-perspective tags spanning all categories, or when the
-single-analyst path returns low confidence.
+session (not the executor) runs `parse-consensus-categories` on
+each flagged item and follows the `tier` it returns (see
+[Plan-Stage Tiers](#plan-stage-tiers)).
 
 **Why two layers:** Single-agent research handles
-straightforward items efficiently. Category-routed consensus
-spends model effort only on the perspective(s) the executor
-identified as relevant, with a defense-in-depth fallback to
-all-three for ambiguous, security-sensitive, or low-confidence
-items.
+straightforward items efficiently. Consensus spends model effort
+only where a second opinion pays: all three analysts on security
+items, one analyst on items the executor doubts.
 
 **When consensus is triggered:**
-- Executor flagged the item as low-confidence
-- Executor's research sources disagreed
-- Item remained unresolved after the executor's one fix pass and re-run
-- Item contains security keywords (always goes to all-three consensus)
+- Item carries a `[security]` tag or a security keyword (all-three consensus, every round)
+- Executor marked the item `Confidence: low` (one analyst, no synthesizer)
+
+Sources that disagree and items left over after the executor's fix pass
+trigger nothing: the executor states a confidence and a recommendation.
+
+## Plan-Stage Tiers
+
+ADR 0022. `parse-consensus-categories` takes the item `line` and the
+executor's `confidence` (`low` or `high`; a missing value counts as
+`low`) and returns one `tier`. Dispatch exactly the analysts it returns.
+
+| `tier` | Items | Analysts | Resolution |
+|--------|-------|----------|------------|
+| `security` | `[security]` tag or a [Security Keyword](#security-keywords), at any confidence | All 3 | Rounds, synthesizer and tiebreak as below |
+| `low_confidence` | Everything else the executor marked `low` | One: the first tag that names a perspective, else `speckit-pro:domain-researcher` | No synthesizer. An analyst answer with `Confidence: high` replaces the recommendation, and the recommendation becomes the rejected alternative. Otherwise the recommendation stands |
+| `recommendation` | Everything else | None | The executor's recommendation stands |
+
+Record every `low_confidence` and `recommendation` outcome in the
+decisions list. Use kind `low_confidence_answer` for a `low_confidence`
+item: the list renders those entries before all others. The plan stage
+makes no decision-model call (ADR 0020).
 
 ## Category-Routed Dispatch (Tier A)
 
 Each item in the executor's "Unresolved for consensus" section
-MUST carry a category prefix. The orchestrator calls the
-`parse-consensus-categories` runner helper on the item line and
-dispatches exactly the analysts it returns. The table below states
+MUST carry a category prefix and a `Confidence: low|high` line. The
+orchestrator calls the `parse-consensus-categories` runner helper on
+the item line and the confidence, and dispatches exactly the analysts
+it returns. The table below states
 what that helper implements; it is not a procedure to run by hand.
 
 ### Category tags
 
 | Tag | Meaning | Routes to |
 |-----|---------|-----------|
-| `[codebase]` | Resolution depends on existing patterns/conventions in this repo's code | `speckit-pro:codebase-analyst` only |
-| `[spec]` | Resolution depends on project decisions in spec/plan/constitution/roadmap | `speckit-pro:spec-context-analyst` only |
-| `[domain]` | Resolution depends on external standards, RFCs, library docs, or community best practice | `speckit-pro:domain-researcher` only |
+| `[codebase]` | Resolution depends on existing patterns/conventions in this repo's code | `speckit-pro:codebase-analyst` |
+| `[spec]` | Resolution depends on project decisions in spec/plan/constitution/roadmap | `speckit-pro:spec-context-analyst` |
+| `[domain]` | Resolution depends on external standards, RFCs, library docs, or community best practice | `speckit-pro:domain-researcher` |
 | `[security]` | Item's substance is about security (credentials, access control, secrets, personal data). A [Security Keyword](#security-keywords) alone needs no tag: the helper widens it | All 3 (defense-in-depth, never single-routed) |
-| `[ambiguous]` | Executor uncertain which perspective applies | All 3 (safe default) |
-| *(missing/unparseable prefix)* | Treated as `[ambiguous]` | All 3 (safe default) |
+| `[ambiguous]`, unknown, or missing/unparseable prefix | Executor uncertain which perspective applies | `speckit-pro:domain-researcher` (the generic domain) |
 
-**Multi-category tags** are valid: `[codebase, domain]` dispatches
-both `speckit-pro:codebase-analyst` and `speckit-pro:domain-researcher`.
-`parse-consensus-categories` reads the comma-separated category list
-inside the bracket and returns that union.
+The Routes-to column applies to a `low` confidence item. A `high` item
+that is not security needs no analyst.
+
+**Multi-category tags** are valid: `parse-consensus-categories` reads
+the comma-separated category list inside the bracket and routes the
+first tag that names a perspective, so `[codebase, domain]` dispatches
+`speckit-pro:codebase-analyst` alone.
 
 ### Two-round protocol with escape hatch
+
+Only the `security` tier runs these rounds, and its Round 1 already
+dispatches all three analysts, so Round 2 fires only for a failed or
+escaped analyst. A `low_confidence` item stops after its one analyst.
 
 ```text
 ROUND 1 — category-routed
@@ -157,15 +180,15 @@ The helpers are what executes.
 
 | Helper | Purpose |
 |--------|---------|
-| `parse-consensus-categories` | Reads one unresolved-item line and returns `tags`, the `analysts` to spawn, the dispatch `reason`, and `security_route` (`tag` for an explicit `[security]` tag, `keyword` for a keyword alone, `null` otherwise). Implements every routing rule in the table above: security override, ambiguous safe default, unknown-tag safe default, multi-tag union, untagged → all 3. It reads the whole line, not just the bracket, so a [Security Keyword](#security-keywords) anywhere in the item text widens to all 3 even when the executor tagged the item narrowly. |
+| `parse-consensus-categories` | Reads one unresolved-item `line` plus the executor's `confidence` and returns `tags`, the `tier`, the `analysts` to spawn, the dispatch `reason`, and `security_route` (`tag` for an explicit `[security]` tag, `keyword` for a keyword alone, `null` otherwise). Implements every routing rule in [Plan-Stage Tiers](#plan-stage-tiers). It reads the whole line, not just the bracket, so a [Security Keyword](#security-keywords) anywhere in the item text widens to all 3 even when the executor tagged the item narrowly or marked it `high`. |
 | `aggregate-crl` | Reads the Consensus Resolution Log table out of a workflow file and returns `total_items`, `round1`, `round2`, `escape_hatch`, `escape_rate_percent`, the `threshold_percent` it was given (default 10), and `exceeds_threshold`. |
 
 **Call `parse-consensus-categories` for every unresolved item and
 dispatch exactly the analysts it returns.** Do not route by reading
-the table yourself. The helper is the only place the widening rules
-run: a tag it does not recognize widens to all three analysts rather
-than narrowing to a guess, and so does a security keyword in the item
-text, whatever the executor put in the bracket.
+the table yourself. The helper is the only place the tier rules run:
+a security keyword in the item text widens to all three analysts
+whatever the executor put in the bracket or wrote as its confidence,
+and a tag it does not recognize routes to the generic domain analyst.
 
 ```text
 resolved_python -m speckit_pro_runner < request.json
@@ -177,7 +200,7 @@ request.json:
   "helper_id": "parse-consensus-categories",
   "operation": "parse-consensus-categories",
   "mode": "read_only",
-  "inputs": { "line": "[codebase, domain] Q3: bcrypt or argon2?" }
+  "inputs": { "line": "[codebase, domain] Q3: bcrypt or argon2?", "confidence": "low" }
 }
 ```
 
@@ -211,7 +234,8 @@ serial (write contention on spec.md / plan.md / tasks.md).
 ```text
 Stage 1 — All routed analysts, ONE assistant message:
   For each unresolved item Ix (x = 1..N):
-    Call parse-consensus-categories on the item line → analyst set Sx
+    Call parse-consensus-categories on the item line and confidence → tier, analyst set Sx
+    (tier recommendation: Sx is empty; apply the recommendation, no dispatch)
     For each analyst a in Sx:
       Agent(subagent_type: <a>,
             run_in_background: true,
@@ -224,7 +248,9 @@ Stage 1 — All routed analysts, ONE assistant message:
   Await ALL spawned analysts to complete.
 
 Stage 2 — All synthesizers, ONE assistant message:
-  For each item Ix:
+  A low_confidence item skips this stage: apply its analyst's answer when that
+  answer says Confidence: high, else keep the recommendation.
+  For each security item Ix:
     Agent(subagent_type: "speckit-pro:consensus-synthesizer",
           run_in_background: true,
           description: "SPEC-XXX consensus synthesis (R1) [I<x>]",
@@ -435,13 +461,11 @@ main session handles Layer 2 (consensus) for unresolved items.
 
 > **Note on the diagrams below.** They depict the **Round 2**
 > (full fan-out) path that fires after a Round 1 escape, or
-> directly when an item is tagged `[security]`, `[ambiguous]`,
-> or untagged. Round 1 follows the same shape but spawns only
-> the analyst(s) `parse-consensus-categories` returns for the
-> item (1 ≤ N ≤ 3).
-> Both rounds invoke `consensus-synthesizer` with whichever
-> analyst responses ran — see "Category-Routed Dispatch" above
-> for the routing rules.
+> directly when an item carries a `[security]` tag or keyword. A
+> `low_confidence` item spawns the one analyst
+> `parse-consensus-categories` returns and no synthesizer. The
+> synthesizer runs only for `security` items — see
+> "Plan-Stage Tiers" above for the routing rules.
 
 ### Clarify Consensus
 
@@ -494,7 +518,7 @@ with high confidence.
 
 ## Executor's Attempt
 [Insert the executor's answer and why it was flagged —
-conflicting sources, low confidence, or security keyword]
+low confidence or security keyword]
 
 ## Your Task
 Propose the best answer to this question from your
@@ -556,8 +580,7 @@ confidence.
 
 ## Executor's Attempt
 [Insert what the executor tried, if anything, and why it
-was flagged — remained after the verification re-run, low confidence, or
-security keyword]
+was flagged — low confidence or security keyword]
 
 ## Your Task
 Propose how to close this gap. Specifically:
@@ -618,8 +641,7 @@ Description: [Insert finding text]
 
 ## Executor's Attempt
 [Insert what the executor tried, if anything, and why it
-was flagged — remained after the verification re-run, low confidence, or
-security keyword]
+was flagged — low confidence or security keyword]
 
 ## Your Task
 Propose how to fix this finding. Specifically:
