@@ -12,8 +12,10 @@ python3 tests/speckit-pro/layer2-trigger/compare-trigger-evals.py validate --man
 ```
 
 Use the full template the same way. `--out` must not exist; binding cannot
-overwrite the template or retained evidence. Validation rejects stale bindings
-with exit code 2. The CI campaign suite exercises both templates and stale
+overwrite the template or retained evidence. `rebind` reads `--manifest` only
+as a regular file of at most 1 MiB, with no symlink anywhere in its path, so pass
+a real path (on macOS, `/private/tmp` rather than `/tmp`). Validation rejects
+stale bindings with exit code 2. The CI campaign suite exercises both templates and stale
 bindings without provider access.
 
 Before a native launch, select the evidence output directory and obtain the

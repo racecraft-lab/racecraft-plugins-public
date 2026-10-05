@@ -7,9 +7,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import sqlite3
+import stat
 
 import host_skill_views
 import native_eval_strict_json as strict_json
@@ -21,6 +23,8 @@ from trigger_inventory import canonical_sha256, validate_inventory
 
 ROOT = Path(__file__).resolve().parents[1]
 _DIGEST = re.compile(r"[0-9a-f]{64}")
+MAX_DRAFT_BYTES = 1 << 20
+_NO_FOLLOW = os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NONBLOCK", 0)
 
 
 def json_digest(value: object) -> str:
@@ -65,10 +69,29 @@ def snapshot_identities(snapshot: dict) -> dict:
     return {key: json_digest(snapshot[key]) for key in ("observer", "catalog", "fixture")}
 
 
+def _draft_path(path: Path) -> Path:
+    """Refuse a draft path that reaches its file through any symlinked component."""
+    absolute = Path(os.path.abspath(path))
+    for component in (*reversed(absolute.parents), absolute):
+        _require(not component.is_symlink(), f"draft path must not contain a symlink: {component}")
+    return absolute
+
+
+def _read_draft(path: Path) -> bytes:
+    """Read a regular, non-symlink draft file of at most MAX_DRAFT_BYTES."""
+    descriptor = os.open(_draft_path(path), os.O_RDONLY | _NO_FOLLOW)
+    with os.fdopen(descriptor, "rb") as stream:
+        _require(stat.S_ISREG(os.fstat(stream.fileno()).st_mode), "draft must be a regular file")
+        payload = stream.read(MAX_DRAFT_BYTES + 1)
+    _require(len(payload) <= MAX_DRAFT_BYTES, f"draft exceeds {MAX_DRAFT_BYTES} bytes")
+    return payload
+
+
 def rebind_identities(path: Path, out: Path | None = None) -> dict:
     """Materialize a template, or refresh only the identities of a concrete draft."""
-    text = path.read_text(encoding="utf-8")
-    manifest = read_json(path)
+    payload = _read_draft(path)
+    text = payload.decode("utf-8")
+    manifest = strict_json.loads(payload, error=ValueError)
     if manifest.get("schema_version") == "trigger-experiment-template/v1":
         _require(out is not None, "template binding requires a separate --out manifest")
         bound = bind_template(manifest)
@@ -76,10 +99,14 @@ def rebind_identities(path: Path, out: Path | None = None) -> dict:
         return {"rebound": True, "identities": bound["identities"]}
     _require(out is None, "--out is only supported for unbound templates")
     current = snapshot_identities(measurement_snapshot())
-    for key, old in json.loads(text)["identities"].items():
+    for key, old in manifest["identities"].items():
         _require(text.count(old) == 1, f"{key} identity digest is not unique in the draft")
         text = text.replace(old, current[key])
-    path.write_text(text, encoding="utf-8")
+    descriptor = os.open(_draft_path(path), os.O_WRONLY | _NO_FOLLOW)
+    with os.fdopen(descriptor, "wb") as stream:
+        _require(stat.S_ISREG(os.fstat(stream.fileno()).st_mode), "draft must be a regular file")
+        stream.truncate(0)
+        stream.write(text.encode("utf-8"))
     return {"rebound": True, "identities": current}
 
 

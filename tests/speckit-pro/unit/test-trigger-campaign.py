@@ -612,7 +612,7 @@ class DraftIdentityTests(unittest.TestCase):
         script = ROOT / "layer2-trigger/compare-trigger-evals.py"
         source = ROOT / "layer2-trigger/campaign-drafts/issue-573-pilot.draft.json"
         with tempfile.TemporaryDirectory() as temporary:
-            draft = Path(temporary) / "template.json"
+            draft = Path(temporary).resolve() / "template.json"
             draft.write_bytes(source.read_bytes())
             for extra in ([], ["--out", str(draft)]):
                 with self.subTest(extra=extra):
@@ -628,7 +628,7 @@ class DraftIdentityTests(unittest.TestCase):
         template["schema_version"] = "trigger-experiment-template/v1"
         template.pop("identities", None)
         with tempfile.TemporaryDirectory() as temporary:
-            draft = Path(temporary) / "template.json"
+            draft = Path(temporary).resolve() / "template.json"
             bound = Path(temporary) / "bound.json"
             draft.write_text(json.dumps(template) + "\n")
             before = draft.read_bytes()
@@ -666,7 +666,7 @@ class DraftIdentityTests(unittest.TestCase):
         source = ROOT / "layer2-trigger" / "campaign-drafts" / "issue-573-pilot.draft.json"
         script = ROOT / "layer2-trigger" / "compare-trigger-evals.py"
         with tempfile.TemporaryDirectory() as temporary:
-            draft = Path(temporary) / "stale.draft.json"
+            draft = Path(temporary).resolve() / "stale.draft.json"
             stale = comparison.bind_template(json.loads(source.read_bytes()))
             stale["identities"]["observer"] = "0" * 64
             draft.write_text(json.dumps(stale, indent=2) + "\n")
@@ -681,6 +681,61 @@ class DraftIdentityTests(unittest.TestCase):
         self.assertTrue(after["identities_current"])
         self.assertEqual({key: value for key, value in rebound.items() if key != "identities"},
                          {key: value for key, value in stale.items() if key != "identities"})
+
+    def test_rebind_refuses_a_symlinked_template_or_template_directory(self):
+        source = ROOT / "layer2-trigger/campaign-drafts/issue-573-pilot.draft.json"
+        script = ROOT / "layer2-trigger/compare-trigger-evals.py"
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            outside = base / "outside"
+            outside.mkdir()
+            (outside / "reviewed.draft.json").write_bytes(source.read_bytes())
+            linked_file = base / "repo/campaign-drafts/reviewed.draft.json"
+            linked_file.parent.mkdir(parents=True)
+            linked_file.symlink_to(outside / "reviewed.draft.json")
+            linked_directory = base / "repo/linked-drafts"
+            linked_directory.symlink_to(outside, target_is_directory=True)
+            for manifest in (linked_file, linked_directory / "reviewed.draft.json"):
+                with self.subTest(manifest=manifest.relative_to(base).as_posix()):
+                    bound = base / f"bound-{manifest.parent.name}.json"
+                    result = subprocess.run([sys.executable, str(script), "rebind", "--manifest", str(manifest),
+                                             "--out", str(bound)], capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+                    self.assertIn("symlink", json.loads(result.stdout)["error"])
+                    self.assertFalse(bound.exists())
+
+    def test_rebind_refuses_an_oversized_template(self):
+        source = ROOT / "layer2-trigger/campaign-drafts/issue-573-pilot.draft.json"
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            template = base / "oversized.draft.json"
+            payload = source.read_bytes().rstrip()
+            template.write_bytes(payload + b" " * (comparison.MAX_DRAFT_BYTES + 1 - len(payload)))
+            bound = base / "bound.json"
+            with self.assertRaisesRegex(ValueError, "exceeds"):
+                comparison.rebind_identities(template, bound)
+            self.assertFalse(bound.exists())
+
+    def test_rebind_refuses_an_in_place_concrete_draft_reached_through_a_symlink(self):
+        source = ROOT / "layer2-trigger/campaign-drafts/issue-573-pilot.draft.json"
+        script = ROOT / "layer2-trigger/compare-trigger-evals.py"
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            stale = comparison.bind_template(json.loads(source.read_bytes()))
+            stale["identities"]["observer"] = "0" * 64
+            target = base / "outside/stale.draft.json"
+            target.parent.mkdir()
+            target.write_text(json.dumps(stale, indent=2) + "\n")
+            before = target.read_bytes()
+            link = base / "repo/stale.draft.json"
+            link.parent.mkdir()
+            link.symlink_to(target)
+            result = subprocess.run([sys.executable, str(script), "rebind", "--manifest", str(link)],
+                                    capture_output=True, text=True)
+            self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+            self.assertIn("symlink", json.loads(result.stdout)["error"])
+            self.assertEqual(target.read_bytes(), before)
+            self.assertTrue(link.is_symlink())
 
 
 class CampaignPinsTests(unittest.TestCase):
