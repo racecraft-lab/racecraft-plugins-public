@@ -942,7 +942,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             try:
                 claude.cleanup_child(child)
             except OSError:
-                pass
+                pass  # cleanup may report the zombie-only group; this test asserts only the signals sent
         self.assertEqual(sent, [(signal.SIGTERM, False)], "SIGKILL reached a PGID after its leader was reaped")
         self.assertTrue(child.reaped, "cleanup must reap the leader last")
 
