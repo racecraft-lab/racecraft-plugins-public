@@ -163,12 +163,11 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
         extension commands registered for the phase's after_<phase> event in
         .specify/extensions.yml (enabled, no condition), by priority then file
         order, to run once after the phase and record in the decisions list.
-        Mandatory hooks (optional: false) belong to the loaded command and are
-        never listed; Clarify loads no command, so it lists none.
+        Mandatory hooks belong to the loaded command, never listed; Clarify
+        loads no command and lists none.
 
-    Empty reserved fields activate no new behavior. Input errors return no
-    data. An unreadable or uninterpretable hook file returns internal_failure
-    with phase_brief_hooks_unavailable, never a guessed list.
+    Empty reserved fields activate no new behavior. Input errors return no data;
+    an uninterpretable hook file is internal_failure, never a guessed list.
     """
     try:
         phase, workflow, feature = checked_request(request.inputs)
