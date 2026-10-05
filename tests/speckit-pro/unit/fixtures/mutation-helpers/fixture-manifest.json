@@ -99,6 +99,13 @@
       "modes": ["dry_run"],
       "failure_classes": ["invalid_input", "deferred_live_mutation"],
       "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/mutation-helpers/requests/multi-pr-emission.json"
+    },
+    {
+      "helper_id": "write-readiness-record",
+      "operation": "write-readiness-record",
+      "modes": ["dry_run", "apply"],
+      "failure_classes": ["invalid_input", "missing_prerequisite", "write_failure"],
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/mutation-helpers/requests/write-readiness-record.json"
     }
   ]
 }
