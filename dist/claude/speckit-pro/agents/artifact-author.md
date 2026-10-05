@@ -4,8 +4,8 @@ description: >
   Fills the shipped HTML artifact-gallery templates for a feature and writes
   the finished pages into the feature's `artifacts/` directory. Use at draft
   pull-request time, after `tasks.md` exists and before the pull request is
-  created or refreshed. Reads the gallery manifest to decide which
-  draft-stage pages the feature needs, fills each selected template's marked
+  created or refreshed. Uses the runner-selected draft-stage pages and
+  fills each selected template's marked
   regions from the feature's planning record, and reports one outcome per
   page. Fail-open — a page it cannot fill is reported as a gap and never
   blocks pull-request creation.
@@ -25,20 +25,21 @@ created or refreshed.
 
 ## Inputs (provided in your prompt)
 
-Six inputs. Every one of them is read-only; the only place you write is the
+Planning and gallery inputs. Every one of them is read-only; the only place you write is the
 feature's `artifacts/` directory.
 
 | Input | Path |
 | --- | --- |
 | specification | `specs/<branch>/spec.md` |
 | plan | `specs/<branch>/plan.md` |
+| research (optional) | `research.md` beside the plan |
 | tasks | `specs/<branch>/tasks.md` |
 | design concept | `docs/ai/specs/.process/<SPEC-ID>-design-concept.md` |
 | gallery manifest | `manifest.json` in the `Gallery dir:` directory |
 | templates | `templates/<entry-id>.html` in the `Gallery dir:` directory |
 
 Read the specification, plan, and tasks first, then the design concept, so you
-know what the feature actually does before you decide which pages it needs.
+know what the feature actually does before you fill the selected pages.
 
 Use capability-first discovery as defined in `capability-discovery.md`.
 Ground every asserted fact in an invoked-capability result per `grounding.md`.
@@ -59,24 +60,20 @@ shipped manifest and the shipped templates. Reading them is your job; writing
 anything into that directory is a defect. You author **from** the shipped
 templates, you never change them.
 
-## Selection — read the manifest, never hardcode the list
+## Selection — consume the runner result
 
-Read `manifest.json` from the `Gallery dir:` directory at run time. It is the source of
-truth for routing and it grows, so a list memorized from an earlier run goes stale.
+Use the `selected_pages` returned by the `select-artifact-pages` runner helper.
+If the dispatch prompt lacks that result, invoke the same helper in `read_only`
+mode from the feature repository root, ahead of all template reads. Its operation
+is also `select-artifact-pages`; send `plan_file` and, when present,
+`research_file` and `design_concept_file` as repository-relative file paths.
+The research file is `research.md` beside the supplied plan. Omit missing
+optional files. The loaded runner reads its own shipped gallery manifest.
 
-1. Keep only `shipped` entries whose `stage` is `draft-pr`; other stages route a
-   different moment. A `planned` entry has no template yet, so it is never
-   selected and never reported as a gap.
-2. Apply each surviving entry's `trigger`:
-   - `{"always": true}` selects the entry on every run.
-   - `{"any_of": [...]}` selects the entry only when the feature carries at
-     least one of the signals it names.
-3. Signal names come from the manifest's own closed `signals` vocabulary. Two
-   of them decide draft-stage routing:
-   - `competing_approaches` — planning weighed a real alternative against the
-     approach that was chosen.
-   - `brownfield_change` — the change edits existing code a reviewer has to
-     understand before they can read the edit.
+The helper owns the signals and the page list. Consume its `selected_pages`
+in order. A `planned` entry has no template yet, so it is never selected and never reported as a gap.
+On a non-`ok` result, write nothing and report a whole-set selection gap with
+the diagnostic reason. Selection failure remains fail-open for PR creation.
 
 ## Fill — write only between the markers
 
@@ -180,7 +177,7 @@ caller and never return a blocking status.
 | one page fails | write the others; report that page as a gap with a reason |
 | every page fails | write nothing; report a whole-set gap with a reason |
 | a template is unreadable | that page is a gap; the other pages proceed |
-| the design concept is missing | `competing_approaches` does not fire; the two always-on pages still generate |
+| an optional planning file is missing | omit its input to the selection helper; fill the pages it returns |
 
 A run that produces zero pages still lets the pull request open. A silently
 corrupted page does not.

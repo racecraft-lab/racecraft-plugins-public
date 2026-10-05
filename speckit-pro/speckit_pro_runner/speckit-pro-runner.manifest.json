@@ -532,6 +532,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/artifact_selection.py",
+        "display": "speckit_pro_runner/helpers/artifact_selection.py"
+      },
+      "sha256": "d32d1d7bf6391e275232a1ea1526a606b492b6aa4d7daea6095c627de98ff7b4"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/helpers/codex_capabilities.py",
         "display": "speckit_pro_runner/helpers/codex_capabilities.py"
       },
@@ -687,7 +695,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "f12aea3d408581699df6020cd01db2ee29518f2d634225e83492fd1ec2eaa3fc"
+      "sha256": "22bb050adf033d52bea76bde9c6c13aa2a835791e10d7ccf7db8c27850c90e28"
     },
     {
       "path": {

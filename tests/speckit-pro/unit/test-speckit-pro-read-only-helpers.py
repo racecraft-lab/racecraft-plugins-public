@@ -61,6 +61,7 @@ from speckit_pro_runner.helpers import registry  # noqa: E402
 from speckit_pro_runner.pr_contract import PACKET_TITLE_SCOPE_PATTERN, PACKET_TITLE_VALUE_PATTERN  # noqa: E402
 
 EXPECTED_HELPERS = [
+    "select-artifact-pages",
     "g0-setup",
     "formal-doctor",
     "scaffold-answers",
@@ -160,6 +161,7 @@ HELPER_CASES: dict[str, dict[str, object]] = {
     "validate-pr-workflow-contract": {"title": "feat(FEATURE-001): Validate helper contract"},
     "validate-pr-packet-read-only": {"packet_path": "tests/speckit-pro/unit/fixtures/read-only-helpers/missing-pr-packet.json"},
     "estimate-spec-size": {"user_stories": 2, "files": 3, "frs": 4},
+    "select-artifact-pages": {"plan_file": FEATURE_DIR + "/plan.md"},
     "research-broker-preflight": {},
     "render-egress-authorization": json.loads(
         (REPO_ROOT / "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/render-egress-authorization.json")

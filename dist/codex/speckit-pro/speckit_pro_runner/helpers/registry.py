@@ -10,6 +10,7 @@ from ..envelope import diagnostic, response
 from ..formal.helper import run_formal_helper
 from ..research_preflight import run_research_broker_preflight_helper
 from .archive_sweep import run_archive_sweep_helper
+from .artifact_selection import run_artifact_selection_helper
 # The two CODEX_ names are re-exported: tests read them through the registry.
 from .install import CODEX_OPTIONAL_HELPER_NAME, CODEX_REQUIRED_AGENT_NAMES, run_install_helper  # noqa: F401
 from .decisions_list import run_decisions_list_helper
@@ -114,6 +115,10 @@ def deferred_authoritative_request() -> str:
 
 
 HELPERS: dict[str, HelperEntry] = {
+    "select-artifact-pages": HelperEntry(
+        "select-artifact-pages", "select-artifact-pages", None, "python_authoritative", "python_contract",
+        authoritative_request("select-artifact-pages"),
+    ),
     "g0-setup": HelperEntry(
         "g0-setup", "g0-setup", None, "python_authoritative", "python_contract",
         authoritative_request("g0-setup"),
@@ -705,6 +710,7 @@ def mutation_registry_report() -> dict[str, Any]:
 
 # Helpers with their own response contracts share one dispatch path.
 SPECIAL_HELPER_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
+    "select-artifact-pages": run_artifact_selection_helper,
     "formal-doctor": run_formal_helper,
     "research-broker-preflight": run_research_broker_preflight_helper,
     "render-egress-authorization": run_egress_authorization_helper,

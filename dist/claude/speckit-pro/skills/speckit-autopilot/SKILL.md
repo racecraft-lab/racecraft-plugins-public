@@ -860,6 +860,19 @@ tell Specify to use that branch and existing spec directory rather than create
 another. Rule 6 and the consensus reference own resolution between prompts. Do
 not reconstruct those contracts from this entrypoint.
 
+### Artifact page selection
+
+Before every artifact-author dispatch, including regeneration, invoke the
+loaded runner's `select-artifact-pages` helper (`operation` of the same name,
+`mode: read_only`) from the established workflow root. Send the current
+`plan_file` and, when present, `research_file` and `design_concept_file` as
+repository-relative paths; omit missing optional files. Pass its `selected_pages`
+in the author prompt in returned order. The helper owns selection; the author
+fills that set and returns one outcome per selected page. A non-`ok` selection
+is a whole-set artifact gap under the existing fail-open reporting protocol.
+
+Include the helper result in the `speckit-pro:artifact-author` Agent prompt.
+
 ## Step 3: Post-Implementation
 
 After Phase 7 passes G7, read and execute

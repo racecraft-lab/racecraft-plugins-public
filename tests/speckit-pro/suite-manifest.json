@@ -176,6 +176,7 @@
         { "path": "tests/speckit-pro/unit/test-parity-extractors.py", "label": "test-parity-extractors" },
         { "path": "tests/speckit-pro/unit/test-parity-judge.py", "label": "test-parity-judge" },
         { "path": "tests/speckit-pro/unit/test-moc-lint-exit-codes.py", "label": "test-moc-lint-exit-codes" },
+        { "path": "tests/speckit-pro/unit/test-artifact-selection.py", "label": "test-artifact-selection" },
         { "path": "tests/speckit-pro/unit/test-artifact-gallery.py", "label": "test-artifact-gallery" },
         { "path": "tests/speckit-pro/unit/test-artifact-review.py", "label": "test-artifact-review" },
         { "path": "tests/speckit-pro/unit/test-author-broker.py", "label": "test-author-broker" },
