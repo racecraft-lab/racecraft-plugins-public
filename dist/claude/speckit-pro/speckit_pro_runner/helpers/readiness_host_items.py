@@ -49,10 +49,13 @@ def choice(value: Any, allowed: tuple[str, ...], label: str) -> str:
 
 
 def name_text(value: Any, label: str) -> str:
+    """A short name safe to store and print; the same pattern bounds every hook, server and probe name."""
     text = clean_text(value, label)
-    if not NAME_RE.fullmatch(text):
-        raise SelectionError(f"{label} must be a short name of letters, digits, dots, hyphens or underscores")
-    return text
+    return text if NAME_RE.fullmatch(text) else _refuse_name(label)
+
+
+def _refuse_name(label: str) -> str:
+    raise SelectionError(f"{label} must be a short name of letters, digits, dots, hyphens or underscores")
 
 
 def allow_rule_texts(probes: list[dict[str, Any]], command_label: str) -> list[str]:
