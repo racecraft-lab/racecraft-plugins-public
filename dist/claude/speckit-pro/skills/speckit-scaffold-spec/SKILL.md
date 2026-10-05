@@ -215,9 +215,9 @@ carry the blind-spot header. Leave an existing Design Concept unchanged and
 report the replacement answer needed. Unanswered findings remain Open Questions.
 
 Use the prepared environment and skip Step 3.5 bootstrap. Present the quality-gate
-confirmation, formal-methods offer and verification-Docker offer, and record
-their file answers. Carry accepted selections from `verification_gates` into
-the workflow; a selection needing more details ends with the missing key.
+confirmation and record its file answer. Make the formal-methods and
+verification-Docker offers at Step 6.6 with their file answers. Carry accepted
+selections from `verification_gates` into the workflow; a selection needing more details ends with the missing key.
 At Step 9, use `continue_to_planning` for the closing report and print the
 planning command. The operator still starts planning as a separate invocation.
 The interactive instructions below apply when `--answers-file` is absent.
@@ -907,6 +907,7 @@ per item:
 | `typesafe_jev` | checking whether this session exposes the Jev `evaluate` tool |
 | `reviewability_report` | reusing the setup gate result, with its report or roadmap path in `files` and SPEC-ID as `values.spec_id` |
 | `git_write` | recording `not_applicable` with `evidence_source` "Claude Code runs no git write probe" |
+| `formal_methods` | judging whether the Design Concept's design suits a formal model, by the [coach's formal-methods guide](../speckit-coach/references/formal-methods-guide.md): `verified` when it suits one, `not_applicable` when it does not; cite the deciding behavior as `evidence_source` |
 
 - Record `verified` for a check that passed in this run. Record `unavailable`
   for a failed check or a declined fix, `unknown` for what this session cannot
@@ -917,8 +918,9 @@ per item:
   helper stores digests only. Send `evidence_source` as one plain line.
   A `verified` item needs an input fingerprint; verified reviewability also
   needs its report or roadmap file and `spec_id`.
-- The helper observes `local_capability` and `quality_gates` itself. Omit
-  `host_version` when the host does not report it.
+- The helper observes `local_capability`, `quality_gates` and
+  `verification_docker` (whether a Linux/arm64 Docker daemon answers) itself.
+  Omit `host_version` when the host does not report it.
 - When the response is `input_error`, correct the field its diagnostic names
   and send the request once more.
 - Print one line per `unavailable` or `unknown` item with its action, then
@@ -926,6 +928,29 @@ per item:
   finishing normally.
 
 The record is git-ignored; leave it unstaged.
+
+### 6.6 Offer Formal Methods and Verification Docker (IN the Worktree)
+
+Every SPEC gets both offers, whatever its feasibility result, so the user
+learns each capability exists even when declining (ADR 0005). Read the two
+results from the Step 6.5 response: `data.record.items.formal_methods` and
+`data.record.items.verification_docker`. When the response holds no record,
+show both as `unknown`. The step is done when each offer was shown with its
+result and its answer is printed.
+
+For each feature, print one line: the feature, its `status`, its
+`evidence_source`, and the `action` when present. Then collect one answer per
+feature:
+
+- Answers-file mode: use the file's `formal_methods` and `verification_docker`
+  booleans; ask nothing.
+- Interactive mode: ask both with one `AskUserQuestion`, recommending the
+  decline for a feature whose status is not `verified`.
+
+Print `accepted` or `declined` beside each feature. An accepted offer
+changes nothing in this run: the opt-in setup
+flow ships in a later release, so scaffold installs nothing and leaves the
+workflow's Formal Methods selection as the Design Concept decided.
 
 ### 7. Commit and Verify (IN the Worktree)
 

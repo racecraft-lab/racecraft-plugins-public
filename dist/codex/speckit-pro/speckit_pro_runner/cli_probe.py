@@ -1,4 +1,4 @@
-"""One bounded, read-only `gh` or `git` query with a fixed argv, a per-caller allowlist and a timeout."""
+"""One bounded, read-only `gh`, `git` or `docker` query with a fixed argv, a per-caller allowlist and a timeout."""
 
 from __future__ import annotations
 
@@ -11,14 +11,18 @@ from typing import Any
 # A branch name that could be read as an option, or that git would reject, is never passed to a CLI.
 BRANCH = re.compile(r"(?!-)(?!.*\.\.)(?!.*//)[A-Za-z0-9._/-]{1,255}\Z")
 STDERR_TAIL_CHARS = 2048
-CLIS = ("gh", "git")
+STDOUT_TAIL_CHARS = 1024 * 1024
+DOCKER_STDOUT_TAIL_CHARS = STDERR_TAIL_CHARS
+CLIS = ("gh", "git", "docker")
 
 
 def probe(root: Path, argv: list[str], *, allowed: Collection[str], timeout: float) -> dict[str, Any]:
     """Run `argv` when its CLI is in `allowed`; any failure to run is reported, never raised.
 
     The record always has the same four keys. `exit_status` is None when the CLI is not
-    allowed, cannot start, or exceeds `timeout` seconds.
+    allowed, cannot start, exceeds `timeout` seconds, or overflows the stdout limit.
+    Docker output is limited to 2048 characters; Git/GitHub retain up to 1 MiB
+    so ordinary structured responses stay complete. Overflow is never a successful probe.
     """
     try:
         if not argv or argv[0] not in allowed or argv[0] not in CLIS:
@@ -28,13 +32,20 @@ def probe(root: Path, argv: list[str], *, allowed: Collection[str], timeout: flo
                                    "stdin": subprocess.DEVNULL, "shell": False}
         if argv[0] == "gh":
             result = subprocess.run(["gh", *argv[1:]], **options)
+        elif argv[0] == "docker":
+            result = subprocess.run(["docker", *argv[1:]], **options)
         else:
             result = subprocess.run(["git", *argv[1:]], **options)
+        stdout_limit = DOCKER_STDOUT_TAIL_CHARS if argv[0] == "docker" else STDOUT_TAIL_CHARS
+        overflow = len(result.stdout) > stdout_limit
+        stderr = result.stderr[-STDERR_TAIL_CHARS:].strip()
+        if overflow:
+            stderr = f"CLI stdout exceeded {stdout_limit} characters; probe output is incomplete. {stderr}"[:STDERR_TAIL_CHARS]
         return {
             "argv": argv,
-            "exit_status": result.returncode,
-            "stdout_tail": result.stdout.strip(),
-            "stderr_tail": result.stderr[-STDERR_TAIL_CHARS:].strip(),
+            "exit_status": None if overflow else result.returncode,
+            "stdout_tail": result.stdout[-stdout_limit:].strip(),
+            "stderr_tail": stderr,
         }
     except (OSError, ValueError, subprocess.SubprocessError) as exc:
         return {"argv": argv, "exit_status": None, "stdout_tail": "", "stderr_tail": str(exc)}
