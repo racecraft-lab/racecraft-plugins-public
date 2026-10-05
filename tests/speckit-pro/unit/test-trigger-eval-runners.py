@@ -840,6 +840,46 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
 
 
     @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
+    def test_claude_post_signal_permission_probe_requires_later_absence(self) -> None:
+        claude = import_script(CLAUDE_RUNNER, "layer2_claude_post_signal_probe")
+        for exit_signal, persistent in itertools.product((signal.SIGTERM, signal.SIGKILL), (False, True)):
+            with self.subTest(exit_signal=exit_signal, persistent=persistent):
+                child = FakePopen(b"", returncode=-exit_signal)
+                child.timeout, child.communicate_calls = True, 1
+                sent, observations = [], []
+                post_signal_probes = 0
+                def probe(pgid: int, signum: int) -> None:
+                    nonlocal post_signal_probes
+                    self.assertEqual(pgid, child.pid)
+                    if signum:
+                        sent.append(signum)
+                    elif exit_signal in sent:
+                        # Exit occurs between poll() and the group probe; the next poll reaps it.
+                        child.timeout = False
+                        post_signal_probes += 1
+                        if persistent or post_signal_probes == 1:
+                            raise PermissionError(1, "post-signal probe unresolved")
+                        raise ProcessLookupError(3, "group absent")
+                with (
+                    mock.patch.object(claude.os, "getpgrp", return_value=child.pid + 1),
+                    mock.patch.object(claude.os, "killpg", side_effect=probe),
+                    mock.patch.multiple(claude, CLEANUP_TIMEOUT=0.5, DESCENDANT_EXIT_GRACE=0),
+                    mock.patch.object(claude.time, "monotonic", side_effect=[i / 10 for i in range(100)]),
+                    mock.patch.object(claude.time, "sleep"),
+                ):
+                    if persistent:
+                        with self.assertRaisesRegex(OSError, "post-signal probe unresolved") as caught:
+                            claude.cleanup_child(child, observations=observations)
+                        self.assertNotIsInstance(caught.exception, PermissionError)
+                    else:
+                        self.assertTrue(claude.cleanup_child(child, observations=observations))
+                self.assertEqual(sent, {(signal.SIGTERM, False): [signal.SIGTERM]}.get((exit_signal, persistent), [signal.SIGTERM, signal.SIGKILL]))
+                self.assertGreaterEqual(post_signal_probes, 2)
+                self.assertEqual(observations[0]["errno"], 1)
+                self.assertEqual(observations[0]["pgid"], child.pid)
+                self.assertEqual(observations[-1]["errno"], 1 if persistent else 3)
+
+    @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
     def test_claude_sigterm_esrch_is_terminal_and_never_signals_reused_pgid(self) -> None:
         claude = import_script(CLAUDE_RUNNER, "layer2_claude_esrch_pgid_reuse")
         child = FakePopen(b"", returncode=0)
@@ -1357,7 +1397,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
 
     def test_claude_direct_runner_contracts(self) -> None:
         claude = import_script(CLAUDE_RUNNER, "layer2_claude_direct")
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory() as temporary, mock.patch.object(tempfile, "gettempdir", return_value=temporary):
             root = Path(temporary)
             source = root / "source" / "SKILL.md"
             source.parent.mkdir()
@@ -2020,7 +2060,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             ("known-different", ("claude-sonnet-test", "claude-opus-test", "claude-sonnet-test"), None),
             ("all-missing", (None, None, None), None),
         )
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory() as temporary, mock.patch.object(tempfile, "gettempdir", return_value=temporary):
             root = Path(temporary)
             plugin = root / "fixture" / "speckit-pro"
             source = plugin / "skills" / "demo" / "SKILL.md"
