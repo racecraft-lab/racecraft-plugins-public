@@ -203,7 +203,9 @@ def run_git_write_probe_helper(entry: Any, request: Any) -> dict[str, Any]:
     if leftovers:
         message += " Probe files could not be removed under the repository's git directory: " + ", ".join(leftovers) + "."
         item["evidence_source"] += "; probe cleanup failed"
-        item["action"] = (item.get("action") or "Rerun scaffold.") + " Remove the named leftover probe files."
+        item["action"] = (item.get("action") or "Rerun scaffold.") + (
+            " Inspect the named leftover entries and restore any replacement files before removing only probe-owned files."
+        )
     data = {"verdict": verdict, "message": message, "observation": item}
     if verdict == "proceed":
         return response("ok", request_id=request.request_id, data=data)
