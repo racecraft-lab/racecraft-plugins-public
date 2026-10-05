@@ -68,6 +68,11 @@ def import_script(path: Path, name: str) -> ModuleType:
     return load_script(name, path)
 
 
+def fixed_trial_id(runner: ModuleType, test_id: str) -> contextlib.AbstractContextManager:
+    """Fix only this runner's nonce; host-view UUID allocation stays independent."""
+    return mock.patch.object(runner, "uuid", SimpleNamespace(uuid4=mock.Mock(return_value=SimpleNamespace(hex=test_id))))
+
+
 def assert_no_speckit_contracts(test: unittest.TestCase, claude: ModuleType, staged_text: str) -> None:
     engine = import_script(CODEX_ENGINE, "layer2_codex_no_speckit_contract")
     test.assertEqual(claude.NO_SPECKIT_SKILL_DESCRIPTION, _NO_SPECKIT_DESCRIPTION)
@@ -451,7 +456,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                             stack.enter_context(mock.patch.object(engine, name, return_value=replacement))
                         stack.enter_context(mock.patch.object(engine.shutil, "which", return_value=f"/stub/{host}"))
                         stack.enter_context(mock.patch.object(engine.tempfile, "mkdtemp", return_value=str(workspace)))
-                        stack.enter_context(mock.patch.object(engine.uuid, "uuid4", return_value=SimpleNamespace(hex=fixed_id)))
+                        stack.enter_context(fixed_trial_id(engine, fixed_id))
                         stack.enter_context(mock.patch.object(engine, f"run_{host}_query", side_effect=provider))
                         if host == "claude":
                             stack.enter_context(mock.patch.object(engine, "cli_preflight", return_value=({}, "ok")))
@@ -1339,6 +1344,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
 
     def test_claude_direct_runner_contracts(self) -> None:
         claude = import_script(CLAUDE_RUNNER, "layer2_claude_direct")
+        host_view_uuid4 = claude.host_skill_views.uuid.uuid4
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             source = root / "source" / "SKILL.md"
@@ -1773,7 +1779,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     "cli_preflight",
                     return_value=({"version": "2.1.261", "supported_flags": []}, "ok"),
                 ),
-                mock.patch.object(claude.uuid, "uuid4", return_value=SimpleNamespace(hex=fixed_id)),
+                fixed_trial_id(claude, fixed_id),
                 mock.patch.object(
                     claude.tempfile,
                     "mkdtemp",
@@ -1788,6 +1794,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 ) as main_run,
                 contextlib.redirect_stdout(main_stdout),
             ):
+                self.assertIs(claude.host_skill_views.uuid.uuid4, host_view_uuid4)
                 main_exit = claude.main(["demo", "--model", "claude-sonnet-test"])
             main_report = json.loads(main_stdout.getvalue())
 
@@ -1814,11 +1821,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                         "cli_preflight",
                         return_value=({"version": "2.1.261", "supported_flags": []}, "ok"),
                     ),
-                    mock.patch.object(
-                        claude.uuid,
-                        "uuid4",
-                        return_value=SimpleNamespace(hex=f"{case_index:012d}"),
-                    ),
+                    fixed_trial_id(claude, f"{case_index:012d}"),
                     mock.patch.object(claude.tempfile, "mkdtemp", return_value=str(rejected_staged)),
                     mock.patch.object(claude.subprocess, "Popen") as rejected_popen,
                     mock.patch.object(claude, "retain_trial_evidence") as rejected_retain,
@@ -1996,6 +1999,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
 
     def test_claude_summary_requires_every_trial_model(self) -> None:
         claude = import_script(CLAUDE_RUNNER, "layer2_claude_model_summary")
+        host_view_uuid4 = claude.host_skill_views.uuid.uuid4
         scenarios = (
             ("all-known-same", ("claude-sonnet-test",) * 3, "claude-sonnet-test"),
             ("mixed-known-missing", ("claude-sonnet-test", None, "claude-sonnet-test"), None),
@@ -2063,11 +2067,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                             "cli_preflight",
                             return_value=({"version": "2.1.261", "supported_flags": []}, "ok"),
                         ),
-                        mock.patch.object(
-                            claude.uuid,
-                            "uuid4",
-                            return_value=SimpleNamespace(hex=fixed_id),
-                        ),
+                        fixed_trial_id(claude, fixed_id),
                         mock.patch.object(
                             claude.tempfile,
                             "mkdtemp",
@@ -2080,6 +2080,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                         ),
                         contextlib.redirect_stdout(output),
                     ):
+                        self.assertIs(claude.host_skill_views.uuid.uuid4, host_view_uuid4)
                         exit_code = claude.main(["demo", "--model", "claude-sonnet-test"])
                     report = json.loads(output.getvalue())
                     self.assertEqual(exit_code, 0 if label == "all-known-same" else 1)
@@ -3137,11 +3138,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     ) as main_preflight,
                     mock.patch.object(engine, "cli_preflight", side_effect=main_cli_preflight),
                     mock.patch.object(engine, "run_codex_query") as rejected_provider,
-                    mock.patch.object(
-                        engine.uuid,
-                        "uuid4",
-                        return_value=SimpleNamespace(hex=f"{case_index:08d}"),
-                    ),
+                    fixed_trial_id(engine, f"{case_index:08d}"),
                     mock.patch.object(engine.tempfile, "mkdtemp", return_value=str(main_workspace)),
                     mock.patch.object(
                         sys,
