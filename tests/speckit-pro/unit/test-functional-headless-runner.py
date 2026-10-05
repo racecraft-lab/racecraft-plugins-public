@@ -53,7 +53,7 @@ def actor_environment(root: Path) -> dict[str, str]:
 
 
 def finish_supervisor_groups(actor_group: int | None, actor_absent: bool, process: subprocess.Popen) -> None:
-    for owned_group in (actor_group, process.pid):
+    for owned_group in dict.fromkeys((actor_group, process.pid)):
         if owned_group == actor_group and actor_absent:
             continue
         if isinstance(owned_group, int) and owned_group > 1 and owned_group != os.getpgrp():
@@ -1366,6 +1366,13 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
 
 
 class SupervisorFixtureAbsenceTests(unittest.TestCase):
+    def test_supervisor_finalizer_deduplicates_group_identity(self) -> None:
+        process = mock.Mock(pid=FAKE_PGID)
+        for absent in (False, True):
+            with self.subTest(absent=absent), mock.patch.object(os, "killpg", side_effect=ProcessLookupError()) as killpg:
+                finish_supervisor_groups(FAKE_PGID, absent, process)
+                self.assertEqual(killpg.call_count, 0 if absent else 1)
+
     @unittest.skipUnless(os.name == "posix", "POSIX process-group contract")
     def test_supervisor_fixture_never_signals_a_verified_absent_actor(self) -> None:
         case = FunctionalHeadlessRunnerTests()
