@@ -5,11 +5,17 @@ Only prospectively retained execution and replay context can qualify a record.
 """
 from __future__ import annotations
 
+from collections.abc import Iterator
+import contextlib
+import errno
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
+import secrets
 import sqlite3
+import stat
 
 import host_skill_views
 import native_eval_strict_json as strict_json
@@ -21,6 +27,10 @@ from trigger_inventory import canonical_sha256, validate_inventory
 
 ROOT = Path(__file__).resolve().parents[1]
 _DIGEST = re.compile(r"[0-9a-f]{64}")
+MAX_DRAFT_BYTES = 1 << 20
+_NO_FOLLOW = os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC
+_DIRECTORY = os.O_RDONLY | os.O_DIRECTORY | _NO_FOLLOW
+_OPEN_AT = os.open in os.supports_dir_fd
 
 
 def json_digest(value: object) -> str:
@@ -65,7 +75,129 @@ def snapshot_identities(snapshot: dict) -> dict:
     return {key: json_digest(snapshot[key]) for key in ("observer", "catalog", "fixture")}
 
 
+def _open_at(parent: int, name: str, flags: int, shown: object) -> int:
+    """Open one name relative to parent without following a symlink."""
+    try:
+        return os.open(name, flags, dir_fd=parent)
+    except OSError as error:
+        if error.errno in {errno.ELOOP, errno.EMLINK, errno.ENOTDIR}:
+            raise ValueError(f"draft path must not contain a symlink or non-directory: {shown}") from error
+        raise
+
+
+def _draft_directory(path: Path) -> tuple[int, str]:
+    """Walk to the draft's directory one descriptor at a time, refusing any symlinked component."""
+    _require(_OPEN_AT, "draft access requires os.open dir_fd support")
+    absolute = Path(os.path.abspath(path))
+    parent = os.open(absolute.anchor, _DIRECTORY)
+    try:
+        for depth, name in enumerate(absolute.parts[1:-1], start=2):
+            child = _open_at(parent, name, _DIRECTORY, Path(*absolute.parts[:depth]))
+            os.close(parent)
+            parent = child
+    except BaseException:
+        os.close(parent)
+        raise
+    return parent, absolute.name
+
+
+def _require_single_draft(info: os.stat_result, identity: tuple[int, int] | None = None) -> None:
+    _require(stat.S_ISREG(info.st_mode), "draft must be a regular file")
+    _require(info.st_nlink == 1, "draft must not be a hard link")
+    _require(identity is None or (info.st_dev, info.st_ino) == identity, "draft was replaced during refresh")
+
+
+@contextlib.contextmanager
+def _held_draft(directory: int, name: str) -> Iterator[tuple[bytes, os.stat_result]]:
+    """Read a regular, single-link, non-symlink draft of at most MAX_DRAFT_BYTES and keep it open.
+
+    The open descriptor keeps the read inode alive, so no file swapped in at the name can be
+    given its (st_dev, st_ino); Linux reuses a freed inode number for the next new file.
+    """
+    fd = _open_at(directory, name, os.O_RDONLY | _NO_FOLLOW, name)
+    try:
+        info = os.fstat(fd)
+        _require_single_draft(info)
+        stream = os.fdopen(fd, "rb")
+    except BaseException:
+        os.close(fd)
+        raise
+    with stream:
+        payload = stream.read(MAX_DRAFT_BYTES + 1)
+        _require(len(payload) <= MAX_DRAFT_BYTES, f"draft exceeds {MAX_DRAFT_BYTES} bytes")
+        yield payload, info
+
+
+def _replace_draft(directory: int, name: str, payload: bytes, read: os.stat_result) -> None:
+    """Rename a new sibling file over the draft; the inode that was read and checked is never written."""
+    temporary = f".{name}.{secrets.token_hex(16)}.tmp"
+    try:
+        fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | _NO_FOLLOW, 0o600, dir_fd=directory)
+    except FileExistsError as error:
+        raise ValueError(f"draft refresh temporary name already exists: {temporary}") from error
+    try:
+        with os.fdopen(fd, "wb") as stream:
+            os.fchmod(stream.fileno(), stat.S_IMODE(read.st_mode))
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+        _require_single_draft(os.stat(name, dir_fd=directory, follow_symlinks=False), (read.st_dev, read.st_ino))
+        os.replace(temporary, name, src_dir_fd=directory, dst_dir_fd=directory)
+    except BaseException:
+        with contextlib.suppress(FileNotFoundError):
+            os.unlink(temporary, dir_fd=directory)
+        raise
+
+
+def rebind_identities(path: Path, out: Path | None = None) -> dict:
+    """Materialize a template, or refresh only the identities of a concrete draft."""
+    directory, name = _draft_directory(path)
+    try:
+        return _rebind_at(directory, name, out)
+    finally:
+        os.close(directory)
+
+
+def _rebind_at(directory: int, name: str, out: Path | None) -> dict:
+    with _held_draft(directory, name) as (payload, read):
+        return _rebind_held(directory, name, out, payload, read)
+
+
+def _rebind_held(directory: int, name: str, out: Path | None, payload: bytes, read: os.stat_result) -> dict:
+    text = payload.decode("utf-8")
+    manifest = strict_json.loads(payload, error=ValueError)
+    if manifest.get("schema_version") == "trigger-experiment-template/v1":
+        _require(out is not None, "template binding requires a separate --out manifest")
+        bound = bind_template(manifest)
+        evidence.write_json_once(out, bound)
+        return {"rebound": True, "identities": bound["identities"]}
+    _require(out is None, "--out is only supported for unbound templates")
+    current = snapshot_identities(measurement_snapshot())
+    for key, old in manifest["identities"].items():
+        _require(text.count(old) == 1, f"{key} identity digest is not unique in the draft")
+        text = text.replace(old, current[key])
+    _replace_draft(directory, name, text.encode("utf-8"), read)
+    return {"rebound": True, "identities": current}
+
+
+def bind_template(template: dict) -> dict:
+    """Freeze an unbound planning template without changing its reviewed inputs."""
+    _require(template.get("schema_version") == "trigger-experiment-template/v1",
+             "unsupported experiment template schema")
+    _require("identities" not in template, "template must not contain frozen identities")
+    _require(template.get("launch_authorized") is False
+             and template.get("qualification_established") is False
+             and template.get("output_directory") is None,
+             "template must remain unapproved with no output directory")
+    manifest = {**template, "schema_version": "trigger-experiment/v1",
+                "identities": snapshot_identities(measurement_snapshot())}
+    validate_experiment(manifest)
+    return manifest
+
+
 def validate_experiment(manifest: dict) -> dict[str, dict]:
+    _require(not (isinstance(manifest, dict) and manifest.get("schema_version") == "trigger-experiment-template/v1"),
+             "unsupported experiment schema: bind a template first with rebind --manifest <template> --out <new-manifest>")
     _require(isinstance(manifest, dict) and manifest.get("schema_version") == "trigger-experiment/v1", "unsupported experiment schema")
     _require(isinstance(manifest.get("experiment_id"), str) and bool(manifest["experiment_id"]), "missing experiment identity")
     _require(type(manifest.get("trials")) is int and manifest["trials"] == 3, "exactly three integer trials required")
@@ -188,6 +320,16 @@ def validate_inventory_binding(manifest: dict, inventory: dict) -> dict:
     _require(all(active_roster.get(key) == row for key, row in cases.items()), "selected roster is not contained in frozen inventory")
     if manifest["qualification_scope"] == "full":
         _require(set(cases) == set(active_roster) and {row["host"] for row in cases.values()} == {"claude", "codex"}, "full qualification requires the entire dual-host inventory")
+    return cases
+
+
+def validate_current_manifest(manifest: dict, inventory_path: Path) -> dict:
+    """Check a concrete draft against the retained inventory and current inputs."""
+    cases = validate_inventory_binding(manifest, read_json(inventory_path))
+    _require(hashlib.sha256(inventory_path.read_bytes()).hexdigest() == manifest["inventory_sha256"],
+             "inventory digest mismatch")
+    _require(manifest["identities"] == snapshot_identities(measurement_snapshot()),
+             "stale experiment identities; bind a fresh draft before approval")
     return cases
 
 
