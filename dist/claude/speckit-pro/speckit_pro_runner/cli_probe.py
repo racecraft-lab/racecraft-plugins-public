@@ -1,4 +1,4 @@
-"""One bounded, read-only `gh`, `git` or `docker` query with a fixed argv, a per-caller allowlist and a timeout."""
+"""Read-only CLI queries with fixed argv, a per-caller allowlist and a timeout; hosts take only --version."""
 
 from __future__ import annotations
 

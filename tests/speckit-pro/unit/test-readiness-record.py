@@ -9,6 +9,7 @@ import os
 import re
 import shutil
 import stat
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -677,6 +678,36 @@ class PreviewEvidenceSecurityTest(unittest.TestCase):
         with unittest.mock.patch.object(readiness_record.os, "read", wraps=os.read) as read:
             self.assertEqual("unknown", readiness_record.preview_surface(self.root, "claude"))
             self.assertLessEqual(sum(call.args[1] for call in read.call_args_list), 1024 * 1024 + 1)
+
+    def test_invalid_file_fingerprint_text(self) -> None:
+        for name in self.records["claude"]["items"]:
+            for path in ("bad\x00path", "bad\npath", "bad\ud800path", " padded "):
+                with self.subTest(item=name, path=repr(path)):
+                    self.assert_unknown(lambda record: record["items"][name].update(fingerprints={f"file:{path}": "missing"}))
+
+    @unittest.skipUnless(hasattr(os, "mkfifo"), "FIFO evidence requires POSIX")
+    def test_fifo_record_and_fingerprint_do_not_block(self) -> None:
+        code = "from pathlib import Path; from speckit_pro_runner.helpers.readiness_record import preview_surface; import sys; print(preview_surface(Path(sys.argv[1]), sys.argv[2]))"
+        environment = {**os.environ, "PYTHONPATH": str(REPO_ROOT / "speckit-pro")}
+        for host, good in self.records.items():
+            path = self.directory / f"{host}.json"
+            for variant in ("record", "preview_surface", "github_auth"):
+                with self.subTest(host=host, variant=variant):
+                    if variant == "record":
+                        os.mkfifo(path)
+                    else:
+                        record = copy.deepcopy(good)
+                        record["items"][variant]["fingerprints"] = {"file:pipe": readiness_record.digest(b"no tools")}
+                        path.write_text(json.dumps(record))
+                        os.mkfifo(self.root / "pipe")
+                    try:
+                        result = subprocess.run([sys.executable, "-c", code, str(self.root), host], env=environment,
+                                                capture_output=True, text=True, timeout=2, check=False)
+                        self.assertEqual((0, "unknown"), (result.returncode, result.stdout.strip()), result.stderr)
+                    finally:
+                        path.unlink()
+                        if variant != "record":
+                            (self.root / "pipe").unlink()
 
 
 class FeasibilityTest(unittest.TestCase):

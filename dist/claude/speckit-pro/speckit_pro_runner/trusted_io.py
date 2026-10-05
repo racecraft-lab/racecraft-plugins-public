@@ -456,7 +456,8 @@ def trusted_open_regular_file(path: Path, repo_root: Path) -> int | None:
             )
             os.close(parent_fd)
             parent_fd = next_fd
-        fd = os.open(target_name, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=parent_fd)
+        # Check the opened descriptor without waiting for a writer if an untrusted leaf is a FIFO.
+        fd = os.open(target_name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=parent_fd)
         file_stat = os.fstat(fd)
         if stat.S_ISLNK(file_stat.st_mode) or not stat.S_ISREG(file_stat.st_mode):
             os.close(fd)
@@ -520,7 +521,7 @@ def trusted_open_directory(path: Path, repo_root: Path) -> int | None:
 
 
 def descriptor_read_supported() -> bool:
-    return os.name != "nt" and hasattr(os, "O_NOFOLLOW")
+    return os.name != "nt" and hasattr(os, "O_NOFOLLOW") and hasattr(os, "O_NONBLOCK")
 
 
 def trusted_lines(path: Path, repo_root: Path | None = None) -> list[str]:

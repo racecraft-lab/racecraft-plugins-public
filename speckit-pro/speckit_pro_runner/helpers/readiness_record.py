@@ -370,6 +370,12 @@ def sound_fingerprint(key: Any, value: Any) -> bool:
     kind, _, name = key.partition(":")
     if kind == "value":
         return VALUE_NAME_RE.fullmatch(name) is not None and DIGEST_RE.fullmatch(value) is not None
+    try:
+        if clean_text(name, "fingerprint file") != name:
+            return False
+        name.encode("utf-8", "strict")
+    except (SelectionError, UnicodeError):
+        return False
     return kind == "file" and inside_repository(name) and PurePosixPath(name).as_posix() == name \
         and name != "." and (DIGEST_RE.fullmatch(value) is not None or value in ("missing", "unreadable"))
 
