@@ -677,6 +677,7 @@ validate_capability_resolution_DIST_CLAUDE = REPO_ROOT / 'dist' / 'claude'
 validate_capability_resolution_DIST_CODEX = REPO_ROOT / 'dist' / 'codex'
 validate_capability_resolution_DIRECTIVE_MARKER = 'capability-discovery.md'
 validate_capability_resolution_GROUNDING_MARKER = 'grounding.md'
+validate_capability_resolution_SLICE_AGENTS = ('clarify-executor', 'checklist-executor', 'analyze-executor')
 validate_capability_resolution_PATH_TOKEN_RE = re.compile('speckit-pro/[A-Za-z0-9._/-]*capability-discovery\\.md')
 validate_capability_resolution_GROUNDING_TOKEN_RE = re.compile('speckit-pro/[A-Za-z0-9._/-]*grounding\\.md')
 CONTRACT_REFERENCES = 'skills/speckit-autopilot/references'
@@ -695,6 +696,21 @@ def validate_capability_resolution__excluded(runtime: str, name: str) -> bool:
     return name in agent_roster.capability_exempt_roles(runtime)
 
 class ValidateCapabilityResolution(unittest.TestCase):
+
+    def _check_claude_agent(self, agent_name: str, agent_file: Path, text: str) -> None:
+        # A repo-relative path does not exist in the consumer repository; Claude
+        # agents read both files from the directory the orchestrator passes.
+        with self.subTest(msg=f"claude: in-scope agent '{agent_name}' names no repo-relative contract path"):
+            self.assertFalse(validate_capability_resolution_PATH_TOKEN_RE.findall(text) or validate_capability_resolution_GROUNDING_TOKEN_RE.findall(text), f'repo-relative contract path in {validate_capability_resolution__rel(agent_file)}')
+        flat = ' '.join(text.split())
+        if agent_name in validate_capability_resolution_SLICE_AGENTS:
+            # The phase brief puts the rule sections in the dispatch prompt, so these agents read no reference.
+            with self.subTest(msg=f"claude: in-scope agent '{agent_name}' takes the contracts as reference slices"):
+                self.assertIn('reference slices', flat, f'no reference slices directive in {validate_capability_resolution__rel(agent_file)}')
+                self.assertNotIn('Reference dir', text)
+            return
+        with self.subTest(msg=f"claude: in-scope agent '{agent_name}' reads the contracts from its `Reference dir:` line"):
+            self.assertIn("prompt's `Reference dir:` line", flat, f'no Reference dir directive in {validate_capability_resolution__rel(agent_file)}')
 
     def _collect_runtime(self, runtime: str, directory: Path, ext: str, found_tokens: list[str]) -> None:
         rel_dir = validate_capability_resolution__rel(directory)
@@ -715,12 +731,7 @@ class ValidateCapabilityResolution(unittest.TestCase):
             if validate_capability_resolution_DIRECTIVE_MARKER not in text:
                 continue
             if runtime == 'claude':
-                # A repo-relative path does not exist in the consumer repository; Claude
-                # agents read both files from the directory the orchestrator passes.
-                with self.subTest(msg=f"claude: in-scope agent '{agent_name}' names no repo-relative contract path"):
-                    self.assertFalse(validate_capability_resolution_PATH_TOKEN_RE.findall(text) or validate_capability_resolution_GROUNDING_TOKEN_RE.findall(text), f'repo-relative contract path in {validate_capability_resolution__rel(agent_file)}')
-                with self.subTest(msg=f"claude: in-scope agent '{agent_name}' reads the contracts from its `Reference dir:` line"):
-                    self.assertIn("prompt's `Reference dir:` line", ' '.join(text.split()), f'no Reference dir directive in {validate_capability_resolution__rel(agent_file)}')
+                self._check_claude_agent(agent_name, agent_file, text)
                 continue
             # An installed Codex agent cannot read the plugin's references, so it
             # carries the grounding rules inline, word for word from grounding.md.
