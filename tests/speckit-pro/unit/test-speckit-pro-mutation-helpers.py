@@ -8587,7 +8587,10 @@ This line must not be copied.
             self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["source_changed"])
             self.assertEqual(target.read_text(encoding="utf-8"), "concurrent\n")
             self.assertFalse(response["data"]["mutation"]["live_mutation"])
-            self.assertFalse(response["data"]["writes_state"])
+            self.assertTrue(response["data"]["writes_state"])
+            self.assertTrue(response["diagnostics"][0]["details"]["rollback_errors"])
+            self.assertTrue(any(path.read_bytes() == b"updated\n"
+                                for path in git_root.glob(".artifact-recovery-*/entry")))
 
     def test_write_failure_cleanup_errors_mark_writes_state(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
