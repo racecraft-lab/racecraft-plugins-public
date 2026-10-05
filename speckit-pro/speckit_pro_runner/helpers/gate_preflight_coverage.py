@@ -121,7 +121,10 @@ def git_common_directory(root: Path) -> Path:
 
 def private_record_dir(root: Path) -> Path:
     """Where the private autonomy record lives: inside the git common directory, shared by every worktree."""
-    return git_common_directory(root) / "speckit-pro" / "autonomy-boundary"
+    try:
+        return git_common_directory(root) / "speckit-pro" / "autonomy-boundary"
+    except ValueError as error:
+        raise ValueError("git could not report the common directory, so the private record path is unknown") from error
 
 
 def _slug(text: str) -> str:

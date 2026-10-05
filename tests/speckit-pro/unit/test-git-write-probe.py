@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import errno
 import os
 import subprocess
 import sys
@@ -16,6 +17,7 @@ LIB_DIR = TEST_DIR.parent / "lib"
 sys.path.insert(0, str(LIB_DIR))
 sys.path.insert(0, str(REPO_ROOT / "speckit-pro"))
 
+from speckit_pro_runner.helpers.git_write_probe import probe_result  # noqa: E402
 from host_skill_views import host_skill_root  # noqa: E402
 from runner_invocation import assert_runner_response, run_runner  # noqa: E402
 from test_result import run_counted  # noqa: E402
@@ -61,6 +63,25 @@ class GitWriteProbeTest(unittest.TestCase):
         observation = data["observation"]
         self.assertEqual(("git_write", "unavailable"), (observation["item"], observation["status"]))
         self.assertTrue(observation["action"])
+
+    def test_stub_refs_directory_from_reftable_repositories_still_proceeds(self) -> None:
+        self.heads.rmdir()
+        self.heads.write_text("stub\n", encoding="utf-8")
+        self.addCleanup(self.heads.mkdir)
+        self.addCleanup(self.heads.unlink)
+        _, response, _ = run_runner(REQUEST, cwd=self.root)
+        assert_runner_response(self, response, "ok", 0)
+        self.assertEqual("verified", response["data"]["observation"]["status"])
+
+    def test_non_permission_failures_proceed_as_unknown_without_the_sandbox_advice(self) -> None:
+        for number in (errno.ENOSPC, errno.EIO):
+            with self.subTest(errno=number):
+                verdict, message, item = probe_result(OSError(number, "boom"), True)
+                self.assertEqual(("proceed", ""), (verdict, message))
+                self.assertEqual("unknown", item["status"])
+                self.assertTrue(item["action"])
+        self.assertEqual("proceed", probe_result(None, False)[0])
+        self.assertEqual("stop", probe_result(PermissionError(errno.EACCES, "no"), True)[0])
 
     def test_codex_scaffold_probes_before_any_gate_and_claude_does_not(self) -> None:
         codex = (host_skill_root("codex") / SKILL).read_text(encoding="utf-8")
