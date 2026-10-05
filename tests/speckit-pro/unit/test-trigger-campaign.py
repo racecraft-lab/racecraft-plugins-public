@@ -913,13 +913,15 @@ class DraftReplaceTests(unittest.TestCase):
         if kind == "renamed file":
             sibling = self.base / "drafts/substitute"
             sibling.write_bytes(b"substituted\n")
-            os.replace(sibling, self.draft)
+            os.rename(sibling, self.draft)
             return
         self.draft.unlink()
         if kind == "file":
             self.draft.write_bytes(b"substituted\n")
         elif kind == "symlink":
             self.draft.symlink_to(self.outside)
+        elif kind == "directory symlink":
+            self.draft.symlink_to(self.outside.parent, target_is_directory=True)
         elif kind == "hard link":
             os.link(self.outside, self.draft)
         else:
@@ -929,6 +931,7 @@ class DraftReplaceTests(unittest.TestCase):
         left = {"file": lambda: self.draft.read_bytes() == b"substituted\n",
                 "renamed file": lambda: self.draft.read_bytes() == b"substituted\n",
                 "symlink": self.draft.is_symlink,
+                "directory symlink": self.draft.is_symlink,
                 "hard link": lambda: self.draft.samefile(self.outside),
                 "directory": self.draft.is_dir}
         for kind, untouched in left.items():
@@ -960,7 +963,7 @@ class DraftReplaceTests(unittest.TestCase):
         # POSIX has no compare-and-rename, so a swap here is not refused; the rename
         # replaces the name itself and never writes through what the name points at.
         real_replace = os.replace
-        for kind in ("symlink", "hard link", "directory"):
+        for kind in ("file", "renamed file", "symlink", "directory symlink", "hard link", "directory"):
             with self.subTest(kind=kind):
                 if self.draft.is_dir() and not self.draft.is_symlink():
                     self.draft.rmdir()
@@ -977,12 +980,39 @@ class DraftReplaceTests(unittest.TestCase):
                     comparison.rebind_identities(self.draft)
                 self.assertEqual(self.outside.read_bytes(), b"outside\n")
                 self.assertEqual(os.stat(self.outside).st_nlink, 1)
+                self.assertEqual(os.listdir(self.base / "outside"), ["reviewed.draft.json"])
                 if kind == "directory":
                     self.assertTrue(self.draft.is_dir())
                 else:
                     self.assertFalse(self.draft.is_symlink())
                     self.assertNotEqual(self.draft.read_bytes(), self.payload)
                 self.assert_only_the_draft_remains()
+
+    def test_a_draft_name_that_links_to_a_directory_is_refused_before_the_read(self):
+        self.draft.unlink()
+        self.draft.symlink_to(self.outside.parent, target_is_directory=True)
+        for out in (None, self.base / "bound.json"):
+            with self.subTest(out=out), self.assertRaisesRegex(ValueError, "symlink"):
+                comparison.rebind_identities(self.draft, out)
+        self.assertTrue(self.draft.is_symlink())
+        self.assertEqual(os.listdir(self.base / "outside"), [])
+        self.assertFalse((self.base / "bound.json").exists())
+
+    def test_a_temporary_entry_swapped_before_the_rename_never_writes_outside(self):
+        temporary = self.base / "drafts/.reviewed.draft.json.planted.tmp"
+        self.outside.write_bytes(b"outside\n")
+        real_replace = os.replace
+
+        def swap_then_replace(*args, **kwargs):
+            temporary.unlink()
+            temporary.symlink_to(self.outside)
+            return real_replace(*args, **kwargs)
+
+        with mock.patch.object(comparison.secrets, "token_hex", return_value="planted"), \
+                mock.patch.object(comparison.os, "replace", swap_then_replace):
+            comparison.rebind_identities(self.draft)
+        self.assertEqual(self.outside.read_bytes(), b"outside\n")
+        self.assert_only_the_draft_remains()
 
     def test_a_planted_temporary_name_is_refused_without_writing_through_it(self):
         planted = self.base / "drafts/.reviewed.draft.json.planted.tmp"
