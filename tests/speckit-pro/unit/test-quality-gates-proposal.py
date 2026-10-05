@@ -35,6 +35,69 @@ def envelope(helper_id: str, mode: str, inputs: dict[str, object]) -> dict[str, 
                 mode=mode, inputs=inputs)
 
 
+def assert_paths_and_display_are_bounded_to_the_checkout(case) -> None:
+    outside = case.tools / "secret.py"
+    outside.touch()
+    (case.root / "escape.py").symlink_to(outside)
+    bad = [outside.as_posix(), "../secret.py", "escape.py", "src/" + "a" * 5000, "src/evil\\path.py"]
+    rows = [function(path, "bad", 40) for path in bad]
+    rows += [function("src/legacy.py", "x" * 5000, 40) for _ in range(100)]
+    case.write_report([*[function("src/ok.py", "ok", 1)] * 2000, *rows])
+    data = case.run_helper("dry_run")["data"]
+    case.assertEqual(["src/legacy.py"], [row["file"] for row in data["failing_files"]])
+    case.assertLessEqual(len(data["failing_files"][0]["functions"]), 20)
+    case.assertLessEqual(len(data["failing_files"][0]["functions"][0]["name"]), 200)
+
+def assert_unbounded_complexities_do_not_raise_the_proposed_ceiling(case) -> None:
+    case.write_report([function("src/bad.py", "bad", 10**100)] * 10)
+    data = case.run_helper("dry_run")["data"]
+    case.assertEqual(10, data["proposal"]["thresholds"]["complexity"])
+    case.assertEqual("nist-235", data["proposal"]["basis"]["method"])
+
+def assert_malformed_functions_fall_back_and_apply_consumes_the_report(case) -> None:
+    for functions in (None, 5, "bad", {}, [None, 4, "bad"]):
+        with case.subTest(functions=functions):
+            (case.root / REPORT_FILE).write_text(json.dumps({"functions": functions}), encoding="utf-8")
+            dry = case.run_helper("dry_run")
+            assert_runner_response(case, dry, "ok", 0)
+            case.assertEqual("nist-235", dry["data"]["proposal"]["basis"]["method"])
+            response = case.run_helper("apply", confirmed=False)
+            assert_runner_response(case, response, "ok", 0)
+            case.assertTrue(response["data"]["report_removed"])
+            case.assertFalse((case.root / REPORT_FILE).exists())
+
+def assert_preview_includes_measured_crap_failures(case) -> None:
+    rows = ten_functions()
+    rows[0]["crap"] = 90
+    rows[0]["file"] = "src/uncovered.py"
+    case.write_report(rows)
+    data = case.run_helper("dry_run")["data"]
+    case.assertIn("src/uncovered.py", [row["file"] for row in data["failing_files"]])
+
+def assert_a_yes_cannot_write_a_changed_proposal(case) -> None:
+    case.write_report(ten_functions())
+    shown = case.run_helper("dry_run")["data"]
+    case.write_report([function("src/changed.py", "changed", 20)] * 10)
+    response = case.run_helper("apply", confirmed=True, proposal_digest=shown.get("proposal_digest", "missing"))
+    case.assertEqual("expected_failure", response["status"])
+    case.assertEqual("proposal_changed", response["data"]["outcome"])
+    case.assertFalse((case.root / GATES_FILE).exists())
+    case.assertFalse((case.root / REPORT_FILE).exists())
+
+
+def observe_quality_gates_source(case) -> dict:
+    record = envelope("write-readiness-record", "dry_run", {
+        "host": "claude", "execution_mode": "interactive", "plugin_revision": "2.40.0", "observations": []})
+    _, response, _ = run_runner(record, cwd=case.root, extra_env={"PATH": str(case.tools)})
+    return response["data"]["record"]["items"]["quality_gates"]
+
+
+def ten_functions() -> list[dict[str, object]]:
+    """Nine simple functions (complexity 1 to 9) and one outlier of 40 in a named file."""
+    simple = [function("src/ok.py", f"ok{n}", n) for n in range(1, 10)]
+    return [*simple, function("src/legacy.py", "tangle", 40)]
+
+
 class QualityGatesProposalTest(unittest.TestCase):
     def setUp(self) -> None:
         scratch = [self.enterContext(tempfile.TemporaryDirectory()) for _ in range(2)]
@@ -44,10 +107,6 @@ class QualityGatesProposalTest(unittest.TestCase):
     def write_report(self, functions: list[dict[str, object]]) -> None:
         (self.root / REPORT_FILE).write_text(json.dumps({"functions": functions}), encoding="utf-8")
 
-    def ten_functions(self) -> list[dict[str, object]]:
-        """Nine simple functions (complexity 1 to 9) and one outlier of 40 in a named file."""
-        simple = [function("src/ok.py", f"ok{n}", n) for n in range(1, 10)]
-        return [*simple, function("src/legacy.py", "tangle", 40)]
 
     def run_helper(self, mode: str, **inputs: object) -> dict:
         if inputs.get("confirmed") is True and "proposal_digest" not in inputs:
@@ -60,7 +119,7 @@ class QualityGatesProposalTest(unittest.TestCase):
                 for path in sorted(self.root.rglob("*")) if path.is_file() and not path.is_symlink()}
 
     def test_proposal_lets_about_ninety_percent_of_measured_functions_pass_and_names_the_failures(self) -> None:
-        self.write_report(self.ten_functions())
+        self.write_report(ten_functions())
         before = self.listing()
         response = self.run_helper("dry_run")
         assert_runner_response(self, response, "ok", 0)
@@ -74,9 +133,10 @@ class QualityGatesProposalTest(unittest.TestCase):
                          data["failing_files"])
         self.assertEqual(1, data["failing_function_count"])
         self.assertEqual(before, self.listing(), "a dry run writes nothing")
+        assert_preview_includes_measured_crap_failures(self)
 
     def test_nothing_measured_proposes_the_nist_ceiling_of_ten(self) -> None:
-        cases = {"declined tool, stale report": (False, self.ten_functions()), "empty report": (True, [])}
+        cases = {"declined tool, stale report": (False, ten_functions()), "empty report": (True, [])}
         for label, (measured, functions) in cases.items():
             with self.subTest(label):
                 self.write_report(functions)  # a stale report must be ignored when nothing was measured
@@ -88,10 +148,13 @@ class QualityGatesProposalTest(unittest.TestCase):
                 self.assertEqual(0, proposal["basis"]["measured_functions"])
                 self.assertEqual([], response["data"]["failing_files"])
 
+        assert_unbounded_complexities_do_not_raise_the_proposed_ceiling(self)
+        assert_malformed_functions_fall_back_and_apply_consumes_the_report(self)
+
     def test_the_file_is_written_only_on_a_yes_and_validates(self) -> None:
         from speckit_pro_runner import quality_gates
 
-        self.write_report(self.ten_functions())
+        self.write_report(ten_functions())
         proposal = self.run_helper("dry_run")["data"]["proposal"]
         response = self.run_helper("apply", confirmed=True)
         assert_runner_response(self, response, "ok", 0)
@@ -100,9 +163,11 @@ class QualityGatesProposalTest(unittest.TestCase):
         self.assertEqual(proposal, written)
         self.assertEqual([], quality_gates.validate(written))
         self.assertFalse((self.root / REPORT_FILE).exists(), "the consumed report is removed")
+        (self.root / GATES_FILE).unlink()
+        assert_a_yes_cannot_write_a_changed_proposal(self)
 
     def test_a_decline_writes_nothing_and_stores_no_decline(self) -> None:
-        self.write_report(self.ten_functions())
+        self.write_report(ten_functions())
         untouched = {path: content for path, content in self.listing().items() if path != REPORT_FILE}
         response = self.run_helper("apply", confirmed=False)
         assert_runner_response(self, response, "ok", 0)
@@ -111,7 +176,7 @@ class QualityGatesProposalTest(unittest.TestCase):
         self.assertEqual(untouched, self.listing(), "only the scratch report may disappear")
 
     def test_only_a_boolean_yes_confirms(self) -> None:
-        self.write_report(self.ten_functions())
+        self.write_report(ten_functions())
         before = self.listing()
         for value in ("yes", 1, None):
             with self.subTest(confirmed=value):
@@ -158,71 +223,23 @@ class QualityGatesProposalTest(unittest.TestCase):
         self.assertEqual(20, len(data["failing_files"]))
         self.assertTrue(data["failing_files_truncated"])
         self.assertEqual(26, data["failing_file_count"])
+        assert_paths_and_display_are_bounded_to_the_checkout(self)
 
-    def test_paths_and_display_are_bounded_to_the_checkout(self) -> None:
-        outside = self.tools / "secret.py"
-        outside.touch()
-        (self.root / "escape.py").symlink_to(outside)
-        bad = [outside.as_posix(), "../secret.py", "escape.py", "src/" + "a" * 5000, "src/evil\\path.py"]
-        rows = [function(path, "bad", 40) for path in bad]
-        rows += [function("src/legacy.py", "x" * 5000, 40) for _ in range(100)]
-        self.write_report([*[function("src/ok.py", "ok", 1)] * 2000, *rows])
-        data = self.run_helper("dry_run")["data"]
-        self.assertEqual(["src/legacy.py"], [row["file"] for row in data["failing_files"]])
-        self.assertLessEqual(len(data["failing_files"][0]["functions"]), 20)
-        self.assertLessEqual(len(data["failing_files"][0]["functions"][0]["name"]), 200)
 
-    def test_unbounded_complexities_do_not_raise_the_proposed_ceiling(self) -> None:
-        self.write_report([function("src/bad.py", "bad", 10**100)] * 10)
-        data = self.run_helper("dry_run")["data"]
-        self.assertEqual(10, data["proposal"]["thresholds"]["complexity"])
-        self.assertEqual("nist-235", data["proposal"]["basis"]["method"])
 
-    def test_malformed_functions_fall_back_and_apply_consumes_the_report(self) -> None:
-        for functions in (None, 5, "bad", {}, [None, 4, "bad"]):
-            with self.subTest(functions=functions):
-                (self.root / REPORT_FILE).write_text(json.dumps({"functions": functions}), encoding="utf-8")
-                dry = self.run_helper("dry_run")
-                assert_runner_response(self, dry, "ok", 0)
-                self.assertEqual("nist-235", dry["data"]["proposal"]["basis"]["method"])
-                response = self.run_helper("apply", confirmed=False)
-                assert_runner_response(self, response, "ok", 0)
-                self.assertTrue(response["data"]["report_removed"])
-                self.assertFalse((self.root / REPORT_FILE).exists())
 
-    def test_preview_includes_measured_crap_failures(self) -> None:
-        rows = self.ten_functions()
-        rows[0]["crap"] = 90
-        rows[0]["file"] = "src/uncovered.py"
-        self.write_report(rows)
-        data = self.run_helper("dry_run")["data"]
-        self.assertIn("src/uncovered.py", [row["file"] for row in data["failing_files"]])
 
-    def test_a_yes_cannot_write_a_changed_proposal(self) -> None:
-        self.write_report(self.ten_functions())
-        shown = self.run_helper("dry_run")["data"]
-        self.write_report([function("src/changed.py", "changed", 20)] * 10)
-        response = self.run_helper("apply", confirmed=True, proposal_digest=shown.get("proposal_digest", "missing"))
-        self.assertEqual("expected_failure", response["status"])
-        self.assertEqual("proposal_changed", response["data"]["outcome"])
-        self.assertFalse((self.root / GATES_FILE).exists())
-        self.assertFalse((self.root / REPORT_FILE).exists())
 
     def test_the_readiness_record_carries_the_observed_quality_gates_source(self) -> None:
-        def source() -> dict:
-            record = envelope("write-readiness-record", "dry_run", {
-                "host": "claude", "execution_mode": "interactive", "plugin_revision": "2.40.0", "observations": []})
-            _, response, _ = run_runner(record, cwd=self.root, extra_env={"PATH": str(self.tools)})
-            return response["data"]["record"]["items"]["quality_gates"]
 
-        self.write_report(self.ten_functions())
+        self.write_report(ten_functions())
         self.run_helper("apply", confirmed=False)
-        declined = source()
+        declined = observe_quality_gates_source(self)
         self.assertEqual("unavailable", declined["status"])
         self.assertIn("shipped defaults in use", declined["evidence_source"])
-        self.write_report(self.ten_functions())
+        self.write_report(ten_functions())
         self.run_helper("apply", confirmed=True)
-        confirmed = source()
+        confirmed = observe_quality_gates_source(self)
         self.assertEqual("verified", confirmed["status"])
         self.assertRegex(confirmed["fingerprints"][f"file:{GATES_FILE}"], r"^sha256:[0-9a-f]{64}$")
 
@@ -245,25 +262,7 @@ class QualityGatesProposalTest(unittest.TestCase):
 
 
 def build_suite() -> unittest.TestSuite:
-    tests = (
-        QualityGatesProposalTest.test_proposal_lets_about_ninety_percent_of_measured_functions_pass_and_names_the_failures,
-        QualityGatesProposalTest.test_nothing_measured_proposes_the_nist_ceiling_of_ten,
-        QualityGatesProposalTest.test_the_file_is_written_only_on_a_yes_and_validates,
-        QualityGatesProposalTest.test_a_decline_writes_nothing_and_stores_no_decline,
-        QualityGatesProposalTest.test_only_a_boolean_yes_confirms,
-        QualityGatesProposalTest.test_a_confirmed_file_is_never_overwritten_and_an_invalid_one_is_replaced_only_on_a_yes,
-        QualityGatesProposalTest.test_a_symlinked_target_is_refused_and_the_linked_file_stays_untouched,
-        QualityGatesProposalTest.test_the_worst_files_come_first_when_the_list_is_capped,
-        QualityGatesProposalTest.test_paths_and_display_are_bounded_to_the_checkout,
-        QualityGatesProposalTest.test_unbounded_complexities_do_not_raise_the_proposed_ceiling,
-        QualityGatesProposalTest.test_malformed_functions_fall_back_and_apply_consumes_the_report,
-        QualityGatesProposalTest.test_preview_includes_measured_crap_failures,
-        QualityGatesProposalTest.test_a_yes_cannot_write_a_changed_proposal,
-        QualityGatesProposalTest.test_the_readiness_record_carries_the_observed_quality_gates_source,
-        QualityGatesProposalTest.test_scaffold_documents_the_request_and_the_step_on_each_host,
-    )
-    assert {test.__name__ for test in tests} == set(unittest.defaultTestLoader.getTestCaseNames(QualityGatesProposalTest))
-    return unittest.TestSuite(QualityGatesProposalTest(test.__name__) for test in tests)
+    return unittest.TestSuite([unittest.defaultTestLoader.loadTestsFromTestCase(QualityGatesProposalTest)])
 
 
 def main() -> int:
