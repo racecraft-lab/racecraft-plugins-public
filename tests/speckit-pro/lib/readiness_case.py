@@ -1,0 +1,45 @@
+"""Shared fixture for the readiness record tests: a scratch SpecKit project and the runner request."""
+
+from __future__ import annotations
+
+import tempfile
+import unittest
+from pathlib import Path
+
+from host_skill_views import host_skill_root
+from runner_invocation import assert_runner_response, run_runner
+
+
+def readiness_request(observations: list[dict[str, object]], host: str = "claude", request_id: str = "test-readiness",
+                      mode: str = "apply", **inputs: object) -> dict[str, object]:
+    body = {"host": host, "execution_mode": "interactive", "plugin_revision": "2.40.0",
+            "observations": observations, **inputs}
+    return {"schema_version": "1.0", "request_id": request_id, "helper_id": "write-readiness-record",
+            "operation": "write-readiness-record", "mode": mode, "inputs": body}
+
+
+def scaffold_step(host: str) -> str:
+    path = host_skill_root(host) / "speckit-scaffold-spec" / "SKILL.md"
+    return path.read_text(encoding="utf-8").split("### 6.5 Write the Readiness Record", 1)[1].split("\n### ", 1)[0]
+
+
+class ReadinessCase(unittest.TestCase):
+    default_host = "claude"
+    request_id = "test-readiness"
+
+    def setUp(self) -> None:
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
+        self.root.joinpath(".specify").mkdir()
+
+    def run_helper(self, observations: list[dict[str, object]], host: str | None = None) -> dict:
+        request = readiness_request(observations, host or self.default_host, self.request_id)
+        return run_runner(request, cwd=self.root)[1]
+
+    def items(self, response: dict) -> dict:
+        assert_runner_response(self, response, "ok", 0)
+        return response["data"]["record"]["items"]
+
+    def documented_rows(self, names: tuple[str, ...]) -> dict[str, dict[str, bool]]:
+        """For each host, whether scaffold step 6.5 has a table row for each item."""
+        return {host: {name: f"| `{name}` |" in scaffold_step(host) for name in names}
+                for host in ("claude", "codex")}
