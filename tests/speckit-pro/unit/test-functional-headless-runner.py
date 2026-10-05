@@ -68,7 +68,9 @@ def supervisor_record_absence(result_path: Path, actor_group: int | None) -> boo
 
 
 def finish_supervisor_groups(actor_group: int | None, actor_absent: bool, process: subprocess.Popen) -> None:
-    for owned_group in dict.fromkeys((actor_group, process.pid)):
+    # An unreaped leader pins its group id; once reaped, the id may be reused.
+    supervisor_group = process.pid if process.poll() is None else None
+    for owned_group in dict.fromkeys((actor_group, supervisor_group)):
         if owned_group == actor_group and actor_absent:
             continue
         if isinstance(owned_group, int) and owned_group > 1 and owned_group != os.getpgrp():
@@ -1394,9 +1396,21 @@ class SupervisorReceiptTests(unittest.TestCase):
                     self.assertFalse(supervisor_record_absence(path, FAKE_PGID))
 
 
+class SupervisorFinalizerOwnershipTests(unittest.TestCase):
+    def test_supervisor_finalizer_never_signals_a_reaped_supervisor_group(self) -> None:
+        # A reaped leader no longer pins its group id, so the number may belong to someone else.
+        for poll_result, expected in ((None, 1), (0, 0)):
+            process = mock.Mock(pid=FAKE_PGID)
+            process.poll.return_value = poll_result
+            with self.subTest(poll=poll_result), mock.patch.object(os, "killpg") as killpg:
+                finish_supervisor_groups(None, False, process)
+                self.assertEqual(killpg.call_count, expected)
+
+
 class SupervisorFixtureAbsenceTests(unittest.TestCase):
     def test_supervisor_finalizer_deduplicates_group_identity(self) -> None:
         process = mock.Mock(pid=FAKE_PGID)
+        process.poll.return_value = None
         for absent in (False, True):
             with self.subTest(absent=absent), mock.patch.object(os, "killpg", side_effect=ProcessLookupError()) as killpg:
                 finish_supervisor_groups(FAKE_PGID, absent, process)
@@ -1544,6 +1558,7 @@ class RunCaseTests(unittest.TestCase):
 def main() -> int:
     suite = unittest.TestSuite([
         unittest.defaultTestLoader.loadTestsFromTestCase(FunctionalHeadlessRunnerTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(SupervisorFinalizerOwnershipTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(SupervisorFixtureAbsenceTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(SupervisorReceiptTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(SharedCodexIsolationTests),
