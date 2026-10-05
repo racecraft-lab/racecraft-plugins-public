@@ -346,8 +346,11 @@ def observe_extension_versions(raw: dict[str, Any], observed_at: str, source: st
     steps = [f"Run `specify extension add {name}`" if installed is None else f"Run `specify extension update {name}`"
              for name, installed, expected in entries if installed is None or (expected and installed != expected)]
     if steps:
-        return make_item("unavailable", source, observed_at, prints,
-                         clean_text("; ".join(steps) + ", then rerun scaffold.", "extension_versions.action"))
+        action = "; ".join(steps) + ", then rerun scaffold."
+        if len(action) > MAX_TEXT:  # many drifted extensions: one fixed line instead of a refused record
+            action = ("Run `specify extension list`, then `specify extension update` for each drifted extension "
+                      "and `specify extension add <id>` for each missing one, then rerun scaffold.")
+        return make_item("unavailable", source, observed_at, prints, clean_text(action, "extension_versions.action"))
     if any(expected is None for _, _, expected in entries):
         return make_item("unknown", source, observed_at, prints, "Name the expected version of each extension "
                          "(its project pin or the curated set), then rerun scaffold.")

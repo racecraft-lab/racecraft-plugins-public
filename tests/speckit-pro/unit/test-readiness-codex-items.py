@@ -133,6 +133,13 @@ class ReadinessCodexItemsTest(ReadinessCase):
         self.assertEqual("unknown", self.item(extensions(no_pin))["status"])
         self.assertEqual("unknown", self.item(extensions([]))["status"])
 
+    def test_many_drifted_extensions_still_record_with_one_fixed_action(self) -> None:
+        many = [{"extension": f"extension-{n:02d}-" + "x" * 30, "installed": "1.0.0", "expected": "2.0.0"}
+                for n in range(12)]
+        item = self.item(extensions(many))
+        self.assertEqual("unavailable", item["status"])
+        self.assertIn("specify extension update", item["action"])
+
     def test_extension_observations_with_unsafe_text_are_refused(self) -> None:
         for entry in ({"extension": "a b", "installed": "1", "expected": "1"},
                       {"extension": "archive; rm", "installed": "1", "expected": "1"},
