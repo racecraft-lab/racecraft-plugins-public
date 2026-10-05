@@ -244,8 +244,8 @@ the `spec_kit` object in its output; it is the only source for whether the CLI i
 `unreadable` or `match`; `install_argv` is the pinned install.
 
 If `status` is `missing` and `uv` exists, run `install_argv`. If `status` is
-`older`, `newer` or `unreadable`, record the mismatch as a readiness item
-(`installed_version` beside `pinned_version`) and offer the operator
+`older`, `newer` or `unreadable`, keep the `spec_kit` object for the
+`project_integration` observation in Step 6.5 and offer the operator
 `install_argv`; continue on the installed CLI when they decline.
 
 If `uv` is unavailable or the install fails, STOP and give the operator
@@ -901,7 +901,7 @@ per item:
 | `item` | Observe it now by |
 | --- | --- |
 | `plugin_payload` | retaining any agent gap from the start of this run; fingerprint the revision and selected installation/routing inputs; verify the session's loaded revision, since disk inventory alone does not prove it; otherwise record `unknown` with a reload/restart action |
-| `project_integration` | reusing the Specify and bootstrap results, then running helper `detect-commands` with empty `inputs={}`; fingerprint the project assets and confirmed command sources |
+| `project_integration` | reusing the Specify and bootstrap results, then running helper `detect-commands` with empty `inputs={}`; fingerprint the project assets and confirmed command sources; when Step 0 found a `spec_kit` status other than `match`, record `unavailable` with `install_argv` as the action and `installed_version` and `pinned_version` in `values` |
 | `github_auth` | running one bounded GitHub authentication status check; keep only its pass or fail |
 | `mcp_servers` | running helper `research-broker-preflight` with empty `inputs={}`, then bounded live observations of required MCP tools/startup/auth; configuration alone does not prove connectivity, so record `unknown` when live evidence is absent |
 | `typesafe_jev` | checking whether this session exposes the Jev `evaluate` tool |

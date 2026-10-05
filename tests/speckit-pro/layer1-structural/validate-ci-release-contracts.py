@@ -1324,6 +1324,18 @@ class ValidateSpecKitPin(unittest.TestCase):
                         ValidateSpecKitPin('test_no_guidance_names_an_unpinned_spec_kit_source').run(result)
                     self.assertTrue(result.failures, 'the structural scan accepted an unpinned source')
 
+class ValidateScaffoldPinMismatch(unittest.TestCase):
+    """Scaffold records a Spec Kit pin mismatch under an item the readiness writer accepts."""
+
+    def test_scaffold_records_a_pin_mismatch_under_a_valid_readiness_item(self) -> None:
+        text = (PLUGIN_ROOT / 'skills' / 'speckit-scaffold-spec' / 'SKILL.md').read_text(encoding='utf-8')
+        step0 = text.split('### 0. Ensure SpecKit CLI', 1)[1].split('### 1.', 1)[0]
+        row = next(line for line in text.splitlines() if line.startswith('| `project_integration` |'))
+        self.assertIn('`project_integration`', step0)
+        self.assertIn('Step 6.5', step0)
+        self.assertIn('spec_kit', row)
+        self.assertIn('pinned_version', row)
+
 # yaml_syntax_sane is shared by both workflow owners and regression tests.
 
 def main() -> int:
