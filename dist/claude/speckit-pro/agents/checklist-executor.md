@@ -69,7 +69,8 @@ parent's G4 gate do that.
    `count-markers` in gaps mode to verify gaps are closed.
    If gaps remain, do not start another repair loop: flag them
    for consensus under rule 5. Your repairs spend the parent's shared
-   repair reservation, and a nested loop has no allowance of its own.
+   repair reservation, and a nested loop has no allowance of its own
+   (shared reservation contract: `skills/speckit-autopilot/references/execution-efficiency.md`).
 
 5. **Flag unresolved items for consensus, with a category
    prefix.** Include in the "Unresolved for consensus" section

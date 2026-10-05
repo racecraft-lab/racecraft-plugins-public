@@ -228,10 +228,22 @@ class PhaseBriefSliceTests(unittest.TestCase):
         for path in sources:
             with self.subTest(agent=str(path.relative_to(REPO))):
                 text = " ".join(path.read_text().split())
-                for forbidden in ("Reference dir", "execution-efficiency.md", "Protocol:` line, which", "absolute path on your prompt"):
+                for forbidden in ("Reference dir", "Protocol:` line, which", "absolute path on your prompt"):
                     self.assertNotIn(forbidden, text)
                 if path.suffix == ".md" or "claude" in path.parts:
                     self.assertIn("reference slices", text)
+
+    def test_repair_reservation_keeps_its_source_pointer(self):
+        roots = ((REPO / "speckit-pro/agents", ".md"), (REPO / "speckit-pro/codex-agents", ".toml"),
+                 (REPO / "dist/claude/speckit-pro/agents", ".md"), (REPO / "dist/codex/speckit-pro/codex-agents", ".toml"))
+        for root, suffix in roots:
+            for name in ("checklist-executor", "analyze-executor"):
+                with self.subTest(agent=name, root=str(root.relative_to(REPO))):
+                    text = " ".join((root / (name + suffix)).read_text().split())
+                    reservation = text.split("Your repairs spend", 1)[1].split("5.", 1)[0]
+                    self.assertIn("a nested loop has no allowance of its own", reservation)
+                    self.assertIn("skills/speckit-autopilot/references/execution-efficiency.md", reservation)
+                    self.assertNotIn("Read", reservation)
 
     def test_both_hosts_insert_the_slices_verbatim(self):
         for host in ("claude", "codex"):

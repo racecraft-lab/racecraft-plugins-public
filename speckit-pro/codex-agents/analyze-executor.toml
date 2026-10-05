@@ -77,7 +77,8 @@ parent's G6 gate do that.
    in findings mode to verify 0 findings remain.
    If findings remain, do not start another repair loop: flag them
    for consensus under rule 5. Your repairs spend the parent's shared
-   repair reservation, and a nested loop has no allowance of its own.
+   repair reservation, and a nested loop has no allowance of its own
+   (shared reservation contract: `skills/speckit-autopilot/references/execution-efficiency.md`).
 
 5. **Flag unresolved items for consensus, with a category
    prefix.** Include in the "Unresolved for consensus" section
