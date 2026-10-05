@@ -44,11 +44,11 @@ def hook_trust(*entries: dict[str, object]) -> dict[str, object]:
 
 
 def hook(state: str = "trusted", digest: str | None = HASH, name: str = "PreToolUse") -> dict[str, object]:
-    return dict(hook=name, state=state, hash=digest, enabled=True)
+    return {"hook": name, "state": state, "hash": digest}
 
 
 def shipped_trust(**changes: object) -> dict[str, object]:
-    entries = [hook(digest=value, name=name) for name, value in SHIPPED_HASHES.items()]
+    entries = [{**hook(digest=value, name=name), "enabled": True} for name, value in SHIPPED_HASHES.items()]
     entries[0].update(changes)
     return hook_trust(*entries)
 
