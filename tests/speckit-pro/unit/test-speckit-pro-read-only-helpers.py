@@ -65,6 +65,7 @@ EXPECTED_HELPERS = [
     "formal-doctor",
     "probe-git-write",
     "scaffold-answers",
+    "phase-brief",
     "helper-registry-dispatch",
     "check-prerequisites",
     "resolve-workflow-binding",
@@ -4567,7 +4568,7 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
 
     def test_helper_python_authoritative_records(self) -> None:
         for helper_id in self.filtered_helpers():
-            if helper_id in {"helper-registry-dispatch", "scaffold-answers", "g0-setup", "probe-git-write"}:
+            if helper_id in {"helper-registry-dispatch", "scaffold-answers", "g0-setup", "probe-git-write", "phase-brief"}:
                 continue
             with self.subTest(helper_id=helper_id):
                 completed, response, stderr_records = run_runner(helper_request(helper_id, HELPER_CASES[helper_id]))

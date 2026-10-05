@@ -21,6 +21,7 @@ sys.path.insert(0, str(LIB_DIR))
 sys.path.insert(0, str(REPO_ROOT / "speckit-pro"))
 
 from host_skill_views import host_skill_root  # noqa: E402
+from readiness_case import readiness_request  # noqa: E402
 from runner_invocation import assert_runner_response, run_runner  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
@@ -45,10 +46,7 @@ def observation(item: str, status: str = "verified", **extra: object) -> dict[st
 
 
 def request(observations: list[dict[str, object]], mode: str = "apply", **inputs: object) -> dict[str, object]:
-    body = {"host": "claude", "host_version": "2.1.0", "execution_mode": "interactive",
-            "plugin_revision": "2.40.0", "observations": observations, **inputs}
-    return {"schema_version": "1.0", "request_id": "test-readiness", "helper_id": "write-readiness-record",
-            "operation": "write-readiness-record", "mode": mode, "inputs": body}
+    return readiness_request(observations, mode=mode, **{"host_version": "2.1.0", **inputs})
 
 
 class ReadinessRecordTest(unittest.TestCase):

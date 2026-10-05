@@ -1,0 +1,5 @@
+{
+  "schema_version": "1.0",
+  "helper_id": "phase-brief", "operation": "phase-brief", "mode": "read_only",
+  "inputs": {"phase": "Plan", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
+}
