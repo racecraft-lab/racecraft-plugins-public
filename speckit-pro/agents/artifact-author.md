@@ -84,8 +84,7 @@ templates, you never change them.
 
 ## Selection — consume the runner result
 
-Use the `selected_pages` returned by the `select-artifact-pages` runner helper.
-If the dispatch prompt lacks that result, invoke the same helper in `read_only`
+Invoke the loaded runner's `select-artifact-pages` helper in `read_only`
 mode from the feature repository root, ahead of all template reads. Its operation
 is also `select-artifact-pages`; send `plan_file` and, when present,
 `research_file` and `design_concept_file` as repository-relative file paths.

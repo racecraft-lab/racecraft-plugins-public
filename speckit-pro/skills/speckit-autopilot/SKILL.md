@@ -1271,20 +1271,20 @@ not reconstruct those contracts from this entrypoint.
 
 ### Artifact page selection
 
-Before every artifact-author dispatch, including regeneration, invoke the
-loaded runner's `select-artifact-pages` helper (`operation` of the same name,
-`mode: read_only`) from the established workflow root. Send the current
-`plan_file` and, when present, `research_file` and `design_concept_file` as
-repository-relative paths; omit missing optional files. Pass its `selected_pages`
-in the author prompt in returned order. The helper owns selection; the author
-fills that set and returns one outcome per selected page. A non-`ok` selection
-is a whole-set artifact gap under the existing fail-open reporting protocol.
+At every artifact-author dispatch, including regeneration, pass the current
+plan and the optional research and design-concept paths inside the established
+workflow root. Require the author to invoke the loaded runner's
+`select-artifact-pages` helper in `read_only` mode before filling templates,
+per its agent instructions. The helper owns selection; the author consumes
+`selected_pages` in returned order and reports one outcome per selected page.
+A non-`ok` selection is a whole-set artifact gap under the existing fail-open
+reporting protocol.
 
-<!-- host:claude: Claude passes selection through the Agent tool's prompt -->
-Include the helper result in the `speckit-pro:artifact-author` Agent prompt.
+<!-- host:claude: Claude supplies inputs through the Agent tool's prompt -->
+Pass those planning inputs in the `speckit-pro:artifact-author` Agent prompt.
 <!-- /host -->
-<!-- host:codex: Codex passes selection through the installed agent's spawn_agent prompt -->
-Include the helper result in the installed `artifact-author` spawn_agent prompt.
+<!-- host:codex: Codex supplies inputs through the installed agent's spawn_agent prompt -->
+Pass those planning inputs in the installed `artifact-author` spawn_agent prompt.
 <!-- /host -->
 
 ## Step 3: Post-Implementation

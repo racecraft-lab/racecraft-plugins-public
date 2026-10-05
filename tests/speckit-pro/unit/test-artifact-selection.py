@@ -16,7 +16,7 @@ sys.path.insert(0, str(ROOT / "tests/speckit-pro/lib"))
 from test_result import run_counted  # noqa: E402
 
 
-class ArtifactSelectionTests(unittest.TestCase):
+class SelectionFixture(unittest.TestCase):
     def setUp(self) -> None:
         scratch = ROOT / ".git/scratch"
         scratch.mkdir(exist_ok=True)
@@ -38,6 +38,8 @@ class ArtifactSelectionTests(unittest.TestCase):
         self.assertEqual(result["status"], status, result)
         return result["data"]
 
+
+class ArtifactSelectionTests(SelectionFixture):
     def test_new_files_select_only_the_always_selected_draft_pages(self) -> None:
         result = self.select()
         self.assertEqual(result["selected_pages"], ["implementation-plan", "spec-explainer"])
@@ -56,6 +58,11 @@ class ArtifactSelectionTests(unittest.TestCase):
                                            "- NEW src/new.py\n## Notes\n- MODIFIED also-outside.py\n", encoding="utf-8")
         self.assertEqual(self.select()["selected_pages"], ["implementation-plan", "spec-explainer"])
 
+    def test_fenced_modified_example_is_not_a_declared_operation(self) -> None:
+        (self.root / "plan.md").write_text("## Declared File Operations\n- NEW src/new.py\n"
+                                           "```markdown\n- MODIFIED src/example.py\n```\n", encoding="utf-8")
+        self.assertEqual(self.select()["signals"], [])
+
     def test_research_alternatives_select_code_approaches(self) -> None:
         (self.root / "research.md").write_text("**Alternatives considered**: a separate schema.\n", encoding="utf-8")
         self.assertEqual(self.select(research_file="research.md")["selected_pages"],
@@ -65,8 +72,16 @@ class ArtifactSelectionTests(unittest.TestCase):
         (self.root / "design.md").write_text("**Alternatives offered:**\n- Keep the old schema.\n", encoding="utf-8")
         self.assertEqual(self.select(design_concept_file="design.md")["signals"], ["competing_approaches"])
 
+    def test_links_and_subheadings_record_real_alternatives(self) -> None:
+        for text in ("**Alternatives considered**:\n- [Separate schema](https://example.com/schema)\n",
+                     "## Alternatives considered\n### Separate schema\nKeep a dedicated schema.\n"):
+            with self.subTest(text=text):
+                (self.root / "research.md").write_text(text, encoding="utf-8")
+                self.assertEqual(self.select(research_file="research.md")["signals"], ["competing_approaches"])
+
     def test_empty_negative_placeholder_and_incidental_alternatives_do_not_select(self) -> None:
-        for text in ("", "We may research alternatives later.\n", "## Alternatives considered\n\n## Decision\nKeep it.\n",
+        for text in ("", "We may research alternatives later.\n", "## Alternatives were not considered\n",
+                     "## Alternatives considered\n\n## Decision\nKeep it.\n",
                      "**Alternatives considered**: None.\n", "**Alternatives offered:**\n- N/A\n",
                      "## Alternatives\n[TODO]\n", "```markdown\n**Alternatives considered**: Example.\n```\n"):
             with self.subTest(text=text):
@@ -77,8 +92,10 @@ class ArtifactSelectionTests(unittest.TestCase):
     def test_both_rules_select_all_shipped_draft_pages_but_no_planned_or_final_pages(self) -> None:
         (self.root / "plan.md").write_text("## Declared File Operations\n- MODIFIED src/old.py\n", encoding="utf-8")
         (self.root / "research.md").write_text("## Alternatives considered\n- Add a new adapter.\n", encoding="utf-8")
-        self.assertEqual(self.select(research_file="research.md")["selected_pages"],
-                         ["implementation-plan", "spec-explainer", "code-approaches", "module-map"])
+        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            with self.subTest(plugin=plugin):
+                self.assertEqual(self.select(plugin=plugin, research_file="research.md")["selected_pages"],
+                                 ["implementation-plan", "spec-explainer", "code-approaches", "module-map"])
 
     def test_unreadable_invalid_and_escaping_inputs_are_explicit_selection_errors(self) -> None:
         for inputs in ({"plan_file": "missing.md"}, {"research_file": "missing.md"},
@@ -88,14 +105,8 @@ class ArtifactSelectionTests(unittest.TestCase):
         (self.root / "outside-link.md").symlink_to(ROOT / "README.md")
         self.assertEqual(self.select(status="input_error", research_file="outside-link.md"), {})
 
-    def test_shipped_claude_and_codex_helpers_choose_the_same_pages(self) -> None:
-        (self.root / "plan.md").write_text("## Declared File Operations\n- MODIFIED src/old.py\n", encoding="utf-8")
-        (self.root / "design.md").write_text("**Alternatives offered:**\n- A separate adapter.\n", encoding="utf-8")
-        for host in ("claude", "codex"):
-            with self.subTest(host=host):
-                self.assertEqual(self.select(plugin=f"dist/{host}/speckit-pro", design_concept_file="design.md")["selected_pages"],
-                                 ["implementation-plan", "spec-explainer", "code-approaches", "module-map"])
 
+class ArtifactHostSelectionTests(SelectionFixture):
     def test_both_host_dispatches_and_author_roles_consume_runner_selection(self) -> None:
         for host, agent in (("claude", "agents/artifact-author.md"), ("codex", "codex-agents/artifact-author.toml")):
             with self.subTest(host=host):

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 import json
 import re
 from pathlib import Path
@@ -14,29 +15,40 @@ from .read_only import declared_file_entries
 
 GALLERY = Path(__file__).resolve().parents[2] / "artifact-gallery"
 INPUTS = frozenset({"repo_root", "plan_file", "research_file", "design_concept_file"})
-ALTERNATIVES = re.compile(r"^(?:#{1,6}\s+|\*\*)Alternatives(?: considered| offered)?\s*:?"
-                          r"(?:\*\*)?\s*:?\s*(.*)$", re.IGNORECASE)
-EMPTY_ALTERNATIVE = re.compile(r"^(?:none\b|no alternatives\b|n/a\b|not applicable\b|tbd\b|todo\b|<|\[)", re.IGNORECASE)
+ALTERNATIVES_TITLE = re.compile(r"Alternatives(?: considered| offered)?\s*:?", re.IGNORECASE)
+ALTERNATIVES_FIELD = re.compile(r"^\*\*Alternatives(?: considered| offered)?\s*:?\*\*\s*:?\s*(.*)$", re.IGNORECASE)
+HEADING = re.compile(r"^(#{1,6})\s+(.+)$")
+EMPTY_ALTERNATIVE = re.compile(r"^(?:none\b|no alternatives\b|n/a\b|not applicable\b|tbd\b|todo\b|<|"
+                               r"\[(?:TODO|TBD|NEEDS CLARIFICATION)\]$)", re.IGNORECASE)
 
 
-def records_alternatives(text: str) -> bool:
-    """Recognize populated alternatives headings or bold fields, outside examples."""
-    active = False
+def planning_lines(text: str) -> Iterator[str]:
+    """Planning records exclude fenced examples from both selection signals."""
     fence: str | None = None
     for raw in text.splitlines():
         previous = fence
         fence = next_fence(fence, raw)
-        if previous is not None or fence is not None:
-            continue
+        if previous is None and fence is None:
+            yield raw
+
+
+def records_alternatives(text: str) -> bool:
+    """Recognize populated alternatives headings or bold fields, outside examples."""
+    active_level = 0
+    for raw in planning_lines(text):
         line = raw.strip()
-        label = ALTERNATIVES.match(line)
+        heading = HEADING.match(line)
+        if heading and ALTERNATIVES_TITLE.fullmatch(heading.group(2)):
+            active_level = len(heading.group(1))
+            continue
+        label = ALTERNATIVES_FIELD.match(line)
         if label:
-            active = True
+            active_level = 7
             line = label.group(1)
-        elif line.startswith(("#", "**")):
-            active = False
+        elif line.startswith("**") or (heading and len(heading.group(1)) <= active_level):
+            active_level = 0
         candidate = line.lstrip("-* `").strip()
-        if active and candidate and not EMPTY_ALTERNATIVE.match(candidate):
+        if active_level and candidate and not EMPTY_ALTERNATIVE.match(candidate):
             return True
     return False
 
@@ -57,7 +69,7 @@ def planning_text(inputs: dict[str, Any], field: str, root: Path, *, required: b
 def select_artifact_pages(inputs: dict[str, Any], root: Path) -> dict[str, Any]:
     if set(inputs) - INPUTS:
         raise ValueError("select-artifact-pages received unknown inputs")
-    plan = planning_text(inputs, "plan_file", root, required=True)
+    plan = "\n".join(planning_lines(planning_text(inputs, "plan_file", root, required=True)))
     signals = {"brownfield_change"} if any(status == "MODIFIED" for status, _ in declared_file_entries(plan)) else set()
     alternatives = [planning_text(inputs, field, root) for field in ("research_file", "design_concept_file")]
     if any(records_alternatives(text) for text in alternatives):
