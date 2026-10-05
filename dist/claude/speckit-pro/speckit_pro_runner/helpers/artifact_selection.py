@@ -4,18 +4,21 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 import json
+import os
 import re
+import stat
 from pathlib import Path
 from typing import Any
 
 from ..envelope import diagnostic, response
 from ..json_schema import json_schema_failures
 from ..strict_input import next_fence, require_text, unique_object
-from ..trusted_io import resolve_repo_root, trusted_bytes, validate_path_value
+from ..trusted_io import resolve_repo_root, trusted_bytes, trusted_open_directory, validate_path_value
 from .read_only import declared_file_entries
 
 GALLERY = Path(__file__).resolve().parents[2] / "artifact-gallery"
-INPUTS = frozenset({"repo_root", "plan_file", "research_file", "design_concept_file", "candidate_paths"})
+INPUTS = frozenset({"repo_root", "plan_file", "research_file", "design_concept_file", "candidate_paths",
+                    "verify_written_paths"})
 INPUT_ERRORS = (ValueError, KeyError, TypeError, OSError, RuntimeError)
 ALTERNATIVES_TITLE = re.compile(r"Alternatives(?: considered| offered)?\s*:?", re.IGNORECASE)
 ALTERNATIVES_FIELD = re.compile(r"^\*\*Alternatives(?: considered| offered)?\s*:?\*\*\s*:?\s*(.*)$", re.IGNORECASE)
@@ -154,8 +157,34 @@ def select_artifact_pages(inputs: dict[str, Any], root: Path) -> dict[str, Any]:
     if not isinstance(candidates, list) or not candidates:
         raise ValueError("candidate_paths must be a non-empty list of artifact output paths")
     checked = [artifact_output_path(path, root, directory) for path in candidates]
-    return {"selected_pages": selected, "output_paths": paths, "checked_paths": checked,
+    verify = inputs.get("verify_written_paths", False)
+    if not isinstance(verify, bool):
+        raise ValueError("verify_written_paths must be a boolean")
+    data = {"selected_pages": selected, "output_paths": paths, "checked_paths": checked,
             "signals": sorted(signals), "writes_state": False}
+    if verify:
+        data["verified_paths"] = verify_artifact_outputs(checked, root)
+    return data
+
+
+def verify_artifact_outputs(paths: list[str], root: Path) -> list[str]:
+    """Inspect written entries relative to one no-follow artifacts descriptor.
+
+    This snapshot cannot make a preceding native-tool write race-safe.
+    """
+    if os.stat not in os.supports_dir_fd or os.stat not in os.supports_follow_symlinks:
+        raise ValueError("descriptor-relative artifact verification is unavailable")
+    directory_fd = trusted_open_directory(root / Path(paths[0]).parent, root)
+    if directory_fd is None:
+        raise ValueError("written artifact directory cannot be opened without following symlinks")
+    try:
+        for path in paths:
+            entry = os.stat(Path(path).name, dir_fd=directory_fd, follow_symlinks=False)
+            if not stat.S_ISREG(entry.st_mode):
+                raise ValueError("written artifact must be a regular file without symlinks")
+        return paths
+    finally:
+        os.close(directory_fd)
 
 
 def run_artifact_selection_helper(entry: Any, request: Any) -> dict[str, Any]:

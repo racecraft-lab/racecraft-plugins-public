@@ -148,10 +148,23 @@ no file operation, report the diagnostic as a gap, and leave unsafe paths alone.
 Create the owned temporary exclusively; an existing name requires a fresh name
 and a fresh confinement check.
 
+After writing and closing the temporary, and again after publishing and
+validating the final page, invoke `select-artifact-pages` with
+`verify_written_paths: true` and `candidate_paths` containing only that written
+path. Require `ok` and its path in `verified_paths` before continuing or
+recording `generated`. The runner opens the artifact directory through
+no-follow descriptors and checks its entries without following symlinks or
+opening special files.
+On verification failure, report a gap and leave the unsafe paths alone.
+Native tool writes retain a check/use race: this post-write snapshot detects
+unsafe paths but cannot prevent redirected writes or make native cleanup safe.
+Report that residual when using native tools for publication.
+
 Only after every check passes, atomically replace the final `.html` with that
 closed sibling file, re-read the final file, and confirm the same checks before
 reporting `generated`. On any recoverable failure, delete the owned temporary
-file and the page written by this attempt, report its gap, and continue. Never
+file and the page written by this attempt only while their confinement checks
+succeed, report its gap, and continue. Never
 publish by writing directly to the final path. This order is load-bearing: an
 interrupted author can leave an owned temporary file, but never a partial page
 at the final path; the orchestrator removes owned temporaries and any final page

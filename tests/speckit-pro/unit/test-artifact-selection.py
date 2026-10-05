@@ -28,20 +28,28 @@ class SelectionFixture(unittest.TestCase):
         (self.root / ".specify").mkdir()
         (self.root / "plan.md").write_text("## Declared File Operations\n\n- NEW src/new.py\n", encoding="utf-8")
 
-    def select(self, *, status: str = "ok", plugin: str = "speckit-pro", **inputs: object) -> dict:
+    def select(self, *, status: str = "ok", plugin: str = "speckit-pro", swap_on_read: bool = False,
+               timeout: float = 30, **inputs: object) -> dict:
         request = {"schema_version": "1.0", "request_id": "artifact-selection-test",
                    "helper_id": "select-artifact-pages", "operation": "select-artifact-pages",
                    "mode": "read_only", "inputs": {"plan_file": "plan.md", **inputs}}
-        command = [sys.executable, "-m", "speckit_pro_runner"] if self.gallery is None else [
-            sys.executable, "-c", "import runpy, sys; from pathlib import Path; "
-            "from speckit_pro_runner.helpers import artifact_selection; "
-            "artifact_selection.GALLERY = Path(sys.argv[1]); "
-            "sys.argv = sys.argv[:1]; "
-            "runpy.run_module('speckit_pro_runner', run_name='__main__')", str(self.gallery),
-        ]
-        done = subprocess.run(command,
+        done = subprocess.run([
+            sys.executable, "-c", "import os, runpy, sys\nfrom pathlib import Path\n"
+            "from speckit_pro_runner.helpers import artifact_selection\n"
+            "artifact_selection.GALLERY = Path(sys.argv[1]) if sys.argv[1] != 'None' else artifact_selection.GALLERY\n"
+            "swap_requested = sys.argv[2] == 'True'\nreal_open = os.open\n"
+            "def swap_open(path, *args, **kwargs):\n"
+            "    global swap_requested\n"
+            "    if swap_requested and str(path) == 'artifacts' and kwargs.get('dir_fd') is not None:\n"
+            "        Path('artifacts').rename('held-artifacts')\n"
+            "        Path('artifacts').symlink_to('outside', target_is_directory=True)\n"
+            "        swap_requested = False\n"
+            "    return real_open(path, *args, **kwargs)\n"
+            "os.open = swap_open\nsys.argv = sys.argv[:1]\n"
+            "runpy.run_module('speckit_pro_runner', run_name='__main__')", str(self.gallery), str(swap_on_read),
+        ],
                               input=json.dumps(request), text=True, capture_output=True, check=False,
-                              cwd=self.root, env={**os.environ, "PYTHONPATH": str(ROOT / plugin)}, timeout=30)
+                              cwd=self.root, env={**os.environ, "PYTHONPATH": str(ROOT / plugin)}, timeout=timeout)
         result = json.loads(done.stdout.splitlines()[-1])
         self.assertEqual(done.returncode, 0 if status == "ok" else 2, result)
         self.assertEqual(result["status"], status, result)
@@ -93,6 +101,52 @@ class ManifestSecurityTests(SelectionFixture):
 
 
 class OutputSecurityTests(SelectionFixture):
+    def test_written_file_verification_fails_closed_at_the_descriptor_read(self) -> None:
+        artifacts = self.root / "artifacts"
+        outside = self.root / "outside"
+        artifacts.mkdir()
+        outside.mkdir()
+        final = "artifacts/implementation-plan.html"
+        (self.root / final).write_text("owned page", encoding="utf-8")
+        (outside / "implementation-plan.html").write_text("outside page", encoding="utf-8")
+        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            with self.subTest(plugin=plugin):
+                self.assertEqual(self.select(status="input_error", plugin=plugin, candidate_paths=[final],
+                                             verify_written_paths=True, swap_on_read=True), {})
+                self.assertTrue(artifacts.is_symlink(), "the race probe must actually swap the directory")
+                artifacts.unlink()
+                (self.root / "held-artifacts").rename(artifacts)
+        (self.root / final).unlink()
+        self.assertEqual(self.select(status="input_error", candidate_paths=[final], verify_written_paths=True), {})
+        (self.root / final).mkdir()
+        self.assertEqual(self.select(status="input_error", candidate_paths=[final], verify_written_paths=True), {})
+        self.assertEqual(self.select(status="input_error", verify_written_paths=1), {})
+        (self.root / final).rmdir()
+        os.mkfifo(self.root / final)
+        self.assertEqual(self.select(status="input_error", candidate_paths=[final],
+                                     verify_written_paths=True, timeout=10), {})
+
+    def test_post_write_verification_rejects_a_swapped_artifact_directory(self) -> None:
+        artifacts = self.root / "artifacts"
+        outside = self.root / "outside"
+        artifacts.mkdir()
+        outside.mkdir()
+        final = "artifacts/implementation-plan.html"
+        temporary = "artifacts/.artifact-author-implementation-plan.race.tmp"
+        (self.root / final).write_text("owned page", encoding="utf-8")
+        verified = self.select(candidate_paths=[final], verify_written_paths=True)
+        self.assertEqual(verified["verified_paths"], [final])
+        self.assertEqual(self.select(candidate_paths=[temporary, final])["checked_paths"], [temporary, final])
+        artifacts.rename(self.root / "held-artifacts")
+        artifacts.symlink_to(outside, target_is_directory=True)
+        # Exercise the documented native-tool check/use window, including exclusive create.
+        with (self.root / temporary).open("x", encoding="utf-8") as stream:
+            stream.write("redirected page")
+        os.replace(self.root / temporary, self.root / final)
+        self.assertEqual(self.select(status="input_error", candidate_paths=[final], verify_written_paths=True), {})
+        self.assertEqual((outside / "implementation-plan.html").read_text(encoding="utf-8"), "redirected page")
+        self.assertEqual((self.root / "held-artifacts/implementation-plan.html").read_text(encoding="utf-8"), "owned page")
+
     def test_temporary_and_final_outputs_require_a_fresh_confinement_check(self) -> None:
         artifacts = self.root / "artifacts"
         artifacts.mkdir()
@@ -236,6 +290,9 @@ class ArtifactHostSelectionTests(SelectionFixture):
                 self.assertIn("output_paths[entry-id]", author)
                 self.assertIn("candidate_paths", author)
                 self.assertIn("checked_paths", author)
+                self.assertIn("verify_written_paths", author)
+                self.assertIn("verified_paths", author)
+                self.assertIn("Native tool writes retain a check/use race", author)
 
 
 if __name__ == "__main__":
