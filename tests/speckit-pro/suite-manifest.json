@@ -56,6 +56,7 @@
         { "path": "tests/speckit-pro/unit/test-autopilot-phase-coverage.py", "label": "test-autopilot-phase-coverage" },
         { "path": "tests/speckit-pro/unit/test-autonomy-boundary-receipt-replay.py", "label": "test-autonomy-boundary-receipt-replay" },
         { "path": "tests/speckit-pro/unit/test-unit-layout.py", "label": "test-unit-layout" },
+        { "path": "tests/speckit-pro/unit/test-phase-brief.py", "label": "test-phase-brief" },
         { "path": "tests/speckit-pro/unit/test-check-toolchain.py", "label": "test-check-toolchain" },
         { "path": "tests/speckit-pro/unit/test-post-implementation-reference.py", "label": "test-post-implementation-reference" },
         { "path": "tests/speckit-pro/unit/test-reviewability-marker-guidance.py", "label": "test-reviewability-marker-guidance" },
