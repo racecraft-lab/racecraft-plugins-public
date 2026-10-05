@@ -30,6 +30,9 @@ SHIPPED_HASHES = {
 POSTURE = {"approval_policy": "on-request", "sandbox_mode": "workspace-write", "approvals_reviewer": "user",
            "mcp_approval_mode": "prompt", "mcp_consent": "granted", "mcp_startup_timeout_sec": 10,
            "mcp_tool_timeout_sec": 60, "external_delegation": "allowed"}
+LEGACY_HOOK_ACTION = ("Verify each hook's identity and hash from /hooks with the codex_hook_trust observation first; "
+                      "never trust a hook that is not verified, then restart Codex and rerun scaffold. "
+                      "Scaffold never broadens permissions or disables a control.")
 ACCESS = {"loopback": "allowed", "temp_dir": "healthy", "egress_policy_ref": "egress-policy",
           "egress_policy_digest": HASH}
 
@@ -96,6 +99,20 @@ class ReadinessCodexTrustTest(ReadinessCase):
         legacy = {"item": "hooks", "evidence_source": "definition review",
                   "hooks": [dict(hook="PreToolUse", defined=True, trust="untrusted")]}
         assert_runner_response(self, self.run_helper([legacy, shipped_trust()]), "input_error", 2)
+
+    def test_empty_legacy_codex_hooks_are_refused_beside_exact_evidence(self) -> None:
+        for legacy in ({"item": "hooks", "evidence_source": "definition review", "hooks": []},
+                       {"item": "hooks", "evidence_source": "definition review"}):
+            with self.subTest(legacy=legacy):
+                assert_runner_response(self, self.run_helper([legacy, shipped_trust()]), "input_error", 2)
+                self.assertEqual("unknown", self.items(self.run_helper([legacy]))["hooks"]["status"])
+
+    def test_untrusted_legacy_codex_hooks_never_recommend_trusting_them(self) -> None:
+        legacy = {"item": "hooks", "evidence_source": "definition review",
+                  "hooks": [dict(hook="PreToolUse", defined=True, trust="untrusted")]}
+        item = self.item(legacy)
+        self.assertEqual("unavailable", item["status"])
+        self.assertEqual(LEGACY_HOOK_ACTION, item["action"])
 
     def test_legacy_codex_hooks_cannot_verify_without_handler_hashes(self) -> None:
         from speckit_pro_runner.helpers import readiness_host_items

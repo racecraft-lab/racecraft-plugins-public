@@ -201,7 +201,7 @@ def observe_hooks(raw: dict[str, Any], observed_at: str, source: str, host: str)
                          "Update the speckit-pro plugin so its required hooks are defined, then rerun scaffold.")
     status = hook_trust_status([trust for _, _, trust in hooks])
     if status == "unavailable":
-        review = ("Review and trust the hooks in /hooks, then restart Codex and rerun scaffold." if host == "codex"
+        review = (LEGACY_CODEX_HOOK_ACTION if host == "codex"
                   else "Enable the speckit-pro plugin, check its hooks in /hooks, accept the workspace trust "
                        "dialog, then rerun scaffold.")
         return make_item("unavailable", source, observed_at, prints, review)
@@ -380,6 +380,9 @@ def observe_extension_versions(raw: dict[str, Any], observed_at: str, source: st
 # These record observed facts, never consent. Every printed action comes from a fixed template, and every
 # recorded value is an enumerated word, a bounded integer, a name or a hex digest, never free text or a path.
 NEVER_BROADEN = "Scaffold never broadens permissions or disables a control."
+# Legacy hook evidence has no exact hash, so its action never asks the user to trust anything.
+LEGACY_CODEX_HOOK_ACTION = ("Verify each hook's identity and hash from /hooks with the codex_hook_trust observation first; "
+                            "never trust a hook that is not verified, then restart Codex and rerun scaffold. " + NEVER_BROADEN)
 POSTURE_CHOICES = {
     "approval_policy": ("on-request", "never", "on-failure"),
     "sandbox_mode": ("read-only", "workspace-write", "danger-full-access"),
@@ -572,12 +575,14 @@ CODEX_TRUST_OBSERVERS = {"codex_approval_posture": observe_codex_approval_postur
                          "codex_local_access": observe_codex_local_access}
 
 
-def reconcile_codex_items(items: dict[str, dict[str, Any]], observed_at: str) -> None:
-    """One Codex trust result and no caller override of the runner's temporary probe."""
+def reconcile_codex_items(items: dict[str, dict[str, Any]], observed_at: str, legacy_hooks_observed: bool) -> None:
+    """One Codex trust result and no caller override of the runner's temporary probe.
+
+    Any legacy `hooks` observation, an empty one included, overlaps exact `codex_hook_trust` evidence.
+    """
     trust = items["codex_hook_trust"]
-    definitions = items["hooks"]
     if trust["fingerprints"]:
-        if definitions["fingerprints"]:
+        if legacy_hooks_observed:
             raise SelectionError("Codex hooks and codex_hook_trust observations overlap; use only the exact-hash observation")
         items["hooks"] = trust
     access = items["codex_local_access"]

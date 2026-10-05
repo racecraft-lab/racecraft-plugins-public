@@ -679,7 +679,7 @@
         "value": "speckit_pro_runner/helpers/readiness_host_items.py",
         "display": "speckit_pro_runner/helpers/readiness_host_items.py"
       },
-      "sha256": "22bfd49ca67ab0f806d6cf95ad8bff0b016d7321b364487b94f4b02232bda076"
+      "sha256": "37fcd044172401a3c474dee8b5aac9952fc50cc5341889deba7b9e742f2752a8"
     },
     {
       "path": {
@@ -687,7 +687,7 @@
         "value": "speckit_pro_runner/helpers/readiness_record.py",
         "display": "speckit_pro_runner/helpers/readiness_record.py"
       },
-      "sha256": "4f3c162346b82f88b8aee5f5f77258aff68e8fad11b09b9e30c4e82d6d1fb65c"
+      "sha256": "2de6fd2aa40193f24376f9a8042f87e579fbb7468404f38943fec7374be309d3"
     },
     {
       "path": {
