@@ -17,8 +17,6 @@ name: Container Preflight
 env:
   HOSTED_PYTHON_VERSION: "3.13.14"
   PIPX_VERSION: "1.15.0"
-  SPEC_KIT_VERSION: v0.8.13
-  SPEC_KIT_GIT_REF: git+https://github.com/github/spec-kit.git@b2314680fce898e0a9151b37ad2535d810c93eef # v0.8.13
 
 on:
   pull_request:

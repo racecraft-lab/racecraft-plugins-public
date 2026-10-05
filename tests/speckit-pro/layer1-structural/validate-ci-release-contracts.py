@@ -20,6 +20,7 @@ for _import_root in (LIB_DIR, PLUGIN_ROOT):
     if str(_import_root) not in sys.path:
         sys.path.insert(0, str(_import_root))
 
+from speckit_pro_runner import spec_kit_pin
 from speckit_pro_runner.helpers import read_only
 from script_loader import load_script
 from test_result import run_counted
@@ -204,8 +205,6 @@ SETUP_PYTHON_COMMENTED_PIN_RE = re.compile('uses: actions/setup-python@[0-9a-f]{
 HOSTED_PYTHON_VERSION = 'HOSTED_PYTHON_VERSION: "3.13.14"'
 CONTAINER_IMAGE_PIN = 'python:3.11.15-bookworm@sha256:b7ae8a4dcc0ab327e333c5e46a3eaa6c1b0ff585bed77e01cd6de4be1325837e'
 CONTAINER_DISPATCH = 'run: import runpy; runpy.run_path("tests/speckit-pro/run-container-preflight.py", run_name="__main__")'
-SPEC_KIT_VERSION_PIN = 'SPEC_KIT_VERSION: v0.8.13'
-SPEC_KIT_REF_PIN = 'SPEC_KIT_GIT_REF: git+https://github.com/github/spec-kit.git@b2314680fce898e0a9151b37ad2535d810c93eef'
 PR_CHECKS_EVENTS_LITERAL = '[opened, reopened, synchronize, ready_for_review]'
 PR_CONCURRENCY_LINES = ('  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}', "  cancel-in-progress: ${{ github.event_name == 'pull_request' }}")
 UNIQUE_ARTIFACT_SUFFIX = '-${{ github.run_id }}-${{ github.run_attempt }}'
@@ -565,9 +564,12 @@ class ValidatePrChecksSentinel(unittest.TestCase):
             self.assertRegex(content, SETUP_PYTHON_PIN_RE)
             self.assertIn('3.13.14-27320626148', content)
             self.assertIn('PIPX_VERSION: "1.15.0"', content)
-            self.assertIn(SPEC_KIT_VERSION_PIN, content)
-            self.assertIn(SPEC_KIT_REF_PIN, content)
-            self.assertNotIn('spec-kit.git@v0.8.13', content)
+            self.assertNotIn('SPEC_KIT_VERSION:', content)
+            self.assertNotIn('SPEC_KIT_GIT_REF:', content)
+            self.assertNotIn(spec_kit_pin.PINNED_SOURCE, content)
+            self.assertIn('from speckit_pro_runner import spec_kit_pin', dispatch_content)
+            self.assertIn('f"v{spec_kit_pin.PINNED_VERSION}"', dispatch_content)
+            self.assertIn('spec_kit_pin.PINNED_SOURCE', dispatch_content)
             for job_id in ('windows-x64-smoke', 'windows-arm64-smoke'):
                 block = _job_block(content, job_id)
                 self.assertRegex(block, SETUP_PYTHON_PIN_RE)

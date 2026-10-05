@@ -29,9 +29,9 @@ def host_skill_root(host: str, plugin_root: Path = PLUGIN_ROOT) -> Path:
     """The rendered skill tree `host` loads from `plugin_root`'s source."""
     key = (plugin_root.resolve(), host)
     if key not in _RENDERED:
-        # Not tempfile.mkdtemp or uuid.uuid4: harness tests script both calls' results
-        # (a patched uuid4 returns a fixed id, so a leftover from a killed run or a concurrent run collides),
-        # and a view built on the side must not consume one.
+        # Not tempfile.mkdtemp: harness tests script that call's results, and a
+        # view built on the side must not consume one.
+        # Trial UUIDs are deliberately mocked; view names need independent entropy.
         temporary = Path(tempfile.gettempdir()).resolve() / f"speckit-{host}-skills-{secrets.token_hex(16)}"
         temporary.mkdir(mode=0o700)
         atexit.register(shutil.rmtree, temporary, ignore_errors=True)
