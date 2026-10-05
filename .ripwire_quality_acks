@@ -1082,3 +1082,9 @@ ack verbosity ea3d11c338c002aa 124 cid=1bf465ef16e77adf Moved unchanged from run
 ack verbosity f138e97d9c143aab 80 cid=34adfa7c9f69a881 developer_instructions is a generated TOML string from the authored phase-executor prompt; its three added prose lines are verified by the host generator, not executable routine length.
 ack verbosity f7f6a7ece1c05656 248 cid=5365e90753588269 Test method grew by one or two lines to read a host's rendered skill view or write a fixture SKILL.md; the host-parity change needs the added step
 ack verbosity f8202e3bceff1b13 123 cid=e25640dffa550f9b HELPER_CASES is a request-data dictionary (AST Dict); the new G0 request is exercised by the passing runner acceptance test, not an executable routine.
+ack dead-code:new-symbol e52a73f167b44008 0 Executed by unittest loadTestsFromTestCase(DraftIdentityTests); campaign suite passed 116 checks, including both committed template CLI round trips.
+ack dead-code:new-symbol d88cc15b635f491c 0 Executed by unittest loadTestsFromTestCase(DraftIdentityTests); campaign suite passed the real two-branch merge regression.
+ack dead-code:new-symbol 603186b4499da980 0 Executed by unittest loadTestsFromTestCase(DraftIdentityTests); observed red on missing --out, then green on separate manifest binding.
+ack dead-code:new-symbol f55cfac2f00c41eb 0 Executed by unittest loadTestsFromTestCase(DraftIdentityTests); missing and existing output rejection exercised by campaign suite.
+ack dead-code:new-symbol 361ec9ac204abe3b 0 Executed by unittest loadTestsFromTestCase(DraftIdentityTests); unbound and malformed template rejection exercised by campaign suite.
+ack verbosity ff831cf062232921 124 False positive: unittest class is a collection of six independent test methods, not one executable body; no method exceeds the 60-line bar and campaign suite executes each.
