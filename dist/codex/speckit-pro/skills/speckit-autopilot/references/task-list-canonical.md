@@ -1,8 +1,8 @@
 # Canonical Task List Reference
 
 The complete, prescribed checklist the autopilot materializes at Step 1.1 in
-`update_plan` and `autopilot-state.json`. Every entry below MUST appear in both
-stores before Phase 1 starts. Do NOT omit, collapse, or defer entries — when a
+`autopilot-state.json`. Every entry below MUST appear in the state file
+before Phase 1 starts. Do NOT omit, collapse, or defer entries — when a
 required extension is absent, the item still appears, marked as
 `skipped: <extension> not installed`.
 
@@ -42,10 +42,10 @@ Parsed from the workflow file:
 
 ## Canonical Post-Implementation Task List
 
-Every item below MUST appear in `update_plan` and `autopilot-state.json`
+Every item below MUST appear in `autopilot-state.json`
 unless its required extension is provably absent. **Do NOT omit any of
 these, do NOT collapse them, do NOT defer them** — the user expects to
-see all of them in the plan panel before Phase 1 starts. When an
+see all of them in the progress summary before Phase 1 starts. When an
 extension is missing, still create the item but mark it
 `skipped: <extension> not installed`.
 
@@ -127,13 +127,13 @@ items. Never omit consensus tasks from the task list at creation time.
 - Phase 7 decomposes into groups after `tasks.md` is created
   (test / impl / verify per phase — see [`phase-execution.md`](./phase-execution.md))
 - Mark completed phases immediately; first pending phase as `in_progress`
-- Use EXACTLY the same item names in `update_plan` and `autopilot-state.json`
+- Use the canonical item names in `autopilot-state.json`
 - Preserve one or more pending items for every later canonical phase when
   resuming from a middle phase
-- Print a checklist summary immediately after writing both copies
+- Print a checklist summary immediately after writing the state file
 - **Verify task-list completeness before starting Phase 1**: count the
   prescribed entries (every Phase, every Consensus, every `Post:` task) and
-  confirm each is present in both stores. If the count differs, ADD the
+  confirm each is present in the state file. If the count differs, ADD the
   missing entries before advancing. Then run the coverage guard below and do
   not advance unless it exits 0.
 
