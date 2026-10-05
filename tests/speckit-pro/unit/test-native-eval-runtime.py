@@ -579,9 +579,11 @@ class NativeEvalRuntimeTests(unittest.TestCase):
         self.assertFalse((self.root / "build-nonregular-license").exists())
 
     def test_staging_never_mutates_checkout_dist_files_directories_or_metadata(self) -> None:
-        before = tree_snapshot(REPO_ROOT / "dist")
-        self.stage()
-        self.assertEqual(tree_snapshot(REPO_ROOT / "dist"), before)
+        fixture = self.fixture_repo("repo-dist-snapshot")
+        shutil.copytree(REPO_ROOT / "dist", fixture / "dist", ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+        before = tree_snapshot(fixture / "dist")
+        self.stage(repo_root=fixture)
+        self.assertEqual(tree_snapshot(fixture / "dist"), before)
 
         snapshot_probe = self.root / "snapshot-probe"
         empty = snapshot_probe / "empty"
@@ -592,6 +594,21 @@ class NativeEvalRuntimeTests(unittest.TestCase):
         self.assertEqual(empty_record["kind"], "directory")
         os.chmod(empty, empty_record["mode"] ^ stat.S_IWGRP)
         self.assertNotEqual(tree_snapshot(snapshot_probe), probe_before)
+
+    def test_dist_snapshot_ignores_an_unrelated_checkout_writer(self) -> None:
+        checkout = self.fixture_repo("repo-unrelated-writer")
+        (checkout / "dist").mkdir()
+        stage = self.stage
+
+        def stage_while_another_suite_writes_checkout(**kwargs):
+            (checkout / "dist" / "foreign.pyc").write_bytes(b"another suite's bytecode")
+            return stage(**kwargs)
+
+        with (
+            mock.patch.dict(globals(), REPO_ROOT=checkout),
+            mock.patch.object(self, "stage", side_effect=stage_while_another_suite_writes_checkout),
+        ):
+            self.test_staging_never_mutates_checkout_dist_files_directories_or_metadata()
 
 
 if __name__ == "__main__":

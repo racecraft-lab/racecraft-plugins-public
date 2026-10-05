@@ -74,6 +74,7 @@ def cleanup_child(
     child: subprocess.Popen[bytes], *, observations: list[dict[str, object]] | None = None,
     timeout: float | None = None, grace: float | None = None,
     terminate: Callable[..., bool] = terminate_child,
+    on_presence: Callable[[bool], None] | None = None,
 ) -> bool:
     """Drain the original owned group; report whether signaling was required."""
     timeout = CLEANUP_TIMEOUT if timeout is None else timeout
@@ -92,9 +93,11 @@ def cleanup_child(
         if child.pid <= 0 or child.pid == os.getpgrp():
             raise OSError("refusing to inspect an unowned process group")
         last_probe_error = None
+        group_present = True
         try:
             os.killpg(child.pid, 0)
         except ProcessLookupError:
+            group_present = False
             if observations is not None:
                 observations.append({"pgid": child.pid, "errno": errno.ESRCH, "elapsed_seconds": time.monotonic() - started})
             return False
@@ -105,6 +108,9 @@ def cleanup_child(
                 raise
             # Permission denial is unresolved, never proof of absence.
             last_probe_error = exc
+        finally:
+            if on_presence is not None:
+                on_presence(group_present)
         return True
 
     if child.poll() is not None:

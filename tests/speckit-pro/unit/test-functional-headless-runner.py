@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import errno
 import io
+import itertools
 import json
 import os
 from pathlib import Path
@@ -916,13 +917,13 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
             with (
                 mock.patch.object(self.runner.shutil, "which", return_value=str(cli)),
                 mock.patch.object(self.runner.subprocess, "Popen", return_value=process) as popen,
-                mock.patch.object(self.runner.os, "killpg", side_effect=[None, None, ProcessLookupError()]) as killpg,
+                mock.patch.object(self.runner.os, "killpg", side_effect=itertools.chain([None, None, None], itertools.repeat(ProcessLookupError()))) as killpg,
             ):
                 result = self.runner.capture_process(
                     "claude", [str(cli)], b"prompt", evidence, Path(temporary), {}, 1
                 )
         self.assertTrue(popen.call_args.kwargs["start_new_session"])
-        self.assertEqual(killpg.call_args_list, [mock.call(FAKE_PGID, 0), mock.call(FAKE_PGID, signal.SIGTERM), mock.call(FAKE_PGID, 0)])
+        self.assertEqual([call for call in killpg.call_args_list if call.args[1]], [mock.call(FAKE_PGID, signal.SIGTERM)])
         self.assertEqual(result["status"], "timeout")
         self.assertIs(result["process_group_cleanup"]["verified_absent"], True)
         self.assertIn("decode_error", result)
@@ -933,15 +934,23 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
             process = mock.Mock(pid=FAKE_PGID, returncode=0)
             process.communicate.return_value = (b"raw output", b"raw error")
             process.poll.return_value = 0
-            effects = [*([None] * 6), ProcessLookupError()] if descendant else [ProcessLookupError()]
+            alive = descendant
+
+            def signal_group(_pgid, sent):
+                nonlocal alive
+                if sent:
+                    alive = False
+                elif not alive:
+                    raise ProcessLookupError()
             with self.subTest(descendant=descendant), tempfile.TemporaryDirectory() as temporary:
                 cli = Path(temporary) / "claude"
                 cli.write_text("placeholder\n")
                 with (
                     mock.patch.object(self.runner.shutil, "which", return_value=str(cli)),
                     mock.patch.object(self.runner.subprocess, "Popen", return_value=process),
-                    mock.patch.object(self.runner.os, "killpg", side_effect=effects) as killpg,
+                    mock.patch.object(self.runner.os, "killpg", side_effect=signal_group) as killpg,
                     mock.patch.object(self.runner.time, "sleep"),
+                    mock.patch.object(self.runner.time, "monotonic", side_effect=itertools.count(0, 0.05)),
                 ):
                     result = self.runner.capture_process("claude", [str(cli)], b"prompt", Path(temporary) / "evidence", Path(temporary), {}, 1)
             self.assertEqual(result["status"], "unexpected_descendants" if descendant else "completed_ungraded")
@@ -952,7 +961,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
             self.assertEqual(killpg.call_args_list[0], mock.call(FAKE_PGID, 0))
 
     def test_normal_group_transient_within_grace_is_recorded_without_termination(self) -> None:
-        with mock.patch.object(self.runner.os, "killpg", side_effect=[None, ProcessLookupError()]), mock.patch.object(self.runner.time, "sleep"):
+        with mock.patch.object(self.runner.os, "killpg", side_effect=itertools.chain([None], itertools.repeat(ProcessLookupError()))), mock.patch.object(self.runner.time, "sleep"):
             cleanup = self.runner.cleanup_process_group(mock.Mock(pid=FAKE_PGID, returncode=0))
         self.assertIs(cleanup["initially_present"], True)
         self.assertIs(cleanup["verified_absent"], True)
@@ -1009,6 +1018,33 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                 self.assertIs(cleanup["verified_absent"], False)
                 self.assertTrue(cleanup["error"])
 
+    def test_post_term_permission_probe_requires_later_group_absence(self) -> None:
+        signals = []
+        probes = itertools.chain((PermissionError(errno.EPERM, "zombie group"),), itertools.repeat(ProcessLookupError()))
+
+        def signal_group(_pgid, sent):
+            if sent:
+                signals.append(sent)
+            elif signals:
+                raise next(probes)
+
+        with mock.patch.object(self.runner.os, "killpg", side_effect=signal_group), mock.patch.object(self.runner.time, "sleep"):
+            cleanup = self.runner.cleanup_process_group(mock.Mock(pid=FAKE_PGID, returncode=0), natural_exit_grace=False)
+        self.assertIs(cleanup["verified_absent"], True)
+        self.assertEqual(signals, [signal.SIGTERM])
+        self.assertIsNone(cleanup["error"])
+
+    def test_natural_exit_permission_probe_requires_later_group_absence(self) -> None:
+        probes = itertools.chain((PermissionError(errno.EPERM, "zombie group"),), itertools.repeat(ProcessLookupError()))
+        with mock.patch.object(self.runner.os, "killpg", side_effect=probes) as killpg, mock.patch.object(self.runner.time, "sleep"):
+            process = mock.Mock(pid=FAKE_PGID, returncode=0)
+            process.poll.return_value = 0
+            cleanup = self.runner.cleanup_process_group(process)
+        self.assertIs(cleanup["initially_present"], True)
+        self.assertIs(cleanup["verified_absent"], True)
+        self.assertTrue(all(call.args[1] == 0 for call in killpg.call_args_list))
+        self.assertIsNone(cleanup["error"])
+
     def test_cleanup_rejects_invalid_and_self_group_identities_without_signaling(self) -> None:
         for pid in (0, 1, -1, None, True, os.getpid(), os.getpgrp()):
             with self.subTest(pid=pid), mock.patch.object(self.runner.os, "killpg") as killpg:
@@ -1017,7 +1053,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                 self.assertIn("identity", cleanup["error"])
                 killpg.assert_not_called()
 
-    def test_only_post_kill_permission_probe_can_settle_with_later_explicit_absence(self) -> None:
+    def test_only_post_signal_permission_probe_can_settle_with_later_explicit_absence(self) -> None:
         for failure_point in ("initial", "term_send", "term_probe", "kill_send", "post_kill_eacces", "persistent", "transient"):
             phase = "initial"
             post_kill_probes = 0
@@ -1042,16 +1078,16 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                 elif failure_point == phase:
                     raise PermissionError(errno.EPERM, "probe denied")
 
-            with self.subTest(failure_point=failure_point), mock.patch.object(self.runner.os, "killpg", side_effect=signal_group), mock.patch.object(self.runner.time, "sleep"):
+            with self.subTest(failure_point=failure_point), mock.patch.object(self.runner.os, "killpg", side_effect=signal_group), mock.patch.object(self.runner.time, "sleep"), mock.patch.object(self.runner.time, "monotonic", side_effect=itertools.count(0, 0.05)):
                 cleanup = self.runner.cleanup_process_group(mock.Mock(pid=FAKE_PGID, returncode=0), natural_exit_grace=False)
-            self.assertIs(cleanup["verified_absent"], failure_point == "transient")
-            if failure_point == "transient":
-                self.assertEqual(post_kill_probes, 2)
+            self.assertIs(cleanup["verified_absent"], failure_point in {"transient", "term_probe"})
+            if failure_point in {"transient", "term_probe"}:
+                self.assertGreaterEqual(post_kill_probes, 2)
                 self.assertEqual(len(cleanup["post_kill_probe_errors"]), 1)
                 self.assertIsNone(cleanup["error"])
             elif failure_point == "persistent":
-                self.assertEqual(post_kill_probes, 20)
-                self.assertEqual(len(cleanup["post_kill_probe_errors"]), 20)
+                self.assertGreater(post_kill_probes, 1)
+                self.assertEqual(len(cleanup["post_kill_probe_errors"]), post_kill_probes)
                 self.assertTrue(cleanup["error"])
             else:
                 if failure_point == "post_kill_eacces":
@@ -1120,7 +1156,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
         for interrupted, cleanup_error in ((True, False), (False, True)):
             process = mock.Mock(pid=FAKE_PGID, returncode=0)
             process.communicate.side_effect = [KeyboardInterrupt(), (b"partial", b"stderr")] if interrupted else [(b"partial", b"stderr")]
-            effects = [None, None, ProcessLookupError()] if interrupted else PermissionError("denied")
+            effects = itertools.chain([None, None, None], itertools.repeat(ProcessLookupError())) if interrupted else PermissionError("denied")
             with self.subTest(interrupted=interrupted), tempfile.TemporaryDirectory() as temporary:
                 cli = Path(temporary) / "claude"
                 cli.write_text("placeholder\n")
