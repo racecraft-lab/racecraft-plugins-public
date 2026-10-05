@@ -130,13 +130,11 @@ def publish(root: Path, feature: Path, name: str, content: bytes) -> None:
         owned = os.fstat(fd)
         current = temporary
         try:
-            try:
-                view = memoryview(content)
-                while view:
-                    view = view[os.write(fd, view):]
-                os.fsync(fd)
-            finally:
-                os.close(fd)
+            # Pin the created inode until verification and withdrawal finish.
+            view = memoryview(content)
+            while view:
+                view = view[os.write(fd, view):]
+            os.fsync(fd)
             if not owned_entry(directory, temporary, owned):
                 raise PublicationRefused("the temporary page is not the object this run created")
             os.rename(temporary, name, src_dir_fd=directory, dst_dir_fd=directory)
@@ -147,6 +145,8 @@ def publish(root: Path, feature: Path, name: str, content: bytes) -> None:
         except BaseException:
             withdraw(directory, current, owned)
             raise
+        finally:
+            os.close(fd)
     finally:
         os.close(directory)
 

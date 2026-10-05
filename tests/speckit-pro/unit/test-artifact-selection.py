@@ -137,7 +137,9 @@ opened = {}
 def act(point, name):
     for action in plan.pop(point, []):
         entry = Path('artifacts', name)
-        if action == 'swap':
+        if action == 'owned-open':
+            os.fstat(state['owned_fd'])
+        elif action == 'swap':
             Path('artifacts').rename('held-artifacts')
             Path('artifacts').symlink_to('outside', target_is_directory=True)
         elif action == 'restore':
@@ -170,7 +172,10 @@ def hooked_open(path, flags, *args, **kwargs):
             state['temporary'] = name
         elif state['published'] and name.endswith('.html') and not flags & os.O_CREAT:
             act('readback', name)
-    return real_open(path, flags, *args, **kwargs)
+    fd = real_open(path, flags, *args, **kwargs)
+    if flags & os.O_CREAT and name.startswith('.artifact-author-'):
+        state['owned_fd'] = fd
+    return fd
 def hooked(real):
     def move(src, dst, *args, **kwargs):
         act('publish', str(src))
@@ -242,7 +247,8 @@ class PublicationSecurityTests(PublicationFixture):
     def test_publication_writes_through_the_held_directory_and_reads_back_the_same_object(self) -> None:
         for plugin in PLUGINS:
             with self.subTest(plugin=plugin):
-                data = self.publish(plugin=plugin)["data"]
+                data = self.publish(plugin=plugin, race={"publish": ["owned-open"],
+                                                        "readback": ["owned-open"]})["data"]
                 self.assertTrue(data["writes_state"])
                 self.assertEqual(data["output_path"], "artifacts/implementation-plan.html")
                 self.assertEqual(self.tree(), {"artifacts/implementation-plan.html": self.page,
