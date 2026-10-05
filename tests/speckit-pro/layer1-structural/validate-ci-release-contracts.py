@@ -1335,6 +1335,8 @@ class ValidateScaffoldPinMismatch(unittest.TestCase):
         self.assertIn('Step 6.5', step0)
         self.assertIn('spec_kit', row)
         self.assertIn('pinned_version', row)
+        self.assertNotIn('other than `match`', row)
+        self.assertIn('`older`, `newer` or `unreadable`', row)
 
 # yaml_syntax_sane is shared by both workflow owners and regression tests.
 
