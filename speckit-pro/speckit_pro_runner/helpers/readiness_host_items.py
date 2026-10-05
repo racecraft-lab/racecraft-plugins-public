@@ -284,9 +284,10 @@ def installation_digest(raw: Any) -> str:
 
 
 def revision_text(value: Any, label: str) -> str:
-    if not isinstance(value, str) or not VERSION_RE.fullmatch(value):
-        raise SelectionError(f"{label} must be a version string")
-    return value
+    """A version string for the record; anything else, such as a path or a sentence, is refused."""
+    if isinstance(value, str) and VERSION_RE.fullmatch(value):
+        return value
+    raise SelectionError(f"{label} must be a version string")
 
 
 def observe_codex_agents(raw: dict[str, Any], observed_at: str, source: str) -> dict[str, Any]:

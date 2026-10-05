@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import json
 import sys
-import tempfile
 import unittest
 from pathlib import Path
 
@@ -13,8 +12,8 @@ TEST_DIR = Path(__file__).resolve().parent
 LIB_DIR = TEST_DIR.parent / "lib"
 sys.path.insert(0, str(LIB_DIR))
 
-from host_skill_views import host_skill_root  # noqa: E402
-from runner_invocation import assert_runner_response, run_runner  # noqa: E402
+from readiness_case import ReadinessCase, scaffold_step  # noqa: E402
+from runner_invocation import assert_runner_response  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 CODEX_ONLY = ("codex_agents", "extension_versions")
@@ -38,30 +37,9 @@ def extensions(entries: list[dict[str, object]]) -> dict[str, object]:
     return {"item": "extension_versions", "evidence_source": "extension registry", "extensions": entries}
 
 
-def request(observations: list[dict[str, object]], host: str = "codex") -> dict[str, object]:
-    body = {"host": host, "execution_mode": "interactive", "plugin_revision": "2.40.0",
-            "observations": observations}
-    return {"schema_version": "1.0", "request_id": "test-codex-items", "helper_id": "write-readiness-record",
-            "operation": "write-readiness-record", "mode": "apply", "inputs": body}
-
-
-def scaffold_step(host: str) -> str:
-    path = host_skill_root(host) / "speckit-scaffold-spec" / "SKILL.md"
-    return path.read_text(encoding="utf-8").split("### 6.5 Write the Readiness Record", 1)[1].split("\n### ", 1)[0]
-
-
-class ReadinessCodexItemsTest(unittest.TestCase):
-    def setUp(self) -> None:
-        self.root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
-        self.root.joinpath(".specify").mkdir()
-
-    def run_helper(self, observations: list[dict[str, object]], host: str = "codex") -> dict:
-        _, response, _ = run_runner(request(observations, host), cwd=self.root)
-        return response
-
-    def items(self, response: dict) -> dict:
-        assert_runner_response(self, response, "ok", 0)
-        return response["data"]["record"]["items"]
+class ReadinessCodexItemsTest(ReadinessCase):
+    default_host = "codex"
+    request_id = "test-codex-items"
 
     def item(self, observation: dict[str, object], host: str = "codex") -> dict:
         return self.items(self.run_helper([observation], host))[str(observation["item"])]
@@ -178,12 +156,10 @@ class ReadinessCodexItemsTest(unittest.TestCase):
             self.assertTrue(items[name]["action"])
 
     def test_scaffold_documents_the_codex_items_on_each_host(self) -> None:
-        steps = {host: scaffold_step(host) for host in ("claude", "codex")}
-        for host, step in steps.items():
-            rows = {name: f"| `{name}` |" in step for name in CODEX_ONLY}
-            self.assertEqual({name: host == "codex" for name in CODEX_ONLY}, rows, host)
-        self.assertIn("`not_applicable`", steps["claude"])
-        self.assertIn('mode="dry_run"', steps["codex"])
+        self.assertEqual({"claude": dict.fromkeys(CODEX_ONLY, False), "codex": dict.fromkeys(CODEX_ONLY, True)},
+                         self.documented_rows(CODEX_ONLY))
+        self.assertIn("`not_applicable`", scaffold_step("claude"))
+        self.assertIn('mode="dry_run"', scaffold_step("codex"))
 
 
 def build_suite() -> unittest.TestSuite:
