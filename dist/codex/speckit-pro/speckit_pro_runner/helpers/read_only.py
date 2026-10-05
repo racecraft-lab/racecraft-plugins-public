@@ -6262,6 +6262,10 @@ def _home_relative(path: str) -> str:
     Reports then carry no user name, whether the CLI sits in another user's home or a
     `..` path points out of this one.
     """
+    if not os.path.isabs(path):
+        # A bare command name is not a location: resolving it against the cwd would
+        # report the checkout path (or a different path on every machine).
+        return Path(path).name or "specify"
     try:
         normalized = Path(os.path.abspath(path))
         return "~/" + normalized.relative_to(Path(os.path.abspath(Path.home()))).as_posix()

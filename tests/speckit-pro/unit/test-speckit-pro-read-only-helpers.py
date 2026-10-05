@@ -3578,7 +3578,9 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
 
         home = Path.home()
         self.assertEqual(_home_relative(str(home / ".local" / "bin" / "specify")), "~/.local/bin/specify")
-        self.assertEqual(_home_relative("/Users/other-person/bin/specify"), "specify")
+        other_home = Path(Path.home().anchor) / "elsewhere" / "other-person" / "bin" / "specify"
+        self.assertEqual(_home_relative(str(other_home)), "specify")
+        self.assertEqual(_home_relative("specify"), "specify")
         self.assertEqual(_home_relative(str(home / ".." / "other-person" / "bin" / "specify")), "specify")
 
     def test_spec_kit_version_ordering_compares_numeric_components(self) -> None:
