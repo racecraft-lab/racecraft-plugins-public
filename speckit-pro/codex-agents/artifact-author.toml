@@ -105,13 +105,15 @@ Publish one finished page per selected entry through the loaded runner.
 ### Publish last, one page at a time
 
 Process selected entries in manifest order. Read only the current entry's
-template; read the next only after the current page is recorded as `generated`
+template; never batch-read, prefetch, or read templates in parallel. Read the
+next only after the current page is recorded as `generated`
 or `gap`. Keep the rendered page and its replacement map in memory.
 
 For the current page, build a replacement map whose keys equal the template's
 slot inventory exactly. Verify the complete rendered page before publication:
 
-1. its bytes differ from the shipped template and every replaced region;
+1. the page differs from the shipped template, and every filled region differs
+   from its corresponding shipped-template region;
 2. it contains no sample-banner element using `sample-notice`, `notice`, or `note`;
 3. every declared `FILL` marker pair appears exactly once and in order;
 4. its slot set equals the inventory and every region matches its replacement.
