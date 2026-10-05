@@ -218,14 +218,9 @@ def _validate_source_inputs(repo: Path) -> None:
         parent = Path(directory)
         for name in (*directories, *files):
             path = parent / name
-            try:
-                mode = path.lstat().st_mode
-            except FileNotFoundError:
-                # A process importing the runner writes each .pyc through a
-                # temp file it renames away, so a listed cache entry can vanish.
-                if parent.name == "__pycache__":
-                    continue
-                raise
+            mode = _source_member_mode(path)
+            if mode is None:
+                continue
             if stat.S_ISLNK(mode) or not (stat.S_ISDIR(mode) or stat.S_ISREG(mode)):
                 raise RuntimeStageError(
                     f"unsafe source member must be a regular file or directory: {path.relative_to(repo)}"
@@ -235,6 +230,18 @@ def _validate_source_inputs(repo: Path) -> None:
         mode = license_path.lstat().st_mode
         if stat.S_ISLNK(mode) or not stat.S_ISREG(mode):
             raise RuntimeStageError("unsafe source member must be a regular file: LICENSE")
+
+
+def _source_member_mode(path: Path) -> int | None:
+    """Return the member's lstat mode, or None for a bytecode temp file renamed away."""
+    try:
+        return path.lstat().st_mode
+    except FileNotFoundError:
+        # A process importing the runner writes each .pyc through a temp file
+        # it renames away, so a listed cache entry can vanish before lstat.
+        if path.parent.name == "__pycache__":
+            return None
+        raise
 
 
 def _load_product_apis() -> _ProductApis:
