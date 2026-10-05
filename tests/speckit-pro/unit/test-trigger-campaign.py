@@ -784,6 +784,67 @@ class DraftComponentSwapTests(unittest.TestCase):
         refreshed = json.loads((base / "drafts.old/reviewed.draft.json").read_bytes())
         self.assertEqual(refreshed["identities"], comparison.snapshot_identities(comparison.measurement_snapshot()))
 
+
+class DraftConfinementTests(unittest.TestCase):
+    """A draft read or refresh must touch only its own single-named file and release every descriptor."""
+
+    SOURCE = ROOT / "layer2-trigger/campaign-drafts/issue-573-pilot.draft.json"
+
+    def base(self) -> Path:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        base = Path(temporary.name).resolve()
+        for folder in ("drafts", "outside"):
+            (base / folder).mkdir()
+        return base
+
+    def stale_payload(self) -> bytes:
+        stale = comparison.bind_template(json.loads(self.SOURCE.read_bytes()))
+        stale["identities"]["observer"] = "0" * 64
+        return (json.dumps(stale, indent=2) + "\n").encode()
+
+    def test_read_refuses_a_hard_linked_template(self):
+        base = self.base()
+        (base / "outside/reviewed.draft.json").write_bytes(self.SOURCE.read_bytes())
+        os.link(base / "outside/reviewed.draft.json", base / "drafts/reviewed.draft.json")
+        with self.assertRaisesRegex(ValueError, "hard link"):
+            comparison.rebind_identities(base / "drafts/reviewed.draft.json", base / "bound.json")
+        self.assertFalse((base / "bound.json").exists())
+
+    def test_in_place_refresh_refuses_a_hard_linked_draft(self):
+        base, payload = self.base(), self.stale_payload()
+        (base / "outside/reviewed.draft.json").write_bytes(payload)
+        os.link(base / "outside/reviewed.draft.json", base / "drafts/reviewed.draft.json")
+        with self.assertRaisesRegex(ValueError, "hard link"):
+            comparison.rebind_identities(base / "drafts/reviewed.draft.json")
+        self.assertEqual((base / "outside/reviewed.draft.json").read_bytes(), payload)
+
+    def test_in_place_refresh_refuses_a_hard_link_added_after_the_read(self):
+        base, payload = self.base(), self.stale_payload()
+        draft = base / "drafts/reviewed.draft.json"
+        draft.write_bytes(payload)
+        real_open = os.open
+
+        def linking_open(path, flags, *args, **kwargs):
+            if flags & os.O_WRONLY and not (base / "outside/reviewed.draft.json").exists():
+                os.link(draft, base / "outside/reviewed.draft.json")
+            return real_open(path, flags, *args, **kwargs)
+
+        with mock.patch.object(comparison.os, "open", linking_open), self.assertRaisesRegex(ValueError, "hard link"):
+            comparison.rebind_identities(draft)
+        self.assertEqual(draft.read_bytes(), payload)
+
+    def test_a_directory_named_as_the_draft_releases_every_descriptor(self):
+        base = self.base()
+        (base / "drafts/reviewed.draft.json").mkdir()
+        before = len(os.listdir("/dev/fd"))
+        for _ in range(3):
+            with self.assertRaisesRegex(ValueError, "regular file"):
+                comparison.rebind_identities(base / "drafts/reviewed.draft.json", base / "bound.json")
+        self.assertEqual(len(os.listdir("/dev/fd")), before)
+        self.assertFalse((base / "bound.json").exists())
+
+
 class CampaignPinsTests(unittest.TestCase):
     """Reviewed campaign pins live in one data module and every count derives from it."""
 
@@ -823,5 +884,6 @@ if __name__ == "__main__":
         unittest.defaultTestLoader.loadTestsFromTestCase(CampaignPinsTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(DraftIdentityTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(DraftComponentSwapTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(DraftConfinementTests),
     ])
     raise SystemExit(run_counted(suite, label="test-trigger-campaign"))

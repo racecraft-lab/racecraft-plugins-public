@@ -98,14 +98,27 @@ def _draft_directory(path: Path) -> tuple[int, str]:
     return parent, absolute.name
 
 
-def _read_draft(directory: int, name: str) -> tuple[bytes, tuple[int, int]]:
-    """Read a regular, non-symlink draft file of at most MAX_DRAFT_BYTES."""
-    with os.fdopen(_open_at(directory, name, os.O_RDONLY | _NO_FOLLOW, name), "rb") as stream:
-        info = os.fstat(stream.fileno())
+def _open_draft(directory: int, name: str, flags: int, identity: tuple[int, int] | None = None):
+    """Open the draft as a stream only if it is a regular file with no other hard link."""
+    fd = _open_at(directory, name, flags | _NO_FOLLOW, name)
+    try:
+        info = os.fstat(fd)
         _require(stat.S_ISREG(info.st_mode), "draft must be a regular file")
+        _require(info.st_nlink == 1, "draft must not be a hard link")
+        _require(identity is None or (info.st_dev, info.st_ino) == identity, "draft was replaced during refresh")
+        return os.fdopen(fd, "wb" if flags & os.O_WRONLY else "rb"), (info.st_dev, info.st_ino)
+    except BaseException:
+        os.close(fd)
+        raise
+
+
+def _read_draft(directory: int, name: str) -> tuple[bytes, tuple[int, int]]:
+    """Read a regular, single-link, non-symlink draft file of at most MAX_DRAFT_BYTES."""
+    stream, identity = _open_draft(directory, name, os.O_RDONLY)
+    with stream:
         payload = stream.read(MAX_DRAFT_BYTES + 1)
     _require(len(payload) <= MAX_DRAFT_BYTES, f"draft exceeds {MAX_DRAFT_BYTES} bytes")
-    return payload, (info.st_dev, info.st_ino)
+    return payload, identity
 
 
 def rebind_identities(path: Path, out: Path | None = None) -> dict:
@@ -131,10 +144,8 @@ def _rebind_at(directory: int, name: str, out: Path | None) -> dict:
     for key, old in manifest["identities"].items():
         _require(text.count(old) == 1, f"{key} identity digest is not unique in the draft")
         text = text.replace(old, current[key])
-    with os.fdopen(_open_at(directory, name, os.O_WRONLY | _NO_FOLLOW, name), "wb") as stream:
-        info = os.fstat(stream.fileno())
-        _require(stat.S_ISREG(info.st_mode), "draft must be a regular file")
-        _require((info.st_dev, info.st_ino) == identity, "draft was replaced during refresh")
+    stream, _ = _open_draft(directory, name, os.O_WRONLY, identity)
+    with stream:
         stream.truncate(0)
         stream.write(text.encode("utf-8"))
     return {"rebound": True, "identities": current}
