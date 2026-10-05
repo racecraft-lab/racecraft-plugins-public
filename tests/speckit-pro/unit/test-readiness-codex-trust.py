@@ -93,9 +93,13 @@ class ReadinessCodexTrustTest(ReadinessCase):
         self.assertEqual("verified", self.item(shipped_trust())["status"])
 
     def test_disagreeing_codex_hook_observations_are_refused(self) -> None:
-        legacy = {"item": "hooks", "evidence_source": "definition review",
-                  "hooks": [dict(hook="PreToolUse", defined=True, trust="untrusted")]}
-        assert_runner_response(self, self.run_helper([legacy, shipped_trust()]), "input_error", 2)
+        # The overlap refusal runs before any hook-name comparison, so a legacy
+        # observation with an arbitrary name is refused the same way.
+        for name, trust in (("PreToolUse", "untrusted"), ("Bogus", "trusted")):
+            with self.subTest(hook=name):
+                legacy = {"item": "hooks", "evidence_source": "definition review",
+                          "hooks": [dict(hook=name, defined=True, trust=trust)]}
+                assert_runner_response(self, self.run_helper([legacy, shipped_trust()]), "input_error", 2)
 
     def test_legacy_codex_hooks_cannot_verify_without_handler_hashes(self) -> None:
         from speckit_pro_runner.helpers import readiness_host_items
@@ -114,11 +118,6 @@ class ReadinessCodexTrustTest(ReadinessCase):
                 item = self.item(posture(**{field: value}))
                 self.assertEqual("unavailable", item["status"])
                 self.assertEqual(action + " Scaffold never broadens permissions or disables a control.", item["action"])
-
-    def test_redundant_legacy_codex_hooks_cannot_hide_arbitrary_names(self) -> None:
-        legacy = {"item": "hooks", "evidence_source": "definition review",
-                  "hooks": [dict(hook="Bogus", defined=True, trust="trusted")]}
-        assert_runner_response(self, self.run_helper([legacy, shipped_trust()]), "input_error", 2)
 
     def test_sha256_fingerprints_normalize_case_prefix_and_length(self) -> None:
         from speckit_pro_runner.helpers import readiness_host_items
