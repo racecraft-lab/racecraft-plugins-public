@@ -135,11 +135,13 @@ def _script_url(value: str) -> bool:
 
 
 class _FillMarkup(HTMLParser):
-    """Collects active content in one fill region."""
+    """Collects active content in one fill region; build it with convert_charrefs=False so "&lt;" stays text."""
 
-    def __init__(self) -> None:
-        super().__init__(convert_charrefs=False)
-        self.findings: list[str] = []
+    findings: list[str]
+
+    def reset(self) -> None:
+        super().reset()
+        self.findings = []
 
     def set_cdata_mode(self, *args: object, **kwargs: object) -> None:
         """Never hide text from inspection: raw-text rules differ inside SVG and across Python versions."""
@@ -165,7 +167,7 @@ class _FillMarkup(HTMLParser):
 def _active_content(fill: bytes) -> list[str]:
     text = fill.decode("utf-8", errors="replace")
     findings = ["markup declaration or nonstandard comment"] if _UNPARSEABLE_FILL.search(text) else []
-    parser = _FillMarkup()
+    parser = _FillMarkup(convert_charrefs=False)
     parser.feed(text)
     if "<" in parser.rawdata:
         findings.append("unterminated markup")
