@@ -70,6 +70,13 @@ class ReadinessCodexItemsTest(ReadinessCase):
         self.assertEqual("unknown", self.item(agents(CURRENT, loaded=None))["status"])
         self.assertEqual("unknown", self.item(agents([]))["status"])
 
+    def test_current_agent_cannot_claim_a_repair_outcome(self) -> None:
+        for repair in ("applied", "declined", "failed"):
+            with self.subTest(repair=repair):
+                inventory = [{**entry, "repair": repair} for entry in CURRENT]
+                assert_runner_response(self, self.run_helper([agents(inventory)]), "input_error", 2)
+                self.assertFalse((self.root / ".specify" / "readiness").exists())
+
     def test_installation_inputs_are_the_selected_ones_and_only_digests_are_recorded(self) -> None:
         for label, installation in (("static", STATIC), ("routed", ROUTED),
                                     ("routed with destination", {**ROUTED, "destination": "agents"})):
@@ -87,18 +94,32 @@ class ReadinessCodexItemsTest(ReadinessCase):
         cases = {
             "invented routing_mode": {**STATIC, "routing_mode": "static"},
             "static and routed mixed": {**STATIC, "route_policy_manifest": "route-policy.json"},
-            "static without model": {"luna_fallback": False},
-            "static without luna_fallback": {"model": "gpt-5"},
             "luna_fallback as text": {"model": "gpt-5", "luna_fallback": "false"},
             "override without manifest": {"strict_model_override": "gpt-5"},
-            "empty": {},
         }
         for label, installation in cases.items():
             with self.subTest(label):
                 assert_runner_response(self, self.run_helper([agents(CURRENT, installation)]), "input_error", 2)
                 self.assertFalse((self.root / ".specify" / "readiness").exists())
 
+    def test_optional_installation_inputs_are_preserved_without_invented_defaults(self) -> None:
+        for installation in ({}, {"model": "gpt-6-sol"}, {"luna_fallback": False},
+                             {"destination": "agents"}):
+            with self.subTest(installation=installation):
+                self.assertEqual("unknown", self.item(agents(CURRENT, installation, loaded=None))["status"])
+
+    def test_expected_agent_revision_must_match_the_record_revision(self) -> None:
+        response = self.run_helper([agents(CURRENT, loaded="2.39.0", expected="2.39.0")])
+        assert_runner_response(self, response, "input_error", 2)
+        self.assertFalse((self.root / ".specify" / "readiness").exists())
+
     def test_malformed_agent_observations_are_refused(self) -> None:
+        for key in ("installation", "inventory", "expected_revision"):
+            with self.subTest(missing=key):
+                observation = agents(CURRENT)
+                del observation["agents"][key]
+                assert_runner_response(self, self.run_helper([observation]), "input_error", 2)
+                self.assertFalse((self.root / ".specify" / "readiness").exists())
         cases = {
             "bad state": [{"agent": "a", "state": "fresh", "repair": "none"}],
             "bad repair": [{"agent": "a", "state": "stale", "repair": "maybe"}],

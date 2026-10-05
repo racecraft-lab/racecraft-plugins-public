@@ -229,7 +229,7 @@ def host_item(raw: dict[str, Any], host: str, observed_at: str, plugin_revision:
     if name == "mcp_authentication":
         return name, observe_mcp_authentication(raw, observed_at, source)
     if name == "codex_agents":
-        return name, observe_codex_agents(raw, observed_at, source)
+        return name, observe_codex_agents(raw, observed_at, source, plugin_revision)
     if name == "extension_versions":
         return name, observe_extension_versions(raw, observed_at, source)
     return name, observe_hooks(raw, observed_at, source, host)
@@ -268,7 +268,7 @@ RESTART_ACTION = ("Rerun scaffold after you restart Codex so it loads the repair
 def installation_digest(raw: Any) -> str:
     """Digest of the selected installation inputs, replayed exactly as the install helper takes them (#1048).
 
-    A static installation names `model` and `luna_fallback`; a route-aware one names
+    A static installation may name `model` and `luna_fallback`; a route-aware one names
     `route_policy_manifest` and may add `strict_model_override`. Neither takes a `routing_mode` key, and the
     two shapes never mix. Only the digest is recorded, so a destination path never reaches the record.
     """
@@ -276,7 +276,7 @@ def installation_digest(raw: Any) -> str:
         raise SelectionError("codex_agents.installation must be an object")
     routed = "route_policy_manifest" in raw
     allowed = ROUTED_INSTALL_KEYS if routed else STATIC_INSTALL_KEYS
-    needed = {"route_policy_manifest"} if routed else {"model", "luna_fallback"}
+    needed = {"route_policy_manifest"} if routed else set()
     if not needed <= raw.keys() <= allowed:
         raise SelectionError(f"codex_agents.installation takes {sorted(allowed)} and needs {sorted(needed)}")
     texts = {key: value for key, value in raw.items() if key != "luna_fallback"}
@@ -293,17 +293,21 @@ def revision_text(value: Any, label: str) -> str:
     raise SelectionError(f"{label} must be a version string")
 
 
-def observe_codex_agents(raw: dict[str, Any], observed_at: str, source: str) -> dict[str, Any]:
+def observe_codex_agents(raw: dict[str, Any], observed_at: str, source: str, plugin_revision: str) -> dict[str, Any]:
     detail = raw["agents"]
-    if not isinstance(detail, dict) or not detail.keys() <= {"installation", "inventory", "loaded_revision",
-                                                              "expected_revision"}:
+    needed = {"installation", "inventory", "expected_revision"}
+    if not isinstance(detail, dict) or not needed <= detail.keys() <= needed | {"loaded_revision"}:
         raise SelectionError("codex_agents.agents takes installation, inventory, loaded_revision, expected_revision")
     prints = {"value:installation_inputs": installation_digest(detail.get("installation"))}
     inventory = [(name_text(entry.get("agent"), "codex_agents agent"),
                   choice(entry.get("state"), AGENT_STATES, "codex_agents state"),
                   choice(entry.get("repair"), REPAIRS, "codex_agents repair"))
                  for entry in listed(detail, "inventory", "codex_agents")]
+    if any(state == "current" and repair != "none" for _, state, repair in inventory):
+        raise SelectionError("codex_agents current agents must have repair none")
     expected = revision_text(detail.get("expected_revision"), "codex_agents expected_revision")
+    if expected != plugin_revision:
+        raise SelectionError("codex_agents expected_revision must match plugin_revision")
     loaded = detail.get("loaded_revision")
     if loaded is not None:
         loaded = revision_text(loaded, "codex_agents loaded_revision")
