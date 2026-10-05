@@ -119,6 +119,10 @@ def checked_request(raw: Any) -> tuple[str, str, str]:
     return phase, workflow, feature
 
 
+def internal_failure(request: Any, code: str, exc: Exception) -> dict[str, Any]:
+    return response("internal_failure", request_id=request.request_id, diagnostics=[diagnostic(code, str(exc))])
+
+
 def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     """Return phase-brief/v1 dispatch data; gate and stop decisions stay separate.
 
@@ -177,11 +181,9 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     try:
         data = brief_data(phase, workflow, feature)
     except (OSError, ValueError) as exc:
-        return response("internal_failure", request_id=request.request_id,
-                        diagnostics=[diagnostic("phase_brief_slices_unavailable", str(exc))])
+        return internal_failure(request, "phase_brief_slices_unavailable", exc)
     try:
         data["hooks"] = optional_hooks(root, "after_" + phase.lower()) if phase in HOOK_PHASES else []
     except ValueError as exc:
-        return response("internal_failure", request_id=request.request_id,
-                        diagnostics=[diagnostic("phase_brief_hooks_unavailable", str(exc))])
+        return internal_failure(request, "phase_brief_hooks_unavailable", exc)
     return response("ok", request_id=request.request_id, data=data)
