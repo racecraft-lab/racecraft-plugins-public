@@ -152,6 +152,7 @@ class ArtifactReviewTests(unittest.TestCase):
                 result = self.review(preview_surface=surface)
                 self.assertEqual(result["resume_action"], "generate")
                 self.assertEqual(result["observer_dispatches"], [])
+                self.assertNotIn("preview_note", result)
 
     def test_a_surface_outside_the_closed_set_is_rejected(self) -> None:
         for surface in ("headless", "", "Available"):

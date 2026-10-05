@@ -135,7 +135,7 @@ class ReadinessRecordTest(unittest.TestCase):
         good = json.loads(path.read_text(encoding="utf-8"))
         broken = {"unparseable": "{", "not an object": "[]", "other schema": {**good, "schema_version": "readiness-record/v0"},
                   "other host": {**good, "host": "codex"}, "other worktree": {**good, "binding": {"worktree": "sha256:0"}},
-                  "no item": {**good, "items": {}}, "bad status": {**good, "items": {"preview_surface": {"status": "ready"}}}}
+                  "no item": {**good, "items": {}}, "items list": {**good, "items": []}, "bad status": {**good, "items": {"preview_surface": {"status": "ready"}}}}
         for label, content in broken.items():
             with self.subTest(label):
                 path.write_text(content if isinstance(content, str) else json.dumps(content), encoding="utf-8")

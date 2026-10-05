@@ -52,9 +52,8 @@ to the active runner's shipped gallery, which must be the one the author used.
 Derive expected content from the actual validated page and check it against the
 feature's planning record. A title repeated as body content is insufficient.
 
-Run `resolve-autopilot-stage` to validate the record, with
-`inputs.host` set to `claude`;
-the runner then reads that host's readiness record for the preview surface. Its optional
+Run `resolve-autopilot-stage` to validate the record, with the same `inputs.host` as Step 0.6c,
+so the runner reads that host's readiness record for the preview surface. Its optional
 `artifact_review` result reports `status`, `resume_action`, `reuse_artifacts`,
 counts, per-page dispositions, generation gaps, `observer_dispatches` (the pages
 that each need one observer) and, when the readiness record shows no preview

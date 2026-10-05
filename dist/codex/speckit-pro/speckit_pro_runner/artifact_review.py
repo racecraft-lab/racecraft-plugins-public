@@ -335,5 +335,5 @@ def review_handoff(text: str, root: Path, read_file: FileReader, preview_surface
         "reuse_artifacts": fresh, "feature_dir": record["feature_dir"], "generated": len(pages),
         "verified": verified, "pages": pages, "generation_gaps": gaps, "generation_error": record["generation_error"],
         "observer": OBSERVER if dispatches else None, "observer_dispatches": dispatches,
-        **({"preview_note": NO_SURFACE_NOTE} if preview_surface == "unavailable" and pages else {}),
+        **({"preview_note": NO_SURFACE_NOTE} if preview_surface == "unavailable" and pages and fresh else {}),
     }

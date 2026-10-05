@@ -63,7 +63,7 @@
         "value": "speckit_pro_runner/artifact_review.py",
         "display": "speckit_pro_runner/artifact_review.py"
       },
-      "sha256": "f729da8144fd57ee95828dced4a5681f65f07806cbf3de1116f06877b64491f6"
+      "sha256": "7fbfd6b6fd5d065e3675fe1930c7cbfce1c8636845fe1cef0f6ca47fc2795b4f"
     },
     {
       "path": {
@@ -687,7 +687,7 @@
         "value": "speckit_pro_runner/helpers/readiness_record.py",
         "display": "speckit_pro_runner/helpers/readiness_record.py"
       },
-      "sha256": "918ab130f3a98d4521a689fed8fb5da105abe638ae53a8f51031c37e545488fe"
+      "sha256": "6386131f225fe7a65853a40cf8935f0b87415bc9035c8493db0287695f903908"
     },
     {
       "path": {

@@ -279,7 +279,8 @@ def preview_surface(root: Path, host: str) -> str:
     if not isinstance(record, dict) or record.get("schema_version") != SCHEMA_VERSION or record.get("host") != host \
             or record.get("binding") != {"worktree": digest(str(root))}:
         return "unknown"
-    item = record.get("items", {}).get("preview_surface")
+    items = record.get("items")
+    item = items.get("preview_surface") if isinstance(items, dict) else None
     status = item.get("status") if isinstance(item, dict) else None
     return {"verified": "available", "unavailable": "unavailable"}.get(str(status), "unknown")
 

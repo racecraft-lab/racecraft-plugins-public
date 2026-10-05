@@ -981,7 +981,7 @@ does not end at the boundary commit above. It runs this sequence, in this order:
 5. Create or refresh the draft pull request using the validated packet.
 6. Write the `Draft PR` record to the workflow file.
 7. Take a separate bookkeeping commit carrying that record, and push it.
-8. The parent dispatches `artifact-preview-observer` once for each page in the resolver's `observer_dispatches`, and for none when `preview_note` shows no preview surface; the isolated observer never inherits general repository tools.
+8. The parent dispatches `artifact-preview-observer` for each generated artifact preview; the isolated observer never inherits general repository tools.
 9. Validate and commit/push the workflow-only preview evidence.
 10. Print the stop report, then print exactly one `stop_reason:plan_stage_boundary` as the last line of your final message, and stop. A step that fails above ends the sequence there; print the stop report for that shape and exactly one marker selected by the precedence rule and table under the stop report.
 ```
