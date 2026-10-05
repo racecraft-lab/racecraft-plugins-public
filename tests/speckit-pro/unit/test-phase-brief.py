@@ -209,6 +209,89 @@ class PhaseBriefTests(InProjectCase):
 
 
 class PhaseBriefSliceTests(InProjectCase):
+    def test_invalid_structure_returns_no_dispatch_material(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(phase_brief, "REFERENCES", Path(directory)):
+            path = Path(directory) / "capability-discovery.md"
+            path.write_text("## Capability Categories\nbody\n## Next\nSetext\n===\n")
+            result = dispatch_brief({"phase": "Clarify", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"})
+        self.assertEqual(result["status"], "internal_failure")
+        self.assertEqual(result["data"], {})
+        self.assertIn("setext underline", result["diagnostics"][0]["message"])
+        self.assertNotIn(directory, result["diagnostics"][0]["message"])
+
+    def test_payload_hosts_enforce_reference_structure(self):
+        expected = "## Target\n<!--\n## Hidden\n```\n-->\nbody\v```"
+        program = ("import json,sys; from pathlib import Path; "
+                   "from speckit_pro_runner.helpers import phase_brief; "
+                   "phase_brief.REFERENCES=Path(sys.argv[1]); "
+                   "print(json.dumps(phase_brief.reference_section('sample.md','Target')))")
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "sample.md"
+            for host in ("claude", "codex"):
+                payload = REPO / "dist" / host / "speckit-pro"
+                for invalid in (False, True):
+                    with self.subTest(host=host, invalid=invalid):
+                        text = expected + "\n## Next\n" + ("Setext\n===\n" if invalid else "excluded\n")
+                        path.write_bytes(text.replace("\n", "\r\n").encode())
+                        done = subprocess.run([sys.executable, "-c", program, directory], cwd=payload,
+                                              env={**os.environ, "PYTHONPATH": str(payload)},
+                                              text=True, capture_output=True, check=False)
+                        if invalid:
+                            self.assertNotEqual(done.returncode, 0)
+                            self.assertIn("setext underline", done.stderr)
+                        else:
+                            self.assertEqual(done.returncode, 0, done.stderr)
+                            self.assertEqual(json.loads(done.stdout), expected)
+
+    def test_setext_underlines_are_refused_in_reference_structure(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(phase_brief, "REFERENCES", Path(directory)):
+            path = Path(directory) / "sample.md"
+            for underline in ("=", "---", "   === \t", "  -\t"):
+                for position in ("before", "inside", "after"):
+                    with self.subTest(underline=underline, position=position):
+                        invalid = "Setext\n" + underline + "\n"
+                        parts = {"before": invalid + "## Target\nbody\n## Next\n",
+                                 "inside": "## Target\nbody\n\n" + invalid + "tail\n",
+                                 "after": "## Target\nbody\n## Next\n" + invalid}
+                        path.write_text(parts[position])
+                        with self.assertRaisesRegex(ValueError, "setext underline.*ATX"):
+                            phase_brief.reference_section("sample.md", "Target")
+            for body in ("```\nSetext\n===\n```", "<!--\nSetext\n---\n-->",
+                         "    ===", "= =", "- - -", "***"):
+                with self.subTest(body=body):
+                    expected = "## Target\n" + body
+                    path.write_text(expected + "\n## Next\n")
+                    self.assertEqual(phase_brief.reference_section("sample.md", "Target"), expected)
+
+    def test_only_lf_and_crlf_split_reference_lines(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(phase_brief, "REFERENCES", Path(directory)):
+            path = Path(directory) / "sample.md"
+            for separator in ("\r", "\v", "\f", "\x1c", "\x1d", "\x1e", "\x85", "\u2028", "\u2029"):
+                for marker in ("```", "## Hidden"):
+                    with self.subTest(separator=repr(separator), marker=marker):
+                        expected = "## Target\nbody" + separator + marker
+                        path.write_bytes((expected + "\n## Next\nexcluded\n").encode())
+                        self.assertEqual(phase_brief.reference_section("sample.md", "Target"), expected)
+            for separator in ("\n", "\r\n"):
+                with self.subTest(separator=repr(separator)):
+                    path.write_bytes(separator.join(("## Target", "body", "## Next", "excluded")).encode())
+                    self.assertEqual(phase_brief.reference_section("sample.md", "Target"), "## Target\nbody")
+
+    def test_comments_hide_headings_and_fences(self):
+        cases = (
+            "<!--\n## Hidden\n```\n~~~\n-->\nkept",
+            "   <!-- ## Hidden --> ```\nkept",
+            "```\n<!--\n```\nkept",
+        )
+        with tempfile.TemporaryDirectory() as directory, patch.object(phase_brief, "REFERENCES", Path(directory)):
+            for body in cases:
+                with self.subTest(body=body):
+                    expected = "## Target\n" + body
+                    (Path(directory) / "sample.md").write_text(expected + "\n## Next\nexcluded\n")
+                    self.assertEqual(phase_brief.reference_section("sample.md", "Target"), expected)
+            (Path(directory) / "sample.md").write_text("<!--\n## Target\n```\n-->\n## Target\nreal\n## Next\n")
+            self.assertEqual(phase_brief.reference_section("sample.md", "Target"), "## Target\nreal")
+
     def test_unreadable_reference_diagnostic_is_relative(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(phase_brief, "REFERENCES", Path(directory)):
             result = dispatch_brief({"phase": "Clarify", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"})
