@@ -161,6 +161,7 @@ def write_bytes_atomic_at(parent_fd: int, target_name: str, content: bytes,
     tmp_cleanup_errors: list[str] = []
     written_stat: os.stat_result | None = None
     replaced = False
+    published = False
     previous = preserve_previous_bytes_at(parent_fd, target_name) if options.verify_content else None
     try:
         try:
@@ -191,6 +192,7 @@ def write_bytes_atomic_at(parent_fd: int, target_name: str, content: bytes,
                 verify_written_file_at(parent_fd, target_name, content, written_stat)
                 if options.post_publish_check is not None:
                     options.post_publish_check()
+            published = True
             try:
                 os.fsync(parent_fd)
             except OSError:
@@ -204,6 +206,8 @@ def write_bytes_atomic_at(parent_fd: int, target_name: str, content: bytes,
             raise
     finally:
         if previous is not None:
+            if published:
+                discard_recovery_directory_at(parent_fd, previous[3], previous[0])
             os.close(previous[1])
             os.close(previous[0])
         try:
@@ -318,17 +322,27 @@ def read_open_file(fd: int, limit: int | None = None) -> bytes:
     return content
 
 
-def preserve_previous_bytes_at(parent_fd: int, name: str) -> tuple[int, int, bytes] | None:
+def discard_recovery_directory_at(parent_fd: int, directory: str, held: int) -> None:
+    """Drop the private rollback copy once publication verified; keep it if removal fails."""
+    try:
+        os.unlink("previous", dir_fd=held)
+        os.rmdir(directory, dir_fd=parent_fd)
+    except OSError:
+        # The copy is private and harmless; retaining it never changes the publication outcome.
+        pass
+
+
+def preserve_previous_bytes_at(parent_fd: int, name: str) -> tuple[int, int, bytes, str] | None:
     snapshot = read_file_snapshot_at(parent_fd, name)
     if not snapshot["exists"]:
         return None
-    _directory, held = open_recovery_directory_at(parent_fd)
+    directory, held = open_recovery_directory_at(parent_fd)
     try:
         fd = os.open("previous", os.O_RDWR | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
                      snapshot["mode"], dir_fd=held)
         try:
             write_open_file(fd, snapshot["content"])
-            return held, fd, snapshot["content"]
+            return held, fd, snapshot["content"], directory
         except BaseException:
             os.close(fd)
             raise
@@ -337,11 +351,11 @@ def preserve_previous_bytes_at(parent_fd: int, name: str) -> tuple[int, int, byt
         raise
 
 
-def recover_failed_publication_at(parent_fd: int, name: str, previous: tuple[int, int, bytes] | None) -> None:
+def recover_failed_publication_at(parent_fd: int, name: str, previous: tuple[int, int, bytes, str] | None) -> None:
     # Capture untrusted final bytes without deleting them, then restore only into an absent slot.
     quarantine_entry_at(parent_fd, name)
     if previous is not None:
-        source_fd, file_fd, content = previous
+        source_fd, file_fd, content, _directory = previous
         try:
             if read_open_file(file_fd, len(content)) != content:
                 raise WritePreconditionChanged("previous page bytes changed; original retained in recovery")

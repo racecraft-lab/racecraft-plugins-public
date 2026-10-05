@@ -18,7 +18,7 @@ PLANNING_INPUTS = frozenset({"repo_root", "plan_file", "research_file", "design_
 INPUTS = PLANNING_INPUTS | {"page_id", "rendered_html", "action", "expected_sha256", "expected_file_identity"}
 MAX_PAGE_BYTES = 1024 * 1024
 DESCRIPTOR_IO_AVAILABLE = os.name != "nt" and hasattr(os, "O_NOFOLLOW") and os.listdir in os.supports_fd and all(
-    operation in os.supports_dir_fd for operation in (os.open, os.stat, os.link, os.mkdir, os.rename))
+    operation in os.supports_dir_fd for operation in (os.open, os.stat, os.link, os.mkdir, os.rename, os.rmdir, os.unlink))
 
 
 def publication_inputs(inputs: dict[str, Any], root: Path) -> tuple[str, str, bytes | None]:
