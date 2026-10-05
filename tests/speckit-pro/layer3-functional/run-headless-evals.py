@@ -698,6 +698,8 @@ def _capture_process(
             shell=False,
             start_new_session=True,
         )
+        # communicate() must not reap the leader before cleanup signals its group.
+        trigger_process.hold_leader(process)
     except OSError as error:
         return {
             "status": "launch_error",

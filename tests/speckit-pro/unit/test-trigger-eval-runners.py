@@ -57,6 +57,7 @@ import trigger_codex_observer as codex_observer  # noqa: E402
 import trigger_evidence as evidence_records  # noqa: E402
 import trigger_process  # noqa: E402
 from foreign_pid import foreign_pid  # noqa: E402
+import fake_leader  # noqa: E402
 
 # A fake child pid that is never this test process's pid or group.
 FAKE_CHILD_PID = foreign_pid(43210)
@@ -764,9 +765,8 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             mock.patch.object(claude.time, "monotonic", side_effect=(i / 100 for i in range(100000))),
             mock.patch.object(claude.time, "sleep"),
         ):
-            with self.assertRaises(PermissionError) as caught:
+            with self.assertRaisesRegex(OSError, "EPERM"):
                 claude.cleanup_child(child, observations=observations)
-            self.assertEqual(caught.exception.errno, 1)
             self.assertGreaterEqual(killpg.call_count, 2)
             self.assertTrue(all(call.args == (child.pid, 0) for call in killpg.call_args_list))
             self.assertTrue(all(item["errno"] == 1 for item in observations))
@@ -797,18 +797,19 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             mock.patch.object(claude.time, "sleep"),
         ):
             self.assertFalse(claude.cleanup_child(child, observations=observations))
-        self.assertEqual(killpg.call_args_list, [mock.call(child.pid, 0)] * 3)
-        self.assertEqual([item["errno"] for item in observations], [1, 3, 3])
+        self.assertEqual(killpg.call_args_list, [mock.call(child.pid, 0)] * 2)
+        self.assertEqual([item["errno"] for item in observations], [1, 3])
 
     @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
     def test_claude_initial_eperm_then_presence_uses_existing_cleanup(self) -> None:
         claude = import_script(CLAUDE_RUNNER, "layer2_claude_eperm_then_presence")
-        child = FakePopen(b"", returncode=0)
+        child = fake_leader.UnreapedLeader(FAKE_CHILD_PID)
         observations, sent = [], []
 
         def probe(_pgid: int, signum: int) -> None:
             if signum:
                 sent.append(signum)
+                child.exited = True
             elif sent:
                 raise ProcessLookupError(3, "group absent")
             elif not observations:
@@ -820,11 +821,13 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             mock.patch.object(claude, "DESCENDANT_EXIT_GRACE", 0.05),
             mock.patch.object(claude.time, "monotonic", side_effect=(i / 100 for i in range(100000))),
             mock.patch.object(claude.time, "sleep"),
+            fake_leader.observed(child),
         ):
             self.assertTrue(claude.cleanup_child(child, observations=observations))
         self.assertEqual(sent, [signal.SIGTERM])
         self.assertEqual(observations[0]["errno"], 1)
         self.assertEqual(observations[-1]["errno"], 3)
+        self.assertTrue(child.reaped)
 
     @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
     def test_claude_completed_group_may_exit_during_grace_without_signals(self) -> None:
@@ -838,51 +841,10 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             self.assertFalse(claude.cleanup_child(child))
         self.assertTrue(all(call.args == (child.pid, 0) for call in killpg.call_args_list))
 
-
-    @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
-    def test_claude_post_signal_permission_probe_requires_later_absence(self) -> None:
-        claude = import_script(CLAUDE_RUNNER, "layer2_claude_post_signal_probe")
-        for exit_signal, persistent in itertools.product((signal.SIGTERM, signal.SIGKILL), (False, True)):
-            with self.subTest(exit_signal=exit_signal, persistent=persistent):
-                child = FakePopen(b"", returncode=-exit_signal)
-                child.timeout, child.communicate_calls = True, 1
-                sent, observations = [], []
-                post_signal_probes = 0
-                def probe(pgid: int, signum: int) -> None:
-                    nonlocal post_signal_probes
-                    self.assertEqual(pgid, child.pid)
-                    if signum:
-                        sent.append(signum)
-                    elif exit_signal in sent:
-                        # Exit occurs between poll() and the group probe; the next poll reaps it.
-                        child.timeout = False
-                        post_signal_probes += 1
-                        if persistent or post_signal_probes == 1:
-                            raise PermissionError(1, "post-signal probe unresolved")
-                        raise ProcessLookupError(3, "group absent")
-                with (
-                    mock.patch.object(claude.os, "getpgrp", return_value=child.pid + 1),
-                    mock.patch.object(claude.os, "killpg", side_effect=probe),
-                    mock.patch.multiple(claude, CLEANUP_TIMEOUT=0.5, DESCENDANT_EXIT_GRACE=0),
-                    mock.patch.object(claude.time, "monotonic", side_effect=[i / 10 for i in range(100)]),
-                    mock.patch.object(claude.time, "sleep"),
-                ):
-                    if persistent:
-                        with self.assertRaisesRegex(OSError, "post-signal probe unresolved") as caught:
-                            claude.cleanup_child(child, observations=observations)
-                        self.assertNotIsInstance(caught.exception, PermissionError)
-                    else:
-                        self.assertTrue(claude.cleanup_child(child, observations=observations))
-                self.assertEqual(sent, {(signal.SIGTERM, False): [signal.SIGTERM]}.get((exit_signal, persistent), [signal.SIGTERM, signal.SIGKILL]))
-                self.assertGreaterEqual(post_signal_probes, 2)
-                self.assertEqual(observations[0]["errno"], 1)
-                self.assertEqual(observations[0]["pgid"], child.pid)
-                self.assertEqual(observations[-1]["errno"], 1 if persistent else 3)
-
     @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
     def test_claude_sigterm_esrch_is_terminal_and_never_signals_reused_pgid(self) -> None:
         claude = import_script(CLAUDE_RUNNER, "layer2_claude_esrch_pgid_reuse")
-        child = FakePopen(b"", returncode=0)
+        child = fake_leader.UnreapedLeader(FAKE_CHILD_PID)
         sent = []
 
         def killpg(_pgid: int, signum: int) -> None:
@@ -898,62 +860,121 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             mock.patch.object(claude, "DESCENDANT_EXIT_GRACE", 0.05),
             mock.patch.object(claude.time, "monotonic", side_effect=(i / 100 for i in range(100000))),
             mock.patch.object(claude.time, "sleep"),
+            fake_leader.observed(child),
+        ):
+            self.assertTrue(claude.cleanup_child(child))
+        self.assertEqual(sent, [signal.SIGTERM])
+
+    @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
+    def test_claude_reaped_leader_never_signals_a_reacquired_pgid(self) -> None:
+        claude = import_script(CLAUDE_RUNNER, "layer2_claude_reaped_leader_reuse")
+        for first_probe in (ProcessLookupError(3, "original group exited"), PermissionError(1, "original group tearing down")):
+            with self.subTest(first_probe=type(first_probe).__name__):
+                child = FakePopen(b"", returncode=0)  # Popen reaped the leader before cleanup.
+                sent, probes = [], []
+
+                def killpg(_pgid: int, signum: int) -> None:
+                    if signum:
+                        sent.append(signum)
+                        raise ProcessLookupError(3, "replacement group exited")
+                    probes.append(signum)
+                    if len(probes) == 1:
+                        raise first_probe
+                    # Later probes succeed: an unrelated group has reused this PGID.
+
+                with (
+                    mock.patch.object(claude.os, "getpgrp", return_value=child.pid + 1),
+                    mock.patch.object(claude.os, "killpg", side_effect=killpg),
+                    mock.patch.multiple(claude, CLEANUP_TIMEOUT=0.5, DESCENDANT_EXIT_GRACE=0.05),
+                    mock.patch.object(claude.time, "monotonic", side_effect=(i / 100 for i in range(100000))),
+                    mock.patch.object(claude.time, "sleep"),
+                ):
+                    try:
+                        result = claude.cleanup_child(child)
+                    except OSError:
+                        result = None
+                self.assertEqual(sent, [], "a group whose leader was reaped before cleanup is not owned")
+                if isinstance(first_probe, ProcessLookupError):
+                    self.assertIs(result, False, "ESRCH proves the reaped leader's group is gone")
+
+    @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
+    def test_claude_no_signal_follows_the_leader_reap(self) -> None:
+        claude = import_script(CLAUDE_RUNNER, "layer2_claude_reap_last")
+
+        class ReapOnPoll:
+            """A Popen stand-in whose poll() reaps the leader once it has exited."""
+
+            pid = FAKE_CHILD_PID
+
+            def __init__(self) -> None:
+                self.returncode: int | None = None
+                self.exited = self.reaped = False
+
+            def poll(self) -> int | None:
+                if self.exited and not self.reaped:
+                    self.reaped, self.returncode = True, -signal.SIGTERM
+                return self.returncode
+
+        child = ReapOnPoll()
+        sent: list[tuple[int, bool]] = []
+
+        def exit_status(_pid: int) -> int | None:
+            if child.reaped:
+                raise ChildProcessError(10, "leader already reaped")
+            return signal.SIGTERM if child.exited else None
+
+        def killpg(_pgid: int, signum: int) -> None:
+            if signum:
+                sent.append((signum, child.reaped))
+                child.exited = True
+            elif child.exited:
+                # Only zombies answer after TERM; ownership is unresolved by the probe alone.
+                raise PermissionError(1, "group members are zombies")
+
+        with (
+            mock.patch.object(claude.os, "getpgrp", return_value=child.pid + 1),
+            mock.patch.object(claude.os, "killpg", side_effect=killpg),
+            mock.patch.object(claude.processes, "leader_exit_status", side_effect=exit_status, create=True),
+            mock.patch.multiple(claude, CLEANUP_TIMEOUT=0.5, DESCENDANT_EXIT_GRACE=0),
+            mock.patch.object(claude.time, "monotonic", side_effect=(i / 100 for i in range(100000))),
+            mock.patch.object(claude.time, "sleep"),
         ):
             try:
                 claude.cleanup_child(child)
             except OSError:
                 pass
-        self.assertEqual(sent, [signal.SIGTERM])
+        self.assertEqual(sent, [(signal.SIGTERM, False)], "SIGKILL reached a PGID after its leader was reaped")
+        self.assertTrue(child.reaped, "cleanup must reap the leader last")
 
     @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
-    def test_claude_transient_eperm_with_unreaped_leader_settles_before_signaling(self) -> None:
-        claude = import_script(CLAUDE_RUNNER, "layer2_claude_unreaped_leader_eperm")
-        child = FakePopen(b"", returncode=0)
-        child.timeout = True  # poll() stays None: the leader is unreaped and the PGID is ours.
-        sent, probes = [], []
-
-        def killpg(_pgid: int, signum: int) -> None:
-            if signum:
-                sent.append(signum)
-                return
-            probes.append(signum)
-            if not sent and len(probes) <= 3:
-                raise PermissionError(1, "group is forking or tearing down")
-            if sent:
-                raise ProcessLookupError(3, "group absent")
-
-        with (
-            mock.patch.object(claude.os, "getpgrp", return_value=child.pid + 1),
-            mock.patch.object(claude.os, "killpg", side_effect=killpg),
-            mock.patch.object(claude.time, "monotonic", side_effect=(i / 100 for i in range(100000))),
-            mock.patch.object(claude.time, "sleep"),
-        ):
-            self.assertTrue(claude.cleanup_child(child))
-        self.assertEqual(sent, [signal.SIGTERM])
-        self.assertGreaterEqual(len(probes), 4)
-
-    @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
-    def test_claude_only_post_successful_signal_eperm_may_settle(self) -> None:
+    def test_claude_permission_outcomes_never_signal_an_unowned_group(self) -> None:
         claude = import_script(CLAUDE_RUNNER, "layer2_claude_permission_boundaries")
-        for fault in ("initial", "term-send", "kill-send", "kill-absent", "post-kill-eacces"):
+        term, kill = signal.SIGTERM, signal.SIGKILL
+        cases = (
+            # fault, leader unreaped, signals attempted, expected error
+            ("reaped-probe-eperm", False, [], OSError),
+            ("term-send-eperm", True, [term, kill], None),
+            ("kill-send-eperm", True, [term, kill], OSError),
+            ("post-kill-eacces", True, [term, kill], PermissionError),
+        )
+        for fault, unreaped, expected, error in cases:
             with self.subTest(fault=fault):
-                child = FakePopen(b"", returncode=0)
+                child = fake_leader.UnreapedLeader(FAKE_CHILD_PID) if unreaped else FakePopen(b"", returncode=0)
                 attempted = []
-                failed_probes = []
 
                 def probe(_pgid: int, signum: int) -> None:
                     if signum:
                         attempted.append(signum)
-                        if (fault == "term-send" and signum == signal.SIGTERM) or (fault == "kill-send" and signum == signal.SIGKILL):
+                        if (fault == "term-send-eperm" and signum == term) or (fault == "kill-send-eperm" and signum == kill):
                             raise PermissionError(1, "signal send denied")
-                        if fault == "kill-absent" and signum == signal.SIGKILL:
-                            raise ProcessLookupError(3, "signal target absent")
-                    elif (
-                        (fault == "initial" and not attempted)
-                        or (fault in {"kill-absent", "post-kill-eacces"} and signal.SIGKILL in attempted)
-                    ):
-                        failed_probes.append(signum)
-                        raise PermissionError(13 if fault == "post-kill-eacces" else 1, "probe denied")
+                        if fault == "term-send-eperm" and signum == kill:
+                            child.exited = True
+                    elif fault == "reaped-probe-eperm":
+                        raise PermissionError(1, "probe denied")
+                    elif fault == "post-kill-eacces" and kill in attempted:
+                        raise PermissionError(13, "probe denied")
+                    elif getattr(child, "exited", False):
+                        raise ProcessLookupError(3, "group absent")
 
                 with (
                     mock.patch.object(claude.os, "getpgrp", return_value=child.pid + 1),
@@ -962,13 +983,16 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     mock.patch.object(claude, "DESCENDANT_EXIT_GRACE", 0),
                     mock.patch.object(claude.time, "monotonic", side_effect=[i / 10 for i in range(100)]),
                     mock.patch.object(claude.time, "sleep"),
+                    fake_leader.observed(child) if unreaped else contextlib.nullcontext(),
                 ):
-                    with self.assertRaises(PermissionError):
-                        claude.cleanup_child(child)
-                if fault == "initial":
-                    self.assertEqual(attempted, [], "an unresolved probe must never lead to a signal")
-                else:
-                    self.assertLessEqual(len(failed_probes), 1, "an ineligible permission error entered settling polls")
+                    if error is None:
+                        self.assertTrue(claude.cleanup_child(child))
+                    else:
+                        with self.assertRaises(error) as caught:
+                            claude.cleanup_child(child)
+                        if error is PermissionError:
+                            self.assertEqual(caught.exception.errno, 13)
+                self.assertEqual(attempted, expected)
 
     def test_claude_finally_cleanup_covers_normal_timeout_and_interruption(self) -> None:
         claude = import_script(CLAUDE_RUNNER, "layer2_claude_finally_cleanup")
@@ -4055,12 +4079,13 @@ class ProcessGroupProbeTests(unittest.TestCase):
 
     @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
     def test_claude_post_signal_permission_probe_requires_later_absence(self) -> None:
-        # macOS answers EPERM for a group whose last member died from a signal
-        # but is not yet reaped; only a later absence settles the cleanup.
+        # macOS answers EPERM for a group whose members are all zombies. With the
+        # leader held unreaped that means no live member remains and no further
+        # signal is due; only an absence after the reap settles the cleanup.
         claude = import_script(CLAUDE_RUNNER, "layer2_claude_post_signal_probe")
         for delivered, persistent in itertools.product((signal.SIGTERM, signal.SIGKILL), (False, True)):
             with self.subTest(signal=delivered.name, persistent=persistent):
-                child = FakePopen(b"", returncode=0)
+                child = fake_leader.UnreapedLeader(FAKE_CHILD_PID)
                 sent = []
                 settling_probes = 0
                 observations = []
@@ -4070,9 +4095,8 @@ class ProcessGroupProbeTests(unittest.TestCase):
                     self.assertEqual(pgid, child.pid)
                     if signum:
                         sent.append(signum)
-                        if signum == signal.SIGKILL and delivered in sent[:-1] and persistent:
-                            raise PermissionError(1, "zombie-only group refuses the signal")
-                    elif delivered in sent:
+                        child.exited = child.exited or signum == delivered
+                    elif child.exited:
                         settling_probes += 1
                         if persistent or settling_probes == 1:
                             raise PermissionError(1, "post-signal probe unresolved")
@@ -4085,18 +4109,20 @@ class ProcessGroupProbeTests(unittest.TestCase):
                     mock.patch.object(claude, "DESCENDANT_EXIT_GRACE", 0),
                     mock.patch.object(claude.time, "monotonic", side_effect=[i / 10 for i in range(100)]),
                     mock.patch.object(claude.time, "sleep"),
+                    fake_leader.observed(child),
                 ):
                     if persistent:
-                        with self.assertRaisesRegex(OSError, "unresolved|refuses the signal"):
+                        with self.assertRaisesRegex(OSError, "EPERM"):
                             claude.cleanup_child(child, observations=observations)
                     else:
                         self.assertTrue(claude.cleanup_child(child, observations=observations))
-                settled_after_term = delivered == signal.SIGTERM and not persistent
-                self.assertEqual(sent, [signal.SIGTERM] if settled_after_term else [signal.SIGTERM, signal.SIGKILL])
+                self.assertEqual(sent, [signal.SIGTERM] if delivered == signal.SIGTERM else [signal.SIGTERM, signal.SIGKILL])
+                self.assertTrue(child.reaped)
                 self.assertGreaterEqual(settling_probes, 2)
-                self.assertEqual(observations[0]["errno"], 1)
-                self.assertEqual(observations[0]["pgid"], child.pid)
-                self.assertEqual(observations[-1]["errno"], 1 if persistent else 3)
+                # The held zombie's own EPERM is not evidence; only post-reap answers are.
+                self.assertEqual({item["pgid"] for item in observations}, {child.pid})
+                errnos = [item["errno"] for item in observations]
+                self.assertEqual(errnos, [1] * max(len(errnos), 1) if persistent else [3])
 
 
 def main() -> int:
