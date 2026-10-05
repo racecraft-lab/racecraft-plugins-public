@@ -25,7 +25,7 @@ for _import_root in (LIB_DIR, PLUGIN_ROOT):
     if str(_import_root) not in sys.path:
         sys.path.insert(0, str(_import_root))
 import native_eval_runner_result  # noqa: E402
-from speckit_pro_runner import envelope  # noqa: E402
+from speckit_pro_runner import envelope, spec_kit_pin  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
@@ -397,6 +397,14 @@ class HostedWindowsPreflightTests(unittest.TestCase):
 
 
 class ContainerPreflightDispatchTests(unittest.TestCase):
+    @contextlib.contextmanager
+    def windows_environment(self, environment):
+        with mock.patch.dict(os.environ, environment, clear=True), mock.patch.object(
+            dispatch_helper.platform, "python_version",
+            return_value=dispatch_helper.HOSTED_PYTHON_VERSION,
+        ):
+            yield
+
     def run_pull_change_detection(
         self,
         diff_output: str,
@@ -545,14 +553,7 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
                 "REPO_X64_ENABLED": "false",
                 "REPO_ARM64_ENABLED": "false",
             }
-            with (
-                mock.patch.dict(os.environ, environment, clear=True),
-                mock.patch.object(
-                    dispatch_helper.platform,
-                    "python_version",
-                    return_value=dispatch_helper.HOSTED_PYTHON_VERSION,
-                ),
-            ):
+            with self.windows_environment(environment):
                 return_code = dispatch_helper._windows_availability()
 
             x64 = json.loads(
@@ -732,12 +733,7 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
                 "SPEC_KIT_GIT_REF": IMMUTABLE_SPEC_KIT_REF,
             }
             with (
-                mock.patch.dict(os.environ, environment, clear=True),
-                mock.patch.object(
-                    dispatch_helper.platform,
-                    "python_version",
-                    return_value=dispatch_helper.HOSTED_PYTHON_VERSION,
-                ),
+                self.windows_environment(environment),
                 mock.patch.object(dispatch_helper.shutil, "which", return_value=None),
                 mock.patch.object(dispatch_helper.subprocess, "run") as run_mock,
             ):
@@ -754,6 +750,8 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
         self.assertEqual(return_code, 1)
         self.assertEqual(summary["interpreter"], "missing-compatible-python-3.11")
         self.assertEqual(summary["probe_count"], 4)
+        self.assertEqual(summary["spec_kit_version_expected"], f"v{spec_kit_pin.PINNED_VERSION}")
+        self.assertEqual(summary["spec_kit_git_ref"], spec_kit_pin.PINNED_SOURCE)
         self.assertEqual([item["status"] for item in probes], ["missing"] * 4)
         run_mock.assert_not_called()
 
@@ -776,12 +774,7 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
                 }
             ]
             with (
-                mock.patch.dict(os.environ, environment, clear=True),
-                mock.patch.object(
-                    dispatch_helper.platform,
-                    "python_version",
-                    return_value=dispatch_helper.HOSTED_PYTHON_VERSION,
-                ),
+                self.windows_environment(environment),
                 mock.patch.object(
                     dispatch_helper,
                     "probe_interpreters",
@@ -806,7 +799,9 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
             DISPATCH_HELPER_PATH.parent / "run-hosted-windows-preflight.py",
         )
         self.assertIn("--spec-kit-ref", arguments)
-        self.assertIn(IMMUTABLE_SPEC_KIT_REF, arguments)
+        self.assertIn(spec_kit_pin.PINNED_SOURCE, arguments)
+        self.assertIn(f"v{spec_kit_pin.PINNED_VERSION}", arguments)
+        self.assertNotIn(IMMUTABLE_SPEC_KIT_REF, arguments)
         self.assertEqual(child_env["PREFLIGHT_INTERPRETER_CANDIDATE"], "py -3")
 
     def test_windows_helper_dispatch_does_not_reresolve_selected_launcher(self) -> None:
