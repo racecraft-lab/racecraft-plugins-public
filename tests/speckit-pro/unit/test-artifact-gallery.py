@@ -144,6 +144,27 @@ def contract_errors(value: str) -> list[str]:
     return [name for name, pattern in BANNED_MARKUP if pattern.search(value)] + slot_errors(value)
 
 
+class ArtifactOutputProtocolTests(unittest.TestCase):
+    def test_output_cleanup_requires_receipts_in_source_and_both_payloads(self) -> None:
+        for root in (REPO_ROOT / "speckit-pro", REPO_ROOT / "dist/claude/speckit-pro",
+                     REPO_ROOT / "dist/codex/speckit-pro"):
+            role = root / ("codex-agents/artifact-author.toml" if "codex" in root.parts
+                           else "agents/artifact-author.md")
+            with self.subTest(surface=str(root.relative_to(REPO_ROOT))):
+                author = " ".join(read(role).split())
+                reference = " ".join(read(root / "skills/speckit-autopilot/references/phase-execution.md").split())
+                skill = " ".join(read(root / "skills/speckit-autopilot/SKILL.md").split())
+                self.assertIn("Both `expected_sha256` and `expected_file_identity` are required", author)
+                self.assertIn("a shipped draft page that re-selection no longer selects", author)
+                self.assertIn("Return each publication receipt with its page outcome", author)
+                self.assertIn("runner-owned artifact reconciliation", skill)
+                self.assertNotIn("`.artifact-author-*.tmp`", reference)
+                self.assertIn("`action: \"cleanup\"`", reference)
+                self.assertIn("`expected_file_identity`", reference)
+                self.assertIn("Preserve files without a publication receipt", reference)
+                self.assertIn("Exclude runner recovery directories and unreceipted files from staging", reference)
+
+
 class ArtifactGalleryTests(unittest.TestCase):
     def test_author_roles_close_each_page_before_reading_the_next_template(self) -> None:
         for path in ("agents/artifact-author.md", "codex-agents/artifact-author.toml"):
@@ -167,25 +188,6 @@ class ArtifactGalleryTests(unittest.TestCase):
                 with self.subTest(path=path, mutation=old):
                     self.assertIn(old, value)
                     self.assertTrue(sequential_template_errors(value.replace(old, new, 1)))
-
-    def test_output_cleanup_requires_receipts_in_source_and_both_payloads(self) -> None:
-        for root in (REPO_ROOT / "speckit-pro", REPO_ROOT / "dist/claude/speckit-pro",
-                     REPO_ROOT / "dist/codex/speckit-pro"):
-            role = root / ("codex-agents/artifact-author.toml" if "codex" in root.parts
-                           else "agents/artifact-author.md")
-            with self.subTest(surface=str(root.relative_to(REPO_ROOT))):
-                author = " ".join(read(role).split())
-                reference = " ".join(read(root / "skills/speckit-autopilot/references/phase-execution.md").split())
-                skill = " ".join(read(root / "skills/speckit-autopilot/SKILL.md").split())
-                self.assertIn("Both `expected_sha256` and `expected_file_identity` are required", author)
-                self.assertIn("a shipped draft page that re-selection no longer selects", author)
-                self.assertIn("Return each publication receipt with its page outcome", author)
-                self.assertIn("runner-owned artifact reconciliation", skill)
-                self.assertNotIn("`.artifact-author-*.tmp`", reference)
-                self.assertIn("`action: \"cleanup\"`", reference)
-                self.assertIn("`expected_file_identity`", reference)
-                self.assertIn("Preserve files without a publication receipt", reference)
-                self.assertIn("Exclude runner recovery directories and unreceipted files from staging", reference)
 
     def test_frozen_catalog_maps_every_manifest_row_and_file(self) -> None:
         expected = catalog()
