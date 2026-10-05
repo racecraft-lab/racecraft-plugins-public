@@ -5,12 +5,14 @@ Only prospectively retained execution and replay context can qualify a record.
 """
 from __future__ import annotations
 
+import contextlib
 import errno
 import hashlib
 import json
 import os
 from pathlib import Path
 import re
+import secrets
 import sqlite3
 import stat
 
@@ -98,27 +100,47 @@ def _draft_directory(path: Path) -> tuple[int, str]:
     return parent, absolute.name
 
 
-def _open_draft(directory: int, name: str, flags: int, identity: tuple[int, int] | None = None):
-    """Open the draft as a stream only if it is a regular file with no other hard link."""
-    fd = _open_at(directory, name, flags | _NO_FOLLOW, name)
+def _require_single_draft(info: os.stat_result, identity: tuple[int, int] | None = None) -> None:
+    _require(stat.S_ISREG(info.st_mode), "draft must be a regular file")
+    _require(info.st_nlink == 1, "draft must not be a hard link")
+    _require(identity is None or (info.st_dev, info.st_ino) == identity, "draft was replaced during refresh")
+
+
+def _read_draft(directory: int, name: str) -> tuple[bytes, os.stat_result]:
+    """Read a regular, single-link, non-symlink draft file of at most MAX_DRAFT_BYTES."""
+    fd = _open_at(directory, name, os.O_RDONLY | _NO_FOLLOW, name)
     try:
         info = os.fstat(fd)
-        _require(stat.S_ISREG(info.st_mode), "draft must be a regular file")
-        _require(info.st_nlink == 1, "draft must not be a hard link")
-        _require(identity is None or (info.st_dev, info.st_ino) == identity, "draft was replaced during refresh")
-        return os.fdopen(fd, "wb" if flags & os.O_WRONLY else "rb"), (info.st_dev, info.st_ino)
+        _require_single_draft(info)
+        stream = os.fdopen(fd, "rb")
     except BaseException:
         os.close(fd)
         raise
-
-
-def _read_draft(directory: int, name: str) -> tuple[bytes, tuple[int, int]]:
-    """Read a regular, single-link, non-symlink draft file of at most MAX_DRAFT_BYTES."""
-    stream, identity = _open_draft(directory, name, os.O_RDONLY)
     with stream:
         payload = stream.read(MAX_DRAFT_BYTES + 1)
     _require(len(payload) <= MAX_DRAFT_BYTES, f"draft exceeds {MAX_DRAFT_BYTES} bytes")
-    return payload, identity
+    return payload, info
+
+
+def _replace_draft(directory: int, name: str, payload: bytes, read: os.stat_result) -> None:
+    """Rename a new sibling file over the draft; the inode that was read and checked is never written."""
+    temporary = f".{name}.{secrets.token_hex(16)}.tmp"
+    try:
+        fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | _NO_FOLLOW, 0o600, dir_fd=directory)
+    except FileExistsError as error:
+        raise ValueError(f"draft refresh temporary name already exists: {temporary}") from error
+    try:
+        with os.fdopen(fd, "wb") as stream:
+            os.fchmod(stream.fileno(), stat.S_IMODE(read.st_mode))
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+        _require_single_draft(os.stat(name, dir_fd=directory, follow_symlinks=False), (read.st_dev, read.st_ino))
+        os.replace(temporary, name, src_dir_fd=directory, dst_dir_fd=directory)
+    except BaseException:
+        with contextlib.suppress(FileNotFoundError):
+            os.unlink(temporary, dir_fd=directory)
+        raise
 
 
 def rebind_identities(path: Path, out: Path | None = None) -> dict:
@@ -131,7 +153,7 @@ def rebind_identities(path: Path, out: Path | None = None) -> dict:
 
 
 def _rebind_at(directory: int, name: str, out: Path | None) -> dict:
-    payload, identity = _read_draft(directory, name)
+    payload, read = _read_draft(directory, name)
     text = payload.decode("utf-8")
     manifest = strict_json.loads(payload, error=ValueError)
     if manifest.get("schema_version") == "trigger-experiment-template/v1":
@@ -144,10 +166,7 @@ def _rebind_at(directory: int, name: str, out: Path | None) -> dict:
     for key, old in manifest["identities"].items():
         _require(text.count(old) == 1, f"{key} identity digest is not unique in the draft")
         text = text.replace(old, current[key])
-    stream, _ = _open_draft(directory, name, os.O_WRONLY, identity)
-    with stream:
-        stream.truncate(0)
-        stream.write(text.encode("utf-8"))
+    _replace_draft(directory, name, text.encode("utf-8"), read)
     return {"rebound": True, "identities": current}
 
 

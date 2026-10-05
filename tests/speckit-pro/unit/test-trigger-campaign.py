@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import copy
+import fcntl
 import hashlib
 import json
 import os
@@ -828,6 +829,7 @@ class DraftConfinementTests(unittest.TestCase):
         with mock.patch.object(comparison.os, "open", linking_open), self.assertRaisesRegex(ValueError, "hard link"):
             comparison.rebind_identities(draft)
         self.assertEqual(draft.read_bytes(), payload)
+        self.assertEqual(os.listdir(base / "drafts"), ["reviewed.draft.json"])
 
     def test_a_directory_named_as_the_draft_releases_every_descriptor(self):
         base = draft_folders(self)
@@ -838,6 +840,108 @@ class DraftConfinementTests(unittest.TestCase):
                 comparison.rebind_identities(base / "drafts/reviewed.draft.json", base / "bound.json")
         self.assertEqual(len(os.listdir("/dev/fd")), before)
         self.assertFalse((base / "bound.json").exists())
+
+
+class DraftReplaceTests(unittest.TestCase):
+    """An in-place refresh renames a new file over the draft, so no checked inode is ever written."""
+
+    SOURCE = ROOT / "layer2-trigger/campaign-drafts/issue-573-pilot.draft.json"
+
+    def setUp(self):
+        stale = comparison.bind_template(json.loads(self.SOURCE.read_bytes()))
+        stale["identities"]["observer"] = "0" * 64
+        self.payload = (json.dumps(stale, indent=2) + "\n").encode()
+        self.base = draft_folders(self)
+        self.draft, self.outside = self.base / "drafts/reviewed.draft.json", self.base / "outside/reviewed.draft.json"
+        self.draft.write_bytes(self.payload)
+
+    def assert_only_the_draft_remains(self):
+        self.assertEqual(os.listdir(self.base / "drafts"), ["reviewed.draft.json"])
+
+    def first_write_open(self, act):
+        """Return an os.open that runs act once, just before the first write-mode open."""
+        real_open, fired = os.open, []
+
+        def hooked(path, flags, *args, **kwargs):
+            if not fired and flags & os.O_WRONLY:
+                fired.append(path)
+                act()
+            return real_open(path, flags, *args, **kwargs)
+
+        return hooked, fired
+
+    def test_a_hard_link_added_after_the_last_check_keeps_the_old_bytes(self):
+        real_fstat, real_replace = os.fstat, os.replace
+        os.chmod(self.draft, 0o640)
+
+        def link_once():
+            if not self.outside.exists():
+                os.link(self.draft, self.outside)
+
+        def late_fstat(fd):
+            info = real_fstat(fd)
+            if fcntl.fcntl(fd, fcntl.F_GETFL) & os.O_WRONLY:
+                link_once()
+            return info
+
+        def late_replace(*args, **kwargs):
+            link_once()
+            return real_replace(*args, **kwargs)
+
+        with mock.patch.object(comparison.os, "fstat", late_fstat), \
+                mock.patch.object(comparison.os, "replace", late_replace):
+            comparison.rebind_identities(self.draft)
+        self.assertTrue(self.outside.exists(), "the link seam never fired")
+        self.assertEqual(self.outside.read_bytes(), self.payload)
+        refreshed = json.loads(self.draft.read_bytes())
+        self.assertEqual(refreshed["identities"], comparison.snapshot_identities(comparison.measurement_snapshot()))
+        self.assertEqual(os.stat(self.draft).st_mode & 0o777, 0o640)
+        self.assert_only_the_draft_remains()
+
+    def test_a_draft_name_swapped_after_the_read_is_refused_and_left_untouched(self):
+        for kind in ("file", "symlink"):
+            with self.subTest(kind=kind):
+                self.draft.unlink(missing_ok=True)
+                self.draft.write_bytes(self.payload)
+                self.outside.write_bytes(b"outside\n")
+
+                def swap(kind=kind):
+                    self.draft.unlink()
+                    if kind == "file":
+                        self.draft.write_bytes(b"substituted\n")
+                    else:
+                        self.draft.symlink_to(self.outside)
+
+                hook, fired = self.first_write_open(swap)
+                with mock.patch.object(comparison.os, "open", hook), self.assertRaises(ValueError):
+                    comparison.rebind_identities(self.draft)
+                self.assertTrue(fired, "the swap seam never fired")
+                self.assertEqual(self.outside.read_bytes(), b"outside\n")
+                if kind == "file":
+                    self.assertEqual(self.draft.read_bytes(), b"substituted\n")
+                else:
+                    self.assertTrue(self.draft.is_symlink())
+                self.assert_only_the_draft_remains()
+
+    def test_a_planted_temporary_name_is_refused_without_writing_through_it(self):
+        planted = self.base / "drafts/.reviewed.draft.json.planted.tmp"
+        planted.symlink_to(self.outside)
+        self.outside.write_bytes(b"outside\n")
+        with mock.patch.object(comparison.secrets, "token_hex", return_value="planted"), \
+                self.assertRaisesRegex(ValueError, "temporary"):
+            comparison.rebind_identities(self.draft)
+        self.assertEqual(self.outside.read_bytes(), b"outside\n")
+        self.assertEqual(self.draft.read_bytes(), self.payload)
+        self.assertTrue(planted.is_symlink())
+
+    def test_every_failed_write_step_removes_the_temporary_file(self):
+        failure = OSError("injected failure")
+        for step in ("fsync", "fchmod", "replace"):
+            with self.subTest(step=step), mock.patch.object(comparison.os, step, side_effect=failure), \
+                    self.assertRaisesRegex(OSError, "injected"):
+                comparison.rebind_identities(self.draft)
+            self.assertEqual(self.draft.read_bytes(), self.payload)
+            self.assert_only_the_draft_remains()
 
 
 class CampaignPinsTests(unittest.TestCase):
@@ -880,5 +984,6 @@ if __name__ == "__main__":
         unittest.defaultTestLoader.loadTestsFromTestCase(DraftIdentityTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(DraftComponentSwapTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(DraftConfinementTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(DraftReplaceTests),
     ])
     raise SystemExit(run_counted(suite, label="test-trigger-campaign"))
