@@ -895,7 +895,8 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 settled_after_term = delivered == signal.SIGTERM and not persistent
                 self.assertEqual(sent, [signal.SIGTERM] if settled_after_term else [signal.SIGTERM, signal.SIGKILL])
                 self.assertGreaterEqual(settling_probes, 2)
-                self.assertEqual(observations[0]["errno"], 1)
+                self.assertEqual(observations[0]["errno"], 0)
+                self.assertIn(1, [item["errno"] for item in observations])
                 self.assertEqual(observations[0]["pgid"], child.pid)
                 self.assertEqual(observations[-1]["errno"], 1 if persistent else 3)
 

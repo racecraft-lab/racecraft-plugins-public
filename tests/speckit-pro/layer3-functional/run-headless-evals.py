@@ -566,10 +566,6 @@ def cleanup_process_group(process: subprocess.Popen, *, natural_exit_grace: bool
     observations: list[dict[str, object]] = []
     kill_probe_start: int | None = None
 
-    def observe_presence(present: bool) -> None:
-        if record["initially_present"] is None:
-            record["initially_present"] = present
-
     def send_owned_signal(child: subprocess.Popen, sent: int) -> bool:
         nonlocal kill_probe_start
         delivered = trigger_process.terminate_child(child, sent)
@@ -586,12 +582,13 @@ def cleanup_process_group(process: subprocess.Popen, *, natural_exit_grace: bool
         trigger_process.cleanup_child(
             process, observations=observations, timeout=1,
             grace=0.2 if natural_exit_grace else 0, terminate=send_owned_signal,
-            on_presence=observe_presence,
         )
         record["verified_absent"] = True
     except (OSError, KeyboardInterrupt) as error:
         record["error"] = f"owned process-group cleanup could not be verified: {type(error).__name__}: {error}"
     finally:
+        if observations:
+            record["initially_present"] = observations[0]["errno"] != errno.ESRCH
         record["probe_errors"] = [item for item in observations if item["errno"] == errno.EPERM]
         if kill_probe_start is not None:
             record["post_kill_probe_errors"] = [item for item in observations[kill_probe_start:] if item["errno"] == errno.EPERM]
