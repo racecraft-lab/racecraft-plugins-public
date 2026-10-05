@@ -187,10 +187,18 @@ field.
 
 Run this first, before any gate or branch step (and before the answers-file
 helper and Step -0.5). Call helper `probe-git-write` in `read_only` mode with
-empty `inputs={}` from the task checkout. It creates and removes one lock file where branch creation
-writes. When `data.verdict` is `stop`, print `data.message` as the one stop
-message and end scaffold: no gate runs, and no branch or worktree is created.
-In every other case keep `data.observation` for Step 6.5. Do not retry the
+empty `inputs={}` from the task checkout. It creates and removes random probe
+files where branch creation and worktree metadata write. When `data.verdict`
+is `stop`, call `write-readiness-record` in `apply` mode from this checkout
+with `host="codex"`, the invocation's `execution_mode` (`answers-file` or
+`interactive`), the installed `plugin_revision` as in Step 6.5, and
+`observations=[data.observation]`. This records the denied capability without
+running a gate or creating a branch/worktree. If recording fails, append that
+fact to `data.message`; never treat an old record as current evidence. Print
+`data.message` as the one stop message and end scaffold: no gate runs, and no
+branch or worktree is created.
+In every other case keep `data.observation` for Step 6.5 and display any
+nonempty `data.message`, including leftover probe cleanup failures. Do not retry the
 probe after a stop; the fix is the user's (approve git writes, or add the
 repository's `.git` to `sandbox_workspace_write.writable_roots`).
 

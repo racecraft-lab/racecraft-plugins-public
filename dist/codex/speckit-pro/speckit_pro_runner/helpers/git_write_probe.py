@@ -3,13 +3,14 @@
 Codex `workspace-write` keeps `.git` read-only unless the user grants it, so
 branch creation fails late with a lock-file error. This helper creates and
 removes one lock file where `git branch` would, and reports the result as a
-`git_write` readiness observation. It stores nothing and names no local path.
+`git_write` readiness observation. Cleanup failures name only probe basenames.
 """
 
 from __future__ import annotations
 
 import errno
 import os
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -19,7 +20,7 @@ from .gate_preflight_coverage import git_common_directory
 ITEM = "git_write"
 STOP_MESSAGE = (
     "Scaffold stopped before any gate or branch step: this session cannot write to the repository's .git "
-    "directory ({cause}), and scaffold must create a branch and a worktree there. "
+    "directory ({cause}), and scaffold must create a branch and worktree metadata there. "
     "Fix it one of two ways, then rerun scaffold: approve git writes when Codex asks, or add the "
     "repository's .git directory to sandbox_workspace_write.writable_roots in the Codex config."
 )
@@ -30,21 +31,46 @@ STOP_ACTION = ("Approve git writes, or add the repository's .git directory to "
 DENIED = frozenset({errno.EACCES, errno.EPERM, errno.EROFS})
 
 
-def create_and_remove_lock(directory: Path) -> OSError | None:
-    """The error that blocked a lock-file create and remove under `directory`, or None."""
-    lock = directory / f".speckit-git-write-probe-{os.getpid()}.lock"
+def remove_probe_lock(lock: str) -> OSError | None:
+    """Retry cleanup once; an already removed probe needs no further cleanup."""
+    blocked = None
+    for _ in range(2):
+        try:
+            os.unlink(lock)
+        except FileNotFoundError:
+            return None
+        except OSError as error:
+            blocked = error
+        else:
+            return None
+    return blocked
+
+
+def create_and_remove_lock(directory: Path) -> tuple[OSError | None, str | None]:
+    """Create exclusively with fresh random names, returning any error and leftover basename."""
     try:
-        os.close(os.open(lock, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600))
-        os.unlink(lock)
+        fd, lock = tempfile.mkstemp(prefix=".speckit-git-write-probe-", suffix=".lock", dir=directory)
     except OSError as error:
-        return error
-    return None
+        return error, None
+    blocked = None
+    try:
+        os.close(fd)
+    except OSError as error:
+        blocked = error
+    finally:
+        cleanup = remove_probe_lock(lock)
+    return cleanup or blocked, Path(lock).name if cleanup else None
 
 
 def probe_directories(common: Path) -> list[Path]:
     """Where scaffold writes: the refs directory (a stub file under reftable) and the git directory itself."""
     heads = common / "refs" / "heads"
-    return [heads if heads.is_dir() else common, common]
+    directories = [heads] if heads.is_dir() else []
+    directories.append(common)
+    metadata = common / "worktrees"
+    if metadata.exists():
+        directories.append(metadata)
+    return directories
 
 
 def probe_result(blocked: OSError | None, found: bool) -> tuple[str, str, dict[str, Any]]:
@@ -74,10 +100,15 @@ def run_git_write_probe_helper(entry: Any, request: Any) -> dict[str, Any]:
         common: Path | None = git_common_directory(Path.cwd())
     except ValueError:
         common = None
-    blocked = None
-    for directory in [] if common is None else probe_directories(common):
-        blocked = blocked or create_and_remove_lock(directory)
+    results = [create_and_remove_lock(directory) for directory in ([] if common is None else probe_directories(common))]
+    errors = [error for error, _ in results if error is not None]
+    blocked = next((error for error in errors if error.errno in DENIED), next(iter(errors), None))
     verdict, message, item = probe_result(blocked, common is not None)
+    leftovers = [name for _, name in results if name is not None]
+    if leftovers:
+        message += " Probe files could not be removed under the repository's git directory: " + ", ".join(leftovers) + "."
+        item["evidence_source"] += "; probe cleanup failed"
+        item["action"] = (item.get("action") or "Rerun scaffold.") + " Remove the named leftover probe files."
     data = {"verdict": verdict, "message": message, "observation": item}
     if verdict == "proceed":
         return response("ok", request_id=request.request_id, data=data)
