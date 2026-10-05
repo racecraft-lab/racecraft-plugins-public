@@ -38,7 +38,7 @@ def git(root: Path, *args: str) -> None:
     subprocess.run(["git", "-C", str(root), *args], check=True, capture_output=True, env={**os.environ, **GIT_ENV})
 
 
-class GitWriteProbeTest(unittest.TestCase):
+class GitWriteProbeFixture(unittest.TestCase):
     def setUp(self) -> None:
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
         git(self.root, "init", "-q")
@@ -52,116 +52,6 @@ class GitWriteProbeTest(unittest.TestCase):
 
     def assert_no_probe_files(self) -> None:
         self.assertEqual([], list((self.root / ".git").rglob(".speckit-git-write-probe-*.lock")))
-
-    def test_symlinked_git_subdirectory_never_receives_probe_files(self) -> None:
-        outside = self.root / "outside"
-        outside.mkdir()
-        self.heads.rmdir()
-        self.heads.symlink_to(outside, target_is_directory=True)
-        self.addCleanup(self.heads.mkdir)
-        self.addCleanup(self.heads.unlink)
-        opened_outside = []
-        open_file = os.open
-
-        def observe_open(path, flags, mode=0o777, *, dir_fd=None):
-            fd = open_file(path, flags, mode, dir_fd=dir_fd)
-            if flags & os.O_CREAT and (outside / Path(path).name).exists():
-                opened_outside.append(Path(path).name)
-            return fd
-
-        with patch.object(probe.os, "open", side_effect=observe_open):
-            result = self.probe_current_repository()
-        self.assertEqual([], opened_outside, "probe created a file outside .git")
-        self.assertEqual("stop", result["data"]["verdict"])
-        self.assertEqual([], list(outside.iterdir()))
-
-    @contextmanager
-    def replacement_on_creation(self):
-        open_file = os.open
-        replacement = None
-
-        def replace_created_lock(path, flags, mode=0o777, *, dir_fd=None):
-            nonlocal replacement
-            fd = open_file(path, flags, mode, dir_fd=dir_fd)
-            if flags & os.O_CREAT and replacement is None:
-                original = self.heads / Path(path).name
-                original.rename(self.heads / "held-original")
-                original.write_text("replacement belongs to someone else", encoding="utf-8")
-                replacement = original
-            return fd
-
-        with patch.object(probe.os, "open", side_effect=replace_created_lock):
-            yield lambda: replacement
-
-    def test_cleanup_preserves_a_replacement_file(self) -> None:
-        with self.replacement_on_creation() as replaced:
-            result = self.probe_current_repository()
-        replacement = replaced()
-        self.assertIsNotNone(replacement)
-        self.assertTrue(replacement.exists(), "cleanup deleted a replacement file")
-        self.assertEqual("replacement belongs to someone else", replacement.read_text(encoding="utf-8"))
-        self.assertEqual("unknown", result["data"]["observation"]["status"])
-
-    def test_probe_removed_before_capture_leaves_no_leftover_report(self) -> None:
-        rename = os.rename
-
-        def remove_then_rename(src, dst, **kwargs):
-            if str(src).endswith(".lock") and kwargs.get("src_dir_fd") is not None:
-                os.unlink(src, dir_fd=kwargs["src_dir_fd"])
-            return rename(src, dst, **kwargs)
-
-        with patch.object(probe.os, "rename", side_effect=remove_then_rename):
-            result = self.probe_current_repository()
-        self.assertEqual("proceed", result["data"]["verdict"])
-        self.assertNotIn("could not be removed", result["data"]["message"])
-        self.assert_no_probe_files()
-
-    def test_unrestored_replacement_is_preserved_for_inspection(self) -> None:
-        with self.replacement_on_creation():
-            with patch.object(probe.os, "link", side_effect=PermissionError(errno.EPERM, "restore denied")):
-                result = self.probe_current_repository()
-        self.assertEqual("stop", result["data"]["verdict"])
-        captured = list(self.heads.glob("*.cleanup/*.lock"))
-        self.assertEqual(1, len(captured))
-        self.assertEqual("replacement belongs to someone else", captured[0].read_text(encoding="utf-8"))
-        action = result["data"]["observation"]["action"]
-        self.assertIn("restore any replacement files", action)
-        self.assertNotIn("Remove the named leftover probe files", action)
-
-    def test_cleanup_preserves_replacement_inserted_after_identity_check(self) -> None:
-        stat_file = os.stat
-        replacement = None
-
-        def replace_after_stat(path, *args, **kwargs):
-            nonlocal replacement
-            metadata = stat_file(path, *args, **kwargs)
-            name = Path(path).name
-            if kwargs.get("dir_fd") is not None and name.endswith(".lock") and replacement is None:
-                public = self.heads / name
-                replacement = public
-                if public.exists():
-                    public.rename(self.heads / "held-original")
-                public.write_text("replacement after stat", encoding="utf-8")
-            return metadata
-
-        with patch.object(probe.os, "stat", side_effect=replace_after_stat):
-            self.probe_current_repository()
-        self.assertIsNotNone(replacement)
-        self.assertTrue(replacement.exists(), "cleanup raced and deleted the replacement")
-        self.assertEqual("replacement after stat", replacement.read_text(encoding="utf-8"))
-
-    def test_close_failure_does_not_mask_cleanup_permission_denial(self) -> None:
-        close = os.close
-
-        def fail_close(fd: int) -> None:
-            close(fd)
-            raise OSError(errno.EIO, "close failed")
-
-        with patch.object(probe.os, "unlink", side_effect=PermissionError(errno.EACCES, "denied")):
-            with patch.object(probe.os, "close", side_effect=fail_close):
-                result = self.probe_current_repository()
-        self.assertEqual("stop", result["data"]["verdict"])
-        self.assertEqual("unavailable", result["data"]["observation"]["status"])
 
     def directory_denial_result(self, directory: Path) -> dict:
         if os.name != "nt" and hasattr(os, "geteuid") and os.geteuid() != 0:
@@ -183,6 +73,9 @@ class GitWriteProbeTest(unittest.TestCase):
         with patch.object(probe.os, "open", side_effect=deny_directory):
             return self.probe_current_repository()
 
+
+
+class GitWriteProbeTest(GitWriteProbeFixture):
     def test_root_runs_execute_both_directory_denial_cases_without_skips(self) -> None:
         with patch.object(os, "geteuid", return_value=0, create=True):
             module = runpy.run_path(str(Path(__file__)), run_name="root_probe_tests")
@@ -364,8 +257,122 @@ class GitWriteProbeTest(unittest.TestCase):
         self.assertEqual("not_applicable", response["data"]["record"]["items"]["git_write"]["status"])
 
 
+
+class GitWriteProbeContainmentTest(GitWriteProbeFixture):
+    def test_symlinked_git_subdirectory_never_receives_probe_files(self) -> None:
+        outside = self.root / "outside"
+        outside.mkdir()
+        self.heads.rmdir()
+        self.heads.symlink_to(outside, target_is_directory=True)
+        self.addCleanup(self.heads.mkdir)
+        self.addCleanup(self.heads.unlink)
+        opened_outside = []
+        open_file = os.open
+
+        def observe_open(path, flags, mode=0o777, *, dir_fd=None):
+            fd = open_file(path, flags, mode, dir_fd=dir_fd)
+            if flags & os.O_CREAT and (outside / Path(path).name).exists():
+                opened_outside.append(Path(path).name)
+            return fd
+
+        with patch.object(probe.os, "open", side_effect=observe_open):
+            result = self.probe_current_repository()
+        self.assertEqual([], opened_outside, "probe created a file outside .git")
+        self.assertEqual("stop", result["data"]["verdict"])
+        self.assertEqual([], list(outside.iterdir()))
+
+    @contextmanager
+    def replacement_on_creation(self):
+        open_file = os.open
+        replacement = None
+
+        def replace_created_lock(path, flags, mode=0o777, *, dir_fd=None):
+            nonlocal replacement
+            fd = open_file(path, flags, mode, dir_fd=dir_fd)
+            if flags & os.O_CREAT and replacement is None:
+                original = self.heads / Path(path).name
+                original.rename(self.heads / "held-original")
+                original.write_text("replacement belongs to someone else", encoding="utf-8")
+                replacement = original
+            return fd
+
+        with patch.object(probe.os, "open", side_effect=replace_created_lock):
+            yield lambda: replacement
+
+    def test_cleanup_preserves_a_replacement_file(self) -> None:
+        with self.replacement_on_creation() as replaced:
+            result = self.probe_current_repository()
+        replacement = replaced()
+        self.assertIsNotNone(replacement)
+        self.assertTrue(replacement.exists(), "cleanup deleted a replacement file")
+        self.assertEqual("replacement belongs to someone else", replacement.read_text(encoding="utf-8"))
+        self.assertEqual("unknown", result["data"]["observation"]["status"])
+
+    def test_probe_removed_before_capture_leaves_no_leftover_report(self) -> None:
+        rename = os.rename
+
+        def remove_then_rename(src, dst, **kwargs):
+            if str(src).endswith(".lock") and kwargs.get("src_dir_fd") is not None:
+                os.unlink(src, dir_fd=kwargs["src_dir_fd"])
+            return rename(src, dst, **kwargs)
+
+        with patch.object(probe.os, "rename", side_effect=remove_then_rename):
+            result = self.probe_current_repository()
+        self.assertEqual("proceed", result["data"]["verdict"])
+        self.assertNotIn("could not be removed", result["data"]["message"])
+        self.assert_no_probe_files()
+
+    def test_unrestored_replacement_is_preserved_for_inspection(self) -> None:
+        with self.replacement_on_creation():
+            with patch.object(probe.os, "link", side_effect=PermissionError(errno.EPERM, "restore denied")):
+                result = self.probe_current_repository()
+        self.assertEqual("stop", result["data"]["verdict"])
+        captured = list(self.heads.glob("*.cleanup/*.lock"))
+        self.assertEqual(1, len(captured))
+        self.assertEqual("replacement belongs to someone else", captured[0].read_text(encoding="utf-8"))
+        action = result["data"]["observation"]["action"]
+        self.assertIn("restore any replacement files", action)
+        self.assertNotIn("Remove the named leftover probe files", action)
+
+    def test_cleanup_preserves_replacement_inserted_after_identity_check(self) -> None:
+        stat_file = os.stat
+        replacement = None
+
+        def replace_after_stat(path, *args, **kwargs):
+            nonlocal replacement
+            metadata = stat_file(path, *args, **kwargs)
+            name = Path(path).name
+            if kwargs.get("dir_fd") is not None and name.endswith(".lock") and replacement is None:
+                public = self.heads / name
+                replacement = public
+                if public.exists():
+                    public.rename(self.heads / "held-original")
+                public.write_text("replacement after stat", encoding="utf-8")
+            return metadata
+
+        with patch.object(probe.os, "stat", side_effect=replace_after_stat):
+            self.probe_current_repository()
+        self.assertIsNotNone(replacement)
+        self.assertTrue(replacement.exists(), "cleanup raced and deleted the replacement")
+        self.assertEqual("replacement after stat", replacement.read_text(encoding="utf-8"))
+
+    def test_close_failure_does_not_mask_cleanup_permission_denial(self) -> None:
+        close = os.close
+
+        def fail_close(fd: int) -> None:
+            close(fd)
+            raise OSError(errno.EIO, "close failed")
+
+        with patch.object(probe.os, "unlink", side_effect=PermissionError(errno.EACCES, "denied")):
+            with patch.object(probe.os, "close", side_effect=fail_close):
+                result = self.probe_current_repository()
+        self.assertEqual("stop", result["data"]["verdict"])
+        self.assertEqual("unavailable", result["data"]["observation"]["status"])
+
+
 def build_suite() -> unittest.TestSuite:
-    return unittest.defaultTestLoader.loadTestsFromTestCase(GitWriteProbeTest)
+    return unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
+                              for case in (GitWriteProbeTest, GitWriteProbeContainmentTest))
 
 
 def main() -> int:
