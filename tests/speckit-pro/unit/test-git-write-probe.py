@@ -6,6 +6,7 @@ from __future__ import annotations
 import errno
 import json
 import os
+import runpy
 import subprocess
 import sys
 import tempfile
@@ -50,6 +51,35 @@ class GitWriteProbeTest(unittest.TestCase):
 
     def assert_no_probe_files(self) -> None:
         self.assertEqual([], list((self.root / ".git").rglob(".speckit-git-write-probe-*.lock")))
+
+    def directory_denial_result(self, directory: Path) -> dict:
+        if os.name != "nt" and hasattr(os, "geteuid") and os.geteuid() != 0:
+            mode = directory.stat().st_mode
+            os.chmod(directory, 0o555)
+            self.addCleanup(os.chmod, directory, mode)
+            _, result, _ = run_runner(REQUEST, cwd=self.root)
+            return result
+        # Root bypasses POSIX modes; Windows directory modes cannot prove denial.
+        open_file = os.open
+
+        def deny_directory(path: str, flags: int, mode: int) -> int:
+            if Path(path).parent == directory:
+                raise PermissionError(errno.EACCES, "directory write denied")
+            return open_file(path, flags, mode)
+
+        with patch.object(probe.os, "open", side_effect=deny_directory):
+            return self.probe_current_repository()
+
+    def test_root_runs_execute_both_directory_denial_cases_without_skips(self) -> None:
+        with patch.object(os, "geteuid", return_value=0, create=True):
+            module = runpy.run_path(str(Path(__file__)), run_name="root_probe_tests")
+            result = unittest.TestResult()
+            for name in ("test_read_only_git_directory_stops_with_cause_and_both_fixes",
+                         "test_existing_read_only_worktree_metadata_stops_before_gates"):
+                module["GitWriteProbeTest"](name).run(result)
+        self.assertEqual([], result.skipped)
+        self.assertTrue(result.wasSuccessful(), result.errors or result.failures)
+        self.assertEqual(2, result.testsRun)
 
     def test_cleanup_failure_names_leftovers_without_local_paths(self) -> None:
         with patch.object(probe.os, "unlink", side_effect=PermissionError(errno.EPERM, "denied")):
@@ -121,13 +151,10 @@ class GitWriteProbeTest(unittest.TestCase):
         self.assertEqual("stop", result["data"]["verdict"])
         self.assertEqual("unavailable", result["data"]["observation"]["status"])
 
-    @unittest.skipIf(os.name == "nt" or (hasattr(os, "geteuid") and os.geteuid() == 0),
-                     "needs POSIX modes and a non-root user")
     def test_existing_read_only_worktree_metadata_stops_before_gates(self) -> None:
         metadata = self.root / ".git" / "worktrees"
-        metadata.mkdir(mode=0o555)
-        self.addCleanup(os.chmod, metadata, 0o755)
-        _, result, _ = run_runner(REQUEST, cwd=self.root)
+        metadata.mkdir()
+        result = self.directory_denial_result(metadata)
         self.assertEqual("stop", result["data"]["verdict"])
 
     def test_denied_codex_probe_is_recorded_before_the_stop_message(self) -> None:
@@ -156,11 +183,8 @@ class GitWriteProbeTest(unittest.TestCase):
         self.assertEqual("git_write", response["data"]["observation"]["item"])
         self.assertEqual([], sorted(self.heads.iterdir()))
 
-    @unittest.skipIf(os.name == "nt" or (hasattr(os, "geteuid") and os.geteuid() == 0),
-                     "needs POSIX modes and a non-root user")
     def test_read_only_git_directory_stops_with_cause_and_both_fixes(self) -> None:
-        os.chmod(self.heads, 0o555)
-        _, response, _ = run_runner(REQUEST, cwd=self.root)
+        response = self.directory_denial_result(self.heads)
         assert_runner_response(self, response, "expected_failure", 1)
         data = response["data"]
         self.assertEqual("stop", data["verdict"])
