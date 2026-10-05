@@ -3483,7 +3483,7 @@ def consensus_category_tags(line: str) -> list[str]:
 
     An item may arrive as a bare line or as a list item, so one leading bullet
     or ordinal is dropped before the prefix is read. Anything else in front of
-    the bracket means there is no prefix, which routes to all three analysts.
+    the bracket means there is no prefix, which routes to the generic domain analyst.
     """
     candidate = CONSENSUS_LIST_MARKER_RE.sub("", line, count=1)
     match = CONSENSUS_PREFIX_RE.match(candidate)
