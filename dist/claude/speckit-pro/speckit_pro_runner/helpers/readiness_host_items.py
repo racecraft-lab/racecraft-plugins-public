@@ -502,7 +502,9 @@ def observe_codex_hook_trust(raw: dict[str, Any], observed_at: str, source: str)
     if not hooks:
         return make_item("unknown", source, observed_at, {}, "Review the hooks in /hooks, then rerun scaffold.")
     summary = ", ".join(f"{name}={state}" + (f" {found}" if found else "") for name, state, found in hooks)
-    prints = {"value:hook_hashes": digest(summary), "value:hook_enablement": digest(enablement),
+    prints = {"value:hook_hashes": digest([(name, state, exact_fingerprint(found) if found else None)
+                                          for name, state, found in hooks]),
+              "value:hook_enablement": digest(enablement),
               **{f"hook:{name}": exact_fingerprint(found) for name, _, found in hooks if found}}
     source = describe(source, summary, "codex_hook_trust.evidence_source")
     expected = shipped_codex_hooks()
@@ -542,7 +544,8 @@ def observe_codex_local_access(raw: dict[str, Any], observed_at: str, source: st
         raise SelectionError("codex_local_access names the egress policy by both reference and digest, or neither")
     policy = f"{reference} {policy_digest}" if reference and policy_digest else "unobservable"
     summary = f"loopback={loopback}, temp_dir={temp_dir}, egress_policy={policy}"
-    prints = {"value:access": digest(summary)}
+    prints = {"value:access": digest({"loopback": loopback, "temp_dir": temp_dir, "egress_policy_ref": reference,
+                                      "egress_policy_digest": exact_fingerprint(policy_digest) if policy_digest else None})}
     if policy_digest:
         prints["value:egress_policy_digest"] = exact_fingerprint(policy_digest)
     source = describe(source, summary, "codex_local_access.evidence_source")

@@ -102,6 +102,14 @@ class ReadinessCodexTrustTest(ReadinessCase):
         self.assertEqual("sha256:" + HASH, readiness_host_items.exact_fingerprint("SHA256:" + HASH.upper()))
         self.refuse_each([hook_trust(hook(digest="a" * 32)), hook_trust(hook(digest="a" * 128))])
 
+    def test_all_hash_fingerprints_ignore_hex_case_and_optional_prefix(self) -> None:
+        plain = self.item(shipped_trust())
+        prefixed = self.item(shipped_trust(hash="SHA256:" + SHIPPED_HASHES["PreToolUse:0:0"].upper()))
+        self.assertEqual(plain["fingerprints"], prefixed["fingerprints"])
+        plain_access = self.item(access())
+        prefixed_access = self.item(access(egress_policy_digest="SHA256:" + HASH.upper()))
+        self.assertEqual(plain_access["fingerprints"], prefixed_access["fingerprints"])
+
     def test_blocked_loopback_action_preserves_controls(self) -> None:
         item = self.item(access(loopback="blocked"))
         self.assertIn("Keep loopback blocked", item["action"])
