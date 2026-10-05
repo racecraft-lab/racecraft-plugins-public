@@ -5827,7 +5827,7 @@
             "Lists all 13 canonical Codex Post items from Doctor Extension Check through Retrospective without collapsing supporting rows",
             "Identifies Doctor, Verify Implementation, Verify Tasks Phantom Check, and Retrospective as extension-backed items and keeps Code Review plus Integration Suite built in",
             "Lists UAT Runbook Generation as mandatory and fail-open, runs generate-uat-skeleton in dry_run then apply mode, and dispatches uat-runbook-author after the skeleton is written",
-            "Lists both Final Reviewability Backstop and PR Packet/Body Generation supporting rows in update_plan and autopilot-state.json",
+            "Lists both Final Reviewability Backstop and PR Packet/Body Generation supporting rows in autopilot-state.json",
             "Lists the feature-local packet path specs/<feature>/.process/pr-packets/<packet-id>.json and states pr-packet-output emits the packet JSON and body file while declaring the validation-result path",
             "Describes generate-pr-body only as a golden_only one-Markdown-body writer accepting output_path, title, and sections, not as packet emission",
             "Lists pre-create validation via runner helper validate-pr-packet-read-only, consumes current data.stdout_json with writes_state=false, and persists that current result with validate-pr-packet-write",
@@ -5977,7 +5977,7 @@
             "States that the canonical Post list has no separate Self-Review step and that Post: Code Review is the single final integration review, with no later step reviewing unchanged code a second time",
             "States that the advisory terms lint runs at the start of UAT Runbook Generation, before its checkpoint, records its note in the workflow log, and never gates",
             "Mentions that Post: UAT Runbook Generation is item position #7 in the canonical 13-entry Codex post-implementation list, between Post: Reviewability Diff Gate and Post: Final Reviewability Backstop",
-            "Notes that the step transitions through update_plan + autopilot-state.json in pending → in_progress → completed states like every other canonical step"
+            "Notes that the step transitions through autopilot-state.json in pending → in_progress → completed states like every other canonical step"
           ]
         }
       ],
