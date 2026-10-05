@@ -3612,6 +3612,11 @@ orchestrator's for those two phases.
 | `before_implement` | Before Phase 7 starts | **Accept** — checklist pre-checks |
 | `after_implement` | After Phase 7 completes | **Accept** — e.g., verify, review, retrospective |
 
+The rows apply as written to Implement (and to Clarify's events). For Specify,
+Plan, Checklist, Tasks and Analyze, the loaded command only prints optional
+`before_` hooks as suggestions, so the autopilot skips them; `after_` rows follow
+`brief.hooks`, once after the phase (ADR 0018).
+
 **Where hooks fire in the execution loop:**
 
 ```text
@@ -3636,7 +3641,7 @@ for each phase:
 3. **Document decisions** — log which hooks were accepted,
    skipped, and why: in the decisions list for `brief.hooks`
    runs, in the workflow file for Clarify and Implement
-4. **Check ALL 8 events** — don't assume only after_tasks
+4. **Check every event the orchestrator owns** — don't assume only after_tasks
    and after_implement have hooks. Extensions may register
    hooks for any event. Read `.specify/extensions.yml` to
    know which events have hooks configured.

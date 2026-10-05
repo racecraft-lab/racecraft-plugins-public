@@ -18,7 +18,7 @@ HOOK_FILE = ".specify/extensions.yml"
 DEFAULT_PRIORITY = 10
 IDENTIFIER = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
 FIELD = re.compile(r"^( *)([A-Za-z_][\w-]*):[ \t]*(.*)$")
-ITEM = re.compile(r"^( *)- ([A-Za-z_][\w-]*):[ \t]*(.*)$")
+ITEM = re.compile(r"^( *)-( +)([A-Za-z_][\w-]*):[ \t]*(.*)$")
 EMPTY_VALUES = frozenset({"", "null", "~"})
 
 
@@ -45,7 +45,7 @@ def hook_entries(text: str, event: str) -> list[tuple[int, dict[str, str]]]:
     entries: list[tuple[int, dict[str, str]]] = []
     in_hooks = in_event = False
     event_indent: int | None = None
-    dash_indent = -1
+    dash_indent = field_indent = -1
     for number, line in enumerate(text.splitlines(), start=1):
         if not line.strip() or line.lstrip().startswith("#"):
             continue
@@ -79,14 +79,14 @@ def hook_entries(text: str, event: str) -> list[tuple[int, dict[str, str]]]:
             continue
         item = ITEM.match(line)
         if item is not None and (not entries or indent <= dash_indent):
-            dash_indent = indent
-            entries.append((number, {item[2]: item[3]}))
+            dash_indent, field_indent = indent, len(item[1]) + 1 + len(item[2])
+            entries.append((number, {item[3]: item[4]}))
             continue
         field = FIELD.match(line)
-        if field is not None and indent == dash_indent + 2:
+        if not entries or indent < field_indent or (indent == field_indent and field is None):
+            raise ValueError(f"{HOOK_FILE} line {number}: expected a hook entry")
+        if indent == field_indent and field is not None:
             entries[-1][1][field[2]] = field[3]
-        elif indent <= dash_indent + 2:
-            raise ValueError(f"{HOOK_FILE} line {number}: expected a hook entry field")
     return entries
 
 

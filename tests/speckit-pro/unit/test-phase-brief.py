@@ -335,6 +335,10 @@ class PhaseBriefHookTests(unittest.TestCase):
                                    prompt="\"Commit?\""))
         self.assertEqual(self.hooks("Plan", text), [{"extension": "git", "command": "speckit.git.commit"}])
 
+    def test_a_wider_gap_after_the_dash_parses(self):
+        text = "hooks:\n  after_plan:\n    -   extension: git\n        command: speckit.git.commit\n"
+        self.assertEqual(self.hooks("Plan", text), [{"extension": "git", "command": "speckit.git.commit"}])
+
     def test_no_project_hooks_means_no_listed_hooks(self):
         for text in (None, "", "installed: []\n", "hooks: {}\n", "hooks:\n  after_plan: []\n"):
             with self.subTest(text=text):
@@ -348,6 +352,10 @@ class PhaseBriefHookTests(unittest.TestCase):
             "unknown optional value": extensions_yml(hook("after_plan", "speckit.a.run", optional="maybe")),
             "hooks is a list": "hooks:\n- command: speckit.a.run\n",
             "tab indentation": "hooks:\n\tafter_plan: []\n",
+            "flow entry": "hooks:\n  after_plan:\n  - {extension: git, command: speckit.git.commit}\n",
+            "mapping, not a list": "hooks:\n  after_plan:\n    extension: git\n    command: speckit.git.commit\n",
+            "field before any entry": "hooks:\n  after_plan:\n   extension: git\n",
+            "misaligned field": "hooks:\n  after_plan:\n  - extension: git\n   command: speckit.git.commit\n",
             "stray text": "hooks:\n  after_plan:\n  - command: speckit.a.run\nnonsense\n",
         }
         for label, text in bad.items():
