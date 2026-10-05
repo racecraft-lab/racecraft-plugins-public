@@ -6273,8 +6273,8 @@ def _home_relative(path: str) -> str:
         return Path(path).name or "specify"
 
 
-def installed_specify_version(specify_path: str, repo_root: Path | None = None) -> str | None:
-    """The version `specify version` reports, or None when it cannot run or has no version row."""
+def verified_specify_executable(specify_path: str, repo_root: Path | None = None) -> Path | None:
+    """The canonical external executable, or None when discovery cannot be attested."""
     # Windows does not use the child's PATH to locate an executable. Resolve in
     # the selected directory before launching, including user-local installs.
     executable = shutil.which("specify", path=str(Path(specify_path).parent))
@@ -6298,8 +6298,19 @@ def installed_specify_version(specify_path: str, repo_root: Path | None = None) 
             or any(parent.resolve() == workspace for parent in Path(executable).parents)
         ):
             return None
+        return resolved
+    except (OSError, RuntimeError, ValueError):
+        return None
+
+
+def installed_specify_version(specify_path: str, repo_root: Path | None = None) -> str | None:
+    """The version `specify version` reports, or None when it cannot run or has no version row."""
+    executable = verified_specify_executable(specify_path, repo_root)
+    if executable is None:
+        return None
+    try:
         result = subprocess.run(
-            [launch_path, "version"], text=True, encoding="utf-8", capture_output=True, shell=False,
+            [str(executable), "version"], text=True, encoding="utf-8", capture_output=True, shell=False,
             check=False, timeout=SUBPROCESS_TIMEOUT_SECONDS, stdin=subprocess.DEVNULL,
         )
     except (OSError, subprocess.SubprocessError, UnicodeError, RuntimeError, ValueError):
