@@ -13,6 +13,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
@@ -27,7 +28,10 @@ from speckit_pro_runner.codex_agent_generator import generated_codex_files
 from speckit_pro_runner.gates.payloads import build_installed_plugin_payloads
 from speckit_pro_runner.host_parity import emit_host
 import agent_roster
+import codex_isolation
 from host_skill_views import host_skill_root
+from host_progress_contract import forbidden_task_tools
+from script_loader import load_script
 from structural_helpers import body as _body
 from structural_helpers import discover_skill_names
 from structural_helpers import frontmatter as _frontmatter
@@ -73,10 +77,70 @@ class CodexSkillMentionTests(unittest.TestCase):
                 self.assertEqual(short.findall(emit_host(source.read_text(encoding='utf-8'), 'codex')), [])
 
 
+def assert_decoded_host_progress_probes(test: unittest.TestCase) -> None:
+    for encoded in (
+        '["UPDATE_PLAN"]',
+        '["tAsKcReAtE"]',
+        r'["\u201cupdate_plan\u201d"]',
+        r'["\u201cTaskCreate\u201d"]',
+        r'["\u0075pdate_plan"]',
+        r'["\nupdate_plan"]',
+        r'{"\u0075pdate_plan": [{"label": "progress"}]}',
+    ):
+        with test.subTest(encoded=encoded):
+            test.assertTrue(forbidden_task_tools(json.loads(encoded)))
+
+
+def prepared_codex_contract_result() -> unittest.TestResult:
+    # Reuse the hermetic preparation fixture; it never launches a provider host.
+    adapter_tests = load_script(
+        'structural_native_eval_adapter_tests',
+        REPO_ROOT / 'tests/speckit-pro/unit/test-native-eval-adapters.py',
+    )
+    prepared_test = adapter_tests.AdapterPreparationTests(
+        'test_prepares_isolated_codex_project_with_full_repository_catalog',
+    )
+    result = unittest.TestResult()
+    prepared_test.run(result)
+    return result
+
+
+def assert_real_codex_producer_probes(test: unittest.TestCase) -> None:
+    original = codex_isolation.skill_isolation_args
+    value = 'tools.' + 'update' + '_plan.enabled=true'
+    for arguments in (
+        ['-c', value], ['-c' + value],
+        ['--config', value], ['--config=' + value],
+    ):
+        with test.subTest(arguments=arguments), mock.patch.object(
+            codex_isolation, 'skill_isolation_args',
+            side_effect=lambda *args, **kwargs: original(*args, **kwargs) + arguments,
+        ) as producer:
+            result = prepared_codex_contract_result()
+            test.assertEqual(producer.call_count, 1)
+            test.assertFalse(result.wasSuccessful())
+            test.assertEqual(result.errors, [])
+            test.assertTrue(any('update_plan' in trace for _, trace in result.failures))
+
+
+def assert_host_eval_adapter_progress(test: unittest.TestCase) -> None:
+    sources = sorted(LIB_DIR.glob('native_eval*adapter*.py'))
+    test.assertIn(LIB_DIR / 'native_eval_codex_adapter.py', sources)
+    test.assertIn(LIB_DIR / 'native_eval_claude_adapter.py', sources)
+    for source in sources:
+        with test.subTest(file=source.name):
+            test.assertEqual(forbidden_task_tools(_read(source)), [], 'eval adapter names a task-list tool or opt-in')
+    result = prepared_codex_contract_result()
+    test.assertEqual(result.testsRun, 1)
+    test.assertEqual(result.skipped, [])
+    test.assertTrue(result.wasSuccessful(), result.failures + result.errors)
+    assert_real_codex_producer_probes(test)
+
+
 class ValidateHostProgressGuidance(unittest.TestCase):
 
+    # ADR 0001 applies to guidance, grading inputs, and host launch configuration.
     def test_host_guidance_uses_no_task_list_tools(self) -> None:
-        forbidden = re.compile(r'\b(?:TaskCreate|TaskGet|TaskUpdate|TaskList|TodoWrite|update_plan|CLAUDE_CODE_ENABLE_TASKS)\b')
         for host, root in (('claude', CLAUDE_VIEW), ('codex', CODEX_VIEW)):
             sources = sorted(root.rglob('*.md')) + sorted(root.rglob('*.yaml'))
             self.assertTrue(sources, f'{host}: missing rendered skill guidance')
@@ -85,7 +149,28 @@ class ValidateHostProgressGuidance(unittest.TestCase):
             sources += agents
             for source in sources:
                 with self.subTest(host=host, file=source.relative_to(source.parent.parent)):
-                    self.assertEqual(forbidden.findall(_read(source)), [], 'host guidance names a task-list tool or opt-in')
+                    self.assertEqual(forbidden_task_tools(_read(source)), [], 'host guidance names a task-list tool or opt-in')
+
+    def test_host_eval_cases_use_no_task_list_tools(self) -> None:
+        assert_decoded_host_progress_probes(self)
+        functional = REPO_ROOT / 'tests/speckit-pro/layer3-functional'
+        for catalog in ('evals', 'codex-evals'):
+            sources = sorted((functional / catalog).glob('*-evals.json'))
+            self.assertTrue(sources, f'{catalog}: missing functional eval cases')
+            self.assertIn(functional / catalog / 'speckit-autopilot-evals.json', sources)
+            for source in sources:
+                cases = json.loads(_read(source))['evals']
+                self.assertIsInstance(cases, list)
+                self.assertTrue(cases, f'{source.name}: empty eval cases')
+                with self.subTest(catalog=catalog, file=source.name):
+                    self.assertEqual(forbidden_task_tools(cases), [], 'eval case names a task-list tool or opt-in')
+        for relative in ('evals/catalog.json', 'evals/fixtures/functional/legacy-selection.json', 'evals/audit/functional-inventory.json'):
+            source = REPO_ROOT / 'tests/speckit-pro' / relative
+            with self.subTest(file=relative):
+                self.assertEqual(forbidden_task_tools(json.loads(_read(source))), [], 'native eval contract names a task-list tool or opt-in')
+
+    def test_host_eval_adapters_use_no_task_list_tools(self) -> None:
+        assert_host_eval_adapter_progress(self)
 
 
 class ValidateSkills(unittest.TestCase):

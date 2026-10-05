@@ -6552,7 +6552,7 @@
         },
         {
           "id": "legacy-06",
-          "description": "States that the host-native visible progress mechanism is REQUIRED before the first phase runs: TaskCreate/TaskUpdate for Claude or update_plan for Codex"
+          "description": "States that the runner-rendered progress block from autopilot-state.json is REQUIRED before the first phase runs on both hosts"
         },
         {
           "id": "legacy-07",
@@ -6579,7 +6579,7 @@
           "description": "Explains that resume reconstructs the host-native visible plan by reconciling workflow-file authority with the current-run state mirror and repairing missing or stale state"
         }
       ],
-      "prompt": "Use {{skill}} to address this bounded request. Before Phase 1 starts in the native client, what exact progress state must the autopilot create? I want the host-native visible-progress tool calls, the naming convention for the plan items, how consensus items are represented, the rule that exactly one item is in_progress, placeholders for later-discovered Phase 7 implementation groups, how progress is mirrored to autopilot-state.json, and how the workflow authority and state mirror are reconciled on resume.",
+      "prompt": "Use {{skill}} to address this bounded request. Before Phase 1 starts in the native client, what exact progress state must the autopilot create? I want the runner-rendered progress block, the naming convention for the plan items, how consensus items are represented, the rule that exactly one item is in_progress, placeholders for later-discovered Phase 7 implementation groups, how progress is mirrored to autopilot-state.json, and how the workflow authority and state mirror are reconciled on resume.",
       "fixtures": [],
       "hosts": {
         "claude": {
@@ -6635,7 +6635,7 @@
           "id": "legacy-06-semantic",
           "requirement": "legacy-06",
           "type": "semantic",
-          "rubric": "PASS only if the evidence says the active runtime's native visible-progress mechanism is required before Phase 1. FAIL if it names a mechanism unavailable in the active runtime, omits the pre-Phase-1 plan, or treats visible progress as optional."
+          "rubric": "PASS only if the evidence says the runner-rendered progress block from autopilot-state.json is required before Phase 1. FAIL if it names a mechanism unavailable in the active runtime, omits the pre-Phase-1 plan, or treats visible progress as optional."
         },
         {
           "id": "legacy-07-semantic",
@@ -7367,7 +7367,7 @@
     {
       "id": "functional.speckit-autopilot.case-12",
       "layer": "functional",
-      "capability": "Rejects partial planning. Explains that before Phase 1 starts, autopilot must create update_plan and autopilot-state.json entries for Phase 0, all seven SDD phases, and Post, including placeholders for later-discovered Clarify, Checklist, and Implement details.",
+      "capability": "Rejects partial planning. Explains that before Phase 1 starts, autopilot must create autopilot-state.json entries for Phase 0, all seven SDD phases, and Post, including placeholders for later-discovered Clarify, Checklist, and Implement details.",
       "timeout_seconds": 300,
       "resource_class": "ordinary",
       "requirements": [
@@ -7654,7 +7654,7 @@
         }
       ],
       "native_differences": [
-        "Claude's visible progress plan is TaskCreate and TaskUpdate; Codex's is update_plan. Both mirror the same canonical names into autopilot-state.json.",
+        "Both hosts render the progress block from the same canonical names in autopilot-state.json.",
         "Case 12 covers the plan before Phase 1; this case covers the projection after phases have run."
       ],
       "provenance": [
@@ -8170,7 +8170,7 @@
     {
       "id": "functional.speckit-autopilot.case-13",
       "layer": "functional",
-      "capability": "Rejects continuing with only the Phase 7 placeholder after G5. Explains that the placeholder must be replaced in both update_plan and autopilot-state.json with concrete Phase 7 task-group items parsed from tasks.md before Analyze or Implement can continue.",
+      "capability": "Rejects continuing with only the Phase 7 placeholder after G5. Explains that the placeholder must be replaced in autopilot-state.json with concrete Phase 7 task-group items parsed from tasks.md before Analyze or Implement can continue.",
       "timeout_seconds": 300,
       "resource_class": "ordinary",
       "requirements": [
@@ -8203,7 +8203,7 @@
           "description": "States that Analyze or Implement must not continue until the plan/state are repaired"
         }
       ],
-      "prompt": "Use {{skill}} to inspect scenario-inputs/visible-plan.json, scenario-inputs/autopilot-state.json, and scenario-inputs/tasks.md after G5. Can autopilot continue to Analyze with the staged Phase 7 placeholder? Both Analyze and Implement must remain blocked until the visible plan and durable state are repaired with concrete task groups. Output only raw JSON with valid, phase7_status, task_groups, update_plan_repair_required, state_repair_required, analyze_allowed, and implement_allowed. The valid field means whether the staged Phase 7 placeholder is valid after G5, not whether the JSON response is well formed. Derive task_groups from tasks.md and do not rewrite the staged inputs.",
+      "prompt": "Use {{skill}} to inspect scenario-inputs/visible-plan.json, scenario-inputs/autopilot-state.json, and scenario-inputs/tasks.md after G5. Can autopilot continue to Analyze with the staged Phase 7 placeholder? Both Analyze and Implement must remain blocked until the visible plan and durable state are repaired with concrete task groups. Output only raw JSON with valid, phase7_status, task_groups, progress_repair_required, state_repair_required, analyze_allowed, and implement_allowed. The valid field means whether the staged Phase 7 placeholder is valid after G5, not whether the JSON response is well formed. Derive task_groups from tasks.md and do not rewrite the staged inputs.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/functional/autopilot-scenarios/placeholder-plan.json",
@@ -8280,7 +8280,7 @@
           "id": "repair-visible-plan",
           "requirement": "legacy-03",
           "type": "response_json_field",
-          "field_path": ["update_plan_repair_required"],
+          "field_path": ["progress_repair_required"],
           "expected_by_host": {"claude": true, "codex": true}
         },
         {
@@ -8352,7 +8352,7 @@
     {
       "id": "functional.speckit-autopilot.case-14",
       "layer": "functional",
-      "capability": "Rejects stopping. Explains that all seven SDD phases being complete is not sufficient if Post items are missing or pending; the autopilot must rebuild update_plan and autopilot-state.json with Post entries and continue post-implementation.",
+      "capability": "Rejects stopping. Explains that all seven SDD phases being complete is not sufficient if Post items are missing or pending; the autopilot must rebuild autopilot-state.json with Post entries and continue post-implementation.",
       "timeout_seconds": 300,
       "resource_class": "ordinary",
       "requirements": [
@@ -9567,7 +9567,7 @@
     {
       "id": "functional.speckit-autopilot.case-26",
       "layer": "functional",
-      "capability": "States that the autopilot must run the pre-final completion audit before any final response, re-read autopilot-state.json and the workflow file, reconcile update_plan with the state file, and MUST NOT send a final response while any Post item is pending, in_progress, or missing. It should set the first incomplete Post item, starting with Post: Doctor Extension Check, to in_progress in both update_plan and autopilot-state.json, continue through the full canonical Post sequence including PR body generation, PR creation, review remediation, and Post: Retrospective, and only report completion after the PR URL is known and every Post item is completed or explicitly skipped.",
+      "capability": "States that the autopilot must run the pre-final completion audit before any final response, re-read autopilot-state.json and the workflow file, reconcile the workflow with the state file, and MUST NOT send a final response while any Post item is pending, in_progress, or missing. It should set the first incomplete Post item, starting with Post: Doctor Extension Check, to in_progress in autopilot-state.json, continue through the full canonical Post sequence including PR body generation, PR creation, review remediation, and Post: Retrospective, and only report completion after the PR URL is known and every Post item is completed or explicitly skipped.",
       "timeout_seconds": 300,
       "resource_class": "ordinary",
       "requirements": [
@@ -15123,7 +15123,7 @@
         },
         {
           "id": "tracking",
-          "description": "Describes native task-status progression; where the native contract requires both update_plan and autopilot-state.json, it preserves both rather than substituting the workflow log."
+          "description": "Describes status progression in autopilot-state.json and the runner-rendered progress block in the active runtime rather than substituting the workflow log."
         }
       ],
       "prompt": "Use {{skill}} to answer this explanation-only request; do not execute the workflow or write files. Explain what the autopilot runs between Post: Reviewability Diff Gate and PR body generation: whether a separate self-review step exists, which step is the final review, where the advisory terms lint runs and is recorded, the native plan position of Post: UAT Runbook Generation, and status tracking. Output only raw JSON: exactly one top-level object with post_step_count (integer), uat_position (one-based integer position of Post: UAT Runbook Generation), neighbors (an array containing the immediately preceding and following exact canonical Post names of Post: UAT Runbook Generation), native_plan_tracking (an object containing exactly method, file, and transitions), and explanation (detailed prose), with no Markdown fences. native_plan_tracking.file must be null when the host-native contract has no state file and must be the exact state-file name otherwise. Do not execute tasks.",
@@ -15221,7 +15221,7 @@
           "id": "tracking-semantic",
           "requirement": "tracking",
           "type": "semantic",
-          "rubric": "PASS only if the evidence satisfies: Describes native task-status progression; where the native contract requires both update_plan and autopilot-state.json, it preserves both rather than substituting the workflow log. FAIL if omitted, contradicted, or merely claimed without required evidence."
+          "rubric": "PASS only if the evidence satisfies: Describes status progression in autopilot-state.json and the runner-rendered progress block in the active runtime rather than substituting the workflow log. FAIL if omitted, contradicted, or merely claimed without required evidence."
         }
       ],
       "native_differences": [
