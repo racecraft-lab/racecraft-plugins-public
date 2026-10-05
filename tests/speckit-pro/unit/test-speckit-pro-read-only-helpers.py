@@ -5325,25 +5325,6 @@ class CanaryVariantContractTests(CanaryVariantCase):
 
 
 class CanaryPlanTargetTests(CanaryVariantCase):
-    def test_nonfinite_and_overflow_reports_are_strict_json_for_both_hosts(self):
-        for host, original in self.receipts.items():
-            for literal in ("NaN", "Infinity", "-Infinity", "1e400", "-1e400"):
-                value = copy.deepcopy(original)
-                value["variants"][0]["stages"]["plan"]["wall_seconds"] = 12345.5
-                body = json.dumps(value).replace("12345.5", literal)
-                with self.subTest(host=host, literal=literal), tempfile.TemporaryDirectory() as directory:
-                    report = self.validator.receipt_report(json.loads(body))
-                    self.assertFalse(report["valid"], report)
-                    json.dumps(report, allow_nan=False)
-                    source = Path(directory) / "receipt.json"
-                    source.write_text(body, encoding="utf-8")
-                    completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
-                                               capture_output=True, text=True, check=False)
-                    self.assertEqual(1, completed.returncode, completed.stdout)
-                    output = json.loads(completed.stdout, parse_constant=self.validator.reject_nonfinite)
-                    self.assertFalse(output["valid"])
-                    self.assertEqual("", completed.stderr)
-
     def test_over_target_reports_false_without_failing_the_gate_for_either_host(self):
         for host, original in self.receipts.items():
             for metric, actual in (("wall_seconds", 1801), ("tokens", 15000001)):
@@ -5843,6 +5824,25 @@ class CanaryCatchInputTests(CanaryVariantCase):
 
 class CanaryReceiptOutputTests(CanaryVariantCase):
     """Receipt and companion schema diagnostics carry only constant identifiers and counts."""
+
+    def test_nonfinite_and_overflow_reports_are_strict_json_for_both_hosts(self):
+        for host, original in self.receipts.items():
+            for literal in ("NaN", "Infinity", "-Infinity", "1e400", "-1e400"):
+                value = copy.deepcopy(original)
+                value["variants"][0]["stages"]["plan"]["wall_seconds"] = 12345.5
+                body = json.dumps(value).replace("12345.5", literal)
+                with self.subTest(host=host, literal=literal), tempfile.TemporaryDirectory() as directory:
+                    report = self.validator.receipt_report(json.loads(body))
+                    self.assertFalse(report["valid"], report)
+                    json.dumps(report, allow_nan=False)
+                    source = Path(directory) / "receipt.json"
+                    source.write_text(body, encoding="utf-8")
+                    completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
+                                               capture_output=True, text=True, check=False)
+                    self.assertEqual(1, completed.returncode, completed.stdout)
+                    output = json.loads(completed.stdout, parse_constant=self.validator.reject_nonfinite)
+                    self.assertFalse(output["valid"])
+                    self.assertEqual("", completed.stderr)
 
     def test_schema_errors_never_reflect_supplied_keys_or_values(self):
         marker = "untrusted-schema-marker"
