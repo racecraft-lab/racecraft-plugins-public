@@ -28,7 +28,8 @@ SCOPES = ("user", "project", "local")
 MCP_STATES = ("connected", "needs_authentication", "pending_approval", "failed", "rejected", "disabled", "unknown")
 TRUST_STATES = ("trusted", "untrusted", "unobservable")
 NAME_RE = re.compile(r"[A-Za-z][A-Za-z0-9_.-]{0,63}")
-COMMAND_RE = re.compile(r"[A-Za-z0-9_.-]+|/[^\s]+")
+# Letters, digits and `_.+-` only: no wildcard, quote, comma, parenthesis, whitespace or shell metacharacter.
+COMMAND_RE = re.compile(r"[A-Za-z0-9_.+][A-Za-z0-9_.+-]*|/[A-Za-z0-9_./+-]+")
 VERSION_RE = re.compile(r"[0-9A-Za-z][0-9A-Za-z.+-]{0,39}")
 INTERPRETER_PLACEHOLDER = "<interpreter>"
 NOT_APPLICABLE_SOURCE = "Claude Code only; Codex records its own approval, sandbox and trust items"
@@ -75,7 +76,8 @@ def parse_probes(raw: dict[str, Any]) -> list[dict[str, Any]]:
                                  "outcome": outcome}
         if entry["probe"] == "runner_request" and outcome != "passed":
             command = probe.get("command")
-            if not isinstance(command, str) or not COMMAND_RE.fullmatch(command) or secret_matches(command):
+            if not isinstance(command, str) or not COMMAND_RE.fullmatch(command) or ".." in command.split("/") \
+                    or secret_matches(command):
                 raise SelectionError("a failed runner_request probe needs the interpreter `command` it used")
             entry["command"] = command
         parsed.append(entry)

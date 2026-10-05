@@ -161,6 +161,25 @@ class ReadinessHostItemsTest(unittest.TestCase):
         self.assertNotIn(interpreter, json.dumps(response["data"]["record"]))
         self.assertIn("<interpreter>", item["action"])
 
+    def test_hostile_interpreter_text_never_reaches_an_allow_rule(self) -> None:
+        hostile = ["/" + "opt/py*", "/" + "opt/py)", "python3)", "python3, Bash(*)", "Bash(*)", "py\nBash(*)",
+                   "/" + "opt/py\nBash(*)", "py'x", 'py"x', "py;rm", "/" + "opt/../py", "py$(x)", "py*", ""]
+        for command in hostile:
+            with self.subTest(command=command):
+                probes = [{"probe": "runner_request", "outcome": "denied", "command": command}]
+                response = self.run_helper([detail("permission_probe", "probes", probes)])
+                assert_runner_response(self, response, "input_error", 2)
+                self.assertNotIn("allow_rules", response.get("data", {}))
+                self.assertFalse((self.root / ".specify" / "readiness").exists())
+
+    def test_every_printed_rule_comes_from_a_fixed_template(self) -> None:
+        probes = [{"probe": "runner_request", "outcome": "denied", "command": "/" + "opt/tools/python3.12"},
+                  {"probe": "git_status", "outcome": "prompted"}]
+        rules = self.run_helper([detail("permission_probe", "probes", probes)])["data"]["allow_rules"]
+        for rule in rules:
+            self.assertRegex(rule, r"^Bash\((?:/?[A-Za-z0-9_./+-]+ -m speckit_pro_runner:\*|printf:\*|git status:\*)\)$")
+        self.assertEqual(3, len(rules))
+
     def test_scaffold_documents_the_host_items_on_each_host(self) -> None:
         for host in ("claude", "codex"):
             with self.subTest(host=host):
