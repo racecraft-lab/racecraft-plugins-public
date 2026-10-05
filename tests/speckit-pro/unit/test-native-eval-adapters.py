@@ -19,6 +19,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import tomllib
 from typing import Any
 import unittest
 from unittest import mock
@@ -30,6 +31,7 @@ sys.path.insert(0, str(TEST_ROOT / "lib"))
 
 import agent_roster  # noqa: E402
 import host_skill_views  # noqa: E402
+from host_progress_contract import codex_config_overrides, forbidden_task_tools  # noqa: E402
 import native_eval_adapter_common as adapter_common  # noqa: E402
 import native_eval_adapters as adapters  # noqa: E402
 import native_eval_claude_adapter as claude_adapter  # noqa: E402
@@ -2107,7 +2109,29 @@ class AdapterPreparationTests(unittest.TestCase):
                          "--ignore-rules", "--skip-git-repo-check", "--model", "gpt-5.6-sol"):
             self.assertIn(required, command)
         self.assertIn('project_root_markers=[".codex"]', command)
-        self.assertFalse(any("tools.update_plan" in argument for argument in command))
+        overrides = codex_config_overrides(command)
+        self.assertTrue(overrides)
+        self.assertEqual(forbidden_task_tools(overrides), [])
+        project_config = tomllib.loads((prepared.cwd / ".codex/config.toml").read_text(encoding="utf-8"))
+        self.assertEqual(forbidden_task_tools(project_config), [])
+        tool = "update" + "_plan"
+        for override in (
+            f"tools.{tool}.enabled=true",
+            'tools={update_plan={enabled=true}}',
+            r'tools."\u0075pdate_plan".enabled=true',
+            'tools.UPDATE_PLAN.enabled=true',
+        ):
+            for option in ("--config", "-c"):
+                with self.subTest(option=option, override=override):
+                    self.assertTrue(forbidden_task_tools(codex_config_overrides(
+                        [*command[:-1], option, override, command[-1]],
+                    )))
+                    self.assertTrue(forbidden_task_tools(codex_config_overrides(
+                        [*command[:-1], f"{option}={override}", command[-1]],
+                    )))
+        for invalid in (["--config"], ["-c", "tools={"]):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                codex_config_overrides(invalid)
         self.assertNotIn("--ephemeral", command)
         self.assertIn("--disable", command)
         self.assertIn("multi_agent", command)

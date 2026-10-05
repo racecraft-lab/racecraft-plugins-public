@@ -28,6 +28,8 @@ from speckit_pro_runner.gates.payloads import build_installed_plugin_payloads
 from speckit_pro_runner.host_parity import emit_host
 import agent_roster
 from host_skill_views import host_skill_root
+from host_progress_contract import forbidden_task_tools
+from script_loader import load_script
 from structural_helpers import body as _body
 from structural_helpers import discover_skill_names
 from structural_helpers import frontmatter as _frontmatter
@@ -76,8 +78,6 @@ class CodexSkillMentionTests(unittest.TestCase):
 class ValidateHostProgressGuidance(unittest.TestCase):
 
     # ADR 0001 applies to guidance, grading inputs, and host launch configuration.
-    forbidden = re.compile(r'\b(?:TaskCreate|TaskGet|TaskUpdate|TaskList|TodoWrite|update_plan|CLAUDE_CODE_ENABLE_TASKS)(?:\b|_)')
-
     def test_host_guidance_uses_no_task_list_tools(self) -> None:
         for host, root in (('claude', CLAUDE_VIEW), ('codex', CODEX_VIEW)):
             sources = sorted(root.rglob('*.md')) + sorted(root.rglob('*.yaml'))
@@ -87,9 +87,20 @@ class ValidateHostProgressGuidance(unittest.TestCase):
             sources += agents
             for source in sources:
                 with self.subTest(host=host, file=source.relative_to(source.parent.parent)):
-                    self.assertEqual(self.forbidden.findall(_read(source)), [], 'host guidance names a task-list tool or opt-in')
+                    self.assertEqual(forbidden_task_tools(_read(source)), [], 'host guidance names a task-list tool or opt-in')
 
     def test_host_eval_cases_use_no_task_list_tools(self) -> None:
+        for encoded in (
+            '["UPDATE_PLAN"]',
+            '["tAsKcReAtE"]',
+            r'["\u201cupdate_plan\u201d"]',
+            r'["\u201cTaskCreate\u201d"]',
+            r'["\u0075pdate_plan"]',
+            r'["\nupdate_plan"]',
+            r'{"\u0075pdate_plan": [{"label": "progress"}]}',
+        ):
+            with self.subTest(encoded=encoded):
+                self.assertTrue(forbidden_task_tools(json.loads(encoded)))
         functional = REPO_ROOT / 'tests/speckit-pro/layer3-functional'
         for catalog in ('evals', 'codex-evals'):
             sources = sorted((functional / catalog).glob('*-evals.json'))
@@ -100,11 +111,11 @@ class ValidateHostProgressGuidance(unittest.TestCase):
                 self.assertIsInstance(cases, list)
                 self.assertTrue(cases, f'{source.name}: empty eval cases')
                 with self.subTest(catalog=catalog, file=source.name):
-                    self.assertEqual(self.forbidden.findall(json.dumps(cases)), [], 'eval case names a task-list tool or opt-in')
+                    self.assertEqual(forbidden_task_tools(cases), [], 'eval case names a task-list tool or opt-in')
         for relative in ('evals/catalog.json', 'evals/fixtures/functional/legacy-selection.json'):
             source = REPO_ROOT / 'tests/speckit-pro' / relative
             with self.subTest(file=relative):
-                self.assertEqual(self.forbidden.findall(json.dumps(json.loads(_read(source)))), [], 'native eval contract names a task-list tool or opt-in')
+                self.assertEqual(forbidden_task_tools(json.loads(_read(source))), [], 'native eval contract names a task-list tool or opt-in')
 
     def test_host_eval_adapters_use_no_task_list_tools(self) -> None:
         sources = sorted(LIB_DIR.glob('native_eval*adapter*.py'))
@@ -112,7 +123,20 @@ class ValidateHostProgressGuidance(unittest.TestCase):
         self.assertIn(LIB_DIR / 'native_eval_claude_adapter.py', sources)
         for source in sources:
             with self.subTest(file=source.name):
-                self.assertEqual(self.forbidden.findall(_read(source)), [], 'eval adapter names a task-list tool or opt-in')
+                self.assertEqual(forbidden_task_tools(_read(source)), [], 'eval adapter names a task-list tool or opt-in')
+        # Reuse the hermetic preparation fixture; it never launches a provider host.
+        adapter_tests = load_script(
+            'structural_native_eval_adapter_tests',
+            REPO_ROOT / 'tests/speckit-pro/unit/test-native-eval-adapters.py',
+        )
+        prepared_test = adapter_tests.AdapterPreparationTests(
+            'test_prepares_isolated_codex_project_with_full_repository_catalog',
+        )
+        result = unittest.TestResult()
+        prepared_test.run(result)
+        self.assertEqual(result.testsRun, 1)
+        self.assertEqual(result.skipped, [])
+        self.assertTrue(result.wasSuccessful(), result.failures + result.errors)
 
 
 class ValidateSkills(unittest.TestCase):
