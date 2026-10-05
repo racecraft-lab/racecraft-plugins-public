@@ -52,6 +52,49 @@ class GitWriteProbeTest(unittest.TestCase):
     def assert_no_probe_files(self) -> None:
         self.assertEqual([], list((self.root / ".git").rglob(".speckit-git-write-probe-*.lock")))
 
+    def test_symlinked_git_subdirectory_never_receives_probe_files(self) -> None:
+        outside = self.root / "outside"
+        outside.mkdir()
+        self.heads.rmdir()
+        self.heads.symlink_to(outside, target_is_directory=True)
+        self.addCleanup(self.heads.mkdir)
+        self.addCleanup(self.heads.unlink)
+        opened_outside = []
+        open_file = os.open
+
+        def observe_open(path, flags, mode=0o777, *, dir_fd=None):
+            fd = open_file(path, flags, mode, dir_fd=dir_fd)
+            if flags & os.O_CREAT and (outside / Path(path).name).exists():
+                opened_outside.append(Path(path).name)
+            return fd
+
+        with patch.object(probe.os, "open", side_effect=observe_open):
+            result = self.probe_current_repository()
+        self.assertEqual([], opened_outside, "probe created a file outside .git")
+        self.assertEqual("stop", result["data"]["verdict"])
+        self.assertEqual([], list(outside.iterdir()))
+
+    def test_cleanup_preserves_a_replacement_file(self) -> None:
+        open_file = os.open
+        replacement = None
+
+        def replace_created_lock(path, flags, mode=0o777, *, dir_fd=None):
+            nonlocal replacement
+            fd = open_file(path, flags, mode, dir_fd=dir_fd)
+            if flags & os.O_CREAT and replacement is None:
+                original = self.heads / Path(path).name
+                original.rename(self.heads / "held-original")
+                original.write_text("replacement belongs to someone else", encoding="utf-8")
+                replacement = original
+            return fd
+
+        with patch.object(probe.os, "open", side_effect=replace_created_lock):
+            result = self.probe_current_repository()
+        self.assertIsNotNone(replacement)
+        self.assertTrue(replacement.exists(), "cleanup deleted a replacement file")
+        self.assertEqual("replacement belongs to someone else", replacement.read_text(encoding="utf-8"))
+        self.assertEqual("unknown", result["data"]["observation"]["status"])
+
     def directory_denial_result(self, directory: Path) -> dict:
         if os.name != "nt" and hasattr(os, "geteuid") and os.geteuid() != 0:
             mode = directory.stat().st_mode
@@ -62,10 +105,12 @@ class GitWriteProbeTest(unittest.TestCase):
         # Root bypasses POSIX modes; Windows directory modes cannot prove denial.
         open_file = os.open
 
-        def deny_directory(path: str, flags: int, mode: int) -> int:
-            if Path(path).parent == directory:
+        def deny_directory(path, flags: int, mode: int = 0o777, *, dir_fd=None) -> int:
+            target = os.fstat(dir_fd) if dir_fd is not None else None
+            denied = directory.stat()
+            if flags & os.O_CREAT and target is not None and (target.st_dev, target.st_ino) == (denied.st_dev, denied.st_ino):
                 raise PermissionError(errno.EACCES, "directory write denied")
-            return open_file(path, flags, mode)
+            return open_file(path, flags, mode, dir_fd=dir_fd)
 
         with patch.object(probe.os, "open", side_effect=deny_directory):
             return self.probe_current_repository()
@@ -97,12 +142,12 @@ class GitWriteProbeTest(unittest.TestCase):
         unlink = os.unlink
         calls = 0
 
-        def fail_once(path: str) -> None:
+        def fail_once(path: str, *, dir_fd=None) -> None:
             nonlocal calls
             calls += 1
             if calls == 1:
                 raise PermissionError(errno.EPERM, "denied")
-            unlink(path)
+            unlink(path, dir_fd=dir_fd)
 
         with patch.object(probe.os, "unlink", side_effect=fail_once):
             result = self.probe_current_repository()
@@ -130,20 +175,32 @@ class GitWriteProbeTest(unittest.TestCase):
         self.assertEqual([stale], list((self.root / ".git").rglob(".speckit-git-write-probe-*.lock")))
 
     def test_collision_retries_fresh_random_name_and_observes_permission_denial(self) -> None:
-        with patch.object(probe.os, "open", side_effect=[
-            FileExistsError(errno.EEXIST, "collision"),
-            PermissionError(errno.EROFS, "read-only"),
-            PermissionError(errno.EPERM, "denied"),
-        ]) as opened:
+        open_file = os.open
+        names = []
+
+        def fail_creation(path, flags, mode=0o777, *, dir_fd=None):
+            if not flags & os.O_CREAT:
+                return open_file(path, flags, mode, dir_fd=dir_fd)
+            names.append(Path(path).name)
+            if len(names) == 1:
+                raise FileExistsError(errno.EEXIST, "collision")
+            raise PermissionError(errno.EROFS, "read-only")
+
+        with patch.object(probe.os, "open", side_effect=fail_creation):
             result = self.probe_current_repository()
         self.assertEqual("stop", result["data"]["verdict"])
-        names = [Path(call.args[0]).name for call in opened.call_args_list]
         self.assertGreaterEqual(len(names), 2)
         self.assertNotEqual(names[0], names[1])
 
     def test_unknown_first_directory_does_not_skip_later_permission_denial(self) -> None:
-        def fail_open(path: str, flags: int, mode: int) -> int:
-            number = errno.ENOSPC if Path(path).parent == self.heads else errno.EACCES
+        open_file = os.open
+
+        def fail_open(path, flags: int, mode: int = 0o777, *, dir_fd=None) -> int:
+            if not flags & os.O_CREAT:
+                return open_file(path, flags, mode, dir_fd=dir_fd)
+            target = os.fstat(dir_fd)
+            heads = self.heads.stat()
+            number = errno.ENOSPC if (target.st_dev, target.st_ino) == (heads.st_dev, heads.st_ino) else errno.EACCES
             raise OSError(number, "storage problem")
 
         with patch.object(probe.os, "open", side_effect=fail_open):

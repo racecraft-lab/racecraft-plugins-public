@@ -10,9 +10,10 @@ from __future__ import annotations
 
 import errno
 import os
-import tempfile
+import secrets
+from contextlib import ExitStack, contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 from ..envelope import diagnostic, response
 from .gate_preflight_coverage import git_common_directory
@@ -29,14 +30,54 @@ STOP_ACTION = ("Approve git writes, or add the repository's .git directory to "
 
 
 DENIED = frozenset({errno.EACCES, errno.EPERM, errno.EROFS})
+ANCHORED_PROBE_SUPPORTED = (
+    hasattr(os, "O_NOFOLLOW") and hasattr(os, "O_DIRECTORY")
+    and {os.open, os.stat, os.unlink} <= os.supports_dir_fd
+    and os.stat in os.supports_follow_symlinks
+)
 
 
-def remove_probe_lock(lock: str) -> OSError | None:
-    """Retry cleanup once; an already removed probe needs no further cleanup."""
+@contextmanager
+def probe_directory(common: Path, directory: Path) -> Iterator[int]:
+    """Hold each component below the canonical Git directory without following links."""
+    if not ANCHORED_PROBE_SUPPORTED:
+        raise OSError(errno.ENOTSUP, "descriptor-relative git write probe unavailable")
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    with ExitStack() as stack:
+        fd = os.open(common, flags)
+        stack.callback(os.close, fd)
+        for component in directory.relative_to(common).parts:
+            try:
+                fd = os.open(component, flags, dir_fd=fd)
+            except OSError as error:
+                if error.errno in {errno.ELOOP, errno.ENOTDIR}:
+                    raise PermissionError(errno.EACCES, "unsafe git directory component") from error
+                raise
+            stack.callback(os.close, fd)
+        yield fd
+
+
+def create_probe_lock(directory_fd: int) -> tuple[int, str]:
+    """Exclusive creation with bounded retries for random-name collisions."""
+    for _ in range(100):
+        name = f".speckit-git-write-probe-{secrets.token_hex(16)}.lock"
+        try:
+            fd = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=directory_fd)
+        except FileExistsError:
+            continue
+        return fd, name
+    raise FileExistsError(errno.EEXIST, "git write probe names exhausted")
+
+
+def remove_probe_lock(lock: str, directory_fd: int, created: os.stat_result) -> OSError | None:
+    """Check the created inode before each cleanup attempt; never follow a replacement link."""
     blocked = None
     for _ in range(2):
         try:
-            os.unlink(lock)
+            current = os.stat(lock, dir_fd=directory_fd, follow_symlinks=False)
+            if (current.st_dev, current.st_ino) != (created.st_dev, created.st_ino):
+                return OSError(errno.ESTALE, "git write probe was replaced")
+            os.unlink(lock, dir_fd=directory_fd)
         except FileNotFoundError:
             return None
         except OSError as error:
@@ -46,29 +87,29 @@ def remove_probe_lock(lock: str) -> OSError | None:
     return blocked
 
 
-def create_and_remove_lock(directory: Path) -> tuple[OSError | None, str | None]:
+def create_and_remove_lock(directory: Path, common: Path) -> tuple[OSError | None, str | None]:
     """Create exclusively with fresh random names, returning any error and leftover basename."""
+    leftover = None
     try:
-        fd, lock = tempfile.mkstemp(prefix=".speckit-git-write-probe-", suffix=".lock", dir=directory)
+        with probe_directory(common, directory) as directory_fd:
+            fd, lock = create_probe_lock(directory_fd)
+            try:
+                cleanup = remove_probe_lock(lock, directory_fd, os.fstat(fd))
+                leftover = lock if cleanup is not None and cleanup.errno != errno.ESTALE else None
+            finally:
+                os.close(fd)
+            return cleanup, leftover
     except OSError as error:
-        return error, None
-    blocked = None
-    try:
-        os.close(fd)
-    except OSError as error:
-        blocked = error
-    finally:
-        cleanup = remove_probe_lock(lock)
-    return cleanup or blocked, Path(lock).name if cleanup else None
+        return error, leftover
 
 
 def probe_directories(common: Path) -> list[Path]:
     """Where scaffold writes: the refs directory (a stub file under reftable) and the git directory itself."""
     heads = common / "refs" / "heads"
-    directories = [heads] if heads.is_dir() else []
+    directories = [heads] if heads.is_dir() or heads.is_symlink() else []
     directories.append(common)
     metadata = common / "worktrees"
-    if metadata.exists():
+    if metadata.exists() or metadata.is_symlink():
         directories.append(metadata)
     return directories
 
@@ -100,7 +141,7 @@ def run_git_write_probe_helper(entry: Any, request: Any) -> dict[str, Any]:
         common: Path | None = git_common_directory(Path.cwd())
     except ValueError:
         common = None
-    results = [create_and_remove_lock(directory) for directory in ([] if common is None else probe_directories(common))]
+    results = [] if common is None else [create_and_remove_lock(directory, common) for directory in probe_directories(common)]
     errors = [error for error, _ in results if error is not None]
     blocked = next((error for error in errors if error.errno in DENIED), next(iter(errors), None))
     verdict, message, item = probe_result(blocked, common is not None)
