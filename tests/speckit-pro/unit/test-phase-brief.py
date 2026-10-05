@@ -219,6 +219,16 @@ class PhaseBriefSliceTests(unittest.TestCase):
                 whole = sum(len(source.splitlines()) for source in sources)
                 self.assertLess(len(joined.splitlines()), whole // 8)
 
+    def test_both_hosts_insert_the_slices_verbatim(self):
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                skill = (host_skill_root(host) / "speckit-autopilot/SKILL.md").read_text()
+                loop = skill.split("## Step 2: Main Execution Loop", 1)[1]
+                self.assertIn("brief.slices", loop)
+                self.assertIn("verbatim", loop.split("brief.slices", 1)[1][:400])
+
+
+class PhaseBriefExecutorContractTests(unittest.TestCase):
     def test_no_executor_is_told_to_read_the_references_whole(self):
         sources = [(REPO / "speckit-pro/agents" / (name + ".md")) for name in SLICE_AGENTS]
         sources += [(REPO / "speckit-pro/codex-agents" / (name + ".toml")) for name in SLICE_AGENTS]
@@ -245,16 +255,12 @@ class PhaseBriefSliceTests(unittest.TestCase):
                     self.assertIn("skills/speckit-autopilot/references/execution-efficiency.md", reservation)
                     self.assertNotIn("Read", reservation)
 
-    def test_both_hosts_insert_the_slices_verbatim(self):
-        for host in ("claude", "codex"):
-            with self.subTest(host=host):
-                skill = (host_skill_root(host) / "speckit-autopilot/SKILL.md").read_text()
-                loop = skill.split("## Step 2: Main Execution Loop", 1)[1]
-                self.assertIn("brief.slices", loop)
-                self.assertIn("verbatim", loop.split("brief.slices", 1)[1][:400])
-                self.assertNotIn("`Reference dir:` lines (`references/consensus-protocol.md`)", loop)
+    def test_dispatch_omits_whole_reference_paths(self):
+        for runtime in ("claude", "codex"):
+            loop = (host_skill_root(runtime) / "speckit-autopilot/SKILL.md").read_text().split("## Step 2: Main Execution Loop", 1)[1]
+            self.assertNotIn("`Reference dir:` lines (`references/consensus-protocol.md`)", loop, runtime)
 
 
 if __name__ == "__main__":
-    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, PhaseBriefSliceTests))
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, PhaseBriefSliceTests, PhaseBriefExecutorContractTests))
     sys.exit(run_counted(suite, label="test-phase-brief"))
