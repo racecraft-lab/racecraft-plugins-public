@@ -27,20 +27,19 @@ VALID = {"schema_version": "1.0", "thresholds": {"complexity": 10, "crap": 30, "
 
 
 def function(file: str, name: str, complexity: int) -> dict[str, object]:
-    return {"file": file, "name": name, "complexity": complexity, "coverage": 0.5, "crap": 1.0}
+    return dict(file=file, name=name, complexity=complexity, coverage=0.5, crap=1.0)
 
 
-def request(mode: str, **inputs: object) -> dict[str, object]:
-    return {"schema_version": "1.0", "request_id": "test-quality-gates", "helper_id": "propose-quality-gates",
-            "operation": "propose-quality-gates", "mode": mode, "inputs": {"measured": True, **inputs}}
+def envelope(helper_id: str, mode: str, inputs: dict[str, object]) -> dict[str, object]:
+    return dict(schema_version="1.0", request_id=f"test-{helper_id}", helper_id=helper_id, operation=helper_id,
+                mode=mode, inputs=inputs)
 
 
 class QualityGatesProposalTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
-        self.specify = self.root / ".specify"
-        self.specify.mkdir()
-        self.tools = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
+        scratch = [self.enterContext(tempfile.TemporaryDirectory()) for _ in range(2)]
+        self.root, self.tools = (Path(name).resolve() for name in scratch)
+        (self.root / ".specify").mkdir()
 
     def write_report(self, functions: list[dict[str, object]]) -> None:
         (self.root / REPORT_FILE).write_text(json.dumps({"functions": functions}), encoding="utf-8")
@@ -51,10 +50,8 @@ class QualityGatesProposalTest(unittest.TestCase):
         return [*simple, function("src/legacy.py", "tangle", 40)]
 
     def run_helper(self, mode: str, **inputs: object) -> dict:
-        completed, response, _ = run_runner(request(mode, **inputs), cwd=self.root,
-                                            extra_env={"PATH": str(self.tools)})
-        self.assertIn(completed.returncode, (0, 1, 2, 3), completed.stderr)
-        return response
+        body = envelope("propose-quality-gates", mode, {"measured": True, **inputs})
+        return run_runner(body, cwd=self.root, extra_env={"PATH": str(self.tools)})[1]
 
     def listing(self) -> dict[str, bytes]:
         return {path.relative_to(self.root).as_posix(): path.read_bytes()
@@ -118,8 +115,7 @@ class QualityGatesProposalTest(unittest.TestCase):
             with self.subTest(confirmed=value):
                 response = self.run_helper("apply", confirmed=value)
                 assert_runner_response(self, response, "input_error", 2)
-        missing = run_runner({**request("apply"), "inputs": {"measured": True}}, cwd=self.root)[1]
-        assert_runner_response(self, missing, "input_error", 2)
+        assert_runner_response(self, self.run_helper("apply"), "input_error", 2)
         self.assertEqual(before, self.listing())
 
     def test_a_confirmed_file_is_never_overwritten_and_an_invalid_one_is_replaced_only_on_a_yes(self) -> None:
@@ -152,10 +148,8 @@ class QualityGatesProposalTest(unittest.TestCase):
 
     def test_the_readiness_record_carries_the_observed_quality_gates_source(self) -> None:
         def source() -> dict:
-            record = {"schema_version": "1.0", "request_id": "test-readiness", "helper_id": "write-readiness-record",
-                      "operation": "write-readiness-record", "mode": "dry_run",
-                      "inputs": {"host": "claude", "execution_mode": "interactive", "plugin_revision": "2.40.0",
-                                 "observations": []}}
+            record = envelope("write-readiness-record", "dry_run", {
+                "host": "claude", "execution_mode": "interactive", "plugin_revision": "2.40.0", "observations": []})
             _, response, _ = run_runner(record, cwd=self.root, extra_env={"PATH": str(self.tools)})
             return response["data"]["record"]["items"]["quality_gates"]
 

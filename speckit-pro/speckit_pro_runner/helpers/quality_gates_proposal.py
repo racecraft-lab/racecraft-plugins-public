@@ -20,21 +20,16 @@ from .. import quality_gates
 from ..atomic_write import write_bytes_atomic
 from ..envelope import diagnostic, response
 from ..strict_input import SelectionError
-from ..trusted_io import find_repo_root, trusted_bytes
+from ..trusted_io import find_repo_root, trusted_bytes, trusted_text
 
 REPORT_FILE = ".specify/quality-gates-report.json"
 INPUT_KEYS = frozenset({"measured", "confirmed"})
 MAX_FAILING_FILES = 20
 
 
-def read_text(root: Path, relative: str) -> str | None:
-    content = trusted_bytes(root / relative, root)
-    return None if content is None else content.decode("utf-8", "replace")
-
-
 def measured_report(root: Path, measured: bool) -> Any:
     """The scratch report's JSON, or an empty report when nothing was measured or it cannot be read."""
-    text = read_text(root, REPORT_FILE) if measured else None
+    text = trusted_text(root / REPORT_FILE, root) if measured else None
     try:
         return json.loads(text) if text is not None else {}
     except ValueError:
@@ -65,28 +60,21 @@ def propose(report: Any) -> dict[str, Any]:
     return proposal
 
 
-def run_quality_gates_proposal_helper(entry: Any, request: Any) -> dict[str, Any]:
-    root = find_repo_root(Path.cwd())
-    if root is None or not (root / ".specify").is_dir():
-        return response("missing_prerequisite", request_id=request.request_id, diagnostics=[diagnostic(
-            "missing_prerequisite", "the quality-gates proposal needs a SpecKit project with a .specify directory",
-            remediation_summary="Initialize SpecKit in this project, then rerun scaffold.",
-            remediation_actions=["Run the SpecKit install flow.", "Rerun scaffold."])])
+def input_problem(request: Any) -> str | None:
     inputs = request.inputs
-    confirmed = inputs.get("confirmed") if isinstance(inputs, dict) else None
-    problem = None
     if not isinstance(inputs, dict) or not inputs.keys() <= INPUT_KEYS or not isinstance(inputs.get("measured"), bool):
-        problem = f"inputs take {sorted(INPUT_KEYS)}; measured must be true or false"
-    elif request.mode == "apply" and not isinstance(confirmed, bool):
-        problem = "apply needs confirmed: true after a yes, false after a decline"
-    elif request.mode == "dry_run" and "confirmed" in inputs:
-        problem = "a dry run takes no confirmed answer"
-    if problem is not None:
-        return response("input_error", request_id=request.request_id, diagnostics=[diagnostic(
-            "invalid_input", problem, remediation_summary="Send the fields this helper takes.",
-            remediation_actions=["Correct the named field.", "Retry the request."])])
-    status, problems, _ = quality_gates.observe(read_text(root, quality_gates.FILE_PATH))
-    report = measured_report(root, inputs["measured"])
+        return f"inputs take {sorted(INPUT_KEYS)}; measured must be true or false"
+    if request.mode == "apply" and not isinstance(inputs.get("confirmed"), bool):
+        return "apply needs confirmed: true after a yes, false after a decline"
+    if request.mode == "dry_run" and "confirmed" in inputs:
+        return "a dry run takes no confirmed answer"
+    return None
+
+
+def describe(root: Path, entry: Any, request: Any) -> tuple[dict[str, Any], Any]:
+    """The observed file status, the proposal (None when a confirmed file stands) and the files it would fail."""
+    status, problems, _ = quality_gates.observe(trusted_text(root / quality_gates.FILE_PATH, root))
+    report = measured_report(root, request.inputs["measured"])
     proposal = None if status == "present" else propose(report)
     data: dict[str, Any] = {"helper_id": entry.helper_id, "operation": entry.operation, "mode": request.mode,
                             "writes_state": False, "file": quality_gates.FILE_PATH, "status": status,
@@ -96,13 +84,33 @@ def run_quality_gates_proposal_helper(entry: Any, request: Any) -> dict[str, Any
         data["failing_files"] = rows[:MAX_FAILING_FILES]
         data["failing_file_count"] = len(rows)
         data["failing_function_count"] = sum(len(row["functions"]) for row in rows)
+    return data, proposal
+
+
+def write_proposal(root: Path, proposal: dict[str, Any]) -> None:
+    write_bytes_atomic(root / quality_gates.FILE_PATH, (json.dumps(proposal, indent=2) + "\n").encode("utf-8"),
+                       trust_root=root, mode=0o644)
+
+
+def run_quality_gates_proposal_helper(entry: Any, request: Any) -> dict[str, Any]:
+    root = find_repo_root(Path.cwd())
+    if root is None or not (root / ".specify").is_dir():
+        return response("missing_prerequisite", request_id=request.request_id, diagnostics=[diagnostic(
+            "missing_prerequisite", "the quality-gates proposal needs a SpecKit project with a .specify directory",
+            remediation_summary="Initialize SpecKit in this project, then rerun scaffold.",
+            remediation_actions=["Run the SpecKit install flow.", "Rerun scaffold."])])
+    problem = input_problem(request)
+    if problem is not None:
+        return response("input_error", request_id=request.request_id, diagnostics=[diagnostic(
+            "invalid_input", problem, remediation_summary="Send the fields this helper takes.",
+            remediation_actions=["Correct the named field.", "Retry the request."])])
+    data, proposal = describe(root, entry, request)
     if request.mode != "apply":
         return response("ok", request_id=request.request_id, data=data)
     data["outcome"] = "already_present" if proposal is None else "declined"
-    if proposal is not None and confirmed:
+    if proposal is not None and request.inputs["confirmed"]:
         try:
-            write_bytes_atomic(root / quality_gates.FILE_PATH, (json.dumps(proposal, indent=2) + "\n").encode("utf-8"),
-                               trust_root=root, mode=0o644)
+            write_proposal(root, proposal)
         except (OSError, SelectionError) as error:
             return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diagnostic(
                 "write_failure", f"the quality-gates file could not be written: {getattr(error, 'strerror', None) or error}",
@@ -111,15 +119,19 @@ def run_quality_gates_proposal_helper(entry: Any, request: Any) -> dict[str, Any
                                      "Fix the .specify directory and rerun scaffold."])])
         data["outcome"] = "written"
         data["writes_state"] = True
-    consume_report(root)
+    data["report_removed"] = consume_report(root)
     return response("ok", request_id=request.request_id, data=data)
 
 
-def consume_report(root: Path) -> None:
-    """Remove the scratch report so a decline leaves nothing behind; a report that cannot be read safely stays."""
-    if trusted_bytes(root / REPORT_FILE, root) is not None:
-        try:
-            os.unlink(root / REPORT_FILE)
-        except OSError:
-            # The report is scratch; a leftover is ignored until the next scaffold measures again.
-            pass
+def consume_report(root: Path) -> bool:
+    """Remove the scratch report so a decline leaves nothing behind; True when it is gone.
+
+    A report that cannot be read safely (a link, an unreadable file) or removed stays, and the caller learns so.
+    """
+    if trusted_bytes(root / REPORT_FILE, root) is None:
+        return not os.path.lexists(root / REPORT_FILE)
+    try:
+        os.unlink(root / REPORT_FILE)
+    except OSError:
+        return False
+    return True
