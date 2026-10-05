@@ -22,6 +22,11 @@ def dispatch_brief(inputs, request_id=None):
                                            mode="read_only", request_id=request_id, inputs=inputs))
 
 
+REFERENCES = REPO / "speckit-pro/skills/speckit-autopilot/references"
+WHOLE_REFERENCES = ("capability-discovery.md", "grounding.md", "execution-efficiency.md", "consensus-protocol.md")
+SLICE_AGENTS = ("clarify-executor", "checklist-executor", "analyze-executor")
+
+
 class PhaseBriefTests(unittest.TestCase):
     def test_dispatch_input_names_the_action(self):
         cases = {"Specify": "Run the speckit-specify skill with:",
@@ -149,8 +154,36 @@ class PhaseBriefTests(unittest.TestCase):
                 self.assertEqual(brief["inputs"]["workflow_file"], "docs/workflow.md")
                 self.assertEqual(brief["inputs"]["feature_dir"], "specs/example")
                 self.assertEqual(brief["readable_files"], ["docs/workflow.md", ".specify/memory/constitution.md", ".specify/extensions.yml"] + ["specs/example/" + name for name in artifacts])
-                self.assertEqual([brief[key] for key in ("slices", "waves", "model", "hooks")], [[], [], None, []])
+                self.assertEqual([brief[key] for key in ("waves", "model", "hooks")], [[], None, []])
+                self.assertEqual(bool(brief["slices"]), agent in SLICE_AGENTS)
+
+
+class PhaseBriefSliceTests(unittest.TestCase):
+    def test_executor_briefs_carry_their_slices(self):
+        sources = [(REFERENCES / name).read_text() for name in WHOLE_REFERENCES]
+        for phase in ("Clarify", "Checklist", "Analyze"):
+            with self.subTest(phase=phase):
+                slices = dispatch_brief({"phase": phase, "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"})["data"]["slices"]
+                self.assertGreaterEqual(len(slices), 3)
+                for text in slices:
+                    self.assertIsInstance(text, str)
+                    self.assertTrue(any(text in source for source in sources), "slice is not a verbatim excerpt: " + text[:60])
+                    self.assertFalse(any(text.strip() == source.strip() for source in sources), "slice is a whole reference")
+                joined = "\n".join(slices)
+                for needle in ("## Research Broker Rule", "## G1", "### Category tags"):
+                    self.assertIn(needle, joined)
+                whole = sum(len(source.splitlines()) for source in sources)
+                self.assertLess(len(joined.splitlines()), whole // 10)
+
+    def test_both_hosts_insert_the_slices_verbatim(self):
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                skill = (host_skill_root(host) / "speckit-autopilot/SKILL.md").read_text()
+                loop = skill.split("## Step 2: Main Execution Loop", 1)[1]
+                self.assertIn("brief.slices", loop)
+                self.assertIn("verbatim", loop.split("brief.slices", 1)[1][:400])
 
 
 if __name__ == "__main__":
-    sys.exit(run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(PhaseBriefTests), label="test-phase-brief"))
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, PhaseBriefSliceTests))
+    sys.exit(run_counted(suite, label="test-phase-brief"))

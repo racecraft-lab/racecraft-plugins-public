@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import PureWindowsPath
+from pathlib import Path, PureWindowsPath
 from typing import Any
 from unicodedata import category
 
@@ -17,6 +17,15 @@ PHASES = {
     "Tasks": ("phase-executor", "G5", ("spec.md", "plan.md", "research.md", "data-model.md", "contracts/", "quickstart.md")),
     "Analyze": ("analyze-executor", "G6", ("spec.md", "plan.md", "tasks.md", "checklists/")),
 }
+REFERENCES = Path(__file__).resolve().parents[2] / "skills" / "speckit-autopilot" / "references"
+EXECUTOR_SLICES = (
+    ("capability-discovery.md", ("Capability Categories", "Research Broker Rule", "Selection Rule", "Capability Boundaries by Role",
+                                 "Fallback Rule", "Evidence Output")),
+    ("grounding.md", ("G1 \u2014 Ground every external claim", "G2 \u2014 Abstain when nothing grounds it",
+                      "G3 \u2014 Separate grounded fact from inference", "G4 \u2014 Cite in the evidence note")),
+    ("consensus-protocol.md", ("Category tags",)),
+)
+SLICE_PHASES = frozenset({"Clarify", "Checklist", "Analyze"})
 PROMPT_SECTIONS = {"Clarify": "Clarify Prompts", "Checklist": "Step 2: Run Enriched Checklist Prompts"}
 
 
@@ -31,6 +40,48 @@ def brief_path(value: Any, label: str) -> str:
     if label == "feature_dir" and path.anchor:
         raise ValueError("feature_dir must be relative to the workflow root")
     return text
+
+
+def reference_section(name: str, heading: str) -> str:
+    """Return one reference section verbatim: its heading line through the line before the next heading of equal or higher level."""
+    lines = (REFERENCES / name).read_text(encoding="utf-8").splitlines()
+    start: int | None = None
+    level = 0
+    fenced = False
+    for index, line in enumerate(lines):
+        if line.lstrip().startswith(("```", "~~~")):
+            fenced = not fenced
+        marks = len(line) - len(line.lstrip("#"))
+        if fenced or not 0 < marks <= 6 or not line[marks:].startswith(" "):
+            continue
+        if start is None:
+            if line[marks:].strip() == heading:
+                start, level = index, marks
+        elif marks <= level:
+            return "\n".join(lines[start:index]).rstrip()
+    if start is None:
+        raise ValueError(f"{name} has no section {heading!r}")
+    return "\n".join(lines[start:]).rstrip()
+
+
+def phase_slices(phase: str) -> list[str]:
+    """Reference excerpts the phase's executor needs, in a closed per-phase order."""
+    return [reference_section(name, heading) for name, headings in (EXECUTOR_SLICES if phase in SLICE_PHASES else ()) for heading in headings]
+
+
+def brief_data(phase: str, workflow: str, feature: str) -> dict[str, Any]:
+    """Assemble one validated phase's brief; raises when a packaged reference is unreadable."""
+    agent, gate, artifacts = PHASES[phase]
+    skill = None if phase == "Clarify" else f"speckit-{phase.lower()}"
+    instruction = f"Run the {skill} skill with:" if skill else "Prepare a Clarify Question Set for:"
+    return {
+        "schema_version": "phase-brief/v1", "phase": phase, "agent": agent,
+        "inputs": {"workflow_file": workflow, "feature_dir": feature,
+                   "prompt_section": PROMPT_SECTIONS.get(phase, phase + " Prompt"), "instruction": instruction,
+                   "skill": skill},
+        "readable_files": [workflow, ".specify/memory/constitution.md", ".specify/extensions.yml"] + [feature + "/" + name for name in artifacts],
+        "gate": gate, "slices": phase_slices(phase), "waves": [], "model": None, "hooks": [],
+    }
 
 
 def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
@@ -54,8 +105,11 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
         to the workflow root unless absolute; a trailing slash means contents.
         Loaded command instructions, templates and scripts remain implicit.
     gate: str, G1 through G6 for the parent's separate validate-gate request.
-    slices: list[str], ordered reference excerpts inserted verbatim into the
-        dispatch prompt; [] until #1182, never paths to whole references.
+    slices: list[str], ordered reference excerpts, each a section copied
+        verbatim from the plugin's own references, for the orchestrator to
+        insert into the dispatch prompt; never paths to whole references.
+        Clarify, Checklist and Analyze carry discovery, grounding and
+        category-tag sections; the other phases return [].
     waves: list[list[{agent: str, inputs: object, model: ModelSelection}]],
         ordered sequential waves;
         each inner list contains concurrent dispatches, with a host-neutral
@@ -84,14 +138,9 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     except ValueError as exc:
         return response("input_error", request_id=request.request_id,
                         diagnostics=[diagnostic("invalid_phase_brief", str(exc))])
-    agent, gate, artifacts = PHASES[phase]
-    skill = None if phase == "Clarify" else f"speckit-{phase.lower()}"
-    instruction = f"Run the {skill} skill with:" if skill else "Prepare a Clarify Question Set for:"
-    return response("ok", request_id=request.request_id, data={
-        "schema_version": "phase-brief/v1", "phase": phase, "agent": agent,
-        "inputs": {"workflow_file": workflow, "feature_dir": feature,
-                   "prompt_section": PROMPT_SECTIONS.get(phase, phase + " Prompt"), "instruction": instruction,
-                   "skill": skill},
-        "readable_files": [workflow, ".specify/memory/constitution.md", ".specify/extensions.yml"] + [feature + "/" + name for name in artifacts],
-        "gate": gate, "slices": [], "waves": [], "model": None, "hooks": [],
-    })
+    try:
+        data = brief_data(phase, workflow, feature)
+    except (OSError, ValueError) as exc:
+        return response("internal_failure", request_id=request.request_id,
+                        diagnostics=[diagnostic("phase_brief_slices_unavailable", str(exc))])
+    return response("ok", request_id=request.request_id, data=data)

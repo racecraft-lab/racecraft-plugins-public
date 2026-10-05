@@ -724,7 +724,8 @@ prefix each with `brief.inputs.instruction`. Pass `brief.inputs` and
 context lines: `Workflow root:`, the Specify branch prefix when
 `ON_FEATURE_BRANCH` is true, the consensus executors' `Protocol:` and
 `Reference dir:` lines (`references/consensus-protocol.md`), and the
-corrective reservation.
+corrective reservation. Insert each entry of `brief.slices` verbatim, in
+order, after those lines under a `Reference slices:` line.
 Run `validate-gate` with `brief.gate` afterward; the brief is not gate evidence.
 Clarify still runs only when G1 found `[NEEDS CLARIFICATION]` markers.
 Use the brief for phase dispatch facts instead of re-reading `phase-execution.md`
@@ -745,7 +746,7 @@ stable fields, shared by both hosts:
 | `inputs` | `workflow_file`, `feature_dir`, `instruction`, `skill` (the loaded command's skill name; null for Clarify), and `prompt_section` (including its session/domain prompts) |
 | `readable_files` | The paths the phase may read when present, including extension configuration; relative to the bound workflow root unless absolute; trailing slash includes directory contents |
 | `gate` | Gate id for the parent's `validate-gate` request |
-| `slices` | Empty list, reserved for reference slices (#1182) |
+| `slices` | Ordered reference sections copied verbatim for the dispatch prompt; empty for Specify, Plan and Tasks |
 | `waves` | Empty list, reserved for dispatch waves (#1183) |
 | `model` | Null; use the installed agent configuration until #1184 |
 | `hooks` | Empty list, reserved for optional hooks (#1188) |
@@ -769,7 +770,7 @@ for phase in PHASES starting from first_pending:
     3. For each workflow prompt in this phase:
          Planning:
          Agent(subagent_type: "speckit-pro:" + brief.agent, run_in_background: false,
-               prompt: <brief.inputs.instruction + workflow prompt + brief context>)
+               prompt: <brief.inputs.instruction + workflow prompt + brief context + brief.slices>)
          Implement: use the implementation executor and task-specific TDD prompt.
     4. Run consensus (Clarify/Checklist/Analyze only) — see Rule 6
     5. Run after_<phase> hooks
