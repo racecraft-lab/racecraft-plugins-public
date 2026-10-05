@@ -256,6 +256,16 @@ Send the `check-prerequisites` helper request (`workflow_file` empty) and read
 the `spec_kit` object in its output; it is the only source for whether the CLI is present. `status` is `missing`, `older`, `newer`,
 `unreadable` or `match`; `install_argv` is the pinned install.
 
+Use `spec_kit.cli_argv` as the executable prefix for every Spec Kit command
+below, including preset resolution, extension observations and initialization
+recommendations. Append the listed arguments and launch the resulting array
+with `shell=False`. The runner supplies the verified absolute path; preserve it
+even if PATH, the current directory or a discovery link changes.
+If `cli_argv` is empty, STOP before any Spec Kit command; offer the pinned
+install, then verify again. Re-run `check-prerequisites` after any CLI install
+or replacement and use the new `spec_kit` object for subsequent steps.
+A declined version repair permits continuation only with a nonempty `cli_argv`.
+
 If `status` is `missing` and `uv` exists, run `install_argv`. If `status` is
 `older`, `newer` or `unreadable`, keep the `spec_kit` object for the
 `project_integration` observation in Step 6.5 and offer the operator
@@ -263,7 +273,7 @@ If `status` is `missing` and `uv` exists, run `install_argv`. If `status` is
 
 If `uv` is unavailable or the install fails, STOP and give the operator
 `install_argv` to run. Do not continue with setup without the `specify`
-command. Do not run `specify init --here --force` automatically: project
+command. Do not run `spec_kit.cli_argv + ["init", "--here", "--force"]` automatically: project
 initialization and forced refreshes can overwrite managed files. Recommend it
 only when `.specify/` is absent and the operator explicitly approves project
 initialization.
@@ -743,9 +753,9 @@ All file operations happen in the worktree directory.
    prerequisite.
 
    Verify resolution from `<worktree_root>/` with
-   `specify preset resolve spec-template`,
-   `specify preset resolve plan-template`, and
-   `specify preset resolve tasks-template`. Each command should resolve to
+   `spec_kit.cli_argv + ["preset", "resolve", "spec-template"]`,
+   `spec_kit.cli_argv + ["preset", "resolve", "plan-template"]`, and
+   `spec_kit.cli_argv + ["preset", "resolve", "tasks-template"]`. Each command should resolve to
    `.specify/presets/speckit-pro-reviewability/` or to a project-specific
    higher-priority override that intentionally includes the reviewability
    sections.
@@ -970,7 +980,7 @@ you send for these.
 | `item` | Detail key | Observe it now by |
 | --- | --- | --- |
 | `codex_agents` | `agents`: `{"installation": {...}, "inventory": [{"agent": "<name>", "state": "current", "stale" or "missing", "repair": "none", "applied", "declined" or "failed"}], "expected_revision": "<plugin_revision>", "loaded_revision": "<version>"}` | reusing the `install-codex-agents` `mode="dry_run"` plan from step -0.5 for `inventory`, and its repair outcome in `repair`; copy the selected installation inputs into `installation` exactly as that request sent them, with no added keys; omit `loaded_revision` unless this session reports the revision it loaded, since a repaired agent loads only after a restart |
-| `extension_versions` | `extensions`: `{"extension": "<id>", "installed": "<version>" or null, "expected": "<version>" or null}` | reading each required extension's version from `specify extension list`; `expected` is its project pin or curated-set version, and a drifted or missing extension is flagged |
+| `extension_versions` | `extensions`: `{"extension": "<id>", "installed": "<version>" or null, "expected": "<version>" or null}` | reading each required extension's version from `spec_kit.cli_argv + ["extension", "list"]`; `expected` is its project pin or curated-set version, and a drifted or missing extension is flagged |
 
 Hook items, on both hosts:
 

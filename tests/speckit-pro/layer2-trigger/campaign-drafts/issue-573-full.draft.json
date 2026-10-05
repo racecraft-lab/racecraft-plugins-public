@@ -1540,7 +1540,7 @@
   },
   "identities": {
     "observer": "5a0080e060b27cb4430c48abbee443c3eab04b9d0b598eed879a38586c206fc7",
-    "catalog": "b8d52eb959e0de767deb4511cfefcd2dcd2702facd61b3998cedb1e6ce11be10",
+    "catalog": "ebd15d813583af3592a4076abd4bd14d81b7955dbc7464d3a8148c99a927f415",
     "fixture": "c094071e16a77dab28275236262066f77b78fd9ee7cdc3cbfbcb78147b36edfe"
   },
   "controlled_difference": {

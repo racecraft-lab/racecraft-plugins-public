@@ -307,6 +307,142 @@ class _ReadOnlyHelperRunner:
         return completed, response, planner
 
 
+class SpecKitExecutableReuseTests(unittest.TestCase):
+    operations = (
+        ["integration", "list"],
+        ["init", "--here", "--integration", "claude", "--script", "sh"],
+        ["init", "--here", "--integration", "codex", "--script", "sh"],
+        ["integration", "install", "claude", "--script", "sh"],
+        ["integration", "install", "codex", "--script", "sh"],
+        ["check"], ["self", "check"],
+        ["integration", "upgrade", "claude", "--script", "sh"],
+        ["integration", "upgrade", "codex", "--force", "--script", "sh"],
+        ["extension", "add", "fixture"], ["preset", "add", "fixture"],
+        ["preset", "resolve", "spec-template"],
+        ["preset", "resolve", "plan-template"],
+        ["preset", "resolve", "tasks-template"], ["extension", "list"],
+    )
+
+    def test_rejected_candidates_expose_no_launch_argv_at_any_command_site(self) -> None:
+        from speckit_pro_runner.helpers.read_only import spec_kit_cli_state
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            checkout = root / "checkout"
+            checkout.mkdir()
+            trusted = root / "trusted" / "specify"
+            trusted.parent.mkdir()
+            trusted.touch()
+            trusted.chmod(0o755)
+            local = checkout / "specify"
+            local.touch()
+            local.chmod(0o755)
+            windows = checkout / "specify.exe"
+            windows.touch()
+            windows.chmod(0o755)
+            outward = checkout / "outward" / "specify"
+            outward.parent.mkdir()
+            outward.symlink_to(trusted)
+            inward = root / "lookup" / "specify"
+            inward.parent.mkdir()
+            inward.symlink_to(local)
+            alias = root / "checkout-alias"
+            alias.symlink_to(checkout, target_is_directory=True)
+            cases = (
+                ("direct-checkout", local, local),
+                ("relative-current-directory", "specify", local),
+                ("windows-root-lookup", trusted, windows),
+                ("checkout-link-outward", outward, outward),
+                ("checkout-link-reselected-external", outward, trusted),
+                ("external-link-inward", inward, inward),
+                ("checkout-directory-link", alias / "specify", alias / "specify"),
+            )
+            for platform in ("linux", "win32"):
+                for variant, selected, lookup in cases:
+                    for operation in self.operations:
+                        with self.subTest(platform=platform, variant=variant, operation=operation), patch(
+                            "speckit_pro_runner.helpers.read_only.Path.cwd", return_value=checkout,
+                        ), patch("speckit_pro_runner.helpers.read_only.sys.platform", platform), patch(
+                            "speckit_pro_runner.helpers.read_only.shutil.which", return_value=str(lookup),
+                        ), patch("speckit_pro_runner.helpers.read_only.subprocess.run") as run:
+                            rows, state = spec_kit_cli_state(str(selected), checkout)
+                            self.assertEqual(state["status"], "missing")
+                            self.assertFalse(rows[0]["pass"])
+                            self.assertEqual(state.get("cli_argv"), [])
+                            run.assert_not_called()
+
+    def test_absolute_launch_survives_alias_link_and_rename_replacement(self) -> None:
+        from speckit_pro_runner.helpers.read_only import spec_kit_cli_state
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            checkout = root / "checkout"
+            checkout.mkdir()
+            trusted = root / "trusted" / "specify"
+            trusted.parent.mkdir()
+            trusted.write_text(
+                f"#!{sys.executable}\nimport json, sys\nprint(json.dumps(sys.argv[1:]))\n",
+                encoding="utf-8",
+            )
+            trusted.chmod(0o755)
+            hostile = checkout / "specify.exe"
+            hostile.write_text("rejected checkout executable\n", encoding="utf-8")
+            hostile.chmod(0o755)
+            alias = root / "lookup" / "specify"
+            alias.parent.mkdir()
+            for platform in ("linux", "win32"):
+                for replacement in ("link", "rename"):
+                    alias.unlink(missing_ok=True)
+                    alias.symlink_to(trusted)
+                    with patch("speckit_pro_runner.helpers.read_only.sys.platform", platform), patch(
+                        "speckit_pro_runner.helpers.read_only.Path.cwd", return_value=checkout,
+                    ), patch(
+                        "speckit_pro_runner.helpers.read_only.shutil.which",
+                        side_effect=lambda _name, *, path: str(trusted if path == str(trusted.parent) else alias),
+                    ), patch(
+                        "speckit_pro_runner.helpers.read_only.subprocess.run",
+                        return_value=SimpleNamespace(stdout="CLI Version    1.1.0", returncode=0),
+                    ):
+                        rows, state = spec_kit_cli_state(str(alias), checkout)
+                    self.assertTrue(rows[0]["pass"])
+                    self.assertEqual(state.get("cli_argv"), [str(trusted)])
+                    alias.unlink()
+                    if replacement == "link":
+                        alias.symlink_to(hostile)
+                    else:
+                        staged = alias.with_name("replacement")
+                        staged.write_bytes(hostile.read_bytes())
+                        staged.chmod(0o755)
+                        staged.replace(alias)
+                    for operation in self.operations:
+                        with self.subTest(platform=platform, replacement=replacement, operation=operation):
+                            result = subprocess.run(
+                                state["cli_argv"] + operation, cwd=checkout, shell=False,
+                                capture_output=True, text=True, check=True,
+                                env={**os.environ, "PATH": str(checkout)},
+                            )
+                            self.assertEqual(json.loads(result.stdout), operation)
+
+    def test_both_hosts_use_verified_argv_for_every_later_spec_kit_launch(self) -> None:
+        from speckit_pro_runner.host_skills import render_host_skills
+
+        plugin = Path(__file__).resolve().parents[3] / "speckit-pro"
+        with tempfile.TemporaryDirectory() as temporary:
+            for host in ("claude", "codex"):
+                destination = Path(temporary) / host
+                render_host_skills(plugin, host, destination)
+                for skill in ("speckit-install", "speckit-upgrade", "speckit-scaffold-spec"):
+                    with self.subTest(host=host, skill=skill):
+                        text = (destination / skill / "SKILL.md").read_text(encoding="utf-8")
+                        self.assertIn("spec_kit.cli_argv", text)
+                        self.assertIn("If `cli_argv` is empty, STOP", text)
+                        self.assertIn("Re-run `check-prerequisites` after", text)
+                        self.assertIn("every Spec Kit command", " ".join(text.split()))
+                        self.assertIn("shell=False", text)
+                        body = text[text.index("\n---", 4) + 4:]
+                        self.assertNotRegex(body, r"`specify\s")
+
+
 class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
     def test_validate_agent_install_rejects_invalid_surface_or_loaded_root(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-agent-install":
@@ -3345,6 +3481,9 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
                 with self.subTest(executable=executable, version=version), patch(
                     "speckit_pro_runner.helpers.read_only.find_specify", return_value=executable,
                 ), patch(
+                    "speckit_pro_runner.helpers.read_only.verified_specify_executable",
+                    return_value=Path(executable) if executable else None,
+                ), patch(
                     "speckit_pro_runner.helpers.read_only.installed_specify_version",
                     return_value=version,
                 ):
@@ -3377,6 +3516,9 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
         hostile = "9" * 5000 + "\x1b[31m"
         with patch(
             "speckit_pro_runner.helpers.read_only.installed_specify_version", return_value=hostile,
+        ), patch(
+            "speckit_pro_runner.helpers.read_only.verified_specify_executable",
+            return_value=Path.home() / ".local" / "bin" / "specify",
         ):
             rows, state = spec_kit_cli_state(str(Path.home() / ".local" / "bin" / "specify"))
         self.assertEqual(state["installed_version"], "unparsed")
@@ -3528,7 +3670,7 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
                     self.assertIsNone(installed_specify_version(str(selected)))
                     run.assert_not_called()
 
-    def test_spec_kit_cli_state_rejects_workspace_and_cwd_probes_without_blocking(self) -> None:
+    def test_spec_kit_cli_state_blocks_workspace_and_cwd_candidates(self) -> None:
         from speckit_pro_runner.helpers.read_only import spec_kit_cli_state
 
         with tempfile.TemporaryDirectory() as temporary:
@@ -3544,8 +3686,9 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
                     "speckit_pro_runner.helpers.read_only.shutil.which", return_value=str(binary),
                 ), patch("speckit_pro_runner.helpers.read_only.subprocess.run") as run:
                     rows, state = spec_kit_cli_state(str(binary), workspace)
-                    self.assertEqual(state["status"], "unreadable")
-                    self.assertTrue(all(row["pass"] for row in rows))
+                    self.assertEqual(state["status"], "missing")
+                    self.assertEqual(state["cli_argv"], [])
+                    self.assertFalse(rows[0]["pass"])
                     run.assert_not_called()
 
     def test_installed_specify_version_treats_decoding_failure_as_unreadable(self) -> None:
@@ -4880,6 +5023,8 @@ class G0SetupTests(unittest.TestCase):
                     before = self.fixture_files(root)
                     for probe in ("prerequisites", "commands", "presets"):
                         with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value=case["specify"]), \
+                                patch("speckit_pro_runner.helpers.read_only.verified_specify_executable",
+                                      return_value=Path("/fixture/bin/specify") if case["specify"] else None), \
                                 patch("speckit_pro_runner.helpers.read_only.installed_specify_version", return_value=None):
                             actual = g0_setup({"surface": surface, "probe": probe, "workflow_file": "workflow.md"}, root)
                         actual = json.loads(json.dumps(actual).replace(str(PLUGIN_ROOT), "<plugin-root>"))
@@ -4922,6 +5067,8 @@ class G0PinTests(unittest.TestCase):
                     G0SetupTests.prepare_fixture(root, None)
                     found = status != "missing"
                     with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value="specify" if found else None), \
+                            patch("speckit_pro_runner.helpers.read_only.verified_specify_executable",
+                                  return_value=Path("/fixture/bin/specify") if found else None), \
                             patch("speckit_pro_runner.helpers.read_only.installed_specify_version", return_value=version):
                         data = g0_setup({"surface": surface, "probe": "prerequisites", "workflow_file": "workflow.md"}, root)
                     result = data["result"]
@@ -5921,7 +6068,7 @@ def main() -> int:
     args = parser.parse_args()
     _ReadOnlyHelperRunner.helper_filter = args.helper
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                               for case in (ReadOnlyHelperTests, PlanLayersRepairRouteTests, PlanLayersPlannerCaseTests,
+                               for case in (SpecKitExecutableReuseTests, ReadOnlyHelperTests, PlanLayersRepairRouteTests, PlanLayersPlannerCaseTests,
                                             PacketTitlePatternTests, G0SetupTests, G0PinTests, G0SetupFailureTests, ScaffoldAnswersTests, CanaryReceiptTests,
                                             CanaryFeatureOfferTests, CanaryVariantAssertionsTests, CanaryVariantContractTests,
                                             CanaryGateVerdictTests, CanaryGuardGapContractTests,
