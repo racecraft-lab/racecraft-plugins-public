@@ -488,9 +488,133 @@ class FeasibilityTest(unittest.TestCase):
                 self.assertNotIn(questions["codex" if host == "claude" else "claude"], offer)
 
 
+AUTOPILOT_TEXTS = ("SKILL.md", "references/prerequisites.md", "references/formal-methods.md")
+# A setup question: autopilot stops, or tells the user, to install, restart or reload something.
+SETUP_QUESTIONS = (re.compile(r"(?i)\b(?:stop|tell|instruct)\b[^.]{0,160}?\b(?:install|restart|reload|plugin add)\b"),
+                   re.compile(r"(?i)\breinstall\b"))
+
+
+class G0ReadsReadinessTest(unittest.TestCase):
+    """G0 reads the record and continues; every stale item is one decisions-list note (ADR 0008)."""
+
+    record_path = ReadinessRecordTest.record_path
+    run_helper = ReadinessRecordTest.run_helper
+    all_verified = ReadinessRecordTest.all_verified
+
+    def setUp(self) -> None:
+        ReadinessRecordTest.setUp(self)
+        (self.root / "workflow.md").write_text("fixture\n", encoding="utf-8")
+        (self.root / ".specify" / "constitution.md").write_text("principles\n", encoding="utf-8")
+        manifest = REPO_ROOT / "speckit-pro" / "speckit_pro_runner" / "speckit-pro-runner.manifest.json"
+        self.revision = json.loads(manifest.read_text(encoding="utf-8"))["plugin_version"]
+
+    def write_record(self, observations: list[dict[str, object]], **inputs: object) -> None:
+        response = self.run_helper(observations, **{"plugin_revision": self.revision, **inputs})
+        assert_runner_response(self, response, "ok", 0)
+
+    def runner(self, helper_id: str, mode: str, inputs: dict[str, object]) -> dict:
+        _, response, _ = run_runner({"schema_version": "1.0", "request_id": "test-g0", "helper_id": helper_id,
+                                     "operation": helper_id, "mode": mode, "inputs": inputs}, cwd=self.root)
+        assert_runner_response(self, response, "ok", 0)
+        return response["data"]
+
+    def g0(self, host: str = "claude") -> dict:
+        before = {path: path.read_bytes() for path in self.root.rglob("*") if path.is_file()}
+        data = self.runner("g0-setup", "read_only", {"probe": "readiness", "surface": host, "workflow_file": "workflow.md"})
+        after = {path: path.read_bytes() for path in self.root.rglob("*") if path.is_file()}
+        self.assertEqual(before, after, "G0 never repairs or rewrites the record")
+        self.assertEqual("proceed", data["readiness"]["verdict"])
+        return data["readiness"]
+
+    def assert_logged_once(self, item: str, reason: str) -> None:
+        readiness = self.g0()
+        self.assertIn(item, [row["item"] for row in readiness["stale"]])
+        logged = [d for d in readiness["decisions"] if d["evidence"].startswith(f"readiness stale: {item}: ")]
+        self.assertEqual(1, len(logged), readiness)
+        self.assertEqual("readiness_stale", logged[0]["kind"])
+        self.assertIn(reason, logged[0]["evidence"])
+        self.runner("decisions-list", "apply", {"workflow_file": "workflow.md", "entries": readiness["decisions"]})
+        self.assertEqual([], self.g0()["decisions"], "a resume logs nothing twice")
+
+    def test_missing_and_malformed_records_supply_no_evidence_and_g0_continues(self) -> None:
+        self.assert_logged_once("record", "missing")
+        self.record_path().parent.mkdir()
+        self.record_path().write_text("{", encoding="utf-8")
+        self.assert_logged_once("record", "incompatible")
+
+    def test_record_for_another_worktree_is_incompatible(self) -> None:
+        self.write_record(self.all_verified())
+        record = json.loads(self.record_path().read_text(encoding="utf-8"))
+        record["binding"]["worktree"] = "sha256:" + "0" * 64
+        self.record_path().write_text(json.dumps(record), encoding="utf-8")
+        self.assert_logged_once("record", "another worktree")
+
+    def test_stale_plugin_revision_is_logged(self) -> None:
+        self.write_record(self.all_verified())
+        self.assertNotIn("plugin_payload", [row["item"] for row in self.g0()["stale"]])
+        self.write_record(self.all_verified(), plugin_revision="0.0.1")
+        self.assert_logged_once("plugin_payload", f"plugin revision changed from 0.0.1 to {self.revision}")
+
+    def test_unknown_item_is_logged_without_markup_or_local_paths(self) -> None:
+        observations = self.all_verified()
+        observations[1] = observation("project_integration", "unknown")
+        self.write_record(observations)
+        record = json.loads(self.record_path().read_text(encoding="utf-8"))
+        record["items"]["project_integration"]["evidence_source"] = f"<img src=x> [a](b) @org {HOME}/fixture/key"
+        self.record_path().write_text(json.dumps(record), encoding="utf-8")
+        text = json.dumps(self.g0())
+        for fragment in ("<img", "](", "@org", HOME):
+            self.assertNotIn(fragment, text)
+        self.assert_logged_once("project_integration", "unknown")
+
+    def test_changed_fingerprint_is_logged(self) -> None:
+        observations = self.all_verified()
+        observations[1] = observation("project_integration", files=[".specify/constitution.md"])
+        self.write_record(observations)
+        self.assertNotIn("project_integration", [row["item"] for row in self.g0()["stale"]])
+        (self.root / ".specify" / "constitution.md").write_text("changed\n", encoding="utf-8")
+        self.assert_logged_once("project_integration", "input changed: .specify/constitution.md")
+
+    def test_auth_connectivity_and_session_items_are_observed_fresh_not_trusted(self) -> None:
+        observations = self.all_verified()
+        observations[2] = observation("github_auth", "unavailable")
+        self.write_record(observations, host="codex")
+        readiness = self.g0("codex")
+        self.assertEqual(["github_auth", "mcp_servers", "typesafe_jev"], readiness["observe_fresh"])
+        self.assertNotIn("github_auth", [row["item"] for row in readiness["stale"]])
+
+    def test_autopilot_asks_no_setup_question_on_either_host(self) -> None:
+        for host in ("claude", "codex"):
+            view = host_skill_root(host) / "speckit-autopilot"
+            for name in AUTOPILOT_TEXTS:
+                text = (view / name).read_text(encoding="utf-8")
+                for pattern in SETUP_QUESTIONS:
+                    with self.subTest(host=host, file=name, pattern=pattern.pattern):
+                        self.assertIsNone(pattern.search(text))
+            prerequisites = (view / "references" / "prerequisites.md").read_text(encoding="utf-8")
+            with self.subTest(host=host):
+                self.assertIn('"inputs":{"probe":"readiness"', prerequisites)
+                self.assertIn("data.readiness.decisions", prerequisites)
+                self.assertIn("`readiness_stale`", prerequisites)
+
+    def test_g0_has_no_selected_formal_setup_stop(self) -> None:
+        for host in ("claude", "codex"):
+            view = host_skill_root(host) / "speckit-autopilot" / "references"
+            preflight = (view / "prerequisites.md").read_text(encoding="utf-8")
+            preflight = preflight.split("## Step 0.11", 1)[1].split("```", 1)[0]
+            selection = (view / "formal-methods.md").read_text(encoding="utf-8")
+            selection = selection.split("## Selection and preflight", 1)[1].split("\n## ", 1)[0]
+            setup_gap = selection.split("formal-doctor", 1)[1].split("\n\n", 1)[0]
+            for name, text in (("prerequisites", preflight), ("formal-methods", setup_gap)):
+                with self.subTest(host=host, text=name):
+                    self.assertNotRegex(text, r"(?i)\b(?:stop|stops|block|blocks)\b")
+                    self.assertIn("`readiness stale: formal_methods`", text)
+
+
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
-    return unittest.TestSuite([loader.loadTestsFromTestCase(case) for case in (ReadinessRecordTest, FeasibilityTest)])
+    cases = (ReadinessRecordTest, FeasibilityTest, G0ReadsReadinessTest)
+    return unittest.TestSuite([loader.loadTestsFromTestCase(case) for case in cases])
 
 
 def main() -> int:

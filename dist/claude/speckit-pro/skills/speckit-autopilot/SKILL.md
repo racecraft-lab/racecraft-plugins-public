@@ -384,10 +384,12 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
    retried once, then deferred the same way. Never silently treat a missing
    archive command as an absent extension.
 3. **Run the G0 setup seam** — call runner helper `g0-setup` in `read_only`
-   mode once per `inputs.probe`, in order: `prerequisites`, `commands`,
-   `presets`. Each call carries `inputs.workflow_file` and `inputs.surface`.
+   mode once per `inputs.probe`, in order: `readiness`, `prerequisites`,
+   `commands`, `presets`. Each call carries `inputs.workflow_file` and `inputs.surface`.
+   G0 reads the readiness record and continues: log each stale item per
+   `references/prerequisites.md` Step 0.0a, never a setup question.
    Set `G0_SURFACE` and `inputs.surface` to `claude`.
-   Read each unchanged probe report from `data.result.stdout_json`, its exit
+   Read each other unchanged probe report from `data.result.stdout_json`, its exit
    code from `data.result.exit_code`, and its error from `data.result.stderr`.
    Consume `data.quality_gate` only at Step 0.11, after the earlier setup work.
    Record `on_feature_branch`, `PROJECT_COMMANDS` (including the

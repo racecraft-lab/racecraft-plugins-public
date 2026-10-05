@@ -13,6 +13,7 @@ kept only as digests.
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
@@ -28,7 +29,7 @@ from ..envelope import diagnostic, response
 from ..atomic_write import write_bytes_atomic
 from ..canonical_json import canonical_bytes
 from ..private_state import ensure_private_directory
-from ..strict_input import SelectionError, require_text
+from ..strict_input import SelectionError, require_text, unique_object
 from ..sweep_isolation import secret_matches
 from ..trusted_io import find_repo_root, trusted_bytes
 from ..verification_docker import DAEMON_ARCHITECTURES, PLATFORM, PLATFORM_OS
@@ -41,6 +42,10 @@ NEEDS_ACTION = ("unavailable", "unknown")
 CALLER_ITEMS = ("plugin_payload", "project_integration", "github_auth", "mcp_servers", "typesafe_jev",
                 "reviewability_report", "formal_methods")
 RUNNER_ITEMS = ("local_capability", "quality_gates", "verification_docker")
+# Auth, connectivity and session: G0 observes these fresh at run start and never trusts a saved status.
+FRESH_ITEMS = ("github_auth", "mcp_servers", "typesafe_jev")
+MANIFEST = "speckit-pro-runner.manifest.json"
+UNSAFE_REASON = re.compile(r"[^A-Za-z0-9 _./,:;'=>()-]")
 RECORD_DIRECTORY = ".specify/readiness"
 INPUT_KEYS = frozenset({"host", "host_version", "execution_mode", "plugin_revision", "observations"})
 OBSERVATION_KEYS = frozenset({"item", "status", "evidence_source", "action", "files", "values"})
@@ -281,6 +286,82 @@ def write_record(root: Path, record: dict[str, Any]) -> str:
     write_bytes_atomic(directory / f"{record['host']}.json", canonical_bytes(record) + b"\n",
                        trust_root=root, mode=0o600)
     return f"{RECORD_DIRECTORY}/{record['host']}.json"
+
+
+def safe_reason(text: str) -> str:
+    """Record text as one line of plain words: no markup, links, mentions, local paths or credentials."""
+    text = " ".join(UNSAFE_REASON.sub("?", text).split())[:300]
+    if LOCAL_PATH_RE.search(text) or secret_matches(text):
+        return "detail withheld: it held a path or a credential"
+    return text or "no detail"
+
+
+def loaded_revision() -> str | None:
+    try:
+        return str(json.loads(Path(__file__).resolve().parents[1].joinpath(MANIFEST).read_bytes())["plugin_version"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def checked_items(record: Any, root: Path, host: str) -> dict[str, Any]:
+    """The record's items, or SelectionError when it cannot be this host's record for this worktree."""
+    if not isinstance(record, dict) or record.get("schema_version") != SCHEMA_VERSION or record.get("host") != host:
+        raise SelectionError(f"not a {SCHEMA_VERSION} record for {host}")
+    if record.get("binding") != {"worktree": digest(str(root))}:
+        raise SelectionError("the record is bound to another worktree")
+    items = record.get("items")
+    if not isinstance(items, dict) or not items.keys() <= {*CALLER_ITEMS, *RUNNER_ITEMS}:
+        raise SelectionError("the record holds unknown readiness items")
+    for item in items.values():
+        if not isinstance(item, dict) or item.get("status") not in STATUSES \
+                or not isinstance(item.get("evidence_source"), str) or not isinstance(item.get("fingerprints"), dict):
+            raise SelectionError("an item lacks a known status, its evidence or its fingerprints")
+    return items
+
+
+def changed_inputs(name: str, fingerprints: dict[str, Any], root: Path) -> list[str]:
+    """Each file input whose current fingerprint differs from the recorded one."""
+    changed = []
+    for key, recorded in fingerprints.items():
+        if key.startswith("file:"):
+            try:
+                same = fingerprint_files([key[5:]], root, name)[key] == recorded
+            except SelectionError:
+                same = False
+            if not same:
+                changed.append(key[5:])
+    return changed
+
+
+def stale_items(root: Path, host: str) -> list[tuple[str, str]]:
+    """Each readiness item G0 cannot rely on, with the reason. G0 only reads the record (ADR 0008).
+
+    A missing, unreadable or incompatible record supplies no verified evidence.
+    """
+    path = root / RECORD_DIRECTORY / f"{host}.json"
+    content = trusted_bytes(path, root)
+    if content is None:
+        return [("record", "unreadable" if os.path.lexists(path) else "missing")]
+    try:
+        record = json.loads(content, object_pairs_hook=unique_object)
+        items = checked_items(record, root, host)
+    except ValueError as error:
+        return [("record", safe_reason(f"incompatible: {error}"))]
+    stale = []
+    current = loaded_revision()
+    if record.get("plugin_revision") != current:
+        stale.append(("plugin_payload",
+                      f"plugin revision changed from {safe_reason(str(record.get('plugin_revision')))} to {current}"))
+    for name, item in items.items():
+        if name in FRESH_ITEMS:
+            continue
+        # Step 0.11's unratified-defaults decision already reports a missing or invalid quality-gates file.
+        if item["status"] in NEEDS_ACTION and name != "quality_gates":
+            stale.append((name, f"{item['status']}: {safe_reason(item['evidence_source'])}; "
+                                f"action: {safe_reason(str(item.get('action')))}"))
+        stale.extend((name, f"input changed: {safe_reason(changed)}")
+                     for changed in changed_inputs(name, item["fingerprints"], root))
+    return stale
 
 
 def run_readiness_record_helper(entry: Any, request: Any) -> dict[str, Any]:
