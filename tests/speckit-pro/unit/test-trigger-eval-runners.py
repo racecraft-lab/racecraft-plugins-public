@@ -842,24 +842,32 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
         self.assertTrue(all(call.args == (child.pid, 0) for call in killpg.call_args_list))
 
     @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
-    def test_claude_post_kill_permission_probe_requires_later_absence(self) -> None:
-        claude = import_script(CLAUDE_RUNNER, "layer2_claude_post_kill_probe")
-        for persistent in (False, True):
-            with self.subTest(persistent=persistent):
+    def test_claude_post_signal_permission_probe_requires_later_absence(self) -> None:
+        # macOS answers EPERM for a group whose last member died from a signal
+        # but is not yet reaped; only a later absence settles the cleanup.
+        claude = import_script(CLAUDE_RUNNER, "layer2_claude_post_signal_probe")
+        cases = (
+            (signal.SIGTERM, False, [signal.SIGTERM]),
+            (signal.SIGTERM, True, [signal.SIGTERM, signal.SIGKILL]),
+            (signal.SIGKILL, False, [signal.SIGTERM, signal.SIGKILL]),
+            (signal.SIGKILL, True, [signal.SIGTERM, signal.SIGKILL]),
+        )
+        for delivered, persistent, expected_signals in cases:
+            with self.subTest(signal=delivered.name, persistent=persistent):
                 child = FakePopen(b"", returncode=0)
                 sent = []
-                post_kill_probes = 0
+                settling_probes = 0
                 observations = []
 
                 def probe(pgid: int, signum: int) -> None:
-                    nonlocal post_kill_probes
+                    nonlocal settling_probes
                     self.assertEqual(pgid, child.pid)
                     if signum:
                         sent.append(signum)
-                    elif signal.SIGKILL in sent:
-                        post_kill_probes += 1
-                        if persistent or post_kill_probes == 1:
-                            raise PermissionError(1, "post-kill probe unresolved")
+                    elif delivered in sent:
+                        settling_probes += 1
+                        if persistent or settling_probes == 1:
+                            raise PermissionError(1, "post-signal probe unresolved")
                         raise ProcessLookupError(3, "group absent")
 
                 with (
@@ -871,20 +879,20 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     mock.patch.object(claude.time, "sleep"),
                 ):
                     if persistent:
-                        with self.assertRaisesRegex(OSError, "post-kill probe unresolved"):
+                        with self.assertRaisesRegex(OSError, "unresolved"):
                             claude.cleanup_child(child, observations=observations)
                     else:
                         self.assertTrue(claude.cleanup_child(child, observations=observations))
-                self.assertEqual(sent, [signal.SIGTERM, signal.SIGKILL])
-                self.assertGreaterEqual(post_kill_probes, 2)
+                self.assertEqual(sent, expected_signals)
+                self.assertGreaterEqual(settling_probes, 2)
                 self.assertEqual(observations[0]["errno"], 1)
                 self.assertEqual(observations[0]["pgid"], child.pid)
                 self.assertEqual(observations[-1]["errno"], 1 if persistent else 3)
 
     @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
-    def test_claude_only_post_successful_kill_eperm_may_settle(self) -> None:
+    def test_claude_only_post_successful_signal_eperm_may_settle(self) -> None:
         claude = import_script(CLAUDE_RUNNER, "layer2_claude_permission_boundaries")
-        for fault in ("initial", "term-send", "term-probe", "kill-send", "kill-absent", "post-kill-eacces"):
+        for fault in ("initial", "term-send", "kill-send", "kill-absent", "post-kill-eacces"):
             with self.subTest(fault=fault):
                 child = FakePopen(b"", returncode=0)
                 attempted = []
@@ -899,7 +907,6 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                             raise ProcessLookupError(3, "signal target absent")
                     elif (
                         (fault == "initial" and not attempted)
-                        or (fault == "term-probe" and attempted == [signal.SIGTERM])
                         or (fault in {"kill-absent", "post-kill-eacces"} and signal.SIGKILL in attempted)
                     ):
                         failed_probes.append(signum)
