@@ -176,7 +176,7 @@ class PhaseBriefModelTests(unittest.TestCase):
 
     def test_both_hosts_dispatch_the_briefed_model(self):
         needles = {"claude": ("model: brief.model.claude.model",),
-                   "codex": ("model=brief.model.codex.model", "reasoning_effort=brief.model.codex.effort")}
+                   "codex": ("model=brief.model.codex.model", "reasoning_effort=brief.model.codex.effort", 'fork_turns="none"')}
         for host, expected in needles.items():
             with self.subTest(host=host):
                 skill = (host_skill_root(host) / "speckit-autopilot/SKILL.md").read_text()
