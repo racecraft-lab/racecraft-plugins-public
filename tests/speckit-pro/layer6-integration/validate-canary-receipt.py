@@ -193,7 +193,16 @@ def receipt_report(value, budget=None, hook_counters=MISSING_HOOK_COUNTERS):
         problems.extend(result["gate_failed_assertions"])
         results.append(result)
         unbudgeted.extend(label for label, _, limit in checks if limit is None)
-    return {"valid": not problems, "failed_assertions": problems, "variants": results, "unbudgeted": unbudgeted}
+    return finalize_receipt_report(problems, results, unbudgeted)
+
+
+def finalize_receipt_report(problems, results, unbudgeted):
+    """One validity result governs the receipt and every target's success claim."""
+    valid = not problems
+    for result in results:
+        if "plan_target" in result:
+            result["plan_target"]["target_met"] = valid and result["plan_target"]["target_met"]
+    return {"valid": valid, "failed_assertions": problems, "variants": results, "unbudgeted": unbudgeted}
 
 
 def validate_receipt(value, budget=None, hook_counters=MISSING_HOOK_COUNTERS):
@@ -209,13 +218,12 @@ def stage_tokens(stage, host):
 
 
 def plan_target_report(variant, measured_tokens):
-    """ADR 0023's base-variant target is reported independently of the release budget."""
+    """Measure the base target; receipt_report finalizes success from full receipt validity."""
     if variant["name"] != "base":
         return None
     plan = variant["stages"]["plan"]
     measured = {"wall_seconds": plan["wall_seconds"], "tokens": measured_tokens}
-    met = (plan["tokens"] == measured_tokens
-           and all(measured[metric] <= limit for metric, limit in PLAN_TARGET_LIMITS.items()))
+    met = all(measured[metric] <= limit for metric, limit in PLAN_TARGET_LIMITS.items())
     return {**{f"{metric}_limit": limit for metric, limit in PLAN_TARGET_LIMITS.items()},
             **measured, "target_met": met}
 
