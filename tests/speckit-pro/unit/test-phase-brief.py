@@ -16,6 +16,12 @@ from test_result import run_counted  # noqa: E402
 from host_skill_views import host_skill_root  # noqa: E402
 
 
+def dispatch_brief(inputs, request_id=None):
+    """Exercise the public dispatch seam with a complete caller-owned input set."""
+    return dispatch_helper(SimpleNamespace(helper_id="phase-brief", operation="phase-brief",
+                                           mode="read_only", request_id=request_id, inputs=inputs))
+
+
 class PhaseBriefTests(unittest.TestCase):
     def test_dispatch_input_names_the_action(self):
         cases = {"Specify": "Run the speckit-specify skill with:",
@@ -26,10 +32,7 @@ class PhaseBriefTests(unittest.TestCase):
                  "Analyze": "Run the speckit-analyze skill with:"}
         for phase, instruction in cases.items():
             with self.subTest(phase=phase):
-                result = dispatch_helper(SimpleNamespace(
-                    helper_id="phase-brief", operation="phase-brief", mode="read_only", request_id=None,
-                    inputs={"phase": phase, "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"},
-                ))
+                result = dispatch_brief({"phase": phase, "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"})
                 self.assertEqual(result["data"]["inputs"].get("instruction"), instruction)
                 skill = None if phase == "Clarify" else "speckit-" + phase.lower()
                 self.assertEqual(result["data"]["inputs"].get("skill"), skill)
@@ -49,7 +52,7 @@ class PhaseBriefTests(unittest.TestCase):
                     self.assertEqual(done.returncode, 0, done.stderr + done.stdout)
                     reports.append(json.loads(done.stdout)["data"])
                 self.assertEqual(reports[0], reports[1])
-                self.assertEqual(reports[0], dispatch_helper(SimpleNamespace(**request, request_id=None))["data"])
+                self.assertEqual(reports[0], dispatch_brief(request["inputs"])["data"])
 
     def test_invalid_requests_return_no_dispatch_facts(self):
         valid = {"phase": "Plan", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
@@ -60,8 +63,7 @@ class PhaseBriefTests(unittest.TestCase):
         invalid += [{**valid, "model": "override"}]
         for inputs in invalid:
             with self.subTest(inputs=inputs):
-                result = dispatch_helper(SimpleNamespace(helper_id="phase-brief", operation="phase-brief",
-                                                        mode="read_only", request_id=None, inputs=inputs))
+                result = dispatch_brief(inputs)
                 self.assertEqual(result["status"], "input_error")
                 self.assertEqual(result["data"], {})
 
@@ -77,8 +79,7 @@ class PhaseBriefTests(unittest.TestCase):
                 cases.extend((key, value) for value in (control + valid[key], valid[key] + control, "docs/" + control + "example"))
         for key, value in cases:
             with self.subTest(key=key, value=value):
-                result = dispatch_helper(SimpleNamespace(helper_id="phase-brief", operation="phase-brief",
-                                                        mode="read_only", request_id="unsafe-path", inputs={**valid, key: value}))
+                result = dispatch_brief({**valid, key: value}, request_id="unsafe-path")
                 self.assertEqual(result["status"], "input_error")
                 self.assertEqual(result["data"], {})
                 self.assertEqual(result["request_id"], "unsafe-path")
@@ -87,10 +88,7 @@ class PhaseBriefTests(unittest.TestCase):
     def test_loaded_commands_can_read_extension_configuration(self):
         for phase in ("Specify", "Clarify", "Plan", "Checklist", "Tasks", "Analyze"):
             with self.subTest(phase=phase):
-                result = dispatch_helper(SimpleNamespace(
-                    helper_id="phase-brief", operation="phase-brief", mode="read_only", request_id=None,
-                    inputs={"phase": phase, "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"},
-                ))
+                result = dispatch_brief({"phase": phase, "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"})
                 self.assertIn(".specify/extensions.yml", result["data"]["readable_files"])
 
     def test_safe_path_text_is_preserved(self):
@@ -98,10 +96,7 @@ class PhaseBriefTests(unittest.TestCase):
                                   ("specs/version..two", "/workflow.md"),
                                   (r"specs\example", r"C:\docs\workflow.md")):
             with self.subTest(feature=feature, workflow=workflow):
-                result = dispatch_helper(SimpleNamespace(
-                    helper_id="phase-brief", operation="phase-brief", mode="read_only", request_id=None,
-                    inputs={"phase": "Plan", "workflow_file": workflow, "feature_dir": feature},
-                ))
+                result = dispatch_brief({"phase": "Plan", "workflow_file": workflow, "feature_dir": feature})
                 self.assertEqual(result["status"], "ok")
                 self.assertEqual(result["data"]["inputs"]["feature_dir"], feature.rstrip("/"))
                 self.assertEqual(result["data"]["inputs"]["workflow_file"], workflow)
@@ -110,10 +105,7 @@ class PhaseBriefTests(unittest.TestCase):
         template = (REPO / "speckit-pro/skills/speckit-coach/templates/workflow-template.md").read_text()
         for phase in ("Specify", "Clarify", "Plan", "Checklist", "Tasks", "Analyze"):
             with self.subTest(phase=phase):
-                result = dispatch_helper(SimpleNamespace(
-                    helper_id="phase-brief", operation="phase-brief", mode="read_only", request_id=None,
-                    inputs={"phase": phase, "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"},
-                ))
+                result = dispatch_brief({"phase": phase, "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"})
                 self.assertIn("\n### " + result["data"]["inputs"]["prompt_section"] + "\n", template)
 
     def test_both_hosts_dispatch_from_brief(self):
@@ -144,10 +136,7 @@ class PhaseBriefTests(unittest.TestCase):
         )
         for phase, agent, gate, artifacts in cases:
             with self.subTest(phase=phase):
-                result = dispatch_helper(SimpleNamespace(
-                    helper_id="phase-brief", operation="phase-brief", mode="read_only", request_id=None,
-                    inputs={"phase": phase, "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"},
-                ))
+                result = dispatch_brief({"phase": phase, "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"})
                 self.assertEqual(result["status"], "ok", result)
                 brief = result["data"]
                 self.assertEqual(set(brief), {"schema_version", "phase", "agent", "inputs", "readable_files",
