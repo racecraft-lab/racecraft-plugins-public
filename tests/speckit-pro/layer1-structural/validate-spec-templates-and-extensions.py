@@ -131,6 +131,11 @@ class ValidateOneClarifySession(unittest.TestCase):
         text = (AUTOPILOT_SKILL_DIR / 'references/gate-validation.md').read_text(encoding='utf-8')
         self.assert_absent(text, r'(?i)skip clarify')
 
+    def test_gate_auto_fix_does_not_dispatch_a_second_clarify_session(self) -> None:
+        text = (AUTOPILOT_SKILL_DIR / 'references/gate-validation.md').read_text(encoding='utf-8')
+        self.assertNotRegex(text, r'(?i)re-run clarify')
+        self.assertIn('without dispatching another clarify session', text.lower())
+
     def test_scaffold_seeds_one_clarify_session(self) -> None:
         text = SCAFFOLD_SKILL.read_text(encoding='utf-8')
         self.assert_absent(text, r'(?i)one focus per open\s+behavior area')
