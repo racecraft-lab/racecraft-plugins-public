@@ -46,7 +46,7 @@ def page_content(inputs: dict[str, Any], entry_id: str) -> bytes:
     regions = REGION.findall(content)
     if [name for name, _ in regions] != [name for name, _ in expected]:
         raise ValueError("content must fill exactly the template's declared slots")
-    if any(filled == sample for (_, filled), (_, sample) in zip(regions, expected)):
+    if any(filled == sample for (_, filled), (_, sample) in zip(regions, expected, strict=True)):
         raise ValueError("content leaves a template slot unfilled")
     if any(banner in content for banner in BANNERS):
         raise ValueError("content still carries a sample banner")
