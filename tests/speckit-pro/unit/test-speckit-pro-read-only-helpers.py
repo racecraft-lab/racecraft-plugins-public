@@ -401,6 +401,9 @@ class SpecKitExecutableReuseTests(unittest.TestCase):
                         rows, state = spec_kit_cli_state(str(alias), checkout)
                     self.assertTrue(rows[0]["pass"])
                     self.assertEqual(state.get("cli_argv"), [str(trusted)])
+                    # The attested launch is the interpreter itself, so launching it by its
+                    # static name keeps this test inside the repository Bash-confinement gate.
+                    self.assertTrue(Path(state["cli_argv"][0]).samefile(sys.executable))
                     alias.unlink()
                     if replacement == "link":
                         alias.symlink_to(hostile)
@@ -412,7 +415,7 @@ class SpecKitExecutableReuseTests(unittest.TestCase):
                     for operation in self.operations:
                         with self.subTest(platform=platform, replacement=replacement, operation=operation):
                             result = subprocess.run(
-                                state["cli_argv"] + ["-c", "import json, sys; print(json.dumps(sys.argv[1:]))"] + operation,
+                                [sys.executable, "-c", "import json, sys; print(json.dumps(sys.argv[1:]))", *operation],
                                 cwd=checkout, shell=False,
                                 capture_output=True, text=True, check=True,
                                 env={**os.environ, "PATH": str(checkout)},
@@ -3607,7 +3610,7 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
                 "speckit_pro_runner.helpers.read_only.sys.platform", "linux",
             ), patch(
                 "speckit_pro_runner.helpers.read_only.shutil.which",
-                side_effect=[None, str(alias), str(alias), str(attested)],
+                side_effect=[None, str(alias), str(alias), str(attested), str(attested)],
             ) as which, patch(
                 "speckit_pro_runner.helpers.read_only.trusted_executable",
                 side_effect=[attested, attested],
