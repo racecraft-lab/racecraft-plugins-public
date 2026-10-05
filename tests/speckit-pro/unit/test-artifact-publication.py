@@ -408,16 +408,19 @@ class PublicationRaceTests(PublicationFixture):
                                  [{"event": "cleanup", "anchored": True}])
 
     def test_cleanup_preserves_unreceipted_temporaries(self) -> None:
-        owned = self.root / ("artifacts/.implementation-plan.html.tmp-42-" + "a" * 32)
-        owned.write_text("interrupted temporary", encoding="utf-8")
-        foreign = self.root / "artifacts/.implementation-plan.html.tmp-foreign"
-        foreign.write_text("foreign temporary", encoding="utf-8")
-        result = self.publish(action="cleanup")
-        self.assertEqual(result["status"], "ok", result)
-        self.assertFalse(self.page.exists())
-        self.assertTrue(owned.exists())
-        self.assertTrue(foreign.exists())
-        self.assertEqual(result["data"]["removed_temporaries"], 0)
+        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            with self.subTest(plugin=plugin):
+                self.page.write_text("untouched original")
+                owned = self.root / ("artifacts/.implementation-plan.html.tmp-42-" + "a" * 32)
+                owned.write_text("interrupted temporary")
+                foreign = self.root / "artifacts/.implementation-plan.html.tmp-foreign"
+                foreign.write_text("foreign temporary")
+                result = self.publish(plugin=plugin, action="cleanup")
+                self.assertEqual(result["status"], "ok", result)
+                self.assertFalse(self.page.exists())
+                self.assertTrue(owned.exists())
+                self.assertTrue(foreign.exists())
+                self.assertEqual(result["data"]["removed_temporaries"], 0)
 
 
 class PublicationInputTests(PublicationFixture):
@@ -526,21 +529,27 @@ class PublicationInputTests(PublicationFixture):
                                  [{"event": "post-replace-failure", "anchored": True}])
 
     def test_cleanup_with_wrong_digest_preserves_page_and_temporaries(self) -> None:
-        temporary = self.page.parent / (".implementation-plan.html.tmp-42-" + "a" * 32)
-        temporary.write_text("interrupted")
-        result = self.publish(action="cleanup", expected_sha256="0" * 64)
-        self.assertEqual(result["status"], "expected_failure", result)
-        self.assertEqual(self.page.read_text(), "untouched original")
-        self.assertTrue(temporary.exists())
+        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            with self.subTest(plugin=plugin):
+                temporary = self.page.parent / (".implementation-plan.html.tmp-42-" + "a" * 32)
+                temporary.write_text("interrupted")
+                result = self.publish(plugin=plugin, action="cleanup", expected_sha256="0" * 64)
+                self.assertEqual(result["status"], "expected_failure", result)
+                self.assertEqual(self.page.read_text(), "untouched original")
+                self.assertTrue(temporary.exists())
 
     def test_symlink_and_fifo_final_paths_fail_closed(self) -> None:
-        self.page.unlink()
-        self.page.symlink_to(self.root / "outside/implementation-plan.html")
-        self.assertNotEqual(self.publish()["status"], "ok")
-        self.page.unlink()
-        os.mkfifo(self.page)
-        self.assertNotEqual(self.publish()["status"], "ok")
-        self.assertEqual((self.root / "outside/implementation-plan.html").read_text(), "outside sentinel")
+        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            with self.subTest(plugin=plugin):
+                self.page.unlink()
+                self.page.symlink_to(self.root / "outside/implementation-plan.html")
+                self.assertNotEqual(self.publish(plugin=plugin)["status"], "ok")
+                self.page.unlink()
+                os.mkfifo(self.page)
+                self.assertNotEqual(self.publish(plugin=plugin)["status"], "ok")
+                self.page.unlink()
+                self.page.write_text("untouched original")
+                self.assertEqual((self.root / "outside/implementation-plan.html").read_text(), "outside sentinel")
 
     def test_missing_artifact_directory_is_created_by_runner(self) -> None:
         for child in self.page.parent.iterdir():
