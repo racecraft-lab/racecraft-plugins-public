@@ -1033,6 +1033,32 @@ per item:
 | `reviewability_report` | reusing the setup gate result, with its report or roadmap path in `files` and SPEC-ID as `values.spec_id` |
 | `formal_methods` | judging whether the Design Concept's design suits a formal model, by the [coach's formal-methods guide](../speckit-coach/references/formal-methods-guide.md): `verified` when it suits one, `not_applicable` when it does not; cite the deciding behavior as `evidence_source` |
 
+<!-- host:claude: Claude Code observes its own permission, plugin scope and MCP approval state -->
+Claude Code items. Send only the raw observation (`item`, `evidence_source`, and
+the detail key); the helper derives `status` and `action`, and rejects a
+`status` you send for these.
+
+| `item` | Detail key | Observe it now by |
+| --- | --- | --- |
+| `permission_probe` | `probes`: `{"probe": "runner_request" or "git_status", "outcome": "passed", "denied" or "prompted", "command": "<interpreter>"}` | running the no-op runner request and one `git status --porcelain` exactly as autopilot's run-start probe does; add `command` (the interpreter as the request wrote it) to a failed runner probe |
+| `plugin_scope` | `scope`: `{"scope": "user", "project" or "local", "loaded_version": "<version>", "expected_version": "<version>"}` | reading this worktree's effective scope and loaded `speckit-pro` version with `claude plugin list`; `expected_version` is the `plugin_revision`; omit `loaded_version` when unobservable, so a worktree pinned to an old cache version is caught |
+| `mcp_authentication` | `servers`: `{"server": "<name>", "state": "connected", "needs_authentication", "pending_approval", "failed", "rejected", "disabled" or "unknown"}` | reading each required server's state in `/mcp` or `claude mcp list` |
+
+When the response lists `allow_rules`, print them once as `permissions.allow`
+entries for `.claude/settings.local.json` or the user settings. Never add a
+rule yourself.
+<!-- /host -->
+<!-- host:codex: Codex records the Claude-only items itself and reports its own hook trust -->
+The helper records `permission_probe`, `plugin_scope` and `mcp_authentication`
+as `not_applicable` on Codex (Claude Code only). Do not send them.
+<!-- /host -->
+
+Hook items, on both hosts:
+
+| `item` | Detail key | Observe it now by |
+| --- | --- | --- |
+| `hooks` | `hooks`: `{"hook": "<event name>", "defined": true or false, "trust": "trusted", "untrusted" or "unobservable"}` | listing each hook this plugin requires in `/hooks`; hook discovery alone does not prove it runs, so send `unobservable` when trust cannot be read |
+
 - Record `verified` for a check that passed in this run. Record `unavailable`
   for a failed check or a declined fix, `unknown` for what this session cannot
   observe, and `not_applicable` for a capability this workflow does not need.
