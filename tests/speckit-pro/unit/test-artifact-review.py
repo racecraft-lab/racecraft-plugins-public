@@ -155,9 +155,7 @@ class ArtifactReviewTests(unittest.TestCase):
 
     def test_a_surface_outside_the_closed_set_is_rejected(self) -> None:
         for surface in ("headless", "", "Available"):
-            with self.subTest(surface=surface):
-                with self.assertRaisesRegex(ValueError, "preview_surface must be one of"):
-                    self.review(preview_surface=surface)
+            self.assertRaisesRegex(ValueError, "preview_surface must be one of", self.review, preview_surface=surface)
 
     def test_the_stage_helper_reads_the_surface_from_the_readiness_record(self) -> None:
         def stage(host: str | None) -> dict:
