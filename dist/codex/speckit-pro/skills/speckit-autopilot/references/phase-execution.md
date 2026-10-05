@@ -1777,6 +1777,31 @@ The Phase 6.5 [Autonomy Boundary Preflight](#autonomy-boundary-preflight)
 collects its egress authorization at run start through
 `check-gate-preflight-coverage`.
 
+#### Phase 7 Setup: Project Baseline
+
+The project baseline (typecheck, test, build, lint) runs here, once, before the
+first task is dispatched. Plan-stage G0 runs none of it.
+
+1. A Prerequisites table that already records the baseline stays as recorded,
+   so resume never recomputes it. A count that later differs is a non-blocking
+   drift diagnostic naming both numbers.
+2. Call runner helper `g0-setup` with `inputs.probe` set to `commands`, as
+   Step 0.11 does. Read `data.baseline.implement_entry`: one `{slot, command}`
+   row per detected slot, in run order. A slot with no command has no row.
+3. Run each row's `command` in order. Record each pass or fail in the
+   workflow file's Prerequisites table, with the test count for the
+   `UNIT_TEST` and `INTEGRATION_TEST` rows. The count is a diagnostic, not a
+   test-growth requirement (see
+   [Gate Validation §G7](./gate-validation.md#g7--after-implement)).
+4. If a check fails, route the failing check to the implement-executor, which
+   repairs it (a red baseline included); run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
+   A deferral records that gate blocked-for-UAT with the check's output as its
+   evidence (ADR 0012); the gate never passes. The first task is dispatched once
+   each check passes or its failure is deferred with its evidence, and tasks
+   that do not depend on a deferred gate continue. When the retry ladder
+   replaces the allowance loop (ADR 0004), the failing check climbs the ladder
+   and blocked-for-UAT follows its third failure.
+
 #### Phase 7 Setup: The Pull-Request Feedback Sweep
 
 Run the sweep **first**, ahead of the implementation-notes record. Reviewer feedback left on the draft pull

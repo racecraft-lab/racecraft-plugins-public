@@ -244,9 +244,7 @@ it does NOT invoke a `/speckit-*` command.
 
 1. Read `.specify/memory/constitution.md` — extract all
    numbered principles
-2. Run automated checks using PROJECT_COMMANDS from Step
-   0.11 (BUILD, TYPECHECK, LINT, UNIT_TEST, INTEGRATION_TEST),
-   then record the G0 baseline for every populated quality-gate
+2. Record the G0 baseline for every populated quality-gate
    slot per the Step 0.11 rule: `COMPLEXITY` on the whole
    tracked source tree (a measurement; only exit 2 blocks),
    `MUTATION` as `deferred`, `DEPENDENCY_RULES` as a real
@@ -254,15 +252,19 @@ it does NOT invoke a `/speckit-*` command.
    when opted in
 3. Verify structural patterns documented in CLAUDE.md
    (e.g., source code organization, module boundaries)
-4. Record baselines in the workflow file's Prerequisites
+4. Record the results in the workflow file's Prerequisites
    table
 5. Set the "Constitution Check" summary line
 
+Plan-stage G0 runs no typecheck, test, build, or lint command. The project
+baseline for those four runs at implement entry (see
+[Phase 7 Setup: Project Baseline](#phase-7-setup-project-baseline)).
+
 **Gate:** G0 — `quality_gates.status` from Step 0.11 must be
-`present`, all automated checks must pass, `DEPENDENCY_RULES`
-must pass, and no blocking slot may exit 2. A `COMPLEXITY` baseline over
-the ceiling is recorded, not a block. If any fail, route the failing gate to the implement-executor, which repairs
-it (a red baseline included); run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
+`present`, `DEPENDENCY_RULES` must pass, and no blocking slot may
+exit 2. A `COMPLEXITY` baseline over the ceiling is recorded, not a
+block. If any fail, route the failing gate to the implement-executor, which repairs
+it; run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
 A missing or invalid `.specify/quality-gates.json` stops with the Step 0.11
 message naming the file and the coach flow.
 
@@ -1563,6 +1565,31 @@ no egress inventory. Its Step -2 run-start permission probe settles the runner
 and `git status` prompts before any phase work. The command then runs under the
 session's permission settings, and a denial the probe could not know is a blocked
 action (below).
+
+#### Phase 7 Setup: Project Baseline
+
+The project baseline (typecheck, test, build, lint) runs here, once, before the
+first task is dispatched. Plan-stage G0 runs none of it.
+
+1. A Prerequisites table that already records the baseline stays as recorded,
+   so resume never recomputes it. A count that later differs is a non-blocking
+   drift diagnostic naming both numbers.
+2. Call runner helper `g0-setup` with `inputs.probe` set to `commands`, as
+   Step 0.11 does. Read `data.baseline.implement_entry`: one `{slot, command}`
+   row per detected slot, in run order. A slot with no command has no row.
+3. Run each row's `command` in order. Record each pass or fail in the
+   workflow file's Prerequisites table, with the test count for the
+   `UNIT_TEST` and `INTEGRATION_TEST` rows. The count is a diagnostic, not a
+   test-growth requirement (see
+   [Gate Validation §G7](./gate-validation.md#g7--after-implement)).
+4. If a check fails, route the failing check to the implement-executor, which
+   repairs it (a red baseline included); run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
+   A deferral records that gate blocked-for-UAT with the check's output as its
+   evidence (ADR 0012); the gate never passes. The first task is dispatched once
+   each check passes or its failure is deferred with its evidence, and tasks
+   that do not depend on a deferred gate continue. When the retry ladder
+   replaces the allowance loop (ADR 0004), the failing check climbs the ladder
+   and blocked-for-UAT follows its third failure.
 
 #### Phase 7 Setup: The Pull-Request Feedback Sweep
 

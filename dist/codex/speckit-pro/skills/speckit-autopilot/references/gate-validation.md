@@ -21,15 +21,10 @@ gate never becomes a pass.
 **Check:** Constitution principles validated against the current codebase.
 
 ```
-1. TYPECHECK command → must pass (0 errors)
-2. UNIT_TEST + INTEGRATION_TEST commands → must pass (record count as baseline)
-3. BUILD command → must pass
-4. LINT command → must pass
-(use PROJECT_COMMANDS discovered in Step 0.11)
-5. Architecture patterns verified (e.g., patterns documented in CLAUDE.md)
-6. Workflow file's Prerequisites table filled with baselines
-7. Constitution Check summary line set to "✅ Verified"
-8. Reviewability setup gate passes:
+1. Architecture patterns verified (e.g., patterns documented in CLAUDE.md)
+2. Workflow file's Prerequisites table filled with the quality-gate baselines
+3. Constitution Check summary line set to "✅ Verified"
+4. Reviewability setup gate passes:
    `runner helper reviewability-gate setup <workflow-or-roadmap>`
    must be `pass`, `warn`, or a recorded `exception`; `block` stops before
    Specify and requires spec decomposition.
@@ -41,7 +36,10 @@ gate never becomes a pass.
    missing budget number is a `block` that no pragma excuses.
 ```
 
-**Auto-Fix:** Spawn a repair agent for the failing typecheck/test/build check within the gate's allowance. These are foundational health checks.
+The typecheck, test, build, and lint baseline is not part of G0. It runs at
+implement entry (phase-execution.md, Phase 7 Setup: Project Baseline).
+
+**Auto-Fix:** Spawn a repair agent for the failing check within the gate's allowance.
 
 **Failure Escalation:** If a check still fails, run the repair loop within its allowance, then defer per the Failure Escalation Protocol. Record which checks failed with their output.
 
@@ -526,7 +524,7 @@ and no placeholder tests exist.
 (use PROJECT_COMMANDS discovered in Step 0.11)
 6. Verify the requirement-to-test mapping names real integration coverage:
    inspect existing or new test files and assertions, not spec-ID filenames
-7. Verify requirement-linked behavioral coverage; preserve G0 count as diagnostic,
+7. Verify requirement-linked behavioral coverage; preserve the baseline count recorded at implement entry as diagnostic,
    not a test-count growth requirement
 8. Verify NO placeholder tests in new files:
    Search for placeholder test markers

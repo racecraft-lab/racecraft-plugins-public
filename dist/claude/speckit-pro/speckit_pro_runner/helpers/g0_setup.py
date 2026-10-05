@@ -1,4 +1,4 @@
-"""G0's existing setup probes and quality-gates stop, without setup writes."""
+"""G0's setup probes, quality-gates stop, and the project baseline plan, without setup writes."""
 
 from __future__ import annotations
 
@@ -13,11 +13,22 @@ from .read_only import (
     EXIT_STATUS, check_prerequisites, detect_commands, detect_presets, helper_failure_diagnostic, output_capture,
 )
 
+# The project baseline runs at implement entry, never at plan-stage G0. The helper
+# only plans it: it runs no project command and records nothing.
+BASELINE_SLOTS = ("TYPECHECK", "UNIT_TEST", "INTEGRATION_TEST", "BUILD", "LINT")
+
 PROBES = {
     "prerequisites": ("check-prerequisites", check_prerequisites),
     "commands": ("detect-commands", detect_commands),
     "presets": ("detect-presets", detect_presets),
 }
+
+
+def baseline_plan(commands: dict[str, str]) -> dict[str, Any]:
+    """Plan-stage G0 runs no project command; implement entry runs each detected baseline slot, in order."""
+    return {"plan_stage": [], "implement_entry": [
+        {"slot": slot, "command": commands[slot]} for slot in BASELINE_SLOTS if commands.get(slot, "N/A") != "N/A"
+    ]}
 
 
 def g0_setup(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
@@ -48,6 +59,7 @@ def g0_setup(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
                 f"Run `{sigil}speckit-pro:speckit-coach quality gates` to create it. Agents never edit this file."
             )}
         data["quality_gate"] = gate
+        data["baseline"] = baseline_plan(result["stdout_json"]["commands"])
     return data
 
 
