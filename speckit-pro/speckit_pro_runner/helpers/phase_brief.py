@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path, PureWindowsPath
 from typing import Any
 from unicodedata import category
@@ -19,11 +20,11 @@ PHASES = {
 }
 REFERENCES = Path(__file__).resolve().parents[2] / "skills" / "speckit-autopilot" / "references"
 EXECUTOR_SLICES = (
-    ("capability-discovery.md", ("Capability Categories", "Research Broker Rule", "Selection Rule", "Capability Boundaries by Role",
-                                 "Fallback Rule", "Evidence Output")),
+    ("capability-discovery.md", ("Capability Categories", "Discovery Step", "Research Broker Rule", "Selection Rule", "Capability Boundaries by Role",
+                                 "Fallback Rule", "Evidence Output", "Inventory Disclosure")),
     ("grounding.md", ("G1 \u2014 Ground every external claim", "G2 \u2014 Abstain when nothing grounds it",
                       "G3 \u2014 Separate grounded fact from inference", "G4 \u2014 Cite in the evidence note")),
-    ("consensus-protocol.md", ("Category tags",)),
+    ("consensus-protocol.md", ("Category tags", "Security Keywords")),
 )
 SLICE_PHASES = frozenset({"Clarify", "Checklist", "Analyze"})
 PROMPT_SECTIONS = {"Clarify": "Clarify Prompts", "Checklist": "Step 2: Run Enriched Checklist Prompts"}
@@ -44,23 +45,40 @@ def brief_path(value: Any, label: str) -> str:
 
 def reference_section(name: str, heading: str) -> str:
     """Return one reference section verbatim: its heading line through the line before the next heading of equal or higher level."""
-    lines = (REFERENCES / name).read_text(encoding="utf-8").splitlines()
+    try:
+        lines = (REFERENCES / name).read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeError) as exc:
+        raise ValueError(f"references/{name}: cannot read section {heading!r}") from exc
     start: int | None = None
     level = 0
-    fenced = False
+    fence = ""
     for index, line in enumerate(lines):
-        if line.lstrip().startswith(("```", "~~~")):
-            fenced = not fenced
-        marks = len(line) - len(line.lstrip("#"))
-        if fenced or not 0 < marks <= 6 or not line[marks:].startswith(" "):
+        # CommonMark 0.31.2, sections 4.2 and 4.5. Nested fence-like lines
+        # are content unless they close the active delimiter and run length.
+        marker = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", line)
+        if fence:
+            if marker and marker[1][0] == fence[0] and len(marker[1]) >= len(fence) and not marker[2].strip(" \t"):
+                fence = ""
             continue
+        if marker and (marker[1][0] == "~" or "`" not in marker[2]):
+            fence = marker[1]
+            continue
+        title = re.match(r"^ {0,3}(#{1,6})(?:[ \t]+(.*)|$)", line)
+        if title is None:
+            continue
+        marks = len(title[1])
+        text = re.sub(r"[ \t]+#+[ \t]*$", "", title[2] or "").strip(" \t")
         if start is None:
-            if line[marks:].strip() == heading:
+            if text == heading:
                 start, level = index, marks
         elif marks <= level:
             return "\n".join(lines[start:index]).rstrip()
+    # CommonMark consumes to EOF for an unclosed fence. A packaged reference
+    # must instead fail closed rather than dispatch an ambiguous section tail.
+    if fence:
+        raise ValueError(f"references/{name}: unclosed fence in section {heading!r}")
     if start is None:
-        raise ValueError(f"{name} has no section {heading!r}")
+        raise ValueError(f"references/{name} has no section {heading!r}")
     return "\n".join(lines[start:]).rstrip()
 
 
