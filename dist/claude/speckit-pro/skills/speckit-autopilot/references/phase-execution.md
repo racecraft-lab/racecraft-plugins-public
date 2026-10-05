@@ -222,10 +222,10 @@ Three resume forms, in order of preference:
 Each phase follows the same pattern: read prompt → spawn
 subagent → receive summary → validate gate → advance.
 
-### Progress Task List
+### Progress Plan
 
-Before executing phases, create a **granular** task list
-(visible in the CLI, survives context compaction):
+Before executing phases, persist a **granular** plan in `autopilot-state.json`
+and print its summary:
 
 - One task per single-prompt phase (Specify, Plan, Tasks,
   Analyze, Implement)
@@ -272,7 +272,7 @@ project diagnostic (structure, agents, features, scripts,
 extensions, git). Log the report in the workflow file.
 
 ```text
-TaskUpdate: "Phase 0: Doctor Health Check" → in_progress
+autopilot-state.json: "Phase 0: Doctor Health Check" → in_progress
 Agent(
   subagent_type: "general-purpose",
   description: "SPEC-XXX doctor health check",
@@ -280,7 +280,7 @@ Agent(
   prompt: "Run /speckit.speckit-utils.doctor for this project.
     Return the diagnostic report summary."
 )
-TaskUpdate: → completed
+autopilot-state.json: → completed
 ```
 
 ⚠️ Use Agent() subagent, NOT Skill() directly — Skill() loads
@@ -339,7 +339,7 @@ questions and applies accepted edits in the main session.
 
 ```text
 For each clarify session in the workflow file:
-  1. TaskUpdate: session task → in_progress
+  1. autopilot-state.json: session task → in_progress
   2. Agent(subagent_type: "speckit-pro:clarify-executor",
           run_in_background: false,
           prompt: """
@@ -355,7 +355,7 @@ For each clarify session in the workflow file:
      remaining count in the session result
   5. Parse executor's "Unresolved for consensus" section
   6. If unresolved items exist:
-     a. TaskUpdate: "<session> Consensus" → in_progress
+     a. autopilot-state.json: "<session> Consensus" → in_progress
      b. BATCHED dispatch (see consensus-protocol.md §Batched Dispatch):
         Stage 1: spawn ALL routed analysts for ALL items in ONE
                  assistant message via run_in_background: true.
@@ -365,10 +365,10 @@ For each clarify session in the workflow file:
                  to spec.md (preserves write contention safety).
         Round 2 escape-hatch: also batched across all queued items.
         [ROUND_3_TIEBREAK]: consensus-protocol.md#round-3-tiebreak (Round 3 agent tiebreak)
-     c. TaskUpdate: "<session> Consensus" → completed
+     c. autopilot-state.json: "<session> Consensus" → completed
   7. After accepted consensus edits, re-scan spec.md and update the recorded
      remaining-marker count
-  8. TaskUpdate: session task → completed
+  8. autopilot-state.json: session task → completed
   9. Proceed to next session
 ```
 
@@ -536,7 +536,7 @@ with two-layer resolution **after each domain**:
 
 ```text
 For each checklist domain in the workflow file:
-  1. TaskUpdate: domain task → in_progress
+  1. autopilot-state.json: domain task → in_progress
   2. Agent(subagent_type: "speckit-pro:checklist-executor",
           run_in_background: false,
           prompt: "Run /speckit-checklist with: <domain prompt>\nProtocol: <plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md\nReference dir: <plugin_root>/skills/speckit-autopilot/references/")
@@ -548,7 +548,7 @@ For each checklist domain in the workflow file:
      gaps, applies fixes, and re-runs to verify (Layer 1)
   3. Parse executor's "Unresolved for consensus" section
   4. If unresolved gaps exist:
-     a. TaskUpdate: "<domain> Consensus" → in_progress
+     a. autopilot-state.json: "<domain> Consensus" → in_progress
      b. BATCHED dispatch (see consensus-protocol.md §Batched Dispatch):
         Stage 1: spawn ALL routed analysts for ALL gaps in ONE
                  assistant message via run_in_background: true.
@@ -558,8 +558,8 @@ For each checklist domain in the workflow file:
         Round 2 escape-hatch: also batched across all queued gaps.
         [ROUND_3_TIEBREAK]: consensus-protocol.md#round-3-tiebreak (Round 3 agent tiebreak)
      c. Re-run domain checklist to verify gaps closed
-     d. TaskUpdate: "<domain> Consensus" → completed
-  5. TaskUpdate: domain task → completed
+     d. autopilot-state.json: "<domain> Consensus" → completed
+  5. autopilot-state.json: domain task → completed
   6. Proceed to next domain
 ```
 
@@ -682,14 +682,14 @@ If the project uses GitHub Issues for tracking and the GitHub
 MCP server is available, export tasks to issues:
 
 ```text
-TaskUpdate: "Phase 5: Tasks to Issues" → in_progress
+autopilot-state.json: "Phase 5: Tasks to Issues" → in_progress
 Agent(
   subagent_type: "general-purpose",
   description: "SPEC-XXX tasks to issues",
   run_in_background: false,
   prompt: "Run /speckit-taskstoissues for SPEC-XXX."
 )
-TaskUpdate: → completed
+autopilot-state.json: → completed
 ```
 
 Skip if GitHub MCP is not configured or the project uses a
@@ -791,7 +791,7 @@ Items it can't resolve are flagged in its
 "Unresolved for consensus" summary section.
 
 ```text
-1. TaskUpdate: "Analyze" → in_progress
+1. autopilot-state.json: "Analyze" → in_progress
 2. Agent(subagent_type: "speckit-pro:analyze-executor",
         run_in_background: false,
         prompt: "Run /speckit-analyze with: <prompt>\nProtocol: <plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md\nReference dir: <plugin_root>/skills/speckit-autopilot/references/")
@@ -799,7 +799,7 @@ Items it can't resolve are flagged in its
    The executor handles research + remediation (Layer 1)
 3. Parse executor's "Unresolved for consensus" section
 4. If unresolved findings exist:
-   a. TaskUpdate: "Analyze - Consensus" → in_progress
+   a. autopilot-state.json: "Analyze - Consensus" → in_progress
    b. BATCHED dispatch (see consensus-protocol.md §Batched Dispatch):
       Stage 1: spawn ALL routed analysts for ALL findings in ONE
                assistant message via run_in_background: true.
@@ -809,8 +809,8 @@ Items it can't resolve are flagged in its
       Round 2 escape-hatch: also batched across all queued findings.
       [ROUND_3_TIEBREAK]: consensus-protocol.md#round-3-tiebreak (Round 3 agent tiebreak)
    c. Re-run analyze to verify findings resolved
-   d. TaskUpdate: "Analyze - Consensus" → completed
-5. TaskUpdate: "Analyze" → completed
+   d. autopilot-state.json: "Analyze - Consensus" → completed
+5. autopilot-state.json: "Analyze" → completed
 ```
 
 If 0 unresolved items from executor, skip consensus and
@@ -872,11 +872,11 @@ to proceed, surface a remediation hint, or stop.
    strict FAIL is `expected_failure`. `input_error` means a malformed
    request, and a missing or unreadable workflow is a file prerequisite
    failure. Route the domain verdict by its raw exit code and action:
-   - exit 0 (PASS): TaskUpdate G6.5 → completed; advance to Phase 7.
+   - exit 0 (PASS): autopilot-state.json G6.5 → completed; advance to Phase 7.
    - exit 1 (NO_DATA): log a warning, surface to operator that the
      synthesizer skipped its confidence emit (treat as a plugin
      regression report).
-     TaskUpdate G6.5 → completed with a
+     autopilot-state.json G6.5 → completed with a
      `no_data: true` note. Advance to Phase 7.
    - exit 2 (FAIL):
        a. Read JSON `deductions_applied` first. When it is true,
@@ -923,8 +923,8 @@ operators who want a fail-closed posture opt into strict via
 `.claude/speckit-pro.local.md` or pass `--strict` on a single
 invocation. Per-invocation flag wins over local config.
 
-**TaskCreate**: at autopilot start, after the G6 task, create a
-G6.5 task: `Confidence gate (pre-Implement)`. Mark it
+At autopilot start, after the G6 item, record a G6.5 item in
+`autopilot-state.json`: `Confidence gate (pre-Implement)`. Mark it
 `in_progress` on entry to this phase and `completed` on exit
 regardless of advisory pass-with-warning vs strict pass.
 
