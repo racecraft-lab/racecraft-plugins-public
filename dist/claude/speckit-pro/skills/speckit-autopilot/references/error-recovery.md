@@ -21,7 +21,7 @@ when its disposition permits. Resume and agent replacement never reset budget.
 **Resume protocol:**
 
 1. Re-read the workflow file, then `autopilot-state.json` next to it
-2. Rebuild the visible task list from the canonical plan
+2. Reconcile its `plan` array with the canonical plan
 3. Verify artifact status and prompt content against the workflow file
 4. If the state file is missing, reconstruct it from the workflow file, then
    continue from the requested phase

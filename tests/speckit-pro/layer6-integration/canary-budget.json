@@ -1,6 +1,6 @@
 {
   "schema_version": "canary-budget/v1",
-  "policy": "Limits for each host, variant and stage (scaffold, plan, implement): wall_seconds is wall-clock time and tokens is total tokens. Each limit starts at the median of the first three green runs plus 50%. Only a reviewed PR changes a limit; nothing ratchets one automatically. A null limit is unset, and the validator reports that stage as unbudgeted, never as within budget. The budget is a pass condition only: it never stops a run (ADR 0016).",
+  "policy": "Limits for each host, variant and stage (scaffold, plan, implement): wall_seconds is wall-clock time and tokens is total tokens. Each limit starts at the median of the first three green runs plus 50%. Only a reviewed PR changes a limit; nothing ratchets one automatically. A null limit is unset, and the validator reports that stage as unbudgeted, never as within budget. The budget is a pass condition only: it never stops a run (ADR 0016). The limits are re-baselined to fixture-v5: they stay unset until three green runs exist on that tag, and #1199 then locks each host's plan-stage limit to the plan-stage target (ADR 0023).",
   "limits": {
     "claude-code": {
       "base": {"scaffold": {"wall_seconds": null, "tokens": null}, "plan": {"wall_seconds": null, "tokens": null}, "implement": {"wall_seconds": null, "tokens": null}},
