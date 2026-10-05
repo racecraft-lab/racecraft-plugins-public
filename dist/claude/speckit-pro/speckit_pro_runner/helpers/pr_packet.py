@@ -652,12 +652,13 @@ def normalize_packet_notices(inputs: dict[str, Any], mode: str) -> dict[str, Any
     if isinstance(deferred, dict):
         return deferred
     flag = inputs.get("unratified_defaults")
-    if flag is not None and (not isinstance(flag, str) or not is_one_line(flag) or mode == "draft"):
+    if flag is not None and (not isinstance(flag, str) or not is_one_line(flag)):
         return invalid_packet_input(
-            "unratified_defaults must be one non-blank line, and a draft body carries none",
+            "unratified_defaults must be one non-blank line",
             field="unratified_defaults",
         )
-    return {"deferred_items": deferred, "unratified_defaults": flag}
+    return {"deferred_items": deferred, "unratified_defaults": flag,
+            "unratified_prefix": "\n" if mode == "draft" else f"\n## {UNRATIFIED_HEADING}\n\n"}
 
 
 def packet_notice_failure(body: str, notices: dict[str, Any]) -> dict[str, Any] | None:
@@ -667,9 +668,9 @@ def packet_notice_failure(body: str, notices: dict[str, Any]) -> dict[str, Any] 
             field="body",
         )
     flag = notices["unratified_defaults"]
-    if flag and f"\n## {UNRATIFIED_HEADING}\n\n{flag.strip()}\n" not in body:
+    if flag and f'{notices["unratified_prefix"]}{flag.strip()}\n' not in body:
         return invalid_packet_input(
-            f"a body for a run on unratified defaults must carry the ## {UNRATIFIED_HEADING} section holding the flag",
+            "a body for a run on unratified defaults must carry the flag in its declared notice format",
             field="body",
         )
     return None

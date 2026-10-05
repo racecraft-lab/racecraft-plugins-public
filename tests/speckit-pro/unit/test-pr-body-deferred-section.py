@@ -114,6 +114,19 @@ class DeferredSectionInPrBodyTests(unittest.TestCase):
 
 
 class UnratifiedDefaultsInPrBodyTests(unittest.TestCase):
+    def test_draft_body_carries_the_flag_without_an_extra_section(self) -> None:
+        flag = "Unratified quality-gate defaults: .specify/quality-gates.json is missing; ratify it."
+        body = "# feat(packet-999): Generate reviewer packet\n\n## Artifacts\n\n" + flag + "\n\n## Resume\n\nStage: plan.\n"
+        rendered = _render(mode="draft", body=body, unratified_defaults=flag)
+        self.assertNotIn("diagnostic", rendered, rendered)
+        self.assertEqual(rendered["body"], body)
+        self.assertEqual(rendered["packet"]["required_headings"], ["Artifacts", "Resume"])
+        _assert_validates(self, rendered)
+        missing = _render(mode="draft", body=body.replace(flag + "\n", ""), unratified_defaults=flag)
+        self.assertEqual(missing["diagnostic"]["details"]["field"], "body")
+        malformed = _render(mode="draft", body=body, unratified_defaults=flag + "\nMore.")
+        self.assertEqual(malformed["diagnostic"]["details"]["field"], "unratified_defaults")
+
     def test_body_carries_the_unratified_flag_after_deferred_items(self) -> None:
         flag = "Unratified quality-gate defaults: .specify/quality-gates.json is missing; ratify it."
         rendered = _render(unratified_defaults=flag, deferred_items=DeferredSectionInPrBodyTests.ITEMS[:1])
