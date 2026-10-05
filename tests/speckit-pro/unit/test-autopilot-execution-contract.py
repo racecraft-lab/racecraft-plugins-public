@@ -35,14 +35,20 @@ class LiveCanaryRegressionTests(unittest.TestCase):
         self.assertIn("Do not invoke the `Skill` tool", boundary)
         self.assertIn("does not authorize stopping", boundary)
 
-    def test_codex_requires_direct_update_plan_invocation(self):
-        codex = (CODEX / "SKILL.md").read_text()
-        runtime = codex.split("## Codex Runtime Contract", 1)[1].split(
-            "## Scope", 1
-        )[0]
-        self.assertIn("Invoke it directly", runtime)
-        self.assertIn("do not infer that it is unavailable", runtime)
-        self.assertIn("actual call is rejected", runtime)
+    def test_both_hosts_persist_progress_through_creation_resume_and_completion(self):
+        for root in (SHARED, CODEX):
+            skill = (root / "SKILL.md").read_text()
+            for start, end in (
+                ("### 1.1 Create Progress Plan", "### 1.2 Validate Plan State"),
+                ("### 1.2 Validate Plan State", "## Step 2:"),
+                ("## Step 2:", "## Step 3:"),
+                ("### 3.4 Pre-final completion audit", "## Workflow File Update Protocol"),
+            ):
+                with self.subTest(host=root.name, boundary=start):
+                    self.assertIn("autopilot-state.json", skill.split(start, 1)[1].split(end, 1)[0])
+            recovery = (root / "references/error-recovery.md").read_text()
+            with self.subTest(host=root.name, boundary="resume"):
+                self.assertIn("autopilot-state.json", recovery.split("**Resume protocol:**", 1)[1])
 
     def test_codex_pre_final_audit_drains_separately_attributable_gate_runs(self):
         post = (CODEX / "references/post-implementation.md").read_text()

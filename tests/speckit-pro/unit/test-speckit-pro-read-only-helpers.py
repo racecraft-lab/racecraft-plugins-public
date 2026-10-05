@@ -4735,7 +4735,7 @@ class ScaffoldAnswersTests(unittest.TestCase):
 def receipt():
     return {
         "schema_version": "canary-receipt/v2", "commit": "a" * 40, "host": "codex",
-        "host_version": "0.1.0", "plugin_version": "1.0.0", "fixture_tag": "v1",
+        "host_version": "0.1.0", "plugin_version": "1.0.0", "fixture_tag": "fixture-v5",
         "trigger": "local", "dirty_tree": True, "release_status_allowed": False,
         "install_probe": {"headless_install": "passed", "skill_expansion": "passed", "evidence": "probe.json"},
         "variants": [{
@@ -4751,6 +4751,7 @@ def receipt():
                 "phases_run": ["specify", "clarify", "plan", "checklist", "tasks", "analyze"], "clarify_sessions": 1,
                 "requirements_total": 4, "untraced_requirements": [], "open_gaps": [], "open_findings": [],
                 "open_clarifications": [], "blocked_for_uat_listed": [],
+                "planted_catches": {"catch-1": "fixed", "catch-2": "fixed"},
                 "decisions": {"total": 5, "low_confidence": 1, "consensus_rounds_by_kind": {"security": 1, "low_confidence": 1}},
             },
             "stages": {name: {"wall_seconds": 1, "tokens": 10, "codex_tokens": {"root_tokens": 10, "child_rollout_tokens": []}} for name in ("scaffold", "plan", "plan_review", "implement")},
@@ -4849,6 +4850,9 @@ class CanaryVariantCase(unittest.TestCase):
                 "independent_work": 3, "independent_work_completed": 3,
             }},
         }
+
+    def catches(self, value):
+        return value["variants"][0]["plan_quality"]["planted_catches"]
 
     def assert_variant_mutations(self, name, mutations):
         for host, value in self.receipts.items():
@@ -4954,7 +4958,8 @@ class CanaryGateVerdictTests(CanaryVariantCase):
                     removed = release["variants"].pop(index)
                     if duplicate:
                         release["variants"].extend([removed, copy.deepcopy(removed)])
-                    self.assertIn("release.variants", self.validator.validate_receipt(release, hook_counters=hook_counters()))
+                    failure = "receipt.variant_entry_limit: 6" if duplicate else "release.variants"
+                    self.assertIn(failure, self.validator.validate_receipt(release, hook_counters=hook_counters()))
 
 
 class CanaryGuardGapContractTests(CanaryVariantCase):
@@ -4978,7 +4983,7 @@ class CanaryGuardGapContractTests(CanaryVariantCase):
                          for bad in (None, "unknown")]
             malformed.extend((f"question_guard.{key}", bad) for key in ("guarded_work_completed", "guarded_work_passed")
                              for bad in (-1, True, 0.5))
-            mutations.extend((path, bad, f"receipt.variants[0].{path}: ") for path, bad in malformed)
+            mutations.extend((path, bad, "receipt.schema: ") for path, bad in malformed)
             for path, bad, expected in mutations:
                 mutated = copy.deepcopy(value)
                 *parent, key = path.split(".")
@@ -5011,26 +5016,22 @@ class CanaryVariantContractTests(CanaryVariantCase):
                 variant = value["variants"][0]
                 variant.update(name=name, **copy.deepcopy(self.variant_evidence[name]))
                 nested = name in self.variant_evidence[name]
-                evidence, prefix = (variant[name], f"receipt.variants[0].{name}") if nested else (variant, "receipt.variants[0]")
+                evidence = variant[name] if nested else variant
                 fields = tuple(evidence) if nested else tuple(self.variant_evidence[name])
                 for key in fields:
-                    field = f"{prefix}.{key}"
                     previous = evidence.pop(key)
                     with self.subTest(host=host, name=name, missing=key):
-                        self.assertEqual([f"{field}: Required schema field is missing: {field}."],
-                                         self.validator.validate_receipt(value))
+                        self.assertEqual(["receipt.schema: 1"], self.validator.validate_receipt(value))
                     evidence[key] = "unknown"
                     with self.subTest(host=host, name=name, malformed=key):
                         failures = self.validator.validate_receipt(value)
                         self.assertEqual(1, len(failures), failures)
-                        self.assertTrue(failures[0].startswith(f"{field}: "), failures)
+                        self.assertTrue(failures[0].startswith("receipt.schema: "), failures)
                     evidence[key] = previous
                 if nested:
                     del variant[name]
-                    field = f"receipt.variants[0].{name}"
                     with self.subTest(host=host, name=name, missing="object"):
-                        self.assertEqual([f"{field}: Required schema field is missing: {field}."],
-                                         self.validator.validate_receipt(value))
+                        self.assertEqual(["receipt.schema: 1"], self.validator.validate_receipt(value))
 
     def test_all_five_variants_keep_missing_guard_red_through_api_and_cli(self):
         for host, value in self.receipts.items():
@@ -5333,7 +5334,7 @@ class CanaryPlanQualityTests(CanaryVariantCase):
             quality["requirements_total"] = 0
             with self.subTest(host=host, requirements=0):
                 failures = self.validator.validate_receipt(mutated)
-                self.assertTrue(failures and "requirements_total" in failures[0], failures)
+                self.assertEqual(["receipt.schema: 1"], failures)
 
     def test_the_clarify_session_count_and_decisions_are_required_evidence(self):
         for host, value in self.receipts.items():
@@ -5346,7 +5347,7 @@ class CanaryPlanQualityTests(CanaryVariantCase):
                     self.quality(mutated)[field] = bad
                 with self.subTest(host=host, field=field, bad=bad):
                     failures = self.validator.validate_receipt(mutated)
-                    self.assertTrue(failures and "plan_quality" in failures[0], failures)
+                    self.assertEqual(["receipt.schema: 1"], failures)
 
     def test_plan_quality_is_required_on_every_variant(self):
         for host, value in self.receipts.items():
@@ -5423,6 +5424,217 @@ class CanaryHookCounterTests(CanaryVariantCase):
                 self.assertEqual(expected, completed.returncode, completed.stdout)
 
 
+class CanaryPlantedCatchTests(CanaryVariantCase):
+    """ADR 0023: the base receipt asserts the plan fixed each planted catch, read against the pinned fixture tag."""
+
+    def test_the_pinned_fixture_has_two_catch_ids(self):
+        self.assertEqual(("catch-1", "catch-2"), self.validator.PLANTED_CATCH_IDS)
+
+    def test_a_catch_left_in_place_fails_the_receipt(self):
+        for host, value in self.receipts.items():
+            for catch in self.validator.PLANTED_CATCH_IDS:
+                mutated = copy.deepcopy(value)
+                self.catches(mutated)[catch] = "left_in_place"
+                with self.subTest(host=host, catch=catch):
+                    self.assertEqual([f"base.plan_quality.planted_catches.{catch}"],
+                                     self.validator.validate_receipt(mutated))
+
+    def test_a_missing_or_unknown_catch_record_fails_closed(self):
+        for host, value in self.receipts.items():
+            missing = copy.deepcopy(value)
+            del self.catches(missing)["catch-2"]
+            unknown = copy.deepcopy(value)
+            self.catches(unknown)["catch-3"] = "fixed"
+            absent = copy.deepcopy(value)
+            del absent["variants"][0]["plan_quality"]["planted_catches"]
+            with self.subTest(host=host, case="missing"):
+                self.assertEqual(["base.plan_quality.planted_catches.catch-2"], self.validator.validate_receipt(missing))
+            with self.subTest(host=host, case="unknown"):
+                self.assertEqual(["planted_catches.entry_limit: 3"], self.validator.validate_receipt(unknown))
+            with self.subTest(host=host, case="absent"):
+                self.assertEqual(["base.plan_quality.planted_catches"], self.validator.validate_receipt(absent))
+
+    def test_an_unrecognised_status_fails_schema_validation(self):
+        for host, value in self.receipts.items():
+            self.catches(value)["catch-1"] = "maybe"
+            with self.subTest(host=host):
+                report = self.validator.receipt_report(value)
+                self.assertFalse(report["valid"])
+                self.assertEqual(["receipt.schema: 1"], report["failed_assertions"])
+                self.assertEqual([], report["variants"])
+
+    def test_a_release_receipt_must_name_the_pinned_fixture_tag(self):
+        self.assertEqual("fixture-v5", self.validator.FIXTURE_TAG)
+        for host, value in self.receipts.items():
+            value.update(trigger="scheduled", dirty_tree=False, release_status_allowed=True)
+            with self.subTest(host=host, tag="pinned"):
+                self.assertNotIn("release.fixture_tag", self.validator.validate_receipt(value, hook_counters=hook_counters()))
+            value["fixture_tag"] = "fixture-v4"
+            with self.subTest(host=host, tag="older"):
+                self.assertIn("release.fixture_tag", self.validator.validate_receipt(value, hook_counters=hook_counters()))
+            value.update(trigger="local", dirty_tree=True, release_status_allowed=False)
+            with self.subTest(host=host, tag="local"):
+                self.assertEqual([], self.validator.validate_receipt(value))
+
+    def test_the_budget_note_names_the_tag_and_the_lock_ticket(self):
+        policy = json.loads(self.validator.BUDGET_FILE.read_text(encoding="utf-8"))["policy"]
+        self.assertIn(self.validator.FIXTURE_TAG, policy)
+        self.assertIn("#1199", policy)
+
+
+class CanaryCatchInputTests(CanaryVariantCase):
+    """Untrusted catch ids produce only bounded, constant diagnostics."""
+
+    def test_many_unknown_catches_have_one_bounded_failure(self):
+        for host, value in self.receipts.items():
+            prefix = "unknown-" + "x" * 64
+            self.catches(value).update({f"{prefix}{index}": "fixed" for index in range(10000)})
+            with self.subTest(host=host), tempfile.TemporaryDirectory() as directory:
+                report = self.validator.receipt_report(value)
+                self.assertEqual(1, len(report["failed_assertions"]))
+                self.assertEqual(["planted_catches.entry_limit: 10002"], report["failed_assertions"])
+                self.assertLess(len(json.dumps(report)), 256)
+                source = Path(directory) / "receipt.json"
+                source.write_text(json.dumps(value), encoding="utf-8")
+                completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
+                                           capture_output=True, text=True, check=False)
+                self.assertLess(source.stat().st_size, 1024 * 1024)
+                self.assertEqual(1, completed.returncode)
+                self.assertEqual(report, json.loads(completed.stdout))
+                self.assertLess(len(completed.stdout), 256)
+                self.assertEqual("", completed.stderr)
+
+    def test_unknown_catch_names_never_appear_in_api_or_cli_output(self):
+        marker = chr(27) + "[31m" + chr(10) + "/" + "synthetic-marker/receipt.txt"
+        for host, original in self.receipts.items():
+            for status in ("fixed", "left_in_place", marker):
+                value = copy.deepcopy(original)
+                del self.catches(value)["catch-2"]
+                self.catches(value)[marker] = status
+                with self.subTest(host=host, status=status), tempfile.TemporaryDirectory() as directory:
+                    report = self.validator.receipt_report(value)
+                    self.assertEqual(["unknown planted-catch id: 1"], report["failed_assertions"])
+                    self.assertLess(len(json.dumps(report)), 256)
+                    source = Path(directory) / "receipt.json"
+                    source.write_text(json.dumps(value), encoding="utf-8")
+                    completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
+                                               capture_output=True, text=True, check=False)
+                    self.assertEqual(1, completed.returncode)
+                    self.assertEqual(report, json.loads(completed.stdout))
+                    self.assertNotIn("synthetic-marker", completed.stdout + completed.stderr)
+                    self.assertLess(len(completed.stdout), 256)
+
+    def test_multiple_unknown_ids_are_one_counted_failure_on_any_variant(self):
+        for host, value in self.receipts.items():
+            for name in self.variant_evidence:
+                value["variants"][0]["name"] = name
+                catches = self.catches(value)
+                catches.clear()
+                catches.update({"unknown-one": "fixed", "unknown-two": "fixed"})
+                with self.subTest(host=host, variant=name):
+                    self.assertEqual(["unknown planted-catch id: 2"], self.validator.validate_receipt(value))
+
+    def test_the_schema_rejects_unknown_catch_ids(self):
+        value = self.receipts["codex"]
+        self.assertEqual([], self.validator.json_schema_failures(value, self.validator.SCHEMA, self.validator.SCHEMA, "receipt"))
+        self.catches(value)["catch-3"] = "fixed"
+        self.assertTrue(self.validator.json_schema_failures(value, self.validator.SCHEMA, self.validator.SCHEMA, "receipt"))
+
+
+class CanaryReceiptOutputTests(CanaryVariantCase):
+    """Receipt and companion schema diagnostics carry only constant identifiers and counts."""
+
+    def test_schema_errors_never_reflect_supplied_keys_or_values(self):
+        marker = "untrusted-schema-marker"
+        for host, original in self.receipts.items():
+            for mutate in (lambda v: v.update({marker: marker}),
+                           lambda v: v["variants"][0].update(name=marker),
+                           lambda v: self.catches(v).update({"catch-1": marker})):
+                value = copy.deepcopy(original)
+                mutate(value)
+                with self.subTest(host=host):
+                    report = self.validator.receipt_report(value)
+                    self.assertEqual(1, len(report["failed_assertions"]))
+                    self.assertRegex(report["failed_assertions"][0], r"^receipt\.schema: [0-9]+$")
+                    self.assertNotIn(marker, json.dumps(report))
+
+    def test_hook_schema_errors_never_reflect_supplied_keys(self):
+        counters = hook_counters()
+        counters["hooks"]["untrusted-hook-marker"] = "untrusted-hook-marker"
+        report = self.validator.receipt_report(self.receipts["codex"], hook_counters=counters)
+        self.assertEqual(["hook_counters.schema: 1"], report["failed_assertions"])
+        self.assertNotIn("untrusted-hook-marker", json.dumps(report))
+
+    def test_extra_variants_cannot_multiply_catch_output(self):
+        value = self.receipts["codex"]
+        value["variants"] *= 10000
+        report = self.validator.receipt_report(value)
+        self.assertEqual(["receipt.variant_entry_limit: 10000"], report["failed_assertions"])
+        self.assertLess(len(json.dumps(report)), 256)
+
+
+class CanaryReceiptInputTests(CanaryVariantCase):
+    """Receipt reads and parsing fail closed within the byte cap."""
+
+    def test_cli_receipt_byte_limit_is_inclusive_and_precedes_json_parsing(self):
+        limit = 1024 * 1024
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "receipt.json"
+            body = json.dumps(self.receipts["codex"]).encode("utf-8")
+            multibyte = copy.deepcopy(self.receipts["codex"])
+            multibyte["host_version"] = "é" * (limit // 2)
+            cases = ((body + b" " * (limit - len(body)), True, []),
+                     (body + b" " * (limit + 1 - len(body)), False, ["input.byte_limit: 1048576"]),
+                     (json.dumps(multibyte, ensure_ascii=False).encode("utf-8"), False, ["input.byte_limit: 1048576"]),
+                     (b"!" * (limit + 1), False, ["input.byte_limit: 1048576"]))
+            for payload, valid, failures in cases:
+                source.write_bytes(payload)
+                with self.subTest(size=len(payload), valid=valid):
+                    completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
+                                               capture_output=True, text=True, check=False)
+                    self.assertEqual("", completed.stderr)
+                    report = json.loads(completed.stdout)
+                    self.assertEqual(int(not valid), completed.returncode)
+                    self.assertEqual(valid, report["valid"])
+                    self.assertEqual(failures, report["failed_assertions"])
+                    self.assertEqual("", completed.stderr)
+                    if not valid:
+                        self.assertLess(len(completed.stdout), 256)
+
+    def test_the_companion_receipt_has_the_same_byte_limit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "receipt.json"
+            counters = Path(directory) / "counters.json"
+            source.write_text(json.dumps(self.receipts["codex"]), encoding="utf-8")
+            counters.write_bytes(b"!" * (1024 * 1024 + 1))
+            completed = subprocess.run([sys.executable, self.validator.__file__, str(source), "--hook-counters", str(counters)],
+                                       capture_output=True, text=True, check=False)
+            self.assertEqual(1, completed.returncode)
+            self.assertEqual(["input.byte_limit: 1048576"], json.loads(completed.stdout)["failed_assertions"])
+            self.assertLess(len(completed.stdout), 256)
+            self.assertEqual("", completed.stderr)
+
+    def test_cli_parse_and_read_errors_are_constant(self):
+        marker = "untrusted-input-marker"
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / (marker + ".json")
+            for payload in (None, b"\xff", (marker + " not JSON").encode(),
+                            b"[" * 2000 + b"]" * 2000,
+                            json.dumps({marker: marker}).replace("}", ', "' + marker + '": 0}').encode()):
+                if payload is not None:
+                    source.write_bytes(payload)
+                with self.subTest(payload=payload is not None):
+                    completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
+                                               capture_output=True, text=True, check=False)
+                    self.assertEqual(1, completed.returncode)
+                    self.assertEqual("", completed.stderr)
+                    report = json.loads(completed.stdout)
+                    self.assertEqual(["input.invalid"], report["failed_assertions"])
+                    self.assertNotIn(marker, completed.stdout + completed.stderr)
+                    self.assertLess(len(completed.stdout), 256)
+                    self.assertEqual("", completed.stderr)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--helper", choices=EXPECTED_HELPERS)
@@ -5434,7 +5646,8 @@ def main() -> int:
                                             CanaryFeatureOfferTests, CanaryVariantAssertionsTests, CanaryVariantContractTests,
                                             CanaryGateVerdictTests, CanaryGuardGapContractTests,
                                             CanaryPlanTargetTests, CanaryPlanTargetContractTests, CanaryCodexTokenTests,
-                                            CanaryPlanQualityTests, CanaryHookCounterTests, CanaryBudgetTests, CanaryBudgetFileTests))
+                                            CanaryPlanQualityTests, CanaryPlantedCatchTests, CanaryCatchInputTests, CanaryReceiptInputTests,
+                                            CanaryReceiptOutputTests, CanaryHookCounterTests, CanaryBudgetTests, CanaryBudgetFileTests))
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     total = result.testsRun
     failed = len(result.failures) + len(result.errors)
