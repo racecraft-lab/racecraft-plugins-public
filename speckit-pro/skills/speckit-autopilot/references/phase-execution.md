@@ -2401,10 +2401,11 @@ once, after the feedback sweep below and before the first task is dispatched.
 
 1. A Prerequisites table that already records the baseline stays as recorded
    (SKILL.md Step 0.6e).
-2. Call runner helper `g0-setup` with `inputs.probe` set to `commands`, as
-   Step 0.11 does. Read `data.baseline.implement_entry`: one `{slot, command}`
-   row per detected slot, in run order. A command recorded in `PROJECT_COMMANDS`
-   for a slot wins over the row's command.
+2. Call runner helper `g0-setup` with `inputs.probe` set to `commands` and
+   `inputs.project_commands` set to the recorded `PROJECT_COMMANDS` object.
+   Read `data.baseline.implement_entry`: the helper applies recorded commands
+   before selecting and ordering runnable slots, including slots absent from
+   detection. Each row's `command` is ready to run.
 3. Run each row's `command` in order. Record each pass or fail in the
    workflow file's Prerequisites table, with the test count for the
    `UNIT_TEST` and `INTEGRATION_TEST` rows (a diagnostic; see

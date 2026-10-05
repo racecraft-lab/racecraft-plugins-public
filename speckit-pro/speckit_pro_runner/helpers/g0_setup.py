@@ -20,16 +20,22 @@ PROBES = {
 }
 
 
-def baseline_plan(commands: dict[str, str]) -> dict[str, Any]:
-    """Plan the project baseline without running it: plan-stage G0 runs nothing; implement entry runs each detected slot, in order."""
+def baseline_plan(commands: dict[str, str], project_commands: Any) -> dict[str, Any]:
+    """Plan the baseline from detected commands with recorded commands taking precedence."""
+    if not isinstance(project_commands, dict):
+        raise SelectionError("project_commands must be an object")
+    recorded = {require_text(slot, "project_commands slot"): require_text(command, "project_commands command")
+                for slot, command in project_commands.items()}
+    effective = commands | recorded
     return {"plan_stage": [], "implement_entry": [
-        {"slot": slot, "command": commands[slot]} for slot in BASELINE_SLOTS if commands.get(slot, "N/A") != "N/A"
+        {"slot": slot, "command": effective[slot]} for slot in BASELINE_SLOTS if effective.get(slot, "N/A") != "N/A"
     ]}
 
 
 def g0_setup(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     """Preserve each probe's result; commands also reports the current G0 stop."""
-    require_fields({key: value for key, value in inputs.items() if key != "repo_root"},
+    optional = {"repo_root", "project_commands"} if inputs.get("probe") == "commands" else {"repo_root"}
+    require_fields({key: value for key, value in inputs.items() if key not in optional},
                    {"probe", "surface", "workflow_file"}, "g0-setup inputs")
     probe = require_text(inputs["probe"], "probe")
     surface = require_text(inputs["surface"], "surface")
@@ -55,7 +61,7 @@ def g0_setup(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
                 f"Run `{sigil}speckit-pro:speckit-coach quality gates` to create it. Agents never edit this file."
             )}
         data["quality_gate"] = gate
-        data["baseline"] = baseline_plan(result["stdout_json"]["commands"])
+        data["baseline"] = baseline_plan(result["stdout_json"]["commands"], inputs.get("project_commands", {}))
     return data
 
 

@@ -4917,12 +4917,27 @@ class G0BaselineStageTests(unittest.TestCase):
 
     SCRIPTS = {"typecheck": "tsc", "test": "vitest", "test:integration": "vitest run it", "build": "tsc -b", "lint": "eslint ."}
 
-    def commands_data(self, root: Path, surface: str) -> dict[str, object]:
+    def commands_data(self, root: Path, surface: str, **extra: object) -> dict[str, object]:
         from speckit_pro_runner.helpers.g0_setup import g0_setup
 
         with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value="/usr/bin/specify"), \
                 patch("speckit_pro_runner.helpers.read_only.installed_specify_version", return_value=None):
-            return g0_setup({"surface": surface, "probe": "commands", "workflow_file": "workflow.md"}, root)
+            return g0_setup({"surface": surface, "probe": "commands", "workflow_file": "workflow.md", **extra}, root)
+
+    def test_recorded_project_commands_supply_missing_slots_and_override_detection(self) -> None:
+        for surface in ("claude", "codex"):
+            with self.subTest(surface=surface), helper_project() as root:
+                G0SetupTests.prepare_fixture(root, None)
+                (root / "package.json").write_text(json.dumps({"scripts": {"test": "vitest", "lint": "eslint ."}}), encoding="utf-8")
+                data = self.commands_data(root, surface, project_commands={
+                    "TYPECHECK": "python3 tools/typecheck.py", "UNIT_TEST": "python3 tools/test.py",
+                    "LINT": "N/A", "FULL_VERIFY": "python3 tools/verify.py",
+                })
+                self.assertEqual([], data["baseline"]["plan_stage"])
+                self.assertEqual([
+                    {"slot": "TYPECHECK", "command": "python3 tools/typecheck.py"},
+                    {"slot": "UNIT_TEST", "command": "python3 tools/test.py"},
+                ], data["baseline"]["implement_entry"])
 
     def test_plan_stage_g0_runs_no_project_command_and_implement_entry_records_the_baseline(self) -> None:
         for surface in ("claude", "codex"):
