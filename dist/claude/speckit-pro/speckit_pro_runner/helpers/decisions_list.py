@@ -29,6 +29,7 @@ KINDS = {
     "readiness_stale": NOTE,
     "pr_record_problem": NOTE,
     "unregistered_stop": NOTE,
+    "optional_hook_run": NOTE,
 }
 
 

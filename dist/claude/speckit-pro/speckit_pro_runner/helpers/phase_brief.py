@@ -9,6 +9,8 @@ from unicodedata import category
 
 from ..envelope import diagnostic, response
 from ..strict_input import require_fields, require_text
+from ..trusted_io import resolve_repo_root
+from .extension_hooks import optional_hooks
 
 PHASES = {
     "Specify": ("phase-executor", "G1", ()),
@@ -26,6 +28,8 @@ EXECUTOR_SLICES = (
                       "G3 \u2014 Separate grounded fact from inference", "G4 \u2014 Cite in the evidence note")),
     ("consensus-protocol.md", ("Category tags", "Security Keywords")),
 )
+# Only a loaded Spec Kit command runs hooks for its own phase. The clarify executor loads none, so Clarify lists no hooks.
+HOOK_PHASES = frozenset(PHASES) - {"Clarify"}
 SLICE_PHASES = frozenset({"Clarify", "Checklist", "Analyze"})
 PROMPT_SECTIONS = {"Clarify": "Clarify Prompts", "Checklist": "Step 2: Run Enriched Checklist Prompts"}
 
@@ -138,11 +142,16 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
         applies to the top-level agent only, never every wave member;
         null preserves installed agent defaults until #1184. Claude consumes
         model per call and keeps effort in the agent; Codex consumes both.
-    hooks: list[{extension: str, command: str}], ordered optional extension
-        command ids to run once after the phase and record in decisions;
-        mandatory hooks belong to loaded commands; [] until #1188.
+    hooks: list[{extension: str, command: str}], the project's optional
+        extension commands registered for the phase's after_<phase> event in
+        .specify/extensions.yml (enabled, no condition), by priority then file
+        order, to run once after the phase and record in the decisions list.
+        Mandatory hooks (optional: false) belong to the loaded command and are
+        never listed; Clarify loads no command, so it lists none.
 
-    Empty reserved fields activate no new behavior. Input errors return no data.
+    Empty reserved fields activate no new behavior. Input errors return no
+    data. An unreadable or uninterpretable hook file returns internal_failure
+    with phase_brief_hooks_unavailable, never a guessed list.
     """
     try:
         inputs = require_fields(request.inputs, {"phase", "workflow_file", "feature_dir"}, "phase-brief inputs")
@@ -156,9 +165,17 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     except ValueError as exc:
         return response("input_error", request_id=request.request_id,
                         diagnostics=[diagnostic("invalid_phase_brief", str(exc))])
+    root = resolve_repo_root({})
+    if isinstance(root, dict):
+        return response("missing_prerequisite", request_id=request.request_id, diagnostics=[root])
     try:
         data = brief_data(phase, workflow, feature)
     except (OSError, ValueError) as exc:
         return response("internal_failure", request_id=request.request_id,
                         diagnostics=[diagnostic("phase_brief_slices_unavailable", str(exc))])
+    try:
+        data["hooks"] = optional_hooks(root, "after_" + phase.lower()) if phase in HOOK_PHASES else []
+    except ValueError as exc:
+        return response("internal_failure", request_id=request.request_id,
+                        diagnostics=[diagnostic("phase_brief_hooks_unavailable", str(exc))])
     return response("ok", request_id=request.request_id, data=data)

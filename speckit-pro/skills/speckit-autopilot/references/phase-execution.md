@@ -385,8 +385,8 @@ for phase in PHASES starting from first_pending:
        If Archive Sweep or any canonical phase family
        is missing, STOP and repair the plan before executing this phase.
     1. autopilot-state.json: mark the current phase item as "in_progress"
-    2. Check .specify/extensions.yml for before_<phase> hooks
-       → run accepted hooks (non-destructive), skip duplicates
+    2. Clarify and Implement only: check .specify/extensions.yml for
+       before_<phase> hooks → run accepted hooks (non-destructive), skip duplicates
     3. Read the workflow file's prompt(s) for this phase
     4. For EACH prompt in the phase:
        a. Resolve <executor>:
@@ -411,8 +411,9 @@ for phase in PHASES starting from first_pending:
        consensus-protocol.md#round-3-tiebreak: a fresh analyst plus a
        max-effort `consensus-tiebreaker` resolve it in an interactive and an
        unattended run alike; it never asks the operator and never stops the run.
-    6. Check .specify/extensions.yml for after_<phase> hooks
-       → run accepted hooks (non-destructive), skip duplicates
+    6. Run each brief.hooks entry once and record the batch in the decisions list.
+       Clarify and Implement only: check .specify/extensions.yml for after_<phase>
+       hooks → run accepted hooks (non-destructive), skip duplicates
     7. Validate gate directly in the main session:
        Before Tasks, after Analyze/review remediation, and after the final
        producing tests, run the applicable planning/final formal checkpoint
@@ -4805,6 +4806,14 @@ If extension hook events are configured (detected in Step
 the autopilot must handle prompts that fire at each phase.
 Hooks are configured in `.specify/extensions.yml`.
 
+**Who runs a hook.** The loaded Spec Kit command runs the mandatory hooks
+(`optional: false`) of its own `before_` and `after_` events, so for Specify,
+Plan, Checklist, Tasks and Analyze the orchestrator never dispatches one.
+`brief.hooks` lists the phase's optional hooks; the orchestrator runs each once
+after the phase and records the batch in the decisions list. Clarify and
+Implement load no Spec Kit command, so this section's rules stay the
+orchestrator's for those two phases.
+
 **Extension detection priority (Step 0.11):**
 1. `.specify/extensions/.registry` (JSON) — MOST authoritative.
    Check each extension's `enabled` field.
@@ -4830,14 +4839,13 @@ Hooks are configured in `.specify/extensions.yml`.
 
 ```text
 for each phase:
-  1. Check .specify/extensions.yml for before_<phase> hooks
-  2. If hooks exist → run accepted hooks, skip duplicates
-  3. Spawn subagent for the phase
-  4. Receive result
-  5. Check .specify/extensions.yml for after_<phase> hooks
-  6. If hooks exist → run accepted hooks, skip duplicates
-  7. Validate gate
-  8. Advance
+  1. Clarify and Implement: run accepted before_<phase> hooks
+  2. Spawn subagent for the phase (the loaded command runs its mandatory hooks)
+  3. Receive result
+  4. Other planning phases: run each brief.hooks entry once, record the batch
+     in the decisions list. Clarify and Implement: run accepted after_<phase> hooks
+  5. Validate gate
+  6. Advance
 ```
 
 ### Hook Handling Rules
@@ -4848,8 +4856,9 @@ for each phase:
    the autopilot already runs the same check (e.g., cleanup
    vs the autopilot's own lint/test verification), skip to
    avoid redundancy
-3. **Document decisions in workflow file** — log which hooks
-   were accepted, skipped, and why
+3. **Document decisions** — log which hooks were accepted,
+   skipped, and why: in the decisions list for `brief.hooks`
+   runs, in the workflow file for Clarify and Implement
 4. **Check ALL 8 events** — don't assume only after_tasks
    and after_implement have hooks. Extensions may register
    hooks for any event. Read `.specify/extensions.yml` to
@@ -4862,8 +4871,8 @@ for each phase:
   acceptance rules above (non-destructive, no duplication).
   The autopilot does NOT literally respond to a prompt — it
   invokes the hook's command directly via `Skill()`.
-- `optional: false` — The hook auto-executes without prompting.
-  The autopilot should always run these.
+- `optional: false` — The hook is mandatory. The loaded command runs it;
+  the orchestrator runs it only for Clarify and Implement.
 - `enabled: false` — The hook is disabled. Skip it entirely.
 
 ### Preset-Aware Phase Execution

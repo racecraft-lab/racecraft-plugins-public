@@ -41,6 +41,7 @@ SPLIT = entry("split_recommendation", "split")
 DEFAULT = entry("unratified_default", "default")
 PR_PROBLEM = entry("pr_record_problem", "pr")
 STOP = entry("unregistered_stop", "stop")
+HOOK = entry("optional_hook_run", "hook")
 
 
 class DecisionsListTests(unittest.TestCase):
@@ -105,6 +106,11 @@ class DecisionsListTests(unittest.TestCase):
             sent = next(each for each in (NOTE, SKIP, SCOPE, SPLIT, DEFAULT, PR_PROBLEM, STOP)
                         if each["kind"] == item["kind"])
             self.assertEqual(sent, {key: value for key, value in item.items() if key != "seq"})
+
+    def test_an_optional_hook_run_is_recorded_as_a_note(self) -> None:
+        self.assertEqual("ok", self.append(HOOK, SCOPE, HOOK)["status"])
+        kinds = [item["kind"] for item in self.listed()["entries"]]
+        self.assertEqual(["scope_answer", "optional_hook_run", "optional_hook_run"], kinds)
 
     def test_entries_of_one_class_keep_the_order_they_were_appended(self) -> None:
         self.append(SPLIT)

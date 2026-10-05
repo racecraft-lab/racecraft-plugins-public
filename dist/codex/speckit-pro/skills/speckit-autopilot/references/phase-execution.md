@@ -222,8 +222,8 @@ for phase in PHASES starting from first_pending:
        If Archive Sweep or any canonical phase family
        is missing, STOP and repair the plan before executing this phase.
     1. autopilot-state.json: mark the current phase item as "in_progress"
-    2. Check .specify/extensions.yml for before_<phase> hooks
-       → run accepted hooks (non-destructive), skip duplicates
+    2. Clarify and Implement only: check .specify/extensions.yml for
+       before_<phase> hooks → run accepted hooks (non-destructive), skip duplicates
     3. Read the workflow file's prompt(s) for this phase
     4. For EACH prompt in the phase:
        a. Resolve <executor>:
@@ -248,8 +248,9 @@ for phase in PHASES starting from first_pending:
        consensus-protocol.md#round-3-tiebreak: a fresh analyst plus a
        max-effort `consensus-tiebreaker` resolve it in an interactive and an
        unattended run alike; it never asks the operator and never stops the run.
-    6. Check .specify/extensions.yml for after_<phase> hooks
-       → run accepted hooks (non-destructive), skip duplicates
+    6. Run each brief.hooks entry once and record the batch in the decisions list.
+       Clarify and Implement only: check .specify/extensions.yml for after_<phase>
+       hooks → run accepted hooks (non-destructive), skip duplicates
     7. Validate gate directly in the main session:
        Before Tasks, after Analyze/review remediation, and after the final
        producing tests, run the applicable planning/final formal checkpoint

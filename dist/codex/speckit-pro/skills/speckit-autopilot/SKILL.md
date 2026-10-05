@@ -839,11 +839,22 @@ stable fields, shared by both hosts:
 | `slices` | Ordered reference sections copied verbatim for the dispatch prompt; empty for Specify, Plan and Tasks |
 | `waves` | Empty list, reserved for dispatch waves (#1183) |
 | `model` | Null; use the installed agent configuration until #1184 |
-| `hooks` | Empty list, reserved for optional hooks (#1188) |
+| `hooks` | The phase's optional hooks, each `{extension, command}`: enabled, unconditional, registered under `after_<phase>`, in priority order; empty for Clarify |
 
 Loaded commands still read their own instructions, templates and scripts.
-Empty reserved fields add no behavior; existing hook handling and sequential
-session/domain dispatch remain. Runner stop policy remains authoritative.
+Empty reserved fields (`waves`, `model`) add no behavior; sequential
+session/domain dispatch remains. Runner stop policy remains authoritative.
+
+Hooks: a loaded planning command runs its own mandatory hooks (`optional:
+false`), so the orchestrator never dispatches one. Run each entry of
+`brief.hooks` once after the phase, in order, and record the batch in the
+decisions list: `helper_id=decisions-list operation=decisions-list mode=apply`
+with `workflow_file` and one `entries` item per hook (`kind`:
+`optional_hook_run`; `option_chosen`: the command run; `rejected_alternative`:
+skipping it; `evidence`: the extension that registered it; `affected_unit`: the
+phase). Clarify and Implement load no Spec Kit command, so for those two the
+orchestrator runs the registered hooks of `before_<phase>` and `after_<phase>`
+from `.specify/extensions.yml`.
 
 For each pending phase, spawn a subagent, collect the result, validate
 the gate, advance. Every step is a tool call.
@@ -856,7 +867,7 @@ for phase in PHASES starting from first_pending:
        autopilot-state.json. Exit 0 is required; on nonzero, repair the plan
        and the workflow status table, then repeat before executing this phase.
     1. autopilot-state.json: phase item → in_progress
-    2. Run before_<phase> hooks from .specify/extensions.yml
+    2. Clarify and Implement only: run before_<phase> hooks from .specify/extensions.yml
     3. For each workflow prompt in this phase:
          Planning:
          spawn_agent(agent_type=brief.agent,
@@ -864,7 +875,8 @@ for phase in PHASES starting from first_pending:
                               brief.inputs.instruction + workflow prompt + brief context + brief.slices>) then wait_agent
          Implement: use the implementation executor and task-specific TDD prompt.
     4. Run consensus (Clarify/Checklist/Analyze only) — see Rule 6
-    5. Run after_<phase> hooks
+    5. Run each brief.hooks entry once and record the batch in the decisions list.
+       Clarify and Implement only: run after_<phase> hooks from .specify/extensions.yml
     6. Validate the gate (G1-G7): run runner helper
        `helper_id=validate-gate operation=validate-gate mode=read_only`
        with `gate=brief.gate` for planning (`G7` for Implement), `feature_dir=<feature-dir>`, and
