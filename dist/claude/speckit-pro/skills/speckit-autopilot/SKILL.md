@@ -161,10 +161,8 @@ not issue a second invocation to obtain a file, exit code, stdout, or stderr.
   surface can execute that group within its exposed limit. Work wider than the
   usable count proceeds in waves; a named parallel group never overrides the
   host's actual cap.
-- Task-list actions such as `TaskCreate`, `TaskUpdate`, and `TaskList` are
-  bookkeeping, not worker follow-up, wait, or result-consumption actions. Use
-  a separately discovered native worker action for those lifecycle steps. If
-  only a foreground worker call is available, its direct return is the final
+- Use a separately discovered native worker action for follow-up, wait, and
+  result consumption. If only a foreground worker call is available, its direct return is the final
   report and each later call is a new attempt, not reuse.
 - Every asynchronous dispatch follows launch, bounded wait or polling, and
   consumption of that worker's actual final report. A launch receipt, ordinary
@@ -211,10 +209,8 @@ This rule applies to: the orchestrator, every phase subagent
 
 For each phase, spawn a **foreground subagent** via the native subagent tool
 (`Agent` when exposed, otherwise its renamed `Task` equivalent) with
-`run_in_background: false`. `TaskCreate`, `TaskUpdate`, and `TaskList` are
-bookkeeping tools, not subagent launchers. If `Task` is listed but deferred,
-load it with `ToolSearch` query `select:Task`; never load only `TaskCreate` or
-`TaskUpdate` and treat that as worker availability. The subagent runs the
+`run_in_background: false`. If `Task` is listed but deferred,
+load it with `ToolSearch` query `select:Task`. The subagent runs the
 `/speckit-*` command and returns a summary. You (the parent) receive
 the result as a tool call response, which keeps your agent loop alive.
 Treat async-launch metadata as launch acknowledgement only; collect the
@@ -237,6 +233,7 @@ own terminal output.
 
 Each phase type has its own specialized executor agent. All noise
 stays in the subagent's context; the parent receives only a summary.
+For planning, use the runner's phase brief in Step 2 as the dispatch authority.
 
 | Phase | Agent | Why specialized |
 | ----- | ----- | --------------- |
@@ -246,9 +243,9 @@ stays in the subagent's context; the parent receives only a summary.
 | Analyze | `speckit-pro:analyze-executor` | Resolve required defects at every severity using relevant evidence and the shared repair reservation |
 | Implement | per-task routing | Route tasks with TDD; dispatch validated capability batches or legacy singletons |
 
-Full `Agent(...)` prompt template + per-phase prefixes live in
-[`references/phase-execution.md`](./references/phase-execution.md)
-§Subagent Delegation.
+The per-dispatch context lines (`Workflow root:` and the Specify branch
+prefix) live in [`references/phase-execution.md`](./references/phase-execution.md)
+§Subagent Delegation; implementation dispatch lives in its §Phase 7: Implement.
 
 **Agent-type namespacing (required):** the prefix requirement applies to every
 speckit-pro **bundled agent id** used as a `subagent_type` value — the
@@ -270,15 +267,15 @@ The canonical execution order is:
 PHASES = [specify, clarify, plan, checklist, tasks, analyze, implement]
 ```
 
-Before executing any phase, create a granular task list using
-TaskCreate. The task list drives the loop — after each subagent
-returns, check it to know what's next.
+Before phase work starts, the parent session MUST persist a granular progress
+plan in `autopilot-state.json`. After each subagent returns, read that plan
+to select the next item.
 The plan accounts for every phase in that list plus prerequisites and
 post-implementation verification. Execution starts and stops within the stage
 resolved at Step 0.6c; phases outside that stage stay visible but are not
 started. `--from-phase` changes the starting index only within the resolved
-stage. It does not remove plan entries from the visible plan or
-`autopilot-state.json`. See Step 1.1 for the full naming pattern and rules.
+stage. It does not remove plan entries from `autopilot-state.json`.
+See Step 1.1 for the full naming pattern and rules.
 
 ### 4. Multi-prompt phases
 
@@ -630,8 +627,7 @@ and finish incomplete canonical Post work before reporting completion.
 ### 1.1 Create Progress Plan
 
 After parsing the workflow state, create a **granular** progress plan.
-Create it as the visible task list with TaskCreate, and mirror the same items
-into `<workflow directory>/autopilot-state.json`.
+Persist it in `<workflow directory>/autopilot-state.json` before Phase 1.
 The initial plan must include every canonical phase family even when its
 detailed items will be discovered later. For multi-prompt phases (Clarify,
 Checklist), create one item per prompt/session when known; otherwise create the
@@ -646,7 +642,7 @@ consensus items.**
 The full **11-entry Post-Implementation task list** and the task
 naming pattern live in
 [`references/task-list-canonical.md`](./references/task-list-canonical.md).
-Every entry there MUST appear in the visible progress plan before
+Every entry there MUST appear in `autopilot-state.json` before
 Phase 1 starts — when an extension is absent, the task still appears
 marked `skipped: <ext-name> not installed`; never silently drop the item.
 
@@ -655,8 +651,8 @@ that the plan includes at least one item whose name starts with each of these
 exact prefixes: `Archive Sweep:`, `Phase 0:`, `Phase 1:`, `Phase 2:`,
 `Phase 3:`, `Phase 4:`, `Phase 5:`, `Phase 6:`, `Phase 6.5:`, `Phase 7:`,
 `Post:`. Count the prescribed entries (every Phase, every Consensus, every
-`Post:`). If any is missing from the visible plan or `autopilot-state.json`,
-repair both stores, print the corrected checklist summary, and repeat this
+`Post:`). If any is missing from `autopilot-state.json`,
+repair the state file, print the corrected checklist summary, and repeat this
 coverage audit before advancing. A complete workflow plan is required even
 when `--from-phase` starts execution in the middle of the workflow.
 
@@ -699,18 +695,58 @@ keeps the status table honest across compactions and manual phase runs.
 
 Before Phase 1 starts, validate all of the following or repair it through the owning agent:
 
-- The visible task list matches the workflow-derived checklist
-- `autopilot-state.json` exists and contains the same ordered step list
+- `autopilot-state.json` exists and its plan matches the workflow-derived ordered step list
 - Exactly one plan item is `in_progress`
 - Every canonical phase family prefix from Phase 0 through Phase 7 plus
-  Phase 6.5 and Post appears in both the visible plan and
-  `autopilot-state.json`, with the Archive Sweep item recorded before Phase 0
+  Phase 6.5 and Post appears in `autopilot-state.json`, with the Archive Sweep item recorded before Phase 0
 - `validate-autopilot-phase-coverage.py` exits 0 for the workflow/state pair
 - Every Clarify session, Checklist domain, and Analyze phase has its
   mandatory Consensus item
 - The checklist summary was printed so progress is visible to the user
 
 ## Step 2: Main Execution Loop
+
+For each planning phase, request
+`helper_id=phase-brief operation=phase-brief mode=read_only` with inputs
+`phase` (Specify, Clarify, Plan, Checklist, Tasks or Analyze),
+`workflow_file=WORKFLOW_FILE` and `feature_dir=<feature-dir>`.
+Use the successful response's data as `brief`: dispatch `brief.agent`,
+read the exact workflow prompt(s) under `brief.inputs.prompt_section`, and
+prefix each with `brief.inputs.instruction`. Pass `brief.inputs` and
+`brief.readable_files` in the executor prompt, alongside the per-dispatch
+context lines: `Workflow root:`, the Specify branch prefix when
+`ON_FEATURE_BRANCH` is true, the consensus executors' `Protocol:` and
+`Reference dir:` lines (`references/consensus-protocol.md`), and the
+corrective reservation. Insert each entry of `brief.slices` verbatim, in
+order, after those lines under a `Reference slices:` line.
+Run `validate-gate` with `brief.gate` afterward; the brief is not gate evidence.
+Clarify still runs only when G1 found `[NEEDS CLARIFICATION]` markers.
+Use the brief for phase dispatch facts instead of re-reading `phase-execution.md`
+for each planning phase. Keep the existing remediation and bookkeeping steps.
+Implement retains its existing agent, inputs and gate; it never requests a
+planning brief. A failed helper request goes through runner error recovery,
+not a guessed dispatch or stop decision.
+
+### Phase brief contract
+
+The successful response data has `schema_version: phase-brief/v1` and these
+stable fields, shared by both hosts:
+
+| Field | Meaning |
+| --- | --- |
+| `phase` | Requested title-case planning phase |
+| `agent` | Host-neutral installed executor role |
+| `inputs` | `workflow_file`, `feature_dir`, `instruction`, `skill` (the loaded command's skill name; null for Clarify), and `prompt_section` (including its session/domain prompts) |
+| `readable_files` | The paths the phase may read when present, including extension configuration; relative to the bound workflow root unless absolute; trailing slash includes directory contents |
+| `gate` | Gate id for the parent's `validate-gate` request |
+| `slices` | Ordered reference sections copied verbatim for the dispatch prompt; empty for Specify, Plan and Tasks |
+| `waves` | Empty list, reserved for dispatch waves (#1183) |
+| `model` | Null; use the installed agent configuration until #1184 |
+| `hooks` | Empty list, reserved for optional hooks (#1188) |
+
+Loaded commands still read their own instructions, templates and scripts.
+Empty reserved fields add no behavior; existing hook handling and sequential
+session/domain dispatch remain. Runner stop policy remains authoritative.
 
 For each pending phase, spawn a subagent, collect the result, validate
 the gate, advance. Every step is a tool call.
@@ -722,15 +758,18 @@ for phase in PHASES starting from first_pending:
     0. Re-run the Step 1.1 coverage guard against the workflow file and
        autopilot-state.json. Exit 0 is required; on nonzero, repair the plan
        and the workflow status table, then repeat before executing this phase.
-    1. TaskUpdate: phase task → in_progress
+    1. autopilot-state.json: phase item → in_progress
     2. Run before_<phase> hooks from .specify/extensions.yml
     3. For each workflow prompt in this phase:
-         Agent(subagent_type: <phase executor>, run_in_background: false, prompt: ...)
+         Planning:
+         Agent(subagent_type: "speckit-pro:" + brief.agent, run_in_background: false,
+               prompt: <brief.inputs.instruction + workflow prompt + brief context + brief.slices>)
+         Implement: use the implementation executor and task-specific TDD prompt.
     4. Run consensus (Clarify/Checklist/Analyze only) — see Rule 6
     5. Run after_<phase> hooks
     6. Validate the gate (G1-G7): run runner helper
        `helper_id=validate-gate operation=validate-gate mode=read_only`
-       with `gate=G<N>`, `feature_dir=<feature-dir>`, and
+       with `gate=brief.gate` for planning (`G7` for Implement), `feature_dir=<feature-dir>`, and
        `workflow_file=<workflow-file>`, then branch on the JSON `pass` field
        On FAIL: reserve a corrective cycle through execution-control;
        honor its shared family/spec budget and checkpoint disposition
@@ -778,9 +817,9 @@ for phase in PHASES starting from first_pending:
         instruction, replace only that instruction; preserve phase
         status and operator-authored content.
         The Phase 7 placeholder is invalid after G5. Parse `tasks.md` and
-        replace that placeholder in both the native visible progress plan and
-        `autopilot-state.json` with concrete task-group items and task IDs;
-        Analyze and Implement remain blocked until both stores are repaired.
+        replace that placeholder in `autopilot-state.json` with concrete
+        task-group items and task IDs;
+        Analyze and Implement remain blocked until the state file is repaired.
     8d. After recording the atomicity route, run the layer planner only
         when route is exactly `split-PR`, and always before Analyze or
         Implement can continue:
@@ -809,9 +848,9 @@ for phase in PHASES starting from first_pending:
     9. Advance
 ```
 
-**Full per-phase prompts, dispatch templates, gate validation
-details, hook events, and the dispatcher-agent table:**
-see [`references/phase-execution.md`](./references/phase-execution.md).
+Planning dispatch facts come from the phase brief above. Consult
+[`references/phase-execution.md`](./references/phase-execution.md) for
+remediation, formal checkpoints, hook events and implementation dispatch.
 Before performing the post-G5 steps (8 through 8e), read
 [`references/phase-execution.md`](./references/phase-execution.md)
 §Phase 5: Tasks for the authoritative placeholder, reviewability, marker
@@ -851,8 +890,7 @@ and mark its task `skipped: <ext> not installed` — do NOT fail the
 autopilot. Recommend `specify extension add <name>` in the warning.
 
 **Dynamic task updates:** If consensus reveals new questions or
-remediation adds loops, add the items to the visible plan and
-`autopilot-state.json`.
+remediation adds loops, add the items to `autopilot-state.json`.
 
 ### Phase Dispatch
 
@@ -887,10 +925,10 @@ continue only after it has consumed all three terminal worker reports.
 
 ### 3.4 Pre-final completion audit
 
-Before any final user-facing response, re-read `autopilot-state.json` and the
-workflow file, reconcile both with the native visible progress plan, and audit
-the complete canonical Post list. A completion response is forbidden while
-any `Post:` item is pending, in progress, or missing.
+Before sending any final user-facing response, re-read
+`autopilot-state.json` and the workflow file, reconcile them,
+and audit the canonical Post list. A completion response is
+forbidden if any `Post:` item is `pending`, `in_progress`, or missing.
 For the first Post
 parallel group, mark Doctor, Code Review, Verify Implementation, Verify Tasks
 Phantom Check, and Integration Suite in progress before dispatching the three
@@ -949,7 +987,7 @@ Print the final report as plain text on `outcome=complete` with nothing deferred
 Otherwise print `end_of_run_request` as plain text in the final message. It is the handoff, listing every fallback taken and every
 deferred item, including each entry of the ledger's `deferred` list.
 If the audit finds incomplete Post work, set the first
-incomplete item to `in_progress` in both state stores and continue the
+incomplete item to `in_progress` in `autopilot-state.json` and continue the
 autopilot loop instead of summarizing. `Post: Retrospective` is the final
 Post item; it must be completed or explicitly skipped before the
 autopilot can report completion.

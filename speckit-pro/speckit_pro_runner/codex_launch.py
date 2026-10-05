@@ -45,8 +45,8 @@ class LauncherViolation(RuntimeError):
     """An isolated model process or security prerequisite failed closed."""
 
 
-def trusted_executable(candidate: str | None, label: str) -> Path:
-    """Resolve an absolute, regular, executable file that no one else may write."""
+def executable_path(candidate: str | None, label: str) -> Path:
+    """Resolve an absolute, regular, executable file."""
     if not candidate:
         raise LauncherViolation(f"{label} is unavailable")
     candidate_path = Path(candidate)
@@ -61,8 +61,19 @@ def trusted_executable(candidate: str | None, label: str) -> Path:
         not resolved.is_absolute()
         or not stat.S_ISREG(info.st_mode)
         or not os.access(resolved, os.X_OK)
-        or stat.S_IMODE(info.st_mode) & 0o022
     ):
+        raise LauncherViolation(f"{label} runtime path is unsafe")
+    return resolved
+
+
+def trusted_executable(candidate: str | None, label: str) -> Path:
+    """Resolve an executable file that no one else may write."""
+    resolved = executable_path(candidate, label)
+    try:
+        mode = resolved.stat().st_mode
+    except OSError as exc:
+        raise LauncherViolation(f"{label} runtime path cannot be attested") from exc
+    if stat.S_IMODE(mode) & 0o022:
         raise LauncherViolation(f"{label} runtime path is unsafe")
     return resolved
 

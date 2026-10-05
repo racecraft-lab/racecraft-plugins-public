@@ -39,6 +39,8 @@ BASIS_METHODS = ("percentile-90", "nist-235", "bobs-six", "shipped-default", "op
 # of modules to 10 wherever possible".
 NIST_COMPLEXITY_CEILING = 10
 PASS_FRACTION = 0.9
+# The coach's lenient measurement ceiling; larger values are not measurements.
+MAX_MEASURED_COMPLEXITY = 1_000_000
 # The shipped defaults when nothing is measured; `recommend` fills the
 # non-measured thresholds from these.
 SHIPPED_DEFAULTS = {"complexity": NIST_COMPLEXITY_CEILING, "crap": 30, "mutation_score_floor": 60}
@@ -153,6 +155,15 @@ def substitutions(thresholds: dict[str, Any]) -> dict[str, str]:
     }
 
 
+def measured_functions(report: Any) -> list[dict[str, Any]]:
+    """Keep bounded positive complexities from a lenient report; malformed containers are empty."""
+    functions = report.get("functions") if isinstance(report, dict) else None
+    if not isinstance(functions, list):
+        return []
+    return [fn for fn in functions if isinstance(fn, dict) and _is_int(fn.get("complexity"))
+            and 1 <= fn["complexity"] <= MAX_MEASURED_COMPLEXITY]
+
+
 def recommend(report: Any) -> dict[str, Any]:
     """Build a thresholds file from a lenient ``crap-score.py --report``.
 
@@ -160,8 +171,7 @@ def recommend(report: Any) -> dict[str, Any]:
     of the measured functions pass. With nothing measured it falls back to
     NIST SP 500-235's ceiling of 10.
     """
-    functions = report.get("functions", []) if isinstance(report, dict) else []
-    values = sorted(int(fn["complexity"]) for fn in functions if _is_int(fn.get("complexity")))
+    values = sorted(fn["complexity"] for fn in measured_functions(report))
     if values:
         index = min(len(values) - 1, max(0, math.ceil(PASS_FRACTION * len(values)) - 1))
         complexity = max(1, values[index])

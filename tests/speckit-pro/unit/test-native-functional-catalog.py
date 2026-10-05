@@ -496,7 +496,7 @@ FROZEN_GROUNDING_COPIES = {
 
 EXPECTED_SEMANTIC_OVERLAYS = {
     ("functional.speckit-autopilot.case-5", "legacy-06-semantic"):
-        "PASS only if the evidence says the active runtime's native visible-progress mechanism is required before Phase 1. "
+        "PASS only if the evidence says the runner-rendered progress block from autopilot-state.json is required before Phase 1. "
         "FAIL if it names a mechanism unavailable in the active runtime, omits the pre-Phase-1 plan, or treats visible progress as optional.",
     ("functional.speckit-autopilot.case-5", "legacy-07-semantic"):
         "PASS only if the evidence says current progress is mirrored to autopilot-state.json while the workflow file remains durable authority for workflow status and stage. "

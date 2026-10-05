@@ -21,6 +21,7 @@ sys.path.insert(0, str(LIB_DIR))
 sys.path.insert(0, str(REPO_ROOT / "speckit-pro"))
 
 from host_skill_views import host_skill_root  # noqa: E402
+from readiness_case import readiness_request  # noqa: E402
 from runner_invocation import assert_runner_response, run_runner  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
@@ -45,10 +46,7 @@ def observation(item: str, status: str = "verified", **extra: object) -> dict[st
 
 
 def request(observations: list[dict[str, object]], mode: str = "apply", **inputs: object) -> dict[str, object]:
-    body = {"host": "claude", "host_version": "2.1.0", "execution_mode": "interactive",
-            "plugin_revision": "2.40.0", "observations": observations, **inputs}
-    return {"schema_version": "1.0", "request_id": "test-readiness", "helper_id": "write-readiness-record",
-            "operation": "write-readiness-record", "mode": mode, "inputs": body}
+    return readiness_request(observations, mode=mode, **{"host_version": "2.1.0", **inputs})
 
 
 class ReadinessRecordTest(unittest.TestCase):
@@ -335,6 +333,19 @@ class ReadinessRecordTest(unittest.TestCase):
         bad_mode = request(self.all_verified(), execution_mode="answer-file")
         _, response, _ = run_runner(bad_mode, cwd=self.root)
         assert_runner_response(self, response, "input_error", 2)
+
+    def test_slash_command_exemptions_require_exact_tokens(self) -> None:
+        from speckit_pro_runner.helpers.readiness_values import clean_text
+        from speckit_pro_runner.strict_input import SelectionError
+
+        for command in ("/mcp", "/hooks", "/plugin", "/reload-plugins"):
+            for template in ("Run {}", "Run `{}`, then retry.", "Run “{}”, then retry.", "Run {} to inspect."):
+                action = template.format(command)
+                self.assertEqual(action, clean_text(action, "action"))
+            for suffix in (".json", ":x", ".d", "/private", "-extra", "_extra"):
+                with self.subTest(command=command, suffix=suffix):
+                    with self.assertRaises(SelectionError):
+                        clean_text(f"Run {command}{suffix}", "action")
 
     def test_unreadable_files_are_not_reported_missing(self) -> None:
         outside = self.root / "target.txt"

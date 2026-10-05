@@ -18,8 +18,10 @@ from .execution_requests import run_execution_helper
 from .gate_preflight_coverage import run_gate_preflight_coverage_helper
 from .g0_setup import run_g0_setup_helper
 from .roadmap_freshness import run_roadmap_freshness_helper
+from .quality_gates_proposal import run_quality_gates_proposal_helper
 from .readiness_record import run_readiness_record_helper
 from .scaffold_answers import run_scaffold_answers_helper
+from .phase_brief import run_phase_brief_helper
 from .run_finalization import run_run_finalization_helper
 from .mutation import empty_mutation, run_mutation_helper, run_spec_index_write, run_sweep_apply_result
 from .pr_emission import generate_pr_body, plan_commands
@@ -114,6 +116,10 @@ def deferred_authoritative_request() -> str:
 
 
 HELPERS: dict[str, HelperEntry] = {
+    "phase-brief": HelperEntry(
+        "phase-brief", "phase-brief", None, "python_authoritative", "python_contract",
+        authoritative_request("phase-brief"),
+    ),
     "g0-setup": HelperEntry(
         "g0-setup", "g0-setup", None, "python_authoritative", "python_contract",
         authoritative_request("g0-setup"),
@@ -685,6 +691,12 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         ("readiness-record-apply",),
         rollback="Delete the local .specify/readiness/<host>.json file; scaffold rewrites it on the next run.",
     ),
+    "propose-quality-gates": MutationEntry(
+        "propose-quality-gates", "propose-quality-gates", ("dry_run", "apply"), None,
+        "golden_only", "fixture_semantic", mutation_authoritative_request("propose-quality-gates"),
+        ("quality-gates-proposal-apply",),
+        rollback="Delete .specify/quality-gates.json; the next scaffold proposes again and autopilot runs on defaults.",
+    ),
 }
 
 
@@ -715,6 +727,7 @@ SPECIAL_HELPER_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
     "check-roadmap-freshness": run_roadmap_freshness_helper,
     "scaffold-answers": run_scaffold_answers_helper,
     "g0-setup": run_g0_setup_helper,
+    "phase-brief": run_phase_brief_helper,
 }
 
 
@@ -826,6 +839,9 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
 
     if entry.helper_id == "write-readiness-record":
         return run_readiness_record_helper(entry, request)
+
+    if entry.helper_id == "propose-quality-gates":
+        return run_quality_gates_proposal_helper(entry, request)
 
     if entry.helper_id == "sweep-apply-result":
         return run_sweep_apply_result(entry, request)
