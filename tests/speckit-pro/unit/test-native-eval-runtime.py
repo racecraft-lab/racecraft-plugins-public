@@ -501,6 +501,17 @@ class NativeEvalRuntimeTests(unittest.TestCase):
             result = self.stage(repo_root=fixture, build_name="build-bytecode", workspace_name="workspace-bytecode")
         self.assertTrue((result.payload_root / ".codex-plugin" / "plugin.json").is_file())
 
+        # The race allowance must not let a linked cache directory through: the
+        # codex-skills overlay copy follows directory links.
+        outside = self.root / "outside-cache"
+        outside.mkdir()
+        (outside / "marker.txt").write_text("PRIVATE-MARKER-MUST-NOT-BE-COPIED", encoding="utf-8")
+        linked = self.fixture_repo("repo-linked-cache")
+        os.symlink(outside, linked / "speckit-pro/codex-skills/install/__pycache__")
+        with self.assertRaisesRegex(RuntimeStageError, "unsafe source member"):
+            self.stage(repo_root=linked, build_name="build-linked-cache", workspace_name="workspace-linked-cache")
+        self.assertFalse((self.root / "build-linked-cache").exists())
+
     def test_rejects_license_symlink_and_nonregular_without_reading_external_target(self) -> None:
         outside = self.root / "protected-external-license.txt"
         outside.write_text("PROTECTED-LICENSE-MARKER", encoding="utf-8")
