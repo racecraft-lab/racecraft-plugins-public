@@ -567,18 +567,10 @@ class NativeEvalRuntimeTests(unittest.TestCase):
             )
         self.assertFalse((self.root / "build-nonregular-license").exists())
 
-    def test_staging_never_mutates_repo_dist_files_directories_or_metadata(self) -> None:
-        # Stage a private checkout copy: other test processes write bytecode
-        # caches into the shared checkout's dist while this test runs.
-        fixture = self.fixture_repo("repo-dist-snapshot")
-        shutil.copytree(
-            REPO_ROOT / "dist",
-            fixture / "dist",
-            ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
-        )
-        before = tree_snapshot(fixture / "dist")
-        self.stage(repo_root=fixture, build_name="build-dist-snapshot", workspace_name="workspace-dist-snapshot")
-        self.assertEqual(tree_snapshot(fixture / "dist"), before)
+    def test_staging_never_mutates_checkout_dist_files_directories_or_metadata(self) -> None:
+        before = tree_snapshot(REPO_ROOT / "dist")
+        self.stage()
+        self.assertEqual(tree_snapshot(REPO_ROOT / "dist"), before)
 
         snapshot_probe = self.root / "snapshot-probe"
         empty = snapshot_probe / "empty"
