@@ -658,6 +658,23 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 )
                 self.assertFalse(parsed["valid"], parsed)
 
+    def test_rendered_skill_view_name_ignores_a_scripted_uuid4(self) -> None:
+        # Runner tests script uuid4 to fixed ids, and the view lives in the
+        # shared temp root, so another process running the same test holds
+        # the name a uuid4-based view would pick.
+        import host_skill_views as views
+        scripted = f"scripted{os.getpid()}"
+        held = Path(tempfile.gettempdir()).resolve() / f"speckit-claude-skills-{scripted}"
+        held.mkdir(mode=0o700)
+        self.addCleanup(held.rmdir)
+        with (
+            mock.patch("uuid.uuid4", return_value=SimpleNamespace(hex=scripted)),
+            mock.patch.dict(views._RENDERED, clear=True),
+        ):
+            root = views.host_skill_root("claude")
+        self.assertTrue((root / "speckit-autopilot" / "SKILL.md").is_file())
+        self.assertNotEqual(root.parent, held)
+
     def test_claude_child_environment_controls(self) -> None:
         claude = import_script(CLAUDE_RUNNER, "layer2_claude_child_environment")
         with (
