@@ -208,6 +208,10 @@ def observe_hooks(raw: dict[str, Any], observed_at: str, source: str, host: str)
     if status == "unknown":
         return make_item("unknown", source, observed_at, prints,
                          "Check the required hooks in /hooks, then rerun scaffold.")
+    if host == "codex":
+        return make_item("unknown", source, observed_at, prints,
+                         "Record legacy hook evidence as incomplete; supply the complete codex_hook_trust "
+                         "observation, then rerun scaffold.")
     return make_item("verified", source, observed_at, prints)
 
 
@@ -392,8 +396,8 @@ POSTURE_DEFAULT_TIMEOUTS = {"mcp_startup_timeout_sec": 10, "mcp_tool_timeout_sec
 LOOPBACK_STATES = ("allowed", "blocked", "unobservable")
 TEMP_DIR_STATES = ("healthy", "leaky", "unobservable")
 POSTURE_ACTIONS = {
-    "external_delegation": "Choose yourself whether external delegation is allowed in Codex; " + NEVER_BROADEN,
-    "mcp_consent": "Decide yourself whether to grant MCP consent in Codex; " + NEVER_BROADEN,
+    "external_delegation": "Keep external delegation blocked; record the limit and continue independent work. " + NEVER_BROADEN,
+    "mcp_consent": "Keep MCP consent ungranted; record the limit and continue work that does not require MCP. " + NEVER_BROADEN,
 }
 
 
@@ -573,8 +577,8 @@ def reconcile_codex_items(items: dict[str, dict[str, Any]], observed_at: str) ->
     trust = items["codex_hook_trust"]
     definitions = items["hooks"]
     if trust["fingerprints"]:
-        if definitions["fingerprints"] and definitions["status"] != trust["status"]:
-            raise SelectionError("Codex hooks and codex_hook_trust observations disagree; use the exact-hash observation")
+        if definitions["fingerprints"]:
+            raise SelectionError("Codex hooks and codex_hook_trust observations overlap; use only the exact-hash observation")
         items["hooks"] = trust
     access = items["codex_local_access"]
     local = items["local_capability"]

@@ -97,6 +97,29 @@ class ReadinessCodexTrustTest(ReadinessCase):
                   "hooks": [dict(hook="PreToolUse", defined=True, trust="untrusted")]}
         assert_runner_response(self, self.run_helper([legacy, shipped_trust()]), "input_error", 2)
 
+    def test_legacy_codex_hooks_cannot_verify_without_handler_hashes(self) -> None:
+        from speckit_pro_runner.helpers import readiness_host_items
+        legacy = {"item": "hooks", "evidence_source": "definition review",
+                  "hooks": [dict(hook="Bogus", defined=True, trust="trusted")]}
+        _, observed = readiness_host_items.host_item(legacy, "codex", "2026-01-01T00:00:00Z", "revision")
+        self.assertEqual("unknown", observed["status"])
+        self.assertEqual("unknown", self.items(self.run_helper([legacy]))["hooks"]["status"])
+
+    def test_blocked_delegation_and_denied_consent_actions_preserve_controls(self) -> None:
+        for field, value, action in (
+            ("external_delegation", "blocked", "Keep external delegation blocked; record the limit and continue independent work."),
+            ("mcp_consent", "not_granted", "Keep MCP consent ungranted; record the limit and continue work that does not require MCP."),
+        ):
+            with self.subTest(field=field):
+                item = self.item(posture(**{field: value}))
+                self.assertEqual("unavailable", item["status"])
+                self.assertEqual(action + " Scaffold never broadens permissions or disables a control.", item["action"])
+
+    def test_redundant_legacy_codex_hooks_cannot_hide_arbitrary_names(self) -> None:
+        legacy = {"item": "hooks", "evidence_source": "definition review",
+                  "hooks": [dict(hook="Bogus", defined=True, trust="trusted")]}
+        assert_runner_response(self, self.run_helper([legacy, shipped_trust()]), "input_error", 2)
+
     def test_sha256_fingerprints_normalize_case_prefix_and_length(self) -> None:
         from speckit_pro_runner.helpers import readiness_host_items
         self.assertEqual("sha256:" + HASH, readiness_host_items.exact_fingerprint("SHA256:" + HASH.upper()))
