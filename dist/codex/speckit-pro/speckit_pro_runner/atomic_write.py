@@ -6,6 +6,7 @@ import hashlib
 import os
 import stat
 import uuid
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -111,7 +112,6 @@ def write_bytes_atomic(
     created_dirs: list[str] = []
     if trust_root is None:
         target.parent.mkdir(parents=True, exist_ok=True)
-        tmp_name = f".{target.name}.tmp-{os.getpid()}-{uuid.uuid4().hex}"
         parent_fd = os.open(target.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0))
         target_name = target.name
     else:
@@ -119,17 +119,49 @@ def write_bytes_atomic(
         if opened is None:
             raise OSError("target parent missing")
         parent_fd, target_name, created_dirs = opened
-        tmp_name = f".{target_name}.tmp-{os.getpid()}-{uuid.uuid4().hex}"
+    failure: OSError | None = None
+    result: dict[str, Any] | None = None
+    try:
+        result = write_bytes_atomic_at(parent_fd, target_name, content, AtomicWriteOptions(
+            mode=mode, expected_snapshot=expected_snapshot, guard_target=trust_root is not None))
+    except OSError as exc:
+        failure = exc
+        raise
+    finally:
+        try:
+            os.close(parent_fd)
+        except OSError as exc:
+            if result is None:
+                if failure is None:
+                    raise
+                failure.cleanup_errors = [*atomic_write_cleanup_errors(failure), f"parent_fd:{type(exc).__name__}"]
+        if trust_root is not None and failure is not None and created_dirs:
+            cleanup_errors = remove_created_parent_dirs(created_dirs, trust_root)
+            if cleanup_errors:
+                failure.cleanup_errors = [*atomic_write_cleanup_errors(failure), *cleanup_errors]
+    return {"digest": result["digest"], "mode": result["mode"], "created_parent_dirs": created_dirs}
+
+
+@dataclass(frozen=True)
+class AtomicWriteOptions:
+    mode: int | None = None
+    expected_snapshot: dict[str, Any] | None = None
+    guard_target: bool = True
+
+
+def write_bytes_atomic_at(parent_fd: int, target_name: str, content: bytes,
+                          options: AtomicWriteOptions) -> dict[str, Any]:
+    """Publish closed bytes relative to a caller-owned directory descriptor."""
+    tmp_name = f".{target_name}.tmp-{os.getpid()}-{uuid.uuid4().hex}"
     tmp_fd = -1
     failure: OSError | None = None
-    replaced = False
     applied_mode: int | None = None
     tmp_cleanup_errors: list[str] = []
     try:
         try:
-            if trust_root is not None:
+            if options.guard_target:
                 ensure_safe_write_target_fd(parent_fd, target_name)
-            existing_mode = mode if mode is not None else current_file_mode_fd(parent_fd, target_name)
+            existing_mode = options.mode if options.mode is not None else current_file_mode_fd(parent_fd, target_name)
             write_mode = existing_mode if existing_mode is not None else 0o666
             tmp_fd = os.open(
                 tmp_name,
@@ -139,18 +171,18 @@ def write_bytes_atomic(
             )
             if existing_mode is not None:
                 os.fchmod(tmp_fd, existing_mode)
-            applied_mode = stat.S_IMODE(os.fstat(tmp_fd).st_mode)
+            written_stat = os.fstat(tmp_fd)
+            applied_mode = stat.S_IMODE(written_stat.st_mode)
             with os.fdopen(tmp_fd, "wb") as fh:
                 tmp_fd = -1
                 fh.write(content)
                 fh.flush()
                 os.fsync(fh.fileno())
-            if trust_root is not None:
+            if options.guard_target:
                 ensure_safe_write_target_fd(parent_fd, target_name)
-            if expected_snapshot is not None:
-                ensure_write_target_matches_snapshot_fd(parent_fd, target_name, expected_snapshot)
+            if options.expected_snapshot is not None:
+                ensure_write_target_matches_snapshot_fd(parent_fd, target_name, options.expected_snapshot)
             os.replace(tmp_name, target_name, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
-            replaced = True
             try:
                 os.fsync(parent_fd)
             except OSError:
@@ -174,28 +206,10 @@ def write_bytes_atomic(
         except OSError:
             # Best-effort cleanup only; the write outcome is already determined.
             tmp_cleanup_errors.append(f"{tmp_name}:OSError")
-        close_error: OSError | None = None
-        try:
-            os.close(parent_fd)
-        except OSError as exc:
-            close_error = exc
-        if close_error is not None and not replaced:
-            if failure is None:
-                raise close_error
-            cleanup_errors = atomic_write_cleanup_errors(failure)
-            cleanup_errors.append(f"parent_fd:{type(close_error).__name__}")
-            failure.cleanup_errors = cleanup_errors
-        if failure is not None and not replaced and tmp_cleanup_errors:
+        if failure is not None and tmp_cleanup_errors:
             failure.cleanup_errors = [*atomic_write_cleanup_errors(failure), *tmp_cleanup_errors]
-        if trust_root is not None and failure is not None and not replaced and created_dirs:
-            cleanup_errors = remove_created_parent_dirs(created_dirs, trust_root)
-            if cleanup_errors:
-                failure.cleanup_errors = [*atomic_write_cleanup_errors(failure), *cleanup_errors]
-    return {
-        "digest": hashlib.sha256(content).hexdigest(),
-        "mode": applied_mode,
-        "created_parent_dirs": created_dirs,
-    }
+    return {"digest": hashlib.sha256(content).hexdigest(), "mode": applied_mode,
+            "file_identity": [written_stat.st_dev, written_stat.st_ino]}
 
 
 def open_safe_parent_fd(target: Path, trust_root: Path, *, create: bool) -> tuple[int, str, list[str]] | None:
