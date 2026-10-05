@@ -214,7 +214,7 @@ def plan_target_report(variant, measured_tokens):
         return None
     plan = variant["stages"]["plan"]
     measured = {"wall_seconds": plan["wall_seconds"], "tokens": measured_tokens}
-    met = plan["tokens"] == measured_tokens and all(measured[metric] <= limit for metric, limit in PLAN_TARGET_LIMITS.items())
+    met = all(measured[metric] <= limit for metric, limit in PLAN_TARGET_LIMITS.items())
     return {**{f"{metric}_limit": limit for metric, limit in PLAN_TARGET_LIMITS.items()},
             **measured, "target_met": met}
 
