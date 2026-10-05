@@ -53,24 +53,23 @@ class ArtifactSelectionTests(SelectionFixture):
         self.assertEqual(result["selected_pages"], ["implementation-plan", "spec-explainer", "module-map"])
         self.assertEqual(result["signals"], ["brownfield_change"])
 
-    def test_modified_mentions_outside_declared_operations_do_not_select_module_map(self) -> None:
-        (self.root / "plan.md").write_text("- MODIFIED outside.py\n## Declared File Operations\n"
-                                           "- NEW src/new.py\n## Notes\n- MODIFIED also-outside.py\n", encoding="utf-8")
-        self.assertEqual(self.select()["selected_pages"], ["implementation-plan", "spec-explainer"])
-
-    def test_fenced_modified_example_is_not_a_declared_operation(self) -> None:
-        (self.root / "plan.md").write_text("## Declared File Operations\n- NEW src/new.py\n"
-                                           "```markdown\n- MODIFIED src/example.py\n```\n", encoding="utf-8")
-        self.assertEqual(self.select()["signals"], [])
-
-    def test_research_alternatives_select_code_approaches(self) -> None:
-        (self.root / "research.md").write_text("**Alternatives considered**: a separate schema.\n", encoding="utf-8")
-        self.assertEqual(self.select(research_file="research.md")["selected_pages"],
-                         ["implementation-plan", "spec-explainer", "code-approaches"])
-
-    def test_design_alternatives_select_code_approaches(self) -> None:
-        (self.root / "design.md").write_text("**Alternatives offered:**\n- Keep the old schema.\n", encoding="utf-8")
-        self.assertEqual(self.select(design_concept_file="design.md")["signals"], ["competing_approaches"])
+    def test_each_signal_follows_its_planning_record(self) -> None:
+        cases = (
+            ("plan_file", "plan.md", "- MODIFIED outside.py\n## Declared File Operations\n"
+             "- NEW src/new.py\n## Notes\n- MODIFIED also-outside.py\n", [],
+             ["implementation-plan", "spec-explainer"]),
+            ("plan_file", "plan.md", "## Declared File Operations\n- NEW src/new.py\n"
+             "```markdown\n- MODIFIED src/example.py\n```\n", [], ["implementation-plan", "spec-explainer"]),
+            ("research_file", "research.md", "**Alternatives considered**: a separate schema.\n",
+             ["competing_approaches"], ["implementation-plan", "spec-explainer", "code-approaches"]),
+            ("design_concept_file", "design.md", "**Alternatives offered:**\n- Keep the old schema.\n",
+             ["competing_approaches"], ["implementation-plan", "spec-explainer", "code-approaches"]),
+        )
+        for field, filename, text, signals, pages in cases:
+            with self.subTest(field=field, text=text):
+                (self.root / filename).write_text(text, encoding="utf-8")
+                result = self.select(**{field: filename})
+                self.assertEqual((result["signals"], result["selected_pages"]), (signals, pages))
 
     def test_links_and_subheadings_record_real_alternatives(self) -> None:
         for text in ("**Alternatives considered**:\n- [Separate schema](https://example.com/schema)\n",
