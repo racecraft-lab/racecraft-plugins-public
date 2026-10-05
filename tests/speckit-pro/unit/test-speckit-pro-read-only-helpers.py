@@ -4930,13 +4930,18 @@ class G0BaselineStageTests(unittest.TestCase):
                 G0SetupTests.prepare_fixture(root, None)
                 (root / "package.json").write_text(json.dumps({"scripts": self.SCRIPTS}), encoding="utf-8")
                 before = G0SetupTests.fixture_files(root)
-                data = self.commands_data(root, surface)
+                with patch("subprocess.Popen", wraps=subprocess.Popen) as spawned:
+                    data = self.commands_data(root, surface)
                 self.assertEqual(before, G0SetupTests.fixture_files(root), "plan-stage G0 must not write")
+                for call in spawned.call_args_list:
+                    argv = call.args[0] if call.args else call.kwargs.get("args")
+                    argv = argv.split() if isinstance(argv, str) else list(argv)
+                    self.assertNotIn(argv[0], {"npm", "pnpm", "yarn", "bun"}, f"plan-stage G0 ran a project command: {argv}")
                 baseline = data["baseline"]
                 self.assertEqual([], baseline["plan_stage"])
                 self.assertEqual(
-                    [("TYPECHECK", "npm typecheck"), ("UNIT_TEST", "npm test"), ("INTEGRATION_TEST", "npm test:integration"),
-                     ("BUILD", "npm build"), ("LINT", "npm lint")],
+                    [("BUILD", "npm build"), ("TYPECHECK", "npm typecheck"), ("LINT", "npm lint"),
+                     ("UNIT_TEST", "npm test"), ("INTEGRATION_TEST", "npm test:integration")],
                     [(row["slot"], row["command"]) for row in baseline["implement_entry"]],
                 )
 

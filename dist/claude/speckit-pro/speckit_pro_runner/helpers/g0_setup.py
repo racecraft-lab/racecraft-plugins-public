@@ -10,12 +10,8 @@ from ..envelope import response
 from ..strict_input import SelectionError, require_fields, require_text
 from ..trusted_io import resolve_repo_root, validate_bounded_inputs
 from .read_only import (
-    EXIT_STATUS, check_prerequisites, detect_commands, detect_presets, helper_failure_diagnostic, output_capture,
+    BASELINE_SLOTS, EXIT_STATUS, check_prerequisites, detect_commands, detect_presets, helper_failure_diagnostic, output_capture,
 )
-
-# The project baseline runs at implement entry, never at plan-stage G0. The helper
-# only plans it: it runs no project command and records nothing.
-BASELINE_SLOTS = ("TYPECHECK", "UNIT_TEST", "INTEGRATION_TEST", "BUILD", "LINT")
 
 PROBES = {
     "prerequisites": ("check-prerequisites", check_prerequisites),
@@ -25,7 +21,7 @@ PROBES = {
 
 
 def baseline_plan(commands: dict[str, str]) -> dict[str, Any]:
-    """Plan-stage G0 runs no project command; implement entry runs each detected baseline slot, in order."""
+    """Plan the project baseline without running it: plan-stage G0 runs nothing; implement entry runs each detected slot, in order."""
     return {"plan_stage": [], "implement_entry": [
         {"slot": slot, "command": commands[slot]} for slot in BASELINE_SLOTS if commands.get(slot, "N/A") != "N/A"
     ]}

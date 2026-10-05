@@ -382,10 +382,9 @@ Read the workflow file's Prerequisites table. If already
 
 1. Read constitution from `.specify/memory/constitution.md`
 2. For each principle, verify it against the codebase by reading:
-   structure, documented patterns, module boundaries. Run no typecheck,
-   test, build, or lint command: the project baseline runs at implement
-   entry (`references/phase-execution.md`, Phase 7 Setup: Project
-   Baseline). For code review items (KISS, YAGNI, SOLID), mark
+   structure, documented patterns, module boundaries. The project baseline
+   belongs to implement entry (`references/phase-execution.md`, Phase 7
+   Setup: Project Baseline). For code review items (KISS, YAGNI, SOLID), mark
    `Verified`; these are validated during implementation.
 3. Record the G0 baseline for every populated quality-gate slot
    per the Step 0.11 rule: `COMPLEXITY` on the whole tracked

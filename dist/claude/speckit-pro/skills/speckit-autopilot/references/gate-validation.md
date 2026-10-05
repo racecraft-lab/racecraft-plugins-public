@@ -36,8 +36,8 @@ gate never becomes a pass.
    missing budget number is a `block` that no pragma excuses.
 ```
 
-The typecheck, test, build, and lint baseline is not part of G0. It runs at
-implement entry (phase-execution.md, Phase 7 Setup: Project Baseline).
+The typecheck, test, build, and lint baseline belongs to implement entry
+(phase-execution.md, Phase 7 Setup: Project Baseline).
 
 **Auto-Fix:** Spawn a repair agent for the failing check within the gate's allowance.
 

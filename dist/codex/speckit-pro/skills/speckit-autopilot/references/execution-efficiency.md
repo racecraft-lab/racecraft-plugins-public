@@ -694,7 +694,7 @@ A content hash or worker `passed: true` is insufficient. Missing input coverage,
 changed inputs, failed checks, absent process/native producer attestation, or
 unresolved findings require rerunning affected checks; broaden if impact is
 unknown. No general cache or daemon is introduced. Review edits invalidate
-affected evidence before PR emission. Preserve the implement-entry baseline test counts as diagnostics;
+affected evidence before PR emission. Preserve G0 test counts as diagnostics;
 require meaningful behavioral coverage, not count growth or redundant tests.
 
 Keep all required gates and truthful manual-UAT status. Timing targets are
