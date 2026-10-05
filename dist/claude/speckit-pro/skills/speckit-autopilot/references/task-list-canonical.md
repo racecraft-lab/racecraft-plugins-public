@@ -1,6 +1,10 @@
 # Canonical Task List Reference
 
-The complete, prescribed task list the autopilot creates via `TaskCreate` at Step 1.1 and mirrors in `autopilot-state.json`. Every entry below MUST appear in the visible progress panel before Phase 1 starts. Do NOT omit, collapse, or defer entries — when a required extension is absent, the task still appears, marked as `skipped: <extension> not installed`.
+The complete, prescribed checklist the autopilot materializes at Step 1.1 in
+`autopilot-state.json`. Every entry below MUST appear in the state file
+before Phase 1 starts. Do NOT omit, collapse, or defer entries — when a
+required extension is absent, the item still appears, marked as
+`skipped: <extension> not installed`.
 
 ## Contents
 
@@ -108,13 +112,13 @@ items. Never omit consensus tasks from the task list at creation time.
 - Phase 7 decomposes into groups after `tasks.md` is created
   (test / impl / verify per phase — see [`phase-execution.md`](./phase-execution.md))
 - Mark completed phases immediately; first pending phase as `in_progress`
-- Use EXACTLY the same task names in the task panel and `autopilot-state.json`
+- Use the canonical item names in `autopilot-state.json`
 - Preserve one or more pending items for every later canonical phase when
   resuming from a middle phase
-- Print a checklist summary immediately after writing both copies
+- Print a checklist summary immediately after writing the state file
 - **Verify task-list completeness before starting Phase 1**: count the
   prescribed entries (every Phase, every Consensus, every `Post:` task) and
-  confirm each is present in both stores. If the count differs, ADD the
+  confirm each is present in the state file. If the count differs, ADD the
   missing entries before advancing. Then run the coverage guard below and do
   not advance unless it exits 0.
 
