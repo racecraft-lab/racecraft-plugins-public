@@ -79,7 +79,9 @@ def cleanup_child(
     timeout = CLEANUP_TIMEOUT if timeout is None else timeout
     grace = DESCENDANT_EXIT_GRACE if grace is None else grace
     started = time.monotonic()
-    kill_sent = False
+    # After the latest signal reached the group, macOS answers EPERM until its
+    # zombie members are reaped, so an EPERM probe then is unresolved, not fatal.
+    signal_delivered = False
     last_probe_error: PermissionError | None = None
 
     def running(*, natural_grace: bool = False) -> bool:
@@ -99,7 +101,7 @@ def cleanup_child(
         except PermissionError as exc:
             if observations is not None:
                 observations.append({"pgid": child.pid, "errno": exc.errno, "elapsed_seconds": time.monotonic() - started})
-            if exc.errno != errno.EPERM or (not natural_grace and not kill_sent):
+            if exc.errno != errno.EPERM or (not natural_grace and not signal_delivered):
                 raise
             # Permission denial is unresolved, never proof of absence.
             last_probe_error = exc
@@ -114,9 +116,7 @@ def cleanup_child(
         if not running():
             return signaled
         signaled = True
-        sent = terminate(child, signum)
-        if signum == signal.SIGKILL and sent:
-            kill_sent = True
+        signal_delivered = terminate(child, signum)
         deadline = time.monotonic() + timeout
         while running() and time.monotonic() < deadline:
             time.sleep(0.05)

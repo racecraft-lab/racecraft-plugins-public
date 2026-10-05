@@ -877,9 +877,48 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 self.assertEqual(observations[-1]["errno"], 1 if persistent else 3)
 
     @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
-    def test_claude_only_post_successful_kill_eperm_may_settle(self) -> None:
+    def test_claude_post_term_zombie_group_eperm_requires_later_absence(self) -> None:
+        # macOS answers EPERM for a group whose last member died from SIGTERM
+        # but is not yet reaped; only a later absence settles the cleanup.
+        claude = import_script(CLAUDE_RUNNER, "layer2_claude_post_term_zombie_probe")
+        for persistent in (False, True):
+            with self.subTest(persistent=persistent):
+                child = FakePopen(b"", returncode=0)
+                sent = []
+                observations = []
+
+                def probe(pgid: int, signum: int) -> None:
+                    self.assertEqual(pgid, child.pid)
+                    if signum:
+                        sent.append(signum)
+                        if persistent and signum == signal.SIGKILL:
+                            raise PermissionError(1, "zombie-only group refuses the signal")
+                    elif sent:
+                        if persistent or not observations:
+                            raise PermissionError(1, "zombie-only group")
+                        raise ProcessLookupError(3, "group absent")
+
+                with (
+                    mock.patch.object(claude.os, "getpgrp", return_value=child.pid + 1),
+                    mock.patch.object(claude.os, "killpg", side_effect=probe),
+                    mock.patch.object(claude, "CLEANUP_TIMEOUT", 0.5),
+                    mock.patch.object(claude, "DESCENDANT_EXIT_GRACE", 0),
+                    mock.patch.object(claude.time, "monotonic", side_effect=[i / 10 for i in range(100)]),
+                    mock.patch.object(claude.time, "sleep"),
+                ):
+                    if persistent:
+                        with self.assertRaises(PermissionError):
+                            claude.cleanup_child(child, observations=observations)
+                    else:
+                        self.assertTrue(claude.cleanup_child(child, observations=observations))
+                self.assertEqual(sent, [signal.SIGTERM, signal.SIGKILL] if persistent else [signal.SIGTERM])
+                self.assertEqual(observations[0]["errno"], 1)
+                self.assertEqual(observations[-1]["errno"], 1 if persistent else 3)
+
+    @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
+    def test_claude_only_post_successful_signal_eperm_may_settle(self) -> None:
         claude = import_script(CLAUDE_RUNNER, "layer2_claude_permission_boundaries")
-        for fault in ("initial", "term-send", "term-probe", "kill-send", "kill-absent", "post-kill-eacces"):
+        for fault in ("initial", "term-send", "kill-send", "kill-absent", "post-kill-eacces"):
             with self.subTest(fault=fault):
                 child = FakePopen(b"", returncode=0)
                 attempted = []
@@ -894,7 +933,6 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                             raise ProcessLookupError(3, "signal target absent")
                     elif (
                         (fault == "initial" and not attempted)
-                        or (fault == "term-probe" and attempted == [signal.SIGTERM])
                         or (fault in {"kill-absent", "post-kill-eacces"} and signal.SIGKILL in attempted)
                     ):
                         failed_probes.append(signum)
