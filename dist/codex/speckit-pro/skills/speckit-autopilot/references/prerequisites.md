@@ -227,8 +227,8 @@ to archive previously merged specs.
    complete the Archive Sweep plan item. It is not a fallback for a broken or
    unexecuted command path.
 8. Add/update the canonical `Archive Sweep: previously merged specs
-   dry-run/apply eligibility` plan item before Phase 0 in both `update_plan`
-   and `autopilot-state.json`. Complete it only after the direct contract run
+   dry-run/apply eligibility` plan item before Phase 0 in
+   `autopilot-state.json`. Complete it only after the direct contract run
    succeeds or the extension is confirmed absent.
 
 If the archive extension is missing, record `archive_extension_installed=false`,
