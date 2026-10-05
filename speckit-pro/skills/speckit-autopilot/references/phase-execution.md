@@ -1876,20 +1876,27 @@ list" case above — it takes the whole-set gap rather than being read as far as
 got. A partial summary is missing information, never evidence of success, and a
 gap count read off one is not a measurement.
 
-**Reconcile current-run ownership before trusting any artifact file.** Read the
-manifest's `draft-pr` entry IDs after the dispatch. A complete outcome list owns
-only the IDs it reports as `generated`; an error, timeout, truncated result, or
-unreadable list owns none. Delete every draft-stage final `.html` whose ID lacks
-a complete current-run `generated` outcome, and delete every sibling
-`.artifact-author-*.tmp` file. This cleanup removes stale results from prior
-runs as well as interrupted writes. After deletion, re-read the artifact
-directory and require that every remaining draft-stage final ID is owned by the
-complete current-run `generated` set and that no `.artifact-author-*.tmp` file
-remains. A successfully removed page is ordinary fail-open gap handling. A
-failed deletion or an ownership postcondition that cannot be established is an
-artifact-integrity failure: STOP before staging, the boundary commit, push, or
-pull-request creation or refresh, because fail-open cannot safely preserve an
-unowned file.
+**Reconcile artifacts through the runner before staging.** Retain each
+publication receipt with its page outcome, including a page demoted to `gap`.
+For a receipted page that fails validation or is no longer selected, invoke
+`publish-artifact-page` in mode `apply` with `action: "cleanup"`, the current
+planning inputs, `page_id`, `expected_sha256` from the receipt's `data.sha256`,
+and `expected_file_identity` from its `data.file_identity`. The helper permits
+a shipped draft page even when re-selection has dropped it. Omit `rendered_html`.
+Require `ok` and `data.outcome == "removed"`; record a removal only when
+`data.removed` is true. A refused operation is a gap with the returned diagnostic.
+
+**Preserve files without a publication receipt.** A missing or truncated author
+result cannot authorize cleanup of a pre-existing page or temporary. Report the
+missing receipt and preserve the entry; use the same runner helper for every
+artifact output operation. Leave retained recovery copies untouched.
+
+**Exclude runner recovery directories and unreceipted files from staging.**
+Stage only the paths returned in accepted publication receipts and successful
+receipted removals. Inspect the index after the boundary's broader path staging
+and unstage any other artifact path before committing. A generation gap remains
+fail-open; a refused operation or unknown ownership must never become a staged
+artifact or a claim of successful deletion.
 
 #### The written pages are verified on disk, not taken on report
 
@@ -1899,7 +1906,8 @@ can leave a page on disk its own report never mentioned. Run this check after th
 dispatch returns and **before the boundary commit**, so nothing that fails it can
 reach a commit.
 
-For each page written to `specs/<feature>/artifacts/`, two positive tests:
+For each accepted publication receipt, apply two positive tests to the helper's
+`data.verified_html` final read:
 
 | Test | The page fails when |
 | --- | --- |
@@ -1912,19 +1920,11 @@ carry none at all. On those, byte-identity is the only guard, and one byte of
 drift defeats it. Neither test is a substitute for reading the page when the
 outcome is in doubt.
 
-**A page that fails either test is a gap for that page — whatever the agent
-reported — and the file is deleted.** Deleting is the point. The shipped
-templates are complete worked examples built on an invented feature, so an
-unfilled page is neither empty nor obviously broken: it is a plausible-looking
-document about something else. Left on disk it is committed, pushed, and linked
-from the pull-request body as though it were real.
-
-After every verification-driven deletion, re-read that path and require it to
-be absent. If an invalid or sample page cannot be removed, STOP before staging,
-the boundary commit, push, or pull-request creation or refresh. Demoting the
-outcome remains fail-open only when the invalid file is verifiably gone; a
-surviving invalid file is the same artifact-integrity failure as a surviving
-unowned file.
+**A page that fails either test is a gap for that page**, whatever the agent
+reported. Reconcile its receipt through the cleanup protocol above. Keep the
+gap out of the staged artifact set; a refused cleanup preserves the entry and
+reports its diagnostic. Consume runner results for the final read and cleanup
+rather than inspecting or deleting output paths with native tools.
 
 **This is why an emptiness check cannot stand in for these two.** "Is every
 marked region populated?" answers yes on a page that was never touched, because
@@ -3389,12 +3389,13 @@ A `stale` verdict regenerates through the installed `artifact-author` agent:
    planning record, then a bounded `wait_agent` loop until its outcome list
    arrives.
 <!-- /host -->
-3. Compute the removal set through the `removal_diff` surface, and delete
-   those files.
-3b. Delete the superseded file behind each per-page gap. Skipped entirely on
+3. Compute the removal set through the `removal_diff` surface, and reconcile
+   its publication receipts through runner-owned cleanup.
+3b. Reconcile the receipt behind each per-page gap through the same helper. Skipped entirely on
     a whole-set gap.
-4. Verify the written pages on disk, through the two positive tests above.
-5. Commit specs/<feature>/artifacts/ alone, with the docs type.
+4. Verify the helper final reads through the two positive tests above.
+5. Stage only accepted publication and removal receipt paths under
+   specs/<feature>/artifacts/, then commit with the docs type.
 6. Push. A failed push ends the sequence there.
 7. Take the refresh call site's own live observation, and classify it.
 8. Refresh the description through create or refresh.
@@ -3449,24 +3450,15 @@ the amended comment instead.
 
 #### Phase 7 Setup: The Superseded File Behind a Per-Page Gap
 
-**A selected page whose regeneration returns a `gap` of its own, in a run that
-produced at least one `generated` page, has any pre-existing file at its path
-removed from disk.** That is step 3b. The removal is reported **inside that
-page's own `gap` outcome**, never as a separate `removed` outcome, which is
-reserved for a page re-selection no longer selects.
+**A selected page whose regeneration returns a per-page `gap` is reconciled
+only with its publication receipt**, through the cleanup protocol above. Report
+an actual removal inside that page's `gap`, rather than a separate `removed`
+outcome, which is reserved for a page re-selection no longer selects. An older
+page without a receipt remains untouched and is excluded from staging.
 
-**The ground is the one the on-disk verification above already gives** for
-deleting a page that fails its two tests: a plausible-looking document about a
-plan that is not this one is worse than no document at all. A page the author
-declined to rewrite is that same hazard one degree sharper, because it is
-about the right feature and the wrong, superseded plan.
-
-**The exclusion is explicit: a whole-set gap deletes nothing.** Step 3b is
-skipped in its entirety there, and the directory is left unmoved.
-
-**The removal set keeps a gapped page out**, because the page is still
-selected. That rule governs the deselection diff alone and is never licence to
-leave the superseded file in the tree.
+**A whole-set gap skips step 3b.** Missing results carry no cleanup authority.
+Deselection cleanup likewise requires the receipt for the dropped page; a
+computed removal set alone is not evidence of ownership.
 
 #### Phase 7 Setup: Three Commit Shapes, Kept Apart
 
@@ -3476,8 +3468,9 @@ leave the superseded file in the tree.
 | Record | the workflow file path alone | `chore` | the refresh actually changed the `Draft PR` cell |
 | Bookkeeping | the workflow file path alone | `chore` | unchanged, exactly as the sweep already takes it above |
 
-**No commit absorbs another.** The regeneration commit stages the artifacts
-directory alone because that is what keeps the freshness join exact: any other
+**No commit absorbs another.** The regeneration commit stages only accepted
+receipt paths under the artifacts directory because that keeps the freshness
+join exact: any other
 staged path would move the directory's last-touched commit for reasons
 unrelated to page content.
 
@@ -3512,55 +3505,13 @@ under that directory would ride into a commit touching it and move the join.
 **The rule does not reach backward to the plan-stage boundary commit**, which
 legitimately carries the first generation through its own `specs/` path set.
 
-**The other half binds the working tree, not the commit.** The reused
-machinery writes each page directly into that directory and deletes every
-written page failing its verification **before** the commit decision exists,
-so a run can end having changed, or emptied, a directory it took no commit
-for. An emptied directory reads `no_pages` on the next join, which outranks
-`stale`, so the retry that would otherwise repair it never fires.
-
-**The mechanism is snapshot and replay.** Snapshot the artifacts directory's
-bytes immediately after the artifacts observation above and before the author
-dispatch, and replay that snapshot only when the run's final verified
-`generated` count is zero — the regeneration commit's own gate, never a proxy
-such as whether a commit landed.
-
-**The replay restores the snapshot minus every page the removal set names.** A
-deselection removal is not damage the replay exists to undo: the manifest
-re-selection no longer justifies that page, and Q5 forbids carrying a page the
-manifest no longer justifies. Restoring it would undo the one piece of work the
-run completed and repeat that undoing on every later run, because the deselection
-is durable and the authoring failure may not be. So the two decisions are read
-apart: the `generated` count decides *whether* to replay, and the removal set
-decides *what the replay leaves out*.
-
-**The two shortfall rows follow from that.** A
-whole-set gap with no removal replays the whole snapshot, leaves the directory
-unmoved, and takes no commit. A whole-set gap beside a deselection removal
-replays every selected page, leaves the directory lighter by exactly that
-removal, and takes the commit the gate above allows. Both match what the
-shortfall table already told the operator to expect.
-
-**A git-restore path is rejected.** The history this case arises on is one
-where no commit has ever touched the directory, so git holds no copy to
-restore from.
-
-**The regeneration rollback snapshot uses an owner-only temporary directory
-outside the repository.** It is separate from the broker session, contains no
-reviewer or model record, and is removed before the run proceeds or stops.
-
-**It never lives under `specs/<feature>/artifacts/`.** The observation would
-read it as a page, and the stem-matched removal diff would then compute it as
-a deselection removal, deleting the restore copy. The exclusivity rule above
-forbids it there independently.
-
-**The replay decision completes before the temporary snapshot is removed.**
-Ordered the other way, cleanup would destroy the bytes the replay exists to
-restore on exactly the zero-generated path it was written for.
-
-**Any restoration performed is reported as a run-level line beside the commit
-sha**, and is not a fourth page outcome: a restored page's own outcome is the
-`gap` explaining why it was not regenerated.
+**Runner publication owns rollback.** A failed replacement preserves the old
+page or a retained recovery copy and reports a gap. Consume that result and
+leave recovery entries untouched; native snapshot, replay and temporary cleanup
+are not artifact operations. Accepted publications remain governed by their
+receipts, even when a later page fails. When no accepted publication or receipted
+removal remains, take no regeneration commit and report the shortfall. Preserve
+unreceipted pages outside the staged path set.
 
 #### Phase 7 Setup: A Whole-Set Gap Still Refreshes
 

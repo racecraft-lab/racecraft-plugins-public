@@ -94,9 +94,8 @@ def sequential_template_errors(value: str) -> list[str]:
         "Process selected entries in manifest order.",
         "Read only the current entry's template; never batch-read, prefetch, or read templates in parallel.",
         "Read the next only after the current page is recorded as `generated` or `gap`.",
-        "The runner exclusively creates and closes a sibling temporary, validates its "
-        "bytes, replaces the destination relative to its anchored directory descriptor, "
-        "and re-reads the final regular file through no-follow descriptors.",
+        "Return each publication receipt with its page outcome",
+        "Both `expected_sha256` and `expected_file_identity` are required",
         "Consume `data.verified_html` as the final read and confirm the same four checks "
         "against that returned content.",
         "Require `ok` and `data.outcome == \"generated\"` before recording `generated`;",
@@ -159,10 +158,8 @@ class ArtifactGalleryTests(unittest.TestCase):
                 ("manifest order", "any order"),
                 ("Read the next only after", "Read the next before"),
                 ("recorded as `generated` or `gap`", "considered ready"),
-                ("creates and closes a sibling temporary", "writes directly"),
-                ("validates its bytes", "assumes its bytes"),
-                ("replaces the destination relative to its anchored directory descriptor", "replaces a pathname"),
-                ("re-reads the final regular file through no-follow descriptors", "reads a pathname"),
+                ("Return each publication receipt with its page outcome", "Omit publication receipts"),
+                ("Both `expected_sha256` and `expected_file_identity` are required", "Receipts are optional"),
                 ("confirm the same four checks", "assume the content"),
                 ('data.outcome == "generated"', 'data.outcome == "dry_run"'),
                 ("A non-`ok` result is an artifact gap, never success.", "Any result is success."),
@@ -170,6 +167,25 @@ class ArtifactGalleryTests(unittest.TestCase):
                 with self.subTest(path=path, mutation=old):
                     self.assertIn(old, value)
                     self.assertTrue(sequential_template_errors(value.replace(old, new, 1)))
+
+    def test_output_cleanup_requires_receipts_in_source_and_both_payloads(self) -> None:
+        for root in (REPO_ROOT / "speckit-pro", REPO_ROOT / "dist/claude/speckit-pro",
+                     REPO_ROOT / "dist/codex/speckit-pro"):
+            role = root / ("codex-agents/artifact-author.toml" if "codex" in root.parts
+                           else "agents/artifact-author.md")
+            with self.subTest(surface=str(root.relative_to(REPO_ROOT))):
+                author = " ".join(read(role).split())
+                reference = " ".join(read(root / "skills/speckit-autopilot/references/phase-execution.md").split())
+                skill = " ".join(read(root / "skills/speckit-autopilot/SKILL.md").split())
+                self.assertIn("Both `expected_sha256` and `expected_file_identity` are required", author)
+                self.assertIn("a shipped draft page that re-selection no longer selects", author)
+                self.assertIn("Return each publication receipt with its page outcome", author)
+                self.assertIn("runner-owned artifact reconciliation", skill)
+                self.assertNotIn("`.artifact-author-*.tmp`", reference)
+                self.assertIn("`action: \"cleanup\"`", reference)
+                self.assertIn("`expected_file_identity`", reference)
+                self.assertIn("Preserve files without a publication receipt", reference)
+                self.assertIn("Exclude runner recovery directories and unreceipted files from staging", reference)
 
     def test_frozen_catalog_maps_every_manifest_row_and_file(self) -> None:
         expected = catalog()

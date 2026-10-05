@@ -143,30 +143,30 @@ slot inventory exactly. Verify the complete rendered page before publication:
 Invoke the loaded runner's `publish-artifact-page` helper, with operation
 `publish-artifact-page` and mode `apply`. Send the same repository-relative
 planning inputs used for selection, the current `page_id`, and the complete
-`rendered_html` string. Its default action is `publish`; `dry_run` validates the
-request without creating output. All artifact output I/O belongs to this helper:
+`rendered_html` string. Its default action is `publish`; mode `dry_run` validates
+the request without creating output. All artifact output I/O belongs to this helper:
 use runner-owned temporary creation, publication, final read and cleanup.
 Never create, write, rename, read or delete artifact output paths through native
 file tools. A pathname preflight or post-write snapshot is not a publication
 receipt: swap-and-restore can make either approve an untouched old page.
 
-The runner exclusively creates and closes a sibling temporary, validates its
-bytes, replaces the destination relative to its anchored directory descriptor,
-and re-reads the final regular file through no-follow descriptors. It verifies
-the written inode, exact rendered bytes and current directory binding. Consume
-`data.verified_html` as the final read and confirm the same four checks against
-that returned content. Require `ok` and `data.outcome == "generated"` before
-recording `generated`; record `data.path`, `data.sha256` and `data.file_identity`
-as its publication receipt. A non-`ok` result is an artifact gap, never success.
+Consume `data.verified_html` as the final read and confirm the same four checks
+against that returned content. Require `ok` and `data.outcome == "generated"`
+before recording `generated`; record `data.path`, `data.sha256` and
+`data.file_identity` as its publication receipt. A non-`ok` result is an artifact
+gap, never success. Return each publication receipt with its page outcome,
+including a page subsequently demoted to `gap`.
 
-The runner cleans its owned temporary and failed publication. If final-content
-validation fails, or interruption leaves an unreported page, use the same helper
-in `apply` mode with `action: "cleanup"`, the planning inputs and `page_id`.
-Omit `rendered_html`; include `expected_sha256` when a receipt is available.
-Cleanup covers that selected final page and its interrupted atomic temporaries
-through the directory descriptor. A refused cleanup remains a reported gap;
-leave unsafe paths alone. The orchestrator uses this cleanup action for pages
-without a complete current-run `generated` outcome before the boundary commit.
+If final-content validation fails, use the same helper in `apply` mode with
+`action: "cleanup"`, the planning inputs and `page_id`. Both `expected_sha256`
+and `expected_file_identity` are required: pass the receipt's `data.sha256` and
+`data.file_identity`. Omit `rendered_html`. This receipt also authorizes cleanup
+of a shipped draft page that re-selection no longer selects. Without a receipt,
+preserve the file and report the gap. Cleanup success requires `ok` and
+`data.outcome == "removed"`; report removal only when `data.removed` is true.
+A refused cleanup preserves the entry and reports a gap. The runner may retain
+recovery copies; leave them untouched and keep them out of commits. It does not
+remove unreceipted temporary files.
 
 ## Result — one outcome per selected page
 
@@ -184,7 +184,7 @@ budget runs low, start no new page and return the outcomes you have:
 `generated` for each page that finished and passed its checks, and `gap` with
 the reason `turn budget exhausted` for each page you did not reach. Report
 those partial outcomes rather than nothing: a missing result is a whole-set gap,
-and the orchestrator then removes every page, including the finished ones.
+and the orchestrator can reconcile only pages with publication receipts.
 
 ## Fail open — never block the pull request
 

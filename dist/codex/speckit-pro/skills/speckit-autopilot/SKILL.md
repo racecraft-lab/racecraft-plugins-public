@@ -992,13 +992,11 @@ A non-`ok` selection is a whole-set artifact gap under the existing fail-open
 reporting protocol.
 
 Require `publish-artifact-page` for every artifact output write, publish,
-final read and cleanup. The author sends the rendered page in memory and
-consumes the runner's publication receipt. At boundary cleanup, use the same
-helper's `cleanup` action for selected pages without a complete current-run
-`generated` outcome; pass `expected_sha256` when known. This runner-owned I/O
-protocol applies during regeneration and overrides native pathname operations
-in older artifact workflow descriptions. A refused operation is an artifact
-gap under the fail-open reporting protocol.
+final read and cleanup. Carry publication receipts in page outcomes and retain
+them for regeneration reconciliation. Before staging or handling a deselected or gapped page,
+execute the runner-owned artifact reconciliation in
+[`references/phase-execution.md`](./references/phase-execution.md). It owns the
+receipt inputs, cleanup outcomes and staging checks for both hosts.
 
 Pass those planning inputs in the installed `artifact-author` spawn_agent prompt.
 
