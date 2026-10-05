@@ -21,7 +21,7 @@ import stat
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
-from typing import Any
+from typing import Any, TypeGuard
 
 from .. import cli_probe, quality_gates
 from ..agent_materialization import digest
@@ -48,6 +48,10 @@ INPUT_KEYS = frozenset({"host", "host_version", "execution_mode", "plugin_revisi
 OBSERVATION_KEYS = frozenset({"item", "status", "evidence_source", "action", "files", "values"})
 VALUE_NAME_RE = re.compile(r"[a-z][a-z0-9_]{0,40}")
 EXECUTION_MODES = ("interactive", "answers-file")
+RECORD_KEYS = frozenset({"schema_version", "binding", "host", "host_version", "execution_mode", "plugin_revision",
+                         "observed_at", "items"})
+ITEM_KEYS = frozenset({"status", "evidence_source", "observed_at", "fingerprints"})
+TIMESTAMP_RE = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z")
 DOCKER_PROBE_SECONDS = 10
 
 
@@ -61,11 +65,16 @@ def fingerprint_files(paths: Any, root: Path, label: str) -> dict[str, str]:
     prints: dict[str, str] = {}
     for raw in paths:
         text = clean_text(raw, f"{label}.files entry")
-        relative = PurePosixPath(text)
-        if relative.is_absolute() or ".." in relative.parts or "\\" in text:
+        if not inside_repository(text):
             raise SelectionError(f"{label}.files entry {text!r} must stay inside the repository")
+        relative = PurePosixPath(text)
         prints[f"file:{relative.as_posix()}"] = fingerprint_file(root, relative)
     return prints
+
+
+def inside_repository(text: str) -> bool:
+    relative = PurePosixPath(text)
+    return bool(text) and not relative.is_absolute() and ".." not in relative.parts and "\\" not in text
 
 
 def fingerprint_file(root: Path, relative: PurePosixPath) -> str:
@@ -268,21 +277,61 @@ def write_record(root: Path, record: dict[str, Any]) -> str:
 def preview_surface(root: Path, host: str) -> str:
     """`available`, `unavailable` or `unknown`: what this worktree's record says about a preview surface (ADR 0019).
 
-    Only a record that parses, names this host and binds to this worktree can speak; anything else is `unknown`,
-    never a guess, because ADR 0008 treats a missing or stale record as no evidence.
+    Only a record the writer could have written, for this host and worktree, with a well-formed item whose file
+    fingerprints still match, can speak; anything else is `unknown`, never a guess, because ADR 0008 treats a
+    missing, malformed or stale record as no evidence.
     """
     content = trusted_bytes(root / RECORD_DIRECTORY / f"{host}.json", root)
     try:
         record = json.loads(content) if content is not None else None
     except ValueError:
         return "unknown"
-    if not isinstance(record, dict) or record.get("schema_version") != SCHEMA_VERSION or record.get("host") != host \
-            or record.get("binding") != {"worktree": digest(str(root))}:
+    if not current_record(record, root, host):
         return "unknown"
-    items = record.get("items")
-    item = items.get("preview_surface") if isinstance(items, dict) else None
-    status = item.get("status") if isinstance(item, dict) else None
-    return {"verified": "available", "unavailable": "unavailable"}.get(str(status), "unknown")
+    item = record["items"].get("preview_surface")
+    if not sound_item(item) or not current_fingerprints(item["fingerprints"], root):
+        return "unknown"
+    return {"verified": "available", "unavailable": "unavailable"}.get(item["status"], "unknown")
+
+
+def current_record(record: Any, root: Path, host: str) -> TypeGuard[dict[str, Any]]:
+    if not isinstance(record, dict) or record.keys() != RECORD_KEYS:
+        return False
+    return record["schema_version"] == SCHEMA_VERSION and record["host"] == host \
+        and record["binding"] == {"worktree": digest(str(root))} and timestamp(record["observed_at"]) \
+        and isinstance(record["items"], dict)
+
+
+def timestamp(value: Any) -> bool:
+    return isinstance(value, str) and TIMESTAMP_RE.fullmatch(value) is not None
+
+
+def sound_item(item: Any) -> bool:
+    """The shape `make_item` writes: a known status, clean evidence, a time, digests, and an action when one is due."""
+    if not isinstance(item, dict) or item.get("status") not in STATUSES:
+        return False
+    texts = ("evidence_source", "action") if item["status"] in NEEDS_ACTION else ("evidence_source",)
+    if item.keys() != ITEM_KEYS | set(texts) or not timestamp(item["observed_at"]):
+        return False
+    try:
+        if not all(clean_text(item[key], key) for key in texts):
+            return False
+    except SelectionError:
+        return False
+    prints = item["fingerprints"]
+    return isinstance(prints, dict) and all(isinstance(value, str) for value in prints.values()) \
+        and (item["status"] != "verified" or any(value.startswith("sha256:") for value in prints.values()))
+
+
+def current_fingerprints(prints: dict[str, str], root: Path) -> bool:
+    """Every key is a value name or a repository file whose fingerprint has not changed since it was observed."""
+    for key, value in prints.items():
+        kind, _, name = key.partition(":")
+        if kind == "value" and VALUE_NAME_RE.fullmatch(name):
+            continue
+        if kind != "file" or not inside_repository(name) or fingerprint_file(root, PurePosixPath(name)) != value:
+            return False
+    return True
 
 
 def run_readiness_record_helper(entry: Any, request: Any) -> dict[str, Any]:

@@ -143,6 +143,39 @@ class ReadinessRecordTest(unittest.TestCase):
         path.unlink()
         self.assertEqual("unknown", readiness_record.preview_surface(self.root, "claude"))
 
+    def test_preview_surface_is_unknown_when_the_item_evidence_is_malformed_or_stale(self) -> None:
+        (self.root / ".specify" / "surface.md").write_text("headless\n", encoding="utf-8")
+        self.run_helper([observation("preview_surface", "unavailable", files=[".specify/surface.md"])])
+        path = self.record_path()
+        good = json.loads(path.read_text(encoding="utf-8"))
+        item = good["items"]["preview_surface"]
+        verified = {key: value for key, value in item.items() if key != "action"} | {"status": "verified"}
+        shapes = {"status only": {"status": "unavailable"},
+                  **{f"no {key}": {k: v for k, v in item.items() if k != key} for key in item if key != "status"},
+                  "extra key": {**item, "note": "trust me"}, "empty evidence": {**item, "evidence_source": ""},
+                  "evidence not text": {**item, "evidence_source": ["probe"]},
+                  "evidence with a path": {**item, "evidence_source": HOME + "/someone/surface"},
+                  "observed_at not a time": {**item, "observed_at": "yesterday"},
+                  "fingerprints list": {**item, "fingerprints": []},
+                  "fingerprint not text": {**item, "fingerprints": {"value:surface": 1}},
+                  "fingerprint key": {**item, "fingerprints": {"surface": "sha256:" + "0" * 64}},
+                  "fingerprint path escapes": {**item, "fingerprints": {"file:../surface.md": "missing"}},
+                  "empty action": {**item, "action": " "},
+                  "verified with an action": {**verified, "action": "Nothing."},
+                  "verified without a digest": {**verified, "fingerprints": {}}}
+        broken = {label: {**good, "items": {**good["items"], "preview_surface": shape}} for label, shape in shapes.items()}
+        broken["binding fields only"] = {key: good[key] for key in ("schema_version", "binding", "host")} | {
+            "items": {"preview_surface": item}}
+        broken["record observed_at"] = {**good, "observed_at": None}
+        for label, content in broken.items():
+            with self.subTest(label):
+                path.write_text(json.dumps(content), encoding="utf-8")
+                self.assertEqual("unknown", readiness_record.preview_surface(self.root, "claude"))
+        path.write_text(json.dumps(good), encoding="utf-8")
+        self.assertEqual("unavailable", readiness_record.preview_surface(self.root, "claude"))
+        (self.root / ".specify" / "surface.md").write_text("a preview pane now\n", encoding="utf-8")
+        self.assertEqual("unknown", readiness_record.preview_surface(self.root, "claude"))
+
     def test_malformed_observations_write_nothing(self) -> None:
         cases = {
             "no action": [{"item": "github_auth", "status": "unavailable", "evidence_source": "probe"}],

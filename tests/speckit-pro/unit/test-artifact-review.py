@@ -174,13 +174,32 @@ class ArtifactReviewTests(unittest.TestCase):
         result = resolve_autopilot_stage({"workflow_file": "workflow.md", "autopilot_args": [], "host": "gemini"}, self.root)
         self.assertEqual(result["exit_code"], 2)
 
-    def write_readiness(self, host: str, status: str) -> None:
+    def test_malformed_readiness_evidence_keeps_every_observer_dispatch(self) -> None:
+        (self.root / "workflow.md").write_text(self.workflow(self.record))
+        bare = {"schema_version": "readiness-record/v1", "binding": {"worktree": digest(str(self.root))},
+                "host": "claude", "items": {"preview_surface": {"status": "unavailable"}}}
+        for label, record in (("binding fields only", bare), ("no action", self.readiness("claude", "unavailable", None))):
+            with self.subTest(label):
+                self.write_readiness("claude", "unavailable", record)
+                inputs = {"workflow_file": "workflow.md", "autopilot_args": [], "host": "claude"}
+                review = json.loads(resolve_autopilot_stage(inputs, self.root)["stdout"])["artifact_review"]
+                self.assertEqual(review["observer"], artifact_review.OBSERVER)
+                self.assertEqual(review["observer_dispatches"], ["implementation-plan", "spec-explainer"])
+                self.assertNotIn("preview_note", review)
+
+    def readiness(self, host: str, status: str, action: str | None = "Run autopilot where a preview pane exists.") -> dict:
+        """A record shaped like the writer's, so only the field under test differs."""
+        item = {"status": status, "evidence_source": "session tools", "observed_at": "2026-10-05T00:00:00Z",
+                "fingerprints": {"value:surface": digest("pane")} if status == "verified" else {},
+                **({"action": action} if status != "verified" and action is not None else {})}
+        return {"schema_version": "readiness-record/v1", "binding": {"worktree": digest(str(self.root))}, "host": host,
+                "host_version": None, "execution_mode": "interactive", "plugin_revision": "test",
+                "observed_at": "2026-10-05T00:00:00Z", "items": {"preview_surface": item}}
+
+    def write_readiness(self, host: str, status: str, record: dict | None = None) -> None:
         directory = self.root / ".specify/readiness"
         directory.mkdir(parents=True, exist_ok=True)
-        item = {"status": status, "evidence_source": "session tools", "observed_at": "2026-10-05T00:00:00Z", "fingerprints": {}}
-        record = {"schema_version": "readiness-record/v1", "binding": {"worktree": digest(str(self.root))}, "host": host,
-                  "items": {"preview_surface": item}}
-        (directory / f"{host}.json").write_text(json.dumps(record))
+        (directory / f"{host}.json").write_text(json.dumps(record or self.readiness(host, status)))
 
     def test_untrusted_html_outside_template_regions_is_rejected(self) -> None:
         path = self.root / self.record["pages"][0]["path"]
