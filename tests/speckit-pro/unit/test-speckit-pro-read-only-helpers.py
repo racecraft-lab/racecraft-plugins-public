@@ -5458,7 +5458,10 @@ class CanaryPlantedCatchTests(CanaryVariantCase):
         for host, value in self.receipts.items():
             self.catches(value)["catch-1"] = "maybe"
             with self.subTest(host=host):
-                self.assertEqual(["receipt.schema: 1"], self.validator.validate_receipt(value))
+                report = self.validator.receipt_report(value)
+                self.assertFalse(report["valid"])
+                self.assertEqual(["receipt.schema: 1"], report["failed_assertions"])
+                self.assertEqual([], report["variants"])
 
     def test_a_release_receipt_must_name_the_pinned_fixture_tag(self):
         self.assertEqual("fixture-v5", self.validator.FIXTURE_TAG)
@@ -5538,8 +5541,8 @@ class CanaryCatchInputTests(CanaryVariantCase):
         self.assertTrue(self.validator.json_schema_failures(value, self.validator.SCHEMA, self.validator.SCHEMA, "receipt"))
 
 
-class CanaryReceiptInputTests(CanaryVariantCase):
-    """Receipt bytes and schema diagnostics are bounded at the public interfaces."""
+class CanaryReceiptOutputTests(CanaryVariantCase):
+    """Receipt and companion schema diagnostics carry only constant identifiers and counts."""
 
     def test_schema_errors_never_reflect_supplied_keys_or_values(self):
         marker = "untrusted-schema-marker"
@@ -5568,6 +5571,10 @@ class CanaryReceiptInputTests(CanaryVariantCase):
         report = self.validator.receipt_report(value)
         self.assertEqual(["receipt.variant_entry_limit: 10000"], report["failed_assertions"])
         self.assertLess(len(json.dumps(report)), 256)
+
+
+class CanaryReceiptInputTests(CanaryVariantCase):
+    """Receipt reads and parsing fail closed within the byte cap."""
 
     def test_cli_receipt_byte_limit_is_inclusive_and_precedes_json_parsing(self):
         limit = 1024 * 1024
@@ -5639,7 +5646,8 @@ def main() -> int:
                                             CanaryFeatureOfferTests, CanaryVariantAssertionsTests, CanaryVariantContractTests,
                                             CanaryGateVerdictTests, CanaryGuardGapContractTests,
                                             CanaryPlanTargetTests, CanaryPlanTargetContractTests, CanaryCodexTokenTests,
-                                            CanaryPlanQualityTests, CanaryPlantedCatchTests, CanaryCatchInputTests, CanaryReceiptInputTests, CanaryHookCounterTests, CanaryBudgetTests, CanaryBudgetFileTests))
+                                            CanaryPlanQualityTests, CanaryPlantedCatchTests, CanaryCatchInputTests, CanaryReceiptInputTests,
+                                            CanaryReceiptOutputTests, CanaryHookCounterTests, CanaryBudgetTests, CanaryBudgetFileTests))
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     total = result.testsRun
     failed = len(result.failures) + len(result.errors)
