@@ -22,7 +22,9 @@ PLANNING_PHASES = frozenset(SCHEMA["$defs"]["plan_quality"]["properties"]["phase
 HOOK_EVENTS = ("after_specify", "after_plan", "after_tasks")  # the phases the fixture registers its hooks on
 HOOK_KINDS = ("mandatory", "optional")
 FIXTURE_TAG = "fixture-v5"  # the fixture tag every release receipt reads against; a new tag re-baselines the budget (ADR 0016)
-PLANTED_CATCH_IDS = ("catch-1", "catch-2")  # opaque ids only; ADR 0023 keeps the catches themselves out of public text
+PLANTED_CATCH_IDS = tuple(SCHEMA["$defs"]["plan_quality"]["properties"]["planted_catches"]["properties"])  # ADR 0023
+MAX_PLANTED_CATCH_ENTRIES = len(PLANTED_CATCH_IDS)
+MAX_RECEIPT_BYTES = 1024 * 1024  # bounded before JSON parsing, including the companion counters
 MISSING_HOOK_COUNTERS = object()
 
 
@@ -76,10 +78,9 @@ def budget_checks(variant, limits):
 
 def hook_counter_failures(counters):
     """ADR 0023: each registered hook fires exactly once per phase, with no fire left unattributed."""
-    schema = [f"hook_counters.{failure['field']}: {failure['message']}"
-              for failure in json_schema_failures(counters, HOOK_COUNTERS_SCHEMA, HOOK_COUNTERS_SCHEMA, "hooks")]
+    schema = json_schema_failures(counters, HOOK_COUNTERS_SCHEMA, HOOK_COUNTERS_SCHEMA, "hooks")
     if schema:
-        return schema
+        return [f"hook_counters.schema: {len(schema)}"]
     failures = []
     for kind, record in counters["hooks"].items():
         failures.extend(f"hook_counters.{kind}.{event}" for event in HOOK_EVENTS if record["phases"][event] != 1)
@@ -123,8 +124,7 @@ def planted_catch_failures(catches):
     """ADR 0023: the base plan must have fixed every planted catch; a missing or unknown record fails closed."""
     if catches is None:
         return ["base.plan_quality.planted_catches"]
-    return [f"base.plan_quality.planted_catches.{catch}" for catch in sorted(set(PLANTED_CATCH_IDS) | set(catches))
-            if catches.get(catch) != "fixed" or catch not in PLANTED_CATCH_IDS]
+    return [f"base.plan_quality.planted_catches.{catch}" for catch in PLANTED_CATCH_IDS if catches.get(catch) != "fixed"]
 
 
 def release_failures(value):
@@ -135,9 +135,31 @@ def release_failures(value):
                                   ("release.fixture_tag", value["fixture_tag"] == FIXTURE_TAG)) if not ok]
 
 
+def planted_catch_input_failures(value):
+    """Bound catch inspection before schema validation can visit or reflect supplied keys."""
+    variants = value.get("variants") if isinstance(value, dict) else None
+    if not isinstance(variants, list):
+        return []
+    if len(variants) > len(VARIANTS):
+        return [f"receipt.variant_entry_limit: {len(variants)}"]
+    unknown = 0
+    for variant in variants:
+        quality = variant.get("plan_quality") if isinstance(variant, dict) else None
+        catches = quality.get("planted_catches") if isinstance(quality, dict) else None
+        if not isinstance(catches, dict):
+            continue
+        if len(catches) > MAX_PLANTED_CATCH_ENTRIES:
+            return [f"planted_catches.entry_limit: {len(catches)}"]
+        unknown += sum(catch not in PLANTED_CATCH_IDS for catch in catches)
+    return [f"unknown planted-catch id: {unknown}"] if unknown else []
+
+
 def receipt_report(value, budget=None, hook_counters=MISSING_HOOK_COUNTERS):
     """Gate failures, separate variant verdicts, and budgeted limits that are still unset."""
-    problems = [f"{failure['field']}: {failure['message']}" for failure in json_schema_failures(value, SCHEMA, SCHEMA, "receipt")]
+    problems = planted_catch_input_failures(value)
+    if not problems:
+        schema = json_schema_failures(value, SCHEMA, SCHEMA, "receipt")
+        problems = [f"receipt.schema: {len(schema)}"] if schema else []
     if problems:
         return {"valid": False, "failed_assertions": problems, "unbudgeted": [], "variants": []}
     if value["trigger"] == "local" and value["release_status_allowed"]:
@@ -258,18 +280,26 @@ def variant_failures(variant):
     return failures
 
 
+def read_receipt(path):
+    """Read at most the byte cap plus one sentinel byte; reject oversized input before parsing."""
+    with path.open("rb") as stream:
+        body = stream.read(MAX_RECEIPT_BYTES + 1)
+    if len(body) > MAX_RECEIPT_BYTES:
+        raise OverflowError
+    return json.loads(body.decode("utf-8"), object_pairs_hook=unique_object, parse_constant=reject_nonfinite)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("receipt", type=Path)
     parser.add_argument("--hook-counters", type=Path, help="the run's hook-counters-receipt.json; required for release triggers")
     args = parser.parse_args()
     try:
-        counters = MISSING_HOOK_COUNTERS if args.hook_counters is None else json.loads(
-            args.hook_counters.read_text(encoding="utf-8"), object_pairs_hook=unique_object)
-        report = receipt_report(json.loads(args.receipt.read_text(encoding="utf-8"), object_pairs_hook=unique_object),
-                                hook_counters=counters)
-    except (OSError, ValueError) as exc:
-        report = {"valid": False, "failed_assertions": [str(exc)], "unbudgeted": [], "variants": []}
+        counters = MISSING_HOOK_COUNTERS if args.hook_counters is None else read_receipt(args.hook_counters)
+        report = receipt_report(read_receipt(args.receipt), hook_counters=counters)
+    except (OSError, ValueError, OverflowError, RecursionError) as exc:
+        failure = f"input.byte_limit: {MAX_RECEIPT_BYTES}" if isinstance(exc, OverflowError) else "input.invalid"
+        report = {"valid": False, "failed_assertions": [failure], "unbudgeted": [], "variants": []}
     print(json.dumps(report))
     return int(not report["valid"])
 
