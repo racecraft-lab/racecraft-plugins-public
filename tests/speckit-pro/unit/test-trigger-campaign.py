@@ -748,6 +748,19 @@ def draft_folders(case: unittest.TestCase, payload: bytes | None = None) -> Path
     return base
 
 
+def once_before_open(fires, act):
+    """Return an os.open that runs act once, just before the first call that fires(path, flags) accepts."""
+    real_open, fired = os.open, []
+
+    def hooked(path, flags, *args, **kwargs):
+        if not fired and fires(path, flags):
+            fired.append(path)
+            act()
+        return real_open(path, flags, *args, **kwargs)
+
+    return hooked, fired
+
+
 class DraftComponentSwapTests(unittest.TestCase):
     """A directory swapped for a symlink mid-open must not move a draft read or refresh outside."""
 
@@ -755,16 +768,12 @@ class DraftComponentSwapTests(unittest.TestCase):
 
     def swap_once(self, base: Path, fires):
         """Return an os.open that swaps drafts/ for a symlink to outside/ before the first matching call."""
-        real_open, swapped = os.open, []
 
-        def swapping_open(path, flags, *args, **kwargs):
-            if not swapped and fires(path, flags):
-                swapped.append(path)
-                (base / "drafts").rename(base / "drafts.old")
-                (base / "drafts").symlink_to(base / "outside", target_is_directory=True)
-            return real_open(path, flags, *args, **kwargs)
+        def swap():
+            (base / "drafts").rename(base / "drafts.old")
+            (base / "drafts").symlink_to(base / "outside", target_is_directory=True)
 
-        return swapping_open, swapped
+        return once_before_open(fires, swap)
 
     def draft_pair(self, payload: bytes) -> tuple[Path, Path]:
         base = draft_folders(self, payload)
@@ -858,18 +867,6 @@ class DraftReplaceTests(unittest.TestCase):
     def assert_only_the_draft_remains(self):
         self.assertEqual(os.listdir(self.base / "drafts"), ["reviewed.draft.json"])
 
-    def first_write_open(self, act):
-        """Return an os.open that runs act once, just before the first write-mode open."""
-        real_open, fired = os.open, []
-
-        def hooked(path, flags, *args, **kwargs):
-            if not fired and flags & os.O_WRONLY:
-                fired.append(path)
-                act()
-            return real_open(path, flags, *args, **kwargs)
-
-        return hooked, fired
-
     def test_a_hard_link_added_after_the_last_check_keeps_the_old_bytes(self):
         real_fstat, real_replace = os.fstat, os.replace
         os.chmod(self.draft, 0o640)
@@ -912,7 +909,7 @@ class DraftReplaceTests(unittest.TestCase):
                     else:
                         self.draft.symlink_to(self.outside)
 
-                hook, fired = self.first_write_open(swap)
+                hook, fired = once_before_open(lambda _path, flags: bool(flags & os.O_WRONLY), swap)
                 with mock.patch.object(comparison.os, "open", hook), self.assertRaises(ValueError):
                     comparison.rebind_identities(self.draft)
                 self.assertTrue(fired, "the swap seam never fired")
