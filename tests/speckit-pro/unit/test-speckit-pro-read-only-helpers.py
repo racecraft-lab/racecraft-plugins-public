@@ -3353,7 +3353,9 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
                     spec_kit = payload["spec_kit"]
                     self.assertEqual(spec_kit["status"], status)
                     self.assertEqual(spec_kit["pinned_version"], "1.1.0")
-                    self.assertEqual(spec_kit["installed_version"], version)
+                    expected_shown = None if executable is None else (
+                        version if status in ("match", "older", "newer") else "unparsed")
+                    self.assertEqual(spec_kit["installed_version"], expected_shown)
                     self.assertEqual(
                         spec_kit["install_argv"],
                         [
@@ -3367,6 +3369,36 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
                             item for item in payload["checks"] if item["check"] == "speckit_cli_version"
                         )
                         self.assertTrue(version_row["pass"], "a version mismatch never stops a run")
+
+    def test_spec_kit_state_never_echoes_raw_cli_output_or_the_home_path(self) -> None:
+        from speckit_pro_runner.helpers.read_only import installed_specify_version, spec_kit_cli_state
+
+        hostile = "9" * 5000 + "\x1b[31m"
+        with patch(
+            "speckit_pro_runner.helpers.read_only.installed_specify_version", return_value=hostile,
+        ):
+            rows, state = spec_kit_cli_state(str(Path.home() / ".local" / "bin" / "specify"))
+        self.assertEqual(state["installed_version"], "unparsed")
+        self.assertEqual(state["status"], "unreadable")
+        detail = rows[0]["detail"]
+        self.assertNotIn(hostile[:20], detail)
+        self.assertNotIn(str(Path.home()), detail)
+        self.assertTrue(detail.startswith("~/.local/bin/specify"))
+        seen = []
+        stdout = "padding " * 1000 + "CLI Version    1.1.0"
+        with patch(
+            "speckit_pro_runner.helpers.read_only.subprocess.run",
+            return_value=SimpleNamespace(stdout=stdout, returncode=0),
+        ), patch("speckit_pro_runner.helpers.read_only.shutil.which", return_value="/fixture/bin/specify"), patch(
+            "speckit_pro_runner.helpers.read_only.trusted_executable", return_value=Path("/fixture/bin/specify"),
+        ), patch(
+            "speckit_pro_runner.helpers.read_only.executable_path", return_value=Path("/fixture/bin/specify"),
+        ), patch(
+            "speckit_pro_runner.helpers.read_only.spec_kit_pin.parse_cli_version",
+            side_effect=lambda text: seen.append(len(text)),
+        ):
+            installed_specify_version("/fixture/bin/specify")
+        self.assertEqual(seen, [4096])
 
     def test_installed_specify_version_reads_the_cli_version_row(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
@@ -4874,7 +4906,7 @@ class G0PinTests(unittest.TestCase):
                     result = data["result"]
                     report = result["stdout_json"]
                     self.assertEqual(status, report["spec_kit"]["status"])
-                    self.assertEqual(version, report["spec_kit"]["installed_version"])
+                    self.assertEqual(version or ("unparsed" if found else None), report["spec_kit"]["installed_version"])
                     self.assertEqual(found, report["all_pass"])
                     self.assertEqual(0 if found else 1, result["exit_code"])
                     if found:

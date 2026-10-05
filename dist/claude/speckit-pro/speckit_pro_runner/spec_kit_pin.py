@@ -24,6 +24,11 @@ def parse_cli_version(output: str) -> str | None:
     return found.group(1) if found else None
 
 
+def release_version(installed: str | None) -> str | None:
+    """The version when it is a plain release, else None. Only this form is safe to echo."""
+    return installed if installed and _RELEASE.match(installed) else None
+
+
 def version_status(installed: str | None, *, cli_found: bool) -> str:
     """One of missing, unreadable, older, newer or match, against the pin.
 

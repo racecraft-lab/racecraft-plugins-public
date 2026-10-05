@@ -6234,9 +6234,11 @@ def spec_kit_cli_state(
     """The CLI rows for `check-prerequisites` and the `spec_kit` object skills read the pin from."""
     installed_version = installed_specify_version(specify_path, repo_root) if specify_path else None
     status = spec_kit_pin.version_status(installed_version, cli_found=specify_path is not None)
+    # CLI output is untrusted: echo only a plain release, never the raw token.
+    shown_version = spec_kit_pin.release_version(installed_version) or ("unparsed" if specify_path else None)
     spec_kit = {
         "pinned_version": spec_kit_pin.PINNED_VERSION,
-        "installed_version": installed_version,
+        "installed_version": shown_version,
         "status": status,
         "install_argv": spec_kit_pin.INSTALL_ARGV,
     }
@@ -6244,7 +6246,7 @@ def spec_kit_cli_state(
     if not specify_path:
         return [check("speckit_cli", False, f"SpecKit CLI not found. Install: {install}", "")], spec_kit
     return [
-        check("speckit_cli", True, "SpecKit CLI installed", f"{specify_path} ({installed_version or 'version unreadable'})"),
+        check("speckit_cli", True, "SpecKit CLI installed", f"{_home_relative(specify_path)} ({shown_version or 'version unreadable'})"),
         # Advisory by design: a version mismatch never stops a run (ADR 0010).
         check(
             "speckit_cli_version", True,
@@ -6252,6 +6254,14 @@ def spec_kit_cli_state(
             "" if status == "match" else f"install the pin: {install}",
         ),
     ], spec_kit
+
+
+def _home_relative(path: str) -> str:
+    """The path with the home directory shown as ~, so reports carry no user name."""
+    try:
+        return "~/" + Path(path).relative_to(Path.home()).as_posix()
+    except (ValueError, RuntimeError):
+        return path
 
 
 def installed_specify_version(specify_path: str, repo_root: Path | None = None) -> str | None:
@@ -6285,7 +6295,7 @@ def installed_specify_version(specify_path: str, repo_root: Path | None = None) 
         )
     except (OSError, subprocess.SubprocessError, UnicodeError, RuntimeError, ValueError):
         return None
-    return spec_kit_pin.parse_cli_version(result.stdout) if result.returncode == 0 else None
+    return spec_kit_pin.parse_cli_version(result.stdout[:4096]) if result.returncode == 0 else None
 
 
 def git_diff_changed_paths(repo_root: Path) -> list[str] | None:
