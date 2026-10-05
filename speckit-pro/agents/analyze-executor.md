@@ -147,7 +147,7 @@ parent's G6 gate do that.
    Multi-category tags are allowed: `[spec, domain]` spawns
    both `spec-context-analyst` and `domain-researcher`. Untagged
    items default to `[ambiguous]` but explicit tagging is the
-   discipline. The routing table is in your prompt's reference slices; never read the
+   discipline. The routing table is in your prompt's reference slices, validated by the runner; never read the
    consensus protocol itself. Report `**Protocol:**` in your summary as the plugin-relative path
    `skills/speckit-autopilot/references/consensus-protocol.md` when your
    prompt names a protocol file, never the absolute path, because the
