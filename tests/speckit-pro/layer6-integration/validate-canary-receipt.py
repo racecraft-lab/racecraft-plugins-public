@@ -18,6 +18,7 @@ HOSTS = tuple(SCHEMA["properties"]["host"]["enum"])
 VARIANTS = tuple(SCHEMA["$defs"]["variant"]["properties"]["name"]["enum"])
 BUDGET_STAGES = ("scaffold", "plan", "implement")  # ADR 0016; plan_review is recorded, never budgeted
 METRICS = ("wall_seconds", "tokens")
+PLAN_TARGET_LIMITS = {"wall_seconds": 1800, "tokens": 15000000}  # ADR 0023; reported, never gated
 PLANNING_PHASES = frozenset(SCHEMA["$defs"]["plan_quality"]["properties"]["phases_run"]["items"]["enum"])  # ADR 0021
 HOOK_EVENTS = ("after_specify", "after_plan", "after_tasks")  # the phases the fixture registers its hooks on
 HOOK_KINDS = ("mandatory", "optional")
@@ -154,9 +155,20 @@ def planted_catch_input_failures(value):
     return [f"unknown planted-catch id: {unknown}"] if unknown else []
 
 
+def receipt_input_failures(value):
+    """Bound planted-catch evidence, then reject non-JSON numbers before any are reported."""
+    problems = planted_catch_input_failures(value)
+    if not problems:
+        try:
+            json.dumps(value, allow_nan=False)  # also catches numeric overflow such as JSON 1e400
+        except ValueError:
+            problems = ["receipt.invalid_json"]
+    return problems
+
+
 def receipt_report(value, budget=None, hook_counters=MISSING_HOOK_COUNTERS):
     """Gate failures, separate variant verdicts, and budgeted limits that are still unset."""
-    problems = planted_catch_input_failures(value)
+    problems = receipt_input_failures(value)
     if not problems:
         schema = json_schema_failures(value, SCHEMA, SCHEMA, "receipt")
         problems = [f"receipt.schema: {len(schema)}"] if schema else []
@@ -196,14 +208,14 @@ def stage_tokens(stage, host):
     return usage["root_tokens"] + sum(usage["child_rollout_tokens"])
 
 
-def plan_target_report(variant, host):
+def plan_target_report(variant):
     """ADR 0023's base-variant target is reported independently of the release budget."""
     if variant["name"] != "base":
         return None
-    target = variant["plan_target"]
-    plan = {**variant["stages"]["plan"], "tokens": stage_tokens(variant["stages"]["plan"], host)}
-    met = all(plan[metric] <= target[f"{metric}_limit"] for metric in METRICS)
-    return {**target, "wall_seconds": plan["wall_seconds"], "tokens": plan["tokens"], "target_met": met}
+    plan = variant["stages"]["plan"]
+    met = all(plan[metric] <= limit for metric, limit in PLAN_TARGET_LIMITS.items())
+    return {**{f"{metric}_limit": limit for metric, limit in PLAN_TARGET_LIMITS.items()},
+            "wall_seconds": plan["wall_seconds"], "tokens": plan["tokens"], "target_met": met}
 
 
 def variant_report(variant, checks, host):
@@ -211,9 +223,7 @@ def variant_report(variant, checks, host):
     failures = variant_failures(variant) + plan_quality_failures(variant)
     failures.extend(f"{variant['name']}.{name}.tokens_sum" for name, stage in variant["stages"].items()
                     if stage["tokens"] != stage_tokens(stage, host))
-    target = plan_target_report(variant, host)
-    if target is not None and target["target_met"] != variant["plan_target"]["target_met"]:
-        failures.append(f"{variant['name']}.plan_target")
+    target = plan_target_report(variant)
     gate = gate_failures(variant, failures)
     gate.extend(f"{label}_budget" for label, actual, limit in checks if limit is not None and actual > limit)
     return {"name": variant["name"], "verdict": "fail" if failures else "pass",
@@ -300,7 +310,7 @@ def main():
     except (OSError, ValueError, OverflowError, RecursionError) as exc:
         failure = f"input.byte_limit: {MAX_RECEIPT_BYTES}" if isinstance(exc, OverflowError) else "input.invalid"
         report = {"valid": False, "failed_assertions": [failure], "unbudgeted": [], "variants": []}
-    print(json.dumps(report))
+    print(json.dumps(report, allow_nan=False))
     return int(not report["valid"])
 
 
