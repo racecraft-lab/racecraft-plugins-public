@@ -1027,47 +1027,6 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                 self.assertIn("identity", cleanup["error"])
                 killpg.assert_not_called()
 
-    def test_only_post_signal_permission_probe_can_settle_with_later_explicit_absence(self) -> None:
-        for failure_point in ("initial", "term_send", "term_probe", "kill_send", "post_kill_eacces", "persistent", "transient"):
-            phase = "initial"
-            post_kill_probes = 0
-
-            def signal_group(_pgid, sent):
-                nonlocal phase, post_kill_probes
-                if sent == signal.SIGTERM:
-                    if failure_point == "term_send":
-                        raise PermissionError(errno.EPERM, "TERM denied")
-                    phase = "term_probe"
-                elif sent == signal.SIGKILL:
-                    if failure_point == "kill_send":
-                        raise PermissionError(errno.EPERM, "KILL denied")
-                    phase = "kill_probe"
-                elif phase == "kill_probe":
-                    post_kill_probes += 1
-                    if failure_point == "post_kill_eacces":
-                        raise PermissionError(errno.EACCES, "post-KILL access denied")
-                    if failure_point == "persistent" or post_kill_probes == 1:
-                        raise PermissionError(errno.EPERM, "post-KILL probe unresolved")
-                    raise ProcessLookupError()
-                elif failure_point == phase:
-                    raise PermissionError(errno.EPERM, "probe denied")
-
-            with self.subTest(failure_point=failure_point), mock.patch.object(self.runner.os, "killpg", side_effect=signal_group), mock.patch.object(self.runner.time, "sleep"), mock.patch.object(self.runner.time, "monotonic", side_effect=itertools.count(0, 0.05)):
-                cleanup = self.runner.cleanup_process_group(mock.Mock(pid=FAKE_PGID, returncode=0), natural_exit_grace=False)
-            self.assertIs(cleanup["verified_absent"], failure_point in {"transient", "term_probe"})
-            if failure_point in {"transient", "term_probe"}:
-                self.assertGreaterEqual(post_kill_probes, 2)
-                self.assertEqual(len(cleanup["post_kill_probe_errors"]), 1)
-                self.assertIsNone(cleanup["error"])
-            elif failure_point == "persistent":
-                self.assertGreater(post_kill_probes, 1)
-                self.assertEqual(len(cleanup["post_kill_probe_errors"]), post_kill_probes)
-                self.assertTrue(cleanup["error"])
-            else:
-                if failure_point == "post_kill_eacces":
-                    self.assertEqual(post_kill_probes, 1)
-                self.assertEqual(cleanup["post_kill_probe_errors"], [])
-                self.assertTrue(cleanup["error"])
 
     @unittest.skipUnless(os.name == "posix", "POSIX supervisor signal witness")
     def test_real_supervisor_signals_preserve_raw_evidence_and_restore_handlers(self) -> None:
@@ -1483,10 +1442,58 @@ class HeadlessProcessGroupProbeTests(unittest.TestCase):
         self.assertIsNone(cleanup["error"])
 
 
+
+class HeadlessCleanupBoundaryTests(unittest.TestCase):
+    runner = import_runner()
+
+    def test_only_post_signal_permission_probe_can_settle_with_later_explicit_absence(self) -> None:
+        for failure_point in ("initial", "term_send", "term_probe", "kill_send", "post_kill_eacces", "persistent", "transient"):
+            phase = "initial"
+            post_kill_probes = 0
+
+            def signal_group(_pgid, sent):
+                nonlocal phase, post_kill_probes
+                if sent == signal.SIGTERM:
+                    if failure_point == "term_send":
+                        raise PermissionError(errno.EPERM, "TERM denied")
+                    phase = "term_probe"
+                elif sent == signal.SIGKILL:
+                    if failure_point == "kill_send":
+                        raise PermissionError(errno.EPERM, "KILL denied")
+                    phase = "kill_probe"
+                elif phase == "kill_probe":
+                    post_kill_probes += 1
+                    if failure_point == "post_kill_eacces":
+                        raise PermissionError(errno.EACCES, "post-KILL access denied")
+                    if failure_point == "persistent" or post_kill_probes == 1:
+                        raise PermissionError(errno.EPERM, "post-KILL probe unresolved")
+                    raise ProcessLookupError()
+                elif failure_point == phase:
+                    raise PermissionError(errno.EPERM, "probe denied")
+
+            with self.subTest(failure_point=failure_point), mock.patch.object(self.runner.os, "killpg", side_effect=signal_group), mock.patch.object(self.runner.time, "sleep"), mock.patch.object(self.runner.time, "monotonic", side_effect=itertools.count(0, 0.05)):
+                cleanup = self.runner.cleanup_process_group(mock.Mock(pid=FAKE_PGID, returncode=0), natural_exit_grace=False)
+            self.assertIs(cleanup["verified_absent"], failure_point in {"transient", "term_probe"})
+            if failure_point in {"transient", "term_probe"}:
+                self.assertGreaterEqual(post_kill_probes, 2)
+                self.assertEqual(len(cleanup["post_kill_probe_errors"]), 1)
+                self.assertIsNone(cleanup["error"])
+            elif failure_point == "persistent":
+                self.assertGreater(post_kill_probes, 1)
+                self.assertEqual(len(cleanup["post_kill_probe_errors"]), post_kill_probes)
+                self.assertTrue(cleanup["error"])
+            else:
+                if failure_point == "post_kill_eacces":
+                    self.assertEqual(post_kill_probes, 1)
+                self.assertEqual(cleanup["post_kill_probe_errors"], [])
+                self.assertTrue(cleanup["error"])
+
+
 def main() -> int:
     suite = unittest.TestSuite([
         unittest.defaultTestLoader.loadTestsFromTestCase(FunctionalHeadlessRunnerTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(HeadlessProcessGroupProbeTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(HeadlessCleanupBoundaryTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(SharedCodexIsolationTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(HeadlessCaseCatalogContractTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(RunCaseTests),
