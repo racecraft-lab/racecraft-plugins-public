@@ -33,5 +33,3 @@ def make_item(status: str, evidence_source: str, observed_at: str, fingerprints:
     required = {"action": action} if action is not None else {}
     return {"status": status, "evidence_source": evidence_source, "observed_at": observed_at,
             "fingerprints": fingerprints, **required}
-
-
