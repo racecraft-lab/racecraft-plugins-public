@@ -22,15 +22,12 @@ from test_result import run_counted  # noqa: E402
 
 REQUEST = {"schema_version": "1.0", "request_id": "test-git-write", "helper_id": "probe-git-write",
            "operation": "probe-git-write", "mode": "read_only", "inputs": {}}
+SKILL = Path("speckit-scaffold-spec") / "SKILL.md"
 GIT_ENV = {"GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_SYSTEM": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
 
 
 def git(root: Path, *args: str) -> None:
     subprocess.run(["git", "-C", str(root), *args], check=True, capture_output=True, env={**os.environ, **GIT_ENV})
-
-
-def scaffold_text(host: str) -> str:
-    return (host_skill_root(host) / "speckit-scaffold-spec" / "SKILL.md").read_text(encoding="utf-8")
 
 
 class GitWriteProbeTest(unittest.TestCase):
@@ -41,13 +38,8 @@ class GitWriteProbeTest(unittest.TestCase):
         self.heads = self.root / ".git" / "refs" / "heads"
         self.addCleanup(os.chmod, self.heads, 0o755)
 
-    def probe(self) -> dict:
-        completed, response, _ = run_runner(REQUEST, cwd=self.root)
-        self.assertIn(completed.returncode, (0, 1, 2, 3), completed.stderr)
-        return response
-
     def test_writable_git_directory_proceeds_and_leaves_no_lock_file(self) -> None:
-        response = self.probe()
+        _, response, _ = run_runner(REQUEST, cwd=self.root)
         assert_runner_response(self, response, "ok", 0)
         self.assertEqual("proceed", response["data"]["verdict"])
         self.assertEqual("verified", response["data"]["observation"]["status"])
@@ -58,7 +50,7 @@ class GitWriteProbeTest(unittest.TestCase):
                      "needs POSIX modes and a non-root user")
     def test_read_only_git_directory_stops_with_cause_and_both_fixes(self) -> None:
         os.chmod(self.heads, 0o555)
-        response = self.probe()
+        _, response, _ = run_runner(REQUEST, cwd=self.root)
         assert_runner_response(self, response, "expected_failure", 1)
         data = response["data"]
         self.assertEqual("stop", data["verdict"])
@@ -71,19 +63,19 @@ class GitWriteProbeTest(unittest.TestCase):
         self.assertTrue(observation["action"])
 
     def test_codex_scaffold_probes_before_any_gate_and_claude_does_not(self) -> None:
-        codex = scaffold_text("codex")
+        codex = (host_skill_root("codex") / SKILL).read_text(encoding="utf-8")
         probe_at = codex.index("## Git Write Probe")
         for later in ("## Answers-file mode", "### -0.5 ", "### 2. Find the Spec"):
             self.assertLess(probe_at, codex.index(later))
         section = codex.split("## Git Write Probe", 1)[1].split("\n## ", 1)[0]
         self.assertIn("`probe-git-write`", section)
         self.assertIn("before any gate or branch step", section)
-        self.assertNotIn("Git Write Probe", scaffold_text("claude"))
+        self.assertNotIn("Git Write Probe", (host_skill_root("claude") / SKILL).read_text(encoding="utf-8"))
 
     def test_readiness_record_accepts_git_write_and_scaffold_sends_it_on_each_host(self) -> None:
         for host in ("claude", "codex"):
             with self.subTest(host=host):
-                step = scaffold_text(host).split("### 6.5 Write the Readiness Record", 1)[1].split("\n### ", 1)[0]
+                step = (host_skill_root(host) / SKILL).read_text(encoding="utf-8").split("### 6.5 Write the Readiness Record", 1)[1].split("\n### ", 1)[0]
                 self.assertIn("`git_write`", step)
         item = {"item": "git_write", "status": "not_applicable", "evidence_source": "Claude Code has no git sandbox probe"}
         body = {"host": "claude", "execution_mode": "interactive", "plugin_revision": "2.40.0", "observations": [item]}

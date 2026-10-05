@@ -9,11 +9,11 @@ removes one lock file where `git branch` would, and reports the result as a
 from __future__ import annotations
 
 import os
-import subprocess
 from pathlib import Path
 from typing import Any
 
 from ..envelope import diagnostic, response
+from .gate_preflight_coverage import git_common_directory
 
 ITEM = "git_write"
 STOP_MESSAGE = (
@@ -24,17 +24,6 @@ STOP_MESSAGE = (
 )
 STOP_ACTION = ("Approve git writes, or add the repository's .git directory to "
                "sandbox_workspace_write.writable_roots, then rerun scaffold.")
-
-
-def git_common_directory(cwd: Path) -> Path | None:
-    try:
-        completed = subprocess.run(["git", "-C", str(cwd), "rev-parse", "--git-common-dir"], shell=False,
-                                   capture_output=True, text=True, timeout=30, check=False)
-    except (OSError, subprocess.SubprocessError):
-        return None
-    if completed.returncode != 0 or not completed.stdout.strip():
-        return None
-    return (cwd / completed.stdout.strip()).resolve()
 
 
 def create_and_remove_lock(directory: Path) -> str | None:
@@ -48,28 +37,34 @@ def create_and_remove_lock(directory: Path) -> str | None:
     return None
 
 
-def observation(status: str, source: str, probe: str, action: str | None = None) -> dict[str, Any]:
+def probe_result(blocked: str | None, found: bool) -> tuple[str, str, dict[str, Any]]:
+    """The verdict, the stop message and the `git_write` readiness observation for one probe outcome."""
+    if not found:
+        status, source, probe = "unknown", "git directory not found for the write probe", "git_directory_not_found"
+        action = "Run scaffold from inside the repository, then rerun it."
+    elif blocked is None:
+        status, source, probe = "verified", "lock file create and remove under the git refs directory", "lock_created_and_removed"
+        action = None
+    else:
+        status, source, probe = "unavailable", f"git refs directory is not writable: {blocked}", blocked
+        action = STOP_ACTION
     item: dict[str, Any] = {"item": ITEM, "status": status, "evidence_source": source, "values": {"probe": probe}}
     if action is not None:
         item["action"] = action
-    return item
+    verdict = "stop" if status == "unavailable" else "proceed"
+    return verdict, STOP_MESSAGE.format(cause=blocked) if verdict == "stop" else "", item
 
 
 def run_git_write_probe_helper(entry: Any, request: Any) -> dict[str, Any]:
-    common = git_common_directory(Path.cwd())
-    if common is None:
-        data = {"verdict": "proceed", "message": "", "observation": observation(
-            "unknown", "git directory not found for the write probe", "git_directory_not_found",
-            "Run scaffold from inside the repository, then rerun it.")}
+    try:
+        common: Path | None = git_common_directory(Path.cwd())
+    except ValueError:
+        common = None
+    blocked = None if common is None else create_and_remove_lock(common / "refs" / "heads")
+    verdict, message, item = probe_result(blocked, common is not None)
+    data = {"verdict": verdict, "message": message, "observation": item}
+    if verdict == "proceed":
         return response("ok", request_id=request.request_id, data=data)
-    blocked = create_and_remove_lock(common / "refs" / "heads")
-    if blocked is None:
-        data = {"verdict": "proceed", "message": "", "observation": observation(
-            "verified", "lock file create and remove under the git refs directory", "lock_created_and_removed")}
-        return response("ok", request_id=request.request_id, data=data)
-    message = STOP_MESSAGE.format(cause=blocked)
-    data = {"verdict": "stop", "message": message, "observation": observation(
-        "unavailable", f"git refs directory is not writable: {blocked}", blocked, STOP_ACTION)}
     return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diagnostic(
         "git_not_writable", message, remediation_summary=STOP_ACTION,
         remediation_actions=["Approve git writes.", "Or add .git to sandbox_workspace_write.writable_roots.",

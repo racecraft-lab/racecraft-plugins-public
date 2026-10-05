@@ -591,7 +591,7 @@
         "value": "speckit_pro_runner/helpers/gate_preflight_coverage.py",
         "display": "speckit_pro_runner/helpers/gate_preflight_coverage.py"
       },
-      "sha256": "bed20509e05a50e98652852cd866b774cf92d4f1e4482c5abebbd0939531f7cf"
+      "sha256": "810f9d938c9eb9594d24d8ea49e87f4508fe261e5ade0298d16f959ac3742753"
     },
     {
       "path": {
@@ -599,7 +599,7 @@
         "value": "speckit_pro_runner/helpers/git_write_probe.py",
         "display": "speckit_pro_runner/helpers/git_write_probe.py"
       },
-      "sha256": "f07272a0925cdb3bb03a178f4ee8b940b0db8e6498df54a1e02f8d5256a9dd64"
+      "sha256": "7cd9d26518d2b7377e637f6ae4b9eed7676bc31b63bf1c7ac4e815a9a870d351"
     },
     {
       "path": {
