@@ -2789,13 +2789,9 @@ def resolve_autopilot_stage(inputs: dict[str, Any], repo_root: Path) -> dict[str
             2,
         )
     from ..artifact_review import review_handoff
-    host = inputs.get("host")
-    if host is not None and host not in HOSTS:
-        return make_result("", f"error: host must be one of {list(HOSTS)}\n", 2)
     try:
         formal = apply_resume_guard(repo_root, workflow_raw, parsed, signals)
-        review = review_handoff(text, repo_root, trusted_bytes,
-                                "unknown" if host is None else preview_surface(repo_root, host))
+        review = review_handoff(text, repo_root, trusted_bytes, recorded_preview_surface(inputs.get("host"), repo_root))
     except ValueError as exc:
         return make_result("", f"error: {exc}\n", 2)
     review_pending = artifact_review_resume(text, signals, review)
@@ -2831,6 +2827,15 @@ def resolve_autopilot_stage(inputs: dict[str, Any], repo_root: Path) -> dict[str
         **({"artifact_review": review} if review["status"] != "absent" else {}),
         **({"formal_checkpoint": formal} if formal["required"] else {}),
     }))
+
+
+def recorded_preview_surface(host: Any, repo_root: Path) -> str:
+    """The readiness record's preview surface for the named host; `unknown` when no host is named."""
+    if host is None:
+        return "unknown"
+    if host not in HOSTS:
+        raise ValueError(f"host must be one of {list(HOSTS)}")
+    return preview_surface(repo_root, host)
 
 
 def artifact_review_resume(text: str, signals: dict[str, Any], review: dict[str, Any]) -> bool:
