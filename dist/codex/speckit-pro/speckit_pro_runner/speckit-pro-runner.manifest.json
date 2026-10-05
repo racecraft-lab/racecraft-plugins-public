@@ -71,7 +71,7 @@
         "value": "speckit_pro_runner/atomic_write.py",
         "display": "speckit_pro_runner/atomic_write.py"
       },
-      "sha256": "69b892f239cc29f0e549462547dcd0b21fc1fd86337113e2ea694588047a76bd"
+      "sha256": "f12f00bf0444c455d56a1e9c198f1aea1910fdb2158bdcc13a945ec8b0af8192"
     },
     {
       "path": {
@@ -535,7 +535,7 @@
         "value": "speckit_pro_runner/helpers/artifact_publication.py",
         "display": "speckit_pro_runner/helpers/artifact_publication.py"
       },
-      "sha256": "2f3b364cc8182d1a24a5f9521d4808ae1361821a580a9e0b53d3883404fea65e"
+      "sha256": "5d4e2f9d085413e400456c3d76e7f2d36882c0ee6eb9a4b3ba51975511a0e434"
     },
     {
       "path": {

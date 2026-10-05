@@ -4,22 +4,21 @@ from __future__ import annotations
 
 import hashlib
 import os
-import stat
 from pathlib import Path
 from typing import Any
 
-from ..atomic_write import (AtomicWriteOptions, cleanup_atomic_temporaries_at, open_safe_parent_fd,
+from ..atomic_write import (AtomicWriteOptions, open_safe_parent_fd, quarantine_entry_at,
                            read_file_snapshot_at, write_bytes_atomic_at)
 from ..envelope import diagnostic, response
 from ..strict_input import require_text
-from ..trusted_io import resolve_repo_root, trusted_open_directory
-from .artifact_selection import select_artifact_pages
+from ..trusted_io import resolve_repo_root, trusted_bytes, trusted_open_directory
+from .artifact_selection import GALLERY, artifact_output_path, draft_gallery_entries, select_artifact_pages
 
 PLANNING_INPUTS = frozenset({"repo_root", "plan_file", "research_file", "design_concept_file"})
-INPUTS = PLANNING_INPUTS | {"page_id", "rendered_html", "action", "expected_sha256"}
+INPUTS = PLANNING_INPUTS | {"page_id", "rendered_html", "action", "expected_sha256", "expected_file_identity"}
 MAX_PAGE_BYTES = 1024 * 1024
 DESCRIPTOR_IO_AVAILABLE = os.name != "nt" and hasattr(os, "O_NOFOLLOW") and os.listdir in os.supports_fd and all(
-    operation in os.supports_dir_fd for operation in (os.open, os.stat, os.unlink, os.mkdir, os.rename))
+    operation in os.supports_dir_fd for operation in (os.open, os.stat, os.link, os.mkdir, os.rename))
 
 
 def publication_inputs(inputs: dict[str, Any], root: Path) -> tuple[str, str, bytes | None]:
@@ -27,11 +26,11 @@ def publication_inputs(inputs: dict[str, Any], root: Path) -> tuple[str, str, by
         raise ValueError("publish-artifact-page received unknown inputs")
     selection = select_artifact_pages({key: value for key, value in inputs.items() if key in PLANNING_INPUTS}, root)
     identifier = require_text(inputs.get("page_id"), "page_id")
-    if identifier not in selection["selected_pages"]:
-        raise ValueError("page_id must be a runner-selected draft page")
     action = inputs.get("action", "publish")
     if action == "publish":
-        if "expected_sha256" in inputs:
+        if identifier not in selection["selected_pages"]:
+            raise ValueError("page_id must be a runner-selected draft page")
+        if "expected_sha256" in inputs or "expected_file_identity" in inputs:
             raise ValueError("expected_sha256 is only supported for cleanup")
         content = require_text(inputs.get("rendered_html"), "rendered_html").encode("utf-8")
         if len(content) > MAX_PAGE_BYTES:
@@ -40,9 +39,19 @@ def publication_inputs(inputs: dict[str, Any], root: Path) -> tuple[str, str, by
         if "rendered_html" in inputs:
             raise ValueError("cleanup does not accept rendered_html")
         expected = inputs.get("expected_sha256")
-        if expected is not None and (not isinstance(expected, str) or len(expected) != 64
-                                     or any(character not in "0123456789abcdef" for character in expected)):
+        if not isinstance(expected, str) or len(expected) != 64 or any(
+                character not in "0123456789abcdef" for character in expected):
             raise ValueError("expected_sha256 must be a lowercase SHA-256 digest")
+        identity = inputs.get("expected_file_identity")
+        if (not isinstance(identity, list) or len(identity) != 2
+                or any(type(part) is not int or part < 0 for part in identity)):
+            raise ValueError("cleanup requires the publication receipt expected_file_identity [dev, ino]")
+        manifest = trusted_bytes(GALLERY / "manifest.json", GALLERY)
+        if manifest is None or identifier not in {entry["id"] for entry in draft_gallery_entries(manifest)}:
+            raise ValueError("cleanup page_id must be a shipped draft page")
+        directory = Path(inputs["plan_file"]).parent / "artifacts"
+        selection["output_paths"][identifier] = artifact_output_path(
+            str(directory / f"{identifier}.html"), root, directory)
         content = None
     else:
         raise ValueError("action must be publish or cleanup")
@@ -70,29 +79,6 @@ def verify_directory_binding(directory: Path, root: Path, identity: list[int]) -
         os.close(fd)
 
 
-def cleanup_owned_artifact(directory_fd: int, name: str, identity: list[int]) -> bool:
-    try:
-        observed = os.stat(name, dir_fd=directory_fd, follow_symlinks=False)
-    except FileNotFoundError:
-        return False
-    if [observed.st_dev, observed.st_ino] != identity or not stat.S_ISREG(observed.st_mode):
-        return False
-    os.unlink(name, dir_fd=directory_fd)
-    return True
-
-
-def publish_artifact_at(directory_fd: int, name: str, content: bytes) -> dict[str, Any]:
-    receipt = write_bytes_atomic_at(directory_fd, name, content, AtomicWriteOptions(mode=0o644, verify_content=True))
-    try:
-        final, identity = read_artifact_at(directory_fd, name, receipt["file_identity"])
-        if final != content:
-            raise ValueError("published artifact bytes differ from the rendered page")
-        return {"sha256": receipt["digest"], "file_identity": identity, "verified_html": final.decode("utf-8")}
-    except (OSError, ValueError):
-        cleanup_owned_artifact(directory_fd, name, receipt["file_identity"])
-        raise
-
-
 def apply_artifact_operation(action: str, path: str, content: bytes | None,
                              inputs: dict[str, Any], root: Path) -> dict[str, Any]:
     if not DESCRIPTOR_IO_AVAILABLE:
@@ -109,23 +95,19 @@ def apply_artifact_operation(action: str, path: str, content: bytes | None,
             try:
                 current, identity = read_artifact_at(directory_fd, name)
             except FileNotFoundError:
-                temporaries = cleanup_atomic_temporaries_at(directory_fd, name)
-                return {"outcome": "removed", "removed": False, "removed_temporaries": temporaries,
-                        "writes_state": bool(temporaries)}
-            expected = inputs.get("expected_sha256")
-            if expected is not None and hashlib.sha256(current).hexdigest() != expected:
-                raise ValueError("cleanup digest differs from the current-run artifact")
-            temporaries = cleanup_atomic_temporaries_at(directory_fd, name)
-            removed = cleanup_owned_artifact(directory_fd, name, identity)
-            return {"outcome": "removed", "removed": removed, "removed_temporaries": temporaries,
-                    "writes_state": removed or bool(temporaries)}
-        receipt = publish_artifact_at(directory_fd, name, content)
-        try:
-            verify_directory_binding(Path(path).parent, root, directory_identity)
-        except (OSError, ValueError):
-            cleanup_owned_artifact(directory_fd, name, receipt["file_identity"])
-            raise
-        return {"outcome": "generated", "writes_state": True, **receipt}
+                return {"outcome": "removed", "removed": False, "removed_temporaries": 0, "writes_state": False}
+            if (hashlib.sha256(current).hexdigest() != inputs["expected_sha256"]
+                    or identity != inputs["expected_file_identity"]):
+                raise ValueError("cleanup receipt differs from the current-run artifact; replacement preserved")
+            recovery = quarantine_entry_at(directory_fd, name, identity, inputs["expected_sha256"])
+            return {"outcome": "removed", "removed": recovery is not None, "removed_temporaries": 0,
+                    "recovery_path": str(Path(path).parent / recovery) if recovery else None,
+                    "writes_state": recovery is not None}
+        receipt = write_bytes_atomic_at(directory_fd, name, content, AtomicWriteOptions(
+            mode=0o644, verify_content=True,
+            post_publish_check=lambda: verify_directory_binding(Path(path).parent, root, directory_identity)))
+        return {"outcome": "generated", "writes_state": True, "sha256": receipt["digest"],
+                "file_identity": receipt["file_identity"], "verified_html": content.decode("utf-8")}
     finally:
         os.close(directory_fd)
 

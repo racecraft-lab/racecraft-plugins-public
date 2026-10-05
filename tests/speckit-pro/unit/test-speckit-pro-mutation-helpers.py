@@ -8479,7 +8479,7 @@ This line must not be copied.
             self.assertFalse((git_root / "nested").exists())
             self.assertFalse(response["data"]["writes_state"])
 
-    def test_apply_reports_temp_unlink_failure_after_failed_replace(self) -> None:
+    def test_apply_reports_temp_capture_failure_after_failed_replace(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
             request = RunnerRequest(
@@ -8498,22 +8498,22 @@ This line must not be copied.
                     ]
                 },
             )
-            real_unlink = mutation.os.unlink
+            real_rename = mutation.os.rename
 
             def fail_replace(*args, **kwargs):
                 raise OSError("injected replace failure")
 
-            def fail_temp_unlink(path, *args, **kwargs):
+            def fail_temp_capture(path, *args, **kwargs):
                 if isinstance(path, str) and path.startswith(".new.md.tmp-"):
                     raise OSError("injected temp cleanup failure")
-                return real_unlink(path, *args, **kwargs)
+                return real_rename(path, *args, **kwargs)
 
             old_cwd = Path.cwd()
             os.chdir(git_root)
             try:
                 with (
                     patch.object(mutation.os, "replace", side_effect=fail_replace),
-                    patch.object(mutation.os, "unlink", side_effect=fail_temp_unlink),
+                    patch.object(mutation.os, "rename", side_effect=fail_temp_capture),
                 ):
                     response = mutation.run_mutation_helper(registry.MUTATION_HELPERS["mutation-foundation"], request)
             finally:
