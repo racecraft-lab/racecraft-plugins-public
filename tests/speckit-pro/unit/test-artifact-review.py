@@ -201,6 +201,13 @@ class FillContentReviewTests(_ReviewFixture):
             '<!-- -- ><a title=" --><img src=x onerror=alert(1)>"></a>',
             '<!-- --\n><a title=" --><img src=x onerror=alert(1)>"></a>',
             "</title><title>left open for the next region",
+            # A browser folds tag names over ASCII only; Python's re.IGNORECASE also folds
+            # long s (U+017F) to s and dotted or dotless I (U+0130, U+0131) to i.
+            '<noscript></noſcript><a title="</noscript><img src=x onerror=alert(1)>"></a>',
+            '<noframes></noframeſ><a title="</noframes><img src=x onerror=alert(1)>"></a>',
+            '<title></tİtle><a title="</title><img src=x onerror=alert(1)>"></a>',
+            '<textarea></textareaı><a title="</textarea><img src=x onerror=alert(1)>"></a>',
+            '<title></tıtle><a title="</title><img src=x onerror=alert(1)>"></a>',
             '<title\x00><img src=x onerror=alert(1)></title>',
         ):
             with self.subTest(content=content):

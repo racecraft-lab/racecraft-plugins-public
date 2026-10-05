@@ -118,21 +118,25 @@ def _fill_skeleton(value: bytes) -> tuple[tuple[str, ...], tuple[bytes, ...], tu
 # Tags and attributes are judged by a parser: escaped planning text holds no raw "<",
 # so every tag in a fill is author structure the parser can see. The two patterns
 # below only reject constructs where Python's parser and a browser disagree.
+# Unicode \s on purpose: Python 3.11 closes a comment at "--" + any Unicode space + ">".
 _UNPARSEABLE_FILL = re.compile(r"<!(?!--)|<\?|<!---?>|--!>|--\s+>")
 # A browser ends these elements at their own end tag even where a parser sees an attribute value.
+# Browsers fold tag names over ASCII only, so every case-insensitive match here is re.ASCII.
 _RAW_TEXT_START = re.compile(
-    r"<(title|textarea|noscript|xmp|noembed|noframes|plaintext|script|style|iframe)(?=[\t\n\f\r />])", re.IGNORECASE
+    r"<(title|textarea|noscript|xmp|noembed|noframes|plaintext|script|style|iframe)(?=[\t\n\f\r />])",
+    re.IGNORECASE | re.ASCII,
 )
 _ACTIVE_ELEMENTS = frozenset({
     "script", "style", "iframe", "frame", "frameset", "object", "embed", "applet", "base", "meta", "link", "portal",
 })
 _URL_ATTRIBUTES = frozenset({"href", "xlink:href", "src", "srcset", "action", "formaction", "poster", "data", "background", "cite"})
 _URL_IGNORED = "".join(chr(code) for code in range(0x21))
+_ASCII_LOWER = str.maketrans("ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz")
 
 
 def _script_url(value: str) -> bool:
     """Browsers drop tabs and newlines and trim C0 controls before reading a URL scheme."""
-    url = re.sub(r"[\t\n\r]", "", value).strip(_URL_IGNORED).lower()
+    url = re.sub(r"[\t\n\r]", "", value).strip(_URL_IGNORED).translate(_ASCII_LOWER)
     if url.startswith("data:"):
         return not url.startswith(("data:image/", "data:font/"))
     return url.startswith(("javascript:", "vbscript:"))
@@ -158,10 +162,10 @@ class _FillMarkup(HTMLParser):
                 self.findings.append(f"{name} attribute")
             elif name in _URL_ATTRIBUTES and value is not None and _script_url(value):
                 self.findings.append(f"script URL in {name}")
-            elif name == "attributename" and value is not None and (
-                value.lower() in ("href", "xlink:href") or value.lower().startswith("on")
-            ):
-                self.findings.append("animated link or event attribute")
+            elif name == "attributename" and value is not None:
+                target = value.translate(_ASCII_LOWER)
+                if target in ("href", "xlink:href") or target.startswith("on"):
+                    self.findings.append("animated link or event attribute")
 
     def handle_data(self, data: str) -> None:
         if "<" in data:
@@ -172,7 +176,7 @@ def _raw_text_holds_markup(text: str) -> bool:
     """A raw-text element is inert only when it closes in the same region with no "<" before its end tag."""
     for start in _RAW_TEXT_START.finditer(text):
         following = text.find("<", start.end())
-        end = re.compile(rf"</{start.group(1)}[\t\n\f\r />]", re.IGNORECASE)
+        end = re.compile(rf"</{start.group(1)}[\t\n\f\r />]", re.IGNORECASE | re.ASCII)
         if following < 0 or not end.match(text, following):
             return True
     return False
