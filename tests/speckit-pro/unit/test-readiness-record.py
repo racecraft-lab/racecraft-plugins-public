@@ -505,7 +505,7 @@ SETUP_QUESTIONS = (re.compile(r"(?i)\b(?:stop|tell|instruct)\b[^.]{0,160}?\b(?:i
                    re.compile(r"(?i)\breinstall\b"))
 
 
-class G0ReadsReadinessTest(unittest.TestCase):
+class G0ReadinessFixture(unittest.TestCase):
     """G0 reads the record and continues; every stale item is one decisions-list note (ADR 0008)."""
 
     record_path = ReadinessRecordTest.record_path
@@ -547,6 +547,8 @@ class G0ReadsReadinessTest(unittest.TestCase):
         self.runner("decisions-list", "apply", {"workflow_file": "workflow.md", "entries": readiness["decisions"]})
         self.assertEqual([], self.g0()["decisions"], "a resume logs nothing twice")
 
+
+class G0RecordValidationTests(G0ReadinessFixture):
     def test_missing_and_malformed_records_supply_no_evidence_and_g0_continues(self) -> None:
         self.assert_logged_once("record", "missing")
         self.record_path().parent.mkdir()
@@ -579,6 +581,8 @@ class G0ReadsReadinessTest(unittest.TestCase):
         self.write_record(self.all_verified(), plugin_revision="0.0.1")
         self.assert_logged_once("plugin_payload", f"plugin revision changed from 0.0.1 to {self.revision}")
 
+
+class G0SavedEvidenceTests(G0ReadinessFixture):
     def test_unknown_item_is_logged_without_markup_or_local_paths(self) -> None:
         observations = self.all_verified()
         observations[1] = observation("project_integration", "unknown")
@@ -628,6 +632,8 @@ class G0ReadsReadinessTest(unittest.TestCase):
         self.write_record([observation("project_integration", values={"policy": "fixture"})])
         self.assert_logged_once("project_integration", "unknown: value fingerprint")
 
+
+class G0WorkflowTests(G0ReadinessFixture):
     def test_appending_readiness_notes_twice_is_idempotent(self) -> None:
         entries = self.g0()["decisions"]
         for _ in range(2):
@@ -672,7 +678,7 @@ class G0ReadsReadinessTest(unittest.TestCase):
 
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
-    cases = (ReadinessRecordTest, FeasibilityTest, G0ReadsReadinessTest)
+    cases = (ReadinessRecordTest, FeasibilityTest, G0RecordValidationTests, G0SavedEvidenceTests, G0WorkflowTests)
     return unittest.TestSuite([loader.loadTestsFromTestCase(case) for case in cases])
 
 
