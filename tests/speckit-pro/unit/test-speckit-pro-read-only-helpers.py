@@ -5082,6 +5082,85 @@ class G0SetupTests(unittest.TestCase):
             self.assertNotIn("G0 blocked:", prereqs)
 
 
+class G0BaselineStageTests(unittest.TestCase):
+    """The project baseline (typecheck, tests, build, lint) belongs to implement entry, not plan-stage G0."""
+
+    SCRIPTS = {"typecheck": "tsc", "test": "vitest", "test:integration": "vitest run it", "build": "tsc -b", "lint": "eslint ."}
+
+    def commands_data(self, root: Path, surface: str, **extra: object) -> dict[str, object]:
+        from speckit_pro_runner.helpers.g0_setup import g0_setup
+
+        with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value="/usr/bin/specify"), \
+                patch("speckit_pro_runner.helpers.read_only.installed_specify_version", return_value=None):
+            return g0_setup({"surface": surface, "probe": "commands", "workflow_file": "workflow.md", **extra}, root)
+
+    def test_recorded_project_commands_supply_missing_slots_and_override_detection(self) -> None:
+        for surface in ("claude", "codex"):
+            with self.subTest(surface=surface), helper_project() as root:
+                G0SetupTests.prepare_fixture(root, None)
+                (root / "package.json").write_text(json.dumps({"scripts": {"test": "vitest", "lint": "eslint ."}}), encoding="utf-8")
+                data = self.commands_data(root, surface, project_commands={
+                    "TYPECHECK": "python3 tools/typecheck.py", "UNIT_TEST": "python3 tools/test.py",
+                    "LINT": "N/A", "FULL_VERIFY": "python3 tools/verify.py",
+                })
+                self.assertEqual([], data["baseline"]["plan_stage"])
+                self.assertEqual([
+                    {"slot": "TYPECHECK", "command": "python3 tools/typecheck.py"},
+                    {"slot": "UNIT_TEST", "command": "python3 tools/test.py"},
+                ], data["baseline"]["implement_entry"])
+
+    def test_plan_stage_g0_runs_no_project_command_and_implement_entry_records_the_baseline(self) -> None:
+        for surface in ("claude", "codex"):
+            with self.subTest(surface=surface), helper_project() as root:
+                G0SetupTests.prepare_fixture(root, None)
+                (root / "package.json").write_text(json.dumps({"scripts": self.SCRIPTS}), encoding="utf-8")
+                before = G0SetupTests.fixture_files(root)
+                with patch("subprocess.Popen", wraps=subprocess.Popen) as spawned:
+                    data = self.commands_data(root, surface)
+                self.assertEqual(before, G0SetupTests.fixture_files(root), "plan-stage G0 must not write")
+                for call in spawned.call_args_list:
+                    argv = call.args[0] if call.args else call.kwargs.get("args")
+                    argv = argv.split() if isinstance(argv, str) else list(argv)
+                    self.assertNotIn(argv[0], {"npm", "pnpm", "yarn", "bun"}, f"plan-stage G0 ran a project command: {argv}")
+                baseline = data["baseline"]
+                self.assertEqual([], baseline["plan_stage"])
+                self.assertEqual(
+                    [("BUILD", "npm build"), ("TYPECHECK", "npm typecheck"), ("LINT", "npm lint"),
+                     ("UNIT_TEST", "npm test"), ("INTEGRATION_TEST", "npm test:integration")],
+                    [(row["slot"], row["command"]) for row in baseline["implement_entry"]],
+                )
+
+    def test_a_project_without_a_command_slot_plans_only_the_slots_it_has(self) -> None:
+        with helper_project() as root:
+            G0SetupTests.prepare_fixture(root, None)
+            (root / "package.json").write_text(json.dumps({"scripts": {"test": "vitest"}}), encoding="utf-8")
+            baseline = self.commands_data(root, "codex")["baseline"]
+            self.assertEqual([], baseline["plan_stage"])
+            self.assertEqual(["UNIT_TEST"], [row["slot"] for row in baseline["implement_entry"]])
+
+    def test_guidance_runs_the_baseline_at_implement_entry_on_both_hosts(self) -> None:
+        for surface in ("claude", "codex"):
+            with self.subTest(surface=surface):
+                view = host_skill_root(surface) / "speckit-autopilot" / "references"
+                phases = (view / "phase-execution.md").read_text(encoding="utf-8")
+                if surface == "claude":  # Codex runs Phase 0 from SKILL.md and prerequisites.md alone
+                    plan_stage = phases.split("Phase 0: Prerequisites", 1)[1].split("Phase 1: Specify", 1)[0]
+                    for slot in ("TYPECHECK", "UNIT_TEST", "INTEGRATION_TEST", "BUILD", "LINT"):
+                        self.assertNotIn(slot, plan_stage, f"plan-stage Phase 0 must not run {slot}")
+                skill = (view.parent / "SKILL.md").read_text(encoding="utf-8")
+                step = skill.split("4. **Constitution validation**", 1)[1].split("\n5. **", 1)[0]
+                self.assertNotIn("PROJECT_COMMANDS", step)
+                entry = phases.split("#### Phase 7 Setup: Project Baseline", 1)[1].split("#### Phase 7 Setup:", 1)[0]
+                self.assertIn("`data.baseline.implement_entry`", entry)
+                self.assertIn("blocked-for-UAT", entry)
+                prereqs = (view / "prerequisites.md").read_text(encoding="utf-8")
+                step_09 = prereqs.split("## Step 0.9: Constitution Validation", 1)[1].split("\n## Step 0.1", 1)[0]
+                self.assertNotIn("PROJECT_COMMANDS", step_09)
+                gates = (view / "gate-validation.md").read_text(encoding="utf-8")
+                g0 = gates.split("### G0", 1)[1].split("### G1", 1)[0]
+                self.assertNotIn("TYPECHECK command", g0)
+
+
 class G0PinTests(unittest.TestCase):
     def test_g0_setup_preserves_advisory_version_statuses(self) -> None:
         from speckit_pro_runner.helpers.g0_setup import g0_setup
@@ -6096,7 +6175,7 @@ def main() -> int:
     _ReadOnlyHelperRunner.helper_filter = args.helper
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                                for case in (SpecKitExecutableReuseTests, ReadOnlyHelperTests, PlanLayersRepairRouteTests, PlanLayersPlannerCaseTests,
-                                            PacketTitlePatternTests, G0SetupTests, G0PinTests, G0SetupFailureTests, ScaffoldAnswersTests, CanaryReceiptTests,
+                                            PacketTitlePatternTests, G0SetupTests, G0BaselineStageTests, G0PinTests, G0SetupFailureTests, ScaffoldAnswersTests, CanaryReceiptTests,
                                             CanaryFeatureOfferTests, CanaryVariantAssertionsTests, CanaryVariantContractTests,
                                             CanaryGateVerdictTests, CanaryGuardGapContractTests,
                                             CanaryPlanTargetTests, CanaryPlanTargetContractTests, CanaryCodexTokenTests,
