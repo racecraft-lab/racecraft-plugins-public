@@ -62,6 +62,22 @@ class PhaseBriefTests(unittest.TestCase):
                 self.assertEqual(reports[0], reports[1])
                 self.assertEqual(reports[0], dispatch_brief(request["inputs"])["data"])
 
+    def test_payload_hosts_reject_directory_and_format_paths(self):
+        valid = {"phase": "Plan", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
+        for key, value in (("workflow_file", "docs/"), ("workflow_file", "docs\\"),
+                           ("workflow_file", "docs/\u202eworkflow.md"), ("feature_dir", "specs/\u200bexample")):
+            for host in ("claude", "codex"):
+                with self.subTest(host=host, key=key, value=value):
+                    request = {"schema_version": "1.0", "helper_id": "phase-brief", "operation": "phase-brief",
+                               "mode": "read_only", "inputs": {**valid, key: value}}
+                    payload = REPO / "dist" / host / "speckit-pro"
+                    done = subprocess.run([sys.executable, "-m", "speckit_pro_runner"],
+                                          cwd=payload, env={**os.environ, "PYTHONPATH": str(payload)},
+                                          input=json.dumps(request), text=True, capture_output=True, check=False)
+                    report = json.loads(done.stdout)
+                    self.assertEqual(report["status"], "input_error")
+                    self.assertEqual(report["data"], {})
+
     def test_invalid_requests_return_no_dispatch_facts(self):
         valid = {"phase": "Plan", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
         invalid = [{**valid, "phase": value} for value in ("Implement", "", "plan", [], None)]
@@ -85,6 +101,10 @@ class PhaseBriefTests(unittest.TestCase):
         for key in ("feature_dir", "workflow_file"):
             for control in ("\n", "\r", "\t", "\x00", "\x1f", "\x7f", "\x85", "\u2028", "\u2029"):
                 cases.extend((key, value) for value in (control + valid[key], valid[key] + control, "docs/" + control + "example"))
+        cases += [("workflow_file", value) for value in ("docs/", "docs\\", "/", "C:\\docs\\")]
+        for key in ("feature_dir", "workflow_file"):
+            for fmt in ("\u202e", "\u200b", "\u200d", "\ufeff", "\u00ad"):
+                cases.extend((key, value) for value in (fmt + valid[key], valid[key] + fmt, "docs/" + fmt + "example"))
         for key, value in cases:
             with self.subTest(key=key, value=value):
                 result = dispatch_brief({**valid, key: value}, request_id="unsafe-path")

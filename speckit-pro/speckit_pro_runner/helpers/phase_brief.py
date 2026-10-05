@@ -33,8 +33,10 @@ PROMPT_SECTIONS = {"Clarify": "Clarify Prompts", "Checklist": "Step 2: Run Enric
 def brief_path(value: Any, label: str) -> str:
     """Validate path text without filesystem access, with portable separators."""
     text = require_text(value, label)
-    if any(category(char) in {"Cc", "Zl", "Zp"} for char in text):
-        raise ValueError(f"{label} must not contain control characters or line separators")
+    if any(category(char) in {"Cc", "Cf", "Zl", "Zp"} for char in text):
+        raise ValueError(f"{label} must not contain control, format or line separator characters")
+    if label == "workflow_file" and text.endswith(("/", "\\")):
+        raise ValueError("workflow_file must name a file, not a directory")
     path = PureWindowsPath(text)
     if ".." in path.parts:
         raise ValueError(f"{label} must not contain parent traversal segments")
@@ -106,9 +108,11 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     """Return phase-brief/v1 dispatch data; gate and stop decisions stay separate.
 
     The closed request inputs are phase, workflow_file and feature_dir strings.
-    Paths reject parent segments and controls; feature_dir is workflow-root
-    relative, workflow_file may be absolute. This is lexical validation only:
-    no files are opened, symlinks resolved or read permissions enforced.
+    Paths reject parent segments and control, format and separator characters;
+    feature_dir is workflow-root relative, workflow_file may be absolute but
+    must not end in a slash or backslash (a directory, not a file). This is
+    lexical validation only: no files are opened, symlinks resolved or read
+    permissions enforced.
     Successful data has exactly these fields. Records have only the named keys;
     a wave dispatch's inputs is an open JSON object for its prompt arguments.
 
