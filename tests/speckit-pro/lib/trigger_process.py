@@ -23,6 +23,10 @@ class CleanupEvidence:
     initially_present: bool | None = None
     observations: list[dict[str, object]] = field(default_factory=list)
 
+    def observe_presence(self, present: bool) -> None:
+        if self.initially_present is None:
+            self.initially_present = present
+
 class QueryError(OSError):
     """Stop the evaluation without discarding a failed child's raw evidence."""
 
@@ -118,8 +122,8 @@ def cleanup_child(
             # Permission denial is unresolved, never proof of absence.
             last_probe_error = exc
         finally:
-            if evidence is not None and evidence.initially_present is None:
-                evidence.initially_present = group_present
+            if evidence is not None:
+                evidence.observe_presence(group_present)
         return True
 
     if child.poll() is not None:
