@@ -600,6 +600,8 @@ class DraftIdentityTests(unittest.TestCase):
         template = json.loads(source.read_bytes())
         with self.assertRaisesRegex(ValueError, "unsupported experiment schema"):
             comparison.validate_experiment(template)
+        with self.assertRaisesRegex(ValueError, "rebind --manifest <template> --out"):
+            comparison.validate_experiment(template)
         for patch in ({"identities": {"observer": "0" * 64}}, {"launch_authorized": True},
                       {"qualification_established": True}, {"output_directory": "evidence"},
                       {"schema_version": "unknown"}, {"roster": []}):

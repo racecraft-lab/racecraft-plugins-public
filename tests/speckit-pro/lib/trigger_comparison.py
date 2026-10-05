@@ -99,6 +99,8 @@ def bind_template(template: dict) -> dict:
 
 
 def validate_experiment(manifest: dict) -> dict[str, dict]:
+    _require(not (isinstance(manifest, dict) and manifest.get("schema_version") == "trigger-experiment-template/v1"),
+             "unsupported experiment schema: bind a template first with rebind --manifest <template> --out <new-manifest>")
     _require(isinstance(manifest, dict) and manifest.get("schema_version") == "trigger-experiment/v1", "unsupported experiment schema")
     _require(isinstance(manifest.get("experiment_id"), str) and bool(manifest["experiment_id"]), "missing experiment identity")
     _require(type(manifest.get("trials")) is int and manifest["trials"] == 3, "exactly three integer trials required")
