@@ -17,7 +17,7 @@ from typing import Any
 from ..agent_materialization import digest
 from ..strict_input import SelectionError
 from ..sweep_isolation import secret_matches
-from .readiness_record import MAX_TEXT, NOT_OBSERVED_ACTION, clean_text, make_item
+from .readiness_values import MAX_TEXT, NOT_OBSERVED_ACTION, clean_text, make_item
 
 CLAUDE_ONLY_ITEMS = ("permission_probe", "plugin_scope", "mcp_authentication")
 CODEX_ONLY_ITEMS = ("codex_agents", "extension_versions")
@@ -30,7 +30,7 @@ SCOPES = ("user", "project", "local")
 MCP_STATES = ("connected", "needs_authentication", "pending_approval", "failed", "rejected", "disabled", "unknown")
 TRUST_STATES = ("trusted", "untrusted", "unobservable")
 NAME_RE = re.compile(r"[A-Za-z][A-Za-z0-9_.:-]{0,63}")  # a plugin MCP server is `plugin:<plugin>:<server>`
-# Letters, digits and `_.+-` only: no wildcard, quote, comma, parenthesis, whitespace or shell metacharacter.
+# Letters, digits and `_./+-` only: no wildcard, quote, comma, parenthesis, whitespace or shell metacharacter.
 COMMAND_RE = re.compile(r"[A-Za-z0-9_.+/][A-Za-z0-9_./+-]*")
 VERSION_RE = re.compile(r"[0-9A-Za-z][0-9A-Za-z.+-]{0,39}")
 INTERPRETER_PLACEHOLDER = "<interpreter>"
@@ -97,11 +97,12 @@ def parse_probes(raw: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def rules_for(probes: list[dict[str, Any]], recorded: bool) -> list[str]:
-    """Rules for the failed probes. A recorded rule shows a placeholder for an absolute interpreter path."""
+    """Printed rules retain the command; recorded rules omit interpreter directories."""
     rules: list[str] = []
     for probe in probes:
         command = probe.get("command", INTERPRETER_PLACEHOLDER)
-        rules += allow_rule_texts([probe], INTERPRETER_PLACEHOLDER if recorded and command.startswith("/") else command)
+        label = INTERPRETER_PLACEHOLDER if command.startswith("/") else command.rsplit("/", 1)[-1]
+        rules += allow_rule_texts([probe], label if recorded else command)
     return rules
 
 
@@ -124,7 +125,8 @@ def observe_permission_probe(raw: dict[str, Any], observed_at: str, source: str)
     return make_item("verified", source, observed_at, prints)
 
 
-def observe_plugin_scope(raw: dict[str, Any], observed_at: str, source: str) -> dict[str, Any]:
+def observe_plugin_scope(raw: dict[str, Any], observed_at: str, source: str,
+                         plugin_revision: str) -> dict[str, Any]:
     scope = raw["scope"]
     if not isinstance(scope, dict):
         raise SelectionError("plugin_scope.scope must be an object")
@@ -136,15 +138,16 @@ def observe_plugin_scope(raw: dict[str, Any], observed_at: str, source: str) -> 
             raise SelectionError(f"plugin_scope {key} must be a version string")
         versions[key] = value
     loaded, expected = versions["loaded_version"], versions["expected_version"]
-    prints = {f"value:{key}": digest(value) for key, value in {"scope": where, **versions}.items()
+    prints = {f"value:{key}": digest(value) for key, value in {"scope": where, "plugin_revision": plugin_revision, **versions}.items()
               if value is not None}
     if loaded is None or expected is None:
         return make_item("unknown", clean_text(f"{source}: effective {where} scope version not observed", "source"),
                          observed_at, prints,
                          "Run `claude plugin list` to read the effective scope and version of speckit-pro, "
                          "then rerun scaffold.")
-    source = describe(source, f"{where} scope loads {loaded}, expected {expected}", "plugin_scope.evidence_source")
-    if loaded == expected:
+    source = describe(source, f"{where} scope loads {loaded}, expected {expected}, record revision {plugin_revision}",
+                      "plugin_scope.evidence_source")
+    if loaded == expected == plugin_revision:
         return make_item("verified", source, observed_at, prints)
     return make_item("unavailable", source, observed_at, prints, clean_text(
         f"Run `claude plugin update speckit-pro --scope {where}`, then run /reload-plugins or restart "
@@ -206,7 +209,7 @@ def observe_hooks(raw: dict[str, Any], observed_at: str, source: str, host: str)
     return make_item("verified", source, observed_at, prints)
 
 
-def host_item(raw: dict[str, Any], host: str, observed_at: str) -> tuple[str, dict[str, Any]]:
+def host_item(raw: dict[str, Any], host: str, observed_at: str, plugin_revision: str) -> tuple[str, dict[str, Any]]:
     """Derive one host-dependent item from its raw observation. `raw["item"]` is in `HOST_ITEMS`."""
     name = str(raw["item"])
     key = DETAIL_KEYS[name]
@@ -222,7 +225,7 @@ def host_item(raw: dict[str, Any], host: str, observed_at: str) -> tuple[str, di
     if name == "permission_probe":
         return name, observe_permission_probe(raw, observed_at, source)
     if name == "plugin_scope":
-        return name, observe_plugin_scope(raw, observed_at, source)
+        return name, observe_plugin_scope(raw, observed_at, source, plugin_revision)
     if name == "mcp_authentication":
         return name, observe_mcp_authentication(raw, observed_at, source)
     if name == "codex_agents":

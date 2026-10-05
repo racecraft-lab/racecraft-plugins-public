@@ -95,7 +95,7 @@
         "value": "speckit_pro_runner/cli_probe.py",
         "display": "speckit_pro_runner/cli_probe.py"
       },
-      "sha256": "1b40ff08fdd135fe67bbfa67ad4a4f068bc268e6bfc6637b1adb0561228e084d"
+      "sha256": "a62f181502b915e0ec1cc5ceec334484e0d7086495e86494e41eb94213eb6bcd"
     },
     {
       "path": {
@@ -663,7 +663,7 @@
         "value": "speckit_pro_runner/helpers/readiness_host_items.py",
         "display": "speckit_pro_runner/helpers/readiness_host_items.py"
       },
-      "sha256": "87cf91609d8dca67db0a7919cc4dc7202100fee887bd1b15cad5aad264d26a0e"
+      "sha256": "f40250f96ba5644186b5f7fdf24e6fc9a3f52cc75c7510e62438fe5cac512314"
     },
     {
       "path": {
@@ -671,7 +671,15 @@
         "value": "speckit_pro_runner/helpers/readiness_record.py",
         "display": "speckit_pro_runner/helpers/readiness_record.py"
       },
-      "sha256": "dc165d4d8d1b4b4e3bf751634cb67ba2a29d5501ea749beeff67638adbf89e09"
+      "sha256": "3aea9f0ebabbd206c0dd29f0324f83712e837c3179f1f880d0ef9c3de0c208fe"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/readiness_values.py",
+        "display": "speckit_pro_runner/helpers/readiness_values.py"
+      },
+      "sha256": "190fa247a54cbbe9e8346a477bb30844319567685eddbbacde48a17131488051"
     },
     {
       "path": {
@@ -919,7 +927,7 @@
         "value": "speckit_pro_runner/verification_docker.py",
         "display": "speckit_pro_runner/verification_docker.py"
       },
-      "sha256": "3d78f47d1b8d83df47c2dc8d4fc9956d6a13af962915ac3a4ca00c7658cf5de2"
+      "sha256": "52971f764f1bcb5f7f3754982c35c6d82ce2da553aa51906bb33379ba4ea1ae6"
     },
     {
       "path": {
@@ -959,7 +967,7 @@
         "value": "speckit_pro_runner/verification_docker_runtime.py",
         "display": "speckit_pro_runner/verification_docker_runtime.py"
       },
-      "sha256": "7d01010d8ac46b19967a380772708ff8b45cbdbffafd2d8883443e01ee9f0edb"
+      "sha256": "ed7ba645f4d03941000472355e41c0c6f5f1587c7272d7ece7a4d11df7495c17"
     },
     {
       "path": {

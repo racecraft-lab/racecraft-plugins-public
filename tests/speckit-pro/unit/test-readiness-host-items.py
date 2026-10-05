@@ -143,6 +143,28 @@ class ReadinessHostItemsTest(ReadinessCase):
         self.assertNotIn(interpreter, json.dumps(response["data"]["record"]))
         self.assertIn("<interpreter>", item["action"])
 
+    def test_relative_interpreter_directories_are_not_recorded(self) -> None:
+        for command in ("person/venv/bin/python", ".venv/bin/python", "python3"):
+            with self.subTest(command=command):
+                probes = [{"probe": "runner_request", "outcome": "denied", "command": command}]
+                response = self.run_helper([detail("permission_probe", "probes", probes)])
+                item = self.items(response)["permission_probe"]
+                self.assertIn(f"Bash({command} -m speckit_pro_runner:*)", response["data"]["allow_rules"])
+                self.assertIn(f"Bash({command.rsplit('/', 1)[-1]} -m speckit_pro_runner:*)", item["action"])
+                if "/" in command:
+                    self.assertNotIn(command, (self.root / ".specify/readiness/claude.json").read_text())
+
+    def test_matching_scope_versions_must_match_record_plugin_revision(self) -> None:
+        scope = {"scope": "local", "loaded_version": "2.39.0", "expected_version": "2.39.0"}
+        response = self.run_helper([detail("plugin_scope", "scope", scope)])
+        item = self.items(response)["plugin_scope"]
+        self.assertEqual("unavailable", item["status"])
+        self.assertIn("2.40.0", item["evidence_source"])
+        self.assertIn("claude plugin update speckit-pro --scope local", item["action"])
+        current = {**scope, "loaded_version": "2.40.0", "expected_version": "2.40.0"}
+        self.assertEqual("verified", self.items(self.run_helper([detail("plugin_scope", "scope", current)]))[
+            "plugin_scope"]["status"])
+
     def test_hostile_interpreter_text_never_reaches_an_allow_rule(self) -> None:
         hostile = ["/" + "opt/py*", "/" + "opt/py)", "python3)", "python3, Bash(*)", "Bash(*)", "py\nBash(*)",
                    "/" + "opt/py\nBash(*)", "py'x", 'py"x', "py;rm", "/" + "opt/../py", "py$(x)", "py*", ""]

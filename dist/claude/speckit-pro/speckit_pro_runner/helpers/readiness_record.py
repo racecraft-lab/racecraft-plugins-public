@@ -2,8 +2,8 @@
 
 Scaffold observes the shared preparation items and hands each observation to
 this helper, which stamps it, fingerprints the inputs it names, and writes
-`.specify/readiness/<host>.json` owner-only. The runner observes two items
-itself: local capability health and the quality-gates source. Missing
+`.specify/readiness/<host>.json` owner-only. The runner observes three items
+itself: local capability health, the quality-gates source and the verification-Docker fit. Missing
 evidence is recorded `unknown`; an `unavailable` or `unknown` item must name
 the action the user takes, so scaffold finishes after a declined or failed
 fix. The record has no overall verdict, stores no credential, and holds no
@@ -15,21 +15,24 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 import stat
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from .. import quality_gates
+from .. import cli_probe, quality_gates
 from ..agent_materialization import digest
 from ..envelope import diagnostic, response
 from ..atomic_write import write_bytes_atomic
 from ..canonical_json import canonical_bytes
 from ..private_state import ensure_private_directory
-from ..strict_input import SelectionError, require_text
-from ..sweep_isolation import secret_matches
+from ..strict_input import SelectionError
 from ..trusted_io import find_repo_root, trusted_bytes
+from ..verification_docker import DAEMON_ARCHITECTURES, PLATFORM, PLATFORM_OS
+from . import readiness_host_items as host_items
+from .readiness_values import NOT_OBSERVED_ACTION, clean_text, make_item
 
 SCHEMA_VERSION = "readiness-record/v1"
 HOSTS = ("claude", "codex")
@@ -37,42 +40,18 @@ STATUSES = ("verified", "unavailable", "unknown", "not_applicable")
 NEEDS_ACTION = ("unavailable", "unknown")
 # Items scaffold observes and passes in. The runner observes the rest.
 CALLER_ITEMS = ("plugin_payload", "project_integration", "github_auth", "mcp_servers", "typesafe_jev",
-                "reviewability_report")
-RUNNER_ITEMS = ("local_capability", "quality_gates")
+                "reviewability_report", "formal_methods")
+RUNNER_ITEMS = ("local_capability", "quality_gates", "verification_docker")
 RECORD_DIRECTORY = ".specify/readiness"
 INPUT_KEYS = frozenset({"host", "host_version", "execution_mode", "plugin_revision", "observations"})
 OBSERVATION_KEYS = frozenset({"item", "status", "evidence_source", "action", "files", "values"})
 VALUE_NAME_RE = re.compile(r"[a-z][a-z0-9_]{0,40}")
-# Keep the supported scaffold slash commands; refuse absolute paths, including roots and UNC paths.
-LOCAL_PATH_RE = re.compile(
-    r"(?<![\w./\\-])(?:/(?!speckit-pro:[a-z][a-z0-9-]*(?=[^\w/\\-]|$)|"
-    r"(?:plugin|reload-plugins|hooks|mcp)(?=[^\w/\\-]|$))[^\s]*|~[/\\]|[A-Za-z]:[\\/]|\\|file://)")
 EXECUTION_MODES = ("interactive", "answers-file")
-MAX_TEXT = 400
-NOT_OBSERVED_ACTION = "Run the preparation check for this item, then rerun scaffold."
+DOCKER_PROBE_SECONDS = 10
 
 
 def now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def clean_text(value: Any, label: str) -> str:
-    """Text that may be written to the record: one short line, no credential, no absolute path."""
-    text = require_text(value, label).strip()
-    if len(text) > MAX_TEXT or "\n" in text or "\r" in text:
-        raise SelectionError(f"{label} must be one line of at most {MAX_TEXT} characters")
-    if secret_matches(text):
-        raise SelectionError(f"{label} looks like a credential; the record never stores one")
-    if LOCAL_PATH_RE.search(text):
-        raise SelectionError(f"{label} holds an absolute local path; use a repository-relative path")
-    return text
-
-
-def make_item(status: str, evidence_source: str, observed_at: str, fingerprints: dict[str, str],
-              action: str | None = None) -> dict[str, Any]:
-    required = {"action": action} if action is not None else {}
-    return {"status": status, "evidence_source": evidence_source, "observed_at": observed_at,
-            "fingerprints": fingerprints, **required}
 
 
 def fingerprint_files(paths: Any, root: Path, label: str) -> dict[str, str]:
@@ -194,6 +173,41 @@ def observe_quality_gates(root: Path) -> dict[str, Any]:
                      "quality gates flow.")
 
 
+def observe_verification_docker(root: Path) -> dict[str, Any]:
+    """Ask a present Docker CLI two read-only questions: is its endpoint local, and is the daemon Linux/arm64?
+
+    Verification Docker runs only against a local Unix socket (ADR 0005), so a remote
+    context or host never counts as a fit. Nothing is installed or started, and the
+    daemon's own words are never recorded.
+    """
+    observed_at = now()
+    no_fit_action = f"Verification Docker needs a local {PLATFORM} Docker daemon; this host has none."
+
+    def unavailable(evidence: str, action: str = no_fit_action) -> dict[str, Any]:
+        return make_item("unavailable", evidence, observed_at, {}, action)
+
+    if shutil.which("docker") is None:
+        return unavailable("the Docker CLI is not installed")
+    # Reject a remote override before any CLI call can contact its daemon.
+    host = os.environ.get("DOCKER_HOST")
+    if host and not host.startswith("unix://"):
+        return unavailable("the Docker daemon is not reached over a local socket")
+    endpoint = cli_probe.probe(root, ["docker", "context", "inspect", "--format", "{{.Endpoints.docker.Host}}"],
+                               allowed=("docker",), timeout=DOCKER_PROBE_SECONDS)
+    if endpoint["exit_status"] != 0:
+        return unavailable("no Docker daemon answered", "Start the Docker daemon, then rerun scaffold.")
+    if not endpoint["stdout_tail"].startswith("unix://"):
+        return unavailable("the Docker daemon is not reached over a local socket")
+    platform = cli_probe.probe(root, ["docker", "info", "--format", "{{.OSType}}/{{.Architecture}}"],
+                               allowed=("docker",), timeout=DOCKER_PROBE_SECONDS)
+    if platform["exit_status"] != 0:
+        return unavailable("no Docker daemon answered", "Start the Docker daemon, then rerun scaffold.")
+    os_type, _, architecture = platform["stdout_tail"].partition("/")
+    if os_type == PLATFORM_OS and architecture in DAEMON_ARCHITECTURES:
+        return make_item("verified", f"a local {PLATFORM} Docker daemon answered", observed_at, {})
+    return unavailable(f"the Docker daemon does not report {PLATFORM}")
+
+
 def build_record(inputs: dict[str, Any], root: Path) -> dict[str, Any]:
     if not isinstance(inputs, dict) or not {"host", "execution_mode", "plugin_revision", "observations"} <= inputs.keys() \
             or not inputs.keys() <= INPUT_KEYS:
@@ -205,13 +219,12 @@ def build_record(inputs: dict[str, Any], root: Path) -> dict[str, Any]:
     observations = inputs["observations"]
     if not isinstance(observations, list):
         raise SelectionError("observations must be a list")
-    from . import readiness_host_items as host_items  # imported here: that module builds on this one
-
+    plugin_revision = clean_text(inputs["plugin_revision"], "plugin_revision")
     observed_at = now()
     items: dict[str, dict[str, Any]] = {}
     for raw in observations:
         if isinstance(raw, dict) and raw.get("item") in host_items.HOST_ITEMS:
-            name, item = host_items.host_item(raw, inputs["host"], observed_at)
+            name, item = host_items.host_item(raw, inputs["host"], observed_at, plugin_revision)
         else:
             name, item = caller_item(raw, root, observed_at)
         if name in items:
@@ -222,6 +235,7 @@ def build_record(inputs: dict[str, Any], root: Path) -> dict[str, Any]:
         items.setdefault(name, make_item("unknown", "not observed by scaffold", observed_at, {}, NOT_OBSERVED_ACTION))
     items["local_capability"] = observe_local_capability()
     items["quality_gates"] = observe_quality_gates(root)
+    items["verification_docker"] = observe_verification_docker(root)
     host_version = inputs.get("host_version")
     return {
         "schema_version": SCHEMA_VERSION,
@@ -229,7 +243,7 @@ def build_record(inputs: dict[str, Any], root: Path) -> dict[str, Any]:
         "host": inputs["host"],
         "host_version": None if host_version is None else clean_text(host_version, "host_version"),
         "execution_mode": inputs["execution_mode"],
-        "plugin_revision": clean_text(inputs["plugin_revision"], "plugin_revision"),
+        "plugin_revision": plugin_revision,
         "observed_at": observed_at,
         "items": {name: items[name] for name in sorted(items)},
     }
@@ -251,8 +265,6 @@ def write_record(root: Path, record: dict[str, Any]) -> str:
 
 
 def run_readiness_record_helper(entry: Any, request: Any) -> dict[str, Any]:
-    from . import readiness_host_items as host_items
-
     root = find_repo_root(Path.cwd())
     if root is None or not (root / ".specify").is_dir():
         return response("missing_prerequisite", request_id=request.request_id, diagnostics=[diagnostic(
