@@ -27,20 +27,11 @@ when its disposition permits. Resume and agent replacement never reset budget.
 
 **Resume protocol:**
 
-<!-- host:claude: Claude's visible progress plan is its task list -->
 1. Re-read the workflow file, then `autopilot-state.json` next to it
-2. Rebuild the visible task list from the canonical plan
+2. Reconcile its `plan` array with the canonical plan
 3. Verify artifact status and prompt content against the workflow file
 4. If the state file is missing, reconstruct it from the workflow file, then
    continue from the requested phase
-<!-- /host -->
-<!-- host:codex: Codex's visible progress plan is update_plan -->
-1. Read `autopilot-state.json` next to the workflow file
-2. Rebuild `update_plan` from its `plan` array
-3. Re-read the workflow file to verify artifact status and prompt content
-4. If the state file is missing, reconstruct it from the workflow file,
-   immediately call `update_plan`, then continue from the requested phase
-<!-- /host -->
 5. If all seven SDD phases are complete but any canonical `Post:` item is
    missing, `pending`, or `in_progress`, resume at the first incomplete Post
    item. Do not summarize completion from a `Phase 7: Implement Complete`

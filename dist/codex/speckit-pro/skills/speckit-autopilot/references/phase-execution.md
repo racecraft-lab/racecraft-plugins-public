@@ -64,7 +64,7 @@ PHASES = [specify, clarify, plan, checklist, tasks, analyze, implement]
 ```
 
 `--from-phase` changes the first phase to execute, not the required plan
-coverage. `update_plan` and `autopilot-state.json` must still contain Phase 0,
+coverage. `autopilot-state.json` must still contain Phase 0,
 all seven SDD phases, and Post before any subagent is spawned.
 
 ## Stage-Bounded Phase Selection
@@ -79,7 +79,7 @@ invocation may run:
 | `full` | All seven phases end to end | `Post: Retrospective` |
 
 The stage bounds which phases may **start**. It never truncates the canonical
-plan: `update_plan` and `autopilot-state.json` still contain Phase 0, all seven
+plan: `autopilot-state.json` still contains Phase 0, all seven
 SDD phases, and Post before any subagent is spawned, and entries outside the
 range are marked per
 [task-list-canonical.md](./task-list-canonical.md#out-of-stage-entries).
@@ -218,11 +218,10 @@ root from the task's default checkout.
 
 ```text
 for phase in PHASES starting from first_pending:
-    0. Re-run the all-phase coverage audit against update_plan and
-       autopilot-state.json. If Archive Sweep or any canonical phase family
+    0. Re-run the all-phase coverage audit against autopilot-state.json.
+       If Archive Sweep or any canonical phase family
        is missing, STOP and repair the plan before executing this phase.
-    1. update_plan: mark the current phase item as "in_progress"
-       and mirror the same status change into autopilot-state.json
+    1. autopilot-state.json: mark the current phase item as "in_progress"
     2. Check .specify/extensions.yml for before_<phase> hooks
        → run accepted hooks (non-destructive), skip duplicates
     3. Read the workflow file's prompt(s) for this phase
@@ -235,8 +234,7 @@ for phase in PHASES starting from first_pending:
           delivered; a status update or timeout alone is not the result. Record
           the summary, then close_agent only when that action is exposed. On
           hosted Responses, the host retains the inspectable completed thread.
-       d. update_plan: mark this prompt's item as "completed"
-       e. Write the same transition to autopilot-state.json
+       d. autopilot-state.json: mark this prompt's item as "completed"
     5. Run consensus in main session if needed:
        Parse executor's "Unresolved for consensus" section.
        For each item → spawn the category-routed analysts (codebase-analyst,
@@ -245,7 +243,7 @@ for phase in PHASES starting from first_pending:
        calling close_agent only when exposed and never exceeding the derived
        subagent_slots limit (dispatch in waves when items × analysts exceeds
        the cap) → apply consensus rules → edit
-       artifacts → mark the corresponding Consensus item complete in both stores.
+       artifacts → mark the corresponding Consensus item complete in autopilot-state.json.
        An item that ends in [ROUND_3_TIEBREAK] follows
        consensus-protocol.md#round-3-tiebreak: a fresh analyst plus a
        max-effort `consensus-tiebreaker` resolve it in an interactive and an
@@ -309,7 +307,7 @@ for phase in PHASES starting from first_pending:
        the runner's ignore rule covers it, so stage the record by path with
        git add --force -- <path>, and never untrack it.
    11. Advance to next phase (next iteration of loop) and write the new
-       in_progress item to both update_plan and autopilot-state.json.
+       in_progress item to autopilot-state.json.
        Never mark the run complete while a later phase family still has
        pending items.
 ```
@@ -486,7 +484,7 @@ Split each listed task: a candidate check now, with the reconciliation against
 actual evidence attached to the emission step. Then rerun G5.
 
 After G5 passes, the placeholder is invalid. Before Analyze or Implement can
-run, audit `update_plan` and `autopilot-state.json`, then apply the
+run, audit `autopilot-state.json`, then apply the
 tasks-phase reviewability boundary.
 Runner helper `reviewability-gate`
 supports setup mode only on the installed runner — tasks mode is deferred, so
@@ -510,7 +508,7 @@ Implement.
 - one or more concrete `Phase 7:` items exist
 - each concrete item names one or more task IDs parsed from `tasks.md`
 
-If any check fails, repair both state stores and print the corrected checklist
+If any check fails, repair autopilot-state.json and print the corrected checklist
 summary before continuing.
 
 **Budget-driven split ratification:**
@@ -1010,11 +1008,11 @@ and keeps executing independent work.
    strict FAIL is `expected_failure`. `input_error` means a malformed
    request, and a missing or unreadable workflow is a file prerequisite
    failure. Route the domain verdict by its raw exit code and action:
-   - exit 0 (PASS): update_plan G6.5 → completed; advance to Phase 7.
+   - exit 0 (PASS): autopilot-state.json G6.5 → completed; advance to Phase 7.
    - exit 1 (NO_DATA): log a warning, surface to operator that the
      synthesizer skipped its confidence emit (treat as a plugin
      regression report).
-     update_plan G6.5 → completed with a
+     autopilot-state.json G6.5 → completed with a
      `no_data: true` note. Advance to Phase 7.
    - exit 2 (FAIL):
        a. Read JSON `deductions_applied` first. When it is true,
@@ -1061,10 +1059,10 @@ operators who want a fail-closed posture opt into strict via
 `.codex/speckit-pro.local.md` or pass `--strict` on a single
 invocation. Per-invocation flag wins over local config.
 
-**update_plan**: at autopilot start, after the G6 task, create a
-G6.5 task `Confidence gate (pre-Implement)`. Transition through
-`in_progress` → `completed` regardless of advisory vs strict outcome
-(strict only differs in whether Phase 7 runs).
+At autopilot start, after the G6 item, record a G6.5 item in
+`autopilot-state.json`: `Confidence gate (pre-Implement)`. Mark it
+`in_progress` on entry to this phase and `completed` on exit
+regardless of advisory pass-with-warning vs strict pass.
 
 ### Plan Stage: Phase 6.5 Is The Terminal Step
 
@@ -1734,7 +1732,7 @@ and project agents, up to four adjacent assigned tasks sequentially, with shared
 context/reservation once. Tell every implementation and project agent that
 checklist items are reviewer-owned and deferred to PR review: do not stop on
 unticked ones, and never edit a checklist marker. Never exceed derived
-`subagent_slots`. Consume every real per-task result, update both state stores,
+`subagent_slots`. Consume every real per-task result, update autopilot-state.json,
 and call `task-results` `action=record` with every frozen task's full result
 block plus independently captured parent `native_observations` before marking
 completion. Follow the shared journal inputs; invalid evidence blocks recording.
@@ -3494,7 +3492,7 @@ commit. This runs as an **idempotent** step **immediately before step 10's
 commit** in the Main Execution Loop above (the scoped `git add` for
 phases 1–6, `git add -A && git commit` for phase 7), so the rebuilt maps are
 swept into that same commit. A boundary that changes nothing contributes
-nothing — no extra `update_plan` item and no `autopilot-state.json` transition
+nothing — no extra `autopilot-state.json` item or transition
 are recorded for this step.
 
 **Why before step 10:** step 10's `git add … && git commit` is what folds the
