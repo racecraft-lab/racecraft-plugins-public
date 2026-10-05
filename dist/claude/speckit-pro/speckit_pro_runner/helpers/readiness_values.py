@@ -14,7 +14,7 @@ NOT_OBSERVED_ACTION = "Run the preparation check for this item, then rerun scaff
 # Refuse absolute paths, including roots and UNC paths.
 LOCAL_PATH_RE = re.compile(
     r"(?<![\w./\\-])(?:/(?!(?:speckit-pro:[a-z][a-z0-9-]*|"
-    r"plugin|reload-plugins|hooks|mcp)[`\"”’,;)]*(?=\s|$))[^\s]*|~[/\\]|[A-Za-z]:[\\/]|\\|file://)")
+    r"plugin|reload-plugins|hooks|mcp)[`\"”’,;)]*\.?(?=\s|$))[^\s]*|~[/\\]|[A-Za-z]:[\\/]|\\|file://)")
 UNSAFE_TEXT_RE = re.compile(
     r"[\x00-\x1f\x7f-\x9f\u061c\u200e\u200f\u2028-\u202e\u2066-\u2069]")
 

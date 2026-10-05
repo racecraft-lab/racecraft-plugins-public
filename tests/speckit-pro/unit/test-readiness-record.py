@@ -358,7 +358,7 @@ class ReadinessRecordTest(unittest.TestCase):
                     with self.subTest(command=command, punctuation=punctuation, suffix=suffix):
                         with self.assertRaises(SelectionError):
                             clean_text(f"Run {command}{punctuation}{suffix}", "action")
-            for ending in ("", " to inspect.", "\u00a0to inspect.", "`, then retry.", "\u201d, then retry."):
+            for ending in ("", ".", "`.", ").", " to inspect.", "\u00a0to inspect.", "`, then retry.", "\u201d, then retry."):
                 with self.subTest(command=command, ending=ending):
                     action = f"Run {command}{ending}"
                     self.assertEqual(action, clean_text(action, "action"))
