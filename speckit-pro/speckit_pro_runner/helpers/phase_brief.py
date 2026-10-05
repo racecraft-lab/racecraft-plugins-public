@@ -44,6 +44,18 @@ def brief_path(value: Any, label: str) -> str:
     return text
 
 
+def reference_fence(line: str, fence: str) -> str | None:
+    """Return the active delimiter for code lines, or None for non-code lines."""
+    marker = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", line)
+    if fence:
+        if marker and marker[1][0] == fence[0] and len(marker[1]) >= len(fence) and not marker[2].strip(" \t"):
+            return ""
+        return fence
+    if marker and (marker[1][0] == "~" or "`" not in marker[2]):
+        return marker[1]
+    return None
+
+
 def reference_content(lines: list[str], name: str, heading: str) -> Iterator[tuple[int, str]]:
     """Yield reference lines outside code and comment blocks, retaining positions."""
     fence = ""
@@ -53,15 +65,11 @@ def reference_content(lines: list[str], name: str, heading: str) -> Iterator[tup
         if comment:
             comment = "-->" not in line
             continue
-        # CommonMark 0.31.2, sections 4.2 and 4.5. Nested fence-like lines
+        # CommonMark 0.31.2, section 4.5. Nested fence-like lines
         # are content unless they close the active delimiter and run length.
-        marker = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", line)
-        if fence:
-            if marker and marker[1][0] == fence[0] and len(marker[1]) >= len(fence) and not marker[2].strip(" \t"):
-                fence = ""
-            continue
-        if marker and (marker[1][0] == "~" or "`" not in marker[2]):
-            fence = marker[1]
+        delimiter = reference_fence(line, fence)
+        if delimiter is not None:
+            fence = delimiter
             continue
         if re.match(r"^ {0,3}<!--", line):
             comment = "-->" not in line

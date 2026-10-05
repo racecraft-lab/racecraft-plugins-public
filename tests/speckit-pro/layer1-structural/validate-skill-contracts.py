@@ -701,9 +701,7 @@ class ValidateCapabilityResolution(unittest.TestCase):
     def test_packaged_reference_slice_structure(self) -> None:
         # The runner owns the ATX-only structural contract, including comment
         # and fence handling. Validate every sliced reference before shipping.
-        for phase in ('Clarify', 'Checklist', 'Analyze'):
-            with self.subTest(phase=phase):
-                self.assertTrue(phase_slices(phase))
+        self.assertEqual([len(phase_slices(phase)) for phase in ('Clarify', 'Checklist', 'Analyze')], [14, 14, 14])
 
     def _check_claude_agent(self, agent_name: str, agent_file: Path, text: str) -> None:
         # A repo-relative path does not exist in the consumer repository; Claude
