@@ -668,6 +668,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/quality_gates_proposal.py",
+        "display": "speckit_pro_runner/helpers/quality_gates_proposal.py"
+      },
+      "sha256": "e2a34f0ed189d9efd15565930f0cc0d5dc7153bd3d6548984f7fac0aec9bb255"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
@@ -703,7 +711,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "c9628ba212f618744e377ca8533479f01b93b4ddccefd2330e2e63c86aab95aa"
+      "sha256": "32c48e6bc86757c1dec95a4edb27f4e73e71e52dea3cbe8a631a10cf06691e7b"
     },
     {
       "path": {
@@ -831,7 +839,7 @@
         "value": "speckit_pro_runner/quality_gates.py",
         "display": "speckit_pro_runner/quality_gates.py"
       },
-      "sha256": "ef5f9661467a565b0828b4adb9be2454d19218be896e7fc015fe858ec54c19f5"
+      "sha256": "14164a46656dad2774366a3d899ed13cf00a76ab3c2ba01e29d4491bbeed7ce5"
     },
     {
       "path": {
