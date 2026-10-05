@@ -217,17 +217,27 @@ def _validate_source_inputs(repo: Path) -> None:
     for directory, directories, files in os.walk(plugin_root, followlinks=False):
         parent = Path(directory)
         for name in (*directories, *files):
-            path = parent / name
-            mode = path.lstat().st_mode
-            if stat.S_ISLNK(mode) or not (stat.S_ISDIR(mode) or stat.S_ISREG(mode)):
-                raise RuntimeStageError(
-                    f"unsafe source member must be a regular file or directory: {path.relative_to(repo)}"
-                )
+            _require_safe_source_member(repo, parent / name)
     license_path = repo / "LICENSE"
     if license_path.exists() or license_path.is_symlink():
         mode = license_path.lstat().st_mode
         if stat.S_ISLNK(mode) or not stat.S_ISREG(mode):
             raise RuntimeStageError("unsafe source member must be a regular file: LICENSE")
+
+
+def _require_safe_source_member(repo: Path, path: Path) -> None:
+    try:
+        mode = path.lstat().st_mode
+    except FileNotFoundError:
+        # A process importing the runner writes each .pyc through a temp file
+        # it renames away, so a listed cache entry can vanish before lstat.
+        if path.parent.name == "__pycache__":
+            return
+        raise
+    if stat.S_ISLNK(mode) or not (stat.S_ISDIR(mode) or stat.S_ISREG(mode)):
+        raise RuntimeStageError(
+            f"unsafe source member must be a regular file or directory: {path.relative_to(repo)}"
+        )
 
 
 def _load_product_apis() -> _ProductApis:
