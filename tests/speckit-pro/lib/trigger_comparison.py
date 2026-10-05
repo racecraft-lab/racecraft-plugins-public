@@ -5,6 +5,7 @@ Only prospectively retained execution and replay context can qualify a record.
 """
 from __future__ import annotations
 
+import errno
 import hashlib
 import json
 import os
@@ -24,7 +25,9 @@ from trigger_inventory import canonical_sha256, validate_inventory
 ROOT = Path(__file__).resolve().parents[1]
 _DIGEST = re.compile(r"[0-9a-f]{64}")
 MAX_DRAFT_BYTES = 1 << 20
-_NO_FOLLOW = os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NONBLOCK", 0)
+_NO_FOLLOW = os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC
+_DIRECTORY = os.O_RDONLY | os.O_DIRECTORY | _NO_FOLLOW
+_OPEN_AT = os.open in os.supports_dir_fd
 
 
 def json_digest(value: object) -> str:
@@ -69,27 +72,53 @@ def snapshot_identities(snapshot: dict) -> dict:
     return {key: json_digest(snapshot[key]) for key in ("observer", "catalog", "fixture")}
 
 
-def _draft_path(path: Path) -> Path:
-    """Refuse a draft path that reaches its file through any symlinked component."""
+def _open_at(parent: int, name: str, flags: int, shown: object) -> int:
+    """Open one name relative to parent without following a symlink."""
+    try:
+        return os.open(name, flags, dir_fd=parent)
+    except OSError as error:
+        if error.errno in {errno.ELOOP, errno.EMLINK, errno.ENOTDIR}:
+            raise ValueError(f"draft path must not contain a symlink or non-directory: {shown}") from error
+        raise
+
+
+def _draft_directory(path: Path) -> tuple[int, str]:
+    """Walk to the draft's directory one descriptor at a time, refusing any symlinked component."""
+    _require(_OPEN_AT, "draft access requires os.open dir_fd support")
     absolute = Path(os.path.abspath(path))
-    for component in (*reversed(absolute.parents), absolute):
-        _require(not component.is_symlink(), f"draft path must not contain a symlink: {component}")
-    return absolute
+    parent = os.open(absolute.anchor, _DIRECTORY)
+    try:
+        for depth, name in enumerate(absolute.parts[1:-1], start=2):
+            child = _open_at(parent, name, _DIRECTORY, Path(*absolute.parts[:depth]))
+            os.close(parent)
+            parent = child
+    except BaseException:
+        os.close(parent)
+        raise
+    return parent, absolute.name
 
 
-def _read_draft(path: Path) -> bytes:
+def _read_draft(directory: int, name: str) -> tuple[bytes, tuple[int, int]]:
     """Read a regular, non-symlink draft file of at most MAX_DRAFT_BYTES."""
-    descriptor = os.open(_draft_path(path), os.O_RDONLY | _NO_FOLLOW)
-    with os.fdopen(descriptor, "rb") as stream:
-        _require(stat.S_ISREG(os.fstat(stream.fileno()).st_mode), "draft must be a regular file")
+    with os.fdopen(_open_at(directory, name, os.O_RDONLY | _NO_FOLLOW, name), "rb") as stream:
+        info = os.fstat(stream.fileno())
+        _require(stat.S_ISREG(info.st_mode), "draft must be a regular file")
         payload = stream.read(MAX_DRAFT_BYTES + 1)
     _require(len(payload) <= MAX_DRAFT_BYTES, f"draft exceeds {MAX_DRAFT_BYTES} bytes")
-    return payload
+    return payload, (info.st_dev, info.st_ino)
 
 
 def rebind_identities(path: Path, out: Path | None = None) -> dict:
     """Materialize a template, or refresh only the identities of a concrete draft."""
-    payload = _read_draft(path)
+    directory, name = _draft_directory(path)
+    try:
+        return _rebind_at(directory, name, out)
+    finally:
+        os.close(directory)
+
+
+def _rebind_at(directory: int, name: str, out: Path | None) -> dict:
+    payload, identity = _read_draft(directory, name)
     text = payload.decode("utf-8")
     manifest = strict_json.loads(payload, error=ValueError)
     if manifest.get("schema_version") == "trigger-experiment-template/v1":
@@ -102,9 +131,10 @@ def rebind_identities(path: Path, out: Path | None = None) -> dict:
     for key, old in manifest["identities"].items():
         _require(text.count(old) == 1, f"{key} identity digest is not unique in the draft")
         text = text.replace(old, current[key])
-    descriptor = os.open(_draft_path(path), os.O_WRONLY | _NO_FOLLOW)
-    with os.fdopen(descriptor, "wb") as stream:
-        _require(stat.S_ISREG(os.fstat(stream.fileno()).st_mode), "draft must be a regular file")
+    with os.fdopen(_open_at(directory, name, os.O_WRONLY | _NO_FOLLOW, name), "wb") as stream:
+        info = os.fstat(stream.fileno())
+        _require(stat.S_ISREG(info.st_mode), "draft must be a regular file")
+        _require((info.st_dev, info.st_ino) == identity, "draft was replaced during refresh")
         stream.truncate(0)
         stream.write(text.encode("utf-8"))
     return {"rebound": True, "identities": current}

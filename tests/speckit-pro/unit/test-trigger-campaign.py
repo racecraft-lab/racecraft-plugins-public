@@ -6,6 +6,7 @@ import concurrent.futures
 import copy
 import hashlib
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -732,6 +733,48 @@ class DraftIdentityTests(unittest.TestCase):
             self.assertIn("symlink", json.loads(result.stdout)["error"])
             self.assertEqual(target.read_bytes(), before)
             self.assertTrue(link.is_symlink())
+
+    def test_rebind_stays_in_the_drafts_directory_when_a_component_is_swapped_mid_open(self):
+        source = ROOT / "layer2-trigger/campaign-drafts/issue-573-pilot.draft.json"
+        stale = comparison.bind_template(json.loads(source.read_bytes()))
+        stale["identities"]["observer"] = "0" * 64
+        concrete = (json.dumps(stale, indent=2) + "\n").encode()
+        real_open = os.open
+        # Each case swaps drafts/ for a symlink to outside/ just before the matching open runs.
+        cases = (("read", source.read_bytes(), True, lambda path, flags: "drafts" in Path(os.fspath(path)).parts),
+                 ("in-place write", concrete, False, lambda path, flags: bool(flags & os.O_WRONLY)))
+        for label, payload, template, fires in cases:
+            with self.subTest(swap=label), tempfile.TemporaryDirectory() as temporary:
+                base = Path(temporary).resolve()
+                drafts, outside = base / "drafts", base / "outside"
+                drafts.mkdir()
+                outside.mkdir()
+                (drafts / "reviewed.draft.json").write_bytes(payload)
+                (outside / "reviewed.draft.json").write_bytes(payload)
+                swapped = []
+
+                def swapping_open(path, flags, *args, fires=fires, swapped=swapped, drafts=drafts,
+                                  base=base, outside=outside, **kwargs):
+                    if not swapped and fires(path, flags):
+                        swapped.append(path)
+                        drafts.rename(base / "drafts.old")
+                        drafts.symlink_to(outside, target_is_directory=True)
+                    return real_open(path, flags, *args, **kwargs)
+
+                bound = base / "bound.json"
+                with mock.patch.object(comparison.os, "open", swapping_open):
+                    if template:
+                        with self.assertRaisesRegex(ValueError, "symlink"):
+                            comparison.rebind_identities(drafts / "reviewed.draft.json", bound)
+                    else:
+                        comparison.rebind_identities(drafts / "reviewed.draft.json")
+                self.assertTrue(swapped, "the swap seam never fired")
+                self.assertFalse(bound.exists())
+                self.assertEqual((outside / "reviewed.draft.json").read_bytes(), payload)
+                if not template:
+                    refreshed = json.loads((base / "drafts.old/reviewed.draft.json").read_bytes())
+                    self.assertEqual(refreshed["identities"],
+                                     comparison.snapshot_identities(comparison.measurement_snapshot()))
 
 
 class CampaignPinsTests(unittest.TestCase):
