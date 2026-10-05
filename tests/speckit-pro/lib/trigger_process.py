@@ -116,6 +116,8 @@ def cleanup_child(
         if not running():
             return signaled
         signaled = True
+        # SIGTERM can race with zombie reaping just as SIGKILL can; only the
+        # latest signal's delivery licenses treating EPERM as unresolved.
         signal_delivered = terminate(child, signum)
         deadline = time.monotonic() + timeout
         while running() and time.monotonic() < deadline:

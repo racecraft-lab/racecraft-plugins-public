@@ -106,6 +106,13 @@
       "modes": ["dry_run", "apply"],
       "failure_classes": ["invalid_input", "missing_prerequisite", "write_failure"],
       "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/mutation-helpers/requests/write-readiness-record.json"
+    },
+    {
+      "helper_id": "propose-quality-gates",
+      "operation": "propose-quality-gates",
+      "modes": ["dry_run", "apply"],
+      "failure_classes": ["invalid_input", "missing_prerequisite", "write_failure"],
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/mutation-helpers/requests/propose-quality-gates.json"
     }
   ]
 }

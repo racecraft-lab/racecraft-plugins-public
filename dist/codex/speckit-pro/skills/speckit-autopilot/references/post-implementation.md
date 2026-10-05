@@ -36,7 +36,7 @@ a Post item is incomplete or `autopilot_continuation.required=true`.
 
 ## Canonical Post Items (10-19)
 
-Every row below is an item that MUST appear in `update_plan` and
+Every row below is an item that MUST appear in
 `autopilot-state.json` (Step 1.1's Canonical Post-Implementation Task List). Run
 in order; do not collapse or defer.
 
@@ -56,7 +56,7 @@ in order; do not collapse or defer.
 ### Combined Durable Plan
 
 The numbered 10-19 gates and the supporting task-list rows are both
-authoritative. Codex materializes **13 distinct Post rows** in `update_plan` and
+authoritative. Codex materializes **13 distinct Post rows** in
 `autopilot-state.json`: every numbered gate above, plus these three supporting
 evidence steps:
 
@@ -206,7 +206,7 @@ tail (15 → 16 → 17 → 18 → 19, with the supporting rows in plan order).
 - Never mark the workflow complete until every planned Post item is completed or
   explicitly logged as skipped.
 - **Pre-final completion audit:** Before any final user-facing response,
-  re-read `autopilot-state.json`, reconcile it with the visible progress plan, and verify
+  re-read `autopilot-state.json`, reconcile it with the workflow file, and verify
   the canonical Post list. A completion response is forbidden while any `Post:` item is pending,
   in_progress, or missing. `execution_control.disposition=checkpoint_required`
   permits a checkpoint explicitly saying the run is not complete, retaining
