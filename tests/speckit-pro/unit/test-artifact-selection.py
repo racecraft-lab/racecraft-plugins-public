@@ -24,20 +24,20 @@ class SelectionFixture(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory(dir=scratch)
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
+        self.gallery: Path | None = None
         (self.root / ".specify").mkdir()
         (self.root / "plan.md").write_text("## Declared File Operations\n\n- NEW src/new.py\n", encoding="utf-8")
 
-    def select(self, *, status: str = "ok", plugin: str = "speckit-pro",
-               gallery: Path | None = None, **inputs: object) -> dict:
+    def select(self, *, status: str = "ok", plugin: str = "speckit-pro", **inputs: object) -> dict:
         request = {"schema_version": "1.0", "request_id": "artifact-selection-test",
                    "helper_id": "select-artifact-pages", "operation": "select-artifact-pages",
                    "mode": "read_only", "inputs": {"plan_file": "plan.md", **inputs}}
-        command = [sys.executable, "-m", "speckit_pro_runner"] if gallery is None else [
+        command = [sys.executable, "-m", "speckit_pro_runner"] if self.gallery is None else [
             sys.executable, "-c", "import runpy, sys; from pathlib import Path; "
             "from speckit_pro_runner.helpers import artifact_selection; "
             "artifact_selection.GALLERY = Path(sys.argv[1]); "
             "sys.argv = sys.argv[:1]; "
-            "runpy.run_module('speckit_pro_runner', run_name='__main__')", str(gallery),
+            "runpy.run_module('speckit_pro_runner', run_name='__main__')", str(self.gallery),
         ]
         done = subprocess.run(command,
                               input=json.dumps(request), text=True, capture_output=True, check=False,
@@ -45,7 +45,7 @@ class SelectionFixture(unittest.TestCase):
         result = json.loads(done.stdout.splitlines()[-1])
         self.assertEqual(done.returncode, 0 if status == "ok" else 2, result)
         self.assertEqual(result["status"], status, result)
-        if gallery is not None and status != "ok":
+        if self.gallery is not None and status != "ok":
             self.assertIn("gallery manifest", result["diagnostics"][0]["message"])
         return result["data"]
 
@@ -54,6 +54,7 @@ class ManifestSecurityTests(SelectionFixture):
     def test_structurally_malformed_manifests_are_explicit_errors(self) -> None:
         gallery = self.root / "gallery"
         gallery.mkdir()
+        self.gallery = gallery
         shipped = json.loads((ROOT / "speckit-pro/artifact-gallery/manifest.json").read_text(encoding="utf-8"))
         cases = [("missing contract", {"templates": []}), ("null", None), ("array", [])]
         for label, field, value in (("empty templates", "templates", []), ("invalid entries", "templates", [None]),
@@ -77,17 +78,18 @@ class ManifestSecurityTests(SelectionFixture):
         for label, manifest in cases:
             with self.subTest(case=label):
                 (gallery / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
-                self.assertEqual(self.select(status="input_error", gallery=gallery), {})
+                self.assertEqual(self.select(status="input_error"), {})
 
     def test_manifest_ids_cannot_escape_the_artifact_directory(self) -> None:
         gallery = self.root / "gallery"
         gallery.mkdir()
+        self.gallery = gallery
         manifest = json.loads((ROOT / "speckit-pro/artifact-gallery/manifest.json").read_text(encoding="utf-8"))
         for identifier in ("../../escape", "/absolute-target", "sub/page", "..", "C:\\escape", "\\escape"):
             with self.subTest(identifier=identifier):
                 manifest["templates"][0]["id"] = identifier
                 (gallery / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
-                self.assertEqual(self.select(status="input_error", gallery=gallery), {})
+                self.assertEqual(self.select(status="input_error"), {})
 
 
 class OutputSecurityTests(SelectionFixture):
@@ -206,15 +208,17 @@ class ArtifactHostSelectionTests(SelectionFixture):
                     "implementation-plan": "artifacts/implementation-plan.html",
                     "spec-explainer": "artifacts/spec-explainer.html",
                 })
+                self.gallery = gallery
                 for identifier in ("../../escape", "/absolute-target"):
                     manifest = copy.deepcopy(shipped)
                     manifest["templates"][0]["id"] = identifier
                     (gallery / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
-                    self.assertEqual(self.select(status="input_error", plugin=plugin, gallery=gallery), {})
+                    self.assertEqual(self.select(status="input_error", plugin=plugin), {})
                 malformed = copy.deepcopy(shipped)
                 malformed["templates"][0]["trigger"] = {}
                 (gallery / "manifest.json").write_text(json.dumps(malformed), encoding="utf-8")
-                self.assertEqual(self.select(status="input_error", plugin=plugin, gallery=gallery), {})
+                self.assertEqual(self.select(status="input_error", plugin=plugin), {})
+                self.gallery = None
                 (self.root / "artifacts").symlink_to(self.root / "redirected")
                 self.assertEqual(self.select(status="input_error", plugin=plugin), {})
                 (self.root / "artifacts").unlink()
