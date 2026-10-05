@@ -63,6 +63,7 @@ from speckit_pro_runner.pr_contract import PACKET_TITLE_SCOPE_PATTERN, PACKET_TI
 EXPECTED_HELPERS = [
     "g0-setup",
     "formal-doctor",
+    "probe-git-write",
     "scaffold-answers",
     "phase-brief",
     "helper-registry-dispatch",
@@ -110,6 +111,7 @@ JSON_STDOUT_PARITY_HELPERS = {"atomicity-route"}
 
 HELPER_CASES: dict[str, dict[str, object]] = {
     "g0-setup": {"probe": "commands", "surface": "codex", "workflow_file": WORKFLOW_FILE},
+    "probe-git-write": {},
     "scaffold-answers": {"answers_file": "missing-answers.json", "spec_id": "SPEC-009"},
     "formal-doctor": {"repo_root": ".", "workflow_file": "tests/speckit-pro/unit/fixtures/formal-methods/disabled-workflow.md"},
     "check-prerequisites": {"workflow_file": WORKFLOW_FILE},
@@ -4733,7 +4735,7 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
 
     def test_helper_python_authoritative_records(self) -> None:
         for helper_id in self.filtered_helpers():
-            if helper_id in {"helper-registry-dispatch", "scaffold-answers", "g0-setup", "phase-brief"}:
+            if helper_id in {"helper-registry-dispatch", "scaffold-answers", "g0-setup", "probe-git-write", "phase-brief"}:
                 continue
             with self.subTest(helper_id=helper_id):
                 completed, response, stderr_records = run_runner(helper_request(helper_id, HELPER_CASES[helper_id]))

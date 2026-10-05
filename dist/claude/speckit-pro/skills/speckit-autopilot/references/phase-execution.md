@@ -344,12 +344,9 @@ For each clarify session in the workflow file:
           run_in_background: false,
           prompt: """
             Prepare a Clarify Question Set for: <session prompt>
-            Protocol: <plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md
-            Reference dir: <plugin_root>/skills/speckit-autopilot/references/
+            Reference slices: <brief.slices, verbatim>
           """)
-     The `Protocol:` and `Reference dir:` lines are built from the
-     `plugin_root` that `validate-agent-install` returned
-     (prerequisites.md Step 0.0b).
+     The phase brief supplies the slices; the executor reads no reference file.
   3. Parent answers returned questions and edits spec/workflow/state
   4. Re-scan spec.md for `[NEEDS CLARIFICATION]` markers and record the
      remaining count in the session result
@@ -539,11 +536,8 @@ For each checklist domain in the workflow file:
   1. autopilot-state.json: domain task → in_progress
   2. Agent(subagent_type: "speckit-pro:checklist-executor",
           run_in_background: false,
-          prompt: "Run /speckit-checklist with: <domain prompt>\nProtocol: <plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md\nReference dir: <plugin_root>/skills/speckit-autopilot/references/")
-     The `Protocol:` line is the active consensus protocol and
-     `Reference dir:` is the directory that holds it, both
-     built from the `plugin_root` that `validate-agent-install`
-     returned (prerequisites.md Step 0.0b).
+          prompt: "Run /speckit-checklist with: <domain prompt>\nReference slices: <brief.slices, verbatim>")
+     The phase brief supplies the slices; the executor reads no reference file.
      The checklist-executor runs the checklist, researches
      gaps, applies fixes, and re-runs to verify (Layer 1)
   3. Parse executor's "Unresolved for consensus" section
@@ -794,8 +788,8 @@ Items it can't resolve are flagged in its
 1. autopilot-state.json: "Analyze" → in_progress
 2. Agent(subagent_type: "speckit-pro:analyze-executor",
         run_in_background: false,
-        prompt: "Run /speckit-analyze with: <prompt>\nProtocol: <plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md\nReference dir: <plugin_root>/skills/speckit-autopilot/references/")
-   The `Protocol:` and `Reference dir:` lines are built as in Phase 4.
+        prompt: "Run /speckit-analyze with: <prompt>\nReference slices: <brief.slices, verbatim>")
+   The phase brief supplies the slices, as in Phase 4.
    The executor handles research + remediation (Layer 1)
 3. Parse executor's "Unresolved for consensus" section
 4. If unresolved findings exist:

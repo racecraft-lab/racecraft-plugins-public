@@ -212,22 +212,22 @@ The helper resolves the loaded plugin root that owns
 including `uat-runbook-author.md`. If `plugin_root` is supplied in `inputs`,
 it must equal that loaded root.
 
-Keep the returned `plugin_root`. Every consensus-synthesizer,
-clarify-executor, checklist-executor, and analyze-executor prompt carries a `Protocol:` line
-set to `<plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md`,
-so those agents read the active protocol and never a cached copy from another
-version. Each one reports `**Protocol:**` in the plugin-relative form
+Keep the returned `plugin_root`. Every consensus-synthesizer prompt carries a
+`Protocol:` line set to `<plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md`,
+so that agent reads the active protocol and never a cached copy from another
+version. It reports `**Protocol:**` in the plugin-relative form
 `skills/speckit-autopilot/references/consensus-protocol.md`; check that value
 against the sent line with `<plugin_root>/` removed. Never copy the expanded
 path into the workflow file, state, implementation notes, or a pull request
 body.
 
-Every clarify-, checklist-, analyze-, and implement-executor prompt, every
-consensus analyst prompt, and every artifact-author, formal-model-author, and
-uat-runbook-author prompt also carries a
-`Reference dir: <plugin_root>/skills/speckit-autopilot/references/` line. Those agents read
-`capability-discovery.md` and `grounding.md` only from that directory and never
-search the plugin cache for another copy. The artifact-author prompt also
+Every implement-executor prompt, every consensus analyst prompt, and every
+artifact-author, formal-model-author, and uat-runbook-author prompt also
+carries a `Reference dir: <plugin_root>/skills/speckit-autopilot/references/`
+line. Those agents read `capability-discovery.md` and `grounding.md` only from
+that directory and never search the plugin cache for another copy. Clarify,
+checklist and analyze executor prompts carry neither line: the runner's phase
+brief puts the sections they need in the prompt as reference slices. The artifact-author prompt also
 carries a `Gallery dir: <plugin_root>/artifact-gallery/` line, and the agent reads the
 manifest and templates only from that directory.
 

@@ -15,6 +15,7 @@ from .install import CODEX_OPTIONAL_HELPER_NAME, CODEX_REQUIRED_AGENT_NAMES, run
 from .decisions_list import run_decisions_list_helper
 from .egress_authorization import run_egress_authorization_helper
 from .execution_requests import run_execution_helper
+from .git_write_probe import run_git_write_probe_helper
 from .gate_preflight_coverage import run_gate_preflight_coverage_helper
 from .g0_setup import run_g0_setup_helper
 from .roadmap_freshness import run_roadmap_freshness_helper
@@ -123,6 +124,10 @@ HELPERS: dict[str, HelperEntry] = {
     "g0-setup": HelperEntry(
         "g0-setup", "g0-setup", None, "python_authoritative", "python_contract",
         authoritative_request("g0-setup"),
+    ),
+    "probe-git-write": HelperEntry(
+        "probe-git-write", "probe-git-write", None, "python_authoritative", "python_contract",
+        authoritative_request("probe-git-write"),
     ),
     "scaffold-answers": HelperEntry(
         "scaffold-answers", "scaffold-answers", None, "python_authoritative", "python_contract",
@@ -727,6 +732,7 @@ SPECIAL_HELPER_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
     "check-roadmap-freshness": run_roadmap_freshness_helper,
     "scaffold-answers": run_scaffold_answers_helper,
     "g0-setup": run_g0_setup_helper,
+    "probe-git-write": run_git_write_probe_helper,
     "phase-brief": run_phase_brief_helper,
 }
 
