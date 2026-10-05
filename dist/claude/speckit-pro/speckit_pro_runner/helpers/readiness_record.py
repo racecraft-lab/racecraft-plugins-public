@@ -222,7 +222,6 @@ def build_record(inputs: dict[str, Any], root: Path) -> dict[str, Any]:
     plugin_revision = clean_text(inputs["plugin_revision"], "plugin_revision")
     observed_at = now()
     items: dict[str, dict[str, Any]] = {}
-    legacy_hooks = any(isinstance(raw, dict) and raw.get("item") == "hooks" for raw in observations)
     for raw in observations:
         if isinstance(raw, dict) and raw.get("item") in host_items.HOST_ITEMS:
             name, item = host_items.host_item(raw, inputs["host"], observed_at, plugin_revision)
@@ -236,7 +235,7 @@ def build_record(inputs: dict[str, Any], root: Path) -> dict[str, Any]:
         items.setdefault(name, make_item("unknown", "not observed by scaffold", observed_at, {}, NOT_OBSERVED_ACTION))
     items["local_capability"] = observe_local_capability()
     if inputs["host"] == "codex":
-        host_items.reconcile_codex_items(items, observed_at, legacy_hooks)
+        host_items.reconcile_codex_items(items, observed_at, host_items.names_item(observations, "hooks"))
     items["quality_gates"] = observe_quality_gates(root)
     items["verification_docker"] = observe_verification_docker(root)
     host_version = inputs.get("host_version")

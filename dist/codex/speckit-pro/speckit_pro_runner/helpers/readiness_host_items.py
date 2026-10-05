@@ -575,6 +575,11 @@ CODEX_TRUST_OBSERVERS = {"codex_approval_posture": observe_codex_approval_postur
                          "codex_local_access": observe_codex_local_access}
 
 
+def names_item(observations: list[Any], name: str) -> bool:
+    """Whether the caller sent an observation for `name`, whatever it holds."""
+    return any(isinstance(raw, dict) and raw.get("item") == name for raw in observations)
+
+
 def reconcile_codex_items(items: dict[str, dict[str, Any]], observed_at: str, legacy_hooks_observed: bool) -> None:
     """One Codex trust result and no caller override of the runner's temporary probe.
 
