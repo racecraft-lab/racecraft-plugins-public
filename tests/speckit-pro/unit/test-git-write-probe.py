@@ -48,6 +48,9 @@ class GitWriteProbeTest(unittest.TestCase):
         with patch.object(probe, "git_common_directory", return_value=self.root / ".git"):
             return probe.run_git_write_probe_helper(None, SimpleNamespace(request_id="test-probe"))
 
+    def assert_no_probe_files(self) -> None:
+        self.assertEqual([], list((self.root / ".git").rglob(".speckit-git-write-probe-*.lock")))
+
     def test_cleanup_failure_names_leftovers_without_local_paths(self) -> None:
         with patch.object(probe.os, "unlink", side_effect=PermissionError(errno.EPERM, "denied")):
             result = self.probe_current_repository()
@@ -74,7 +77,7 @@ class GitWriteProbeTest(unittest.TestCase):
         with patch.object(probe.os, "unlink", side_effect=fail_once):
             result = self.probe_current_repository()
         self.assertEqual("verified", result["data"]["observation"]["status"])
-        self.assertEqual([], list((self.root / ".git").rglob(".speckit-git-write-probe-*.lock")))
+        self.assert_no_probe_files()
 
     def test_close_failure_still_removes_created_probe_in_finally(self) -> None:
         close = os.close
@@ -86,7 +89,7 @@ class GitWriteProbeTest(unittest.TestCase):
         with patch.object(probe.os, "close", side_effect=fail_close):
             result = self.probe_current_repository()
         self.assertEqual("unknown", result["data"]["observation"]["status"])
-        self.assertEqual([], list((self.root / ".git").rglob(".speckit-git-write-probe-*.lock")))
+        self.assert_no_probe_files()
 
     def test_recycled_pid_leftover_is_preserved_and_does_not_mask_probe(self) -> None:
         stale = self.heads / f".speckit-git-write-probe-{os.getpid()}.lock"
