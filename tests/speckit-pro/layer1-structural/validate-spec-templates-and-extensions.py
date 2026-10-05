@@ -124,14 +124,12 @@ class ValidateOneClarifySession(unittest.TestCase):
 
     def test_autopilot_skill_has_no_marker_gate_on_clarify(self) -> None:
         text = (AUTOPILOT_SKILL_DIR / 'SKILL.md').read_text(encoding='utf-8')
+        gate_text = (AUTOPILOT_SKILL_DIR / 'references/gate-validation.md').read_text(encoding='utf-8')
         self.assert_absent(text, r'(?i)clarify still runs only when')
         self.assert_absent(text, r'(?i)Clarify and Checklist have multiple prompts')
-
-    def test_gate_reference_does_not_skip_clarify_on_zero_markers(self) -> None:
-        text = (AUTOPILOT_SKILL_DIR / 'references/gate-validation.md').read_text(encoding='utf-8')
-        self.assert_absent(text, r'(?i)skip clarify')
-        self.assertNotRegex(text, r'(?i)re-run clarify')
-        self.assertIn('without dispatching another clarify session', text.lower())
+        self.assert_absent(gate_text, r'(?i)skip clarify')
+        self.assertNotRegex(gate_text, r'(?i)re-run clarify')
+        self.assertIn('without dispatching another clarify session', gate_text.lower())
 
     def test_scaffold_seeds_one_clarify_session(self) -> None:
         text = SCAFFOLD_SKILL.read_text(encoding='utf-8')
