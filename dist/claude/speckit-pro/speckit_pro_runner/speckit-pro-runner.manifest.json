@@ -63,7 +63,7 @@
         "value": "speckit_pro_runner/artifact_review.py",
         "display": "speckit_pro_runner/artifact_review.py"
       },
-      "sha256": "9432d9e4cdd32f0f190d417dc4a1af7c77cdd66c84cf87ed2069aadb7d173435"
+      "sha256": "f729da8144fd57ee95828dced4a5681f65f07806cbf3de1116f06877b64491f6"
     },
     {
       "path": {
@@ -671,7 +671,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "f9e5949d2d377cb5d9ed26a9b60e2e606916d4565254108362578162b70257b0"
+      "sha256": "0c73669ed9c0d4d0645bc91869e821f40c44b05700916647ff9f11b02bced5b5"
     },
     {
       "path": {
@@ -687,7 +687,7 @@
         "value": "speckit_pro_runner/helpers/readiness_record.py",
         "display": "speckit_pro_runner/helpers/readiness_record.py"
       },
-      "sha256": "3aea9f0ebabbd206c0dd29f0324f83712e837c3179f1f880d0ef9c3de0c208fe"
+      "sha256": "918ab130f3a98d4521a689fed8fb5da105abe638ae53a8f51031c37e545488fe"
     },
     {
       "path": {

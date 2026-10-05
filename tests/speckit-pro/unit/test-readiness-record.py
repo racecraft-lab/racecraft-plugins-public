@@ -20,13 +20,14 @@ LIB_DIR = TEST_DIR.parent / "lib"
 sys.path.insert(0, str(LIB_DIR))
 sys.path.insert(0, str(REPO_ROOT / "speckit-pro"))
 
+from speckit_pro_runner.helpers import readiness_record  # noqa: E402
 from host_skill_views import host_skill_root  # noqa: E402
 from readiness_case import readiness_request  # noqa: E402
 from runner_invocation import assert_runner_response, run_runner  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 CALLER_ITEMS = ("plugin_payload", "project_integration", "github_auth", "mcp_servers", "typesafe_jev",
-                "reviewability_report", "formal_methods")
+                "reviewability_report", "formal_methods", "preview_surface")
 # Built from parts so the repository privacy scan does not flag these deliberate leak samples.
 HOME = "/" + "Users"
 SCRATCH = "/private" + "/tmp"
@@ -118,6 +119,29 @@ class ReadinessRecordTest(unittest.TestCase):
         for item in set(CALLER_ITEMS) - {"github_auth"}:
             self.assertEqual("unknown", items[item]["status"])
             self.assertTrue(items[item]["action"])
+
+    def test_preview_surface_reads_back_as_a_closed_answer(self) -> None:
+        for status, surface in (("verified", "available"), ("unavailable", "unavailable"),
+                                ("unknown", "unknown"), ("not_applicable", "unknown")):
+            with self.subTest(status=status):
+                response = self.run_helper([observation("preview_surface", status)])
+                assert_runner_response(self, response, "ok", 0)
+                self.assertEqual(surface, readiness_record.preview_surface(self.root, "claude"))
+        self.assertEqual("unknown", readiness_record.preview_surface(self.root, "codex"))
+
+    def test_preview_surface_is_unknown_unless_a_current_record_vouches_for_it(self) -> None:
+        self.run_helper([observation("preview_surface", "unavailable")])
+        path = self.record_path()
+        good = json.loads(path.read_text(encoding="utf-8"))
+        broken = {"unparseable": "{", "not an object": "[]", "other schema": {**good, "schema_version": "readiness-record/v0"},
+                  "other host": {**good, "host": "codex"}, "other worktree": {**good, "binding": {"worktree": "sha256:0"}},
+                  "no item": {**good, "items": {}}, "bad status": {**good, "items": {"preview_surface": {"status": "ready"}}}}
+        for label, content in broken.items():
+            with self.subTest(label):
+                path.write_text(content if isinstance(content, str) else json.dumps(content), encoding="utf-8")
+                self.assertEqual("unknown", readiness_record.preview_surface(self.root, "claude"))
+        path.unlink()
+        self.assertEqual("unknown", readiness_record.preview_surface(self.root, "claude"))
 
     def test_malformed_observations_write_nothing(self) -> None:
         cases = {

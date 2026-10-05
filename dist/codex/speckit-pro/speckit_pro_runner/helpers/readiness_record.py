@@ -13,6 +13,7 @@ kept only as digests.
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
@@ -40,7 +41,7 @@ STATUSES = ("verified", "unavailable", "unknown", "not_applicable")
 NEEDS_ACTION = ("unavailable", "unknown")
 # Items scaffold observes and passes in. The runner observes the rest.
 CALLER_ITEMS = ("plugin_payload", "project_integration", "github_auth", "mcp_servers", "typesafe_jev",
-                "reviewability_report", "formal_methods")
+                "reviewability_report", "formal_methods", "preview_surface")
 RUNNER_ITEMS = ("local_capability", "quality_gates", "verification_docker")
 RECORD_DIRECTORY = ".specify/readiness"
 INPUT_KEYS = frozenset({"host", "host_version", "execution_mode", "plugin_revision", "observations"})
@@ -262,6 +263,25 @@ def write_record(root: Path, record: dict[str, Any]) -> str:
     write_bytes_atomic(directory / f"{record['host']}.json", canonical_bytes(record) + b"\n",
                        trust_root=root, mode=0o600)
     return f"{RECORD_DIRECTORY}/{record['host']}.json"
+
+
+def preview_surface(root: Path, host: str) -> str:
+    """`available`, `unavailable` or `unknown`: what this worktree's record says about a preview surface (ADR 0019).
+
+    Only a record that parses, names this host and binds to this worktree can speak; anything else is `unknown`,
+    never a guess, because ADR 0008 treats a missing or stale record as no evidence.
+    """
+    content = trusted_bytes(root / RECORD_DIRECTORY / f"{host}.json", root)
+    try:
+        record = json.loads(content) if content is not None else None
+    except ValueError:
+        return "unknown"
+    if not isinstance(record, dict) or record.get("schema_version") != SCHEMA_VERSION or record.get("host") != host \
+            or record.get("binding") != {"worktree": digest(str(root))}:
+        return "unknown"
+    item = record.get("items", {}).get("preview_surface")
+    status = item.get("status") if isinstance(item, dict) else None
+    return {"verified": "available", "unavailable": "unavailable"}.get(str(status), "unknown")
 
 
 def run_readiness_record_helper(entry: Any, request: Any) -> dict[str, Any]:

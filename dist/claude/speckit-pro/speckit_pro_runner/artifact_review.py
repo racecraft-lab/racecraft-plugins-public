@@ -17,6 +17,9 @@ GALLERY = Path(__file__).resolve().parents[1] / "artifact-gallery"
 PREVIEW_STATUSES = ("pending", "verified", "unavailable", "denied")
 BROKERED_PREVIEW_VERDICTS = ("verified", "unavailable", "denied")
 OBSERVER = "artifact-preview-observer"
+# What the readiness record says about the host (ADR 0019); only `unavailable` is evidence of no surface.
+PREVIEW_SURFACES = ("available", "unavailable", "unknown")
+NO_SURFACE_NOTE = "preview unavailable: the readiness record shows no preview surface"
 # The broker stamps observed_at itself; allow only ordinary clock skew beyond now.
 OBSERVATION_CLOCK_SKEW = timedelta(minutes=5)
 FILL_MARKER = re.compile(rb"<!--\s*FILL:([a-z0-9-]+):(START|END)\s*-->")
@@ -261,13 +264,19 @@ def _selection(record: dict[str, Any], read_file: FileReader) -> None:
         raise ValueError("artifact review includes a non-draft artifact")
 
 
-def _page_preview(page: dict[str, Any], generation_current: bool) -> dict[str, Any]:
-    """Retain denials and require current broker evidence for terminal unavailability."""
+def _page_preview(page: dict[str, Any], generation_current: bool, preview_surface: str) -> dict[str, Any]:
+    """Retain denials and require current broker evidence for terminal unavailability.
+
+    With no preview surface no observer can add evidence, so a current page that is not
+    verified or denied ends as `unavailable` without one.
+    """
     preview = page["preview"]
     result = {"id": page["id"], "path": page["path"], "status": preview["status"], "blocker": preview["blocker"]}
     if not generation_current:
         if preview["status"] != "denied":
             result.update(status="pending", blocker="Generation inputs or artifact bytes changed; revalidate generation")
+    elif preview_surface == "unavailable" and preview["status"] in ("pending", "unavailable"):
+        result.update(status="unavailable", blocker=NO_SURFACE_NOTE)
     elif preview["status"] == "unavailable":
         observation = preview["observation"]
         if observation is None or observation["artifact_sha256"] != page["sha256"]:
@@ -275,7 +284,8 @@ def _page_preview(page: dict[str, Any], generation_current: bool) -> dict[str, A
     return result
 
 
-def _page_results(record: dict[str, Any], root: Path, read_file: FileReader) -> tuple[list[dict[str, Any]], list[str], bool]:
+def _page_results(record: dict[str, Any], root: Path, read_file: FileReader,
+                  preview_surface: str) -> tuple[list[dict[str, Any]], list[str], bool]:
     inputs_current = _inputs_current(record, root, read_file)
     fresh = inputs_current
     pages = []
@@ -291,18 +301,24 @@ def _page_results(record: dict[str, Any], root: Path, read_file: FileReader) -> 
         if current:
             _generation_provenance(page, root, read_file)
         fresh = fresh and current
-        pages.append(_page_preview(page, inputs_current and current))
+        pages.append(_page_preview(page, inputs_current and current, preview_surface))
     return pages, gaps, fresh
 
 
-def review_handoff(text: str, root: Path, read_file: FileReader) -> dict[str, Any]:
-    """Classify current evidence without opening browsers, writing, or deleting artifacts."""
+def review_handoff(text: str, root: Path, read_file: FileReader, preview_surface: str = "unknown") -> dict[str, Any]:
+    """Classify current evidence without opening browsers, writing, or deleting artifacts.
+
+    `observer_dispatches` names the pages that still need one observer each: none without a
+    preview surface, and none until stale pages are regenerated.
+    """
+    if preview_surface not in PREVIEW_SURFACES:
+        raise ValueError(f"preview_surface must be one of {PREVIEW_SURFACES}")
     value = record_from_workflow(text)
     if value is None:
         return {"status": "absent", "resume_action": "none", "reuse_artifacts": False}
     record = _record(value)
     _selection(record, read_file)
-    pages, gaps, fresh = _page_results(record, root, read_file)
+    pages, gaps, fresh = _page_results(record, root, read_file, preview_surface)
     verified = sum(page["status"] == "verified" for page in pages)
     delivered = sum(page["status"] in ("verified", "unavailable") for page in pages)
     if not pages:
@@ -313,9 +329,11 @@ def review_handoff(text: str, root: Path, read_file: FileReader) -> dict[str, An
         status = "verified"
     else:
         status = "unavailable"
+    dispatches = [page["id"] for page in pages if fresh and page["status"] == "pending"]
     return {
         "status": status, "resume_action": "generate" if not fresh else "preview" if status == "pending" else "none",
         "reuse_artifacts": fresh, "feature_dir": record["feature_dir"], "generated": len(pages),
         "verified": verified, "pages": pages, "generation_gaps": gaps, "generation_error": record["generation_error"],
-        "observer": OBSERVER,
+        "observer": OBSERVER if dispatches else None, "observer_dispatches": dispatches,
+        **({"preview_note": NO_SURFACE_NOTE} if preview_surface == "unavailable" and pages else {}),
     }

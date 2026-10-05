@@ -30,6 +30,7 @@ from ..runtime import detect_plugin_root
 from .. import spec_kit_pin
 from ..strict_input import unique_object
 from .formal_policy import apply_resume_guard, gate_checkpoint
+from .readiness_record import HOSTS, preview_surface
 from .feedback_sweep import (
     sweep_isolation_session,
     sweep_pr_feedback,
@@ -2788,9 +2789,13 @@ def resolve_autopilot_stage(inputs: dict[str, Any], repo_root: Path) -> dict[str
             2,
         )
     from ..artifact_review import review_handoff
+    host = inputs.get("host")
+    if host is not None and host not in HOSTS:
+        return make_result("", f"error: host must be one of {list(HOSTS)}\n", 2)
     try:
         formal = apply_resume_guard(repo_root, workflow_raw, parsed, signals)
-        review = review_handoff(text, repo_root, trusted_bytes)
+        review = review_handoff(text, repo_root, trusted_bytes,
+                                "unknown" if host is None else preview_surface(repo_root, host))
     except ValueError as exc:
         return make_result("", f"error: {exc}\n", 2)
     review_pending = artifact_review_resume(text, signals, review)

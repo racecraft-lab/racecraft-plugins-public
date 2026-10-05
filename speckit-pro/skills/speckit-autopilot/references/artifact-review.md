@@ -52,14 +52,24 @@ to the active runner's shipped gallery, which must be the one the author used.
 Derive expected content from the actual validated page and check it against the
 feature's planning record. A title repeated as body content is insufficient.
 
-Run `resolve-autopilot-stage` to validate the record. Its optional
+Run `resolve-autopilot-stage` to validate the record, with
+<!-- host:claude: Claude names its own host so the runner reads the right readiness record -->
+`inputs.host` set to `claude`;
+<!-- /host -->
+<!-- host:codex: Codex names its own host so the runner reads the right readiness record -->
+`inputs.host` set to `codex`;
+<!-- /host -->
+the runner then reads that host's readiness record for the preview surface. Its optional
 `artifact_review` result reports `status`, `resume_action`, `reuse_artifacts`,
-counts, per-page dispositions, generation gaps, and the required observer. The
+counts, per-page dispositions, generation gaps, `observer_dispatches` (the pages
+that each need one observer) and, when the readiness record shows no preview
+surface, `preview_note`. The
 existing phase-coverage validator gates malformed evidence through
 `artifact_review_errors`. Neither helper opens a browser or proves that an
-observation really occurred: the parent must mint a broker preview capability,
-dispatch the identified `artifact-preview-observer`, and retain the closed
-broker verdict referenced by the record.
+observation really occurred: for each page in `observer_dispatches` the parent
+must mint a broker preview capability, dispatch the identified
+`artifact-preview-observer`, and retain the closed broker verdict referenced by
+the record.
 
 ## Delivery after publication
 
@@ -70,6 +80,12 @@ Only after the draft PR identity bookkeeping commit and push succeed:
    runtime. Keep that task as the destination; never silently open in another
    task or infer task identity from a similarly named worktree. An unresolved
    binding or destination leaves delivery pending with its blocker.
+   Then read the resolver's `observer_dispatches`. With `preview_note` present
+   and no dispatches, the readiness record shows no preview surface: skip steps
+   3 and 4, mint no capability, spawn no observer, and print the note once in the
+   stop report. The resolver already reads each page as `unavailable` with that
+   note as its blocker, so the workflow record keeps its pending pages and
+   `resume_action` is `none`.
 2. Discover available preview **and observation** capabilities using the shared
    capability-discovery directive. Prefer supported native HTML preview when it
    can be observed. A browser preview must use an initially permitted local route
