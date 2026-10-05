@@ -925,7 +925,7 @@ The helper records `codex_agents`, `extension_versions`, `codex_approval_posture
 `codex_hook_trust` and `codex_local_access` as `not_applicable` on Claude Code
 (Codex only). Do not send them.
 
-Hook items, on both hosts:
+Hook definitions on Claude Code (Codex uses the exact-hash observation above):
 
 | `item` | Detail key | Observe it now by |
 | --- | --- | --- |

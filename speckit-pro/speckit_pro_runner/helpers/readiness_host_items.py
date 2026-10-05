@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import re
+from pathlib import Path
 from typing import Any
 
 from ..agent_materialization import digest
@@ -60,7 +61,7 @@ def choice(value: Any, allowed: tuple[str, ...], label: str) -> str:
 
 def name_text(value: Any, label: str) -> str:
     """A short name safe to store and print; the same pattern bounds every hook, server and probe name."""
-    text = clean_text(value, label)
+    text = pattern_text(value, NAME_RE, "a short name", label)
     return text if NAME_RE.fullmatch(text) else _refuse_name(label)
 
 
@@ -72,9 +73,11 @@ def allow_rule_texts(probes: list[dict[str, Any]], command_label: str) -> list[s
     """Claude Code `Tool(pattern)` rules for each failed probe; `command_label` stands in for the interpreter."""
     rules: list[str] = []
     for probe in probes:
-        if probe["outcome"] == "passed":
+        outcome = choice(probe["outcome"], PROBE_OUTCOMES, "permission_probe outcome")
+        name = choice(probe["probe"], PROBES, "permission_probe probe")
+        if outcome == "passed":
             continue
-        if probe["probe"] == "runner_request":
+        if name == "runner_request":
             rules += [f"Bash({command_label} -m speckit_pro_runner:*)", "Bash(printf:*)"]
         else:
             rules.append("Bash(git status:*)")
@@ -200,12 +203,13 @@ def observe_hooks(raw: dict[str, Any], observed_at: str, source: str, host: str)
     if any(not defined for _, defined, _ in hooks):
         return make_item("unavailable", source, observed_at, prints,
                          "Update the speckit-pro plugin so its required hooks are defined, then rerun scaffold.")
-    if any(trust == "untrusted" for _, _, trust in hooks):
+    status = hook_trust_status([trust for _, _, trust in hooks])
+    if status == "unavailable":
         review = ("Review and trust the hooks in /hooks, then restart Codex and rerun scaffold." if host == "codex"
                   else "Enable the speckit-pro plugin, check its hooks in /hooks, accept the workspace trust "
                        "dialog, then rerun scaffold.")
         return make_item("unavailable", source, observed_at, prints, review)
-    if any(trust == "unobservable" for _, _, trust in hooks):
+    if status == "unknown":
         return make_item("unknown", source, observed_at, prints,
                          "Check the required hooks in /hooks, then rerun scaffold.")
     return make_item("verified", source, observed_at, prints)
@@ -377,7 +381,7 @@ def observe_extension_versions(raw: dict[str, Any], observed_at: str, source: st
 # recorded value is an enumerated word, a bounded integer, a name or a hex digest, never free text or a path.
 NEVER_BROADEN = "Scaffold never broadens permissions or disables a control."
 POSTURE_CHOICES = {
-    "approval_policy": ("on-request", "never", "granular"),
+    "approval_policy": ("on-request", "never", "on-failure"),
     "sandbox_mode": ("read-only", "workspace-write", "danger-full-access"),
     "approvals_reviewer": ("user", "auto_review"),
     "mcp_approval_mode": ("auto", "prompt", "writes", "approve"),
@@ -386,8 +390,9 @@ POSTURE_CHOICES = {
 }
 POSTURE_TIMEOUTS = ("mcp_startup_timeout_sec", "mcp_tool_timeout_sec")
 MAX_TIMEOUT_SECONDS = 86400
-HASH_RE = re.compile(r"(?:sha256:)?[0-9a-fA-F]{32,128}")
-HOOK_TRUST_STATES = ("trusted", "untrusted", "unobservable")
+HASH_RE = re.compile(r"(?:(?i:sha256):)?[0-9a-fA-F]{64}")
+GRANULAR_KEYS = ("sandbox_approval", "rules", "mcp_elicitations", "request_permissions", "skill_approval")
+POSTURE_DEFAULT_TIMEOUTS = {"mcp_startup_timeout_sec": 10, "mcp_tool_timeout_sec": 60}
 LOOPBACK_STATES = ("allowed", "blocked", "unobservable")
 TEMP_DIR_STATES = ("healthy", "leaky", "unobservable")
 POSTURE_ACTIONS = {
@@ -397,7 +402,7 @@ POSTURE_ACTIONS = {
 
 
 def hash_text(value: Any, label: str) -> str:
-    """An exact digest as the host printed it: lowercase hex, optionally `sha256:`-prefixed."""
+    """SHA-256 as printed; comparisons normalize case and the optional prefix."""
     return pattern_text(value, HASH_RE, "a hex digest", label)
 
 
@@ -406,7 +411,39 @@ def optional_hash(value: Any, label: str) -> str | None:
 
 
 def exact_fingerprint(value: str) -> str:
-    return value if value.startswith("sha256:") else f"sha256:{value}"
+    return "sha256:" + hash_text(value, "fingerprint").lower().removeprefix("sha256:")
+
+
+def hook_trust_status(states: list[str]) -> str:
+    """One trust rule for both definition and exact-hash observations."""
+    if "untrusted" in states:
+        return "unavailable"
+    return "unknown" if not states or "unobservable" in states else "verified"
+
+
+def shipped_codex_hooks() -> dict[str, str] | None:
+    """Codex 0.160 normalized definition hashes; no expanded local paths enter the identity.
+
+    Matches openai/codex rust-v0.160.0 hooks/engine/discovery.rs::hook_hash and
+    config/fingerprint.rs::version_for_toml, checked against live hooks/list.
+    Unsupported shipped shapes supply no verified evidence.
+    """
+    try:
+        events = json.loads((Path(__file__).parents[2] / "codex-hooks.json").read_text(encoding="utf-8"))["hooks"]
+        expected = {}
+        for event, groups in events.items():
+            for group_index, group in enumerate(groups):
+                for handler_index, handler in enumerate(group["hooks"]):
+                    if handler.keys() - {"type", "command", "timeout"} or handler["type"] != "command":
+                        return None
+                    identity = {"event_name": re.sub(r"(?<!^)(?=[A-Z])", "_", event).lower(),
+                                "hooks": [{**handler, "async": False}]}
+                    if "matcher" in group:
+                        identity["matcher"] = group["matcher"]
+                    expected[f"{event}:{group_index}:{handler_index}"] = digest(identity)
+        return expected or None
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
 
 
 def observe_codex_approval_posture(raw: dict[str, Any], observed_at: str, source: str) -> dict[str, Any]:
@@ -415,7 +452,15 @@ def observe_codex_approval_posture(raw: dict[str, Any], observed_at: str, source
         raise SelectionError(f"codex_approval_posture.posture takes {sorted({*POSTURE_CHOICES, *POSTURE_TIMEOUTS})}")
     facts: dict[str, str] = {}
     for key, allowed in POSTURE_CHOICES.items():
-        facts[key] = choice(detail[key], (*allowed, "unobservable"), f"codex_approval_posture {key}")
+        value = detail[key]
+        if key == "approval_policy" and isinstance(value, dict):
+            granular = value.get("granular")
+            if value.keys() != {"granular"} or not isinstance(granular, dict) or granular.keys() != set(GRANULAR_KEYS) \
+                    or any(type(flag) is not bool for flag in granular.values()):
+                raise SelectionError("approval_policy granular needs exactly five boolean prompt categories")
+            facts[key] = "granular(" + ",".join(f"{name}={str(granular[name]).lower()}" for name in GRANULAR_KEYS) + ")"
+        else:
+            facts[key] = choice(value, (*allowed, "unobservable"), f"codex_approval_posture {key}")
     for key in POSTURE_TIMEOUTS:
         value = detail[key]  # null means the setting is absent, so Codex uses its documented default
         if value is not None and value != "unobservable" and (type(value) is not int
@@ -428,16 +473,29 @@ def observe_codex_approval_posture(raw: dict[str, Any], observed_at: str, source
     refused = [key for key in POSTURE_ACTIONS if facts[key] in ("blocked", "not_granted")]
     if refused:
         return make_item("unavailable", source, observed_at, prints, POSTURE_ACTIONS[refused[0]])
+    if facts["sandbox_mode"] == "danger-full-access" or facts["mcp_approval_mode"] in ("auto", "writes", "approve") \
+            or any(type(detail[key]) is int and detail[key] > limit for key, limit in POSTURE_DEFAULT_TIMEOUTS.items()):
+        return make_item("unavailable", source, observed_at, prints,
+                         "Keep current controls; review the observed posture against the conservative scaffold profile "
+                         "before using the affected capability. " + NEVER_BROADEN)
     if "unobservable" in facts.values():
         return make_item("unknown", source, observed_at, prints, "Read the Codex approval, sandbox, reviewer and "
-                         "MCP settings with /status and /permissions, then rerun scaffold. " + NEVER_BROADEN)
+                         "MCP settings from an effective running-thread source; leave unreadable values unobservable "
+                         "and rerun scaffold. " + NEVER_BROADEN)
     return make_item("verified", source, observed_at, prints)
 
 
 def observe_codex_hook_trust(raw: dict[str, Any], observed_at: str, source: str) -> dict[str, Any]:
     hooks = []
+    enablement = []
     for entry in listed(raw, "hooks", "codex_hook_trust"):
-        state = choice(entry.get("state"), HOOK_TRUST_STATES, "codex_hook_trust state")
+        if not entry.keys() <= {"hook", "state", "hash", "enabled"}:
+            raise SelectionError("codex_hook_trust entries take hook, state, hash and enabled")
+        state = choice(entry.get("state"), TRUST_STATES, "codex_hook_trust state")
+        enabled = entry.get("enabled")
+        if enabled is not None and type(enabled) is not bool:
+            raise SelectionError("codex_hook_trust enabled must be a boolean or null when unobservable")
+        enablement.append("untrusted" if enabled is False else "unobservable" if enabled is None else "trusted")
         found = optional_hash(entry.get("hash"), "codex_hook_trust hash")
         if state == "trusted" and found is None:
             raise SelectionError("a trusted codex_hook_trust entry needs the exact `hash` that was trusted")
@@ -451,10 +509,24 @@ def observe_codex_hook_trust(raw: dict[str, Any], observed_at: str, source: str)
     prints = {"value:hook_hashes": digest(summary),
               **{f"hook:{name}": exact_fingerprint(found) for name, _, found in hooks if found}}
     source = describe(source, summary, "codex_hook_trust.evidence_source")
-    if any(state == "untrusted" for _, state, _ in hooks):
+    expected = shipped_codex_hooks()
+    if expected is None:
+        return make_item("unknown", source, observed_at, prints,
+                         "Inspect the shipped hook definitions and the supported Codex hash contract, then rerun scaffold.")
+    if {name for name, _, _ in hooks} != expected.keys() or any(
+            found is not None and exact_fingerprint(found) != expected.get(name) for name, _, found in hooks):
+        return make_item("unavailable", source, observed_at, prints,
+                         "Compare every shipped hook handler and exact hash with the loaded plugin; keep current controls "
+                         "and rerun scaffold after resolving missing or changed definitions. " + NEVER_BROADEN)
+    status = hook_trust_status([state for _, state, _ in hooks] + enablement)
+    if status == "unavailable":
+        if "untrusted" in enablement:
+            return make_item("unavailable", source, observed_at, prints,
+                             "Keep current controls; review why a required shipped hook is disabled, then rerun scaffold. "
+                             + NEVER_BROADEN)
         return make_item("unavailable", source, observed_at, prints,
                          "Review and trust the hooks in /hooks, then restart Codex and rerun scaffold. " + NEVER_BROADEN)
-    if any(state == "unobservable" for _, state, _ in hooks):
+    if status == "unknown":
         return make_item("unknown", source, observed_at, prints, "Review the hooks in /hooks, then rerun scaffold.")
     return make_item("verified", source, observed_at, prints)
 
@@ -480,7 +552,7 @@ def observe_codex_local_access(raw: dict[str, Any], observed_at: str, source: st
     source = describe(source, summary, "codex_local_access.evidence_source")
     steps = []
     if loopback == "blocked":
-        steps.append("Allow loopback connections for the Codex sandbox in your own settings")
+        steps.append("Keep loopback blocked under current controls; record the affected capability as unavailable")
     if temp_dir == "leaky":
         steps.append("Fix the temporary directory so sensitive files stay owner-only")
     if steps:
@@ -495,3 +567,21 @@ def observe_codex_local_access(raw: dict[str, Any], observed_at: str, source: st
 CODEX_TRUST_OBSERVERS = {"codex_approval_posture": observe_codex_approval_posture,
                          "codex_hook_trust": observe_codex_hook_trust,
                          "codex_local_access": observe_codex_local_access}
+
+
+def reconcile_codex_items(items: dict[str, dict[str, Any]], observed_at: str) -> None:
+    """One Codex trust result and no caller override of the runner's temporary probe."""
+    trust = items["codex_hook_trust"]
+    definitions = items["hooks"]
+    if trust["fingerprints"]:
+        if definitions["fingerprints"] and definitions["status"] != trust["status"]:
+            raise SelectionError("Codex hooks and codex_hook_trust observations disagree; use the exact-hash observation")
+        items["hooks"] = trust
+    access = items["codex_local_access"]
+    local = items["local_capability"]
+    if (local["status"] == "unavailable" and access["status"] != "unavailable") \
+            or (local["status"] == "unknown" and access["status"] == "verified"):
+        items["codex_local_access"] = make_item(
+            local["status"], describe(access["evidence_source"], "runner temporary probe=" + local["status"],
+                                      "codex_local_access.evidence_source"),
+            observed_at, {**access["fingerprints"], **local["fingerprints"]}, local["action"])

@@ -234,6 +234,8 @@ def build_record(inputs: dict[str, Any], root: Path) -> dict[str, Any]:
     for name in CALLER_ITEMS:
         items.setdefault(name, make_item("unknown", "not observed by scaffold", observed_at, {}, NOT_OBSERVED_ACTION))
     items["local_capability"] = observe_local_capability()
+    if inputs["host"] == "codex":
+        host_items.reconcile_codex_items(items, observed_at)
     items["quality_gates"] = observe_quality_gates(root)
     items["verification_docker"] = observe_verification_docker(root)
     host_version = inputs.get("host_version")
