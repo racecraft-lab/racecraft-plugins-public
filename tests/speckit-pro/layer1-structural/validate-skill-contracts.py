@@ -23,6 +23,7 @@ for _import_root in (LIB_DIR, PLUGIN_ROOT):
         sys.path.insert(0, str(_import_root))
 
 from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
+from speckit_pro_runner.helpers.phase_brief import phase_slices
 from speckit_pro_runner.agent_inventory import AGENT_INVENTORY
 from speckit_pro_runner.codex_agent_generator import generated_codex_files
 from speckit_pro_runner.gates.payloads import build_installed_plugin_payloads
@@ -696,6 +697,13 @@ def validate_capability_resolution__excluded(runtime: str, name: str) -> bool:
     return name in agent_roster.capability_exempt_roles(runtime)
 
 class ValidateCapabilityResolution(unittest.TestCase):
+
+    def test_packaged_reference_slice_structure(self) -> None:
+        # The runner owns the ATX-only structural contract, including comment
+        # and fence handling. Validate every sliced reference before shipping.
+        for phase in ('Clarify', 'Checklist', 'Analyze'):
+            with self.subTest(phase=phase):
+                self.assertTrue(phase_slices(phase))
 
     def _check_claude_agent(self, agent_name: str, agent_file: Path, text: str) -> None:
         # A repo-relative path does not exist in the consumer repository; Claude

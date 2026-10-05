@@ -45,9 +45,14 @@ def brief_path(value: Any, label: str) -> str:
 
 
 def reference_content(lines: list[str], name: str, heading: str) -> Iterator[tuple[int, str]]:
-    """Yield reference lines outside fenced code, retaining their source positions."""
+    """Yield reference lines outside code and comment blocks, retaining positions."""
     fence = ""
+    comment = False
     for index, line in enumerate(lines):
+        # CommonMark 4.6, HTML block type 2: the entire closing line is HTML.
+        if comment:
+            comment = "-->" not in line
+            continue
         # CommonMark 0.31.2, sections 4.2 and 4.5. Nested fence-like lines
         # are content unless they close the active delimiter and run length.
         marker = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", line)
@@ -58,6 +63,14 @@ def reference_content(lines: list[str], name: str, heading: str) -> Iterator[tup
         if marker and (marker[1][0] == "~" or "`" not in marker[2]):
             fence = marker[1]
             continue
+        if re.match(r"^ {0,3}<!--", line):
+            comment = "-->" not in line
+            continue
+        # These packaged references use ATX headings. Refuse every possible
+        # setext underline (including dash-only thematic breaks); use *** for
+        # separators. This conservative contract needs no paragraph parser.
+        if re.fullmatch(r" {0,3}(?:=+|-+)[ \t]*", line):
+            raise ValueError(f"references/{name}:{index + 1}: setext underline is unsupported; use ATX headings or *** separators")
         yield index, line
     # CommonMark consumes to EOF for an unclosed fence. A packaged reference
     # must instead fail closed rather than dispatch an ambiguous section tail.
@@ -68,12 +81,16 @@ def reference_content(lines: list[str], name: str, heading: str) -> Iterator[tup
 def reference_section(name: str, heading: str) -> str:
     """Return one reference section verbatim: its heading line through the line before the next heading of equal or higher level."""
     try:
-        lines = (REFERENCES / name).read_text(encoding="utf-8").splitlines()
+        # Read bytes to avoid universal-newline conversion of bare CR. The
+        # packaged-reference contract accepts LF and CRLF separators only.
+        lines = re.split(r"\r?\n", (REFERENCES / name).read_bytes().decode("utf-8"))
     except (OSError, UnicodeError) as exc:
         raise ValueError(f"references/{name}: cannot read section {heading!r}") from exc
     start: int | None = None
     level = 0
-    for index, line in reference_content(lines, name, heading):
+    # Validate the entire reference before returning any dispatch material.
+    content = list(reference_content(lines, name, heading))
+    for index, line in content:
         title = re.match(r"^ {0,3}(#{1,6})(?:[ \t]+(.*)|$)", line)
         if title is None:
             continue
