@@ -123,6 +123,20 @@ def assert_real_codex_producer_probes(test: unittest.TestCase) -> None:
             test.assertTrue(any('update_plan' in trace for _, trace in result.failures))
 
 
+def assert_host_eval_adapter_progress(test: unittest.TestCase) -> None:
+    sources = sorted(LIB_DIR.glob('native_eval*adapter*.py'))
+    test.assertIn(LIB_DIR / 'native_eval_codex_adapter.py', sources)
+    test.assertIn(LIB_DIR / 'native_eval_claude_adapter.py', sources)
+    for source in sources:
+        with test.subTest(file=source.name):
+            test.assertEqual(forbidden_task_tools(_read(source)), [], 'eval adapter names a task-list tool or opt-in')
+    result = prepared_codex_contract_result()
+    test.assertEqual(result.testsRun, 1)
+    test.assertEqual(result.skipped, [])
+    test.assertTrue(result.wasSuccessful(), result.failures + result.errors)
+    assert_real_codex_producer_probes(test)
+
+
 class ValidateHostProgressGuidance(unittest.TestCase):
 
     # ADR 0001 applies to guidance, grading inputs, and host launch configuration.
@@ -156,17 +170,7 @@ class ValidateHostProgressGuidance(unittest.TestCase):
                 self.assertEqual(forbidden_task_tools(json.loads(_read(source))), [], 'native eval contract names a task-list tool or opt-in')
 
     def test_host_eval_adapters_use_no_task_list_tools(self) -> None:
-        sources = sorted(LIB_DIR.glob('native_eval*adapter*.py'))
-        self.assertIn(LIB_DIR / 'native_eval_codex_adapter.py', sources)
-        self.assertIn(LIB_DIR / 'native_eval_claude_adapter.py', sources)
-        for source in sources:
-            with self.subTest(file=source.name):
-                self.assertEqual(forbidden_task_tools(_read(source)), [], 'eval adapter names a task-list tool or opt-in')
-        result = prepared_codex_contract_result()
-        self.assertEqual(result.testsRun, 1)
-        self.assertEqual(result.skipped, [])
-        self.assertTrue(result.wasSuccessful(), result.failures + result.errors)
-        assert_real_codex_producer_probes(self)
+        assert_host_eval_adapter_progress(self)
 
 
 class ValidateSkills(unittest.TestCase):
