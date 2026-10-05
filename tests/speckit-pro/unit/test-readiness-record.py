@@ -710,6 +710,194 @@ class PreviewEvidenceSecurityTest(unittest.TestCase):
                             (self.root / "pipe").unlink()
 
 
+class HostProbePathSecurityTest(unittest.TestCase):
+    """A worktree writer cannot supply any executable used by the shared CLI probe."""
+
+    def setUp(self) -> None:
+        self.area = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
+        self.root = self.area / "worktree"
+        self.root.mkdir()
+        self.tools = self.area / "installed"
+        self.tools.mkdir()
+        self.marker = self.root / "executed"
+        self.probe = readiness_record.cli_probe.probe
+
+    def executable(self, path: Path, *, trusted: bool = False) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        body = "print('2.1.0')\n" if trusted else f"from pathlib import Path\nPath({str(self.marker)!r}).touch()\nprint('2.1.0')\n"
+        path.write_text(f"#!{sys.executable}\n{body}", encoding="utf-8")
+        path.chmod(0o755)
+
+    def reject_path(self, entry: str, directory: Path, form: str = "regular", hosts=("codex", "claude")) -> None:
+        for host in hosts:
+            with self.subTest(host=host, entry=entry, form=form):
+                target = directory / host
+                if form == "symlink":
+                    payload = self.root / "payloads" / host
+                    self.executable(payload)
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.symlink_to(payload)
+                elif form == "renamed-copy":
+                    payload = self.root / "payloads" / host
+                    self.executable(payload)
+                    shutil.copy2(payload, target)
+                else:
+                    self.executable(target)
+                try:
+                    with unittest.mock.patch.dict(os.environ, {"PATH": entry}):
+                        result = self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)
+                    self.assertFalse(self.marker.exists(), "worktree executable ran")
+                    self.assertIsNone(result["exit_status"])
+                finally:
+                    target.unlink()
+                    self.marker.unlink(missing_ok=True)
+
+    def test_codex_and_claude_dot_path(self) -> None:
+        self.reject_path(".", self.root)
+
+    def test_codex_and_claude_empty_path_component(self) -> None:
+        for entry in ("", f":{self.tools}", f"{self.tools}:", f"{self.tools}::{self.tools}"):
+            self.reject_path(entry, self.root)
+
+    def test_codex_and_claude_relative_worktree_path(self) -> None:
+        self.reject_path("bin", self.root / "bin")
+
+    def test_codex_and_claude_absolute_worktree_path(self) -> None:
+        self.reject_path(str(self.root / "bin"), self.root / "bin")
+
+    def test_regular_and_renamed_copy_host_executables(self) -> None:
+        for form in ("regular", "renamed-copy"):
+            for entry, directory in ((".", self.root), ("", self.root), ("bin", self.root / "bin"),
+                                     (str(self.root / "bin"), self.root / "bin")):
+                self.reject_path(entry, directory, form)
+
+    def test_symlink_host_executables(self) -> None:
+        for entry, directory in ((".", self.root), ("", self.root), ("bin", self.root / "bin"),
+                                 (str(self.root / "bin"), self.root / "bin")):
+            self.reject_path(entry, directory, "symlink")
+
+    def test_external_executable_symlink_into_worktree(self) -> None:
+        self.reject_path(str(self.tools), self.tools, "symlink")
+
+    def test_external_directory_symlink_into_worktree(self) -> None:
+        alias = self.area / "alias"
+        alias.symlink_to(self.root, target_is_directory=True)
+        self.reject_path(str(alias), self.root)
+
+    def test_case_alias_worktree_path(self) -> None:
+        alias = self.root.with_name(self.root.name.upper())
+        if not alias.exists():
+            self.skipTest("filesystem has no case alias")
+        self.reject_path(str(alias), self.root)
+
+    def test_external_executable_link_chain_through_worktree(self) -> None:
+        for host in ("codex", "claude"):
+            with self.subTest(host=host):
+                installed = self.area / f"installed-{host}"
+                self.executable(installed, trusted=True)
+                bridge = self.root / f"bridge-{host}"
+                bridge.symlink_to(installed)
+                (self.tools / host).symlink_to(bridge)
+                with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                    result = self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)
+                self.assertIsNone(result["exit_status"])
+
+    def test_relative_external_executable_symlink_into_worktree(self) -> None:
+        for host in ("codex", "claude"):
+            with self.subTest(host=host):
+                payload = self.root / f"payload-{host}"
+                self.executable(payload)
+                (self.tools / host).symlink_to(Path("..") / "worktree" / payload.name)
+                with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                    result = self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)
+                self.assertFalse(self.marker.exists(), "relative executable link entered the worktree")
+                self.assertIsNone(result["exit_status"])
+
+    def test_other_cli_branches_reject_worktree_path(self) -> None:
+        for form in ("regular", "renamed-copy", "symlink"):
+            for entry, directory in ((".", self.root), ("", self.root), ("bin", self.root / "bin"),
+                                     (str(self.root / "bin"), self.root / "bin"), (str(self.tools), self.tools)):
+                if directory == self.tools and form != "symlink":
+                    continue
+                self.reject_path(entry, directory, form, hosts=("git", "gh", "docker"))
+
+    def test_trusted_installed_hosts_survive_poisoned_path(self) -> None:
+        for host in ("codex", "claude"):
+            with self.subTest(host=host):
+                self.executable(self.tools / host, trusted=True)
+                self.executable(self.root / host)
+                for entry in (".", "", "bin", str(self.root)):
+                    with self.subTest(entry=entry), unittest.mock.patch.dict(os.environ, {
+                        "PATH": f"{entry}:{self.tools}"}):
+                        result = self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)
+                    self.assertFalse(self.marker.exists())
+                    self.assertEqual((0, "2.1.0"), (result["exit_status"], result["stdout_tail"]))
+
+    def test_trusted_external_executable_symlinks_still_work(self) -> None:
+        for host in ("codex", "claude"):
+            with self.subTest(host=host):
+                payload = self.tools / f"version-{host}"
+                self.executable(payload, trusted=True)
+                (self.tools / host).symlink_to(payload.name)
+                with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                    result = self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)
+                self.assertEqual((0, "2.1.0"), (result["exit_status"], result["stdout_tail"]))
+
+    def test_directory_alias_swap_cannot_redirect_launch(self) -> None:
+        alias = self.area / "alias"
+        run = subprocess.run
+        for host in ("codex", "claude"):
+            with self.subTest(host=host):
+                self.executable(self.tools / host, trusted=True)
+                self.executable(self.root / host)
+                alias.symlink_to(self.tools, target_is_directory=True)
+
+                def swap_then_run(*args, **kwargs):
+                    alias.unlink()
+                    alias.symlink_to(self.root, target_is_directory=True)
+                    return run(*args, **kwargs)
+
+                with unittest.mock.patch.dict(os.environ, {"PATH": str(alias)}), unittest.mock.patch.object(
+                    subprocess, "run", side_effect=swap_then_run):
+                    result = self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)
+                alias.unlink()
+                self.assertFalse(self.marker.exists())
+                self.assertEqual((0, "2.1.0"), (result["exit_status"], result["stdout_tail"]))
+
+    def test_cyclic_executable_links_fail_closed(self) -> None:
+        for host in ("codex", "claude"):
+            with self.subTest(host=host):
+                (self.tools / host).symlink_to(host)
+                with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                    result = self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)
+                self.assertIsNone(result["exit_status"])
+
+    def test_non_posix_host_lookup_fails_closed(self) -> None:
+        with unittest.mock.patch.object(os, "name", "nt"), unittest.mock.patch.object(subprocess, "run") as run:
+            for host in ("codex", "claude"):
+                with self.subTest(host=host):
+                    self.assertIsNone(self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)["exit_status"])
+            run.assert_not_called()
+
+    def test_readiness_remains_unknown_for_hijacked_host(self) -> None:
+        self.root.joinpath(".specify").mkdir()
+        self.root.joinpath("surface.txt").write_text("no preview tools")
+        for host in ("codex", "claude"):
+            with self.subTest(host=host):
+                with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                    inputs = request([observation("preview_surface", "unavailable", files=["surface.txt"])],
+                                     host=host)["inputs"]
+                    record = readiness_record.build_record(inputs, self.root)
+                directory = self.root / ".specify/readiness"
+                directory.mkdir(exist_ok=True)
+                (directory / f"{host}.json").write_text(json.dumps(record))
+                self.executable(self.root / host)
+                with unittest.mock.patch.dict(os.environ, {"PATH": str(self.root)}):
+                    result = readiness_record.preview_surface(self.root, host)
+                self.assertFalse(self.marker.exists())
+                self.assertEqual("unknown", result)
+
+
 class FeasibilityTest(unittest.TestCase):
     """Scaffold's feasibility results for formal methods and verification Docker (ADR 0005)."""
 
@@ -804,7 +992,7 @@ class FeasibilityTest(unittest.TestCase):
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
     return unittest.TestSuite([loader.loadTestsFromTestCase(case) for case in (
-        ReadinessRecordTest, PreviewEvidenceSecurityTest, FeasibilityTest)])
+        ReadinessRecordTest, PreviewEvidenceSecurityTest, HostProbePathSecurityTest, FeasibilityTest)])
 
 
 def main() -> int:
