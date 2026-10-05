@@ -287,6 +287,14 @@ class PublicationRaceTests(PublicationFixture):
                     self.assertTrue(all(event["anchored"] for event in events))
                     self.assertEqual((self.root / "outside/implementation-plan.html").read_text(), "outside sentinel")
 
+    def test_successful_republish_leaves_no_recovery_directory(self) -> None:
+        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            with self.subTest(plugin=plugin):
+                result = self.publish("", plugin)
+                self.assertEqual(result["status"], "ok", result)
+                self.assertEqual(self.page.read_text(), "<html><body>finished page</body></html>")
+                self.assertEqual(list(self.page.parent.glob(".artifact-recovery-*")), [])
+
     def test_temporary_basename_rename_fails_closed_without_attacker_final(self) -> None:
         for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
             with self.subTest(plugin=plugin):
