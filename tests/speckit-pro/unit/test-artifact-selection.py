@@ -33,10 +33,14 @@ class SelectionFixture(unittest.TestCase):
                    "helper_id": "select-artifact-pages", "operation": "select-artifact-pages",
                    "mode": "read_only", "inputs": {"plan_file": "plan.md", **inputs}}
         done = subprocess.run([
-            sys.executable, "-c", "import runpy, sys\nfrom pathlib import Path\n"
-            "from speckit_pro_runner.helpers import artifact_selection\n"
-            "artifact_selection.GALLERY = Path(sys.argv[1]) if sys.argv[1] != 'None' else artifact_selection.GALLERY\n"
-            "sys.argv = sys.argv[:1]\nrunpy.run_module('speckit_pro_runner', run_name='__main__')", str(self.gallery),
+            sys.executable, "-c", "\n".join([
+                "import runpy, sys",
+                "from pathlib import Path",
+                "from speckit_pro_runner.helpers import artifact_selection",
+                "artifact_selection.GALLERY = Path(sys.argv[1]) if sys.argv[1] != 'None' else artifact_selection.GALLERY",
+                "sys.argv = sys.argv[:1]",
+                "runpy.run_module('speckit_pro_runner', run_name='__main__')",
+            ]), str(self.gallery),
         ], input=json.dumps(request), text=True, capture_output=True, check=False,
             cwd=self.root, env={**os.environ, "PYTHONPATH": str(ROOT / plugin)}, timeout=self.timeout)
         result = json.loads(done.stdout.splitlines()[-1])

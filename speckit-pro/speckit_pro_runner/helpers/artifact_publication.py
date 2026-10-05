@@ -67,6 +67,7 @@ def open_artifacts(root: Path, feature: Path, *, create: bool) -> int | None:
             try:
                 os.mkdir("artifacts", 0o777, dir_fd=parent)
             except FileExistsError:
+                # Existing entries still undergo the no-follow directory open below.
                 pass
         return os.open("artifacts", DIRECTORY, dir_fd=parent)
     except OSError:
