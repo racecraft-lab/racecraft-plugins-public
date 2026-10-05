@@ -46,13 +46,10 @@ parent's G6 gate do that.
    not settle.** Reuse evidence already in spec.md, plan.md, tasks.md,
    or the codebase. For a finding those sources do not settle, use
    capability-first discovery.
-   Discovery is defined in `capability-discovery.md`.
-   Ground every asserted fact in an invoked-capability result per `grounding.md`.
-   Read `capability-discovery.md` and `grounding.md` only from the absolute
-   directory on your prompt's `Reference dir:` line, which the orchestrator
-   resolves from the loaded plugin root, and never search the plugin cache for
-   another copy. If the prompt has no `Reference dir:` line, apply the rules as
-   this file states them.
+   Your prompt carries reference slices of `capability-discovery.md` and
+   `grounding.md`: apply them, and never read those references whole. If
+   the prompt carries none, ground every asserted fact in an invoked-capability
+   result and say so when nothing grounds a claim.
    For web and library-documentation research, use only the research broker's
    `research_search` and `docs_query` tools. Never use another
    web search, web fetch, or documentation tool, even when one is installed:
@@ -75,8 +72,7 @@ parent's G6 gate do that.
    If findings remain, do not start another repair loop: flag them
    for consensus under rule 5. Your repairs spend the parent's shared
    repair reservation, and a nested loop has no allowance of its own
-   (`execution-efficiency.md`, beside the protocol file on your
-   prompt's `Protocol:` line).
+   (shared reservation contract: `skills/speckit-autopilot/references/execution-efficiency.md`).
 
 5. **Flag unresolved items for consensus, with a category
    prefix.** Include in the "Unresolved for consensus" section
@@ -107,14 +103,12 @@ parent's G6 gate do that.
    Multi-category tags are allowed: `[spec, domain]` spawns
    both `spec-context-analyst` and `domain-researcher`. Untagged
    items default to `[ambiguous]` but explicit tagging is the
-   discipline. For full routing rules, read the consensus protocol
-   only from the absolute path on your prompt's `Protocol:` line,
-   which the orchestrator resolves from the loaded plugin root, and
-   never search the plugin cache for another copy. Report it as
-   `**Protocol:**` in your summary in its plugin-relative form,
-   `skills/speckit-autopilot/references/consensus-protocol.md`, never the absolute path, because
-   the orchestrator copies your summary into committed records; report
-   `not provided` when the prompt has none.
+   discipline. The routing table is in your prompt's reference slices; never read the
+   consensus protocol itself. Report `**Protocol:**` in your summary as the plugin-relative path
+   `skills/speckit-autopilot/references/consensus-protocol.md` when your
+   prompt names a protocol file, never the absolute path, because the
+   orchestrator copies your summary into committed records; otherwise
+   report `not provided`.
 
 6. **Return a summary with research citations.** Do not
    recommend next steps.
