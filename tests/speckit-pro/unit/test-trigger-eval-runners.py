@@ -7,7 +7,6 @@ import ast
 import contextlib
 import hashlib
 import io
-import itertools
 import json
 import os
 import shutil
@@ -847,7 +846,13 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
         # macOS answers EPERM for a group whose last member died from a signal
         # but is not yet reaped; only a later absence settles the cleanup.
         claude = import_script(CLAUDE_RUNNER, "layer2_claude_post_signal_probe")
-        for delivered, persistent in itertools.product((signal.SIGTERM, signal.SIGKILL), (False, True)):
+        cases = (
+            (signal.SIGTERM, False, [signal.SIGTERM]),
+            (signal.SIGTERM, True, [signal.SIGTERM, signal.SIGKILL]),
+            (signal.SIGKILL, False, [signal.SIGTERM, signal.SIGKILL]),
+            (signal.SIGKILL, True, [signal.SIGTERM, signal.SIGKILL]),
+        )
+        for delivered, persistent, expected_signals in cases:
             with self.subTest(signal=delivered.name, persistent=persistent):
                 child = FakePopen(b"", returncode=0)
                 sent = []
@@ -859,8 +864,6 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     self.assertEqual(pgid, child.pid)
                     if signum:
                         sent.append(signum)
-                        if signum == signal.SIGKILL and delivered in sent[:-1] and persistent:
-                            raise PermissionError(1, "zombie-only group refuses the signal")
                     elif delivered in sent:
                         settling_probes += 1
                         if persistent or settling_probes == 1:
@@ -876,12 +879,11 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     mock.patch.object(claude.time, "sleep"),
                 ):
                     if persistent:
-                        with self.assertRaisesRegex(OSError, "unresolved|refuses the signal"):
+                        with self.assertRaisesRegex(OSError, "unresolved"):
                             claude.cleanup_child(child, observations=observations)
                     else:
                         self.assertTrue(claude.cleanup_child(child, observations=observations))
-                settled_after_term = delivered == signal.SIGTERM and not persistent
-                self.assertEqual(sent, [signal.SIGTERM] if settled_after_term else [signal.SIGTERM, signal.SIGKILL])
+                self.assertEqual(sent, expected_signals)
                 self.assertGreaterEqual(settling_probes, 2)
                 self.assertEqual(observations[0]["errno"], 1)
                 self.assertEqual(observations[0]["pgid"], child.pid)
