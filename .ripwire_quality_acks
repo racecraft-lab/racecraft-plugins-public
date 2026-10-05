@@ -188,6 +188,7 @@ ack dead-code:new-symbol 207d7d54ac9b23f6 0 cid=540d202eb4541283 unittest discov
 ack dead-code:new-symbol 20c7472b4068cce6 0 cid=ed6f4c434285c7a8 Referenced as a GuardPolicy field value (PATH_GUARD_POLICY in path_guard.py, RUNTIME_GUARD_POLICY in runtime_guard.py) and called through the policy by the shared scan; the dead-code scan does not follow a function passed as a keyword argument
 ack dead-code:new-symbol 2124217de4c0d1cf 0 cid=2a3b8935b49039b0 unittest discovers these test methods through loadTestsFromTestCase in main(); no direct caller is expected
 ack dead-code:new-symbol 218dfa21eafb17e1 0 cid=4bdd3f199287800f unittest discovers these test methods through loadTestsFromTestCase in main(); no direct caller is expected
+ack dead-code:new-symbol 222c0601354f1231 0 cid=141dfd2393bc4a4a now=0 was=0 p=tests/speckit-pro/unit/test-trigger-eval-runners.py:841 unittest discovery invokes this regression test; the focused cleanup module passed 245/245
 ack dead-code:new-symbol 22931f4f928ebfcb 0 cid=837b46cee75a413d Referenced only as values in the _SEPARATE_DERIVATIONS dispatch table (test-native-functional-catalog.py:893-894), which the dead-code scan does not follow
 ack dead-code:new-symbol 22ac1a9aa7cd30b1 0 cid=9d711a0bb198057c unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 23162b065674f774 0 cid=41626097e320b46f unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
@@ -344,6 +345,7 @@ ack dead-code:new-symbol 588ab8c85a038009 0 cid=12c6b0135f30b188 unittest discov
 ack dead-code:new-symbol 58916268f5880be5 0 cid=ec0e5ff2805b24a6 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 59351005d8c5cad9 0 cid=eaa17f61108737a1 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 5983a6984c665a6f 0 cid=593731bf5ff1b607 unittest methods and a patch side_effect closure are invoked by the runner and by mock, not by a call site
+ack dead-code:new-symbol 59aa552e60f00a8b 0 cid=89a1978ef088458f now=0 was=0 p=tests/speckit-pro/unit/test-autopilot-execution-contract.py:38 unittest discovery invokes this regression test; suite-manifest selects its module and green execution was observed
 ack dead-code:new-symbol 5ae1bcf5a5539a06 0 cid=0c7053783e55da85 by=tests/speckit-pro/unit/test-gh-json.py unittest discovers and runs test_ methods by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 5af4050eeb941687 0 cid=7f4e25b389eacbc5 unittest discovers and runs test_ methods by name, and a patched-in subprocess stand-in is passed as side_effect; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 5b87a24ee5f6a5e0 0 ScaffoldAnswersTests.test_missing_answer_names_the_key_and_stops runs via unittest discovery and exercises the runner CLI
@@ -374,6 +376,7 @@ ack dead-code:new-symbol 6483267906c58fac 0 cid=ecb3000113a6f2c0 by=tests/specki
 ack dead-code:new-symbol 64dada13abbe49b2 0 cid=b60fa19d27bbf81d Referenced only as entries in the _VALUE_CHECKS dispatch tuple in json_schema_failures, which the dead-code scan does not count as a call
 ack dead-code:new-symbol 65267ab4c07f8fb0 0 cid=19c1beae9a1b4fc7 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 654468ecb6fcb98e 0 cid=c66f78032dfcab49 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol 6550387e1b734a82 0 cid=a62dbeca3b2a78c2 now=0 was=0 p=tests/speckit-pro/layer1-structural/validate-skill-contracts.py:77 unittest discovery invokes this regression test; suite-manifest selects its module and red execution was observed
 ack dead-code:new-symbol 65ddc97b1d3ada7e 0 cid=1e7ca05161557756 unittest-discovered test methods, run by loadTestsFromTestCase
 ack dead-code:new-symbol 666f98274e1091cf 0 cid=7d5563d107fcf7d6 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 668217f466cfbb26 0 cid=12ef32b01a0a4c9c unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
@@ -789,6 +792,7 @@ ack dead-code:new-symbol ddfbb0bb43f3e4a4 0 cid=791745fe5e770fd6 unittest discov
 ack dead-code:new-symbol de87f40ad239ce0e 0 cid=99cd6b509b1734d4 unittest discovers test_ methods by name, and the nested helpers are passed by value in a case table or as a mock side effect, so dead-code is a false positive
 ack dead-code:new-symbol deca692be30db70c 0 cid=d9f7e9bf60a0d7e9 unittest methods and a patch side_effect closure are invoked by the runner and by mock, not by a call site
 ack dead-code:new-symbol df19bfe6371f06e1 0 cid=b744d73af104492a unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol df5322ea62c9afb0 0 cid=19d339c49fd7db34 now=0 was=0 p=tests/speckit-pro/unit/test-trigger-eval-runners.py:881 unittest discovery invokes this regression test; the focused cleanup module passed 245/245
 ack dead-code:new-symbol df899839f155fc9c 0 cid=3b6b557808f46317 Check functions are passed by value in the assert_dispatch_fixture check list, which the dead-code scan does not follow as a call
 ack dead-code:new-symbol dfd03aa675e745bd 0 cid=e68b31e1bae2f032 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol e025a9e21adf10d3 0 cid=906a9a7f8ae281d7 unittest discovers these test methods through loadTestsFromTestCase in main(); no direct caller is expected

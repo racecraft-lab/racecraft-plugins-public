@@ -7,6 +7,7 @@ import ast
 import contextlib
 import hashlib
 import io
+import itertools
 import json
 import os
 import shutil
@@ -837,74 +838,71 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
         self.assertTrue(all(call.args == (child.pid, 0) for call in killpg.call_args_list))
 
     @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
-    def test_claude_post_kill_permission_probe_requires_later_absence(self) -> None:
-        claude = import_script(CLAUDE_RUNNER, "layer2_claude_post_kill_probe")
-        for persistent in (False, True):
-            with self.subTest(persistent=persistent):
-                child = FakePopen(b"", returncode=0)
-                sent = []
-                post_kill_probes = 0
-                observations = []
-
+    def test_claude_post_signal_permission_probe_requires_later_absence(self) -> None:
+        claude = import_script(CLAUDE_RUNNER, "layer2_claude_post_signal_probe")
+        for exit_signal, persistent in itertools.product((signal.SIGTERM, signal.SIGKILL), (False, True)):
+            with self.subTest(exit_signal=exit_signal, persistent=persistent):
+                child = FakePopen(b"", returncode=-exit_signal)
+                child.timeout, child.communicate_calls = True, 1
+                sent, observations = [], []
+                post_signal_probes = 0
                 def probe(pgid: int, signum: int) -> None:
-                    nonlocal post_kill_probes
+                    nonlocal post_signal_probes
                     self.assertEqual(pgid, child.pid)
                     if signum:
                         sent.append(signum)
-                    elif signal.SIGKILL in sent:
-                        post_kill_probes += 1
-                        if persistent or post_kill_probes == 1:
-                            raise PermissionError(1, "post-kill probe unresolved")
+                    elif exit_signal in sent:
+                        # Exit occurs between poll() and the group probe; the next poll reaps it.
+                        child.timeout = False
+                        post_signal_probes += 1
+                        if persistent or post_signal_probes == 1:
+                            raise PermissionError(1, "post-signal probe unresolved")
                         raise ProcessLookupError(3, "group absent")
-
                 with (
                     mock.patch.object(claude.os, "getpgrp", return_value=child.pid + 1),
                     mock.patch.object(claude.os, "killpg", side_effect=probe),
-                    mock.patch.object(claude, "CLEANUP_TIMEOUT", 0.5),
-                    mock.patch.object(claude, "DESCENDANT_EXIT_GRACE", 0),
+                    mock.patch.multiple(claude, CLEANUP_TIMEOUT=0.5, DESCENDANT_EXIT_GRACE=0),
                     mock.patch.object(claude.time, "monotonic", side_effect=[i / 10 for i in range(100)]),
                     mock.patch.object(claude.time, "sleep"),
                 ):
                     if persistent:
-                        with self.assertRaisesRegex(OSError, "post-kill probe unresolved"):
+                        with self.assertRaisesRegex(OSError, "post-signal probe unresolved") as caught:
                             claude.cleanup_child(child, observations=observations)
+                        self.assertNotIsInstance(caught.exception, PermissionError)
                     else:
                         self.assertTrue(claude.cleanup_child(child, observations=observations))
-                self.assertEqual(sent, [signal.SIGTERM, signal.SIGKILL])
-                self.assertGreaterEqual(post_kill_probes, 2)
+                self.assertEqual(sent, {(signal.SIGTERM, False): [signal.SIGTERM]}.get((exit_signal, persistent), [signal.SIGTERM, signal.SIGKILL]))
+                self.assertGreaterEqual(post_signal_probes, 2)
                 self.assertEqual(observations[0]["errno"], 1)
                 self.assertEqual(observations[0]["pgid"], child.pid)
                 self.assertEqual(observations[-1]["errno"], 1 if persistent else 3)
 
     @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
-    def test_claude_only_post_successful_kill_eperm_may_settle(self) -> None:
+    def test_claude_denied_or_unsent_signals_cannot_start_eperm_settling(self) -> None:
         claude = import_script(CLAUDE_RUNNER, "layer2_claude_permission_boundaries")
-        for fault in ("initial", "term-send", "term-probe", "kill-send", "kill-absent", "post-kill-eacces"):
+        cases = (
+            ("initial", None, None, [], 1),
+            ("term-send", signal.SIGTERM, PermissionError(1, "signal send denied"), None, 1),
+            ("term-absent", signal.SIGTERM, ProcessLookupError(3, "signal target absent"), [signal.SIGTERM], 1),
+            ("kill-send", signal.SIGKILL, PermissionError(1, "signal send denied"), None, 1),
+            ("post-kill-eacces", None, None, [signal.SIGTERM, signal.SIGKILL], 13),
+        )
+        for fault, failed_signal, signal_error, probe_after, probe_errno in cases:
             with self.subTest(fault=fault):
                 child = FakePopen(b"", returncode=0)
-                attempted = []
-                failed_probes = []
-
+                attempted, failed_probes = [], []
                 def probe(_pgid: int, signum: int) -> None:
                     if signum:
                         attempted.append(signum)
-                        if (fault == "term-send" and signum == signal.SIGTERM) or (fault == "kill-send" and signum == signal.SIGKILL):
-                            raise PermissionError(1, "signal send denied")
-                        if fault == "kill-absent" and signum == signal.SIGKILL:
-                            raise ProcessLookupError(3, "signal target absent")
-                    elif (
-                        (fault == "initial" and not attempted)
-                        or (fault == "term-probe" and attempted == [signal.SIGTERM])
-                        or (fault in {"kill-absent", "post-kill-eacces"} and signal.SIGKILL in attempted)
-                    ):
+                        if signum == failed_signal:
+                            raise signal_error
+                    elif attempted == probe_after:
                         failed_probes.append(signum)
-                        raise PermissionError(13 if fault == "post-kill-eacces" else 1, "probe denied")
-
+                        raise PermissionError(probe_errno, "probe denied")
                 with (
                     mock.patch.object(claude.os, "getpgrp", return_value=child.pid + 1),
                     mock.patch.object(claude.os, "killpg", side_effect=probe),
-                    mock.patch.object(claude, "CLEANUP_TIMEOUT", 0.5),
-                    mock.patch.object(claude, "DESCENDANT_EXIT_GRACE", 0),
+                    mock.patch.multiple(claude, CLEANUP_TIMEOUT=0.5, DESCENDANT_EXIT_GRACE=0),
                     mock.patch.object(claude.time, "monotonic", side_effect=[i / 10 for i in range(100)]),
                     mock.patch.object(claude.time, "sleep"),
                 ):
@@ -1339,7 +1337,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
 
     def test_claude_direct_runner_contracts(self) -> None:
         claude = import_script(CLAUDE_RUNNER, "layer2_claude_direct")
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory() as temporary, mock.patch.object(tempfile, "gettempdir", return_value=temporary):
             root = Path(temporary)
             source = root / "source" / "SKILL.md"
             source.parent.mkdir()
@@ -2002,7 +2000,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             ("known-different", ("claude-sonnet-test", "claude-opus-test", "claude-sonnet-test"), None),
             ("all-missing", (None, None, None), None),
         )
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory() as temporary, mock.patch.object(tempfile, "gettempdir", return_value=temporary):
             root = Path(temporary)
             plugin = root / "fixture" / "speckit-pro"
             source = plugin / "skills" / "demo" / "SKILL.md"
