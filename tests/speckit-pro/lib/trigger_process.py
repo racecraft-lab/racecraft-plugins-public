@@ -79,7 +79,7 @@ def cleanup_child(
     timeout = CLEANUP_TIMEOUT if timeout is None else timeout
     grace = DESCENDANT_EXIT_GRACE if grace is None else grace
     started = time.monotonic()
-    kill_sent = False
+    termination_sent = False
     last_probe_error: PermissionError | None = None
 
     def running(*, natural_grace: bool = False) -> bool:
@@ -99,7 +99,7 @@ def cleanup_child(
         except PermissionError as exc:
             if observations is not None:
                 observations.append({"pgid": child.pid, "errno": exc.errno, "elapsed_seconds": time.monotonic() - started})
-            if exc.errno != errno.EPERM or (not natural_grace and not kill_sent):
+            if exc.errno != errno.EPERM or (not natural_grace and not termination_sent):
                 raise
             # Permission denial is unresolved, never proof of absence.
             last_probe_error = exc
@@ -114,9 +114,8 @@ def cleanup_child(
         if not running():
             return signaled
         signaled = True
-        sent = terminate(child, signum)
-        if signum == signal.SIGKILL and sent:
-            kill_sent = True
+        # SIGTERM can race with zombie reaping just as SIGKILL can.
+        termination_sent = terminate(child, signum) or termination_sent
         deadline = time.monotonic() + timeout
         while running() and time.monotonic() < deadline:
             time.sleep(0.05)
