@@ -728,18 +728,23 @@ class HostProbePathSecurityTest(unittest.TestCase):
         path.write_text(f"#!{sys.executable}\n{body}", encoding="utf-8")
         path.chmod(0o755)
 
-    def protected_probe(self, host: str, protected: tuple[Path, ...], writable: tuple[Path, ...] = ()) -> dict:
+    def protected_probe(self, host: str, protected: tuple[Path, ...], writable: tuple[Path, ...] = (),
+                        mutable_directories: tuple[Path, ...] = ()) -> dict:
         """Model an installation owned by another identity with no effective write access.
 
         Only OS permission observations are mocked; lookup and execution remain real.
         """
         names = {str(path.resolve()) for path in protected}
+        # A protected executable also needs a protected namespace. Model every
+        # ancestor, while letting attacks expose the actual mutable directory.
+        names.update(str(parent) for path in (*protected, self.tools / host) for parent in path.resolve().parents)
+        names.difference_update(str(path) for path in mutable_directories)
         writable_names = {str(path.resolve()) for path in writable}
         native_stat, native_lstat, native_access = os.stat, os.lstat, os.access
 
         def metadata(function, path, *args, **kwargs):
             info = function(path, *args, **kwargs)
-            if not isinstance(path, int) and os.path.abspath(path) in names and stat.S_ISREG(info.st_mode):
+            if not isinstance(path, int) and os.path.abspath(path) in names:
                 fields = list(info)
                 fields[4] = os.geteuid() + 1
                 return os.stat_result(fields)
@@ -1057,6 +1062,177 @@ class HostProbePathSecurityTest(unittest.TestCase):
                     result = self.protected_probe(host, (launcher, Path(sys.executable)))
                 launcher.unlink()
                 self.assertEqual((0, "2.1.0"), (result["exit_status"], result["stdout_tail"]))
+
+    def race_probe(self, host: str, variant: str, window: str, form: str = "regular") -> None:
+        """Inject at the real lookup/launch seams; permission observations alone are modeled."""
+        ancestor = variant.startswith("ancestor-")
+        variant = variant.removeprefix("ancestor-")
+        launcher = self.tools / host
+        helper = variant in ("env-helper", "subprocess-helper")
+        if helper:
+            body = "#!/usr/bin/env helper\n" if variant == "env-helper" else (
+                f"#!{sys.executable}\nimport subprocess\nsubprocess.run(['helper'], check=True)\n")
+            launcher.write_text(body)
+            launcher.chmod(0o755)
+        elif variant != "create":
+            self.executable(launcher, trusted=True)
+        payload = self.root / "payload"
+        self.executable(payload)
+        native_which, native_run = shutil.which, subprocess.run
+
+        def attack() -> None:
+            target = self.tools / ("helper" if helper else host)
+            if variant.startswith("directory"):
+                self.tools.rename(self.area / "displaced")
+                if variant == "directory-symlink":
+                    self.executable(self.root / host)
+                    self.tools.symlink_to(self.root, target_is_directory=True)
+                    return
+                self.tools.mkdir()
+            target.unlink(missing_ok=True)
+            {"copy": lambda: shutil.copy2(payload, target), "symlink": lambda: target.symlink_to(payload),
+             "hardlink": lambda: os.link(payload, target), "regular": lambda: self.executable(target)}[form]()
+
+        def lookup(*args, **kwargs):
+            if window == "after-validation":
+                attack()
+            return native_which(*args, **kwargs)
+
+        def launch(*args, **kwargs):
+            if window == "after-lookup":
+                attack()
+            return native_run(*args, **kwargs)
+
+        with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}), \
+             unittest.mock.patch.object(shutil, "which", side_effect=lookup), \
+             unittest.mock.patch.object(subprocess, "run", side_effect=launch):
+            result = self.protected_probe(host, (launcher,),
+                                          mutable_directories=(self.area if ancestor else self.tools,))
+        executed = self.marker.exists()
+        if self.tools.is_symlink():
+            self.tools.unlink()
+        else:
+            shutil.rmtree(self.tools)
+        shutil.rmtree(self.area / "displaced", ignore_errors=True)
+        self.tools.mkdir()
+        self.marker.unlink(missing_ok=True)
+        self.assertFalse(executed, "late executable or helper ran")
+        self.assertIsNone(result["exit_status"])
+
+    def test_host_created_after_validation_is_unknown(self) -> None:
+        for host in ("codex", "claude"):
+            for form in ("regular", "copy", "symlink", "hardlink"):
+                with self.subTest(host=host, form=form):
+                    self.race_probe(host, "create", "after-validation", form)
+
+    def test_host_replaced_after_lookup_is_unknown(self) -> None:
+        for host in ("codex", "claude"):
+            for form in ("regular", "copy", "symlink", "hardlink"):
+                with self.subTest(host=host, form=form):
+                    self.race_probe(host, "replace", "after-lookup", form)
+
+    def test_path_directory_recreated_after_validation_or_lookup_is_unknown(self) -> None:
+        for host in ("codex", "claude"):
+            for window in ("after-validation", "after-lookup"):
+                with self.subTest(host=host, window=window):
+                    self.race_probe(host, "directory-recreate", window)
+
+    def test_path_directory_symlinked_after_validation_or_lookup_is_unknown(self) -> None:
+        for host in ("codex", "claude"):
+            for window in ("after-validation", "after-lookup"):
+                with self.subTest(host=host, window=window):
+                    self.race_probe(host, "directory-symlink", window)
+
+    def test_env_shebang_helper_created_after_validation_is_unknown(self) -> None:
+        for host in ("codex", "claude"):
+            with self.subTest(host=host):
+                self.race_probe(host, "env-helper", "after-validation")
+
+    def test_subprocess_helper_created_after_validation_is_unknown(self) -> None:
+        for host in ("codex", "claude"):
+            with self.subTest(host=host):
+                self.race_probe(host, "subprocess-helper", "after-validation")
+
+    def test_protected_path_directory_under_mutable_ancestor_is_unknown(self) -> None:
+        for host in ("codex", "claude"):
+            for variant in ("directory-recreate", "directory-symlink"):
+                for window in ("after-validation", "after-lookup"):
+                    with self.subTest(host=host, variant=variant, window=window):
+                        self.race_probe(host, f"ancestor-{variant}", window)
+
+    def test_host_directory_owner_can_chmod_readonly_is_unknown(self) -> None:
+        for host in ("codex", "claude"):
+            with self.subTest(host=host):
+                launcher = self.tools / host
+                self.executable(launcher, trusted=True)
+                self.tools.chmod(0o555)
+                try:
+                    with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                        result = self.protected_probe(host, (launcher,), mutable_directories=(self.tools,))
+                    self.assertIsNone(result["exit_status"])
+                finally:
+                    self.tools.chmod(0o755)
+                    launcher.unlink()
+
+    def test_effectively_writable_foreign_owned_directory_is_unknown(self) -> None:
+        for host in ("codex", "claude"):
+            for directory in (self.tools, self.area):
+                with self.subTest(host=host, directory=directory.name):
+                    launcher = self.tools / host
+                    self.executable(launcher, trusted=True)
+                    try:
+                        with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                            result = self.protected_probe(host, (launcher,), writable=(directory,))
+                        self.assertIsNone(result["exit_status"])
+                    finally:
+                        launcher.unlink()
+
+    def test_host_and_helper_symlink_target_mutable_ancestors_are_unknown(self) -> None:
+        targets = self.area / "targets"
+        targets.mkdir()
+        for host in ("codex", "claude"):
+            for name in (host, "helper"):
+                for directory in (targets, self.area):
+                    with self.subTest(host=host, name=name, directory=directory.name):
+                        payload = targets / "payload"
+                        self.executable(payload, trusted=True)
+                        launcher = self.tools / host
+                        if name == "helper":
+                            launcher.write_text("#!/usr/bin/env helper\n")
+                            launcher.chmod(0o755)
+                        (self.tools / name).symlink_to(payload)
+                        try:
+                            with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                                result = self.protected_probe(host, (launcher, payload),
+                                                              mutable_directories=(directory,))
+                            self.assertIsNone(result["exit_status"])
+                        finally:
+                            (self.tools / name).unlink()
+                            launcher.unlink(missing_ok=True)
+                            payload.unlink()
+
+    def test_unsafe_empty_helper_directory_is_removed_from_child_path(self) -> None:
+        helpers = self.area / "helpers"
+        helpers.mkdir()
+        native_run = subprocess.run
+        for host in ("codex", "claude"):
+            with self.subTest(host=host):
+                launcher = self.tools / host
+                self.executable(launcher, trusted=True)
+
+                def launch(*args, **kwargs):
+                    self.executable(helpers / "helper")
+                    self.assertNotIn(str(helpers), kwargs["env"]["PATH"].split(os.pathsep))
+                    return native_run(*args, **kwargs)
+
+                try:
+                    with unittest.mock.patch.dict(os.environ, {"PATH": f"{helpers}:{self.tools}"}), \
+                         unittest.mock.patch.object(subprocess, "run", side_effect=launch):
+                        result = self.protected_probe(host, (launcher,))
+                    self.assertEqual((0, "2.1.0"), (result["exit_status"], result["stdout_tail"]))
+                finally:
+                    launcher.unlink()
+                    (helpers / "helper").unlink(missing_ok=True)
 
     def test_readiness_remains_unknown_for_hijacked_host(self) -> None:
         self.root.joinpath(".specify").mkdir()

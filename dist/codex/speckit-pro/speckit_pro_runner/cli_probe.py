@@ -20,39 +20,49 @@ CLIS = ("gh", "git", "docker", "claude", "codex")
 
 
 def reject_mutable_probe_alias(info: os.stat_result, path: Path, *, host: bool) -> None:
-    """A writable host inode cannot prove it had no worktree alias, even after unlink.
+    """A writable host inode or namespace cannot authenticate a later lookup.
 
     Keep system-owned, non-group/other-writable hardlinks: a worktree writer
     cannot modify them or grant itself write access through an alias.
     """
     writable = info.st_uid == os.geteuid() or os.access(path, os.W_OK, effective_ids=True)
+    if host and stat.S_ISDIR(info.st_mode) and writable:
+        raise ValueError("CLI lookup cannot authenticate a mutable directory")
     if stat.S_ISREG(info.st_mode) and writable and (host or info.st_nlink > 1):
         raise ValueError("CLI lookup cannot authenticate a mutable executable inode")
 
 
-def external_probe_path(path: Path, worktree: Path, links: int = 40) -> Path:
-    """Resolve each link hop, rejecting even intermediate worktree-owned paths."""
+def external_probe_path(path: Path, worktree: Path, links: int = 40, *, host: bool = False) -> Path:
+    """Resolve links root-first; host lookups require protected ancestors at every hop.
+
+    Protect the parent before observing a child: holding only an executable inode
+    leaves directory replacement and the child's later PATH lookups unauthenticated.
+    A same-identity writer must not own (and chmod) or effectively write any ancestor.
+    """
     if links < 0 or path.is_relative_to(worktree):
         raise ValueError("CLI path traverses the worktree or too many symlinks")
     if path.parent == path:
+        reject_mutable_probe_alias(path.lstat(), path, host=host)
         return path
-    parent = external_probe_path(path.parent, worktree, links)
+    parent = external_probe_path(path.parent, worktree, links, host=host)
     candidate = parent.parent if path.name == ".." else parent / path.name
     if candidate.is_relative_to(worktree) or (candidate.is_dir() and candidate.samefile(worktree)):
         raise ValueError("CLI path traverses the worktree")
     if candidate.is_symlink():
         target = candidate.readlink()
-        return external_probe_path(target if target.is_absolute() else parent / target, worktree, links - 1)
+        return external_probe_path(target if target.is_absolute() else parent / target, worktree, links - 1, host=host)
+    if candidate.is_dir():
+        reject_mutable_probe_alias(candidate.lstat(), candidate, host=host)
     return candidate
 
 
 def validate_probe_directory(directory: Path, worktree: Path, *, host: bool) -> None:
     """Check every child lookup name, including env-shebang interpreters/helpers."""
-    external_probe_path(directory, worktree)
+    external_probe_path(directory, worktree, host=host)
     for entry in directory.iterdir():
         info = entry.lstat()
         if stat.S_ISLNK(info.st_mode):
-            target = external_probe_path(entry, worktree)
+            target = external_probe_path(entry, worktree, host=host)
             if target.exists():
                 reject_mutable_probe_alias(target.stat(), target, host=host)
         else:
@@ -62,8 +72,9 @@ def validate_probe_directory(directory: Path, worktree: Path, *, host: bool) -> 
 def probe_search_path(root: Path, cli: str) -> str:
     """Exclude cwd-relative entries and worktree-owned directories or executable targets.
 
-    Emit canonical external directories, so worktree symlink/rename changes cannot
-    redirect a later lookup. An empty search path must never reach subprocess: on
+    Host PATH directories and every link target ancestor must be protected from
+    same-identity changes for lookup, launch and later helper resolution. Canonical
+    paths alone cannot prevent rename/recreation. An empty search path must never reach subprocess: on
     POSIX it would search cwd again. Other platforms' cwd lookup rules fail closed.
     """
     if os.name != "posix":
@@ -76,7 +87,7 @@ def probe_search_path(root: Path, cli: str) -> str:
             continue
         try:
             directory = directory.resolve(strict=True)
-            target = external_probe_path(directory / cli, worktree)
+            target = external_probe_path(directory / cli, worktree, host=cli in ("claude", "codex"))
             validate_probe_directory(directory, worktree, host=cli in ("claude", "codex"))
         except (OSError, RuntimeError, ValueError):
             continue
