@@ -1115,12 +1115,15 @@ stable fields, shared by both hosts:
 | `inputs` | `workflow_file`, `feature_dir`, `instruction`, `skill` (the loaded command's skill name; null for Clarify), and `prompt_section` (including its session/domain prompts) |
 | `readable_files` | The paths the phase may read when present, including extension configuration; relative to the bound workflow root unless absolute; trailing slash includes directory contents |
 | `gate` | Gate id for the parent's `validate-gate` request |
-| `slices` | Ordered reference sections copied verbatim for the dispatch prompt; empty for Specify, Plan and Tasks |
+| `slices` | Ordered, structurally validated reference sections copied verbatim for the dispatch prompt; empty for Specify, Plan and Tasks |
 | `waves` | Empty list, reserved for dispatch waves (#1183) |
 | `model` | Null; use the installed agent configuration until #1184 |
 | `hooks` | Empty list, reserved for optional hooks (#1188) |
 
 Loaded commands still read their own instructions, templates and scripts.
+The phase-brief helper validates each sliced reference before dispatch: use
+ATX headings and `***` separators in those references. Comment blocks and
+fenced code retain their original text in a slice.
 Empty reserved fields add no behavior; existing hook handling and sequential
 session/domain dispatch remain. Runner stop policy remains authoritative.
 
