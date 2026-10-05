@@ -7,6 +7,7 @@ import argparse
 import copy
 import functools
 import hashlib
+import itertools
 import json
 import os
 import re
@@ -5488,8 +5489,8 @@ class CanaryCodexTokenTests(CanaryVariantCase):
         self.assertEqual(10, report["variants"][0]["plan_target"]["tokens"])
 
 
-class CanaryReceiptTargetValidityTests(CanaryVariantCase):
-    """Every rejected receipt must reject target success, regardless of the failing field."""
+class CanaryTargetValidityCase(CanaryVariantCase):
+    """Runs one receipt through the API and a copied CLI; it holds no tests of its own."""
 
     def setUp(self):
         super().setUp()
@@ -5551,6 +5552,11 @@ class CanaryReceiptTargetValidityTests(CanaryVariantCase):
                 for target in targets:
                     self.assertEqual(valid, target["target_met"], report)
         self.checked_cases += 1
+        return dict(reports)
+
+
+class CanaryReceiptTargetValidityTests(CanaryTargetValidityCase):
+    """Every rejected receipt must reject target success, regardless of the failing field."""
 
     def test_each_receipt_and_hook_field_rejects_target_success_through_api_and_cli(self):
         for host in self.receipts:
@@ -5674,6 +5680,104 @@ class CanaryReceiptTargetValidityTests(CanaryVariantCase):
         print(f"target validity CLI input matrix: {len(bodies)} read/parse failures")
 
 
+class CanaryVariantIdentityTests(CanaryTargetValidityCase):
+    """Class: variant-identity ambiguity. A receipt whose variant names repeat has no single
+    report per identity, so it must be invalid and publish no per-variant report or target."""
+
+    TRIGGERS = ("local", "scheduled", "on_demand")
+
+    def with_trigger(self, value, trigger):
+        value = copy.deepcopy(value)
+        if trigger != "local":
+            value.update(trigger=trigger, dirty_tree=False, release_status_allowed=True)
+        return value
+
+    def set_plan(self, variant, metric, amount):
+        plan = variant["stages"]["plan"]
+        plan[metric] = amount
+        if metric == "tokens" and "codex_tokens" in plan:
+            plan["codex_tokens"] = {"root_tokens": amount, "child_rollout_tokens": []}
+
+    def assert_ambiguous(self, value, name):
+        reports = self.assert_target_validity(value, hook_counters(), failure=f"receipt.duplicate_variant: {name}")
+        for seam, report in reports.items():
+            with self.subTest(seam=seam):
+                self.assertEqual([], report["variants"], report)
+
+    def test_conflicting_base_duplicates_report_no_target_through_api_and_cli(self):
+        for host in self.receipts:
+            base = self.complete_receipt(host)["variants"][0]
+            for trigger in self.TRIGGERS:
+                for metric, over in (("wall_seconds", 1801), ("tokens", 15000001)):
+                    for copies in range(2, len(self.validator.VARIANTS) + 1):
+                        for position in range(copies):
+                            entries = [copy.deepcopy(base) for _ in range(copies)]
+                            self.set_plan(entries[position], metric, over)
+                            value = dict(self.receipts[host], variants=entries)
+                            with self.subTest(host=host, trigger=trigger, metric=metric, copies=copies, position=position):
+                                self.assert_ambiguous(self.with_trigger(value, trigger), "base")
+        print(f"variant identity base-conflict matrix: {self.checked_cases} receipts, API and CLI")
+
+    def test_each_name_duplicated_at_each_position_is_ambiguous_through_api_and_cli(self):
+        for host in self.receipts:
+            complete = self.complete_receipt(host)
+            for trigger in self.TRIGGERS:
+                # Renaming one entry to an identity already present, for every source and position pair.
+                for source, position in itertools.permutations(range(len(complete["variants"])), 2):
+                    value = copy.deepcopy(complete)
+                    value["variants"][position] = copy.deepcopy(value["variants"][source])
+                    name = value["variants"][source]["name"]
+                    with self.subTest(host=host, trigger=trigger, source=source, position=position):
+                        self.assert_ambiguous(self.with_trigger(value, trigger), name)
+                # Two through five entries of one identity, with no other entry.
+                for variant in complete["variants"]:
+                    for copies in range(2, len(self.validator.VARIANTS) + 1):
+                        value = dict(complete, variants=[copy.deepcopy(variant) for _ in range(copies)])
+                        with self.subTest(host=host, trigger=trigger, name=variant["name"], copies=copies):
+                            self.assert_ambiguous(self.with_trigger(value, trigger), variant["name"])
+        print(f"variant identity name/position matrix: {self.checked_cases} receipts, API and CLI")
+
+    def test_a_repeated_mapping_reference_is_ambiguous_through_api_and_cli(self):
+        for host in self.receipts:
+            base = self.complete_receipt(host)["variants"][0]
+            for copies in range(2, len(self.validator.VARIANTS) + 1):
+                with self.subTest(host=host, copies=copies):
+                    self.assert_ambiguous(dict(self.receipts[host], variants=[base] * copies), "base")
+
+    def test_unique_identities_keep_one_report_per_variant(self):
+        for host in self.receipts:
+            for trigger in self.TRIGGERS:
+                value = self.with_trigger(self.complete_receipt(host), trigger)
+                with self.subTest(host=host, trigger=trigger):
+                    reports = self.assert_target_validity(value, hook_counters(), valid=True)
+                    for report in reports.values():
+                        names = [result["name"] for result in report["variants"]]
+                        self.assertEqual(sorted(self.validator.VARIANTS), sorted(names))
+                        self.assertEqual(1, sum("plan_target" in result for result in report["variants"]))
+
+    def test_duplicate_json_keys_on_every_target_selection_key_fail_closed_in_the_cli(self):
+        """The CLI is the only seam that can see a repeated key; each one the target reads must fail closed."""
+        repeats = (("host", "claude-code"), ("trigger", "scheduled"), ("variants", []), ("name", "oversized_plan"),
+                   ("stages", {}), ("plan", {"wall_seconds": 1801, "tokens": 10}), ("wall_seconds", 1801),
+                   ("tokens", 15000001), ("codex_tokens", {"root_tokens": 15000001, "child_rollout_tokens": []}),
+                   ("root_tokens", 15000001), ("child_rollout_tokens", [15000001]))
+        source = self.root / "receipt.json"
+        for host in self.receipts:
+            text = json.dumps(self.complete_receipt(host))
+            for key, other in repeats:
+                marker = f'"{key}": '
+                if marker not in text:
+                    continue  # claude-code stages carry no codex token keys
+                with self.subTest(host=host, key=key):
+                    source.write_text(text.replace(marker, f"{marker}{json.dumps(other)}, {marker}", 1), encoding="utf-8")
+                    completed = subprocess.run([sys.executable, str(self.cli), str(source)],
+                                               env={**os.environ, "PYTHONPATH": str(PLUGIN_ROOT)},
+                                               capture_output=True, text=True, check=False)
+                    report = json.loads(completed.stdout)
+                    self.assertEqual((1, False, ["input.invalid"], []),
+                                     (completed.returncode, report["valid"], report["failed_assertions"], report["variants"]))
+
+
 class CanaryBudgetCase(unittest.TestCase):
     """Shared setup for the budget tests; it holds no tests of its own."""
 
@@ -5700,10 +5804,11 @@ class CanaryBudgetTests(CanaryBudgetCase):
 
     def test_an_overrun_belongs_only_to_the_variant_entry_that_ran_over(self):
         value = receipt()
-        value["variants"].append(copy.deepcopy(value["variants"][0]))
+        value["variants"].append(dict(copy.deepcopy(value["variants"][0]), name="oversized_plan",
+                                      split_recommendation_recorded=True, full_plan_built=True, stops=0))
         value["variants"][1]["stages"]["plan"]["wall_seconds"] = 6
         report = self.validator.receipt_report(value, self.budget(5, 100))
-        self.assertEqual(["base.plan.wall_seconds_budget"], report["failed_assertions"])
+        self.assertEqual(["oversized_plan.plan.wall_seconds_budget"], report["failed_assertions"])
         self.assertEqual(["pass", "fail"], [variant["gate_verdict"] for variant in report["variants"]])
 
     def test_an_unset_limit_reports_unbudgeted_and_never_a_pass(self):
@@ -6161,7 +6266,7 @@ def main() -> int:
                                             CanaryFeatureOfferTests, CanaryVariantAssertionsTests, CanaryVariantContractTests,
                                             CanaryGateVerdictTests, CanaryGuardGapContractTests,
                                             CanaryPlanTargetTests, CanaryPlanTargetContractTests, CanaryCodexTokenTests,
-                                            CanaryReceiptTargetValidityTests,
+                                            CanaryReceiptTargetValidityTests, CanaryVariantIdentityTests,
                                             CanaryPlanQualityTests, CanaryPlantedCatchTests, CanaryCatchInputTests, CanaryReceiptInputTests,
                                             CanaryReceiptOutputTests, CanaryHookCounterTests, CanaryBudgetTests, CanaryBudgetFileTests))
     result = unittest.TextTestRunner(verbosity=1).run(suite)

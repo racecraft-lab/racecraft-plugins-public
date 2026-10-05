@@ -166,12 +166,18 @@ def receipt_input_failures(value):
     return problems
 
 
+def variant_identity_failures(value):
+    """Each variant name identifies one report; a repeated name leaves no single report to read."""
+    names = [variant["name"] for variant in value["variants"]]
+    return [f"receipt.duplicate_variant: {name}" for name in VARIANTS if names.count(name) > 1]
+
+
 def receipt_report(value, budget=None, hook_counters=MISSING_HOOK_COUNTERS):
     """Gate failures, separate variant verdicts, and budgeted limits that are still unset."""
     problems = receipt_input_failures(value)
     if not problems:
         schema = json_schema_failures(value, SCHEMA, SCHEMA, "receipt")
-        problems = [f"receipt.schema: {len(schema)}"] if schema else []
+        problems = [f"receipt.schema: {len(schema)}"] if schema else variant_identity_failures(value)
     if problems:
         return {"valid": False, "failed_assertions": problems, "unbudgeted": [], "variants": []}
     if value["trigger"] == "local" and value["release_status_allowed"]:

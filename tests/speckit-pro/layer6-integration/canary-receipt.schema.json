@@ -10,7 +10,7 @@
     "fixture_tag": {"$ref": "#/$defs/text"}, "trigger": {"enum": ["local", "scheduled", "on_demand"]},
     "dirty_tree": {"type": "boolean"}, "release_status_allowed": {"type": "boolean"},
     "install_probe": {"type": "object"},
-    "variants": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/variant"}}
+    "variants": {"description": "Each variant name appears at most once; the validator rejects a repeated name before it reports any variant.", "type": "array", "minItems": 1, "items": {"$ref": "#/$defs/variant"}}
   },
   "allOf": [{"if": {"properties": {"host": {"const": "codex"}}},
     "then": {"properties": {"install_probe": {"$ref": "#/$defs/codex_probe"},
