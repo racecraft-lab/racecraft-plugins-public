@@ -259,6 +259,45 @@ class GitWriteProbeTest(GitWriteProbeFixture):
 
 
 class GitWriteProbeContainmentTest(GitWriteProbeFixture):
+    def test_cleanup_rejects_a_private_directory_owned_by_another_user(self) -> None:
+        fstat = os.fstat
+
+        def foreign_owner(fd):
+            metadata = fstat(fd)
+            if metadata.st_mode & 0o777 == 0o700:
+                fields = list(metadata)
+                fields[4] = os.geteuid() + 1
+                return os.stat_result(fields)
+            return metadata
+
+        with patch.object(probe.os, "fstat", side_effect=foreign_owner):
+            result = self.probe_current_repository()
+        self.assertEqual("stop", result["data"]["verdict"])
+        self.assertTrue(list(self.heads.glob("*.lock")), "probe moved into a foreign directory")
+        self.assertTrue(list(self.heads.glob("*.cleanup")), "foreign directory was removed")
+
+    def test_cleanup_rejects_a_substituted_shared_directory_before_capture(self) -> None:
+        open_file = os.open
+        replacement = None
+
+        def substitute_cleanup(path, flags, mode=0o777, *, dir_fd=None):
+            nonlocal replacement
+            if str(path).endswith(".cleanup") and replacement is None:
+                private = self.heads / path
+                private.rename(self.heads / "held-cleanup")
+                private.mkdir(mode=0o755)
+                private.chmod(0o755)
+                replacement = private / str(path).removesuffix(".cleanup")
+                replacement.write_text("foreign file", encoding="utf-8")
+            return open_file(path, flags, mode, dir_fd=dir_fd)
+
+        with patch.object(probe.os, "open", side_effect=substitute_cleanup):
+            result = self.probe_current_repository()
+        self.assertIsNotNone(replacement)
+        self.assertTrue(replacement.exists(), "capture overwrote a foreign file")
+        self.assertEqual("foreign file", replacement.read_text(encoding="utf-8"))
+        self.assertEqual("stop", result["data"]["verdict"])
+
     def test_symlinked_git_subdirectory_never_receives_probe_files(self) -> None:
         outside = self.root / "outside"
         outside.mkdir()

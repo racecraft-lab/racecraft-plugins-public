@@ -32,6 +32,7 @@ STOP_ACTION = ("Approve git writes, or add the repository's .git directory to "
 DENIED = frozenset({errno.EACCES, errno.EPERM, errno.EROFS})
 ANCHORED_PROBE_SUPPORTED = (
     hasattr(os, "O_NOFOLLOW") and hasattr(os, "O_DIRECTORY")
+    and hasattr(os, "geteuid")
     and {os.open, os.stat, os.unlink, os.rename, os.link, os.mkdir, os.rmdir} <= os.supports_dir_fd
     and os.stat in os.supports_follow_symlinks
 )
@@ -111,6 +112,10 @@ def retire_probe_lock(lock: str, directory_fd: int, created: os.stat_result) -> 
         os.mkdir(private, 0o700, dir_fd=directory_fd)
         private_created = True
         private_fd = os.open(private, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=directory_fd)
+        metadata = os.fstat(private_fd)
+        if metadata.st_uid != os.geteuid() or metadata.st_mode & 0o077:
+            private_created = False  # A substituted directory is not ours to remove.
+            raise PermissionError(errno.EACCES, "unsafe git probe cleanup directory")
         try:
             os.rename(lock, lock, src_dir_fd=directory_fd, dst_dir_fd=private_fd)
             captured = True
