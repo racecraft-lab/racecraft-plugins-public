@@ -455,8 +455,8 @@ changed plugin revision or input file, or an `unavailable` or `unknown` item.
    from this run's own checks, never from the record.
 
 A setup gap a later G0 step finds is logged the same way: one `readiness_stale`
-entry whose `evidence` starts `readiness stale: <item>: ` and names the gap and
-its fix. Then continue on the safe default the step names. Work that needs the
+entry shaped like the runner's, whose `evidence` starts `readiness stale: <item>: `
+and names the gap and its fix. Then continue on the safe default the step names. Work that needs the
 missing capability defers through the Failure Escalation Protocol and is never
 marked done without it. The fix belongs to the next scaffold run and the UAT
 handoff.
