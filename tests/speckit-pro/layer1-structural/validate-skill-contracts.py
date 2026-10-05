@@ -75,6 +75,20 @@ class CodexSkillMentionTests(unittest.TestCase):
                 self.assertEqual(short.findall(emit_host(source.read_text(encoding='utf-8'), 'codex')), [])
 
 
+def assert_decoded_host_progress_probes(test: unittest.TestCase) -> None:
+    for encoded in (
+        '["UPDATE_PLAN"]',
+        '["tAsKcReAtE"]',
+        r'["\u201cupdate_plan\u201d"]',
+        r'["\u201cTaskCreate\u201d"]',
+        r'["\u0075pdate_plan"]',
+        r'["\nupdate_plan"]',
+        r'{"\u0075pdate_plan": [{"label": "progress"}]}',
+    ):
+        with test.subTest(encoded=encoded):
+            test.assertTrue(forbidden_task_tools(json.loads(encoded)))
+
+
 def prepared_codex_contract_result() -> unittest.TestResult:
     # Reuse the hermetic preparation fixture; it never launches a provider host.
     adapter_tests = load_script(
@@ -104,17 +118,7 @@ class ValidateHostProgressGuidance(unittest.TestCase):
                     self.assertEqual(forbidden_task_tools(_read(source)), [], 'host guidance names a task-list tool or opt-in')
 
     def test_host_eval_cases_use_no_task_list_tools(self) -> None:
-        for encoded in (
-            '["UPDATE_PLAN"]',
-            '["tAsKcReAtE"]',
-            r'["\u201cupdate_plan\u201d"]',
-            r'["\u201cTaskCreate\u201d"]',
-            r'["\u0075pdate_plan"]',
-            r'["\nupdate_plan"]',
-            r'{"\u0075pdate_plan": [{"label": "progress"}]}',
-        ):
-            with self.subTest(encoded=encoded):
-                self.assertTrue(forbidden_task_tools(json.loads(encoded)))
+        assert_decoded_host_progress_probes(self)
         functional = REPO_ROOT / 'tests/speckit-pro/layer3-functional'
         for catalog in ('evals', 'codex-evals'):
             sources = sorted((functional / catalog).glob('*-evals.json'))
