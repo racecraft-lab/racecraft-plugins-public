@@ -188,6 +188,7 @@ returned by `resolve-scaffold-worktree-placement` and verified inside the
 worktree. Never write `main`, a guessed branch, or a display label into that
 field.
 
+
 ## Answers-file mode
 
 With `--answers-file`, first call runner helper `scaffold-answers` in
@@ -952,6 +953,7 @@ per item:
 | `mcp_servers` | running helper `research-broker-preflight` with empty `inputs={}`, then bounded live observations of required MCP tools/startup/auth; configuration alone does not prove connectivity, so record `unknown` when live evidence is absent |
 | `typesafe_jev` | checking whether this session exposes the Jev `evaluate` tool |
 | `reviewability_report` | reusing the setup gate result, with its report or roadmap path in `files` and SPEC-ID as `values.spec_id` |
+| `git_write` | recording `not_applicable` with `evidence_source` "Claude Code runs no git write probe" |
 | `formal_methods` | judging whether the Design Concept's design suits a formal model, by the [coach's formal-methods guide](../speckit-coach/references/formal-methods-guide.md): `verified` when it suits one, `not_applicable` when it does not; cite the deciding behavior as `evidence_source` |
 
 Claude Code items. Send only the raw observation (`item`, `evidence_source`, and
@@ -991,7 +993,9 @@ Hook definitions on Claude Code (Codex uses the exact-hash observation above):
   `verification_docker` (whether a Linux/arm64 Docker daemon answers) itself.
   Omit `host_version` when the host does not report it.
 - When the response is `input_error`, correct the field its diagnostic names
-  and send the request once more.
+  and send the request once more. Keep evidence and action text subject to
+  the helper's privacy validation; never write the readiness record directly
+  to bypass a rejected field.
 - Print one line per `unavailable` or `unknown` item with its action, then
   continue. A declined fix, a failed fix, or a failed write leaves scaffold
   finishing normally.
