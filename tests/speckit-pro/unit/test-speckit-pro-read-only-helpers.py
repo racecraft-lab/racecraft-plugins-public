@@ -5399,6 +5399,27 @@ class CanaryPlanTargetContractTests(CanaryVariantCase):
                 self.assertNotIn("plan_target", report["variants"][0])
 
 
+    def test_inconsistent_plan_tokens_cannot_report_target_met_through_api_or_cli(self):
+        value = self.receipts["codex"]
+        plan = value["variants"][0]["stages"]["plan"]
+        plan.update(wall_seconds=1, tokens=16000000,
+                    codex_tokens={"root_tokens": 10, "child_rollout_tokens": [20]})
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "receipt.json"
+            source.write_text(json.dumps(value), encoding="utf-8")
+            completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
+                                       capture_output=True, text=True, check=False)
+        self.assertEqual(1, completed.returncode, completed.stdout)
+        for seam, report in (("api", self.validator.receipt_report(value)),
+                             ("cli", json.loads(completed.stdout))):
+            with self.subTest(seam=seam):
+                self.assertFalse(report["valid"])
+                self.assertEqual(["base.plan.tokens_sum"], report["failed_assertions"])
+                self.assertEqual({"wall_seconds_limit": 1800, "tokens_limit": 15000000,
+                                  "wall_seconds": 1, "tokens": 30, "target_met": False},
+                                 report["variants"][0]["plan_target"])
+
+
 class CanaryCodexTokenTests(CanaryVariantCase):
     def test_child_rollouts_are_included_in_the_plan_total_and_target(self):
         value = self.receipts["codex"]
@@ -5409,7 +5430,7 @@ class CanaryCodexTokenTests(CanaryVariantCase):
         target = report["variants"][0]["plan_target"]
         self.assertEqual(16000000, target["tokens"])
         self.assertFalse(target["target_met"])
-        for children, measured, met in (([15000000], 15000010, False), ([20], 30, True)):
+        for children, measured in (([15000000], 15000010), ([20], 30)):
             plan.update(tokens=10, codex_tokens={"root_tokens": 10, "child_rollout_tokens": children})
             with self.subTest(measured=measured):
                 report = self.validator.receipt_report(value)
@@ -5417,8 +5438,8 @@ class CanaryCodexTokenTests(CanaryVariantCase):
                 self.assertEqual(["base.plan.tokens_sum"], report["failed_assertions"])
                 target = report["variants"][0]["plan_target"]
                 self.assertEqual(measured, target["tokens"])
-                # The target comes only from the summed breakdown, never from the claimed stage total.
-                self.assertEqual(met, target["target_met"])
+                # A summed breakdown cannot establish success while the claimed total contradicts it.
+                self.assertFalse(target["target_met"])
 
 
     def test_each_codex_stage_checks_its_sum_and_allows_equal_child_counts(self):
