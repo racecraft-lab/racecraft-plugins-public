@@ -1048,10 +1048,22 @@ the detail key); the helper derives `status` and `action`, and rejects a
 When the response lists `allow_rules`, print them once as `permissions.allow`
 entries for `.claude/settings.local.json` or the user settings. Never add a
 rule yourself.
+
+The helper records `codex_agents` and `extension_versions` as `not_applicable`
+on Claude Code (Codex only). Do not send them.
 <!-- /host -->
 <!-- host:codex: Codex records the Claude-only items itself and reports its own hook trust -->
 The helper records `permission_probe`, `plugin_scope` and `mcp_authentication`
 as `not_applicable` on Codex (Claude Code only). Do not send them.
+
+Codex items. Send only the raw observation (`item`, `evidence_source`, and the
+detail key); the helper derives `status` and `action`, and rejects a `status`
+you send for these.
+
+| `item` | Detail key | Observe it now by |
+| --- | --- | --- |
+| `codex_agents` | `agents`: `{"installation": {...}, "inventory": [{"agent": "<name>", "state": "current", "stale" or "missing", "repair": "none", "applied", "declined" or "failed"}], "expected_revision": "<plugin_revision>", "loaded_revision": "<version>"}` | reusing the `install-codex-agents` `mode="dry_run"` plan from step -0.5 for `inventory`, and its repair outcome in `repair`; copy the selected installation inputs into `installation` exactly as that request sent them, with no added keys; omit `loaded_revision` unless this session reports the revision it loaded, since a repaired agent loads only after a restart |
+| `extension_versions` | `extensions`: `{"extension": "<id>", "installed": "<version>" or null, "expected": "<version>" or null}` | reading each required extension's version from `specify extension list`; `expected` is its project pin or curated-set version, and a drifted or missing extension is flagged |
 <!-- /host -->
 
 Hook items, on both hosts:
