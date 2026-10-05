@@ -35,8 +35,6 @@ Token discipline does **not** touch:
   reports
 - Any text that lands in `spec.md`, `plan.md`, `tasks.md`,
   `data-model.md`, or `contracts/*`
-- TaskUpdate `subject` / `description` fields, since the
-  TaskList tool surfaces them to the operator
 
 If a transcript could end up in front of a human — directly or
 via a future PR body generation step — it is **not eligible** for
