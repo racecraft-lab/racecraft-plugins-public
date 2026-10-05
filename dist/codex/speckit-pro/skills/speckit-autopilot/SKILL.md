@@ -338,6 +338,13 @@ See Step 1.1 for the full naming pattern and rules.
 
 Clarify has one prompt in the workflow file: one session of at most 5
 questions. Checklist has one prompt per domain.
+For older workflows with multiple Clarify prompts, normalize the pending
+Clarify phase before creating its task items or requesting its phase brief:
+combine the existing focuses into one prompt, ranked by how much each changes
+the plan. Replace the workflow's Clarify Prompts and pending Clarify Results
+rows with that one session; reconcile pending Clarify task items in state to
+the same session. Keep completed session evidence. If a Clarify session has
+already completed, proceed to G2 instead of dispatching another session.
 Spawn a **separate subagent for each prompt**, consume its result, and run the
 two-layer resolution (Rule 6) after each one BEFORE spawning the next — later
 domains may depend on earlier resolved items. Do not batch

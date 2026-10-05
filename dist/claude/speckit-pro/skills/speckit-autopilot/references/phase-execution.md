@@ -332,6 +332,7 @@ prefix: "Already on feature branch `<branch>`. Do NOT run
 Every SPEC runs Clarify: one session of at most 5 questions. G1's marker
 count does not decide whether it runs.
 
+Normalize Clarify through Rule 4 before reading phase prompts.
 Spawn **one subagent** for the session.
 The clarify-executor is read-only. It returns a `Clarify Question Set`
 with prioritized questions, recommended answers, evidence, and

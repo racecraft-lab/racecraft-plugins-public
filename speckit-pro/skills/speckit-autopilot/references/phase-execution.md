@@ -387,7 +387,8 @@ for phase in PHASES starting from first_pending:
     1. autopilot-state.json: mark the current phase item as "in_progress"
     2. Check .specify/extensions.yml for before_<phase> hooks
        → run accepted hooks (non-destructive), skip duplicates
-    3. Read the workflow file's prompt(s) for this phase
+    3. Normalize Clarify through Rule 4 before reading phase prompts.
+       Read the workflow file's prompt(s) for this phase
     4. For EACH prompt in the phase:
        a. Resolve <executor>:
           use the matching installed SpecKit custom agent
@@ -549,6 +550,7 @@ prefix: "Already on feature branch `<branch>`. Do NOT run
 Every SPEC runs Clarify: one session of at most 5 questions. G1's marker
 count does not decide whether it runs.
 
+Normalize Clarify through Rule 4 before reading phase prompts.
 Spawn **one subagent** for the session.
 The clarify-executor is read-only. It returns a `Clarify Question Set`
 with prioritized questions, recommended answers, evidence, and

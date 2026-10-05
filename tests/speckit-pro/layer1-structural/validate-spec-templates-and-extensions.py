@@ -18,6 +18,7 @@ for _import_root in (LIB_DIR, PLUGIN_ROOT):
         sys.path.insert(0, str(_import_root))
 
 from test_result import run_counted
+from host_skill_views import host_skill_root
 
 ROADMAP_TEMPLATE = PLUGIN_ROOT / 'skills/speckit-coach/templates/technical-roadmap-template.md'
 SPEC_TEMPLATES = (REPO_ROOT / '.specify/presets/speckit-pro-reviewability/templates/spec-template.md', REPO_ROOT / '.specify/templates/spec-template.md')
@@ -134,6 +135,18 @@ class ValidateOneClarifySession(unittest.TestCase):
         text = SCAFFOLD_SKILL.read_text(encoding='utf-8')
         self.assert_absent(text, r'(?i)one focus per open\s+behavior area')
         self.assertIn('one clarify session', text.lower())
+
+    def test_both_hosts_consolidate_older_clarify_prompts_before_dispatch(self) -> None:
+        for host in ('claude', 'codex'):
+            with self.subTest(host=host):
+                root = host_skill_root(host) / 'speckit-autopilot'
+                skill = (root / 'SKILL.md').read_text(encoding='utf-8')
+                rule = markdown_section(skill, '### 4. Multi-prompt phases')
+                self.assertRegex(rule, r'(?s)older workflows.*multiple Clarify prompts')
+                self.assertRegex(rule, r'(?s)combine.*one prompt')
+                self.assertRegex(rule, r'(?s)before creating.*task.*phase brief')
+                phase = (root / 'references/phase-execution.md').read_text(encoding='utf-8')
+                self.assertIn('Normalize Clarify through Rule 4 before reading phase prompts.', phase)
 
 FROZEN_MARKER = "🧊 Frozen"
 HEALTH_PROGRAM = "https://github.com/racecraft-lab/racecraft-plugins-public/issues/1038"
