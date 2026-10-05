@@ -455,14 +455,17 @@ changed plugin revision or input file, or an `unavailable` or `unknown` item.
    already holds, so a resume logs nothing twice.
 2. Persist `data.readiness.stale` as `readiness_observation` in
    `autopilot-state.json` beside the workflow file.
-3. Take the `observe_fresh` items (GitHub authentication, MCP servers, Jev)
-   from this run's own checks, never from the record.
+3. The runner records services, session boundaries and unavailable value
+   comparisons as unknown. Observe GitHub authentication, required MCP/Jev
+   connectivity and current session constraints through bounded, read-only
+   checks at run start. Retain those results in `readiness_observation`; an
+   unavailable probe stays unknown. Configuration and saved status supply no
+   live evidence, and these observations grant no authorization.
 
 A setup gap a later G0 step finds is logged the same way: one `readiness_stale`
 entry shaped like the runner's, whose `evidence` starts `readiness stale: <item>: `
-and names the gap and its fix. Read the list with `decisions-list` in
-`read_only` mode first, and record the entry only when the list does not
-already hold it word for word, so a resume logs it once. Then continue on the safe default the step names. Work that needs the
+and names the gap and its fix. Submit the entry to `decisions-list` in `apply`
+mode; the runner deduplicates readiness entries. Then continue on the safe default the step names. Work that needs the
 missing capability defers through the Failure Escalation Protocol and is never
 marked done without it. The fix belongs to the next scaffold run and the UAT
 handoff.

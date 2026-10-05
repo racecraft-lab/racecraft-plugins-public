@@ -29,7 +29,7 @@ from ..envelope import diagnostic, response
 from ..atomic_write import write_bytes_atomic
 from ..canonical_json import canonical_bytes
 from ..private_state import ensure_private_directory
-from ..strict_input import SelectionError, require_text, unique_object
+from ..strict_input import SelectionError, require_fields, require_text, unique_object
 from ..sweep_isolation import secret_matches
 from ..trusted_io import find_repo_root, trusted_bytes
 from ..verification_docker import DAEMON_ARCHITECTURES, PLATFORM, PLATFORM_OS
@@ -132,14 +132,21 @@ def caller_item(raw: Any, root: Path, observed_at: str) -> tuple[str, dict[str, 
         action = clean_text(raw["action"], f"{name}.action")
     fingerprints = {**fingerprint_files(raw.get("files", []), root, name),
                     **fingerprint_values(raw.get("values", {}), name)}
+    require_verified_fingerprints(name, status, fingerprints)
+    return name, make_item(status, clean_text(raw.get("evidence_source"), f"{name}.evidence_source"),
+                           observed_at, fingerprints, action)
+
+
+def require_verified_fingerprints(name: str, status: str, fingerprints: dict[str, str]) -> None:
+    """Shared proof requirements for scaffold observations and G0's saved evidence."""
+    if not all(isinstance(value, str) for value in fingerprints.values()):
+        raise SelectionError("fingerprints must map names to text")
     if status == "verified" and not any(value.startswith("sha256:") for value in fingerprints.values()):
         raise SelectionError(f"{name}: verified evidence needs an input fingerprint")
     if name == "reviewability_report" and status == "verified" and (
             "value:spec_id" not in fingerprints or not any(key.startswith("file:") and value.startswith("sha256:")
                                                           for key, value in fingerprints.items())):
         raise SelectionError("reviewability_report: verified evidence needs a report or roadmap file and spec_id")
-    return name, make_item(status, clean_text(raw.get("evidence_source"), f"{name}.evidence_source"),
-                           observed_at, fingerprints, action)
 
 
 def probe_temporary_directory(directory: Path) -> str | None:
@@ -290,9 +297,9 @@ def write_record(root: Path, record: dict[str, Any]) -> str:
 
 def safe_reason(text: str) -> str:
     """Record text as one line of plain words: no markup, links, mentions, local paths or credentials."""
-    text = " ".join(UNSAFE_REASON.sub("?", text).split())[:300]
     if LOCAL_PATH_RE.search(text) or secret_matches(text):
         return "detail withheld: it held a path or a credential"
+    text = " ".join(UNSAFE_REASON.sub("?", text).split())[:300]
     return text or "no detail"
 
 
@@ -305,17 +312,33 @@ def loaded_revision() -> str | None:
 
 def checked_items(record: Any, root: Path, host: str) -> dict[str, Any]:
     """The record's items, or SelectionError when it cannot be this host's record for this worktree."""
+    require_fields(record, {"schema_version", "host", "binding", "host_version", "execution_mode",
+                            "plugin_revision", "observed_at", "items"}, "record")
+    for field in ("plugin_revision", "observed_at"):
+        require_text(record[field], field)
+    if record["host_version"] is not None:
+        require_text(record["host_version"], "host_version")
+    if record["execution_mode"] not in EXECUTION_MODES:
+        raise SelectionError("record execution mode is unknown")
     if not isinstance(record, dict) or record.get("schema_version") != SCHEMA_VERSION or record.get("host") != host:
         raise SelectionError(f"not a {SCHEMA_VERSION} record for {host}")
     if record.get("binding") != {"worktree": digest(str(root))}:
         raise SelectionError("the record is bound to another worktree")
     items = record.get("items")
-    if not isinstance(items, dict) or not items.keys() <= {*CALLER_ITEMS, *RUNNER_ITEMS}:
-        raise SelectionError("the record holds unknown readiness items")
-    for item in items.values():
+    if not isinstance(items, dict) or items.keys() != {*CALLER_ITEMS, *RUNNER_ITEMS}:
+        raise SelectionError("the record has missing or unknown readiness items")
+    for name, item in items.items():
         if not isinstance(item, dict) or item.get("status") not in STATUSES \
                 or not isinstance(item.get("evidence_source"), str) or not isinstance(item.get("fingerprints"), dict):
             raise SelectionError("an item lacks a known status, its evidence or its fingerprints")
+        require_text(item["evidence_source"], "evidence_source")
+        require_text(item.get("observed_at"), "observed_at")
+        if item["status"] in NEEDS_ACTION:
+            require_text(item.get("action"), "action")
+        require_verified_fingerprints(name, item["status"], item["fingerprints"])
+        for key in item["fingerprints"]:
+            if key.startswith("file:") and PurePosixPath(key[5:]).as_posix() != key[5:]:
+                raise SelectionError("a file fingerprint has a noncanonical path")
     return items
 
 
@@ -323,6 +346,9 @@ def changed_inputs(name: str, fingerprints: dict[str, Any], root: Path) -> list[
     """Each file input whose current fingerprint differs from the recorded one."""
     changed = []
     for key, recorded in fingerprints.items():
+        if not key.startswith("file:"):
+            changed.append("unknown: value fingerprint comparison unavailable")
+            continue
         if key.startswith("file:"):
             try:
                 same = fingerprint_files([key[5:]], root, name)[key] == recorded
@@ -345,23 +371,25 @@ def stale_items(root: Path, host: str) -> list[tuple[str, str]]:
     try:
         record = json.loads(content, object_pairs_hook=unique_object)
         items = checked_items(record, root, host)
-    except ValueError as error:
+    except (ValueError, RecursionError) as error:
         return [("record", safe_reason(f"incompatible: {error}"))]
-    stale = []
+    stale = [("session", "unknown: current host version, execution mode and permission boundary need fresh observations")]
     current = loaded_revision()
     if record.get("plugin_revision") != current:
         stale.append(("plugin_payload",
                       f"plugin revision changed from {safe_reason(str(record.get('plugin_revision')))} to {current}"))
     for name, item in items.items():
         if name in FRESH_ITEMS:
+            stale.append((name, "unknown: requires a fresh run-start observation; saved status is not evidence"))
             continue
         # Step 0.11's unratified-defaults decision already reports a missing or invalid quality-gates file.
         if item["status"] in NEEDS_ACTION and name != "quality_gates":
             stale.append((name, f"{item['status']}: {safe_reason(item['evidence_source'])}; "
                                 f"action: {safe_reason(str(item.get('action')))}"))
-        stale.extend((name, f"input changed: {safe_reason(changed)}")
+        stale.extend((name, safe_reason(changed) if changed.startswith("unknown:") else f"input changed: {safe_reason(changed)}")
                      for changed in changed_inputs(name, item["fingerprints"], root))
-    return stale
+    return [(name, safe_reason("; ".join(dict.fromkeys(reason for item, reason in stale if item == name))))
+            for name in dict(stale)]
 
 
 def run_readiness_record_helper(entry: Any, request: Any) -> dict[str, Any]:

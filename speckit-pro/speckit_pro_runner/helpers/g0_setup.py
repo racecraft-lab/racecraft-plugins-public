@@ -11,7 +11,7 @@ from ..envelope import response
 from ..quality_gates import SHIPPED_DEFAULTS
 from ..strict_input import SelectionError, require_fields, require_text
 from ..trusted_io import resolve_repo_root, validate_bounded_inputs
-from .decisions_list import decisions_list
+from .decisions_list import decisions_list, recorded
 from .readiness_record import FRESH_ITEMS, RECORD_DIRECTORY, stale_items
 from .read_only import (
     EXIT_STATUS, check_prerequisites, detect_commands, detect_presets, helper_failure_diagnostic, output_capture,
@@ -54,11 +54,6 @@ def g0_setup(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
             gate["unratified_defaults"] = observed
         data["quality_gate"] = gate
     return data
-
-
-def recorded(decision: dict[str, str], entries: list[dict[str, Any]]) -> bool:
-    """Whether the list already holds this exact decision, so a resume adds no second entry."""
-    return any(all(previous.get(field) == value for field, value in decision.items()) for previous in entries)
 
 
 def readiness(root: Path, surface: str, workflow: str) -> dict[str, Any]:

@@ -541,6 +541,8 @@ class G0ReadsReadinessTest(unittest.TestCase):
         self.record_path().parent.mkdir()
         self.record_path().write_text("{", encoding="utf-8")
         self.assert_logged_once("record", "incompatible")
+        self.record_path().write_text("[" * 1100 + "0" + "]" * 1100, encoding="utf-8")
+        self.assert_logged_once("record", "incompatible")
 
     def test_record_for_another_worktree_is_incompatible(self) -> None:
         self.write_record(self.all_verified())
@@ -549,9 +551,20 @@ class G0ReadsReadinessTest(unittest.TestCase):
         self.record_path().write_text(json.dumps(record), encoding="utf-8")
         self.assert_logged_once("record", "another worktree")
 
+    def test_truncated_record_and_noncanonical_fingerprint_continue_stale(self) -> None:
+        for change in (lambda r: r.update(items={}), lambda r: r.update(host_version=[]),
+                lambda r: r["items"]["project_integration"].update(fingerprints={}),
+                lambda r: r["items"]["project_integration"].update(
+                fingerprints={"file:foo//bar": "sha256:" + "0" * 64})):
+            self.write_record(self.all_verified())
+            record = json.loads(self.record_path().read_text(encoding="utf-8"))
+            change(record)
+            self.record_path().write_text(json.dumps(record), encoding="utf-8")
+            self.assert_logged_once("record", "incompatible")
+
     def test_stale_plugin_revision_is_logged(self) -> None:
         self.write_record(self.all_verified())
-        self.assertNotIn("plugin_payload", [row["item"] for row in self.g0()["stale"]])
+        self.assertNotIn("plugin revision changed", json.dumps(self.g0()["stale"]))
         self.write_record(self.all_verified(), plugin_revision="0.0.1")
         self.assert_logged_once("plugin_payload", f"plugin revision changed from 0.0.1 to {self.revision}")
 
@@ -567,11 +580,17 @@ class G0ReadsReadinessTest(unittest.TestCase):
             self.assertNotIn(fragment, text)
         self.assert_logged_once("project_integration", "unknown")
 
+    def test_record_credentials_are_withheld_before_text_reduction(self) -> None:
+        self.write_record([observation("project_integration", "unknown")])
+        self.record_path().write_text(self.record_path().read_text(encoding="utf-8").replace(
+            'project_integration probe', 'api_key=\\"fixturecredentialvalue\\"'), encoding="utf-8")
+        self.assertNotIn("fixturecredentialvalue", json.dumps(self.g0()))
+
     def test_changed_fingerprint_is_logged(self) -> None:
         observations = self.all_verified()
         observations[1] = observation("project_integration", files=[".specify/constitution.md"])
         self.write_record(observations)
-        self.assertNotIn("project_integration", [row["item"] for row in self.g0()["stale"]])
+        self.assertNotIn("input changed: .specify/constitution.md", json.dumps(self.g0()["stale"]))
         (self.root / ".specify" / "constitution.md").write_text("changed\n", encoding="utf-8")
         self.assert_logged_once("project_integration", "input changed: .specify/constitution.md")
 
@@ -581,7 +600,26 @@ class G0ReadsReadinessTest(unittest.TestCase):
         self.write_record(observations, host="codex")
         readiness = self.g0("codex")
         self.assertEqual(["github_auth", "mcp_servers", "typesafe_jev"], readiness["observe_fresh"])
-        self.assertNotIn("github_auth", [row["item"] for row in readiness["stale"]])
+        self.assertIn("github_auth", [row["item"] for row in readiness["stale"]])
+        self.assertIn("unknown", json.dumps(readiness["stale"]))
+
+    def test_unobservable_value_fingerprints_are_unknown(self) -> None:
+        self.write_record([observation("project_integration", values={"policy": "fixture"})])
+        self.assert_logged_once("project_integration", "unknown: value fingerprint")
+
+    def test_appending_readiness_notes_twice_is_idempotent(self) -> None:
+        entries = self.g0()["decisions"]
+        for _ in range(2):
+            result = self.runner("decisions-list", "apply", {"workflow_file": "workflow.md", "entries": entries})
+        self.assertEqual(len(entries), result["count"])
+
+    def test_many_changed_inputs_fit_the_decisions_contract(self) -> None:
+        files = [f"file-{index}-" + "x" * 50 for index in range(30)]
+        self.write_record([observation("project_integration", files=files)])
+        for name in files:
+            (self.root / name).write_text("changed", encoding="utf-8")
+        entries = self.g0()["decisions"]
+        self.runner("decisions-list", "apply", {"workflow_file": "workflow.md", "entries": entries})
 
     def test_autopilot_asks_no_setup_question_on_either_host(self) -> None:
         for host in ("claude", "codex"):
