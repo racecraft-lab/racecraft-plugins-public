@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import re
 import shutil
+import stat
 import subprocess
 from collections.abc import Collection
 from pathlib import Path
@@ -16,6 +17,17 @@ STDERR_TAIL_CHARS = 2048
 STDOUT_TAIL_CHARS = 1024 * 1024
 DOCKER_STDOUT_TAIL_CHARS = STDERR_TAIL_CHARS
 CLIS = ("gh", "git", "docker", "claude", "codex")
+
+
+def reject_mutable_probe_alias(info: os.stat_result) -> None:
+    """A shared writable inode can be modified through a worktree hardlink.
+
+    Keep system-owned, non-group/other-writable hardlinks: a worktree writer
+    cannot modify them or grant itself write access through an alias.
+    """
+    writable = info.st_uid == os.geteuid() or info.st_mode & (stat.S_IWGRP | stat.S_IWOTH)
+    if stat.S_ISREG(info.st_mode) and info.st_nlink > 1 and writable:
+        raise ValueError("CLI lookup contains a mutable hardlink alias")
 
 
 def external_probe_path(path: Path, worktree: Path, links: int = 40) -> Path:
@@ -32,6 +44,19 @@ def external_probe_path(path: Path, worktree: Path, links: int = 40) -> Path:
         target = candidate.readlink()
         return external_probe_path(target if target.is_absolute() else parent / target, worktree, links - 1)
     return candidate
+
+
+def validate_probe_directory(directory: Path, worktree: Path) -> None:
+    """Check every child lookup name, including env-shebang interpreters/helpers."""
+    external_probe_path(directory, worktree)
+    for entry in directory.iterdir():
+        info = entry.lstat()
+        if stat.S_ISLNK(info.st_mode):
+            target = external_probe_path(entry, worktree)
+            if target.exists():
+                reject_mutable_probe_alias(target.stat())
+        else:
+            reject_mutable_probe_alias(info)
 
 
 def probe_search_path(root: Path, cli: str) -> str:
@@ -52,6 +77,7 @@ def probe_search_path(root: Path, cli: str) -> str:
         try:
             directory = directory.resolve(strict=True)
             target = external_probe_path(directory / cli, worktree)
+            validate_probe_directory(directory, worktree)
         except (OSError, RuntimeError, ValueError):
             continue
         if not directory.is_relative_to(worktree) and not target.is_relative_to(worktree):

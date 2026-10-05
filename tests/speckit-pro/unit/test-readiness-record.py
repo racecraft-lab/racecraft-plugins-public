@@ -797,21 +797,30 @@ class HostProbePathSecurityTest(unittest.TestCase):
                 self.executable(installed, trusted=True)
                 bridge = self.root / f"bridge-{host}"
                 bridge.symlink_to(installed)
-                (self.tools / host).symlink_to(bridge)
-                with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
-                    result = self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)
-                self.assertIsNone(result["exit_status"])
+                launcher = self.tools / host
+                launcher.symlink_to(bridge)
+                try:
+                    with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                        result = self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)
+                    self.assertIsNone(result["exit_status"])
+                finally:
+                    launcher.unlink()
 
     def test_relative_external_executable_symlink_into_worktree(self) -> None:
         for host in ("codex", "claude"):
             with self.subTest(host=host):
                 payload = self.root / f"payload-{host}"
                 self.executable(payload)
-                (self.tools / host).symlink_to(Path("..") / "worktree" / payload.name)
-                with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
-                    result = self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)
-                self.assertFalse(self.marker.exists(), "relative executable link entered the worktree")
-                self.assertIsNone(result["exit_status"])
+                launcher = self.tools / host
+                launcher.symlink_to(Path("..") / "worktree" / payload.name)
+                try:
+                    with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                        result = self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)
+                    self.assertFalse(self.marker.exists(), "relative executable link entered the worktree")
+                    self.assertIsNone(result["exit_status"])
+                finally:
+                    launcher.unlink()
+                    self.marker.unlink(missing_ok=True)
 
     def test_other_cli_branches_reject_worktree_path(self) -> None:
         for form in ("regular", "renamed-copy", "symlink"):
@@ -867,10 +876,14 @@ class HostProbePathSecurityTest(unittest.TestCase):
     def test_cyclic_executable_links_fail_closed(self) -> None:
         for host in ("codex", "claude"):
             with self.subTest(host=host):
-                (self.tools / host).symlink_to(host)
-                with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
-                    result = self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)
-                self.assertIsNone(result["exit_status"])
+                launcher = self.tools / host
+                launcher.symlink_to(host)
+                try:
+                    with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                        result = self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)
+                    self.assertIsNone(result["exit_status"])
+                finally:
+                    launcher.unlink()
 
     def test_non_posix_host_lookup_fails_closed(self) -> None:
         with unittest.mock.patch.object(os, "name", "nt"), unittest.mock.patch.object(subprocess, "run") as run:
@@ -878,6 +891,60 @@ class HostProbePathSecurityTest(unittest.TestCase):
                 with self.subTest(host=host):
                     self.assertIsNone(self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)["exit_status"])
             run.assert_not_called()
+
+    def test_worktree_hardlink_alias_cannot_supply_any_cli(self) -> None:
+        for cli in ("codex", "claude", "git", "gh", "docker"):
+            with self.subTest(cli=cli):
+                payload = self.root / cli
+                self.executable(payload, trusted=True)
+                installed = self.tools / cli
+                os.link(payload, installed)
+                self.executable(payload)
+                try:
+                    with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                        result = self.probe(self.root, [cli, "--version"], allowed=(cli,), timeout=2)
+                    self.assertFalse(self.marker.exists(), "worktree hardlink supplied executable bytes")
+                    self.assertIsNone(result["exit_status"])
+                finally:
+                    installed.unlink()
+                    self.marker.unlink(missing_ok=True)
+
+    def test_host_interpreter_path_cannot_enter_worktree(self) -> None:
+        for host in ("codex", "claude"):
+            for helper, form in ((name, form) for name in ("python3", "node", "helper")
+                                 for form in ("symlink", "hardlink")):
+                with self.subTest(host=host, helper=helper, form=form):
+                    launcher = self.tools / host
+                    launcher.write_text(f"#!/usr/bin/env {helper}\nprint('2.1.0')\n")
+                    if helper == "helper":
+                        launcher.write_text(f"#!{sys.executable}\nimport subprocess\nsubprocess.run(['helper', '--version'], check=True)\n")
+                    launcher.chmod(0o755)
+                    payload = self.root / helper
+                    self.executable(payload)
+                    interpreter = self.tools / helper
+                    if form == "symlink":
+                        interpreter.symlink_to(payload)
+                    else:
+                        os.link(payload, interpreter)
+                    try:
+                        with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                            result = self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)
+                        self.assertFalse(self.marker.exists(), "host launcher used a worktree interpreter")
+                        self.assertIsNone(result["exit_status"])
+                    finally:
+                        interpreter.unlink()
+                        self.marker.unlink(missing_ok=True)
+
+    def test_trusted_env_shebang_interpreter_still_works(self) -> None:
+        (self.tools / "python3").symlink_to(sys.executable)
+        for host in ("codex", "claude"):
+            with self.subTest(host=host):
+                launcher = self.tools / host
+                launcher.write_text("#!/usr/bin/env python3\nprint('2.1.0')\n")
+                launcher.chmod(0o755)
+                with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                    result = self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)
+                self.assertEqual((0, "2.1.0"), (result["exit_status"], result["stdout_tail"]))
 
     def test_readiness_remains_unknown_for_hijacked_host(self) -> None:
         self.root.joinpath(".specify").mkdir()
