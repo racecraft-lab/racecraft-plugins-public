@@ -105,9 +105,11 @@ Rules:
 - Keep every fill inert: no `<script>`, `<style>`, `<iframe>`, `<object>`,
   `<embed>`, `<base>`, `<meta>`, or `<link>` element; no `on*` or `srcdoc`
   attribute; no `javascript:`, `vbscript:`, or non-image, non-font `data:` URL;
-  and no `<!` or `<?` construct other than a plain `<!-- ... -->` comment. The
-  template's own scripts already provide the page's behavior. The artifact
-  review rejects a page whose fill carries active content and names the region.
+  no `<!` or `<?` construct other than a plain `<!-- ... -->` comment; and
+  only escaped text inside a `<title>` or `<textarea>`, closed in the same
+  region. The template's own scripts already provide the page's behavior. The
+  artifact review rejects a page whose fill carries active content and names
+  the region.
 - Leave no placeholder text behind.
 - Content comes from the planning record. Never invent it.
 

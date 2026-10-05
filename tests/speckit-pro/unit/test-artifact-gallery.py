@@ -255,6 +255,7 @@ class GalleryGuidanceTests(unittest.TestCase):
             "Escape `&`, `<`, `>`, `\"`, and `'` before the value lands in element text or a double-quoted attribute value",
             "no `on*` or `srcdoc` attribute",
             "no `javascript:`, `vbscript:`, or non-image, non-font `data:` URL",
+            "only escaped text inside a `<title>` or `<textarea>`, closed in the same region",
             "The artifact review rejects a page whose fill carries active content and names the region",
             "no fill region carries active content",
         )

@@ -27,7 +27,7 @@ from test_result import run_counted
 
 
 class _Rendered(HTMLParser):
-    """Independent oracle: the elements and text a fill region renders to."""
+    """Test-side record of the elements, text and attribute values one fill parses to."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -200,15 +200,36 @@ class ArtifactReviewTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "active content: implementation-plan region plan-stats: "):
                     self.review()
 
-    def test_benign_fill_markup_and_every_shipped_draft_sample_pass_review(self) -> None:
+    def test_parser_differentials_cannot_hide_active_content(self) -> None:
+        """A browser runs or exposes markup here that a naive parse reads as attribute or comment text."""
+        hidden = '<a title="</{0}><img src=x onerror=alert(1)>"></a>'
+        for content in (
+            *(f"<{name}>{hidden.format(name)}</{name}>" for name in (
+                "title", "textarea", "noscript", "xmp", "noembed", "noframes", "plaintext",
+            )),
+            '<TITLE><a title="</TiTlE ><img src=x onerror=alert(1)>"></a></TITLE>',
+            '<!-- -- ><a title=" --><img src=x onerror=alert(1)>"></a>',
+            '<!-- --\n><a title=" --><img src=x onerror=alert(1)>"></a>',
+            "</title><title>left open for the next region",
+            '<title\x00><img src=x onerror=alert(1)></title>',
+        ):
+            with self.subTest(content=content):
+                self.fill("implementation-plan", "plan-stats", content)
+                with self.assertRaisesRegex(ValueError, "active content: implementation-plan region plan-stats: "):
+                    self.review()
+
+    def test_inert_fill_markup_passes_review(self) -> None:
         for content in (
             '<p>Use <code>onChange={(e) <span class="kw">=&gt;</span> x}</code></p>',
             '<p title="Data: a JavaScript: aside"><a href="#phase-1">Phase 1</a></p>',
             "<!-- a reviewer note --><img src=\"data:image/png;base64,AA\" alt=\"\">",
+            "<p>Run <code>--check</code> -- then compare</p><textarea>&lt;b&gt;</textarea>",
         ):
             with self.subTest(content=content):
                 self.fill("implementation-plan", "plan-stats", content)
                 self.assertEqual(self.review()["status"], "pending")
+
+    def test_every_shipped_draft_sample_passes_review(self) -> None:
         for identifier in ("code-approaches", "module-map"):
             path = f"{self.feature}/artifacts/{identifier}.html"
             template = self.gallery / f"templates/{identifier}.html"

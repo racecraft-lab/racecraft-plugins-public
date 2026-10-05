@@ -115,10 +115,14 @@ def _fill_skeleton(value: bytes) -> tuple[tuple[str, ...], tuple[bytes, ...], tu
     return tuple(slots), tuple(static), tuple(fills)
 
 
-# Fill markup is parsed, never pattern-matched: escaped planning text holds no raw "<",
-# so every tag in a fill is author structure the parser can see. Constructs where
-# Python's parser and a browser disagree are rejected outright instead of parsed.
-_UNPARSEABLE_FILL = re.compile(r"<!(?!--)|<\?|<!---?>|--!>")
+# Tags and attributes are judged by a parser: escaped planning text holds no raw "<",
+# so every tag in a fill is author structure the parser can see. The two patterns
+# below only reject constructs where Python's parser and a browser disagree.
+_UNPARSEABLE_FILL = re.compile(r"<!(?!--)|<\?|<!---?>|--!>|--\s+>")
+# A browser ends these elements at their own end tag even where a parser sees an attribute value.
+_RAW_TEXT_START = re.compile(
+    r"<(title|textarea|noscript|xmp|noembed|noframes|plaintext|script|style|iframe)(?=[\t\n\f\r />])", re.IGNORECASE
+)
 _ACTIVE_ELEMENTS = frozenset({
     "script", "style", "iframe", "frame", "frameset", "object", "embed", "applet", "base", "meta", "link", "portal",
 })
@@ -164,9 +168,21 @@ class _FillMarkup(HTMLParser):
             self.findings.append("unescaped <")
 
 
+def _raw_text_holds_markup(text: str) -> bool:
+    """A raw-text element is inert only when it closes in the same region with no "<" before its end tag."""
+    for start in _RAW_TEXT_START.finditer(text):
+        following = text.find("<", start.end())
+        end = re.compile(rf"</{start.group(1)}[\t\n\f\r />]", re.IGNORECASE)
+        if following < 0 or not end.match(text, following):
+            return True
+    return False
+
+
 def _active_content(fill: bytes) -> list[str]:
     text = fill.decode("utf-8", errors="replace")
     findings = ["markup declaration or nonstandard comment"] if _UNPARSEABLE_FILL.search(text) else []
+    if _raw_text_holds_markup(text):
+        findings.append("raw-text element holding markup")
     parser = _FillMarkup(convert_charrefs=False)
     parser.feed(text)
     if "<" in parser.rawdata:
