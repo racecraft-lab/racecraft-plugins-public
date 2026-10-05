@@ -70,6 +70,11 @@ def terminate_child(child: subprocess.Popen[bytes] | None, signum: int = signal.
 
 
 
+def observed_group_absence(pgid: int, observations: list[dict[str, object]] | None) -> bool:
+    """Only this group's recorded ESRCH makes later cleanup terminal."""
+    return any(item.get("pgid") == pgid and item.get("errno") == errno.ESRCH for item in observations or ())
+
+
 def cleanup_child(
     child: subprocess.Popen[bytes], *, observations: list[dict[str, object]] | None = None,
     timeout: float | None = None, grace: float | None = None,
@@ -83,7 +88,8 @@ def cleanup_child(
     # zombie members are reaped, so an EPERM probe then is unresolved, not fatal.
     signal_delivered = False
     last_probe_error: PermissionError | None = None
-    absent = False  # The first ESRCH is terminal; a later answer may be a reused PGID.
+    # Preserve terminal absence when a fixture resumes cleanup after supervision.
+    absent = observed_group_absence(child.pid, observations)
 
     def record_probe_error(error: int | None) -> None:
         if observations is not None and os.name != "nt":
