@@ -1,4 +1,4 @@
-"""G0's setup probes and its unratified quality-gate defaults observation, without setup writes."""
+"""G0 setup probes, unratified-defaults observation, and project baseline plan, without setup writes."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from ..strict_input import SelectionError, require_fields, require_text
 from ..trusted_io import resolve_repo_root, validate_bounded_inputs
 from .decisions_list import decisions_list
 from .read_only import (
-    EXIT_STATUS, check_prerequisites, detect_commands, detect_presets, helper_failure_diagnostic, output_capture,
+    BASELINE_SLOTS, EXIT_STATUS, check_prerequisites, detect_commands, detect_presets, helper_failure_diagnostic, output_capture,
 )
 
 UNSAFE_TEXT = re.compile(r"[^A-Za-z0-9 _.,:;'=>()-]")
@@ -24,9 +24,22 @@ PROBES = {
 }
 
 
+def baseline_plan(commands: dict[str, str], project_commands: Any) -> dict[str, Any]:
+    """Plan the baseline from detected commands with recorded commands taking precedence."""
+    if not isinstance(project_commands, dict):
+        raise SelectionError("project_commands must be an object")
+    recorded = {require_text(slot, "project_commands slot"): require_text(command, "project_commands command")
+                for slot, command in project_commands.items()}
+    effective = commands | recorded
+    return {"plan_stage": [], "implement_entry": [
+        {"slot": slot, "command": effective[slot]} for slot in BASELINE_SLOTS if effective.get(slot, "N/A") != "N/A"
+    ]}
+
+
 def g0_setup(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
-    """Preserve each probe's result; commands also reports an unratified-defaults observation."""
-    require_fields({key: value for key, value in inputs.items() if key != "repo_root"},
+    """Preserve each probe, the unratified-defaults observation, and the baseline plan."""
+    optional = {"repo_root", "project_commands"} if inputs.get("probe") == "commands" else {"repo_root"}
+    require_fields({key: value for key, value in inputs.items() if key not in optional},
                    {"probe", "surface", "workflow_file"}, "g0-setup inputs")
     probe = require_text(inputs["probe"], "probe")
     surface = require_text(inputs["surface"], "surface")
@@ -53,6 +66,7 @@ def g0_setup(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
             )
             gate["unratified_defaults"] = observed
         data["quality_gate"] = gate
+        data["baseline"] = baseline_plan(result["stdout_json"]["commands"], inputs.get("project_commands", {}))
     return data
 
 
