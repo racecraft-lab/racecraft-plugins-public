@@ -480,6 +480,27 @@ class NativeEvalRuntimeTests(unittest.TestCase):
             )
         self.assertFalse((self.root / "build-nonregular").exists())
 
+    def test_concurrent_bytecode_writes_do_not_break_source_validation(self) -> None:
+        # Another process importing the runner writes each .pyc through a
+        # temporary file it renames away, so a listed cache entry can vanish
+        # before it is inspected. The builder never copies bytecode caches.
+        fixture = self.fixture_repo("repo-bytecode-writer")
+        cache = fixture / "speckit-pro/speckit_pro_runner/__pycache__"
+        cache.mkdir()
+        cache = cache.resolve()
+        vanished = "envelope.cpython-311.pyc.4422282800"
+        real_walk = os.walk
+
+        def walk_listing_a_renamed_cache_entry(top: object, *args: object, **kwargs: object):
+            for directory, directories, files in real_walk(top, *args, **kwargs):
+                if Path(directory) == cache:
+                    files = [*files, vanished]
+                yield directory, directories, files
+
+        with mock.patch.object(runtime.os, "walk", side_effect=walk_listing_a_renamed_cache_entry):
+            result = self.stage(repo_root=fixture, build_name="build-bytecode", workspace_name="workspace-bytecode")
+        self.assertTrue((result.payload_root / ".codex-plugin" / "plugin.json").is_file())
+
     def test_rejects_license_symlink_and_nonregular_without_reading_external_target(self) -> None:
         outside = self.root / "protected-external-license.txt"
         outside.write_text("PROTECTED-LICENSE-MARKER", encoding="utf-8")
@@ -546,10 +567,18 @@ class NativeEvalRuntimeTests(unittest.TestCase):
             )
         self.assertFalse((self.root / "build-nonregular-license").exists())
 
-    def test_staging_never_mutates_checkout_dist_files_directories_or_metadata(self) -> None:
-        before = tree_snapshot(REPO_ROOT / "dist")
-        self.stage()
-        self.assertEqual(tree_snapshot(REPO_ROOT / "dist"), before)
+    def test_staging_never_mutates_repo_dist_files_directories_or_metadata(self) -> None:
+        # Stage a private checkout copy: other test processes write bytecode
+        # caches into the shared checkout's dist while this test runs.
+        fixture = self.fixture_repo("repo-dist-snapshot")
+        shutil.copytree(
+            REPO_ROOT / "dist",
+            fixture / "dist",
+            ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+        )
+        before = tree_snapshot(fixture / "dist")
+        self.stage(repo_root=fixture, build_name="build-dist-snapshot", workspace_name="workspace-dist-snapshot")
+        self.assertEqual(tree_snapshot(fixture / "dist"), before)
 
         snapshot_probe = self.root / "snapshot-probe"
         empty = snapshot_probe / "empty"

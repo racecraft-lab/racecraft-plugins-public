@@ -215,6 +215,9 @@ def _inside(candidate: Path, root: Path) -> bool:
 def _validate_source_inputs(repo: Path) -> None:
     plugin_root = repo / "speckit-pro"
     for directory, directories, files in os.walk(plugin_root, followlinks=False):
+        # The builder never copies bytecode caches, and other processes that
+        # import the runner rewrite them concurrently (temp file, then rename).
+        directories[:] = [name for name in directories if name != "__pycache__"]
         parent = Path(directory)
         for name in (*directories, *files):
             path = parent / name
