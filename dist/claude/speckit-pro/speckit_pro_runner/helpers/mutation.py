@@ -1058,10 +1058,11 @@ def run_mutation_helper(
             try:
                 mutation["live_mutation"] = True
                 write_result = write_file_atomic(target, str(op["content"]), trust_root=repo_root, expected_snapshot=snapshots.get(rel))
-            except WritePreconditionChanged:
+            except WritePreconditionChanged as exc:
                 mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
                 mutation["failure_operation"] = operation_record(op)
                 rollback_errors = rollback_applied_writes(mutation["touched_paths"], snapshots, repo_root)
+                rollback_errors.extend(atomic_write_cleanup_errors(exc))
                 mutation["live_mutation"] = bool(mutation["applied_operations"])
                 mutation["manual_remediation"] = [
                     "Inspect the target path and parent directory.",
@@ -1078,7 +1079,7 @@ def run_mutation_helper(
                         diagnostic(
                             "source_changed",
                             "mutation helper refused to overwrite a target that changed during atomic write",
-                            details={"target": rel},
+                            details={"target": rel, "rollback_errors": rollback_errors},
                             remediation_summary="Retry from a stable repository tree.",
                             remediation_actions=["Inspect the target path.", "Retry apply mode after concurrent edits stop."],
                         )

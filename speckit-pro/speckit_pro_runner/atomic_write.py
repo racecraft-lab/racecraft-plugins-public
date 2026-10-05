@@ -8,7 +8,7 @@ import stat
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from .trusted_io import (
     is_relative_to,
@@ -148,16 +148,20 @@ class AtomicWriteOptions:
     expected_snapshot: dict[str, Any] | None = None
     guard_target: bool = True
     verify_content: bool = False
+    post_publish_check: Callable[[], None] | None = None
 
 
 def write_bytes_atomic_at(parent_fd: int, target_name: str, content: bytes,
                           options: AtomicWriteOptions) -> dict[str, Any]:
-    """Publish closed bytes relative to a caller-owned directory descriptor."""
+    """Publish and verify through held descriptors; preserve recovery entries on races."""
     tmp_name = f"{atomic_temporary_prefix(target_name)}{os.getpid()}-{uuid.uuid4().hex}"
     tmp_fd = -1
     failure: OSError | None = None
     applied_mode: int | None = None
     tmp_cleanup_errors: list[str] = []
+    written_stat: os.stat_result | None = None
+    replaced = False
+    previous = preserve_previous_bytes_at(parent_fd, target_name) if options.verify_content else None
     try:
         try:
             if options.guard_target:
@@ -166,7 +170,7 @@ def write_bytes_atomic_at(parent_fd: int, target_name: str, content: bytes,
             write_mode = existing_mode if existing_mode is not None else 0o666
             tmp_fd = os.open(
                 tmp_name,
-                os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0),
+                os.O_RDWR | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0),
                 write_mode,
                 dir_fd=parent_fd,
             )
@@ -174,44 +178,47 @@ def write_bytes_atomic_at(parent_fd: int, target_name: str, content: bytes,
                 os.fchmod(tmp_fd, existing_mode)
             written_stat = os.fstat(tmp_fd)
             applied_mode = stat.S_IMODE(written_stat.st_mode)
-            with os.fdopen(tmp_fd, "wb") as fh:
-                tmp_fd = -1
-                fh.write(content)
-                fh.flush()
-                os.fsync(fh.fileno())
-            if options.verify_content:
-                closed = read_file_snapshot_at(parent_fd, tmp_name, len(content))
-                if (not closed["exists"] or closed["content"] != content
-                        or closed["file_identity"] != [written_stat.st_dev, written_stat.st_ino]):
-                    raise WritePreconditionChanged("closed temporary identity or bytes changed before publication")
+            write_open_file(tmp_fd, content)
+            if options.verify_content and read_open_file(tmp_fd, len(content)) != content:
+                raise WritePreconditionChanged("temporary bytes changed before publication")
             if options.guard_target:
                 ensure_safe_write_target_fd(parent_fd, target_name)
             if options.expected_snapshot is not None:
                 ensure_write_target_matches_snapshot_fd(parent_fd, target_name, options.expected_snapshot)
+            replaced = True
             os.replace(tmp_name, target_name, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
+            if options.verify_content:
+                verify_written_file_at(parent_fd, target_name, content, written_stat)
+                if options.post_publish_check is not None:
+                    options.post_publish_check()
             try:
                 os.fsync(parent_fd)
             except OSError:
                 # Directory fsync is best-effort after replace; the atomic swap already succeeded.
                 pass
-        except OSError as exc:
-            failure = exc
+        except (OSError, ValueError) as exc:
+            if isinstance(exc, OSError):
+                failure = exc
+            if replaced and options.verify_content:
+                recover_failed_publication_at(parent_fd, target_name, previous)
             raise
     finally:
+        if previous is not None:
+            os.close(previous[1])
+            os.close(previous[0])
+        try:
+            if written_stat is not None:
+                retained = quarantine_entry_at(parent_fd, tmp_name, [written_stat.st_dev, written_stat.st_ino])
+                if retained is not None:
+                    tmp_cleanup_errors.append(f"{retained}:retained")
+        except OSError:
+            tmp_cleanup_errors.append(f"{tmp_name}:OSError")
         if tmp_fd >= 0:
             try:
                 os.close(tmp_fd)
             except OSError:
                 # Best-effort cleanup only; a close error cannot safely change the write outcome.
                 pass
-        try:
-            os.unlink(tmp_name, dir_fd=parent_fd)
-        except FileNotFoundError:
-            # The temp name is absent after successful replace; cleanup is already complete.
-            pass
-        except OSError:
-            # Best-effort cleanup only; the write outcome is already determined.
-            tmp_cleanup_errors.append(f"{tmp_name}:OSError")
         if failure is not None and tmp_cleanup_errors:
             failure.cleanup_errors = [*atomic_write_cleanup_errors(failure), *tmp_cleanup_errors]
     return {"digest": hashlib.sha256(content).hexdigest(), "mode": applied_mode,
@@ -222,24 +229,141 @@ def atomic_temporary_prefix(target_name: str) -> str:
     return f".{target_name}.tmp-"
 
 
-def cleanup_atomic_temporaries_at(parent_fd: int, target_name: str) -> int:
-    """Remove interrupted regular files from this target's atomic-write namespace."""
-    prefix = atomic_temporary_prefix(target_name)
-    removed = 0
-    for name in sorted(os.listdir(parent_fd)):
-        if not name.startswith(prefix):
-            continue
-        pid, separator, nonce = name[len(prefix):].partition("-")
-        if not separator or not pid.isascii() or not pid.isdigit() or len(nonce) != 32:
-            continue
-        if any(character not in "0123456789abcdef" for character in nonce):
-            continue
-        mode = os.stat(name, dir_fd=parent_fd, follow_symlinks=False).st_mode
-        if not stat.S_ISREG(mode):
-            raise OSError("unsafe interrupted atomic temporary")
-        os.unlink(name, dir_fd=parent_fd)
-        removed += 1
-    return removed
+def open_recovery_directory_at(parent_fd: int) -> tuple[str, int]:
+    directory = f".artifact-recovery-{uuid.uuid4().hex}"
+    os.mkdir(directory, 0o700, dir_fd=parent_fd)
+    return directory, os.open(directory, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent_fd)
+
+
+def quarantine_entry_at(parent_fd: int, name: str, identity: list[int] | None = None,
+                        expected_digest: str | None = None) -> str | None:
+    """Capture before checking; retain entries because POSIX has no inode-conditional unlink."""
+    opened = -1
+    try:
+        if identity is not None:
+            try:
+                opened = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=parent_fd)
+            except FileNotFoundError:
+                return None
+            observed = os.fstat(opened)
+            if not stat.S_ISREG(observed.st_mode) or [observed.st_dev, observed.st_ino] != identity:
+                raise WritePreconditionChanged("cleanup entry identity changed; replacement preserved")
+        directory, held = open_recovery_directory_at(parent_fd)
+        try:
+            try:
+                os.rename(name, "entry", src_dir_fd=parent_fd, dst_dir_fd=held)
+            except FileNotFoundError:
+                return None
+            if identity is not None:
+                verify_captured_entry_at(held, parent_fd, name, identity, expected_digest)
+            return f"{directory}/entry"
+        finally:
+            os.close(held)
+    finally:
+        if opened >= 0:
+            os.close(opened)
+
+
+def verify_captured_entry_at(held: int, parent_fd: int, name: str,
+                             identity: list[int], expected_digest: str | None) -> None:
+    try:
+        captured = read_file_snapshot_at(held, "entry")
+        if (not captured["exists"] or captured["file_identity"] != identity
+                or expected_digest is not None and captured["digest"] != expected_digest):
+            raise WritePreconditionChanged("cleanup entry identity or bytes changed during capture; replacement preserved")
+    except OSError:
+        restore_quarantined_entry_at(held, "entry", parent_fd, name)
+        raise
+    try:
+        os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+    except FileNotFoundError:
+        return
+    raise WritePreconditionChanged("cleanup basename was replaced after capture; replacement preserved")
+
+
+def restore_quarantined_entry_at(source_fd: int, source: str, parent_fd: int, name: str) -> None:
+    """Restore without overwriting a concurrent entry; retain the recovery copy."""
+    try:
+        os.link(source, name, src_dir_fd=source_fd, dst_dir_fd=parent_fd, follow_symlinks=False)
+    except FileExistsError:
+        pass
+
+
+def write_open_file(fd: int, content: bytes) -> None:
+    os.lseek(fd, 0, os.SEEK_SET)
+    os.ftruncate(fd, 0)
+    with os.fdopen(os.dup(fd), "wb") as stream:
+        stream.write(content)
+        stream.flush()
+        os.fsync(stream.fileno())
+
+
+def verify_written_file_at(parent_fd: int, name: str, content: bytes, written: os.stat_result) -> None:
+    final = read_file_snapshot_at(parent_fd, name, len(content))
+    if (not final["exists"] or final["content"] != content
+            or final["file_identity"] != [written.st_dev, written.st_ino]):
+        raise WritePreconditionChanged("published artifact identity or bytes differ from the held temporary")
+
+
+def read_open_file(fd: int, limit: int | None = None) -> bytes:
+    """Read through the held file, leaving it open for subsequent identity checks."""
+    before = os.fstat(fd)
+    os.lseek(fd, 0, os.SEEK_SET)
+    with os.fdopen(os.dup(fd), "rb") as stream:
+        content = stream.read() if limit is None else stream.read(limit + 1)
+    after = os.fstat(fd)
+    if (before.st_size, before.st_mtime_ns, before.st_ctime_ns) != (
+            after.st_size, after.st_mtime_ns, after.st_ctime_ns):
+        raise WritePreconditionChanged("file changed during descriptor read")
+    return content
+
+
+def preserve_previous_bytes_at(parent_fd: int, name: str) -> tuple[int, int, bytes] | None:
+    snapshot = read_file_snapshot_at(parent_fd, name)
+    if not snapshot["exists"]:
+        return None
+    _directory, held = open_recovery_directory_at(parent_fd)
+    try:
+        fd = os.open("previous", os.O_RDWR | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                     snapshot["mode"], dir_fd=held)
+        try:
+            write_open_file(fd, snapshot["content"])
+            return held, fd, snapshot["content"]
+        except BaseException:
+            os.close(fd)
+            raise
+    except BaseException:
+        os.close(held)
+        raise
+
+
+def recover_failed_publication_at(parent_fd: int, name: str, previous: tuple[int, int, bytes] | None) -> None:
+    # Capture untrusted final bytes without deleting them, then restore only into an absent slot.
+    quarantine_entry_at(parent_fd, name)
+    if previous is not None:
+        source_fd, file_fd, content = previous
+        try:
+            if read_open_file(file_fd, len(content)) != content:
+                raise WritePreconditionChanged("previous page bytes changed; original retained in recovery")
+            restore_quarantined_entry_at(source_fd, "previous", parent_fd, name)
+            verify_restored_file_at(parent_fd, name, file_fd, content)
+        except OSError:
+            write_open_file(file_fd, content)
+            if read_open_file(file_fd, len(content)) != content:
+                raise WritePreconditionChanged("previous page repair failed") from None
+            quarantine_entry_at(parent_fd, name)
+            raise
+
+
+def verify_restored_file_at(parent_fd: int, name: str, file_fd: int, content: bytes) -> None:
+    final = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=parent_fd)
+    try:
+        written, observed = os.fstat(file_fd), os.fstat(final)
+        if ((written.st_dev, written.st_ino) != (observed.st_dev, observed.st_ino)
+                or read_open_file(final, len(content)) != content):
+            raise WritePreconditionChanged("rollback slot identity or bytes changed; previous page retained in recovery")
+    finally:
+        os.close(final)
 
 
 def open_safe_parent_fd(target: Path, trust_root: Path, *, create: bool) -> tuple[int, str, list[str]] | None:

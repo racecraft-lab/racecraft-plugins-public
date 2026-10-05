@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import runpy
@@ -22,8 +23,42 @@ def publication_probe(plugin: str, attack: str) -> None:
     # Load capability predicates before replacing the OS boundary.
     from speckit_pro_runner.helpers import registry  # noqa: F401
 
-    original_replace = os.replace
+    original_replace, original_stat, original_rename, original_link = os.replace, os.stat, os.rename, os.link
     events = []
+    fired = False
+    stat_calls = 0
+
+    def replaced_basename(source, destination, **kwargs):
+        nonlocal fired
+        if not fired and destination == "implementation-plan.html":
+            fired = True
+            source_fd = kwargs.get("src_dir_fd")
+            original_replace(source, "saved-written.html", src_dir_fd=source_fd, dst_dir_fd=source_fd)
+            if attack == "rename-temp-symlink":
+                os.symlink("../outside/implementation-plan.html", source, dir_fd=source_fd)
+            elif attack == "rename-temp-hardlink":
+                os.link("victim.html", source, src_dir_fd=source_fd, dst_dir_fd=source_fd)
+            else:
+                fd = os.open(source, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600, dir_fd=source_fd)
+                try:
+                    os.write(fd, b"attacker bytes")
+                finally:
+                    os.close(fd)
+            events.append({"event": "temporary-rename", "anchored": source_fd is not None})
+        return original_replace(source, destination, **kwargs)
+
+    def statted(name, *args, **kwargs):
+        nonlocal fired, stat_calls
+        result = original_stat(name, *args, **kwargs)
+        if name == "implementation-plan.html" and kwargs.get("dir_fd") is not None:
+            stat_calls += 1
+        if not fired and stat_calls == 2 and name == "implementation-plan.html":
+            fired = True
+            directory_fd = kwargs["dir_fd"]
+            original_replace(name, "saved-owned.html", src_dir_fd=directory_fd, dst_dir_fd=directory_fd)
+            original_replace("victim.html", name, src_dir_fd=directory_fd, dst_dir_fd=directory_fd)
+            events.append({"event": "cleanup-rename", "anchored": True})
+        return result
 
     def replace(source, destination, **kwargs):
         directory = Path("artifacts")
@@ -40,7 +75,7 @@ def publication_probe(plugin: str, attack: str) -> None:
             original_replace(directory / "old.html", directory / "implementation-plan.html")
         return result
 
-    original_open, original_unlink = os.open, os.unlink
+    original_open, original_unlink, original_fsync = os.open, os.unlink, os.fsync
 
     def anchored_boundary(operation, name, args, kwargs):
         directory = Path("artifacts")
@@ -55,20 +90,135 @@ def publication_probe(plugin: str, attack: str) -> None:
             Path("held-artifacts").rename(directory)
 
     def opened(name, *args, **kwargs):
+        nonlocal fired
+        if attack == "temporary-collision" and str(name).startswith(".implementation-plan.html.tmp-") and args[0] & os.O_CREAT:
+            fd = original_open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600, **kwargs)
+            try:
+                os.write(fd, b"foreign collision")
+            finally:
+                os.close(fd)
+            events.append({"event": "temporary-collision", "anchored": kwargs.get("dir_fd") is not None})
+        if attack == "captured-entry" and not fired and name == "entry":
+            fired = True
+            fd = kwargs["dir_fd"]
+            original_replace(name, "saved-owned", src_dir_fd=fd, dst_dir_fd=fd)
+            changed = original_open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600, dir_fd=fd)
+            try:
+                os.write(changed, b"replacement victim")
+            finally:
+                os.close(changed)
+            events.append({"event": "captured-entry", "anchored": True})
         if attack == "read-swap" and name == "implementation-plan.html":
             return anchored_boundary(original_open, name, args, kwargs)
-        if attack == "tamper-temp" and str(name).startswith(".implementation-plan.html.tmp-") and not args[0] & os.O_CREAT:
-            Path("artifacts", name).write_text("tampered")
         return original_open(name, *args, **kwargs)
+
+    def rename_cleanup(source, destination, **kwargs):
+        nonlocal fired
+        if attack.startswith("rename-cleanup") and not fired and source == "implementation-plan.html":
+            fired = True
+            fd = kwargs["src_dir_fd"]
+            original_replace(source, "saved-owned.html", src_dir_fd=fd, dst_dir_fd=fd)
+            if attack == "rename-cleanup-bytes":
+                original_replace("saved-owned.html", source, src_dir_fd=fd, dst_dir_fd=fd)
+                changed = original_open(source, os.O_WRONLY | os.O_TRUNC, dir_fd=fd)
+                try:
+                    os.write(changed, b"replacement victim")
+                finally:
+                    os.close(changed)
+            else:
+                original_replace("victim.html", source, src_dir_fd=fd, dst_dir_fd=fd)
+            events.append({"event": "cleanup-rename", "anchored": True})
+        if attack == "cleanup-swap" and source == "implementation-plan.html":
+            directory = Path("artifacts")
+            directory.rename("held-artifacts")
+            directory.symlink_to("outside", target_is_directory=True)
+            try:
+                events.append({"event": "cleanup", "anchored": kwargs.get("src_dir_fd") is not None})
+                return original_rename(source, destination, **kwargs)
+            finally:
+                directory.unlink()
+                Path("held-artifacts").rename(directory)
+        result = original_rename(source, destination, **kwargs)
+        if attack == "after-capture" and source == "implementation-plan.html":
+            fd = kwargs["src_dir_fd"]
+            original_link("victim.html", source, src_dir_fd=fd, dst_dir_fd=fd)
+            events.append({"event": "after-capture", "anchored": True})
+        return result
 
     def unlinked(name, *args, **kwargs):
         if attack == "cleanup-swap" and name == "implementation-plan.html":
             return anchored_boundary(original_unlink, name, args, kwargs)
         return original_unlink(name, *args, **kwargs)
 
+    def synced(fd):
+        result = original_fsync(fd)
+        if attack == "tamper-temp":
+            for path in Path("artifacts").glob(".implementation-plan.html.tmp-*"):
+                observed = path.stat()
+                held = os.fstat(fd)
+                if (held.st_dev, held.st_ino) == (observed.st_dev, observed.st_ino):
+                    os.pwrite(fd, b"tampered", 0)
+                    os.ftruncate(fd, 8)
+                    events.append({"event": "temporary-bytes", "anchored": True})
+        return result
+
+    def linked(source, destination, **kwargs):
+        nonlocal fired
+        if attack.startswith("rollback-link") and not fired and source == "previous":
+            fired = True
+            fd = kwargs["src_dir_fd"]
+            if attack in {"rollback-link-bytes-before", "rollback-link-bytes-after"}:
+                if attack == "rollback-link-bytes-after":
+                    result = original_link(source, destination, **kwargs)
+                changed = original_open(source, os.O_WRONLY | os.O_TRUNC, dir_fd=fd)
+                try:
+                    os.write(changed, b"attacker backup bytes")
+                finally:
+                    os.close(changed)
+                if attack == "rollback-link-bytes-after":
+                    events.append({"event": "rollback-link", "anchored": True})
+                    return result
+            else:
+                original_replace(source, "saved-previous", src_dir_fd=fd, dst_dir_fd=fd)
+            if attack == "rollback-link-symlink":
+                os.symlink("../../outside/implementation-plan.html", source, dir_fd=fd)
+            elif attack not in {"rollback-link-bytes-before", "rollback-link-bytes-after"}:
+                changed = original_open(source, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600, dir_fd=fd)
+                try:
+                    os.write(changed, b"attacker rollback bytes")
+                finally:
+                    os.close(changed)
+            events.append({"event": "rollback-link", "anchored": True})
+        return original_link(source, destination, **kwargs)
+
+    os.link = linked
+    os.fsync = synced
     if attack in {"restore-old", "publish-swap"}:
         os.replace = replace
-    os.open, os.unlink = opened, unlinked
+    if attack.startswith("rename-temp"):
+        os.replace = replaced_basename
+    if attack == "rename-cleanup":
+        os.stat = statted
+    if attack in {"post-replace-failure", "rollback-bytes"} or attack.startswith("rollback-link"):
+        from speckit_pro_runner.helpers import artifact_publication
+        original_binding = artifact_publication.verify_directory_binding
+        binding_calls = 0
+
+        def binding(*args):
+            nonlocal binding_calls
+            binding_calls += 1
+            if binding_calls == 2:
+                if attack == "rollback-bytes":
+                    for backup in Path("artifacts").glob(".artifact-recovery-*/previous"):
+                        backup.write_text("attacker backup bytes")
+                    events.append({"event": "rollback-bytes", "anchored": True})
+                else:
+                    events.append({"event": "post-replace-failure", "anchored": True})
+                raise ValueError("injected final directory validation failure")
+            return original_binding(*args)
+
+        artifact_publication.verify_directory_binding = binding
+    os.open, os.unlink, os.rename = opened, unlinked, rename_cleanup
     sys.argv = sys.argv[:1]
     try:
         runpy.run_module("speckit_pro_runner", run_name="__main__")
@@ -97,6 +247,10 @@ class PublicationFixture(unittest.TestCase):
                               "rendered_html": "<html><body>finished page</body></html>", **inputs}}
         if inputs.get("action") == "cleanup":
             request["inputs"].pop("rendered_html")
+            if self.page.is_file():
+                request["inputs"].setdefault("expected_sha256", hashlib.sha256(self.page.read_bytes()).hexdigest())
+                observed = self.page.stat()
+                request["inputs"].setdefault("expected_file_identity", [observed.st_dev, observed.st_ino])
         completed = subprocess.run(
             [sys.executable, str(Path(__file__)), "--probe", str(ROOT / plugin), attack],
             input=json.dumps(request), text=True, capture_output=True, cwd=self.root, check=False, timeout=15,
@@ -128,35 +282,145 @@ class PublicationRaceTests(PublicationFixture):
                     self.assertEqual(result["status"], "ok", result)
                     self.assertEqual(result["data"]["verified_html"], self.page.read_text())
                     self.assertEqual(result["data"]["outcome"], "generated")
-                    self.assertTrue(all(event["anchored"] for event in json.loads(
-                        (self.root / "probe-events.json").read_text())))
+                    events = json.loads((self.root / "probe-events.json").read_text())
+                    self.assertTrue(events)
+                    self.assertTrue(all(event["anchored"] for event in events))
                     self.assertEqual((self.root / "outside/implementation-plan.html").read_text(), "outside sentinel")
 
-    def test_closed_temporary_tampering_is_rejected(self) -> None:
-        result = self.publish("tamper-temp")
-        self.assertEqual(result["status"], "expected_failure", result)
-        self.assertEqual(self.page.read_text(), "untouched original")
-        self.assertEqual(list(self.page.parent.glob(".*.tmp-*")), [])
+    def test_temporary_basename_rename_fails_closed_without_attacker_final(self) -> None:
+        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            with self.subTest(plugin=plugin):
+                self.page.write_text("untouched original")
+                result = self.publish("rename-temp", plugin)
+                self.assertEqual(result["status"], "expected_failure", result)
+                self.assertEqual(self.page.read_text(), "untouched original")
+                self.assertEqual(json.loads((self.root / "probe-events.json").read_text()),
+                                 [{"event": "temporary-rename", "anchored": True}])
+
+    def test_temporary_link_substitutions_fail_closed_and_preserve_old(self) -> None:
+        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            for attack in ("rename-temp-symlink", "rename-temp-hardlink"):
+                with self.subTest(plugin=plugin, attack=attack):
+                    if self.page.is_symlink():
+                        self.page.unlink()
+                    self.page.write_text("untouched original")
+                    (self.root / "outside/implementation-plan.html").write_text("outside sentinel")
+                    (self.page.parent / "victim.html").write_text("<html><body>finished page</body></html>")
+                    result = self.publish(attack, plugin)
+                    self.assertEqual(result["status"], "expected_failure", result)
+                    self.assertFalse(self.page.is_symlink())
+                    self.assertEqual(self.page.read_text(), "untouched original")
+                    self.assertEqual((self.root / "outside/implementation-plan.html").read_text(), "outside sentinel")
+                    self.assertEqual(json.loads((self.root / "probe-events.json").read_text()),
+                                     [{"event": "temporary-rename", "anchored": True}])
+
+    def test_cleanup_basename_rename_preserves_replacement(self) -> None:
+        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            with self.subTest(plugin=plugin):
+                self.page.write_text("untouched original")
+                (self.page.parent / "victim.html").write_text("replacement victim")
+                result = self.publish("rename-cleanup", plugin, action="cleanup")
+                self.assertEqual(result["status"], "expected_failure", result)
+                self.assertEqual(self.page.read_text(), "replacement victim")
+                self.assertEqual(json.loads((self.root / "probe-events.json").read_text()),
+                                 [{"event": "cleanup-rename", "anchored": True}])
+
+    def test_cleanup_replacement_after_capture_is_preserved_and_reported(self) -> None:
+        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            with self.subTest(plugin=plugin):
+                self.page.write_text("untouched original")
+                (self.page.parent / "victim.html").write_text("replacement victim")
+                result = self.publish("after-capture", plugin, action="cleanup")
+                self.assertEqual(result["status"], "expected_failure", result)
+                self.assertEqual(self.page.read_text(), "replacement victim")
+                self.assertEqual(json.loads((self.root / "probe-events.json").read_text()),
+                                 [{"event": "after-capture", "anchored": True}])
+
+    def test_cleanup_capture_rejects_links_special_files_and_changed_bytes(self) -> None:
+        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            for variant in ("symlink", "hardlink", "fifo", "bytes"):
+                with self.subTest(plugin=plugin, variant=variant):
+                    if self.page.exists() or self.page.is_symlink():
+                        self.page.unlink()
+                    self.page.write_text("untouched original")
+                    victim = self.page.parent / "victim.html"
+                    if victim.exists() or victim.is_symlink():
+                        victim.unlink()
+                    if variant == "symlink":
+                        victim.symlink_to("../outside/implementation-plan.html")
+                    elif variant == "fifo":
+                        os.mkfifo(victim)
+                    elif variant == "hardlink":
+                        os.link(self.page.parent / "old.html", victim)
+                    else:
+                        victim.write_text("replacement victim")
+                    result = self.publish("rename-cleanup-" + variant, plugin, action="cleanup")
+                    self.assertEqual(result["status"], "expected_failure", result)
+                    self.assertTrue(self.page.exists() or self.page.is_symlink())
+                    self.assertEqual((self.root / "outside/implementation-plan.html").read_text(), "outside sentinel")
+                    self.assertEqual(json.loads((self.root / "probe-events.json").read_text()),
+                                     [{"event": "cleanup-rename", "anchored": True}])
+
+    def test_temporary_collision_never_cleans_an_entry_it_did_not_create(self) -> None:
+        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            with self.subTest(plugin=plugin):
+                result = self.publish("temporary-collision", plugin)
+                self.assertEqual(result["status"], "expected_failure", result)
+                self.assertEqual(self.page.read_text(), "untouched original")
+                temporaries = list(self.page.parent.glob(".implementation-plan.html.tmp-*"))
+                self.assertTrue(temporaries)
+                self.assertEqual(len(temporaries), ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro").index(plugin) + 1)
+                self.assertTrue(all(path.read_text() == "foreign collision" for path in temporaries))
+                self.assertEqual(json.loads((self.root / "probe-events.json").read_text()),
+                                 [{"event": "temporary-collision", "anchored": True}])
+
+    def test_captured_entry_rename_is_preserved_without_unlink(self) -> None:
+        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            with self.subTest(plugin=plugin):
+                self.page.write_text("untouched original")
+                result = self.publish("captured-entry", plugin, action="cleanup")
+                self.assertEqual(result["status"], "expected_failure", result)
+                self.assertEqual(self.page.read_text(), "replacement victim")
+                self.assertTrue(any(path.read_text() == "untouched original"
+                                    for path in self.page.parent.glob(".artifact-recovery-*/saved-owned")))
+                self.assertEqual(json.loads((self.root / "probe-events.json").read_text()),
+                                 [{"event": "captured-entry", "anchored": True}])
+
+    def test_open_temporary_tampering_is_rejected(self) -> None:
+        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            with self.subTest(plugin=plugin):
+                result = self.publish("tamper-temp", plugin)
+                self.assertEqual(result["status"], "expected_failure", result)
+                self.assertEqual(self.page.read_text(), "untouched original")
+                self.assertEqual(list(self.page.parent.glob(".*.tmp-*")), [])
+                self.assertEqual(json.loads((self.root / "probe-events.json").read_text()),
+                                 [{"event": "temporary-bytes", "anchored": True}])
 
     def test_cleanup_swap_never_removes_outside_file(self) -> None:
-        result = self.publish("cleanup-swap", action="cleanup")
-        self.assertEqual(result["status"], "ok", result)
-        self.assertFalse(self.page.exists())
-        self.assertEqual((self.root / "outside/implementation-plan.html").read_text(), "outside sentinel")
-        self.assertEqual(json.loads((self.root / "probe-events.json").read_text()),
-                         [{"event": "cleanup", "anchored": True}])
+        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            with self.subTest(plugin=plugin):
+                self.page.write_text("untouched original")
+                result = self.publish("cleanup-swap", plugin, action="cleanup")
+                self.assertEqual(result["status"], "ok", result)
+                self.assertFalse(self.page.exists())
+                self.assertEqual((self.root / "outside/implementation-plan.html").read_text(), "outside sentinel")
+                self.assertEqual(json.loads((self.root / "probe-events.json").read_text()),
+                                 [{"event": "cleanup", "anchored": True}])
 
-    def test_cleanup_removes_only_selected_page_and_owned_temporary_namespace(self) -> None:
-        owned = self.root / ("artifacts/.implementation-plan.html.tmp-42-" + "a" * 32)
-        owned.write_text("interrupted temporary", encoding="utf-8")
-        foreign = self.root / "artifacts/.implementation-plan.html.tmp-foreign"
-        foreign.write_text("foreign temporary", encoding="utf-8")
-        result = self.publish(action="cleanup")
-        self.assertEqual(result["status"], "ok", result)
-        self.assertFalse(self.page.exists())
-        self.assertFalse(owned.exists())
-        self.assertTrue(foreign.exists())
-        self.assertEqual(result["data"]["removed_temporaries"], 1)
+    def test_cleanup_preserves_unreceipted_temporaries(self) -> None:
+        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            with self.subTest(plugin=plugin):
+                self.page.write_text("untouched original")
+                owned = self.root / ("artifacts/.implementation-plan.html.tmp-42-" + "a" * 32)
+                owned.write_text("interrupted temporary")
+                foreign = self.root / "artifacts/.implementation-plan.html.tmp-foreign"
+                foreign.write_text("foreign temporary")
+                result = self.publish(plugin=plugin, action="cleanup")
+                self.assertEqual(result["status"], "ok", result)
+                self.assertFalse(self.page.exists())
+                self.assertTrue(owned.exists())
+                self.assertTrue(foreign.exists())
+                self.assertEqual(result["data"]["removed_temporaries"], 0)
 
 
 class PublicationInputTests(PublicationFixture):
@@ -169,22 +433,123 @@ class PublicationInputTests(PublicationFixture):
                 self.assertEqual(self.publish(**inputs)["status"], "input_error")
         self.assertEqual(self.page.read_text(), "untouched original")
 
+    def test_deselected_page_can_be_removed_only_with_its_receipt(self) -> None:
+        original = self.page
+        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            with self.subTest(plugin=plugin):
+                self.page = original.parent / "module-map.html"
+                (self.root / "plan.md").write_text("## Declared File Operations\n\n- MODIFIED src/existing.py\n")
+                published = self.publish(plugin=plugin, page_id="module-map")
+                self.assertEqual(published["status"], "ok", published)
+                (self.root / "plan.md").write_text("## Declared File Operations\n\n- NEW src/new.py\n")
+                receipt = published["data"]
+                removed = self.publish(plugin=plugin, page_id="module-map", action="cleanup",
+                                       expected_sha256=receipt["sha256"], expected_file_identity=receipt["file_identity"])
+                self.assertEqual(removed["status"], "ok", removed)
+                self.assertTrue(removed["data"]["removed"])
+                self.assertFalse(self.page.exists())
+        self.page = original
+
+    def test_cleanup_requires_a_publication_receipt(self) -> None:
+        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            with self.subTest(plugin=plugin):
+                self.assertEqual(self.publish(plugin=plugin, action="cleanup", expected_sha256=None)["status"], "input_error")
+                self.assertEqual(self.page.read_text(), "untouched original")
+
+    def test_rollback_link_substitution_preserves_old_without_attacker_final(self) -> None:
+        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            with self.subTest(plugin=plugin):
+                self.page.write_text("untouched original")
+                result = self.publish("rollback-link", plugin)
+                self.assertEqual(result["status"], "expected_failure", result)
+                self.assertFalse(self.page.exists())
+                self.assertTrue(any(path.read_text() == "untouched original"
+                                    for path in self.page.parent.glob(".artifact-recovery-*/saved-previous")))
+                self.assertEqual(json.loads((self.root / "probe-events.json").read_text()),
+                                 [{"event": "post-replace-failure", "anchored": True},
+                                  {"event": "rollback-link", "anchored": True}])
+
+    def test_rollback_link_symlink_substitution_is_quarantined(self) -> None:
+        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            with self.subTest(plugin=plugin):
+                if self.page.is_symlink():
+                    self.page.unlink()
+                self.page.write_text("untouched original")
+                result = self.publish("rollback-link-symlink", plugin)
+                self.assertEqual(result["status"], "expected_failure", result)
+                self.assertFalse(self.page.is_symlink())
+                self.assertFalse(self.page.exists())
+                self.assertEqual((self.root / "outside/implementation-plan.html").read_text(), "outside sentinel")
+                self.assertTrue(any(path.read_text() == "untouched original"
+                                    for path in self.page.parent.glob(".artifact-recovery-*/saved-previous")))
+
+    def test_cleanup_receipt_rejects_replacements_and_malformed_identity(self) -> None:
+        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            for identity in (None, [], [True, 0], [-1, 1], ["1", "2"], [0, 0]):
+                with self.subTest(plugin=plugin, identity=identity):
+                    result = self.publish(plugin=plugin, action="cleanup", expected_file_identity=identity)
+                    expected = "expected_failure" if identity == [0, 0] else "input_error"
+                    self.assertEqual(result["status"], expected, result)
+                    self.assertEqual(self.page.read_text(), "untouched original")
+
+    def test_rollback_binds_bytes_through_the_link_boundary(self) -> None:
+        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            for attack in ("rollback-link-bytes-before", "rollback-link-bytes-after"):
+                with self.subTest(plugin=plugin, attack=attack):
+                    self.page.write_text("untouched original")
+                    result = self.publish(attack, plugin)
+                    self.assertEqual(result["status"], "expected_failure", result)
+                    self.assertFalse(self.page.exists())
+                    self.assertTrue(any(path.read_text() == "untouched original"
+                                        for path in self.page.parent.glob(".artifact-recovery-*/previous")))
+                    self.assertEqual(json.loads((self.root / "probe-events.json").read_text()),
+                                     [{"event": "post-replace-failure", "anchored": True},
+                                      {"event": "rollback-link", "anchored": True}])
+
+    def test_rollback_rejects_same_inode_backup_tampering(self) -> None:
+        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            with self.subTest(plugin=plugin):
+                self.page.write_text("untouched original")
+                result = self.publish("rollback-bytes", plugin)
+                self.assertEqual(result["status"], "expected_failure", result)
+                self.assertFalse(self.page.exists())
+                self.assertTrue(any(path.read_text() == "untouched original"
+                                    for path in self.page.parent.glob(".artifact-recovery-*/previous")))
+                self.assertEqual(json.loads((self.root / "probe-events.json").read_text()),
+                                 [{"event": "rollback-bytes", "anchored": True}])
+
+    def test_post_replace_failure_restores_the_previous_page(self) -> None:
+        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            with self.subTest(plugin=plugin):
+                self.page.write_text("untouched original")
+                result = self.publish("post-replace-failure", plugin)
+                self.assertEqual(result["status"], "expected_failure", result)
+                self.assertEqual(self.page.read_text(), "untouched original")
+                self.assertEqual(json.loads((self.root / "probe-events.json").read_text()),
+                                 [{"event": "post-replace-failure", "anchored": True}])
+
     def test_cleanup_with_wrong_digest_preserves_page_and_temporaries(self) -> None:
-        temporary = self.page.parent / (".implementation-plan.html.tmp-42-" + "a" * 32)
-        temporary.write_text("interrupted")
-        result = self.publish(action="cleanup", expected_sha256="0" * 64)
-        self.assertEqual(result["status"], "expected_failure", result)
-        self.assertEqual(self.page.read_text(), "untouched original")
-        self.assertTrue(temporary.exists())
+        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            with self.subTest(plugin=plugin):
+                temporary = self.page.parent / (".implementation-plan.html.tmp-42-" + "a" * 32)
+                temporary.write_text("interrupted")
+                result = self.publish(plugin=plugin, action="cleanup", expected_sha256="0" * 64)
+                self.assertEqual(result["status"], "expected_failure", result)
+                self.assertEqual(self.page.read_text(), "untouched original")
+                self.assertTrue(temporary.exists())
 
     def test_symlink_and_fifo_final_paths_fail_closed(self) -> None:
-        self.page.unlink()
-        self.page.symlink_to(self.root / "outside/implementation-plan.html")
-        self.assertNotEqual(self.publish()["status"], "ok")
-        self.page.unlink()
-        os.mkfifo(self.page)
-        self.assertNotEqual(self.publish()["status"], "ok")
-        self.assertEqual((self.root / "outside/implementation-plan.html").read_text(), "outside sentinel")
+        for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
+            with self.subTest(plugin=plugin):
+                self.page.unlink()
+                self.page.symlink_to(self.root / "outside/implementation-plan.html")
+                self.assertNotEqual(self.publish(plugin=plugin)["status"], "ok")
+                self.page.unlink()
+                os.mkfifo(self.page)
+                self.assertNotEqual(self.publish(plugin=plugin)["status"], "ok")
+                self.page.unlink()
+                self.page.write_text("untouched original")
+                self.assertEqual((self.root / "outside/implementation-plan.html").read_text(), "outside sentinel")
 
     def test_missing_artifact_directory_is_created_by_runner(self) -> None:
         for child in self.page.parent.iterdir():
