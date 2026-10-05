@@ -48,6 +48,24 @@ def load(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def observe(text: str | None) -> tuple[str, list[str], Any]:
+    """Classify the file's text (``None`` when absent) as ``missing``, ``invalid`` or ``present``.
+
+    Returns the status, the violations that made it invalid, and the parsed
+    data when present. An invalid file is never salvaged section by section.
+    """
+    if text is None:
+        return "missing", [], None
+    try:
+        data = json.loads(text)
+    except ValueError as exc:
+        return "invalid", [f"cannot parse JSON: {exc}"], None
+    problems = validate(data)
+    if problems:
+        return "invalid", problems, None
+    return "present", [], data
+
+
 def validate(data: Any) -> list[str]:
     """Return every violation in ``data``; an empty list means valid."""
     problems: list[str] = []

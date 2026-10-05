@@ -95,7 +95,7 @@
         "value": "speckit_pro_runner/cli_probe.py",
         "display": "speckit_pro_runner/cli_probe.py"
       },
-      "sha256": "1b40ff08fdd135fe67bbfa67ad4a4f068bc268e6bfc6637b1adb0561228e084d"
+      "sha256": "a62f181502b915e0ec1cc5ceec334484e0d7086495e86494e41eb94213eb6bcd"
     },
     {
       "path": {
@@ -580,6 +580,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/g0_setup.py",
+        "display": "speckit_pro_runner/helpers/g0_setup.py"
+      },
+      "sha256": "f4ae3f795fe430161ff1e609f46c22e0b9ea959e75f21de9a22d0b15a02e0ba0"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/helpers/gate_preflight_coverage.py",
         "display": "speckit_pro_runner/helpers/gate_preflight_coverage.py"
       },
@@ -647,7 +655,31 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "4c3b3a0890741765bcb6a9f997e8f7c9a4a2bd4586cd959de5d0b7234756ca6d"
+      "sha256": "f9e5949d2d377cb5d9ed26a9b60e2e606916d4565254108362578162b70257b0"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/readiness_host_items.py",
+        "display": "speckit_pro_runner/helpers/readiness_host_items.py"
+      },
+      "sha256": "49b55f02fdbebddc95367f1fe5af69a9e176a1bfb0a81180621434f14ea76308"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/readiness_record.py",
+        "display": "speckit_pro_runner/helpers/readiness_record.py"
+      },
+      "sha256": "3aea9f0ebabbd206c0dd29f0324f83712e837c3179f1f880d0ef9c3de0c208fe"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/readiness_values.py",
+        "display": "speckit_pro_runner/helpers/readiness_values.py"
+      },
+      "sha256": "190fa247a54cbbe9e8346a477bb30844319567685eddbbacde48a17131488051"
     },
     {
       "path": {
@@ -655,7 +687,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "deba289bc909117a95f08a92550a65167bd3a10411d2fbc9719f019c232a337c"
+      "sha256": "f12aea3d408581699df6020cd01db2ee29518f2d634225e83492fd1ec2eaa3fc"
     },
     {
       "path": {
@@ -783,7 +815,7 @@
         "value": "speckit_pro_runner/quality_gates.py",
         "display": "speckit_pro_runner/quality_gates.py"
       },
-      "sha256": "8295d667de2ec12763e2654cd46fb17d53da333c120e49a20ce561557979c927"
+      "sha256": "ef5f9661467a565b0828b4adb9be2454d19218be896e7fc015fe858ec54c19f5"
     },
     {
       "path": {
@@ -791,7 +823,7 @@
         "value": "speckit_pro_runner/research_broker.py",
         "display": "speckit_pro_runner/research_broker.py"
       },
-      "sha256": "c08e9234c67f4abc4f89cec84b021beba34653578a3e3c0c4b6b6bca341fd1c5"
+      "sha256": "8aaa27f863d25d803f4f297bc478c2911cc49c0e9d3cce46336240424a1f1f8b"
     },
     {
       "path": {
@@ -815,7 +847,7 @@
         "value": "speckit_pro_runner/spec_kit_pin.py",
         "display": "speckit_pro_runner/spec_kit_pin.py"
       },
-      "sha256": "68b245d2609e8649f65d04024420a45f08be24e8d9476e02f0c9ede56fad499c"
+      "sha256": "3df68841f2ca55a332f929fad1b2bae5c041ad5ed16379f647ab3a78d2f6cda7"
     },
     {
       "path": {
@@ -903,7 +935,7 @@
         "value": "speckit_pro_runner/verification_docker.py",
         "display": "speckit_pro_runner/verification_docker.py"
       },
-      "sha256": "3d78f47d1b8d83df47c2dc8d4fc9956d6a13af962915ac3a4ca00c7658cf5de2"
+      "sha256": "52971f764f1bcb5f7f3754982c35c6d82ce2da553aa51906bb33379ba4ea1ae6"
     },
     {
       "path": {
@@ -943,7 +975,7 @@
         "value": "speckit_pro_runner/verification_docker_runtime.py",
         "display": "speckit_pro_runner/verification_docker_runtime.py"
       },
-      "sha256": "7d01010d8ac46b19967a380772708ff8b45cbdbffafd2d8883443e01ee9f0edb"
+      "sha256": "ed7ba645f4d03941000472355e41c0c6f5f1587c7272d7ece7a4d11df7495c17"
     },
     {
       "path": {

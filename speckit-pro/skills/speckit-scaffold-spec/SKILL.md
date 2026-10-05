@@ -40,6 +40,7 @@ These examples name the runner's contract; the steps below determine when a chec
 | `resolve-workflow-binding` | `read_only` | `{"workflow_file": "<absolute-workflow-path>"}` |
 | `resolve-scaffold-worktree-placement` | `read_only` | `{"branch_name": "<branch-name>"}` (add `worktree_root_override` only when the user supplied one) |
 | `scaffold-answers` | `read_only` | `{"answers_file": "<answers-file>", "spec_id": "<SPEC-ID>"}` |
+| `write-readiness-record` | `apply` | `{"host": "<host>", "execution_mode": "<mode>", "plugin_revision": "<version>", "observations": [{"item": "<item>", "status": "<status>", "evidence_source": "<one line>", "values": {"probe": "<observed-result>"}}]}` (add `action` and `files` per observation; add `host_version` when reported) |
 
 ## Capability discovery & grounding
 
@@ -239,9 +240,9 @@ carry the blind-spot header. Leave an existing Design Concept unchanged and
 report the replacement answer needed. Unanswered findings remain Open Questions.
 
 Use the prepared environment and skip Step 3.5 bootstrap. Present the quality-gate
-confirmation, formal-methods offer and verification-Docker offer, and record
-their file answers. Carry accepted selections from `verification_gates` into
-the workflow; a selection needing more details ends with the missing key.
+confirmation and record its file answer. Make the formal-methods and
+verification-Docker offers at Step 6.6 with their file answers. Carry accepted
+selections from `verification_gates` into the workflow; a selection needing more details ends with the missing key.
 At Step 9, use `continue_to_planning` for the closing report and print the
 planning command. The operator still starts planning as a separate invocation.
 The interactive instructions below apply when `--answers-file` is absent.
@@ -256,9 +257,10 @@ skill location and verify by filesystem reads that every bundled Claude Code
 `agents/*.md` file is present, including `uat-runbook-author.md`.
 Do not use `install-codex-agents` as a Claude-side repair: Claude Code loads
 plugin agents from the plugin cache, so scaffold cannot safely self-heal a
-missing Claude agent file. If the file inventory is incomplete, STOP and
-tell the user to update/reinstall `speckit-pro`, run `/reload-plugins`, and
-retry.
+missing Claude agent file. If the inventory is incomplete, keep `plugin_payload`
+`unavailable` with the action to update/reinstall `speckit-pro`, run
+`/reload-plugins`, and retry. Carry that gap to Step 6.5 and continue independent
+scaffold steps after a declined or failed repair.
 <!-- /host -->
 <!-- host:codex: Codex installs custom agents with the install-codex-agents helper -->
 ### -0.5 Verify Codex Agent Install
@@ -283,9 +285,10 @@ its user-scope destination when `destination` was omitted. Route-aware verificat
 reuses the selected manifest and optional override instead of static model defaults.
 The plan must show every bundled TOML, including
 `uat-runbook-author.toml`, as current. If any required file is missing or stale,
-STOP, instruct the user to run `$speckit-pro:install`, restart Codex, and then retry
-scaffold. Do not apply the repair inside scaffold because this process cannot
-reload changed custom agents safely.
+keep `plugin_payload` `unavailable` with the action to run `$speckit-pro:install`,
+restart Codex, and retry. Carry that gap to Step 6.5 and continue independent
+scaffold steps after a declined or failed repair. The repair belongs to a new
+session because this process cannot reload changed custom agents safely.
 <!-- /host -->
 
 ### 0. Ensure SpecKit CLI
@@ -1002,6 +1005,110 @@ The prompts should be strong enough that the autopilot can execute without the
 user hand-editing obvious missing context. If a critical detail cannot be
 derived from the roadmap or the design concept, stop and report the gap rather
 than filling it with fiction.
+
+### 6.5 Write the Readiness Record (IN the Worktree)
+
+Record what this run observed, so autopilot reads evidence instead of
+stopping to ask (ADR 0008). From the worktree root, run helper
+`write-readiness-record` with the request fields above. The step is done when
+the response is `ok` with a `record_path`, or a failed write is reported.
+
+<!-- host:claude: Claude names its own host and reads the plugin manifest through the plugin root -->
+Set `host` to `claude`. Set `plugin_revision` to the `plugin_version` in
+`${CLAUDE_PLUGIN_ROOT}/speckit_pro_runner/speckit-pro-runner.manifest.json`.
+<!-- /host -->
+<!-- host:codex: Codex names its own host and reads the plugin manifest relative to this skill -->
+Set `host` to `codex`. Set `plugin_revision` to the `version` in
+`../../.codex-plugin/plugin.json`.
+<!-- /host -->
+Set `execution_mode` to `answers-file` or `interactive`. Send one observation
+per item:
+
+| `item` | Observe it now by |
+| --- | --- |
+| `plugin_payload` | retaining any agent gap from the start of this run; fingerprint the revision and selected installation/routing inputs; verify the session's loaded revision, since disk inventory alone does not prove it; otherwise record `unknown` with a reload/restart action |
+| `project_integration` | reusing the Specify and bootstrap results, then running helper `detect-commands` with empty `inputs={}`; fingerprint the project assets and confirmed command sources |
+| `github_auth` | running one bounded GitHub authentication status check; keep only its pass or fail |
+| `mcp_servers` | running helper `research-broker-preflight` with empty `inputs={}`, then bounded live observations of required MCP tools/startup/auth; configuration alone does not prove connectivity, so record `unknown` when live evidence is absent |
+| `typesafe_jev` | checking whether this session exposes the Jev `evaluate` tool |
+| `reviewability_report` | reusing the setup gate result, with its report or roadmap path in `files` and SPEC-ID as `values.spec_id` |
+| `formal_methods` | judging whether the Design Concept's design suits a formal model, by the [coach's formal-methods guide](../speckit-coach/references/formal-methods-guide.md): `verified` when it suits one, `not_applicable` when it does not; cite the deciding behavior as `evidence_source` |
+
+<!-- host:claude: Claude Code observes its own permission, plugin scope and MCP approval state -->
+Claude Code items. Send only the raw observation (`item`, `evidence_source`, and
+the detail key); the helper derives `status` and `action`, and rejects a
+`status` you send for these.
+
+| `item` | Detail key | Observe it now by |
+| --- | --- | --- |
+| `permission_probe` | `probes`: `{"probe": "runner_request" or "git_status", "outcome": "passed", "denied" or "prompted", "command": "<interpreter>"}` | running the no-op runner request and one `git status --porcelain` exactly as autopilot's run-start probe does; add `command` (the interpreter as the request wrote it) to a failed runner probe |
+| `plugin_scope` | `scope`: `{"scope": "user", "project" or "local", "loaded_version": "<version>", "expected_version": "<version>"}` | reading this worktree's effective scope and loaded `speckit-pro` version with `claude plugin list`; `expected_version` is the `plugin_revision`; omit `loaded_version` when unobservable, so a worktree pinned to an old cache version is caught |
+| `mcp_authentication` | `servers`: `{"server": "<name>", "state": "connected", "needs_authentication", "pending_approval", "failed", "rejected", "disabled" or "unknown"}` | reading each required server's state in `/mcp` or `claude mcp list` |
+
+When the response lists `allow_rules`, print them once as `permissions.allow`
+entries for `.claude/settings.local.json` or the user settings. Never add a
+rule yourself.
+<!-- /host -->
+<!-- host:codex: Codex records the Claude-only items itself and reports its own hook trust -->
+The helper records `permission_probe`, `plugin_scope` and `mcp_authentication`
+as `not_applicable` on Codex (Claude Code only). Do not send them.
+<!-- /host -->
+
+Hook items, on both hosts:
+
+| `item` | Detail key | Observe it now by |
+| --- | --- | --- |
+| `hooks` | `hooks`: `{"hook": "<event name>", "defined": true or false, "trust": "trusted", "untrusted" or "unobservable"}` | listing each hook this plugin requires in `/hooks`; hook discovery alone does not prove it runs, so send `unobservable` when trust cannot be read |
+
+- Record `verified` for a check that passed in this run. Record `unavailable`
+  for a failed check or a declined fix, `unknown` for what this session cannot
+  observe, and `not_applicable` for a capability this workflow does not need.
+- Give every `unavailable` or `unknown` item an `action`: what the user does
+  next.
+- Send `files` as repository-relative paths and `values` as named text; the
+  helper stores digests only. Send `evidence_source` as one plain line.
+  A `verified` item needs an input fingerprint; verified reviewability also
+  needs its report or roadmap file and `spec_id`.
+- The helper observes `local_capability`, `quality_gates` and
+  `verification_docker` (whether a Linux/arm64 Docker daemon answers) itself.
+  Omit `host_version` when the host does not report it.
+- When the response is `input_error`, correct the field its diagnostic names
+  and send the request once more.
+- Print one line per `unavailable` or `unknown` item with its action, then
+  continue. A declined fix, a failed fix, or a failed write leaves scaffold
+  finishing normally.
+
+The record is git-ignored; leave it unstaged.
+
+### 6.6 Offer Formal Methods and Verification Docker (IN the Worktree)
+
+Every SPEC gets both offers, whatever its feasibility result, so the user
+learns each capability exists even when declining (ADR 0005). Read the two
+results from the Step 6.5 response: `data.record.items.formal_methods` and
+`data.record.items.verification_docker`. When the response holds no record,
+show both as `unknown`. The step is done when each offer was shown with its
+result and its answer is printed.
+
+For each feature, print one line: the feature, its `status`, its
+`evidence_source`, and the `action` when present. Then collect one answer per
+feature:
+
+- Answers-file mode: use the file's `formal_methods` and `verification_docker`
+  booleans; ask nothing.
+<!-- host:claude: Claude asks through AskUserQuestion -->
+- Interactive mode: ask both with one `AskUserQuestion`, recommending the
+  decline for a feature whose status is not `verified`.
+<!-- /host -->
+<!-- host:codex: Codex asks through request_user_input, with a foreground chat fallback -->
+- Interactive mode: ask both with one `request_user_input` call, or in free text
+  in an active foreground chat; recommend the decline for a feature whose
+  status is not `verified`.
+<!-- /host -->
+
+Print `accepted` or `declined` beside each feature. An accepted offer
+changes nothing in this run: the opt-in setup
+flow ships in a later release, so scaffold installs nothing and leaves the
+workflow's Formal Methods selection as the Design Concept decided.
 
 ### 7. Commit and Verify (IN the Worktree)
 

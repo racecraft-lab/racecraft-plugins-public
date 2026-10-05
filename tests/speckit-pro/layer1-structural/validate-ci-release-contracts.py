@@ -568,6 +568,7 @@ class ValidatePrChecksSentinel(unittest.TestCase):
             self.assertIn('PIPX_VERSION: "1.15.0"', content)
             self.assertNotIn('SPEC_KIT_VERSION:', content)
             self.assertNotIn('SPEC_KIT_GIT_REF:', content)
+            self.assertNotIn(spec_kit_pin.PINNED_SOURCE, content)
             self.assertIn('from speckit_pro_runner import spec_kit_pin', dispatch_content)
             self.assertIn('f"v{spec_kit_pin.PINNED_VERSION}"', dispatch_content)
             self.assertIn('spec_kit_pin.PINNED_SOURCE', dispatch_content)

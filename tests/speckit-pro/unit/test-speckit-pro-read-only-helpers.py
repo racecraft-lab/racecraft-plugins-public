@@ -61,6 +61,7 @@ from speckit_pro_runner.helpers import registry  # noqa: E402
 from speckit_pro_runner.pr_contract import PACKET_TITLE_SCOPE_PATTERN, PACKET_TITLE_VALUE_PATTERN  # noqa: E402
 
 EXPECTED_HELPERS = [
+    "g0-setup",
     "formal-doctor",
     "scaffold-answers",
     "helper-registry-dispatch",
@@ -107,6 +108,7 @@ EXPECTED_HELPERS = [
 JSON_STDOUT_PARITY_HELPERS = {"atomicity-route"}
 
 HELPER_CASES: dict[str, dict[str, object]] = {
+    "g0-setup": {"probe": "commands", "surface": "codex", "workflow_file": WORKFLOW_FILE},
     "scaffold-answers": {"answers_file": "missing-answers.json", "spec_id": "SPEC-009"},
     "formal-doctor": {"repo_root": ".", "workflow_file": "tests/speckit-pro/unit/fixtures/formal-methods/disabled-workflow.md"},
     "check-prerequisites": {"workflow_file": WORKFLOW_FILE},
@@ -3351,7 +3353,9 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
                     spec_kit = payload["spec_kit"]
                     self.assertEqual(spec_kit["status"], status)
                     self.assertEqual(spec_kit["pinned_version"], "1.1.0")
-                    self.assertEqual(spec_kit["installed_version"], version)
+                    expected_shown = None if executable is None else (
+                        version if status in ("match", "older", "newer") else "unparsed")
+                    self.assertEqual(spec_kit["installed_version"], expected_shown)
                     self.assertEqual(
                         spec_kit["install_argv"],
                         [
@@ -3365,6 +3369,36 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
                             item for item in payload["checks"] if item["check"] == "speckit_cli_version"
                         )
                         self.assertTrue(version_row["pass"], "a version mismatch never stops a run")
+
+    def test_spec_kit_state_never_echoes_raw_cli_output_or_the_home_path(self) -> None:
+        from speckit_pro_runner.helpers.read_only import installed_specify_version, spec_kit_cli_state
+
+        hostile = "9" * 5000 + "\x1b[31m"
+        with patch(
+            "speckit_pro_runner.helpers.read_only.installed_specify_version", return_value=hostile,
+        ):
+            rows, state = spec_kit_cli_state(str(Path.home() / ".local" / "bin" / "specify"))
+        self.assertEqual(state["installed_version"], "unparsed")
+        self.assertEqual(state["status"], "unreadable")
+        detail = rows[0]["detail"]
+        self.assertNotIn(hostile[:20], detail)
+        self.assertNotIn(str(Path.home()), detail)
+        self.assertTrue(detail.startswith("~/.local/bin/specify"))
+        seen = []
+        stdout = "padding " * 1000 + "CLI Version    1.1.0"
+        with patch(
+            "speckit_pro_runner.helpers.read_only.subprocess.run",
+            return_value=SimpleNamespace(stdout=stdout, returncode=0),
+        ), patch("speckit_pro_runner.helpers.read_only.shutil.which", return_value="/fixture/bin/specify"), patch(
+            "speckit_pro_runner.helpers.read_only.trusted_executable", return_value=Path("/fixture/bin/specify"),
+        ), patch(
+            "speckit_pro_runner.helpers.read_only.executable_path", return_value=Path("/fixture/bin/specify"),
+        ), patch(
+            "speckit_pro_runner.helpers.read_only.spec_kit_pin.parse_cli_version",
+            side_effect=lambda text: seen.append(len(text)),
+        ):
+            installed_specify_version("/fixture/bin/specify")
+        self.assertEqual(seen, [4096])
 
     def test_installed_specify_version_reads_the_cli_version_row(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
@@ -3528,6 +3562,26 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
             rows, state = spec_kit_cli_state("/fixture/bin/specify")
         self.assertEqual(state["status"], "unreadable")
         self.assertTrue(all(row["pass"] for row in rows))
+
+    def test_spec_kit_release_version_accepts_only_short_ascii_components(self) -> None:
+        from speckit_pro_runner import spec_kit_pin
+
+        for hostile in ("\u0661.\u0661.\u0660", "\uff11.\uff11.\uff10", "1." + "1" * 3000 + ".0", "1.1.1234567"):
+            with self.subTest(version=hostile[:12]):
+                self.assertIsNone(spec_kit_pin.release_version(hostile))
+                self.assertEqual(spec_kit_pin.version_status(hostile, cli_found=True), "unreadable")
+        self.assertEqual(spec_kit_pin.release_version("1.1.0"), "1.1.0")
+        self.assertEqual(spec_kit_pin.release_version("123456.0.1"), "123456.0.1")
+
+    def test_cli_path_detail_never_shows_another_users_path(self) -> None:
+        from speckit_pro_runner.helpers.read_only import _home_relative
+
+        home = Path.home()
+        self.assertEqual(_home_relative(str(home / ".local" / "bin" / "specify")), "~/.local/bin/specify")
+        other_home = Path(Path.home().anchor) / "elsewhere" / "other-person" / "bin" / "specify"
+        self.assertEqual(_home_relative(str(other_home)), "specify")
+        self.assertEqual(_home_relative("specify"), "specify")
+        self.assertEqual(_home_relative(str(home / ".." / "other-person" / "bin" / "specify")), "specify")
 
     def test_spec_kit_version_ordering_compares_numeric_components(self) -> None:
         from speckit_pro_runner import spec_kit_pin
@@ -4511,7 +4565,7 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
 
     def test_helper_python_authoritative_records(self) -> None:
         for helper_id in self.filtered_helpers():
-            if helper_id in {"helper-registry-dispatch", "scaffold-answers"}:
+            if helper_id in {"helper-registry-dispatch", "scaffold-answers", "g0-setup"}:
                 continue
             with self.subTest(helper_id=helper_id):
                 completed, response, stderr_records = run_runner(helper_request(helper_id, HELPER_CASES[helper_id]))
@@ -4794,6 +4848,113 @@ class PlanLayersPlannerCaseTests(unittest.TestCase):
                 self.assertEqual(found, expected)
 
 
+class G0SetupTests(unittest.TestCase):
+    @staticmethod
+    def fixture_files(root: Path) -> dict[str, bytes]:
+        return {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}
+
+    @staticmethod
+    def prepare_fixture(root: Path, quality_text: str | None) -> None:
+        subprocess.run(["git", "init", "-q", "-b", "test-g0", str(root)], check=True)
+        for name in ("speckit-specify", "speckit-plan", "speckit-tasks", "speckit-implement"):
+            skill = root / ".agents" / "skills" / name / "SKILL.md"
+            skill.parent.mkdir(parents=True)
+            skill.write_text("fixture", encoding="utf-8")
+        constitution = root / ".specify" / "memory" / "constitution.md"
+        constitution.parent.mkdir()
+        constitution.write_text("fixture", encoding="utf-8")
+        (root / "workflow.md").write_text("fixture", encoding="utf-8")
+        if quality_text is not None:
+            (root / ".specify" / "quality-gates.json").write_text(quality_text, encoding="utf-8")
+
+    def test_g0_setup_matches_golden_outcomes(self) -> None:
+        from speckit_pro_runner.helpers.g0_setup import g0_setup
+
+        manifest = json.loads((FIXTURE_DIR / "fixture-manifest.json").read_text(encoding="utf-8"))
+        cases = next(row["golden_outcomes"] for row in manifest["helpers"] if row["helper_id"] == "g0-setup")
+        for case in cases:
+            for surface in ("claude", "codex"):
+                with self.subTest(case=case["name"], surface=surface), helper_project() as root:
+                    self.prepare_fixture(root, case["quality_text"])
+                    before = self.fixture_files(root)
+                    for probe in ("prerequisites", "commands", "presets"):
+                        with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value=case["specify"]), \
+                                patch("speckit_pro_runner.helpers.read_only.installed_specify_version", return_value=None):
+                            actual = g0_setup({"surface": surface, "probe": probe, "workflow_file": "workflow.md"}, root)
+                        actual = json.loads(json.dumps(actual).replace(str(PLUGIN_ROOT), "<plugin-root>"))
+                        self.assertEqual(case["probes"][probe], actual["result"])
+                        if probe == "commands":
+                            self.assertEqual(case["quality_gate"][surface], actual["quality_gate"])
+                    after = self.fixture_files(root)
+                    self.assertEqual(before, after, "G0 setup probes must not write")
+
+    def test_g0_setup_runner_rejects_invalid_requests_and_routes_both_hosts(self) -> None:
+        base = {"probe": "commands", "surface": "codex", "workflow_file": WORKFLOW_FILE}
+        for inputs in ({}, {**base, "probe": "unknown"}, {**base, "surface": "unknown"},
+                       {**base, "extra": True}, {**base, "workflow_file": "../outside.md"}):
+            with self.subTest(inputs=inputs):
+                completed, report, _ = run_runner(helper_request("g0-setup", inputs))
+                self.assertEqual(2, completed.returncode)
+                self.assertEqual("input_error", report["status"])
+        for surface in ("claude", "codex"):
+            completed, report, _ = run_runner(helper_request("g0-setup", {**base, "surface": surface}))
+            self.assertEqual(0, completed.returncode)
+            self.assertEqual("commands", report["data"]["probe"])
+            view = host_skill_root(surface) / "speckit-autopilot"
+            skill = (view / "SKILL.md").read_text(encoding="utf-8")
+            prereqs = (view / "references" / "prerequisites.md").read_text(encoding="utf-8")
+            self.assertIn(f"to `{surface}`", skill)
+            self.assertEqual(3, prereqs.count('"helper_id":"g0-setup"'))
+            self.assertIn("data.quality_gate", prereqs)
+            self.assertNotIn("G0 blocked:", prereqs)
+
+
+class G0PinTests(unittest.TestCase):
+    def test_g0_setup_preserves_advisory_version_statuses(self) -> None:
+        from speckit_pro_runner.helpers.g0_setup import g0_setup
+
+        cases = (("1.1.0", "match"), ("1.0.0", "older"), ("1.10.0", "newer"),
+                 (None, "unreadable"), (None, "missing"))
+        for surface in ("claude", "codex"):
+            for version, status in cases:
+                with self.subTest(surface=surface, status=status), helper_project() as root:
+                    G0SetupTests.prepare_fixture(root, None)
+                    found = status != "missing"
+                    with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value="specify" if found else None), \
+                            patch("speckit_pro_runner.helpers.read_only.installed_specify_version", return_value=version):
+                        data = g0_setup({"surface": surface, "probe": "prerequisites", "workflow_file": "workflow.md"}, root)
+                    result = data["result"]
+                    report = result["stdout_json"]
+                    self.assertEqual(status, report["spec_kit"]["status"])
+                    self.assertEqual(version or ("unparsed" if found else None), report["spec_kit"]["installed_version"])
+                    self.assertEqual(found, report["all_pass"])
+                    self.assertEqual(0 if found else 1, result["exit_code"])
+                    if found:
+                        row = next(row for row in report["checks"] if row["check"] == "speckit_cli_version")
+                        self.assertTrue(row["pass"], "G0 must preserve advisory version checks")
+
+
+class G0SetupFailureTests(unittest.TestCase):
+    def test_g0_setup_failed_probe_keeps_standalone_status_and_diagnostic(self) -> None:
+        from types import SimpleNamespace
+        from speckit_pro_runner.helpers.g0_setup import run_g0_setup_helper
+
+        with helper_project() as root:
+            G0SetupTests.prepare_fixture(root, None)
+            inputs = {"probe": "prerequisites", "surface": "claude", "workflow_file": "workflow.md"}
+            request = SimpleNamespace(request_id="g0", inputs=inputs)
+            previous = Path.cwd()
+            os.chdir(root)
+            try:
+                with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value=None):
+                    report = run_g0_setup_helper(None, request)
+            finally:
+                os.chdir(previous)
+        self.assertEqual("expected_failure", report["status"], report)
+        self.assertEqual(["validation_failure"], [row["code"] for row in report["diagnostics"]])
+        self.assertEqual("check-prerequisites", report["diagnostics"][0]["details"]["helper_id"])
+
+
 class ScaffoldAnswersTests(unittest.TestCase):
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()
@@ -4853,7 +5014,7 @@ class ScaffoldAnswersTests(unittest.TestCase):
 def receipt():
     return {
         "schema_version": "canary-receipt/v2", "commit": "a" * 40, "host": "codex",
-        "host_version": "0.1.0", "plugin_version": "1.0.0", "fixture_tag": "v1",
+        "host_version": "0.1.0", "plugin_version": "1.0.0", "fixture_tag": "fixture-v5",
         "trigger": "local", "dirty_tree": True, "release_status_allowed": False,
         "install_probe": {"headless_install": "passed", "skill_expansion": "passed", "evidence": "probe.json"},
         "variants": [{
@@ -4862,9 +5023,26 @@ def receipt():
             "unregistered_stops": 0, "planning_end": "artifacts_and_draft_pr",
             "implement_end": "ready_for_uat", "uat_runbook": "uat.md",
             "decisions_by_kind": {"design": 2}, "retry_attempts": 0, "blocked_for_uat": 0,
-            "stages": {name: {"wall_seconds": 1, "tokens": 10} for name in ("scaffold", "plan", "plan_review", "implement")},
+            "feature_offers": {feature: {"evaluated": True, "offered": True, "answer": "declined"}
+                               for feature in ("formal_methods", "verification_docker")},
+            "plan_target": {"wall_seconds_limit": 1800, "tokens_limit": 15000000, "target_met": True},
+            "plan_quality": {
+                "phases_run": ["specify", "clarify", "plan", "checklist", "tasks", "analyze"], "clarify_sessions": 1,
+                "requirements_total": 4, "untraced_requirements": [], "open_gaps": [], "open_findings": [],
+                "open_clarifications": [], "blocked_for_uat_listed": [],
+                "planted_catches": {"catch-1": "fixed", "catch-2": "fixed"},
+                "decisions": {"total": 5, "low_confidence": 1, "consensus_rounds_by_kind": {"security": 1, "low_confidence": 1}},
+            },
+            "stages": {name: {"wall_seconds": 1, "tokens": 10, "codex_tokens": {"root_tokens": 10, "child_rollout_tokens": []}} for name in ("scaffold", "plan", "plan_review", "implement")},
         }],
     }
+
+
+def hook_counters():
+    phases = {"after_specify": 1, "after_plan": 1, "after_tasks": 1}
+    return {"schema_version": "hook-counters/v1", "hooks": {
+        kind: {"command": f"speckit.canary.{kind}", "optional": kind == "optional", "fires": 3,
+               "phases": dict(phases), "unattributed_fires": 0} for kind in ("mandatory", "optional")}}
 
 
 class CanaryReceiptTests(unittest.TestCase):
@@ -4878,6 +5056,17 @@ class CanaryReceiptTests(unittest.TestCase):
             if host == "claude-code":
                 value["install_probe"] = {"loaded_plugins": ["speckit-pro@1.0.0"], "evidence": "init.json"}
             self.assertEqual([], self.validator.validate_receipt(value))
+
+    def test_base_receipt_without_plan_target_fails_schema_validation(self):
+        for host in ("claude-code", "codex"):
+            value = receipt()
+            value["host"] = host
+            if host == "claude-code":
+                value["install_probe"] = {"loaded_plugins": ["speckit-pro@1.0.0"], "evidence": "init.json"}
+            del value["variants"][0]["plan_target"]
+            with self.subTest(host=host):
+                failures = self.validator.json_schema_failures(value, self.validator.SCHEMA, self.validator.SCHEMA, "receipt")
+                self.assertTrue(any("plan_target" in failure["message"] for failure in failures), failures)
 
     def test_rejects_questions_nonterminal_plan_missing_runbook_and_unregistered_stop(self):
         for key, bad in (("questions_after_scaffold", 1), ("planning_end", "paused"),
@@ -4941,6 +5130,9 @@ class CanaryVariantCase(unittest.TestCase):
             }},
         }
 
+    def catches(self, value):
+        return value["variants"][0]["plan_quality"]["planted_catches"]
+
     def assert_variant_mutations(self, name, mutations):
         for host, value in self.receipts.items():
             variant = value["variants"][0]
@@ -4955,6 +5147,24 @@ class CanaryVariantCase(unittest.TestCase):
                     (target[parent[0]] if parent else target)[key] = bad
                 with self.subTest(host=host, changes=changes):
                     self.assertEqual([f"{name}.{assertion}"], self.validator.validate_receipt(mutated))
+
+
+class CanaryFeatureOfferTests(CanaryVariantCase):
+    def test_base_requires_both_features_evaluated_offered_and_declined(self):
+        for feature in ("formal_methods", "verification_docker"):
+            for key, bad in (("evaluated", False), ("offered", False), ("answer", "accepted")):
+                with self.subTest(feature=feature, key=key):
+                    value = receipt()
+                    value["variants"][0]["feature_offers"][feature][key] = bad
+                    self.assertEqual(["base.feature_offers"], self.validator.validate_receipt(value))
+        for broken in ({}, {"formal_methods": receipt()["variants"][0]["feature_offers"]["formal_methods"]}):
+            with self.subTest(offers=sorted(broken)):
+                value = receipt()
+                value["variants"][0]["feature_offers"] = broken
+                self.assertTrue(self.validator.validate_receipt(value))
+        value = receipt()
+        del value["variants"][0]["feature_offers"]
+        self.assertTrue(self.validator.validate_receipt(value))
 
 
 class CanaryVariantAssertionsTests(CanaryVariantCase):
@@ -5023,11 +5233,12 @@ class CanaryGateVerdictTests(CanaryVariantCase):
                 release = copy.deepcopy(value)
                 release.update(trigger=trigger, dirty_tree=False, release_status_allowed=True)
                 with self.subTest(host=host, trigger=trigger, index=index, duplicate=duplicate):
-                    self.assertEqual([], self.validator.validate_receipt(release))
+                    self.assertEqual([], self.validator.validate_receipt(release, hook_counters=hook_counters()))
                     removed = release["variants"].pop(index)
                     if duplicate:
                         release["variants"].extend([removed, copy.deepcopy(removed)])
-                    self.assertIn("release.variants", self.validator.validate_receipt(release))
+                    failure = "receipt.variant_entry_limit: 6" if duplicate else "release.variants"
+                    self.assertIn(failure, self.validator.validate_receipt(release, hook_counters=hook_counters()))
 
 
 class CanaryGuardGapContractTests(CanaryVariantCase):
@@ -5051,7 +5262,7 @@ class CanaryGuardGapContractTests(CanaryVariantCase):
                          for bad in (None, "unknown")]
             malformed.extend((f"question_guard.{key}", bad) for key in ("guarded_work_completed", "guarded_work_passed")
                              for bad in (-1, True, 0.5))
-            mutations.extend((path, bad, f"receipt.variants[0].{path}: ") for path, bad in malformed)
+            mutations.extend((path, bad, "receipt.schema: ") for path, bad in malformed)
             for path, bad, expected in mutations:
                 mutated = copy.deepcopy(value)
                 *parent, key = path.split(".")
@@ -5084,26 +5295,22 @@ class CanaryVariantContractTests(CanaryVariantCase):
                 variant = value["variants"][0]
                 variant.update(name=name, **copy.deepcopy(self.variant_evidence[name]))
                 nested = name in self.variant_evidence[name]
-                evidence, prefix = (variant[name], f"receipt.variants[0].{name}") if nested else (variant, "receipt.variants[0]")
+                evidence = variant[name] if nested else variant
                 fields = tuple(evidence) if nested else tuple(self.variant_evidence[name])
                 for key in fields:
-                    field = f"{prefix}.{key}"
                     previous = evidence.pop(key)
                     with self.subTest(host=host, name=name, missing=key):
-                        self.assertEqual([f"{field}: Required schema field is missing: {field}."],
-                                         self.validator.validate_receipt(value))
+                        self.assertEqual(["receipt.schema: 1"], self.validator.validate_receipt(value))
                     evidence[key] = "unknown"
                     with self.subTest(host=host, name=name, malformed=key):
                         failures = self.validator.validate_receipt(value)
                         self.assertEqual(1, len(failures), failures)
-                        self.assertTrue(failures[0].startswith(f"{field}: "), failures)
+                        self.assertTrue(failures[0].startswith("receipt.schema: "), failures)
                     evidence[key] = previous
                 if nested:
                     del variant[name]
-                    field = f"receipt.variants[0].{name}"
                     with self.subTest(host=host, name=name, missing="object"):
-                        self.assertEqual([f"{field}: Required schema field is missing: {field}."],
-                                         self.validator.validate_receipt(value))
+                        self.assertEqual(["receipt.schema: 1"], self.validator.validate_receipt(value))
 
     def test_all_five_variants_keep_missing_guard_red_through_api_and_cli(self):
         for host, value in self.receipts.items():
@@ -5121,6 +5328,132 @@ class CanaryVariantContractTests(CanaryVariantCase):
                 report = json.loads(completed.stdout)
                 self.assertEqual((1, False, ["missing_question_guard.question_guard"]),
                                  (completed.returncode, report["valid"], report["failed_assertions"]))
+
+
+class CanaryPlanTargetTests(CanaryVariantCase):
+    def test_over_target_reports_false_without_failing_the_gate_for_either_host(self):
+        for host, value in self.receipts.items():
+            variant = value["variants"][0]
+            for metric, actual in (("wall_seconds", 1801), ("tokens", 15000001)):
+                with self.subTest(host=host, metric=metric):
+                    variant["stages"]["plan"].update(wall_seconds=1, tokens=10)
+                    variant["stages"]["plan"][metric] = actual
+                    variant["stages"]["plan"]["codex_tokens"]["root_tokens"] = variant["stages"]["plan"]["tokens"]
+                    variant["plan_target"]["target_met"] = False
+                    report = self.validator.receipt_report(value)
+                    self.assertTrue(report["valid"], report)
+                    result = report["variants"][0]
+                    self.assertEqual("pass", result["gate_verdict"])
+                    self.assertFalse(result["plan_target"]["target_met"])
+                    self.assertEqual(actual, result["plan_target"][metric])
+
+
+    def test_target_boundaries_and_claims_are_checked_independently_of_budget(self):
+        for host, value in self.receipts.items():
+            variant = value["variants"][0]
+            plan = variant["stages"]["plan"]
+            plan.update(wall_seconds=1800, tokens=15000000,
+                        codex_tokens={"root_tokens": 15000000, "child_rollout_tokens": []})
+            with self.subTest(host=host):
+                report = self.validator.receipt_report(value)
+                self.assertTrue(report["valid"], report)
+                self.assertTrue(report["variants"][0]["plan_target"]["target_met"])
+                variant["plan_target"]["target_met"] = False
+                self.assertIn("base.plan_target", self.validator.validate_receipt(value))
+                plan["wall_seconds"] = 1801
+                self.assertEqual([], self.validator.validate_receipt(value))
+                variant["plan_target"]["target_met"] = True
+                self.assertIn("base.plan_target", self.validator.validate_receipt(value))
+
+    def test_cli_reports_an_over_target_receipt_as_valid_for_both_hosts(self):
+        for host, value in self.receipts.items():
+            value["variants"][0]["stages"]["plan"]["wall_seconds"] = 1801
+            value["variants"][0]["plan_target"]["target_met"] = False
+            with self.subTest(host=host), tempfile.TemporaryDirectory() as directory:
+                source = Path(directory) / "receipt.json"
+                source.write_text(json.dumps(value), encoding="utf-8")
+                completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
+                                           capture_output=True, text=True, check=False)
+                report = json.loads(completed.stdout)
+                self.assertEqual(0, completed.returncode, report)
+                self.assertEqual("pass", report["variants"][0]["gate_verdict"])
+                self.assertFalse(report["variants"][0]["plan_target"]["target_met"])
+
+
+class CanaryPlanTargetContractTests(CanaryVariantCase):
+    def test_target_fields_fail_closed_when_missing_malformed_or_changed(self):
+        for host, original in self.receipts.items():
+            for field, bad in (("wall_seconds_limit", 1801), ("tokens_limit", 15000001),
+                               ("target_met", "false"), ("unexpected", True)):
+                value = copy.deepcopy(original)
+                value["variants"][0]["plan_target"][field] = bad
+                with self.subTest(host=host, field=field):
+                    self.assertTrue(self.validator.validate_receipt(value))
+            for field in ("wall_seconds_limit", "tokens_limit", "target_met"):
+                value = copy.deepcopy(original)
+                del value["variants"][0]["plan_target"][field]
+                with self.subTest(host=host, missing=field):
+                    self.assertTrue(self.validator.validate_receipt(value))
+
+    def test_only_the_base_variant_reports_the_target(self):
+        for host, value in self.receipts.items():
+            variant = value["variants"][0]
+            variant.update(name="oversized_plan", **self.variant_evidence["oversized_plan"])
+            del variant["plan_target"]
+            with self.subTest(host=host):
+                report = self.validator.receipt_report(value)
+                self.assertTrue(report["valid"], report)
+                self.assertNotIn("plan_target", report["variants"][0])
+
+
+class CanaryCodexTokenTests(CanaryVariantCase):
+    def test_child_rollouts_are_included_in_the_plan_total_and_target(self):
+        value = self.receipts["codex"]
+        plan = value["variants"][0]["stages"]["plan"]
+        plan.update(tokens=16000000, codex_tokens={"root_tokens": 9000000, "child_rollout_tokens": [4000000, 3000000]})
+        value["variants"][0]["plan_target"]["target_met"] = False
+        report = self.validator.receipt_report(value)
+        self.assertTrue(report["valid"], report)
+        target = report["variants"][0]["plan_target"]
+        self.assertEqual(16000000, target["tokens"])
+        self.assertFalse(target["target_met"])
+        plan["tokens"] = 9000000
+        value["variants"][0]["plan_target"]["target_met"] = True
+        self.assertIn("base.plan.tokens_sum", self.validator.validate_receipt(value))
+
+
+    def test_each_codex_stage_checks_its_sum_and_allows_equal_child_counts(self):
+        for name in ("scaffold", "plan", "plan_review", "implement"):
+            value = self.receipts["codex"]
+            stage = value["variants"][0]["stages"][name]
+            stage.update(tokens=27, codex_tokens={"root_tokens": 7, "child_rollout_tokens": [10, 10]})
+            with self.subTest(stage=name):
+                self.assertEqual([], self.validator.validate_receipt(value))
+                stage["tokens"] = 7
+                self.assertIn(f"base.{name}.tokens_sum", self.validator.validate_receipt(value))
+                stage["tokens"] = 27
+
+    def test_codex_breakdown_fails_closed_when_missing_or_malformed(self):
+        for name in ("scaffold", "plan", "plan_review", "implement"):
+            for bad in (None, {}, {"root_tokens": 10}, {"root_tokens": True, "child_rollout_tokens": []},
+                        {"root_tokens": 10, "child_rollout_tokens": [-1]},
+                        {"root_tokens": 10, "child_rollout_tokens": [1.5]}):
+                value = copy.deepcopy(self.receipts["codex"])
+                stage = value["variants"][0]["stages"][name]
+                if bad is None:
+                    del stage["codex_tokens"]
+                else:
+                    stage["codex_tokens"] = bad
+                with self.subTest(stage=name, bad=bad):
+                    self.assertTrue(self.validator.validate_receipt(value))
+
+    def test_claude_uses_its_stage_total_without_a_codex_breakdown(self):
+        value = self.receipts["claude-code"]
+        for stage in value["variants"][0]["stages"].values():
+            del stage["codex_tokens"]
+        report = self.validator.receipt_report(value)
+        self.assertTrue(report["valid"], report)
+        self.assertEqual(10, report["variants"][0]["plan_target"]["tokens"])
 
 
 class CanaryBudgetCase(unittest.TestCase):
@@ -5142,8 +5475,9 @@ class CanaryBudgetTests(CanaryBudgetCase):
         for key, actual in (("wall_seconds", 6), ("tokens", 101)):
             value = receipt()
             value["variants"][0]["stages"]["plan"][key] = actual
+            value["variants"][0]["stages"]["plan"]["codex_tokens"]["root_tokens"] = value["variants"][0]["stages"]["plan"]["tokens"]
             self.assertEqual([f"base.plan.{key}_budget"], self.validator.validate_receipt(value, self.budget(5, 100)), key)
-        value["variants"][0]["stages"]["plan"].update(wall_seconds=5, tokens=100)
+        value["variants"][0]["stages"]["plan"].update(wall_seconds=5, tokens=100, codex_tokens={"root_tokens": 100, "child_rollout_tokens": []})
         self.assertEqual([], self.validator.validate_receipt(value, self.budget(5, 100)), "a stage at its limit is within budget")
 
     def test_an_overrun_belongs_only_to_the_variant_entry_that_ran_over(self):
@@ -5157,6 +5491,8 @@ class CanaryBudgetTests(CanaryBudgetCase):
     def test_an_unset_limit_reports_unbudgeted_and_never_a_pass(self):
         value = receipt()
         value["variants"][0]["stages"]["plan"]["tokens"] = 10**9
+        value["variants"][0]["plan_target"]["target_met"] = False
+        value["variants"][0]["stages"]["plan"]["codex_tokens"]["root_tokens"] = 10**9
         unset = self.budget(5, None)
         report = self.validator.receipt_report(value, unset)
         self.assertEqual((True, []), (report["valid"], report["failed_assertions"]))
@@ -5173,7 +5509,7 @@ class CanaryBudgetTests(CanaryBudgetCase):
 
     def test_plan_review_is_recorded_but_never_budgeted(self):
         value = receipt()
-        value["variants"][0]["stages"]["plan_review"].update(wall_seconds=10**6, tokens=10**9)
+        value["variants"][0]["stages"]["plan_review"].update(wall_seconds=10**6, tokens=10**9, codex_tokens={"root_tokens": 10**9, "child_rollout_tokens": []})
         self.assertEqual([], self.validator.validate_receipt(value, self.budget(5, 100)))
 
 
@@ -5225,6 +5561,359 @@ class CanaryBudgetFileTests(CanaryBudgetCase):
         self.assertEqual([], shipped)
 
 
+class CanaryPlanQualityTests(CanaryVariantCase):
+    """ADR 0023 artifact checks and ADR 0021's six planning phases, for both hosts."""
+
+    def quality(self, value):
+        return value["variants"][0]["plan_quality"]
+
+    def test_each_open_planning_item_fails_the_receipt(self):
+        for host, value in self.receipts.items():
+            for field, label in (("untraced_requirements", "untraced_requirements"), ("open_gaps", "open_gap"),
+                                 ("open_findings", "open_finding"), ("open_clarifications", "open_clarification")):
+                mutated = copy.deepcopy(value)
+                self.quality(mutated)[field] = ["item-1"]
+                with self.subTest(host=host, field=field):
+                    self.assertEqual([f"base.plan_quality.{label}"], self.validator.validate_receipt(mutated))
+
+    def test_a_blocked_and_listed_item_passes_but_an_unlisted_one_fails(self):
+        for host, value in self.receipts.items():
+            for field, item_id in (("open_gaps", "checklists/requirements.md:L12"),
+                                   ("open_findings", "F001"), ("open_clarifications", "spec.md:L24")):
+                mutated = copy.deepcopy(value)
+                quality = self.quality(mutated)
+                quality[field] = [item_id]
+                quality["blocked_for_uat_listed"] = [item_id]
+                mutated["variants"][0]["blocked_for_uat"] = 1
+                with self.subTest(host=host, field=field, listed=True):
+                    self.assertEqual([], self.validator.validate_receipt(mutated))
+                mutated["variants"][0]["blocked_for_uat"] = 0
+                with self.subTest(host=host, field=field, listed="not counted"):
+                    self.assertEqual(["base.plan_quality.blocked_for_uat_listed"], self.validator.validate_receipt(mutated))
+                mutated["variants"][0]["blocked_for_uat"] = 1
+                quality["blocked_for_uat_listed"] = ["T001"]
+                with self.subTest(host=host, field=field, listed=False):
+                    self.assertEqual(1, len(self.validator.validate_receipt(mutated)))
+
+    def test_every_planning_phase_must_have_run(self):
+        for host, value in self.receipts.items():
+            for phase in self.quality(value)["phases_run"]:
+                mutated = copy.deepcopy(value)
+                self.quality(mutated)["phases_run"].remove(phase)
+                with self.subTest(host=host, missing=phase):
+                    self.assertEqual(["base.plan_quality.phases_run"], self.validator.validate_receipt(mutated))
+
+    def test_a_variant_that_never_reached_specify_fails(self):
+        for host, value in self.receipts.items():
+            mutated = copy.deepcopy(value)
+            quality = self.quality(mutated)
+            quality["phases_run"] = []
+            with self.subTest(host=host, requirements=quality["requirements_total"]):
+                self.assertEqual(["base.plan_quality.phases_run"], self.validator.validate_receipt(mutated))
+            quality["requirements_total"] = 0
+            with self.subTest(host=host, requirements=0):
+                failures = self.validator.validate_receipt(mutated)
+                self.assertEqual(["receipt.schema: 1"], failures)
+
+    def test_the_clarify_session_count_and_decisions_are_required_evidence(self):
+        for host, value in self.receipts.items():
+            for field, bad in (("clarify_sessions", None), ("clarify_sessions", -1), ("decisions", None),
+                               ("requirements_total", 0)):
+                mutated = copy.deepcopy(value)
+                if bad is None:
+                    del self.quality(mutated)[field]
+                else:
+                    self.quality(mutated)[field] = bad
+                with self.subTest(host=host, field=field, bad=bad):
+                    failures = self.validator.validate_receipt(mutated)
+                    self.assertEqual(["receipt.schema: 1"], failures)
+
+    def test_plan_quality_is_required_on_every_variant(self):
+        for host, value in self.receipts.items():
+            mutated = copy.deepcopy(value)
+            del mutated["variants"][0]["plan_quality"]
+            with self.subTest(host=host):
+                self.assertTrue(self.validator.validate_receipt(mutated))
+
+
+class CanaryHookCounterTests(CanaryVariantCase):
+    """ADR 0023: each registered hook fires exactly once per phase."""
+
+    def test_one_fire_per_hook_per_phase_passes_for_both_hosts(self):
+        for host, value in self.receipts.items():
+            with self.subTest(host=host):
+                self.assertEqual([], self.validator.validate_receipt(value, hook_counters=hook_counters()))
+
+    def test_a_hook_fired_twice_or_never_fails_the_receipt(self):
+        for host, value in self.receipts.items():
+            for kind in ("mandatory", "optional"):
+                for event, fires in (("after_specify", 2), ("after_plan", 0), ("after_tasks", 2)):
+                    counters = hook_counters()
+                    counters["hooks"][kind]["phases"][event] = fires
+                    counters["hooks"][kind]["fires"] = sum(counters["hooks"][kind]["phases"].values())
+                    with self.subTest(host=host, kind=kind, event=event, fires=fires):
+                        self.assertEqual([f"hook_counters.{kind}.{event}"],
+                                         self.validator.validate_receipt(value, hook_counters=counters))
+
+    def test_unattributed_fires_fail_the_receipt(self):
+        counters = hook_counters()
+        counters["hooks"]["optional"]["unattributed_fires"] = 1
+        counters["hooks"]["optional"]["fires"] = 4
+        self.assertEqual(["hook_counters.optional.unattributed_fires"],
+                         self.validator.validate_receipt(self.receipts["codex"], hook_counters=counters))
+
+    def test_inconsistent_totals_or_a_swapped_optional_flag_fail_the_receipt(self):
+        for field, bad in (("fires", 0), ("optional", True)):
+            counters = hook_counters()
+            counters["hooks"]["mandatory"][field] = bad
+            self.assertEqual([f"hook_counters.mandatory.{field}"],
+                             self.validator.validate_receipt(self.receipts["codex"], hook_counters=counters))
+
+    def test_malformed_counters_fail_closed(self):
+        for host, value in self.receipts.items():
+            with self.subTest(host=host, counters=None):
+                self.assertTrue(self.validator.validate_receipt(value, hook_counters=None))
+        for mutate in (lambda c: c["hooks"].pop("optional"), lambda c: c.update(schema_version="other"),
+                       lambda c: c["hooks"]["mandatory"]["phases"].pop("after_tasks")):
+            counters = hook_counters()
+            mutate(counters)
+            failures = self.validator.validate_receipt(self.receipts["codex"], hook_counters=counters)
+            self.assertTrue(failures and failures[0].startswith("hook_counters"), failures)
+
+    def test_a_release_receipt_without_counters_fails_but_a_local_one_does_not(self):
+        value = self.receipts["codex"]
+        self.assertEqual([], self.validator.validate_receipt(value))
+        value.update(trigger="scheduled", dirty_tree=False, release_status_allowed=True)
+        self.assertIn("hook_counters.missing", self.validator.validate_receipt(value))
+        self.assertNotIn("hook_counters.missing", self.validator.validate_receipt(value, hook_counters=hook_counters()))
+
+    def test_cli_reads_the_companion_receipt(self):
+        value = self.receipts["claude-code"]
+        for fires, expected in ((1, 0), (2, 1), (None, 1)):
+            counters = None if fires is None else hook_counters()
+            if counters is not None:
+                counters["hooks"]["mandatory"]["phases"]["after_plan"] = fires
+            with self.subTest(fires=fires), tempfile.TemporaryDirectory() as directory:
+                source, companion = Path(directory) / "receipt.json", Path(directory) / "hook-counters-receipt.json"
+                source.write_text(json.dumps(value), encoding="utf-8")
+                companion.write_text(json.dumps(counters), encoding="utf-8")
+                completed = subprocess.run([sys.executable, self.validator.__file__, str(source),
+                                            "--hook-counters", str(companion)],
+                                           capture_output=True, text=True, check=False)
+                self.assertEqual(expected, completed.returncode, completed.stdout)
+
+
+class CanaryPlantedCatchTests(CanaryVariantCase):
+    """ADR 0023: the base receipt asserts the plan fixed each planted catch, read against the pinned fixture tag."""
+
+    def test_the_pinned_fixture_has_two_catch_ids(self):
+        self.assertEqual(("catch-1", "catch-2"), self.validator.PLANTED_CATCH_IDS)
+
+    def test_a_catch_left_in_place_fails_the_receipt(self):
+        for host, value in self.receipts.items():
+            for catch in self.validator.PLANTED_CATCH_IDS:
+                mutated = copy.deepcopy(value)
+                self.catches(mutated)[catch] = "left_in_place"
+                with self.subTest(host=host, catch=catch):
+                    self.assertEqual([f"base.plan_quality.planted_catches.{catch}"],
+                                     self.validator.validate_receipt(mutated))
+
+    def test_a_missing_or_unknown_catch_record_fails_closed(self):
+        for host, value in self.receipts.items():
+            missing = copy.deepcopy(value)
+            del self.catches(missing)["catch-2"]
+            unknown = copy.deepcopy(value)
+            self.catches(unknown)["catch-3"] = "fixed"
+            absent = copy.deepcopy(value)
+            del absent["variants"][0]["plan_quality"]["planted_catches"]
+            with self.subTest(host=host, case="missing"):
+                self.assertEqual(["base.plan_quality.planted_catches.catch-2"], self.validator.validate_receipt(missing))
+            with self.subTest(host=host, case="unknown"):
+                self.assertEqual(["planted_catches.entry_limit: 3"], self.validator.validate_receipt(unknown))
+            with self.subTest(host=host, case="absent"):
+                self.assertEqual(["base.plan_quality.planted_catches"], self.validator.validate_receipt(absent))
+
+    def test_an_unrecognised_status_fails_schema_validation(self):
+        for host, value in self.receipts.items():
+            self.catches(value)["catch-1"] = "maybe"
+            with self.subTest(host=host):
+                report = self.validator.receipt_report(value)
+                self.assertFalse(report["valid"])
+                self.assertEqual(["receipt.schema: 1"], report["failed_assertions"])
+                self.assertEqual([], report["variants"])
+
+    def test_a_release_receipt_must_name_the_pinned_fixture_tag(self):
+        self.assertEqual("fixture-v5", self.validator.FIXTURE_TAG)
+        for host, value in self.receipts.items():
+            value.update(trigger="scheduled", dirty_tree=False, release_status_allowed=True)
+            with self.subTest(host=host, tag="pinned"):
+                self.assertNotIn("release.fixture_tag", self.validator.validate_receipt(value, hook_counters=hook_counters()))
+            value["fixture_tag"] = "fixture-v4"
+            with self.subTest(host=host, tag="older"):
+                self.assertIn("release.fixture_tag", self.validator.validate_receipt(value, hook_counters=hook_counters()))
+            value.update(trigger="local", dirty_tree=True, release_status_allowed=False)
+            with self.subTest(host=host, tag="local"):
+                self.assertEqual([], self.validator.validate_receipt(value))
+
+    def test_the_budget_note_names_the_tag_and_the_lock_ticket(self):
+        policy = json.loads(self.validator.BUDGET_FILE.read_text(encoding="utf-8"))["policy"]
+        self.assertIn(self.validator.FIXTURE_TAG, policy)
+        self.assertIn("#1199", policy)
+
+
+class CanaryCatchInputTests(CanaryVariantCase):
+    """Untrusted catch ids produce only bounded, constant diagnostics."""
+
+    def test_many_unknown_catches_have_one_bounded_failure(self):
+        for host, value in self.receipts.items():
+            prefix = "unknown-" + "x" * 64
+            self.catches(value).update({f"{prefix}{index}": "fixed" for index in range(10000)})
+            with self.subTest(host=host), tempfile.TemporaryDirectory() as directory:
+                report = self.validator.receipt_report(value)
+                self.assertEqual(1, len(report["failed_assertions"]))
+                self.assertEqual(["planted_catches.entry_limit: 10002"], report["failed_assertions"])
+                self.assertLess(len(json.dumps(report)), 256)
+                source = Path(directory) / "receipt.json"
+                source.write_text(json.dumps(value), encoding="utf-8")
+                completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
+                                           capture_output=True, text=True, check=False)
+                self.assertLess(source.stat().st_size, 1024 * 1024)
+                self.assertEqual(1, completed.returncode)
+                self.assertEqual(report, json.loads(completed.stdout))
+                self.assertLess(len(completed.stdout), 256)
+                self.assertEqual("", completed.stderr)
+
+    def test_unknown_catch_names_never_appear_in_api_or_cli_output(self):
+        marker = chr(27) + "[31m" + chr(10) + "/" + "synthetic-marker/receipt.txt"
+        for host, original in self.receipts.items():
+            for status in ("fixed", "left_in_place", marker):
+                value = copy.deepcopy(original)
+                del self.catches(value)["catch-2"]
+                self.catches(value)[marker] = status
+                with self.subTest(host=host, status=status), tempfile.TemporaryDirectory() as directory:
+                    report = self.validator.receipt_report(value)
+                    self.assertEqual(["unknown planted-catch id: 1"], report["failed_assertions"])
+                    self.assertLess(len(json.dumps(report)), 256)
+                    source = Path(directory) / "receipt.json"
+                    source.write_text(json.dumps(value), encoding="utf-8")
+                    completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
+                                               capture_output=True, text=True, check=False)
+                    self.assertEqual(1, completed.returncode)
+                    self.assertEqual(report, json.loads(completed.stdout))
+                    self.assertNotIn("synthetic-marker", completed.stdout + completed.stderr)
+                    self.assertLess(len(completed.stdout), 256)
+
+    def test_multiple_unknown_ids_are_one_counted_failure_on_any_variant(self):
+        for host, value in self.receipts.items():
+            for name in self.variant_evidence:
+                value["variants"][0]["name"] = name
+                catches = self.catches(value)
+                catches.clear()
+                catches.update({"unknown-one": "fixed", "unknown-two": "fixed"})
+                with self.subTest(host=host, variant=name):
+                    self.assertEqual(["unknown planted-catch id: 2"], self.validator.validate_receipt(value))
+
+    def test_the_schema_rejects_unknown_catch_ids(self):
+        value = self.receipts["codex"]
+        self.assertEqual([], self.validator.json_schema_failures(value, self.validator.SCHEMA, self.validator.SCHEMA, "receipt"))
+        self.catches(value)["catch-3"] = "fixed"
+        self.assertTrue(self.validator.json_schema_failures(value, self.validator.SCHEMA, self.validator.SCHEMA, "receipt"))
+
+
+class CanaryReceiptOutputTests(CanaryVariantCase):
+    """Receipt and companion schema diagnostics carry only constant identifiers and counts."""
+
+    def test_schema_errors_never_reflect_supplied_keys_or_values(self):
+        marker = "untrusted-schema-marker"
+        for host, original in self.receipts.items():
+            for mutate in (lambda v: v.update({marker: marker}),
+                           lambda v: v["variants"][0].update(name=marker),
+                           lambda v: self.catches(v).update({"catch-1": marker})):
+                value = copy.deepcopy(original)
+                mutate(value)
+                with self.subTest(host=host):
+                    report = self.validator.receipt_report(value)
+                    self.assertEqual(1, len(report["failed_assertions"]))
+                    self.assertRegex(report["failed_assertions"][0], r"^receipt\.schema: [0-9]+$")
+                    self.assertNotIn(marker, json.dumps(report))
+
+    def test_hook_schema_errors_never_reflect_supplied_keys(self):
+        counters = hook_counters()
+        counters["hooks"]["untrusted-hook-marker"] = "untrusted-hook-marker"
+        report = self.validator.receipt_report(self.receipts["codex"], hook_counters=counters)
+        self.assertEqual(["hook_counters.schema: 1"], report["failed_assertions"])
+        self.assertNotIn("untrusted-hook-marker", json.dumps(report))
+
+    def test_extra_variants_cannot_multiply_catch_output(self):
+        value = self.receipts["codex"]
+        value["variants"] *= 10000
+        report = self.validator.receipt_report(value)
+        self.assertEqual(["receipt.variant_entry_limit: 10000"], report["failed_assertions"])
+        self.assertLess(len(json.dumps(report)), 256)
+
+
+class CanaryReceiptInputTests(CanaryVariantCase):
+    """Receipt reads and parsing fail closed within the byte cap."""
+
+    def test_cli_receipt_byte_limit_is_inclusive_and_precedes_json_parsing(self):
+        limit = 1024 * 1024
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "receipt.json"
+            body = json.dumps(self.receipts["codex"]).encode("utf-8")
+            multibyte = copy.deepcopy(self.receipts["codex"])
+            multibyte["host_version"] = "é" * (limit // 2)
+            cases = ((body + b" " * (limit - len(body)), True, []),
+                     (body + b" " * (limit + 1 - len(body)), False, ["input.byte_limit: 1048576"]),
+                     (json.dumps(multibyte, ensure_ascii=False).encode("utf-8"), False, ["input.byte_limit: 1048576"]),
+                     (b"!" * (limit + 1), False, ["input.byte_limit: 1048576"]))
+            for payload, valid, failures in cases:
+                source.write_bytes(payload)
+                with self.subTest(size=len(payload), valid=valid):
+                    completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
+                                               capture_output=True, text=True, check=False)
+                    self.assertEqual("", completed.stderr)
+                    report = json.loads(completed.stdout)
+                    self.assertEqual(int(not valid), completed.returncode)
+                    self.assertEqual(valid, report["valid"])
+                    self.assertEqual(failures, report["failed_assertions"])
+                    self.assertEqual("", completed.stderr)
+                    if not valid:
+                        self.assertLess(len(completed.stdout), 256)
+
+    def test_the_companion_receipt_has_the_same_byte_limit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "receipt.json"
+            counters = Path(directory) / "counters.json"
+            source.write_text(json.dumps(self.receipts["codex"]), encoding="utf-8")
+            counters.write_bytes(b"!" * (1024 * 1024 + 1))
+            completed = subprocess.run([sys.executable, self.validator.__file__, str(source), "--hook-counters", str(counters)],
+                                       capture_output=True, text=True, check=False)
+            self.assertEqual(1, completed.returncode)
+            self.assertEqual(["input.byte_limit: 1048576"], json.loads(completed.stdout)["failed_assertions"])
+            self.assertLess(len(completed.stdout), 256)
+            self.assertEqual("", completed.stderr)
+
+    def test_cli_parse_and_read_errors_are_constant(self):
+        marker = "untrusted-input-marker"
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / (marker + ".json")
+            for payload in (None, b"\xff", (marker + " not JSON").encode(),
+                            b"[" * 2000 + b"]" * 2000,
+                            json.dumps({marker: marker}).replace("}", ', "' + marker + '": 0}').encode()):
+                if payload is not None:
+                    source.write_bytes(payload)
+                with self.subTest(payload=payload is not None):
+                    completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
+                                               capture_output=True, text=True, check=False)
+                    self.assertEqual(1, completed.returncode)
+                    self.assertEqual("", completed.stderr)
+                    report = json.loads(completed.stdout)
+                    self.assertEqual(["input.invalid"], report["failed_assertions"])
+                    self.assertNotIn(marker, completed.stdout + completed.stderr)
+                    self.assertLess(len(completed.stdout), 256)
+                    self.assertEqual("", completed.stderr)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--helper", choices=EXPECTED_HELPERS)
@@ -5232,10 +5921,12 @@ def main() -> int:
     _ReadOnlyHelperRunner.helper_filter = args.helper
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                                for case in (ReadOnlyHelperTests, PlanLayersRepairRouteTests, PlanLayersPlannerCaseTests,
-                                            PacketTitlePatternTests, ScaffoldAnswersTests, CanaryReceiptTests,
-                                            CanaryVariantAssertionsTests, CanaryVariantContractTests,
+                                            PacketTitlePatternTests, G0SetupTests, G0PinTests, G0SetupFailureTests, ScaffoldAnswersTests, CanaryReceiptTests,
+                                            CanaryFeatureOfferTests, CanaryVariantAssertionsTests, CanaryVariantContractTests,
                                             CanaryGateVerdictTests, CanaryGuardGapContractTests,
-                                            CanaryBudgetTests, CanaryBudgetFileTests))
+                                            CanaryPlanTargetTests, CanaryPlanTargetContractTests, CanaryCodexTokenTests,
+                                            CanaryPlanQualityTests, CanaryPlantedCatchTests, CanaryCatchInputTests, CanaryReceiptInputTests,
+                                            CanaryReceiptOutputTests, CanaryHookCounterTests, CanaryBudgetTests, CanaryBudgetFileTests))
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     total = result.testsRun
     failed = len(result.failures) + len(result.errors)

@@ -144,7 +144,7 @@ to archive previously merged specs.
    `safeToApplyCleanup=false` (the sweep never passes `--apply-cleanup`, so it
    never removes spec folders).
 7. Add the canonical `Archive Sweep: previously merged specs dry-run/apply
-   eligibility` task before Phase 0 in the visible task list.
+   eligibility` item before Phase 0 in `autopilot-state.json`.
 
 If the archive extension is missing, record `archive_extension_installed=false`,
 keep cleanup disabled, and continue only after warning that the project should
@@ -268,10 +268,10 @@ user to run `claude plugin install typesafe-jev@racecraft-plugins-public`.
 ## Step 0.1–0.7: Environment Checks
 
 ```text
-printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-check-prerequisites","helper_id":"check-prerequisites","operation":"check-prerequisites","mode":"read_only","inputs":{"workflow_file":"<workflow-file-path>"}}' | <resolved_python> -m speckit_pro_runner
+printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-check-prerequisites","helper_id":"g0-setup","operation":"g0-setup","mode":"read_only","inputs":{"probe":"prerequisites","surface":"<G0_SURFACE>","workflow_file":"<workflow-file-path>"}}' | <resolved_python> -m speckit_pro_runner
 ```
 
-Parse the JSON result:
+Read the unchanged probe report from `data.result.stdout_json`:
 - `all_pass`: if `false`, route each failed check's `message` to its owner: the orchestrator repairs a fixable check
   (a missing workflow directory, a stale binding), and the implement-executor repairs a failing project check; rerun the helper,
   then defer per the Failure Escalation Protocol when repair fails
@@ -436,10 +436,10 @@ New-model authoring may be pending; missing existing files or tool setup blocks
 with a resumable diagnostic. Do not install a checker implicitly.
 
 ```text
-printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-detect-commands","helper_id":"detect-commands","operation":"detect-commands","mode":"read_only","inputs":{}}' | <resolved_python> -m speckit_pro_runner
+printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-detect-commands","helper_id":"g0-setup","operation":"g0-setup","mode":"read_only","inputs":{"probe":"commands","surface":"<G0_SURFACE>","workflow_file":"<workflow-file-path>"}}' | <resolved_python> -m speckit_pro_runner
 ```
 
-Parse the JSON result for `commands` object containing:
+Read `data.result.stdout_json` for the unchanged `commands` object containing:
 BUILD, TYPECHECK, LINT, LINT_FIX, UNIT_TEST,
 INTEGRATION_TEST, SINGLE_FILE_TEST, SINGLE_FILE_INTEGRATION,
 FULL_VERIFY. Commands set to `"N/A"` are skipped during
@@ -470,15 +470,12 @@ files exists in the repository, otherwise `unconfigured` and
 `"N/A"`; a slot named in the file's `skips` is `skipped` and
 `"N/A"` without a question.
 
-**`.specify/quality-gates.json` is the threshold authority.** The
-result's `quality_gates.status` is `present`, `missing`, or
-`invalid` (with `problems`). Anything but `present` fails G0
-with this message, verbatim, and STOP:
-
-```text
-G0 blocked: .specify/quality-gates.json is <missing|invalid: first problem>.
-Run `/speckit-pro:speckit-coach quality gates` to create it. Agents never edit this file.
-```
+**`.specify/quality-gates.json` is the threshold authority.** The probe's
+`quality_gates.status` remains `present`, `missing`, or `invalid` (with
+`problems`). Read the seam's `data.quality_gate` at this step: on `stop`,
+print its `message` verbatim and STOP; on `proceed`, continue. The runner
+owns this decision and the host-specific coach command. Agents never edit
+this file.
 
 With the file missing, the slot commands still show the shipped
 defaults (complexity 10, CRAP 30, mutation-score floor 60) so the
@@ -598,10 +595,10 @@ operator out.
 ## Step 0.12: Preset and Extension Detection
 
 ```text
-printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-detect-presets","helper_id":"detect-presets","operation":"detect-presets","mode":"read_only","inputs":{}}' | <resolved_python> -m speckit_pro_runner
+printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-detect-presets","helper_id":"g0-setup","operation":"g0-setup","mode":"read_only","inputs":{"probe":"presets","surface":"<G0_SURFACE>","workflow_file":"<workflow-file-path>"}}' | <resolved_python> -m speckit_pro_runner
 ```
 
-Parse the JSON result for: `has_presets`, `presets` (names +
+Read `data.result.stdout_json` for: `has_presets`, `presets` (names +
 templates they override), `extensions`, `hooks`, and
 `templates` (resolved paths for tasks/spec/plan templates).
 
