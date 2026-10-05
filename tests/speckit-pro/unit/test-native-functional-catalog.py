@@ -267,10 +267,10 @@ ORCHESTRATION_REQUIRING_TEXT.update({
         (PREREQUISITES, "the run never asks"),
     ),
     "functional.speckit-autopilot.red-baseline-repaired-by-implement-executor": (
-        (PREREQUISITES, "route the failing check to the implement-executor"),
-        (PREREQUISITES, "Phase 1 starts once the check passes, or once the failure is deferred with its evidence"),
-        (PREREQUISITES, "route the failing check to the implement-executor"),
-        (PREREQUISITES, "Phase 1 starts once the check passes, or once the failure is deferred with its evidence"),
+        (PHASE_EXECUTION, "route the failing check to the implement-executor"),
+        (PHASE_EXECUTION, "The first task is dispatched once each check passes or its failure is deferred with its evidence"),
+        (PHASE_EXECUTION, "route the failing check to the implement-executor"),
+        (PHASE_EXECUTION, "The first task is dispatched once each check passes or its failure is deferred with its evidence"),
     ),
     "functional.speckit-autopilot.blocked-action-defers": (
         (PHASE_EXECUTION, "With no defined fallback, defer that task."),
@@ -414,7 +414,7 @@ ORCHESTRATION_FAILURE_PHRASES = {
     "functional.speckit-autopilot.resolved-deferral-leaves-request": "lists the resolved deferral in the request",
     "functional.speckit-autopilot.blocked-action-defers": "retries the blocked action by another route",
     "functional.speckit-autopilot.missing-quality-tool-install-hint": "asks the operator to choose install or skip",
-    "functional.speckit-autopilot.red-baseline-repaired-by-implement-executor": "starts Phase 1 on a red baseline",
+    "functional.speckit-autopilot.red-baseline-repaired-by-implement-executor": "starts the first task on a red baseline",
 }
 LOCAL_COMMAND_LEGACY_SOURCES = {
     "functional.speckit-autopilot.case-2": (
@@ -873,19 +873,19 @@ def _derive_quality_tool_answers(read: Callable[[str], str]) -> dict:
 
 
 def _derive_red_baseline_answers(read: Callable[[str], str]) -> dict:
-    """Step 0.9: a failing baseline goes to the implement-executor within its allowance."""
+    """Project Baseline: a failing check goes to the implement-executor within its allowance."""
     attempts = json.loads(read("scenario-inputs/baseline-attempts.json"))
     failing = re.search(r"^\| Baseline test suite \| failed \| `([^`]+)`", read("scenario-inputs/workflow.md"), re.M)
     assert failing and failing.group(1) == attempts["failing_check"], "workflow and attempts disagree"
     spent = attempts["repair_attempts"] >= attempts["repair_allowance"]
     return {
         "repair_allowance_spent": spent,
-        # Step 0.9: a failing check goes to the implement-executor; Phase 1 starts once it
-        # passes or the failure is deferred with its evidence.
+        # Project Baseline: a failing check goes to the implement-executor; the first task starts
+        # once it passes or the failure is deferred with its evidence.
         "owner": "implement-executor",
         "next_action": "defer" if spent else "repair",
         "rerun_command": attempts["failing_check"],
-        "phase_one_starts": spent,
+        "first_task_starts": spent,
         "question_offered": False,
     }
 
