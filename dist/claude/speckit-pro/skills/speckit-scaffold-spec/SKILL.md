@@ -992,7 +992,9 @@ Hook items, on both hosts:
   `verification_docker` (whether a Linux/arm64 Docker daemon answers) itself.
   Omit `host_version` when the host does not report it.
 - When the response is `input_error`, correct the field its diagnostic names
-  and send the request once more.
+  and send the request once more. Keep evidence and action text subject to
+  the helper's privacy validation; never write the readiness record directly
+  to bypass a rejected field.
 - Print one line per `unavailable` or `unknown` item with its action, then
   continue. A declined fix, a failed fix, or a failed write leaves scaffold
   finishing normally.
