@@ -52,6 +52,18 @@ def actor_environment(root: Path) -> dict[str, str]:
     return env
 
 
+def finish_supervisor_groups(actor_group: int | None, actor_absent: bool, process: subprocess.Popen) -> None:
+    for owned_group in (actor_group, process.pid):
+        if owned_group == actor_group and actor_absent:
+            continue
+        if isinstance(owned_group, int) and owned_group > 1 and owned_group != os.getpgrp():
+            try:
+                os.killpg(owned_group, signal.SIGKILL)
+            except ProcessLookupError:
+                continue
+    process.communicate(timeout=5)
+
+
 class FunctionalHeadlessRunnerTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -1102,15 +1114,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                     self.assertEqual(result["process_group_cleanup"]["pgid"], actor_group)
                     self.assertIn(b"before supervisor signal", (root / "evidence/stdout.bin").read_bytes())
                 finally:
-                    for owned_group in (actor_group, process.pid):
-                        if owned_group == actor_group and actor_absent:
-                            continue
-                        if isinstance(owned_group, int) and owned_group > 1 and owned_group != os.getpgrp():
-                            try:
-                                os.killpg(owned_group, signal.SIGKILL)
-                            except ProcessLookupError:
-                                pass
-                    process.communicate(timeout=5)
+                    finish_supervisor_groups(actor_group, actor_absent, process)
 
     def test_capture_signal_handler_installation_failure_stops_before_launch(self) -> None:
         with mock.patch.object(self.runner.signal, "signal", side_effect=ValueError("not the main thread")), mock.patch.object(self.runner.subprocess, "Popen") as popen:

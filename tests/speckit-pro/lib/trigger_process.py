@@ -70,6 +70,11 @@ def terminate_child(child: subprocess.Popen[bytes] | None, signum: int = signal.
 
 
 
+def observed_group_absence(pgid: int, observations: list[dict[str, object]] | None) -> bool:
+    """Only this group's recorded ESRCH makes later cleanup terminal."""
+    return any(item.get("pgid") == pgid and item.get("errno") == errno.ESRCH for item in observations or ())
+
+
 def cleanup_child(
     child: subprocess.Popen[bytes], *, observations: list[dict[str, object]] | None = None,
     timeout: float | None = None, grace: float | None = None,
@@ -84,8 +89,7 @@ def cleanup_child(
     signal_delivered = False
     last_probe_error: PermissionError | None = None
     # Preserve terminal absence when a fixture resumes cleanup after supervision.
-    absent = any(item.get("pgid") == child.pid and item.get("errno") == errno.ESRCH
-                 for item in observations or ())
+    absent = observed_group_absence(child.pid, observations)
 
     def record_probe_error(error: int | None) -> None:
         if observations is not None and os.name != "nt":
