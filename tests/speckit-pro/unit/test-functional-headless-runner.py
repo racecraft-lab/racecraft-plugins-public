@@ -1022,8 +1022,6 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                 self.assertEqual(cleanup["signals_sent"], ["SIGTERM", "SIGKILL"])
                 self.assertIs(cleanup["verified_absent"], True)
                 self.assertTrue(result["stdout"].startswith("child="))
-                with self.assertRaises(ProcessLookupError):
-                    os.killpg(cleanup["pgid"], 0)
             finally:
                 if not cleanup["verified_absent"]:
                     try:
@@ -1405,6 +1403,22 @@ class SupervisorFinalizerOwnershipTests(unittest.TestCase):
             with self.subTest(poll=poll_result), mock.patch.object(os, "killpg") as killpg:
                 finish_supervisor_groups(None, False, process)
                 self.assertEqual(killpg.call_count, expected)
+
+
+    @unittest.skipUnless(os.name == "posix", "POSIX process-group contract")
+    def test_completed_leader_fixture_does_not_reprobe_verified_absence(self) -> None:
+        case = FunctionalHeadlessRunnerTests()
+        case.runner = mock.Mock()
+        case.runner.capture_process.return_value = {
+            "status": "unexpected_descendants", "exit_code_before_cleanup": 0, "stdout": "child=fixture",
+            "process_group_cleanup": {"signals_sent": ["SIGTERM", "SIGKILL"], "verified_absent": True, "pgid": FAKE_PGID},
+        }
+        with (
+            mock.patch(__name__ + ".actor_environment", return_value={}),
+            mock.patch.object(os, "killpg") as replacement_group,
+        ):
+            case.test_real_exited_leader_leaves_term_ignoring_child_that_is_drained()
+        replacement_group.assert_not_called()
 
 
 class SupervisorFixtureAbsenceTests(unittest.TestCase):
