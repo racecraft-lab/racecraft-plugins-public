@@ -591,7 +591,7 @@
         "value": "speckit_pro_runner/helpers/g0_setup.py",
         "display": "speckit_pro_runner/helpers/g0_setup.py"
       },
-      "sha256": "f4ae3f795fe430161ff1e609f46c22e0b9ea959e75f21de9a22d0b15a02e0ba0"
+      "sha256": "862a8279f4c6749f5931090fbebbecabb772857615a406684f2b461c0acaeeba"
     },
     {
       "path": {
@@ -687,7 +687,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "f9e5949d2d377cb5d9ed26a9b60e2e606916d4565254108362578162b70257b0"
+      "sha256": "bbcc1b62b837cb1136560366b6225e3157549e37ab16879be4846eeda9d27602"
     },
     {
       "path": {
