@@ -144,7 +144,18 @@ class QualityGatesProposalTest(unittest.TestCase):
         os.symlink(outside, self.root / GATES_FILE)
         response = self.run_helper("apply", confirmed=True)
         self.assertEqual("expected_failure", response["status"])
+        self.assertEqual("write_failed", response["data"]["outcome"])
         self.assertEqual("keep", outside.read_text(encoding="utf-8"))
+
+    def test_the_worst_files_come_first_when_the_list_is_capped(self) -> None:
+        crowd = [function(f"src/a{n:02d}.py", "f", 20 + n % 5) for n in range(25)]
+        self.write_report([*crowd, function(self.root.joinpath("src/zeta.py").as_posix(), "worst", 80),
+                           *[function("src/ok.py", f"ok{n}", 1) for n in range(300)]])
+        data = self.run_helper("dry_run")["data"]
+        self.assertEqual("src/zeta.py", data["failing_files"][0]["file"])
+        self.assertEqual(20, len(data["failing_files"]))
+        self.assertTrue(data["failing_files_truncated"])
+        self.assertEqual(26, data["failing_file_count"])
 
     def test_the_readiness_record_carries_the_observed_quality_gates_source(self) -> None:
         def source() -> dict:

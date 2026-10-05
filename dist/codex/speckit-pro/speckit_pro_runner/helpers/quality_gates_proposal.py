@@ -4,7 +4,7 @@
 and returns the proposed file and the files whose functions would fail it
 today; it writes nothing. ``apply`` takes the user's answer as a boolean
 ``confirmed``: ``true`` writes ``.specify/quality-gates.json``, ``false`` writes
-nothing and stores no decline. Either way the scratch report is removed. A
+nothing and stores no decline. The scratch report is removed after every apply. A
 file that is already valid is never overwritten.
 """
 
@@ -20,7 +20,7 @@ from .. import quality_gates
 from ..atomic_write import write_bytes_atomic
 from ..envelope import diagnostic, response
 from ..strict_input import SelectionError
-from ..trusted_io import find_repo_root, trusted_bytes, trusted_text
+from ..trusted_io import find_repo_root, trusted_text
 
 REPORT_FILE = ".specify/quality-gates-report.json"
 INPUT_KEYS = frozenset({"measured", "confirmed"})
@@ -32,7 +32,7 @@ def measured_report(root: Path, measured: bool) -> Any:
     text = trusted_text(root / REPORT_FILE, root) if measured else None
     try:
         return json.loads(text) if text is not None else {}
-    except ValueError:
+    except (ValueError, RecursionError):
         return {}
 
 
@@ -44,14 +44,16 @@ def failing_files(report: Any, ceiling: int, root: Path) -> list[dict[str, Any]]
         if (not isinstance(complexity, int) or isinstance(complexity, bool) or complexity <= ceiling
                 or not isinstance(fn.get("file"), str)):
             continue
+        # crap-score runs from the repository root, so a relative path is relative to it.
         path = Path(fn["file"])
         try:
-            path = path.relative_to(root) if path.is_absolute() else path
-        except ValueError:
-            path = Path(path.name)
+            path = (path if path.is_absolute() else root / path).resolve().relative_to(root.resolve())
+        except (OSError, ValueError):
+            path = Path(fn["file"])
         groups.setdefault(path.as_posix(), []).append({"name": str(fn.get("name", "?")), "complexity": complexity})
-    return [{"file": name, "functions": sorted(groups[name], key=lambda row: -row["complexity"])}
-            for name in sorted(groups)]
+    rows: list[dict[str, Any]] = [{"file": name, "functions": sorted(groups[name], key=lambda row: -row["complexity"])}
+            for name in groups]
+    return sorted(rows, key=lambda row: (-row["functions"][0]["complexity"], row["file"]))
 
 
 def propose(report: Any) -> dict[str, Any]:
@@ -81,7 +83,8 @@ def describe(root: Path, entry: Any, request: Any) -> tuple[dict[str, Any], Any]
                             "problems": problems, "proposal": proposal}
     if proposal is not None:
         rows = failing_files(report, proposal["thresholds"]["complexity"], root)
-        data["failing_files"] = rows[:MAX_FAILING_FILES]
+        data["failing_files"] = rows[:MAX_FAILING_FILES]  # worst offenders first
+        data["failing_files_truncated"] = len(rows) > MAX_FAILING_FILES
         data["failing_file_count"] = len(rows)
         data["failing_function_count"] = sum(len(row["functions"]) for row in rows)
     return data, proposal
@@ -112,6 +115,8 @@ def run_quality_gates_proposal_helper(entry: Any, request: Any) -> dict[str, Any
         try:
             write_proposal(root, proposal)
         except (OSError, SelectionError) as error:
+            data["outcome"] = "write_failed"
+            data["report_removed"] = consume_report(root)
             return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diagnostic(
                 "write_failure", f"the quality-gates file could not be written: {getattr(error, 'strerror', None) or error}",
                 remediation_summary="Scaffold continues on the shipped defaults; the next scaffold offers again.",
@@ -124,14 +129,11 @@ def run_quality_gates_proposal_helper(entry: Any, request: Any) -> dict[str, Any
 
 
 def consume_report(root: Path) -> bool:
-    """Remove the scratch report so a decline leaves nothing behind; True when it is gone.
-
-    A report that cannot be read safely (a link, an unreadable file) or removed stays, and the caller learns so.
-    """
-    if trusted_bytes(root / REPORT_FILE, root) is None:
-        return not os.path.lexists(root / REPORT_FILE)
+    """Remove the scratch report so a decline leaves nothing behind; True when it is gone."""
     try:
         os.unlink(root / REPORT_FILE)
+    except FileNotFoundError:
+        return True
     except OSError:
         return False
     return True

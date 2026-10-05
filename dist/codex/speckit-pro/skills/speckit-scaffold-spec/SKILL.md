@@ -908,6 +908,8 @@ outcome.
    `data.failing_files` with its functions. Say that COMPLEXITY and MUTATION
    judge every function in a changed file, so a SPEC touching a listed file
    plans its refactor. For `nist-235`, say the ceiling of 10 was not measured.
+   When `data.status` is `invalid`, print `data.problems` and say that a yes
+   replaces the whole file, skips and opt-in slots included.
 4. Ask once whether to write the proposal.
    Interactive mode: ask with `request_user_input`, or in free text in an
    active foreground chat, recommending yes.
@@ -920,7 +922,8 @@ outcome.
    again. A decline writes nothing and stores nothing; do not record it.
 6. On `input_error`, correct the named field and send the request once more.
    On a write failure, report it and continue: scaffold finishes on the shipped
-   defaults.
+   defaults. When `data.report_removed` is false, tell the user to delete
+   `.specify/quality-gates-report.json`.
 
 Step 6.5 then records the source this step left in place.
 
