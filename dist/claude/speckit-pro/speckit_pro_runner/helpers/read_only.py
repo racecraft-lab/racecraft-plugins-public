@@ -118,6 +118,8 @@ PR_PACKET_SCHEMA_PATH = (
     / "pr-packet.schema.json"
 )
 
+# The project baseline and the FULL_VERIFY chain run these slots in this order.
+BASELINE_SLOTS = ("BUILD", "TYPECHECK", "LINT", "UNIT_TEST", "INTEGRATION_TEST")
 EXIT_STATUS = {
     0: "ok",
     1: "expected_failure",
@@ -1817,7 +1819,7 @@ def detect_commands(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
             if commands[key] == "N/A":
                 commands[key] = command
 
-    chain = [commands[key] for key in ("BUILD", "TYPECHECK", "LINT", "UNIT_TEST", "INTEGRATION_TEST") if commands[key] != "N/A"]
+    chain = [commands[key] for key in BASELINE_SLOTS if commands[key] != "N/A"]
     if chain:
         commands["FULL_VERIFY"] = " && ".join(chain)
     # Quality-gate slots come from the discovery table, not from package
