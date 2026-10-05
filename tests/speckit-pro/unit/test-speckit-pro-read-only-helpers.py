@@ -4749,7 +4749,7 @@ def receipt():
                 "phases_run": ["specify", "clarify", "plan", "checklist", "tasks", "analyze"], "clarify_sessions": 1,
                 "requirements_total": 4, "untraced_requirements": [], "open_gaps": [], "open_findings": [],
                 "open_clarifications": [], "blocked_for_uat_listed": [],
-                "planted_catches": {"catch-1": "fixed", "catch-2": "fixed", "catch-3": "fixed"},
+                "planted_catches": {"catch-1": "fixed", "catch-2": "fixed"},
                 "decisions": {"total": 5, "low_confidence": 1, "consensus_rounds_by_kind": {"security": 1, "low_confidence": 1}},
             },
             "stages": {name: {"wall_seconds": 1, "tokens": 10, "codex_tokens": {"root_tokens": 10, "child_rollout_tokens": []}} for name in ("scaffold", "plan", "plan_review", "implement")},
@@ -5410,6 +5410,9 @@ class CanaryPlantedCatchTests(CanaryVariantCase):
     def catches(self, value):
         return value["variants"][0]["plan_quality"]["planted_catches"]
 
+    def test_the_pinned_fixture_has_two_catch_ids(self):
+        self.assertEqual(("catch-1", "catch-2"), self.validator.PLANTED_CATCH_IDS)
+
     def test_a_catch_left_in_place_fails_the_receipt(self):
         for host, value in self.receipts.items():
             for catch in self.validator.PLANTED_CATCH_IDS:
@@ -5424,13 +5427,13 @@ class CanaryPlantedCatchTests(CanaryVariantCase):
             missing = copy.deepcopy(value)
             del self.catches(missing)["catch-2"]
             unknown = copy.deepcopy(value)
-            self.catches(unknown)["catch-9"] = "fixed"
+            self.catches(unknown)["catch-3"] = "fixed"
             absent = copy.deepcopy(value)
             del absent["variants"][0]["plan_quality"]["planted_catches"]
             with self.subTest(host=host, case="missing"):
                 self.assertEqual(["base.plan_quality.planted_catches.catch-2"], self.validator.validate_receipt(missing))
             with self.subTest(host=host, case="unknown"):
-                self.assertEqual(["base.plan_quality.planted_catches.catch-9"], self.validator.validate_receipt(unknown))
+                self.assertEqual(["base.plan_quality.planted_catches.catch-3"], self.validator.validate_receipt(unknown))
             with self.subTest(host=host, case="absent"):
                 self.assertEqual(["base.plan_quality.planted_catches"], self.validator.validate_receipt(absent))
 

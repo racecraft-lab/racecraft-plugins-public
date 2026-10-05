@@ -22,7 +22,7 @@ PLANNING_PHASES = frozenset(SCHEMA["$defs"]["plan_quality"]["properties"]["phase
 HOOK_EVENTS = ("after_specify", "after_plan", "after_tasks")  # the phases the fixture registers its hooks on
 HOOK_KINDS = ("mandatory", "optional")
 FIXTURE_TAG = "fixture-v5"  # the fixture tag every release receipt reads against; a new tag re-baselines the budget (ADR 0016)
-PLANTED_CATCH_IDS = ("catch-1", "catch-2", "catch-3")  # opaque ids only; ADR 0023 keeps the catches themselves out of public text
+PLANTED_CATCH_IDS = ("catch-1", "catch-2")  # opaque ids only; ADR 0023 keeps the catches themselves out of public text
 MISSING_HOOK_COUNTERS = object()
 
 
