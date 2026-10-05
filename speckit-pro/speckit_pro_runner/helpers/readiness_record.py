@@ -41,7 +41,9 @@ STATUSES = ("verified", "unavailable", "unknown", "not_applicable")
 NEEDS_ACTION = ("unavailable", "unknown")
 # Items scaffold observes and passes in. The runner observes the rest.
 CALLER_ITEMS = ("plugin_payload", "project_integration", "github_auth", "mcp_servers", "typesafe_jev",
-                "reviewability_report", "formal_methods", "preview_surface")
+                "reviewability_report", "formal_methods", "preview_surface",
+                # Codex git write probe (`probe-git-write`); Claude Code records not_applicable.
+                "git_write")
 RUNNER_ITEMS = ("local_capability", "quality_gates", "verification_docker")
 RECORD_DIRECTORY = ".specify/readiness"
 INPUT_KEYS = frozenset({"host", "host_version", "execution_mode", "plugin_revision", "observations"})

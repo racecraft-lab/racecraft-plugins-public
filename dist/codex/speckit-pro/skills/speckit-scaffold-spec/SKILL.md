@@ -31,6 +31,7 @@ These examples name the runner's contract; the steps below determine when a chec
 | `resolve-workflow-binding` | `read_only` | `{"workflow_file": "<absolute-workflow-path>"}` |
 | `resolve-scaffold-worktree-placement` | `read_only` | `{"branch_name": "<branch-name>"}` (add `worktree_root_override` only when the user supplied one) |
 | `scaffold-answers` | `read_only` | `{"answers_file": "<answers-file>", "spec_id": "<SPEC-ID>"}` |
+| `probe-git-write` | `read_only` | `{}` |
 | `propose-quality-gates` | `dry_run` | `{"measured": true}` (`false` when nothing was measured) |
 | `propose-quality-gates` | `apply` | `{"measured": true, "confirmed": true, "proposal_digest": "<dry-run digest>"}` (`confirmed` is `false` after a decline) |
 | `write-readiness-record` | `apply` | `{"host": "<host>", "execution_mode": "<mode>", "plugin_revision": "<version>", "observations": [{"item": "<item>", "status": "<status>", "evidence_source": "<one line>", "values": {"probe": "<observed-result>"}}]}` (add `action` and `files` per observation; add `host_version` when reported) |
@@ -183,6 +184,25 @@ The generated workflow's `Branch` field is the actual dedicated branch
 returned by `resolve-scaffold-worktree-placement` and verified inside the
 worktree. Never write `main`, a guessed branch, or a display label into that
 field.
+
+## Git Write Probe
+
+Run this first, before any gate or branch step (and before the answers-file
+helper and Step -0.5). Call helper `probe-git-write` in `read_only` mode with
+empty `inputs={}` from the task checkout. It creates and removes random probe
+files where branch creation and worktree metadata write. When `data.verdict`
+is `stop`, call `write-readiness-record` in `apply` mode from this checkout
+with `host="codex"`, the invocation's `execution_mode` (`answers-file` or
+`interactive`), the installed `plugin_revision` as in Step 6.5, and
+`observations=[data.observation]`. This records the denied capability without
+running a gate or creating a branch/worktree. If recording fails, append that
+fact to `data.message`; never treat an old record as current evidence. Print
+`data.message` as the one stop message and end scaffold: no gate runs, and no
+branch or worktree is created.
+In every other case keep `data.observation` for Step 6.5 and display any
+nonempty `data.message`, including leftover probe cleanup failures. Do not retry the
+probe after a stop; the fix is the user's (approve git writes, or add the
+repository's `.git` to `sandbox_workspace_write.writable_roots`).
 
 ## Answers-file mode
 
@@ -957,6 +977,7 @@ per item:
 | `mcp_servers` | running helper `research-broker-preflight` with empty `inputs={}`, then bounded live observations of required MCP tools/startup/auth; configuration alone does not prove connectivity, so record `unknown` when live evidence is absent |
 | `typesafe_jev` | checking whether this session exposes the Jev `evaluate` tool |
 | `reviewability_report` | reusing the setup gate result, with its report or roadmap path in `files` and SPEC-ID as `values.spec_id` |
+| `git_write` | sending `data.observation` from the Git Write Probe unchanged |
 | `formal_methods` | judging whether the Design Concept's design suits a formal model, by the [coach's formal-methods guide](../speckit-coach/references/formal-methods-guide.md): `verified` when it suits one, `not_applicable` when it does not; cite the deciding behavior as `evidence_source` |
 | `preview_surface` | checking whether this session can open an HTML page in a preview that the agent can also observe, by the capability-discovery directive: `verified` with the surface name as `values.surface` when it can, `unavailable` with the observed absence as `values.surface` when the run is headless or has none, `unknown` when it cannot tell |
 
