@@ -1369,7 +1369,6 @@ def _prepare_codex(
         *permission_args,
         "--config",
         "project_root_markers=" + json.dumps(project_root_markers, separators=(",", ":")),
-        "--config", "tools.update_plan.enabled=true",
         *agent_registration_args, *trigger_instruction_args,
         "--cd", str(workspace.resolve()), *isolation_args, prompt,
     ]
@@ -1401,7 +1400,6 @@ def _prepare_codex(
         "project_instruction_parent_traversal": False,
         "project_root_markers": project_root_markers,
         "global_instructions_disabled": False,
-        "update_plan_enabled": True,
         "filesystem": f"workspace-{filesystem_access}-plus-runtime-minimal", "network": False,
         "filesystem_capability_enforced": True, "literal_tool_allowlist_enforced": False,
         "isolation_qualification": isolation_qualification,

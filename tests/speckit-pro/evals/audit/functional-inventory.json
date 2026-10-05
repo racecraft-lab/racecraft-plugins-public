@@ -703,7 +703,7 @@
     },
     {
       "id": "codex:speckit-autopilot:5",
-      "requirement": "Explains that the Codex autopilot must call update_plan before phase execution, create deterministic phase/session/consensus items for all canonical phase families, ensure exactly one item is in_progress, and mirror the ",
+      "requirement": "Explains that the Codex autopilot must create deterministic phase/session/consensus items for all canonical phase families in autopilot-state.json next to the workflow file before phase execution, ensure exactly one item is in_progress, and render the progress block from that state at every phase transition.",
       "detail_count": 10,
       "disposition": "merge",
       "coverage": "automated-native-semantic",
@@ -932,7 +932,7 @@
     },
     {
       "id": "codex:speckit-autopilot:12",
-      "requirement": "Rejects partial planning. Explains that before Phase 1 starts, Codex autopilot must create update_plan and autopilot-state.json entries for Phase 0, all seven SDD phases, and Post, including placeholders for later-discov",
+      "requirement": "Rejects partial planning. Explains that before Phase 1 starts, Codex autopilot must create autopilot-state.json entries for Phase 0, all seven SDD phases, and Post, including placeholders for later-discovered Clarify, Checklist, and Implement details.",
       "detail_count": 7,
       "disposition": "keep",
       "coverage": "automated-native-semantic",
@@ -952,7 +952,7 @@
     },
     {
       "id": "codex:speckit-autopilot:13",
-      "requirement": "Rejects continuing with only the Phase 7 placeholder after G5. Explains that the placeholder must be replaced in both update_plan and autopilot-state.json with concrete Phase 7 task-group items parsed from tasks.md befor",
+      "requirement": "Rejects continuing with only the Phase 7 placeholder after G5. Explains that the placeholder must be replaced in autopilot-state.json with concrete Phase 7 task-group items parsed from tasks.md before Analyze or Implement can continue.",
       "detail_count": 6,
       "disposition": "keep",
       "coverage": "automated-native-semantic",
@@ -972,7 +972,7 @@
     },
     {
       "id": "codex:speckit-autopilot:14",
-      "requirement": "Rejects stopping. Explains that all seven SDD phases being complete is not sufficient if Post items are missing or pending; the autopilot must rebuild update_plan and autopilot-state.json with Post entries and continue p",
+      "requirement": "Rejects stopping. Explains that all seven SDD phases being complete is not sufficient if Post items are missing or pending; the autopilot must rebuild autopilot-state.json with Post entries and continue post-implementation.",
       "detail_count": 5,
       "disposition": "keep",
       "coverage": "automated-native-semantic",
@@ -1400,7 +1400,7 @@
     },
     {
       "id": "codex:speckit-autopilot:26",
-      "requirement": "States that the autopilot must run the pre-final completion audit before any final response, re-read autopilot-state.json and the workflow file, reconcile update_plan with the state file, and MUST NOT send a final respon",
+      "requirement": "States that the autopilot must run the pre-final completion audit before any final response, re-read autopilot-state.json and the workflow file, reconcile the workflow with the state file, and MUST NOT send a final response while any Post item is pending, in_progress, or missing. It should set the first incomplete Post item, starting with Post: Doctor Extension Check, to in_progress in autopilot-state.json, continue through the full canonical Post sequence including PR body generation, PR creation, review remediation, and Post: Retrospective, and only report completion after the PR URL is known and every Post item is completed or explicitly skipped.",
       "detail_count": 8,
       "disposition": "keep",
       "coverage": "automated-native-semantic",

@@ -61,6 +61,7 @@
         { "path": "tests/speckit-pro/unit/test-post-implementation-reference.py", "label": "test-post-implementation-reference" },
         { "path": "tests/speckit-pro/unit/test-reviewability-marker-guidance.py", "label": "test-reviewability-marker-guidance" },
         { "path": "tests/speckit-pro/unit/test-readiness-record.py", "label": "test-readiness-record" },
+        { "path": "tests/speckit-pro/unit/test-quality-gates-proposal.py", "label": "test-quality-gates-proposal" },
         { "path": "tests/speckit-pro/unit/test-readiness-host-items.py", "label": "test-readiness-host-items" },
         { "path": "tests/speckit-pro/unit/test-readiness-codex-items.py", "label": "test-readiness-codex-items" },
         { "path": "tests/speckit-pro/unit/test-readiness-codex-trust.py", "label": "test-readiness-codex-trust" },
