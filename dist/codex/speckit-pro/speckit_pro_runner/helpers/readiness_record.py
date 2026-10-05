@@ -251,6 +251,8 @@ def write_record(root: Path, record: dict[str, Any]) -> str:
 
 
 def run_readiness_record_helper(entry: Any, request: Any) -> dict[str, Any]:
+    from . import readiness_host_items as host_items
+
     root = find_repo_root(Path.cwd())
     if root is None or not (root / ".specify").is_dir():
         return response("missing_prerequisite", request_id=request.request_id, diagnostics=[diagnostic(
@@ -264,7 +266,8 @@ def run_readiness_record_helper(entry: Any, request: Any) -> dict[str, Any]:
             "invalid_input", str(error), remediation_summary="Send observations the record can hold.",
             remediation_actions=["Correct the named field.", "Retry the request."])])
     data: dict[str, Any] = {"helper_id": entry.helper_id, "operation": entry.operation, "mode": request.mode,
-                            "writes_state": False, "record": record}
+                            "writes_state": False, "record": record,
+                            "allow_rules": host_items.allow_rules(request.inputs)}
     if request.mode == "apply":
         try:
             data["record_path"] = write_record(root, record)
@@ -275,7 +278,4 @@ def run_readiness_record_helper(entry: Any, request: Any) -> dict[str, Any]:
                 remediation_actions=["Report the failure in the scaffold closing report.",
                                      "Fix the .specify directory permissions and rerun scaffold."])])
         data["writes_state"] = True
-    from . import readiness_host_items as host_items
-
-    data["allow_rules"] = host_items.allow_rules(request.inputs)
     return response("ok", request_id=request.request_id, data=data)

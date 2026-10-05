@@ -177,6 +177,32 @@ class ReadinessHostItemsTest(unittest.TestCase):
                 self.assertNotIn("allow_rules", response.get("data", {}))
                 self.assertFalse((self.root / ".specify" / "readiness").exists())
 
+    def test_review_edge_cases_record_instead_of_refusing_or_overclaiming(self) -> None:
+        plugin_server = [{"server": "plugin:speckit-pro:author-broker", "state": "failed"}]
+        item = self.items(self.run_helper([detail("mcp_authentication", "servers", plugin_server)]))
+        self.assertEqual("unavailable", item["mcp_authentication"]["status"])
+        relative = [{"probe": "runner_request", "outcome": "denied", "command": ".venv/bin/python"},
+                    {"probe": "git_status", "outcome": "passed"}]
+        response = self.run_helper([detail("permission_probe", "probes", relative)])
+        self.assertEqual(["Bash(.venv/bin/python -m speckit_pro_runner:*)", "Bash(printf:*)"],
+                         response["data"]["allow_rules"])
+        partial = [{"probe": "runner_request", "outcome": "passed"}]
+        item = self.items(self.run_helper([detail("permission_probe", "probes", partial)]))["permission_probe"]
+        self.assertEqual("unknown", item["status"])
+        self.assertIn("git_status", item["action"])
+        self.assertEqual("unknown", self.items(self.run_helper([detail("hooks", "hooks", [])]))["hooks"]["status"])
+        many = [{"server": f"server-{n:02d}-" + "x" * 40, "state": "connected"} for n in range(12)]
+        self.assertEqual("verified", self.items(self.run_helper(
+            [detail("mcp_authentication", "servers", many)]))["mcp_authentication"]["status"])
+
+    def test_allow_rules_are_returned_when_the_write_fails(self) -> None:
+        (self.root / ".specify" / "readiness").symlink_to(self.root)
+        probes = [{"probe": "runner_request", "outcome": "denied", "command": "python3"},
+                  {"probe": "git_status", "outcome": "passed"}]
+        response = self.run_helper([detail("permission_probe", "probes", probes)])
+        assert_runner_response(self, response, "expected_failure", 1)
+        self.assertEqual(2, len(response["data"]["allow_rules"]))
+
     def test_every_printed_rule_comes_from_a_fixed_template(self) -> None:
         probes = [{"probe": "runner_request", "outcome": "denied", "command": "/" + "opt/tools/python3.12"},
                   {"probe": "git_status", "outcome": "prompted"}]

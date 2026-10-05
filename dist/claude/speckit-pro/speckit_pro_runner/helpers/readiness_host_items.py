@@ -16,7 +16,7 @@ from typing import Any
 from ..agent_materialization import digest
 from ..strict_input import SelectionError
 from ..sweep_isolation import secret_matches
-from .readiness_record import NOT_OBSERVED_ACTION, clean_text, make_item
+from .readiness_record import MAX_TEXT, NOT_OBSERVED_ACTION, clean_text, make_item
 
 CLAUDE_ONLY_ITEMS = ("permission_probe", "plugin_scope", "mcp_authentication")
 HOST_ITEMS = (*CLAUDE_ONLY_ITEMS, "hooks")
@@ -27,12 +27,17 @@ PROBE_OUTCOMES = ("passed", "denied", "prompted")
 SCOPES = ("user", "project", "local")
 MCP_STATES = ("connected", "needs_authentication", "pending_approval", "failed", "rejected", "disabled", "unknown")
 TRUST_STATES = ("trusted", "untrusted", "unobservable")
-NAME_RE = re.compile(r"[A-Za-z][A-Za-z0-9_.-]{0,63}")
+NAME_RE = re.compile(r"[A-Za-z][A-Za-z0-9_.:-]{0,63}")  # a plugin MCP server is `plugin:<plugin>:<server>`
 # Letters, digits and `_.+-` only: no wildcard, quote, comma, parenthesis, whitespace or shell metacharacter.
-COMMAND_RE = re.compile(r"[A-Za-z0-9_.+][A-Za-z0-9_.+-]*|/[A-Za-z0-9_./+-]+")
+COMMAND_RE = re.compile(r"[A-Za-z0-9_.+/][A-Za-z0-9_./+-]*")
 VERSION_RE = re.compile(r"[0-9A-Za-z][0-9A-Za-z.+-]{0,39}")
 INTERPRETER_PLACEHOLDER = "<interpreter>"
 NOT_APPLICABLE_SOURCE = "Claude Code only; Codex records its own approval, sandbox and trust items"
+
+
+def describe(source: str, summary: str, label: str) -> str:
+    """`source: summary` as one record line; a long summary is cut so the line fits the record limit."""
+    return clean_text(f"{source}: {summary}"[:MAX_TEXT - 1], label)
 
 
 def listed(raw: dict[str, Any], key: str, label: str) -> list[dict[str, Any]]:
@@ -80,7 +85,7 @@ def parse_probes(raw: dict[str, Any]) -> list[dict[str, Any]]:
                                  "outcome": outcome}
         if entry["probe"] == "runner_request" and outcome != "passed":
             command = probe.get("command")
-            if not isinstance(command, str) or not COMMAND_RE.fullmatch(command) or ".." in command.split("/") \
+            if not isinstance(command, str) or not COMMAND_RE.fullmatch(command) or len(command) > 120 or ".." in command.split("/") \
                     or secret_matches(command):
                 raise SelectionError("a failed runner_request probe needs the interpreter `command` it used")
             entry["command"] = command
@@ -88,10 +93,12 @@ def parse_probes(raw: dict[str, Any]) -> list[dict[str, Any]]:
     return parsed
 
 
-def printed_rules(probes: list[dict[str, Any]]) -> list[str]:
+def rules_for(probes: list[dict[str, Any]], recorded: bool) -> list[str]:
+    """Rules for the failed probes. A recorded rule shows a placeholder for an absolute interpreter path."""
     rules: list[str] = []
     for probe in probes:
-        rules += allow_rule_texts([probe], probe.get("command", INTERPRETER_PLACEHOLDER))
+        command = probe.get("command", INTERPRETER_PLACEHOLDER)
+        rules += allow_rule_texts([probe], INTERPRETER_PLACEHOLDER if recorded and command.startswith("/") else command)
     return rules
 
 
@@ -101,16 +108,17 @@ def observe_permission_probe(raw: dict[str, Any], observed_at: str, source: str)
         return make_item("unknown", source, observed_at, {}, NOT_OBSERVED_ACTION)
     summary = ", ".join(f"{probe['probe']}={probe['outcome']}" for probe in probes)
     prints = {"value:probes": digest(summary)}
-    source = clean_text(f"{source}: {summary}", "permission_probe.evidence_source")
-    # The record never holds an absolute interpreter path, so its action shows a placeholder for one.
-    rules = [rule for probe in probes for rule in allow_rule_texts(
-        [probe], probe.get("command", INTERPRETER_PLACEHOLDER) if not probe.get("command", "").startswith("/")
-        else INTERPRETER_PLACEHOLDER)]
-    if not rules:
-        return make_item("verified", source, observed_at, prints)
-    action = clean_text("Add these allow rules to permissions.allow in .claude/settings.local.json or your "
-                        "user settings, then rerun scaffold: " + "; ".join(rules), "permission_probe.action")
-    return make_item("unavailable", source, observed_at, prints, action)
+    source = describe(source, summary, "permission_probe.evidence_source")
+    rules = rules_for(probes, recorded=True)
+    if rules:
+        return make_item("unavailable", source, observed_at, prints, clean_text(
+            "Add these allow rules to permissions.allow in .claude/settings.local.json or your user settings, "
+            "then rerun scaffold: " + "; ".join(rules), "permission_probe.action"))
+    missing = [name for name in PROBES if name not in {probe["probe"] for probe in probes}]
+    if missing:
+        return make_item("unknown", source, observed_at, prints,
+                         f"Run the {', '.join(missing)} probe, then rerun scaffold.")
+    return make_item("verified", source, observed_at, prints)
 
 
 def observe_plugin_scope(raw: dict[str, Any], observed_at: str, source: str) -> dict[str, Any]:
@@ -132,7 +140,7 @@ def observe_plugin_scope(raw: dict[str, Any], observed_at: str, source: str) -> 
                          observed_at, prints,
                          "Run `claude plugin list` to read the effective scope and version of speckit-pro, "
                          "then rerun scaffold.")
-    source = clean_text(f"{source}: {where} scope loads {loaded}, expected {expected}", "plugin_scope.evidence_source")
+    source = describe(source, f"{where} scope loads {loaded}, expected {expected}", "plugin_scope.evidence_source")
     if loaded == expected:
         return make_item("verified", source, observed_at, prints)
     return make_item("unavailable", source, observed_at, prints, clean_text(
@@ -158,7 +166,7 @@ def observe_mcp_authentication(raw: dict[str, Any], observed_at: str, source: st
                          "then rerun scaffold.")
     summary = ", ".join(f"{server}={state}" for server, state in servers)
     prints = {"value:servers": digest(summary)}
-    source = clean_text(f"{source}: {summary}", "mcp_authentication.evidence_source")
+    source = describe(source, summary, "mcp_authentication.evidence_source")
     failing = [(server, state) for server, state in servers if state in MCP_ACTIONS]
     if failing:
         steps = "; ".join(MCP_ACTIONS[state].format(server=server) for server, state in failing)
@@ -174,11 +182,13 @@ def observe_hooks(raw: dict[str, Any], observed_at: str, source: str, host: str)
     hooks = [(name_text(entry.get("hook"), "hooks hook"), entry.get("defined"),
               choice(entry.get("trust"), TRUST_STATES, "hooks trust"))
              for entry in listed(raw, "hooks", "hooks")]
-    if not hooks or any(not isinstance(defined, bool) for _, defined, _ in hooks):
-        raise SelectionError("hooks needs a non-empty list with a boolean `defined` on each entry")
+    if any(not isinstance(defined, bool) for _, defined, _ in hooks):
+        raise SelectionError("hooks needs a boolean `defined` on each entry")
+    if not hooks:
+        return make_item("unknown", source, observed_at, {}, "Check the required hooks in /hooks, then rerun scaffold.")
     summary = ", ".join(f"{name}={'missing' if not defined else trust}" for name, defined, trust in hooks)
     prints = {"value:hooks": digest(summary)}
-    source = clean_text(f"{source}: {summary}", "hooks.evidence_source")
+    source = describe(source, summary, "hooks.evidence_source")
     if any(not defined for _, defined, _ in hooks):
         return make_item("unavailable", source, observed_at, prints,
                          "Update the speckit-pro plugin so its required hooks are defined, then rerun scaffold.")
@@ -228,5 +238,5 @@ def allow_rules(inputs: dict[str, Any]) -> list[str]:
     """The rules to print for a denied probe, with the interpreter exactly as the request used it."""
     for raw in inputs.get("observations", []):
         if isinstance(raw, dict) and raw.get("item") == "permission_probe" and "probes" in raw:
-            return printed_rules(parse_probes(raw))
+            return rules_for(parse_probes(raw), recorded=False)
     return []
