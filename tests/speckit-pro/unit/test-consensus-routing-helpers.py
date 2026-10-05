@@ -546,9 +546,8 @@ class ReferenceProseTests(unittest.TestCase):
 
     def test_the_single_analyst_path_follows_runner_selection_without_escalation(self) -> None:
         single = section_between(self.text, "### Single-analyst confidence rule", "### Two-analyst rule")
-        self.assertIn("answer_source", single)
-        self.assertNotIn("Fall through to Round 2", single)
-        self.assertNotIn("synthesizer's output", single)
+        self.assertEqual([True, False, False], [phrase in single for phrase in (
+            "answer_source", "Fall through to Round 2", "synthesizer's output")])
 
 
 class SecurityKeywordCopyTests(unittest.TestCase):
