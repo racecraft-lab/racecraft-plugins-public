@@ -849,8 +849,10 @@ class CarryForwardThreatTests(unittest.TestCase):
                 finder = generator["_ClosedBytesFinder"](closure, sources, expected)
             sys.meta_path.insert(0, finder)
             try:
-                with mock.patch.object(importlib.machinery.SourceFileLoader, "get_data",
-                                       side_effect=AssertionError("path loader reopened source")):
+                # The finder narrows sys.path to its trusted roots; restore it for later tests.
+                with (mock.patch.object(sys, "path", list(sys.path)),
+                      mock.patch.object(importlib.machinery.SourceFileLoader, "get_data",
+                                        side_effect=AssertionError("path loader reopened source"))):
                     module = finder.load("trigger_test_parser", "lib/parser.py")
             finally:
                 sys.meta_path.remove(finder)
