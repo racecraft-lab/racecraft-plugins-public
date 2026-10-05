@@ -715,10 +715,11 @@ read the exact workflow prompt(s) under `brief.inputs.prompt_section`, and
 prefix each with `brief.inputs.instruction`. Pass `brief.inputs` and
 `brief.readable_files` in the executor prompt, alongside the per-dispatch
 context lines: `Workflow root:`, the Specify branch prefix when
-`ON_FEATURE_BRANCH` is true, the consensus executors' `Protocol:` and
-`Reference dir:` lines (`references/consensus-protocol.md`), and the
-corrective reservation. Insert each entry of `brief.slices` verbatim, in
-order, after those lines under a `Reference slices:` line.
+`ON_FEATURE_BRANCH` is true, and the corrective reservation. Insert each
+entry of `brief.slices` verbatim, in order, after those lines under a
+`Reference slices:` line. Clarify, Checklist and Analyze executors take their
+discovery, grounding and routing rules from the slices, so the prompt carries
+no `Protocol:` or `Reference dir:` line for them.
 Run `validate-gate` with `brief.gate` afterward; the brief is not gate evidence.
 Clarify still runs only when G1 found `[NEEDS CLARIFICATION]` markers.
 Use the brief for phase dispatch facts instead of re-reading `phase-execution.md`
