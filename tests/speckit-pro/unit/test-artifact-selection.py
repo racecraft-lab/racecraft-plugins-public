@@ -83,6 +83,8 @@ class ArtifactSelectionTests(SelectionFixture):
         for text in ("", "We may research alternatives later.\n", "## Alternatives were not considered\n",
                      "## Alternatives considered\n\n## Decision\nKeep it.\n",
                      "**Alternatives considered**: None.\n", "**Alternatives offered:**\n- N/A\n",
+                     "**Alternatives considered**: None.\nCompatibility requires the existing approach.\n",
+                     "## Alternatives considered\nNone.\nCompatibility requires the existing approach.\n",
                      "## Alternatives\n[TODO]\n", "```markdown\n**Alternatives considered**: Example.\n```\n"):
             with self.subTest(text=text):
                 (self.root / "research.md").write_text(text, encoding="utf-8")

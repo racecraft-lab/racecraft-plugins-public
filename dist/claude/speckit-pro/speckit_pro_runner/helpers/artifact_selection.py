@@ -48,7 +48,9 @@ def records_alternatives(text: str) -> bool:
         elif line.startswith("**") or (heading and len(heading.group(1)) <= active_level):
             active_level = 0
         candidate = line.lstrip("-* `").strip()
-        if active_level and candidate and not EMPTY_ALTERNATIVE.match(candidate):
+        if EMPTY_ALTERNATIVE.match(candidate):
+            active_level = 0
+        if active_level and candidate:
             return True
     return False
 
