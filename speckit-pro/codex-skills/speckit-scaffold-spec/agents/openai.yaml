@@ -1,7 +1,7 @@
 interface:
   display_name: "SpecKit Scaffold Spec"
-  short_description: "Scaffold interactively or from an answers file"
-  default_prompt: "Scaffold a SPEC-ID from the technical roadmap for SpecKit autopilot and record observed readiness through the write-readiness-record helper"
+  short_description: "Scaffold a SPEC-ID and record observed readiness"
+  default_prompt: "Scaffold a SPEC-ID from the technical roadmap for SpecKit autopilot"
 
 policy:
   allow_implicit_invocation: true
