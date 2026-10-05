@@ -35,6 +35,8 @@ These examples name the runner's contract; the steps below determine when a chec
 | `resolve-workflow-binding` | `read_only` | `{"workflow_file": "<absolute-workflow-path>"}` |
 | `resolve-scaffold-worktree-placement` | `read_only` | `{"branch_name": "<branch-name>"}` (add `worktree_root_override` only when the user supplied one) |
 | `scaffold-answers` | `read_only` | `{"answers_file": "<answers-file>", "spec_id": "<SPEC-ID>"}` |
+| `propose-quality-gates` | `dry_run` | `{"measured": true}` (`false` when nothing was measured) |
+| `propose-quality-gates` | `apply` | `{"measured": true, "confirmed": true, "proposal_digest": "<dry-run digest>"}` (`confirmed` is `false` after a decline) |
 | `write-readiness-record` | `apply` | `{"host": "<host>", "execution_mode": "<mode>", "plugin_revision": "<version>", "observations": [{"item": "<item>", "status": "<status>", "evidence_source": "<one line>", "values": {"probe": "<observed-result>"}}]}` (add `action` and `files` per observation; add `host_version` when reported) |
 
 ## Capability discovery & grounding
@@ -886,6 +888,51 @@ user hand-editing obvious missing context. If a critical detail cannot be
 derived from the roadmap or the design concept, stop and report the gap rather
 than filling it with fiction.
 
+### 6.4 Propose the Quality Gates (IN the Worktree)
+
+Every scaffold checks `.specify/quality-gates.json` (ADR 0007). When it is
+missing or invalid, measure the codebase, propose thresholds, ask once, and
+write the file only on a yes. The step is done when one line states the
+outcome.
+
+1. Run helper `propose-quality-gates` in `dry_run` with `measured: false`.
+   When `data.status` is `present`, print that the file is confirmed and go on
+   to Step 6.5.
+2. Measure with the tools already installed. Run steps 1 and 2 of the
+   [coach's complexity-ceiling measurement](../speckit-coach/references/quality-gates-guide.md),
+   set `--report` to `.specify/quality-gates-report.json`, and skip the install
+   offers and skip the coverage run: scaffold installs nothing and executes no
+   repository tests. Reuse existing coverage data; for Python, pass an empty
+   coverage JSON when none exists, and disclose that CRAP then assumes zero
+   coverage. A missing tool, an unsupported language,
+   or a failed run means `measured: false`.
+3. Run `propose-quality-gates` in `dry_run` again with that `measured` value.
+   Print `data.proposal` (the thresholds, `basis.method` and
+   `basis.measured_functions`), `data.failing_file_count`, and each file in
+   `data.failing_files` with its functions. Say that COMPLEXITY and MUTATION
+   judge every function in a changed file, so a SPEC touching a listed file
+   plans its refactor. For `nist-235`, say the ceiling of 10 was not measured.
+   When `data.status` is `invalid`, print `data.problems` and say that a yes
+   replaces the whole file, skips and opt-in slots included.
+4. Ask once whether to write the proposal.
+   Interactive mode: ask with `AskUserQuestion`, recommending yes.
+   Answers-file mode: use the file's `quality_gate_confirmation` boolean and
+   ask nothing.
+5. Run `propose-quality-gates` in `apply` with the same `measured` value and
+   `confirmed` set to the answer and `proposal_digest` from the dry run whose
+   proposal was displayed (also in answers-file mode). On `data.outcome` of
+   `proposal_changed`, report that nothing was written and continue on shipped
+   defaults; the next scaffold offers again. On `written`, tell the user
+   the file is theirs to edit through the coach flow. On `declined`, tell the
+   user autopilot runs on the shipped defaults and the next scaffold offers
+   again. A decline writes nothing and stores nothing; do not record it.
+6. On `input_error`, correct the named field and send the request once more.
+   On a write failure, report it and continue: scaffold finishes on the shipped
+   defaults. When `data.report_removed` is false, tell the user to delete
+   `.specify/quality-gates-report.json`.
+
+Step 6.5 then records the source this step left in place.
+
 ### 6.5 Write the Readiness Record (IN the Worktree)
 
 Record what this run observed, so autopilot reads evidence instead of
@@ -989,6 +1036,7 @@ equal the resolver's `branch_name` and must not be `main`; otherwise STOP.
    `docs/ai/specs/.process/SPEC-<ID>-workflow.md`, and
    `specs/<branch-name>/SPEC-MOC.md`, then commit with
    `chore(SPEC-XXX): add design concept and workflow for autopilot`.
+   When Step 6.4 wrote `.specify/quality-gates.json`, add it to the same commit.
 
 2. Push the WORKTREE BRANCH to the detected remote:
    From `<worktree_root>/`, run `git push -u <remote> <branch-name>`.
