@@ -43,7 +43,8 @@ class _Rendered(HTMLParser):
         self.text += data
 
 
-class ArtifactReviewTests(unittest.TestCase):
+class _ReviewFixture(unittest.TestCase):
+    """A feature with two generated draft pages and their pending review record."""
     @classmethod
     def setUpClass(cls) -> None:
         path = ROOT / "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py"
@@ -125,21 +126,6 @@ class ArtifactReviewTests(unittest.TestCase):
         (self.root / "workflow.md").write_text(text or self.workflow(self.record))
         return resolve_autopilot_stage({"workflow_file": "workflow.md", "autopilot_args": args or []}, self.root)
 
-    def test_valid_pending_record_is_not_a_validation_failure(self) -> None:
-        result = self.review()
-        self.assertEqual(result["status"], "pending")
-        self.assertEqual(result["resume_action"], "preview")
-        self.assertEqual(result["observer"], artifact_review.OBSERVER)
-        self.assertTrue(result["reuse_artifacts"])
-        self.assertEqual(result["verified"], 0)
-
-    def test_untrusted_html_outside_template_regions_is_rejected(self) -> None:
-        path = self.root / self.record["pages"][0]["path"]
-        path.write_text(path.read_text().replace("<!DOCTYPE html>", "<!DOCTYPE html><!-- injected -->", 1))
-        self.record["pages"][0]["sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
-        with self.assertRaisesRegex(ValueError, "trusted fill"):
-            self.review()
-
     def fill(self, identifier: str, region: str, content: str) -> None:
         """Replace one fill region of a recorded page and re-fingerprint the page."""
         page = next(page for page in self.record["pages"] if page["id"] == identifier)
@@ -149,6 +135,10 @@ class ArtifactReviewTests(unittest.TestCase):
         self.assertEqual(count, 1, f"{identifier} has no {region} region")
         path.write_text(text, encoding="utf-8")
         page["sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+class FillContentReviewTests(_ReviewFixture):
+    """Planning text in a fill renders inert, and active content fails review."""
 
     def test_escaped_planning_markup_renders_inert_in_every_fill_context(self) -> None:
         planning = '" onmouseover="alert(1)" x="<script>alert(2)</script><img src=x onerror=alert(3)>'
@@ -242,6 +232,23 @@ class ArtifactReviewTests(unittest.TestCase):
                 "preview": {"status": "pending", "blocker": "Not observed yet", "observation": None},
             })
         self.assertEqual(self.review()["generated"], 4)
+
+
+class ArtifactReviewTests(_ReviewFixture):
+    def test_valid_pending_record_is_not_a_validation_failure(self) -> None:
+        result = self.review()
+        self.assertEqual(result["status"], "pending")
+        self.assertEqual(result["resume_action"], "preview")
+        self.assertEqual(result["observer"], artifact_review.OBSERVER)
+        self.assertTrue(result["reuse_artifacts"])
+        self.assertEqual(result["verified"], 0)
+
+    def test_untrusted_html_outside_template_regions_is_rejected(self) -> None:
+        path = self.root / self.record["pages"][0]["path"]
+        path.write_text(path.read_text().replace("<!DOCTYPE html>", "<!DOCTYPE html><!-- injected -->", 1))
+        self.record["pages"][0]["sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+        with self.assertRaisesRegex(ValueError, "trusted fill"):
+            self.review()
 
     def test_all_rendered_pages_are_verified(self) -> None:
         self.verify(0)
@@ -541,4 +548,6 @@ class ArtifactReviewTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    raise SystemExit(run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(ArtifactReviewTests), label="test-artifact-review"))
+    loader = unittest.defaultTestLoader
+    suite = unittest.TestSuite(loader.loadTestsFromTestCase(case) for case in (FillContentReviewTests, ArtifactReviewTests))
+    raise SystemExit(run_counted(suite, label="test-artifact-review"))
