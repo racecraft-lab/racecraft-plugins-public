@@ -83,7 +83,9 @@ def cleanup_child(
     # zombie members are reaped, so an EPERM probe then is unresolved, not fatal.
     signal_delivered = False
     last_probe_error: PermissionError | None = None
-    absent = False  # The first ESRCH is terminal; a later answer may be a reused PGID.
+    # Preserve terminal absence when a fixture resumes cleanup after supervision.
+    absent = any(item.get("pgid") == child.pid and item.get("errno") == errno.ESRCH
+                 for item in observations or ())
 
     def record_probe_error(error: int | None) -> None:
         if observations is not None and os.name != "nt":

@@ -1082,6 +1082,7 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                 )
                 process = subprocess.Popen([sys.executable, str(supervisor)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True, env=actor_environment(root))
                 actor_group = None
+                actor_absent = False
                 try:
                     deadline = time.monotonic() + 5
                     while not ready.is_file() and process.poll() is None and time.monotonic() < deadline:
@@ -1092,16 +1093,18 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                     stdout, stderr = process.communicate(timeout=8)
                     self.assertEqual(process.returncode, 0, (stdout, stderr))
                     result = json.loads(result_path.read_text())
+                    actor_absent = result["process_group_cleanup"]["verified_absent"] is True and (
+                        result["process_group_cleanup"]["pgid"] == actor_group)
                     self.assertEqual(result["interruption_signal"], sent.name)
                     self.assertEqual(result["status"], "interrupted", json.dumps(result, sort_keys=True))
                     self.assertIs(result["handlers_restored"], True)
                     self.assertIs(result["process_group_cleanup"]["verified_absent"], True)
                     self.assertEqual(result["process_group_cleanup"]["pgid"], actor_group)
                     self.assertIn(b"before supervisor signal", (root / "evidence/stdout.bin").read_bytes())
-                    with self.assertRaises(ProcessLookupError):
-                        os.killpg(actor_group, 0)
                 finally:
                     for owned_group in (actor_group, process.pid):
+                        if owned_group == actor_group and actor_absent:
+                            continue
                         if isinstance(owned_group, int) and owned_group > 1 and owned_group != os.getpgrp():
                             try:
                                 os.killpg(owned_group, signal.SIGKILL)
@@ -1358,6 +1361,58 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
         )
 
 
+class SupervisorFixtureAbsenceTests(unittest.TestCase):
+    @unittest.skipUnless(os.name == "posix", "POSIX process-group contract")
+    def test_supervisor_fixture_never_signals_a_verified_absent_actor(self) -> None:
+        case = FunctionalHeadlessRunnerTests()
+        case.setUp()
+        process = mock.Mock(pid=FAKE_PGID + 1, returncode=0)
+        process.poll.return_value = 0
+        process.communicate.return_value = (b"", b"")
+        state, actor_calls = {}, []
+
+        def launch(command: list, **_kwargs: object) -> object:
+            state["root"] = Path(command[1]).parent
+            (state["root"] / "ready.json").write_text(json.dumps({"pgid": FAKE_PGID}))
+            return process
+
+        def signal_supervisor(_pid: int, signum: int) -> None:
+            root = state["root"]
+            result = {"interruption_signal": signum.name, "status": state["status"], "handlers_restored": True,
+                      "process_group_cleanup": {"verified_absent": state["absent"], "pgid": state["pgid"]}}
+            (root / "result.json").write_text(json.dumps(result))
+            (root / "evidence").mkdir()
+            (root / "evidence/stdout.bin").write_bytes(b"before supervisor signal")
+
+        def reused_group(pgid: int, signum: int) -> None:
+            if pgid == FAKE_PGID:
+                actor_calls.append(signum)
+                if not signum:
+                    raise ProcessLookupError(3, "original actor group absent")
+
+        variants = (("matching", FAKE_PGID, True, "interrupted", []),
+                    ("other-group", FAKE_PGID + 9, True, "interrupted", [signal.SIGKILL]),
+                    ("failed-assertion", FAKE_PGID, True, "invalid", []),
+                    ("not-absent", FAKE_PGID, False, "interrupted", [signal.SIGKILL]))
+        for variant, pgid, absent, status, expected in variants:
+            state.update(pgid=pgid, absent=absent, status=status)
+            actor_calls.clear()
+            with (
+                self.subTest(variant=variant),
+                mock.patch(__name__ + ".actor_environment", return_value={}),
+                mock.patch.object(subprocess, "Popen", side_effect=launch),
+                mock.patch.object(os, "kill", side_effect=signal_supervisor),
+                mock.patch.object(os, "killpg", side_effect=reused_group),
+                mock.patch.object(os, "getpgrp", return_value=FAKE_PGID + 2),
+            ):
+                if variant == "matching":
+                    case.test_real_supervisor_signals_preserve_raw_evidence_and_restore_handlers()
+                else:
+                    with self.assertRaises(AssertionError):
+                        case.test_real_supervisor_signals_preserve_raw_evidence_and_restore_handlers()
+                self.assertEqual(actor_calls, expected, "only this actor's verified absence is terminal")
+
+
 class SharedCodexIsolationTests(unittest.TestCase):
     """Layer 3 launches Codex with the isolation arguments Layer 2 qualified."""
 
@@ -1444,6 +1499,7 @@ class RunCaseTests(unittest.TestCase):
 def main() -> int:
     suite = unittest.TestSuite([
         unittest.defaultTestLoader.loadTestsFromTestCase(FunctionalHeadlessRunnerTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(SupervisorFixtureAbsenceTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(SharedCodexIsolationTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(HeadlessCaseCatalogContractTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(RunCaseTests),

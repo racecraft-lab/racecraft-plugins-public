@@ -346,13 +346,9 @@ def supervised_results(results: list[tuple[int, bytes, bytes, bool]], requested_
     return provider
 
 
-def finish_owned_children(children: list[subprocess.Popen]) -> None:
+def finish_owned_children(children: list[subprocess.Popen], execution: dict) -> None:
     for child in children:
-        try:
-            os.killpg(child.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            # The runner already removed the owned process group.
-            pass
+        trigger_process.cleanup_child(child, observations=execution.get("cleanup_observations", []))
         child.wait(timeout=5)
 
 
@@ -395,6 +391,64 @@ class ProcessGroupAbsenceTests(unittest.TestCase):
                 self.assertEqual(calls, original_calls, "no probe or signal may follow ESRCH")
                 self.assertEqual(signaled, any(original_calls))
                 self.assertEqual([item["errno"] for item in observations], [3])
+
+
+class PriorGroupAbsenceTests(unittest.TestCase):
+    @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
+    def test_cleanup_preserves_prior_absence_only_for_its_group(self) -> None:
+        child = FakePopen(b"", returncode=0)
+        cases = (
+            ("matching", [{"pgid": child.pid, "errno": 3}], True),
+            ("matching-before-other-error", [{"pgid": child.pid, "errno": 3}, {"pgid": child.pid, "errno": 1}], True),
+            ("other-group", [{"pgid": child.pid + 1, "errno": 3}], False),
+            ("permission-only", [{"pgid": child.pid, "errno": 1}], False),
+        )
+        for variant, observations, absent in cases:
+            with (
+                self.subTest(variant=variant),
+                mock.patch.object(trigger_process.os, "getpgrp", return_value=child.pid + 1),
+                mock.patch.object(trigger_process.os, "killpg", side_effect=ProcessLookupError(3, "group absent")) as killpg,
+            ):
+                self.assertFalse(trigger_process.cleanup_child(child, observations=observations, grace=0))
+                self.assertEqual(killpg.call_args_list, [] if absent else [mock.call(child.pid, 0)])
+
+
+class FixtureGroupAbsenceTests(unittest.TestCase):
+    @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
+    def test_owned_fixture_finalizers_preserve_cleanup_absence(self) -> None:
+        methods = (
+            "test_codex_timeout_drains_inherited_pipes_and_removes_owned_descendant",
+            "test_codex_completed_leader_cannot_leave_an_owned_descendant",
+        )
+        for method in methods:
+            with self.subTest(method=method):
+                child = FakePopen(b"", returncode=0)
+                calls = []
+                engine = SimpleNamespace(codex_executable=None, subprocess=SimpleNamespace(Popen=None))
+
+                def query(*_args: object, **kwargs: object) -> tuple:
+                    engine.subprocess.Popen([])
+                    evidence = kwargs.get("process_evidence")
+                    if evidence is not None:
+                        evidence.update(successful_process_evidence("gpt-test", host="codex"))
+                    if "completed_leader" in method:
+                        raise OSError("lingering owned descendants")
+                    return -1, b"child ready\nleader finished\n", b"", True
+
+                def reused_group(_pgid: int, signum: int) -> None:
+                    calls.append(signum)
+                    if not signum:
+                        raise ProcessLookupError(3, "original group absent")
+                    # A later signal succeeds against the replacement group.
+
+                engine.run_codex_query = query
+                with (
+                    mock.patch(__name__ + ".import_script", return_value=engine),
+                    mock.patch.object(subprocess, "Popen", return_value=child),
+                    mock.patch.object(os, "killpg", side_effect=reused_group),
+                ):
+                    getattr(Layer2TriggerRunnerTests(), method)()
+                self.assertEqual(calls, [], "fixture finalization must preserve the runner's ESRCH")
 
 
 class Layer2TriggerRunnerTests(unittest.TestCase):
@@ -594,10 +648,8 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 self.assertEqual(execution["cleanup_observations"][-1]["errno"], 3)
                 self.assertIn(b"child ready", stdout)
                 self.assertIn(b"leader finished", stdout)
-                with self.assertRaises(ProcessLookupError):
-                    os.killpg(owned[0].pid, 0)
             finally:
-                finish_owned_children(owned)
+                finish_owned_children(owned, execution)
 
     @unittest.skipIf(os.name == "nt", "POSIX owned process-group contract")
     def test_codex_completed_leader_cannot_leave_an_owned_descendant(self) -> None:
@@ -620,17 +672,18 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             owned.append(child)
             return child
 
+        execution = {}
         with tempfile.TemporaryDirectory() as temporary:
             try:
                 with mock.patch.object(engine, "codex_executable", return_value=sys.executable), mock.patch.object(
                     engine.subprocess, "Popen", side_effect=launch,
                 ):
                     with self.assertRaises(OSError):
-                        engine.run_codex_query(Path(temporary), "q", "low", "gpt-test", 5, [])
-                with self.assertRaises(ProcessLookupError):
-                    os.killpg(owned[0].pid, 0)
+                        engine.run_codex_query(Path(temporary), "q", "low", "gpt-test", 5, [], process_evidence=execution)
+                self.assertTrue(execution["cleanup_verified"])
+                self.assertEqual(execution["cleanup_observations"][-1]["errno"], 3)
             finally:
-                finish_owned_children(owned)
+                finish_owned_children(owned, execution)
 
     def test_claude_rejects_invalid_sibling_completion_and_observed_contract_conflicts(self) -> None:
         claude = import_script(CLAUDE_RUNNER, "layer2_claude_evidence_contract")
@@ -4017,6 +4070,8 @@ class CodexRelativeSkillBodyReadTests(unittest.TestCase):
 def main() -> int:
     suite = unittest.TestSuite([
         unittest.defaultTestLoader.loadTestsFromTestCase(ProcessGroupAbsenceTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(PriorGroupAbsenceTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(FixtureGroupAbsenceTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(Layer2TriggerRunnerTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(CodexRelativeSkillBodyReadTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(MeasurementRecordTests),
