@@ -63,9 +63,8 @@ class ReadinessCase(unittest.TestCase):
     def check_codex_only(self, names: tuple[str, ...], observations: list[dict[str, object]]) -> None:
         """Claude records `names` not_applicable and refuses their observations; Codex without any records unknown."""
         recorded = self.items(self.run_helper([], "claude"))
-        for name in names:
-            self.assertEqual("not_applicable", recorded[name]["status"], name)
-            self.assertNotIn("action", recorded[name])
+        self.assertEqual(dict.fromkeys(names, ("not_applicable", False)),
+                         {name: (recorded[name]["status"], "action" in recorded[name]) for name in names})
         self.refuse_each(observations, "claude")
         recorded = self.items(self.run_helper([], "codex"))
         for name in names:

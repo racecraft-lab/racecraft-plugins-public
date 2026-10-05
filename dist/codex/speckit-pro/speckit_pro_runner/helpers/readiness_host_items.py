@@ -62,11 +62,7 @@ def choice(value: Any, allowed: tuple[str, ...], label: str) -> str:
 def name_text(value: Any, label: str) -> str:
     """A short name safe to store and print; the same pattern bounds every hook, server and probe name."""
     text = pattern_text(value, NAME_RE, "a short name", label)
-    return text if NAME_RE.fullmatch(text) else _refuse_name(label)
-
-
-def _refuse_name(label: str) -> str:
-    raise SelectionError(f"{label} must be a short name of letters, digits, dots, hyphens or underscores")
+    return clean_text(text, label)
 
 
 def allow_rule_texts(probes: list[dict[str, Any]], command_label: str) -> list[str]:
@@ -506,7 +502,7 @@ def observe_codex_hook_trust(raw: dict[str, Any], observed_at: str, source: str)
     if not hooks:
         return make_item("unknown", source, observed_at, {}, "Review the hooks in /hooks, then rerun scaffold.")
     summary = ", ".join(f"{name}={state}" + (f" {found}" if found else "") for name, state, found in hooks)
-    prints = {"value:hook_hashes": digest(summary),
+    prints = {"value:hook_hashes": digest(summary), "value:hook_enablement": digest(enablement),
               **{f"hook:{name}": exact_fingerprint(found) for name, _, found in hooks if found}}
     source = describe(source, summary, "codex_hook_trust.evidence_source")
     expected = shipped_codex_hooks()

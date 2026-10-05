@@ -44,7 +44,7 @@ def hook_trust(*entries: dict[str, object]) -> dict[str, object]:
 
 
 def hook(state: str = "trusted", digest: str | None = HASH, name: str = "PreToolUse") -> dict[str, object]:
-    return {"hook": name, "state": state, "hash": digest, "enabled": True}
+    return dict(hook=name, state=state, hash=digest, enabled=True)
 
 
 def shipped_trust(**changes: object) -> dict[str, object]:
@@ -141,6 +141,12 @@ class ReadinessCodexTrustTest(ReadinessCase):
         from speckit_pro_runner.strict_input import SelectionError
         with self.assertRaises(SelectionError):
             readiness_host_items.allow_rule_texts([{"probe": "git status-extra", "outcome": "denied"}], "python3")
+
+    def test_exact_names_keep_the_credential_filter(self) -> None:
+        from speckit_pro_runner.helpers import readiness_host_items
+        from speckit_pro_runner.strict_input import SelectionError
+        with self.assertRaises(SelectionError):
+            readiness_host_items.name_text("ghp_" + "a" * 35 + "1", "hook name")
 
     def test_disabled_or_unobservable_hook_enablement_never_verifies(self) -> None:
         self.assertEqual("unavailable", self.item(shipped_trust(enabled=False))["status"])
