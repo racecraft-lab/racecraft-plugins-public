@@ -10,6 +10,7 @@ path; an absolute interpreter appears only in the rules printed to the user.
 
 from __future__ import annotations
 
+import json
 import re
 from typing import Any
 
@@ -19,9 +20,10 @@ from ..sweep_isolation import secret_matches
 from .readiness_record import MAX_TEXT, NOT_OBSERVED_ACTION, clean_text, make_item
 
 CLAUDE_ONLY_ITEMS = ("permission_probe", "plugin_scope", "mcp_authentication")
-HOST_ITEMS = (*CLAUDE_ONLY_ITEMS, "hooks")
+CODEX_ONLY_ITEMS = ("codex_agents", "extension_versions")
+HOST_ITEMS = (*CLAUDE_ONLY_ITEMS, "hooks", *CODEX_ONLY_ITEMS)
 DETAIL_KEYS = {"permission_probe": "probes", "plugin_scope": "scope", "mcp_authentication": "servers",
-               "hooks": "hooks"}
+               "hooks": "hooks", "codex_agents": "agents", "extension_versions": "extensions"}
 PROBES = ("runner_request", "git_status")
 PROBE_OUTCOMES = ("passed", "denied", "prompted")
 SCOPES = ("user", "project", "local")
@@ -33,6 +35,7 @@ COMMAND_RE = re.compile(r"[A-Za-z0-9_.+/][A-Za-z0-9_./+-]*")
 VERSION_RE = re.compile(r"[0-9A-Za-z][0-9A-Za-z.+-]{0,39}")
 INTERPRETER_PLACEHOLDER = "<interpreter>"
 NOT_APPLICABLE_SOURCE = "Claude Code only; Codex records its own approval, sandbox and trust items"
+CODEX_NOT_APPLICABLE_SOURCE = "Codex only; Claude Code loads its agents from the plugin and records its own scope item"
 
 
 def describe(source: str, summary: str, label: str) -> str:
@@ -211,6 +214,8 @@ def host_item(raw: dict[str, Any], host: str, observed_at: str) -> tuple[str, di
         raise SelectionError(f"{name} takes only item, evidence_source and {key}; its status is derived")
     if name in CLAUDE_ONLY_ITEMS and host != "claude":
         raise SelectionError(f"{name} is Claude Code only; the helper records it not_applicable on {host}")
+    if name in CODEX_ONLY_ITEMS and host != "codex":
+        raise SelectionError(f"{name} is Codex only; the helper records it not_applicable on {host}")
     source = clean_text(raw.get("evidence_source"), f"{name}.evidence_source")
     if key not in raw:
         return name, make_item("unknown", source, observed_at, {}, NOT_OBSERVED_ACTION)
@@ -220,16 +225,22 @@ def host_item(raw: dict[str, Any], host: str, observed_at: str) -> tuple[str, di
         return name, observe_plugin_scope(raw, observed_at, source)
     if name == "mcp_authentication":
         return name, observe_mcp_authentication(raw, observed_at, source)
+    if name == "codex_agents":
+        return name, observe_codex_agents(raw, observed_at, source)
+    if name == "extension_versions":
+        return name, observe_extension_versions(raw, observed_at, source)
     return name, observe_hooks(raw, observed_at, source, host)
 
 
 def fill_missing(items: dict[str, dict[str, Any]], host: str, observed_at: str) -> None:
-    """Record each item scaffold did not send: not_applicable off Claude Code, otherwise unknown."""
+    """Record each item scaffold did not send: not_applicable off its host, otherwise unknown."""
     for name in HOST_ITEMS:
         if name in items:
             continue
         if name in CLAUDE_ONLY_ITEMS and host != "claude":
             items[name] = make_item("not_applicable", NOT_APPLICABLE_SOURCE, observed_at, {})
+        elif name in CODEX_ONLY_ITEMS and host != "codex":
+            items[name] = make_item("not_applicable", CODEX_NOT_APPLICABLE_SOURCE, observed_at, {})
         else:
             items[name] = make_item("unknown", "not observed by scaffold", observed_at, {}, NOT_OBSERVED_ACTION)
 
@@ -240,3 +251,103 @@ def allow_rules(inputs: dict[str, Any]) -> list[str]:
         if isinstance(raw, dict) and raw.get("item") == "permission_probe" and "probes" in raw:
             return rules_for(parse_probes(raw), recorded=False)
     return []
+
+
+# --- Codex-only items: installed agents and extension versions -------------------------------------------------
+AGENT_STATES = ("current", "stale", "missing")
+REPAIRS = ("none", "applied", "declined", "failed")
+STATIC_INSTALL_KEYS = {"destination", "model", "luna_fallback"}
+ROUTED_INSTALL_KEYS = {"destination", "route_policy_manifest", "strict_model_override"}
+RESTART_ACTION = ("Rerun scaffold after you restart Codex so it loads the repaired agents; "
+                  "installing them does not change the running session.")
+
+
+def installation_digest(raw: Any) -> str:
+    """Digest of the selected installation inputs, replayed exactly as the install helper takes them (#1048).
+
+    A static installation names `model` and `luna_fallback`; a route-aware one names
+    `route_policy_manifest` and may add `strict_model_override`. Neither takes a `routing_mode` key, and the
+    two shapes never mix. Only the digest is recorded, so a destination path never reaches the record.
+    """
+    if not isinstance(raw, dict):
+        raise SelectionError("codex_agents.installation must be an object")
+    routed = "route_policy_manifest" in raw
+    allowed = ROUTED_INSTALL_KEYS if routed else STATIC_INSTALL_KEYS
+    needed = {"route_policy_manifest"} if routed else {"model", "luna_fallback"}
+    if not needed <= raw.keys() <= allowed:
+        raise SelectionError(f"codex_agents.installation takes {sorted(allowed)} and needs {sorted(needed)}")
+    texts = {key: value for key, value in raw.items() if key != "luna_fallback"}
+    if not all(isinstance(value, str) and value.strip() for value in texts.values()) \
+            or not isinstance(raw.get("luna_fallback", False), bool):
+        raise SelectionError("codex_agents.installation needs text values and a boolean luna_fallback")
+    return digest(json.dumps(raw, sort_keys=True))
+
+
+def revision_text(value: Any, label: str) -> str:
+    if not isinstance(value, str) or not VERSION_RE.fullmatch(value):
+        raise SelectionError(f"{label} must be a version string")
+    return value
+
+
+def observe_codex_agents(raw: dict[str, Any], observed_at: str, source: str) -> dict[str, Any]:
+    detail = raw["agents"]
+    if not isinstance(detail, dict) or not detail.keys() <= {"installation", "inventory", "loaded_revision",
+                                                              "expected_revision"}:
+        raise SelectionError("codex_agents.agents takes installation, inventory, loaded_revision, expected_revision")
+    prints = {"value:installation_inputs": installation_digest(detail.get("installation"))}
+    inventory = [(name_text(entry.get("agent"), "codex_agents agent"),
+                  choice(entry.get("state"), AGENT_STATES, "codex_agents state"),
+                  choice(entry.get("repair"), REPAIRS, "codex_agents repair"))
+                 for entry in listed(detail, "inventory", "codex_agents")]
+    expected = revision_text(detail.get("expected_revision"), "codex_agents expected_revision")
+    loaded = detail.get("loaded_revision")
+    if loaded is not None:
+        loaded = revision_text(loaded, "codex_agents loaded_revision")
+    prints["value:expected_revision"] = digest(expected)
+    if not inventory:
+        return make_item("unknown", source, observed_at, prints,
+                         "Run the install-codex-agents dry run with the selected installation inputs, "
+                         "then rerun scaffold.")
+    summary = ", ".join(f"{name}={state}" + ("" if repair == "none" else f" ({repair})")
+                        for name, state, repair in inventory)
+    prints["value:inventory"] = digest(summary)
+    source = describe(source, summary, "codex_agents.evidence_source")
+    if any(state != "current" and repair != "applied" for _, state, repair in inventory):
+        return make_item("unavailable", source, observed_at, prints, clean_text(
+            "Run $speckit-pro:install with the selected installation inputs, restart Codex, then rerun scaffold.",
+            "codex_agents.action"))
+    if loaded is None:
+        return make_item("unknown", source, observed_at, prints, RESTART_ACTION)
+    prints["value:loaded_revision"] = digest(loaded)
+    if loaded != expected:
+        return make_item("unavailable", describe(source, f"session loaded {loaded}, expected {expected}",
+                                                 "codex_agents.evidence_source"), observed_at, prints, RESTART_ACTION)
+    return make_item("verified", source, observed_at, prints)
+
+
+def observe_extension_versions(raw: dict[str, Any], observed_at: str, source: str) -> dict[str, Any]:
+    entries = []
+    for entry in listed(raw, "extensions", "extension_versions"):
+        versions = {}
+        for key in ("installed", "expected"):
+            value = entry.get(key)
+            versions[key] = None if value is None else revision_text(value, f"extension_versions {key}")
+        entries.append((name_text(entry.get("extension"), "extension_versions extension"), versions["installed"],
+                        versions["expected"]))
+    if not entries:
+        return make_item("unknown", source, observed_at, {}, "Read the installed extension versions with "
+                         "`specify extension list`, then rerun scaffold.")
+    summary = ", ".join(f"{name}={installed or 'not installed'}"
+                        + (f" (expected {expected})" if expected not in (None, installed) else "")
+                        for name, installed, expected in entries)
+    prints = {"value:extensions": digest(summary)}
+    source = describe(source, summary, "extension_versions.evidence_source")
+    steps = [f"Run `specify extension add {name}`" if installed is None else f"Run `specify extension update {name}`"
+             for name, installed, expected in entries if installed is None or (expected and installed != expected)]
+    if steps:
+        return make_item("unavailable", source, observed_at, prints,
+                         clean_text("; ".join(steps) + ", then rerun scaffold.", "extension_versions.action"))
+    if any(expected is None for _, _, expected in entries):
+        return make_item("unknown", source, observed_at, prints, "Name the expected version of each extension "
+                         "(its project pin or the curated set), then rerun scaffold.")
+    return make_item("verified", source, observed_at, prints)
