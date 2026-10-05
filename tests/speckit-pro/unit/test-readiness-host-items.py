@@ -33,6 +33,11 @@ def request(observations: list[dict[str, object]], host: str = "claude") -> dict
             "operation": "write-readiness-record", "mode": "apply", "inputs": body}
 
 
+def scaffold_step(host: str) -> str:
+    path = host_skill_root(host) / "speckit-scaffold-spec" / "SKILL.md"
+    return path.read_text(encoding="utf-8").split("### 6.5 Write the Readiness Record", 1)[1].split("\n### ", 1)[0]
+
+
 class ReadinessHostItemsTest(unittest.TestCase):
     def setUp(self) -> None:
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
@@ -181,18 +186,14 @@ class ReadinessHostItemsTest(unittest.TestCase):
         self.assertEqual(3, len(rules))
 
     def test_scaffold_documents_the_host_items_on_each_host(self) -> None:
-        for host in ("claude", "codex"):
-            with self.subTest(host=host):
-                skill = (host_skill_root(host) / "speckit-scaffold-spec" / "SKILL.md").read_text(encoding="utf-8")
-                step = skill.split("### 6.5 Write the Readiness Record", 1)[1].split("\n### ", 1)[0]
-                self.assertIn("`hooks`", step)
-                for name in CLAUDE_ONLY:
-                    self.assertEqual(host == "claude", f"| `{name}` |" in step, name)
-                if host == "codex":
-                    self.assertIn("`not_applicable`", step)
-                    self.assertIn("Claude Code only", step)
-                else:
-                    self.assertIn("allow_rules", step)
+        steps = {host: scaffold_step(host) for host in ("claude", "codex")}
+        for host, step in steps.items():
+            rows = {name: f"| `{name}` |" in step for name in (*CLAUDE_ONLY, "hooks")}
+            self.assertEqual({"permission_probe": host == "claude", "plugin_scope": host == "claude",
+                              "mcp_authentication": host == "claude", "hooks": True}, rows, host)
+        self.assertIn("allow_rules", steps["claude"])
+        self.assertIn("Claude Code only", steps["codex"])
+        self.assertIn("`not_applicable`", steps["codex"])
 
 
 def build_suite() -> unittest.TestSuite:

@@ -49,9 +49,10 @@ def choice(value: Any, allowed: tuple[str, ...], label: str) -> str:
 
 
 def name_text(value: Any, label: str) -> str:
-    if not isinstance(value, str) or not NAME_RE.fullmatch(value):
+    text = clean_text(value, label)
+    if not NAME_RE.fullmatch(text):
         raise SelectionError(f"{label} must be a short name of letters, digits, dots, hyphens or underscores")
-    return clean_text(value, label)
+    return text
 
 
 def allow_rule_texts(probes: list[dict[str, Any]], command_label: str) -> list[str]:
