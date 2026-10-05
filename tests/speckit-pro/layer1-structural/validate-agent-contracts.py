@@ -112,7 +112,7 @@ CC_AGENTS_DIR = PLUGIN_ROOT / 'agents'
 CODEX_AGENT_PROFILES = {
     role['name']: (
         role['codex']['model'],
-        role['codex']['effort'],
+        role['codex']['effort'] or '',
         role['codex']['sandbox'],
     )
     for role in AGENT_INVENTORY['roles']
@@ -176,7 +176,11 @@ class ValidateCodexAgents(unittest.TestCase):
             model_val = toml_string_field(content, 'model')
             with self.subTest(msg=f'{agent}: model is an officially documented Codex GPT model'):
                 self.assertRegex(model_val, validate_codex_agents_MODEL_RE, 'model must be an officially documented Codex GPT model')
-            if agent == 'autopilot-fast-helper':
+            if not expected_profile[1]:
+                with self.subTest(msg=f'{agent}: sets no model_reasoning_effort, so the spawn value applies'):
+                    self.assertNotIn('model_reasoning_effort', content)
+                effort_val = ''
+            elif agent == 'autopilot-fast-helper':
                 with self.subTest(msg=f'{agent}: has low model_reasoning_effort field'):
                     self.assertIn('model_reasoning_effort = "low"', content)
                 effort_val = toml_string_field(content, 'model_reasoning_effort')
@@ -258,9 +262,10 @@ class ValidateAgentProsePaths(unittest.TestCase):
 
 
 # The owner's plan-stage table (issue 1150): (Claude model, Claude effort, Codex model, Codex effort)
-# per installed agent. phase-executor's default is its Plan row; the brief overrides Specify and Tasks.
+# per installed agent. phase-executor's Codex file sets no effort (a file effort would override the spawn
+# value), so the brief sets it per phase: Plan high, Specify and Tasks medium. None marks that row.
 PLAN_STAGE_TABLE = {
-    'phase-executor': ('opus', 'high', 'gpt-6-sol', 'high'),
+    'phase-executor': ('opus', 'high', 'gpt-6-sol', None),
     'clarify-executor': ('sonnet', 'high', 'gpt-6-sol', 'medium'),
     'checklist-executor': ('sonnet', 'high', 'gpt-6-sol', 'medium'),
     'analyze-executor': ('sonnet', 'high', 'gpt-6-sol', 'medium'),
@@ -289,7 +294,7 @@ class ValidatePlanStageModelTable(unittest.TestCase):
                 continue
             toml = (CODEX_AGENTS_DIR / f'{agent}.toml').read_text(encoding='utf-8')
             with self.subTest(agent=agent, host='codex'):
-                self.assertEqual((codex_model, codex_effort),
+                self.assertEqual((codex_model, codex_effort or ''),
                                  (toml_string_field(toml, 'model'), toml_string_field(toml, 'model_reasoning_effort')))
                 self.assertEqual((codex_model, codex_effort),
                                  (inventory[agent]['codex']['model'], inventory[agent]['codex']['effort']))

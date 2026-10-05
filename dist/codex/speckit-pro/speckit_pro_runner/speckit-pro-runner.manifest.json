@@ -31,7 +31,7 @@
         "value": "speckit_pro_runner/agent_inventory.json",
         "display": "speckit_pro_runner/agent_inventory.json"
       },
-      "sha256": "4b2911e6caf488733fbd6306f02b65d0d637230e3f57bcaddf8777029c1f72d2"
+      "sha256": "774eb9bb92eb4a9a4aa3c09cf280874599bf08748cce189844a1d1ffe18730da"
     },
     {
       "path": {
@@ -103,7 +103,7 @@
         "value": "speckit_pro_runner/codex_agent_generator.py",
         "display": "speckit_pro_runner/codex_agent_generator.py"
       },
-      "sha256": "0a938335b0ed6a4471adc9df9535f095f233a1f9799b21e6636e75f5c860a825"
+      "sha256": "15491ab8dcf8cc6f133834bee193ec47fd052f8f22440aae3398495f94d0c01c"
     },
     {
       "path": {
@@ -623,7 +623,7 @@
         "value": "speckit_pro_runner/helpers/phase_brief.py",
         "display": "speckit_pro_runner/helpers/phase_brief.py"
       },
-      "sha256": "b3d2181c805358ecbbead85b1d53d10579ee7e574c5126c727ee07baa8ccf007"
+      "sha256": "d9b5309fa119788d3973b16fef62fc1e919b2a541c425888d793d60be543a5ec"
     },
     {
       "path": {

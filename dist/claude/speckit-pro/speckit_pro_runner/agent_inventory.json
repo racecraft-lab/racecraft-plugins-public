@@ -6,7 +6,7 @@
       "category": "shared",
       "exception_reason": null,
       "claude_code": {"implementation": "plugin_agent", "source": "agents/phase-executor.md", "install_status": "required", "order": 0, "model": "opus", "effort": "high", "sandbox": "tool-policy", "memory": "none"},
-      "codex": {"implementation": "custom_agent", "source": "codex-agents/phase-executor.toml", "install_status": "required", "order": 8, "model": "gpt-6-sol", "effort": "high", "sandbox": "workspace-write", "memory": "none"}
+      "codex": {"implementation": "custom_agent", "source": "codex-agents/phase-executor.toml", "install_status": "required", "order": 8, "model": "gpt-6-sol", "effort": null, "sandbox": "workspace-write", "memory": "none"}
     },
     {
       "name": "clarify-executor",

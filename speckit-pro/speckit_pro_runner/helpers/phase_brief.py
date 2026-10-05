@@ -19,10 +19,11 @@ PHASES = {
     "Tasks": ("phase-executor", "G5", ("spec.md", "plan.md", "research.md", "data-model.md", "contracts/", "quickstart.md")),
     "Analyze": ("analyze-executor", "G6", ("spec.md", "plan.md", "tasks.md", "checklists/")),
 }
-# Specify and Tasks follow a written spec, so the shared phase-executor runs them below the Plan default
-# that its agent files and the inventory carry (issue 1150). Every other phase uses its agent's inventory row.
+# The shared phase-executor serves three phases at different efforts (issue 1150). Its Codex file sets no
+# effort, since a file effort overrides the spawn value, so the brief names the Codex effort per phase;
+# Specify and Tasks follow a written spec and also run Sonnet on Claude Code. Other phases use their agent's inventory row.
 SPEC_DRIVEN_MODEL = {"claude": {"model": "sonnet", "effort": "high"}, "codex": {"model": "gpt-6-sol", "effort": "medium"}}
-PHASE_MODEL_OVERRIDES = {"Specify": SPEC_DRIVEN_MODEL, "Tasks": SPEC_DRIVEN_MODEL}
+PHASE_MODEL_OVERRIDES = {"Specify": SPEC_DRIVEN_MODEL, "Tasks": SPEC_DRIVEN_MODEL, "Plan": {"codex": {"model": "gpt-6-sol", "effort": "high"}}}
 REFERENCES = Path(__file__).resolve().parents[2] / "skills" / "speckit-autopilot" / "references"
 EXECUTOR_SLICES = (
     ("capability-discovery.md", ("Capability Categories", "Discovery Step", "Research Broker Rule", "Selection Rule", "Capability Boundaries by Role",
@@ -94,11 +95,11 @@ def phase_slices(phase: str) -> list[str]:
 
 def phase_model(phase: str, agent: str) -> dict[str, dict[str, str]]:
     """Model and effort for the phase's dispatch on each host; Claude Code uses the model per call and keeps effort in the agent."""
-    if phase in PHASE_MODEL_OVERRIDES:
-        return {host: dict(choice) for host, choice in PHASE_MODEL_OVERRIDES[phase].items()}
     role = next(role for role in AGENT_INVENTORY["roles"] if role["name"] == agent)
-    return {host: {"model": role[key]["model"], "effort": role[key]["effort"]}
-            for host, key in (("claude", "claude_code"), ("codex", "codex"))}
+    model = {host: {"model": role[key]["model"], "effort": role[key]["effort"]}
+             for host, key in (("claude", "claude_code"), ("codex", "codex"))}
+    model.update({host: dict(choice) for host, choice in PHASE_MODEL_OVERRIDES.get(phase, {}).items()})
+    return model
 
 
 def brief_data(phase: str, workflow: str, feature: str) -> dict[str, Any]:
@@ -150,8 +151,9 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     model: {claude: {model: str, effort: str},
         codex: {model: str, effort: str}}, host-specific dispatch configuration;
         applies to the top-level agent only, never every wave member. Specify
-        and Tasks name a faster model than the phase-executor's installed Plan
-        default; every other phase names its agent's inventory row. Claude
+        and Tasks name a faster model than Plan on both hosts, and the Codex
+        phase-executor file sets no effort, so its effort comes from this
+        field; every other phase names its agent's inventory row. Claude
         consumes model per call and keeps effort in the agent; Codex consumes
         both per spawn.
     hooks: list[{extension: str, command: str}], ordered optional extension

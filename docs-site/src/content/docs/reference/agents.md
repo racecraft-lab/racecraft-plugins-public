@@ -361,7 +361,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 #### Source Facts
 
-- phase-executor is classified as `shared`. Claude Code: plugin agent (required). Codex: custom agent (required). Codex uses `gpt-6-sol` with `high` effort. Source refs: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/phase-executor.md`, `speckit-pro/codex-agents/phase-executor.toml`.
+- phase-executor is classified as `shared`. Claude Code: plugin agent (required). Codex: custom agent (required). Codex uses `gpt-6-sol`, with effort set per dispatch by the phase brief. Source refs: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/phase-executor.md`, `speckit-pro/codex-agents/phase-executor.toml`.
 
 #### Sources
 

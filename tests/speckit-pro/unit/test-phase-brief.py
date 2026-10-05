@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import tomllib
 from unittest.mock import patch
 from types import SimpleNamespace
 import unittest
@@ -186,6 +187,18 @@ class PhaseBriefModelTests(unittest.TestCase):
                     self.assertNotIn("model_reasoning_effort=", loop)
 
 
+class CodexEffectiveEffortTests(unittest.TestCase):
+    def test_codex_dispatch_runs_the_effort_the_table_names(self):
+        # Codex applies an agent file's effort over the spawn value (OpenAI subagent docs), so the effort a
+        # dispatch actually runs is the file's when it sets one and the brief's spawn value otherwise.
+        table = {"Specify": "medium", "Clarify": "medium", "Plan": "high", "Checklist": "medium", "Tasks": "medium", "Analyze": "medium"}
+        for phase, expected in table.items():
+            with self.subTest(phase=phase):
+                brief = dispatch_brief({"phase": phase, "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"})["data"]
+                agent = tomllib.loads((REPO / "speckit-pro/codex-agents" / (brief["agent"] + ".toml")).read_text())
+                self.assertEqual(agent.get("model_reasoning_effort", brief["model"]["codex"]["effort"]), expected)
+
+
 class RetryLadderTopRungTests(unittest.TestCase):
     def test_third_rung_stays_the_strongest_model_at_max_effort(self):
         # ADR 0004: the plan-stage table lowers executor effort; a failing check still escalates to the top.
@@ -264,5 +277,5 @@ class PhaseBriefSliceTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, PhaseBriefModelTests, RetryLadderTopRungTests, PhaseBriefSliceTests))
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, PhaseBriefModelTests, CodexEffectiveEffortTests, RetryLadderTopRungTests, PhaseBriefSliceTests))
     sys.exit(run_counted(suite, label="test-phase-brief"))

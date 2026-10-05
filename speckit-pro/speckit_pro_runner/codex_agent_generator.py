@@ -78,6 +78,9 @@ def render_codex_agent(name: str, claude_text: str, codex_record: dict[str, Any]
         "sandbox_mode": sandbox,
         "developer_instructions": instructions,
     }
+    if values["model_reasoning_effort"] is None:
+        # Codex applies a file's effort over the spawn value, so a null inventory effort leaves it unset for the brief.
+        del values["model_reasoning_effort"]
     lines = [f"{key} = {_basic_string(value)}" for key, value in values.items() if key != "developer_instructions"]
     text = GENERATED_NOTICE.format(source=source) + "\n".join(lines)
     text += f"\ndeveloper_instructions = {_multiline_string(instructions)}\n"
