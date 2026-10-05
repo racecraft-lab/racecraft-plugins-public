@@ -216,18 +216,16 @@ class RoutingTests(unittest.TestCase):
     def test_untagged_ambiguous_unknown_and_empty_prefixes_route_to_the_generic_domain(self) -> None:
         # A low-confidence item with no usable category still gets exactly one
         # second opinion, from the generic domain perspective (ADR 0022).
-        for line, tags in (
-            ("Q5: no category prefix was written at all", []),
-            ("[ambiguous] Q4: unclear which perspective applies", ["ambiguous"]),
-            ("[frobnicate] Q6: a tag nobody defined", ["frobnicate"]),
-            ("[NEEDS CLARIFICATION] Q8: leaked marker", ["needs clarification"]),
-            ("[] Q9: an empty prefix", []),
-        ):
-            with self.subTest(line=line):
-                payload, exit_code = route(line, "low")
-                self.assertEqual(exit_code, 0)
-                self.assertEqual(payload["tags"], tags)
-                self.assertEqual(payload["analysts"], [DOMAIN])
+        lines = {
+            "Q5: no category prefix was written at all": [],
+            "[ambiguous] Q4: unclear which perspective applies": ["ambiguous"],
+            "[frobnicate] Q6: a tag nobody defined": ["frobnicate"],
+            "[NEEDS CLARIFICATION] Q8: leaked marker": ["needs clarification"],
+            "[] Q9: an empty prefix": [],
+        }
+        routed = {line: route(line, "low") for line in lines}
+        self.assertEqual({line: (payload["tags"], payload["analysts"], code) for line, (payload, code) in routed.items()},
+                         {line: (tags, [DOMAIN], 0) for line, tags in lines.items()})
 
     def test_the_first_known_tag_decides_a_multi_tag_item(self) -> None:
         self.assertEqual(analysts_for("[codebase, domain] Q10: bcrypt or argon2?", "low"), [CODEBASE])
@@ -293,9 +291,7 @@ class TierTests(unittest.TestCase):
                 self.assertIsNone(payload["security_route"])
 
     def test_a_missing_confidence_is_low_and_never_a_free_pass(self) -> None:
-        payload, _ = route("[spec] Q8: which decision applies?")
-        self.assertEqual(payload["tier"], "low_confidence")
-        self.assertEqual(payload["analysts"], [SPEC])
+        self.assertEqual(route("[spec] Q8: which decision applies?")[0], route("[spec] Q8: which decision applies?", "low")[0])
 
     def test_confidence_is_case_insensitive_and_anything_else_is_refused(self) -> None:
         self.assertEqual(route("[spec] Q9: x", "HIGH")[0]["tier"], "recommendation")
@@ -659,8 +655,7 @@ class NoDecisionModelTests(unittest.TestCase):
 
     def test_the_routing_helper_calls_no_decision_model(self) -> None:
         source = inspect.getsource(read_only.parse_consensus_categories).casefold()
-        for marker in ("jev", "evaluate", "typesafe", "subprocess", "urllib"):
-            self.assertNotIn(marker, source)
+        self.assertEqual([marker for marker in ("jev", "evaluate", "typesafe", "subprocess", "urllib") if marker in source], [])
 
     def test_no_plan_stage_consensus_agent_or_reference_names_a_decision_model(self) -> None:
         paths = [PLUGIN_ROOT / "agents" / f"{name}.md" for name in PLAN_STAGE_CONSENSUS_AGENTS]
