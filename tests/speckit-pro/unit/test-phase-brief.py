@@ -175,13 +175,15 @@ class PhaseBriefModelTests(unittest.TestCase):
 
     def test_both_hosts_dispatch_the_briefed_model(self):
         needles = {"claude": ("model: brief.model.claude.model",),
-                   "codex": ("model=brief.model.codex.model", "model_reasoning_effort=brief.model.codex.effort")}
+                   "codex": ("model=brief.model.codex.model", "reasoning_effort=brief.model.codex.effort")}
         for host, expected in needles.items():
             with self.subTest(host=host):
                 skill = (host_skill_root(host) / "speckit-autopilot/SKILL.md").read_text()
                 loop = skill.split("## Step 2: Main Execution Loop", 1)[1]
                 for needle in expected:
                     self.assertIn(needle, loop)
+                if host == "codex":
+                    self.assertNotIn("model_reasoning_effort=", loop)
 
 
 class RetryLadderTopRungTests(unittest.TestCase):

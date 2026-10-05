@@ -860,7 +860,7 @@ for phase in PHASES starting from first_pending:
     3. For each workflow prompt in this phase:
          Planning:
          spawn_agent(agent_type=brief.agent, model=brief.model.codex.model,
-                     model_reasoning_effort=brief.model.codex.effort,
+                     reasoning_effort=brief.model.codex.effort,
                      message=<"$" + brief.inputs.skill (omitted when null) + newline +
                               brief.inputs.instruction + workflow prompt + brief context + brief.slices>) then wait_agent
          Implement: use the implementation executor and task-specific TDD prompt.
