@@ -3660,7 +3660,8 @@ should understand what the presets enforce:
    sections than core defaults. The autopilot's task parsing
    should handle any structure.
 4. **Debug with `specify preset resolve`** — if artifacts have
-   unexpected structure, run `specify preset resolve <template>`
+   unexpected structure, run `spec_kit.cli_argv + ["preset", "resolve", "<template>"]`
+   (the verified prefix from `check-prerequisites`; never bare `specify`)
    to see which file the `/speckit-*` command actually used
 
 ## PR Creation Protocol
