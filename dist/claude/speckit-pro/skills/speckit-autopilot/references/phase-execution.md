@@ -3614,8 +3614,11 @@ orchestrator's for those two phases.
 
 The rows apply as written to Implement (and to Clarify's events). For Specify,
 Plan, Checklist, Tasks and Analyze, the loaded command only prints optional
-`before_` hooks as suggestions, so the autopilot skips them; `after_` rows follow
-`brief.hooks`, once after the phase (ADR 0018).
+hooks as suggestions, so `brief.hooks` carries them: the optional `before_` and
+`after_` hooks of the phase, each once, run after the phase (ADR 0018). A
+condition the runner cannot evaluate (anything but `env.NAME is set` or
+`env.NAME ==|!= 'value'`) fails the brief request; handle it through runner
+error recovery, never by guessing.
 
 **Where hooks fire in the execution loop:**
 

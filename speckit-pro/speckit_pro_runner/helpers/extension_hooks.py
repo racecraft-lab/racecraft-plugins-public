@@ -1,9 +1,14 @@
-"""The optional hooks a project registers for one Spec Kit event, read from `.specify/extensions.yml`.
+"""The optional hooks a project registers for Spec Kit events, read from `.specify/extensions.yml`.
 
 Spec Kit writes this file as block YAML: `hooks:`, then one key per event, then a
 list of entries. The standard library has no YAML reader, so this module reads
 only that shape and fails closed on anything else, naming the line. Mandatory
 hooks are never returned: the loaded upstream command runs those itself.
+
+Quoted values keep their type: a quoted `"true"` is text, not a boolean, and a
+quoted `"null"` is a condition, not an absent one. A hook condition is run the
+way Spec Kit v1.1.0 runs it for `env.NAME is set` and `env.NAME ==|!= 'value'`;
+any other condition raises, so a registration is never lost without a word.
 """
 
 from __future__ import annotations
@@ -20,24 +25,61 @@ IDENTIFIER = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
 FIELD = re.compile(r"^( *)([A-Za-z_][\w-]*):[ \t]*(.*)$")
 ITEM = re.compile(r"^( *)-( +)([A-Za-z_][\w-]*):[ \t]*(.*)$")
 EMPTY_VALUES = frozenset({"", "null", "~"})
+CLOSING_QUOTE_TAIL = re.compile(r"(?:[ \t]+#.*)?[ \t]*")
+ENV_SET = re.compile(r"env\.([A-Za-z0-9_]+)\s+is\s+set", re.IGNORECASE)
+ENV_COMPARE = re.compile(r"""env\.([A-Za-z0-9_]+)\s*(==|!=)\s*["']([^"']+)["']""", re.IGNORECASE)
+
+
+def parse_scalar(raw: str) -> tuple[str, bool]:
+    """One YAML scalar and whether it was quoted; malformed quoting raises."""
+    text = raw.strip()
+    if text[:1] not in {'"', "'"}:
+        return re.sub(r"[ \t]+#.*$", "", text).strip(), False
+    quote, out, index = text[0], [], 1
+    while index < len(text):
+        char = text[index]
+        if char == quote:
+            if quote == "'" and text[index + 1 : index + 2] == "'":
+                out.append("'")
+                index += 2
+                continue
+            if CLOSING_QUOTE_TAIL.fullmatch(text[index + 1 :]) is None:
+                raise ValueError("text follows a closing quote")
+            return "".join(out), True
+        if quote == '"' and char == "\\":
+            following = text[index + 1 : index + 2]
+            if following not in {'"', "\\"}:
+                raise ValueError("unsupported escape in a quoted value")
+            out.append(following)
+            index += 2
+            continue
+        out.append(char)
+        index += 1
+    raise ValueError("unterminated quoted value")
 
 
 def scalar(raw: str) -> str:
-    """One plain or quoted YAML scalar, without its quotes or trailing comment."""
-    text = raw.strip()
-    if text[:1] in {'"', "'"}:
-        quote = text[0]
-        end = text.find(quote, 1)
-        return text[1:end] if end > 0 else text[1:]
-    return re.sub(r"[ \t]+#.*$", "", text).strip()
+    return parse_scalar(raw)[0]
 
 
-def flag(fields: dict[str, str], name: str, where: str) -> bool:
-    """A true/false field that Spec Kit defaults to true when absent."""
-    value = scalar(fields.get(name, "true")).lower()
-    if value not in {"true", "false"}:
-        raise ValueError(f"{HOOK_FILE} {where}: {name} must be true or false")
-    return value == "true"
+def flag(fields: dict[str, str], name: str) -> bool:
+    """A true/false field that Spec Kit defaults to true when absent; a quoted value is text, so it raises."""
+    value, quoted = parse_scalar(fields.get(name, "true"))
+    if quoted or value.lower() not in {"true", "false"}:
+        raise ValueError(f"{name} must be an unquoted true or false")
+    return value.lower() == "true"
+
+
+def condition_met(fields: dict[str, str]) -> bool:
+    """True when the entry has no condition or its env condition holds; any other condition raises."""
+    text, quoted = parse_scalar(fields.get("condition", ""))
+    if text.strip() == "" or (text in EMPTY_VALUES and not quoted):
+        return True
+    if (match := ENV_SET.fullmatch(text.strip())) is not None:
+        return match[1].upper() in os.environ
+    if (match := ENV_COMPARE.fullmatch(text.strip())) is not None:
+        return (os.environ.get(match[1].upper(), "") == match[3]) == (match[2] == "==")
+    raise ValueError("condition is not one the runner evaluates (env.NAME is set, env.NAME == or != 'value')")
 
 
 def hook_entries(text: str, event: str) -> list[tuple[int, dict[str, str]]]:
@@ -90,11 +132,27 @@ def hook_entries(text: str, event: str) -> list[tuple[int, dict[str, str]]]:
     return entries
 
 
-def optional_hooks(root: Path, event: str) -> list[dict[str, str]]:
-    """Enabled, unconditional, optional hooks for `event`, lowest priority number first.
+def entry_hook(fields: dict[str, str]) -> tuple[int, dict[str, str]] | None:
+    """Priority and the {extension, command} record for an entry that should be listed; None when it should not."""
+    extension, command = scalar(fields.get("extension", "")), scalar(fields.get("command", ""))
+    if not IDENTIFIER.fullmatch(extension) or not IDENTIFIER.fullmatch(command):
+        raise ValueError("extension and command must be plain ids")
+    try:
+        priority = int(scalar(fields.get("priority", str(DEFAULT_PRIORITY))))
+    except ValueError:
+        raise ValueError("priority must be an integer") from None
+    enabled, optional = flag(fields, "enabled"), flag(fields, "optional")
+    if enabled and optional and condition_met(fields):
+        return priority, {"extension": extension, "command": command}
+    return None
 
-    A missing file means no hooks. A file the runner cannot read, or reads but
-    cannot interpret, raises ValueError so the caller never guesses.
+
+def optional_hooks(root: Path, events: tuple[str, ...]) -> list[dict[str, str]]:
+    """Enabled optional hooks whose condition holds, per event in the order given, lowest priority number first.
+
+    A hook registered under several events is listed once, at its first place.
+    A missing file means no hooks. A file the runner cannot read or interpret
+    raises ValueError so the caller never guesses.
     """
     path = root / HOOK_FILE
     text = trusted_text(path, root)
@@ -102,17 +160,15 @@ def optional_hooks(root: Path, event: str) -> list[dict[str, str]]:
         if os.path.lexists(path):
             raise ValueError(f"{HOOK_FILE} is not a readable regular file inside the project")
         return []
-    ranked: list[tuple[int, dict[str, str]]] = []
-    for number, fields in hook_entries(text, event):
-        where = f"entry at line {number}"
-        extension, command = scalar(fields.get("extension", "")), scalar(fields.get("command", ""))
-        if not IDENTIFIER.fullmatch(extension) or not IDENTIFIER.fullmatch(command):
-            raise ValueError(f"{HOOK_FILE} {where}: extension and command must be plain ids")
-        try:
-            priority = int(scalar(fields.get("priority", str(DEFAULT_PRIORITY))))
-        except ValueError:
-            raise ValueError(f"{HOOK_FILE} {where}: priority must be an integer") from None
-        enabled, optional = flag(fields, "enabled", where), flag(fields, "optional", where)
-        if enabled and optional and scalar(fields.get("condition", "")).lower() in EMPTY_VALUES:
-            ranked.append((priority, {"extension": extension, "command": command}))
-    return [hook for _, hook in sorted(ranked, key=lambda pair: pair[0])]
+    listed: list[dict[str, str]] = []
+    for event in events:
+        ranked: list[tuple[int, dict[str, str]]] = []
+        for number, fields in hook_entries(text, event):
+            try:
+                found = entry_hook(fields)
+            except ValueError as exc:
+                raise ValueError(f"{HOOK_FILE} entry at line {number}: {exc}") from None
+            if found is not None:
+                ranked.append(found)
+        listed.extend(hook for _, hook in sorted(ranked, key=lambda pair: pair[0]) if hook not in listed)
+    return listed

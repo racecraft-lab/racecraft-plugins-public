@@ -291,11 +291,35 @@ class PhaseBriefHookTests(unittest.TestCase):
             hook("after_plan", "speckit.git.commit", "git"),
             hook("after_plan", "speckit.verify.run", "verify", optional="false"),
             hook("after_plan", "speckit.off.run", "off", enabled="false"),
-            hook("after_plan", "speckit.when.run", "when", condition="\"config.flag is set\""),
-            hook("before_plan", "speckit.before.run", "before"),
             hook("after_tasks", "speckit.tasks.run", "tasks"),
         )
         self.assertEqual(self.hooks("Plan", text), [{"extension": "git", "command": "speckit.git.commit"}])
+
+    def test_before_hooks_come_first_and_a_repeated_command_is_listed_once(self):
+        text = extensions_yml(
+            hook("after_plan", "speckit.git.commit", "git"),
+            hook("after_plan", "speckit.after.run", "after"),
+            hook("before_plan", "speckit.git.commit", "git"),
+            hook("before_plan", "speckit.before.run", "before"),
+            hook("before_plan", "speckit.gate.run", "gate", optional="false"),
+        )
+        self.assertEqual([item["command"] for item in self.hooks("Plan", text)],
+                         ["speckit.git.commit", "speckit.before.run", "speckit.after.run"])
+
+    def test_conditions_the_runner_can_evaluate_gate_the_listing(self):
+        text = extensions_yml(
+            hook("after_plan", "speckit.set.run", "a", condition="\"env.SPK_HOOK_SET is set\""),
+            hook("after_plan", "speckit.unset.run", "b", condition="\"env.SPK_HOOK_UNSET is set\""),
+            hook("after_plan", "speckit.equal.run", "c", condition="\"env.SPK_HOOK_MODE == 'fast'\""),
+            hook("after_plan", "speckit.differs.run", "d", condition="\"env.SPK_HOOK_MODE != 'fast'\""),
+            hook("after_plan", "speckit.empty.run", "e", condition="\"\""),
+        )
+        with patch.dict(os.environ, {"SPK_HOOK_SET": "1", "SPK_HOOK_MODE": "fast"}):
+            self.assertEqual([item["command"] for item in self.hooks("Plan", text)],
+                             ["speckit.set.run", "speckit.equal.run", "speckit.empty.run"])
+        with patch.dict(os.environ, {"SPK_HOOK_MODE": "slow"}):
+            self.assertEqual([item["command"] for item in self.hooks("Plan", text)],
+                             ["speckit.differs.run", "speckit.empty.run"])
 
     def test_no_phase_lists_a_mandatory_hook(self):
         text = extensions_yml(*(hook(f"after_{phase.lower()}", f"speckit.mandatory.{phase.lower()}", "m", optional="false")
@@ -330,7 +354,7 @@ class PhaseBriefHookTests(unittest.TestCase):
         self.assertEqual(self.hooks("Clarify", text), [])
 
     def test_quoted_values_and_wrapped_text_parse(self):
-        text = extensions_yml(hook("after_plan", "\"speckit.git.commit\"", "'git'", optional="'true'",
+        text = extensions_yml(hook("after_plan", "\"speckit.git.commit\"", "'git'", priority="10 # default",
                                    description="Commit the plan\n      across two lines: still one field",
                                    prompt="\"Commit?\""))
         self.assertEqual(self.hooks("Plan", text), [{"extension": "git", "command": "speckit.git.commit"}])
@@ -357,6 +381,13 @@ class PhaseBriefHookTests(unittest.TestCase):
             "field before any entry": "hooks:\n  after_plan:\n   extension: git\n",
             "misaligned field": "hooks:\n  after_plan:\n  - extension: git\n   command: speckit.git.commit\n",
             "stray text": "hooks:\n  after_plan:\n  - command: speckit.a.run\nnonsense\n",
+            "unterminated quote": extensions_yml(hook("after_plan", "speckit.a.run", optional="\"true")),
+            "text after a closing quote": extensions_yml(hook("after_plan", "\"speckit.a.run\"x")),
+            "quoted boolean": extensions_yml(hook("after_plan", "speckit.a.run", optional="'true'")),
+            "quoted null condition": extensions_yml(hook("after_plan", "speckit.a.run", condition="\"null\"")),
+            "config condition": extensions_yml(hook("after_plan", "speckit.a.run", condition="\"config.flag is set\"")),
+            "unknown condition": extensions_yml(hook("after_plan", "speckit.a.run", condition="whenever")),
+            "unknown escape": extensions_yml(hook("after_plan", "speckit.a.run", condition="\"env.A\\q\"")),
         }
         for label, text in bad.items():
             with self.subTest(label):
@@ -385,6 +416,8 @@ class PhaseBriefHookTests(unittest.TestCase):
                 for text in (skill, (root / "references/phase-execution.md").read_text()):
                     self.assertNotIn("`optional: false` — The hook auto-executes", text)
                     self.assertNotIn("The autopilot should always run these", text)
+                self.assertIn("`before_<phase>` then `after_<phase>`", skill)
+                self.assertNotIn("the autopilot skips them", (root / "references/phase-execution.md").read_text())
                 self.assertIn("mandatory", loop.lower())
                 self.assertIn("decisions list", loop)
 

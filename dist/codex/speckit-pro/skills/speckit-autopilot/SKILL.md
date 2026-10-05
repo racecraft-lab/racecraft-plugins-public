@@ -839,7 +839,7 @@ stable fields, shared by both hosts:
 | `slices` | Ordered reference sections copied verbatim for the dispatch prompt; empty for Specify, Plan and Tasks |
 | `waves` | Empty list, reserved for dispatch waves (#1183) |
 | `model` | Null; use the installed agent configuration until #1184 |
-| `hooks` | The phase's optional hooks, each `{extension, command}`: enabled, unconditional, registered under `after_<phase>`, in priority order; empty for Clarify |
+| `hooks` | The phase's optional hooks, each `{extension, command}` once: enabled, condition met, registered under `before_<phase>` then `after_<phase>`, in priority order within an event; empty for Clarify |
 
 Loaded commands still read their own instructions, templates and scripts.
 Empty reserved fields (`waves`, `model`) add no behavior; sequential
