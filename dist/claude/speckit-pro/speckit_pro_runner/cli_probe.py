@@ -56,10 +56,10 @@ def external_probe_path(path: Path, worktree: Path, links: int = 40, *, host: bo
     return candidate
 
 
-def validate_probe_directory(directory: Path, worktree: Path, *, host: bool) -> None:
-    """Check every child lookup name, including env-shebang interpreters/helpers."""
+def validate_probe_directory(directory: Path, worktree: Path, *, host: bool, cli: str) -> None:
+    """Check the selected CLI; hosts also authenticate every interpreter/helper name."""
     external_probe_path(directory, worktree, host=host)
-    for entry in directory.iterdir():
+    for entry in directory.iterdir() if host else (directory / cli,):
         info = entry.lstat()
         if stat.S_ISLNK(info.st_mode):
             target = external_probe_path(entry, worktree, host=host)
@@ -88,7 +88,7 @@ def probe_search_path(root: Path, cli: str) -> str:
         try:
             directory = directory.resolve(strict=True)
             target = external_probe_path(directory / cli, worktree, host=cli in ("claude", "codex"))
-            validate_probe_directory(directory, worktree, host=cli in ("claude", "codex"))
+            validate_probe_directory(directory, worktree, host=cli in ("claude", "codex"), cli=cli)
         except (OSError, RuntimeError, ValueError):
             continue
         if not directory.is_relative_to(worktree) and not target.is_relative_to(worktree):

@@ -665,7 +665,12 @@ class PreviewEvidenceSecurityTest(unittest.TestCase):
 
     def test_host_probe_is_limited_to_version(self) -> None:
         for host in ("claude", "codex"):
-            with self.subTest(host=host), unittest.mock.patch.object(readiness_record.cli_probe.subprocess, "run") as run:
+            # This seam tests argv restrictions, independently of installed tools
+            # and whether the test identity can write system PATH directories.
+            with self.subTest(host=host), \
+                 unittest.mock.patch.object(readiness_record.cli_probe, "probe_search_path", return_value=str(self.root)), \
+                 unittest.mock.patch.object(readiness_record.cli_probe.shutil, "which", return_value=str(self.root / host)), \
+                 unittest.mock.patch.object(readiness_record.cli_probe.subprocess, "run") as run:
                 run.return_value = unittest.mock.Mock(returncode=0, stdout="2.1.0", stderr="")
                 self.assertEqual(0, self.probe(self.root, [host, "--version"], allowed=(host,), timeout=1)["exit_status"])
                 self.assertEqual([host, "--version"], run.call_args.args[0])
@@ -819,8 +824,8 @@ class HostProbePathSecurityTest(unittest.TestCase):
 
     def test_case_alias_worktree_path(self) -> None:
         alias = self.root.with_name(self.root.name.upper())
-        if not alias.exists():
-            self.skipTest("filesystem has no case alias")
+        # A case-insensitive alias enters the worktree; a case-sensitive lookup
+        # is absent. Both must fail closed without executing the payload.
         self.reject_path(str(alias), self.root)
 
     def test_external_executable_link_chain_through_worktree(self) -> None:
@@ -862,6 +867,23 @@ class HostProbePathSecurityTest(unittest.TestCase):
                 if directory == self.tools and form != "symlink":
                     continue
                 self.reject_path(entry, directory, form, hosts=("git", "gh", "docker"))
+
+    def test_other_cli_probes_ignore_unrelated_hardlinks(self) -> None:
+        payload = self.root / "unrelated"
+        self.executable(payload)
+        alias = self.tools / "unrelated"
+        os.link(payload, alias)
+        for cli in ("git", "gh", "docker"):
+            with self.subTest(cli=cli):
+                target = self.tools / cli
+                self.executable(target, trusted=True)
+                try:
+                    with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                        result = self.probe(self.root, [cli, "--version"], allowed=(cli,), timeout=2)
+                    self.assertFalse(self.marker.exists())
+                    self.assertEqual((0, "2.1.0"), (result["exit_status"], result["stdout_tail"]))
+                finally:
+                    target.unlink()
 
     def test_trusted_installed_hosts_survive_poisoned_path(self) -> None:
         for host in ("codex", "claude"):
