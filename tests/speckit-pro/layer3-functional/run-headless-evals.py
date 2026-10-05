@@ -34,6 +34,7 @@ if str(SHARED_LIB) not in sys.path:
 import codex_isolation
 from preview_helpers import read_eval_data
 import run_codex_evals as codex_trigger_evals
+import trigger_process
 
 
 CATALOG_PATH = LAYER_ROOT / "headless_cases.json"
@@ -557,56 +558,40 @@ def cleanup_process_group(process: subprocess.Popen, *, natural_exit_grace: bool
         "natural_exit_grace_seconds": 0.2 if natural_exit_grace else 0,
         "signals_sent": [],
         "post_kill_probe_errors": [],
+        "probe_errors": [],
         "verified_absent": False,
         "error": None,
     }
 
-    def present() -> bool:
-        process.poll()  # Reap the leader, but never use its exit as group absence.
-        try:
-            os.killpg(process.pid, 0)
-        except ProcessLookupError:
-            return False
-        except PermissionError as error:
-            if error.errno != errno.EPERM or record["signals_sent"][-1:] != ["SIGKILL"]:
-                raise
-            record["post_kill_probe_errors"].append({
-                "elapsed_seconds": time.monotonic() - started,
-                "errno": error.errno,
-                "error": f"{type(error).__name__}: {error}",
-            })
-        return True
+    evidence = trigger_process.CleanupEvidence()
+    observations = evidence.observations
+    kill_probe_start: int | None = None
+
+    def send_owned_signal(child: subprocess.Popen, sent: int) -> bool:
+        nonlocal kill_probe_start
+        delivered = trigger_process.terminate_child(child, sent)
+        if delivered:
+            record["signals_sent"].append(signal.Signals(sent).name)
+            if sent == signal.SIGKILL:
+                kill_probe_start = len(observations)
+        return delivered
 
     try:
         if type(process.pid) is not int or process.pid <= 1 or process.pid in {os.getpid(), os.getpgrp()}:
             record["error"] = "refusing invalid or self-owned process group identity"
             return record
-        record["initially_present"] = present()
-        if not record["initially_present"]:
-            record["verified_absent"] = True
-            return record
-        if natural_exit_grace:
-            for _ in range(4):
-                time.sleep(0.05)
-                if not present():
-                    record["verified_absent"] = True
-                    return record
-        for sent in (signal.SIGTERM, signal.SIGKILL):
-            try:
-                os.killpg(process.pid, sent)
-            except ProcessLookupError:
-                record["verified_absent"] = True
-                return record
-            record["signals_sent"].append(sent.name)
-            for _ in range(20):
-                if not present():
-                    record["verified_absent"] = True
-                    return record
-                time.sleep(0.05)
-        record["error"] = "owned process group absence not verified after bounded TERM/KILL cleanup"
+        trigger_process.cleanup_child(
+            process, observations=evidence, timeout=1,
+            grace=0.2 if natural_exit_grace else 0, terminate=send_owned_signal,
+        )
+        record["verified_absent"] = True
     except (OSError, KeyboardInterrupt) as error:
         record["error"] = f"owned process-group cleanup could not be verified: {type(error).__name__}: {error}"
     finally:
+        record["initially_present"] = evidence.initially_present
+        record["probe_errors"] = [item for item in observations if item["errno"] == errno.EPERM]
+        if kill_probe_start is not None:
+            record["post_kill_probe_errors"] = [item for item in observations[kill_probe_start:] if item["errno"] == errno.EPERM]
         record["duration_seconds"] = time.monotonic() - started
     return record
 
@@ -713,6 +698,8 @@ def _capture_process(
             shell=False,
             start_new_session=True,
         )
+        # communicate() must not reap the leader before cleanup signals its group.
+        trigger_process.hold_leader(process)
     except OSError as error:
         return {
             "status": "launch_error",
