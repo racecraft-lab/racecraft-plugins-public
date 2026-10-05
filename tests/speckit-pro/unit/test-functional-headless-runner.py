@@ -1018,32 +1018,6 @@ class FunctionalHeadlessRunnerTests(unittest.TestCase):
                 self.assertIs(cleanup["verified_absent"], False)
                 self.assertTrue(cleanup["error"])
 
-    def test_post_term_permission_probe_requires_later_group_absence(self) -> None:
-        signals = []
-        probes = itertools.chain((PermissionError(errno.EPERM, "zombie group"),), itertools.repeat(ProcessLookupError()))
-
-        def signal_group(_pgid, sent):
-            if sent:
-                signals.append(sent)
-            elif signals:
-                raise next(probes)
-
-        with mock.patch.object(self.runner.os, "killpg", side_effect=signal_group), mock.patch.object(self.runner.time, "sleep"):
-            cleanup = self.runner.cleanup_process_group(mock.Mock(pid=FAKE_PGID, returncode=0), natural_exit_grace=False)
-        self.assertIs(cleanup["verified_absent"], True)
-        self.assertEqual(signals, [signal.SIGTERM])
-        self.assertIsNone(cleanup["error"])
-
-    def test_natural_exit_permission_probe_requires_later_group_absence(self) -> None:
-        probes = itertools.chain((PermissionError(errno.EPERM, "zombie group"),), itertools.repeat(ProcessLookupError()))
-        with mock.patch.object(self.runner.os, "killpg", side_effect=probes) as killpg, mock.patch.object(self.runner.time, "sleep"):
-            process = mock.Mock(pid=FAKE_PGID, returncode=0)
-            process.poll.return_value = 0
-            cleanup = self.runner.cleanup_process_group(process)
-        self.assertIs(cleanup["initially_present"], True)
-        self.assertIs(cleanup["verified_absent"], True)
-        self.assertTrue(all(call.args[1] == 0 for call in killpg.call_args_list))
-        self.assertIsNone(cleanup["error"])
 
     def test_cleanup_rejects_invalid_and_self_group_identities_without_signaling(self) -> None:
         for pid in (0, 1, -1, None, True, os.getpid(), os.getpgrp()):
@@ -1477,9 +1451,42 @@ class RunCaseTests(unittest.TestCase):
             self.assertTrue((evidence / "sha256.txt").is_file())
 
 
+class HeadlessProcessGroupProbeTests(unittest.TestCase):
+    runner = import_runner()
+
+    def test_post_term_permission_probe_requires_later_group_absence(self) -> None:
+        signals = []
+        probes = itertools.chain((PermissionError(errno.EPERM, "zombie group"),), itertools.repeat(ProcessLookupError()))
+
+        def signal_group(_pgid, sent):
+            if sent:
+                signals.append(sent)
+            elif signals:
+                raise next(probes)
+
+        with mock.patch.object(self.runner.os, "killpg", side_effect=signal_group), mock.patch.object(self.runner.time, "sleep"):
+            cleanup = self.runner.cleanup_process_group(mock.Mock(pid=FAKE_PGID, returncode=0), natural_exit_grace=False)
+        self.assertIs(cleanup["verified_absent"], True)
+        self.assertEqual(signals, [signal.SIGTERM])
+        self.assertIsNone(cleanup["error"])
+
+
+    def test_natural_exit_permission_probe_requires_later_group_absence(self) -> None:
+        probes = itertools.chain((PermissionError(errno.EPERM, "zombie group"),), itertools.repeat(ProcessLookupError()))
+        with mock.patch.object(self.runner.os, "killpg", side_effect=probes) as killpg, mock.patch.object(self.runner.time, "sleep"):
+            process = mock.Mock(pid=FAKE_PGID, returncode=0)
+            process.poll.return_value = 0
+            cleanup = self.runner.cleanup_process_group(process)
+        self.assertIs(cleanup["initially_present"], True)
+        self.assertIs(cleanup["verified_absent"], True)
+        self.assertTrue(all(call.args[1] == 0 for call in killpg.call_args_list))
+        self.assertIsNone(cleanup["error"])
+
+
 def main() -> int:
     suite = unittest.TestSuite([
         unittest.defaultTestLoader.loadTestsFromTestCase(FunctionalHeadlessRunnerTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(HeadlessProcessGroupProbeTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(SharedCodexIsolationTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(HeadlessCaseCatalogContractTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(RunCaseTests),
