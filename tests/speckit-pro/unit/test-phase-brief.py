@@ -380,6 +380,8 @@ class PhaseBriefHookTests(unittest.TestCase):
             "mapping, not a list": "hooks:\n  after_plan:\n    extension: git\n    command: speckit.git.commit\n",
             "field before any entry": "hooks:\n  after_plan:\n   extension: git\n",
             "misaligned field": "hooks:\n  after_plan:\n  - extension: git\n   command: speckit.git.commit\n",
+            "continued command": "hooks:\n  after_plan:\n  - extension: git\n    command: speckit.git.commit\n      extra-argument\n",
+            "nested command list": "hooks:\n  after_plan:\n  - extension: git\n    command: speckit.git.commit\n      - speckit.other.run\n",
             "stray text": "hooks:\n  after_plan:\n  - command: speckit.a.run\nnonsense\n",
             "unterminated quote": extensions_yml(hook("after_plan", "speckit.a.run", optional="\"true")),
             "text after a closing quote": extensions_yml(hook("after_plan", "\"speckit.a.run\"x")),

@@ -88,6 +88,7 @@ def hook_entries(text: str, event: str) -> list[tuple[int, dict[str, str]]]:
     in_hooks = in_event = False
     event_indent: int | None = None
     dash_indent = field_indent = -1
+    current_field = ""
     for number, line in enumerate(text.splitlines(), start=1):
         if not line.strip() or line.lstrip().startswith("#"):
             continue
@@ -122,13 +123,17 @@ def hook_entries(text: str, event: str) -> list[tuple[int, dict[str, str]]]:
         item = ITEM.match(line)
         if item is not None and (not entries or indent <= dash_indent):
             dash_indent, field_indent = indent, len(item[1]) + 1 + len(item[2])
+            current_field = item[3]
             entries.append((number, {item[3]: item[4]}))
             continue
         field = FIELD.match(line)
         if not entries or indent < field_indent or (indent == field_indent and field is None):
             raise ValueError(f"{HOOK_FILE} line {number}: expected a hook entry")
         if indent == field_indent and field is not None:
+            current_field = field[2]
             entries[-1][1][field[2]] = field[3]
+        elif current_field not in {"description", "prompt"}:
+            raise ValueError(f"{HOOK_FILE} line {number}: {current_field} must be a single-line scalar")
     return entries
 
 
