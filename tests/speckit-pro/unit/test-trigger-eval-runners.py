@@ -3952,8 +3952,7 @@ class ProcessGroupProbeTests(unittest.TestCase):
             ):
                 self.assertFalse(processes.cleanup_child(child, observations=observations))
             if platform == "posix":
-                self.assertTrue(observations)
-                self.assertTrue(all(item["errno"] == 3 for item in observations))
+                self.assertEqual({item["errno"] for item in observations}, {3})
             else:
                 self.assertEqual(observations, [])
                 probe.assert_not_called()
