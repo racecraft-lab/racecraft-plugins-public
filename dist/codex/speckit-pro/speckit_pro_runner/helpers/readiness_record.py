@@ -328,18 +328,22 @@ def checked_items(record: Any, root: Path, host: str) -> dict[str, Any]:
     if not isinstance(items, dict) or items.keys() != {*CALLER_ITEMS, *RUNNER_ITEMS}:
         raise SelectionError("the record has missing or unknown readiness items")
     for name, item in items.items():
-        if not isinstance(item, dict) or item.get("status") not in STATUSES \
-                or not isinstance(item.get("evidence_source"), str) or not isinstance(item.get("fingerprints"), dict):
-            raise SelectionError("an item lacks a known status, its evidence or its fingerprints")
-        require_text(item["evidence_source"], "evidence_source")
-        require_text(item.get("observed_at"), "observed_at")
-        if item["status"] in NEEDS_ACTION:
-            require_text(item.get("action"), "action")
-        require_verified_fingerprints(name, item["status"], item["fingerprints"])
-        for key in item["fingerprints"]:
-            if key.startswith("file:") and PurePosixPath(key[5:]).as_posix() != key[5:]:
-                raise SelectionError("a file fingerprint has a noncanonical path")
+        check_saved_item(name, item)
     return items
+
+
+def check_saved_item(name: str, item: Any) -> None:
+    if not isinstance(item, dict) or item.get("status") not in STATUSES \
+            or not isinstance(item.get("evidence_source"), str) or not isinstance(item.get("fingerprints"), dict):
+        raise SelectionError("an item lacks a known status, its evidence or its fingerprints")
+    require_text(item["evidence_source"], "evidence_source")
+    require_text(item.get("observed_at"), "observed_at")
+    if item["status"] in NEEDS_ACTION:
+        require_text(item.get("action"), "action")
+    require_verified_fingerprints(name, item["status"], item["fingerprints"])
+    for key in item["fingerprints"]:
+        if key.startswith("file:") and PurePosixPath(key[5:]).as_posix() != key[5:]:
+            raise SelectionError("a file fingerprint has a noncanonical path")
 
 
 def changed_inputs(name: str, fingerprints: dict[str, Any], root: Path) -> list[str]:
