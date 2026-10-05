@@ -106,6 +106,13 @@
       "modes": ["dry_run", "apply"],
       "failure_classes": ["invalid_input", "missing_prerequisite", "write_failure"],
       "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/mutation-helpers/requests/write-readiness-record.json"
+    },
+    {
+      "helper_id": "publish-artifact-page",
+      "operation": "publish-artifact-page",
+      "modes": ["dry_run", "apply"],
+      "failure_classes": ["artifact_publication_invalid"],
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/mutation-helpers/requests/publish-artifact-page.json"
     }
   ]
 }

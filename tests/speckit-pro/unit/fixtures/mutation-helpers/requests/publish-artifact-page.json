@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-publish-artifact-page",
+  "helper_id": "publish-artifact-page",
+  "operation": "publish-artifact-page",
+  "mode": "dry_run",
+  "inputs": {
+    "plan_file": "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature/plan.md",
+    "page_id": "implementation-plan",
+    "rendered_html": "<html><body>Completed fixture page</body></html>"
+  }
+}

@@ -1280,6 +1280,15 @@ per its agent instructions. The helper owns selection; the author consumes
 A non-`ok` selection is a whole-set artifact gap under the existing fail-open
 reporting protocol.
 
+Require `publish-artifact-page` for every artifact output write, publish,
+final read and cleanup. The author sends the rendered page in memory and
+consumes the runner's publication receipt. At boundary cleanup, use the same
+helper's `cleanup` action for selected pages without a complete current-run
+`generated` outcome; pass `expected_sha256` when known. This runner-owned I/O
+protocol applies during regeneration and overrides native pathname operations
+in older artifact workflow descriptions. A refused operation is an artifact
+gap under the fail-open reporting protocol.
+
 <!-- host:claude: Claude supplies inputs through the Agent tool's prompt -->
 Pass those planning inputs in the `speckit-pro:artifact-author` Agent prompt.
 <!-- /host -->

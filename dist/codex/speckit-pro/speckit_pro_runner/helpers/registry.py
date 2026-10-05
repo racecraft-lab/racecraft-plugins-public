@@ -11,6 +11,7 @@ from ..formal.helper import run_formal_helper
 from ..research_preflight import run_research_broker_preflight_helper
 from .archive_sweep import run_archive_sweep_helper
 from .artifact_selection import run_artifact_selection_helper
+from .artifact_publication import run_artifact_publication_helper
 # The two CODEX_ names are re-exported: tests read them through the registry.
 from .install import CODEX_OPTIONAL_HELPER_NAME, CODEX_REQUIRED_AGENT_NAMES, run_install_helper  # noqa: F401
 from .decisions_list import run_decisions_list_helper
@@ -458,6 +459,12 @@ HELPERS: dict[str, HelperEntry] = {
 
 
 MUTATION_HELPERS: dict[str, MutationEntry] = {
+    "publish-artifact-page": MutationEntry(
+        "publish-artifact-page", "publish-artifact-page", ("dry_run", "apply"), None,
+        "golden_only", "fixture_semantic", mutation_authoritative_request("publish-artifact-page"),
+        ("anchored-publication", "swap-and-restore", "anchored-cleanup"),
+        rollback="Use the helper cleanup action for current-run pages; report unsafe paths as artifact gaps.",
+    ),
     "task-results": MutationEntry(
         "task-results", "task-results", ("read_only", "dry_run", "apply"), None,
         "golden_only", "fixture_semantic", mutation_authoritative_request("task-results"),
@@ -832,6 +839,9 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
 
     if entry.helper_id == "write-readiness-record":
         return run_readiness_record_helper(entry, request)
+
+    if entry.helper_id == "publish-artifact-page":
+        return run_artifact_publication_helper(entry, request)
 
     if entry.helper_id == "sweep-apply-result":
         return run_sweep_apply_result(entry, request)

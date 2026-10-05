@@ -71,7 +71,7 @@
         "value": "speckit_pro_runner/atomic_write.py",
         "display": "speckit_pro_runner/atomic_write.py"
       },
-      "sha256": "f5e0fcd38624759713edd562c57d64e5e4065acea735463838dfa8a4d4c365bc"
+      "sha256": "69b892f239cc29f0e549462547dcd0b21fc1fd86337113e2ea694588047a76bd"
     },
     {
       "path": {
@@ -532,6 +532,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/artifact_publication.py",
+        "display": "speckit_pro_runner/helpers/artifact_publication.py"
+      },
+      "sha256": "2f3b364cc8182d1a24a5f9521d4808ae1361821a580a9e0b53d3883404fea65e"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/helpers/artifact_selection.py",
         "display": "speckit_pro_runner/helpers/artifact_selection.py"
       },
@@ -695,7 +703,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "22bb050adf033d52bea76bde9c6c13aa2a835791e10d7ccf7db8c27850c90e28"
+      "sha256": "41fb4dc4ca5dfae5343df079d77b94ceae44d6f1020bc1453b1d277922ec5850"
     },
     {
       "path": {
