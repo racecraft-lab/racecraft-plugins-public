@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import os
 import subprocess
@@ -26,17 +27,103 @@ class SelectionFixture(unittest.TestCase):
         (self.root / ".specify").mkdir()
         (self.root / "plan.md").write_text("## Declared File Operations\n\n- NEW src/new.py\n", encoding="utf-8")
 
-    def select(self, *, status: str = "ok", plugin: str = "speckit-pro", **inputs: object) -> dict:
+    def select(self, *, status: str = "ok", plugin: str = "speckit-pro",
+               gallery: Path | None = None, **inputs: object) -> dict:
         request = {"schema_version": "1.0", "request_id": "artifact-selection-test",
                    "helper_id": "select-artifact-pages", "operation": "select-artifact-pages",
                    "mode": "read_only", "inputs": {"plan_file": "plan.md", **inputs}}
-        done = subprocess.run([sys.executable, "-m", "speckit_pro_runner"],
+        command = [sys.executable, "-m", "speckit_pro_runner"] if gallery is None else [
+            sys.executable, "-c", "import runpy, sys; from pathlib import Path; "
+            "from speckit_pro_runner.helpers import artifact_selection; "
+            "artifact_selection.GALLERY = Path(sys.argv[1]); "
+            "sys.argv = sys.argv[:1]; "
+            "runpy.run_module('speckit_pro_runner', run_name='__main__')", str(gallery),
+        ]
+        done = subprocess.run(command,
                               input=json.dumps(request), text=True, capture_output=True, check=False,
                               cwd=self.root, env={**os.environ, "PYTHONPATH": str(ROOT / plugin)}, timeout=30)
         result = json.loads(done.stdout.splitlines()[-1])
         self.assertEqual(done.returncode, 0 if status == "ok" else 2, result)
         self.assertEqual(result["status"], status, result)
+        if gallery is not None and status != "ok":
+            self.assertIn("gallery manifest", result["diagnostics"][0]["message"])
         return result["data"]
+
+
+class ManifestSecurityTests(SelectionFixture):
+    def test_structurally_malformed_manifests_are_explicit_errors(self) -> None:
+        gallery = self.root / "gallery"
+        gallery.mkdir()
+        shipped = json.loads((ROOT / "speckit-pro/artifact-gallery/manifest.json").read_text(encoding="utf-8"))
+        cases = [("missing contract", {"templates": []}), ("null", None), ("array", [])]
+        for label, field, value in (("empty templates", "templates", []), ("invalid entries", "templates", [None]),
+                                    ("invalid version", "schema_version", "2.0"), ("invalid signals", "signals", {})):
+            manifest = copy.deepcopy(shipped)
+            manifest[field] = value
+            cases.append((label, manifest))
+        for trigger in ({}, {"always": False}, {"always": 1}, {"any_of": []}, {"any_of": "brownfield_change"},
+                        {"any_of": ["unknown"]}, {"always": True, "any_of": ["brownfield_change"]}):
+            manifest = copy.deepcopy(shipped)
+            manifest["templates"][0]["trigger"] = trigger
+            cases.append((str(trigger), manifest))
+        duplicate = copy.deepcopy(shipped)
+        duplicate["templates"].append(duplicate["templates"][0])
+        cases.append(("duplicate ids", duplicate))
+        no_mandatory = copy.deepcopy(shipped)
+        for entry in no_mandatory["templates"]:
+            if entry["stage"] == "draft-pr":
+                entry["trigger"] = {"any_of": ["brownfield_change"]}
+        cases.append(("missing mandatory draft pages", no_mandatory))
+        for label, manifest in cases:
+            with self.subTest(case=label):
+                (gallery / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+                self.assertEqual(self.select(status="input_error", gallery=gallery), {})
+
+    def test_manifest_ids_cannot_escape_the_artifact_directory(self) -> None:
+        gallery = self.root / "gallery"
+        gallery.mkdir()
+        manifest = json.loads((ROOT / "speckit-pro/artifact-gallery/manifest.json").read_text(encoding="utf-8"))
+        for identifier in ("../../escape", "/absolute-target", "sub/page", "..", "C:\\escape", "\\escape"):
+            with self.subTest(identifier=identifier):
+                manifest["templates"][0]["id"] = identifier
+                (gallery / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+                self.assertEqual(self.select(status="input_error", gallery=gallery), {})
+
+
+class OutputSecurityTests(SelectionFixture):
+    def test_temporary_and_final_outputs_require_a_fresh_confinement_check(self) -> None:
+        artifacts = self.root / "artifacts"
+        artifacts.mkdir()
+        paths = ["artifacts/.artifact-author-implementation-plan.probe.tmp", "artifacts/implementation-plan.html"]
+        self.assertEqual(self.select(candidate_paths=paths)["checked_paths"], paths)
+        for raw in ("../../escape", "/absolute-target", str(artifacts / "absolute.html"),
+                    "elsewhere.html", "artifacts/../escape.html", "artifacts/sub/page.html", "C:\\escape"):
+            with self.subTest(raw=raw):
+                self.assertEqual(self.select(status="input_error", candidate_paths=[raw]), {})
+        temporary = self.root / paths[0]
+        temporary.symlink_to(self.root / "escape.html")
+        self.assertEqual(self.select(status="input_error", candidate_paths=paths), {})
+        temporary.unlink()
+        for invalid in ([], "artifacts/page.html", [1]):
+            with self.subTest(invalid=invalid):
+                self.assertEqual(self.select(status="input_error", candidate_paths=invalid), {})
+
+    def test_symlinked_artifact_components_reject_selection(self) -> None:
+        artifacts = self.root / "artifacts"
+        outside = self.root / "outside"
+        outside.mkdir()
+        for target in (outside, outside / "missing"):
+            with self.subTest(target=target.name):
+                artifacts.symlink_to(target)
+                self.assertEqual(self.select(status="input_error"), {})
+                artifacts.unlink()
+        artifacts.mkdir()
+        final = artifacts / "implementation-plan.html"
+        for target in (outside / "escape.html", artifacts / "another.html"):
+            with self.subTest(target=target.name):
+                final.symlink_to(target)
+                self.assertEqual(self.select(status="input_error"), {})
+                final.unlink()
 
 
 class ArtifactSelectionTests(SelectionFixture):
@@ -108,6 +195,30 @@ class ArtifactSelectionTests(SelectionFixture):
 
 
 class ArtifactHostSelectionTests(SelectionFixture):
+    def test_packaged_hosts_enforce_manifest_and_output_confinement(self) -> None:
+        gallery = self.root / "gallery"
+        gallery.mkdir()
+        shipped = json.loads((ROOT / "speckit-pro/artifact-gallery/manifest.json").read_text(encoding="utf-8"))
+        for host in ("claude", "codex"):
+            plugin = f"dist/{host}/speckit-pro"
+            with self.subTest(host=host):
+                self.assertEqual(self.select(plugin=plugin)["output_paths"], {
+                    "implementation-plan": "artifacts/implementation-plan.html",
+                    "spec-explainer": "artifacts/spec-explainer.html",
+                })
+                for identifier in ("../../escape", "/absolute-target"):
+                    manifest = copy.deepcopy(shipped)
+                    manifest["templates"][0]["id"] = identifier
+                    (gallery / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+                    self.assertEqual(self.select(status="input_error", plugin=plugin, gallery=gallery), {})
+                malformed = copy.deepcopy(shipped)
+                malformed["templates"][0]["trigger"] = {}
+                (gallery / "manifest.json").write_text(json.dumps(malformed), encoding="utf-8")
+                self.assertEqual(self.select(status="input_error", plugin=plugin, gallery=gallery), {})
+                (self.root / "artifacts").symlink_to(self.root / "redirected")
+                self.assertEqual(self.select(status="input_error", plugin=plugin), {})
+                (self.root / "artifacts").unlink()
+
     def test_both_host_dispatches_and_author_roles_consume_runner_selection(self) -> None:
         for host, agent in (("claude", "agents/artifact-author.md"), ("codex", "codex-agents/artifact-author.toml")):
             with self.subTest(host=host):
@@ -117,6 +228,10 @@ class ArtifactHostSelectionTests(SelectionFixture):
                     self.assertIn("select-artifact-pages", text)
                     self.assertIn("selected_pages", text)
                 self.assertNotIn("Apply each surviving entry's `trigger`", (plugin / agent).read_text(encoding="utf-8"))
+                author = (plugin / agent).read_text(encoding="utf-8")
+                self.assertIn("output_paths[entry-id]", author)
+                self.assertIn("candidate_paths", author)
+                self.assertIn("checked_paths", author)
 
 
 if __name__ == "__main__":

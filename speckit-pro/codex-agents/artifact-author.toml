@@ -71,6 +71,9 @@ optional files. The loaded runner reads its own shipped gallery manifest.
 
 The helper owns the signals and the page list. Consume its `selected_pages`
 in order. A `planned` entry has no template yet, so it is never selected and never reported as a gap.
+Consume `output_paths[entry-id]` as each final destination. The runner validates
+the manifest contract, safe entry IDs, and resolved output confinement to the
+`artifacts/` directory beside the plan, rejecting symlinked components.
 On a non-`ok` result, write nothing and report a whole-set selection gap with
 the diagnostic reason. Selection failure remains fail-open for PR creation.
 
@@ -97,9 +100,7 @@ Rules:
 - Leave no placeholder text behind.
 - Content comes from the planning record. Never invent it.
 
-Write one finished page per selected entry to
-`specs/<branch>/artifacts/<entry-id>.html`, keeping the manifest entry's `id` as
-the filename stem.
+Write one finished page per selected entry to its runner-returned final path.
 
 ### Publish last, one page at a time
 
@@ -138,6 +139,14 @@ temporary file. Require all of these conditions:
 3. every declared `FILL` marker pair still appears exactly once and in order;
 4. its slot set equals the inventory exactly, and every marked region matches
    the replacement map rather than the shipped-template region.
+
+Immediately before each temporary creation, write, publish, final-path read,
+or cleanup, invoke `select-artifact-pages` again with the same planning inputs
+and `candidate_paths` listing the temporary and final repository-relative paths.
+Proceed only on `ok`, using its `checked_paths`. On a confinement error, perform
+no file operation, report the diagnostic as a gap, and leave unsafe paths alone.
+Create the owned temporary exclusively; an existing name requires a fresh name
+and a fresh confinement check.
 
 Only after every check passes, atomically replace the final `.html` with that
 closed sibling file, re-read the final file, and confirm the same checks before
