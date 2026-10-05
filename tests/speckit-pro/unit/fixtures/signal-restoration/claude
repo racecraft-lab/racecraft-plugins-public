@@ -13,9 +13,12 @@ else:
     root = sys.argv[sys.argv.index('--plugin-dir') + 1]
     sys.stdout.buffer.write(b'partial stdout\r\n'); sys.stdout.buffer.flush()
     sys.stderr.buffer.write(b'partial stderr\xff'); sys.stderr.buffer.flush()
-    (Path(os.environ['HOME']).parent / 'child-state.json').write_text(json.dumps({'pid': os.getpid(), 'plugin_root': root}), encoding='utf-8')
     def stop(_signum, _frame):
         (Path(os.environ['HOME']).parent / 'child-stopped').write_text('stopped\n', encoding='utf-8')
         raise SystemExit(143)
     signal.signal(signal.SIGTERM, stop)
+    state_dir = Path(os.environ['HOME']).parent
+    pending = state_dir / 'child-state.json.tmp'
+    pending.write_text(json.dumps({'pid': os.getpid(), 'plugin_root': root}), encoding='utf-8')
+    os.replace(pending, state_dir / 'child-state.json')
     time.sleep(60)

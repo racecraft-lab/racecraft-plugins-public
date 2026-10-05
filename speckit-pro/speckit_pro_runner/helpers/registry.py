@@ -20,6 +20,7 @@ from .g0_setup import run_g0_setup_helper
 from .roadmap_freshness import run_roadmap_freshness_helper
 from .readiness_record import run_readiness_record_helper
 from .scaffold_answers import run_scaffold_answers_helper
+from .phase_brief import run_phase_brief_helper
 from .run_finalization import run_run_finalization_helper
 from .mutation import empty_mutation, run_mutation_helper, run_spec_index_write, run_sweep_apply_result
 from .pr_emission import generate_pr_body, plan_commands
@@ -114,6 +115,10 @@ def deferred_authoritative_request() -> str:
 
 
 HELPERS: dict[str, HelperEntry] = {
+    "phase-brief": HelperEntry(
+        "phase-brief", "phase-brief", None, "python_authoritative", "python_contract",
+        authoritative_request("phase-brief"),
+    ),
     "g0-setup": HelperEntry(
         "g0-setup", "g0-setup", None, "python_authoritative", "python_contract",
         authoritative_request("g0-setup"),
@@ -715,6 +720,7 @@ SPECIAL_HELPER_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
     "check-roadmap-freshness": run_roadmap_freshness_helper,
     "scaffold-answers": run_scaffold_answers_helper,
     "g0-setup": run_g0_setup_helper,
+    "phase-brief": run_phase_brief_helper,
 }
 
 
