@@ -186,6 +186,7 @@ returned by `resolve-scaffold-worktree-placement` and verified inside the
 worktree. Never write `main`, a guessed branch, or a display label into that
 field.
 
+
 ## Answers-file mode
 
 With `--answers-file`, first call runner helper `scaffold-answers` in
@@ -905,6 +906,7 @@ per item:
 | `mcp_servers` | running helper `research-broker-preflight` with empty `inputs={}`, then bounded live observations of required MCP tools/startup/auth; configuration alone does not prove connectivity, so record `unknown` when live evidence is absent |
 | `typesafe_jev` | checking whether this session exposes the Jev `evaluate` tool |
 | `reviewability_report` | reusing the setup gate result, with its report or roadmap path in `files` and SPEC-ID as `values.spec_id` |
+| `git_write` | recording `not_applicable` with `evidence_source` "Claude Code runs no git write probe" |
 
 - Record `verified` for a check that passed in this run. Record `unavailable`
   for a failed check or a declined fix, `unknown` for what this session cannot

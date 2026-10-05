@@ -31,6 +31,7 @@ These examples name the runner's contract; the steps below determine when a chec
 | `resolve-workflow-binding` | `read_only` | `{"workflow_file": "<absolute-workflow-path>"}` |
 | `resolve-scaffold-worktree-placement` | `read_only` | `{"branch_name": "<branch-name>"}` (add `worktree_root_override` only when the user supplied one) |
 | `scaffold-answers` | `read_only` | `{"answers_file": "<answers-file>", "spec_id": "<SPEC-ID>"}` |
+| `probe-git-write` | `read_only` | `{}` |
 | `write-readiness-record` | `apply` | `{"host": "<host>", "execution_mode": "<mode>", "plugin_revision": "<version>", "observations": [{"item": "<item>", "status": "<status>", "evidence_source": "<one line>", "values": {"probe": "<observed-result>"}}]}` (add `action` and `files` per observation; add `host_version` when reported) |
 
 ## Capability discovery & grounding
@@ -181,6 +182,17 @@ The generated workflow's `Branch` field is the actual dedicated branch
 returned by `resolve-scaffold-worktree-placement` and verified inside the
 worktree. Never write `main`, a guessed branch, or a display label into that
 field.
+
+## Git Write Probe
+
+Run this first, before any gate or branch step (and before the answers-file
+helper and Step -0.5). Call helper `probe-git-write` in `read_only` mode with
+empty `inputs={}` from the task checkout. It creates and removes one lock file where branch creation
+writes. When `data.verdict` is `stop`, print `data.message` as the one stop
+message and end scaffold: no gate runs, and no branch or worktree is created.
+In every other case keep `data.observation` for Step 6.5. Do not retry the
+probe after a stop; the fix is the user's (approve git writes, or add the
+repository's `.git` to `sandbox_workspace_write.writable_roots`).
 
 ## Answers-file mode
 
@@ -905,6 +917,7 @@ per item:
 | `mcp_servers` | running helper `research-broker-preflight` with empty `inputs={}`, then bounded live observations of required MCP tools/startup/auth; configuration alone does not prove connectivity, so record `unknown` when live evidence is absent |
 | `typesafe_jev` | checking whether this session exposes the Jev `evaluate` tool |
 | `reviewability_report` | reusing the setup gate result, with its report or roadmap path in `files` and SPEC-ID as `values.spec_id` |
+| `git_write` | sending `data.observation` from the Git Write Probe unchanged |
 
 - Record `verified` for a check that passed in this run. Record `unavailable`
   for a failed check or a declined fix, `unknown` for what this session cannot

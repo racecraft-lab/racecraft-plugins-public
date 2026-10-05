@@ -25,7 +25,7 @@ from runner_invocation import assert_runner_response, run_runner  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 CALLER_ITEMS = ("plugin_payload", "project_integration", "github_auth", "mcp_servers", "typesafe_jev",
-                "reviewability_report")
+                "reviewability_report", "git_write")
 # Built from parts so the repository privacy scan does not flag these deliberate leak samples.
 HOME = "/" + "Users"
 SCRATCH = "/private" + "/tmp"
