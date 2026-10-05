@@ -144,7 +144,7 @@ to archive previously merged specs.
    `safeToApplyCleanup=false` (the sweep never passes `--apply-cleanup`, so it
    never removes spec folders).
 7. Add the canonical `Archive Sweep: previously merged specs dry-run/apply
-   eligibility` task before Phase 0 in the visible task list.
+   eligibility` item before Phase 0 in `autopilot-state.json`.
 
 If the archive extension is missing, record `archive_extension_installed=false`,
 keep cleanup disabled, and continue only after warning that the project should

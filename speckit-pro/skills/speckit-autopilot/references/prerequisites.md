@@ -344,9 +344,9 @@ to archive previously merged specs.
    `safeToApplyCleanup=false` (the sweep never passes `--apply-cleanup`, so it
    never removes spec folders).
 7. Add the canonical `Archive Sweep: previously merged specs dry-run/apply
-   eligibility` task before Phase 0 in the visible task list.
+   eligibility` item before Phase 0 in `autopilot-state.json`.
 <!-- /host -->
-<!-- host:codex: Codex persists the sweep in autopilot-state.json and its update_plan -->
+<!-- host:codex: Codex persists the sweep details in autopilot-state.json -->
 6. Persist sweep output into `autopilot-state.json` under `archive_sweep`,
    including `status`, `execution_path=extension_contract`,
    `invocation_available`, `prerequisite_available`, `prerequisite_mode`,
@@ -361,8 +361,8 @@ to archive previously merged specs.
    complete the Archive Sweep plan item. It is not a fallback for a broken or
    unexecuted command path.
 8. Add/update the canonical `Archive Sweep: previously merged specs
-   dry-run/apply eligibility` plan item before Phase 0 in both `update_plan`
-   and `autopilot-state.json`. Complete it only after the direct contract run
+   dry-run/apply eligibility` plan item before Phase 0 in
+   `autopilot-state.json`. Complete it only after the direct contract run
    succeeds or the extension is confirmed absent.
 <!-- /host -->
 
