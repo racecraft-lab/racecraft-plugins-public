@@ -13,7 +13,7 @@ model: sonnet
 color: green
 disallowedTools: Skill, Agent, SendMessage
 maxTurns: 60
-effort: max
+effort: high
 ---
 
 # Artifact Author

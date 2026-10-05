@@ -6,28 +6,28 @@
       "category": "shared",
       "exception_reason": null,
       "claude_code": {"implementation": "plugin_agent", "source": "agents/phase-executor.md", "install_status": "required", "order": 0, "model": "opus", "effort": "high", "sandbox": "tool-policy", "memory": "none"},
-      "codex": {"implementation": "custom_agent", "source": "codex-agents/phase-executor.toml", "install_status": "required", "order": 8, "model": "gpt-6-sol", "effort": "xhigh", "sandbox": "workspace-write", "memory": "none"}
+      "codex": {"implementation": "custom_agent", "source": "codex-agents/phase-executor.toml", "install_status": "required", "order": 8, "model": "gpt-6-sol", "effort": "high", "sandbox": "workspace-write", "memory": "none"}
     },
     {
       "name": "clarify-executor",
       "category": "shared",
       "exception_reason": null,
-      "claude_code": {"implementation": "plugin_agent", "source": "agents/clarify-executor.md", "install_status": "required", "order": 1, "model": "opus", "effort": "high", "sandbox": "tool-policy-read-only", "memory": "none"},
-      "codex": {"implementation": "custom_agent", "source": "codex-agents/clarify-executor.toml", "install_status": "required", "order": 3, "model": "gpt-6-sol", "effort": "xhigh", "sandbox": "read-only", "memory": "none"}
+      "claude_code": {"implementation": "plugin_agent", "source": "agents/clarify-executor.md", "install_status": "required", "order": 1, "model": "sonnet", "effort": "high", "sandbox": "tool-policy-read-only", "memory": "none"},
+      "codex": {"implementation": "custom_agent", "source": "codex-agents/clarify-executor.toml", "install_status": "required", "order": 3, "model": "gpt-6-sol", "effort": "medium", "sandbox": "read-only", "memory": "none"}
     },
     {
       "name": "checklist-executor",
       "category": "shared",
       "exception_reason": null,
-      "claude_code": {"implementation": "plugin_agent", "source": "agents/checklist-executor.md", "install_status": "required", "order": 2, "model": "opus", "effort": "high", "sandbox": "tool-policy", "memory": "none"},
-      "codex": {"implementation": "custom_agent", "source": "codex-agents/checklist-executor.toml", "install_status": "required", "order": 2, "model": "gpt-6-sol", "effort": "xhigh", "sandbox": "workspace-write", "memory": "none"}
+      "claude_code": {"implementation": "plugin_agent", "source": "agents/checklist-executor.md", "install_status": "required", "order": 2, "model": "sonnet", "effort": "high", "sandbox": "tool-policy", "memory": "none"},
+      "codex": {"implementation": "custom_agent", "source": "codex-agents/checklist-executor.toml", "install_status": "required", "order": 2, "model": "gpt-6-sol", "effort": "medium", "sandbox": "workspace-write", "memory": "none"}
     },
     {
       "name": "analyze-executor",
       "category": "shared",
       "exception_reason": null,
-      "claude_code": {"implementation": "plugin_agent", "source": "agents/analyze-executor.md", "install_status": "required", "order": 3, "model": "opus", "effort": "high", "sandbox": "tool-policy", "memory": "none"},
-      "codex": {"implementation": "custom_agent", "source": "codex-agents/analyze-executor.toml", "install_status": "required", "order": 0, "model": "gpt-6-sol", "effort": "xhigh", "sandbox": "workspace-write", "memory": "none"}
+      "claude_code": {"implementation": "plugin_agent", "source": "agents/analyze-executor.md", "install_status": "required", "order": 3, "model": "sonnet", "effort": "high", "sandbox": "tool-policy", "memory": "none"},
+      "codex": {"implementation": "custom_agent", "source": "codex-agents/analyze-executor.toml", "install_status": "required", "order": 0, "model": "gpt-6-sol", "effort": "medium", "sandbox": "workspace-write", "memory": "none"}
     },
     {
       "name": "implement-executor",
@@ -47,22 +47,22 @@
       "name": "codebase-analyst",
       "category": "shared",
       "exception_reason": null,
-      "claude_code": {"implementation": "plugin_agent", "source": "agents/codebase-analyst.md", "install_status": "required", "order": 6, "model": "sonnet", "effort": "max", "sandbox": "tool-policy-read-only", "memory": "local"},
-      "codex": {"implementation": "custom_agent", "source": "codex-agents/codebase-analyst.toml", "install_status": "required", "order": 4, "model": "gpt-6-luna", "effort": "max", "sandbox": "read-only", "memory": "none"}
+      "claude_code": {"implementation": "plugin_agent", "source": "agents/codebase-analyst.md", "install_status": "required", "order": 6, "model": "sonnet", "effort": "high", "sandbox": "tool-policy-read-only", "memory": "local"},
+      "codex": {"implementation": "custom_agent", "source": "codex-agents/codebase-analyst.toml", "install_status": "required", "order": 4, "model": "gpt-6-luna", "effort": "high", "sandbox": "read-only", "memory": "none"}
     },
     {
       "name": "spec-context-analyst",
       "category": "shared",
       "exception_reason": null,
-      "claude_code": {"implementation": "plugin_agent", "source": "agents/spec-context-analyst.md", "install_status": "required", "order": 7, "model": "sonnet", "effort": "max", "sandbox": "tool-policy-read-only", "memory": "local"},
-      "codex": {"implementation": "custom_agent", "source": "codex-agents/spec-context-analyst.toml", "install_status": "required", "order": 9, "model": "gpt-6-luna", "effort": "max", "sandbox": "read-only", "memory": "none"}
+      "claude_code": {"implementation": "plugin_agent", "source": "agents/spec-context-analyst.md", "install_status": "required", "order": 7, "model": "sonnet", "effort": "high", "sandbox": "tool-policy-read-only", "memory": "local"},
+      "codex": {"implementation": "custom_agent", "source": "codex-agents/spec-context-analyst.toml", "install_status": "required", "order": 9, "model": "gpt-6-luna", "effort": "high", "sandbox": "read-only", "memory": "none"}
     },
     {
       "name": "domain-researcher",
       "category": "shared",
       "exception_reason": null,
-      "claude_code": {"implementation": "plugin_agent", "source": "agents/domain-researcher.md", "install_status": "required", "order": 8, "model": "sonnet", "effort": "max", "sandbox": "tool-policy-read-only", "memory": "none"},
-      "codex": {"implementation": "custom_agent", "source": "codex-agents/domain-researcher.toml", "install_status": "required", "order": 5, "model": "gpt-6-luna", "effort": "max", "sandbox": "read-only", "memory": "none"}
+      "claude_code": {"implementation": "plugin_agent", "source": "agents/domain-researcher.md", "install_status": "required", "order": 8, "model": "sonnet", "effort": "high", "sandbox": "tool-policy-read-only", "memory": "none"},
+      "codex": {"implementation": "custom_agent", "source": "codex-agents/domain-researcher.toml", "install_status": "required", "order": 5, "model": "gpt-6-luna", "effort": "high", "sandbox": "read-only", "memory": "none"}
     },
     {
       "name": "consensus-synthesizer",
@@ -82,8 +82,8 @@
       "name": "artifact-author",
       "category": "shared",
       "exception_reason": null,
-      "claude_code": {"implementation": "plugin_agent", "source": "agents/artifact-author.md", "install_status": "required", "order": 10, "model": "sonnet", "effort": "max", "sandbox": "tool-policy", "memory": "none"},
-      "codex": {"implementation": "custom_agent", "source": "codex-agents/artifact-author.toml", "install_status": "required", "order": 1, "model": "gpt-6-sol", "effort": "xhigh", "sandbox": "workspace-write", "memory": "none"}
+      "claude_code": {"implementation": "plugin_agent", "source": "agents/artifact-author.md", "install_status": "required", "order": 10, "model": "sonnet", "effort": "high", "sandbox": "tool-policy", "memory": "none"},
+      "codex": {"implementation": "custom_agent", "source": "codex-agents/artifact-author.toml", "install_status": "required", "order": 1, "model": "gpt-6-sol", "effort": "medium", "sandbox": "workspace-write", "memory": "none"}
     },
     {
       "name": "uat-runbook-author",

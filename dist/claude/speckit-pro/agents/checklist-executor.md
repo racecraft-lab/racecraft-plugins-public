@@ -7,7 +7,7 @@ description: >
   exploration, and local file analysis to determine evidence-grounded
   fixes, then applies them to spec.md or plan.md. Use for every
   checklist domain in the autopilot workflow.
-model: opus
+model: sonnet
 disallowedTools: WebFetch, WebSearch, mcp__tavily, mcp__tavily-mcp, mcp__context7, mcp__plugin_context7_context7
 color: yellow
 maxTurns: 100

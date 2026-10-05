@@ -257,6 +257,44 @@ class ValidateAgentProsePaths(unittest.TestCase):
         self.assertGreater(checked, 0, 'no plugin path found in agent prose; the pattern matches nothing')
 
 
+# The owner's plan-stage table (issue 1150): (Claude model, Claude effort, Codex model, Codex effort)
+# per installed agent. phase-executor's default is its Plan row; the brief overrides Specify and Tasks.
+PLAN_STAGE_TABLE = {
+    'phase-executor': ('opus', 'high', 'gpt-6-sol', 'high'),
+    'clarify-executor': ('sonnet', 'high', 'gpt-6-sol', 'medium'),
+    'checklist-executor': ('sonnet', 'high', 'gpt-6-sol', 'medium'),
+    'analyze-executor': ('sonnet', 'high', 'gpt-6-sol', 'medium'),
+    'codebase-analyst': ('sonnet', 'high', 'gpt-6-luna', 'high'),
+    'spec-context-analyst': ('sonnet', 'high', 'gpt-6-luna', 'high'),
+    'domain-researcher': ('sonnet', 'high', 'gpt-6-luna', 'high'),
+    'artifact-author': ('sonnet', 'high', 'gpt-6-sol', 'medium'),
+    # Unchanged rows.
+    'consensus-synthesizer': ('sonnet', 'high', 'gpt-6-sol', 'medium'),
+    'consensus-tiebreaker': ('sonnet', 'max', 'gpt-6-sol', 'max'),
+    'artifact-preview-observer': ('haiku', '', None, None),
+}
+
+
+class ValidatePlanStageModelTable(unittest.TestCase):
+
+    def test_agent_files_and_codex_tomls_match_the_table(self) -> None:
+        inventory = {role['name']: role for role in AGENT_INVENTORY['roles']}
+        for agent, (claude_model, claude_effort, codex_model, codex_effort) in PLAN_STAGE_TABLE.items():
+            source = _frontmatter((CC_AGENTS_DIR / f'{agent}.md').read_text(encoding='utf-8').splitlines())
+            with self.subTest(agent=agent, host='claude'):
+                self.assertEqual((claude_model, claude_effort), (_field(source, 'model'), _field(source, 'effort')))
+                self.assertEqual((claude_model, claude_effort or None),
+                                 (inventory[agent]['claude_code']['model'], inventory[agent]['claude_code']['effort'] or None))
+            if codex_model is None:
+                continue
+            toml = (CODEX_AGENTS_DIR / f'{agent}.toml').read_text(encoding='utf-8')
+            with self.subTest(agent=agent, host='codex'):
+                self.assertEqual((codex_model, codex_effort),
+                                 (toml_string_field(toml, 'model'), toml_string_field(toml, 'model_reasoning_effort')))
+                self.assertEqual((codex_model, codex_effort),
+                                 (inventory[agent]['codex']['model'], inventory[agent]['codex']['effort']))
+
+
 def main() -> int:
     suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])
     return run_counted(suite, label="validate-agent-contracts", allow_live_specs=True)

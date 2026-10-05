@@ -56,7 +56,7 @@ The runner-owned policy defines each bundled agent's model and reasoning effort.
 An explicit route manifest materializes its selected model-and-effort tuple.
 Bundled agents default to `gpt-6-sol` unless named here. The three consensus
 analysts (`codebase-analyst`, `spec-context-analyst`, `domain-researcher`) run on
-`gpt-6-luna` at max effort. The optional `autopilot-fast-helper` runs on
+`gpt-6-luna` at high effort. The optional `autopilot-fast-helper` runs on
 `gpt-6-luna` at low effort for tiny advisory text-only prep, never for SDD
 reasoning.
 

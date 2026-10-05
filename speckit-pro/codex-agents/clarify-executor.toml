@@ -3,7 +3,7 @@
 name = "clarify-executor"
 description = "Prepares a single Clarify question set for the autopilot workflow. This read-only agent inspects the workflow prompt, feature spec, and repo evidence, then returns prioritized questions with recommended answers and evidence for the parent orchestrator to answer/apply. It never edits artifacts and never waits on a user."
 model = "gpt-6-sol"
-model_reasoning_effort = "xhigh"
+model_reasoning_effort = "medium"
 sandbox_mode = "read-only"
 developer_instructions = """
 # Clarify Executor

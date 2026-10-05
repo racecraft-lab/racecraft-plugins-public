@@ -8,7 +8,7 @@ description: >
   whatever current evidence does not settle, then applies the fixes to the
   relevant artifacts. Use for the analyze phase in the autopilot
   workflow.
-model: opus
+model: sonnet
 disallowedTools: WebFetch, WebSearch, mcp__tavily, mcp__tavily-mcp, mcp__context7, mcp__plugin_context7_context7
 color: orange
 maxTurns: 100

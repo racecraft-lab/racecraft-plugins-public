@@ -204,7 +204,7 @@ into expensive rework.
 operator has set for the session and do not stop, warn, or ask them to
 change it. The bundled subagents carry their own pins: judgment roles
 ship at a measured high effort (`high`, `xhigh`, or `max` on Claude;
-`xhigh` or `max` on Codex), and bounded rule-applying
+`medium`, `high`, `xhigh`, or `max` on Codex), and bounded rule-applying
 roles that only apply rules to inputs already in their prompt ship at
 the documented default.
 The optional `autopilot-fast-helper` is pinned to low effort on gpt-6-luna
@@ -838,7 +838,7 @@ stable fields, shared by both hosts:
 | `gate` | Gate id for the parent's `validate-gate` request |
 | `slices` | Ordered reference sections copied verbatim for the dispatch prompt; empty for Specify, Plan and Tasks |
 | `waves` | Empty list, reserved for dispatch waves (#1183) |
-| `model` | Null; use the installed agent configuration until #1184 |
+| `model` | `claude` and `codex` entries, each with `model` and `effort`, for this dispatch. Claude Code passes `model` per call and keeps effort in the agent file; Codex passes both per spawn |
 | `hooks` | Empty list, reserved for optional hooks (#1188) |
 
 Loaded commands still read their own instructions, templates and scripts.
@@ -859,7 +859,8 @@ for phase in PHASES starting from first_pending:
     2. Run before_<phase> hooks from .specify/extensions.yml
     3. For each workflow prompt in this phase:
          Planning:
-         spawn_agent(agent_type=brief.agent,
+         spawn_agent(agent_type=brief.agent, model=brief.model.codex.model,
+                     model_reasoning_effort=brief.model.codex.effort,
                      message=<"$" + brief.inputs.skill (omitted when null) + newline +
                               brief.inputs.instruction + workflow prompt + brief context + brief.slices>) then wait_agent
          Implement: use the implementation executor and task-specific TDD prompt.

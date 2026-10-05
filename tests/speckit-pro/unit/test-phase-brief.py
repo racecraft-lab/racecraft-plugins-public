@@ -157,8 +157,41 @@ class PhaseBriefTests(unittest.TestCase):
                 self.assertEqual(brief["inputs"]["workflow_file"], "docs/workflow.md")
                 self.assertEqual(brief["inputs"]["feature_dir"], "specs/example")
                 self.assertEqual(brief["readable_files"], ["docs/workflow.md", ".specify/memory/constitution.md", ".specify/extensions.yml"] + ["specs/example/" + name for name in artifacts])
-                self.assertEqual([brief[key] for key in ("waves", "model", "hooks")], [[], None, []])
+                self.assertEqual([brief[key] for key in ("waves", "hooks")], [[], []])
                 self.assertEqual(bool(brief["slices"]), agent in SLICE_AGENTS)
+
+
+class PhaseBriefModelTests(unittest.TestCase):
+    def test_brief_names_the_model_for_each_dispatch(self):
+        # The owner's plan-stage table (issue 1150); Specify and Tasks run phase-executor below its Plan default.
+        sonnet, plan_claude = {"model": "sonnet", "effort": "high"}, {"model": "opus", "effort": "high"}
+        sol_medium, sol_high = {"model": "gpt-6-sol", "effort": "medium"}, {"model": "gpt-6-sol", "effort": "high"}
+        cases = (("Specify", sonnet, sol_medium), ("Clarify", sonnet, sol_medium), ("Plan", plan_claude, sol_high),
+                 ("Checklist", sonnet, sol_medium), ("Tasks", sonnet, sol_medium), ("Analyze", sonnet, sol_medium))
+        for phase, claude, codex in cases:
+            with self.subTest(phase=phase):
+                brief = dispatch_brief({"phase": phase, "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"})["data"]
+                self.assertEqual(brief["model"], {"claude": claude, "codex": codex})
+
+    def test_both_hosts_dispatch_the_briefed_model(self):
+        needles = {"claude": ("model: brief.model.claude.model",),
+                   "codex": ("model=brief.model.codex.model", "model_reasoning_effort=brief.model.codex.effort")}
+        for host, expected in needles.items():
+            with self.subTest(host=host):
+                skill = (host_skill_root(host) / "speckit-autopilot/SKILL.md").read_text()
+                loop = skill.split("## Step 2: Main Execution Loop", 1)[1]
+                for needle in expected:
+                    self.assertIn(needle, loop)
+
+
+class RetryLadderTopRungTests(unittest.TestCase):
+    def test_third_rung_stays_the_strongest_model_at_max_effort(self):
+        # ADR 0004: the plan-stage table lowers executor effort; a failing check still escalates to the top.
+        from speckit_pro_runner.helpers import run_finalization
+        rung = "strongest model at max effort"
+        self.assertIn(rung, (REPO / "docs/adr/0004-retry-ladder.md").read_text())
+        self.assertIn(rung, (REFERENCES / "stop-policy.md").read_text())
+        self.assertIn(rung, run_finalization._tier_steps("tier3"))
 
 
 class PhaseBriefSliceTests(unittest.TestCase):
@@ -229,5 +262,5 @@ class PhaseBriefSliceTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, PhaseBriefSliceTests))
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, PhaseBriefModelTests, RetryLadderTopRungTests, PhaseBriefSliceTests))
     sys.exit(run_counted(suite, label="test-phase-brief"))
