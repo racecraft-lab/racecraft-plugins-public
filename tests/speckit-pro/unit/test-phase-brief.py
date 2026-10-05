@@ -175,6 +175,20 @@ class PhaseBriefSliceTests(unittest.TestCase):
                 whole = sum(len(source.splitlines()) for source in sources)
                 self.assertLess(len(joined.splitlines()), whole // 10)
 
+    def test_no_executor_is_told_to_read_the_references_whole(self):
+        sources = [(REPO / "speckit-pro/agents" / (name + ".md")) for name in SLICE_AGENTS]
+        sources += [(REPO / "speckit-pro/codex-agents" / (name + ".toml")) for name in SLICE_AGENTS]
+        for host, folder in (("claude", "agents"), ("codex", "codex-agents")):
+            suffix = ".md" if host == "claude" else ".toml"
+            sources += [REPO / "dist" / host / "speckit-pro" / folder / (name + suffix) for name in SLICE_AGENTS]
+        for path in sources:
+            with self.subTest(agent=str(path.relative_to(REPO))):
+                text = " ".join(path.read_text().split())
+                for forbidden in ("Reference dir", "execution-efficiency.md", "Protocol:` line, which", "absolute path on your prompt"):
+                    self.assertNotIn(forbidden, text)
+                if path.suffix == ".md" or "claude" in path.parts:
+                    self.assertIn("reference slices", text)
+
     def test_both_hosts_insert_the_slices_verbatim(self):
         for host in ("claude", "codex"):
             with self.subTest(host=host):
@@ -182,6 +196,7 @@ class PhaseBriefSliceTests(unittest.TestCase):
                 loop = skill.split("## Step 2: Main Execution Loop", 1)[1]
                 self.assertIn("brief.slices", loop)
                 self.assertIn("verbatim", loop.split("brief.slices", 1)[1][:400])
+                self.assertNotIn("`Reference dir:` lines (`references/consensus-protocol.md`)", loop)
 
 
 if __name__ == "__main__":
