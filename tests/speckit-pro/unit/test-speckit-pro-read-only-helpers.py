@@ -4572,6 +4572,12 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
             with self.subTest(helper_id=helper_id):
                 completed, response, stderr_records = run_runner(helper_request(helper_id, HELPER_CASES[helper_id]))
                 data = response["data"]
+                if helper_id == "select-artifact-pages":
+                    self.assert_response(response, "ok", 0)
+                    self.assertFalse(data["writes_state"])
+                    self.assertEqual(data["selected_pages"], ["implementation-plan", "spec-explainer", "module-map"])
+                    self.assertEqual(stderr_records, [])
+                    continue
                 if helper_id == "formal-doctor":
                     self.assertEqual(completed.returncode, 0)
                     self.assertEqual(data["verdict"], "disabled")
