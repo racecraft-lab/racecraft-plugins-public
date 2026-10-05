@@ -655,7 +655,15 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "4c3b3a0890741765bcb6a9f997e8f7c9a4a2bd4586cd959de5d0b7234756ca6d"
+      "sha256": "a6aa4a591c337bc32f1dec79bbfbbc0f62fd6db56288bc81e5821a2529cff3b6"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/readiness_record.py",
+        "display": "speckit_pro_runner/helpers/readiness_record.py"
+      },
+      "sha256": "d9ac9a07bd0a72e7bd9bb2286e7ec1fba1cf983b02a38010f00201b7c74ca482"
     },
     {
       "path": {
@@ -663,7 +671,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "079224f02149b4335ad9c69aafaf289cdd4a585b58d6531dfff76aa292a698ef"
+      "sha256": "f12aea3d408581699df6020cd01db2ee29518f2d634225e83492fd1ec2eaa3fc"
     },
     {
       "path": {
@@ -791,7 +799,7 @@
         "value": "speckit_pro_runner/quality_gates.py",
         "display": "speckit_pro_runner/quality_gates.py"
       },
-      "sha256": "8295d667de2ec12763e2654cd46fb17d53da333c120e49a20ce561557979c927"
+      "sha256": "ef5f9661467a565b0828b4adb9be2454d19218be896e7fc015fe858ec54c19f5"
     },
     {
       "path": {

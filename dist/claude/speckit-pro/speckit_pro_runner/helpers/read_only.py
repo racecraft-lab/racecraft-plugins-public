@@ -1834,23 +1834,16 @@ def detect_commands(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
         "enforce": [],
         "coach": "speckit-coach quality gates",
     }
-    quality_text = trusted_text(root / quality_gates.FILE_PATH, repo_root)
-    if quality_text is not None:
-        try:
-            quality_data = json.loads(quality_text)
-        except ValueError as exc:
-            quality["status"] = "invalid"
-            quality["problems"] = [f"cannot parse JSON: {exc}"]
-        else:
-            problems = quality_gates.validate(quality_data)
-            if problems:
-                quality["status"] = "invalid"
-                quality["problems"] = problems
-            else:
-                quality["status"] = "present"
-                quality["thresholds"] = quality_data["thresholds"]
-                quality["skips"] = quality_data.get("skips", {})
-                quality["enforce"] = quality_data.get("enforce", [])
+    quality_status, quality_problems, quality_data = quality_gates.observe(
+        trusted_text(root / quality_gates.FILE_PATH, repo_root))
+    if quality_status != "missing":
+        quality["status"] = quality_status
+    if quality_problems:
+        quality["problems"] = quality_problems
+    if quality_data is not None:
+        quality["thresholds"] = quality_data["thresholds"]
+        quality["skips"] = quality_data.get("skips", {})
+        quality["enforce"] = quality_data.get("enforce", [])
     base_branch = resolve_base_branch(root)
     gates = resolve_gate_slots(
         root,
