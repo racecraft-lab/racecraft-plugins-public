@@ -1093,19 +1093,19 @@ class HostProbePathSecurityTest(unittest.TestCase):
             {"copy": lambda: shutil.copy2(payload, target), "symlink": lambda: target.symlink_to(payload),
              "hardlink": lambda: os.link(payload, target), "regular": lambda: self.executable(target)}[form]()
 
-        def lookup(*args, **kwargs):
+        def race_lookup(*args, **kwargs):
             if window == "after-validation":
                 attack()
             return native_which(*args, **kwargs)
 
-        def launch(*args, **kwargs):
+        def race_launch(*args, **kwargs):
             if window == "after-lookup":
                 attack()
             return native_run(*args, **kwargs)
 
         with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}), \
-             unittest.mock.patch.object(shutil, "which", side_effect=lookup), \
-             unittest.mock.patch.object(subprocess, "run", side_effect=launch):
+             unittest.mock.patch.object(shutil, "which", side_effect=race_lookup), \
+             unittest.mock.patch.object(subprocess, "run", side_effect=race_launch):
             result = self.protected_probe(host, (launcher,),
                                           mutable_directories=(self.area if ancestor else self.tools,))
         executed = self.marker.exists()
