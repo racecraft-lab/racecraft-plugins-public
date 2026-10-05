@@ -378,13 +378,8 @@ class SpecKitExecutableReuseTests(unittest.TestCase):
             root = Path(temporary).resolve()
             checkout = root / "checkout"
             checkout.mkdir()
-            trusted = root / "trusted" / "specify"
-            trusted.parent.mkdir()
-            trusted.write_text(
-                f"#!{sys.executable}\nimport json, sys\nprint(json.dumps(sys.argv[1:]))\n",
-                encoding="utf-8",
-            )
-            trusted.chmod(0o755)
+            # A harmless native executable keeps actual launches portable to Windows.
+            trusted = Path(sys.executable).resolve()
             hostile = checkout / "specify.exe"
             hostile.write_text("rejected checkout executable\n", encoding="utf-8")
             hostile.chmod(0o755)
@@ -417,7 +412,8 @@ class SpecKitExecutableReuseTests(unittest.TestCase):
                     for operation in self.operations:
                         with self.subTest(platform=platform, replacement=replacement, operation=operation):
                             result = subprocess.run(
-                                state["cli_argv"] + operation, cwd=checkout, shell=False,
+                                state["cli_argv"] + ["-c", "import json, sys; print(json.dumps(sys.argv[1:]))"] + operation,
+                                cwd=checkout, shell=False,
                                 capture_output=True, text=True, check=True,
                                 env={**os.environ, "PATH": str(checkout)},
                             )
