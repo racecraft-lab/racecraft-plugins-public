@@ -46,7 +46,7 @@ VALUE_NAME_RE = re.compile(r"[a-z][a-z0-9_]{0,40}")
 # Keep the supported scaffold slash commands; refuse absolute paths, including roots and UNC paths.
 LOCAL_PATH_RE = re.compile(
     r"(?<![\w./\\-])(?:/(?!speckit-pro:[a-z][a-z0-9-]*(?=[^\w/\\-]|$)|"
-    r"(?:plugin|reload-plugins)(?=[^\w/\\-]|$))[^\s]*|~[/\\]|[A-Za-z]:[\\/]|\\|file://)")
+    r"(?:plugin|reload-plugins|hooks|mcp)(?=[^\w/\\-]|$))[^\s]*|~[/\\]|[A-Za-z]:[\\/]|\\|file://)")
 EXECUTION_MODES = ("interactive", "answers-file")
 MAX_TEXT = 400
 NOT_OBSERVED_ACTION = "Run the preparation check for this item, then rerun scaffold."
@@ -205,13 +205,19 @@ def build_record(inputs: dict[str, Any], root: Path) -> dict[str, Any]:
     observations = inputs["observations"]
     if not isinstance(observations, list):
         raise SelectionError("observations must be a list")
+    from . import readiness_host_items as host_items  # imported here: that module builds on this one
+
     observed_at = now()
     items: dict[str, dict[str, Any]] = {}
     for raw in observations:
-        name, item = caller_item(raw, root, observed_at)
+        if isinstance(raw, dict) and raw.get("item") in host_items.HOST_ITEMS:
+            name, item = host_items.host_item(raw, inputs["host"], observed_at)
+        else:
+            name, item = caller_item(raw, root, observed_at)
         if name in items:
             raise SelectionError(f"{name} is observed twice")
         items[name] = item
+    host_items.fill_missing(items, inputs["host"], observed_at)
     for name in CALLER_ITEMS:
         items.setdefault(name, make_item("unknown", "not observed by scaffold", observed_at, {}, NOT_OBSERVED_ACTION))
     items["local_capability"] = observe_local_capability()
@@ -269,4 +275,7 @@ def run_readiness_record_helper(entry: Any, request: Any) -> dict[str, Any]:
                 remediation_actions=["Report the failure in the scaffold closing report.",
                                      "Fix the .specify directory permissions and rerun scaffold."])])
         data["writes_state"] = True
+    from . import readiness_host_items as host_items
+
+    data["allow_rules"] = host_items.allow_rules(request.inputs)
     return response("ok", request_id=request.request_id, data=data)

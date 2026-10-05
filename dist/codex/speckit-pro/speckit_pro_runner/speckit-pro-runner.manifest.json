@@ -660,10 +660,18 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/readiness_host_items.py",
+        "display": "speckit_pro_runner/helpers/readiness_host_items.py"
+      },
+      "sha256": "e0c293ed540564680da3d1e761bbfef201b04ceb0a31a35b02dd257de0c19c4d"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/helpers/readiness_record.py",
         "display": "speckit_pro_runner/helpers/readiness_record.py"
       },
-      "sha256": "d9ac9a07bd0a72e7bd9bb2286e7ec1fba1cf983b02a38010f00201b7c74ca482"
+      "sha256": "f8d264d52dedef54ff0326ed1cf13062f9075802e7d076000fcf08f3e25e1fa4"
     },
     {
       "path": {
