@@ -5082,28 +5082,18 @@ class CanaryReceiptTests(unittest.TestCase):
         self.assertTrue(self.validator.validate_receipt(value))
 
     def test_rejects_nonfinite_stage_evidence_through_api_and_cli(self):
-        for host in ("claude-code", "codex"):
-            for literal in ("NaN", "Infinity", "-Infinity", "1e400", "-1e400"):
-                value = receipt()
-                value["host"] = host
-                if host == "claude-code":
-                    value["install_probe"] = {"loaded_plugins": ["speckit-pro@1.0.0"], "evidence": "init.json"}
-                    for stage in value["variants"][0]["stages"].values():
-                        stage.pop("codex_tokens")
-                value["variants"][0]["stages"]["plan"]["wall_seconds"] = 12345.5
-                body = json.dumps(value).replace("12345.5", literal)
-                with self.subTest(host=host, literal=literal), tempfile.TemporaryDirectory() as directory:
-                    report = self.validator.receipt_report(json.loads(body))
-                    self.assertFalse(report["valid"], report)
-                    json.dumps(report, allow_nan=False)
-                    source = Path(directory) / "receipt.json"
-                    source.write_text(body, encoding="utf-8")
-                    completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
-                                               capture_output=True, text=True, check=False)
-                    self.assertEqual(1, completed.returncode, completed.stdout)
-                    output = json.loads(completed.stdout, parse_constant=self.validator.reject_nonfinite)
-                    self.assertFalse(output["valid"])
-                    self.assertEqual("", completed.stderr)
+        for number in (float("nan"), float("inf"), -float("inf")):
+            value = receipt()
+            value["variants"][0]["stages"]["plan"]["wall_seconds"] = number
+            with self.subTest(number=str(number)), tempfile.TemporaryDirectory() as directory:
+                source = Path(directory) / "receipt.json"
+                source.write_text(json.dumps(value), encoding="utf-8")
+                completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
+                                           capture_output=True, text=True, check=False)
+                self.assertEqual(1, completed.returncode, completed.stdout)
+                report = self.validator.receipt_report(value)
+                self.assertFalse(report["valid"])
+                json.dumps(report, allow_nan=False)
 
 
 class CanaryVariantCase(unittest.TestCase):
@@ -5335,6 +5325,25 @@ class CanaryVariantContractTests(CanaryVariantCase):
 
 
 class CanaryPlanTargetTests(CanaryVariantCase):
+    def test_nonfinite_and_overflow_reports_are_strict_json_for_both_hosts(self):
+        for host, original in self.receipts.items():
+            for literal in ("NaN", "Infinity", "-Infinity", "1e400", "-1e400"):
+                value = copy.deepcopy(original)
+                value["variants"][0]["stages"]["plan"]["wall_seconds"] = 12345.5
+                body = json.dumps(value).replace("12345.5", literal)
+                with self.subTest(host=host, literal=literal), tempfile.TemporaryDirectory() as directory:
+                    report = self.validator.receipt_report(json.loads(body))
+                    self.assertFalse(report["valid"], report)
+                    json.dumps(report, allow_nan=False)
+                    source = Path(directory) / "receipt.json"
+                    source.write_text(body, encoding="utf-8")
+                    completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
+                                               capture_output=True, text=True, check=False)
+                    self.assertEqual(1, completed.returncode, completed.stdout)
+                    output = json.loads(completed.stdout, parse_constant=self.validator.reject_nonfinite)
+                    self.assertFalse(output["valid"])
+                    self.assertEqual("", completed.stderr)
+
     def test_over_target_reports_false_without_failing_the_gate_for_either_host(self):
         for host, original in self.receipts.items():
             for metric, actual in (("wall_seconds", 1801), ("tokens", 15000001)):
