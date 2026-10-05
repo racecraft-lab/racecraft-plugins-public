@@ -1,0 +1,199 @@
+#!/usr/bin/env python3
+"""Scaffold's quality-gates proposal (ADR 0007): measurement rules, confirm-before-write, decline stores nothing."""
+
+from __future__ import annotations
+
+import json
+import os
+import re
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+TEST_DIR = Path(__file__).resolve().parent
+REPO_ROOT = TEST_DIR.parents[2]
+LIB_DIR = TEST_DIR.parent / "lib"
+sys.path.insert(0, str(LIB_DIR))
+sys.path.insert(0, str(REPO_ROOT / "speckit-pro"))
+
+from host_skill_views import host_skill_root  # noqa: E402
+from runner_invocation import assert_runner_response, run_runner  # noqa: E402
+from test_result import run_counted  # noqa: E402
+
+GATES_FILE = ".specify/quality-gates.json"
+REPORT_FILE = ".specify/quality-gates-report.json"
+VALID = {"schema_version": "1.0", "thresholds": {"complexity": 10, "crap": 30, "mutation_score_floor": 60}}
+
+
+def function(file: str, name: str, complexity: int) -> dict[str, object]:
+    return {"file": file, "name": name, "complexity": complexity, "coverage": 0.5, "crap": 1.0}
+
+
+def request(mode: str, **inputs: object) -> dict[str, object]:
+    return {"schema_version": "1.0", "request_id": "test-quality-gates", "helper_id": "propose-quality-gates",
+            "operation": "propose-quality-gates", "mode": mode, "inputs": {"measured": True, **inputs}}
+
+
+class QualityGatesProposalTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
+        self.specify = self.root / ".specify"
+        self.specify.mkdir()
+        self.tools = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
+
+    def write_report(self, functions: list[dict[str, object]]) -> None:
+        (self.root / REPORT_FILE).write_text(json.dumps({"functions": functions}), encoding="utf-8")
+
+    def ten_functions(self) -> list[dict[str, object]]:
+        """Nine simple functions (complexity 1 to 9) and one outlier of 40 in a named file."""
+        simple = [function("src/ok.py", f"ok{n}", n) for n in range(1, 10)]
+        return [*simple, function("src/legacy.py", "tangle", 40)]
+
+    def run_helper(self, mode: str, **inputs: object) -> dict:
+        completed, response, _ = run_runner(request(mode, **inputs), cwd=self.root,
+                                            extra_env={"PATH": str(self.tools)})
+        self.assertIn(completed.returncode, (0, 1, 2, 3), completed.stderr)
+        return response
+
+    def listing(self) -> dict[str, bytes]:
+        return {path.relative_to(self.root).as_posix(): path.read_bytes()
+                for path in sorted(self.root.rglob("*")) if path.is_file() and not path.is_symlink()}
+
+    def test_proposal_lets_about_ninety_percent_of_measured_functions_pass_and_names_the_failures(self) -> None:
+        self.write_report(self.ten_functions())
+        before = self.listing()
+        response = self.run_helper("dry_run")
+        assert_runner_response(self, response, "ok", 0)
+        data = response["data"]
+        self.assertEqual("missing", data["status"])
+        proposal = data["proposal"]
+        self.assertEqual({"complexity": 9, "crap": 30, "mutation_score_floor": 60}, proposal["thresholds"])
+        self.assertEqual("percentile-90", proposal["basis"]["method"])
+        self.assertEqual(10, proposal["basis"]["measured_functions"])
+        self.assertEqual([{"file": "src/legacy.py", "functions": [{"name": "tangle", "complexity": 40}]}],
+                         data["failing_files"])
+        self.assertEqual(1, data["failing_function_count"])
+        self.assertEqual(before, self.listing(), "a dry run writes nothing")
+
+    def test_nothing_measured_proposes_the_nist_ceiling_of_ten(self) -> None:
+        cases = {"declined tool, stale report": (False, self.ten_functions()), "empty report": (True, [])}
+        for label, (measured, functions) in cases.items():
+            with self.subTest(label):
+                self.write_report(functions)  # a stale report must be ignored when nothing was measured
+                response = self.run_helper("dry_run", measured=measured)
+                assert_runner_response(self, response, "ok", 0)
+                proposal = response["data"]["proposal"]
+                self.assertEqual({"complexity": 10, "crap": 30, "mutation_score_floor": 60}, proposal["thresholds"])
+                self.assertEqual("nist-235", proposal["basis"]["method"])
+                self.assertEqual(0, proposal["basis"]["measured_functions"])
+                self.assertEqual([], response["data"]["failing_files"])
+
+    def test_the_file_is_written_only_on_a_yes_and_validates(self) -> None:
+        from speckit_pro_runner import quality_gates
+
+        self.write_report(self.ten_functions())
+        proposal = self.run_helper("dry_run")["data"]["proposal"]
+        response = self.run_helper("apply", confirmed=True)
+        assert_runner_response(self, response, "ok", 0)
+        self.assertEqual("written", response["data"]["outcome"])
+        written = json.loads((self.root / GATES_FILE).read_text(encoding="utf-8"))
+        self.assertEqual(proposal, written)
+        self.assertEqual([], quality_gates.validate(written))
+        self.assertFalse((self.root / REPORT_FILE).exists(), "the consumed report is removed")
+
+    def test_a_decline_writes_nothing_and_stores_no_decline(self) -> None:
+        self.write_report(self.ten_functions())
+        untouched = {path: content for path, content in self.listing().items() if path != REPORT_FILE}
+        response = self.run_helper("apply", confirmed=False)
+        assert_runner_response(self, response, "ok", 0)
+        self.assertEqual("declined", response["data"]["outcome"])
+        self.assertFalse(response["data"]["writes_state"])
+        self.assertEqual(untouched, self.listing(), "only the scratch report may disappear")
+
+    def test_only_a_boolean_yes_confirms(self) -> None:
+        self.write_report(self.ten_functions())
+        before = self.listing()
+        for value in ("yes", 1, None):
+            with self.subTest(confirmed=value):
+                response = self.run_helper("apply", confirmed=value)
+                assert_runner_response(self, response, "input_error", 2)
+        missing = run_runner({**request("apply"), "inputs": {"measured": True}}, cwd=self.root)[1]
+        assert_runner_response(self, missing, "input_error", 2)
+        self.assertEqual(before, self.listing())
+
+    def test_a_confirmed_file_is_never_overwritten_and_an_invalid_one_is_replaced_only_on_a_yes(self) -> None:
+        gates = self.root / GATES_FILE
+        gates.write_text(json.dumps({**VALID, "thresholds": {**VALID["thresholds"], "complexity": 7}}), encoding="utf-8")
+        present = self.run_helper("dry_run")
+        self.assertEqual(("present", None), (present["data"]["status"], present["data"]["proposal"]))
+        kept = gates.read_bytes()
+        response = self.run_helper("apply", confirmed=True)
+        assert_runner_response(self, response, "ok", 0)
+        self.assertEqual("already_present", response["data"]["outcome"])
+        self.assertEqual(kept, gates.read_bytes())
+        gates.write_text('{"schema_version": "2"}', encoding="utf-8")
+        invalid = self.run_helper("dry_run")["data"]
+        self.assertEqual("invalid", invalid["status"])
+        self.assertIn("schema_version", invalid["problems"][0])
+        self.assertIsNotNone(invalid["proposal"])
+        self.run_helper("apply", confirmed=False)
+        self.assertEqual('{"schema_version": "2"}', gates.read_text(encoding="utf-8"))
+        self.run_helper("apply", confirmed=True)
+        self.assertEqual(VALID["schema_version"], json.loads(gates.read_text(encoding="utf-8"))["schema_version"])
+
+    def test_a_symlinked_target_is_refused_and_the_linked_file_stays_untouched(self) -> None:
+        outside = self.tools / "outside.json"
+        outside.write_text("keep", encoding="utf-8")
+        os.symlink(outside, self.root / GATES_FILE)
+        response = self.run_helper("apply", confirmed=True)
+        self.assertEqual("expected_failure", response["status"])
+        self.assertEqual("keep", outside.read_text(encoding="utf-8"))
+
+    def test_the_readiness_record_carries_the_observed_quality_gates_source(self) -> None:
+        def source() -> dict:
+            record = {"schema_version": "1.0", "request_id": "test-readiness", "helper_id": "write-readiness-record",
+                      "operation": "write-readiness-record", "mode": "dry_run",
+                      "inputs": {"host": "claude", "execution_mode": "interactive", "plugin_revision": "2.40.0",
+                                 "observations": []}}
+            _, response, _ = run_runner(record, cwd=self.root, extra_env={"PATH": str(self.tools)})
+            return response["data"]["record"]["items"]["quality_gates"]
+
+        self.write_report(self.ten_functions())
+        self.run_helper("apply", confirmed=False)
+        declined = source()
+        self.assertEqual("unavailable", declined["status"])
+        self.assertIn("shipped defaults in use", declined["evidence_source"])
+        self.write_report(self.ten_functions())
+        self.run_helper("apply", confirmed=True)
+        confirmed = source()
+        self.assertEqual("verified", confirmed["status"])
+        self.assertRegex(confirmed["fingerprints"][f"file:{GATES_FILE}"], r"^sha256:[0-9a-f]{64}$")
+
+    def test_scaffold_documents_the_request_and_the_step_on_each_host(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                skill = (host_skill_root(host) / "speckit-scaffold-spec" / "SKILL.md").read_text(encoding="utf-8")
+                rows = re.findall(r"\| `propose-quality-gates` \| `(dry_run|apply)` \| `(\{[^`]*\})`", skill)
+                self.assertEqual({"dry_run", "apply"}, {mode for mode, _ in rows})
+                for _, body in rows:
+                    self.assertLessEqual(set(json.loads(body)), {"measured", "confirmed"})
+                step = skill.split("### 6.4 Propose the Quality Gates", 1)[1].split("\n### ", 1)[0]
+                self.assertLess(skill.index("### 6.4 "), skill.index("### 6.5 "))
+                for phrase in ("quality_gate_confirmation", "writes nothing", "Ask once"):
+                    self.assertIn(phrase, step)
+                question = {"claude": "AskUserQuestion", "codex": "request_user_input"}
+                self.assertIn(question[host], step)
+                self.assertNotIn(question["codex" if host == "claude" else "claude"], step)
+
+
+def build_suite() -> unittest.TestSuite:
+    return unittest.TestSuite([unittest.defaultTestLoader.loadTestsFromTestCase(QualityGatesProposalTest)])
+
+
+def main() -> int:
+    return run_counted(build_suite(), label="test-quality-gates-proposal")
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
