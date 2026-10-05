@@ -423,8 +423,9 @@ tail (15 → 16 → 17 → 18 → 19, with the supporting rows in plan order).
   `pr-packet-output` as `known_gaps`, so the PR body lists them under
   `## Known Gaps`.
 - When Step 0.11 recorded `UNRATIFIED_FLAG`, pass it to `pr-packet-output` as
-  `unratified_defaults`; the runner renders it as the body's
-  `## Unratified quality-gate defaults` section. A draft body carries none.
+  `unratified_defaults`; the runner renders it in the final body's
+  `## Unratified quality-gate defaults` section. Initial drafts carry the same
+  warning below the Artifacts table, as described in Phase Execution.
 - Missing optional extensions are logged and skipped. Do not fail the entire
   autopilot because an optional extension command is unavailable.
 - Never mark the workflow complete until every planned Post item is completed or

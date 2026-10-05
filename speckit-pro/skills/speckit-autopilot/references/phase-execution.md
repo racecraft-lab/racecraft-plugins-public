@@ -2070,6 +2070,11 @@ Resume with: `$speckit-pro:speckit-autopilot <workflow-file> --stage implement`
 - **The resume/status block** names the stage the run stopped at and the exact
   command that resumes it.
 
+When G0 recorded `UNRATIFIED_FLAG`, include that exact one-line warning below the
+Artifacts table and pass it as `inputs.unratified_defaults` to the packet helper.
+This flags the initial draft as well as the final PR body; keep the draft's two
+H2 sections. Omit the warning and input when G0 found a valid ratified file.
+
 **Forbidden in a draft description**: a release-note fence, any verification
 section, any scope or UAT section, and any placeholder final-writeup content. The
 pull request sits in draft state, so the repository's PR checks do not run
