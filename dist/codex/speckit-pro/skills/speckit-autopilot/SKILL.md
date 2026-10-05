@@ -343,7 +343,7 @@ two-layer resolution (Rule 6) after each one BEFORE spawning the next — later
 domains may depend on earlier resolved items. Do not batch
 all domains and check for markers only at the end.
 
-Per-phase flow templates (per-session for Clarify, per-domain for
+Per-phase flow templates (the Clarify session, per-domain for
 Checklist) live in
 [`references/phase-execution.md`](./references/phase-execution.md)
 §Main Execution Loop.

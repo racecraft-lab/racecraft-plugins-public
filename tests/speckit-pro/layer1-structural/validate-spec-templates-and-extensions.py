@@ -115,7 +115,7 @@ class ValidateOneClarifySession(unittest.TestCase):
     def test_phase_reference_has_no_marker_gate_on_clarify(self) -> None:
         text = (AUTOPILOT_SKILL_DIR / 'references/phase-execution.md').read_text(encoding='utf-8')
         section = markdown_section(text, '### Phase 2: Clarify')
-        self.assertTrue(section or '### Phase 2: Clarify' in text, 'the Phase 2 section is present')
+        self.assertTrue(section, 'the Phase 2 section is present')
         self.assert_absent(text, r'Phase 2: Clarify \(Conditional\)')
         self.assert_absent(text, r'(?i)only runs if G1')
         self.assert_absent(text, r'(?i)separate subagent for each clarify session')
