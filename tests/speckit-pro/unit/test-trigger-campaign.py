@@ -558,7 +558,7 @@ class DraftIdentityTests(unittest.TestCase):
                    "GIT_CONFIG_NOSYSTEM": "1"}
 
             def git(*args):
-                return subprocess.run(["git", "-c", "user.name=Test", "-c", "user.email=test@example.com",
+                return subprocess.run(["git", "-c", "user.name=Test", "-c", "user.email=native-eval@example.invalid",
                                        "-c", "commit.gpgsign=false", *args], cwd=repo, env=env,
                                       capture_output=True, text=True, check=True).stdout
 

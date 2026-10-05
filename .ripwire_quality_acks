@@ -248,6 +248,7 @@ ack dead-code:new-symbol 3581db9cf8a6f52f 0 unittest loader executes ValidateRoa
 ack dead-code:new-symbol 35a5235991a00385 0 cid=2140d80dc047c11c by=tests/speckit-pro/unit/test-install-ripwire.py unittest discovers test_ methods and setUp by name; the runner calls them, not repository code
 ack dead-code:new-symbol 35eaa254e8f7ff3e 0 cid=f94001dac8bb257b now=0 was=0 p=tests/speckit-pro/unit/test-research-broker.py:542 Executed by unittest loadTestsFromTestCase in test-research-broker.py; the 148-case broker suite executes this method. Static calls cannot see reflected test methods.
 ack dead-code:new-symbol 35edc10f890efdb6 0 cid=f05128a6a4df0323 unittest discovers test_ methods by name through loadTestsFromTestCase in main(); nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol 361ec9ac204abe3b 0 Executed by unittest loadTestsFromTestCase(DraftIdentityTests); unbound and malformed template rejection exercised by campaign suite.
 ack dead-code:new-symbol 36539398ecef01a7 0 cid=887c477cc6158b6e Handlers are registered as values in the PR_EMISSION_HANDLERS table in helpers/registry.py, and test_ methods are found by unittest by name; neither is a direct call the dead-code scan can see
 ack dead-code:new-symbol 36815bb4cc38ab6f 0 cid=4960d247b1da1f34 unittest discovers and runs test_ methods by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 36893f671a3eced0 0 cid=841ca0cb8a8de7db unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
@@ -358,6 +359,7 @@ ack dead-code:new-symbol 5d5614debc7000fc 0 cid=ac712e41689e78e6 unittest discov
 ack dead-code:new-symbol 5e0e88001174e4f0 0 cid=c14f44e28daec575 unittest discovers test_ methods by name, and the nested helpers are passed by value in a case table or as a mock side effect, so dead-code is a false positive
 ack dead-code:new-symbol 5f308f0d60a92345 0 cid=1cae8a0de378aae5 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 6023013b5a165ba5 0 cid=d98c303699b31548 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol 603186b4499da980 0 Executed by unittest loadTestsFromTestCase(DraftIdentityTests); observed red on missing --out, then green on separate manifest binding.
 ack dead-code:new-symbol 605df3dec5ec769a 0 cid=f955a12d2e1a3b8d by=tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py unittest discovers and runs test_oversized_plan_requires_split_full_build_and_no_stop by name; nothing calls it directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol 60a707d937e63ed4 0 cid=44440a0318ec7075 Referenced only as entries in the _VALUE_CHECKS dispatch tuple in json_schema_failures, which the dead-code scan does not count as a call
 ack dead-code:new-symbol 60ca67d78dff03a8 0 cid=3223f5ca6813d5a4 unittest methods and a patch side_effect closure are invoked by the runner and by mock, not by a call site
@@ -773,6 +775,7 @@ ack dead-code:new-symbol d6d5c2b6214bd108 0 cid=8a5edba5c75e7d43 unittest discov
 ack dead-code:new-symbol d7170d2e4afe9901 0 cid=9f8db37aa5c0d78e Callback passed to json.loads as an object_pairs_hook and a parse_constant hook; the dead-code scan cannot see a function passed by reference
 ack dead-code:new-symbol d725a78cd8db16d9 0 cid=611c357487aa2e19 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol d7e8c3416f8f657a 0 cid=7ea4b5bb9a1f905a unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol d88cc15b635f491c 0 Executed by unittest loadTestsFromTestCase(DraftIdentityTests); campaign suite passed the real two-branch merge regression.
 ack dead-code:new-symbol d8ab03822b20f234 0 cid=3c400514fefced87 unittest discovers test_ methods through its test loader, so they have no static caller
 ack dead-code:new-symbol d98ab74266479a56 0 cid=3c9f1cfdd792b83f unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol d9f4d002156b8f16 0 cid=013a77ed61f0bf5b unittest discovers test_ methods by name and the module's __main__ suite loads this class, so the method is not dead code
@@ -809,6 +812,7 @@ ack dead-code:new-symbol e48bcf5d33752887 0 cid=e4a5c689dccc3643 unittest discov
 ack dead-code:new-symbol e4f43fe9391fadea 0 cid=efef6d412c3f44a9 unittest discovers test_ methods by name through loadTestsFromTestCase, so no static caller exists
 ack dead-code:new-symbol e4f8071fd2c78bd4 0 ScaffoldAnswersTests.setUp runs via unittest discovery; full read-only helper suite executes 163 tests without skips
 ack dead-code:new-symbol e51ec396e2684e6e 0 cid=21bc322c5a414c02 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol e52a73f167b44008 0 Executed by unittest loadTestsFromTestCase(DraftIdentityTests); campaign suite passed 116 checks, including both committed template CLI round trips.
 ack dead-code:new-symbol e55447a98846f7f3 0 cid=a7eb281099f4c2e3 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol e6a771cd1383c9bb 0 cid=10f8561788570c9f unittest discovers test_ methods by name through loadTestsFromTestCase or loadTestsFromModule, so no static caller exists
 ack dead-code:new-symbol e6f9b93105c414ce 0 cid=84243c3df9052e18 now=0 was=0 p=tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py:5443 unittest discovers test methods by name; the dead-code scan sees no direct call
@@ -849,6 +853,7 @@ ack dead-code:new-symbol f4235fb086a2cfdf 0 cid=c0360a527112992d unittest discov
 ack dead-code:new-symbol f43df3fcf937ad4e 0 cid=dab31a728176abe0 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol f45b576881e4d1b7 0 cid=be475e9e2f421e43 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol f5272b4caf41127c 0 cid=982d44ef2c862564 unittest discovers and runs test_ methods by name; nothing calls them directly, so the dead-code scan cannot see the use
+ack dead-code:new-symbol f55cfac2f00c41eb 0 Executed by unittest loadTestsFromTestCase(DraftIdentityTests); missing and existing output rejection exercised by campaign suite.
 ack dead-code:new-symbol f67692f65b72fddb 0 cid=13c81a80af9bbfc6 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol f67906e9a38ffedf 0 cid=fcf4fba67f8d87f7 unittest discovers and runs test_ methods and setUp/tearDown hooks by name; nothing calls them directly, so the dead-code scan cannot see the use
 ack dead-code:new-symbol f695ba9e8ea6d5dc 0 cid=1b01dd7ed58d5f1b unittest discovers test_ methods by name through loadTestsFromTestCase, so no static caller exists
@@ -1082,9 +1087,4 @@ ack verbosity ea3d11c338c002aa 124 cid=1bf465ef16e77adf Moved unchanged from run
 ack verbosity f138e97d9c143aab 80 cid=34adfa7c9f69a881 developer_instructions is a generated TOML string from the authored phase-executor prompt; its three added prose lines are verified by the host generator, not executable routine length.
 ack verbosity f7f6a7ece1c05656 248 cid=5365e90753588269 Test method grew by one or two lines to read a host's rendered skill view or write a fixture SKILL.md; the host-parity change needs the added step
 ack verbosity f8202e3bceff1b13 123 cid=e25640dffa550f9b HELPER_CASES is a request-data dictionary (AST Dict); the new G0 request is exercised by the passing runner acceptance test, not an executable routine.
-ack dead-code:new-symbol e52a73f167b44008 0 Executed by unittest loadTestsFromTestCase(DraftIdentityTests); campaign suite passed 116 checks, including both committed template CLI round trips.
-ack dead-code:new-symbol d88cc15b635f491c 0 Executed by unittest loadTestsFromTestCase(DraftIdentityTests); campaign suite passed the real two-branch merge regression.
-ack dead-code:new-symbol 603186b4499da980 0 Executed by unittest loadTestsFromTestCase(DraftIdentityTests); observed red on missing --out, then green on separate manifest binding.
-ack dead-code:new-symbol f55cfac2f00c41eb 0 Executed by unittest loadTestsFromTestCase(DraftIdentityTests); missing and existing output rejection exercised by campaign suite.
-ack dead-code:new-symbol 361ec9ac204abe3b 0 Executed by unittest loadTestsFromTestCase(DraftIdentityTests); unbound and malformed template rejection exercised by campaign suite.
 ack verbosity ff831cf062232921 124 False positive: unittest class is a collection of six independent test methods, not one executable body; no method exceeds the 60-line bar and campaign suite executes each.
