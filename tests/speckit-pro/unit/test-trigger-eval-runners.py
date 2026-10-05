@@ -346,6 +346,16 @@ def supervised_results(results: list[tuple[int, bytes, bytes, bool]], requested_
     return provider
 
 
+def finish_owned_children(children: list[subprocess.Popen]) -> None:
+    for child in children:
+        try:
+            os.killpg(child.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            # The runner already removed the owned process group.
+            pass
+        child.wait(timeout=5)
+
+
 class ProcessGroupAbsenceTests(unittest.TestCase):
     @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
     def test_claude_cleanup_esrch_is_terminal_across_all_windows(self) -> None:
@@ -587,13 +597,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 with self.assertRaises(ProcessLookupError):
                     os.killpg(owned[0].pid, 0)
             finally:
-                for child in owned:
-                    try:
-                        os.killpg(child.pid, signal.SIGKILL)
-                    except ProcessLookupError:
-                        # The runner already removed the owned process group.
-                        pass
-                    child.wait(timeout=5)
+                finish_owned_children(owned)
 
     @unittest.skipIf(os.name == "nt", "POSIX owned process-group contract")
     def test_codex_completed_leader_cannot_leave_an_owned_descendant(self) -> None:
@@ -626,13 +630,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 with self.assertRaises(ProcessLookupError):
                     os.killpg(owned[0].pid, 0)
             finally:
-                for child in owned:
-                    try:
-                        os.killpg(child.pid, signal.SIGKILL)
-                    except ProcessLookupError:
-                        # The runner already removed the owned process group.
-                        pass
-                    child.wait(timeout=5)
+                finish_owned_children(owned)
 
     def test_claude_rejects_invalid_sibling_completion_and_observed_contract_conflicts(self) -> None:
         claude = import_script(CLAUDE_RUNNER, "layer2_claude_evidence_contract")
