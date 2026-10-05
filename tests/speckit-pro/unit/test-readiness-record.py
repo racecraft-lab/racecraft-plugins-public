@@ -728,6 +728,33 @@ class HostProbePathSecurityTest(unittest.TestCase):
         path.write_text(f"#!{sys.executable}\n{body}", encoding="utf-8")
         path.chmod(0o755)
 
+    def protected_probe(self, host: str, protected: tuple[Path, ...], writable: tuple[Path, ...] = ()) -> dict:
+        """Model an installation owned by another identity with no effective write access.
+
+        Only OS permission observations are mocked; lookup and execution remain real.
+        """
+        names = {str(path.resolve()) for path in protected}
+        writable_names = {str(path.resolve()) for path in writable}
+        native_stat, native_lstat, native_access = os.stat, os.lstat, os.access
+
+        def metadata(function, path, *args, **kwargs):
+            info = function(path, *args, **kwargs)
+            if not isinstance(path, int) and os.path.abspath(path) in names and stat.S_ISREG(info.st_mode):
+                fields = list(info)
+                fields[4] = os.geteuid() + 1
+                return os.stat_result(fields)
+            return info
+
+        def access(path, mode, *args, **kwargs):
+            if mode == os.W_OK and os.path.abspath(path) in names:
+                return os.path.abspath(path) in writable_names
+            return native_access(path, mode, *args, **kwargs)
+
+        with unittest.mock.patch.object(os, "stat", side_effect=lambda *a, **k: metadata(native_stat, *a, **k)), \
+             unittest.mock.patch.object(os, "lstat", side_effect=lambda *a, **k: metadata(native_lstat, *a, **k)), \
+             unittest.mock.patch.object(os, "access", side_effect=access):
+            return self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)
+
     def reject_path(self, entry: str, directory: Path, form: str = "regular", hosts=("codex", "claude")) -> None:
         for host in hosts:
             with self.subTest(host=host, entry=entry, form=form):
@@ -838,9 +865,10 @@ class HostProbePathSecurityTest(unittest.TestCase):
                 for entry in (".", "", "bin", str(self.root)):
                     with self.subTest(entry=entry), unittest.mock.patch.dict(os.environ, {
                         "PATH": f"{entry}:{self.tools}"}):
-                        result = self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)
+                        result = self.protected_probe(host, (self.tools / host,))
                     self.assertFalse(self.marker.exists())
                     self.assertEqual((0, "2.1.0"), (result["exit_status"], result["stdout_tail"]))
+                (self.tools / host).unlink()
 
     def test_trusted_external_executable_symlinks_still_work(self) -> None:
         for host in ("codex", "claude"):
@@ -849,7 +877,9 @@ class HostProbePathSecurityTest(unittest.TestCase):
                 self.executable(payload, trusted=True)
                 (self.tools / host).symlink_to(payload.name)
                 with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
-                    result = self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)
+                    result = self.protected_probe(host, (payload,))
+                (self.tools / host).unlink()
+                payload.unlink()
                 self.assertEqual((0, "2.1.0"), (result["exit_status"], result["stdout_tail"]))
 
     def test_directory_alias_swap_cannot_redirect_launch(self) -> None:
@@ -868,8 +898,9 @@ class HostProbePathSecurityTest(unittest.TestCase):
 
                 with unittest.mock.patch.dict(os.environ, {"PATH": str(alias)}), unittest.mock.patch.object(
                     subprocess, "run", side_effect=swap_then_run):
-                    result = self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)
+                    result = self.protected_probe(host, (self.tools / host,))
                 alias.unlink()
+                (self.tools / host).unlink()
                 self.assertFalse(self.marker.exists())
                 self.assertEqual((0, "2.1.0"), (result["exit_status"], result["stdout_tail"]))
 
@@ -935,6 +966,85 @@ class HostProbePathSecurityTest(unittest.TestCase):
                         interpreter.unlink()
                         self.marker.unlink(missing_ok=True)
 
+    def test_unlinked_worktree_alias_cannot_supply_host(self) -> None:
+        for host in ("codex", "claude"):
+            for window in ("write-then-unlink", "open-then-unlink"):
+                with self.subTest(host=host, window=window):
+                    payload = self.root / host
+                    self.executable(payload, trusted=True)
+                    installed = self.tools / host
+                    os.link(payload, installed)
+                    if window == "write-then-unlink":
+                        self.executable(payload)
+                        payload.unlink()
+                    else:
+                        with payload.open("w") as handle:
+                            payload.unlink()
+                            handle.write(f"#!{sys.executable}\nfrom pathlib import Path\nPath({str(self.marker)!r}).touch()\nprint('2.1.0')\n")
+                    try:
+                        with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                            result = self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)
+                        self.assertFalse(self.marker.exists(), "unlinked worktree alias supplied host bytes")
+                        self.assertIsNone(result["exit_status"])
+                    finally:
+                        installed.unlink()
+                        self.marker.unlink(missing_ok=True)
+
+    def test_unlinked_worktree_alias_cannot_supply_host_interpreter(self) -> None:
+        for host in ("codex", "claude"):
+            for window in ("write-then-unlink", "open-then-unlink"):
+                with self.subTest(host=host, window=window):
+                    launcher = self.tools / host
+                    launcher.write_text("#!/usr/bin/env python3\nprint('2.1.0')\n")
+                    launcher.chmod(0o755)
+                    payload = self.root / "python3"
+                    self.executable(payload, trusted=True)
+                    interpreter = self.tools / "python3"
+                    os.link(payload, interpreter)
+                    if window == "write-then-unlink":
+                        self.executable(payload)
+                        payload.unlink()
+                    else:
+                        with payload.open("w") as handle:
+                            payload.unlink()
+                            handle.write(f"#!{sys.executable}\nfrom pathlib import Path\nPath({str(self.marker)!r}).touch()\nprint('2.1.0')\n")
+                    try:
+                        with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                            result = self.protected_probe(host, (launcher,))
+                        self.assertFalse(self.marker.exists())
+                        self.assertIsNone(result["exit_status"])
+                    finally:
+                        interpreter.unlink()
+                        launcher.unlink()
+                        self.marker.unlink(missing_ok=True)
+
+    def test_effectively_writable_foreign_owned_host_is_unknown(self) -> None:
+        for host in ("codex", "claude"):
+            with self.subTest(host=host):
+                installed = self.tools / host
+                self.executable(installed)
+                try:
+                    with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                        result = self.protected_probe(host, (installed,), writable=(installed,))
+                    self.assertFalse(self.marker.exists())
+                    self.assertIsNone(result["exit_status"])
+                finally:
+                    installed.unlink()
+                    self.marker.unlink(missing_ok=True)
+
+    def test_owner_can_chmod_readonly_host_is_unknown(self) -> None:
+        for host in ("codex", "claude"):
+            with self.subTest(host=host):
+                installed = self.tools / host
+                self.executable(installed, trusted=True)
+                installed.chmod(0o555)
+                try:
+                    with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                        result = self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)
+                    self.assertIsNone(result["exit_status"])
+                finally:
+                    installed.unlink()
+
     def test_trusted_env_shebang_interpreter_still_works(self) -> None:
         (self.tools / "python3").symlink_to(sys.executable)
         for host in ("codex", "claude"):
@@ -943,7 +1053,8 @@ class HostProbePathSecurityTest(unittest.TestCase):
                 launcher.write_text("#!/usr/bin/env python3\nprint('2.1.0')\n")
                 launcher.chmod(0o755)
                 with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
-                    result = self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)
+                    result = self.protected_probe(host, (launcher, Path(sys.executable)))
+                launcher.unlink()
                 self.assertEqual((0, "2.1.0"), (result["exit_status"], result["stdout_tail"]))
 
     def test_readiness_remains_unknown_for_hijacked_host(self) -> None:

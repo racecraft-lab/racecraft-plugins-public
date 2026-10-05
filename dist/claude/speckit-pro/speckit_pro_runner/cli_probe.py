@@ -19,15 +19,15 @@ DOCKER_STDOUT_TAIL_CHARS = STDERR_TAIL_CHARS
 CLIS = ("gh", "git", "docker", "claude", "codex")
 
 
-def reject_mutable_probe_alias(info: os.stat_result) -> None:
-    """A shared writable inode can be modified through a worktree hardlink.
+def reject_mutable_probe_alias(info: os.stat_result, path: Path, *, host: bool) -> None:
+    """A writable host inode cannot prove it had no worktree alias, even after unlink.
 
     Keep system-owned, non-group/other-writable hardlinks: a worktree writer
     cannot modify them or grant itself write access through an alias.
     """
-    writable = info.st_uid == os.geteuid() or info.st_mode & (stat.S_IWGRP | stat.S_IWOTH)
-    if stat.S_ISREG(info.st_mode) and info.st_nlink > 1 and writable:
-        raise ValueError("CLI lookup contains a mutable hardlink alias")
+    writable = info.st_uid == os.geteuid() or os.access(path, os.W_OK, effective_ids=True)
+    if stat.S_ISREG(info.st_mode) and writable and (host or info.st_nlink > 1):
+        raise ValueError("CLI lookup cannot authenticate a mutable executable inode")
 
 
 def external_probe_path(path: Path, worktree: Path, links: int = 40) -> Path:
@@ -46,7 +46,7 @@ def external_probe_path(path: Path, worktree: Path, links: int = 40) -> Path:
     return candidate
 
 
-def validate_probe_directory(directory: Path, worktree: Path) -> None:
+def validate_probe_directory(directory: Path, worktree: Path, *, host: bool) -> None:
     """Check every child lookup name, including env-shebang interpreters/helpers."""
     external_probe_path(directory, worktree)
     for entry in directory.iterdir():
@@ -54,9 +54,9 @@ def validate_probe_directory(directory: Path, worktree: Path) -> None:
         if stat.S_ISLNK(info.st_mode):
             target = external_probe_path(entry, worktree)
             if target.exists():
-                reject_mutable_probe_alias(target.stat())
+                reject_mutable_probe_alias(target.stat(), target, host=host)
         else:
-            reject_mutable_probe_alias(info)
+            reject_mutable_probe_alias(info, entry, host=host)
 
 
 def probe_search_path(root: Path, cli: str) -> str:
@@ -77,7 +77,7 @@ def probe_search_path(root: Path, cli: str) -> str:
         try:
             directory = directory.resolve(strict=True)
             target = external_probe_path(directory / cli, worktree)
-            validate_probe_directory(directory, worktree)
+            validate_probe_directory(directory, worktree, host=cli in ("claude", "codex"))
         except (OSError, RuntimeError, ValueError):
             continue
         if not directory.is_relative_to(worktree) and not target.is_relative_to(worktree):
