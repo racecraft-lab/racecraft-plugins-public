@@ -103,9 +103,10 @@ def section_between(text: str, start: str, end: str) -> str:
     return text[head : text.index(end, head)]
 
 
-def route(line: str, confidence: str | None = None) -> tuple[dict[str, object], int]:
+def route(line: str, confidence: str | None = None, **answer_inputs: object) -> tuple[dict[str, object], int]:
     """Run parse-consensus-categories over one unresolved-item line."""
     inputs = {"line": line} if confidence is None else {"line": line, "confidence": confidence}
+    inputs.update(answer_inputs)
     with tempfile.TemporaryDirectory() as raw_root:
         result = parse_consensus_categories(inputs, Path(raw_root).resolve())
     return json.loads(result["stdout"]), int(result["exit_code"])
@@ -306,6 +307,17 @@ class TierTests(unittest.TestCase):
             reason = str(route(line, confidence)[0]["reason"]).casefold()
             self.assertNotIn("disagree", reason)
             self.assertNotIn("fix pass", reason)
+
+    def test_low_confidence_answer_selection_requires_explicit_high_analyst_confidence(self) -> None:
+        for confidence, source in (("high", "analyst"), ("low", "executor"),
+                                   (None, "executor"), ("medium", "executor"), (True, "executor")):
+            with self.subTest(analyst_confidence=confidence):
+                payload, code = route("[spec] Q: which decision applies?", "low",
+                                      analyst_confidence=confidence)
+                self.assertEqual(code, 0)
+                self.assertEqual(payload["answer_source"], source)
+        self.assertEqual(route("Q: which decision applies?", "high",
+                               analyst_confidence="high")[0]["answer_source"], "executor")
 
 
 class AggregationTests(unittest.TestCase):
@@ -532,6 +544,12 @@ class ReferenceProseTests(unittest.TestCase):
         round_one = section_between(self.text, "ROUND 1 — category-routed", "ROUND 2 — full fan-out")
         self.assertIn("parse-consensus-categories", round_one)
 
+    def test_the_single_analyst_path_follows_runner_selection_without_escalation(self) -> None:
+        single = section_between(self.text, "### Single-analyst confidence rule", "### Two-analyst rule")
+        self.assertIn("answer_source", single)
+        self.assertNotIn("Fall through to Round 2", single)
+        self.assertNotIn("synthesizer's output", single)
+
 
 class SecurityKeywordCopyTests(unittest.TestCase):
     """Every prose copy of the Security Keywords list names the runner's list.
@@ -610,7 +628,7 @@ PLAN_STAGE_CONSENSUS_AGENTS = (
 DECISION_MODEL_MARKERS = ("typesafe-jev", "decision model", "typed judgment")
 
 
-def run_dist_helper(host: str, line: str, confidence: str) -> dict[str, object]:
+def run_dist_helper(host: str, line: str, confidence: str, analyst_confidence: str | None = None) -> dict[str, object]:
     """Route one item through the runner a host's payload ships."""
     request = {
         "schema_version": "1.0",
@@ -618,7 +636,7 @@ def run_dist_helper(host: str, line: str, confidence: str) -> dict[str, object]:
         "helper_id": "parse-consensus-categories",
         "operation": "parse-consensus-categories",
         "mode": "read_only",
-        "inputs": {"line": line, "confidence": confidence},
+        "inputs": {"line": line, "confidence": confidence, "analyst_confidence": analyst_confidence},
     }
     environment = {**os.environ, "PYTHONPATH": str(REPO_ROOT / "dist" / host / "speckit-pro")}
     done = subprocess.run(
@@ -632,9 +650,13 @@ class HostParityTests(unittest.TestCase):
     def test_both_payloads_route_every_item_identically(self) -> None:
         for line, confidence in TIER_ITEMS:
             with self.subTest(line=line, confidence=confidence):
-                routed = [run_dist_helper(host, line, confidence) for host in HOSTS]
-                self.assertEqual(routed[0], routed[1])
-                self.assertIn(routed[0]["tier"], {"security", "low_confidence", "recommendation"})
+                for analyst_confidence in (None, "high"):
+                    routed = [run_dist_helper(host, line, confidence, analyst_confidence) for host in HOSTS]
+                    self.assertEqual(routed[0], routed[1])
+                    tier = routed[0]["tier"]
+                    expected = None if tier == "security" else (
+                        "analyst" if tier == "low_confidence" and analyst_confidence == "high" else "executor")
+                    self.assertEqual(routed[0]["answer_source"], expected)
 
     def test_the_rendered_tier_section_is_the_same_on_both_hosts(self) -> None:
         texts = [

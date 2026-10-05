@@ -68,7 +68,7 @@ executor's `confidence` (`low` or `high`; a missing value counts as
 | `tier` | Items | Analysts | Resolution |
 |--------|-------|----------|------------|
 | `security` | `[security]` tag or a [Security Keyword](#security-keywords), at any confidence | All 3 | Rounds, synthesizer and tiebreak as below |
-| `low_confidence` | Everything else the executor marked `low` | One: the first tag that names a perspective, else `speckit-pro:domain-researcher` | No synthesizer. An analyst answer with `Confidence: high` replaces the recommendation, and the recommendation becomes the rejected alternative. Otherwise the recommendation stands |
+| `low_confidence` | Everything else the executor marked `low` | One: the first tag that names a perspective, else `speckit-pro:domain-researcher` | Follow the helper's `answer_source` after the analyst returns (see [Single-analyst confidence rule](#single-analyst-confidence-rule-n1)) |
 | `recommendation` | Everything else | None | The executor's recommendation stands |
 
 Record every `low_confidence` and `recommendation` outcome in the
@@ -134,23 +134,20 @@ ROUND 3 — agent tiebreak (only after a [ROUND_3_TIEBREAK] flag)
   Run §Round 3 Tiebreak. Its result is applied like any other edit.
 ```
 
-The escape hatch is the asymmetry that keeps routing cheap when
-right and safe when wrong. A `[codebase]` tag that should have
-been `[domain]` triggers Round 2 the moment `speckit-pro:codebase-analyst`
-admits "no precedent in this repo" — no silently-shipped
-low-confidence answers.
-
 ### Single-analyst confidence rule (N=1)
 
-When only one analyst ran in Round 1, the synthesizer's output
-includes a `confidence: high | low` field instead of an
-agreement count.
+For a `low_confidence` item, call `parse-consensus-categories` again with
+its original `line` and executor `confidence`, plus `analyst_confidence`
+from the completed analyst response. Follow the returned `answer_source`:
 
-| Synthesizer output | Action |
-|--------------------|--------|
-| `confidence: high` AND no escape-hatch keyword | Apply edit, log, done |
-| `confidence: low` | Fall through to Round 2 |
-| Escape-hatch keyword in analyst response | Fall through to Round 2 |
+| `answer_source` | Action |
+|-----------------|--------|
+| `analyst` | Apply the analyst answer; record the executor recommendation as the rejected alternative |
+| `executor` | Keep the executor recommendation |
+
+Missing or malformed analyst confidence keeps the executor recommendation.
+Record the outcome as `low_confidence_answer` and finish the item after this
+one analyst. No synthesizer or later analyst round runs for this tier.
 
 ### Two-analyst rule (N=2)
 
@@ -180,7 +177,7 @@ The helpers are what executes.
 
 | Helper | Purpose |
 |--------|---------|
-| `parse-consensus-categories` | Reads one unresolved-item `line` plus the executor's `confidence` and returns `tags`, the `tier`, the `analysts` to spawn, the dispatch `reason`, and `security_route` (`tag` for an explicit `[security]` tag, `keyword` for a keyword alone, `null` otherwise). Implements every routing rule in [Plan-Stage Tiers](#plan-stage-tiers). It reads the whole line, not just the bracket, so a [Security Keyword](#security-keywords) anywhere in the item text widens to all 3 even when the executor tagged the item narrowly or marked it `high`. |
+| `parse-consensus-categories` | Reads one unresolved-item `line` plus the executor's `confidence` and optional `analyst_confidence`; returns `answer_source` (`analyst` or `executor` for nonsecurity items, `null` for security), `tags`, the `tier`, the `analysts` to spawn, the dispatch `reason`, and `security_route` (`tag` for an explicit `[security]` tag, `keyword` for a keyword alone, `null` otherwise). Implements every routing rule in [Plan-Stage Tiers](#plan-stage-tiers). It reads the whole line, not just the bracket, so a [Security Keyword](#security-keywords) anywhere in the item text widens to all 3 even when the executor tagged the item narrowly or marked it `high`. |
 | `aggregate-crl` | Reads the Consensus Resolution Log table out of a workflow file and returns `total_items`, `round1`, `round2`, `escape_hatch`, `escape_rate_percent`, the `threshold_percent` it was given (default 10), and `exceeds_threshold`. |
 
 **Call `parse-consensus-categories` for every unresolved item and
@@ -248,8 +245,8 @@ Stage 1 — All routed analysts, ONE assistant message:
   Await ALL spawned analysts to complete.
 
 Stage 2 — All synthesizers, ONE assistant message:
-  A low_confidence item skips this stage: apply its analyst's answer when that
-  answer says Confidence: high, else keep the recommendation.
+  A low_confidence item follows the Single-analyst confidence rule above and
+  finishes before this stage.
   For each security item Ix:
     Agent(subagent_type: "speckit-pro:consensus-synthesizer",
           run_in_background: true,

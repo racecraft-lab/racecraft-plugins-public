@@ -3538,9 +3538,16 @@ def parse_consensus_categories(inputs: dict[str, Any], repo_root: Path) -> dict[
         "low_confidence": [CONSENSUS_ROUTED_ANALYSTS[tag]] if tier == "low_confidence" else [],
         "recommendation": [],
     }[tier]
+    # Security resolution remains with its consensus rounds. For other tiers,
+    # only an explicit high-confidence second opinion replaces the executor.
+    analyst_confidence = inputs.get("analyst_confidence")
+    answer_source = None if tier == "security" else "executor"
+    if tier == "low_confidence" and isinstance(analyst_confidence, str) and analyst_confidence.strip().casefold() == "high":
+        answer_source = "analyst"
     return make_result(
         json_text(
-            {"tags": tags, "tier": tier, "analysts": analysts, "reason": reason, "security_route": security_route}
+            {"tags": tags, "tier": tier, "analysts": analysts, "reason": reason, "security_route": security_route,
+             "answer_source": answer_source}
         )
     )
 
