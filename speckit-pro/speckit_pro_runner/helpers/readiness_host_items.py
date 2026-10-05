@@ -381,8 +381,9 @@ def observe_extension_versions(raw: dict[str, Any], observed_at: str, source: st
 # recorded value is an enumerated word, a bounded integer, a name or a hex digest, never free text or a path.
 NEVER_BROADEN = "Scaffold never broadens permissions or disables a control."
 # Legacy hook evidence has no exact hash, so its action never asks the user to trust anything.
-LEGACY_CODEX_HOOK_ACTION = ("Verify each hook's identity and hash from /hooks with the codex_hook_trust observation first; "
-                            "never trust a hook that is not verified, then restart Codex and rerun scaffold. " + NEVER_BROADEN)
+LEGACY_CODEX_HOOK_ACTION = ("Send a complete codex_hook_trust observation that verifies each hook's identity and exact hash "
+                            "against the shipped definitions, then rerun scaffold. Never trust a hook that is not "
+                            "verified. " + NEVER_BROADEN)
 POSTURE_CHOICES = {
     "approval_policy": ("on-request", "never", "on-failure"),
     "sandbox_mode": ("read-only", "workspace-write", "danger-full-access"),

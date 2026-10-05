@@ -30,9 +30,9 @@ SHIPPED_HASHES = {
 POSTURE = {"approval_policy": "on-request", "sandbox_mode": "workspace-write", "approvals_reviewer": "user",
            "mcp_approval_mode": "prompt", "mcp_consent": "granted", "mcp_startup_timeout_sec": 10,
            "mcp_tool_timeout_sec": 60, "external_delegation": "allowed"}
-LEGACY_HOOK_ACTION = ("Verify each hook's identity and hash from /hooks with the codex_hook_trust observation first; "
-                      "never trust a hook that is not verified, then restart Codex and rerun scaffold. "
-                      "Scaffold never broadens permissions or disables a control.")
+LEGACY_HOOK_ACTION = ("Send a complete codex_hook_trust observation that verifies each hook's identity and exact hash "
+                      "against the shipped definitions, then rerun scaffold. Never trust a hook that is not "
+                      "verified. Scaffold never broadens permissions or disables a control.")
 ACCESS = {"loopback": "allowed", "temp_dir": "healthy", "egress_policy_ref": "egress-policy",
           "egress_policy_digest": HASH}
 

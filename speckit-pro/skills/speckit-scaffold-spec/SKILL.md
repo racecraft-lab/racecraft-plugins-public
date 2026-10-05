@@ -1141,7 +1141,7 @@ normalize hex case and an optional case-insensitive `sha256:` prefix. The
 record retains the observed hash text and canonicalizes hash fingerprints.
 
 On Codex, send `codex_hook_trust` as the trust source; the helper mirrors it
-into `hooks` and refuses contradictory duplicate observations. The runner
+into `hooks` and refuses any `hooks` observation beside hash evidence, an empty one included. The runner
 temporary-storage probe can downgrade caller local-access evidence.
 
 These three record facts, never consent. Scaffold never broadens a permission,
