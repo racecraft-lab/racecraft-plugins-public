@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import contextmanager
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -74,7 +75,8 @@ class GitWriteProbeTest(unittest.TestCase):
         self.assertEqual("stop", result["data"]["verdict"])
         self.assertEqual([], list(outside.iterdir()))
 
-    def test_cleanup_preserves_a_replacement_file(self) -> None:
+    @contextmanager
+    def replacement_on_creation(self):
         open_file = os.open
         replacement = None
 
@@ -89,7 +91,12 @@ class GitWriteProbeTest(unittest.TestCase):
             return fd
 
         with patch.object(probe.os, "open", side_effect=replace_created_lock):
+            yield lambda: replacement
+
+    def test_cleanup_preserves_a_replacement_file(self) -> None:
+        with self.replacement_on_creation() as replaced:
             result = self.probe_current_repository()
+        replacement = replaced()
         self.assertIsNotNone(replacement)
         self.assertTrue(replacement.exists(), "cleanup deleted a replacement file")
         self.assertEqual("replacement belongs to someone else", replacement.read_text(encoding="utf-8"))
