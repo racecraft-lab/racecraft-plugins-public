@@ -18,6 +18,7 @@ from .execution_requests import run_execution_helper
 from .gate_preflight_coverage import run_gate_preflight_coverage_helper
 from .g0_setup import run_g0_setup_helper
 from .roadmap_freshness import run_roadmap_freshness_helper
+from .readiness_record import run_readiness_record_helper
 from .scaffold_answers import run_scaffold_answers_helper
 from .phase_brief import run_phase_brief_helper
 from .run_finalization import run_run_finalization_helper
@@ -683,6 +684,12 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         "command_plan",
         mutation_authoritative_request("detect-stack-manager-plan"),
     ),
+    "write-readiness-record": MutationEntry(
+        "write-readiness-record", "write-readiness-record", ("dry_run", "apply"), None,
+        "golden_only", "fixture_semantic", mutation_authoritative_request("write-readiness-record"),
+        ("readiness-record-apply",),
+        rollback="Delete the local .specify/readiness/<host>.json file; scaffold rewrites it on the next run.",
+    ),
 }
 
 
@@ -822,6 +829,9 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
 
     if entry.helper_id == "generate-spec-index-write":
         return run_spec_index_write(entry, request)
+
+    if entry.helper_id == "write-readiness-record":
+        return run_readiness_record_helper(entry, request)
 
     if entry.helper_id == "sweep-apply-result":
         return run_sweep_apply_result(entry, request)
