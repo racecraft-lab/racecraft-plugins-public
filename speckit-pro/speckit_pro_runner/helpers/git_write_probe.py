@@ -101,6 +101,13 @@ def remove_probe_lock(lock: str, directory_fd: int, created: os.stat_result) -> 
     return blocked
 
 
+def check_private_probe_directory(fd: int) -> None:
+    """Only this identity can mutate the namespace used to capture public entries."""
+    metadata = os.fstat(fd)
+    if metadata.st_uid != os.geteuid() or metadata.st_mode & 0o077:
+        raise PermissionError(errno.EACCES, "unsafe git probe cleanup directory")
+
+
 def retire_probe_lock(lock: str, directory_fd: int, created: os.stat_result) -> tuple[OSError | None, str | None]:
     """Capture the public name before checking identity; never unlink that public name."""
     private = lock + ".cleanup"
@@ -112,10 +119,9 @@ def retire_probe_lock(lock: str, directory_fd: int, created: os.stat_result) -> 
         os.mkdir(private, 0o700, dir_fd=directory_fd)
         private_created = True
         private_fd = os.open(private, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=directory_fd)
-        metadata = os.fstat(private_fd)
-        if metadata.st_uid != os.geteuid() or metadata.st_mode & 0o077:
-            private_created = False  # A substituted directory is not ours to remove.
-            raise PermissionError(errno.EACCES, "unsafe git probe cleanup directory")
+        private_created = False  # An unverified directory is not ours to remove.
+        check_private_probe_directory(private_fd)
+        private_created = True
         try:
             os.rename(lock, lock, src_dir_fd=directory_fd, dst_dir_fd=private_fd)
             captured = True
