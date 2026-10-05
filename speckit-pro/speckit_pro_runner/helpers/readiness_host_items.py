@@ -386,7 +386,7 @@ POSTURE_CHOICES = {
 }
 POSTURE_TIMEOUTS = ("mcp_startup_timeout_sec", "mcp_tool_timeout_sec")
 MAX_TIMEOUT_SECONDS = 86400
-HASH_RE = re.compile(r"(?:sha256:)?[0-9a-f]{32,128}")
+HASH_RE = re.compile(r"(?:sha256:)?[0-9a-fA-F]{32,128}")
 HOOK_TRUST_STATES = ("trusted", "untrusted", "unobservable")
 LOOPBACK_STATES = ("allowed", "blocked", "unobservable")
 TEMP_DIR_STATES = ("healthy", "leaky", "unobservable")
@@ -398,7 +398,7 @@ POSTURE_ACTIONS = {
 
 def hash_text(value: Any, label: str) -> str:
     """An exact digest as the host printed it: lowercase hex, optionally `sha256:`-prefixed."""
-    return pattern_text(value, HASH_RE, "a lowercase hex digest", label)
+    return pattern_text(value, HASH_RE, "a hex digest", label)
 
 
 def optional_hash(value: Any, label: str) -> str | None:
@@ -417,10 +417,11 @@ def observe_codex_approval_posture(raw: dict[str, Any], observed_at: str, source
     for key, allowed in POSTURE_CHOICES.items():
         facts[key] = choice(detail[key], (*allowed, "unobservable"), f"codex_approval_posture {key}")
     for key in POSTURE_TIMEOUTS:
-        value = detail[key]
-        if value is not None and (type(value) is not int or not 0 < value <= MAX_TIMEOUT_SECONDS):
-            raise SelectionError(f"codex_approval_posture {key} must be whole seconds or null")
-        facts[key] = "unobservable" if value is None else str(value)
+        value = detail[key]  # null means the setting is absent, so Codex uses its documented default
+        if value is not None and value != "unobservable" and (type(value) is not int
+                                                              or not 0 < value <= MAX_TIMEOUT_SECONDS):
+            raise SelectionError(f"codex_approval_posture {key} must be whole seconds, null or \"unobservable\"")
+        facts[key] = "default" if value is None else str(value)
     summary = ", ".join(f"{key}={value}" for key, value in facts.items())
     prints = {"value:posture": digest(summary)}
     source = describe(source, summary, "codex_approval_posture.evidence_source")
@@ -441,6 +442,9 @@ def observe_codex_hook_trust(raw: dict[str, Any], observed_at: str, source: str)
         if state == "trusted" and found is None:
             raise SelectionError("a trusted codex_hook_trust entry needs the exact `hash` that was trusted")
         hooks.append((name_text(entry.get("hook"), "codex_hook_trust hook"), state, found))
+    if len({name for name, _, _ in hooks}) != len(hooks):
+        raise SelectionError("codex_hook_trust names each hook once")
+    hooks.sort(key=lambda hook: hook[1] != "untrusted")  # untrusted first, so a long list never cuts them from the evidence
     if not hooks:
         return make_item("unknown", source, observed_at, {}, "Review the hooks in /hooks, then rerun scaffold.")
     summary = ", ".join(f"{name}={state}" + (f" {found}" if found else "") for name, state, found in hooks)
@@ -466,6 +470,8 @@ def observe_codex_local_access(raw: dict[str, Any], observed_at: str, source: st
     reference = detail["egress_policy_ref"]
     reference = None if reference is None else name_text(reference, "codex_local_access egress_policy_ref")
     policy_digest = optional_hash(detail["egress_policy_digest"], "codex_local_access egress_policy_digest")
+    if (reference is None) != (policy_digest is None):
+        raise SelectionError("codex_local_access names the egress policy by both reference and digest, or neither")
     policy = f"{reference} {policy_digest}" if reference and policy_digest else "unobservable"
     summary = f"loopback={loopback}, temp_dir={temp_dir}, egress_policy={policy}"
     prints = {"value:access": digest(summary)}

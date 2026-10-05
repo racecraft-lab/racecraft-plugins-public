@@ -63,12 +63,14 @@ class ReadinessCodexTrustTest(ReadinessCase):
         blocked = self.item(posture(external_delegation="blocked"))
         self.assertEqual("unavailable", blocked["status"])
         self.assertIn("never broadens", blocked["action"])
-        self.assertEqual("unknown", self.item(posture(mcp_startup_timeout_sec=None))["status"])
+        self.assertEqual("unknown", self.item(posture(mcp_startup_timeout_sec="unobservable"))["status"])
+        default = self.item(posture(mcp_startup_timeout_sec=None, mcp_tool_timeout_sec=None))
+        self.assert_item(default, "verified", ("mcp_startup_timeout_sec=default",))
 
     def test_malformed_posture_is_refused(self) -> None:
         cases = {"policy": {"approval_policy": "always"}, "sandbox": {"sandbox_mode": "off"},
                  "reviewer": {"approvals_reviewer": "bot"}, "mcp mode": {"mcp_approval_mode": "yes"},
-                 "consent": {"mcp_consent": True}, "timeout text": {"mcp_tool_timeout_sec": "60"},
+                 "consent": {"mcp_consent": True}, "timeout text": {"mcp_tool_timeout_sec": "60"}, "timeout word": {"mcp_tool_timeout_sec": "fast"},
                  "timeout zero": {"mcp_tool_timeout_sec": 0}, "timeout bool": {"mcp_tool_timeout_sec": True},
                  "extra key": {"consent_given": "yes"}}
         for label, change in cases.items():
@@ -97,6 +99,20 @@ class ReadinessCodexTrustTest(ReadinessCase):
             with self.subTest(bad=bad):
                 assert_runner_response(self, self.run_helper([hook_trust(hook("untrusted", bad))]), "input_error", 2)
 
+    def test_duplicate_hook_names_are_refused_and_untrusted_hooks_lead_the_evidence(self) -> None:
+        self.refuse_each([hook_trust(hook(), hook(digest=OTHER_HASH))])
+        many = [hook(name=f"Hook{n}") for n in range(8)] + [hook("untrusted", OTHER_HASH, "LastHook")]
+        self.assert_item(self.item(hook_trust(*many)), "unavailable", (f"LastHook=untrusted {OTHER_HASH}",))
+
+    def test_an_uppercase_digest_is_kept_exactly_as_printed(self) -> None:
+        upper = "ABCDEF" * 10 + "ABCD"
+        self.assert_item(self.item(hook_trust(hook("trusted", upper))), "verified", (upper,))
+
+    def test_a_partial_egress_policy_is_refused(self) -> None:
+        self.refuse_each([access(egress_policy_digest=None), access(egress_policy_ref=None)])
+        none = self.item(access(egress_policy_ref=None, egress_policy_digest=None))
+        self.assert_item(none, "unknown", ("egress_policy=unobservable",))
+
     def test_blocked_loopback_is_unavailable_with_the_action(self) -> None:
         item = self.item(access(loopback="blocked"))
         self.assert_item(item, "unavailable", ("loopback=blocked",), ("loopback",))
@@ -113,7 +129,6 @@ class ReadinessCodexTrustTest(ReadinessCase):
         self.assertEqual("verified", item["status"])
         self.assertIn(f"egress_policy={ACCESS['egress_policy_ref']} {HASH}", item["evidence_source"])
         self.assertEqual("unknown", self.item(access(loopback="unobservable"))["status"])
-        self.assertEqual("unknown", self.item(access(egress_policy_digest=None))["status"])
         self.assertNotIn("entries", json.dumps(response["data"]["record"]))
 
     def test_malformed_access_is_refused(self) -> None:

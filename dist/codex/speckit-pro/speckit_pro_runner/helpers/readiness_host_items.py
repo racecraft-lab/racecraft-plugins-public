@@ -231,7 +231,7 @@ def host_item(raw: dict[str, Any], host: str, observed_at: str, plugin_revision:
     if name == "mcp_authentication":
         return name, observe_mcp_authentication(raw, observed_at, source)
     if name == "codex_agents":
-        return name, observe_codex_agents(raw, observed_at, source)
+        return name, observe_codex_agents(raw, observed_at, source, plugin_revision)
     if name == "extension_versions":
         return name, observe_extension_versions(raw, observed_at, source)
     if name in CODEX_TRUST_ITEMS:
@@ -272,7 +272,7 @@ RESTART_ACTION = ("Rerun scaffold after you restart Codex so it loads the repair
 def installation_digest(raw: Any) -> str:
     """Digest of the selected installation inputs, replayed exactly as the install helper takes them (#1048).
 
-    A static installation names `model` and `luna_fallback`; a route-aware one names
+    A static installation may name `model` and `luna_fallback`; a route-aware one names
     `route_policy_manifest` and may add `strict_model_override`. Neither takes a `routing_mode` key, and the
     two shapes never mix. Only the digest is recorded, so a destination path never reaches the record.
     """
@@ -280,7 +280,7 @@ def installation_digest(raw: Any) -> str:
         raise SelectionError("codex_agents.installation must be an object")
     routed = "route_policy_manifest" in raw
     allowed = ROUTED_INSTALL_KEYS if routed else STATIC_INSTALL_KEYS
-    needed = {"route_policy_manifest"} if routed else {"model", "luna_fallback"}
+    needed = {"route_policy_manifest"} if routed else set()
     if not needed <= raw.keys() <= allowed:
         raise SelectionError(f"codex_agents.installation takes {sorted(allowed)} and needs {sorted(needed)}")
     texts = {key: value for key, value in raw.items() if key != "luna_fallback"}
@@ -301,17 +301,21 @@ def revision_text(value: Any, label: str) -> str:
     return pattern_text(value, VERSION_RE, "a version string", label)
 
 
-def observe_codex_agents(raw: dict[str, Any], observed_at: str, source: str) -> dict[str, Any]:
+def observe_codex_agents(raw: dict[str, Any], observed_at: str, source: str, plugin_revision: str) -> dict[str, Any]:
     detail = raw["agents"]
-    if not isinstance(detail, dict) or not detail.keys() <= {"installation", "inventory", "loaded_revision",
-                                                              "expected_revision"}:
+    needed = {"installation", "inventory", "expected_revision"}
+    if not isinstance(detail, dict) or not needed <= detail.keys() <= needed | {"loaded_revision"}:
         raise SelectionError("codex_agents.agents takes installation, inventory, loaded_revision, expected_revision")
     prints = {"value:installation_inputs": installation_digest(detail.get("installation"))}
     inventory = [(name_text(entry.get("agent"), "codex_agents agent"),
                   choice(entry.get("state"), AGENT_STATES, "codex_agents state"),
                   choice(entry.get("repair"), REPAIRS, "codex_agents repair"))
                  for entry in listed(detail, "inventory", "codex_agents")]
+    if any(state == "current" and repair != "none" for _, state, repair in inventory):
+        raise SelectionError("codex_agents current agents must have repair none")
     expected = revision_text(detail.get("expected_revision"), "codex_agents expected_revision")
+    if expected != plugin_revision:
+        raise SelectionError("codex_agents expected_revision must match plugin_revision")
     loaded = detail.get("loaded_revision")
     if loaded is not None:
         loaded = revision_text(loaded, "codex_agents loaded_revision")
@@ -382,7 +386,7 @@ POSTURE_CHOICES = {
 }
 POSTURE_TIMEOUTS = ("mcp_startup_timeout_sec", "mcp_tool_timeout_sec")
 MAX_TIMEOUT_SECONDS = 86400
-HASH_RE = re.compile(r"(?:sha256:)?[0-9a-f]{32,128}")
+HASH_RE = re.compile(r"(?:sha256:)?[0-9a-fA-F]{32,128}")
 HOOK_TRUST_STATES = ("trusted", "untrusted", "unobservable")
 LOOPBACK_STATES = ("allowed", "blocked", "unobservable")
 TEMP_DIR_STATES = ("healthy", "leaky", "unobservable")
@@ -394,7 +398,7 @@ POSTURE_ACTIONS = {
 
 def hash_text(value: Any, label: str) -> str:
     """An exact digest as the host printed it: lowercase hex, optionally `sha256:`-prefixed."""
-    return pattern_text(value, HASH_RE, "a lowercase hex digest", label)
+    return pattern_text(value, HASH_RE, "a hex digest", label)
 
 
 def optional_hash(value: Any, label: str) -> str | None:
@@ -413,10 +417,11 @@ def observe_codex_approval_posture(raw: dict[str, Any], observed_at: str, source
     for key, allowed in POSTURE_CHOICES.items():
         facts[key] = choice(detail[key], (*allowed, "unobservable"), f"codex_approval_posture {key}")
     for key in POSTURE_TIMEOUTS:
-        value = detail[key]
-        if value is not None and (type(value) is not int or not 0 < value <= MAX_TIMEOUT_SECONDS):
-            raise SelectionError(f"codex_approval_posture {key} must be whole seconds or null")
-        facts[key] = "unobservable" if value is None else str(value)
+        value = detail[key]  # null means the setting is absent, so Codex uses its documented default
+        if value is not None and value != "unobservable" and (type(value) is not int
+                                                              or not 0 < value <= MAX_TIMEOUT_SECONDS):
+            raise SelectionError(f"codex_approval_posture {key} must be whole seconds, null or \"unobservable\"")
+        facts[key] = "default" if value is None else str(value)
     summary = ", ".join(f"{key}={value}" for key, value in facts.items())
     prints = {"value:posture": digest(summary)}
     source = describe(source, summary, "codex_approval_posture.evidence_source")
@@ -437,6 +442,9 @@ def observe_codex_hook_trust(raw: dict[str, Any], observed_at: str, source: str)
         if state == "trusted" and found is None:
             raise SelectionError("a trusted codex_hook_trust entry needs the exact `hash` that was trusted")
         hooks.append((name_text(entry.get("hook"), "codex_hook_trust hook"), state, found))
+    if len({name for name, _, _ in hooks}) != len(hooks):
+        raise SelectionError("codex_hook_trust names each hook once")
+    hooks.sort(key=lambda hook: hook[1] != "untrusted")  # untrusted first, so a long list never cuts them from the evidence
     if not hooks:
         return make_item("unknown", source, observed_at, {}, "Review the hooks in /hooks, then rerun scaffold.")
     summary = ", ".join(f"{name}={state}" + (f" {found}" if found else "") for name, state, found in hooks)
@@ -462,6 +470,8 @@ def observe_codex_local_access(raw: dict[str, Any], observed_at: str, source: st
     reference = detail["egress_policy_ref"]
     reference = None if reference is None else name_text(reference, "codex_local_access egress_policy_ref")
     policy_digest = optional_hash(detail["egress_policy_digest"], "codex_local_access egress_policy_digest")
+    if (reference is None) != (policy_digest is None):
+        raise SelectionError("codex_local_access names the egress policy by both reference and digest, or neither")
     policy = f"{reference} {policy_digest}" if reference and policy_digest else "unobservable"
     summary = f"loopback={loopback}, temp_dir={temp_dir}, egress_policy={policy}"
     prints = {"value:access": digest(summary)}

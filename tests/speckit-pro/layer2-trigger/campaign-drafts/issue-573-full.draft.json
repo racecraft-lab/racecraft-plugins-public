@@ -1539,8 +1539,8 @@
     }
   },
   "identities": {
-    "observer": "5e800fe61c62b3d919344218a7f511567a9dfe72903a23f33bb10518b6fcd3cc",
-    "catalog": "6d5d322cb309041d4a9c7ee6d394fa06796e250fe0b9ad826f372bd767f0ed41",
+    "observer": "42f97166e63f49487099556ce9915954b1873d9d1e5c8e29ab5e7a315273ab5d",
+    "catalog": "a21bf9afb66b85e58e35472800bd1075d1623d95bddc026bbd108642ad776771",
     "fixture": "c094071e16a77dab28275236262066f77b78fd9ee7cdc3cbfbcb78147b36edfe"
   },
   "controlled_difference": {
