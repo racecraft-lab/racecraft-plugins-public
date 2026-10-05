@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator
 from pathlib import Path, PureWindowsPath
 from typing import Any
 from unicodedata import category
@@ -43,14 +44,8 @@ def brief_path(value: Any, label: str) -> str:
     return text
 
 
-def reference_section(name: str, heading: str) -> str:
-    """Return one reference section verbatim: its heading line through the line before the next heading of equal or higher level."""
-    try:
-        lines = (REFERENCES / name).read_text(encoding="utf-8").splitlines()
-    except (OSError, UnicodeError) as exc:
-        raise ValueError(f"references/{name}: cannot read section {heading!r}") from exc
-    start: int | None = None
-    level = 0
+def reference_content(lines: list[str], name: str, heading: str) -> Iterator[tuple[int, str]]:
+    """Yield reference lines outside fenced code, retaining their source positions."""
     fence = ""
     for index, line in enumerate(lines):
         # CommonMark 0.31.2, sections 4.2 and 4.5. Nested fence-like lines
@@ -63,6 +58,22 @@ def reference_section(name: str, heading: str) -> str:
         if marker and (marker[1][0] == "~" or "`" not in marker[2]):
             fence = marker[1]
             continue
+        yield index, line
+    # CommonMark consumes to EOF for an unclosed fence. A packaged reference
+    # must instead fail closed rather than dispatch an ambiguous section tail.
+    if fence:
+        raise ValueError(f"references/{name}: unclosed fence in section {heading!r}")
+
+
+def reference_section(name: str, heading: str) -> str:
+    """Return one reference section verbatim: its heading line through the line before the next heading of equal or higher level."""
+    try:
+        lines = (REFERENCES / name).read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeError) as exc:
+        raise ValueError(f"references/{name}: cannot read section {heading!r}") from exc
+    start: int | None = None
+    level = 0
+    for index, line in reference_content(lines, name, heading):
         title = re.match(r"^ {0,3}(#{1,6})(?:[ \t]+(.*)|$)", line)
         if title is None:
             continue
@@ -73,10 +84,6 @@ def reference_section(name: str, heading: str) -> str:
                 start, level = index, marks
         elif marks <= level:
             return "\n".join(lines[start:index]).rstrip()
-    # CommonMark consumes to EOF for an unclosed fence. A packaged reference
-    # must instead fail closed rather than dispatch an ambiguous section tail.
-    if fence:
-        raise ValueError(f"references/{name}: unclosed fence in section {heading!r}")
     if start is None:
         raise ValueError(f"references/{name} has no section {heading!r}")
     return "\n".join(lines[start:]).rstrip()
