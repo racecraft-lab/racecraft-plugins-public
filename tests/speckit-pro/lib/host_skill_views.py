@@ -10,7 +10,7 @@ relative links resolve as they do once installed. It is removed at exit.
 from __future__ import annotations
 
 import atexit
-import os
+import secrets
 import shutil
 import sys
 import tempfile
@@ -29,11 +29,10 @@ def host_skill_root(host: str, plugin_root: Path = PLUGIN_ROOT) -> Path:
     """The rendered skill tree `host` loads from `plugin_root`'s source."""
     key = (plugin_root.resolve(), host)
     if key not in _RENDERED:
-        # Not tempfile.mkdtemp or uuid4: harness tests script both, so a view
-        # built on the side must not consume a result or reuse a scripted name
-        # that another process holds in the shared temp root.
-        unique = f"{os.getpid()}-{os.urandom(8).hex()}"
-        temporary = Path(tempfile.gettempdir()).resolve() / f"speckit-{host}-skills-{unique}"
+        # Not tempfile.mkdtemp: harness tests script that call's results, and a
+        # view built on the side must not consume one.
+        # Trial UUIDs are deliberately mocked; view names need independent entropy.
+        temporary = Path(tempfile.gettempdir()).resolve() / f"speckit-{host}-skills-{secrets.token_hex(16)}"
         temporary.mkdir(mode=0o700)
         atexit.register(shutil.rmtree, temporary, ignore_errors=True)
         root = temporary / "skills"

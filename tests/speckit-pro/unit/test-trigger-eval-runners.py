@@ -1848,6 +1848,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             main_stream = claude_stream(main_staged, main_plugin_name, main_skill, main_nonce)
             claude.PLUGIN_ROOT = main_plugin
             main_stdout = io.StringIO()
+            main_stderr = io.StringIO()
             with (
                 mock.patch.object(claude.shutil, "which", return_value="/usr/local/bin/claude"),
                 mock.patch.object(
@@ -1869,8 +1870,10 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     ),
                 ) as main_run,
                 contextlib.redirect_stdout(main_stdout),
+                contextlib.redirect_stderr(main_stderr),
             ):
                 main_exit = claude.main(["demo", "--model", "claude-sonnet-test"])
+            self.assertEqual(main_exit, 0, main_stderr.getvalue())
             main_report = json.loads(main_stdout.getvalue())
 
             main_identity_rejections = []
@@ -3887,6 +3890,33 @@ class CodexEvalCorpusResolutionTests(unittest.TestCase):
         self.assertNotIn("Eval file:", output.getvalue())
 
 
+class HostSkillViewTests(unittest.TestCase):
+    def test_fixed_trial_uuid_cannot_collide_rendered_skill_views(self) -> None:
+        claude = import_script(CLAUDE_RUNNER, "layer2_claude_view_names")
+        views = claude.host_skill_views
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            cache = (root / "views").resolve()
+            cache.mkdir()
+            plugins = [root / "first-plugin", root / "second-plugin"]
+            for plugin in plugins:
+                source = plugin / "skills" / "demo" / "SKILL.md"
+                source.parent.mkdir(parents=True)
+                source.write_text("---\nname: demo\ndescription: Demo skill.\n---\n\nDemo body.\n", encoding="utf-8")
+            with (
+                mock.patch.object(claude.uuid, "uuid4", return_value=SimpleNamespace(hex="123456789abc")),
+                mock.patch.object(views.tempfile, "gettempdir", return_value=str(cache)),
+                mock.patch.object(views.tempfile, "mkdtemp", side_effect=AssertionError("consumed trial workspace mock")),
+            ):
+                first = views.host_skill_root("claude", plugins[0])
+                second = views.host_skill_root("claude", plugins[1])
+                self.assertNotEqual(first, second)
+                self.assertEqual(views.host_skill_root("claude", plugins[0]), first)
+                for view in (first, second):
+                    self.assertEqual(view.parent.parent, cache)
+                    self.assertIn("Demo body.", (view / "demo" / "SKILL.md").read_text(encoding="utf-8"))
+
+
 class SharedRunnerCodeTests(unittest.TestCase):
     """Both runners reuse the library's corpus, sibling, evidence and process helpers."""
 
@@ -4133,6 +4163,7 @@ def main() -> int:
         unittest.defaultTestLoader.loadTestsFromTestCase(CodexRelativeSkillBodyReadTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(MeasurementRecordTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(CodexEvalCorpusResolutionTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(HostSkillViewTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(SharedRunnerCodeTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(NoOpDescriptionSourceTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(CatalogIdentityFailureTests),
