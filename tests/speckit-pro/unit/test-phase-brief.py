@@ -108,16 +108,6 @@ class PhaseBriefTests(unittest.TestCase):
                 result = dispatch_brief({"phase": phase, "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"})
                 self.assertIn(".specify/extensions.yml", result["data"]["readable_files"])
 
-    def test_safe_path_text_is_preserved(self):
-        for feature, workflow in (("specs/example/", "docs/workflow.md"),
-                                  ("specs/version..two", "/workflow.md"),
-                                  (r"specs\example", r"C:\docs\workflow.md")):
-            with self.subTest(feature=feature, workflow=workflow):
-                result = dispatch_brief({"phase": "Plan", "workflow_file": workflow, "feature_dir": feature})
-                self.assertEqual(result["status"], "ok")
-                self.assertEqual(result["data"]["inputs"]["feature_dir"], feature.rstrip("/"))
-                self.assertEqual(result["data"]["inputs"]["workflow_file"], workflow)
-
     def test_prompt_sections_match_the_workflow_template(self):
         template = (REPO / "speckit-pro/skills/speckit-coach/templates/workflow-template.md").read_text()
         for phase in ("Specify", "Clarify", "Plan", "Checklist", "Tasks", "Analyze"):
@@ -171,6 +161,16 @@ class PhaseBriefTests(unittest.TestCase):
 
 
 class PhaseBriefPathTests(unittest.TestCase):
+    def test_safe_path_text_is_preserved(self):
+        for feature, workflow in (("specs/example/", "docs/workflow.md"),
+                                  ("specs/version..two", "/workflow.md"),
+                                  (r"specs\example", r"C:\docs\workflow.md")):
+            with self.subTest(feature=feature, workflow=workflow):
+                result = dispatch_brief({"phase": "Plan", "workflow_file": workflow, "feature_dir": feature})
+                self.assertEqual(result["status"], "ok")
+                self.assertEqual(result["data"]["inputs"]["feature_dir"], feature.rstrip("/"))
+                self.assertEqual(result["data"]["inputs"]["workflow_file"], workflow)
+
     def test_payload_hosts_reject_directory_and_format_paths(self):
         valid = {"phase": "Plan", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
         for key, value in (("workflow_file", "docs/"), ("workflow_file", "docs\\"),
@@ -188,33 +188,24 @@ class PhaseBriefPathTests(unittest.TestCase):
                     self.assertEqual(report["status"], "input_error")
                     self.assertEqual(report["data"], {})
 
-    def test_directory_aliases_and_normalized_traversal_fail_before_io(self):
+    def test_unsafe_path_variants_fail_before_io(self):
         valid = {"phase": "Clarify", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
-        cases = [("workflow_file", value) for value in DIRECTORY_WORKFLOWS + TRAVERSAL_PATHS]
-        cases += [("feature_dir", value) for value in TRAVERSAL_PATHS]
+        cases = [("workflow_file", value, "file") for value in DIRECTORY_WORKFLOWS]
+        cases += [(key, value, "parent traversal") for key in ("workflow_file", "feature_dir") for value in TRAVERSAL_PATHS]
+        formats = [chr(code) for code in range(sys.maxunicode + 1) if category(chr(code)) == "Cf"]
+        self.assertTrue(formats)
+        cases += [(key, "docs/" + char + "example", "format") for key in ("workflow_file", "feature_dir") for char in formats]
         with patch.object(Path, "open", side_effect=AssertionError("input validation accessed filesystem")):
-            for key, value in cases:
+            for key, value, reason in cases:
                 with self.subTest(key=key, value=ascii(value)):
                     result = dispatch_brief({**valid, key: value})
                     self.assertEqual(result["status"], "input_error")
                     self.assertEqual(result["data"], {})
                     self.assertEqual(result["diagnostics"][0]["code"], "invalid_phase_brief")
                     self.assertIn(key, result["diagnostics"][0]["message"])
+                    self.assertIn(reason, result["diagnostics"][0]["message"])
                     self.assertNotIn(value, result["diagnostics"][0]["message"])
 
-    def test_every_unicode_format_character_fails_before_io(self):
-        valid = {"phase": "Clarify", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
-        formats = [chr(code) for code in range(sys.maxunicode + 1) if category(chr(code)) == "Cf"]
-        self.assertTrue(formats)
-        with patch.object(Path, "open", side_effect=AssertionError("input validation accessed filesystem")):
-            for key in ("workflow_file", "feature_dir"):
-                for char in formats:
-                    with self.subTest(key=key, code=hex(ord(char))):
-                        result = dispatch_brief({**valid, key: "docs/" + char + "example"})
-                        self.assertEqual(result["status"], "input_error")
-                        self.assertEqual(result["data"], {})
-                        self.assertIn("format", result["diagnostics"][0]["message"])
-                        self.assertNotIn(char, result["diagnostics"][0]["message"])
 
 
 class PhaseBriefSliceTests(unittest.TestCase):
