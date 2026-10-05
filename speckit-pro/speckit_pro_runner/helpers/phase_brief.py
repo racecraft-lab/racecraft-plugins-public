@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from pathlib import Path, PureWindowsPath
 from typing import Any
-from unicodedata import category
+from unicodedata import category, normalize
 
 from ..envelope import diagnostic, response
 from ..strict_input import require_fields, require_text
@@ -35,12 +35,16 @@ def brief_path(value: Any, label: str) -> str:
     text = require_text(value, label)
     if any(category(char) in {"Cc", "Cf", "Zl", "Zp"} for char in text):
         raise ValueError(f"{label} must not contain control, format or line separator characters")
-    if label == "workflow_file" and text.endswith(("/", "\\")):
+    # Check compatibility-normalized text too, but preserve the caller's path.
+    normalized = normalize("NFKC", text).rstrip()
+    paths = (PureWindowsPath(text), PureWindowsPath(normalized))
+    if label == "workflow_file" and (normalized.endswith(("/", "\\"))
+                                     or normalized.replace("\\", "/").rsplit("/", 1)[-1] == "."
+                                     or not paths[1].name):
         raise ValueError("workflow_file must name a file, not a directory")
-    path = PureWindowsPath(text)
-    if ".." in path.parts:
+    if any(".." in path.parts for path in paths):
         raise ValueError(f"{label} must not contain parent traversal segments")
-    if label == "feature_dir" and path.anchor:
+    if label == "feature_dir" and any(path.anchor for path in paths):
         raise ValueError("feature_dir must be relative to the workflow root")
     return text
 

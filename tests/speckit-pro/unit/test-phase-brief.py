@@ -10,6 +10,7 @@ import tempfile
 from unittest.mock import patch
 from types import SimpleNamespace
 import unittest
+from unicodedata import category
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO / "speckit-pro"), str(REPO / "tests/speckit-pro/lib")]
@@ -28,6 +29,10 @@ def dispatch_brief(inputs, request_id=None):
 REFERENCES = REPO / "speckit-pro/skills/speckit-autopilot/references"
 WHOLE_REFERENCES = ("capability-discovery.md", "grounding.md", "execution-efficiency.md", "consensus-protocol.md")
 SLICE_AGENTS = ("clarify-executor", "checklist-executor", "analyze-executor")
+DIRECTORY_WORKFLOWS = (".", "docs/.", "docs\\.", "docs/./", "docs/\\.",
+                       "docs/ ", "docs\\\u00a0", "docs/. ", "docs/\uff0f", "docs/\uff3c", "docs/\uff0e")
+TRAVERSAL_PATHS = ("docs/..\\workflow.md", "docs\\../workflow.md", "docs/\uff0e\uff0e/workflow.md",
+                   "docs\uff0f..\uff3cworkflow.md", "docs/.. ")
 
 
 class PhaseBriefTests(unittest.TestCase):
@@ -169,7 +174,8 @@ class PhaseBriefPathTests(unittest.TestCase):
     def test_payload_hosts_reject_directory_and_format_paths(self):
         valid = {"phase": "Plan", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
         for key, value in (("workflow_file", "docs/"), ("workflow_file", "docs\\"),
-                           ("workflow_file", "docs/\u202eworkflow.md"), ("feature_dir", "specs/\u200bexample")):
+                           ("workflow_file", "docs/\u202eworkflow.md"), ("feature_dir", "specs/\u200bexample"),
+                           *(("workflow_file", value) for value in DIRECTORY_WORKFLOWS + TRAVERSAL_PATHS)):
             for host in ("claude", "codex"):
                 with self.subTest(host=host, key=key, value=value):
                     request = {"schema_version": "1.0", "helper_id": "phase-brief", "operation": "phase-brief",
@@ -181,6 +187,34 @@ class PhaseBriefPathTests(unittest.TestCase):
                     report = json.loads(done.stdout)
                     self.assertEqual(report["status"], "input_error")
                     self.assertEqual(report["data"], {})
+
+    def test_directory_aliases_and_normalized_traversal_fail_before_io(self):
+        valid = {"phase": "Clarify", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
+        cases = [("workflow_file", value) for value in DIRECTORY_WORKFLOWS + TRAVERSAL_PATHS]
+        cases += [("feature_dir", value) for value in TRAVERSAL_PATHS]
+        with patch.object(Path, "open", side_effect=AssertionError("input validation accessed filesystem")):
+            for key, value in cases:
+                with self.subTest(key=key, value=ascii(value)):
+                    result = dispatch_brief({**valid, key: value})
+                    self.assertEqual(result["status"], "input_error")
+                    self.assertEqual(result["data"], {})
+                    self.assertEqual(result["diagnostics"][0]["code"], "invalid_phase_brief")
+                    self.assertIn(key, result["diagnostics"][0]["message"])
+                    self.assertNotIn(value, result["diagnostics"][0]["message"])
+
+    def test_every_unicode_format_character_fails_before_io(self):
+        valid = {"phase": "Clarify", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
+        formats = [chr(code) for code in range(sys.maxunicode + 1) if category(chr(code)) == "Cf"]
+        self.assertTrue(formats)
+        with patch.object(Path, "open", side_effect=AssertionError("input validation accessed filesystem")):
+            for key in ("workflow_file", "feature_dir"):
+                for char in formats:
+                    with self.subTest(key=key, code=hex(ord(char))):
+                        result = dispatch_brief({**valid, key: "docs/" + char + "example"})
+                        self.assertEqual(result["status"], "input_error")
+                        self.assertEqual(result["data"], {})
+                        self.assertIn("format", result["diagnostics"][0]["message"])
+                        self.assertNotIn(char, result["diagnostics"][0]["message"])
 
 
 class PhaseBriefSliceTests(unittest.TestCase):
