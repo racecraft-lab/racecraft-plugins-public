@@ -6,7 +6,6 @@ import concurrent.futures
 import copy
 import hashlib
 import json
-import os
 from pathlib import Path
 import subprocess
 import sys
@@ -21,6 +20,7 @@ import trigger_approval_fixtures as approvals
 import trigger_campaign_pins as pins
 import trigger_carry_forward as carry
 import trigger_comparison as comparison
+import git_fixture
 from test_result import run_counted
 from trigger_inventory import load_inventory, plan_inventory
 
@@ -554,13 +554,9 @@ class DraftIdentityTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             repo = Path(temporary)
             test_root = repo / "tests/speckit-pro"
-            env = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_SYSTEM": os.devnull,
-                   "GIT_CONFIG_NOSYSTEM": "1"}
 
             def git(*args):
-                return subprocess.run(["git", "-c", "user.name=Test", "-c", "user.email=native-eval@example.invalid",
-                                       "-c", "commit.gpgsign=false", *args], cwd=repo, env=env,
-                                      capture_output=True, text=True, check=True).stdout
+                return git_fixture.git_stdout(repo, *args)
 
             for source in sources:
                 target = test_root / "layer2-trigger/campaign-drafts" / source.name
