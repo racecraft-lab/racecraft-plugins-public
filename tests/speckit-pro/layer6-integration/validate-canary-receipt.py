@@ -208,22 +208,24 @@ def stage_tokens(stage, host):
     return usage["root_tokens"] + sum(usage["child_rollout_tokens"])
 
 
-def plan_target_report(variant):
+def plan_target_report(variant, measured_tokens):
     """ADR 0023's base-variant target is reported independently of the release budget."""
     if variant["name"] != "base":
         return None
     plan = variant["stages"]["plan"]
-    met = all(plan[metric] <= limit for metric, limit in PLAN_TARGET_LIMITS.items())
+    measured = {"wall_seconds": plan["wall_seconds"], "tokens": measured_tokens}
+    met = plan["tokens"] == measured_tokens and all(measured[metric] <= limit for metric, limit in PLAN_TARGET_LIMITS.items())
     return {**{f"{metric}_limit": limit for metric, limit in PLAN_TARGET_LIMITS.items()},
-            "wall_seconds": plan["wall_seconds"], "tokens": plan["tokens"], "target_met": met}
+            **measured, "target_met": met}
 
 
 def variant_report(variant, checks, host):
     """One variant entry's assertions and gate result, including its own budget failures."""
     failures = variant_failures(variant) + plan_quality_failures(variant)
+    measured_tokens = {name: stage_tokens(stage, host) for name, stage in variant["stages"].items()}
     failures.extend(f"{variant['name']}.{name}.tokens_sum" for name, stage in variant["stages"].items()
-                    if stage["tokens"] != stage_tokens(stage, host))
-    target = plan_target_report(variant)
+                    if stage["tokens"] != measured_tokens[name])
+    target = plan_target_report(variant, measured_tokens["plan"])
     gate = gate_failures(variant, failures)
     gate.extend(f"{label}_budget" for label, actual, limit in checks if limit is not None and actual > limit)
     return {"name": variant["name"], "verdict": "fail" if failures else "pass",

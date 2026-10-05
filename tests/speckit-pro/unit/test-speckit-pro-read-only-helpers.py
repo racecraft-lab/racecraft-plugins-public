@@ -5408,10 +5408,15 @@ class CanaryCodexTokenTests(CanaryVariantCase):
         target = report["variants"][0]["plan_target"]
         self.assertEqual(16000000, target["tokens"])
         self.assertFalse(target["target_met"])
-        plan["tokens"] = 9000000
-        report = self.validator.receipt_report(value)
-        self.assertIn("base.plan.tokens_sum", report["failed_assertions"])
-        self.assertEqual(9000000, report["variants"][0]["plan_target"]["tokens"])
+        for children, measured in (([15000000], 15000010), ([20], 30)):
+            plan.update(tokens=10, codex_tokens={"root_tokens": 10, "child_rollout_tokens": children})
+            with self.subTest(measured=measured):
+                report = self.validator.receipt_report(value)
+                self.assertFalse(report["valid"])
+                self.assertEqual(["base.plan.tokens_sum"], report["failed_assertions"])
+                target = report["variants"][0]["plan_target"]
+                self.assertEqual(measured, target["tokens"])
+                self.assertFalse(target["target_met"])
 
 
     def test_each_codex_stage_checks_its_sum_and_allows_equal_child_counts(self):
