@@ -31,6 +31,7 @@
       "type": "object", "additionalProperties": false, "required": ["loaded_plugins", "evidence"],
       "properties": {"loaded_plugins": {"type": "array", "items": {"$ref": "#/$defs/text"}}, "evidence": {"$ref": "#/$defs/text"}}
     },
+    "offer": {"type": "object", "additionalProperties": false, "required": ["evaluated", "offered", "answer"], "properties": {"evaluated": {"type": "boolean"}, "offered": {"type": "boolean"}, "answer": {"enum": ["accepted", "declined"]}}},
     "stage": {
       "type": "object", "additionalProperties": false,
       "required": ["wall_seconds", "tokens"],
@@ -51,9 +52,25 @@
       "properties": {"wall_seconds_limit": {"const": 1800}, "tokens_limit": {"const": 15000000},
         "target_met": {"type": "boolean"}}
     },
+    "plan_quality": {
+      "description": "ADR 0023 artifact checks at the end of planning; an open gap, finding or clarification passes only when it is in blocked_for_uat_listed, and the list cannot exceed the variant's blocked_for_uat count. Open items and blocked_for_uat_listed entries use the same item id: a repository-relative artifact location path:Lnn (for example spec.md:L24) or an analyze finding id (for example F001), never a blocked task or gate id. Untraced requirements have no exemption. requirements_total is at least 1; a variant that never reached Specify fails rather than reporting an empty plan as passing.",
+      "type": "object", "additionalProperties": false,
+      "required": ["phases_run", "clarify_sessions", "requirements_total", "untraced_requirements", "open_gaps", "open_findings", "open_clarifications", "blocked_for_uat_listed", "decisions"],
+      "properties": {
+        "phases_run": {"type": "array", "uniqueItems": true, "items": {"enum": ["specify", "clarify", "plan", "checklist", "tasks", "analyze"]}},
+        "clarify_sessions": {"$ref": "#/$defs/count"}, "requirements_total": {"type": "integer", "minimum": 1},
+        "untraced_requirements": {"$ref": "#/$defs/ids"}, "open_gaps": {"$ref": "#/$defs/ids"},
+        "open_findings": {"$ref": "#/$defs/ids"}, "open_clarifications": {"$ref": "#/$defs/ids"},
+        "blocked_for_uat_listed": {"$ref": "#/$defs/ids"},
+        "decisions": {"type": "object", "additionalProperties": false, "required": ["total", "low_confidence", "consensus_rounds_by_kind"],
+          "properties": {"total": {"$ref": "#/$defs/count"}, "low_confidence": {"$ref": "#/$defs/count"},
+            "consensus_rounds_by_kind": {"type": "object", "additionalProperties": {"$ref": "#/$defs/count"}}}}
+      }
+    },
+    "ids": {"type": "array", "items": {"$ref": "#/$defs/text"}, "uniqueItems": true},
     "variant": {
       "type": "object", "additionalProperties": false,
-      "required": ["name", "verdict", "failed_assertions", "umask", "task_list_calls", "questions_after_scaffold", "unregistered_stops", "planning_end", "implement_end", "uat_runbook", "decisions_by_kind", "retry_attempts", "blocked_for_uat", "stages"],
+      "required": ["name", "verdict", "failed_assertions", "umask", "task_list_calls", "questions_after_scaffold", "unregistered_stops", "planning_end", "implement_end", "uat_runbook", "decisions_by_kind", "retry_attempts", "blocked_for_uat", "plan_quality", "stages"],
       "properties": {
         "name": {"enum": ["base", "oversized_plan", "security_interrupt", "missing_question_guard", "security_block"]},
         "verdict": {"enum": ["pass", "fail"]},
@@ -63,6 +80,7 @@
         "planning_end": {"type": "string"}, "implement_end": {"type": "string"}, "uat_runbook": {"type": "string"},
         "decisions_by_kind": {"type": "object", "additionalProperties": {"$ref": "#/$defs/count"}},
         "retry_attempts": {"$ref": "#/$defs/count"}, "blocked_for_uat": {"$ref": "#/$defs/count"},
+        "feature_offers": {"type": "object", "additionalProperties": false, "required": ["formal_methods", "verification_docker"], "properties": {"formal_methods": {"$ref": "#/$defs/offer"}, "verification_docker": {"$ref": "#/$defs/offer"}}},
         "split_recommendation_recorded": {"type": "boolean"}, "full_plan_built": {"type": "boolean"}, "stops": {"$ref": "#/$defs/count"},
         "question_guard": {
           "type": "object", "additionalProperties": false,
@@ -83,12 +101,13 @@
             "independent_work": {"$ref": "#/$defs/count"}, "independent_work_completed": {"$ref": "#/$defs/count"}}
         },
         "plan_target": {"$ref": "#/$defs/plan_target"},
+        "plan_quality": {"$ref": "#/$defs/plan_quality"},
         "stages": {
           "type": "object", "additionalProperties": false, "required": ["scaffold", "plan", "plan_review", "implement"],
           "properties": {"scaffold": {"$ref": "#/$defs/stage"}, "plan": {"$ref": "#/$defs/stage"}, "plan_review": {"$ref": "#/$defs/stage"}, "implement": {"$ref": "#/$defs/stage"}}
         }
       },
-      "allOf": [{"if": {"properties": {"name": {"const": "base"}}}, "then": {"required": ["plan_target"]}},
+      "allOf": [{"if": {"properties": {"name": {"const": "base"}}}, "then": {"required": ["feature_offers", "plan_target"]}},
         {"if": {"properties": {"name": {"const": "oversized_plan"}}},
         "then": {"required": ["split_recommendation_recorded", "full_plan_built", "stops"]}},
         {"if": {"properties": {"name": {"const": "security_interrupt"}}}, "then": {"required": ["security_interrupt"]}},

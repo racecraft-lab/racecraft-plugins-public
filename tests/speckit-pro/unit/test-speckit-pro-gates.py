@@ -2287,6 +2287,32 @@ class GateFoundationTests(unittest.TestCase):
             self.assertNotIn("jq", " ".join(argv).lower())
             self.assertFalse(any(arg.endswith(".sh") for arg in argv))
 
+    def test_layer_dispatcher_runs_dist_snapshot_after_the_parallel_pool_closes(self) -> None:
+        dispatcher = load_layer_script_dispatcher()
+        runtime = REPO_ROOT / "tests/speckit-pro/unit/test-native-eval-runtime.py"
+        ordinary = REPO_ROOT / "tests/speckit-pro/unit/test-check-toolchain.py"
+        events = []
+
+        def run_script(path, root):
+            events.append(path.name)
+            return (path.relative_to(root).as_posix(), True, "passed")
+
+        with (
+            patch.object(dispatcher, "layer_workers", return_value=4),
+            patch.object(dispatcher, "run_script", side_effect=run_script) as run,
+            patch.object(dispatcher, "emit_checks", return_value=0) as emit,
+            patch.object(dispatcher, "ThreadPoolExecutor") as executor,
+        ):
+            pool = executor.return_value.__enter__.return_value
+            pool.map.side_effect = map
+            executor.return_value.__exit__.side_effect = lambda *args: events.append("pool-closed")
+            self.assertEqual(dispatcher.run_script_suite("layer", [runtime, ordinary], REPO_ROOT), 0)
+            self.assertEqual(pool.map.call_args.args[1], [ordinary])
+            self.assertEqual(events, [ordinary.name, "pool-closed", runtime.name])
+            self.assertEqual(run.call_count, 2)
+            self.assertEqual([row[0] for row in emit.call_args.args[1]],
+                             [runtime.relative_to(REPO_ROOT).as_posix(), ordinary.relative_to(REPO_ROOT).as_posix()])
+
     def test_layer_dispatcher_rejects_invalid_child_summaries(self) -> None:
         dispatcher = load_layer_script_dispatcher()
         test_path = REPO_ROOT / "tests" / "speckit-pro" / "run-layer-scripts.py"
