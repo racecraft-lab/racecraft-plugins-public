@@ -7,6 +7,7 @@ import ast
 import contextlib
 import hashlib
 import io
+import itertools
 import json
 import os
 import shutil
@@ -343,6 +344,47 @@ def supervised_results(results: list[tuple[int, bytes, bytes, bool]], requested_
         return result
 
     return provider
+
+
+class ProcessGroupAbsenceTests(unittest.TestCase):
+    @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
+    def test_claude_cleanup_esrch_is_terminal_across_all_windows(self) -> None:
+        # A completed/reaped leader permits PGID reuse, unlike an unreaped leader.
+        windows = (
+            ("natural-grace", [0]),
+            ("initial-probe", [0]),
+            ("term-send", [0, signal.SIGTERM]),
+            ("term-wait", [0, signal.SIGTERM, 0]),
+            ("kill-entry", [0, signal.SIGTERM, 0, 0]),
+            ("kill-send", [0, signal.SIGTERM, 0, 0, signal.SIGKILL]),
+            ("kill-wait", [0, signal.SIGTERM, 0, 0, signal.SIGKILL, 0]),
+            ("final-probe", [0, signal.SIGTERM, 0, 0, signal.SIGKILL, 0, 0]),
+        )
+        for window, original_calls in windows:
+            with self.subTest(window=window):
+                child = FakePopen(b"", returncode=0)
+                calls, observations = [], []
+
+                def reused_group(pgid: int, signum: int) -> None:
+                    self.assertEqual(pgid, child.pid)
+                    self.assertEqual(child.poll(), 0, "leader must be reaped before reuse")
+                    calls.append(signum)
+                    if len(calls) == len(original_calls):
+                        raise ProcessLookupError(3, "original group absent")
+                    # Subsequent probes and sends succeed against an unrelated group.
+
+                with (
+                    mock.patch.object(trigger_process.os, "getpgrp", return_value=child.pid + 1),
+                    mock.patch.object(trigger_process.os, "killpg", side_effect=reused_group),
+                    mock.patch.object(trigger_process.time, "sleep"),
+                ):
+                    signaled = trigger_process.cleanup_child(
+                        child, observations=observations, timeout=0,
+                        grace=1 if window == "natural-grace" else 0,
+                    )
+                self.assertEqual(calls, original_calls, "no probe or signal may follow ESRCH")
+                self.assertEqual(signaled, any(original_calls))
+                self.assertEqual([item["errno"] for item in observations], [3])
 
 
 class Layer2TriggerRunnerTests(unittest.TestCase):
@@ -800,8 +842,8 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             mock.patch.object(claude.time, "sleep"),
         ):
             self.assertFalse(claude.cleanup_child(child, observations=observations))
-        self.assertEqual(killpg.call_args_list, [mock.call(child.pid, 0)] * 3)
-        self.assertEqual([item["errno"] for item in observations], [1, 3, 3])
+        self.assertEqual(killpg.call_args_list, [mock.call(child.pid, 0)] * 2)
+        self.assertEqual([item["errno"] for item in observations], [1, 3])
 
     @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
     def test_claude_initial_eperm_then_presence_uses_existing_cleanup(self) -> None:
@@ -843,80 +885,69 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
 
     @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
     def test_claude_post_signal_permission_probe_requires_later_absence(self) -> None:
-        # macOS answers EPERM for a group whose last member died from a signal
-        # but is not yet reaped; only a later absence settles the cleanup.
         claude = import_script(CLAUDE_RUNNER, "layer2_claude_post_signal_probe")
-        cases = (
-            (signal.SIGTERM, False, [signal.SIGTERM]),
-            (signal.SIGTERM, True, [signal.SIGTERM, signal.SIGKILL]),
-            (signal.SIGKILL, False, [signal.SIGTERM, signal.SIGKILL]),
-            (signal.SIGKILL, True, [signal.SIGTERM, signal.SIGKILL]),
-        )
-        for delivered, persistent, expected_signals in cases:
-            with self.subTest(signal=delivered.name, persistent=persistent):
-                child = FakePopen(b"", returncode=0)
-                sent = []
-                settling_probes = 0
-                observations = []
-
+        for exit_signal, persistent in itertools.product((signal.SIGTERM, signal.SIGKILL), (False, True)):
+            with self.subTest(exit_signal=exit_signal, persistent=persistent):
+                child = FakePopen(b"", returncode=-exit_signal)
+                child.timeout, child.communicate_calls = True, 1
+                sent, observations = [], []
+                post_signal_probes = 0
                 def probe(pgid: int, signum: int) -> None:
-                    nonlocal settling_probes
+                    nonlocal post_signal_probes
                     self.assertEqual(pgid, child.pid)
                     if signum:
                         sent.append(signum)
-                    elif delivered in sent:
-                        settling_probes += 1
-                        if persistent or settling_probes == 1:
+                    elif exit_signal in sent:
+                        # Exit occurs between poll() and the group probe; the next poll reaps it.
+                        child.timeout = False
+                        post_signal_probes += 1
+                        if persistent or post_signal_probes == 1:
                             raise PermissionError(1, "post-signal probe unresolved")
                         raise ProcessLookupError(3, "group absent")
-
                 with (
                     mock.patch.object(claude.os, "getpgrp", return_value=child.pid + 1),
                     mock.patch.object(claude.os, "killpg", side_effect=probe),
-                    mock.patch.object(claude, "CLEANUP_TIMEOUT", 0.5),
-                    mock.patch.object(claude, "DESCENDANT_EXIT_GRACE", 0),
+                    mock.patch.multiple(claude, CLEANUP_TIMEOUT=0.5, DESCENDANT_EXIT_GRACE=0),
                     mock.patch.object(claude.time, "monotonic", side_effect=[i / 10 for i in range(100)]),
                     mock.patch.object(claude.time, "sleep"),
                 ):
                     if persistent:
-                        with self.assertRaisesRegex(OSError, "unresolved"):
+                        with self.assertRaisesRegex(OSError, "post-signal probe unresolved") as caught:
                             claude.cleanup_child(child, observations=observations)
+                        self.assertNotIsInstance(caught.exception, PermissionError)
                     else:
                         self.assertTrue(claude.cleanup_child(child, observations=observations))
-                self.assertEqual(sent, expected_signals)
-                self.assertGreaterEqual(settling_probes, 2)
+                self.assertEqual(sent, {(signal.SIGTERM, False): [signal.SIGTERM]}.get((exit_signal, persistent), [signal.SIGTERM, signal.SIGKILL]))
+                self.assertGreaterEqual(post_signal_probes, 2)
                 self.assertEqual(observations[0]["errno"], 1)
                 self.assertEqual(observations[0]["pgid"], child.pid)
                 self.assertEqual(observations[-1]["errno"], 1 if persistent else 3)
 
     @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
-    def test_claude_only_post_successful_signal_eperm_may_settle(self) -> None:
+    def test_claude_denied_or_unsent_signals_cannot_start_eperm_settling(self) -> None:
         claude = import_script(CLAUDE_RUNNER, "layer2_claude_permission_boundaries")
-        for fault in ("initial", "term-send", "kill-send", "kill-absent", "post-kill-eacces"):
+        cases = (
+            ("initial", None, None, [], 1),
+            ("term-send", signal.SIGTERM, PermissionError(1, "signal send denied"), None, 1),
+            ("kill-send", signal.SIGKILL, PermissionError(1, "signal send denied"), None, 1),
+            ("post-kill-eacces", None, None, [signal.SIGTERM, signal.SIGKILL], 13),
+        )
+        for fault, failed_signal, signal_error, probe_after, probe_errno in cases:
             with self.subTest(fault=fault):
                 child = FakePopen(b"", returncode=0)
-                attempted = []
-                failed_probes = []
-
+                attempted, failed_probes = [], []
                 def probe(_pgid: int, signum: int) -> None:
                     if signum:
                         attempted.append(signum)
-                        if (fault == "term-send" and signum == signal.SIGTERM) or (fault == "kill-send" and signum == signal.SIGKILL):
-                            raise PermissionError(1, "signal send denied")
-                        if fault == "kill-absent" and signum == signal.SIGKILL:
-                            raise ProcessLookupError(3, "signal target absent")
-                    elif (
-                        (fault == "initial" and not attempted)
-                        or (fault in {"kill-absent", "post-kill-eacces"} and signal.SIGKILL in attempted)
-                    ):
+                        if signum == failed_signal:
+                            raise signal_error
+                    elif attempted == probe_after:
                         failed_probes.append(signum)
-                        raise PermissionError(13 if fault == "post-kill-eacces" else 1, "probe denied")
-
+                        raise PermissionError(probe_errno, "probe denied")
                 with (
                     mock.patch.object(claude.os, "getpgrp", return_value=child.pid + 1),
                     mock.patch.object(claude.os, "killpg", side_effect=probe),
-                    mock.patch.object(claude, "CLEANUP_TIMEOUT", 0.5),
-                    mock.patch.object(claude, "DESCENDANT_EXIT_GRACE", 0),
+                    mock.patch.multiple(claude, CLEANUP_TIMEOUT=0.5, DESCENDANT_EXIT_GRACE=0),
                     mock.patch.object(claude.time, "monotonic", side_effect=[i / 10 for i in range(100)]),
                     mock.patch.object(claude.time, "sleep"),
                 ):
@@ -1351,8 +1382,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
 
     def test_claude_direct_runner_contracts(self) -> None:
         claude = import_script(CLAUDE_RUNNER, "layer2_claude_direct")
-        host_view_uuid4 = claude.host_skill_views.uuid.uuid4
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory() as temporary, mock.patch.object(tempfile, "gettempdir", return_value=temporary):
             root = Path(temporary)
             source = root / "source" / "SKILL.md"
             source.parent.mkdir()
@@ -1779,6 +1809,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
             main_stream = claude_stream(main_staged, main_plugin_name, main_skill, main_nonce)
             claude.PLUGIN_ROOT = main_plugin
             main_stdout = io.StringIO()
+            main_stderr = io.StringIO()
             with (
                 mock.patch.object(claude.shutil, "which", return_value="/usr/local/bin/claude"),
                 mock.patch.object(
@@ -1800,9 +1831,10 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     ),
                 ) as main_run,
                 contextlib.redirect_stdout(main_stdout),
+                contextlib.redirect_stderr(main_stderr),
             ):
-                self.assertIs(claude.host_skill_views.uuid.uuid4, host_view_uuid4)
                 main_exit = claude.main(["demo", "--model", "claude-sonnet-test"])
+            self.assertEqual(main_exit, 0, main_stderr.getvalue())
             main_report = json.loads(main_stdout.getvalue())
 
             main_identity_rejections = []
@@ -2006,14 +2038,13 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
 
     def test_claude_summary_requires_every_trial_model(self) -> None:
         claude = import_script(CLAUDE_RUNNER, "layer2_claude_model_summary")
-        host_view_uuid4 = claude.host_skill_views.uuid.uuid4
         scenarios = (
             ("all-known-same", ("claude-sonnet-test",) * 3, "claude-sonnet-test"),
             ("mixed-known-missing", ("claude-sonnet-test", None, "claude-sonnet-test"), None),
             ("known-different", ("claude-sonnet-test", "claude-opus-test", "claude-sonnet-test"), None),
             ("all-missing", (None, None, None), None),
         )
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory() as temporary, mock.patch.object(tempfile, "gettempdir", return_value=temporary):
             root = Path(temporary)
             plugin = root / "fixture" / "speckit-pro"
             source = plugin / "skills" / "demo" / "SKILL.md"
@@ -2087,7 +2118,6 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                         ),
                         contextlib.redirect_stdout(output),
                     ):
-                        self.assertIs(claude.host_skill_views.uuid.uuid4, host_view_uuid4)
                         exit_code = claude.main(["demo", "--model", "claude-sonnet-test"])
                     report = json.loads(output.getvalue())
                     self.assertEqual(exit_code, 0 if label == "all-known-same" else 1)
@@ -3809,6 +3839,33 @@ class CodexEvalCorpusResolutionTests(unittest.TestCase):
         self.assertNotIn("Eval file:", output.getvalue())
 
 
+class HostSkillViewTests(unittest.TestCase):
+    def test_fixed_trial_uuid_cannot_collide_rendered_skill_views(self) -> None:
+        claude = import_script(CLAUDE_RUNNER, "layer2_claude_view_names")
+        views = claude.host_skill_views
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            cache = (root / "views").resolve()
+            cache.mkdir()
+            plugins = [root / "first-plugin", root / "second-plugin"]
+            for plugin in plugins:
+                source = plugin / "skills" / "demo" / "SKILL.md"
+                source.parent.mkdir(parents=True)
+                source.write_text("---\nname: demo\ndescription: Demo skill.\n---\n\nDemo body.\n", encoding="utf-8")
+            with (
+                mock.patch.object(claude.uuid, "uuid4", return_value=SimpleNamespace(hex="123456789abc")),
+                mock.patch.object(views.tempfile, "gettempdir", return_value=str(cache)),
+                mock.patch.object(views.tempfile, "mkdtemp", side_effect=AssertionError("consumed trial workspace mock")),
+            ):
+                first = views.host_skill_root("claude", plugins[0])
+                second = views.host_skill_root("claude", plugins[1])
+                self.assertNotEqual(first, second)
+                self.assertEqual(views.host_skill_root("claude", plugins[0]), first)
+                for view in (first, second):
+                    self.assertEqual(view.parent.parent, cache)
+                    self.assertIn("Demo body.", (view / "demo" / "SKILL.md").read_text(encoding="utf-8"))
+
+
 class SharedRunnerCodeTests(unittest.TestCase):
     """Both runners reuse the library's corpus, sibling, evidence and process helpers."""
 
@@ -3961,10 +4018,12 @@ class CodexRelativeSkillBodyReadTests(unittest.TestCase):
 
 def main() -> int:
     suite = unittest.TestSuite([
+        unittest.defaultTestLoader.loadTestsFromTestCase(ProcessGroupAbsenceTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(Layer2TriggerRunnerTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(CodexRelativeSkillBodyReadTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(MeasurementRecordTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(CodexEvalCorpusResolutionTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(HostSkillViewTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(SharedRunnerCodeTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(NoOpDescriptionSourceTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(CatalogIdentityFailureTests),

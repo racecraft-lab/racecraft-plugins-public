@@ -64,6 +64,7 @@ EXPECTED_HELPERS = [
     "g0-setup",
     "formal-doctor",
     "scaffold-answers",
+    "phase-brief",
     "helper-registry-dispatch",
     "check-prerequisites",
     "resolve-workflow-binding",
@@ -3327,20 +3328,273 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
         self.assertEqual(exit_code, 2)
         self.assertIn("SPEC-009", payload["error"])
 
-    def test_check_prerequisites_does_not_invent_a_cli_version(self) -> None:
+    def test_check_prerequisites_compares_the_cli_version_with_the_pin(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
-            self.skipTest("CLI presence case uses check-prerequisites")
+            self.skipTest("CLI version case uses check-prerequisites")
+        cases = (
+            ("/fixture/bin/specify", "1.1.0", "match"),
+            ("/fixture/bin/specify", "1.0.12", "older"),
+            ("/fixture/bin/specify", "1.2.0", "newer"),
+            ("/fixture/bin/specify", "1.10.0", "newer"),
+            ("/fixture/bin/specify", "1.1.0.dev0", "unreadable"),
+            ("/fixture/bin/specify", None, "unreadable"),
+            (None, None, "missing"),
+        )
         with tempfile.TemporaryDirectory(prefix="read-only-helper-project-") as project:
-            for executable in ("/fixture/bin/specify", "/fixture/other/specify", None):
-                with self.subTest(executable=executable), patch(
+            for executable, version, status in cases:
+                with self.subTest(executable=executable, version=version), patch(
                     "speckit_pro_runner.helpers.read_only.find_specify", return_value=executable,
+                ), patch(
+                    "speckit_pro_runner.helpers.read_only.installed_specify_version",
+                    return_value=version,
                 ):
                     payload = self._feature_state(Path(project))
                     row = next(item for item in payload["checks"] if item["check"] == "speckit_cli")
                     self.assertEqual(row["pass"], executable is not None)
+                    spec_kit = payload["spec_kit"]
+                    self.assertEqual(spec_kit["status"], status)
+                    self.assertEqual(spec_kit["pinned_version"], "1.1.0")
+                    expected_shown = None if executable is None else (
+                        version if status in ("match", "older", "newer") else "unparsed")
+                    self.assertEqual(spec_kit["installed_version"], expected_shown)
                     self.assertEqual(
-                        row["detail"], f"{executable} (version not checked)" if executable else "",
+                        spec_kit["install_argv"],
+                        [
+                            "uv", "tool", "install", "specify-cli", "--force", "--from",
+                            "git+https://github.com/github/spec-kit.git"
+                            "@f1d3a4f8337ebbd3ae22760a9c12e3352b93a175",
+                        ],
                     )
+                    if executable is not None:
+                        version_row = next(
+                            item for item in payload["checks"] if item["check"] == "speckit_cli_version"
+                        )
+                        self.assertTrue(version_row["pass"], "a version mismatch never stops a run")
+
+    def test_spec_kit_state_never_echoes_raw_cli_output_or_the_home_path(self) -> None:
+        from speckit_pro_runner.helpers.read_only import installed_specify_version, spec_kit_cli_state
+
+        hostile = "9" * 5000 + "\x1b[31m"
+        with patch(
+            "speckit_pro_runner.helpers.read_only.installed_specify_version", return_value=hostile,
+        ):
+            rows, state = spec_kit_cli_state(str(Path.home() / ".local" / "bin" / "specify"))
+        self.assertEqual(state["installed_version"], "unparsed")
+        self.assertEqual(state["status"], "unreadable")
+        detail = rows[0]["detail"]
+        self.assertNotIn(hostile[:20], detail)
+        self.assertNotIn(str(Path.home()), detail)
+        self.assertTrue(detail.startswith("~/.local/bin/specify"))
+        seen = []
+        stdout = "padding " * 1000 + "CLI Version    1.1.0"
+        with patch(
+            "speckit_pro_runner.helpers.read_only.subprocess.run",
+            return_value=SimpleNamespace(stdout=stdout, returncode=0),
+        ), patch("speckit_pro_runner.helpers.read_only.shutil.which", return_value="/fixture/bin/specify"), patch(
+            "speckit_pro_runner.helpers.read_only.trusted_executable", return_value=Path("/fixture/bin/specify"),
+        ), patch(
+            "speckit_pro_runner.helpers.read_only.executable_path", return_value=Path("/fixture/bin/specify"),
+        ), patch(
+            "speckit_pro_runner.helpers.read_only.spec_kit_pin.parse_cli_version",
+            side_effect=lambda text: seen.append(len(text)),
+        ):
+            installed_specify_version("/fixture/bin/specify")
+        self.assertEqual(seen, [4096])
+
+    def test_installed_specify_version_reads_the_cli_version_row(self) -> None:
+        if self.helper_filter and self.helper_filter != "check-prerequisites":
+            self.skipTest("CLI version case uses check-prerequisites")
+        from speckit_pro_runner.helpers.read_only import installed_specify_version
+
+        panel = (
+            "╭──── Specify CLI Information ────╮\n"
+            "│                                 │\n"
+            "│     CLI Version    1.0.12       │\n"
+            "│          Python    3.13.13      │\n"
+        )
+        for stdout, returncode, expected in ((panel, 0, "1.0.12"), ("no row", 0, None), (panel, 2, None)):
+            with self.subTest(returncode=returncode, stdout=stdout[:8]), patch(
+                "speckit_pro_runner.helpers.read_only.subprocess.run",
+                return_value=SimpleNamespace(stdout=stdout, returncode=returncode),
+            ), patch(
+                "speckit_pro_runner.helpers.read_only.shutil.which", return_value="/fixture/bin/specify",
+            ), patch(
+                "speckit_pro_runner.helpers.read_only.trusted_executable", return_value=Path("/fixture/bin/specify"),
+            ), patch(
+                "speckit_pro_runner.helpers.read_only.executable_path", return_value=Path("/fixture/bin/specify"),
+            ):
+                self.assertEqual(installed_specify_version("/fixture/bin/specify"), expected)
+        with patch("speckit_pro_runner.helpers.read_only.subprocess.run", side_effect=OSError), patch(
+            "speckit_pro_runner.helpers.read_only.shutil.which", return_value="/fixture/bin/specify",
+        ), patch(
+            "speckit_pro_runner.helpers.read_only.trusted_executable", return_value=Path("/fixture/bin/specify"),
+        ), patch(
+            "speckit_pro_runner.helpers.read_only.executable_path", return_value=Path("/fixture/bin/specify"),
+        ):
+            self.assertIsNone(installed_specify_version("/fixture/bin/specify"))
+
+    def test_installed_specify_version_probes_the_resolved_fallback_binary(self) -> None:
+        from speckit_pro_runner.helpers.read_only import find_specify, installed_specify_version
+
+        with tempfile.TemporaryDirectory() as temporary:
+            home = Path(temporary)
+            alias = home / ".local" / "bin" / "specify.exe"
+            attested = home / "trusted" / "bin" / "specify.exe"
+            with patch("speckit_pro_runner.helpers.read_only.Path.home", return_value=home), patch(
+                "speckit_pro_runner.helpers.read_only.sys.platform", "linux",
+            ), patch(
+                "speckit_pro_runner.helpers.read_only.shutil.which",
+                side_effect=[None, str(alias), str(alias), str(attested)],
+            ) as which, patch(
+                "speckit_pro_runner.helpers.read_only.trusted_executable",
+                side_effect=[attested, attested],
+            ), patch(
+                "speckit_pro_runner.helpers.read_only.subprocess.run",
+                return_value=SimpleNamespace(stdout="CLI Version    1.1.0", returncode=0),
+            ) as run:
+                selected = find_specify()
+                self.assertEqual(selected, str(alias))
+                self.assertEqual(installed_specify_version(selected), "1.1.0")
+            self.assertEqual(which.call_args.kwargs["path"], str(attested.parent))
+            self.assertEqual(run.call_args.args[0], [str(attested), "version"])
+            self.assertNotIn("executable", run.call_args.kwargs)
+            self.assertFalse(run.call_args.kwargs["shell"])
+            self.assertEqual(run.call_args.kwargs["stdin"], subprocess.DEVNULL)
+
+    def test_installed_specify_version_never_probes_a_workspace_executable(self) -> None:
+        from speckit_pro_runner.helpers.read_only import installed_specify_version
+
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary).resolve()
+            binary = workspace / "specify.exe"
+            binary.touch()
+            binary.chmod(0o755)
+            for candidate in (str(binary), "specify.exe"):
+                with self.subTest(candidate=candidate), patch(
+                    "speckit_pro_runner.helpers.read_only.Path.cwd", return_value=workspace,
+                ), patch("speckit_pro_runner.helpers.read_only.sys.platform", "win32"), patch(
+                    "speckit_pro_runner.helpers.read_only.shutil.which", return_value=candidate,
+                ), patch(
+                    "speckit_pro_runner.helpers.read_only.subprocess.run",
+                    return_value=SimpleNamespace(stdout="CLI Version    1.1.0", returncode=0),
+                ) as run:
+                    self.assertIsNone(installed_specify_version(candidate))
+                    run.assert_not_called()
+
+    def test_installed_specify_version_accepts_windows_file_modes(self) -> None:
+        from speckit_pro_runner.helpers.read_only import installed_specify_version
+
+        with tempfile.TemporaryDirectory() as temporary:
+            binary = Path(temporary).resolve() / "specify.exe"
+            binary.touch()
+            binary.chmod(0o755)
+            with patch("speckit_pro_runner.helpers.read_only.sys.platform", "win32"), patch(
+                "speckit_pro_runner.helpers.read_only.shutil.which", return_value=str(binary),
+            ), patch(
+                "speckit_pro_runner.codex_launch.Path.stat", return_value=SimpleNamespace(st_mode=0o100666),
+            ), patch(
+                "speckit_pro_runner.helpers.read_only.subprocess.run",
+                return_value=SimpleNamespace(stdout="CLI Version    1.1.0", returncode=0),
+            ) as run:
+                self.assertEqual(installed_specify_version(str(binary)), "1.1.0")
+                self.assertEqual(run.call_args.args[0], [str(binary), "version"])
+                self.assertNotIn("executable", run.call_args.kwargs)
+
+    def test_installed_specify_version_rejects_a_reselected_or_symlinked_workspace_binary(self) -> None:
+        from speckit_pro_runner.helpers.read_only import installed_specify_version
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            workspace = root / "checkout"
+            workspace.mkdir()
+            installed = root / "bin" / "specify"
+            installed.parent.mkdir()
+            installed.touch()
+            installed.chmod(0o755)
+            workspace_binary = workspace / "specify.exe"
+            workspace_binary.touch()
+            workspace_binary.chmod(0o755)
+            link = installed.parent / "specify.exe"
+            link.symlink_to(workspace_binary)
+            checkout_link = workspace / "bin" / "specify.exe"
+            checkout_link.parent.mkdir()
+            checkout_link.symlink_to(installed)
+            for selected, candidate in ((installed, workspace_binary), (link, link), (checkout_link, checkout_link)):
+                with self.subTest(selected=selected.name), patch(
+                    "speckit_pro_runner.helpers.read_only.Path.cwd", return_value=workspace,
+                ), patch("speckit_pro_runner.helpers.read_only.sys.platform", "win32"), patch(
+                    "speckit_pro_runner.helpers.read_only.shutil.which", return_value=str(candidate),
+                ), patch("speckit_pro_runner.helpers.read_only.subprocess.run") as run:
+                    self.assertIsNone(installed_specify_version(str(selected)))
+                    run.assert_not_called()
+
+    def test_spec_kit_cli_state_rejects_workspace_and_cwd_probes_without_blocking(self) -> None:
+        from speckit_pro_runner.helpers.read_only import spec_kit_cli_state
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            workspace = root / "checkout"
+            workspace.mkdir()
+            for binary in (workspace / "specify.exe", root / "specify.exe"):
+                binary.touch()
+                binary.chmod(0o755)
+                with self.subTest(parent=binary.parent.name), patch(
+                    "speckit_pro_runner.helpers.read_only.Path.cwd", return_value=root,
+                ), patch(
+                    "speckit_pro_runner.helpers.read_only.shutil.which", return_value=str(binary),
+                ), patch("speckit_pro_runner.helpers.read_only.subprocess.run") as run:
+                    rows, state = spec_kit_cli_state(str(binary), workspace)
+                    self.assertEqual(state["status"], "unreadable")
+                    self.assertTrue(all(row["pass"] for row in rows))
+                    run.assert_not_called()
+
+    def test_installed_specify_version_treats_decoding_failure_as_unreadable(self) -> None:
+        from speckit_pro_runner.helpers.read_only import installed_specify_version, spec_kit_cli_state
+
+        error = UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid start byte")
+        with patch("speckit_pro_runner.helpers.read_only.subprocess.run", side_effect=error), patch(
+            "speckit_pro_runner.helpers.read_only.shutil.which", return_value="/fixture/bin/specify",
+        ), patch(
+            "speckit_pro_runner.helpers.read_only.trusted_executable", return_value=Path("/fixture/bin/specify"),
+        ), patch(
+            "speckit_pro_runner.helpers.read_only.executable_path", return_value=Path("/fixture/bin/specify"),
+        ):
+            self.assertIsNone(installed_specify_version("/fixture/bin/specify"))
+            rows, state = spec_kit_cli_state("/fixture/bin/specify")
+        self.assertEqual(state["status"], "unreadable")
+        self.assertTrue(all(row["pass"] for row in rows))
+
+    def test_spec_kit_release_version_accepts_only_short_ascii_components(self) -> None:
+        from speckit_pro_runner import spec_kit_pin
+
+        for hostile in ("\u0661.\u0661.\u0660", "\uff11.\uff11.\uff10", "1." + "1" * 3000 + ".0", "1.1.1234567"):
+            with self.subTest(version=hostile[:12]):
+                self.assertIsNone(spec_kit_pin.release_version(hostile))
+                self.assertEqual(spec_kit_pin.version_status(hostile, cli_found=True), "unreadable")
+        self.assertEqual(spec_kit_pin.release_version("1.1.0"), "1.1.0")
+        self.assertEqual(spec_kit_pin.release_version("123456.0.1"), "123456.0.1")
+
+    def test_cli_path_detail_never_shows_another_users_path(self) -> None:
+        from speckit_pro_runner.helpers.read_only import _home_relative
+
+        home = Path.home()
+        self.assertEqual(_home_relative(str(home / ".local" / "bin" / "specify")), "~/.local/bin/specify")
+        other_home = Path(Path.home().anchor) / "elsewhere" / "other-person" / "bin" / "specify"
+        self.assertEqual(_home_relative(str(other_home)), "specify")
+        self.assertEqual(_home_relative("specify"), "specify")
+        self.assertEqual(_home_relative(str(home / ".." / "other-person" / "bin" / "specify")), "specify")
+
+    def test_spec_kit_version_ordering_compares_numeric_components(self) -> None:
+        from speckit_pro_runner import spec_kit_pin
+
+        for pinned, installed, status in (
+            ("1.9.9", "1.10.0", "newer"),
+            ("1.10.0", "1.9.99", "older"),
+        ):
+            with self.subTest(pinned=pinned, installed=installed), patch.object(
+                spec_kit_pin, "PINNED_VERSION", pinned,
+            ):
+                self.assertEqual(spec_kit_pin.version_status(installed, cli_found=True), status)
 
     def test_check_prerequisites_honors_specify_feature_directory_env(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
@@ -4312,7 +4566,7 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
 
     def test_helper_python_authoritative_records(self) -> None:
         for helper_id in self.filtered_helpers():
-            if helper_id in {"helper-registry-dispatch", "scaffold-answers", "g0-setup"}:
+            if helper_id in {"helper-registry-dispatch", "scaffold-answers", "g0-setup", "phase-brief"}:
                 continue
             with self.subTest(helper_id=helper_id):
                 completed, response, stderr_records = run_runner(helper_request(helper_id, HELPER_CASES[helper_id]))
@@ -4635,7 +4889,8 @@ class G0SetupTests(unittest.TestCase):
                     self.prepare_fixture(root, case["quality_text"])
                     before = self.fixture_files(root)
                     for probe in ("prerequisites", "commands", "presets"):
-                        with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value=case["specify"]):
+                        with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value=case["specify"]), \
+                                patch("speckit_pro_runner.helpers.read_only.installed_specify_version", return_value=None):
                             actual = g0_setup({"surface": surface, "probe": probe, "workflow_file": "workflow.md"}, root)
                         actual = json.loads(json.dumps(actual).replace(str(PLUGIN_ROOT), "<plugin-root>"))
                         self.assertEqual(case["probes"][probe], actual["result"])
@@ -4757,6 +5012,31 @@ class G0UnratifiedDefaultsTests(unittest.TestCase):
         self.assertNotIn("unratified_defaults", gate["quality_gate"])
 
 
+class G0PinTests(unittest.TestCase):
+    def test_g0_setup_preserves_advisory_version_statuses(self) -> None:
+        from speckit_pro_runner.helpers.g0_setup import g0_setup
+
+        cases = (("1.1.0", "match"), ("1.0.0", "older"), ("1.10.0", "newer"),
+                 (None, "unreadable"), (None, "missing"))
+        for surface in ("claude", "codex"):
+            for version, status in cases:
+                with self.subTest(surface=surface, status=status), helper_project() as root:
+                    G0SetupTests.prepare_fixture(root, None)
+                    found = status != "missing"
+                    with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value="specify" if found else None), \
+                            patch("speckit_pro_runner.helpers.read_only.installed_specify_version", return_value=version):
+                        data = g0_setup({"surface": surface, "probe": "prerequisites", "workflow_file": "workflow.md"}, root)
+                    result = data["result"]
+                    report = result["stdout_json"]
+                    self.assertEqual(status, report["spec_kit"]["status"])
+                    self.assertEqual(version or ("unparsed" if found else None), report["spec_kit"]["installed_version"])
+                    self.assertEqual(found, report["all_pass"])
+                    self.assertEqual(0 if found else 1, result["exit_code"])
+                    if found:
+                        row = next(row for row in report["checks"] if row["check"] == "speckit_cli_version")
+                        self.assertTrue(row["pass"], "G0 must preserve advisory version checks")
+
+
 class G0SetupFailureTests(unittest.TestCase):
     def test_g0_setup_failed_probe_keeps_standalone_status_and_diagnostic(self) -> None:
         from types import SimpleNamespace
@@ -4837,7 +5117,7 @@ class ScaffoldAnswersTests(unittest.TestCase):
 def receipt():
     return {
         "schema_version": "canary-receipt/v2", "commit": "a" * 40, "host": "codex",
-        "host_version": "0.1.0", "plugin_version": "1.0.0", "fixture_tag": "v1",
+        "host_version": "0.1.0", "plugin_version": "1.0.0", "fixture_tag": "fixture-v5",
         "trigger": "local", "dirty_tree": True, "release_status_allowed": False,
         "install_probe": {"headless_install": "passed", "skill_expansion": "passed", "evidence": "probe.json"},
         "variants": [{
@@ -4853,6 +5133,7 @@ def receipt():
                 "phases_run": ["specify", "clarify", "plan", "checklist", "tasks", "analyze"], "clarify_sessions": 1,
                 "requirements_total": 4, "untraced_requirements": [], "open_gaps": [], "open_findings": [],
                 "open_clarifications": [], "blocked_for_uat_listed": [],
+                "planted_catches": {"catch-1": "fixed", "catch-2": "fixed"},
                 "decisions": {"total": 5, "low_confidence": 1, "consensus_rounds_by_kind": {"security": 1, "low_confidence": 1}},
             },
             "stages": {name: {"wall_seconds": 1, "tokens": 10, "codex_tokens": {"root_tokens": 10, "child_rollout_tokens": []}} for name in ("scaffold", "plan", "plan_review", "implement")},
@@ -4951,6 +5232,9 @@ class CanaryVariantCase(unittest.TestCase):
                 "independent_work": 3, "independent_work_completed": 3,
             }},
         }
+
+    def catches(self, value):
+        return value["variants"][0]["plan_quality"]["planted_catches"]
 
     def assert_variant_mutations(self, name, mutations):
         for host, value in self.receipts.items():
@@ -5056,7 +5340,8 @@ class CanaryGateVerdictTests(CanaryVariantCase):
                     removed = release["variants"].pop(index)
                     if duplicate:
                         release["variants"].extend([removed, copy.deepcopy(removed)])
-                    self.assertIn("release.variants", self.validator.validate_receipt(release, hook_counters=hook_counters()))
+                    failure = "receipt.variant_entry_limit: 6" if duplicate else "release.variants"
+                    self.assertIn(failure, self.validator.validate_receipt(release, hook_counters=hook_counters()))
 
 
 class CanaryGuardGapContractTests(CanaryVariantCase):
@@ -5080,7 +5365,7 @@ class CanaryGuardGapContractTests(CanaryVariantCase):
                          for bad in (None, "unknown")]
             malformed.extend((f"question_guard.{key}", bad) for key in ("guarded_work_completed", "guarded_work_passed")
                              for bad in (-1, True, 0.5))
-            mutations.extend((path, bad, f"receipt.variants[0].{path}: ") for path, bad in malformed)
+            mutations.extend((path, bad, "receipt.schema: ") for path, bad in malformed)
             for path, bad, expected in mutations:
                 mutated = copy.deepcopy(value)
                 *parent, key = path.split(".")
@@ -5113,26 +5398,22 @@ class CanaryVariantContractTests(CanaryVariantCase):
                 variant = value["variants"][0]
                 variant.update(name=name, **copy.deepcopy(self.variant_evidence[name]))
                 nested = name in self.variant_evidence[name]
-                evidence, prefix = (variant[name], f"receipt.variants[0].{name}") if nested else (variant, "receipt.variants[0]")
+                evidence = variant[name] if nested else variant
                 fields = tuple(evidence) if nested else tuple(self.variant_evidence[name])
                 for key in fields:
-                    field = f"{prefix}.{key}"
                     previous = evidence.pop(key)
                     with self.subTest(host=host, name=name, missing=key):
-                        self.assertEqual([f"{field}: Required schema field is missing: {field}."],
-                                         self.validator.validate_receipt(value))
+                        self.assertEqual(["receipt.schema: 1"], self.validator.validate_receipt(value))
                     evidence[key] = "unknown"
                     with self.subTest(host=host, name=name, malformed=key):
                         failures = self.validator.validate_receipt(value)
                         self.assertEqual(1, len(failures), failures)
-                        self.assertTrue(failures[0].startswith(f"{field}: "), failures)
+                        self.assertTrue(failures[0].startswith("receipt.schema: "), failures)
                     evidence[key] = previous
                 if nested:
                     del variant[name]
-                    field = f"receipt.variants[0].{name}"
                     with self.subTest(host=host, name=name, missing="object"):
-                        self.assertEqual([f"{field}: Required schema field is missing: {field}."],
-                                         self.validator.validate_receipt(value))
+                        self.assertEqual(["receipt.schema: 1"], self.validator.validate_receipt(value))
 
     def test_all_five_variants_keep_missing_guard_red_through_api_and_cli(self):
         for host, value in self.receipts.items():
@@ -5435,7 +5716,7 @@ class CanaryPlanQualityTests(CanaryVariantCase):
             quality["requirements_total"] = 0
             with self.subTest(host=host, requirements=0):
                 failures = self.validator.validate_receipt(mutated)
-                self.assertTrue(failures and "requirements_total" in failures[0], failures)
+                self.assertEqual(["receipt.schema: 1"], failures)
 
     def test_the_clarify_session_count_and_decisions_are_required_evidence(self):
         for host, value in self.receipts.items():
@@ -5448,7 +5729,7 @@ class CanaryPlanQualityTests(CanaryVariantCase):
                     self.quality(mutated)[field] = bad
                 with self.subTest(host=host, field=field, bad=bad):
                     failures = self.validator.validate_receipt(mutated)
-                    self.assertTrue(failures and "plan_quality" in failures[0], failures)
+                    self.assertEqual(["receipt.schema: 1"], failures)
 
     def test_plan_quality_is_required_on_every_variant(self):
         for host, value in self.receipts.items():
@@ -5525,6 +5806,217 @@ class CanaryHookCounterTests(CanaryVariantCase):
                 self.assertEqual(expected, completed.returncode, completed.stdout)
 
 
+class CanaryPlantedCatchTests(CanaryVariantCase):
+    """ADR 0023: the base receipt asserts the plan fixed each planted catch, read against the pinned fixture tag."""
+
+    def test_the_pinned_fixture_has_two_catch_ids(self):
+        self.assertEqual(("catch-1", "catch-2"), self.validator.PLANTED_CATCH_IDS)
+
+    def test_a_catch_left_in_place_fails_the_receipt(self):
+        for host, value in self.receipts.items():
+            for catch in self.validator.PLANTED_CATCH_IDS:
+                mutated = copy.deepcopy(value)
+                self.catches(mutated)[catch] = "left_in_place"
+                with self.subTest(host=host, catch=catch):
+                    self.assertEqual([f"base.plan_quality.planted_catches.{catch}"],
+                                     self.validator.validate_receipt(mutated))
+
+    def test_a_missing_or_unknown_catch_record_fails_closed(self):
+        for host, value in self.receipts.items():
+            missing = copy.deepcopy(value)
+            del self.catches(missing)["catch-2"]
+            unknown = copy.deepcopy(value)
+            self.catches(unknown)["catch-3"] = "fixed"
+            absent = copy.deepcopy(value)
+            del absent["variants"][0]["plan_quality"]["planted_catches"]
+            with self.subTest(host=host, case="missing"):
+                self.assertEqual(["base.plan_quality.planted_catches.catch-2"], self.validator.validate_receipt(missing))
+            with self.subTest(host=host, case="unknown"):
+                self.assertEqual(["planted_catches.entry_limit: 3"], self.validator.validate_receipt(unknown))
+            with self.subTest(host=host, case="absent"):
+                self.assertEqual(["base.plan_quality.planted_catches"], self.validator.validate_receipt(absent))
+
+    def test_an_unrecognised_status_fails_schema_validation(self):
+        for host, value in self.receipts.items():
+            self.catches(value)["catch-1"] = "maybe"
+            with self.subTest(host=host):
+                report = self.validator.receipt_report(value)
+                self.assertFalse(report["valid"])
+                self.assertEqual(["receipt.schema: 1"], report["failed_assertions"])
+                self.assertEqual([], report["variants"])
+
+    def test_a_release_receipt_must_name_the_pinned_fixture_tag(self):
+        self.assertEqual("fixture-v5", self.validator.FIXTURE_TAG)
+        for host, value in self.receipts.items():
+            value.update(trigger="scheduled", dirty_tree=False, release_status_allowed=True)
+            with self.subTest(host=host, tag="pinned"):
+                self.assertNotIn("release.fixture_tag", self.validator.validate_receipt(value, hook_counters=hook_counters()))
+            value["fixture_tag"] = "fixture-v4"
+            with self.subTest(host=host, tag="older"):
+                self.assertIn("release.fixture_tag", self.validator.validate_receipt(value, hook_counters=hook_counters()))
+            value.update(trigger="local", dirty_tree=True, release_status_allowed=False)
+            with self.subTest(host=host, tag="local"):
+                self.assertEqual([], self.validator.validate_receipt(value))
+
+    def test_the_budget_note_names_the_tag_and_the_lock_ticket(self):
+        policy = json.loads(self.validator.BUDGET_FILE.read_text(encoding="utf-8"))["policy"]
+        self.assertIn(self.validator.FIXTURE_TAG, policy)
+        self.assertIn("#1199", policy)
+
+
+class CanaryCatchInputTests(CanaryVariantCase):
+    """Untrusted catch ids produce only bounded, constant diagnostics."""
+
+    def test_many_unknown_catches_have_one_bounded_failure(self):
+        for host, value in self.receipts.items():
+            prefix = "unknown-" + "x" * 64
+            self.catches(value).update({f"{prefix}{index}": "fixed" for index in range(10000)})
+            with self.subTest(host=host), tempfile.TemporaryDirectory() as directory:
+                report = self.validator.receipt_report(value)
+                self.assertEqual(1, len(report["failed_assertions"]))
+                self.assertEqual(["planted_catches.entry_limit: 10002"], report["failed_assertions"])
+                self.assertLess(len(json.dumps(report)), 256)
+                source = Path(directory) / "receipt.json"
+                source.write_text(json.dumps(value), encoding="utf-8")
+                completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
+                                           capture_output=True, text=True, check=False)
+                self.assertLess(source.stat().st_size, 1024 * 1024)
+                self.assertEqual(1, completed.returncode)
+                self.assertEqual(report, json.loads(completed.stdout))
+                self.assertLess(len(completed.stdout), 256)
+                self.assertEqual("", completed.stderr)
+
+    def test_unknown_catch_names_never_appear_in_api_or_cli_output(self):
+        marker = chr(27) + "[31m" + chr(10) + "/" + "synthetic-marker/receipt.txt"
+        for host, original in self.receipts.items():
+            for status in ("fixed", "left_in_place", marker):
+                value = copy.deepcopy(original)
+                del self.catches(value)["catch-2"]
+                self.catches(value)[marker] = status
+                with self.subTest(host=host, status=status), tempfile.TemporaryDirectory() as directory:
+                    report = self.validator.receipt_report(value)
+                    self.assertEqual(["unknown planted-catch id: 1"], report["failed_assertions"])
+                    self.assertLess(len(json.dumps(report)), 256)
+                    source = Path(directory) / "receipt.json"
+                    source.write_text(json.dumps(value), encoding="utf-8")
+                    completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
+                                               capture_output=True, text=True, check=False)
+                    self.assertEqual(1, completed.returncode)
+                    self.assertEqual(report, json.loads(completed.stdout))
+                    self.assertNotIn("synthetic-marker", completed.stdout + completed.stderr)
+                    self.assertLess(len(completed.stdout), 256)
+
+    def test_multiple_unknown_ids_are_one_counted_failure_on_any_variant(self):
+        for host, value in self.receipts.items():
+            for name in self.variant_evidence:
+                value["variants"][0]["name"] = name
+                catches = self.catches(value)
+                catches.clear()
+                catches.update({"unknown-one": "fixed", "unknown-two": "fixed"})
+                with self.subTest(host=host, variant=name):
+                    self.assertEqual(["unknown planted-catch id: 2"], self.validator.validate_receipt(value))
+
+    def test_the_schema_rejects_unknown_catch_ids(self):
+        value = self.receipts["codex"]
+        self.assertEqual([], self.validator.json_schema_failures(value, self.validator.SCHEMA, self.validator.SCHEMA, "receipt"))
+        self.catches(value)["catch-3"] = "fixed"
+        self.assertTrue(self.validator.json_schema_failures(value, self.validator.SCHEMA, self.validator.SCHEMA, "receipt"))
+
+
+class CanaryReceiptOutputTests(CanaryVariantCase):
+    """Receipt and companion schema diagnostics carry only constant identifiers and counts."""
+
+    def test_schema_errors_never_reflect_supplied_keys_or_values(self):
+        marker = "untrusted-schema-marker"
+        for host, original in self.receipts.items():
+            for mutate in (lambda v: v.update({marker: marker}),
+                           lambda v: v["variants"][0].update(name=marker),
+                           lambda v: self.catches(v).update({"catch-1": marker})):
+                value = copy.deepcopy(original)
+                mutate(value)
+                with self.subTest(host=host):
+                    report = self.validator.receipt_report(value)
+                    self.assertEqual(1, len(report["failed_assertions"]))
+                    self.assertRegex(report["failed_assertions"][0], r"^receipt\.schema: [0-9]+$")
+                    self.assertNotIn(marker, json.dumps(report))
+
+    def test_hook_schema_errors_never_reflect_supplied_keys(self):
+        counters = hook_counters()
+        counters["hooks"]["untrusted-hook-marker"] = "untrusted-hook-marker"
+        report = self.validator.receipt_report(self.receipts["codex"], hook_counters=counters)
+        self.assertEqual(["hook_counters.schema: 1"], report["failed_assertions"])
+        self.assertNotIn("untrusted-hook-marker", json.dumps(report))
+
+    def test_extra_variants_cannot_multiply_catch_output(self):
+        value = self.receipts["codex"]
+        value["variants"] *= 10000
+        report = self.validator.receipt_report(value)
+        self.assertEqual(["receipt.variant_entry_limit: 10000"], report["failed_assertions"])
+        self.assertLess(len(json.dumps(report)), 256)
+
+
+class CanaryReceiptInputTests(CanaryVariantCase):
+    """Receipt reads and parsing fail closed within the byte cap."""
+
+    def test_cli_receipt_byte_limit_is_inclusive_and_precedes_json_parsing(self):
+        limit = 1024 * 1024
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "receipt.json"
+            body = json.dumps(self.receipts["codex"]).encode("utf-8")
+            multibyte = copy.deepcopy(self.receipts["codex"])
+            multibyte["host_version"] = "é" * (limit // 2)
+            cases = ((body + b" " * (limit - len(body)), True, []),
+                     (body + b" " * (limit + 1 - len(body)), False, ["input.byte_limit: 1048576"]),
+                     (json.dumps(multibyte, ensure_ascii=False).encode("utf-8"), False, ["input.byte_limit: 1048576"]),
+                     (b"!" * (limit + 1), False, ["input.byte_limit: 1048576"]))
+            for payload, valid, failures in cases:
+                source.write_bytes(payload)
+                with self.subTest(size=len(payload), valid=valid):
+                    completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
+                                               capture_output=True, text=True, check=False)
+                    self.assertEqual("", completed.stderr)
+                    report = json.loads(completed.stdout)
+                    self.assertEqual(int(not valid), completed.returncode)
+                    self.assertEqual(valid, report["valid"])
+                    self.assertEqual(failures, report["failed_assertions"])
+                    self.assertEqual("", completed.stderr)
+                    if not valid:
+                        self.assertLess(len(completed.stdout), 256)
+
+    def test_the_companion_receipt_has_the_same_byte_limit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "receipt.json"
+            counters = Path(directory) / "counters.json"
+            source.write_text(json.dumps(self.receipts["codex"]), encoding="utf-8")
+            counters.write_bytes(b"!" * (1024 * 1024 + 1))
+            completed = subprocess.run([sys.executable, self.validator.__file__, str(source), "--hook-counters", str(counters)],
+                                       capture_output=True, text=True, check=False)
+            self.assertEqual(1, completed.returncode)
+            self.assertEqual(["input.byte_limit: 1048576"], json.loads(completed.stdout)["failed_assertions"])
+            self.assertLess(len(completed.stdout), 256)
+            self.assertEqual("", completed.stderr)
+
+    def test_cli_parse_and_read_errors_are_constant(self):
+        marker = "untrusted-input-marker"
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / (marker + ".json")
+            for payload in (None, b"\xff", (marker + " not JSON").encode(),
+                            b"[" * 2000 + b"]" * 2000,
+                            json.dumps({marker: marker}).replace("}", ', "' + marker + '": 0}').encode()):
+                if payload is not None:
+                    source.write_bytes(payload)
+                with self.subTest(payload=payload is not None):
+                    completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
+                                               capture_output=True, text=True, check=False)
+                    self.assertEqual(1, completed.returncode)
+                    self.assertEqual("", completed.stderr)
+                    report = json.loads(completed.stdout)
+                    self.assertEqual(["input.invalid"], report["failed_assertions"])
+                    self.assertNotIn(marker, completed.stdout + completed.stderr)
+                    self.assertLess(len(completed.stdout), 256)
+                    self.assertEqual("", completed.stderr)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--helper", choices=EXPECTED_HELPERS)
@@ -5532,11 +6024,12 @@ def main() -> int:
     _ReadOnlyHelperRunner.helper_filter = args.helper
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
                                for case in (ReadOnlyHelperTests, PlanLayersRepairRouteTests, PlanLayersPlannerCaseTests,
-                                            PacketTitlePatternTests, G0SetupTests, G0UnratifiedDefaultsTests, G0SetupFailureTests, ScaffoldAnswersTests, CanaryReceiptTests,
+                                            PacketTitlePatternTests, G0SetupTests, G0PinTests, G0UnratifiedDefaultsTests, G0SetupFailureTests, ScaffoldAnswersTests, CanaryReceiptTests,
                                             CanaryFeatureOfferTests, CanaryVariantAssertionsTests, CanaryVariantContractTests,
                                             CanaryGateVerdictTests, CanaryGuardGapContractTests,
                                             CanaryPlanTargetTests, CanaryPlanTargetContractTests, CanaryCodexTokenTests,
-                                            CanaryPlanQualityTests, CanaryHookCounterTests, CanaryBudgetTests, CanaryBudgetFileTests))
+                                            CanaryPlanQualityTests, CanaryPlantedCatchTests, CanaryCatchInputTests, CanaryReceiptInputTests,
+                                            CanaryReceiptOutputTests, CanaryHookCounterTests, CanaryBudgetTests, CanaryBudgetFileTests))
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     total = result.testsRun
     failed = len(result.failures) + len(result.errors)

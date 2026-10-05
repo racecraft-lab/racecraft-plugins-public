@@ -137,7 +137,7 @@ a "skip branch creation" prefix in its prompt. Do NOT use
 `export SPECIFY_FEATURE` — env vars do not persist across
 tool invocations.
 
-<!-- host:codex: Codex states the canonical order in terms of its update_plan and autopilot-state.json plan -->
+<!-- host:codex: Codex repeats the canonical order beside its native loop -->
 ## Canonical Order
 
 ```text
@@ -145,7 +145,7 @@ PHASES = [specify, clarify, plan, checklist, tasks, analyze, implement]
 ```
 
 `--from-phase` changes the first phase to execute, not the required plan
-coverage. `update_plan` and `autopilot-state.json` must still contain Phase 0,
+coverage. `autopilot-state.json` must still contain Phase 0,
 all seven SDD phases, and Post before any subagent is spawned.
 <!-- /host -->
 
@@ -165,9 +165,9 @@ invocation may run:
 | `implement` | Implement, then the post-implementation steps | `Post: Retrospective` |
 | `full` | All seven phases end to end | `Post: Retrospective` |
 
-<!-- host:codex: Codex states the untruncated canonical plan in update_plan terms -->
+<!-- host:codex: Codex states the untruncated canonical plan in autopilot-state.json terms -->
 The stage bounds which phases may **start**. It never truncates the canonical
-plan: `update_plan` and `autopilot-state.json` still contain Phase 0, all seven
+plan: `autopilot-state.json` still contains Phase 0, all seven
 SDD phases, and Post before any subagent is spawned, and entries outside the
 range are marked per
 [task-list-canonical.md](./task-list-canonical.md#out-of-stage-entries).
@@ -295,10 +295,10 @@ Three resume forms, in order of preference:
 Each phase follows the same pattern: read prompt → spawn
 subagent → receive summary → validate gate → advance.
 
-### Progress Task List
+### Progress Plan
 
-Before executing phases, create a **granular** task list
-(visible in the CLI, survives context compaction):
+Before executing phases, persist a **granular** plan in `autopilot-state.json`
+and print its summary:
 
 - One task per single-prompt phase (Specify, Plan, Tasks,
   Analyze, Implement)
@@ -344,7 +344,7 @@ project diagnostic (structure, agents, features, scripts,
 extensions, git). Log the report in the workflow file.
 
 ```text
-TaskUpdate: "Phase 0: Doctor Health Check" → in_progress
+autopilot-state.json: "Phase 0: Doctor Health Check" → in_progress
 Agent(
   subagent_type: "general-purpose",
   description: "SPEC-XXX doctor health check",
@@ -352,7 +352,7 @@ Agent(
   prompt: "Run /speckit.speckit-utils.doctor for this project.
     Return the diagnostic report summary."
 )
-TaskUpdate: → completed
+autopilot-state.json: → completed
 ```
 
 ⚠️ Use Agent() subagent, NOT Skill() directly — Skill() loads
@@ -380,11 +380,10 @@ root from the task's default checkout.
 
 ```text
 for phase in PHASES starting from first_pending:
-    0. Re-run the all-phase coverage audit against update_plan and
-       autopilot-state.json. If Archive Sweep or any canonical phase family
+    0. Re-run the all-phase coverage audit against autopilot-state.json.
+       If Archive Sweep or any canonical phase family
        is missing, STOP and repair the plan before executing this phase.
-    1. update_plan: mark the current phase item as "in_progress"
-       and mirror the same status change into autopilot-state.json
+    1. autopilot-state.json: mark the current phase item as "in_progress"
     2. Check .specify/extensions.yml for before_<phase> hooks
        → run accepted hooks (non-destructive), skip duplicates
     3. Read the workflow file's prompt(s) for this phase
@@ -397,8 +396,7 @@ for phase in PHASES starting from first_pending:
           delivered; a status update or timeout alone is not the result. Record
           the summary, then close_agent only when that action is exposed. On
           hosted Responses, the host retains the inspectable completed thread.
-       d. update_plan: mark this prompt's item as "completed"
-       e. Write the same transition to autopilot-state.json
+       d. autopilot-state.json: mark this prompt's item as "completed"
     5. Run consensus in main session if needed:
        Parse executor's "Unresolved for consensus" section.
        For each item → spawn the category-routed analysts (codebase-analyst,
@@ -407,7 +405,7 @@ for phase in PHASES starting from first_pending:
        calling close_agent only when exposed and never exceeding the derived
        subagent_slots limit (dispatch in waves when items × analysts exceeds
        the cap) → apply consensus rules → edit
-       artifacts → mark the corresponding Consensus item complete in both stores.
+       artifacts → mark the corresponding Consensus item complete in autopilot-state.json.
        An item that ends in [ROUND_3_TIEBREAK] follows
        consensus-protocol.md#round-3-tiebreak: a fresh analyst plus a
        max-effort `consensus-tiebreaker` resolve it in an interactive and an
@@ -471,7 +469,7 @@ for phase in PHASES starting from first_pending:
        the runner's ignore rule covers it, so stage the record by path with
        git add --force -- <path>, and never untrack it.
    11. Advance to next phase (next iteration of loop) and write the new
-       in_progress item to both update_plan and autopilot-state.json.
+       in_progress item to autopilot-state.json.
        Never mark the run complete while a later phase family still has
        pending items.
 ```
@@ -557,7 +555,7 @@ questions and applies accepted edits in the main session.
 
 ```text
 For each clarify session in the workflow file:
-  1. TaskUpdate: session task → in_progress
+  1. autopilot-state.json: session task → in_progress
   2. Agent(subagent_type: "speckit-pro:clarify-executor",
           run_in_background: false,
           prompt: """
@@ -573,7 +571,7 @@ For each clarify session in the workflow file:
      remaining count in the session result
   5. Parse executor's "Unresolved for consensus" section
   6. If unresolved items exist:
-     a. TaskUpdate: "<session> Consensus" → in_progress
+     a. autopilot-state.json: "<session> Consensus" → in_progress
      b. BATCHED dispatch (see consensus-protocol.md §Batched Dispatch):
         Stage 1: spawn ALL routed analysts for ALL items in ONE
                  assistant message via run_in_background: true.
@@ -583,10 +581,10 @@ For each clarify session in the workflow file:
                  to spec.md (preserves write contention safety).
         Round 2 escape-hatch: also batched across all queued items.
         [ROUND_3_TIEBREAK]: consensus-protocol.md#round-3-tiebreak (Round 3 agent tiebreak)
-     c. TaskUpdate: "<session> Consensus" → completed
+     c. autopilot-state.json: "<session> Consensus" → completed
   7. After accepted consensus edits, re-scan spec.md and update the recorded
      remaining-marker count
-  8. TaskUpdate: session task → completed
+  8. autopilot-state.json: session task → completed
   9. Proceed to next session
 ```
 
@@ -778,7 +776,7 @@ with two-layer resolution **after each domain**:
 
 ```text
 For each checklist domain in the workflow file:
-  1. TaskUpdate: domain task → in_progress
+  1. autopilot-state.json: domain task → in_progress
   2. Agent(subagent_type: "speckit-pro:checklist-executor",
           run_in_background: false,
           prompt: "Run /speckit-checklist with: <domain prompt>\nProtocol: <plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md\nReference dir: <plugin_root>/skills/speckit-autopilot/references/")
@@ -790,7 +788,7 @@ For each checklist domain in the workflow file:
      gaps, applies fixes, and re-runs to verify (Layer 1)
   3. Parse executor's "Unresolved for consensus" section
   4. If unresolved gaps exist:
-     a. TaskUpdate: "<domain> Consensus" → in_progress
+     a. autopilot-state.json: "<domain> Consensus" → in_progress
      b. BATCHED dispatch (see consensus-protocol.md §Batched Dispatch):
         Stage 1: spawn ALL routed analysts for ALL gaps in ONE
                  assistant message via run_in_background: true.
@@ -800,8 +798,8 @@ For each checklist domain in the workflow file:
         Round 2 escape-hatch: also batched across all queued gaps.
         [ROUND_3_TIEBREAK]: consensus-protocol.md#round-3-tiebreak (Round 3 agent tiebreak)
      c. Re-run domain checklist to verify gaps closed
-     d. TaskUpdate: "<domain> Consensus" → completed
-  5. TaskUpdate: domain task → completed
+     d. autopilot-state.json: "<domain> Consensus" → completed
+  5. autopilot-state.json: domain task → completed
   6. Proceed to next domain
 ```
 
@@ -830,7 +828,7 @@ domain runs.
 ## Phase 5: Tasks
 <!-- /host -->
 
-<!-- host:codex: Codex tracks the Phase 7 placeholder as an update_plan item -->
+<!-- host:codex: Codex tracks the Phase 7 placeholder as an autopilot-state.json item -->
 Before `tasks.md` exists, the plan contains:
 
 ```text
@@ -862,9 +860,9 @@ actual evidence attached to the emission step. Then rerun G5.
 **Post-G5 reviewability capture:**
 After G5 passes, apply the tasks-phase reviewability boundary.
 <!-- /host -->
-<!-- host:codex: Codex audits its update_plan placeholder before the boundary -->
+<!-- host:codex: Codex audits its autopilot-state.json placeholder before the boundary -->
 After G5 passes, the placeholder is invalid. Before Analyze or Implement can
-run, audit `update_plan` and `autopilot-state.json`, then apply the
+run, audit `autopilot-state.json`, then apply the
 tasks-phase reviewability boundary.
 <!-- /host -->
 Runner helper `reviewability-gate`
@@ -884,13 +882,13 @@ verification, invalid packet, unsafe output, unusable gate evidence, invalid
 JSON, unreadable artifacts, missing reviewability status/mode, stale
 fingerprints, or any non-size safety finding. These stops fire before Analyze or
 Implement.
-<!-- host:codex: Codex checks its update_plan items against tasks.md -->
+<!-- host:codex: Codex checks its autopilot-state.json items against tasks.md -->
 
 - no `Phase 7: Implement - Pending task decomposition` item remains
 - one or more concrete `Phase 7:` items exist
 - each concrete item names one or more task IDs parsed from `tasks.md`
 
-If any check fails, repair both state stores and print the corrected checklist
+If any check fails, repair autopilot-state.json and print the corrected checklist
 summary before continuing.
 <!-- /host -->
 
@@ -959,14 +957,14 @@ If the project uses GitHub Issues for tracking and the GitHub
 MCP server is available, export tasks to issues:
 
 ```text
-TaskUpdate: "Phase 5: Tasks to Issues" → in_progress
+autopilot-state.json: "Phase 5: Tasks to Issues" → in_progress
 Agent(
   subagent_type: "general-purpose",
   description: "SPEC-XXX tasks to issues",
   run_in_background: false,
   prompt: "Run /speckit-taskstoissues for SPEC-XXX."
 )
-TaskUpdate: → completed
+autopilot-state.json: → completed
 ```
 
 Skip if GitHub MCP is not configured or the project uses a
@@ -1072,7 +1070,7 @@ Items it can't resolve are flagged in its
 "Unresolved for consensus" summary section.
 
 ```text
-1. TaskUpdate: "Analyze" → in_progress
+1. autopilot-state.json: "Analyze" → in_progress
 2. Agent(subagent_type: "speckit-pro:analyze-executor",
         run_in_background: false,
         prompt: "Run /speckit-analyze with: <prompt>\nProtocol: <plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md\nReference dir: <plugin_root>/skills/speckit-autopilot/references/")
@@ -1080,7 +1078,7 @@ Items it can't resolve are flagged in its
    The executor handles research + remediation (Layer 1)
 3. Parse executor's "Unresolved for consensus" section
 4. If unresolved findings exist:
-   a. TaskUpdate: "Analyze - Consensus" → in_progress
+   a. autopilot-state.json: "Analyze - Consensus" → in_progress
    b. BATCHED dispatch (see consensus-protocol.md §Batched Dispatch):
       Stage 1: spawn ALL routed analysts for ALL findings in ONE
                assistant message via run_in_background: true.
@@ -1090,8 +1088,8 @@ Items it can't resolve are flagged in its
       Round 2 escape-hatch: also batched across all queued findings.
       [ROUND_3_TIEBREAK]: consensus-protocol.md#round-3-tiebreak (Round 3 agent tiebreak)
    c. Re-run analyze to verify findings resolved
-   d. TaskUpdate: "Analyze - Consensus" → completed
-5. TaskUpdate: "Analyze" → completed
+   d. autopilot-state.json: "Analyze - Consensus" → completed
+5. autopilot-state.json: "Analyze" → completed
 ```
 
 If 0 unresolved items from executor, skip consensus and
@@ -1500,21 +1498,11 @@ and keeps executing independent work.
    strict FAIL is `expected_failure`. `input_error` means a malformed
    request, and a missing or unreadable workflow is a file prerequisite
    failure. Route the domain verdict by its raw exit code and action:
-<!-- host:claude: Claude tracks progress items with TaskCreate and TaskUpdate -->
-   - exit 0 (PASS): TaskUpdate G6.5 → completed; advance to Phase 7.
-<!-- /host -->
-<!-- host:codex: Codex tracks progress items with update_plan -->
-   - exit 0 (PASS): update_plan G6.5 → completed; advance to Phase 7.
-<!-- /host -->
+   - exit 0 (PASS): autopilot-state.json G6.5 → completed; advance to Phase 7.
    - exit 1 (NO_DATA): log a warning, surface to operator that the
      synthesizer skipped its confidence emit (treat as a plugin
      regression report).
-<!-- host:claude: Claude tracks progress items with TaskCreate and TaskUpdate -->
-     TaskUpdate G6.5 → completed with a
-<!-- /host -->
-<!-- host:codex: Codex tracks progress items with update_plan -->
-     update_plan G6.5 → completed with a
-<!-- /host -->
+     autopilot-state.json G6.5 → completed with a
      `no_data: true` note. Advance to Phase 7.
    - exit 2 (FAIL):
        a. Read JSON `deductions_applied` first. When it is true,
@@ -1579,18 +1567,10 @@ operators who want a fail-closed posture opt into strict via
 <!-- /host -->
 invocation. Per-invocation flag wins over local config.
 
-<!-- host:claude: Claude tracks progress items with TaskCreate and TaskUpdate -->
-**TaskCreate**: at autopilot start, after the G6 task, create a
-G6.5 task: `Confidence gate (pre-Implement)`. Mark it
+At autopilot start, after the G6 item, record a G6.5 item in
+`autopilot-state.json`: `Confidence gate (pre-Implement)`. Mark it
 `in_progress` on entry to this phase and `completed` on exit
 regardless of advisory pass-with-warning vs strict pass.
-<!-- /host -->
-<!-- host:codex: Codex tracks progress items with update_plan -->
-**update_plan**: at autopilot start, after the G6 task, create a
-G6.5 task `Confidence gate (pre-Implement)`. Transition through
-`in_progress` → `completed` regardless of advisory vs strict outcome
-(strict only differs in whether Phase 7 runs).
-<!-- /host -->
 
 <!-- host:claude: Claude's terminal step is G6.5 alone -->
 #### Plan stage: G6.5 is the terminal step
@@ -2360,7 +2340,7 @@ and project agents, up to four adjacent assigned tasks sequentially, with shared
 context/reservation once. Tell every implementation and project agent that
 checklist items are reviewer-owned and deferred to PR review: do not stop on
 unticked ones, and never edit a checklist marker. Never exceed derived
-`subagent_slots`. Consume every real per-task result, update both state stores,
+`subagent_slots`. Consume every real per-task result, update autopilot-state.json,
 and call `task-results` `action=record` with every frozen task's full result
 block plus independently captured parent `native_observations` before marking
 completion. Follow the shared journal inputs; invalid evidence blocks recording.
@@ -4728,7 +4708,7 @@ commit. This runs as an **idempotent** step **immediately before step 10's
 commit** in the Main Execution Loop above (the scoped `git add` for
 phases 1–6, `git add -A && git commit` for phase 7), so the rebuilt maps are
 swept into that same commit. A boundary that changes nothing contributes
-nothing — no extra `update_plan` item and no `autopilot-state.json` transition
+nothing — no extra `autopilot-state.json` item or transition
 are recorded for this step.
 <!-- /host -->
 
@@ -4948,7 +4928,7 @@ The workflow file serves as both checklist and execution
 log — the complete auditable record of the autonomous
 execution.
 <!-- /host -->
-<!-- host:codex: Codex's PR packet boundary and its update_plan coverage audit -->
+<!-- host:codex: Codex's PR packet boundary and its autopilot-state.json coverage audit -->
 ## PR Packet and Body Boundary
 
 Before creating or updating a PR after G7, the parent session applies this

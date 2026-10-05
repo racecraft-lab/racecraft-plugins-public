@@ -74,8 +74,8 @@ the above).
 
 **Both code paths are parallel.** The autopilot auto-routes based on
 `AGENT_TEAMS_AVAILABLE` from Step 0.6's capability probe — there is
-no user-facing opt-in. Agent Teams adds inter-teammate messaging and
-shared task-list coordination; the subagents fallback achieves the
+no user-facing opt-in. Agent Teams adds inter-teammate messaging;
+the subagents fallback achieves the
 same wall-clock parallelism via background dispatch.
 
 ### Dependency graph
@@ -101,13 +101,10 @@ Wall-clock = `max(track A, track B, track C)`.
 
 **Resolve the native launcher before dispatch:** use `Agent` when the current
 Claude tool inventory exposes `Agent`; when the runtime instead exposes the
-renamed `Task` tool, use `Task` with the same subagent fields. `TaskCreate`,
-`TaskUpdate`, `TaskGet`, and `TaskList` only manage the shared task list. They
-never count as worker dispatch and never authorize parent execution of a
-track. When `Task` is listed but deferred, first call `ToolSearch` with the
+renamed `Task` tool, use `Task` with the same subagent fields.
+When `Task` is listed but deferred, first call `ToolSearch` with the
 exact query `select:Task`, then issue the three `Task` launches together in
-one assistant message. Loading `TaskCreate` or `TaskUpdate` alone does not load
-the subagent launcher. If neither `Agent` nor `Task` is available, checkpoint the unavailable
+one assistant message. If neither `Agent` nor `Task` is available, checkpoint the unavailable
 capability instead of running the three tracks in the parent.
 
 <hard_constraints>
@@ -144,7 +141,7 @@ session. No legacy team-management tool is invoked.
 example is a 1:1 match — independent reviewers each apply a distinct
 lens, lead synthesizes. The team adds inter-teammate messaging (a
 verifier can ask the reviewer "did you see the regression in
-`src/foo.ts:42`?") and a shared task list with file-locked claiming.
+`src/foo.ts:42`?"). The parent records track progress in `autopilot-state.json`.
 
 **Team spawn (named Agent semantics):**
 
@@ -329,7 +326,7 @@ Users do not need to know about a setting; the autopilot adapts.
 - Never mark the workflow complete until every planned Post item is completed or
   explicitly logged as skipped.
 - **Pre-final completion audit:** Before any final user-facing response,
-  re-read `autopilot-state.json`, reconcile it with the visible progress plan, and verify
+  re-read `autopilot-state.json`, reconcile it with the workflow file, and verify
   the canonical Post list. A completion response is forbidden while any `Post:` item is pending,
   in_progress, or missing. `execution_control.disposition=checkpoint_required`
   permits a checkpoint explicitly saying the run is not complete, retaining
