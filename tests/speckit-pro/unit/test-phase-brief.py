@@ -276,6 +276,39 @@ class PhaseBriefSliceTests(unittest.TestCase):
                 self.assertIn("verbatim", loop.split("brief.slices", 1)[1][:400])
 
 
+class PhaseBriefExecutorContractTests(unittest.TestCase):
+    def test_no_executor_is_told_to_read_the_references_whole(self):
+        sources = [(REPO / "speckit-pro/agents" / (name + ".md")) for name in SLICE_AGENTS]
+        sources += [(REPO / "speckit-pro/codex-agents" / (name + ".toml")) for name in SLICE_AGENTS]
+        for host, folder in (("claude", "agents"), ("codex", "codex-agents")):
+            suffix = ".md" if host == "claude" else ".toml"
+            sources += [REPO / "dist" / host / "speckit-pro" / folder / (name + suffix) for name in SLICE_AGENTS]
+        for path in sources:
+            with self.subTest(agent=str(path.relative_to(REPO))):
+                text = " ".join(path.read_text().split())
+                for forbidden in ("Reference dir", "Protocol:` line, which", "absolute path on your prompt"):
+                    self.assertNotIn(forbidden, text)
+                if path.suffix == ".md" or "claude" in path.parts:
+                    self.assertIn("reference slices", text)
+
+    def test_repair_reservation_keeps_its_source_pointer(self):
+        roots = ((REPO / "speckit-pro/agents", ".md"), (REPO / "speckit-pro/codex-agents", ".toml"),
+                 (REPO / "dist/claude/speckit-pro/agents", ".md"), (REPO / "dist/codex/speckit-pro/codex-agents", ".toml"))
+        for root, suffix in roots:
+            for name in ("checklist-executor", "analyze-executor"):
+                with self.subTest(agent=name, root=str(root.relative_to(REPO))):
+                    text = " ".join((root / (name + suffix)).read_text().split())
+                    reservation = text.split("Your repairs spend", 1)[1].split("5.", 1)[0]
+                    self.assertIn("a nested loop has no allowance of its own", reservation)
+                    self.assertIn("skills/speckit-autopilot/references/execution-efficiency.md", reservation)
+                    self.assertNotIn("Read", reservation)
+
+    def test_dispatch_omits_whole_reference_paths(self):
+        for runtime in ("claude", "codex"):
+            loop = (host_skill_root(runtime) / "speckit-autopilot/SKILL.md").read_text().split("## Step 2: Main Execution Loop", 1)[1]
+            self.assertNotIn("`Reference dir:` lines (`references/consensus-protocol.md`)", loop, runtime)
+
+
 if __name__ == "__main__":
-    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, PhaseBriefModelTests, CodexEffectiveEffortTests, RetryLadderTopRungTests, PhaseBriefSliceTests))
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, PhaseBriefModelTests, CodexEffectiveEffortTests, RetryLadderTopRungTests, PhaseBriefSliceTests, PhaseBriefExecutorContractTests))
     sys.exit(run_counted(suite, label="test-phase-brief"))

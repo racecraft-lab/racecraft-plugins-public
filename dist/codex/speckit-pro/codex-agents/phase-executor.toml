@@ -33,6 +33,8 @@ or permission to end the run. A null model preserves this agent's configuration.
    for "pattern consistency" or "reference." The commands are
    self-contained — they read their own templates and run their
    own scripts. For helper calls, use the exact request-envelope fields and `inputs` keys it names.
+   Report helper validation errors by the named field, without copying rejected
+   observation text into artifacts or bypassing the helper with a direct write.
 
 Use the parent's `PROJECT_COMMANDS` and `PRESET_CONVENTIONS` from the
 `g0-setup` probe reports as supplied in the workflow prompt.
