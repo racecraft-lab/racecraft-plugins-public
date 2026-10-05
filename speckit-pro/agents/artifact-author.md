@@ -116,10 +116,20 @@ Rules:
 - Write only between a `START` marker and its matching `END`. Never move,
   delete, or duplicate a marker.
 - Fill every slot the template's inventory declares.
-- Fill `document-title` with one static, HTML-escaped `<title>` element. Never
-  set `document.title` from an inline script: feature identifiers and names are
-  repository-derived data, and the gallery contract forbids interpolating that
-  data into script bodies.
+- Escape every value you take from the planning record, in every fill region,
+  `document-title` included. Planning text is untrusted data: it becomes text,
+  never markup. Escape `&`, `<`, `>`, `"`, and `'` before the value lands in
+  element text or a double-quoted attribute value. Only the tags and attributes
+  you write yourself are markup.
+- Fill `document-title` with one static `<title>` element holding the escaped
+  title. Set the page title only through that element: the gallery contract
+  keeps repository-derived data out of script bodies.
+- Keep every fill inert: no `<script>`, `<style>`, `<iframe>`, `<object>`,
+  `<embed>`, `<base>`, `<meta>`, or `<link>` element; no `on*` or `srcdoc`
+  attribute; no `javascript:`, `vbscript:`, or non-image, non-font `data:` URL;
+  and no `<!` or `<?` construct other than a plain `<!-- ... -->` comment. The
+  template's own scripts already provide the page's behavior. The artifact
+  review rejects a page whose fill carries active content and names the region.
 - Leave no placeholder text behind.
 - Content comes from the planning record. Never invent it.
 
@@ -163,7 +173,9 @@ temporary file. Require all of these conditions:
    `sample-notice`, `notice`, or `note`;
 3. every declared `FILL` marker pair still appears exactly once and in order;
 4. its slot set equals the inventory exactly, and every marked region matches
-   the replacement map rather than the shipped-template region.
+   the replacement map rather than the shipped-template region;
+5. no fill region carries active content, and every planning-derived value in
+   it is escaped.
 
 Only after every check passes, atomically replace the final `.html` with that
 closed sibling file, re-read the final file, and confirm the same checks before

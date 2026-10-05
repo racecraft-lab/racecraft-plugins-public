@@ -7,6 +7,7 @@ import json
 import re
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
+from html.parser import HTMLParser
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -94,12 +95,13 @@ def _relative(value: Any) -> str:
     return value
 
 
-def _fill_skeleton(value: bytes) -> tuple[tuple[str, ...], tuple[bytes, ...]]:
+def _fill_skeleton(value: bytes) -> tuple[tuple[str, ...], tuple[bytes, ...], tuple[bytes, ...]]:
     matches = list(FILL_MARKER.finditer(value))
     if len(matches) % 2:
         raise ValueError("artifact template has an unmatched fill marker")
     slots: list[str] = []
     static: list[bytes] = []
+    fills: list[bytes] = []
     cursor = 0
     for index in range(0, len(matches), 2):
         start, end = matches[index], matches[index + 1]
@@ -107,9 +109,67 @@ def _fill_skeleton(value: bytes) -> tuple[tuple[str, ...], tuple[bytes, ...]]:
             raise ValueError("artifact template has an invalid fill marker")
         slots.append(start.group(1).decode("ascii"))
         static.append(value[cursor:start.end()])
+        fills.append(value[start.end():end.start()])
         cursor = end.start()
     static.append(value[cursor:])
-    return tuple(slots), tuple(static)
+    return tuple(slots), tuple(static), tuple(fills)
+
+
+# Fill markup is parsed, never pattern-matched: escaped planning text holds no raw "<",
+# so every tag in a fill is author structure the parser can see. Constructs where
+# Python's parser and a browser disagree are rejected outright instead of parsed.
+_UNPARSEABLE_FILL = re.compile(r"<!(?!--)|<\?|<!---?>|--!>")
+_ACTIVE_ELEMENTS = frozenset({
+    "script", "style", "iframe", "frame", "frameset", "object", "embed", "applet", "base", "meta", "link", "portal",
+})
+_URL_ATTRIBUTES = frozenset({"href", "xlink:href", "src", "srcset", "action", "formaction", "poster", "data", "background", "cite"})
+_URL_IGNORED = "".join(chr(code) for code in range(0x21))
+
+
+def _script_url(value: str) -> bool:
+    """Browsers drop tabs and newlines and trim C0 controls before reading a URL scheme."""
+    url = re.sub(r"[\t\n\r]", "", value).strip(_URL_IGNORED).lower()
+    if url.startswith("data:"):
+        return not url.startswith(("data:image/", "data:font/"))
+    return url.startswith(("javascript:", "vbscript:"))
+
+
+class _FillMarkup(HTMLParser):
+    """Collects active content in one fill region."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=False)
+        self.findings: list[str] = []
+
+    def set_cdata_mode(self, *args: object, **kwargs: object) -> None:
+        """Never hide text from inspection: raw-text rules differ inside SVG and across Python versions."""
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in _ACTIVE_ELEMENTS:
+            self.findings.append(f"<{tag}> element")
+        for name, value in attrs:
+            if name.startswith("on") or name == "srcdoc":
+                self.findings.append(f"{name} attribute")
+            elif name in _URL_ATTRIBUTES and value is not None and _script_url(value):
+                self.findings.append(f"script URL in {name}")
+            elif name == "attributename" and value is not None and (
+                value.lower() in ("href", "xlink:href") or value.lower().startswith("on")
+            ):
+                self.findings.append("animated link or event attribute")
+
+    def handle_data(self, data: str) -> None:
+        if "<" in data:
+            self.findings.append("unescaped <")
+
+
+def _active_content(fill: bytes) -> list[str]:
+    text = fill.decode("utf-8", errors="replace")
+    findings = ["markup declaration or nonstandard comment"] if _UNPARSEABLE_FILL.search(text) else []
+    parser = _FillMarkup()
+    parser.feed(text)
+    if "<" in parser.rawdata:
+        findings.append("unterminated markup")
+    return findings + parser.findings
 
 
 def _generation_provenance(page: dict[str, Any], root: Path, read_file: FileReader) -> None:
@@ -117,10 +177,14 @@ def _generation_provenance(page: dict[str, Any], root: Path, read_file: FileRead
     artifact = read_file(root / page["path"], root)
     if template is None or artifact is None:
         raise ValueError(f"artifact preview provenance is unreadable: {page['id']}")
-    template_slots, template_static = _fill_skeleton(template)
-    artifact_slots, artifact_static = _fill_skeleton(artifact)
+    template_slots, template_static, _template_fills = _fill_skeleton(template)
+    artifact_slots, artifact_static, artifact_fills = _fill_skeleton(artifact)
     if template_slots != artifact_slots or template_static != artifact_static:
         raise ValueError(f"artifact preview is not a trusted fill of its template: {page['id']}")
+    for slot, fill in zip(artifact_slots, artifact_fills, strict=True):
+        findings = _active_content(fill)
+        if findings:
+            raise ValueError(f"artifact fill carries active content: {page['id']} region {slot}: {', '.join(findings)}")
 
 
 def _current_hash(root: Path, relative: str, read_file: FileReader) -> str | None:

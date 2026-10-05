@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import html
 import json
 import re
 import runpy
@@ -12,6 +13,7 @@ import sys
 import tempfile
 import unittest
 import unittest.mock
+from html.parser import HTMLParser
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -22,6 +24,23 @@ from speckit_pro_runner import artifact_review
 from speckit_pro_runner.helpers.read_only import resolve_autopilot_stage, trusted_bytes
 from guide_text import guide_text, host_source
 from test_result import run_counted
+
+
+class _Rendered(HTMLParser):
+    """Independent oracle: the elements and text a fill region renders to."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.tags: list[str] = []
+        self.text = ""
+        self.values = ""
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.tags.append(tag)
+        self.values += "".join(value or "" for _name, value in attrs)
+
+    def handle_data(self, data: str) -> None:
+        self.text += data
 
 
 class ArtifactReviewTests(unittest.TestCase):
@@ -120,6 +139,88 @@ class ArtifactReviewTests(unittest.TestCase):
         self.record["pages"][0]["sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
         with self.assertRaisesRegex(ValueError, "trusted fill"):
             self.review()
+
+    def fill(self, identifier: str, region: str, content: str) -> None:
+        """Replace one fill region of a recorded page and re-fingerprint the page."""
+        page = next(page for page in self.record["pages"] if page["id"] == identifier)
+        path = self.root / page["path"]
+        pattern = re.compile(rf"(<!--\s*FILL:{region}:START\s*-->)(.*?)(<!--\s*FILL:{region}:END\s*-->)", re.DOTALL)
+        text, count = pattern.subn(lambda match: match.group(1) + content + match.group(3), path.read_text(encoding="utf-8"), count=1)
+        self.assertEqual(count, 1, f"{identifier} has no {region} region")
+        path.write_text(text, encoding="utf-8")
+        page["sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+
+    def test_escaped_planning_markup_renders_inert_in_every_fill_context(self) -> None:
+        planning = '" onmouseover="alert(1)" x="<script>alert(2)</script><img src=x onerror=alert(3)>'
+        contexts = (
+            ("document-title", "<title>{}</title>", ["title"]),
+            ("tldr", "<p>{}</p>", ["p"]),
+            ("tldr", '<span title="{}">TL;DR</span>', ["span"]),
+            ("tldr", "<svg><title>{}</title></svg>", ["svg", "title"]),
+        )
+        for region, wrapper, structure in contexts:
+            with self.subTest(region=region, wrapper=wrapper):
+                escaped = wrapper.format(html.escape(planning, quote=True))
+                self.fill("spec-explainer", region, escaped)
+                self.assertEqual(self.review()["status"], "pending")
+                rendered = _Rendered()
+                rendered.feed(escaped)
+                rendered.close()
+                self.assertEqual(rendered.tags, structure)
+                self.assertIn(planning, rendered.text + rendered.values)
+                self.fill("spec-explainer", region, wrapper.format(planning))
+                with self.assertRaisesRegex(ValueError, f"active content: spec-explainer region {region}"):
+                    self.review()
+                self.fill("spec-explainer", region, escaped)
+
+    def test_active_content_in_fill_bytes_is_rejected_naming_the_region(self) -> None:
+        for content in (
+            "<script>alert(1)</script>",
+            "<SCRIPT >alert(1)</SCRIPT>",
+            "<p>ok</p><img src=x onerror=alert(1)>",
+            "<svg/onload=alert(1)>",
+            '<a href="java&#x09;script:alert(1)">x</a>',
+            '<a href="&#106avascript:alert(1)">x</a>',
+            '<a href=" vbscript:msgbox(1)">x</a>',
+            '<a href="data:text/html,x">x</a>',
+            '<p srcdoc="x">x</p>',
+            "<iframe></iframe>",
+            '<meta http-equiv="refresh" content="0">',
+            '<svg><a><animate attributeName="href" values="javascript:alert(1)"/></a></svg>',
+            "<svg><style><img src=x onerror=alert(1)></style></svg>",
+            "<!--x--!><img src=x onerror=alert(1)>-->",
+            "<!--><img src=x onerror=alert(1)>-->",
+            "<![CDATA[ ]><img src=x onerror=alert(1)> ]]>",
+            "<?x><img src=x onerror=alert(1)>?>",
+            "<p>unescaped < text</p>",
+            '<p>ok</p><img src=x title="',
+        ):
+            with self.subTest(content=content):
+                self.fill("implementation-plan", "plan-stats", content)
+                with self.assertRaisesRegex(ValueError, "active content: implementation-plan region plan-stats: "):
+                    self.review()
+
+    def test_benign_fill_markup_and_every_shipped_draft_sample_pass_review(self) -> None:
+        for content in (
+            '<p>Use <code>onChange={(e) <span class="kw">=&gt;</span> x}</code></p>',
+            '<p title="Data: a JavaScript: aside"><a href="#phase-1">Phase 1</a></p>',
+            "<!-- a reviewer note --><img src=\"data:image/png;base64,AA\" alt=\"\">",
+        ):
+            with self.subTest(content=content):
+                self.fill("implementation-plan", "plan-stats", content)
+                self.assertEqual(self.review()["status"], "pending")
+        for identifier in ("code-approaches", "module-map"):
+            path = f"{self.feature}/artifacts/{identifier}.html"
+            template = self.gallery / f"templates/{identifier}.html"
+            (self.root / path).write_bytes(template.read_bytes())
+            self.record["template_hashes"][identifier] = hashlib.sha256(template.read_bytes()).hexdigest()
+            self.record["pages"].append({
+                "id": identifier, "generation": "generated", "path": path,
+                "sha256": hashlib.sha256(template.read_bytes()).hexdigest(),
+                "expected_title": identifier, "expected_content": f"{identifier} body",
+                "preview": {"status": "pending", "blocker": "Not observed yet", "observation": None},
+            })
+        self.assertEqual(self.review()["generated"], 4)
 
     def test_all_rendered_pages_are_verified(self) -> None:
         self.verify(0)
