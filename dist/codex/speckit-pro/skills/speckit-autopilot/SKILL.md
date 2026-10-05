@@ -481,10 +481,10 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
    repairs a failing project check. Run the repair loop within its allowance,
    then defer per the Failure Escalation Protocol.
 4. **Constitution validation** — for each principle in
-   `.specify/memory/constitution.md`, run the appropriate
-   PROJECT_COMMANDS check (typecheck/test/build/lint); update the
-   workflow's Prerequisites table. On a failure, route each failing check to the implement-executor,
-   which repairs it (a red baseline included); run the repair loop within its allowance, then defer per the Failure Escalation Protocol
+   `.specify/memory/constitution.md`, verify it against the codebase by
+   reading (the project baseline belongs to implement entry, step 6e). Update the workflow's
+   Prerequisites table. On a failing quality-gate slot, route the failing gate to the implement-executor,
+   which repairs it; run the repair loop within its allowance, then defer per the Failure Escalation Protocol
    with `stop_reason:all_tiers_failed` only when repair fails.
 5. **Codex agent availability and implementation agent detection** — run the
    promoted `install-codex-agents` helper in `dry_run` mode against the selected
@@ -650,11 +650,14 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
      no heartbeat, no lease — so `in_progress` cannot distinguish a live run from
      one abandoned to a crash or a closed terminal. Blocking on it would strand
      every run that followed an interrupted one. Report it and proceed.
-6e. **Preserve the prerequisite test-count baseline; do not recompute it** — if
-   the workflow file already records a G0 test-count baseline, **keep it.** The
+6e. **Defer the project baseline to implement entry, and record it once** — Phase 7 Setup
+   (`references/phase-execution.md`, Project Baseline) runs typecheck, test,
+   build, and lint through `g0-setup`'s `data.baseline.implement_entry`. On a red check, route each failing check to the
+   implement-executor within the repair allowance. If the workflow file already
+   records the test-count baseline, **keep it.** The
    count is a diagnostic, not a test-growth acceptance requirement (see
    [Gate Validation §G7](./references/gate-validation.md#g7--after-implement)).
-   Recapturing it after planning loses the original health evidence. Require
+   Recapturing it loses the original health evidence. Require
    meaningful behavioral coverage instead of adding tests to increase a count.
    - If a newly observed count differs from the recorded baseline, record it as a
      **non-blocking drift diagnostic** naming both numbers. Do **not** replace the
@@ -664,7 +667,7 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
      session, or in a different working copy, reconstructs its context from the
      **workflow file**, which is durable and survives archiving of `specs/<id>/`:
      the `## Workflow Overview` status table, the `Stage` row, the recorded
-     `Confidence Gate` verdict, and the G0 baseline. `autopilot-state.json` is a
+     `Confidence Gate` verdict, and the project baseline. `autopilot-state.json` is a
      mirror of the active run and may be absent, stale, or naming another spec —
      each is recoverable, and none is an error. A **missing** state file is
      rebuilt from the workflow file; a state file naming **another** workflow is
