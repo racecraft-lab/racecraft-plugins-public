@@ -35,6 +35,8 @@ def codex_config_overrides(command: Sequence[str]) -> list[dict[str, object]]:
                 raise ValueError("missing Codex configuration override") from exc
         elif argument.startswith(("--config=", "-c=")):
             value = argument.split("=", 1)[1]
+        elif argument.startswith("-c"):
+            value = argument[2:]
         else:
             continue
         overrides.append(tomllib.loads(value))

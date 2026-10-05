@@ -13,6 +13,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
@@ -27,6 +28,7 @@ from speckit_pro_runner.codex_agent_generator import generated_codex_files
 from speckit_pro_runner.gates.payloads import build_installed_plugin_payloads
 from speckit_pro_runner.host_parity import emit_host
 import agent_roster
+import codex_isolation
 from host_skill_views import host_skill_root
 from host_progress_contract import forbidden_task_tools
 from script_loader import load_script
@@ -103,6 +105,24 @@ def prepared_codex_contract_result() -> unittest.TestResult:
     return result
 
 
+def assert_real_codex_producer_probes(test: unittest.TestCase) -> None:
+    original = codex_isolation.skill_isolation_args
+    value = 'tools.' + 'update' + '_plan.enabled=true'
+    for arguments in (
+        ['-c', value], ['-c' + value],
+        ['--config', value], ['--config=' + value],
+    ):
+        with test.subTest(arguments=arguments), mock.patch.object(
+            codex_isolation, 'skill_isolation_args',
+            side_effect=lambda *args, **kwargs: original(*args, **kwargs) + arguments,
+        ) as producer:
+            result = prepared_codex_contract_result()
+            test.assertEqual(producer.call_count, 1)
+            test.assertFalse(result.wasSuccessful())
+            test.assertEqual(result.errors, [])
+            test.assertTrue(any('update_plan' in trace for _, trace in result.failures))
+
+
 class ValidateHostProgressGuidance(unittest.TestCase):
 
     # ADR 0001 applies to guidance, grading inputs, and host launch configuration.
@@ -146,6 +166,7 @@ class ValidateHostProgressGuidance(unittest.TestCase):
         self.assertEqual(result.testsRun, 1)
         self.assertEqual(result.skipped, [])
         self.assertTrue(result.wasSuccessful(), result.failures + result.errors)
+        assert_real_codex_producer_probes(self)
 
 
 class ValidateSkills(unittest.TestCase):
