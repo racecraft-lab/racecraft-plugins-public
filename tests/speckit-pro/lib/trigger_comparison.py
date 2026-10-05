@@ -5,6 +5,7 @@ Only prospectively retained execution and replay context can qualify a record.
 """
 from __future__ import annotations
 
+from collections.abc import Iterator
 import contextlib
 import errno
 import hashlib
@@ -106,8 +107,13 @@ def _require_single_draft(info: os.stat_result, identity: tuple[int, int] | None
     _require(identity is None or (info.st_dev, info.st_ino) == identity, "draft was replaced during refresh")
 
 
-def _read_draft(directory: int, name: str) -> tuple[bytes, os.stat_result]:
-    """Read a regular, single-link, non-symlink draft file of at most MAX_DRAFT_BYTES."""
+@contextlib.contextmanager
+def _held_draft(directory: int, name: str) -> Iterator[tuple[bytes, os.stat_result]]:
+    """Read a regular, single-link, non-symlink draft of at most MAX_DRAFT_BYTES and keep it open.
+
+    The open descriptor keeps the read inode alive, so no file swapped in at the name can be
+    given its (st_dev, st_ino); Linux reuses a freed inode number for the next new file.
+    """
     fd = _open_at(directory, name, os.O_RDONLY | _NO_FOLLOW, name)
     try:
         info = os.fstat(fd)
@@ -118,8 +124,8 @@ def _read_draft(directory: int, name: str) -> tuple[bytes, os.stat_result]:
         raise
     with stream:
         payload = stream.read(MAX_DRAFT_BYTES + 1)
-    _require(len(payload) <= MAX_DRAFT_BYTES, f"draft exceeds {MAX_DRAFT_BYTES} bytes")
-    return payload, info
+        _require(len(payload) <= MAX_DRAFT_BYTES, f"draft exceeds {MAX_DRAFT_BYTES} bytes")
+        yield payload, info
 
 
 def _replace_draft(directory: int, name: str, payload: bytes, read: os.stat_result) -> None:
@@ -153,7 +159,11 @@ def rebind_identities(path: Path, out: Path | None = None) -> dict:
 
 
 def _rebind_at(directory: int, name: str, out: Path | None) -> dict:
-    payload, read = _read_draft(directory, name)
+    with _held_draft(directory, name) as (payload, read):
+        return _rebind_held(directory, name, out, payload, read)
+
+
+def _rebind_held(directory: int, name: str, out: Path | None, payload: bytes, read: os.stat_result) -> dict:
     text = payload.decode("utf-8")
     manifest = strict_json.loads(payload, error=ValueError)
     if manifest.get("schema_version") == "trigger-experiment-template/v1":

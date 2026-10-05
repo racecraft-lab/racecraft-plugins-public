@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import concurrent.futures
+import contextlib
 import copy
 import fcntl
 import hashlib
@@ -748,6 +749,18 @@ def draft_folders(case: unittest.TestCase, payload: bytes | None = None) -> Path
     return base
 
 
+def descriptor_holds(info: os.stat_result) -> bool:
+    """Return whether this process has a descriptor open on the file info describes."""
+    for name in os.listdir("/dev/fd"):
+        try:
+            opened = os.fstat(int(name))
+        except OSError:
+            continue
+        if (opened.st_dev, opened.st_ino) == (info.st_dev, info.st_ino):
+            return True
+    return False
+
+
 def once_before_open(fires, act):
     """Return an os.open that runs act once, just before the first call that fires(path, flags) accepts."""
     real_open, fired = os.open, []
@@ -895,29 +908,80 @@ class DraftReplaceTests(unittest.TestCase):
         self.assertEqual(os.stat(self.draft).st_mode & 0o777, 0o640)
         self.assert_only_the_draft_remains()
 
+    def substitute(self, kind: str) -> None:
+        """Put a kind of entry other than the draft that was read at the draft's name."""
+        if kind == "renamed file":
+            sibling = self.base / "drafts/substitute"
+            sibling.write_bytes(b"substituted\n")
+            os.replace(sibling, self.draft)
+            return
+        self.draft.unlink()
+        if kind == "file":
+            self.draft.write_bytes(b"substituted\n")
+        elif kind == "symlink":
+            self.draft.symlink_to(self.outside)
+        elif kind == "hard link":
+            os.link(self.outside, self.draft)
+        else:
+            self.draft.mkdir()
+
     def test_a_draft_name_swapped_after_the_read_is_refused_and_left_untouched(self):
-        for kind in ("file", "symlink"):
+        left = {"file": lambda: self.draft.read_bytes() == b"substituted\n",
+                "renamed file": lambda: self.draft.read_bytes() == b"substituted\n",
+                "symlink": self.draft.is_symlink,
+                "hard link": lambda: self.draft.samefile(self.outside),
+                "directory": self.draft.is_dir}
+        for kind, untouched in left.items():
             with self.subTest(kind=kind):
+                if self.draft.is_dir() and not self.draft.is_symlink():
+                    self.draft.rmdir()
                 self.draft.unlink(missing_ok=True)
                 self.draft.write_bytes(self.payload)
                 self.outside.write_bytes(b"outside\n")
+                read = os.stat(self.draft)
+                held = []
 
-                def swap(kind=kind):
-                    self.draft.unlink()
-                    if kind == "file":
-                        self.draft.write_bytes(b"substituted\n")
-                    else:
-                        self.draft.symlink_to(self.outside)
+                def swap(kind=kind, read=read, held=held):
+                    # Linux hands a freed inode number to the next new file, so the
+                    # identity check is sound only while the read inode stays open.
+                    held.append(descriptor_holds(read))
+                    self.substitute(kind)
 
                 hook, fired = once_before_open(lambda _path, flags: bool(flags & os.O_WRONLY), swap)
                 with mock.patch.object(comparison.os, "open", hook), self.assertRaises(ValueError):
                     comparison.rebind_identities(self.draft)
                 self.assertTrue(fired, "the swap seam never fired")
+                self.assertEqual(held, [True], "the read draft was released before the swap")
                 self.assertEqual(self.outside.read_bytes(), b"outside\n")
-                if kind == "file":
-                    self.assertEqual(self.draft.read_bytes(), b"substituted\n")
+                self.assertTrue(untouched(), f"the {kind} at the draft name was changed")
+                self.assert_only_the_draft_remains()
+
+    def test_a_swap_after_the_last_check_never_writes_outside_the_drafts_folder(self):
+        # POSIX has no compare-and-rename, so a swap here is not refused; the rename
+        # replaces the name itself and never writes through what the name points at.
+        real_replace = os.replace
+        for kind in ("symlink", "hard link", "directory"):
+            with self.subTest(kind=kind):
+                if self.draft.is_dir() and not self.draft.is_symlink():
+                    self.draft.rmdir()
+                self.draft.unlink(missing_ok=True)
+                self.draft.write_bytes(self.payload)
+                self.outside.write_bytes(b"outside\n")
+
+                def late_replace(*args, kind=kind, **kwargs):
+                    self.substitute(kind)
+                    return real_replace(*args, **kwargs)
+
+                with mock.patch.object(comparison.os, "replace", late_replace), \
+                        contextlib.suppress(IsADirectoryError):
+                    comparison.rebind_identities(self.draft)
+                self.assertEqual(self.outside.read_bytes(), b"outside\n")
+                self.assertEqual(os.stat(self.outside).st_nlink, 1)
+                if kind == "directory":
+                    self.assertTrue(self.draft.is_dir())
                 else:
-                    self.assertTrue(self.draft.is_symlink())
+                    self.assertFalse(self.draft.is_symlink())
+                    self.assertNotEqual(self.draft.read_bytes(), self.payload)
                 self.assert_only_the_draft_remains()
 
     def test_a_planted_temporary_name_is_refused_without_writing_through_it(self):
