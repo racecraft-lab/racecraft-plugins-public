@@ -75,6 +75,20 @@ class CodexSkillMentionTests(unittest.TestCase):
                 self.assertEqual(short.findall(emit_host(source.read_text(encoding='utf-8'), 'codex')), [])
 
 
+def prepared_codex_contract_result() -> unittest.TestResult:
+    # Reuse the hermetic preparation fixture; it never launches a provider host.
+    adapter_tests = load_script(
+        'structural_native_eval_adapter_tests',
+        REPO_ROOT / 'tests/speckit-pro/unit/test-native-eval-adapters.py',
+    )
+    prepared_test = adapter_tests.AdapterPreparationTests(
+        'test_prepares_isolated_codex_project_with_full_repository_catalog',
+    )
+    result = unittest.TestResult()
+    prepared_test.run(result)
+    return result
+
+
 class ValidateHostProgressGuidance(unittest.TestCase):
 
     # ADR 0001 applies to guidance, grading inputs, and host launch configuration.
@@ -124,16 +138,7 @@ class ValidateHostProgressGuidance(unittest.TestCase):
         for source in sources:
             with self.subTest(file=source.name):
                 self.assertEqual(forbidden_task_tools(_read(source)), [], 'eval adapter names a task-list tool or opt-in')
-        # Reuse the hermetic preparation fixture; it never launches a provider host.
-        adapter_tests = load_script(
-            'structural_native_eval_adapter_tests',
-            REPO_ROOT / 'tests/speckit-pro/unit/test-native-eval-adapters.py',
-        )
-        prepared_test = adapter_tests.AdapterPreparationTests(
-            'test_prepares_isolated_codex_project_with_full_repository_catalog',
-        )
-        result = unittest.TestResult()
-        prepared_test.run(result)
+        result = prepared_codex_contract_result()
         self.assertEqual(result.testsRun, 1)
         self.assertEqual(result.skipped, [])
         self.assertTrue(result.wasSuccessful(), result.failures + result.errors)

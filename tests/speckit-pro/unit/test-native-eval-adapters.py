@@ -56,6 +56,33 @@ NATIVE_CODEX_SANDBOX_PROBES = (
 )
 
 
+def assert_prepared_codex_progress_contract(test: unittest.TestCase, prepared: adapter_common.PreparedTrial) -> None:
+    command = list(prepared.command)
+    overrides = codex_config_overrides(command)
+    test.assertTrue(overrides)
+    test.assertEqual(forbidden_task_tools(overrides), [])
+    project_config = tomllib.loads((prepared.cwd / ".codex/config.toml").read_text(encoding="utf-8"))
+    test.assertEqual(forbidden_task_tools(project_config), [])
+    tool = "update" + "_plan"
+    for override in (
+        f"tools.{tool}.enabled=true",
+        'tools={update_plan={enabled=true}}',
+        r'tools."\u0075pdate_plan".enabled=true',
+        'tools.UPDATE_PLAN.enabled=true',
+    ):
+        for option in ("--config", "-c"):
+            with test.subTest(option=option, override=override):
+                test.assertTrue(forbidden_task_tools(codex_config_overrides(
+                    [*command[:-1], option, override, command[-1]],
+                )))
+                test.assertTrue(forbidden_task_tools(codex_config_overrides(
+                    [*command[:-1], f"{option}={override}", command[-1]],
+                )))
+    for invalid in (["--config"], ["-c", "tools={"]):
+        with test.subTest(invalid=invalid), test.assertRaises(ValueError):
+            codex_config_overrides(invalid)
+
+
 def make_directory(path: Path, mode: int) -> None:
     """Create a directory with an exact mode; mkdir(mode=) is masked by the umask."""
     path.mkdir(parents=True)
@@ -2109,29 +2136,7 @@ class AdapterPreparationTests(unittest.TestCase):
                          "--ignore-rules", "--skip-git-repo-check", "--model", "gpt-5.6-sol"):
             self.assertIn(required, command)
         self.assertIn('project_root_markers=[".codex"]', command)
-        overrides = codex_config_overrides(command)
-        self.assertTrue(overrides)
-        self.assertEqual(forbidden_task_tools(overrides), [])
-        project_config = tomllib.loads((prepared.cwd / ".codex/config.toml").read_text(encoding="utf-8"))
-        self.assertEqual(forbidden_task_tools(project_config), [])
-        tool = "update" + "_plan"
-        for override in (
-            f"tools.{tool}.enabled=true",
-            'tools={update_plan={enabled=true}}',
-            r'tools."\u0075pdate_plan".enabled=true',
-            'tools.UPDATE_PLAN.enabled=true',
-        ):
-            for option in ("--config", "-c"):
-                with self.subTest(option=option, override=override):
-                    self.assertTrue(forbidden_task_tools(codex_config_overrides(
-                        [*command[:-1], option, override, command[-1]],
-                    )))
-                    self.assertTrue(forbidden_task_tools(codex_config_overrides(
-                        [*command[:-1], f"{option}={override}", command[-1]],
-                    )))
-        for invalid in (["--config"], ["-c", "tools={"]):
-            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
-                codex_config_overrides(invalid)
+        assert_prepared_codex_progress_contract(self, prepared)
         self.assertNotIn("--ephemeral", command)
         self.assertIn("--disable", command)
         self.assertIn("multi_agent", command)
