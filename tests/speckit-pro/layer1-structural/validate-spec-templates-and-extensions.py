@@ -130,9 +130,6 @@ class ValidateOneClarifySession(unittest.TestCase):
     def test_gate_reference_does_not_skip_clarify_on_zero_markers(self) -> None:
         text = (AUTOPILOT_SKILL_DIR / 'references/gate-validation.md').read_text(encoding='utf-8')
         self.assert_absent(text, r'(?i)skip clarify')
-
-    def test_gate_auto_fix_does_not_dispatch_a_second_clarify_session(self) -> None:
-        text = (AUTOPILOT_SKILL_DIR / 'references/gate-validation.md').read_text(encoding='utf-8')
         self.assertNotRegex(text, r'(?i)re-run clarify')
         self.assertIn('without dispatching another clarify session', text.lower())
 
