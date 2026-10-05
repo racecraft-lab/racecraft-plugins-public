@@ -75,8 +75,10 @@ class CodexSkillMentionTests(unittest.TestCase):
 
 class ValidateHostProgressGuidance(unittest.TestCase):
 
+    # ADR 0001 applies to guidance, grading inputs, and host launch configuration.
+    forbidden = re.compile(r'\b(?:TaskCreate|TaskGet|TaskUpdate|TaskList|TodoWrite|update_plan|CLAUDE_CODE_ENABLE_TASKS)(?:\b|_)')
+
     def test_host_guidance_uses_no_task_list_tools(self) -> None:
-        forbidden = re.compile(r'\b(?:TaskCreate|TaskGet|TaskUpdate|TaskList|TodoWrite|update_plan|CLAUDE_CODE_ENABLE_TASKS)\b')
         for host, root in (('claude', CLAUDE_VIEW), ('codex', CODEX_VIEW)):
             sources = sorted(root.rglob('*.md')) + sorted(root.rglob('*.yaml'))
             self.assertTrue(sources, f'{host}: missing rendered skill guidance')
@@ -85,7 +87,28 @@ class ValidateHostProgressGuidance(unittest.TestCase):
             sources += agents
             for source in sources:
                 with self.subTest(host=host, file=source.relative_to(source.parent.parent)):
-                    self.assertEqual(forbidden.findall(_read(source)), [], 'host guidance names a task-list tool or opt-in')
+                    self.assertEqual(self.forbidden.findall(_read(source)), [], 'host guidance names a task-list tool or opt-in')
+
+    def test_host_eval_cases_use_no_task_list_tools(self) -> None:
+        functional = REPO_ROOT / 'tests/speckit-pro/layer3-functional'
+        for catalog in ('evals', 'codex-evals'):
+            sources = sorted((functional / catalog).glob('*-evals.json'))
+            self.assertTrue(sources, f'{catalog}: missing functional eval cases')
+            self.assertIn(functional / catalog / 'speckit-autopilot-evals.json', sources)
+            for source in sources:
+                cases = json.loads(_read(source))['evals']
+                self.assertIsInstance(cases, list)
+                self.assertTrue(cases, f'{source.name}: empty eval cases')
+                with self.subTest(catalog=catalog, file=source.name):
+                    self.assertEqual(self.forbidden.findall(json.dumps(cases)), [], 'eval case names a task-list tool or opt-in')
+
+    def test_host_eval_adapters_use_no_task_list_tools(self) -> None:
+        sources = sorted(LIB_DIR.glob('native_eval*adapter*.py'))
+        self.assertIn(LIB_DIR / 'native_eval_codex_adapter.py', sources)
+        self.assertIn(LIB_DIR / 'native_eval_claude_adapter.py', sources)
+        for source in sources:
+            with self.subTest(file=source.name):
+                self.assertEqual(self.forbidden.findall(_read(source)), [], 'eval adapter names a task-list tool or opt-in')
 
 
 class ValidateSkills(unittest.TestCase):

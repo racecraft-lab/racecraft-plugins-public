@@ -51,11 +51,11 @@
     },
     {
       "id": 5,
-      "prompt": "Before Phase 1 starts in Codex, what exact progress state must the autopilot create? I want the mandatory tool calls, the naming convention for the plan items, how consensus items are represented, and how the plan survives a resume.",
-      "expected_output": "Explains that the Codex autopilot must call update_plan before phase execution, create deterministic phase/session/consensus items for all canonical phase families, ensure exactly one item is in_progress, and mirror the same state into autopilot-state.json next to the workflow file.",
+      "prompt": "Before Phase 1 starts in Codex, what exact progress state must the autopilot create? I want the progress block, the naming convention for the state items, how consensus items are represented, and how the state survives a resume.",
+      "expected_output": "Explains that the Codex autopilot must create deterministic phase/session/consensus items for all canonical phase families in autopilot-state.json next to the workflow file before phase execution, ensure exactly one item is in_progress, and render the progress block from that state at every phase transition.",
       "expectations": [
-        "States that update_plan is REQUIRED before the first phase runs",
-        "States that the plan is mirrored to autopilot-state.json for durable resume state",
+        "States that autopilot-state.json is REQUIRED before the first phase runs",
+        "States that the progress block is rendered by the runner from autopilot-state.json at every phase transition",
         "States that exactly one plan item must be in_progress before Phase 1",
         "States that Phase 0 through Phase 7 and Post must all be represented before Phase 1",
         "Mentions placeholders for later-discovered Phase 7 implementation task groups",
@@ -63,7 +63,7 @@
         "States that consensus tasks are MANDATORY after each Checklist domain",
         "States that consensus tasks are MANDATORY after the Analyze phase",
         "Shows the naming convention including 'Phase N:' and 'Consensus' in the plan item name",
-        "Explains that resume reconstructs update_plan from autopilot-state.json before continuing"
+        "Explains that resume reconstructs progress from autopilot-state.json before continuing"
       ]
     },
     {
@@ -86,7 +86,7 @@
         "Lists all 13 canonical Codex Post items from Doctor Extension Check through Retrospective without collapsing supporting rows",
         "Identifies Doctor, Verify Implementation, Verify Tasks Phantom Check, and Retrospective as extension-backed items and keeps Code Review plus Integration Suite built in",
         "Lists UAT Runbook Generation as mandatory and fail-open, runs generate-uat-skeleton in dry_run then apply mode, and dispatches uat-runbook-author after the skeleton is written",
-        "Lists both Final Reviewability Backstop and PR Packet/Body Generation supporting rows in update_plan and autopilot-state.json",
+        "Lists both Final Reviewability Backstop and PR Packet/Body Generation supporting rows in autopilot-state.json",
         "Lists the feature-local packet path specs/<feature>/.process/pr-packets/<packet-id>.json and states pr-packet-output emits the packet JSON and body file while declaring the validation-result path",
         "Describes generate-pr-body only as a golden_only one-Markdown-body writer accepting output_path, title, and sections, not as packet emission",
         "Lists pre-create validation via runner helper validate-pr-packet-read-only, consumes current data.stdout_json with writes_state=false, and persists that current result with validate-pr-packet-write",
@@ -150,12 +150,12 @@
     {
       "id": 12,
       "prompt": "I want to save time: the workflow file already has good specify and plan prompts, so when the Codex autopilot starts can it just plan Specify, Plan, and Tasks first and decide later whether Analyze and Implement are necessary?",
-      "expected_output": "Rejects partial planning. Explains that before Phase 1 starts, Codex autopilot must create update_plan and autopilot-state.json entries for Phase 0, all seven SDD phases, and Post, including placeholders for later-discovered Clarify, Checklist, and Implement details.",
+      "expected_output": "Rejects partial planning. Explains that before Phase 1 starts, Codex autopilot must create autopilot-state.json entries for Phase 0, all seven SDD phases, and Post, including placeholders for later-discovered Clarify, Checklist, and Implement details.",
       "expectations": [
         "Rejects planning only Specify, Plan, and Tasks",
         "States that all seven SDD phases must be represented before Phase 1 starts",
-        "States that update_plan must contain every phase family",
-        "States that autopilot-state.json must mirror the same complete plan",
+        "States that autopilot-state.json must contain every phase family",
+        "States that the progress block must be rendered from the complete autopilot state",
         "Mentions Phase 7: Implement - Pending task decomposition or equivalent Phase 7 placeholder",
         "Mentions Post: Verification and Status Sync or equivalent post-implementation placeholder",
         "States that --from-phase does not remove later phases from the plan"
@@ -164,11 +164,11 @@
     {
       "id": 13,
       "prompt": "Tasks just passed G5 and tasks.md now exists, but my current Codex plan still only has 'Phase 7: Implement - Pending task decomposition'. Can autopilot continue to Analyze and decide task groups later?",
-      "expected_output": "Rejects continuing with only the Phase 7 placeholder after G5. Explains that the placeholder must be replaced in both update_plan and autopilot-state.json with concrete Phase 7 task-group items parsed from tasks.md before Analyze or Implement can continue.",
+      "expected_output": "Rejects continuing with only the Phase 7 placeholder after G5. Explains that the placeholder must be replaced in autopilot-state.json with concrete Phase 7 task-group items parsed from tasks.md before Analyze or Implement can continue.",
       "expectations": [
         "States that the Phase 7 placeholder is invalid after Tasks/G5 passes",
         "Requires parsing tasks.md before continuing",
-        "Requires replacing the placeholder in update_plan",
+        "Requires rendering the progress block from the repaired autopilot state",
         "Requires replacing the placeholder in autopilot-state.json",
         "Requires one or more concrete Phase 7 task-group items with task IDs",
         "States that Analyze or Implement must not continue until the plan/state are repaired"
@@ -177,11 +177,11 @@
     {
       "id": 14,
       "prompt": "I'm resuming an autopilot workflow where Specify through Implement are complete, but I don't see any Post items in autopilot-state.json. Should the Codex autopilot report all phases complete and stop?",
-      "expected_output": "Rejects stopping. Explains that all seven SDD phases being complete is not sufficient if Post items are missing or pending; the autopilot must rebuild update_plan and autopilot-state.json with Post entries and continue post-implementation.",
+      "expected_output": "Rejects stopping. Explains that all seven SDD phases being complete is not sufficient if Post items are missing or pending; the autopilot must rebuild autopilot-state.json with Post entries and continue post-implementation.",
       "expectations": [
         "States that all seven SDD phases complete is not enough to stop",
         "Checks whether Post items are missing, pending, or in progress",
-        "Requires rebuilding update_plan when Post items are missing",
+        "Requires rendering the progress block from the repaired autopilot state",
         "Requires rebuilding autopilot-state.json when Post items are missing",
         "Continues into post-implementation instead of reporting complete"
       ]
@@ -317,23 +317,23 @@
     },
     {
       "id": 25,
-      "prompt": "The Codex autopilot just finished its Post: Reviewability Diff Gate step and is about to start Post: PR Body Generation. Describe exactly what the autopilot does between those two steps: whether a separate self-review step exists, which step is the final review of the change, where the advisory terms lint runs and where its result is recorded, where Post: UAT Runbook Generation sits in the canonical Post list, and how it shows up in update_plan / autopilot-state.json.",
-      "expected_output": "States that the canonical Post list has no separate Self-Review step: Post: Code Review is the single final integration review, and no later step reviews unchanged code a second time. The step after Post: Reviewability Diff Gate is Post: UAT Runbook Generation, position 7 of the 13-entry canonical Codex list, followed by Post: Final Reviewability Backstop. The advisory terms lint runs at the start of UAT Runbook Generation, before its checkpoint, records its note in the workflow log, and never gates. The step appears in update_plan and autopilot-state.json like every other canonical step.",
+      "prompt": "The Codex autopilot just finished its Post: Reviewability Diff Gate step and is about to start Post: PR Body Generation. Describe exactly what the autopilot does between those two steps: whether a separate self-review step exists, which step is the final review of the change, where the advisory terms lint runs and where its result is recorded, where Post: UAT Runbook Generation sits in the canonical Post list, and how it shows up in autopilot-state.json and the progress block.",
+      "expected_output": "States that the canonical Post list has no separate Self-Review step: Post: Code Review is the single final integration review, and no later step reviews unchanged code a second time. The step after Post: Reviewability Diff Gate is Post: UAT Runbook Generation, position 7 of the 13-entry canonical Codex list, followed by Post: Final Reviewability Backstop. The advisory terms lint runs at the start of UAT Runbook Generation, before its checkpoint, records its note in the workflow log, and never gates. The step appears in autopilot-state.json like every other canonical step.",
       "expectations": [
         "States that the canonical Post list has no separate Self-Review step and that Post: Code Review is the single final integration review, with no later step reviewing unchanged code a second time",
         "States that the advisory terms lint runs at the start of UAT Runbook Generation, before its checkpoint, records its note in the workflow log, and never gates",
         "Mentions that Post: UAT Runbook Generation is item position #7 in the canonical 13-entry Codex post-implementation list, between Post: Reviewability Diff Gate and Post: Final Reviewability Backstop",
-        "Notes that the step transitions through update_plan + autopilot-state.json in pending → in_progress → completed states like every other canonical step"
+        "Notes that the step transitions through autopilot-state.json in pending → in_progress → completed states like every other canonical step"
       ]
     },
     {
       "id": 26,
       "prompt": "A Codex autopilot run has just committed and pushed after Phase 7. `autopilot-state.json` says `active_step` is `Phase 7: Implement Complete`; the workflow overview marks Implement complete; but the plan still has `Post: Doctor Extension Check`, `Post: PR Creation`, and `Post: Retrospective` as pending. The model is about to send the user a final summary. What must it do instead?",
-      "expected_output": "States that the autopilot must run the pre-final completion audit before any final response, re-read autopilot-state.json and the workflow file, reconcile update_plan with the state file, and MUST NOT send a final response while any Post item is pending, in_progress, or missing. It should set the first incomplete Post item, starting with Post: Doctor Extension Check, to in_progress in both update_plan and autopilot-state.json, continue through the full canonical Post sequence including PR body generation, PR creation, review remediation, and Post: Retrospective, and only report completion after the PR URL is known and every Post item is completed or explicitly skipped.",
+      "expected_output": "States that the autopilot must run the pre-final completion audit before any final response, re-read autopilot-state.json and the workflow file, reconcile the workflow with the state file, and MUST NOT send a final response while any Post item is pending, in_progress, or missing. It should set the first incomplete Post item, starting with Post: Doctor Extension Check, to in_progress in autopilot-state.json, continue through the full canonical Post sequence including PR body generation, PR creation, review remediation, and Post: Retrospective, and only report completion after the PR URL is known and every Post item is completed or explicitly skipped.",
       "expectations": [
         "Names the pre-final completion audit",
         "States the model must re-read autopilot-state.json and the workflow file",
-        "States the model must reconcile update_plan with autopilot-state.json before continuing",
+        "States the model must reconcile the workflow with autopilot-state.json before continuing",
         "States explicitly that it MUST NOT send a final response while any Post item is pending, in_progress, or missing",
         "Sets Post: Doctor Extension Check as the first incomplete in_progress item",
         "Continues through PR body generation and PR creation instead of stopping after Phase 7",
@@ -358,7 +358,7 @@
         "Requires the packet-owned body_file emitted by pr-packet-output to exist as a readable repo-relative path",
         "States missing, malformed, stale, or invalid packet evidence is repaired by pr-packet-output when possible and otherwise blocks before gh pr create with returned diagnostics",
         "States there is no post-create auto-repair fallback for invalid packets",
-        "States Post: UAT Runbook Generation appears in update_plan and autopilot-state.json; the generation attempt is mandatory while genuine generator or author failures remain fail-open"
+        "States Post: UAT Runbook Generation appears in autopilot-state.json; the generation attempt is mandatory while genuine generator or author failures remain fail-open"
       ]
     },
     {
@@ -416,10 +416,10 @@
     },
     {
       "id": 31,
-      "prompt": "A Codex autopilot run has finished Phase 7 and full verification for a feature whose SPEC-908 layer-plan fixture has three ordered increments: foundation, us1, and us2. Describe the post-implementation PR creation behavior required by SPEC-909 multi-PR emission. Include update_plan/autopilot-state.json handling, branch/base topology, scoped verification evidence, durable PRS rows, resume, failed-slice blocking, restack, and what must not change.",
+      "prompt": "A Codex autopilot run has finished Phase 7 and full verification for a feature whose SPEC-908 layer-plan fixture has three ordered increments: foundation, us1, and us2. Describe the post-implementation PR creation behavior required by SPEC-909 multi-PR emission. Include autopilot-state.json and progress block handling, branch/base topology, scoped verification evidence, durable PRS rows, resume, failed-slice blocking, restack, and what must not change.",
       "expected_output": "Explains that Codex keeps all 13 Post items active, consumes the plan-layers-feature-dir envelope as the only slice source, and may use multi-pr-emission only for golden_only command-plan capture after full verification. The helper does not emit packets or execute PRs, so every slice emits or refreshes a feature-local packet with pr-packet-output, passes validate-pr-packet-read-only via data.stdout_json, checkpoints packet/body artifacts so validate-pr-packet-write can rerun current validation from a clean worktree and persist it, and then uses an explicit packet-owned gh pr create command. It keeps source evidence separate from emitted branch prefixes, persists PRS/resume state, blocks failed slices, and treats restack as deferred with direct gh pr edit --base fallback.",
       "expectations": [
-        "States that all canonical Post items remain in update_plan and autopilot-state.json until completed or explicitly skipped",
+        "States that all canonical Post items remain in autopilot-state.json until completed or explicitly skipped",
         "States that SPEC-908 runner helper plan-layers-feature-dir output is the authoritative ordering and membership source",
         "States that SPEC-909 does not infer, reroute, or re-slice work and does not add SPEC-910 routing/backstop heuristics",
         "Uses multi-pr-emission only for golden_only command-plan capture after implementation and full default verification; it does not emit packets or execute live PR creation",

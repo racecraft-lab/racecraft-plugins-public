@@ -2107,7 +2107,7 @@ class AdapterPreparationTests(unittest.TestCase):
                          "--ignore-rules", "--skip-git-repo-check", "--model", "gpt-5.6-sol"):
             self.assertIn(required, command)
         self.assertIn('project_root_markers=[".codex"]', command)
-        self.assertEqual(command.count("tools.update_plan.enabled=true"), 1)
+        self.assertFalse(any("tools.update_plan" in argument for argument in command))
         self.assertNotIn("--ephemeral", command)
         self.assertIn("--disable", command)
         self.assertIn("multi_agent", command)
@@ -2150,7 +2150,7 @@ class AdapterPreparationTests(unittest.TestCase):
             prepared.runtime_identity["settings"]["project_root_markers"],
             [".codex"],
         )
-        self.assertTrue(prepared.runtime_identity["settings"]["update_plan_enabled"])
+        self.assertNotIn("update_plan_enabled", prepared.runtime_identity["settings"])
         self.assertFalse(prepared.runtime_identity["settings"]["global_instructions_disabled"])
         runtime = prepared.runtime_identity["settings"]["codex_runtime"]
         self.assertEqual(runtime["schema_version"], adapters.native_eval_runtime.SCHEMA_VERSION)
