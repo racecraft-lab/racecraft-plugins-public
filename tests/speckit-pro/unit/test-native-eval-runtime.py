@@ -77,7 +77,7 @@ def tree_snapshot(root: Path) -> dict[str, object]:
     return {"exists": True, "entries": entries}
 
 
-class NativeEvalRuntimeTests(unittest.TestCase):
+class NativeRuntimeFixture:
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -85,6 +85,7 @@ class NativeEvalRuntimeTests(unittest.TestCase):
         self.workspace = self.root / "workspace"
         self.workspace.mkdir()
         self.build_root = self.root / "build"
+
 
     def stage(
         self,
@@ -97,6 +98,7 @@ class NativeEvalRuntimeTests(unittest.TestCase):
         workspace.mkdir(exist_ok=True)
         return stage_codex_runtime(repo_root, self.root / build_name, workspace)
 
+
     def fixture_repo(self, name: str) -> Path:
         target = self.root / name
         shutil.copytree(
@@ -107,6 +109,8 @@ class NativeEvalRuntimeTests(unittest.TestCase):
         shutil.copy2(REPO_ROOT / "LICENSE", target / "LICENSE")
         return target
 
+
+class NativeEvalRuntimeTests(NativeRuntimeFixture, unittest.TestCase):
     def test_stages_complete_payload_base_overlay_and_controlled_pythonpath(self) -> None:
         result = self.stage()
 
@@ -480,6 +484,7 @@ class NativeEvalRuntimeTests(unittest.TestCase):
             )
         self.assertFalse((self.root / "build-nonregular").exists())
 
+
     def test_rejects_license_symlink_and_nonregular_without_reading_external_target(self) -> None:
         outside = self.root / "protected-external-license.txt"
         outside.write_text("PROTECTED-LICENSE-MARKER", encoding="utf-8")
@@ -546,10 +551,47 @@ class NativeEvalRuntimeTests(unittest.TestCase):
             )
         self.assertFalse((self.root / "build-nonregular-license").exists())
 
+
+class RuntimeConcurrencyTests(NativeRuntimeFixture, unittest.TestCase):
+    def test_concurrent_bytecode_writes_do_not_break_source_validation(self) -> None:
+        # Another process importing the runner writes each .pyc through a
+        # temporary file it renames away, so a listed cache entry can vanish
+        # before it is inspected. The builder never copies bytecode caches.
+        fixture = self.fixture_repo("repo-bytecode-writer")
+        cache = fixture / "speckit-pro/speckit_pro_runner/__pycache__"
+        cache.mkdir()
+        cache = cache.resolve()
+        vanished = "envelope.cpython-311.pyc.4422282800"
+        real_walk = os.walk
+
+        def walk_listing_a_renamed_cache_entry(top: object, *args: object, **kwargs: object):
+            for directory, directories, files in real_walk(top, *args, **kwargs):
+                if Path(directory) == cache:
+                    files = [*files, vanished]
+                yield directory, directories, files
+
+        with mock.patch.object(runtime.os, "walk", side_effect=walk_listing_a_renamed_cache_entry):
+            result = self.stage(repo_root=fixture, build_name="build-bytecode", workspace_name="workspace-bytecode")
+        self.assertTrue((result.payload_root / ".codex-plugin" / "plugin.json").is_file())
+
+        # The race allowance must not let a linked cache directory through: the
+        # codex-skills overlay copy follows directory links.
+        outside = self.root / "outside-cache"
+        outside.mkdir()
+        (outside / "marker.txt").write_text("PRIVATE-MARKER-MUST-NOT-BE-COPIED", encoding="utf-8")
+        linked = self.fixture_repo("repo-linked-cache")
+        os.symlink(outside, linked / "speckit-pro/codex-skills/install/__pycache__")
+        with self.assertRaisesRegex(RuntimeStageError, "unsafe source member"):
+            self.stage(repo_root=linked, build_name="build-linked-cache", workspace_name="workspace-linked-cache")
+        self.assertFalse((self.root / "build-linked-cache").exists())
+
+
     def test_staging_never_mutates_checkout_dist_files_directories_or_metadata(self) -> None:
-        before = tree_snapshot(REPO_ROOT / "dist")
-        self.stage()
-        self.assertEqual(tree_snapshot(REPO_ROOT / "dist"), before)
+        fixture = self.fixture_repo("repo-dist-snapshot")
+        shutil.copytree(REPO_ROOT / "dist", fixture / "dist", ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+        before = tree_snapshot(fixture / "dist")
+        self.stage(repo_root=fixture)
+        self.assertEqual(tree_snapshot(fixture / "dist"), before)
 
         snapshot_probe = self.root / "snapshot-probe"
         empty = snapshot_probe / "empty"
@@ -562,6 +604,22 @@ class NativeEvalRuntimeTests(unittest.TestCase):
         self.assertNotEqual(tree_snapshot(snapshot_probe), probe_before)
 
 
+    def test_dist_snapshot_ignores_an_unrelated_checkout_writer(self) -> None:
+        checkout = self.fixture_repo("repo-unrelated-writer")
+        (checkout / "dist").mkdir()
+        stage = self.stage
+
+        def stage_while_another_suite_writes_checkout(**kwargs):
+            (checkout / "dist" / "foreign.pyc").write_bytes(b"another suite's bytecode")
+            return stage(**kwargs)
+
+        with (
+            mock.patch.dict(globals(), REPO_ROOT=checkout),
+            mock.patch.object(self, "stage", side_effect=stage_while_another_suite_writes_checkout),
+        ):
+            self.test_staging_never_mutates_checkout_dist_files_directories_or_metadata()
+
+
 if __name__ == "__main__":
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(NativeEvalRuntimeTests)
+    suite = unittest.TestSuite([unittest.defaultTestLoader.loadTestsFromTestCase(NativeEvalRuntimeTests), unittest.defaultTestLoader.loadTestsFromTestCase(RuntimeConcurrencyTests)])
     raise SystemExit(run_counted(suite, label="test-native-eval-runtime"))
