@@ -6,11 +6,13 @@ import concurrent.futures
 import copy
 import hashlib
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "lib"))
@@ -527,15 +529,7 @@ class CampaignTests(unittest.TestCase):
 
 
 class CampaignDraftBindingTests(unittest.TestCase):
-    """Committed freeze drafts must keep binding the shipped corpus.
-
-    ``compare-trigger-evals.py validate`` is the launch-time gate, but nothing
-    ran it over the drafts kept in the repository, so a corpus revision that
-    landed after they were generated left both of them unable to validate
-    against the inventory they name. Rebind them from the provider-free planner
-    whenever the inventory changes; the freeze-time model, CLI, observer,
-    catalog, fixture and description pins stay with the draft.
-    """
+    """Stable templates retain the reviewed corpus and bind identities at check time."""
 
     def test_committed_campaign_drafts_match_the_provider_free_planner(self):
         layer = ROOT / "layer2-trigger"
@@ -544,7 +538,7 @@ class CampaignDraftBindingTests(unittest.TestCase):
         drafts = {"issue-573-pilot.draft.json": "pilot", "issue-573-full.draft.json": "full"}
         for name, scope in sorted(drafts.items()):
             with self.subTest(draft=name):
-                draft = json.loads((layer / "campaign-drafts" / name).read_bytes())
+                draft = comparison.bind_template(json.loads((layer / "campaign-drafts" / name).read_bytes()))
                 plan = plan_inventory(inventory, layer, scope, inventory_path=inventory_path)
                 cases = comparison.validate_inventory_binding(draft, inventory)
                 self.assertEqual(len(cases), len(plan["roster"]))
@@ -555,35 +549,134 @@ class CampaignDraftBindingTests(unittest.TestCase):
 
 
 class DraftIdentityTests(unittest.TestCase):
-    def test_committed_campaign_drafts_bind_the_current_identities(self):
-        """A draft names the observer, catalog and fixture it was planned against.
+    def test_independent_observer_and_host_catalog_edits_merge_without_draft_conflicts(self):
+        sources = sorted((ROOT / "layer2-trigger/campaign-drafts").glob("*.draft.json"))
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = Path(temporary)
+            test_root = repo / "tests/speckit-pro"
+            env = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_SYSTEM": os.devnull,
+                   "GIT_CONFIG_NOSYSTEM": "1"}
 
-        A library, skill or fixture edit changes those digests. This fails until
-        ``compare-trigger-evals.py rebind`` refreshes each draft, so a stale draft
-        cannot be used unnoticed.
-        """
-        current = comparison.snapshot_identities(comparison.measurement_snapshot())
-        drafts = sorted((ROOT / "layer2-trigger" / "campaign-drafts").glob("*.draft.json"))
+            def git(*args):
+                return subprocess.run(["git", "-c", "user.name=Test", "-c", "user.email=test@example.com",
+                                       "-c", "commit.gpgsign=false", *args], cwd=repo, env=env,
+                                      capture_output=True, text=True, check=True).stdout
+
+            for source in sources:
+                target = test_root / "layer2-trigger/campaign-drafts" / source.name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(source.read_bytes())
+            edits = (test_root / "layer2-trigger/observer.py",
+                     test_root / "lib/observer.py",
+                     repo / "speckit-pro/skills/example/SKILL.md",
+                     repo / "speckit-pro/codex-skills/example/SKILL.md")
+            for path in edits:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("original\n")
+            git("init", "-b", "main")
+            git("add", ".")
+            git("commit", "-m", "Initial templates")
+            bindings = []
+            for branch, changed in (("first", edits[::2]), ("second", edits[1::2])):
+                git("checkout", "-b", branch, "main")
+                for path in changed:
+                    path.write_text(branch + "\n")
+                with mock.patch.object(comparison, "ROOT", test_root):
+                    bindings.append(comparison.bind_template(json.loads(sources[0].read_bytes()))["identities"])
+                git("add", ".")
+                git("commit", "-m", branch)
+            git("checkout", "main")
+            git("merge", "--no-edit", "first")
+            git("merge", "--no-edit", "second")
+            self.assertEqual(git("status", "--porcelain"), "")
+            for key in ("observer", "catalog"):
+                self.assertNotEqual(bindings[0][key], bindings[1][key])
+            for source in sources:
+                self.assertEqual((test_root / "layer2-trigger/campaign-drafts" / source.name).read_bytes(),
+                                 source.read_bytes())
+
+    def test_unbound_or_malformed_templates_cannot_be_used_as_frozen_evidence(self):
+        source = ROOT / "layer2-trigger/campaign-drafts/issue-573-pilot.draft.json"
+        template = json.loads(source.read_bytes())
+        with self.assertRaisesRegex(ValueError, "unsupported experiment schema"):
+            comparison.validate_experiment(template)
+        for patch in ({"identities": {"observer": "0" * 64}}, {"launch_authorized": True},
+                      {"qualification_established": True}, {"output_directory": "evidence"},
+                      {"schema_version": "unknown"}, {"roster": []}):
+            with self.subTest(patch=patch), self.assertRaises(ValueError):
+                comparison.bind_template({**template, **patch})
+
+    def test_template_rebind_requires_new_output_and_never_overwrites_evidence(self):
+        script = ROOT / "layer2-trigger/compare-trigger-evals.py"
+        source = ROOT / "layer2-trigger/campaign-drafts/issue-573-pilot.draft.json"
+        with tempfile.TemporaryDirectory() as temporary:
+            draft = Path(temporary) / "template.json"
+            draft.write_bytes(source.read_bytes())
+            for extra in ([], ["--out", str(draft)]):
+                with self.subTest(extra=extra):
+                    result = subprocess.run([sys.executable, str(script), "rebind", "--manifest", str(draft),
+                                             *extra], capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+                    self.assertEqual(draft.read_bytes(), source.read_bytes())
+
+    def test_template_binds_to_a_separate_manifest_without_rewriting_the_draft(self):
+        source = ROOT / "layer2-trigger/campaign-drafts/issue-573-pilot.draft.json"
+        script = ROOT / "layer2-trigger/compare-trigger-evals.py"
+        template = json.loads(source.read_bytes())
+        template["schema_version"] = "trigger-experiment-template/v1"
+        template.pop("identities", None)
+        with tempfile.TemporaryDirectory() as temporary:
+            draft = Path(temporary) / "template.json"
+            bound = Path(temporary) / "bound.json"
+            draft.write_text(json.dumps(template) + "\n")
+            before = draft.read_bytes()
+            result = subprocess.run([sys.executable, str(script), "rebind", "--manifest",
+                                     str(draft), "--out", str(bound)], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            manifest = json.loads(bound.read_bytes())
+            self.assertEqual(draft.read_bytes(), before)
+            self.assertEqual(manifest["schema_version"], "trigger-experiment/v1")
+            self.assertEqual(manifest["identities"],
+                             comparison.snapshot_identities(comparison.measurement_snapshot()))
+            self.assertEqual({k: v for k, v in manifest.items() if k not in {"schema_version", "identities"}},
+                             {k: v for k, v in template.items() if k != "schema_version"})
+
+    def test_committed_templates_bind_and_validate_without_changing_source(self):
+        script = ROOT / "layer2-trigger/compare-trigger-evals.py"
+        drafts = sorted((ROOT / "layer2-trigger/campaign-drafts").glob("*.draft.json"))
         self.assertTrue(drafts, "no committed campaign drafts found")
         for path in drafts:
-            with self.subTest(draft=path.name):
-                self.assertEqual(json.loads(path.read_bytes())["identities"], current)
+            with self.subTest(draft=path.name), tempfile.TemporaryDirectory() as temporary:
+                before = path.read_bytes()
+                self.assertNotIn("identities", json.loads(before))
+                bound = Path(temporary) / "bound.json"
+                subprocess.run([sys.executable, str(script), "rebind", "--manifest", str(path),
+                                "--out", str(bound)], capture_output=True, text=True, check=True)
+                result = subprocess.run([sys.executable, str(script), "validate", "--manifest", str(bound),
+                                         "--inventory", str(ROOT / "layer2-trigger/case-inventory.json")],
+                                        capture_output=True, text=True, check=True)
+                self.assertTrue(json.loads(result.stdout)["identities_current"])
+                self.assertEqual(path.read_bytes(), before)
+                self.assertEqual({row["host"] for row in json.loads(bound.read_bytes())["roster"]},
+                                 {"claude", "codex"})
 
     def test_rebind_refreshes_a_stale_draft_and_only_its_identities(self):
         source = ROOT / "layer2-trigger" / "campaign-drafts" / "issue-573-pilot.draft.json"
         script = ROOT / "layer2-trigger" / "compare-trigger-evals.py"
         with tempfile.TemporaryDirectory() as temporary:
             draft = Path(temporary) / "stale.draft.json"
-            stale = json.loads(source.read_bytes())
+            stale = comparison.bind_template(json.loads(source.read_bytes()))
             stale["identities"]["observer"] = "0" * 64
             draft.write_text(json.dumps(stale, indent=2) + "\n")
             args = [sys.executable, str(script)]
             inventory = ["--manifest", str(draft), "--inventory", str(ROOT / "layer2-trigger" / "case-inventory.json")]
-            before = json.loads(subprocess.run([*args, "validate", *inventory], capture_output=True, text=True, check=True).stdout)
+            before = subprocess.run([*args, "validate", *inventory], capture_output=True, text=True)
+            self.assertEqual(before.returncode, 2, before.stdout + before.stderr)
+            self.assertIn("stale", json.loads(before.stdout)["error"])
             subprocess.run([*args, "rebind", "--manifest", str(draft)], capture_output=True, text=True, check=True)
             after = json.loads(subprocess.run([*args, "validate", *inventory], capture_output=True, text=True, check=True).stdout)
             rebound = json.loads(draft.read_bytes())
-        self.assertEqual((before["identities_current"], after["identities_current"]), (False, True))
+        self.assertTrue(after["identities_current"])
         self.assertEqual({key: value for key, value in rebound.items() if key != "identities"},
                          {key: value for key, value in stale.items() if key != "identities"})
 

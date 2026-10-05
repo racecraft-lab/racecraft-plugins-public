@@ -65,6 +65,21 @@ def snapshot_identities(snapshot: dict) -> dict:
     return {key: json_digest(snapshot[key]) for key in ("observer", "catalog", "fixture")}
 
 
+def bind_template(template: dict) -> dict:
+    """Freeze an unbound planning template without changing its reviewed inputs."""
+    _require(template.get("schema_version") == "trigger-experiment-template/v1",
+             "unsupported experiment template schema")
+    _require("identities" not in template, "template must not contain frozen identities")
+    _require(template.get("launch_authorized") is False
+             and template.get("qualification_established") is False
+             and template.get("output_directory") is None,
+             "template must remain unapproved with no output directory")
+    manifest = {**template, "schema_version": "trigger-experiment/v1",
+                "identities": snapshot_identities(measurement_snapshot())}
+    validate_experiment(manifest)
+    return manifest
+
+
 def validate_experiment(manifest: dict) -> dict[str, dict]:
     _require(isinstance(manifest, dict) and manifest.get("schema_version") == "trigger-experiment/v1", "unsupported experiment schema")
     _require(isinstance(manifest.get("experiment_id"), str) and bool(manifest["experiment_id"]), "missing experiment identity")
