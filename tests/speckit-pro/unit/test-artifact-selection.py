@@ -25,11 +25,12 @@ class SelectionFixture(unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
         self.gallery: Path | None = None
+        self.swap_on_read = False
+        self.timeout = 30
         (self.root / ".specify").mkdir()
         (self.root / "plan.md").write_text("## Declared File Operations\n\n- NEW src/new.py\n", encoding="utf-8")
 
-    def select(self, *, status: str = "ok", plugin: str = "speckit-pro", swap_on_read: bool = False,
-               timeout: float = 30, **inputs: object) -> dict:
+    def select(self, *, status: str = "ok", plugin: str = "speckit-pro", **inputs: object) -> dict:
         request = {"schema_version": "1.0", "request_id": "artifact-selection-test",
                    "helper_id": "select-artifact-pages", "operation": "select-artifact-pages",
                    "mode": "read_only", "inputs": {"plan_file": "plan.md", **inputs}}
@@ -46,10 +47,10 @@ class SelectionFixture(unittest.TestCase):
             "        swap_requested = False\n"
             "    return real_open(path, *args, **kwargs)\n"
             "os.open = swap_open\nsys.argv = sys.argv[:1]\n"
-            "runpy.run_module('speckit_pro_runner', run_name='__main__')", str(self.gallery), str(swap_on_read),
+            "runpy.run_module('speckit_pro_runner', run_name='__main__')", str(self.gallery), str(self.swap_on_read),
         ],
                               input=json.dumps(request), text=True, capture_output=True, check=False,
-                              cwd=self.root, env={**os.environ, "PYTHONPATH": str(ROOT / plugin)}, timeout=timeout)
+                              cwd=self.root, env={**os.environ, "PYTHONPATH": str(ROOT / plugin)}, timeout=self.timeout)
         result = json.loads(done.stdout.splitlines()[-1])
         self.assertEqual(done.returncode, 0 if status == "ok" else 2, result)
         self.assertEqual(result["status"], status, result)
@@ -100,7 +101,7 @@ class ManifestSecurityTests(SelectionFixture):
                 self.assertEqual(self.select(status="input_error"), {})
 
 
-class OutputSecurityTests(SelectionFixture):
+class WrittenOutputSecurityTests(SelectionFixture):
     def test_written_file_verification_fails_closed_at_the_descriptor_read(self) -> None:
         artifacts = self.root / "artifacts"
         outside = self.root / "outside"
@@ -111,8 +112,10 @@ class OutputSecurityTests(SelectionFixture):
         (outside / "implementation-plan.html").write_text("outside page", encoding="utf-8")
         for plugin in ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro"):
             with self.subTest(plugin=plugin):
+                self.swap_on_read = True
                 self.assertEqual(self.select(status="input_error", plugin=plugin, candidate_paths=[final],
-                                             verify_written_paths=True, swap_on_read=True), {})
+                                             verify_written_paths=True), {})
+                self.swap_on_read = False
                 self.assertTrue(artifacts.is_symlink(), "the race probe must actually swap the directory")
                 artifacts.unlink()
                 (self.root / "held-artifacts").rename(artifacts)
@@ -123,8 +126,9 @@ class OutputSecurityTests(SelectionFixture):
         self.assertEqual(self.select(status="input_error", verify_written_paths=1), {})
         (self.root / final).rmdir()
         os.mkfifo(self.root / final)
+        self.timeout = 10
         self.assertEqual(self.select(status="input_error", candidate_paths=[final],
-                                     verify_written_paths=True, timeout=10), {})
+                                     verify_written_paths=True), {})
 
     def test_post_write_verification_rejects_a_swapped_artifact_directory(self) -> None:
         artifacts = self.root / "artifacts"
@@ -147,6 +151,8 @@ class OutputSecurityTests(SelectionFixture):
         self.assertEqual((outside / "implementation-plan.html").read_text(encoding="utf-8"), "redirected page")
         self.assertEqual((self.root / "held-artifacts/implementation-plan.html").read_text(encoding="utf-8"), "owned page")
 
+
+class OutputSecurityTests(SelectionFixture):
     def test_temporary_and_final_outputs_require_a_fresh_confinement_check(self) -> None:
         artifacts = self.root / "artifacts"
         artifacts.mkdir()
