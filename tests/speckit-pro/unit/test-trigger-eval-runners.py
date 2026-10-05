@@ -3940,11 +3940,21 @@ class ProcessGroupProbeTests(unittest.TestCase):
     def test_cleanup_observations_preserve_terminal_absence_contract(self) -> None:
         import trigger_process as processes
         child = FakePopen(b"", returncode=0)
-        observations = []
-        with mock.patch.object(processes.os, "killpg", side_effect=itertools.chain([None], itertools.repeat(ProcessLookupError()))):
-            self.assertFalse(processes.cleanup_child(child, observations=observations))
-        self.assertTrue(observations)
-        self.assertTrue(all(item["errno"] == 3 for item in observations))
+        for platform in ("posix", "nt"):
+            observations = []
+            with (
+                self.subTest(platform=platform),
+                mock.patch.object(processes.os, "name", platform),
+                mock.patch.object(processes.os, "getpgrp", return_value=child.pid + 1, create=True),
+                mock.patch.object(processes.os, "killpg", create=True, side_effect=itertools.chain([None], itertools.repeat(ProcessLookupError()))) as probe,
+            ):
+                self.assertFalse(processes.cleanup_child(child, observations=observations))
+            if platform == "posix":
+                self.assertTrue(observations)
+                self.assertTrue(all(item["errno"] == 3 for item in observations))
+            else:
+                self.assertEqual(observations, [])
+                probe.assert_not_called()
 
     @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
     def test_claude_post_signal_permission_probe_requires_later_absence(self) -> None:
