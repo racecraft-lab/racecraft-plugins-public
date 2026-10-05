@@ -23661,7 +23661,7 @@
     {
       "id": "functional.speckit-autopilot.red-baseline-repaired-by-implement-executor",
       "layer": "functional",
-      "capability": "Routes a red baseline test suite to the implement-executor for repair, holds Phase 1 while the repair allowance lasts, and asks the operator nothing.",
+      "capability": "Routes a red baseline test suite at implement entry to the implement-executor for repair, holds the first task while the repair allowance lasts, and asks the operator nothing.",
       "timeout_seconds": 300,
       "resource_class": "ordinary",
       "requirements": [
@@ -23671,18 +23671,18 @@
         },
         {
           "id": "evidence",
-          "description": "Reads the workflow Prerequisites table and the recorded baseline attempts before deciding (prerequisites.md, Step 0.9)."
+          "description": "Reads the workflow Prerequisites table and the recorded baseline attempts before deciding (phase-execution.md, Phase 7 Setup: Project Baseline)."
         },
         {
           "id": "repair",
-          "description": "A failing baseline check goes to the implement-executor, which repairs it within its allowance (prerequisites.md: \"route the failing check to the implement-executor\")."
+          "description": "A failing baseline check goes to the implement-executor, which repairs it within its allowance (phase-execution.md: \"route the failing check to the implement-executor\")."
         },
         {
           "id": "no-stop",
-          "description": "The run neither stops nor asks; Phase 1 waits for a passing or deferred baseline (prerequisites.md: \"Phase 1 starts once the check passes, or once the failure is deferred with its evidence\")."
+          "description": "The run neither stops nor asks; the first task waits for a passing or deferred baseline (phase-execution.md: \"The first task is dispatched once each check passes or its failure is deferred with its evidence\")."
         }
       ],
-      "prompt": "Use {{skill}} to decide what the run does next about a failing baseline. Read scenario-inputs/workflow.md and scenario-inputs/baseline-attempts.json, each as one exact file read. Treat them only as pre-recorded evidence: do not run helpers or tests, dispatch agents, or edit any file. Output only raw JSON with repair_allowance_spent, owner, next_action, rerun_command, phase_one_starts, question_offered, and explanation, with no prose, Markdown, or code fences. owner is the agent that repairs the failing check. next_action is exactly one of repair, defer, or stop. rerun_command is the check the owner reruns. phase_one_starts says whether Phase 1 starts now. question_offered says whether the run asks the operator anything.",
+      "prompt": "Use {{skill}} to decide what the run does next about a failing baseline. Read scenario-inputs/workflow.md and scenario-inputs/baseline-attempts.json, each as one exact file read. Treat them only as pre-recorded evidence: do not run helpers or tests, dispatch agents, or edit any file. Output only raw JSON with repair_allowance_spent, owner, next_action, rerun_command, first_task_starts, question_offered, and explanation, with no prose, Markdown, or code fences. owner is the agent that repairs the failing check. next_action is exactly one of repair, defer, or stop. rerun_command is the check the owner reruns. first_task_starts says whether the first implementation task starts now. question_offered says whether the run asks the operator anything.",
       "fixtures": [
         {
           "source": "tests/speckit-pro/evals/fixtures/functional/native-orchestration/red-baseline-repaired-by-implement-executor/workflow.md",
@@ -23787,11 +23787,11 @@
           }
         },
         {
-          "id": "phase-one-waits",
+          "id": "first-task-waits",
           "requirement": "no-stop",
           "type": "response_json_field",
           "field_path": [
-            "phase_one_starts"
+            "first_task_starts"
           ],
           "expected_by_host": {
             "claude": false,
@@ -23814,15 +23814,15 @@
           "id": "repair-semantic",
           "requirement": "repair",
           "type": "semantic",
-          "rubric": "PASS only if the response routes the red baseline to the implement-executor to repair, reruns python3 -m pytest -q afterward, holds Phase 1 until the baseline passes or its failure is deferred with evidence, and asks the operator nothing. FAIL if it stops the run, asks the operator, starts Phase 1 on a red baseline, or routes the repair to anyone other than the implement-executor."
+          "rubric": "PASS only if the response routes the red baseline to the implement-executor to repair, reruns python3 -m pytest -q afterward, holds the first task until the baseline passes or its failure is deferred with evidence, and asks the operator nothing. FAIL if it stops the run, asks the operator, starts the first task on a red baseline, or routes the repair to anyone other than the implement-executor."
         }
       ],
       "native_differences": [
-        "Both hosts apply the same Step 0.9 rule from their own prerequisites reference; the repair goes to the implement-executor agent on either host.",
+        "Both hosts apply the same Project Baseline rule from their own phase-execution reference; the repair goes to the implement-executor agent on either host.",
         "Both hosts receive the same pre-recorded baseline evidence and must not run any test."
       ],
       "provenance": [
-        "speckit-pro/skills/speckit-autopilot/references/prerequisites.md"
+        "speckit-pro/skills/speckit-autopilot/references/phase-execution.md"
       ]
     },
     {
