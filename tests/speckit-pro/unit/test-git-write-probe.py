@@ -102,6 +102,20 @@ class GitWriteProbeTest(unittest.TestCase):
         self.assertEqual("replacement belongs to someone else", replacement.read_text(encoding="utf-8"))
         self.assertEqual("unknown", result["data"]["observation"]["status"])
 
+    def test_probe_removed_before_capture_leaves_no_leftover_report(self) -> None:
+        rename = os.rename
+
+        def remove_then_rename(src, dst, **kwargs):
+            if str(src).endswith(".lock") and kwargs.get("src_dir_fd") is not None:
+                os.unlink(src, dir_fd=kwargs["src_dir_fd"])
+            return rename(src, dst, **kwargs)
+
+        with patch.object(probe.os, "rename", side_effect=remove_then_rename):
+            result = self.probe_current_repository()
+        self.assertEqual("proceed", result["data"]["verdict"])
+        self.assertNotIn("could not be removed", result["data"]["message"])
+        self.assert_no_probe_files()
+
     def test_unrestored_replacement_is_preserved_for_inspection(self) -> None:
         with self.replacement_on_creation():
             with patch.object(probe.os, "link", side_effect=PermissionError(errno.EPERM, "restore denied")):

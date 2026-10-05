@@ -111,18 +111,23 @@ def retire_probe_lock(lock: str, directory_fd: int, created: os.stat_result) -> 
         os.mkdir(private, 0o700, dir_fd=directory_fd)
         private_created = True
         private_fd = os.open(private, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=directory_fd)
-        os.rename(lock, lock, src_dir_fd=directory_fd, dst_dir_fd=private_fd)
-        leftover = f"{private} ({lock})"
-        current = os.stat(lock, dir_fd=private_fd, follow_symlinks=False)
-        if (current.st_dev, current.st_ino) != (created.st_dev, created.st_ino):
-            # Exclusive link restores a captured replacement without overwriting a new public entry.
-            os.link(lock, lock, src_dir_fd=private_fd, dst_dir_fd=directory_fd, follow_symlinks=False)
-            os.unlink(lock, dir_fd=private_fd)
-            errors.append(OSError(errno.ESTALE, "git write probe was replaced"))
-        else:
-            cleanup = remove_probe_lock(lock, private_fd, created)
-            if cleanup is not None:
-                raise cleanup
+        try:
+            os.rename(lock, lock, src_dir_fd=directory_fd, dst_dir_fd=private_fd)
+            captured = True
+        except FileNotFoundError:
+            captured = False  # Already removed by someone else: nothing of ours is left to clean.
+        if captured:
+            leftover = f"{private} ({lock})"
+            current = os.stat(lock, dir_fd=private_fd, follow_symlinks=False)
+            if (current.st_dev, current.st_ino) != (created.st_dev, created.st_ino):
+                # Exclusive link restores a captured replacement without overwriting a new public entry.
+                os.link(lock, lock, src_dir_fd=private_fd, dst_dir_fd=directory_fd, follow_symlinks=False)
+                os.unlink(lock, dir_fd=private_fd)
+                errors.append(OSError(errno.ESTALE, "git write probe was replaced"))
+            else:
+                cleanup = remove_probe_lock(lock, private_fd, created)
+                if cleanup is not None:
+                    raise cleanup
         leftover = ""
     except OSError as error:
         errors.append(error)
