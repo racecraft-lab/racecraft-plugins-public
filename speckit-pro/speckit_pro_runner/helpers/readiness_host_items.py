@@ -16,7 +16,7 @@ from typing import Any
 from ..agent_materialization import digest
 from ..strict_input import SelectionError
 from ..sweep_isolation import secret_matches
-from .readiness_record import MAX_TEXT, NOT_OBSERVED_ACTION, clean_text, make_item
+from .readiness_values import MAX_TEXT, NOT_OBSERVED_ACTION, clean_text, make_item
 
 CLAUDE_ONLY_ITEMS = ("permission_probe", "plugin_scope", "mcp_authentication")
 HOST_ITEMS = (*CLAUDE_ONLY_ITEMS, "hooks")
