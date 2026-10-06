@@ -354,7 +354,7 @@ class RegistryDescriptorTests(CuratedInstallCase):
 class CompletedInstallTests(CuratedInstallCase):
     """Neither an aborted install nor the legacy opt-in supplies owner acceptance."""
 
-    def run_main(self, args=(), *, init_exit=0, register=True, preset_ok=True):
+    def run_main(self, args=(), *, preset_ok=True):
         installs = []
 
         def specify(argv, project):
@@ -365,57 +365,49 @@ class CompletedInstallTests(CuratedInstallCase):
             if argv[:1] == ["extension"]:
                 return subprocess.CompletedProcess([], 1, check.TRUST_PROMPT, "")
             installs.append(argv)
-            if register:
-                extension = argv[argv.index("--extension") + 1]
-                entry = next(entry for entry in EXTENSIONS if entry["archive_url"] == extension)
-                (project / ".specify/extensions" / entry["id"]).mkdir(parents=True)
-            return subprocess.CompletedProcess([], init_exit, "", "")
+            return subprocess.CompletedProcess([], 0, "", "")
 
         def setup(project):
             (project / ".specify").mkdir(exist_ok=True)
             return []
 
-        def init_project(project, extra=()):
-            (project / ".specify").mkdir(exist_ok=True)
-            if not extra:
-                return []
-            return [] if specify(["init", "--here", *extra], project).returncode == 0 else ["setup failed"]
-
         stdout, stderr = io.StringIO(), io.StringIO()
         with mock.patch.object(check, "fresh_project", side_effect=setup), mock.patch.object(
-            check, "init_project", side_effect=init_project
-        ), mock.patch.object(check, "specify", side_effect=specify), mock.patch.object(
+            check, "specify", side_effect=specify
+        ), mock.patch.object(
             check, "archive_declares_id", return_value=True
         ), redirect_stdout(stdout), redirect_stderr(stderr):
             status = check.main(list(args))
         return status, stdout.getvalue(), stderr.getvalue(), installs
 
+    def assert_no_completion_claim(self, status, stdout, installs, expected_status):
+        self.assertEqual(status, expected_status)
+        self.assertIn("0/6 passed", stdout)
+        self.assertEqual(installs, [])
+
     def test_default_run_reports_every_extension_unproven_and_never_zero(self):
         status, stdout, stderr, installs = self.run_main()
-        self.assertEqual(status, 2)
-        self.assertIn("0/6 passed", stdout)
+        self.assert_no_completion_claim(status, stdout, installs, 2)
         self.assertIn("6 unproven", stdout)
         self.assertIn("UNPROVEN preset claude-ask-questions: needs owner-run acceptance", stderr)
         for entry in EXTENSIONS:
             self.assertIn(f"UNPROVEN extension {entry['id']}: needs operator confirmation", stderr)
-        self.assertEqual(installs, [])
 
     def test_legacy_opt_in_fails_closed_without_attempting_installs(self):
         status, stdout, stderr, installs = self.run_main(["--trust-pinned-archives"])
-        self.assertEqual(status, 1)
-        self.assertIn("0/6 passed", stdout)
+        self.assert_no_completion_claim(status, stdout, installs, 1)
         for entry in EXTENSIONS:
             self.assertIn(f"FAIL extension {entry['id']}: completed install is unproven; owner-run acceptance is required", stderr)
-        self.assertEqual(installs, [])
 
-    def test_opted_in_run_fails_when_the_install_is_not_registered(self):
-        for label, options in (("unregistered", {"register": False}), ("nonzero", {"init_exit": 1})):
-            with self.subTest(case=label):
-                status, stdout, stderr, _ = self.run_main(["--trust-pinned-archives"], **options)
+    def test_legacy_opt_in_never_uses_init_results(self):
+        for result in ([], ["setup failed"]):
+            with self.subTest(result=result), mock.patch.object(check, "init_project", return_value=result) as init:
+                status, stdout, stderr, _ = self.run_main(["--trust-pinned-archives"])
                 self.assertEqual(status, 1)
                 self.assertIn("0/6 passed", stdout)
                 for entry in EXTENSIONS:
                     self.assertIn(f"FAIL extension {entry['id']}:", stderr)
+                init.assert_not_called()
 
     def test_a_failed_preset_is_a_failure_not_unproven(self):
         status, _, stderr, _ = self.run_main(preset_ok=False)
