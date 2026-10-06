@@ -870,8 +870,8 @@ class HostProbePathSecurityTest(unittest.TestCase):
                 self.reject_path(entry, directory, form, hosts=("git", "gh", "docker"))
 
     def test_other_cli_probes_ignore_unrelated_hardlinks(self) -> None:
-        # Root can write every system hardlink in a container; one outside the
-        # worktree must not hide Git. A worktree alias is the attack instead.
+        # A protected inode remains safe regardless of its link count. Model
+        # protection explicitly so root container runs observe the same policy.
         payload = self.area / "unrelated"
         self.executable(payload)
         alias = self.tools / "unrelated"
@@ -882,7 +882,7 @@ class HostProbePathSecurityTest(unittest.TestCase):
                 self.executable(target, trusted=True)
                 try:
                     with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
-                        result = self.probe(self.root, [cli, "--version"], allowed=(cli,), timeout=2)
+                        result = self.protected_probe(cli, (target, alias))
                     self.assertFalse(self.marker.exists())
                     self.assertEqual((0, "2.1.0"), (result["exit_status"], result["stdout_tail"]))
                 finally:
@@ -899,7 +899,7 @@ class HostProbePathSecurityTest(unittest.TestCase):
                 launcher.chmod(0o755)
                 try:
                     with unittest.mock.patch.dict(os.environ, {"PATH": os.pathsep.join(map(str, (self.tools, helpers)))}):
-                        result = self.probe(self.root, [cli, "--version"], allowed=(cli,), timeout=2)
+                        result = self.protected_probe(cli, (launcher, Path(sys.executable)))
                     self.assertEqual((0, "2.1.0"), (result["exit_status"], result["stdout_tail"]))
                 finally:
                     launcher.unlink()
@@ -925,12 +925,107 @@ class HostProbePathSecurityTest(unittest.TestCase):
                 links[form](helper)
                 try:
                     with unittest.mock.patch.dict(os.environ, {"PATH": path}):
-                        result = self.probe(self.root, [cli, "--version"], allowed=(cli,), timeout=2)
+                        result = self.protected_probe(cli, (launcher,))
                     self.assertFalse(self.marker.exists(), "worktree-linked helper ran")
                     self.assertNotEqual(0, result["exit_status"])
                 finally:
                     launcher.unlink()
                     helper.unlink()
+                    self.marker.unlink(missing_ok=True)
+
+    def test_other_cli_probes_reject_relinked_helpers(self) -> None:
+        """A missing worktree alias during validation never authenticates later helper bytes."""
+        helpers = self.area / "helpers"
+        helpers.mkdir()
+        consumers = {
+            "env-shebang": "#!/usr/bin/env spk-helper\n",
+            "subprocess": f"#!{sys.executable}\nimport subprocess\nraise SystemExit(subprocess.run(['spk-helper']).returncode)\n",
+        }
+        validate = readiness_record.cli_probe.validate_probe_directory
+        which = shutil.which
+        for cli, consumer, location, window, form in itertools.product(
+                ("git", "gh", "docker"), consumers, (self.tools, helpers),
+                ("after-validation", "after-lookup"),
+                ("regular", "readonly", "indirect-symlink", "nonexecutable", "foreign-writable")):
+            with self.subTest(cli=cli, consumer=consumer, location=location.name, window=window, form=form):
+                launcher = self.tools / cli
+                launcher.write_text(consumers[consumer], encoding="utf-8")
+                launcher.chmod(0o755)
+                payload = self.root / "payload"
+                self.executable(payload, trusted=True)
+                helper = location / "spk-helper"
+                inode = {"indirect-symlink": self.area / "helper-inode"}.get(form, helper)
+                os.link(payload, inode)
+                payload.unlink()
+                if form == "indirect-symlink":
+                    helper.symlink_to(inode)
+                inode.chmod({"readonly": 0o555, "nonexecutable": 0o644}.get(form, 0o755))
+                self.assertEqual(1, inode.stat().st_nlink)
+
+                def attack() -> None:
+                    os.link(inode, payload)
+                    payload.chmod(0o755)
+                    self.executable(payload)
+
+                def race_validation(directory, *args, **kwargs):
+                    try:
+                        return validate(directory, *args, **kwargs)
+                    finally:
+                        if window == "after-validation" and directory == location:
+                            attack()
+
+                def race_lookup(*args, **kwargs):
+                    selected = which(*args, **kwargs)
+                    if window == "after-lookup":
+                        attack()
+                    return selected
+
+                try:
+                    with unittest.mock.patch.dict(os.environ, {"PATH": os.pathsep.join(map(str, (self.tools, helpers)))}), \
+                         unittest.mock.patch.object(readiness_record.cli_probe, "validate_probe_directory", side_effect=race_validation), \
+                         unittest.mock.patch.object(shutil, "which", side_effect=race_lookup):
+                        permissions = {"foreign-writable": {"protected": (launcher, inode), "writable": (inode,)}}
+                        result = self.protected_probe(cli, **permissions.get(form, {"protected": (launcher,)}))
+                    self.assertFalse(self.marker.exists(), "relinked helper supplied executable bytes")
+                    self.assertNotEqual(0, result["exit_status"])
+                finally:
+                    launcher.unlink()
+                    helper.unlink()
+                    inode.unlink(missing_ok=True)
+                    payload.unlink(missing_ok=True)
+                    self.marker.unlink(missing_ok=True)
+
+    def test_any_cli_rejects_relinked_selected_executable(self) -> None:
+        for cli, window in itertools.product(("git", "gh", "docker", "claude", "codex"),
+                                             ("after-validation", "after-lookup")):
+            with self.subTest(cli=cli, window=window):
+                payload = self.root / "payload"
+                self.executable(payload, trusted=True)
+                launcher = self.tools / cli
+                os.link(payload, launcher)
+                payload.unlink()
+                self.assertEqual(1, launcher.stat().st_nlink)
+                which = shutil.which
+
+                def race_lookup(*args, **kwargs):
+                    if window == "after-validation":
+                        os.link(launcher, payload)
+                        self.executable(payload)
+                    selected = which(*args, **kwargs)
+                    if window == "after-lookup":
+                        os.link(launcher, payload)
+                        self.executable(payload)
+                    return selected
+
+                try:
+                    with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}), \
+                         unittest.mock.patch.object(shutil, "which", side_effect=race_lookup):
+                        result = self.probe(self.root, [cli, "--version"], allowed=(cli,), timeout=2)
+                    self.assertFalse(self.marker.exists(), "relinked selected CLI supplied executable bytes")
+                    self.assertIsNone(result["exit_status"])
+                finally:
+                    launcher.unlink()
+                    payload.unlink(missing_ok=True)
                     self.marker.unlink(missing_ok=True)
 
     def test_trusted_installed_hosts_survive_poisoned_path(self) -> None:
@@ -1332,9 +1427,11 @@ class FeasibilityTest(unittest.TestCase):
 
     def record_items(self, observations: list[dict[str, object]] | None = None, mode: str = "dry_run") -> dict:
         observations = [observation(item) for item in CALLER_ITEMS] if observations is None else observations
-        _, response, _ = run_runner(request(observations, mode), cwd=self.root,
-                                    extra_env={"PATH": str(self.tools), **self.tool_env})
-        return response["data"]["record"]["items"]
+        # Feasibility tests exercise daemon replies, independently of installation
+        # ownership. HostProbePathSecurityTest covers the real lookup policy.
+        with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools), **self.tool_env}), \
+             unittest.mock.patch.object(readiness_record.cli_probe, "probe_search_path", return_value=str(self.tools)):
+            return readiness_record.build_record(request(observations, mode)["inputs"], self.root)["items"]
 
     def fake_docker(self, output: str, exit_code: int = 0, endpoint: str = "unix:///run/docker.sock") -> None:
         """A `docker` that answers `info` with `output` and `context inspect` with `endpoint`."""

@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import functools
 import os
 import re
 import shutil
 import stat
 import subprocess
-from collections.abc import Callable, Collection
+from collections.abc import Collection
 from pathlib import Path
 from typing import Any
 
@@ -20,34 +19,20 @@ DOCKER_STDOUT_TAIL_CHARS = STDERR_TAIL_CHARS
 CLIS = ("gh", "git", "docker", "claude", "codex")
 
 
-def reject_mutable_probe_alias(info: os.stat_result, path: Path, *, host: bool,
-                               shared: Callable[[os.stat_result], bool] | None = None) -> None:
-    """A writable host inode or namespace cannot authenticate a later lookup.
+def reject_mutable_probe_alias(info: os.stat_result, path: Path, *, host: bool) -> None:
+    """A mutable inode cannot authenticate bytes used by a later child lookup.
 
-    Keep system-owned, non-group/other-writable hardlinks: a worktree writer
-    cannot modify them or grant itself write access through an alias. `shared`
-    narrows a writable hardlink to one that is also a worktree file, because root
-    can write every system hardlink in a container.
+    Reject ownership as well as effective write access: owners can chmod read-only
+    files through a hardlink. Link counts and worktree inventories cannot establish
+    protection, because an alias may be absent at validation and relinked later.
+    Hosts additionally require protected namespaces; other CLIs retain their
+    external-directory policy, where replacing names already requires external write access.
     """
     writable = info.st_uid == os.geteuid() or os.access(path, os.W_OK, effective_ids=True)
     if host and stat.S_ISDIR(info.st_mode) and writable:
         raise ValueError("CLI lookup cannot authenticate a mutable directory")
-    if stat.S_ISREG(info.st_mode) and writable and (host or info.st_nlink > 1) and (shared is None or shared(info)):
+    if stat.S_ISREG(info.st_mode) and writable:
         raise ValueError("CLI lookup cannot authenticate a mutable executable inode")
-
-
-def worktree_link_inodes(worktree: Path) -> set[tuple[int, int]]:
-    """Every multiply linked worktree file; an unreadable directory fails closed."""
-    def fail(error: OSError) -> None:
-        raise error
-
-    inodes = set()
-    for parent, directories, files in os.walk(worktree, onerror=fail):
-        for name in (*directories, *files):
-            info = os.lstat(os.path.join(parent, name))
-            if stat.S_ISREG(info.st_mode) and info.st_nlink > 1:
-                inodes.add((info.st_dev, info.st_ino))
-    return inodes
 
 
 def external_probe_path(path: Path, worktree: Path, links: int = 40, *, host: bool = False) -> Path:
@@ -74,23 +59,17 @@ def external_probe_path(path: Path, worktree: Path, links: int = 40, *, host: bo
     return candidate
 
 
-def validate_probe_directory(directory: Path, worktree: Path, *, host: bool, cli: str,
-                             shared: Callable[[os.stat_result], bool]) -> None:
-    """Authenticate every child lookup name, including env-shebang interpreters/helpers.
-
-    Other CLIs judge a writable hardlink beside the selected name by `shared`, so an
-    unrelated system hardlink keeps the directory while a worktree alias rejects it.
-    """
+def validate_probe_directory(directory: Path, worktree: Path, *, host: bool) -> None:
+    """Require protected regular-file targets for every selected CLI and helper name."""
     external_probe_path(directory, worktree, host=host)
     for entry in directory.iterdir():
-        narrow = None if host or entry.name.casefold() == cli else shared
         info = entry.lstat()
         if stat.S_ISLNK(info.st_mode):
             target = external_probe_path(entry, worktree, host=host)
             if target.exists():
-                reject_mutable_probe_alias(target.stat(), target, host=host, shared=narrow)
+                reject_mutable_probe_alias(target.stat(), target, host=host)
         else:
-            reject_mutable_probe_alias(info, entry, host=host, shared=narrow)
+            reject_mutable_probe_alias(info, entry, host=host)
 
 
 def probe_search_path(root: Path, cli: str) -> str:
@@ -104,7 +83,6 @@ def probe_search_path(root: Path, cli: str) -> str:
     if os.name != "posix":
         raise ValueError("trusted CLI lookup requires POSIX")
     worktree = root.resolve(strict=True)
-    inodes = functools.cache(functools.partial(worktree_link_inodes, worktree))
     directories = []
     for entry in os.environ.get("PATH", os.defpath).split(os.pathsep):
         directory = Path(entry)
@@ -113,8 +91,7 @@ def probe_search_path(root: Path, cli: str) -> str:
         try:
             directory = directory.resolve(strict=True)
             target = external_probe_path(directory / cli, worktree, host=cli in ("claude", "codex"))
-            validate_probe_directory(directory, worktree, host=cli in ("claude", "codex"), cli=cli,
-                                     shared=lambda info: (info.st_dev, info.st_ino) in inodes())
+            validate_probe_directory(directory, worktree, host=cli in ("claude", "codex"))
         except (OSError, RuntimeError, ValueError):
             continue
         if not directory.is_relative_to(worktree) and not target.is_relative_to(worktree):
