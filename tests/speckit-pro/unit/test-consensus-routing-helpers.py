@@ -750,8 +750,10 @@ class NoDecisionModelTests(unittest.TestCase):
     """ADR 0020: the plan stage routes with runner rules, never a decision model."""
 
     def test_the_routing_helper_calls_no_decision_model(self) -> None:
-        source = inspect.getsource(read_only.parse_consensus_categories).casefold()
-        self.assertEqual([marker for marker in ("jev", "evaluate", "typesafe", "subprocess", "urllib") if marker in source], [])
+        for helper in (read_only.parse_consensus_categories, read_only.consensus_route):
+            with self.subTest(helper=helper.__name__):
+                source = inspect.getsource(helper).casefold()
+                self.assertEqual([marker for marker in ("jev", "evaluate", "typesafe", "subprocess", "urllib") if marker in source], [])
 
     def test_no_plan_stage_consensus_agent_or_reference_names_a_decision_model(self) -> None:
         paths = [PLUGIN_ROOT / "agents" / f"{name}.md" for name in PLAN_STAGE_CONSENSUS_AGENTS]

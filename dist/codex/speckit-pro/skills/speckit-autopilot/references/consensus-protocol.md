@@ -227,20 +227,24 @@ serial (write contention on spec.md / plan.md / tasks.md).
 ### Stages
 
 ```text
-Stage 1 — All routed analysts, ONE assistant message:
-  For each unresolved item Ix (x = 1..N):
-    Call parse-consensus-categories on the item line and confidence → tier, analyst set Sx
-    (tier recommendation: Sx is empty; apply the recommendation, no dispatch)
-    For each analyst a in Sx:
-      Agent(subagent_type: <a>,
+Stage 1 — All routed analysts, as the brief's waves (one turn each):
+  Request the phase brief with `items` (each unresolved item's line and confidence)
+  and `max_agents` (the host's concurrent-agent limit).
+  Its security wave holds the three analysts of every security item; its
+  low-confidence wave holds the one routed analyst of every low-confidence item.
+  A wave over the limit arrives as consecutive waves of at most `max_agents`.
+  (A recommendation item has no entry: apply the recommendation, no dispatch.)
+  For each entry of a wave, all in ONE turn:
+      Agent(subagent_type: "speckit-pro:" + <entry.agent>,
             run_in_background: true,
-            description: "SPEC-XXX consensus R1 [I<x>]: <item>",
-            prompt: <consensus prompt for item Ix from a's perspective>)
-  Total dispatches in one message: Σ |Sx|
+            description: "SPEC-XXX consensus R1 [I<entry.inputs.item>]: <item>",
+            prompt: <consensus prompt for entry.inputs.item from that analyst's perspective>)
+  Total dispatches across the two waves: Σ |Sx|
   Each analyst prompt ends with the `Reference dir:` line, built from the
   `plugin_root` that `validate-agent-install` returned.
   ↓
-  Await ALL spawned analysts to complete.
+  Await ALL analysts of a wave before the next wave; the security wave's
+  synthesizers (Stage 2) need only the security wave.
 
 Stage 2 — All synthesizers, ONE assistant message:
   A low_confidence item follows the Single-analyst confidence rule above and
@@ -566,7 +570,7 @@ checklist-executor runs /speckit-checklist domain
 ```
 
 The diagram above is per-gap educational. Actual dispatch is
-**batched across N gaps per checklist domain** — see §Batched Dispatch.
+**batched across N gaps from the whole checklist domain wave** — see §Batched Dispatch.
 
 **Prompt template for consensus agents during Gap Remediation:**
 

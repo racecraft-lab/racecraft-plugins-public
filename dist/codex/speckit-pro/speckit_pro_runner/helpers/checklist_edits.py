@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from collections.abc import Callable, Iterator
 from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass, field
@@ -35,15 +36,30 @@ from ..atomic_write import (AtomicSwapUnavailable, AtomicWriteInterrupted, Write
 from ..canonical_json import canonical_bytes
 from ..envelope import diagnostic, response
 from ..execution_control import confined_path, ignore_owned_directory, workflow_process_directory
-from ..strict_input import SelectionError, has_hidden_characters, require_fields, require_text
+from ..strict_input import SelectionError, has_hidden_characters, next_fence, require_fields, require_text
 from ..sweep_isolation import secret_matches
+from .dispatch_waves import DOMAIN_NAME
 from .execution_requests import Refusal, run_contained_helper
 
 SCHEMA_VERSION = "checklist-edits/v1"
 ARTIFACTS = ("spec.md", "plan.md")
 MAX_TEXT = 20000
-# Markdown keeps its tabs and line breaks; every other control, format or separator character is refused.
-EDIT_TEXT_KEEPS = "\t\n\r"
+# Auto-application accepts prose, not Markdown syntax, references or path/token alphabets.
+PLAIN_PROSE = re.compile(r"[A-Za-z0-9 ,;!?'\"().-]*")
+PROSE_STRUCTURE = re.compile(r"^ {4}|^\s*(?:[-.()]|[0-9]+[.)](?:\s|$))|\.(?=[A-Za-z0-9-])")
+PROPOSAL_LABEL = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}")
+UNCHANGED_HEADING = re.compile(r"#{1,6} +[^\r\n]+")
+# CommonMark 0.31.2, section 4.6: these HTML blocks can cross blank lines.
+HTML_BLOCK_ENDS = (
+    (re.compile(r"^ {0,3}<script(?:\s|>|$)", re.I), "</script>"),
+    (re.compile(r"^ {0,3}<pre(?:\s|>|$)", re.I), "</pre>"),
+    (re.compile(r"^ {0,3}<style(?:\s|>|$)", re.I), "</style>"),
+    (re.compile(r"^ {0,3}<textarea(?:\s|>|$)", re.I), "</textarea>"),
+    (re.compile(r"^ {0,3}<!--"), "-->"),
+    (re.compile(r"^ {0,3}<\?"), "?>"),
+    (re.compile(r"^ {0,3}<!\[CDATA\["), "]]>"),
+    (re.compile(r"^ {0,3}<![A-Z]"), ">"),
+)
 
 
 class CanonicalMismatch(ValueError):
@@ -102,6 +118,73 @@ def checked_text(value: Any, label: str, *, keep: str = "") -> str:
     return value
 
 
+def prose_problem(text: str) -> str | None:
+    """Closed auto-edit alphabet; evaluate fragments and their completed lines by the same rule."""
+    if secret_matches(text):
+        return "edits would write credential-shaped text"
+    if not PLAIN_PROSE.fullmatch(text) or PROSE_STRUCTURE.search(text):
+        return "edits must stay single-line plain prose without markup, references, mentions or paths"
+    return None
+
+
+def checked_label(value: Any, label: str, pattern: re.Pattern[str] = PROPOSAL_LABEL) -> str:
+    """Record identifiers have no prose, active syntax or credential alphabet."""
+    text = checked_text(value, label)
+    if pattern.fullmatch(text) and not secret_matches(text):
+        return text
+    raise SelectionError(f"{label} must be a bounded non-credential identifier")
+
+
+def plain_prose_context(lines: list[str], index: int) -> bool:
+    """Admit only a top-level prose block, outside fences and multiline HTML.
+
+    Other Markdown blocks stay untouched. Neighbouring lines protect Setext
+    headings, lazy list/quote continuations and multiline inline markup.
+    """
+    fence: str | None = None
+    html_end: str | None = None
+    start = 0
+    for number, row in enumerate(lines[:index]):
+        if html_end is not None:
+            if html_end in row.lower():
+                html_end = None
+        elif fence is not None:
+            fence = next_fence(fence, row)
+        else:
+            fence = next_fence(None, row)
+            html_end = next((end for pattern, end in HTML_BLOCK_ENDS if pattern.match(row)), None)
+            if html_end is not None and html_end in row.lower():
+                html_end = None
+        if not row.strip() or UNCHANGED_HEADING.fullmatch(row):
+            start = number + 1
+    if fence is not None or html_end is not None or lines[index].startswith((" ", "\t")):
+        return False
+    end = index + 1
+    while end < len(lines) and lines[end].strip() and not UNCHANGED_HEADING.fullmatch(lines[end]):
+        end += 1
+    return all(prose_problem(row) is None for row in lines[start:end])
+
+
+def prose_edit(before: str, find: str, replacement: str) -> tuple[str, str | None]:
+    """An inline edit and its completed-line check, before any artifact write."""
+    if has_hidden_characters(find):
+        return before, "find must stay on one visible line"
+    position = before.index(find)
+    start = before.rfind("\n", 0, position) + 1
+    end = before.find("\n", position + len(find))
+    if end == -1:
+        end = len(before)
+    elif end > start and before[end - 1] == "\r":
+        end -= 1
+    line = before[start:position] + replacement + before[position + len(find):end]
+    # Check the touched line, even if identical text already exists elsewhere.
+    problem = prose_problem(line)
+    if problem is None and (prose_problem(find) is not None or prose_problem(before[start:end]) is not None or
+                            not plain_prose_context(before.replace("\r\n", "\n").split("\n"), before.count("\n", 0, start))):
+        problem = "automatic edits require a plain prose block; review structural content separately"
+    return (before if problem else before[:position] + replacement + before[position + len(find):]), problem
+
+
 def checked_proposal(value: Any) -> tuple[str, list[str], list[dict[str, str]]]:
     """One domain's proposal as (domain, gap ids, edits); anything outside the contract raises."""
     item = require_fields(value, {"domain", "gaps", "edits"}, "proposal")
@@ -111,7 +194,7 @@ def checked_proposal(value: Any) -> tuple[str, list[str], list[dict[str, str]]]:
     for raw in item["gaps"]:
         gap = require_fields(raw, {"id", "description"}, "gap")
         require_text(gap["description"], "gap description")
-        gaps.append(checked_text(require_text(gap["id"], "gap id"), "gap id"))
+        gaps.append(checked_label(gap["id"], "gap id"))
     if len(set(gaps)) != len(gaps):
         raise SelectionError("proposal: gap ids must be unique")
     edits = []
@@ -121,11 +204,12 @@ def checked_proposal(value: Any) -> tuple[str, list[str], list[dict[str, str]]]:
             raise SelectionError("edit: gap must name a gap in this proposal")
         if edit["file"] not in ARTIFACTS:
             raise SelectionError(f"edit: file must be one of {list(ARTIFACTS)}")
-        checked_text(require_text(edit["find"], "find"), "edit find", keep=EDIT_TEXT_KEEPS)
-        if secret_matches(checked_text(edit["replace"], "edit replace", keep=EDIT_TEXT_KEEPS)):
-            raise SelectionError("edit replace looks like a credential; planning artifacts never store one")
+        checked_text(require_text(edit["find"], "find"), "edit find")
+        problem = prose_problem(checked_text(edit["replace"], "edit replace"))
+        if problem:
+            raise SelectionError(problem)
         edits.append({key: edit[key] for key in ("gap", "file", "find", "replace")})
-    return checked_text(require_text(item["domain"], "domain"), "domain"), gaps, edits
+    return checked_label(item["domain"], "domain", DOMAIN_NAME), gaps, edits
 
 
 def checked_request(request: dict[str, Any]) -> tuple[list[str], dict[str, str], dict[str, tuple[list[str], list[dict[str, str]]]]]:
@@ -135,6 +219,7 @@ def checked_request(request: dict[str, Any]) -> tuple[list[str], dict[str, str],
         raise SelectionError("domains must be a list of domain names")
     if len(set(domains)) != len(domains):
         raise SelectionError("domains must be unique")
+    domains = [checked_label(name, "domain", DOMAIN_NAME) for name in domains]
     baseline = require_fields(request["baseline"], set(ARTIFACTS), "baseline")
     if not isinstance(request["proposals"], list):
         raise SelectionError("proposals must be a list")
@@ -158,10 +243,11 @@ def apply_domain(texts: dict[str, str], edits: list[dict[str, str]]) -> tuple[di
         count = work[edit["file"]].count(edit["find"])
         if count == 1:
             before = work[edit["file"]]
-            work[edit["file"]] = before.replace(edit["find"], edit["replace"], 1)
-            # Check the lines as written, not just the replace text: edits can complete a credential together.
-            if any(secret_matches(line) for line in set(work[edit["file"]].splitlines()) - set(before.splitlines())):
-                conflicts.append({"gap": edit["gap"], "file": edit["file"], "reason": "edits would write credential-shaped text"})
+            updated, problem = prose_edit(before, edit["find"], edit["replace"])
+            if problem:
+                conflicts.append({"gap": edit["gap"], "file": edit["file"], "reason": problem})
+            else:
+                work[edit["file"]] = updated
         else:
             reason = "find text not found" if count == 0 else f"find text matches {count} times"
             conflicts.append({"gap": edit["gap"], "file": edit["file"], "reason": reason})

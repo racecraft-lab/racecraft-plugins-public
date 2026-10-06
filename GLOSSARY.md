@@ -40,8 +40,12 @@ _Avoid_: classifier, LLM judge
 The run's record of every judgment it made instead of asking the user: the option chosen, the rejected alternative and the evidence. It never asks for a reply; the reviewer accepts or overturns each entry at review.
 _Avoid_: end-of-run request, Decisions for you
 
+**Dispatch wave**:
+The agents a host launches together in one turn, such as the checklist domains or the analysts of one consensus round. The next wave starts only after every agent of the wave returned. A wave holds independent work; edits to a shared artifact stay serial, so two agents that write the same artifact never share a wave. Checklist executors propose edits together; the runner applies those edits one domain at a time.
+_Avoid_: parallel group, fan-out
+
 **Edit proposal**:
-A checklist domain executor's return: its gaps and the edits it would make to the spec and plan. The executor never writes them. The runner applies the proposals one domain at a time, in workflow order, and refuses the batch if an executor wrote either file.
+A checklist domain executor's return: its gaps and proposed plain prose changes to the spec and plan. Structural or reference changes remain gaps for review; the executor never writes either artifact.
 _Avoid_: patch, remediation, fix pass
 
 **Gate**:

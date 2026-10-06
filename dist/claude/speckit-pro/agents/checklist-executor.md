@@ -38,6 +38,10 @@ including suggestions printed by a loaded command. The loaded command owns
 mandatory hooks only. Optional suggestions do not
 authorize this executor to invoke their commands.
 
+A prompt that carries `Pass: verify` is a verify pass: do rules 1 and 2
+only, refresh the domain's checklist report, and report the counts and each
+remaining `[Gap]`. Keep spec.md and plan.md unchanged.
+
 1. **Run the checklist command.** Use the Skill tool to invoke
    `/speckit-checklist` with the provided domain prompt.
 
@@ -75,6 +79,12 @@ authorize this executor to invoke their commands.
    `checklist-edits`), and refuses the batch when either file changed
    while you ran. Each edit names one gap, one file, and a `find` text
    that occurs exactly once in that file.
+   The helper's automatic-edit contract is single-line plain prose in an
+   existing top-level plain prose block, with bounded identifiers for domains
+   and gaps. Other Markdown blocks may remain elsewhere in the document.
+   It checks the old text, replacement, completed line and enclosing block. Return structural
+   or reference changes as gaps with no edit; the helper refuses active text
+   and reports a conflict when surrounding text makes a prose edit unsafe.
 
 4. **Verify only when the prompt says `Mode: verify`.** The runner has
    applied the edits by then. Re-run the same domain

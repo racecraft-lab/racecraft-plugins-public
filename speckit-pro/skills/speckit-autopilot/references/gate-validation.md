@@ -202,8 +202,7 @@ Phase 7 setup records that decision as the Implement Checklist Gate (see
 phase-execution.md).
 
 **Auto-Fix:** This is the **Checklist Gap Remediation Loop**.
-Runs after each domain subagent returns (not batched — see
-SKILL.md Rule 6).
+Runs once the checklist domain wave has returned (see SKILL.md Rule 6).
 
 ```text
 For EACH [Gap] marker found after a domain subagent:
