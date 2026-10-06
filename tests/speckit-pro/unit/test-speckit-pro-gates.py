@@ -3140,12 +3140,15 @@ class SourceSnapshotTests(unittest.TestCase):
         (package / "sub").mkdir(parents=True)
         (package / "a.py").write_text("a = 1\n", encoding="utf-8")
         (package / "sub" / "b.py").write_text("b = 2\n", encoding="utf-8")
+        if change.startswith("nested"):
+            (package / "early").mkdir()
+            (package / "early" / "source.py").write_text("value = 1\n", encoding="utf-8")
         real = trusted_io.read_tree_entry
 
-        def read_while_changing(parent_fd: int, name: str, expected: Any = None) -> Any:
+        def read_while_changing(parent_fd: int, name: str, expected: Any = None, **kwargs: Any) -> Any:
             if name == "b.py":
                 if change == "bytecode cache":
-                    (package / "sub" / "__pycache__").mkdir()
+                    (package / "sub" / "__pycache__").mkdir(exist_ok=True)
                     (package / "sub" / "__pycache__" / "b.cpython-311.pyc").write_bytes(b"cache")
                 elif change == "new source file":
                     (package / "sub" / "c.py").write_text("c = 3\n", encoding="utf-8")
@@ -3153,7 +3156,15 @@ class SourceSnapshotTests(unittest.TestCase):
                     replacement = root / "a-new.py"
                     replacement.write_text("a = 99\n", encoding="utf-8")
                     os.replace(replacement, package / "a.py")
-            return real(parent_fd, name, expected)
+                elif change == "nested replaced sibling":
+                    replacement = root / "source-new.py"
+                    replacement.write_text("value = 1\n", encoding="utf-8")
+                    os.replace(replacement, package / "early" / "source.py")
+                elif change == "nested edited sibling":
+                    (package / "early" / "source.py").write_text("value = 99\n", encoding="utf-8")
+                elif change == "nested new source file":
+                    (package / "early" / "new.py").write_text("new = 1\n", encoding="utf-8")
+            return real(parent_fd, name, expected, **kwargs)
 
         with patch.object(trusted_io, "read_tree_entry", read_while_changing):
             return trusted_io.trusted_tree_snapshot(package, root)
@@ -3171,7 +3182,10 @@ class SourceSnapshotTests(unittest.TestCase):
         return True
 
     def test_a_source_change_while_reading_still_fails_the_snapshot(self) -> None:
-        self.assertEqual([], [change for change in ("new source file", "replaced sibling") if self.survives(change)])
+        self.assertEqual([], [change for change in (
+            "new source file", "replaced sibling", "nested replaced sibling",
+            "nested edited sibling", "nested new source file",
+        ) if self.survives(change)])
 
 if __name__ == "__main__":
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(GateFoundationTests)

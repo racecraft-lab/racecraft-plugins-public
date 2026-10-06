@@ -556,6 +556,20 @@ class CanonicalResultTests(ChecklistEditsCase):
                 self.assertEqual(("expected_failure", [name]), (result["status"], result["data"].get("changed")), result)
                 self.assertEqual("# Competitor\n", self.text(name))
 
+    def test_an_unavailable_swap_refuses_the_write_and_keeps_a_competing_edit(self) -> None:
+        target = self.root / FEATURE / "spec.md"
+
+        def unavailable(*args: Any) -> bool:
+            target.write_text("# Competitor\n", encoding="utf-8")
+            return False
+
+        with patch.object(atomic_write, "swap_entries", unavailable):
+            result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
+        self.assertEqual("expected_failure", result["status"], result)
+        self.assertEqual("# Competitor\n", self.text("spec.md"))
+        self.assertFalse((self.root / RECORD).exists())
+        self.assertFalse(feature_locked(self.root))
+
     def test_a_concurrent_record_is_kept_and_reported(self) -> None:
         for prior in (False, True):
             with self.subTest(prior_record=prior):

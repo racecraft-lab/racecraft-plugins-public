@@ -268,7 +268,7 @@ def swap_entries(directory_fd: int, first: str, second: str) -> bool:
 def install_checked(parent_fd: int, tmp_name: str, target_name: str, expected: dict[str, Any]) -> bool:
     """Put `tmp_name` at `target_name` only if what it displaces still matches `expected`.
 
-    Returns False, having changed nothing, when the platform cannot swap; the caller then replaces.
+    Refuses existing-target writes when the platform cannot perform the checked swap.
     """
     if not expected.get("exists"):
         try:
@@ -277,7 +277,7 @@ def install_checked(parent_fd: int, tmp_name: str, target_name: str, expected: d
             raise WritePreconditionChanged("write target appeared after snapshot capture") from error
         return True
     if not swap_entries(parent_fd, tmp_name, target_name):
-        return False
+        raise WritePreconditionChanged("checked atomic swap is unavailable; write refused")
     try:
         displaced_matches = write_target_matches_snapshot(snapshot_write_target_fd(parent_fd, tmp_name), expected)
     except OSError:
