@@ -178,6 +178,7 @@
         { "path": "tests/speckit-pro/unit/test-quint-reference-attribution.py", "label": "test-quint-reference-attribution" },
         { "path": "tests/speckit-pro/unit/test-ratify-pr-split.py", "label": "test-ratify-pr-split" },
         { "path": "tests/speckit-pro/unit/test-readiness-codex-items.py", "label": "test-readiness-codex-items" },
+        { "path": "tests/speckit-pro/unit/test-readiness-codex-trust.py", "label": "test-readiness-codex-trust" },
         { "path": "tests/speckit-pro/unit/test-readiness-host-items.py", "label": "test-readiness-host-items" },
         { "path": "tests/speckit-pro/unit/test-readiness-record.py", "label": "test-readiness-record" },
         { "path": "tests/speckit-pro/unit/test-refresh-local-plugin.py", "label": "test-refresh-local-plugin" },
