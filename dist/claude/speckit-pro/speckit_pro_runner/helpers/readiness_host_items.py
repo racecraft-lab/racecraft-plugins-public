@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import re
+from pathlib import Path
 from typing import Any
 
 from ..agent_materialization import digest
@@ -20,10 +21,12 @@ from ..sweep_isolation import secret_matches
 from .readiness_values import MAX_TEXT, NOT_OBSERVED_ACTION, clean_text, make_item
 
 CLAUDE_ONLY_ITEMS = ("permission_probe", "plugin_scope", "mcp_authentication")
-CODEX_ONLY_ITEMS = ("codex_agents", "extension_versions")
+CODEX_TRUST_ITEMS = ("codex_approval_posture", "codex_hook_trust", "codex_local_access")
+CODEX_ONLY_ITEMS = ("codex_agents", "extension_versions", *CODEX_TRUST_ITEMS)
 HOST_ITEMS = (*CLAUDE_ONLY_ITEMS, "hooks", *CODEX_ONLY_ITEMS)
 DETAIL_KEYS = {"permission_probe": "probes", "plugin_scope": "scope", "mcp_authentication": "servers",
-               "hooks": "hooks", "codex_agents": "agents", "extension_versions": "extensions"}
+               "hooks": "hooks", "codex_agents": "agents", "extension_versions": "extensions",
+               "codex_approval_posture": "posture", "codex_hook_trust": "hooks", "codex_local_access": "access"}
 PROBES = ("runner_request", "git_status")
 PROBE_OUTCOMES = ("passed", "denied", "prompted")
 SCOPES = ("user", "project", "local")
@@ -58,21 +61,19 @@ def choice(value: Any, allowed: tuple[str, ...], label: str) -> str:
 
 def name_text(value: Any, label: str) -> str:
     """A short name safe to store and print; the same pattern bounds every hook, server and probe name."""
-    text = clean_text(value, label)
-    return text if NAME_RE.fullmatch(text) else _refuse_name(label)
-
-
-def _refuse_name(label: str) -> str:
-    raise SelectionError(f"{label} must be a short name of letters, digits, dots, hyphens or underscores")
+    text = pattern_text(value, NAME_RE, "a short name", label)
+    return clean_text(text, label)
 
 
 def allow_rule_texts(probes: list[dict[str, Any]], command_label: str) -> list[str]:
     """Claude Code `Tool(pattern)` rules for each failed probe; `command_label` stands in for the interpreter."""
     rules: list[str] = []
     for probe in probes:
-        if probe["outcome"] == "passed":
+        outcome = choice(probe["outcome"], PROBE_OUTCOMES, "permission_probe outcome")
+        name = choice(probe["probe"], PROBES, "permission_probe probe")
+        if outcome == "passed":
             continue
-        if probe["probe"] == "runner_request":
+        if name == "runner_request":
             rules += [f"Bash({command_label} -m speckit_pro_runner:*)", "Bash(printf:*)"]
         else:
             rules.append("Bash(git status:*)")
@@ -198,14 +199,19 @@ def observe_hooks(raw: dict[str, Any], observed_at: str, source: str, host: str)
     if any(not defined for _, defined, _ in hooks):
         return make_item("unavailable", source, observed_at, prints,
                          "Update the speckit-pro plugin so its required hooks are defined, then rerun scaffold.")
-    if any(trust == "untrusted" for _, _, trust in hooks):
+    status = hook_trust_status([trust for _, _, trust in hooks])
+    if status == "unavailable":
         review = ("Review and trust the hooks in /hooks, then restart Codex and rerun scaffold." if host == "codex"
                   else "Enable the speckit-pro plugin, check its hooks in /hooks, accept the workspace trust "
                        "dialog, then rerun scaffold.")
         return make_item("unavailable", source, observed_at, prints, review)
-    if any(trust == "unobservable" for _, _, trust in hooks):
+    if status == "unknown":
         return make_item("unknown", source, observed_at, prints,
                          "Check the required hooks in /hooks, then rerun scaffold.")
+    if host == "codex":
+        return make_item("unknown", source, observed_at, prints,
+                         "Record legacy hook evidence as incomplete; supply the complete codex_hook_trust "
+                         "observation, then rerun scaffold.")
     return make_item("verified", source, observed_at, prints)
 
 
@@ -232,6 +238,8 @@ def host_item(raw: dict[str, Any], host: str, observed_at: str, plugin_revision:
         return name, observe_codex_agents(raw, observed_at, source, plugin_revision)
     if name == "extension_versions":
         return name, observe_extension_versions(raw, observed_at, source)
+    if name in CODEX_TRUST_ITEMS:
+        return name, CODEX_TRUST_OBSERVERS[name](raw, observed_at, source)
     return name, observe_hooks(raw, observed_at, source, host)
 
 
@@ -286,11 +294,15 @@ def installation_digest(raw: Any) -> str:
     return digest(json.dumps(raw, sort_keys=True))
 
 
-def revision_text(value: Any, label: str) -> str:
-    """A version string for the record; anything else, such as a path or a sentence, is refused."""
-    if isinstance(value, str) and VERSION_RE.fullmatch(value):
+def pattern_text(value: Any, pattern: re.Pattern[str], what: str, label: str) -> str:
+    """`value` when it is text that fully matches `pattern`; anything else, such as a path or a sentence, is refused."""
+    if isinstance(value, str) and pattern.fullmatch(value):
         return value
-    raise SelectionError(f"{label} must be a version string")
+    raise SelectionError(f"{label} must be {what}")
+
+
+def revision_text(value: Any, label: str) -> str:
+    return pattern_text(value, VERSION_RE, "a version string", label)
 
 
 def observe_codex_agents(raw: dict[str, Any], observed_at: str, source: str, plugin_revision: str) -> dict[str, Any]:
@@ -362,3 +374,218 @@ def observe_extension_versions(raw: dict[str, Any], observed_at: str, source: st
         return make_item("unknown", source, observed_at, prints, "Name the expected version of each extension "
                          "(its project pin or the curated set), then rerun scaffold.")
     return make_item("verified", source, observed_at, prints)
+
+
+# --- Codex-only items: approval posture, hook trust and local access (ADR 0008) --------------------------------
+# These record observed facts, never consent. Every printed action comes from a fixed template, and every
+# recorded value is an enumerated word, a bounded integer, a name or a hex digest, never free text or a path.
+NEVER_BROADEN = "Scaffold never broadens permissions or disables a control."
+POSTURE_CHOICES = {
+    "approval_policy": ("on-request", "never", "on-failure"),
+    "sandbox_mode": ("read-only", "workspace-write", "danger-full-access"),
+    "approvals_reviewer": ("user", "auto_review"),
+    "mcp_approval_mode": ("auto", "prompt", "writes", "approve"),
+    "mcp_consent": ("granted", "not_granted"),
+    "external_delegation": ("allowed", "blocked"),
+}
+POSTURE_TIMEOUTS = ("mcp_startup_timeout_sec", "mcp_tool_timeout_sec")
+MAX_TIMEOUT_SECONDS = 86400
+HASH_RE = re.compile(r"(?:(?i:sha256):)?[0-9a-fA-F]{64}")
+GRANULAR_KEYS = ("sandbox_approval", "rules", "mcp_elicitations", "request_permissions", "skill_approval")
+POSTURE_DEFAULT_TIMEOUTS = {"mcp_startup_timeout_sec": 10, "mcp_tool_timeout_sec": 60}
+LOOPBACK_STATES = ("allowed", "blocked", "unobservable")
+TEMP_DIR_STATES = ("healthy", "leaky", "unobservable")
+POSTURE_ACTIONS = {
+    "external_delegation": "Keep external delegation blocked; record the limit and continue independent work. " + NEVER_BROADEN,
+    "mcp_consent": "Keep MCP consent ungranted; record the limit and continue work that does not require MCP. " + NEVER_BROADEN,
+}
+
+
+def hash_text(value: Any, label: str) -> str:
+    """SHA-256 as printed; comparisons normalize case and the optional prefix."""
+    return pattern_text(value, HASH_RE, "a hex digest", label)
+
+
+def optional_hash(value: Any, label: str) -> str | None:
+    return None if value is None else hash_text(value, label)
+
+
+def exact_fingerprint(value: str) -> str:
+    return "sha256:" + hash_text(value, "fingerprint").lower().removeprefix("sha256:")
+
+
+def hook_trust_status(states: list[str]) -> str:
+    """One trust rule for both definition and exact-hash observations."""
+    if "untrusted" in states:
+        return "unavailable"
+    return "unknown" if not states or "unobservable" in states else "verified"
+
+
+def shipped_codex_hooks() -> dict[str, str] | None:
+    """Codex 0.160 normalized definition hashes; no expanded local paths enter the identity.
+
+    Matches openai/codex rust-v0.160.0 hooks/engine/discovery.rs::hook_hash and
+    config/fingerprint.rs::version_for_toml, checked against live hooks/list.
+    Unsupported shipped shapes supply no verified evidence.
+    """
+    try:
+        events = json.loads((Path(__file__).parents[2] / "codex-hooks.json").read_text(encoding="utf-8"))["hooks"]
+        expected = {}
+        for event, groups in events.items():
+            for group_index, group in enumerate(groups):
+                for handler_index, handler in enumerate(group["hooks"]):
+                    if handler.keys() - {"type", "command", "timeout"} or handler["type"] != "command":
+                        return None
+                    identity = {"event_name": re.sub(r"(?<!^)(?=[A-Z])", "_", event).lower(),
+                                "hooks": [{**handler, "async": False}]}
+                    if "matcher" in group:
+                        identity["matcher"] = group["matcher"]
+                    expected[f"{event}:{group_index}:{handler_index}"] = digest(identity)
+        return expected or None
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def observe_codex_approval_posture(raw: dict[str, Any], observed_at: str, source: str) -> dict[str, Any]:
+    detail = raw["posture"]
+    if not isinstance(detail, dict) or detail.keys() != {*POSTURE_CHOICES, *POSTURE_TIMEOUTS}:
+        raise SelectionError(f"codex_approval_posture.posture takes {sorted({*POSTURE_CHOICES, *POSTURE_TIMEOUTS})}")
+    facts: dict[str, str] = {}
+    for key, allowed in POSTURE_CHOICES.items():
+        value = detail[key]
+        if key == "approval_policy" and isinstance(value, dict):
+            granular = value.get("granular")
+            if value.keys() != {"granular"} or not isinstance(granular, dict) or granular.keys() != set(GRANULAR_KEYS) \
+                    or any(type(flag) is not bool for flag in granular.values()):
+                raise SelectionError("approval_policy granular needs exactly five boolean prompt categories")
+            facts[key] = "granular(" + ",".join(f"{name}={str(granular[name]).lower()}" for name in GRANULAR_KEYS) + ")"
+        else:
+            facts[key] = choice(value, (*allowed, "unobservable"), f"codex_approval_posture {key}")
+    for key in POSTURE_TIMEOUTS:
+        value = detail[key]  # null means the setting is absent, so Codex uses its documented default
+        if value is not None and value != "unobservable" and (type(value) is not int
+                                                              or not 0 < value <= MAX_TIMEOUT_SECONDS):
+            raise SelectionError(f"codex_approval_posture {key} must be whole seconds, null or \"unobservable\"")
+        facts[key] = "default" if value is None else str(value)
+    summary = ", ".join(f"{key}={value}" for key, value in facts.items())
+    prints = {"value:posture": digest(summary)}
+    # Every bounded posture fact fits; shorten only the source label to retain all observations.
+    source = describe(source[:MAX_TEXT - len(summary) - 3], summary, "codex_approval_posture.evidence_source")
+    refused = [key for key in POSTURE_ACTIONS if facts[key] in ("blocked", "not_granted")]
+    if refused:
+        return make_item("unavailable", source, observed_at, prints, POSTURE_ACTIONS[refused[0]])
+    if facts["sandbox_mode"] == "danger-full-access" or facts["mcp_approval_mode"] in ("auto", "writes", "approve") \
+            or any(type(detail[key]) is int and detail[key] > limit for key, limit in POSTURE_DEFAULT_TIMEOUTS.items()):
+        return make_item("unavailable", source, observed_at, prints,
+                         "Keep current controls; review the observed posture against the conservative scaffold profile "
+                         "before using the affected capability. " + NEVER_BROADEN)
+    if "unobservable" in facts.values():
+        return make_item("unknown", source, observed_at, prints, "Read the Codex approval, sandbox, reviewer and "
+                         "MCP settings from an effective running-thread source; leave unreadable values unobservable "
+                         "and rerun scaffold. " + NEVER_BROADEN)
+    return make_item("verified", source, observed_at, prints)
+
+
+def observe_codex_hook_trust(raw: dict[str, Any], observed_at: str, source: str) -> dict[str, Any]:
+    hooks = []
+    enablement = []
+    for entry in listed(raw, "hooks", "codex_hook_trust"):
+        if not entry.keys() <= {"hook", "state", "hash", "enabled"}:
+            raise SelectionError("codex_hook_trust entries take hook, state, hash and enabled")
+        state = choice(entry.get("state"), TRUST_STATES, "codex_hook_trust state")
+        enabled = entry.get("enabled")
+        if enabled is not None and type(enabled) is not bool:
+            raise SelectionError("codex_hook_trust enabled must be a boolean or null when unobservable")
+        enablement.append("untrusted" if enabled is False else "unobservable" if enabled is None else "trusted")
+        found = optional_hash(entry.get("hash"), "codex_hook_trust hash")
+        if state == "trusted" and found is None:
+            raise SelectionError("a trusted codex_hook_trust entry needs the exact `hash` that was trusted")
+        hooks.append((name_text(entry.get("hook"), "codex_hook_trust hook"), state, found))
+    if len({name for name, _, _ in hooks}) != len(hooks):
+        raise SelectionError("codex_hook_trust names each hook once")
+    hooks.sort(key=lambda hook: hook[1] != "untrusted")  # untrusted first, so a long list never cuts them from the evidence
+    if not hooks:
+        return make_item("unknown", source, observed_at, {}, "Review the hooks in /hooks, then rerun scaffold.")
+    summary = ", ".join(f"{name}={state}" + (f" {found}" if found else "") for name, state, found in hooks)
+    prints = {"value:hook_hashes": digest([(name, state, exact_fingerprint(found) if found else None)
+                                          for name, state, found in hooks]),
+              "value:hook_enablement": digest(enablement),
+              **{f"hook:{name}": exact_fingerprint(found) for name, _, found in hooks if found}}
+    source = describe(source, summary, "codex_hook_trust.evidence_source")
+    expected = shipped_codex_hooks()
+    if expected is None:
+        return make_item("unknown", source, observed_at, prints,
+                         "Inspect the shipped hook definitions and the supported Codex hash contract, then rerun scaffold.")
+    if {name for name, _, _ in hooks} != expected.keys() or any(
+            found is not None and exact_fingerprint(found) != expected.get(name) for name, _, found in hooks):
+        return make_item("unavailable", source, observed_at, prints,
+                         "Compare every shipped hook handler and exact hash with the loaded plugin; keep current controls "
+                         "and rerun scaffold after resolving missing or changed definitions. " + NEVER_BROADEN)
+    status = hook_trust_status([state for _, state, _ in hooks] + enablement)
+    if status == "unavailable":
+        if "untrusted" in enablement:
+            return make_item("unavailable", source, observed_at, prints,
+                             "Keep current controls; review why a required shipped hook is disabled, then rerun scaffold. "
+                             + NEVER_BROADEN)
+        return make_item("unavailable", source, observed_at, prints,
+                         "Review and trust the hooks in /hooks, then restart Codex and rerun scaffold. " + NEVER_BROADEN)
+    if status == "unknown":
+        return make_item("unknown", source, observed_at, prints, "Review the hooks in /hooks, then rerun scaffold.")
+    return make_item("verified", source, observed_at, prints)
+
+
+def observe_codex_local_access(raw: dict[str, Any], observed_at: str, source: str) -> dict[str, Any]:
+    detail = raw["access"]
+    if not isinstance(detail, dict) or detail.keys() != {"loopback", "temp_dir", "egress_policy_ref",
+                                                          "egress_policy_digest"}:
+        raise SelectionError("codex_local_access.access takes loopback, temp_dir, egress_policy_ref, "
+                             "egress_policy_digest")
+    loopback = choice(detail["loopback"], LOOPBACK_STATES, "codex_local_access loopback")
+    temp_dir = choice(detail["temp_dir"], TEMP_DIR_STATES, "codex_local_access temp_dir")
+    reference = detail["egress_policy_ref"]
+    reference = None if reference is None else name_text(reference, "codex_local_access egress_policy_ref")
+    policy_digest = optional_hash(detail["egress_policy_digest"], "codex_local_access egress_policy_digest")
+    if (reference is None) != (policy_digest is None):
+        raise SelectionError("codex_local_access names the egress policy by both reference and digest, or neither")
+    policy = f"{reference} {policy_digest}" if reference and policy_digest else "unobservable"
+    summary = f"loopback={loopback}, temp_dir={temp_dir}, egress_policy={policy}"
+    prints = {"value:access": digest({"loopback": loopback, "temp_dir": temp_dir, "egress_policy_ref": reference,
+                                      "egress_policy_digest": exact_fingerprint(policy_digest) if policy_digest else None})}
+    if policy_digest:
+        prints["value:egress_policy_digest"] = exact_fingerprint(policy_digest)
+    source = describe(source, summary, "codex_local_access.evidence_source")
+    steps = []
+    if loopback == "blocked":
+        steps.append("Keep loopback blocked under current controls; record the affected capability as unavailable")
+    if temp_dir == "leaky":
+        steps.append("Fix the temporary directory so sensitive files stay owner-only")
+    if steps:
+        return make_item("unavailable", source, observed_at, prints,
+                         "; ".join(steps) + ", then rerun scaffold. " + NEVER_BROADEN)
+    if "unobservable" in (loopback, temp_dir, policy):
+        return make_item("unknown", source, observed_at, prints, "Run the bounded loopback and temporary directory "
+                         "checks and name the egress policy and its digest, then rerun scaffold.")
+    return make_item("verified", source, observed_at, prints)
+
+
+CODEX_TRUST_OBSERVERS = {"codex_approval_posture": observe_codex_approval_posture,
+                         "codex_hook_trust": observe_codex_hook_trust,
+                         "codex_local_access": observe_codex_local_access}
+
+
+def reconcile_codex_items(items: dict[str, dict[str, Any]], observed_at: str) -> None:
+    """One Codex trust result and no caller override of the runner's temporary probe."""
+    trust = items["codex_hook_trust"]
+    definitions = items["hooks"]
+    if trust["fingerprints"]:
+        if definitions["fingerprints"]:
+            raise SelectionError("Codex hooks and codex_hook_trust observations overlap; use only the exact-hash observation")
+        items["hooks"] = trust
+    access = items["codex_local_access"]
+    local = items["local_capability"]
+    if (local["status"] == "unavailable" and access["status"] != "unavailable") \
+            or (local["status"] == "unknown" and access["status"] == "verified"):
+        items["codex_local_access"] = make_item(
+            local["status"], describe(access["evidence_source"], "runner temporary probe=" + local["status"],
+                                      "codex_local_access.evidence_source"),
+            observed_at, {**access["fingerprints"], **local["fingerprints"]}, local["action"])

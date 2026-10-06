@@ -4,10 +4,13 @@
 from __future__ import annotations
 
 import json
+import copy
+import itertools
 import os
 import re
 import shutil
 import stat
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -20,13 +23,14 @@ LIB_DIR = TEST_DIR.parent / "lib"
 sys.path.insert(0, str(LIB_DIR))
 sys.path.insert(0, str(REPO_ROOT / "speckit-pro"))
 
+from speckit_pro_runner.helpers import readiness_record  # noqa: E402
 from host_skill_views import host_skill_root  # noqa: E402
 from readiness_case import readiness_request  # noqa: E402
 from runner_invocation import assert_runner_response, run_runner  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 CALLER_ITEMS = ("plugin_payload", "project_integration", "github_auth", "mcp_servers", "typesafe_jev",
-                "reviewability_report", "formal_methods")
+                "reviewability_report", "formal_methods", "preview_surface", "git_write")
 # Built from parts so the repository privacy scan does not flag these deliberate leak samples.
 HOME = "/" + "Users"
 SCRATCH = "/private" + "/tmp"
@@ -118,6 +122,64 @@ class ReadinessRecordTest(unittest.TestCase):
         for item in set(CALLER_ITEMS) - {"github_auth"}:
             self.assertEqual("unknown", items[item]["status"])
             self.assertTrue(items[item]["action"])
+
+    @unittest.mock.patch.object(readiness_record.cli_probe, "probe", return_value={"exit_status": 0, "stdout_tail": "2.1.0"})
+    def test_preview_surface_reads_back_as_a_closed_answer(self, _probe) -> None:
+        for status, surface in (("verified", "available"), ("unavailable", "unavailable"),
+                                ("unknown", "unknown"), ("not_applicable", "unknown")):
+            with self.subTest(status=status):
+                response = self.run_helper([observation("preview_surface", status, values={"probe": "observed"})])
+                assert_runner_response(self, response, "ok", 0)
+                self.assertEqual(surface, readiness_record.preview_surface(self.root, "claude"))
+        self.assertEqual("unknown", readiness_record.preview_surface(self.root, "codex"))
+
+    def test_preview_surface_is_unknown_unless_a_current_record_vouches_for_it(self) -> None:
+        self.run_helper([observation("preview_surface", "unavailable")])
+        path = self.record_path()
+        good = json.loads(path.read_text(encoding="utf-8"))
+        broken = {"unparseable": "{", "not an object": "[]", "other schema": {**good, "schema_version": "readiness-record/v0"},
+                  "other host": {**good, "host": "codex"}, "other worktree": {**good, "binding": {"worktree": "sha256:0"}},
+                  "no item": {**good, "items": {}}, "items list": {**good, "items": []}, "bad status": {**good, "items": {"preview_surface": {"status": "ready"}}}}
+        for label, content in broken.items():
+            with self.subTest(label):
+                path.write_text(content if isinstance(content, str) else json.dumps(content), encoding="utf-8")
+                self.assertEqual("unknown", readiness_record.preview_surface(self.root, "claude"))
+        path.unlink()
+        self.assertEqual("unknown", readiness_record.preview_surface(self.root, "claude"))
+
+    @unittest.mock.patch.object(readiness_record.cli_probe, "probe", return_value={"exit_status": 0, "stdout_tail": "2.1.0"})
+    def test_preview_surface_is_unknown_when_the_item_evidence_is_malformed_or_stale(self, _probe) -> None:
+        (self.root / ".specify" / "surface.md").write_text("headless\n", encoding="utf-8")
+        self.run_helper([observation("preview_surface", "unavailable", files=[".specify/surface.md"])])
+        path = self.record_path()
+        good = json.loads(path.read_text(encoding="utf-8"))
+        item = good["items"]["preview_surface"]
+        verified = {key: value for key, value in item.items() if key != "action"} | {"status": "verified"}
+        shapes = {"status only": {"status": "unavailable"},
+                  **{f"no {key}": {k: v for k, v in item.items() if k != key} for key in item if key != "status"},
+                  "extra key": {**item, "note": "trust me"}, "empty evidence": {**item, "evidence_source": ""},
+                  "evidence not text": {**item, "evidence_source": ["probe"]},
+                  "evidence with a path": {**item, "evidence_source": HOME + "/someone/surface"},
+                  "observed_at not a time": {**item, "observed_at": "yesterday"},
+                  "fingerprints list": {**item, "fingerprints": []},
+                  "fingerprint not text": {**item, "fingerprints": {"value:surface": 1}},
+                  "fingerprint key": {**item, "fingerprints": {"surface": "sha256:" + "0" * 64}},
+                  "fingerprint path escapes": {**item, "fingerprints": {"file:../surface.md": "missing"}},
+                  "empty action": {**item, "action": " "},
+                  "verified with an action": {**verified, "action": "Nothing."},
+                  "verified without a digest": {**verified, "fingerprints": {}}}
+        broken = {label: {**good, "items": {**good["items"], "preview_surface": shape}} for label, shape in shapes.items()}
+        broken["binding fields only"] = {key: good[key] for key in ("schema_version", "binding", "host")} | {
+            "items": {"preview_surface": item}}
+        broken["record observed_at"] = {**good, "observed_at": None}
+        for label, content in broken.items():
+            with self.subTest(label):
+                path.write_text(json.dumps(content), encoding="utf-8")
+                self.assertEqual("unknown", readiness_record.preview_surface(self.root, "claude"))
+        path.write_text(json.dumps(good), encoding="utf-8")
+        self.assertEqual("unavailable", readiness_record.preview_surface(self.root, "claude"))
+        (self.root / ".specify" / "surface.md").write_text("a preview pane now\n", encoding="utf-8")
+        self.assertEqual("unknown", readiness_record.preview_surface(self.root, "claude"))
 
     def test_malformed_observations_write_nothing(self) -> None:
         cases = {
@@ -347,6 +409,38 @@ class ReadinessRecordTest(unittest.TestCase):
                     with self.assertRaises(SelectionError):
                         clean_text(f"Run {command}{suffix}", "action")
 
+    def test_slash_command_punctuation_cannot_hide_a_path_suffix(self) -> None:
+        from speckit_pro_runner.helpers.readiness_values import clean_text
+        from speckit_pro_runner.strict_input import SelectionError
+
+        for command in ("/mcp", "/hooks", "/plugin", "/reload-plugins",
+                        "/speckit-pro:speckit-install", "/speckit-pro:speckit-scaffold-spec"):
+            for punctuation in ('`', '"', '\u201d', '\u2019', ',', ';', ')', '`,', '\u201d,', '.', ':', ']', '}'):
+                for suffix in ("private/data", ".json"):
+                    with self.subTest(command=command, punctuation=punctuation, suffix=suffix):
+                        with self.assertRaises(SelectionError):
+                            clean_text(f"Run {command}{punctuation}{suffix}", "action")
+            for ending in ("", ".", "`.", ").", " to inspect.", "\u00a0to inspect.", "`, then retry.", "\u201d, then retry."):
+                with self.subTest(command=command, ending=ending):
+                    action = f"Run {command}{ending}"
+                    self.assertEqual(action, clean_text(action, "action"))
+
+    def test_readiness_text_rejects_controls_and_bidirectional_formatting(self) -> None:
+        from speckit_pro_runner.helpers.readiness_values import clean_text
+        from speckit_pro_runner.strict_input import SelectionError
+
+        characters = (*map(chr, range(32)), *map(chr, range(127, 160)),
+                      "\u2028", "\u2029", "\u061c", "\u200e", "\u200f",
+                      *map(chr, range(0x202A, 0x202F)), *map(chr, range(0x2066, 0x206A)))
+        for character in characters:
+            for template in ("{}probe", "probe{}result", "probe{}"):
+                with self.subTest(character=ascii(character), template=template):
+                    with self.assertRaises(SelectionError):
+                        clean_text(template.format(character), "evidence_source")
+        for text in ("MCP probe passed", "\u00e9tat v\u00e9rifi\u00e9", "\u0646\u062c\u062d \u0627\u0644\u0641\u062d\u0635"):
+            with self.subTest(text=text):
+                self.assertEqual(text, clean_text(text, "evidence_source"))
+
     def test_unreadable_files_are_not_reported_missing(self) -> None:
         outside = self.root / "target.txt"
         outside.write_text("x\n", encoding="utf-8")
@@ -408,6 +502,922 @@ class ReadinessRecordTest(unittest.TestCase):
                     shutil.rmtree(readiness, ignore_errors=True)
 
 
+class PreviewEvidenceSecurityTest(unittest.TestCase):
+    """The reader must fail closed on the entire snapshot, on both supported hosts."""
+
+    def setUp(self) -> None:
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
+        self.root.joinpath(".specify").mkdir()
+        self.root.joinpath("surface.txt").write_text("no preview tools")
+        self.directory = self.root / ".specify/readiness"
+        self.directory.mkdir()
+        self.records = {}
+        with unittest.mock.patch.object(readiness_record.shutil, "which", return_value=None):
+            for host in ("claude", "codex"):
+                inputs = request([observation("preview_surface", "unavailable", files=["surface.txt"])],
+                                 host=host)["inputs"]
+                self.records[host] = readiness_record.build_record(inputs, self.root)
+        self.probe = readiness_record.cli_probe.probe
+        self.enterContext(unittest.mock.patch.object(readiness_record.cli_probe, "probe", return_value={
+            "exit_status": 0, "stdout_tail": "2.1.0", "stderr_tail": ""}))
+
+    def assert_unknown(self, change) -> None:
+        for host, good in self.records.items():
+            with self.subTest(host=host):
+                record = copy.deepcopy(good)
+                change(record)
+                (self.directory / f"{host}.json").write_text(json.dumps(record))
+                self.assertEqual("unknown", readiness_record.preview_surface(self.root, host))
+
+    def test_complete_current_records_for_both_hosts(self) -> None:
+        for host, record in self.records.items():
+            with self.subTest(host=host):
+                (self.directory / f"{host}.json").write_text(json.dumps(record))
+                self.assertEqual("unavailable", readiness_record.preview_surface(self.root, host))
+
+    def test_preview_surface_only_inventory(self) -> None:
+        self.assert_unknown(lambda record: record.update(items={"preview_surface": record["items"]["preview_surface"]}))
+
+    def test_malformed_sibling_item(self) -> None:
+        for name in self.records["claude"]["items"]:
+            if name != "preview_surface":
+                with self.subTest(item=name):
+                    self.assert_unknown(lambda record: record["items"].update({name: {"status": "unknown"}}))
+
+    def test_invalid_execution_mode(self) -> None:
+        self.assert_unknown(lambda record: record.update(execution_mode="headless"))
+
+    def test_non_text_host_version(self) -> None:
+        self.assert_unknown(lambda record: record.update(host_version=["2.1.0"]))
+
+    def test_non_text_plugin_revision(self) -> None:
+        self.assert_unknown(lambda record: record.update(plugin_revision={"version": "2.40.0"}))
+
+    def test_impossible_record_timestamp(self) -> None:
+        for time in ("2026-02-30T00:00:00Z", "2026-10-05T25:00:00Z", "0000-01-01T00:00:00Z"):
+            with self.subTest(time=time):
+                self.assert_unknown(lambda record: record.update(observed_at=time))
+
+    def test_impossible_item_timestamp(self) -> None:
+        for name in self.records["claude"]["items"]:
+            with self.subTest(item=name):
+                self.assert_unknown(lambda record: record["items"][name].update(observed_at="2026-13-05T00:00:00Z"))
+
+    def test_non_digest_value_fingerprint(self) -> None:
+        for name in self.records["claude"]["items"]:
+            for value in ("trust me", "sha256:xyz", "sha256:" + "g" * 64):
+                with self.subTest(item=name, value=value):
+                    self.assert_unknown(lambda record: record["items"][name].update(fingerprints={"value:probe": value}))
+
+    def test_duplicate_json_keys(self) -> None:
+        for host, record in self.records.items():
+            text = json.dumps(record)
+            for key, value in (("host", host), ("status", "unavailable"), ("file:surface.txt", record["items"]["preview_surface"]["fingerprints"]["file:surface.txt"])):
+                with self.subTest(host=host, key=key):
+                    field = json.dumps(key) + ": " + json.dumps(value)
+                    (self.directory / f"{host}.json").write_text(text.replace(field, field + ", " + field, 1))
+                    self.assertEqual("unknown", readiness_record.preview_surface(self.root, host))
+
+    def test_stale_host_version(self) -> None:
+        self.assert_unknown(lambda record: record.update(host_version="1.0.0"))
+
+    def test_stale_plugin_revision(self) -> None:
+        self.assert_unknown(lambda record: record.update(plugin_revision="1.0.0"))
+
+    def test_empty_preview_fingerprints(self) -> None:
+        self.assert_unknown(lambda record: record["items"]["preview_surface"].update(fingerprints={}))
+
+    def test_missing_file_fingerprint_sentinel(self) -> None:
+        self.assert_unknown(lambda record: record["items"]["preview_surface"].update(fingerprints={"file:absent": "missing"}))
+
+    def test_unreadable_symlink_fingerprint_sentinel(self) -> None:
+        (self.root / "linked").symlink_to(self.root / "surface.txt")
+        self.assert_unknown(lambda record: record["items"]["preview_surface"].update(fingerprints={"file:linked": "unreadable"}))
+
+    def test_deeply_nested_json(self) -> None:
+        for host, good in self.records.items():
+            with self.subTest(host=host):
+                text = json.dumps(good)[:-1] + ', "extra": ' + "[" * 2000 + "0" + "]" * 2000 + "}"
+                (self.directory / f"{host}.json").write_text(text)
+                self.assertEqual("unknown", readiness_record.preview_surface(self.root, host))
+
+    def test_oversized_flat_json(self) -> None:
+        for host, good in self.records.items():
+            with self.subTest(host=host):
+                (self.directory / f"{host}.json").write_text(json.dumps(good) + " " * (1024 * 1024))
+                self.assertEqual("unknown", readiness_record.preview_surface(self.root, host))
+
+    def test_repeated_normalized_file_aliases(self) -> None:
+        prints = {"file:" + "./" * n + "surface.txt": readiness_record.digest(b"no preview tools") for n in range(100)}
+        self.assert_unknown(lambda record: record["items"]["preview_surface"].update(fingerprints=prints))
+
+    def test_other_inventory_and_item_fields(self) -> None:
+        for name in self.records["claude"]["items"]:
+            for field, value in (("status", []), ("evidence_source", {}), ("fingerprints", []), ("action", "")):
+                with self.subTest(item=name, field=field):
+                    self.assert_unknown(lambda record: record["items"][name].update({field: value}))
+        self.assert_unknown(lambda record: record["items"].update(extra=record["items"]["preview_surface"]))
+
+    def test_stale_sibling_file_and_preview_rename(self) -> None:
+        self.assert_unknown(lambda record: record["items"]["github_auth"].update(fingerprints={"file:surface.txt": "sha256:" + "0" * 64}))
+        (self.root / "surface.txt").rename(self.root / "renamed.txt")
+        self.assert_unknown(lambda record: None)
+
+    def test_record_and_evidence_symlinks(self) -> None:
+        for host, record in self.records.items():
+            with self.subTest(host=host):
+                (self.root / "record.json").write_text(json.dumps(record))
+                (self.directory / f"{host}.json").symlink_to(self.root / "record.json")
+                self.assertEqual("unknown", readiness_record.preview_surface(self.root, host))
+                (self.directory / f"{host}.json").unlink()
+        (self.root / "surface.txt").unlink()
+        (self.root / "surface.txt").symlink_to(self.root / "record.json")
+        self.assert_unknown(lambda record: None)
+
+    def test_unobservable_or_failed_host_version(self) -> None:
+        self.assert_unknown(lambda record: record.update(host_version=None))
+        for result in ({"exit_status": None, "stdout_tail": ""}, {"exit_status": 1, "stdout_tail": "2.1.0"},
+                       {"exit_status": 0, "stdout_tail": "unparseable"}):
+            with self.subTest(result=result), unittest.mock.patch.object(readiness_record.cli_probe, "probe", return_value=result):
+                self.assert_unknown(lambda record: None)
+
+    def test_current_host_cli_version_formats(self) -> None:
+        for host, text in (("claude", "2.1.0 (Claude Code)"), ("codex", "codex-cli 2.1.0")):
+            with self.subTest(host=host), unittest.mock.patch.object(readiness_record.cli_probe, "probe", return_value={"exit_status": 0, "stdout_tail": text}):
+                (self.directory / f"{host}.json").write_text(json.dumps(self.records[host]))
+                self.assertEqual("unavailable", readiness_record.preview_surface(self.root, host))
+
+    def test_file_fingerprint_budget(self) -> None:
+        (self.root / "surface.txt").write_bytes(b"a" * (1024 * 1024 + 1))
+        prints = {"file:surface.txt": readiness_record.digest((self.root / "surface.txt").read_bytes())}
+        self.assert_unknown(lambda record: record["items"]["preview_surface"].update(fingerprints=prints))
+        for n in range(65):
+            (self.root / f"evidence{n}").write_bytes(b"small")
+        prints = {f"file:evidence{n}": readiness_record.digest(b"small") for n in range(65)}
+        self.assert_unknown(lambda record: record["items"]["preview_surface"].update(fingerprints=prints))
+
+    def test_duplicate_file_evidence_is_read_once(self) -> None:
+        record = copy.deepcopy(self.records["claude"])
+        record["items"]["github_auth"]["fingerprints"] = record["items"]["preview_surface"]["fingerprints"]
+        (self.directory / "claude.json").write_text(json.dumps(record))
+        with unittest.mock.patch.object(readiness_record, "fingerprint_file", wraps=readiness_record.fingerprint_file) as read:
+            self.assertEqual("unavailable", readiness_record.preview_surface(self.root, "claude"))
+            self.assertEqual(1, sum(call.args[1].as_posix() == "surface.txt" for call in read.call_args_list))
+
+    def test_host_probe_is_limited_to_version(self) -> None:
+        for host in ("claude", "codex"):
+            # This seam tests argv restrictions, independently of installed tools
+            # and whether the test identity can write system PATH directories.
+            with self.subTest(host=host), \
+                 unittest.mock.patch.object(readiness_record.cli_probe, "probe_search_path", return_value=str(self.root)), \
+                 unittest.mock.patch.object(readiness_record.cli_probe.shutil, "which", return_value=str(self.root / host)), \
+                 unittest.mock.patch.object(readiness_record.cli_probe.subprocess, "run") as run:
+                run.return_value = unittest.mock.Mock(returncode=0, stdout="2.1.0", stderr="")
+                self.assertEqual(0, self.probe(self.root, [host, "--version"], allowed=(host,), timeout=1)["exit_status"])
+                self.assertEqual([host, "--version"], run.call_args.args[0])
+                run.reset_mock()
+                self.assertIsNone(self.probe(self.root, [host, "exec"], allowed=(host,), timeout=1)["exit_status"])
+                run.assert_not_called()
+
+    def test_record_reader_stops_at_byte_limit(self) -> None:
+        (self.directory / "claude.json").write_bytes(b" " * (2 * 1024 * 1024))
+        with unittest.mock.patch.object(readiness_record.os, "read", wraps=os.read) as read:
+            self.assertEqual("unknown", readiness_record.preview_surface(self.root, "claude"))
+            self.assertLessEqual(sum(call.args[1] for call in read.call_args_list), 1024 * 1024 + 1)
+
+    def test_invalid_file_fingerprint_text(self) -> None:
+        for name in self.records["claude"]["items"]:
+            for path in ("bad\x00path", "bad\npath", "bad\ud800path", " padded "):
+                with self.subTest(item=name, path=repr(path)):
+                    self.assert_unknown(lambda record: record["items"][name].update(fingerprints={f"file:{path}": "missing"}))
+
+    @unittest.skipUnless(hasattr(os, "mkfifo"), "FIFO evidence requires POSIX")
+    def test_fifo_record_and_fingerprint_do_not_block(self) -> None:
+        code = "from pathlib import Path; from speckit_pro_runner.helpers.readiness_record import preview_surface; import sys; print(preview_surface(Path(sys.argv[1]), sys.argv[2]))"
+        environment = {**os.environ, "PYTHONPATH": str(REPO_ROOT / "speckit-pro")}
+        for host, good in self.records.items():
+            path = self.directory / f"{host}.json"
+            for variant in ("record", "preview_surface", "github_auth"):
+                with self.subTest(host=host, variant=variant):
+                    if variant == "record":
+                        os.mkfifo(path)
+                    else:
+                        record = copy.deepcopy(good)
+                        record["items"][variant]["fingerprints"] = {"file:pipe": readiness_record.digest(b"no tools")}
+                        path.write_text(json.dumps(record))
+                        os.mkfifo(self.root / "pipe")
+                    try:
+                        result = subprocess.run([sys.executable, "-c", code, str(self.root), host], env=environment,
+                                                capture_output=True, text=True, timeout=2, check=False)
+                        self.assertEqual((0, "unknown"), (result.returncode, result.stdout.strip()), result.stderr)
+                    finally:
+                        path.unlink()
+                        if variant != "record":
+                            (self.root / "pipe").unlink()
+
+
+class HostProbePathSecurityTest(unittest.TestCase):
+    """A worktree writer cannot supply any executable used by the shared CLI probe."""
+
+    def setUp(self) -> None:
+        self.area = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
+        self.root = self.area / "worktree"
+        self.root.mkdir()
+        self.tools = self.area / "installed"
+        self.tools.mkdir()
+        self.marker = self.root / "executed"
+        self.probe = readiness_record.cli_probe.probe
+
+    def executable(self, path: Path, *, trusted: bool = False) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        body = "print('2.1.0')\n" if trusted else f"from pathlib import Path\nPath({str(self.marker)!r}).touch()\nprint('2.1.0')\n"
+        path.write_text(f"#!{sys.executable}\n{body}", encoding="utf-8")
+        path.chmod(0o755)
+
+    def protected_probe(self, host: str, protected: tuple[Path, ...], writable: tuple[Path, ...] = (),
+                        mutable_directories: tuple[Path, ...] = ()) -> dict:
+        """Model an installation owned by another identity with no effective write access.
+
+        Only OS permission observations are mocked; lookup and execution remain real.
+        """
+        names = {str(path.resolve()) for path in protected}
+        # A protected executable also needs a protected namespace. Model every
+        # ancestor, while letting attacks expose the actual mutable directory.
+        names.update(str(parent) for path in (*protected, self.tools / host) for parent in path.resolve().parents)
+        names.difference_update(str(path) for path in mutable_directories)
+        writable_names = {str(path.resolve()) for path in writable}
+        native_stat, native_lstat, native_access = os.stat, os.lstat, os.access
+
+        def metadata(function, path, *args, **kwargs):
+            info = function(path, *args, **kwargs)
+            if not isinstance(path, int) and os.path.abspath(path) in names:
+                fields = list(info)
+                fields[4] = os.geteuid() + 1
+                return os.stat_result(fields)
+            return info
+
+        def access(path, mode, *args, **kwargs):
+            if mode == os.W_OK and os.path.abspath(path) in names:
+                return os.path.abspath(path) in writable_names
+            return native_access(path, mode, *args, **kwargs)
+
+        with unittest.mock.patch.object(os, "stat", side_effect=lambda *a, **k: metadata(native_stat, *a, **k)), \
+             unittest.mock.patch.object(os, "lstat", side_effect=lambda *a, **k: metadata(native_lstat, *a, **k)), \
+             unittest.mock.patch.object(os, "access", side_effect=access):
+            return self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)
+
+    def reject_path(self, entry: str, directory: Path, form: str = "regular", hosts=("codex", "claude")) -> None:
+        for host in hosts:
+            with self.subTest(host=host, entry=entry, form=form):
+                target = directory / host
+                if form == "symlink":
+                    payload = self.root / "payloads" / host
+                    self.executable(payload)
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.symlink_to(payload)
+                elif form == "renamed-copy":
+                    payload = self.root / "payloads" / host
+                    self.executable(payload)
+                    shutil.copy2(payload, target)
+                else:
+                    self.executable(target)
+                try:
+                    with unittest.mock.patch.dict(os.environ, {"PATH": entry}):
+                        result = self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)
+                    self.assertFalse(self.marker.exists(), "worktree executable ran")
+                    self.assertIsNone(result["exit_status"])
+                finally:
+                    target.unlink()
+                    self.marker.unlink(missing_ok=True)
+
+    def test_codex_and_claude_dot_path(self) -> None:
+        self.reject_path(".", self.root)
+
+    def test_codex_and_claude_empty_path_component(self) -> None:
+        for entry in ("", f":{self.tools}", f"{self.tools}:", f"{self.tools}::{self.tools}"):
+            self.reject_path(entry, self.root)
+
+    def test_codex_and_claude_relative_worktree_path(self) -> None:
+        self.reject_path("bin", self.root / "bin")
+
+    def test_codex_and_claude_absolute_worktree_path(self) -> None:
+        self.reject_path(str(self.root / "bin"), self.root / "bin")
+
+    def reject_forms(self, forms: tuple[str, ...]) -> None:
+        for form in forms:
+            for entry, directory in ((".", self.root), ("", self.root), ("bin", self.root / "bin"),
+                                     (str(self.root / "bin"), self.root / "bin")):
+                self.reject_path(entry, directory, form)
+
+    def test_regular_and_renamed_copy_host_executables(self) -> None:
+        self.reject_forms(("regular", "renamed-copy"))
+
+    def test_symlink_host_executables(self) -> None:
+        self.reject_forms(("symlink",))
+
+    def test_external_executable_symlink_into_worktree(self) -> None:
+        self.reject_path(str(self.tools), self.tools, "symlink")
+
+    def test_external_directory_symlink_into_worktree(self) -> None:
+        alias = self.area / "alias"
+        alias.symlink_to(self.root, target_is_directory=True)
+        self.reject_path(str(alias), self.root)
+
+    def test_case_alias_worktree_path(self) -> None:
+        alias = self.root.with_name(self.root.name.upper())
+        # A case-insensitive alias enters the worktree; a case-sensitive lookup
+        # is absent. Both must fail closed without executing the payload.
+        self.reject_path(str(alias), self.root)
+
+    def test_external_executable_link_chain_through_worktree(self) -> None:
+        for host in ("codex", "claude"):
+            with self.subTest(host=host):
+                installed = self.area / f"installed-{host}"
+                self.executable(installed, trusted=True)
+                bridge = self.root / f"bridge-{host}"
+                bridge.symlink_to(installed)
+                launcher = self.tools / host
+                launcher.symlink_to(bridge)
+                try:
+                    with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                        result = self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)
+                    self.assertIsNone(result["exit_status"])
+                finally:
+                    launcher.unlink()
+
+    def test_relative_external_executable_symlink_into_worktree(self) -> None:
+        for host in ("codex", "claude"):
+            with self.subTest(host=host):
+                payload = self.root / f"payload-{host}"
+                self.executable(payload)
+                launcher = self.tools / host
+                launcher.symlink_to(Path("..") / "worktree" / payload.name)
+                try:
+                    with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                        result = self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)
+                    self.assertFalse(self.marker.exists(), "relative executable link entered the worktree")
+                    self.assertIsNone(result["exit_status"])
+                finally:
+                    launcher.unlink()
+                    self.marker.unlink(missing_ok=True)
+
+    def test_other_cli_branches_reject_worktree_path(self) -> None:
+        for form in ("regular", "renamed-copy", "symlink"):
+            for entry, directory in ((".", self.root), ("", self.root), ("bin", self.root / "bin"),
+                                     (str(self.root / "bin"), self.root / "bin"), (str(self.tools), self.tools)):
+                if directory == self.tools and form != "symlink":
+                    continue
+                self.reject_path(entry, directory, form, hosts=("git", "gh", "docker"))
+
+    def test_other_cli_probes_ignore_unrelated_hardlinks(self) -> None:
+        # A protected inode remains safe regardless of its link count. Model
+        # protection explicitly so root container runs observe the same policy.
+        payload = self.area / "unrelated"
+        self.executable(payload)
+        alias = self.tools / "unrelated"
+        os.link(payload, alias)
+        for cli in ("git", "gh", "docker"):
+            with self.subTest(cli=cli):
+                target = self.tools / cli
+                self.executable(target, trusted=True)
+                try:
+                    with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                        result = self.protected_probe(cli, (target, alias))
+                    self.assertFalse(self.marker.exists())
+                    self.assertEqual((0, "2.1.0"), (result["exit_status"], result["stdout_tail"]))
+                finally:
+                    target.unlink()
+
+    def test_other_cli_probes_retain_helper_only_path_directories(self) -> None:
+        helpers = self.area / "helpers"
+        helpers.mkdir()
+        (helpers / "python3").symlink_to(sys.executable)
+        for cli in ("git", "gh", "docker"):
+            with self.subTest(cli=cli):
+                launcher = self.tools / cli
+                launcher.write_text("#!/usr/bin/env python3\nprint('2.1.0')\n", encoding="utf-8")
+                launcher.chmod(0o755)
+                try:
+                    with unittest.mock.patch.dict(os.environ, {"PATH": os.pathsep.join(map(str, (self.tools, helpers)))}):
+                        result = self.protected_probe(cli, (launcher, Path(sys.executable)))
+                    self.assertEqual((0, "2.1.0"), (result["exit_status"], result["stdout_tail"]))
+                finally:
+                    launcher.unlink()
+
+    def test_other_cli_probes_reject_worktree_linked_helpers(self) -> None:
+        """An interpreter or helper linked to a worktree file never runs, in any retained directory."""
+        helpers = self.area / "helpers"
+        helpers.mkdir()
+        payload = self.root / "payloads" / "spk-helper"
+        self.executable(payload)
+        consumers = {
+            "env-shebang": "#!/usr/bin/env spk-helper\n",
+            "subprocess": f"#!{sys.executable}\nimport subprocess\nraise SystemExit(subprocess.run(['spk-helper']).returncode)\n",
+        }
+        links = {"symlink": lambda helper: helper.symlink_to(payload), "hardlink": lambda helper: os.link(payload, helper)}
+        path = os.pathsep.join(map(str, (self.tools, helpers)))
+        for cli, consumer, location, form in itertools.product(("git", "gh", "docker"), consumers, (self.tools, helpers), links):
+            with self.subTest(cli=cli, consumer=consumer, location=location.name, form=form):
+                launcher = self.tools / cli
+                launcher.write_text(consumers[consumer], encoding="utf-8")
+                launcher.chmod(0o755)
+                helper = location / "spk-helper"
+                links[form](helper)
+                try:
+                    with unittest.mock.patch.dict(os.environ, {"PATH": path}):
+                        result = self.protected_probe(cli, (launcher,))
+                    self.assertFalse(self.marker.exists(), "worktree-linked helper ran")
+                    self.assertNotEqual(0, result["exit_status"])
+                finally:
+                    launcher.unlink()
+                    helper.unlink()
+                    self.marker.unlink(missing_ok=True)
+
+    def test_other_cli_probes_reject_relinked_helpers(self) -> None:
+        """A missing worktree alias during validation never authenticates later helper bytes."""
+        helpers = self.area / "helpers"
+        helpers.mkdir()
+        consumers = {
+            "env-shebang": "#!/usr/bin/env spk-helper\n",
+            "subprocess": f"#!{sys.executable}\nimport subprocess\nraise SystemExit(subprocess.run(['spk-helper']).returncode)\n",
+        }
+        validate = readiness_record.cli_probe.validate_probe_directory
+        which = shutil.which
+        for cli, consumer, location, window, form in itertools.product(
+                ("git", "gh", "docker"), consumers, (self.tools, helpers),
+                ("after-validation", "after-lookup"),
+                ("regular", "readonly", "indirect-symlink", "nonexecutable", "foreign-writable")):
+            with self.subTest(cli=cli, consumer=consumer, location=location.name, window=window, form=form):
+                launcher = self.tools / cli
+                launcher.write_text(consumers[consumer], encoding="utf-8")
+                launcher.chmod(0o755)
+                payload = self.root / "payload"
+                self.executable(payload, trusted=True)
+                helper = location / "spk-helper"
+                inode = {"indirect-symlink": self.area / "helper-inode"}.get(form, helper)
+                os.link(payload, inode)
+                payload.unlink()
+                if form == "indirect-symlink":
+                    helper.symlink_to(inode)
+                inode.chmod({"readonly": 0o555, "nonexecutable": 0o644}.get(form, 0o755))
+                self.assertEqual(1, inode.stat().st_nlink)
+
+                def attack() -> None:
+                    os.link(inode, payload)
+                    payload.chmod(0o755)
+                    self.executable(payload)
+
+                def race_validation(directory, *args, **kwargs):
+                    try:
+                        return validate(directory, *args, **kwargs)
+                    finally:
+                        if window == "after-validation" and directory == location:
+                            attack()
+
+                def race_lookup(*args, **kwargs):
+                    selected = which(*args, **kwargs)
+                    if window == "after-lookup":
+                        attack()
+                    return selected
+
+                try:
+                    with unittest.mock.patch.dict(os.environ, {"PATH": os.pathsep.join(map(str, (self.tools, helpers)))}), \
+                         unittest.mock.patch.object(readiness_record.cli_probe, "validate_probe_directory", side_effect=race_validation), \
+                         unittest.mock.patch.object(shutil, "which", side_effect=race_lookup):
+                        permissions = {"foreign-writable": {"protected": (launcher, inode), "writable": (inode,)}}
+                        result = self.protected_probe(cli, **permissions.get(form, {"protected": (launcher,)}))
+                    self.assertFalse(self.marker.exists(), "relinked helper supplied executable bytes")
+                    self.assertNotEqual(0, result["exit_status"])
+                finally:
+                    launcher.unlink()
+                    helper.unlink()
+                    inode.unlink(missing_ok=True)
+                    payload.unlink(missing_ok=True)
+                    self.marker.unlink(missing_ok=True)
+
+    def test_any_cli_rejects_relinked_selected_executable(self) -> None:
+        for cli, window in itertools.product(("git", "gh", "docker", "claude", "codex"),
+                                             ("after-validation", "after-lookup")):
+            with self.subTest(cli=cli, window=window):
+                payload = self.root / "payload"
+                self.executable(payload, trusted=True)
+                launcher = self.tools / cli
+                os.link(payload, launcher)
+                payload.unlink()
+                self.assertEqual(1, launcher.stat().st_nlink)
+                which = shutil.which
+
+                def race_lookup(*args, **kwargs):
+                    if window == "after-validation":
+                        os.link(launcher, payload)
+                        self.executable(payload)
+                    selected = which(*args, **kwargs)
+                    if window == "after-lookup":
+                        os.link(launcher, payload)
+                        self.executable(payload)
+                    return selected
+
+                try:
+                    with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}), \
+                         unittest.mock.patch.object(shutil, "which", side_effect=race_lookup):
+                        result = self.probe(self.root, [cli, "--version"], allowed=(cli,), timeout=2)
+                    self.assertFalse(self.marker.exists(), "relinked selected CLI supplied executable bytes")
+                    self.assertIsNone(result["exit_status"])
+                finally:
+                    launcher.unlink()
+                    payload.unlink(missing_ok=True)
+                    self.marker.unlink(missing_ok=True)
+
+    def test_trusted_installed_hosts_survive_poisoned_path(self) -> None:
+        for host in ("codex", "claude"):
+            with self.subTest(host=host):
+                self.executable(self.tools / host, trusted=True)
+                self.executable(self.root / host)
+                for entry in (".", "", "bin", str(self.root)):
+                    with self.subTest(entry=entry), unittest.mock.patch.dict(os.environ, {
+                        "PATH": f"{entry}:{self.tools}"}):
+                        result = self.protected_probe(host, (self.tools / host,))
+                    self.assertFalse(self.marker.exists())
+                    self.assertEqual((0, "2.1.0"), (result["exit_status"], result["stdout_tail"]))
+                (self.tools / host).unlink()
+
+    def test_trusted_external_executable_symlinks_still_work(self) -> None:
+        for host in ("codex", "claude"):
+            with self.subTest(host=host):
+                payload = self.tools / f"version-{host}"
+                self.executable(payload, trusted=True)
+                (self.tools / host).symlink_to(payload.name)
+                with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                    result = self.protected_probe(host, (payload,))
+                (self.tools / host).unlink()
+                payload.unlink()
+                self.assertEqual((0, "2.1.0"), (result["exit_status"], result["stdout_tail"]))
+
+    def test_directory_alias_swap_cannot_redirect_launch(self) -> None:
+        alias = self.area / "alias"
+        run = subprocess.run
+        for host in ("codex", "claude"):
+            with self.subTest(host=host):
+                self.executable(self.tools / host, trusted=True)
+                self.executable(self.root / host)
+                alias.symlink_to(self.tools, target_is_directory=True)
+
+                def swap_then_run(*args, **kwargs):
+                    alias.unlink()
+                    alias.symlink_to(self.root, target_is_directory=True)
+                    return run(*args, **kwargs)
+
+                with unittest.mock.patch.dict(os.environ, {"PATH": str(alias)}), unittest.mock.patch.object(
+                    subprocess, "run", side_effect=swap_then_run):
+                    result = self.protected_probe(host, (self.tools / host,))
+                alias.unlink()
+                (self.tools / host).unlink()
+                self.assertFalse(self.marker.exists())
+                self.assertEqual((0, "2.1.0"), (result["exit_status"], result["stdout_tail"]))
+
+    def test_cyclic_executable_links_fail_closed(self) -> None:
+        for host in ("codex", "claude"):
+            with self.subTest(host=host):
+                launcher = self.tools / host
+                launcher.symlink_to(host)
+                try:
+                    with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                        result = self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)
+                    self.assertIsNone(result["exit_status"])
+                finally:
+                    launcher.unlink()
+
+    def test_non_posix_host_lookup_fails_closed(self) -> None:
+        with unittest.mock.patch.object(os, "name", "nt"), unittest.mock.patch.object(subprocess, "run") as run:
+            for host in ("codex", "claude"):
+                with self.subTest(host=host):
+                    self.assertIsNone(self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)["exit_status"])
+            run.assert_not_called()
+
+    def test_worktree_hardlink_alias_cannot_supply_any_cli(self) -> None:
+        for cli in ("codex", "claude", "git", "gh", "docker"):
+            with self.subTest(cli=cli):
+                payload = self.root / cli
+                self.executable(payload, trusted=True)
+                installed = self.tools / cli
+                os.link(payload, installed)
+                self.executable(payload)
+                try:
+                    with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                        result = self.probe(self.root, [cli, "--version"], allowed=(cli,), timeout=2)
+                    self.assertFalse(self.marker.exists(), "worktree hardlink supplied executable bytes")
+                    self.assertIsNone(result["exit_status"])
+                finally:
+                    installed.unlink()
+                    self.marker.unlink(missing_ok=True)
+
+    def test_host_interpreter_path_cannot_enter_worktree(self) -> None:
+        for host in ("codex", "claude"):
+            for helper, form in ((name, form) for name in ("python3", "node", "helper")
+                                 for form in ("symlink", "hardlink")):
+                with self.subTest(host=host, helper=helper, form=form):
+                    launcher = self.tools / host
+                    launcher.write_text(f"#!/usr/bin/env {helper}\nprint('2.1.0')\n")
+                    if helper == "helper":
+                        launcher.write_text(f"#!{sys.executable}\nimport subprocess\nsubprocess.run(['helper', '--version'], check=True)\n")
+                    launcher.chmod(0o755)
+                    payload = self.root / helper
+                    self.executable(payload)
+                    interpreter = self.tools / helper
+                    if form == "symlink":
+                        interpreter.symlink_to(payload)
+                    else:
+                        os.link(payload, interpreter)
+                    try:
+                        with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                            result = self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)
+                        self.assertFalse(self.marker.exists(), "host launcher used a worktree interpreter")
+                        self.assertIsNone(result["exit_status"])
+                    finally:
+                        interpreter.unlink()
+                        self.marker.unlink(missing_ok=True)
+
+    def test_unlinked_worktree_alias_cannot_supply_host(self) -> None:
+        for host in ("codex", "claude"):
+            for window in ("write-then-unlink", "open-then-unlink"):
+                with self.subTest(host=host, window=window):
+                    payload = self.root / host
+                    self.executable(payload, trusted=True)
+                    installed = self.tools / host
+                    os.link(payload, installed)
+                    if window == "write-then-unlink":
+                        self.executable(payload)
+                        payload.unlink()
+                    else:
+                        with payload.open("w") as handle:
+                            payload.unlink()
+                            handle.write(f"#!{sys.executable}\nfrom pathlib import Path\nPath({str(self.marker)!r}).touch()\nprint('2.1.0')\n")
+                    try:
+                        with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                            result = self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)
+                        self.assertFalse(self.marker.exists(), "unlinked worktree alias supplied host bytes")
+                        self.assertIsNone(result["exit_status"])
+                    finally:
+                        installed.unlink()
+                        self.marker.unlink(missing_ok=True)
+
+    def test_unlinked_worktree_alias_cannot_supply_host_interpreter(self) -> None:
+        for host in ("codex", "claude"):
+            for window in ("write-then-unlink", "open-then-unlink"):
+                with self.subTest(host=host, window=window):
+                    launcher = self.tools / host
+                    launcher.write_text("#!/usr/bin/env python3\nprint('2.1.0')\n")
+                    launcher.chmod(0o755)
+                    payload = self.root / "python3"
+                    self.executable(payload, trusted=True)
+                    interpreter = self.tools / "python3"
+                    os.link(payload, interpreter)
+                    if window == "write-then-unlink":
+                        self.executable(payload)
+                        payload.unlink()
+                    else:
+                        with payload.open("w") as handle:
+                            payload.unlink()
+                            handle.write(f"#!{sys.executable}\nfrom pathlib import Path\nPath({str(self.marker)!r}).touch()\nprint('2.1.0')\n")
+                    try:
+                        with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                            result = self.protected_probe(host, (launcher,))
+                        self.assertFalse(self.marker.exists())
+                        self.assertIsNone(result["exit_status"])
+                    finally:
+                        interpreter.unlink()
+                        launcher.unlink()
+                        self.marker.unlink(missing_ok=True)
+
+    def test_effectively_writable_foreign_owned_host_is_unknown(self) -> None:
+        for host in ("codex", "claude"):
+            with self.subTest(host=host):
+                installed = self.tools / host
+                self.executable(installed)
+                try:
+                    with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                        result = self.protected_probe(host, (installed,), writable=(installed,))
+                    self.assertFalse(self.marker.exists())
+                    self.assertIsNone(result["exit_status"])
+                finally:
+                    installed.unlink()
+                    self.marker.unlink(missing_ok=True)
+
+    def test_owner_can_chmod_readonly_host_is_unknown(self) -> None:
+        for host in ("codex", "claude"):
+            with self.subTest(host=host):
+                installed = self.tools / host
+                self.executable(installed, trusted=True)
+                installed.chmod(0o555)
+                try:
+                    with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                        result = self.probe(self.root, [host, "--version"], allowed=(host,), timeout=2)
+                    self.assertIsNone(result["exit_status"])
+                finally:
+                    installed.unlink()
+
+    def test_trusted_env_shebang_interpreter_still_works(self) -> None:
+        (self.tools / "python3").symlink_to(sys.executable)
+        for host in ("codex", "claude"):
+            with self.subTest(host=host):
+                launcher = self.tools / host
+                launcher.write_text("#!/usr/bin/env python3\nprint('2.1.0')\n")
+                launcher.chmod(0o755)
+                with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                    result = self.protected_probe(host, (launcher, Path(sys.executable)))
+                launcher.unlink()
+                self.assertEqual((0, "2.1.0"), (result["exit_status"], result["stdout_tail"]))
+
+    def race_probe(self, host: str, variant: str, window: str, form: str = "regular") -> None:
+        """Inject at the real lookup/launch seams; permission observations alone are modeled."""
+        ancestor = variant.startswith("ancestor-")
+        variant = variant.removeprefix("ancestor-")
+        launcher = self.tools / host
+        helper = variant in ("env-helper", "subprocess-helper")
+        if helper:
+            body = "#!/usr/bin/env helper\n" if variant == "env-helper" else (
+                f"#!{sys.executable}\nimport subprocess\nsubprocess.run(['helper'], check=True)\n")
+            launcher.write_text(body)
+            launcher.chmod(0o755)
+        elif variant != "create":
+            self.executable(launcher, trusted=True)
+        payload = self.root / "payload"
+        self.executable(payload)
+        native_which, native_run = shutil.which, subprocess.run
+
+        def attack() -> None:
+            target = self.tools / ("helper" if helper else host)
+            if variant.startswith("directory"):
+                self.tools.rename(self.area / "displaced")
+                if variant == "directory-symlink":
+                    self.executable(self.root / host)
+                    self.tools.symlink_to(self.root, target_is_directory=True)
+                    return
+                self.tools.mkdir()
+            target.unlink(missing_ok=True)
+            {"copy": lambda: shutil.copy2(payload, target), "symlink": lambda: target.symlink_to(payload),
+             "hardlink": lambda: os.link(payload, target), "regular": lambda: self.executable(target)}[form]()
+
+        def race_lookup(*args, **kwargs):
+            if window == "after-validation":
+                attack()
+            return native_which(*args, **kwargs)
+
+        def race_launch(*args, **kwargs):
+            if window == "after-lookup":
+                attack()
+            return native_run(*args, **kwargs)
+
+        with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}), \
+             unittest.mock.patch.object(shutil, "which", side_effect=race_lookup), \
+             unittest.mock.patch.object(subprocess, "run", side_effect=race_launch):
+            result = self.protected_probe(host, (launcher,),
+                                          mutable_directories=(self.area if ancestor else self.tools,))
+        executed = self.marker.exists()
+        if self.tools.is_symlink():
+            self.tools.unlink()
+        else:
+            shutil.rmtree(self.tools)
+        shutil.rmtree(self.area / "displaced", ignore_errors=True)
+        self.tools.mkdir()
+        self.marker.unlink(missing_ok=True)
+        self.assertFalse(executed, "late executable or helper ran")
+        self.assertIsNone(result["exit_status"])
+
+    def test_host_created_after_validation_is_unknown(self) -> None:
+        for host in ("codex", "claude"):
+            for form in ("regular", "copy", "symlink", "hardlink"):
+                with self.subTest(host=host, form=form):
+                    self.race_probe(host, "create", "after-validation", form)
+
+    def test_host_replaced_after_lookup_is_unknown(self) -> None:
+        for host in ("codex", "claude"):
+            for form in ("regular", "copy", "symlink", "hardlink"):
+                with self.subTest(host=host, form=form):
+                    self.race_probe(host, "replace", "after-lookup", form)
+
+    def test_path_directory_recreated_after_validation_or_lookup_is_unknown(self) -> None:
+        for host in ("codex", "claude"):
+            for window in ("after-validation", "after-lookup"):
+                with self.subTest(host=host, window=window):
+                    self.race_probe(host, "directory-recreate", window)
+
+    def test_path_directory_symlinked_after_validation_or_lookup_is_unknown(self) -> None:
+        for host in ("codex", "claude"):
+            for window in ("after-validation", "after-lookup"):
+                with self.subTest(host=host, window=window):
+                    self.race_probe(host, "directory-symlink", window)
+
+    def test_env_shebang_helper_created_after_validation_is_unknown(self) -> None:
+        for host in ("codex", "claude"):
+            with self.subTest(host=host):
+                self.race_probe(host, "env-helper", "after-validation")
+
+    def test_subprocess_helper_created_after_validation_is_unknown(self) -> None:
+        for host in ("codex", "claude"):
+            with self.subTest(host=host):
+                self.race_probe(host, "subprocess-helper", "after-validation")
+
+    def test_protected_path_directory_under_mutable_ancestor_is_unknown(self) -> None:
+        for host in ("codex", "claude"):
+            for variant in ("directory-recreate", "directory-symlink"):
+                for window in ("after-validation", "after-lookup"):
+                    with self.subTest(host=host, variant=variant, window=window):
+                        self.race_probe(host, f"ancestor-{variant}", window)
+
+    def test_host_directory_owner_can_chmod_readonly_is_unknown(self) -> None:
+        for host in ("codex", "claude"):
+            with self.subTest(host=host):
+                launcher = self.tools / host
+                self.executable(launcher, trusted=True)
+                self.tools.chmod(0o555)
+                try:
+                    with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                        result = self.protected_probe(host, (launcher,), mutable_directories=(self.tools,))
+                    self.assertIsNone(result["exit_status"])
+                finally:
+                    self.tools.chmod(0o755)
+                    launcher.unlink()
+
+    def test_effectively_writable_foreign_owned_directory_is_unknown(self) -> None:
+        for host in ("codex", "claude"):
+            for directory in (self.tools, self.area):
+                with self.subTest(host=host, directory=directory.name):
+                    launcher = self.tools / host
+                    self.executable(launcher, trusted=True)
+                    try:
+                        with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                            result = self.protected_probe(host, (launcher,), writable=(directory,))
+                        self.assertIsNone(result["exit_status"])
+                    finally:
+                        launcher.unlink()
+
+    def test_host_and_helper_symlink_target_mutable_ancestors_are_unknown(self) -> None:
+        targets = self.area / "targets"
+        targets.mkdir()
+        for host in ("codex", "claude"):
+            for name in (host, "helper"):
+                for directory in (targets, self.area):
+                    with self.subTest(host=host, name=name, directory=directory.name):
+                        payload = targets / "payload"
+                        self.executable(payload, trusted=True)
+                        launcher = self.tools / host
+                        if name == "helper":
+                            launcher.write_text("#!/usr/bin/env helper\n")
+                            launcher.chmod(0o755)
+                        (self.tools / name).symlink_to(payload)
+                        try:
+                            with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                                result = self.protected_probe(host, (launcher, payload),
+                                                              mutable_directories=(directory,))
+                            self.assertIsNone(result["exit_status"])
+                        finally:
+                            (self.tools / name).unlink()
+                            launcher.unlink(missing_ok=True)
+                            payload.unlink()
+
+    def test_unsafe_empty_helper_directory_is_removed_from_child_path(self) -> None:
+        helpers = self.area / "helpers"
+        helpers.mkdir()
+        native_run = subprocess.run
+        for host in ("codex", "claude"):
+            with self.subTest(host=host):
+                launcher = self.tools / host
+                self.executable(launcher, trusted=True)
+
+                def launch(*args, **kwargs):
+                    self.executable(helpers / "helper")
+                    self.assertNotIn(str(helpers), kwargs["env"]["PATH"].split(os.pathsep))
+                    return native_run(*args, **kwargs)
+
+                try:
+                    with unittest.mock.patch.dict(os.environ, {"PATH": f"{helpers}:{self.tools}"}), \
+                         unittest.mock.patch.object(subprocess, "run", side_effect=launch):
+                        result = self.protected_probe(host, (launcher,))
+                    self.assertEqual((0, "2.1.0"), (result["exit_status"], result["stdout_tail"]))
+                finally:
+                    launcher.unlink()
+                    (helpers / "helper").unlink(missing_ok=True)
+
+    def test_readiness_remains_unknown_for_hijacked_host(self) -> None:
+        self.root.joinpath(".specify").mkdir()
+        self.root.joinpath("surface.txt").write_text("no preview tools")
+        for host in ("codex", "claude"):
+            with self.subTest(host=host):
+                with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools)}):
+                    inputs = request([observation("preview_surface", "unavailable", files=["surface.txt"])],
+                                     host=host)["inputs"]
+                    record = readiness_record.build_record(inputs, self.root)
+                directory = self.root / ".specify/readiness"
+                directory.mkdir(exist_ok=True)
+                (directory / f"{host}.json").write_text(json.dumps(record))
+                self.executable(self.root / host)
+                with unittest.mock.patch.dict(os.environ, {"PATH": str(self.root)}):
+                    result = readiness_record.preview_surface(self.root, host)
+                self.assertFalse(self.marker.exists())
+                self.assertEqual("unknown", result)
+
+
 class FeasibilityTest(unittest.TestCase):
     """Scaffold's feasibility results for formal methods and verification Docker (ADR 0005)."""
 
@@ -417,9 +1427,11 @@ class FeasibilityTest(unittest.TestCase):
 
     def record_items(self, observations: list[dict[str, object]] | None = None, mode: str = "dry_run") -> dict:
         observations = [observation(item) for item in CALLER_ITEMS] if observations is None else observations
-        _, response, _ = run_runner(request(observations, mode), cwd=self.root,
-                                    extra_env={"PATH": str(self.tools), **self.tool_env})
-        return response["data"]["record"]["items"]
+        # Feasibility tests exercise daemon replies, independently of installation
+        # ownership. HostProbePathSecurityTest covers the real lookup policy.
+        with unittest.mock.patch.dict(os.environ, {"PATH": str(self.tools), **self.tool_env}), \
+             unittest.mock.patch.object(readiness_record.cli_probe, "probe_search_path", return_value=str(self.tools)):
+            return readiness_record.build_record(request(observations, mode)["inputs"], self.root)["items"]
 
     def fake_docker(self, output: str, exit_code: int = 0, endpoint: str = "unix:///run/docker.sock") -> None:
         """A `docker` that answers `info` with `output` and `context inspect` with `endpoint`."""
@@ -678,7 +1690,8 @@ class G0WorkflowTests(G0ReadinessFixture):
 
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
-    cases = (ReadinessRecordTest, FeasibilityTest, G0RecordValidationTests, G0SavedEvidenceTests, G0WorkflowTests)
+    cases = (ReadinessRecordTest, PreviewEvidenceSecurityTest, HostProbePathSecurityTest, FeasibilityTest,
+             G0RecordValidationTests, G0SavedEvidenceTests, G0WorkflowTests)
     return unittest.TestSuite([loader.loadTestsFromTestCase(case) for case in cases])
 
 

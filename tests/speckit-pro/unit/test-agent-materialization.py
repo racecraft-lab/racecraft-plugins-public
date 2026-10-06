@@ -299,7 +299,7 @@ class AgentMaterializationTests(unittest.TestCase):
                         installed_policy.get("model"),
                         installed_policy.get("model_reasoning_effort"),
                     ),
-                    ("gpt-6-luna", "max", "gpt-6-luna", "max"),
+                    ("gpt-6-luna", "high", "gpt-6-luna", "high"),
                 )
                 self.assertEqual(result.destination_bytes, source_bytes)
 

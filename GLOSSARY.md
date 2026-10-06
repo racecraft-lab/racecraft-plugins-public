@@ -67,9 +67,17 @@ _Avoid_: planning pause, implement preflight, artifact delivery
 The part of an autopilot run that takes a SPEC from specify through analyze and ends when the review artifacts and the draft PR are ready. The other stages are implement and full.
 _Avoid_: planning run, planning phase
 
+**Optional hook suggestion**:
+An extension action offered for a specific event that requires explicit operator confirmation. Its consent message is supplied by the runner, rather than by the project registering the action.
+_Avoid_: hook approval, automatic hook, project consent
+
 **Planning phase**:
 One of the six steps inside the plan stage: specify, clarify, plan, checklist, tasks and analyze. Every SPEC runs all six.
 _Avoid_: stage, step, gate, quality gate, optional phase
+
+**Preview surface**:
+A place in the host where the agent can open a generated HTML page and see it rendered. Scaffold records whether the host has one in the readiness record; a run spawns a preview observer for a page only when the record does not say there is none.
+_Avoid_: preview support, browser access
 
 **Progress block**:
 The fixed summary of an autopilot run's phases and tasks that the runner renders from autopilot state at every phase transition. It is the only place a run shows its progress.

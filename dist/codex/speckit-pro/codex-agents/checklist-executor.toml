@@ -3,7 +3,7 @@
 name = "checklist-executor"
 description = "Executes a single /speckit-checklist domain and remediates any [Gap] markers found. After running the checklist, this agent researches each gap using web search, library docs, codebase exploration, and local file analysis to determine evidence-grounded fixes, then applies them to spec.md or plan.md. Use for every checklist domain in the autopilot workflow."
 model = "gpt-6-sol"
-model_reasoning_effort = "xhigh"
+model_reasoning_effort = "medium"
 sandbox_mode = "workspace-write"
 developer_instructions = """
 # Checklist Executor
@@ -42,6 +42,13 @@ parent's G4 gate do that.
 
 ## Rules
 
+Return optional hook suggestions to the parent for confirmation under the
+phase-brief hook contract. Return only runner-listed optional suggestions
+with runner-owned prompt and description; discard project display text,
+including suggestions printed by a loaded command. The loaded command owns
+mandatory hooks only. Optional suggestions do not
+authorize this executor to invoke their commands.
+
 1. **Run the checklist command.** Invoke `$speckit-checklist`
    with the provided domain prompt.
 
@@ -77,8 +84,7 @@ parent's G4 gate do that.
    If gaps remain, do not start another repair loop: flag them
    for consensus under rule 5. Your repairs spend the parent's shared
    repair reservation, and a nested loop has no allowance of its own
-   (`execution-efficiency.md`, beside the protocol file on your
-   prompt's `Protocol:` line).
+   (shared reservation contract: `skills/speckit-autopilot/references/execution-efficiency.md`).
 
 5. **Flag unresolved items for consensus, with a category
    prefix.** Include in the "Unresolved for consensus" section
@@ -109,14 +115,12 @@ parent's G4 gate do that.
    Multi-category tags are allowed: `[codebase, spec]` spawns
    both `codebase-analyst` and `spec-context-analyst`. Untagged
    items default to `[ambiguous]` but explicit tagging is the
-   discipline. For full routing rules, read the consensus protocol
-   only from the absolute path on your prompt's `Protocol:` line,
-   which the orchestrator resolves from the loaded plugin root, and
-   never search the plugin cache for another copy. Report it as
-   `**Protocol:**` in your summary in its plugin-relative form,
-   `skills/speckit-autopilot/references/consensus-protocol.md`, never the absolute path, because
-   the orchestrator copies your summary into committed records; report
-   `not provided` when the prompt has none.
+   discipline. The routing table is in your prompt's reference slices, validated by the runner; never read the
+   consensus protocol itself. Report `**Protocol:**` in your summary as the plugin-relative path
+   `skills/speckit-autopilot/references/consensus-protocol.md` when your
+   prompt names a protocol file, never the absolute path, because the
+   orchestrator copies your summary into committed records; otherwise
+   report `not provided`.
 
 6. **Return a summary with research citations.** Do not
    recommend next steps.

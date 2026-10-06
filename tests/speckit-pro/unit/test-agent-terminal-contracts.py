@@ -28,13 +28,12 @@ TERMINAL_RESULT_ROLES = (
     "spec-context-analyst",
     "domain-researcher",
 )
+# The phase brief hands these executors their protocol sections as reference slices.
+SLICE_EXECUTORS = ("analyze-executor", "checklist-executor", "clarify-executor")
 PROTOCOL_READERS = ("consensus-synthesizer", "analyze-executor", "checklist-executor", "clarify-executor")
 PLUGIN_RELATIVE_PROTOCOL_REPORT = "**Protocol:** skills/speckit-autopilot/references/consensus-protocol.md | not provided"
 REFERENCE_READERS = (
-    "analyze-executor",
     "artifact-author",
-    "checklist-executor",
-    "clarify-executor",
     "codebase-analyst",
     "domain-researcher",
     "formal-model-author",
@@ -106,6 +105,8 @@ class AgentTerminalContractTests(unittest.TestCase):
         # stale version. The orchestrator passes the active path instead, and
         # the agent reports the path it read so the parent can check it.
         for name in PROTOCOL_READERS:
+            if name in SLICE_EXECUTORS:
+                continue
             body = claude_body(name)
             flat = " ".join(body.split())
             with self.subTest(agent=name):
@@ -113,6 +114,8 @@ class AgentTerminalContractTests(unittest.TestCase):
                 self.assertIn("`Protocol:` line", flat)
                 self.assertIn("never search the plugin cache", flat)
         for name in PROTOCOL_READERS:
+            if name in SLICE_EXECUTORS:
+                continue
             instructions = " ".join(codex_policy(name)["developer_instructions"].split())
             with self.subTest(codex=name):
                 self.assertIn("`Protocol:` line", instructions)

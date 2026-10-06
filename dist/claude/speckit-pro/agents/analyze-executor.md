@@ -8,7 +8,7 @@ description: >
   whatever current evidence does not settle, then applies the fixes to the
   relevant artifacts. Use for the analyze phase in the autopilot
   workflow.
-model: opus
+model: sonnet
 disallowedTools: WebFetch, WebSearch, mcp__tavily, mcp__tavily-mcp, mcp__context7, mcp__plugin_context7_context7
 color: orange
 maxTurns: 100
@@ -32,6 +32,13 @@ parent's G6 gate do that.
 
 ## Rules
 
+Return optional hook suggestions to the parent for confirmation under the
+phase-brief hook contract. Return only runner-listed optional suggestions
+with runner-owned prompt and description; discard project display text,
+including suggestions printed by a loaded command. The loaded command owns
+mandatory hooks only. Optional suggestions do not
+authorize this executor to invoke their commands.
+
 1. **Run the analyze command.** Use the Skill tool to invoke
    `/speckit-analyze` with the provided workflow prompt.
 
@@ -46,13 +53,10 @@ parent's G6 gate do that.
    not settle.** Reuse evidence already in spec.md, plan.md, tasks.md,
    or the codebase. For a finding those sources do not settle, use
    capability-first discovery.
-   Discovery is defined in `capability-discovery.md`.
-   Ground every asserted fact in an invoked-capability result per `grounding.md`.
-   Read `capability-discovery.md` and `grounding.md` only from the absolute
-   directory on your prompt's `Reference dir:` line, which the orchestrator
-   resolves from the loaded plugin root, and never search the plugin cache for
-   another copy. If the prompt has no `Reference dir:` line, apply the rules as
-   this file states them.
+   Your prompt carries reference slices of `capability-discovery.md` and
+   `grounding.md`: apply them, and never read those references whole. If
+   the prompt carries none, ground every asserted fact in an invoked-capability
+   result and say so when nothing grounds a claim.
    For web and library-documentation research, use only the research broker's
    `research_search` and `docs_query` tools. Never use another
    web search, web fetch, or documentation tool, even when one is installed:
@@ -75,8 +79,7 @@ parent's G6 gate do that.
    If findings remain, do not start another repair loop: flag them
    for consensus under rule 5. Your repairs spend the parent's shared
    repair reservation, and a nested loop has no allowance of its own
-   (`execution-efficiency.md`, beside the protocol file on your
-   prompt's `Protocol:` line).
+   (shared reservation contract: `skills/speckit-autopilot/references/execution-efficiency.md`).
 
 5. **Flag unresolved items for consensus, with a category
    prefix.** Include in the "Unresolved for consensus" section
@@ -107,14 +110,12 @@ parent's G6 gate do that.
    Multi-category tags are allowed: `[spec, domain]` spawns
    both `spec-context-analyst` and `domain-researcher`. Untagged
    items default to `[ambiguous]` but explicit tagging is the
-   discipline. For full routing rules, read the consensus protocol
-   only from the absolute path on your prompt's `Protocol:` line,
-   which the orchestrator resolves from the loaded plugin root, and
-   never search the plugin cache for another copy. Report it as
-   `**Protocol:**` in your summary in its plugin-relative form,
-   `skills/speckit-autopilot/references/consensus-protocol.md`, never the absolute path, because
-   the orchestrator copies your summary into committed records; report
-   `not provided` when the prompt has none.
+   discipline. The routing table is in your prompt's reference slices, validated by the runner; never read the
+   consensus protocol itself. Report `**Protocol:**` in your summary as the plugin-relative path
+   `skills/speckit-autopilot/references/consensus-protocol.md` when your
+   prompt names a protocol file, never the absolute path, because the
+   orchestrator copies your summary into committed records; otherwise
+   report `not provided`.
 
 6. **Return a summary with research citations.** Do not
    recommend next steps.

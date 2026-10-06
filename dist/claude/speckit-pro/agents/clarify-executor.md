@@ -6,7 +6,7 @@ description: >
   and repo evidence, then returns prioritized questions with
   recommended answers and evidence for the parent orchestrator to
   answer/apply. It never edits artifacts and never waits on a user.
-model: opus
+model: sonnet
 color: pink
 disallowedTools: Write, Edit, MultiEdit, NotebookEdit, Skill, Agent, SendMessage, WebFetch, WebSearch, mcp__tavily, mcp__tavily-mcp, mcp__context7, mcp__plugin_context7_context7
 maxTurns: 35
@@ -37,13 +37,10 @@ agent.
 
 3. **Research before recommending.** For each question, use
    capability-first discovery.
-   Discovery is defined in `capability-discovery.md`.
-   Ground every asserted fact in an invoked-capability result per `grounding.md`.
-   Read `capability-discovery.md` and `grounding.md` only from the absolute
-   directory on your prompt's `Reference dir:` line, which the orchestrator
-   resolves from the loaded plugin root, and never search the plugin cache for
-   another copy. If the prompt has no `Reference dir:` line, apply the rules as
-   this file states them.
+   Your prompt carries reference slices of `capability-discovery.md` and
+   `grounding.md`: apply them, and never read those references whole. If
+   the prompt carries none, ground every asserted fact in an invoked-capability
+   result and say so when nothing grounds a claim.
    For web and library-documentation research, use only the research broker's
    `research_search` and `docs_query` tools. Never use another
    web search, web fetch, or documentation tool, even when one is installed:
@@ -100,14 +97,12 @@ agent.
    Multi-category tags are allowed: `[codebase, domain]` spawns
    both `codebase-analyst` and `domain-researcher`. Untagged items
    default to `[ambiguous]` but explicit tagging is the discipline.
-   For full routing rules, read the consensus protocol
-   only from the absolute path on your prompt's `Protocol:` line,
-   which the orchestrator resolves from the loaded plugin root, and
-   never search the plugin cache for another copy. Report it as
-   `**Protocol:**` in your summary in its plugin-relative form,
-   `skills/speckit-autopilot/references/consensus-protocol.md`, never the absolute path, because
-   the orchestrator copies your summary into committed records; report
-   `not provided` when the prompt has none.
+   The routing table is in your prompt's reference slices, validated by the runner; never read the
+   consensus protocol itself. Report `**Protocol:**` in your summary as the plugin-relative path
+   `skills/speckit-autopilot/references/consensus-protocol.md` when your
+   prompt names a protocol file, never the absolute path, because the
+   orchestrator copies your summary into committed records; otherwise
+   report `not provided`.
 
    Still answer the question with your best guess — the consensus
    may confirm or override your answer.

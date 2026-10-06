@@ -41,6 +41,7 @@ SPLIT = entry("split_recommendation", "split")
 DEFAULT = entry("unratified_default", "default")
 PR_PROBLEM = entry("pr_record_problem", "pr")
 STOP = entry("unregistered_stop", "stop")
+HOOK = entry("optional_hook_run", "hook")
 
 
 class DecisionsListTests(unittest.TestCase):
@@ -92,17 +93,17 @@ class DecisionsListTests(unittest.TestCase):
     def test_entries_come_back_spec_affecting_then_authority_then_notes(self) -> None:
         first = self.append(NOTE, SKIP, SCOPE, PR_PROBLEM)
         self.assertEqual("ok", first["status"], first)
-        self.assertEqual("ok", self.append(SPLIT, DEFAULT, STOP)["status"])
+        self.assertEqual("ok", self.append(SPLIT, DEFAULT, STOP, HOOK)["status"])
         data = self.listed()
         order = [item["kind"] for item in data["entries"]]
         self.assertEqual(
             ["scope_answer", "split_recommendation", "unratified_default", "authority_action_skipped",
-             "readiness_stale", "pr_record_problem", "unregistered_stop"], order
+             "readiness_stale", "pr_record_problem", "unregistered_stop", "optional_hook_run"], order
         )
-        self.assertEqual(7, data["count"])
+        self.assertEqual(8, data["count"])
         for item in data["entries"]:
             self.assertEqual({"seq", "kind", *TEXT_FIELDS}, set(item))
-            sent = next(each for each in (NOTE, SKIP, SCOPE, SPLIT, DEFAULT, PR_PROBLEM, STOP)
+            sent = next(each for each in (NOTE, SKIP, SCOPE, SPLIT, DEFAULT, PR_PROBLEM, STOP, HOOK)
                         if each["kind"] == item["kind"])
             self.assertEqual(sent, {key: value for key, value in item.items() if key != "seq"})
 

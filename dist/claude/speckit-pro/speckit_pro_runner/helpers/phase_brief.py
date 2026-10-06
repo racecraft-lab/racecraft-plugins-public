@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator
 from pathlib import Path, PureWindowsPath
 from typing import Any
-from unicodedata import category
+from unicodedata import category, normalize
 
+from ..agent_inventory import AGENT_INVENTORY
 from ..envelope import diagnostic, response
 from ..strict_input import require_fields, require_text
+from ..trusted_io import resolve_repo_root
+from .extension_hooks import optional_hooks
 
 PHASES = {
     "Specify": ("phase-executor", "G1", ()),
@@ -18,6 +22,13 @@ PHASES = {
     "Tasks": ("phase-executor", "G5", ("spec.md", "plan.md", "research.md", "data-model.md", "contracts/", "quickstart.md")),
     "Analyze": ("analyze-executor", "G6", ("spec.md", "plan.md", "tasks.md", "checklists/")),
 }
+# The shared phase-executor serves three phases at different efforts (issue 1150). Its Codex file sets no
+# effort: custom-file values take precedence over explicit spawn values (which override [agents] defaults).
+# https://learn.chatgpt.com/docs/agent-configuration/subagents#custom-agents
+# The brief therefore names the Codex effort per phase;
+# Specify and Tasks follow a written spec and also run Sonnet on Claude Code. Other phases use their agent's inventory row.
+SPEC_DRIVEN_MODEL = {"claude": {"model": "sonnet", "effort": "high"}, "codex": {"model": "gpt-6-sol", "effort": "medium"}}
+PHASE_MODEL_OVERRIDES = {"Specify": SPEC_DRIVEN_MODEL, "Tasks": SPEC_DRIVEN_MODEL, "Plan": {"codex": {"model": "gpt-6-sol", "effort": "high"}}}
 REFERENCES = Path(__file__).resolve().parents[2] / "skills" / "speckit-autopilot" / "references"
 EXECUTOR_SLICES = (
     ("capability-discovery.md", ("Capability Categories", "Discovery Step", "Research Broker Rule", "Selection Rule", "Capability Boundaries by Role",
@@ -26,6 +37,8 @@ EXECUTOR_SLICES = (
                       "G3 \u2014 Separate grounded fact from inference", "G4 \u2014 Cite in the evidence note")),
     ("consensus-protocol.md", ("Category tags", "Security Keywords")),
 )
+# Only a loaded Spec Kit command runs hooks for its own phase. The clarify executor loads none, so Clarify lists no hooks.
+HOOK_PHASES = frozenset(PHASES) - {"Clarify"}
 SLICE_PHASES = frozenset({"Clarify", "Checklist", "Analyze"})
 PROMPT_SECTIONS = {"Clarify": "Clarify Prompts", "Checklist": "Step 2: Run Enriched Checklist Prompts"}
 
@@ -33,36 +46,82 @@ PROMPT_SECTIONS = {"Clarify": "Clarify Prompts", "Checklist": "Step 2: Run Enric
 def brief_path(value: Any, label: str) -> str:
     """Validate path text without filesystem access, with portable separators."""
     text = require_text(value, label)
-    if any(category(char) in {"Cc", "Zl", "Zp"} for char in text):
-        raise ValueError(f"{label} must not contain control characters or line separators")
-    path = PureWindowsPath(text)
-    if ".." in path.parts:
+    if any(category(char) in {"Cc", "Cf", "Zl", "Zp"} for char in text):
+        raise ValueError(f"{label} must not contain control, format or line separator characters")
+    # Check compatibility-normalized text too, but preserve the caller's path.
+    normalized = normalize("NFKC", text).rstrip()
+    paths = (PureWindowsPath(text), PureWindowsPath(normalized))
+    if label == "workflow_file" and (normalized.endswith(("/", "\\"))
+                                     or normalized.replace("\\", "/").rsplit("/", 1)[-1] == "."
+                                     or not paths[1].name):
+        raise ValueError("workflow_file must name a file, not a directory")
+    if any(".." in path.parts for path in paths):
         raise ValueError(f"{label} must not contain parent traversal segments")
-    if label == "feature_dir" and path.anchor:
+    if label == "feature_dir" and any(path.anchor for path in paths):
         raise ValueError("feature_dir must be relative to the workflow root")
     return text
+
+
+def reference_fence(line: str, fence: str) -> str | None:
+    """Return the active delimiter for code lines, or None for non-code lines."""
+    marker = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", line)
+    if fence:
+        if marker and marker[1][0] == fence[0] and len(marker[1]) >= len(fence) and not marker[2].strip(" \t"):
+            return ""
+        return fence
+    if marker and (marker[1][0] == "~" or "`" not in marker[2]):
+        return marker[1]
+    return None
+
+
+def reference_content(lines: list[str], name: str, heading: str) -> Iterator[tuple[int, str]]:
+    """Yield reference lines outside code and comment blocks, retaining positions."""
+    fence = ""
+    comment = False
+    for index, line in enumerate(lines):
+        # CommonMark 4.6, HTML block type 2: the entire closing line is HTML.
+        if comment:
+            comment = "-->" not in line
+            continue
+        # CommonMark 0.31.2, section 4.5. Nested fence-like lines
+        # are content unless they close the active delimiter and run length.
+        delimiter = reference_fence(line, fence)
+        if delimiter is not None:
+            fence = delimiter
+            continue
+        if re.match(r"^ {0,3}<!--", line):
+            comment = "-->" not in line
+            continue
+        # These packaged references use ATX headings. Refuse every possible
+        # setext underline (including dash-only thematic breaks); use *** for
+        # separators. This conservative contract needs no paragraph parser.
+        if re.fullmatch(r" {0,3}(?:=+|-+)[ \t]*", line):
+            raise ValueError(f"references/{name}:{index + 1}: setext underline is unsupported; use ATX headings or *** separators")
+        yield index, line
+    # CommonMark consumes to EOF for an unclosed fence. A packaged reference
+    # must instead fail closed rather than dispatch an ambiguous section tail.
+    if fence:
+        raise ValueError(f"references/{name}: unclosed fence in section {heading!r}")
 
 
 def reference_section(name: str, heading: str) -> str:
     """Return one reference section verbatim: its heading line through the line before the next heading of equal or higher level."""
     try:
-        lines = (REFERENCES / name).read_text(encoding="utf-8").splitlines()
+        # Read bytes to avoid universal-newline conversion of bare CR. The
+        # packaged-reference contract accepts LF and CRLF separators only.
+        lines = re.split(r"\r?\n", (REFERENCES / name).read_bytes().decode("utf-8"))
     except (OSError, UnicodeError) as exc:
         raise ValueError(f"references/{name}: cannot read section {heading!r}") from exc
+    # LF/CRLF have already been consumed. Validate every remaining character
+    # before comments, fences, or section boundaries can skip any content.
+    # Never dispatch separators the structural parser does not recognize.
+    if any(category(char) in {"Cc", "Zl", "Zp"} for char in "".join(lines).replace("\t", "")):
+        raise ValueError(f"references/{name}: unsupported control or line separator")
     start: int | None = None
     level = 0
-    fence = ""
-    for index, line in enumerate(lines):
-        # CommonMark 0.31.2, sections 4.2 and 4.5. Nested fence-like lines
-        # are content unless they close the active delimiter and run length.
-        marker = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", line)
-        if fence:
-            if marker and marker[1][0] == fence[0] and len(marker[1]) >= len(fence) and not marker[2].strip(" \t"):
-                fence = ""
-            continue
-        if marker and (marker[1][0] == "~" or "`" not in marker[2]):
-            fence = marker[1]
-            continue
+    # Validate the entire reference before returning any dispatch material.
+    content = list(reference_content(lines, name, heading))
+    for index, line in content:
         title = re.match(r"^ {0,3}(#{1,6})(?:[ \t]+(.*)|$)", line)
         if title is None:
             continue
@@ -73,10 +132,6 @@ def reference_section(name: str, heading: str) -> str:
                 start, level = index, marks
         elif marks <= level:
             return "\n".join(lines[start:index]).rstrip()
-    # CommonMark consumes to EOF for an unclosed fence. A packaged reference
-    # must instead fail closed rather than dispatch an ambiguous section tail.
-    if fence:
-        raise ValueError(f"references/{name}: unclosed fence in section {heading!r}")
     if start is None:
         raise ValueError(f"references/{name} has no section {heading!r}")
     return "\n".join(lines[start:]).rstrip()
@@ -85,6 +140,15 @@ def reference_section(name: str, heading: str) -> str:
 def phase_slices(phase: str) -> list[str]:
     """Reference excerpts the phase's executor needs, in a closed per-phase order."""
     return [reference_section(name, heading) for name, headings in (EXECUTOR_SLICES if phase in SLICE_PHASES else ()) for heading in headings]
+
+
+def phase_model(phase: str, agent: str) -> dict[str, dict[str, str]]:
+    """Model and effort for the phase's dispatch on each host; Claude Code uses the model per call and keeps effort in the agent."""
+    role = next(role for role in AGENT_INVENTORY["roles"] if role["name"] == agent)
+    model = {host: {"model": role[key]["model"], "effort": role[key]["effort"]}
+             for host, key in (("claude", "claude_code"), ("codex", "codex"))}
+    model.update({host: dict(choice) for host, choice in PHASE_MODEL_OVERRIDES.get(phase, {}).items()})
+    return model
 
 
 def brief_data(phase: str, workflow: str, feature: str) -> dict[str, Any]:
@@ -98,17 +162,34 @@ def brief_data(phase: str, workflow: str, feature: str) -> dict[str, Any]:
                    "prompt_section": PROMPT_SECTIONS.get(phase, phase + " Prompt"), "instruction": instruction,
                    "skill": skill},
         "readable_files": [workflow, ".specify/memory/constitution.md", ".specify/extensions.yml"] + [feature + "/" + name for name in artifacts],
-        "gate": gate, "slices": phase_slices(phase), "waves": [], "model": None, "hooks": [],
+        "gate": gate, "slices": phase_slices(phase), "waves": [], "model": phase_model(phase, agent), "hooks": [],
     }
+
+
+def checked_request(raw: Any) -> tuple[str, str, str]:
+    """The closed phase-brief inputs as (phase, workflow_file, feature_dir); anything else raises ValueError."""
+    inputs = require_fields(raw, {"phase", "workflow_file", "feature_dir"}, "phase-brief inputs")
+    phase = require_text(inputs["phase"], "phase")
+    workflow = brief_path(inputs["workflow_file"], "workflow_file")
+    feature = brief_path(inputs["feature_dir"], "feature_dir").rstrip("/")
+    if not feature:
+        raise ValueError("feature_dir must name a directory")
+    if phase not in PHASES:
+        raise ValueError("phase must be Specify, Clarify, Plan, Checklist, Tasks or Analyze")
+    return phase, workflow, feature
+
+
+def internal_failure(request: Any, code: str, exc: Exception) -> dict[str, Any]:
+    return response("internal_failure", request_id=request.request_id, diagnostics=[diagnostic(code, str(exc))])
 
 
 def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     """Return phase-brief/v1 dispatch data; gate and stop decisions stay separate.
 
     The closed request inputs are phase, workflow_file and feature_dir strings.
-    Paths reject parent segments and controls; feature_dir is workflow-root
-    relative, workflow_file may be absolute. This is lexical validation only:
-    no files are opened, symlinks resolved or read permissions enforced.
+    Paths reject parent segments and control, format and line separator characters.
+    feature_dir is workflow-root relative; workflow_file may be absolute but must name a file.
+    Validation is lexical: no files opened, symlinks resolved or read permissions enforced.
     Successful data has exactly these fields. Records have only the named keys;
     a wave dispatch's inputs is an open JSON object for its prompt arguments.
 
@@ -133,32 +214,35 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
         each inner list contains concurrent dispatches, with a host-neutral
         role, JSON prompt inputs and its own model selection per dispatch;
         [] until #1183. ModelSelection has the same shape as model below.
-    model: null | {claude: {model: str, effort: str},
+    model: {claude: {model: str, effort: str},
         codex: {model: str, effort: str}}, host-specific dispatch configuration;
-        applies to the top-level agent only, never every wave member;
-        null preserves installed agent defaults until #1184. Claude consumes
-        model per call and keeps effort in the agent; Codex consumes both.
-    hooks: list[{extension: str, command: str}], ordered optional extension
-        command ids to run once after the phase and record in decisions;
-        mandatory hooks belong to loaded commands; [] until #1188.
+        applies to the top-level agent only. Codex phase-executor omits file
+        effort; this field supplies it per phase. Other phases follow their
+        inventory row. Claude passes model and keeps agent effort; Codex passes both.
+    hooks: list[{extension, command, event, optional: true, prompt, description}],
+        enabled optional suggestions from .specify/extensions.yml, once per event.
+        Fields except optional are strings; prompt/description are runner-owned.
+        Env conditions must hold; others raise. Confirm the exact extension,
+        command and event or skip and record. Before stays before dispatch;
+        after stays afterward. Mandatory hooks belong to the loaded command;
+        Clarify loads none and lists none.
 
-    Empty reserved fields activate no new behavior. Input errors return no data.
+    Input errors return no data; uninterpretable hooks are internal_failure.
     """
     try:
-        inputs = require_fields(request.inputs, {"phase", "workflow_file", "feature_dir"}, "phase-brief inputs")
-        phase = require_text(inputs["phase"], "phase")
-        workflow = brief_path(inputs["workflow_file"], "workflow_file")
-        feature = brief_path(inputs["feature_dir"], "feature_dir").rstrip("/")
-        if not feature:
-            raise ValueError("feature_dir must name a directory")
-        if phase not in PHASES:
-            raise ValueError("phase must be Specify, Clarify, Plan, Checklist, Tasks or Analyze")
+        phase, workflow, feature = checked_request(request.inputs)
     except ValueError as exc:
         return response("input_error", request_id=request.request_id,
                         diagnostics=[diagnostic("invalid_phase_brief", str(exc))])
+    root = resolve_repo_root({})
+    if isinstance(root, dict):
+        return response("missing_prerequisite", request_id=request.request_id, diagnostics=[root])
     try:
         data = brief_data(phase, workflow, feature)
     except (OSError, ValueError) as exc:
-        return response("internal_failure", request_id=request.request_id,
-                        diagnostics=[diagnostic("phase_brief_slices_unavailable", str(exc))])
+        return internal_failure(request, "phase_brief_slices_unavailable", exc)
+    try:
+        data["hooks"] = optional_hooks(root, ("before_" + phase.lower(), "after_" + phase.lower())) if phase in HOOK_PHASES else []
+    except ValueError as exc:
+        return internal_failure(request, "phase_brief_hooks_unavailable", exc)
     return response("ok", request_id=request.request_id, data=data)

@@ -334,6 +334,10 @@ Read the unchanged probe report from `data.result.stdout_json`:
 - `all_pass`: if `false`, route each failed check's `message` to its owner: the orchestrator repairs a fixable check
   (a missing workflow directory, a stale binding), and the implement-executor repairs a failing project check; rerun the helper,
   then defer per the Failure Escalation Protocol when repair fails
+- `spec_kit.status`: `older`, `newer` or `unreadable` against `spec_kit.pinned_version`
+  is one entry under "Decisions for you" (the installed version beside the pinned one;
+  `spec_kit.install_argv` is an optional fix, and a `newer` CLI may be deliberate);
+  the run continues on the installed CLI
 - `branch`: current git branch name
 - `on_feature_branch`: if `true`, Specify must skip branch creation
 - `is_worktree`: if `true`, already in an isolated worktree
@@ -425,20 +429,20 @@ Read the workflow file's Prerequisites table. If already
 `Verified`, skip (resuming a workflow). Otherwise:
 
 1. Read constitution from `.specify/memory/constitution.md`
-2. For each principle, run the appropriate PROJECT_COMMANDS
-   check (typecheck, test suite, build, lint). For code
-   review items (KISS, YAGNI, SOLID), mark `Verified` —
-   these are validated during implementation.
+2. For each principle, verify it against the codebase by reading:
+   structure, documented patterns, module boundaries. The project baseline
+   belongs to implement entry (`references/phase-execution.md`, Phase 7
+   Setup: Project Baseline). For code review items (KISS, YAGNI, SOLID), mark
+   `Verified`; these are validated during implementation.
 3. Record the G0 baseline for every populated quality-gate slot
    per the Step 0.11 rule: `COMPLEXITY` on the whole tracked
    source tree (a measurement; only exit 2 blocks), `MUTATION`
    as `deferred`, `DEPENDENCY_RULES` as a real blocking run,
    `DEPENDENCY_AUDIT` as a real blocking run only when opted in
 4. Update the workflow file's table with results and baselines
-5. If any check or populated blocking gate fails, route the failing check to the implement-executor, which repairs it
-   (a red baseline included). Rerun the check, and
-   run the repair loop within its allowance, then defer per the Failure Escalation Protocol with `stop_reason:all_tiers_failed`.
-   Phase 1 starts once the check passes, or once the failure is deferred with its evidence.
+5. If a populated blocking gate fails, route the failing gate to the implement-executor, which repairs it.
+   Rerun the gate, and run the repair loop within its allowance, then defer per the Failure Escalation Protocol with `stop_reason:all_tiers_failed`.
+   Phase 1 starts once the gate passes, or once the failure is deferred with its evidence.
 
 ## Step 0.10: Codex Agent Availability Check
 

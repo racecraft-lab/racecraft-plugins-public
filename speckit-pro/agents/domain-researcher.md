@@ -12,7 +12,7 @@ tools: Read, Grep, Glob, mcp__plugin_speckit-pro_research-broker__research_searc
 disallowedTools: Write, Edit, MultiEdit, NotebookEdit, Skill, Agent, SendMessage
 maxTurns: 50
 background: true
-effort: max
+effort: high
 ---
 
 # Domain Researcher — Consensus Agent

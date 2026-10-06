@@ -67,7 +67,7 @@ PINS = (
      ("route the validator diagnostics to the uat-runbook-author", "hold PR-body generation"), ()),
     ("missing reviewability evidence and checkpoint SHAs are repaired", POSTS,
      ("regenerate the committed reviewability evidence", "record the marker checkpoint commit SHAs"), ()),
-    ("a red baseline goes to the implement-executor", PREREQS,
+    ("a red baseline goes to the implement-executor", PHASES,
      ("route the failing check to the implement-executor", REPAIR_THEN_DEFER),
      ("If any check or populated blocking gate fails, STOP", "report each failed check's `message` and STOP")),
     ("a failing step zero check routes to its owner", (*PREREQS, CODEX_SKILL), ("route the failure to its owner",),

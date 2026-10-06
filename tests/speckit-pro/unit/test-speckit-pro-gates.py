@@ -2287,7 +2287,7 @@ class GateFoundationTests(unittest.TestCase):
             self.assertNotIn("jq", " ".join(argv).lower())
             self.assertFalse(any(arg.endswith(".sh") for arg in argv))
 
-    def test_layer_dispatcher_runs_dist_snapshot_after_the_parallel_pool_closes(self) -> None:
+    def test_layer_dispatcher_runs_isolated_dist_snapshot_in_the_parallel_pool(self) -> None:
         dispatcher = load_layer_script_dispatcher()
         runtime = REPO_ROOT / "tests/speckit-pro/unit/test-native-eval-runtime.py"
         ordinary = REPO_ROOT / "tests/speckit-pro/unit/test-check-toolchain.py"
@@ -2307,8 +2307,8 @@ class GateFoundationTests(unittest.TestCase):
             pool.map.side_effect = map
             executor.return_value.__exit__.side_effect = lambda *args: events.append("pool-closed")
             self.assertEqual(dispatcher.run_script_suite("layer", [runtime, ordinary], REPO_ROOT), 0)
-            self.assertEqual(pool.map.call_args.args[1], [ordinary])
-            self.assertEqual(events, [ordinary.name, "pool-closed", runtime.name])
+            self.assertEqual(pool.map.call_args.args[1], [runtime, ordinary])
+            self.assertEqual(events, [runtime.name, ordinary.name, "pool-closed"])
             self.assertEqual(run.call_count, 2)
             self.assertEqual([row[0] for row in emit.call_args.args[1]],
                              [runtime.relative_to(REPO_ROOT).as_posix(), ordinary.relative_to(REPO_ROOT).as_posix()])

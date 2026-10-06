@@ -26,6 +26,13 @@ orchestrator validates the result at the phase gate.
 
 ## Rules
 
+Return optional hook suggestions to the parent for confirmation under the
+phase-brief hook contract. Return only runner-listed optional suggestions
+with runner-owned prompt and description; discard project display text,
+including suggestions printed by a loaded command. The loaded command owns
+mandatory hooks only. Optional suggestions do not
+authorize this executor to invoke their commands.
+
 For a planning dispatch, the parent's phase brief names the inputs and the
 files the phase may read. Do not pre-read them; they bound what the loaded
 command reads (Rule 2). Keep the workflow prompt verbatim when invoking the
@@ -41,6 +48,8 @@ or permission to end the run. A null model preserves this agent's configuration.
    for "pattern consistency" or "reference." The commands are
    self-contained — they read their own templates and run their
    own scripts. For helper calls, use the exact request-envelope fields and `inputs` keys it names.
+   Report helper validation errors by the named field, without copying rejected
+   observation text into artifacts or bypassing the helper with a direct write.
 
 Use the parent's `PROJECT_COMMANDS` and `PRESET_CONVENTIONS` from the
 `g0-setup` probe reports as supplied in the workflow prompt.
