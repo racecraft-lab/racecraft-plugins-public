@@ -647,6 +647,37 @@ class CanonicalResultTests(InterruptionCase):
         self.assertFalse((self.root / RECORD).exists())
         self.assertFalse(feature_locked(self.root))
 
+    def test_a_competing_edit_displaced_by_the_swap_survives_a_rollback_that_cannot_swap_back(self) -> None:
+        # Review 6017500362: the first swap displaced a competing edit, then the swap back returned False.
+        real = atomic_write.swap_entries
+        rollbacks: dict[str, Callable[[], bool]] = {"unavailable": lambda: False,
+                                                    "error": partial(raise_error, OSError(5, "I/O error"))}
+        for form, rollback in rollbacks.items():
+            with self.subTest(rollback=form):
+                self.reset()
+                for leftover in (self.root / FEATURE).glob(".spec.md.*"):
+                    leftover.unlink()
+                calls = [0]
+
+                def compete_then_fail_rollback(directory_fd: int, first: str, second: str) -> bool:
+                    calls[0] += 1
+                    if calls[0] == 1:
+                        (self.root / FEATURE / "spec.md").write_text("# Competitor\n", encoding="utf-8")
+                        return real(directory_fd, first, second)
+                    return rollback()
+
+                with patch.object(atomic_write, "swap_entries", compete_then_fail_rollback):
+                    result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
+                self.assertEqual(("expected_failure", "artifact_changed_during_check", ["spec.md"], 2),
+                                 (result["status"], result["diagnostics"][0]["code"], result["data"].get("changed"), calls[0]),
+                                 result)
+                kept = sorted((self.root / FEATURE).glob(".spec.md.kept-*"))
+                self.assertEqual(["# Competitor\n"], [path.read_text(encoding="utf-8") for path in kept])
+                self.assertEqual([], sorted((self.root / FEATURE).glob(".spec.md.tmp-*")))
+                self.assertEqual(PLAN, self.text("plan.md"))
+                self.assertFalse((self.root / RECORD).exists())
+                self.assertFalse(feature_locked(self.root))
+
     def test_a_concurrent_record_is_kept_and_reported(self) -> None:
         for prior in (False, True):
             with self.subTest(prior_record=prior):

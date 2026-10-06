@@ -288,13 +288,17 @@ def install_checked(parent_fd: int, tmp_name: str, target_name: str, expected: d
         displaced_matches = False
     if displaced_matches:
         return True
+    rollback_error: OSError | None = None
     try:
-        swap_entries(parent_fd, tmp_name, target_name)
+        swapped_back = swap_entries(parent_fd, tmp_name, target_name)
     except OSError as error:
-        kept = f".{target_name}.kept-{uuid.uuid4().hex}"
-        os.rename(tmp_name, kept, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
-        raise WritePreconditionChanged(f"write target changed after snapshot capture; the competing entry is kept as {kept}") from error
-    raise WritePreconditionChanged("write target changed after snapshot capture")
+        swapped_back, rollback_error = False, error
+    if swapped_back:
+        raise WritePreconditionChanged("write target changed after snapshot capture")
+    # The swap back failed or was refused, so the temporary name holds the competing entry; keep it, never delete it.
+    kept = f".{target_name}.kept-{uuid.uuid4().hex}"
+    os.rename(tmp_name, kept, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
+    raise WritePreconditionChanged(f"write target changed after snapshot capture; the competing entry is kept as {kept}") from rollback_error
 
 
 def open_safe_parent_fd(target: Path, trust_root: Path, *, create: bool) -> tuple[int, str, list[str]] | None:
