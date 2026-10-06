@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Live check: each curated install command works in a fresh project at the pinned Spec Kit.
+"""Live probe: each curated install command runs in a fresh project at the pinned Spec Kit.
 
 This is an operator-run, networked check and is not part of any suite layer. It needs the pinned
 `specify` CLI first on PATH and reaches github.com. It fails, never skips, when the CLI
@@ -18,7 +18,8 @@ skills give the operator, `<kind> add <id> --from <archive_url>`, in a fresh `sp
 - The legacy `--trust-pinned-archives` option fails closed: this check cannot certify a completed
   extension install and never bypasses the trust prompt. Live acceptance belongs to the operator.
 
-Exit codes: 0 every entry passed, 1 a failure, 2 no failure but some extension is unproven.
+Exit codes: 1 a failure, 2 no failure but every entry is unproven. No entry can pass, so the check
+never exits 0: completed installs need owner-run acceptance.
 """
 
 from __future__ import annotations
@@ -152,11 +153,11 @@ def check_entry(entry: dict[str, str], project: Path) -> list[str]:
     return failures
 
 
-def init_project(project: Path, extra: list[str] | tuple[str, ...] = ()) -> list[str]:
+def init_project(project: Path) -> list[str]:
     """Initialize a Spec Kit project in `project`, or say why that failed."""
     if subprocess.run(["git", "init", "-q", "."], cwd=project, capture_output=True, shell=False, check=False).returncode:
         return ["setup failed: git init"]
-    created = specify(["init", "--here", "--integration", "claude", "--force", "--script", "py", *extra], project)
+    created = specify(["init", "--here", "--integration", "claude", "--force", "--script", "py"], project)
     return [f"setup failed: specify init exit {created.returncode}"] if created.returncode else []
 
 
@@ -174,7 +175,7 @@ def check_completed_install(entry: dict[str, str]) -> list[str]:
 
 
 def entry_result(entry: dict[str, str], project: Path, trust_archives: bool) -> tuple[str, list[str]]:
-    """One of pass, fail or unproven, with the failures behind a fail."""
+    """Fail with its failures, or unproven: this check never certifies a completed install."""
     failures = check_entry(entry, project)
     if not failures and entry["kind"] == "extension" and trust_archives:
         failures = check_completed_install(entry)
