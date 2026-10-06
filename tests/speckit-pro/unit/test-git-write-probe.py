@@ -53,6 +53,57 @@ class GitWriteProbeFixture(unittest.TestCase):
     def assert_no_probe_files(self) -> None:
         self.assertEqual([], list((self.root / ".git").rglob(".speckit-git-write-probe-*.lock")))
 
+    def assert_helper_descriptor_cleanup(self, common: Path, scenario: str) -> None:
+        open_file, close, rename = os.open, os.close, os.rename
+        live: set[int] = set()
+        opened: list[str] = []
+        injected: list[str] = []
+
+        def track_open(path, flags, mode=0o777, *, dir_fd=None):
+            name = str(path)
+            capture = name.endswith(".lock.cleanup")
+            target = {"component_open": name == "heads",
+                      "cleanup_open": name == probe.PROBE_CLEANUP_DIRECTORY,
+                      "capture_open": capture}.get(scenario, False)
+            if target:
+                injected.append(scenario)
+                raise PermissionError(errno.EACCES, "injected open denial")
+            fd = open_file(path, flags, mode, dir_fd=dir_fd)
+            live.add(fd)
+            opened.append(name)
+            shared_parent = scenario == "created_cleanup_validation" and name == probe.PROBE_CLEANUP_DIRECTORY
+            shared_capture = scenario == "capture_validation" and capture
+            if shared_parent or shared_capture:
+                injected.append(scenario)
+                os.fchmod(fd, 0o755)
+            return fd
+
+        def track_close(fd):
+            close(fd)
+            live.remove(fd)
+
+        def fail_rename(*args, **kwargs):
+            if scenario == "capture_rename":
+                injected.append(scenario)
+                raise PermissionError(errno.EACCES, "injected capture denial")
+            return rename(*args, **kwargs)
+
+        try:
+            with patch.object(probe, "git_common_directory", return_value=common):
+                with patch.object(probe.os, "open", side_effect=track_open), \
+                     patch.object(probe.os, "close", side_effect=track_close), \
+                     patch.object(probe.os, "rename", side_effect=fail_rename):
+                    result = probe.run_git_write_probe_helper(None, SimpleNamespace(request_id="test-probe"))
+            self.assertTrue(opened, "descriptor tracking did not reach the probe")
+            self.assertEqual(set(), live, "helper leaked descriptors")
+            expected = "verified" if scenario == "success" else "unavailable"
+            self.assertEqual(expected, result["data"]["observation"]["status"])
+            if scenario not in {"success", "existing_cleanup_validation"}:
+                self.assertTrue(injected, "fault did not reach the intended storage boundary")
+        finally:
+            for fd in live:
+                close(fd)
+
     def directory_denial_result(self, directory: Path) -> dict:
         if os.name != "nt" and hasattr(os, "geteuid") and os.geteuid() != 0:
             mode = directory.stat().st_mode
@@ -76,6 +127,19 @@ class GitWriteProbeFixture(unittest.TestCase):
 
 
 class GitWriteProbeTest(GitWriteProbeFixture):
+    def test_helper_closes_descriptors_on_success_and_storage_failures(self) -> None:
+        scenarios = ("success", "component_open", "cleanup_open", "created_cleanup_validation",
+                     "existing_cleanup_validation", "capture_open", "capture_validation", "capture_rename")
+        for scenario in scenarios:
+            with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as temporary:
+                common = Path(temporary)
+                common.joinpath("refs", "heads").mkdir(parents=True)
+                if scenario == "existing_cleanup_validation":
+                    existing = common / probe.PROBE_CLEANUP_DIRECTORY
+                    existing.mkdir(mode=0o755)
+                    existing.chmod(0o755)
+                self.assert_helper_descriptor_cleanup(common, scenario)
+
     def test_root_runs_execute_both_directory_denial_cases_without_skips(self) -> None:
         with patch.object(os, "geteuid", return_value=0, create=True):
             module = runpy.run_path(str(Path(__file__)), run_name="root_probe_tests")
