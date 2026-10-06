@@ -74,7 +74,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 #### Source Facts
 
-- analyze-executor is classified as `shared`. Claude Code: plugin agent (required). Codex: custom agent (required). Codex uses `gpt-6-sol` with `xhigh` effort. Source refs: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/analyze-executor.md`, `speckit-pro/codex-agents/analyze-executor.toml`.
+- analyze-executor is classified as `shared`. Claude Code: plugin agent (required). Codex: custom agent (required). Codex uses `gpt-6-sol` with `medium` effort. Source refs: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/analyze-executor.md`, `speckit-pro/codex-agents/analyze-executor.toml`.
 
 #### Sources
 
@@ -98,7 +98,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 #### Source Facts
 
-- artifact-author is classified as `shared`. Claude Code: plugin agent (required). Codex: custom agent (required). Codex uses `gpt-6-sol` with `xhigh` effort. Source refs: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/artifact-author.md`, `speckit-pro/codex-agents/artifact-author.toml`.
+- artifact-author is classified as `shared`. Claude Code: plugin agent (required). Codex: custom agent (required). Codex uses `gpt-6-sol` with `medium` effort. Source refs: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/artifact-author.md`, `speckit-pro/codex-agents/artifact-author.toml`.
 
 #### Sources
 
@@ -169,7 +169,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 #### Source Facts
 
-- checklist-executor is classified as `shared`. Claude Code: plugin agent (required). Codex: custom agent (required). Codex uses `gpt-6-sol` with `xhigh` effort. Source refs: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/checklist-executor.md`, `speckit-pro/codex-agents/checklist-executor.toml`.
+- checklist-executor is classified as `shared`. Claude Code: plugin agent (required). Codex: custom agent (required). Codex uses `gpt-6-sol` with `medium` effort. Source refs: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/checklist-executor.md`, `speckit-pro/codex-agents/checklist-executor.toml`.
 
 #### Sources
 
@@ -193,7 +193,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 #### Source Facts
 
-- clarify-executor is classified as `shared`. Claude Code: plugin agent (required). Codex: custom agent (required). Codex uses `gpt-6-sol` with `xhigh` effort. Source refs: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/clarify-executor.md`, `speckit-pro/codex-agents/clarify-executor.toml`.
+- clarify-executor is classified as `shared`. Claude Code: plugin agent (required). Codex: custom agent (required). Codex uses `gpt-6-sol` with `medium` effort. Source refs: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/clarify-executor.md`, `speckit-pro/codex-agents/clarify-executor.toml`.
 
 #### Sources
 
@@ -217,7 +217,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 #### Source Facts
 
-- codebase-analyst is classified as `shared`. Claude Code: plugin agent (required). Codex: custom agent (required). Codex uses `gpt-6-luna` with `max` effort. Source refs: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/codebase-analyst.md`, `speckit-pro/codex-agents/codebase-analyst.toml`.
+- codebase-analyst is classified as `shared`. Claude Code: plugin agent (required). Codex: custom agent (required). Codex uses `gpt-6-luna` with `high` effort. Source refs: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/codebase-analyst.md`, `speckit-pro/codex-agents/codebase-analyst.toml`.
 
 #### Sources
 
@@ -289,7 +289,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 #### Source Facts
 
-- domain-researcher is classified as `shared`. Claude Code: plugin agent (required). Codex: custom agent (required). Codex uses `gpt-6-luna` with `max` effort. Source refs: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/domain-researcher.md`, `speckit-pro/codex-agents/domain-researcher.toml`.
+- domain-researcher is classified as `shared`. Claude Code: plugin agent (required). Codex: custom agent (required). Codex uses `gpt-6-luna` with `high` effort. Source refs: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/domain-researcher.md`, `speckit-pro/codex-agents/domain-researcher.toml`.
 
 #### Sources
 
@@ -361,7 +361,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 #### Source Facts
 
-- phase-executor is classified as `shared`. Claude Code: plugin agent (required). Codex: custom agent (required). Codex uses `gpt-6-sol` with `xhigh` effort. Source refs: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/phase-executor.md`, `speckit-pro/codex-agents/phase-executor.toml`.
+- phase-executor is classified as `shared`. Claude Code: plugin agent (required). Codex: custom agent (required). Codex uses `gpt-6-sol`, with effort set per dispatch by the phase brief. Source refs: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/phase-executor.md`, `speckit-pro/codex-agents/phase-executor.toml`.
 
 #### Sources
 
@@ -385,7 +385,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 #### Source Facts
 
-- spec-context-analyst is classified as `shared`. Claude Code: plugin agent (required). Codex: custom agent (required). Codex uses `gpt-6-luna` with `max` effort. Source refs: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/spec-context-analyst.md`, `speckit-pro/codex-agents/spec-context-analyst.toml`.
+- spec-context-analyst is classified as `shared`. Claude Code: plugin agent (required). Codex: custom agent (required). Codex uses `gpt-6-luna` with `high` effort. Source refs: `speckit-pro/speckit_pro_runner/agent_inventory.json`, `speckit-pro/agents/spec-context-analyst.md`, `speckit-pro/codex-agents/spec-context-analyst.toml`.
 
 #### Sources
 

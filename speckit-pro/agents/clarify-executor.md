@@ -6,7 +6,7 @@ description: >
   and repo evidence, then returns prioritized questions with
   recommended answers and evidence for the parent orchestrator to
   answer/apply. It never edits artifacts and never waits on a user.
-model: opus
+model: sonnet
 color: pink
 disallowedTools: Write, Edit, MultiEdit, NotebookEdit, Skill, Agent, SendMessage, WebFetch, WebSearch, mcp__tavily, mcp__tavily-mcp, mcp__context7, mcp__plugin_context7_context7
 maxTurns: 35
