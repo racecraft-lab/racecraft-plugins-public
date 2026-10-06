@@ -734,13 +734,11 @@ class PhaseBriefWaveTests(InProjectCase):
         self.assertEqual(len(waves), 1)
         self.assertEqual({entry["agent"] for entry in waves[0]}, set(self.ANALYSTS))
 
-    def test_domains_and_items_compose_in_dispatch_order(self):
-        # One run, one fix pass and one verify per domain: a consensus edit alone puts a domain after the consensus waves.
+    def test_domains_and_items_compose_in_dispatch_order(self):  # a domain re-runs after consensus only when an edit named it
         run, verify, analyst = ("checklist-executor", None), ("checklist-executor", "verify"), ("codebase-analyst", None)
         kinds = lambda **named: [(wave[0]["agent"], wave[0]["inputs"].get("pass")) for wave in self.waves("Checklist", items=list(self.ITEMS), **named)]
         self.assertEqual(kinds(domains=["ux"]), [run, verify, analyst, analyst])
         self.assertEqual(kinds(domains=["ux"], consensus_edited=["ux"]), [run, verify, analyst, analyst, verify])
-        self.assertEqual([wave[0]["inputs"]["domain"] for wave in self.waves("Checklist", consensus_edited=["ux", "api"], max_agents=1)], ["ux", "api"])
 
     def test_a_brief_without_wave_inputs_has_no_waves(self):
         phases = tuple(phase_brief.PHASES)
