@@ -1007,8 +1007,33 @@ you send for these.
 | --- | --- | --- |
 | `codex_agents` | `agents`: `{"installation": {...}, "inventory": [{"agent": "<name>", "state": "current", "stale" or "missing", "repair": "none", "applied", "declined" or "failed"}], "expected_revision": "<plugin_revision>", "loaded_revision": "<version>"}` | reusing the `install-codex-agents` `mode="dry_run"` plan from step -0.5 for `inventory`, and its repair outcome in `repair`; copy the selected installation inputs into `installation` exactly as that request sent them, with no added keys; omit `loaded_revision` unless this session reports the revision it loaded, since a repaired agent loads only after a restart |
 | `extension_versions` | `extensions`: `{"extension": "<id>", "installed": "<version>" or null, "expected": "<version>" or null}` | reading each required extension's version from `spec_kit.cli_argv + ["extension", "list"]`; `expected` is its project pin or curated-set version, and a drifted or missing extension is flagged |
+| `codex_approval_posture` | `posture`: `{"approval_policy": "on-request", "never", "on-failure" or {"granular": {"sandbox_approval": <bool>, "rules": <bool>, "mcp_elicitations": <bool>, "request_permissions": <bool>, "skill_approval": <bool>}}, "sandbox_mode": "read-only", "workspace-write" or "danger-full-access", "approvals_reviewer": "user" or "auto_review", "mcp_approval_mode": "auto", "prompt", "writes" or "approve", "mcp_consent": "granted" or "not_granted", "mcp_startup_timeout_sec": <seconds>, null or "unobservable", "mcp_tool_timeout_sec": <seconds>, null or "unobservable", "external_delegation": "allowed" or "blocked"}` | reading an effective running-thread source; use `/status` or `/permissions` only for values they actually expose in this version, and do not change settings while inspecting; their complete live approval, sandbox and MCP coverage is unconfirmed. Send `"unobservable"` for anything unreadable; send null for a timeout only when its effective setting is confirmed unset. Disk configuration alone does not prove launch overrides or running-thread permissions |
+| `codex_hook_trust` | `hooks`: `{"hook": "<Event:group-index:handler-index>", "state": "trusted", "untrusted" or "unobservable", "hash": "<SHA-256 digest>" or null, "enabled": true, false or null}` | reviewing every shipped handler in `/hooks`; obtain the exact hash from an effective hook metadata source when available. Codex 0.160.0 `hooks/list` returns `sha256:` plus 64 lowercase hex digits; whether `/hooks` prints the hash is unconfirmed. The helper compares the complete shipped handler set and normalized expected hashes. Send `trusted` only with its trusted hash and observable enablement; ask the user to review and trust untrusted hooks in `/hooks`, never trust them yourself |
+| `codex_local_access` | `access`: `{"loopback": "allowed", "blocked" or "unobservable", "temp_dir": "healthy", "leaky" or "unobservable", "egress_policy_ref": "<name>" or null, "egress_policy_digest": "<hex digest>" or null}` | running one bounded loopback connection to a local port you open, reusing the `local_capability` temporary directory probe result, and naming the applicable egress policy by reference and digest together, or both null when none applies; do not copy its entries |
 
-Hook items, on both hosts:
+The helper owns the conservative scaffold posture profile: confined sandbox,
+MCP prompt mode, granted consent and delegation, and timeouts no larger than
+the documented defaults. A complete supported approval policy (including the
+five granular booleans) and either supported reviewer are observations, not
+consent; `never` does not remove sandbox controls. Other observed profiles are
+`unavailable`, and unreadable values remain `unknown`. This profile is a
+conservative readiness check, not an ADR-defined security threshold.
+
+Codex 0.160.0 config parsing accepts `on-request`, `never`, deprecated
+`on-failure`, and structured granular policies; it rejects `untrusted` and the
+string `"granular"`. Its `-a` flag accepts only `on-request` and `never`.
+Policy words and handler identifiers match exactly; SHA-256 comparisons alone
+normalize hex case and an optional case-insensitive `sha256:` prefix. The
+record retains the observed hash text and canonicalizes hash fingerprints.
+
+On Codex, send `codex_hook_trust` as the trust source; the helper mirrors it
+into `hooks` and refuses contradictory duplicate observations. The runner
+temporary-storage probe can downgrade caller local-access evidence.
+
+These three record facts, never consent. Scaffold never broadens a permission,
+grants egress consent or disables a control to make an item pass.
+
+Hook definitions on Claude Code (Codex uses the exact-hash observation above):
 
 | `item` | Detail key | Observe it now by |
 | --- | --- | --- |
