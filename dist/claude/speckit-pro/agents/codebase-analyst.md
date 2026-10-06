@@ -12,7 +12,7 @@ color: blue
 disallowedTools: Write, Edit, MultiEdit, NotebookEdit, Skill, Agent, SendMessage
 maxTurns: 60
 background: true
-effort: max
+effort: high
 memory: local
 ---
 

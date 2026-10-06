@@ -30,9 +30,9 @@ REQUEST_SCHEMA = CONTRACT_DIR / "mutation-helper-request.schema.json"
 RESULT_SCHEMA = CONTRACT_DIR / "mutation-helper-result.schema.json"
 CODEX_AGENT_ROUTING_CASES = FIXTURE_DIR / "codex-agent-routing" / "cases.json"
 LUNA_CODEX_AGENT_EFFORTS = {
-    "codebase-analyst": "max",
-    "spec-context-analyst": "max",
-    "domain-researcher": "max",
+    "codebase-analyst": "high",
+    "spec-context-analyst": "high",
+    "domain-researcher": "high",
     "autopilot-fast-helper": "low",
 }
 
