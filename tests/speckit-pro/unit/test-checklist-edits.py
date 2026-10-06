@@ -1622,6 +1622,14 @@ class GateFourTests(ChecklistEditsCase):
         # checklists/ is flat: a nested directory, readable or not, fails G4 instead of hiding a [Gap] report.
         checklists = self.feature / "checklists"
         locked: list[Path] = []
+        real_open = os.open
+
+        def open_readable(path: Any, *args: Any, **kwargs: Any) -> int:
+            # Containers may run as root, which bypasses chmod(0). Inject the
+            # actual failed-open condition at the OS boundary on every platform.
+            if Path(path).name in {item.name for item in locked}:
+                raise PermissionError("G4 fixture denies read access")
+            return real_open(path, *args, **kwargs)
 
         def nested(mode: int) -> None:
             (checklists / "hidden").mkdir()
@@ -1644,7 +1652,8 @@ class GateFourTests(ChecklistEditsCase):
                 self.reset_tree()
                 mutate()
                 try:
-                    verdict = self.gate()
+                    with patch.object(os, "open", open_readable):
+                        verdict = self.gate()
                 finally:
                     while locked:
                         os.chmod(locked.pop(), 0o755)
