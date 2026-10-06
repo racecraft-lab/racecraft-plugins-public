@@ -6314,7 +6314,7 @@ def installed_specify_version(specify_path: str, repo_root: Path | None = None) 
     executable = verified_specify_executable(specify_path, repo_root)
     if executable is None:
         return None
-    # Launch the name  resolved inside the attested directory: the repository
+    # Launch the name resolved inside the attested directory: the repository
     # Bash-confinement gate can follow that form statically, not a bare Path value.
     launch_path = shutil.which("specify", path=str(executable.parent))
     if launch_path is None or Path(launch_path) != executable:
