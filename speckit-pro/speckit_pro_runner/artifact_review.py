@@ -7,6 +7,7 @@ import json
 import re
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
+from html.parser import HTMLParser
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -97,12 +98,13 @@ def _relative(value: Any) -> str:
     return value
 
 
-def _fill_skeleton(value: bytes) -> tuple[tuple[str, ...], tuple[bytes, ...]]:
+def _fill_skeleton(value: bytes) -> tuple[tuple[str, ...], tuple[bytes, ...], tuple[bytes, ...]]:
     matches = list(FILL_MARKER.finditer(value))
     if len(matches) % 2:
         raise ValueError("artifact template has an unmatched fill marker")
     slots: list[str] = []
     static: list[bytes] = []
+    fills: list[bytes] = []
     cursor = 0
     for index in range(0, len(matches), 2):
         start, end = matches[index], matches[index + 1]
@@ -110,9 +112,96 @@ def _fill_skeleton(value: bytes) -> tuple[tuple[str, ...], tuple[bytes, ...]]:
             raise ValueError("artifact template has an invalid fill marker")
         slots.append(start.group(1).decode("ascii"))
         static.append(value[cursor:start.end()])
+        fills.append(value[start.end():end.start()])
         cursor = end.start()
     static.append(value[cursor:])
-    return tuple(slots), tuple(static)
+    return tuple(slots), tuple(static), tuple(fills)
+
+
+# Tags and attributes are judged by a parser: escaped planning text holds no raw "<",
+# so every tag in a fill is author structure the parser can see. The two patterns
+# below only reject constructs where Python's parser and a browser disagree.
+# Unicode \s on purpose: Python 3.11 closes a comment at "--" + any Unicode space + ">".
+_UNPARSEABLE_FILL = re.compile(r"<!(?!--)|<\?|<!---?>|--!>|--\s+>")
+# A browser ends these elements at their own end tag even where a parser sees an attribute value.
+# Browsers fold tag names over ASCII only, so every case-insensitive match here is re.ASCII.
+_RAW_TEXT_START = re.compile(
+    r"<(title|textarea|noscript|xmp|noembed|noframes|plaintext|script|style|iframe)(?=[\t\n\f\r />])",
+    re.IGNORECASE | re.ASCII,
+)
+_ACTIVE_ELEMENTS = frozenset({
+    "script", "style", "iframe", "frame", "frameset", "object", "embed", "applet", "base", "meta", "link", "portal",
+})
+_URL_ATTRIBUTES = frozenset({"href", "xlink:href", "src", "srcset", "action", "formaction", "poster", "data", "background", "cite"})
+_URL_IGNORED = "".join(chr(code) for code in range(0x21))
+_ASCII_LOWER = str.maketrans("ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz")
+
+
+def _script_url(value: str) -> bool:
+    """Browsers drop tabs and newlines and trim C0 controls before reading a URL scheme."""
+    url = re.sub(r"[\t\n\r]", "", value).strip(_URL_IGNORED).translate(_ASCII_LOWER)
+    if url.startswith("data:"):
+        return not url.startswith(("data:image/", "data:font/"))
+    return url.startswith(("javascript:", "vbscript:"))
+
+
+class _FillMarkup(HTMLParser):
+    """Collects active content in one fill region; build it with convert_charrefs=False so "&lt;" stays text."""
+
+    findings: list[str]
+    start_positions: set[tuple[int, int]]
+
+    def reset(self) -> None:
+        super().reset()
+        self.findings = []
+        self.start_positions = set()
+
+    def set_cdata_mode(self, *args: object, **kwargs: object) -> None:
+        """Never hide text from inspection: raw-text rules differ inside SVG and across Python versions."""
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.start_positions.add(self.getpos())
+        if tag in _ACTIVE_ELEMENTS:
+            self.findings.append(f"<{tag}> element")
+        for name, value in attrs:
+            if name.startswith("on") or name == "srcdoc":
+                self.findings.append(f"{name} attribute")
+            elif name in _URL_ATTRIBUTES and value is not None and _script_url(value):
+                self.findings.append(f"script URL in {name}")
+            elif name == "attributename" and value is not None:
+                target = value.translate(_ASCII_LOWER)
+                if target in ("href", "xlink:href") or target.startswith("on"):
+                    self.findings.append("animated link or event attribute")
+
+    def handle_data(self, data: str) -> None:
+        if "<" in data:
+            self.findings.append("unescaped <")
+
+
+def _raw_text_holds_markup(text: str, start_positions: set[tuple[int, int]]) -> bool:
+    """A raw-text element is inert only when it closes in the same region with no "<" before its end tag."""
+    for start in _RAW_TEXT_START.finditer(text):
+        position = (text.count("\n", 0, start.start()) + 1, start.start() - text.rfind("\n", 0, start.start()) - 1)
+        # Tag-shaped text inside a parsed comment or attribute is not an element.
+        if position not in start_positions:
+            continue
+        following = text.find("<", start.end())
+        end = re.compile(rf"</{start.group(1)}[\t\n\f\r />]", re.IGNORECASE | re.ASCII)
+        if following < 0 or not end.match(text, following):
+            return True
+    return False
+
+
+def _active_content(fill: bytes) -> list[str]:
+    text = fill.decode("utf-8", errors="replace")
+    findings = ["markup declaration or nonstandard comment"] if _UNPARSEABLE_FILL.search(text) else []
+    parser = _FillMarkup(convert_charrefs=False)
+    parser.feed(text)
+    if _raw_text_holds_markup(text, parser.start_positions):
+        findings.append("raw-text element holding markup")
+    if "<" in parser.rawdata:
+        findings.append("unterminated markup")
+    return findings + parser.findings
 
 
 def _generation_provenance(page: dict[str, Any], root: Path, read_file: FileReader) -> None:
@@ -120,10 +209,14 @@ def _generation_provenance(page: dict[str, Any], root: Path, read_file: FileRead
     artifact = read_file(root / page["path"], root)
     if template is None or artifact is None:
         raise ValueError(f"artifact preview provenance is unreadable: {page['id']}")
-    template_slots, template_static = _fill_skeleton(template)
-    artifact_slots, artifact_static = _fill_skeleton(artifact)
+    template_slots, template_static, _template_fills = _fill_skeleton(template)
+    artifact_slots, artifact_static, artifact_fills = _fill_skeleton(artifact)
     if template_slots != artifact_slots or template_static != artifact_static:
         raise ValueError(f"artifact preview is not a trusted fill of its template: {page['id']}")
+    for slot, fill in zip(artifact_slots, artifact_fills, strict=True):
+        findings = _active_content(fill)
+        if findings:
+            raise ValueError(f"artifact fill carries active content: {page['id']} region {slot}: {', '.join(findings)}")
 
 
 def _current_hash(root: Path, relative: str, read_file: FileReader) -> str | None:
