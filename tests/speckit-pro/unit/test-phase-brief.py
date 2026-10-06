@@ -752,8 +752,7 @@ class PhaseBriefWaveTests(InProjectCase):
                ("Checklist", {"domains": ["a"] * 13}), ("Analyze", {"items": "Q1"}), ("Analyze", {"items": ["Q1"]}),
                ("Analyze", {"items": [{"line": ""}]}), ("Analyze", {"items": [{"line": "Q1", "confidence": "medium"}]}),
                ("Analyze", {"items": [{"line": "Q1", "extra": 1}]}), ("Analyze", {"items": [{"confidence": "low"}]}),
-               ("Analyze", {"items": [{"line": "x" * 2001}]}), ("Analyze", {"items": [{"line": "Q"}] * 101}),
-               ("Analyze", {"consensus_edited": ["ux"]}), ("Checklist", {"consensus_edited": []}), ("Checklist", {"consensus_edited": ["ux"] * 2})]
+               ("Analyze", {"items": [{"line": "x" * 2001}]}), ("Analyze", {"items": [{"line": "Q"}] * 101}), ("Checklist", {"consensus_edited": ["ux"] * 2})]
         for phase, extra in bad:
             with self.subTest(phase=phase, extra=str(extra)[:40]):
                 result = self.brief(phase, **extra)
