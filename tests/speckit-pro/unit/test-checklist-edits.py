@@ -1159,7 +1159,7 @@ class HostParityTests(unittest.TestCase):
 import os, stat, sys
 from pathlib import Path
 from speckit_pro_runner import atomic_write
-root, name, outcome = Path(sys.argv[1]), sys.argv[2], sys.argv[3]
+root, name, outcome = Path(sys.argv[1]).resolve(), sys.argv[2], sys.argv[3]
 target = root / name
 target.write_bytes(b'original')
 parent = os.open(root, os.O_RDONLY)
@@ -1182,6 +1182,7 @@ atomic_write.swap_entries = exchange_with_fifo
 try:
     atomic_write.write_bytes_atomic(target, b'proposal', trust_root=root, expected_snapshot=expected)
 except OSError as error:
+    assert calls == 2, 'fault must reach the displaced-entry read and rollback'
     if outcome == 'success':
         assert isinstance(error, atomic_write.WritePreconditionChanged)
         assert stat.S_ISFIFO(target.stat().st_mode)
