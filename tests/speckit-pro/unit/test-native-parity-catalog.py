@@ -609,7 +609,10 @@ class NativeParityCatalogTests(_ParityCatalogFixture, unittest.TestCase):
                 _git_controller_exclude(fixture_result, host="codex"),
             )
             runtime = stage_codex_runtime(REPO_ROOT, root / "build", workspace)
-            toolchain = prepare_native_toolchain(workspace, required_tools=["specify"])
+            # Prerequisites require an external CLI, not a checkout-local launcher.
+            toolchain_root = root / "toolchain"
+            (toolchain_root / ".codex").mkdir(parents=True)
+            toolchain = prepare_native_toolchain(toolchain_root, required_tools=["specify"])
             environment = dict(os.environ)
             environment.update(toolchain.environment)
             environment["PYTHONPATH"] = runtime.pythonpath
@@ -683,7 +686,7 @@ class NativeParityCatalogTests(_ParityCatalogFixture, unittest.TestCase):
             self.assertFalse(prerequisites["is_worktree"])
             self.assertEqual(prerequisites["branch"], "feature")
             checks = {row["check"]: row for row in prerequisites["checks"]}
-            self.assertTrue(checks["speckit_cli"]["pass"])
+            self.assertTrue(checks["speckit_cli"]["pass"], checks["speckit_cli"])
             self.assertFalse(checks["commands"]["pass"])
             self.assertIn(
                 "Missing commands: speckit-specify speckit-plan speckit-tasks speckit-implement",
