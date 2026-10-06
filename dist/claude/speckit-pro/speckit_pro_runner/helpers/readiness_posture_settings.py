@@ -28,8 +28,9 @@ Rules name exact leaves; a `*` matches one user-named segment, such as a profile
 nothing matches recursively. A name Codex gives another meaning in one position is reserved there (`reserved`):
 `_default` is the apps default table, so `*` never stands for it as an app id, while `apps._default` has its
 own rows for the five keys Codex reads there and `apps._default.default_tools_enabled`, which Codex ignores,
-matches nothing; and a plugin from an OpenAI-managed marketplace keeps a workspace-managed or synced enabled
-state, so `*` never stands for its key in `plugins.*.enabled`. Elsewhere `_default` is an ordinary name. Any other key, an unknown
+matches nothing; and in `plugins.*.enabled`, `*` stands only for a `<name>@<marketplace>` key whose marketplace
+the inventory itself configures as a local or Git source, the one provably local source, since a remote
+installation replaces the local enabled state of every other key. Elsewhere `_default` is an ordinary name. Any other key, an unknown
 descendant of a known table included, is `outside` when its value was observed and `unobservable` when it was
 not; so is a modeled or conservative key whose value is `"unobservable"`. A key absent from every layer keeps
 the Codex default. Values and key names never reach the record as text: one digest holds each key path and
@@ -71,35 +72,40 @@ def patterns(*keys: str) -> tuple[tuple[str, ...], ...]:
     return tuple(pattern(key) for key in keys)
 
 
-# Marketplaces whose plugins Codex installs from the remote catalog or its curated cache: a workspace-managed or
-# synced enabled state replaces the local `plugins.<name>@<marketplace>.enabled` (core-plugins/src/loader.rs
-# merge_configured_plugins_with_remote_installed, merge_remote_plugin_config; core-plugins/src/remote.rs).
-MANAGED_MARKETPLACES = ("openai-curated-remote", "openai-curated", "openai-api-curated", "openai-bundled")
+# Marketplace sources Codex loads from the user's own configuration (`marketplaces.<name>.source_type`,
+# core-plugins/src/marketplace_policy.rs policy_filtered_plugin_config). A plugin from one of them is local; a
+# remote installation replaces the local enabled state of any other plugin key (core-plugins/src/loader.rs
+# merge_configured_plugins_with_remote_installed, merge_remote_plugin_config; remote.rs names the remote families).
+LOCAL_SOURCES = ("local", "git")
 
 
-def managed_plugin(name: str) -> bool:
-    """A `<name>@<marketplace>` plugin key whose marketplace Codex manages."""
-    return name.rpartition("@")[2] in MANAGED_MARKETPLACES if "@" in name else False
+def local_plugin(settings: Settings | None, name: str) -> bool:
+    """Whether `name` is a `<name>@<marketplace>` plugin key (core-plugin-common/src/plugin_id.rs PluginId::parse)
+    whose marketplace the inventory configures as a local source; without an inventory nothing is proven."""
+    plugin, at, marketplace = name.rpartition("@")
+    return bool(at and plugin and settings is not None
+                and read(settings, "marketplaces.*.source_type", marketplace) in LOCAL_SOURCES)
 
 
-def reserved(rule: tuple[str, ...], index: int, name: str) -> bool:
+def reserved(rule: tuple[str, ...], index: int, name: str, settings: Settings | None) -> bool:
     """Whether `*` at `index` of `rule` never stands for `name`, since Codex gives it another meaning there."""
     if rule[:index] == ("apps",):
         return name == DEFAULTS
     if rule == ("plugins", "*", "enabled"):
-        return managed_plugin(name)
+        return not local_plugin(settings, name)
     return False
 
 
-def matches(rule: tuple[str, ...], path: tuple[str, ...]) -> bool:
-    """One path segment per rule segment; `*` matches one user-named segment that is not reserved there."""
+def matches(rule: tuple[str, ...], path: tuple[str, ...], settings: Settings | None = None) -> bool:
+    """One path segment per rule segment; `*` matches one user-named segment that is not reserved there, which
+    for a plugin's own switch the inventory must prove."""
     return len(rule) == len(path) and all(
-        want == got or (want == "*" and not reserved(rule, index, got))
+        want == got or (want == "*" and not reserved(rule, index, got, settings))
         for index, (want, got) in enumerate(zip(rule, path, strict=True)))
 
 
-def rule_for(rules: dict[tuple[str, ...], str], path: tuple[str, ...]) -> str | None:
-    return next((key for segments, key in rules.items() if matches(segments, path)), None)
+def rule_for(rules: dict[tuple[str, ...], str], path: tuple[str, ...], settings: Settings | None = None) -> str | None:
+    return next((key for segments, key in rules.items() if matches(segments, path, settings)), None)
 
 
 MODELED = "modeled"
@@ -108,9 +114,11 @@ CONSERVATIVE = "conservative"
 REFERENCE = "learn.chatgpt.com/docs/config-file/config-reference#configtoml"
 # Loader sources, under github.com/openai/codex codex-rs, for effects the reference leaves implicit.
 PLUGIN_FEATURE = "core/src/mcp.rs selected_plugins (Feature::Plugins gates every plugin MCP contribution)"
+LOCAL_PROOF = ("core-plugins/src/marketplace_policy.rs policy_filtered_plugin_config; core-plugins/src/remote.rs "
+               "remote_plugin_canonical_marketplace_name; core-plugin-common/src/plugin_id.rs PluginId::parse")
 HOOKS_ALIAS = "features/src/legacy.rs ALIASES (codex_hooks maps to the hooks feature)"
 REMOTE_CATALOG = "core-plugins/src/manager.rs remote_global_catalog_active"
-CONTENT_DEFAULT = "config/src/config_toml.rs DEFAULT_PROJECT_DOC_MAX_BYTES (32 KiB)"
+CONTENT_DEFAULT = "config/src/config_toml.rs DEFAULT_PROJECT_DOC_MAX_BYTES (32 KiB, Option<usize>; 0 skips the docs)"
 APP_POLICY = "connectors/src/app_tool_policy.rs app_tool_policy_from_apps_config"
 APP_ENABLED = "connectors/src/app_tool_policy.rs app_is_enabled; config/src/types.rs AppConfig, AppsDefaultConfig"
 MCP_FILTER = "codex-mcp/src/tools.rs ToolFilter::allows"
@@ -230,7 +238,8 @@ CODEX_KEYS: dict[str, Row] = {
     f"{MCP}.disabled_tools": row(MODELED, "deny list applied after `enabled_tools`: a listed tool is off",
                                  MCP_FILTER),
     f"{MCP}.startup_timeout_sec": row(MODELED, "this server's startup timeout, default 10 s"),
-    f"{MCP}.startup_timeout_ms": row(MODELED, "alias of `startup_timeout_sec` in milliseconds"),
+    f"{MCP}.startup_timeout_ms": row(MODELED, "alias of `startup_timeout_sec` in whole milliseconds (u64)",
+                                     "config/src/mcp_types.rs RawMcpServerConfig"),
     f"{MCP}.tool_timeout_sec": row(MODELED, "this server's per-tool timeout, default 60 s"),
     f"{PLUGIN_MCP}.default_tools_approval_mode": row(MODELED, "default approval for a plugin-provided server's "
                                                               "tools", PLUGIN_LOADER),
@@ -254,11 +263,13 @@ CODEX_KEYS: dict[str, Row] = {
     "shell_environment_policy.set.*": row(CONSERVATIVE, "adds or replaces one variable; no conservative value"),
     "projects.*.trust_level": row(CONSERVATIVE, "`trusted` activates project configuration, hooks and rules; "
                                                 "`untrusted` is conservative"),
-    "plugins.*.enabled": row(CONSERVATIVE, "`false` switches off a plugin from a user-configured marketplace, its "
-                                           "MCP servers included; no summary judges an enabled plugin's "
-                                           "instructions, agents and hooks. For a plugin from an OpenAI-managed "
-                                           "marketplace the remote or synced state replaces it, so `*` never "
-                                           "stands for such a key here", PLUGIN_LOADER),
+    "plugins.*.enabled": row(CONSERVATIVE, "`false` switches off a plugin from a marketplace the inventory "
+                                           "configures as a local or Git source, its MCP servers included; no "
+                                           "summary judges an enabled plugin's instructions, agents and hooks. "
+                                           "`*` stands for that key only: a remote installation replaces the "
+                                           "local enabled state of a plugin from any other source, so a remote "
+                                           "family, a managed, unconfigured or user-named marketplace, and a "
+                                           "bare name prove nothing", f"{PLUGIN_LOADER}; {LOCAL_PROOF}"),
     "features.plugins": row(CONSERVATIVE, "plugin availability; `false` switches off every plugin contribution, "
                                           "MCP servers included, whatever the plugin's source", PLUGIN_FEATURE),
     "features.remote_plugin": row(CONSERVATIVE, "the remote plugin catalog; `false` is conservative, and cached "
@@ -268,12 +279,16 @@ CODEX_KEYS: dict[str, Row] = {
                                         "`false` is conservative"),
     "features.codex_hooks": row(CONSERVATIVE, "deprecated alias of `features.hooks`; judged alone, so either "
                                               "spelling at `true` is outside", HOOKS_ALIAS),
-    "project_doc_max_bytes": row(CONSERVATIVE, "bytes of project instructions read into the model's context; "
-                                               "conservative at or under the 32 KiB default", CONTENT_DEFAULT),
-    "tool_output_token_limit": row(CONSERVATIVE, "tokens of tool output kept in history; the model sets the "
-                                                 "default, so no value is provably conservative"),
-    f"{MCP}.tools.*.output_token_limit": row(CONSERVATIVE, "tokens of one MCP tool's serialized output; the model "
-                                                           "sets the default, so no value is provably conservative"),
+    "project_doc_max_bytes": row(CONSERVATIVE, "whole bytes of project instructions read into the model's context "
+                                               "(0 reads none); conservative at or under the 32 KiB default",
+                                 CONTENT_DEFAULT),
+    "tool_output_token_limit": row(CONSERVATIVE, "whole tokens of tool output kept in history (Option<usize>); the "
+                                                 "model sets the default, so no value is provably conservative",
+                                   "config/src/config_toml.rs ConfigToml"),
+    f"{MCP}.tools.*.output_token_limit": row(CONSERVATIVE, "whole non-zero tokens of one MCP tool's serialized "
+                                                           "output (NonZeroUsize); the model sets the default, so "
+                                                           "no value is provably conservative",
+                                             "config/src/mcp_types.rs McpServerToolConfig"),
     **rows(CONSERVATIVE, "selects external plugin content; no conservative value", "marketplaces.*.source",
            "marketplaces.*.source_type", "marketplaces.*.ref", "marketplaces.*.sparse_paths"),
     "check_for_update_on_startup": row(CONSERVATIVE, "sends an update request on startup; `false` is conservative"),
@@ -298,13 +313,15 @@ def read(settings: Settings, rule: str, *names: str) -> Any:
         raise LookupError(f"{rule} is not in the Codex key table")
     segments = iter(names)
     path = tuple(next(segments) if segment == "*" else segment for segment in pattern(rule))
-    return settings.get(path) if matches(pattern(rule), path) else None
+    return settings.get(path) if matches(pattern(rule), path, settings) else None
 
 
 BOOLEAN = "boolean"
 NAMES = "names"
 TEXT = "text"
 NUMBER = "number"
+COUNT = "count"
+POSITIVE_COUNT = "positive count"
 SCALAR = "scalar"
 ANY = "any"
 BROAD_MODES = ("auto", "writes", "approve")
@@ -502,7 +519,7 @@ MODELED_SETTINGS: dict[str, tuple[Any, Forces]] = {
     "auto_review.extra_policy": (TEXT, sets("auto_review_policy", lambda value: "set")),
     **mcp_rules(MCP, "mcp_tool_approval", server_off, server_tool_off),
     f"{MCP}.startup_timeout_sec": (NUMBER, timeout("mcp_startup_timeout_sec")),
-    f"{MCP}.startup_timeout_ms": (NUMBER, timeout("mcp_startup_timeout_sec", 1000)),
+    f"{MCP}.startup_timeout_ms": (POSITIVE_COUNT, timeout("mcp_startup_timeout_sec", 1000)),
     f"{MCP}.tool_timeout_sec": (NUMBER, timeout("mcp_tool_timeout_sec")),
     **mcp_rules(PLUGIN_MCP, "plugin_mcp_tool_approval", plugin_server_off, plugin_server_tool_off),
 }
@@ -530,9 +547,9 @@ CONSERVATIVE_SETTINGS: dict[str, tuple[Any, Any]] = {
     "features.remote_plugin": (BOOLEAN, (False,)),
     "features.hooks": (BOOLEAN, (False,)),
     "features.codex_hooks": (BOOLEAN, (False,)),
-    "project_doc_max_bytes": (NUMBER, lambda value: value <= PROJECT_DOC_MAX_BYTES),
-    "tool_output_token_limit": (NUMBER, ()),
-    f"{MCP}.tools.*.output_token_limit": (NUMBER, ()),
+    "project_doc_max_bytes": (COUNT, lambda value: value <= PROJECT_DOC_MAX_BYTES),
+    "tool_output_token_limit": (COUNT, ()),
+    f"{MCP}.tools.*.output_token_limit": (POSITIVE_COUNT, ()),
     "marketplaces.*.source": (TEXT, ()),
     "marketplaces.*.source_type": (("git", "local"), ()),
     "marketplaces.*.ref": (TEXT, ()),
@@ -573,6 +590,10 @@ def well_formed(value: Any, accepted: Any) -> bool:
         return isinstance(value, str)
     if accepted == NUMBER:
         return type(value) in (int, float) and value > 0
+    if accepted == COUNT:
+        return type(value) is int and value >= 0
+    if accepted == POSITIVE_COUNT:
+        return type(value) is int and value > 0
     if accepted == SCALAR:
         return isinstance(value, (str, bool, int, float, list))
     return isinstance(value, str) and value in accepted
@@ -600,12 +621,12 @@ def setting_class(path: tuple[str, ...], value: Any, settings: Settings, summary
         return "inert"
     if value == UNOBSERVABLE:
         return UNOBSERVABLE
-    modeled = rule_for(MODELED_PATTERNS, path)
+    modeled = rule_for(MODELED_PATTERNS, path, settings)
     if modeled is not None:
         accepted, forces = MODELED_SETTINGS[modeled]
         accepted_value(modeled, value, accepted)
         return "contradicted" if contradicts(forces(path, value, settings), summary) else "modeled"
-    rule = rule_for(CONSERVATIVE_PATTERNS, path)
+    rule = rule_for(CONSERVATIVE_PATTERNS, path, settings)
     if rule is None:
         return "outside"
     accepted, conservative = CONSERVATIVE_SETTINGS[rule]

@@ -38,7 +38,7 @@ CONTROLS = {"workspace_network_access": "disabled", "workspace_writable_roots": 
 # Every configuration key set in any effective layer, as dotted TOML key paths: inert, judged by a summary
 # fact or control, or at its conservative value.
 SETTINGS = {"model": "gpt-6.1-sol", "model_reasoning_effort": "high", 'projects."repo".trust_level': "untrusted",
-            'plugins."speckit-pro@racecraft".enabled': False, "features.hooks": False, "approval_policy": "on-request",
+            "check_for_update_on_startup": False, "features.hooks": False, "approval_policy": "on-request",
             "sandbox_mode": "workspace-write", "sandbox_workspace_write.network_access": False}
 POSTURE = {"approval_policy": "on-request", "sandbox_mode": "workspace-write", "approvals_reviewer": "user",
            "mcp_approval_mode": "prompt", "mcp_consent": "granted", "mcp_startup_timeout_sec": 10,
@@ -95,9 +95,9 @@ SETTINGS_PROMISES = ("are the same key", "a key named twice", "also a table hold
                      "one key table", "`apps._default` takes only `enabled`",
                      "such as `apps._default.default_tools_enabled`, switches nothing off",
                      "`_default` is reserved only as an app id",
-                     "an OpenAI-managed marketplace (`openai-curated-remote`",
+                     "counts only when `settings` configures that marketplace",
                      "`features.plugins` false", "`features.codex_hooks` false", "`features.remote_plugin` false",
-                     "`project_doc_max_bytes` at most 32768")
+                     "`project_doc_max_bytes` a whole number at most 32768")
 LEGACY_HOOK_ACTION = ("Send a complete codex_hook_trust observation that verifies each hook's identity and exact hash "
                       "against the shipped definitions, then rerun scaffold. Never trust a hook that is not "
                       "verified. Scaffold never broadens permissions or disables a control.")
@@ -723,7 +723,7 @@ class ReadinessCodexPostureEvidenceTest(ReadinessCase):
         self.assertEqual("unknown", self.item(settings(**unread))["status"])
         local = {'marketplaces."local".source': "local-marketplace", 'marketplaces."local".source_type': "local"}
         self.assertEqual("unavailable", self.item(settings(**local))["status"])
-        for key, value in (('plugins."kit@contrib".enabled', False), ("features.hooks", False),
+        for key, value in (("features.plugins", False), ("features.hooks", False),
                            ('projects."repo".trust_level', "untrusted"), ("check_for_update_on_startup", False)):
             with self.subTest(key=key, value=value):
                 self.assertEqual("verified", self.item(settings(**{key: value}))["status"])
@@ -778,8 +778,8 @@ AGGREGATE_PRECONDITION_OFF = {
                                         'mcp_servers."docs".tools."search".approval_mode': "prompt"},
     "the MCP tool disabled": {'mcp_servers."docs".disabled_tools': ["search"],
                               'mcp_servers."docs".tools."search".approval_mode': "prompt"},
-    "the plugin off": {'plugins."kit".enabled': False, 'plugins."kit".mcp_servers."docs".enabled': True,
-                       'plugins."kit".mcp_servers."docs".tools."search".approval_mode': "prompt"},
+    "plugins off": {"features.plugins": False, 'plugins."kit".mcp_servers."docs".enabled': True,
+                    'plugins."kit".mcp_servers."docs".tools."search".approval_mode': "prompt"},
 }
 
 
@@ -984,19 +984,30 @@ class ReadinessCodexKeyTableTest(ReadinessCase):
         settings = module.canonical_settings({"apps._default.default_tools_enabled": False,
                                               'apps."drive".default_tools_enabled': False,
                                               'plugins."demo@openai-curated-remote".enabled': False,
-                                              'plugins."kit@local".enabled': False})
+                                              'plugins."kit@local".enabled': False,
+                                              'plugins."kit@contrib".enabled': False, **GIT_MARKETPLACE})
         self.assertIsNone(module.read(settings, "apps.*.default_tools_enabled", "_default"))
         self.assertIs(False, module.read(settings, "apps.*.default_tools_enabled", "drive"))
         self.assertIsNone(module.read(settings, "plugins.*.enabled", "demo@openai-curated-remote"))
-        self.assertIs(False, module.read(settings, "plugins.*.enabled", "kit@local"))
+        self.assertIsNone(module.read(settings, "plugins.*.enabled", "kit@local"))
+        self.assertIs(False, module.read(settings, "plugins.*.enabled", "kit@contrib"))
+        self.assertIsNone(module.rule_for(module.CONSERVATIVE_PATTERNS, ("plugins", "kit@local", "enabled")))
+        self.assertEqual("plugins.*.enabled", module.rule_for(module.CONSERVATIVE_PATTERNS,
+                                                              ("plugins", "kit@contrib", "enabled"), settings))
         with self.assertRaises(LookupError):
             module.read(settings, "apps._default.default_tools_enabled")
 
 
-# Cross-host review cr1263h: plugin-scope and hook-scope off switches, local versus OpenAI-managed plugin sources,
-# and `_default` in every position. A managed plugin key is `<name>@<marketplace>` for one of these marketplaces.
-MANAGED_MARKETPLACES = ("openai-curated-remote", "openai-curated", "openai-api-curated", "openai-bundled")
-LOCAL_PLUGINS = ("kit@local", "kit", "kit@contrib")
+# Cross-host reviews cr1263h and cr1263i: plugin-scope and hook-scope off switches, local versus remote plugin
+# sources, and `_default` in every position. A plugin's local off value counts only for a marketplace the
+# inventory configures; every other key is unproven: a remote family, an OpenAI-managed marketplace, a
+# user-named marketplace the inventory does not configure, or a bare name.
+UNPROVEN_PLUGINS = ("demo@openai-curated-remote", "demo@created-by-me-remote", "demo@workspace-directory",
+                    "demo@workspace-shared-with-me", "demo@workspace-shared-with-me-private",
+                    "demo@workspace-shared-with-me-unlisted", "demo@openai-curated", "demo@openai-api-curated",
+                    "demo@openai-bundled", "demo@openai-bundled-alpha", "kit@contrib", "kit@local", "kit",
+                    "kit@", "@contrib")
+LOCAL_MARKETPLACE = {'marketplaces."local".source': "local-marketplace", 'marketplaces."local".source_type': "local"}
 
 
 def plugin_server(plugin: str, **changes: object) -> dict[str, object]:
@@ -1018,7 +1029,8 @@ DEFAULT_ELSEWHERE = {
                           'mcp_servers."docs".tools."_default".approval_mode': "prompt"},
     "an app tool": {'apps."drive".tools."_default".enabled': False,
                     'apps."drive".tools."_default".approval_mode': "prompt"},
-    "a plugin": {'plugins."_default".enabled': False, 'plugins."_default".mcp_servers."docs".enabled': True},
+    "a plugin": {'plugins."_default".mcp_servers."docs".enabled': False,
+                 'plugins."_default".mcp_servers."docs".tools."search".approval_mode': "prompt"},
     "a plugin MCP server": {'plugins."kit".mcp_servers."_default".enabled': False,
                             'plugins."kit".mcp_servers."_default".tools."search".approval_mode': "prompt"},
     "a project": {'projects."_default".trust_level': "untrusted"},
@@ -1033,9 +1045,8 @@ class ReadinessCodexPluginScopeTest(ReadinessCase):
     default_host = "codex"
     request_id = "test-codex-plugin-scope"
 
-    def test_a_local_off_value_never_verifies_a_managed_plugin(self) -> None:
-        for marketplace in MANAGED_MARKETPLACES:
-            plugin = f"demo@{marketplace}"
+    def test_a_local_off_value_counts_only_for_a_marketplace_the_inventory_configures(self) -> None:
+        for plugin in UNPROVEN_PLUGINS:
             with self.subTest(plugin=plugin):
                 probe = {f'plugins."{plugin}".enabled': False, **plugin_server(plugin)}
                 self.assert_item(self.item(no_tools(probe)), "unavailable",
@@ -1045,10 +1056,20 @@ class ReadinessCodexPluginScopeTest(ReadinessCase):
                 remote_off = {"features.remote_plugin": False, f'plugins."{plugin}".enabled': False,
                               **plugin_server(plugin)}
                 self.assert_item(self.item(no_tools(remote_off)), "unavailable", ("settings=1 outside, 2 contradicted",))
-        for plugin in LOCAL_PLUGINS:
+        # A configured marketplace proves the plugin local, so its off value switches the server off; the
+        # marketplace keys themselves select external content and keep the posture from verifying.
+        for plugin, marketplace in (("kit@contrib", GIT_MARKETPLACE), ("kit@local", LOCAL_MARKETPLACE)):
             with self.subTest(plugin=plugin):
-                self.assert_item(self.item(no_tools({f'plugins."{plugin}".enabled': False, **plugin_server(plugin)})),
-                                 "verified", ("settings=accounted",))
+                probe = {**marketplace, f'plugins."{plugin}".enabled': False, **plugin_server(plugin)}
+                self.assert_item(self.item(no_tools(probe)), "unavailable",
+                                 (f"settings={len(marketplace)} outside, 0 contradicted",))
+                unread = {**dict.fromkeys(marketplace, "unobservable"), f'plugins."{plugin}".enabled': False,
+                          **plugin_server(plugin)}
+                self.assert_item(self.item(no_tools(unread)), "unavailable",
+                                 (f"settings=1 outside, 2 contradicted, {len(marketplace)} unobservable",))
+        # A marketplace the inventory configures under another name proves nothing for this plugin.
+        probe = {**GIT_MARKETPLACE, 'plugins."kit@local".enabled': False, **plugin_server("kit@local")}
+        self.assert_item(self.item(no_tools(probe)), "unavailable", ("settings=5 outside, 2 contradicted",))
 
     def test_explicit_plugin_scope_off_switches_still_switch_off(self) -> None:
         plugin = "demo@openai-curated-remote"
@@ -1092,15 +1113,23 @@ class ReadinessCodexPluginScopeTest(ReadinessCase):
             with self.subTest(key=key):
                 self.assert_item(self.item(settings(**{key: 1000000})), "unavailable", ("settings=1 outside",))
                 self.assertEqual("unknown", self.item(settings(**{key: "unobservable"}))["status"])
-        self.assertEqual("verified", self.item(settings(project_doc_max_bytes=32768))["status"])
-        self.assertEqual("verified", self.item(settings(project_doc_max_bytes=1024))["status"])
+        for value in (0, 1, 1024, 32768):
+            with self.subTest(project_doc_max_bytes=value):
+                self.assertEqual("verified", self.item(settings(project_doc_max_bytes=value))["status"])
         self.assertEqual("unavailable", self.item(settings(project_doc_max_bytes=32769))["status"])
         # The model, not the configuration, sets the default output budgets, so no value is provably smaller.
-        for key in CONTENT_LIMITS[1:]:
-            with self.subTest(key=key, value=100):
-                self.assertEqual("unavailable", self.item(settings(**{key: 100}))["status"])
-        self.refuse_each([settings(project_doc_max_bytes="big"), settings(tool_output_token_limit=0),
-                          settings(**{CONTENT_LIMITS[2]: -1})])
+        for key, value in ((CONTENT_LIMITS[1], 0), (CONTENT_LIMITS[1], 100), (CONTENT_LIMITS[2], 1)):
+            with self.subTest(key=key, value=value):
+                self.assertEqual("unavailable", self.item(settings(**{key: value}))["status"])
+
+    def test_counts_take_whole_numbers_in_their_codex_range(self) -> None:
+        """Cross-host review cr1263i: an unsigned byte or token count is a whole number; one budget is non-zero."""
+        for key in CONTENT_LIMITS[:2]:
+            self.refuse_each([settings(**{key: bad}) for bad in (1.5, -1, True, "32768", [1], 0.0)])
+        self.refuse_each([settings(**{CONTENT_LIMITS[2]: bad}) for bad in (0, 1.5, -1, True, "8000")])
+        self.refuse_each([settings(**{'mcp_servers."docs".startup_timeout_ms': bad}) for bad in (0, 1.5, True)])
+        self.assertEqual("verified", self.item(settings(**{'mcp_servers."docs".startup_timeout_ms': 10000}))["status"])
+        self.assertEqual("verified", self.item(settings(**{'mcp_servers."docs".startup_timeout_sec': 9.5}))["status"])
 
 
 def build_suite() -> unittest.TestSuite:

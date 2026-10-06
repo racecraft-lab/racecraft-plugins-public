@@ -1062,11 +1062,13 @@ and `open_world_enabled`, and `apps._default.enabled` false disables only
 apps with no `[apps.<id>]` table. A key under a path Codex does not read it
 from, such as `apps._default.default_tools_enabled`, switches nothing off
 and makes the posture `unavailable`. `_default` is reserved only as an app id;
-elsewhere it is an ordinary name. A plugin from an OpenAI-managed marketplace
-(`openai-curated-remote`, `openai-curated`, `openai-api-curated` or
-`openai-bundled`) keeps a workspace-managed or synced enabled state, so its
-local `plugins.<name>@<marketplace>.enabled` proves nothing and makes the
-posture `unavailable`; its per-server switches still hold. Other keys are on
+elsewhere it is an ordinary name. A local `plugins.<name>@<marketplace>.enabled`
+false counts only when `settings` configures that marketplace
+(`marketplaces.<marketplace>.source_type` `local` or `git`), the one source
+Codex provably loads locally; a remote installation replaces the local
+enabled state of every other plugin key, so a remote family, an OpenAI-managed
+or unconfigured marketplace, or a bare name proves nothing and makes the
+posture `unavailable`; per-server switches still hold. Other keys are on
 the helper's list of inert keys (model, display, notice and local history
 settings), or hold their conservative value: `allow_login_shell` false,
 `shell_environment_policy.inherit` `core` or `none`,
@@ -1075,13 +1077,14 @@ settings), or hold their conservative value: `allow_login_shell` false,
 `shell_environment_policy.exclude`, `shell_environment_policy.include_only` or
 `shell_environment_policy.filters.*` entry, since those only remove inherited
 variables; `projects.*.trust_level` `untrusted`, since trust activates project
-configuration, hooks and rules; `plugins.*.enabled` false (a user-configured
-marketplace only), `features.plugins` false and `features.remote_plugin`
-false, since no summary judges plugin instructions, agents or hooks;
-`features.hooks` false and its deprecated alias `features.codex_hooks` false,
-each judged alone, since no summary judges hooks beyond the shipped ones;
-`project_doc_max_bytes` at most 32768, the Codex default for project
-instructions read into context; and `check_for_update_on_startup` false,
+configuration, hooks and rules; `plugins.*.enabled` false (a marketplace
+`settings` configures only), `features.plugins` false and
+`features.remote_plugin` false, since no summary judges plugin instructions,
+agents or hooks; `features.hooks` false and its deprecated alias
+`features.codex_hooks` false, each judged alone, since no summary judges hooks
+beyond the shipped ones; `project_doc_max_bytes` a whole number at most 32768,
+the Codex default for project instructions read into context (0 reads none);
+and `check_for_update_on_startup` false,
 since the check sends a request. `shell_environment_policy.set.*`,
 `marketplaces.*.source`, `marketplaces.*.source_type`, `marketplaces.*.ref`,
 `marketplaces.*.sparse_paths`, `tool_output_token_limit` and
