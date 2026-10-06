@@ -569,10 +569,6 @@ edits in domain order, run the verify waves, then resolve all domains' gaps:
    spec.md and plan.md unchanged.
    Then runner helper `checklist-edits`, mode dry_run, with no domains, no
    proposals and the verify baseline: a refusal means a verify run wrote an artifact.
-   After consuming every verify result, record coverage with checklist-edits, mode
-   apply, domains=[], proposals=[], baseline=<verify baseline>, and verified_domains
-   set to all original domains in order. G4 requires this receipt: skipping the final
-   request after a shared edit leaves stale evidence and fails G4.
 6. Build the consensus queue from initial run items plus every verify-pass 'Unresolved for consensus' item.
    Retain apply conflicts and gaps with no edit; preserve domain order within each list.
    Item numbers index items + verify_items; use that combined queue for prompts and logs.
@@ -589,15 +585,14 @@ edits in domain order, run the verify waves, then resolve all domains' gaps:
    edit labels, before marking any domain completed. The runner compares both
    shared artifacts on disk: any spec.md/plan.md change returns only verify waves
    for every original domain; no change returns none. Missing or unreadable evidence
-   fails closed; consensus_edited is unnecessary. For returned waves, take a fresh
+   fails closed; edit labels are not inputs. For returned waves, take a fresh
    read_only baseline, launch every verify wave as in step 5, consume all results,
    then run checklist-edits in dry_run mode with that baseline. Keep Consensus
    items incomplete until this checkpoint succeeds. The final verify-pass unresolved items return to consensus
    before completion, under the existing shared repair reservation and consensus-round
    bounds: retain pending items, append new verify_items, save the just-verified baseline
    before further edits, and return to step 6. If the reservation is exhausted, use the
-   Failure Escalation Protocol and keep tasks incomplete. After consuming each complete
-   verify wave set, attest verified_domains through checklist-edits as in step 5.
+   Failure Escalation Protocol and keep tasks incomplete.
    Then mark Consensus items completed.
 8. autopilot-state.json: every domain task → completed
 ```

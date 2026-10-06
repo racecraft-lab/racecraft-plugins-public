@@ -92,14 +92,6 @@
     {
       "path": {
         "kind": "plugin_relative",
-        "value": "speckit_pro_runner/checklist_coverage.py",
-        "display": "speckit_pro_runner/checklist_coverage.py"
-      },
-      "sha256": "729cea8c544349bf2416bf69fc2247f86697f8509a5f5d09ba714907428a1026"
-    },
-    {
-      "path": {
-        "kind": "plugin_relative",
         "value": "speckit_pro_runner/cli_probe.py",
         "display": "speckit_pro_runner/cli_probe.py"
       },
@@ -559,7 +551,7 @@
         "value": "speckit_pro_runner/helpers/checklist_edits.py",
         "display": "speckit_pro_runner/helpers/checklist_edits.py"
       },
-      "sha256": "0bba28d7ac9a42ea858a323a971ae46eb6919151c337c9a1e2bf704f54a717a7"
+      "sha256": "0eb7e37d86f0c45918e192fc8ee247d9b9fe470822f6b98f9021eb4f325ec2b6"
     },
     {
       "path": {
@@ -583,7 +575,7 @@
         "value": "speckit_pro_runner/helpers/dispatch_waves.py",
         "display": "speckit_pro_runner/helpers/dispatch_waves.py"
       },
-      "sha256": "17bcd934612d38a7de3c15988e7eee3a18ea25255b4c50dbc4ac82a97104668f"
+      "sha256": "e72640b462776cc7e675ae33308ba07c7441fe9562b842100b0271261c68b56a"
     },
     {
       "path": {
@@ -679,7 +671,7 @@
         "value": "speckit_pro_runner/helpers/phase_brief.py",
         "display": "speckit_pro_runner/helpers/phase_brief.py"
       },
-      "sha256": "6f0950b53a06b0c4a34d26b9aeb7f939b2b445f314d16943670365795868bd27"
+      "sha256": "d03b65159ac4117d952263fd54575391973cb6a735bed26227e53d066849939e"
     },
     {
       "path": {
@@ -727,7 +719,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "ca43812d8cd8d340c737fd30de6390a54205c1e43c8683579d52a6d5f443a31d"
+      "sha256": "c931a5916d2057f82f973757121d70b429342378befc727f01f9ecfc9eb0cf92"
     },
     {
       "path": {

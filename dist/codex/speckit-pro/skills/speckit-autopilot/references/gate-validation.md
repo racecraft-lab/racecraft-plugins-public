@@ -187,19 +187,19 @@ must not rewrite their provenance.
 
 ### G4 — After Checklist
 
-**Check:** All gap markers resolved and a current checklist coverage receipt.
+**Check:** All gap markers resolved across one stable read of the feature.
 
 ```
 1. Find all checklist files: specs/<feature>/checklists/*.md
 2. Count [Gap] markers across ALL files: grep -c "\[Gap\]" checklists/*.md,
    plus spec.md and plan.md (runner `validate-gate` G4 counts all three)
 3. Total must be 0
-4. The runner also requires the checklist coverage receipt created by
-   checklist-edits: every original domain verified against current spec.md/plan.md.
-   Missing, unreadable, malformed or stale evidence fails G4, even with zero markers.
+4. The runner reads each file once and fails closed when spec.md, plan.md or
+   checklists/ is missing, linked or unreadable, when checklists/ holds no report,
+   a link or a special file, or when any of them changed during the read.
 ```
 
-G4 counts `[Gap]` markers and checks shared-artifact verification freshness. Unticked checklist items are
+G4 counts only `[Gap]` markers, by design. Unticked checklist items are
 reviewer-owned, so they do not fail G4. They are deferred to PR review, and
 Phase 7 setup records that decision as the Implement Checklist Gate (see
 phase-execution.md).

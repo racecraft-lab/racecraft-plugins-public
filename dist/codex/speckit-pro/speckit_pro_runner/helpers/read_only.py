@@ -18,7 +18,6 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any, Callable, cast
 
-from ..checklist_coverage import coverage_problem
 from ..agent_inventory import CLAUDE_REQUIRED_AGENT_NAMES
 from ..canonical_json import canonical_bytes
 from ..codex_launch import executable_path, trusted_executable
@@ -2034,7 +2033,7 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
             exit_code=1,
         )
     if gate == "G4":
-        return g4_checklist_result(feature, repo_root)
+        return g4_result(feature, repo_root)
     if gate == "G5":
         if not trusted_file_exists(tasks, repo_root):
             return make_result(json_text({"gate": "G5", "pass": False, "reason": "tasks.md not found", "markers": 0, "details": []}), exit_code=1)
@@ -2105,30 +2104,62 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     return make_result(json_text({"gate": gate, "pass": False, "reason": f"{count} CRITICAL/HIGH findings remain", "markers": count, "analysis_findings": findings, "details": []}), exit_code=1)
 
 
-def g4_checklist_result(feature: Path, repo_root: Path) -> dict[str, Any]:
-    """A clean marker count requires current complete-domain coverage evidence."""
-    spec, plan = feature / "spec.md", feature / "plan.md"
-    spec_gaps = count_pattern([spec], r"\[Gap\]", repo_root)
-    plan_gaps = count_pattern([plan], r"\[Gap\]", repo_root)
-    checklist_gaps = count_pattern_dir(feature / "checklists", r"\[Gap\]", repo_root)
-    gaps = spec_gaps + plan_gaps + checklist_gaps
+def g4_identity(path: Path) -> tuple[int, ...]:
+    """What changes when an entry is replaced, renamed over, relinked or rewritten."""
+    info = os.lstat(path)
+    return info.st_mode, info.st_dev, info.st_ino, info.st_nlink, info.st_size, info.st_mtime_ns, info.st_ctime_ns
+
+
+def g4_entries(directory: Path) -> tuple[list[Path], list[Path]]:
+    """Every entry under checklists/ and its reports. A missing or linked directory, a link or special file, or no report fails closed."""
+    if not stat.S_ISDIR(os.lstat(directory).st_mode):
+        raise ValueError("checklists/ must be a directory, not a link or a file")
+    entries = sorted(directory.rglob("*"))
+    reports = []
+    for path in entries:
+        mode = os.lstat(path).st_mode
+        if stat.S_ISREG(mode):
+            reports.append(path)
+        elif not stat.S_ISDIR(mode):
+            raise ValueError(f"checklists/ holds a link or special file: {path.name}")
+    if not reports:
+        raise ValueError("checklists/ holds no checklist report")
+    return entries, reports
+
+
+def g4_scan(feature: Path, repo_root: Path) -> tuple[dict[str, int], int]:
+    """Count [Gap] lines in one stable read of spec.md, plan.md and every checklist report.
+
+    Each file is read once through the contained reader. Every entry is checked again after the reads,
+    so a change during the scan fails closed instead of mixing two trees.
+    """
+    directory = feature / "checklists"
+    entries, reports = g4_entries(directory)
+    files = [feature / "spec.md", feature / "plan.md", *reports]
+    watched = [directory, *entries, *files[:2]]
+    before = [g4_identity(path) for path in watched]
+    texts = [trusted_text(path, repo_root) for path in files]
+    if any(text is None for text in texts):
+        raise ValueError("G4 reads spec.md, plan.md and every checklist report as contained regular files")
+    if g4_entries(directory)[0] != entries or [g4_identity(path) for path in watched] != before:
+        raise ValueError("the feature changed while G4 read it; run the gate again")
+    counts = [sum(1 for line in str(text).splitlines() if "[Gap]" in line) for text in texts]
+    return {"spec": counts[0], "plan": counts[1], "checklists": sum(counts[2:])}, len(reports)
+
+
+def g4_result(feature: Path, repo_root: Path) -> dict[str, Any]:
+    """Zero [Gap] markers over a stable, complete read passes; anything G4 cannot read fails closed."""
+    try:
+        counts, reports = g4_scan(feature, repo_root)
+    except (OSError, ValueError) as error:
+        reason = f"G4 cannot read {Path(error.filename).name}: {error.strerror}" if isinstance(error, OSError) and error.filename else str(error)
+        return make_result(json_text({"gate": "G4", "pass": False, "reason": reason, "markers": 0, "details": []}), exit_code=1)
+    gaps = sum(counts.values())
     if gaps == 0:
-        problem = coverage_problem(repo_root, feature)
-        return make_result(json_text({"gate": "G4", "pass": problem is None,
-                                     "reason": problem or "0 [Gap] markers; checklist coverage is current",
-                                     "markers": 0, "details": []}), exit_code=1 if problem else 0)
-    return make_result(
-        json_text(
-            {
-                "gate": "G4",
-                "pass": False,
-                "reason": f"{gaps} [Gap] markers (spec:{spec_gaps}, plan:{plan_gaps}, checklists:{checklist_gaps})",
-                "markers": gaps,
-                "details": [],
-            }
-        ),
-        exit_code=1,
-    )
+        reason = f"0 [Gap] markers in spec.md, plan.md and {reports} checklist report{'s' if reports > 1 else ''}"
+        return make_result(json_text({"gate": "G4", "pass": True, "reason": reason, "markers": 0, "details": []}))
+    reason = f"{gaps} [Gap] markers (spec:{counts['spec']}, plan:{counts['plan']}, checklists:{counts['checklists']})"
+    return make_result(json_text({"gate": "G4", "pass": False, "reason": reason, "markers": gaps, "details": []}), exit_code=1)
 
 
 COVERAGE_TASK_HEADER = re.compile(r"tasks?(?:\s*\(s\)|\s*ids?)?", re.IGNORECASE)

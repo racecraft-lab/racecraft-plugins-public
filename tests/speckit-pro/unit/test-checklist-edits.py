@@ -947,7 +947,7 @@ class RecordStateTests(InterruptionCase):
         def fail_record_parent_sync(fd: int) -> None:
             record = self.root / RECORD
             info = os.fstat(fd)
-            if not faults and stat.S_ISDIR(info.st_mode) and record.is_file() and info.st_ino == record.parent.stat().st_ino:
+            if stat.S_ISDIR(info.st_mode) and record.is_file() and info.st_ino == record.parent.stat().st_ino:
                 faults.append(fd)
                 raise OSError("record parent sync failed")
             real(fd)
@@ -1394,8 +1394,8 @@ sys.exit(scope['run_counted'](suite, label='shipped-matrix'))
                 if expected is not None:
                     self.assertIn(f"{expected}/{expected} passed", done.stdout)
 
-    def test_both_payloads_enforce_current_complete_checklist_coverage(self) -> None:
-        self.assert_payload_cases(("CoverageTests",))
+    def test_both_payloads_fail_g4_closed_on_unstable_or_missing_evidence(self) -> None:
+        self.assert_payload_cases(("GateFourTests",))
 
     def test_both_payloads_cover_the_failed_rollback_matrix(self) -> None:
         self.assert_payload_cases(("RollbackFailureTests",), 47)
@@ -1430,58 +1430,177 @@ sys.exit(scope['run_counted'](suite, label='shipped-matrix'))
 EXECUTOR_GUIDES = ("agents/checklist-executor.md", "codex-agents/checklist-executor.toml")
 
 
-class CoverageTests(ChecklistEditsCase):
-    """G4 binds completion to shared-artifact verification, even when the final request is omitted."""
+G4_INPUTS = {"gate": "G4", "feature_dir": FEATURE}
+RECEIPT = f"{FEATURE}/.process/checklist-edits/coverage.json"
+CLEAN_REPORT = "- [x] CHK001 Is token expiry defined?\n"
+GAP_LINE = "- [ ] CHK009 Is account lockout defined? [Gap]\n"
 
-    def test_verification_receipt_requires_all_original_domains(self) -> None:
-        self.assertEqual("ok", self.apply()["status"])
-        for domains in (["security"], ["api"], [], ["security", "ux", "foreign"]):
-            result = self.call("apply", domains=[], proposals=[], baseline=self.baseline(), verified_domains=domains)
-            self.assertNotEqual(result["status"], "ok", domains)
-        result = self.call("apply", domains=[], proposals=[], baseline=self.baseline(), verified_domains=DOMAINS)
-        self.assertEqual("ok", result["status"], result)
-        gate = read_only.validate_gate({"gate": "G4", "feature_dir": FEATURE}, self.root)
-        self.assertTrue(json.loads(gate["stdout"])["pass"], gate)
 
-    def test_missing_malformed_or_linked_coverage_evidence_fails_closed(self) -> None:
-        self.assertEqual("ok", self.apply()["status"])
-        path = self.root / FEATURE / ".process/checklist-edits/coverage.json"
-        valid = {"schema_version": "checklist-coverage/v1", "domains": DOMAINS,
-                 "verified_baseline": self.baseline()}
-        invalid = [None, "{", json.dumps(valid | {"domains": []}),
-                   json.dumps(valid | {"domains": ["security", "security"]}),
-                   json.dumps(valid | {"verified_baseline": None}),
-                   json.dumps(valid | {"verified_baseline": {"spec.md": "0" * 64}})]
-        for content in invalid:
-            path.unlink(missing_ok=True)
-            if content is not None:
-                path.write_text(content)
-            gate = read_only.validate_gate({"gate": "G4", "feature_dir": FEATURE}, self.root)
-            self.assertFalse(json.loads(gate["stdout"])["pass"], content)
-        path.unlink()
-        path.symlink_to(self.root / FEATURE / "spec.md")
-        gate = read_only.validate_gate({"gate": "G4", "feature_dir": FEATURE}, self.root)
-        self.assertFalse(json.loads(gate["stdout"])["pass"])
+class GateFourTests(ChecklistEditsCase):
+    """G4 judges one stable read of spec.md, plan.md and the checklist reports; no caller claim can pass it."""
 
-    def test_final_verify_gaps_return_to_consensus_on_both_hosts(self) -> None:
-        for passage in checklist_passages():
-            self.assertIn("final verify-pass unresolved items return to consensus", passage)
-            self.assertIn("verified_domains", passage)
+    def setUp(self) -> None:
+        super().setUp()
+        self.feature = self.root / FEATURE
+        self.outside = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.outside)
+        (self.outside / "security.md").write_text(GAP_LINE, encoding="utf-8")
+        self.reset_tree()
 
-    def test_omitting_final_request_after_shared_spec_or_plan_edit_fails_g4(self) -> None:
-        self.assertEqual("ok", self.apply()["status"])
-        path = self.root / FEATURE / ".process/checklist-edits/coverage.json"
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps({"schema_version": "checklist-coverage/v1", "domains": DOMAINS,
-                                    "verified_baseline": self.baseline()}))
-        inputs = {"gate": "G4", "feature_dir": FEATURE}
-        self.assertTrue(json.loads(read_only.validate_gate(inputs, self.root)["stdout"])["pass"])
-        for artifact in ("spec.md", "plan.md"):
-            original = self.text(artifact)
-            (self.root / FEATURE / artifact).write_text(original + "Marker-free consensus edit.\n")
-            result = read_only.validate_gate(inputs, self.root)
-            self.assertFalse(json.loads(result["stdout"])["pass"], artifact)
-            (self.root / FEATURE / artifact).write_text(original)
+    def reset_tree(self) -> None:
+        """A marker-free feature with one checklist report, rebuilt from scratch for each variant."""
+        for path in (self.feature, self.root / "previous", self.root / "alias.md"):
+            if path.is_symlink() or path.is_file():
+                path.unlink()
+            elif path.exists():
+                shutil.rmtree(path)
+        (self.feature / "checklists").mkdir(parents=True)
+        (self.root / WORKFLOW).parent.mkdir(parents=True)
+        (self.root / WORKFLOW).write_text("# Workflow\n", encoding="utf-8")
+        (self.feature / "spec.md").write_text(SPEC, encoding="utf-8")
+        (self.feature / "plan.md").write_text(PLAN, encoding="utf-8")
+        (self.feature / "checklists/security.md").write_text(CLEAN_REPORT, encoding="utf-8")
+
+    def gate(self) -> dict[str, Any]:
+        return dict(json.loads(read_only.validate_gate(G4_INPUTS, self.root)["stdout"]))
+
+    def forge_receipt(self, path: Path | None = None, domains: tuple[str, ...] = ("security",)) -> Path:
+        """The schema-valid receipt any caller could write without checklist-edits or a verify pass."""
+        target = path or self.root / RECEIPT
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps({"schema_version": "checklist-coverage/v1", "domains": list(domains),
+                                      "verified_baseline": {name: digest(self.text(name)) for name in ("spec.md", "plan.md")}}),
+                          encoding="utf-8")
+        return target
+
+    def replace_with_gap(self, relative: str) -> None:
+        """Swap a file for a [Gap] version through an atomic rename, then refresh the forged receipt."""
+        target = self.feature / relative
+        staged = target.with_name(target.name + ".new")
+        staged.write_text(target.read_text(encoding="utf-8") + GAP_LINE, encoding="utf-8")
+        os.replace(staged, target)
+        self.forge_receipt()
+
+    @contextmanager
+    def after_scan(self, mutate: Callable[[], None]) -> Iterator[None]:
+        """Run `mutate` once, right after G4 reads the last checklist report."""
+        fired: list[bool] = []
+
+        def hooked(real: Callable[..., Any], path: Path, *args: Any) -> Any:
+            value = real(path, *args)
+            if not fired and Path(path).name == "security.md":
+                fired.append(True)
+                mutate()
+            return value
+
+        with ExitStack() as stack:
+            for name in ("trusted_lines", "trusted_text"):
+                real = getattr(read_only, name, None)
+                if real is not None:
+                    stack.enter_context(patch.object(read_only, name, partial(hooked, real)))
+            yield
+        self.assertTrue(fired, "G4 never read the checklist report")
+
+    # F1281-fa5e5023: a verification claim is not evidence that any verify pass ran, and no domain list is stored.
+    def test_checklist_edits_records_no_domain_list_and_refuses_every_verification_claim(self) -> None:
+        statuses = [self.call("apply", domains=["security"], baseline=self.baseline(), proposals=[proposal("security")])["status"]]
+        statuses += [self.call("apply", domains=[], proposals=[], baseline=self.baseline(), verified_domains=claimed)["status"]
+                     for claimed in (DOMAINS, ["security"], ["security", "ux", "foreign"])]
+        self.assertEqual(["ok", "input_error", "input_error", "input_error"], statuses)
+        self.assertEqual([], sorted(path.name for path in (self.root / RECEIPT).parent.glob("coverage*")))
+        verdict = self.gate()
+        self.assertEqual((True, "0 [Gap] markers in spec.md, plan.md and 1 checklist report"), (verdict["pass"], verdict["reason"]))
+
+    # F1281-d099791e and F1281-510e5f28: caller-written evidence never changes the verdict.
+    def test_g4_verdict_ignores_caller_written_coverage_receipts(self) -> None:
+        receipt = self.root / RECEIPT
+        nested = "[" * 1100 + "]" * 1100
+        many = tuple(f"d{index}" for index in range(5000))
+
+        def hard_link() -> None:
+            self.forge_receipt(self.root / "alias.md")
+            os.link(self.root / "alias.md", receipt)
+
+        variants: dict[str, Callable[[], object]] = {
+            "regular": self.forge_receipt, "hard link": hard_link,
+            "deep nesting": lambda: receipt.write_text(nested, encoding="utf-8"),
+            "5000 domains": lambda: self.forge_receipt(domains=many)}
+        for tree in ("reports", "no reports"):
+            for name, forge in variants.items():
+                with self.subTest(tree=tree, receipt=name):
+                    self.reset_tree()
+                    if tree == "no reports":
+                        shutil.rmtree(self.feature / "checklists")
+                    expected = self.gate()
+                    receipt.parent.mkdir(parents=True, exist_ok=True)
+                    forge()
+                    self.assertEqual(expected, self.gate())
+
+    def link_checklists_out_of_root(self) -> None:
+        """Move the real checklists/ aside and put a link to a directory of [Gap] reports in its place."""
+        os.rename(self.feature / "checklists", self.feature / "checklists-old")
+        os.symlink(self.outside, self.feature / "checklists", target_is_directory=True)
+
+    def test_g4_fails_closed_without_contained_checklist_reports(self) -> None:
+        checklists = self.feature / "checklists"
+        variants: dict[str, Callable[[], object]] = {
+            "deleted": lambda: shutil.rmtree(checklists),
+            "emptied": lambda: (checklists / "security.md").unlink(),
+            "renamed": lambda: checklists.rename(self.feature / "checklists-old"),
+            "linked out of root": self.link_checklists_out_of_root,
+            "linked report": lambda: os.symlink(self.outside / "security.md", checklists / "linked.md")}
+        for name, mutate in variants.items():
+            with self.subTest(variant=name):
+                self.reset_tree()
+                mutate()
+                self.forge_receipt()
+                self.assertFalse(self.gate()["pass"], name)
+
+    def test_g4_fails_closed_on_missing_or_linked_shared_artifacts(self) -> None:
+        for name in ("spec.md", "plan.md"):
+            for linked in (False, True):
+                with self.subTest(artifact=name, linked=linked):
+                    self.reset_tree()
+                    self.forge_receipt()
+                    (self.feature / name).unlink()
+                    if linked:
+                        (self.feature / name).symlink_to(self.outside / "security.md")
+                    self.assertFalse(self.gate()["pass"])
+
+    # F1281-e0d72cb8: the verdict describes one tree, so a change during the scan fails closed.
+    def test_g4_fails_closed_when_the_tree_changes_during_its_scan(self) -> None:
+        checklists = self.feature / "checklists"
+
+        def add_report() -> None:
+            (checklists / "ux.md").write_text(GAP_LINE, encoding="utf-8")
+
+        def edit_through_hard_link() -> None:
+            with open(self.root / "alias.md", "a", encoding="utf-8") as alias:
+                alias.write(GAP_LINE)
+
+        def replace_feature() -> None:
+            self.feature.rename(self.root / "previous")
+            shutil.copytree(self.root / "previous", self.feature, symlinks=True)
+            self.replace_with_gap("spec.md")
+
+        variants: dict[str, Callable[[], None]] = {
+            "spec.md replaced": lambda: self.replace_with_gap("spec.md"),
+            "plan.md replaced": lambda: self.replace_with_gap("plan.md"),
+            "report added": add_report,
+            "report deleted": lambda: (checklists / "security.md").unlink(),
+            "report replaced": lambda: self.replace_with_gap("checklists/security.md"),
+            "report edited through a hard link": edit_through_hard_link,
+            "directory linked": self.link_checklists_out_of_root,
+            "feature directory replaced": replace_feature}
+        for name, mutate in variants.items():
+            with self.subTest(variant=name):
+                self.reset_tree()
+                os.link(checklists / "security.md", self.root / "alias.md")
+                self.forge_receipt()
+                with self.after_scan(mutate):
+                    verdict = self.gate()
+                self.assertFalse(verdict["pass"], (name, verdict))
+
 
 def checklist_passages() -> list[str]:
     """Each host's checklist flow rendered from the shared source."""
@@ -1499,20 +1618,14 @@ class GuidanceTests(unittest.TestCase):
             self.assertEqual([], [(relative, phrase) for phrase in ("Proposed Edits", "Do not edit spec.md or plan.md") if phrase not in text])
             self.assertEqual([], [(relative, phrase) for phrase in RETIRED if phrase in text])
 
-    def test_verify_gaps_join_initial_consensus_queue_before_dispatch_on_both_hosts(self) -> None:
+    def test_every_verify_gap_reaches_consensus_and_the_final_checkpoint_always_runs_on_both_hosts(self) -> None:
         for passage in checklist_passages():
-            self.assertIn("initial run items plus every verify-pass 'Unresolved for consensus' item", passage)
-            self.assertIn("verify_items", passage)
-            queue_at = passage.index("initial run items plus every verify-pass")
-            dispatch_at = passage.index("phase brief", queue_at)
-            self.assertLess(queue_at, dispatch_at)
-
-    def test_final_checkpoint_is_required_even_without_consensus_edited_on_both_hosts(self) -> None:
-        for passage in checklist_passages():
-            self.assertIn("Always request the final phase brief", passage)
-            self.assertIn("verify_baseline", passage)
-            self.assertIn("before marking any domain completed", passage)
-            self.assertNotIn("send no third request", passage)
+            queue_at = passage.index("initial run items plus every verify-pass 'Unresolved for consensus' item")
+            self.assertLess(queue_at, passage.index("phase brief", queue_at))
+            for phrase in ("verify_items", "Always request the final phase brief", "verify_baseline",
+                           "before marking any domain completed", "final verify-pass unresolved items return to consensus"):
+                self.assertIn(phrase, passage)
+            self.assertEqual([], [phrase for phrase in ("send no third request", "verified_domains") if phrase in passage])
 
     def test_the_phase_four_flow_applies_proposals_through_the_helper_on_both_hosts(self) -> None:
         # Each host's own checklist passage: Claude's Phase 4 section, Codex's checklist-only loop step.
@@ -1542,7 +1655,7 @@ if __name__ == "__main__":
                 unittest.defaultTestLoader.loadTestsFromTestCase(case)
                 for case in (ProposalTests, ConflictTests, RefusalTests, CompetingWriterTests, CanonicalResultTests, RollbackFailureTests, CommittedStateTests,
                              RecordStateTests,
-                             UntrustedTextTests, PlanningTextTests, PlanningContextTests, HostParityTests, CoverageTests, GuidanceTests)
+                             UntrustedTextTests, PlanningTextTests, PlanningContextTests, HostParityTests, GateFourTests, GuidanceTests)
             ),
             label="test-checklist-edits",
         )

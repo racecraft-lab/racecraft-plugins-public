@@ -9,7 +9,6 @@ from typing import Any
 from unicodedata import category, normalize
 
 from ..agent_inventory import AGENT_INVENTORY
-from ..checklist_coverage import read_coverage
 from ..envelope import diagnostic, response
 from ..strict_input import has_hidden_characters, require_fields, require_text
 from ..trusted_io import resolve_repo_root
@@ -190,27 +189,25 @@ def internal_failure(request: Any, code: str, exc: Exception) -> dict[str, Any]:
 
 
 def observed_checklist_waves(root: Path, workflow: str, feature: str, waves: WaveRequest) -> WaveRequest:
-    """Bind the final wave to original domains and observed shared-artifact changes."""
+    """Select the final verify wave from the shared-artifact digests on disk, never from caller attribution.
+
+    verify_baseline is the pre-consensus read_only snapshot. The checklist-edits owner reads the contained workflow
+    and both shared artifacts without following links; missing or unreadable evidence fails closed.
+    """
     if waves.verify_baseline is None:
         return waves
-    if read_coverage(root, root / feature)["domains"] != waves.domains:
-        raise ValueError("final verification requires every original domain in order")
     snapshot = checklist_edits(root, {"workflow_file": workflow, "feature_dir": feature}, "read_only")
-    changed = snapshot["baseline"] != waves.verify_baseline
-    return waves._replace(consensus_edited=waves.domains if changed else [])
+    return waves._replace(shared_changed=snapshot["baseline"] != waves.verify_baseline)
 
 
 def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     """Return phase-brief/v1 dispatch data; gate and stop decisions stay separate.
 
-    The closed request inputs are phase, workflow_file and feature_dir strings, and optional domains, items, verify_items, consensus_edited, verify_baseline and max_agents
+    The closed request inputs are phase, workflow_file and feature_dir strings, and optional domains, items, verify_items, verify_baseline and max_agents
     for waves (dispatch_waves.py).
     Paths reject parent segments and control, format and line separator characters.
     feature_dir is workflow-root relative; workflow_file may be absolute but must name a file.
-    Validation is lexical except for verify_baseline: the checklist-edits owner reads the contained
-    workflow and shared artifacts without following links. Missing or unreadable evidence fails closed.
-    verify_baseline is the pre-consensus read_only snapshot; that request emits only final verify waves.
-    verify_items appends verify-pass unresolved items after initial items, preserving dispatch positions.
+    Validation is lexical, except that a verify_baseline is compared with checklist-edits' on-disk digests.
     Successful data has exactly these fields. Records have only the named keys;
     a wave dispatch's inputs is an open JSON object for its prompt arguments.
 
@@ -258,8 +255,7 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     if isinstance(root, dict):
         return response("missing_prerequisite", request_id=request.request_id, diagnostics=[root])
     try:
-        waves = observed_checklist_waves(root, workflow, feature, waves)
-        data = brief_data(phase, workflow, feature, waves)
+        data = brief_data(phase, workflow, feature, observed_checklist_waves(root, workflow, feature, waves))
     except (OSError, ValueError) as exc:
         return internal_failure(request, "phase_brief_slices_unavailable", exc)
     try:

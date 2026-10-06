@@ -3878,12 +3878,6 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
             self.assertEqual(2, payload["markers"])
             self.assertIn("checklists:2", payload["reason"])
             (feature / "checklists" / "security.md").write_text("- [x] CHK001 Is token expiry defined?\n", encoding="utf-8")
-            # This fixture isolates marker counting; coverage lifecycle has its own public-helper tests.
-            receipt = feature / ".process/checklist-edits/coverage.json"
-            receipt.parent.mkdir(parents=True)
-            receipt.write_text(json.dumps({"schema_version": "checklist-coverage/v1", "domains": ["security"],
-                "verified_baseline": {name: hashlib.sha256((feature / name).read_bytes()).hexdigest()
-                                      for name in ("spec.md", "plan.md")}}), encoding="utf-8")
             code, payload = self._helper_json("validate_gate", {"gate": "G4", "feature_dir": "specs/001-demo"}, project_path)
             self.assertEqual((0, True), (code, payload["pass"]))
 

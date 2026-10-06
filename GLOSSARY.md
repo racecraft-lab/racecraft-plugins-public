@@ -40,10 +40,6 @@ _Avoid_: classifier, LLM judge
 The run's record of every judgment it made instead of asking the user: the option chosen, the rejected alternative and the evidence. It never asks for a reply; the reviewer accepts or overturns each entry at review.
 _Avoid_: end-of-run request, Decisions for you
 
-**Checklist coverage receipt**:
-The record that every checklist domain was verified against the current shared specification and plan. Shared-artifact changes make that record stale until every domain is verified again.
-_Avoid_: presumed coverage, completion claim
-
 **Dispatch wave**:
 The agents a host launches together in one turn, such as the checklist domains or the analysts of one consensus round. The next wave starts only after every agent of the wave returned. A wave holds independent work; edits to a shared artifact stay serial, so two agents that write the same artifact never share a wave. Checklist executors propose edits together; the runner applies those edits one domain at a time.
 _Avoid_: parallel group, fan-out

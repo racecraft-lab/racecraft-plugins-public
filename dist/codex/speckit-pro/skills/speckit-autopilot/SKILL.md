@@ -350,8 +350,8 @@ Spawn a **separate subagent for each prompt**. Clarify has one. Checklist
 domains run together as dispatch waves while their executors only propose
 edits (see Dispatch waves), then the verify wave re-runs each domain once,
 then the two-layer resolution (Rule 6) runs once over every domain's
-unresolved items. A domain runs again only when a consensus edit changed an
-artifact for it.
+unresolved items. Every domain runs again only when a consensus edit changed
+spec.md or plan.md.
 
 Per-phase flow templates (the Clarify session, per-domain for
 Checklist) live in
@@ -886,7 +886,7 @@ original full list), `verify_baseline` (the pre-consensus spec/plan digests from
 `checklist-edits`, read_only), and `max_agents`. The runner reads both shared
 artifacts: if either changed, it returns only `pass: verify` waves for every
 original domain; otherwise it returns no waves. Missing or unreadable evidence
-fails closed. Legacy `consensus_edited` labels cannot narrow coverage. Checklist executors only
+fails closed, and edit labels are not inputs. Checklist executors only
 propose edits, so domain checks share a wave within the host limit. The
 runner applies their proposals one domain at a time, in workflow order.
 Pass `max_agents=subagent_slots`, derived as in the capacity rule above. The
@@ -913,8 +913,8 @@ Always request the final phase brief with the original `domains`,
 items or edit labels, before marking any domain completed. Consume every returned
 verify wave and guard it with a fresh `checklist-edits` read_only baseline and
 dry_run as for the first verify pass. With no shared edit the final brief is empty,
-so each domain still runs exactly twice. A missing `consensus_edited` cannot
-suppress verification: the runner compares disk content, not attribution.
+so each domain still runs exactly twice. The runner compares disk content, not
+attribution, so no label can narrow or suppress verification.
 
 Hooks: a loaded planning command runs its own mandatory hooks (`optional:
 false`), so the orchestrator never dispatches one. For optional hooks,
@@ -979,10 +979,6 @@ for phase in PHASES starting from first_pending:
        the original domain prompt, brief inputs, readable files and dispatch context.
        Then `checklist-edits`, mode dry_run, with no domains, no proposals and
        the verify baseline: a refusal means a verify run wrote an artifact.
-       After consuming every verify result, record its coverage with checklist-edits,
-       mode apply, domains=[], proposals=[], baseline=<verify baseline>, and
-       verified_domains=<all original domains in order>. G4 requires this receipt;
-       skipping the final request after a shared edit leaves stale evidence and fails G4.
        Build the consensus queue from initial run items plus every verify-pass 'Unresolved for consensus' item.
        Request the phase brief with items and verify_items, preserving initial apply conflicts.
        Always request the final phase brief with the original domains, verify_baseline
@@ -991,8 +987,7 @@ for phase in PHASES starting from first_pending:
        The final verify-pass unresolved items return to consensus under the existing
        shared reservation and round bounds; preserve pending items, append verify_items,
        and repeat the checkpoint using the just-verified baseline before further edits.
-       Exhaustion follows Failure Escalation; tasks remain incomplete. Attest each
-       complete verify wave set with verified_domains as above.
+       Exhaustion follows Failure Escalation; tasks remain incomplete.
        The runner compares shared spec.md/plan.md digests: any change verifies every
        domain, no change returns no final wave, and missing evidence fails closed.
        Other phases: run consensus (Clarify/Analyze only) — see Rule 6
