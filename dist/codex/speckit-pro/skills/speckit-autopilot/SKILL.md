@@ -168,11 +168,12 @@ Bind the workflow to actual Codex primitives:
 Do not translate this skill into Claude-only primitives such as legacy
 Claude agent/shell placeholders. Do not read the
 bundled TOML templates and inline them as ad hoc prompts. Validate that the
-required custom subagents are installed, then spawn them by agent name. Before
-any phase work, at setup or run start, if any required SpecKit Pro subagent is
-missing, STOP and instruct the user to run `$speckit-pro:install` from the SpecKit Pro
-plugin, then restart Codex. After phase work has begun, a plugin update or agent
-refresh is never a stop: follow §Plugin Update Mid-Run: Record, Re-resolve,
+required custom subagents are installed, then spawn them by agent name. A
+missing required SpecKit Pro subagent found at setup or run start is logged as
+`readiness stale: plugin_payload`, with `$speckit-pro:install` and a Codex restart as the fix
+(prerequisites.md Step 0.10); the run continues and that agent's phase defers.
+After phase work has begun, a plugin update or agent refresh follows
+§Plugin Update Mid-Run: Record, Re-resolve,
 Continue in [phase-execution.md](./references/phase-execution.md).
 
 ## Prerequisites — Model
@@ -295,9 +296,9 @@ Concrete Codex mapping:
   agents for Codex.
 - Resolve the installed agent from `.codex/agents/<agent>.toml` first, then
   `$CODEX_HOME/agents/<agent>.toml` (default `~/.codex/agents/`)
-- If the installed agent is missing at setup or run start, STOP and tell the
-  user to run `$speckit-pro:install`, then restart Codex. Mid-run, follow §Plugin Update
-  Mid-Run: Record, Re-resolve, Continue instead
+- If the installed agent is missing at setup or run start, log it as `readiness stale:
+  plugin_payload` (prerequisites.md Step 0.10) and defer that phase. Mid-run,
+  follow §Plugin Update Mid-Run: Record, Re-resolve, Continue instead
 - Build the phase prompt in the parent session
 - Call `spawn_agent` with `agent_type="<installed-agent-name>"` plus the
   workflow prompt
@@ -463,10 +464,12 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
    prerequisites, and fail closed on a broken installed extension: defer the
    Archive Sweep with the exact failed path or operation and continue to Phase 0.
 3. **Run the G0 setup seam** — call runner helper `g0-setup` in `read_only`
-   mode once per `inputs.probe`, in order: `prerequisites`, `commands`,
-   `presets`. Each call carries `inputs.workflow_file` and `inputs.surface`.
+   mode once per `inputs.probe`, in order: `readiness`, `prerequisites`,
+   `commands`, `presets`. Each call carries `inputs.workflow_file` and `inputs.surface`.
+   G0 reads the readiness record and continues: log each stale item per
+   `references/prerequisites.md` Step 0.0a, never a setup question.
    Set `G0_SURFACE` and `inputs.surface` to `codex`.
-   Read each unchanged probe report from `data.result.stdout_json`, its exit
+   Read each other unchanged probe report from `data.result.stdout_json`, its exit
    code from `data.result.exit_code`, and its error from `data.result.stderr`.
    Consume `data.quality_gate` only at Step 0.11, after the earlier setup work.
    Record `on_feature_branch`, `PROJECT_COMMANDS` (including the
@@ -490,11 +493,11 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
    promoted `install-codex-agents` helper in `dry_run` mode against the selected
    project or user destination and its installed model and Luna fallback
    choice. This check runs at setup or run start, before any phase work. If any
-   required file is missing or stale, STOP and instruct the user to run
-   `$speckit-pro:install`, approve the expected local write, and restart Codex. Do not apply
-   the repair inside autopilot: Codex fixes its list of custom agents when the
-   session starts. Once phase work has begun, a stale or refreshed agent file is
-   recorded, never a stop: see §Plugin Update Mid-Run: Record, Re-resolve,
+   required file is missing or stale, log `readiness stale: plugin_payload` with
+   `$speckit-pro:install` and a Codex restart as the fix, and continue. Agent files
+   change only through `$speckit-pro:install`: Codex fixes its list of custom agents
+   when the session starts. Once phase work has begun, a stale or refreshed agent
+   file is recorded: see §Plugin Update Mid-Run: Record, Re-resolve,
    Continue. Then discover `PROJECT_IMPLEMENTATION_AGENT` from `.codex/agents/`.
 6. **Load settings** — read `gate-failure` and `auto-commit` from
    `.claude/speckit-pro.local.md` or
