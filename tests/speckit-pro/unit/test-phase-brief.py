@@ -620,10 +620,11 @@ class TasksG4BindingTests(InProjectCase):
         return feature, verdict["judged"]
 
     def test_drift_in_each_judged_file_kind_refuses_tasks_on_both_hosts(self):
-        for name, kind in (("spec.md", "spec.md"), ("plan.md", "plan.md"), ("checklists/security.md", "checklist report")):
-            with self.subTest(input=name):
+        for (name, kind), content in product((("spec.md", "spec.md"), ("plan.md", "plan.md"), ("checklists/security.md", "checklist report")),
+                                            ("[Gap] sensitive replacement text\n", "Marker-free sensitive replacement text\n")):
+            with self.subTest(input=name, contains_gap="[Gap]" in content):
                 feature, judged = self.tree()
-                (feature / name).write_text("[Gap] sensitive replacement text\n", encoding="utf-8")
+                (feature / name).write_text(content, encoding="utf-8")
                 inputs = {"phase": "Tasks", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example", "g4_judged": judged}
                 for result in (dispatch_brief(inputs), *payload_briefs(inputs, include_status=True)):
                     self.assertEqual("input_error", result["status"])
@@ -631,6 +632,25 @@ class TasksG4BindingTests(InProjectCase):
                     self.assertEqual("g4_input_drift", result["diagnostics"][0]["code"])
                     self.assertIn(kind, result["diagnostics"][0]["message"])
                     self.assertNotIn("sensitive replacement text", json.dumps(result))
+
+    def test_no_drift_accepts_every_report_name_g4_accepts(self):
+        feature, _ = self.tree()
+        (feature / "checklists/security.md").rename(feature / "checklists/.md")
+        judged = json.loads(read_only.validate_gate({"gate": "G4", "feature_dir": "specs/example"}, Path.cwd())["stdout"])["judged"]
+        inputs = {"phase": "Tasks", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example", "g4_judged": judged}
+        for result in (dispatch_brief(inputs), *payload_briefs(inputs, include_status=True)):
+            self.assertEqual("ok", result["status"])
+
+    def test_missing_inputs_name_the_failed_kind_on_both_hosts(self):
+        for name, kind in (("spec.md", "spec.md"), ("plan.md", "plan.md"), ("checklists/security.md", "checklist report")):
+            with self.subTest(input=name):
+                feature, judged = self.tree()
+                (feature / name).unlink()
+                inputs = {"phase": "Tasks", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example", "g4_judged": judged}
+                for result in (dispatch_brief(inputs), *payload_briefs(inputs, include_status=True)):
+                    self.assertEqual("input_error", result["status"])
+                    self.assertEqual({}, result["data"])
+                    self.assertIn(kind, result["diagnostics"][0]["message"])
 
     def test_no_drift_starts_tasks_as_today_on_both_hosts(self):
         _, judged = self.tree()

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import ast
-from contextlib import ExitStack
+from contextlib import ExitStack, contextmanager
 import hashlib
 import itertools
 import json
@@ -2112,6 +2112,24 @@ G4_MAX_REPORTS = 64
 G4_MAX_BYTES = 8 * 1024 * 1024
 
 
+class G4InputDrift(ValueError):
+    """A Tasks input no longer matches the preceding G4 snapshot."""
+
+
+@contextmanager
+def g4_input_kind(kind: str) -> Any:
+    """Translate unsafe snapshot reads into a sanitized input-kind diagnostic."""
+    try:
+        yield
+    except (OSError, ValueError):
+        raise G4InputDrift(f"G4 input drift: {kind} is unsafe, changed or unreadable") from None
+
+
+def g4_report_name(name: str) -> bool:
+    """The one display-safe, flat Markdown report-name contract."""
+    return name.endswith(".md") and re.fullmatch(r"[A-Za-z0-9_.-]+", name) is not None
+
+
 def g4_reports(directory: int) -> dict[str, os.stat_result]:
     """Capture the bounded flat entry set through a held directory descriptor."""
     with os.scandir(directory) as listing:
@@ -2122,7 +2140,7 @@ def g4_reports(directory: int) -> dict[str, os.stat_result]:
     for name, info in entries.items():
         if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
             raise ValueError("checklists/ holds a directory, link or special file")
-        if name.endswith(".md") and re.fullmatch(r"[A-Za-z0-9_.-]+", name) is None:
+        if name.endswith(".md") and not g4_report_name(name):
             raise ValueError("checklists/ holds an unsafe report name")
     if not any(name.endswith(".md") for name in entries):
         raise ValueError("checklists/ holds no checklist report")
@@ -2132,43 +2150,55 @@ def g4_reports(directory: int) -> dict[str, os.stat_result]:
 def g4_check_entries(directory: int, entries: dict[str, os.stat_result]) -> None:
     """Refuse a changed name, inode or mutation signature without re-reading content."""
     for name, before in entries.items():
-        after = os.stat(name, dir_fd=directory, follow_symlinks=False)
-        if tree_entry_signature(before) != tree_entry_signature(after):
-            raise ValueError("G4 input changed during capture")
+        kind = name if name in ("spec.md", "plan.md") else "checklists entry" if name == "checklists" else "checklist report"
+        with g4_input_kind(kind):
+            after = os.stat(name, dir_fd=directory, follow_symlinks=False)
+            if tree_entry_signature(before) != tree_entry_signature(after):
+                raise ValueError("G4 input changed during capture")
 
 
 def g4_snapshot(feature: Path, repo_root: Path) -> dict[str, bytes]:
     """Capture stable bounded bytes relative to held parents, then validate their namespace."""
     with ExitStack() as stack:
-        feature_fd = trusted_open_directory(feature, repo_root)
-        if feature_fd is None:
-            raise ValueError("G4 feature directory is missing, linked or unreadable")
+        with g4_input_kind("feature entry"):
+            feature_fd = trusted_open_directory(feature, repo_root)
+            if feature_fd is None:
+                raise ValueError("G4 feature directory is missing, linked or unreadable")
         stack.callback(os.close, feature_fd)
-        directory_fd = os.open("checklists", os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=feature_fd)
+        with g4_input_kind("checklists entry"):
+            directory_fd = os.open("checklists", os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=feature_fd)
         stack.callback(os.close, directory_fd)
-        reports = g4_reports(directory_fd)
-        shared = {name: os.stat(name, dir_fd=feature_fd, follow_symlinks=False) for name in ("spec.md", "plan.md")}
+        with g4_input_kind("checklist report set"):
+            reports = g4_reports(directory_fd)
+        shared = {}
+        for name in ("spec.md", "plan.md"):
+            with g4_input_kind(name):
+                shared[name] = os.stat(name, dir_fd=feature_fd, follow_symlinks=False)
         files = [(name, feature_fd, name, info) for name, info in shared.items()]
         files += [(f"checklists/{name}", directory_fd, name, info) for name, info in reports.items() if name.endswith(".md")]
         snapshot: dict[str, bytes] = {}
         for key, parent, name, info in files:
-            if not stat.S_ISREG(info.st_mode):
-                raise ValueError("G4 requires regular files")
-            content = read_tree_entry(parent, name, info, byte_limit=G4_MAX_BYTES - sum(map(len, snapshot.values())))[Path()][1]
-            if content is None:
-                raise ValueError("G4 requires file content")
-            snapshot[key] = content
+            with g4_input_kind(name if key in shared else "checklist report"):
+                if not stat.S_ISREG(info.st_mode):
+                    raise ValueError("G4 requires regular files")
+                content = read_tree_entry(parent, name, info, byte_limit=G4_MAX_BYTES - sum(map(len, snapshot.values())))[Path()][1]
+                if content is None:
+                    raise ValueError("G4 requires file content")
+                snapshot[key] = content
         g4_check_entries(feature_fd, shared)
         g4_check_entries(directory_fd, reports)
-        if set(g4_reports(directory_fd)) != set(reports):
-            raise ValueError("G4 checklist entries changed during capture")
+        with g4_input_kind("checklist report set"):
+            if set(g4_reports(directory_fd)) != set(reports):
+                raise ValueError("G4 checklist entries changed during capture")
         g4_check_entries(feature_fd, {"checklists": os.fstat(directory_fd)})
-        current_fd = trusted_open_directory(feature, repo_root)
-        if current_fd is None:
-            raise ValueError("G4 feature directory changed during capture")
+        with g4_input_kind("feature entry"):
+            current_fd = trusted_open_directory(feature, repo_root)
+            if current_fd is None:
+                raise ValueError("G4 feature directory changed during capture")
         stack.callback(os.close, current_fd)
-        if tree_entry_signature(os.fstat(current_fd)) != tree_entry_signature(os.fstat(feature_fd)):
-            raise ValueError("G4 feature directory changed during capture")
+        with g4_input_kind("feature entry"):
+            if tree_entry_signature(os.fstat(current_fd)) != tree_entry_signature(os.fstat(feature_fd)):
+                raise ValueError("G4 feature directory changed during capture")
         return snapshot
 
 
@@ -2200,15 +2230,11 @@ def checked_g4_judged(raw: Any) -> dict[str, str]:
         raise ValueError("G4 judged digests require spec.md and plan.md")
     for name, digest in raw.items():
         if not isinstance(name, str) or (name not in ("spec.md", "plan.md")
-                and re.fullmatch(r"checklists/[A-Za-z0-9_.-]+\.md", name) is None):
+                and not (name.startswith("checklists/") and g4_report_name(name.removeprefix("checklists/")))):
             raise ValueError("G4 judged digests require flat checklist report names")
         if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
             raise ValueError("G4 judged digests require SHA-256 values")
     return dict(raw)
-
-
-class G4InputDrift(ValueError):
-    """A Tasks input no longer matches the preceding G4 snapshot."""
 
 
 def check_g4_inputs(feature: Path, repo_root: Path, judged: dict[str, str]) -> None:
@@ -2216,7 +2242,7 @@ def check_g4_inputs(feature: Path, repo_root: Path, judged: dict[str, str]) -> N
     current = json.loads(g4_result(feature, repo_root)["stdout"])
     actual = current.get("judged")
     if not isinstance(actual, dict):
-        raise G4InputDrift("G4 input drift: shared artifact, checklist report or feature namespace is unsafe or unreadable")
+        raise G4InputDrift(current["reason"])
     for name in ("spec.md", "plan.md"):
         if actual.get(name) != judged[name]:
             raise G4InputDrift(f"G4 input drift: {name}")

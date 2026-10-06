@@ -223,20 +223,17 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
         to the workflow root unless absolute; a trailing slash means contents.
         Loaded command instructions, templates and scripts remain implicit.
     gate: str, G1 through G6 for the parent's separate validate-gate request.
-    slices: list[str], ordered reference excerpts, each a section copied
-        verbatim from the plugin's own references, for the orchestrator to
-        insert into the dispatch prompt; never paths to whole references.
-        Clarify, Checklist and Analyze carry discovery, grounding and
-        category-tag sections; the other phases return [].
+    slices: list[str], ordered verbatim plugin-reference sections for the dispatch prompt.
+        Clarify, Checklist and Analyze carry discovery, grounding and category-tag
+        sections; the other phases return [].
     waves: list[list[{agent: str, inputs: object, model: ModelSelection}]],
         ordered sequential waves; each inner list holds concurrent dispatches, with a
         host-neutral role, JSON prompt inputs and its own model selection (the shape of
         model below); empty without domains or items.
     model: {claude: {model: str, effort: str},
         codex: {model: str, effort: str}}, host-specific dispatch configuration;
-        applies to the top-level agent only. Codex phase-executor omits file
-        effort; this field supplies it per phase. Other phases follow their
-        inventory row. Claude passes model and keeps agent effort; Codex passes both.
+        top-level dispatch only; Claude passes model and keeps agent effort,
+        Codex passes both. Inventory defaults and phase overrides select them.
     hooks: list[{extension, command, event, optional: true, prompt, description}],
         enabled optional suggestions from .specify/extensions.yml, once per event.
         Fields except optional are strings; prompt/description are runner-owned.

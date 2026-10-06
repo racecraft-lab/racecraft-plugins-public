@@ -671,7 +671,7 @@
         "value": "speckit_pro_runner/helpers/phase_brief.py",
         "display": "speckit_pro_runner/helpers/phase_brief.py"
       },
-      "sha256": "d0356876b1325c6503f23d2acb3f9379c65e16c052feeb13403d1cdf1468c04f"
+      "sha256": "6efc3cbc057e1ef120d5cbd0ac46ba88adf562aaf0809657ecaf42331abc3a62"
     },
     {
       "path": {
@@ -719,7 +719,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "a0892299182843f7c0c273cac8dfec9108f24b58e6223889f63b8579a2564077"
+      "sha256": "4b366ec282f6bc1f3024d42453a9d925740a1e3e7e45aab9d8faddb58f011ee6"
     },
     {
       "path": {

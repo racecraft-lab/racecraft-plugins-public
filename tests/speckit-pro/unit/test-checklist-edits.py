@@ -1511,7 +1511,7 @@ class GateFourTests(ChecklistEditsCase):
                 placeholder.write_bytes(b"")
                 result = self.gate()
                 self.assertFalse(result["pass"], result)
-                self.assertIn("no checklist report", result["reason"])
+                self.assertIn("checklist report", result["reason"])
                 placeholder.unlink()
 
     def test_g4_ignores_non_reports_but_validates_every_entry(self) -> None:
