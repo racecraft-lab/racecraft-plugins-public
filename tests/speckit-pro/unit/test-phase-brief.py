@@ -777,9 +777,9 @@ class PhaseBriefWaveTests(InProjectCase):
         self.assertIn("issue one spawn_agent per entry in one turn", self.loop("codex"))
         self.assertIn("model=entry.model.codex.model", self.loop("codex"))
         reference = (host_skill_root("codex") / "speckit-autopilot/references/phase-execution.md").read_text()
-        self.assertTrue("For each brief wave: issue one spawn_agent per entry in one turn" in reference)
-        self.assertTrue("one bounded wait_agent loop until every entry returned its terminal result" in reference)
-        self.assertFalse("For each item → spawn the category-routed analysts" in reference)
+        self.assertIn("For each brief wave: issue one spawn_agent per entry in one turn", reference)
+        self.assertIn("one bounded wait_agent loop until every entry returned its terminal result", reference)
+        self.assertNotIn("For each item → spawn the category-routed analysts", reference)
         for host in ("claude", "codex"):
             self.assertTrue(all(needle in self.loop(host) for needle in ("### Dispatch waves", "Each brief wave")), host)
 
