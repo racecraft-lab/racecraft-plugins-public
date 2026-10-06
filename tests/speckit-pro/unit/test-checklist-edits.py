@@ -103,6 +103,25 @@ class ChecklistEditsCase(MutationRequestCase):
 
         return self.before_write(fail)
 
+    def after_call(self, name: str, action: Callable[[], None]) -> Any:
+        """Patch checklist_edits.`name` so `action` runs right after each real call returns."""
+        real = getattr(checklist_edits, name)
+
+        def wrapped(*args: Any, **kwargs: Any) -> Any:
+            returned = real(*args, **kwargs)
+            action()
+            return returned
+
+        return patch.object(checklist_edits, name, wrapped)
+
+    def assert_interrupted_after_writes(self, result: dict[str, Any], record_written: bool) -> None:
+        """Every domain reached disk, nothing is half written, and the record is reported as it is on disk."""
+        self.assertEqual(("expected_failure", "apply_interrupted", ["security", "ux", "api"], [], record_written),
+                         (result["status"], result["diagnostics"][0]["code"], result["data"].get("applied"),
+                          result["data"].get("partial"), result["data"].get("record_written")), result)
+        self.assert_both_written()
+        self.assertEqual(record_written, (self.root / RECORD).is_file())
+
     def around_lock(self, *, on_acquire: Callable[[], None] = lambda: None,
                     on_release: Callable[[], None] = lambda: None) -> Any:
         """Patch the apply lock so `on_acquire` runs before it is taken and `on_release` after it is released."""
@@ -539,14 +558,7 @@ class CanonicalResultTests(ChecklistEditsCase):
         self.assertEqual(SPEC, self.text("spec.md"))
 
     def test_a_feature_directory_swapped_after_the_last_write_is_never_reported_applied(self) -> None:
-        real = checklist_edits.write_bytes_atomic
-
-        def write_then_swap(path: Path, content: bytes, **kwargs: Any) -> Any:
-            written = real(path, content, **kwargs)
-            swap_feature_directory(self.root)
-            return written
-
-        with patch.object(checklist_edits, "write_bytes_atomic", write_then_swap):
+        with self.after_call("write_bytes_atomic", partial(swap_feature_directory, self.root)):
             result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
         self.assertEqual(("expected_failure", "apply_interrupted"), (result["status"], result["diagnostics"][0]["code"]), result)
         self.assertIn("spec.md", result["data"].get("moved", []), result)
@@ -718,10 +730,7 @@ class CommittedStateTests(ChecklistEditsCase):
     def test_a_lock_release_failure_after_the_writes_reports_them(self) -> None:
         with self.around_lock(on_release=partial(raise_error, OSError("lock cleanup failed"))):
             result = self.apply_both()
-        self.assertEqual(("expected_failure", ["security", "ux", "api"], True),
-                         (result["status"], result["data"].get("applied"), result["data"].get("record_written")), result)
-        self.assert_both_written()
-        self.assertTrue((self.root / RECORD).is_file())
+        self.assert_interrupted_after_writes(result, record_written=True)
 
 
 class RecordStateTests(ChecklistEditsCase):
@@ -730,11 +739,7 @@ class RecordStateTests(ChecklistEditsCase):
     def test_a_failure_before_record_publication_reports_both_artifacts_and_no_record(self) -> None:
         with patch.object(checklist_edits, "write_file_atomic", side_effect=OSError("record publication failed")):
             result = self.apply_both()
-        self.assertEqual(("expected_failure", "apply_interrupted", ["security", "ux", "api"], [], False),
-                         (result["status"], result["diagnostics"][0]["code"], result["data"].get("applied"),
-                          result["data"].get("partial"), result["data"].get("record_written")), result)
-        self.assert_both_written()
-        self.assertFalse((self.root / RECORD).exists())
+        self.assert_interrupted_after_writes(result, record_written=False)
 
     def test_a_record_parent_open_failure_reports_both_artifacts_and_no_record(self) -> None:
         real = checklist_edits.write_file_atomic
@@ -859,18 +864,9 @@ class RecordStateTests(ChecklistEditsCase):
                 self.assertIn("absent or different (publication completed)", result["diagnostics"][0]["message"])
 
     def test_a_record_published_before_its_failure_is_reported_written(self) -> None:
-        real = checklist_edits.write_file_atomic
-
-        def publish_then_fail(path: Path, content: str, **kwargs: Any) -> None:
-            real(path, content, **kwargs)
-            raise OSError("directory sync failed")
-
-        with patch.object(checklist_edits, "write_file_atomic", publish_then_fail):
+        with self.after_call("write_file_atomic", partial(raise_error, OSError("directory sync failed"))):
             result = self.apply_both()
-        self.assertEqual(("expected_failure", "apply_interrupted"), (result["status"], result["diagnostics"][0]["code"]), result)
-        self.assertEqual((["security", "ux", "api"], True), (result["data"]["applied"], result["data"].get("record_written")), result)
-        self.assertTrue((self.root / RECORD).is_file())
-        self.assert_both_written()
+        self.assert_interrupted_after_writes(result, record_written=True)
 
     def test_a_record_path_held_by_a_directory_is_refused_before_any_write(self) -> None:
         (self.root / RECORD).mkdir(parents=True)
