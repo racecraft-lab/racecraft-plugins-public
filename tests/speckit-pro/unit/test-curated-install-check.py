@@ -325,7 +325,7 @@ class RegistryDescriptorTests(CuratedInstallCase):
 
 
 class CompletedInstallTests(CuratedInstallCase):
-    """An aborted extension install is not an install: only a registered one is a pass."""
+    """Neither an aborted install nor the legacy opt-in supplies owner acceptance."""
 
     def run_main(self, args=(), *, init_exit=0, register=True, preset_ok=True):
         installs = []
@@ -372,13 +372,13 @@ class CompletedInstallTests(CuratedInstallCase):
             self.assertIn(f"UNPROVEN extension {entry['id']}: needs operator confirmation", stderr)
         self.assertEqual(installs, [])
 
-    def test_opted_in_run_passes_only_when_each_extension_is_registered(self):
+    def test_legacy_opt_in_fails_closed_without_attempting_installs(self):
         status, stdout, stderr, installs = self.run_main(["--trust-pinned-archives"])
-        self.assertEqual((status, stderr), (0, ""))
-        self.assertIn("6/6 passed", stdout)
-        self.assertEqual(len(installs), len(EXTENSIONS))
-        for argv in installs:
-            self.assertIn("--trust-extension-urls", argv)
+        self.assertEqual(status, 1)
+        self.assertIn("1/6 passed", stdout)
+        for entry in EXTENSIONS:
+            self.assertIn(f"FAIL extension {entry['id']}: completed install is unproven; owner-run acceptance is required", stderr)
+        self.assertEqual(installs, [])
 
     def test_opted_in_run_fails_when_the_install_is_not_registered(self):
         for label, options in (("unregistered", {"register": False}), ("nonzero", {"init_exit": 1})):
@@ -393,6 +393,70 @@ class CompletedInstallTests(CuratedInstallCase):
         status, _, stderr, _ = self.run_main(preset_ok=False)
         self.assertEqual(status, 1)
         self.assertIn("FAIL preset", stderr)
+
+
+class CompletedInstallEvidenceTests(CuratedInstallCase):
+    """A successful init and leftover artifacts cannot certify a completed install."""
+
+    def assert_completion_unproven(self, variant):
+        for entry in EXTENSIONS:
+            with self.scenario(entry=entry["id"], variant=variant) as project:
+                target = project / ".specify/extensions" / entry["id"]
+                target.mkdir(parents=True)
+                registry = target.parent / ".registry"
+                data = {"extensions": {entry["id"]: {"enabled": True}}}
+                if variant == "empty-mapping":
+                    data["extensions"] = {}
+                elif variant == "different-id":
+                    data["extensions"] = {"different-extension": {"enabled": True}}
+                elif variant == "disabled":
+                    data["extensions"][entry["id"]]["enabled"] = False
+                if variant != "absent-registry":
+                    registry.write_text("{" if variant == "malformed-registry" else json.dumps(data), encoding="utf-8")
+                if variant != "missing-manifest":
+                    declared = "different-extension" if variant == "wrong-manifest-id" else entry["id"]
+                    (target / "extension.yml").write_text(f'extension:\n  id: {declared}\n', encoding="utf-8")
+                # Model init's successful exit without trusting its artifacts. No CLI runs.
+                with mock.patch.object(check.tempfile, "TemporaryDirectory") as temporary, mock.patch.object(
+                    check, "init_project", return_value=[]
+                ):
+                    temporary.return_value.__enter__.return_value = str(project)
+                    self.assertEqual(check.check_completed_install(entry), [
+                        f"extension {entry['id']}: completed install is unproven; owner-run acceptance is required"
+                    ])
+
+    def test_absent_registry_cannot_certify_completion(self):
+        self.assert_completion_unproven("absent-registry")
+
+    def test_malformed_registry_cannot_certify_completion(self):
+        self.assert_completion_unproven("malformed-registry")
+
+    def test_empty_registry_mapping_cannot_certify_completion(self):
+        self.assert_completion_unproven("empty-mapping")
+
+    def test_different_registry_id_cannot_certify_completion(self):
+        self.assert_completion_unproven("different-id")
+
+    def test_disabled_registry_entry_cannot_certify_completion(self):
+        self.assert_completion_unproven("disabled")
+
+    def test_missing_manifest_cannot_certify_completion(self):
+        self.assert_completion_unproven("missing-manifest")
+
+    def test_wrong_manifest_id_cannot_certify_completion(self):
+        self.assert_completion_unproven("wrong-manifest-id")
+
+    def test_apparently_valid_artifacts_are_not_owner_acceptance(self):
+        self.assert_completion_unproven("apparently-valid")
+
+    def test_completion_check_never_attempts_an_install(self):
+        for entry in EXTENSIONS:
+            with self.subTest(entry=entry["id"]), mock.patch.object(check, "init_project", return_value=[]) as init, mock.patch.object(
+                check, "specify"
+            ) as specify:
+                self.assertTrue(check.check_completed_install(entry))
+                init.assert_not_called()
+                specify.assert_not_called()
 
 
 class CuratedRosterTests(CuratedInstallCase):

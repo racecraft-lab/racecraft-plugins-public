@@ -14,10 +14,8 @@ skills give the operator, `<kind> add <id> --from <archive_url>`, in a fresh `sp
   prompt (the discovery-only refusal is gone), a verifiably empty registry, and an archive whose
   `extension.yml` declares the entry's id. That proves the refusal is gone, not that an install
   succeeds, so each extension is reported "unproven: needs operator confirmation" and the run exits 2.
-- With `--trust-pinned-archives` the operator authorizes the pinned archives. Each extension is then
-  installed in its own fresh project through `specify init --extension <archive_url>
-  --trust-extension-urls`, Spec Kit's documented non-interactive trust flag (`extension add` has none),
-  and passes only when it is registered. Run it yourself; no agent should.
+- The legacy `--trust-pinned-archives` option fails closed: this check cannot certify a completed
+  extension install and never bypasses the trust prompt. Live acceptance belongs to the operator.
 
 Exit codes: 0 every entry passed, 1 a failure, 2 no failure but some extension is unproven.
 """
@@ -167,16 +165,11 @@ def fresh_project(project: Path) -> list[str]:
 
 
 def check_completed_install(entry: dict[str, str]) -> list[str]:
-    """Install one extension through Spec Kit's documented trust flag and require its registration."""
+    """Fail closed until the operator supplies completed-install acceptance outside this check."""
     label = f"{entry['kind']} {entry['id']}"
-    with tempfile.TemporaryDirectory(prefix="curated-install-") as raw:
-        project = Path(raw)
-        failures = init_project(project, ["--extension", entry["archive_url"], "--trust-extension-urls"])
-        if failures:
-            return [f"{label}: completed install failed: {failures[0]}"]
-        if registry_entries(project, "extension", entry["id"]) is None:
-            return [f"{label}: not registered after the completed install"]
-    return []
+    # Directory presence and init's exit status are not registration or manifest evidence.
+    # Do not manufacture that evidence by pre-authorizing third-party extension execution.
+    return [f"{label}: completed install is unproven; owner-run acceptance is required"]
 
 
 def entry_result(entry: dict[str, str], project: Path, trust_archives: bool) -> tuple[str, list[str]]:
@@ -194,7 +187,7 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--curated-set", type=Path, default=CURATED_SET)
     parser.add_argument(
         "--trust-pinned-archives", action="store_true",
-        help="operator opt-in: install each extension from its pinned archive with Spec Kit's trust flag",
+        help="legacy option: fails closed; completed installs need owner-run acceptance",
     )
     args = parser.parse_args(argv)
     entries = json.loads(args.curated_set.read_text(encoding="utf-8"))["entries"]
