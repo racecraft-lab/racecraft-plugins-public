@@ -87,6 +87,9 @@ class ValidateCuratedSet(unittest.TestCase):
                 url = entry.get('archive_url')
                 self.assertTrue(isinstance(url, str) and ARCHIVE_URL.fullmatch(url), f'archive_url={url!r}')
 
+
+class CuratedGuidanceContracts(unittest.TestCase):
+
     def test_install_and_upgrade_skills_install_through_from(self) -> None:
         guide = ' '.join((PLUGIN_ROOT / 'skills' / 'speckit-coach' / 'references' / 'presets-extensions-guide.md').read_text(encoding='utf-8').split())
         with self.subTest(msg='guide says what the pin guarantees and what the operator reviews'):
@@ -101,6 +104,7 @@ class ValidateCuratedSet(unittest.TestCase):
                 self.assertIn('pins the bytes but does not vet them', flat)
             with self.subTest(msg=f'{skill} no longer tells the operator to add by catalog id'):
                 self.assertNotIn('"extension", "add", "<id>"]', flat)
+
 
 def main() -> int:
     suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])
