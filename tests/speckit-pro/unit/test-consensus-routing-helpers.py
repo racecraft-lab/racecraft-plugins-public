@@ -566,17 +566,18 @@ class ReferenceProseTests(unittest.TestCase):
                 self.assertIn("ELSE IF Flags includes [ROUND_3_TIEBREAK] OR low confidence", batch)
 
     def test_security_retry_exhaustion_and_phase_diagrams_match_the_tiers(self) -> None:
+        required = (
+            "If a retry fails or escapes again",
+            "If the replacement fails or escapes",
+            "Stage 6 — Apply accepted Round-2 edits serially; unresolved items go to Round 3",
+            *(f"one synthesizer per security {item}" for item in ("item", "gap", "finding")),
+        )
+        retired = ("### Two-analyst rule", "two disagreeing Round 1 analysts", "N=1 high-confidence | N=2 both-agree")
         for host in HOSTS:
             with self.subTest(host=host):
                 text = (host_skill_root(host) / TIER_REFERENCE).read_text(encoding="utf-8")
-                self.assertIn("If a retry fails or escapes again", text)
-                self.assertIn("If the replacement fails or escapes", text)
-                self.assertIn("Stage 6 — Apply accepted Round-2 edits serially; unresolved items go to Round 3", text)
-                self.assertNotIn("### Two-analyst rule", text)
-                self.assertNotIn("two disagreeing Round 1 analysts", text)
-                for item in ("item", "gap", "finding"):
-                    self.assertIn(f"one synthesizer per security {item}", text)
-                self.assertNotIn("N=1 high-confidence | N=2 both-agree", text)
+                self.assertEqual([], [phrase for phrase in required if phrase not in text])
+                self.assertEqual([], [phrase for phrase in retired if phrase in text])
 
 
 class SecurityKeywordCopyTests(unittest.TestCase):
