@@ -380,25 +380,24 @@ class PayloadCopySecurity(unittest.TestCase):
         self.outside.mkdir()
         (self.outside / "leaf.md").write_text("unreviewed")
 
-    def test_claude_and_codex_reject_leaf_file_symlinks(self) -> None:
-        (self.source / "leaf.md").unlink()
-        (self.source / "leaf.md").symlink_to(self.outside / "leaf.md")
+    def assert_rejected_on_both_hosts(self) -> None:
         for host in ("claude", "codex"):
             with self.subTest(host=host), self.assertRaises(OSError):
                 payloads.copy_optional_installed_plugin(self.source, self.root / host)
 
+    def test_claude_and_codex_reject_leaf_file_symlinks(self) -> None:
+        (self.source / "leaf.md").unlink()
+        (self.source / "leaf.md").symlink_to(self.outside / "leaf.md")
+        self.assert_rejected_on_both_hosts()
+
     def test_both_hosts_reject_leaf_directory_symlinks(self) -> None:
         (self.source / "templates").symlink_to(self.outside, target_is_directory=True)
-        for host in ("claude", "codex"):
-            with self.subTest(host=host), self.assertRaises(OSError):
-                payloads.copy_optional_installed_plugin(self.source, self.root / host)
+        self.assert_rejected_on_both_hosts()
 
     def test_both_hosts_reject_top_level_directory_symlinks(self) -> None:
         shutil.rmtree(self.source)
         self.source.symlink_to(self.outside, target_is_directory=True)
-        for host in ("claude", "codex"):
-            with self.subTest(host=host), self.assertRaises(OSError):
-                payloads.copy_optional_installed_plugin(self.source, self.root / host)
+        self.assert_rejected_on_both_hosts()
 
     def test_hard_linked_leaves_are_rejected(self) -> None:
         (self.source / "leaf.md").unlink()
