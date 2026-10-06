@@ -41,6 +41,19 @@ def atomic_write_cleanup_errors(exc: OSError) -> list[str]:
     return errors if isinstance(errors, list) else []
 
 
+def cleanup_temporary_entry(parent_fd: int, name: str, failure: OSError | None) -> list[str]:
+    """Remove an owned temporary entry; a failed rollback transfers it to the competing writer."""
+    if isinstance(failure, AtomicWriteInterrupted):
+        return []
+    try:
+        os.unlink(name, dir_fd=parent_fd)
+    except FileNotFoundError:
+        return []  # Successful replacement already removed the temporary name.
+    except OSError:
+        return [f"{name}:OSError"]
+    return []
+
+
 def validate_target_path(raw: str, repo_root: Path) -> dict[str, Any] | None:
     if "\x00" in raw:
         return path_diagnostic("invalid_input", "path contains a NUL byte", {"field": "target"})
@@ -193,15 +206,7 @@ def write_bytes_atomic(
             except OSError:
                 # Best-effort cleanup only; a close error cannot safely change the write outcome.
                 pass
-        if not isinstance(failure, AtomicWriteInterrupted):
-            try:
-                os.unlink(tmp_name, dir_fd=parent_fd)
-            except FileNotFoundError:
-                # The temp name is absent after successful replace; cleanup is already complete.
-                pass
-            except OSError:
-                # Best-effort cleanup only; the write outcome is already determined.
-                tmp_cleanup_errors.append(f"{tmp_name}:OSError")
+        tmp_cleanup_errors = cleanup_temporary_entry(parent_fd, tmp_name, failure)
         close_error: OSError | None = None
         try:
             os.close(parent_fd)
