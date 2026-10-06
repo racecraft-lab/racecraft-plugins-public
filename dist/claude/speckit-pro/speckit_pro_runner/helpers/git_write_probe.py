@@ -30,6 +30,7 @@ STOP_ACTION = ("Approve git writes, or add the repository's .git directory to "
 
 
 DENIED = frozenset({errno.EACCES, errno.EPERM, errno.EROFS})
+PROBE_CLEANUP_DIRECTORY = ".speckit-git-write-probe.cleanup"
 ANCHORED_PROBE_SUPPORTED = (
     hasattr(os, "O_NOFOLLOW") and hasattr(os, "O_DIRECTORY")
     and hasattr(os, "geteuid")
@@ -52,13 +53,14 @@ def close_probe_descriptor(fd: int, errors: list[OSError]) -> None:
 
 
 @contextmanager
-def probe_directory(common: Path, directory: Path, errors: list[OSError]) -> Iterator[int]:
+def probe_directory(common: Path, directory: Path, errors: list[OSError]) -> Iterator[tuple[int, int]]:
     """Hold each component below the canonical Git directory without following links."""
     if not ANCHORED_PROBE_SUPPORTED:
         raise OSError(errno.ENOTSUP, "descriptor-relative git write probe unavailable")
     flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
     with ExitStack() as stack:
         fd = os.open(common, flags)
+        common_fd = fd
         stack.callback(close_probe_descriptor, fd, errors)
         for component in directory.relative_to(common).parts:
             try:
@@ -68,7 +70,7 @@ def probe_directory(common: Path, directory: Path, errors: list[OSError]) -> Ite
                     raise PermissionError(errno.EACCES, "unsafe git directory component") from error
                 raise
             stack.callback(close_probe_descriptor, fd, errors)
-        yield fd
+        yield common_fd, fd
 
 
 def create_probe_lock(directory_fd: int) -> tuple[int, str]:
@@ -108,7 +110,23 @@ def check_private_probe_directory(fd: int) -> None:
         raise PermissionError(errno.EACCES, "unsafe git probe cleanup directory")
 
 
-def retire_probe_lock(lock: str, directory_fd: int, created: os.stat_result) -> tuple[OSError | None, str | None]:
+@contextmanager
+def probe_cleanup_directory(directory_fd: int, errors: list[OSError]) -> Iterator[int]:
+    """Retain one private parent: deleting its public name could remove a replacement."""
+    with ExitStack() as stack:
+        flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+        try:
+            fd = os.open(PROBE_CLEANUP_DIRECTORY, flags, dir_fd=directory_fd)
+        except FileNotFoundError:
+            os.mkdir(PROBE_CLEANUP_DIRECTORY, 0o700, dir_fd=directory_fd)
+            fd = os.open(PROBE_CLEANUP_DIRECTORY, flags, dir_fd=directory_fd)
+        stack.callback(close_probe_descriptor, fd, errors)
+        check_private_probe_directory(fd)
+        yield fd
+
+
+def capture_probe_lock(lock: str, directory_fd: int, cleanup_fd: int,
+                       created: os.stat_result) -> tuple[OSError | None, str | None]:
     """Capture the public name before checking identity; never unlink that public name."""
     private = lock + ".cleanup"
     errors: list[OSError] = []
@@ -116,9 +134,9 @@ def retire_probe_lock(lock: str, directory_fd: int, created: os.stat_result) -> 
     private_fd = None
     private_created = False
     try:
-        os.mkdir(private, 0o700, dir_fd=directory_fd)
+        os.mkdir(private, 0o700, dir_fd=cleanup_fd)
         private_created = True
-        private_fd = os.open(private, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=directory_fd)
+        private_fd = os.open(private, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=cleanup_fd)
         private_created = False  # An unverified directory is not ours to remove.
         check_private_probe_directory(private_fd)
         private_created = True
@@ -128,7 +146,7 @@ def retire_probe_lock(lock: str, directory_fd: int, created: os.stat_result) -> 
         except FileNotFoundError:
             captured = False  # Already removed by someone else: nothing of ours is left to clean.
         if captured:
-            leftover = f"{private} ({lock})"
+            leftover = f"{PROBE_CLEANUP_DIRECTORY}/{private} ({lock})"
             current = os.stat(lock, dir_fd=private_fd, follow_symlinks=False)
             if (current.st_dev, current.st_ino) != (created.st_dev, created.st_ino):
                 # Exclusive link restores a captured replacement without overwriting a new public entry.
@@ -147,10 +165,24 @@ def retire_probe_lock(lock: str, directory_fd: int, created: os.stat_result) -> 
             close_probe_descriptor(private_fd, errors)
         if private_created:
             try:
-                os.rmdir(private, dir_fd=directory_fd)
+                os.rmdir(private, dir_fd=cleanup_fd)
             except OSError as error:
                 errors.append(error)
-                leftover = leftover or private
+                leftover = leftover or f"{PROBE_CLEANUP_DIRECTORY}/{private}"
+    return probe_error(errors), leftover or None
+
+
+def retire_probe_lock(lock: str, common_fd: int, directory_fd: int,
+                      created: os.stat_result) -> tuple[OSError | None, str | None]:
+    errors: list[OSError] = []
+    leftover: str | None = lock
+    try:
+        with probe_cleanup_directory(common_fd, errors) as cleanup_fd:
+            cleanup, leftover = capture_probe_lock(lock, directory_fd, cleanup_fd, created)
+            if cleanup is not None:
+                errors.append(cleanup)
+    except OSError as error:
+        errors.append(error)
     return probe_error(errors), leftover or None
 
 
@@ -159,11 +191,11 @@ def create_and_remove_lock(directory: Path, common: Path) -> tuple[OSError | Non
     leftover = None
     errors: list[OSError] = []
     try:
-        with probe_directory(common, directory, errors) as directory_fd:
+        with probe_directory(common, directory, errors) as (common_fd, directory_fd):
             fd, lock = create_probe_lock(directory_fd)
             leftover = lock
             try:
-                cleanup, leftover = retire_probe_lock(lock, directory_fd, os.fstat(fd))
+                cleanup, leftover = retire_probe_lock(lock, common_fd, directory_fd, os.fstat(fd))
                 if cleanup is not None:
                     errors.append(cleanup)
             finally:
