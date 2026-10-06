@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any, Callable, cast
 
+from ..checklist_coverage import coverage_problem
 from ..agent_inventory import CLAUDE_REQUIRED_AGENT_NAMES
 from ..canonical_json import canonical_bytes
 from ..codex_launch import executable_path, trusted_executable
@@ -2038,7 +2039,10 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
         checklist_gaps = count_pattern_dir(feature / "checklists", r"\[Gap\]", repo_root)
         gaps = spec_gaps + plan_gaps + checklist_gaps
         if gaps == 0:
-            return make_result(json_text({"gate": "G4", "pass": True, "reason": "0 [Gap] markers", "markers": 0, "details": []}))
+            problem = coverage_problem(repo_root, feature)
+            return make_result(json_text({"gate": "G4", "pass": problem is None,
+                                         "reason": problem or "0 [Gap] markers; checklist coverage is current",
+                                         "markers": 0, "details": []}), exit_code=1 if problem else 0)
         return make_result(
             json_text(
                 {

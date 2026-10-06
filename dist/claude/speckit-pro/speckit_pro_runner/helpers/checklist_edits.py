@@ -34,6 +34,7 @@ from typing import Any
 from ..atomic_write import (AtomicSwapUnavailable, AtomicWriteInterrupted, WritePreconditionChanged, file_identity, open_safe_parent_fd, snapshot_write_target_fd,
                             write_bytes_atomic, write_file_atomic, write_target_matches_snapshot)
 from ..canonical_json import canonical_bytes
+from ..checklist_coverage import ARTIFACTS, save_coverage
 from ..envelope import diagnostic, response
 from ..execution_control import confined_path, ignore_owned_directory, workflow_process_directory
 from ..strict_input import SelectionError, has_hidden_characters, next_fence, require_fields, require_text
@@ -42,7 +43,6 @@ from .dispatch_waves import DOMAIN_NAME
 from .execution_requests import Refusal, run_contained_helper
 
 SCHEMA_VERSION = "checklist-edits/v1"
-ARTIFACTS = ("spec.md", "plan.md")
 MAX_TEXT = 20000
 # Auto-application accepts prose, not Markdown syntax, references or path/token alphabets.
 PLAIN_PROSE = re.compile(r"[A-Za-z0-9 ,;!?'\"().-]*")
@@ -377,19 +377,39 @@ def record_on_disk(root: Path, record: Path, value: dict[str, Any] | None) -> bo
         return False
 
 
+def attest_verification(root: Path, feature: Path,
+                        checked: tuple[list[str], dict[str, str], dict[str, tuple[list[str], list[dict[str, str]]]]],
+                        verified: Any) -> dict[str, Any]:
+    """Record a complete read-only verify pass using the application-bound domain list."""
+    domains, baseline, proposals = checked
+    if domains or proposals:
+        raise SelectionError("verified_domains requires apply mode with no proposals or domains")
+    if not isinstance(verified, list) or not verified or any(not isinstance(name, str) for name in verified):
+        raise SelectionError("verified_domains must list every original domain")
+    with held_feature(root, feature, exclusive=True) as directory:
+        if changed_since(read_artifacts(directory), baseline):
+            raise SelectionError("shared artifacts changed during verification")
+        save_coverage(root, feature, verified, baseline)
+    return {"verified_domains": verified, "writes_state": True}
+
+
 def checklist_edits(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, Any]:
     """Snapshot (read_only), plan (dry_run) or apply (apply) one batch of domain proposals."""
     fields = {"workflow_file", "feature_dir"} | (set() if mode == "read_only" else {"domains", "baseline", "proposals"})
-    request = require_fields({key: value for key, value in inputs.items() if key != "repo_root"}, fields, "inputs")
+    request = require_fields({key: value for key, value in inputs.items() if key not in {"repo_root", "verified_domains"}}, fields, "inputs")
     workflow = require_text(request["workflow_file"], "workflow_file")
     if not confined_path(root, workflow).is_file():
         raise SelectionError("workflow_file must be an existing contained file")
     feature = confined_path(root, require_text(request["feature_dir"], "feature_dir"))
+    if "verified_domains" in inputs and mode != "apply":
+        raise SelectionError("verified_domains is an apply-only attestation")
     if mode == "read_only":
         with held_feature(root, feature, exclusive=False) as directory:
             return {"baseline": {name: snapshot["digest"] for name, snapshot in read_artifacts(directory).items()},
                     "writes_state": False}
     domains, baseline, proposals = checked_request(request)
+    if "verified_domains" in inputs:
+        return attest_verification(root, feature, (domains, baseline, proposals), inputs["verified_domains"])
     link = workflow_process_directory(workflow).joinpath("checklist-edits", "applied.json").as_posix()
     record = confined_path(root, link)
     progress = Progress()
@@ -449,6 +469,9 @@ def locked_apply(root: Path, feature: Path, record: Path, mode: str,
         progress.record_published = True
         progress.step = "verification"
         confirm(root, {**artifacts, record.name: (record, record_before[0], {"exists": True, **published})}, progress)
+        if domains:
+            progress.step = "coverage record"
+            save_coverage(root, feature, domains)
         progress.step = "lock release"
     return rows
 

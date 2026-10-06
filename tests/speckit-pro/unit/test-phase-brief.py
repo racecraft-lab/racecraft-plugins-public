@@ -738,7 +738,8 @@ class PhaseBriefWaveTests(InProjectCase):
         run, verify, analyst = ("checklist-executor", None), ("checklist-executor", "verify"), ("codebase-analyst", None)
         kinds = lambda **named: [(wave[0]["agent"], wave[0]["inputs"].get("pass")) for wave in self.waves("Checklist", items=list(self.ITEMS), **named)]
         self.assertEqual(kinds(domains=["ux"]), [run, verify, analyst, analyst])
-        self.assertEqual(kinds(domains=["ux"], consensus_edited=["ux"]), [run, verify, analyst, analyst, verify])
+        result = self.brief("Checklist", domains=["ux"], consensus_edited=["ux"])
+        self.assertEqual((result["status"], result["data"]), ("input_error", {}))
 
     def test_shared_spec_edit_reverifies_every_original_domain(self):
         self.shared_edit_checkpoint("spec.md", consensus_edited=["security"])
@@ -764,7 +765,8 @@ class PhaseBriefWaveTests(InProjectCase):
                              ["security", "ux", "security", "ux"])
 
     def test_misattributed_consensus_domain_is_rejected(self):
-        result = self.brief("Checklist", domains=["security", "ux"], consensus_edited=["api"])
+        baseline = self.checklist_snapshot()["baseline"]
+        result = self.brief("Checklist", domains=["security", "ux"], consensus_edited=["api"], verify_baseline=baseline)
         self.assertEqual((result["status"], result["data"]), ("input_error", {}))
 
     def checklist_snapshot(self):
@@ -774,8 +776,12 @@ class PhaseBriefWaveTests(InProjectCase):
         Path(self.BRIEF["workflow_file"]).write_text("Checklist workflow\n")
         for name in ("spec.md", "plan.md"):
             (feature / name).write_text("Initial requirements\n")
-        return checklist_edits.checklist_edits(Path.cwd(),
-            {key: self.BRIEF[key] for key in ("workflow_file", "feature_dir")}, "read_only")
+        context = {key: self.BRIEF[key] for key in ("workflow_file", "feature_dir")}
+        baseline = checklist_edits.checklist_edits(Path.cwd(), context, "read_only")
+        domains = ["security", "ux"]
+        checklist_edits.checklist_edits(Path.cwd(), {**context, "domains": domains, "baseline": baseline["baseline"],
+            "proposals": [{"domain": name, "gaps": [], "edits": []} for name in domains]}, "apply")
+        return baseline
 
     def shared_edit_checkpoint(self, artifact, **extra):
         baseline = self.checklist_snapshot()
@@ -786,6 +792,14 @@ class PhaseBriefWaveTests(InProjectCase):
             self.assertEqual(result["status"], "ok", result)
             self.assertEqual([[entry["inputs"] for entry in wave] for wave in result["data"]["waves"]],
                              [[{"domain": "security", "pass": "verify"}, {"domain": "ux", "pass": "verify"}]])
+
+    def test_final_checkpoint_cannot_drop_original_domains(self):
+        baseline = self.checklist_snapshot()["baseline"]
+        Path(self.BRIEF["feature_dir"], "spec.md").write_text("Changed shared requirement\n")
+        inputs = {"phase": "Checklist", **self.BRIEF, "domains": ["security"], "verify_baseline": baseline}
+        for result in [dispatch_brief(inputs), *payload_briefs(inputs, include_status=True)]:
+            self.assertNotEqual(result["status"], "ok", result)
+            self.assertEqual(result["data"], {})
 
     def test_final_checkpoint_observes_atomic_replacements_and_host_limits(self):
         baseline = self.checklist_snapshot()
@@ -837,11 +851,10 @@ class PhaseBriefWaveTests(InProjectCase):
                 result = self.brief(phase, **extra)
                 self.assertEqual((result["status"], result["data"]), ("input_error", {}))
 
-    def test_legacy_consensus_labels_widen_to_all_original_domains(self):
+    def test_consensus_labels_require_an_observed_shared_artifact_checkpoint(self):
         for named in (["security"], ["ux"]):
-            waves = self.waves("Checklist", domains=["security", "ux"], consensus_edited=named, max_agents=1)
-            self.assertEqual([entry["inputs"] for wave in waves[-2:] for entry in wave],
-                             [{"domain": "security", "pass": "verify"}, {"domain": "ux", "pass": "verify"}])
+            result = self.brief("Checklist", domains=["security", "ux"], consensus_edited=named)
+            self.assertEqual((result["status"], result["data"]), ("input_error", {}))
 
     def test_verify_pass_gap_reaches_consensus_with_initial_items_preserved(self):
         inputs = {"phase": "Checklist", **self.BRIEF,
@@ -871,7 +884,7 @@ class PhaseBriefWaveTests(InProjectCase):
                 self.assertEqual((result["status"], result["data"]), ("input_error", {}))
 
     def test_both_payload_hosts_return_identical_waves(self):
-        for phase, extra in (("Checklist", {"domains": ["security", "ux"], "items": list(self.ITEMS), "consensus_edited": ["ux"]}),
+        for phase, extra in (("Checklist", {"domains": ["security", "ux"], "items": list(self.ITEMS)}),
                              ("Clarify", {"items": list(self.ITEMS)}), ("Analyze", {"items": list(self.ITEMS)})):
             with self.subTest(phase=phase):
                 inputs = {"phase": phase, **self.BRIEF, **extra}

@@ -7,6 +7,7 @@ from collections.abc import Callable
 from typing import Any, NamedTuple
 
 from ..strict_input import require_fields, require_text
+from ..checklist_coverage import ARTIFACTS
 from .read_only import consensus_route
 
 ModelFor = Callable[[str], dict[str, dict[str, str]]]
@@ -66,13 +67,15 @@ def checked_checklist_inputs(phase: str, raw: dict[str, Any], domains: list[str]
         if phase != CHECKLIST_PHASE:
             raise ValueError("verify_items apply to the Checklist phase only")
         items = checked_items(phase, items + checked_items(phase, raw["verify_items"]))
+    if "consensus_edited" in raw and "verify_baseline" not in raw:
+        raise ValueError("consensus_edited requires a shared-artifact verify_baseline checkpoint")
     if edited and (not domains or not set(edited) <= set(domains)):
         raise ValueError("consensus_edited must name original checklist domains")
     baseline = None
     if "verify_baseline" in raw:
         if phase != CHECKLIST_PHASE or not domains or "items" in raw or "verify_items" in raw:
             raise ValueError("verify_baseline requires original Checklist domains and no consensus items")
-        baseline = require_fields(raw["verify_baseline"], {"spec.md", "plan.md"}, "verify_baseline")
+        baseline = require_fields(raw["verify_baseline"], set(ARTIFACTS), "verify_baseline")
         if any(not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value) for value in baseline.values()):
             raise ValueError("verify_baseline must contain SHA-256 digests")
     return items, edited, baseline
@@ -126,7 +129,7 @@ def compose_waves(request: WaveRequest, model_for: ModelFor) -> list[list[dict[s
     """Domain waves ({domain}), the verify wave ({domain, pass: "verify"}), the security and low-confidence waves
     ({item}), then one more verify wave for every original domain when shared artifacts changed.
     A verify_baseline request emits only that final wave; phase_brief compares the on-disk artifacts first.
-    Legacy consensus_edited attribution widens to all original domains, never just the named domains.
+    Only observed shared-artifact changes select the final wave, always for every original domain.
     A wave with no agents is dropped.
 
     A wave larger than the host's limit becomes consecutive sub-waves of at most `max_agents`, in entry order.

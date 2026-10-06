@@ -27,7 +27,7 @@ from unittest.mock import patch
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO / "speckit-pro"), str(REPO / "tests/speckit-pro/lib")]
 from speckit_pro_runner import atomic_write  # noqa: E402
-from speckit_pro_runner.helpers import checklist_edits  # noqa: E402
+from speckit_pro_runner.helpers import checklist_edits, read_only  # noqa: E402
 from speckit_pro_runner.helpers.registry import MUTATION_HELPERS  # noqa: E402
 from guide_text import PHASE_EXECUTION_GUIDES, guide_text, guide_view  # noqa: E402
 from mutation_request_case import MutationRequestCase  # noqa: E402
@@ -947,7 +947,7 @@ class RecordStateTests(InterruptionCase):
         def fail_record_parent_sync(fd: int) -> None:
             record = self.root / RECORD
             info = os.fstat(fd)
-            if stat.S_ISDIR(info.st_mode) and record.is_file() and info.st_ino == record.parent.stat().st_ino:
+            if not faults and stat.S_ISDIR(info.st_mode) and record.is_file() and info.st_ino == record.parent.stat().st_ino:
                 faults.append(fd)
                 raise OSError("record parent sync failed")
             real(fd)
@@ -1378,7 +1378,7 @@ else:
         program = """
 import runpy, sys, unittest
 from pathlib import Path
-from speckit_pro_runner.helpers import checklist_edits
+from speckit_pro_runner.helpers import checklist_edits, read_only
 assert Path(checklist_edits.__file__).is_relative_to(Path(sys.argv[1]))
 scope = runpy.run_path(sys.argv[2])
 suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(scope[name]) for name in sys.argv[3:])
@@ -1393,6 +1393,9 @@ sys.exit(scope['run_counted'](suite, label='shipped-matrix'))
                 self.assertEqual(0, done.returncode, done.stdout + done.stderr)
                 if expected is not None:
                     self.assertIn(f"{expected}/{expected} passed", done.stdout)
+
+    def test_both_payloads_enforce_current_complete_checklist_coverage(self) -> None:
+        self.assert_payload_cases(("CoverageTests",))
 
     def test_both_payloads_cover_the_failed_rollback_matrix(self) -> None:
         self.assert_payload_cases(("RollbackFailureTests",), 47)
@@ -1426,6 +1429,60 @@ sys.exit(scope['run_counted'](suite, label='shipped-matrix'))
 
 EXECUTOR_GUIDES = ("agents/checklist-executor.md", "codex-agents/checklist-executor.toml")
 
+
+class CoverageTests(ChecklistEditsCase):
+    """G4 binds completion to shared-artifact verification, even when the final request is omitted."""
+
+    def test_verification_receipt_requires_all_original_domains(self) -> None:
+        self.assertEqual("ok", self.apply()["status"])
+        for domains in (["security"], ["api"], [], ["security", "ux", "foreign"]):
+            result = self.call("apply", domains=[], proposals=[], baseline=self.baseline(), verified_domains=domains)
+            self.assertNotEqual(result["status"], "ok", domains)
+        result = self.call("apply", domains=[], proposals=[], baseline=self.baseline(), verified_domains=DOMAINS)
+        self.assertEqual("ok", result["status"], result)
+        gate = read_only.validate_gate({"gate": "G4", "feature_dir": FEATURE}, self.root)
+        self.assertTrue(json.loads(gate["stdout"])["pass"], gate)
+
+    def test_missing_malformed_or_linked_coverage_evidence_fails_closed(self) -> None:
+        self.assertEqual("ok", self.apply()["status"])
+        path = self.root / FEATURE / ".process/checklist-edits/coverage.json"
+        valid = {"schema_version": "checklist-coverage/v1", "domains": DOMAINS,
+                 "verified_baseline": self.baseline()}
+        invalid = [None, "{", json.dumps(valid | {"domains": []}),
+                   json.dumps(valid | {"domains": ["security", "security"]}),
+                   json.dumps(valid | {"verified_baseline": None}),
+                   json.dumps(valid | {"verified_baseline": {"spec.md": "0" * 64}})]
+        for content in invalid:
+            path.unlink(missing_ok=True)
+            if content is not None:
+                path.write_text(content)
+            gate = read_only.validate_gate({"gate": "G4", "feature_dir": FEATURE}, self.root)
+            self.assertFalse(json.loads(gate["stdout"])["pass"], content)
+        path.unlink()
+        path.symlink_to(self.root / FEATURE / "spec.md")
+        gate = read_only.validate_gate({"gate": "G4", "feature_dir": FEATURE}, self.root)
+        self.assertFalse(json.loads(gate["stdout"])["pass"])
+
+    def test_final_verify_gaps_return_to_consensus_on_both_hosts(self) -> None:
+        for guide, anchor in zip(PHASE_EXECUTION_GUIDES, ("### Phase 4: Checklist", "Checklist only:"), strict=True):
+            passage = " ".join(guide_view(guide).split(anchor, 1)[1][:8000].split())
+            self.assertIn("final verify-pass unresolved items return to consensus", passage)
+            self.assertIn("verified_domains", passage)
+
+    def test_omitting_final_request_after_shared_spec_or_plan_edit_fails_g4(self) -> None:
+        self.assertEqual("ok", self.apply()["status"])
+        path = self.root / FEATURE / ".process/checklist-edits/coverage.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"schema_version": "checklist-coverage/v1", "domains": DOMAINS,
+                                    "verified_baseline": self.baseline()}))
+        inputs = {"gate": "G4", "feature_dir": FEATURE}
+        self.assertTrue(json.loads(read_only.validate_gate(inputs, self.root)["stdout"])["pass"])
+        for artifact in ("spec.md", "plan.md"):
+            original = self.text(artifact)
+            (self.root / FEATURE / artifact).write_text(original + "Marker-free consensus edit.\n")
+            result = read_only.validate_gate(inputs, self.root)
+            self.assertFalse(json.loads(result["stdout"])["pass"], artifact)
+            (self.root / FEATURE / artifact).write_text(original)
 
 class GuidanceTests(unittest.TestCase):
     """The prose points at the helper and never tells an executor to write the artifacts."""
@@ -1481,7 +1538,7 @@ if __name__ == "__main__":
                 unittest.defaultTestLoader.loadTestsFromTestCase(case)
                 for case in (ProposalTests, ConflictTests, RefusalTests, CompetingWriterTests, CanonicalResultTests, RollbackFailureTests, CommittedStateTests,
                              RecordStateTests,
-                             UntrustedTextTests, PlanningTextTests, PlanningContextTests, HostParityTests, GuidanceTests)
+                             UntrustedTextTests, PlanningTextTests, PlanningContextTests, HostParityTests, CoverageTests, GuidanceTests)
             ),
             label="test-checklist-edits",
         )

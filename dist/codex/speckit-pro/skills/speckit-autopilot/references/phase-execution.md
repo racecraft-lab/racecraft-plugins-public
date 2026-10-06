@@ -238,7 +238,7 @@ for phase in PHASES starting from first_pending:
           delivered; a status update or timeout alone is not the result. Record
           the summary, then close_agent only when that action is exposed. On
           hosted Responses, the host retains the inspectable completed thread.
-       d. autopilot-state.json: mark this prompt's item as "completed"
+       d. Other phases: autopilot-state.json: mark this prompt's item as "completed"
        Checklist only: executors propose and write no artifact. Run runner helper
        `checklist-edits` in read_only mode before the first domain wave for the baseline.
        Request the brief with domains and max_agents; for each domain wave, issue
@@ -256,8 +256,11 @@ for phase in PHASES starting from first_pending:
        reusing the original domain prompt, phase brief inputs, readable files and
        dispatch context; consume every result before the next verify wave, then
        run `checklist-edits` in dry_run mode with no domains, no proposals and that
-       baseline: a refusal means a verify run wrote an artifact. Each domain runs
-       once, is fixed once and is verified once.
+       baseline: a refusal means a verify run wrote an artifact. Record coverage with
+       checklist-edits, mode apply, domains=[], proposals=[], baseline=<verify baseline>,
+       verified_domains=<all original domains in order>. G4 requires this receipt:
+       skipping the final request after a shared edit leaves stale evidence and fails G4.
+       Each domain runs once, is fixed once and is verified once.
     5. Run consensus in main session if needed:
        Parse executor's "Unresolved for consensus" section, in workflow order.
        Checklist: build the queue from initial run items plus every verify-pass 'Unresolved for consensus' item.
@@ -286,7 +289,14 @@ for phase in PHASES starting from first_pending:
        returns only verify waves for every original domain; no change returns none.
        Missing or unreadable evidence fails closed; consensus_edited is unnecessary.
        Consume every returned wave with a fresh read_only baseline and dry_run guard
-       as above. Keep Consensus items incomplete until this checkpoint succeeds.
+       as above. The final verify-pass unresolved items return to consensus before completion,
+       under the existing shared repair reservation and consensus-round bounds.
+       Preserve pending items, append new verify_items, save the just-verified baseline
+       before further consensus edits, and repeat the final checkpoint after them.
+       If resolution exhausts its reservation, use the Failure Escalation Protocol;
+       keep domain and Consensus tasks incomplete. After every successful verify wave
+       set, attest verified_domains through checklist-edits as above.
+       Keep Consensus items incomplete until this checkpoint succeeds.
     6. Specify, Plan, Checklist, Tasks and Analyze only:
        handle optional brief.hooks with event=after_<phase> under the confirmation
        rule in Extension Hook Events; record runs and skips in the decisions list.

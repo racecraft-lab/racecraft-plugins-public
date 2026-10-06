@@ -979,11 +979,20 @@ for phase in PHASES starting from first_pending:
        the original domain prompt, brief inputs, readable files and dispatch context.
        Then `checklist-edits`, mode dry_run, with no domains, no proposals and
        the verify baseline: a refusal means a verify run wrote an artifact.
+       After consuming every verify result, record its coverage with checklist-edits,
+       mode apply, domains=[], proposals=[], baseline=<verify baseline>, and
+       verified_domains=<all original domains in order>. G4 requires this receipt;
+       skipping the final request after a shared edit leaves stale evidence and fails G4.
        Build the consensus queue from initial run items plus every verify-pass 'Unresolved for consensus' item.
        Request the phase brief with items and verify_items, preserving initial apply conflicts.
        Always request the final phase brief with the original domains, verify_baseline
        saved before consensus and max_agents before marking any domain completed.
        Consume its returned verify waves using a fresh baseline and dry_run guard.
+       The final verify-pass unresolved items return to consensus under the existing
+       shared reservation and round bounds; preserve pending items, append verify_items,
+       and repeat the checkpoint using the just-verified baseline before further edits.
+       Exhaustion follows Failure Escalation; tasks remain incomplete. Attest each
+       complete verify wave set with verified_domains as above.
        The runner compares shared spec.md/plan.md digests: any change verifies every
        domain, no change returns no final wave, and missing evidence fails closed.
        Other phases: run consensus (Clarify/Analyze only) — see Rule 6

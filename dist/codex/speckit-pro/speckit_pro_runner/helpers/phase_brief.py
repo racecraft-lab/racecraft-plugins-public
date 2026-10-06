@@ -9,6 +9,7 @@ from typing import Any
 from unicodedata import category, normalize
 
 from ..agent_inventory import AGENT_INVENTORY
+from ..checklist_coverage import read_coverage
 from ..envelope import diagnostic, response
 from ..strict_input import has_hidden_characters, require_fields, require_text
 from ..trusted_io import resolve_repo_root
@@ -247,6 +248,8 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
         return response("missing_prerequisite", request_id=request.request_id, diagnostics=[root])
     try:
         if waves.verify_baseline is not None:
+            if read_coverage(root, root / feature)["domains"] != waves.domains:
+                raise ValueError("final verification requires every original domain in order")
             snapshot = checklist_edits(root, {"workflow_file": workflow, "feature_dir": feature}, "read_only")
             changed = snapshot["baseline"] != waves.verify_baseline
             waves = waves._replace(consensus_edited=waves.domains if changed else [])
