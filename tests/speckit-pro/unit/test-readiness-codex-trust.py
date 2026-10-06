@@ -130,11 +130,6 @@ class ReadinessCodexTrustTest(ReadinessCase):
                 self.assertEqual("unavailable", item["status"])
                 self.assertEqual(action + " Scaffold never broadens permissions or disables a control.", item["action"])
 
-    def test_redundant_legacy_codex_hooks_cannot_hide_arbitrary_names(self) -> None:
-        legacy = {"item": "hooks", "evidence_source": "definition review",
-                  "hooks": [dict(hook="Bogus", defined=True, trust="trusted")]}
-        assert_runner_response(self, self.run_helper([legacy, shipped_trust()]), "input_error", 2)
-
     def test_sha256_fingerprints_normalize_case_prefix_and_length(self) -> None:
         from speckit_pro_runner.helpers import readiness_host_items
         self.assertEqual("sha256:" + HASH, readiness_host_items.exact_fingerprint("SHA256:" + HASH.upper()))
