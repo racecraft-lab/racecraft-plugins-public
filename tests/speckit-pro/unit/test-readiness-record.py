@@ -869,7 +869,9 @@ class HostProbePathSecurityTest(unittest.TestCase):
                 self.reject_path(entry, directory, form, hosts=("git", "gh", "docker"))
 
     def test_other_cli_probes_ignore_unrelated_hardlinks(self) -> None:
-        payload = self.root / "unrelated"
+        # Root can write every system hardlink in a container; one outside the
+        # worktree must not hide Git. A worktree alias is the attack instead.
+        payload = self.area / "unrelated"
         self.executable(payload)
         alias = self.tools / "unrelated"
         os.link(payload, alias)
@@ -900,6 +902,40 @@ class HostProbePathSecurityTest(unittest.TestCase):
                     self.assertEqual((0, "2.1.0"), (result["exit_status"], result["stdout_tail"]))
                 finally:
                     launcher.unlink()
+
+    def test_other_cli_probes_reject_worktree_linked_helpers(self) -> None:
+        """An interpreter or helper linked to a worktree file never runs, in any retained directory."""
+        helpers = self.area / "helpers"
+        helpers.mkdir()
+        payload = self.root / "payloads" / "spk-helper"
+        self.executable(payload)
+        consumers = {
+            "env-shebang": "#!/usr/bin/env spk-helper\n",
+            "subprocess": f"#!{sys.executable}\nimport subprocess\nraise SystemExit(subprocess.run(['spk-helper']).returncode)\n",
+        }
+        for cli in ("git", "gh", "docker"):
+            for consumer, body in consumers.items():
+                for location in (self.tools, helpers):
+                    for form in ("symlink", "hardlink"):
+                        with self.subTest(cli=cli, consumer=consumer, location=location.name, form=form):
+                            launcher = self.tools / cli
+                            launcher.write_text(body, encoding="utf-8")
+                            launcher.chmod(0o755)
+                            helper = location / "spk-helper"
+                            if form == "symlink":
+                                helper.symlink_to(payload)
+                            else:
+                                os.link(payload, helper)
+                            try:
+                                path = os.pathsep.join(map(str, (self.tools, helpers)))
+                                with unittest.mock.patch.dict(os.environ, {"PATH": path}):
+                                    result = self.probe(self.root, [cli, "--version"], allowed=(cli,), timeout=2)
+                                self.assertFalse(self.marker.exists(), "worktree-linked helper ran")
+                                self.assertNotEqual(0, result["exit_status"])
+                            finally:
+                                launcher.unlink()
+                                helper.unlink()
+                                self.marker.unlink(missing_ok=True)
 
     def test_trusted_installed_hosts_survive_poisoned_path(self) -> None:
         for host in ("codex", "claude"):
