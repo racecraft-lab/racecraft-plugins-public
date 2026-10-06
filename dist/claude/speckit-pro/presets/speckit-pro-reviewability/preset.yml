@@ -1,0 +1,36 @@
+schema_version: "1.0"
+
+preset:
+  id: "speckit-pro-reviewability"
+  name: "SpecKit Pro Reviewability"
+  version: "1.0.0"
+  description: "Adds reviewability budgets and PR review packet requirements while preserving host project template policy."
+  author: "speckit-pro"
+  repository: "https://github.com/racecraft-lab/racecraft-plugins-public"
+  license: "MIT"
+
+requires:
+  speckit_version: ">=0.5.1"
+
+provides:
+  templates:
+    - type: "template"
+      name: "spec-template"
+      file: "templates/spec-template.md"
+      description: "Feature specification template with reviewability budget and PR packet requirements."
+      replaces: "spec-template"
+    - type: "template"
+      name: "plan-template"
+      file: "templates/plan-template.md"
+      description: "Implementation plan template with reviewability gate checks."
+      replaces: "plan-template"
+    - type: "template"
+      name: "tasks-template"
+      file: "templates/tasks-template.md"
+      description: "Task template with reviewability checkpoint and PR packet task."
+      replaces: "tasks-template"
+
+tags:
+  - "reviewability"
+  - "verification-debt"
+  - "speckit-pro"

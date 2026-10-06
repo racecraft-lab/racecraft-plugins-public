@@ -479,7 +479,7 @@
         "value": "speckit_pro_runner/gates/payloads.py",
         "display": "speckit_pro_runner/gates/payloads.py"
       },
-      "sha256": "bbe166b4165221eede37139d16c4b5cbd3495624af60102b376c38c087bde158"
+      "sha256": "4f830ec6f46efc16dfc53c6ae377bef76e5fda11df596517dc4b3b0fd313f71b"
     },
     {
       "path": {
@@ -703,7 +703,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "672443f9a7021f87f8f87fafabb790dfa2799e4f420e8cd13e34bd3b79399c05"
+      "sha256": "ed98dfc86c4a5e9582cf26be0743032722d964a52adf8d3cc5c08ef511f752de"
     },
     {
       "path": {
@@ -884,6 +884,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/reviewability_preset.py",
+        "display": "speckit_pro_runner/reviewability_preset.py"
+      },
+      "sha256": "f258e130f6603d1c5f21b950abf42a5c101dbb0ca492e48ff6ed3b403e401309"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/runtime.py",
         "display": "speckit_pro_runner/runtime.py"
       },
@@ -975,7 +983,7 @@
         "value": "speckit_pro_runner/trusted_io.py",
         "display": "speckit_pro_runner/trusted_io.py"
       },
-      "sha256": "93092c49032c63de83e4f203cea81f6501bf3fc34a096cc0d526fa00b6000ab6"
+      "sha256": "d29219761ca0f908bfeb4298094d630e26519531b3fa8c9ad3cc9aba75fb3f52"
     },
     {
       "path": {

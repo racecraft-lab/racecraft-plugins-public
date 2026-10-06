@@ -496,7 +496,7 @@ class PayloadRequiredSourceTests(unittest.TestCase):
         self.assertIn("codex-agents", required)
         for missing in required:
             with self.subTest(missing=missing), tempfile.TemporaryDirectory() as tmp:
-                repo_root = Path(tmp) / "repo"
+                repo_root = Path(tmp).resolve() / "repo"
                 source = repo_root / "speckit-pro"
                 for name in required:
                     if name != missing:

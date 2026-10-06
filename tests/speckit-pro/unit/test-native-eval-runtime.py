@@ -107,6 +107,8 @@ class NativeRuntimeFixture:
             ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
         )
         shutil.copy2(REPO_ROOT / "LICENSE", target / "LICENSE")
+        preset = Path(".specify/presets/speckit-pro-reviewability")
+        shutil.copytree(REPO_ROOT / preset, target / preset)
         return target
 
 
