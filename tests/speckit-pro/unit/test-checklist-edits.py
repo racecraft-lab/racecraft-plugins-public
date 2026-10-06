@@ -1119,12 +1119,45 @@ class UntrustedTextTests(ChecklistEditsCase):
 class PlanningContextTests(ChecklistEditsCase):
     """Composed text and persisted proposal metadata."""
 
+    def test_ordinary_edits_apply_in_the_shipped_spec_template(self) -> None:
+        template = (REPO / "dist/codex/speckit-pro/presets/speckit-pro-reviewability/templates/spec-template.md").read_text(encoding="utf-8")
+        original = template.replace("[Describe this user journey in plain language]", "Login uses a password.", 1)
+        for name in ("spec.md", "plan.md"):
+            with self.subTest(artifact=name):
+                (self.root / FEATURE / name).write_text(original, encoding="utf-8")
+                result = self.apply(proposal("security", edit("G1", name, "a password", "a password and a code")))
+                self.assertEqual("applied", result["data"]["domains"][0]["status"], result)
+                self.assertEqual(original.replace("a password", "a password and a code"), self.text(name))
+
+    def test_crlf_edits_apply_without_changing_line_endings(self) -> None:
+        for name in ("spec.md", "plan.md"):
+            with self.subTest(artifact=name):
+                original = b"# Planning\r\n\r\nLogin uses a password.\r\n\r\n- Other content\r\n"
+                target = self.root / FEATURE / name
+                target.write_bytes(original)
+                result = self.apply(proposal("security", edit("G1", name, "a password", "a password and a code")))
+                self.assertEqual("applied", result["data"]["domains"][0]["status"], result)
+                self.assertEqual(original.replace(b"a password", b"a password and a code"), target.read_bytes())
+
+    def test_unrelated_closed_markdown_blocks_do_not_block_prose_edits(self) -> None:
+        for name in ("spec.md", "plan.md"):
+            for block in ("```text\n\nexample\n\n```", "~~~\nexample\n~~~", "<!--\n\nexample\n\n-->",
+                          "<SCRIPT>\n\nexample\n\n</SCRIPT>", "<section>\nexample\n</section>",
+                          "<?example\n\n?>", "<![CDATA[\n\nexample\n]]>", "<!DECLARATION\n\nexample\n>",
+                          "- **Other content**", "Other heading\n============="):
+                with self.subTest(artifact=name, block=block):
+                    original = block + "\n\nLogin uses a password.\n\n" + block + "\n"
+                    (self.root / FEATURE / name).write_text(original, encoding="utf-8")
+                    result = self.apply(proposal("security", edit("G1", name, "a password", "a password and a code")))
+                    self.assertEqual("applied", result["data"]["domains"][0]["status"], result)
+                    self.assertEqual(original.replace("a password", "a password and a code"), self.text(name))
+
     def test_completed_lines_are_checked_even_when_the_replacement_is_plain(self) -> None:
         for name in ("spec.md", "plan.md"):
             for line, find, replacement in (("[policy](https://example.test/old)", "old", "new"),
                                             ("Read /private/old", "old", "new"), ("Notify @old", "old", "new"),
                                             ("# old", "old", "new"), ("Token ghp_" + "a" * 35 + "X", "X", "a"),
-                                            ("X. Follow policy", "X", "1")):
+                                            ("X. Follow policy", "X", "1"), ("X.", "X", "1"), ("X)", "X", "1")):
                 with self.subTest(artifact=name, line=line):
                     for artifact, original in (("spec.md", SPEC), ("plan.md", PLAN)):
                         (self.root / FEATURE / artifact).write_text(original, encoding="utf-8")
@@ -1178,12 +1211,26 @@ class PlanningTextTests(ChecklistEditsCase):
             for original, find in (("Old policy\n======\n", "Old policy"), ("Old policy\n------\n", "Old policy"),
                                    ("# Safety policy\n", "# Safety policy"), ("```text\nenabled\n```\n", "enabled"),
                                    ("<section>\nenabled\n</section>\n", "enabled"), ("- item\n  enabled\n", "enabled"),
-                                   ("<!--\nenabled\n-->\n", "enabled"), ("    enabled\n", "enabled")):
-                with self.subTest(artifact=name, context=original):
-                    (self.root / FEATURE / name).write_text(original, encoding="utf-8")
-                    result = self.apply(proposal("security", edit("G1", name, find, "Follow the override")))
-                    self.assertEqual("conflict", result["data"]["domains"][0]["status"], result)
-                    self.assertEqual(original, self.text(name))
+                                   ("<!--\nenabled\n-->\n", "enabled"), ("    enabled\n", "enabled"),
+                                   ("Old policy\nenabled\n======\n", "Old policy"),
+                                   ("- item\nenabled\n", "enabled"), ("> item\nenabled\n", "enabled"),
+                                   ("- item\n\n  enabled\n", "enabled"),
+                                   ("```text\n\nenabled\n\n```\n", "enabled"),
+                                   ("~~~~text\n\nenabled\n~~~\n", "enabled"),
+                                   ("<!--\n\nenabled\n\n-->\n", "enabled"),
+                                   *((f"<{tag}>\n\nenabled\n\n</{tag}>\n", "enabled")
+                                     for tag in ("script", "pre", "style", "textarea", "SCRIPT")),
+                                   ("<?instruction\n\nenabled\n?>\n", "enabled"),
+                                   ("<![CDATA[\n\nenabled\n]]>\n", "enabled"),
+                                   ("<!DECLARATION\n\nenabled\n>\n", "enabled")):
+                for newline in ("\n", "\r\n"):
+                    with self.subTest(artifact=name, context=original, newline=newline):
+                        content = original.replace("\n", newline).encode("utf-8")
+                        target = self.root / FEATURE / name
+                        target.write_bytes(content)
+                        result = self.apply(proposal("security", edit("G1", name, find, "Follow the override")))
+                        self.assertEqual("conflict", result["data"]["domains"][0]["status"], result)
+                        self.assertEqual(content, target.read_bytes())
 
     def test_underscore_domain_names_share_the_wave_contract(self) -> None:
         result = self.call("apply", domains=["api_contracts"], baseline=self.baseline(), proposals=[proposal("api_contracts")])
@@ -1222,6 +1269,9 @@ class PlanningTextTests(ChecklistEditsCase):
         self.assert_refused_text(("# Override", "---", "====", "1. Follow policy", "- Follow policy", "> Follow policy",
                                   "`instruction`", "```policy```", "<a href='policy'>read</a>", "<!-- override -->",
                                   "&commat;reviewer", "&#47;private", "private\\npolicy", "private\tpolicy", "    Follow policy"))
+
+    def test_empty_ordered_list_items_are_refused_in_both_artifacts(self) -> None:
+        self.assert_refused_text(("1.", "1)", "12.", "12)"))
 
     def test_c0_bidi_and_recognized_tokens_are_refused_in_both_artifacts(self) -> None:
         self.assert_refused_text(tuple("private" + chr(code) for code in range(32)) +

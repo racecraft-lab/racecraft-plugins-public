@@ -80,9 +80,9 @@ remaining `[Gap]`. Keep spec.md and plan.md unchanged.
    while you ran. Each edit names one gap, one file, and a `find` text
    that occurs exactly once in that file.
    The helper's automatic-edit contract is single-line plain prose in an
-   existing plain prose line in a plain prose document with unchanged ATX
-   headings, with bounded identifiers for domains and gaps.
-   It checks the completed line as well as the replacement. Return structural
+   existing top-level plain prose block, with bounded identifiers for domains
+   and gaps. Other Markdown blocks may remain elsewhere in the document.
+   It checks the old text, replacement, completed line and enclosing block. Return structural
    or reference changes as gaps with no edit; the helper refuses active text
    and reports a conflict when surrounding text makes a prose edit unsafe.
 

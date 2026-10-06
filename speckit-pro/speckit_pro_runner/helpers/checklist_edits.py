@@ -36,7 +36,7 @@ from ..atomic_write import (AtomicSwapUnavailable, AtomicWriteInterrupted, Write
 from ..canonical_json import canonical_bytes
 from ..envelope import diagnostic, response
 from ..execution_control import confined_path, ignore_owned_directory, workflow_process_directory
-from ..strict_input import SelectionError, has_hidden_characters, require_fields, require_text
+from ..strict_input import SelectionError, has_hidden_characters, next_fence, require_fields, require_text
 from ..sweep_isolation import secret_matches
 from .dispatch_waves import DOMAIN_NAME
 from .execution_requests import Refusal, run_contained_helper
@@ -46,9 +46,20 @@ ARTIFACTS = ("spec.md", "plan.md")
 MAX_TEXT = 20000
 # Auto-application accepts prose, not Markdown syntax, references or path/token alphabets.
 PLAIN_PROSE = re.compile(r"[A-Za-z0-9 ,;!?'\"().-]*")
-PROSE_STRUCTURE = re.compile(r"^ {4}|^\s*(?:[-.()]|[0-9]+[.)]\s)|\.(?=[A-Za-z0-9-])")
+PROSE_STRUCTURE = re.compile(r"^ {4}|^\s*(?:[-.()]|[0-9]+[.)](?:\s|$))|\.(?=[A-Za-z0-9-])")
 PROPOSAL_LABEL = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}")
 UNCHANGED_HEADING = re.compile(r"#{1,6} +[^\r\n]+")
+# CommonMark 0.31.2, section 4.6: these HTML blocks can cross blank lines.
+HTML_BLOCK_ENDS = (
+    (re.compile(r"^ {0,3}<script(?:\s|>|$)", re.I), "</script>"),
+    (re.compile(r"^ {0,3}<pre(?:\s|>|$)", re.I), "</pre>"),
+    (re.compile(r"^ {0,3}<style(?:\s|>|$)", re.I), "</style>"),
+    (re.compile(r"^ {0,3}<textarea(?:\s|>|$)", re.I), "</textarea>"),
+    (re.compile(r"^ {0,3}<!--"), "-->"),
+    (re.compile(r"^ {0,3}<\?"), "?>"),
+    (re.compile(r"^ {0,3}<!\[CDATA\["), "]]>"),
+    (re.compile(r"^ {0,3}<![A-Z]"), ">"),
+)
 
 
 class CanonicalMismatch(ValueError):
@@ -124,6 +135,36 @@ def checked_label(value: Any, label: str, pattern: re.Pattern[str] = PROPOSAL_LA
     raise SelectionError(f"{label} must be a bounded non-credential identifier")
 
 
+def plain_prose_context(lines: list[str], index: int) -> bool:
+    """Admit only a top-level prose block, outside fences and multiline HTML.
+
+    Other Markdown blocks stay untouched. Neighbouring lines protect Setext
+    headings, lazy list/quote continuations and multiline inline markup.
+    """
+    fence: str | None = None
+    html_end: str | None = None
+    start = 0
+    for number, row in enumerate(lines[:index]):
+        if html_end is not None:
+            if html_end in row.lower():
+                html_end = None
+        elif fence is not None:
+            fence = next_fence(fence, row)
+        else:
+            fence = next_fence(None, row)
+            html_end = next((end for pattern, end in HTML_BLOCK_ENDS if pattern.match(row)), None)
+            if html_end is not None and html_end in row.lower():
+                html_end = None
+        if not row.strip() or UNCHANGED_HEADING.fullmatch(row):
+            start = number + 1
+    if fence is not None or html_end is not None or lines[index].startswith((" ", "\t")):
+        return False
+    end = index + 1
+    while end < len(lines) and lines[end].strip() and not UNCHANGED_HEADING.fullmatch(lines[end]):
+        end += 1
+    return all(prose_problem(row) is None for row in lines[start:end])
+
+
 def prose_edit(before: str, find: str, replacement: str) -> tuple[str, str | None]:
     """An inline edit and its completed-line check, before any artifact write."""
     if has_hidden_characters(find):
@@ -133,13 +174,14 @@ def prose_edit(before: str, find: str, replacement: str) -> tuple[str, str | Non
     end = before.find("\n", position + len(find))
     if end == -1:
         end = len(before)
+    elif end > start and before[end - 1] == "\r":
+        end -= 1
     line = before[start:position] + replacement + before[position + len(find):end]
     # Check the touched line, even if identical text already exists elsewhere.
     problem = prose_problem(line)
-    if problem is None and (prose_problem(before[start:end]) is not None or
-                            any(prose_problem(row) is not None and not UNCHANGED_HEADING.fullmatch(row)
-                                for row in before.splitlines())):
-        problem = "automatic edits require plain prose documents with unchanged ATX headings; review structural content separately"
+    if problem is None and (prose_problem(find) is not None or prose_problem(before[start:end]) is not None or
+                            not plain_prose_context(before.replace("\r\n", "\n").split("\n"), before.count("\n", 0, start))):
+        problem = "automatic edits require a plain prose block; review structural content separately"
     return (before if problem else before[:position] + replacement + before[position + len(find):]), problem
 
 
