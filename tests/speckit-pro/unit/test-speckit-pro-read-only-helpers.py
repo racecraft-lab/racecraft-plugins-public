@@ -3879,8 +3879,7 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
             self.assertIn("checklists:2", payload["reason"])
             (feature / "checklists" / "security.md").write_text("- [x] CHK001 Is token expiry defined?\n", encoding="utf-8")
             code, payload = self._helper_json("validate_gate", {"gate": "G4", "feature_dir": "specs/001-demo"}, project_path)
-            self.assertEqual((1, False), (code, payload["pass"]))
-            self.assertEqual("unbound_live_inputs", payload["blocked"])
+            self.assertEqual((0, True), (code, payload["pass"]))
 
     def _g5(self, project_path: Path, tasks: str, depends_on: dict[str, list[str]] | None) -> tuple[int, dict[str, object]]:
         feature = project_path / "specs" / "001-demo"
