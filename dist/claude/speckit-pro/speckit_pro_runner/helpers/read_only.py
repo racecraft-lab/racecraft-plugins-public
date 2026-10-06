@@ -3519,7 +3519,7 @@ def consensus_category_tags(line: str) -> list[str]:
     return tags
 
 
-def parse_consensus_categories(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+def consensus_route(inputs: dict[str, Any]) -> dict[str, Any]:
     """Plan-stage consensus tier for one executor item (ADR 0022), executed.
 
     Three tiers, decided in this order:
@@ -3535,10 +3535,12 @@ def parse_consensus_categories(inputs: dict[str, Any], repo_root: Path) -> dict[
     a tag at unanimous agreement and lets a keyword-only route use the item's own
     rule when no analyst finds security content in it. A missing `confidence` counts
     as `low`, so an item never skips its second opinion by omission.
+
+    Raises ValueError when `confidence` is neither low nor high.
     """
     confidence = "low" if inputs.get("confidence") is None else str(inputs["confidence"]).strip().casefold()
     if confidence not in ("low", "high"):
-        return make_result(json_text({"error": "confidence must be low or high"}), exit_code=2)
+        raise ValueError("confidence must be low or high")
     line = str(inputs.get("line") or "")
     tags = consensus_category_tags(line)
     keyword = CONSENSUS_SECURITY_RE.search(line)
@@ -3566,12 +3568,16 @@ def parse_consensus_categories(inputs: dict[str, Any], repo_root: Path) -> dict[
     answer_source = None if tier == "security" else "executor"
     if tier == "low_confidence" and isinstance(analyst_confidence, str) and analyst_confidence.strip().casefold() == "high":
         answer_source = "analyst"
-    return make_result(
-        json_text(
-            {"tags": tags, "tier": tier, "analysts": analysts, "reason": reason, "security_route": security_route,
-             "answer_source": answer_source}
-        )
-    )
+    return {"tags": tags, "tier": tier, "analysts": analysts, "reason": reason, "security_route": security_route,
+            "answer_source": answer_source}
+
+
+def parse_consensus_categories(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+    """The `parse-consensus-categories` helper: one item's tier as JSON; the rules live in consensus_route."""
+    try:
+        return make_result(json_text(consensus_route(inputs)))
+    except ValueError as exc:
+        return make_result(json_text({"error": str(exc)}), exit_code=2)
 
 
 CRL_HEADING = "Consensus Resolution Log"
