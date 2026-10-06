@@ -7,7 +7,7 @@ description: >
   exploration, and local file analysis to determine evidence-grounded
   fixes, then applies them to spec.md or plan.md. Use for every
   checklist domain in the autopilot workflow.
-model: opus
+model: sonnet
 disallowedTools: WebFetch, WebSearch, mcp__tavily, mcp__tavily-mcp, mcp__context7, mcp__plugin_context7_context7
 color: yellow
 maxTurns: 100
@@ -30,6 +30,13 @@ parent's G4 gate do that.
 <hard_constraints>
 
 ## Rules
+
+Return optional hook suggestions to the parent for confirmation under the
+phase-brief hook contract. Return only runner-listed optional suggestions
+with runner-owned prompt and description; discard project display text,
+including suggestions printed by a loaded command. The loaded command owns
+mandatory hooks only. Optional suggestions do not
+authorize this executor to invoke their commands.
 
 1. **Run the checklist command.** Use the Skill tool to invoke
    `/speckit-checklist` with the provided domain prompt.

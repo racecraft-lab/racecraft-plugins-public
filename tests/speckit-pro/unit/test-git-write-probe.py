@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import contextmanager
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -37,7 +38,7 @@ def git(root: Path, *args: str) -> None:
     subprocess.run(["git", "-C", str(root), *args], check=True, capture_output=True, env={**os.environ, **GIT_ENV})
 
 
-class GitWriteProbeTest(unittest.TestCase):
+class GitWriteProbeFixture(unittest.TestCase):
     def setUp(self) -> None:
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
         git(self.root, "init", "-q")
@@ -62,14 +63,85 @@ class GitWriteProbeTest(unittest.TestCase):
         # Root bypasses POSIX modes; Windows directory modes cannot prove denial.
         open_file = os.open
 
-        def deny_directory(path: str, flags: int, mode: int) -> int:
-            if Path(path).parent == directory:
+        def deny_directory(path, flags: int, mode: int = 0o777, *, dir_fd=None) -> int:
+            target = os.fstat(dir_fd) if dir_fd is not None else None
+            denied = directory.stat()
+            if flags & os.O_CREAT and target is not None and (target.st_dev, target.st_ino) == (denied.st_dev, denied.st_ino):
                 raise PermissionError(errno.EACCES, "directory write denied")
-            return open_file(path, flags, mode)
+            return open_file(path, flags, mode, dir_fd=dir_fd)
 
         with patch.object(probe.os, "open", side_effect=deny_directory):
             return self.probe_current_repository()
 
+
+
+class GitWriteProbeDescriptorTest(unittest.TestCase):
+    def assert_helper_descriptor_cleanup(self, common: Path, scenario: str) -> None:
+        open_file, close, rename = os.open, os.close, os.rename
+        live: set[int] = set()
+        opened: list[str] = []
+        injected: list[str] = []
+
+        def track_open(path, flags, mode=0o777, *, dir_fd=None):
+            name = str(path)
+            capture = name.endswith(".lock.cleanup")
+            target = {"component_open": name == "heads",
+                      "cleanup_open": name == probe.PROBE_CLEANUP_DIRECTORY,
+                      "capture_open": capture}.get(scenario, False)
+            if target:
+                injected.append(scenario)
+                raise PermissionError(errno.EACCES, "injected open denial")
+            fd = open_file(path, flags, mode, dir_fd=dir_fd)
+            live.add(fd)
+            opened.append(name)
+            shared_parent = scenario == "created_cleanup_validation" and name == probe.PROBE_CLEANUP_DIRECTORY
+            shared_capture = scenario == "capture_validation" and capture
+            if shared_parent or shared_capture:
+                injected.append(scenario)
+                os.fchmod(fd, 0o755)
+            return fd
+
+        def track_close(fd):
+            close(fd)
+            live.remove(fd)
+
+        def fail_rename(*args, **kwargs):
+            if scenario == "capture_rename":
+                injected.append(scenario)
+                raise PermissionError(errno.EACCES, "injected capture denial")
+            return rename(*args, **kwargs)
+
+        try:
+            with patch.object(probe, "git_common_directory", return_value=common):
+                with patch.object(probe.os, "open", side_effect=track_open), \
+                     patch.object(probe.os, "close", side_effect=track_close), \
+                     patch.object(probe.os, "rename", side_effect=fail_rename):
+                    result = probe.run_git_write_probe_helper(None, SimpleNamespace(request_id="test-probe"))
+            self.assertTrue(opened, "descriptor tracking did not reach the probe")
+            self.assertEqual(set(), live, "helper leaked descriptors")
+            expected = "verified" if scenario == "success" else "unavailable"
+            self.assertEqual(expected, result["data"]["observation"]["status"])
+            if scenario not in {"success", "existing_cleanup_validation"}:
+                self.assertTrue(injected, "fault did not reach the intended storage boundary")
+        finally:
+            for fd in live:
+                close(fd)
+
+    def test_helper_closes_descriptors_on_success_and_storage_failures(self) -> None:
+        scenarios = ("success", "component_open", "cleanup_open", "created_cleanup_validation",
+                     "existing_cleanup_validation", "capture_open", "capture_validation", "capture_rename")
+        for scenario in scenarios:
+            with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as temporary:
+                common = Path(temporary)
+                common.joinpath("refs", "heads").mkdir(parents=True)
+                if scenario == "existing_cleanup_validation":
+                    existing = common / probe.PROBE_CLEANUP_DIRECTORY
+                    existing.mkdir(mode=0o755)
+                    existing.chmod(0o755)
+                self.assert_helper_descriptor_cleanup(common, scenario)
+
+
+class GitWriteProbeTest(GitWriteProbeFixture):
     def test_root_runs_execute_both_directory_denial_cases_without_skips(self) -> None:
         with patch.object(os, "geteuid", return_value=0, create=True):
             module = runpy.run_path(str(Path(__file__)), run_name="root_probe_tests")
@@ -97,12 +169,12 @@ class GitWriteProbeTest(unittest.TestCase):
         unlink = os.unlink
         calls = 0
 
-        def fail_once(path: str) -> None:
+        def fail_once(path: str, *, dir_fd=None) -> None:
             nonlocal calls
             calls += 1
             if calls == 1:
                 raise PermissionError(errno.EPERM, "denied")
-            unlink(path)
+            unlink(path, dir_fd=dir_fd)
 
         with patch.object(probe.os, "unlink", side_effect=fail_once):
             result = self.probe_current_repository()
@@ -130,20 +202,32 @@ class GitWriteProbeTest(unittest.TestCase):
         self.assertEqual([stale], list((self.root / ".git").rglob(".speckit-git-write-probe-*.lock")))
 
     def test_collision_retries_fresh_random_name_and_observes_permission_denial(self) -> None:
-        with patch.object(probe.os, "open", side_effect=[
-            FileExistsError(errno.EEXIST, "collision"),
-            PermissionError(errno.EROFS, "read-only"),
-            PermissionError(errno.EPERM, "denied"),
-        ]) as opened:
+        open_file = os.open
+        names = []
+
+        def fail_creation(path, flags, mode=0o777, *, dir_fd=None):
+            if not flags & os.O_CREAT:
+                return open_file(path, flags, mode, dir_fd=dir_fd)
+            names.append(Path(path).name)
+            if len(names) == 1:
+                raise FileExistsError(errno.EEXIST, "collision")
+            raise PermissionError(errno.EROFS, "read-only")
+
+        with patch.object(probe.os, "open", side_effect=fail_creation):
             result = self.probe_current_repository()
         self.assertEqual("stop", result["data"]["verdict"])
-        names = [Path(call.args[0]).name for call in opened.call_args_list]
         self.assertGreaterEqual(len(names), 2)
         self.assertNotEqual(names[0], names[1])
 
     def test_unknown_first_directory_does_not_skip_later_permission_denial(self) -> None:
-        def fail_open(path: str, flags: int, mode: int) -> int:
-            number = errno.ENOSPC if Path(path).parent == self.heads else errno.EACCES
+        open_file = os.open
+
+        def fail_open(path, flags: int, mode: int = 0o777, *, dir_fd=None) -> int:
+            if not flags & os.O_CREAT:
+                return open_file(path, flags, mode, dir_fd=dir_fd)
+            target = os.fstat(dir_fd)
+            heads = self.heads.stat()
+            number = errno.ENOSPC if (target.st_dev, target.st_ino) == (heads.st_dev, heads.st_ino) else errno.EACCES
             raise OSError(number, "storage problem")
 
         with patch.object(probe.os, "open", side_effect=fail_open):
@@ -239,8 +323,209 @@ class GitWriteProbeTest(unittest.TestCase):
         self.assertEqual("not_applicable", response["data"]["record"]["items"]["git_write"]["status"])
 
 
+
+class GitWriteProbeContainmentTest(GitWriteProbeFixture):
+    def test_cleanup_rejects_a_private_directory_owned_by_another_user(self) -> None:
+        fstat = os.fstat
+
+        def foreign_owner(fd):
+            metadata = fstat(fd)
+            if metadata.st_mode & 0o777 == 0o700:
+                fields = list(metadata)
+                fields[4] = os.geteuid() + 1
+                return os.stat_result(fields)
+            return metadata
+
+        with patch.object(probe.os, "fstat", side_effect=foreign_owner):
+            result = self.probe_current_repository()
+        self.assertEqual("stop", result["data"]["verdict"])
+        self.assertTrue(list(self.heads.glob("*.lock")), "probe moved into a foreign directory")
+        self.assertTrue(list((self.root / ".git").glob("*.cleanup")), "foreign directory was removed")
+
+    def test_cleanup_rejects_a_substituted_shared_directory_before_capture(self) -> None:
+        open_file = os.open
+        replacement = None
+
+        def substitute_cleanup(path, flags, mode=0o777, *, dir_fd=None):
+            nonlocal replacement
+            if str(path).endswith(".cleanup") and replacement is None:
+                private = self.root / ".git" / path
+                private.rename(self.root / ".git" / "held-cleanup")
+                private.mkdir(mode=0o755)
+                private.chmod(0o755)
+                replacement = private / str(path).removesuffix(".cleanup")
+                replacement.write_text("foreign file", encoding="utf-8")
+            return open_file(path, flags, mode, dir_fd=dir_fd)
+
+        with patch.object(probe.os, "open", side_effect=substitute_cleanup):
+            result = self.probe_current_repository()
+        self.assertIsNotNone(replacement)
+        self.assertTrue(replacement.exists(), "capture overwrote a foreign file")
+        self.assertEqual("foreign file", replacement.read_text(encoding="utf-8"))
+        self.assertEqual("stop", result["data"]["verdict"])
+
+    def test_symlinked_git_subdirectory_never_receives_probe_files(self) -> None:
+        outside = self.root / "outside"
+        outside.mkdir()
+        self.heads.rmdir()
+        self.heads.symlink_to(outside, target_is_directory=True)
+        self.addCleanup(self.heads.mkdir)
+        self.addCleanup(self.heads.unlink)
+        opened_outside = []
+        open_file = os.open
+
+        def observe_open(path, flags, mode=0o777, *, dir_fd=None):
+            fd = open_file(path, flags, mode, dir_fd=dir_fd)
+            if flags & os.O_CREAT and (outside / Path(path).name).exists():
+                opened_outside.append(Path(path).name)
+            return fd
+
+        with patch.object(probe.os, "open", side_effect=observe_open):
+            result = self.probe_current_repository()
+        self.assertEqual([], opened_outside, "probe created a file outside .git")
+        self.assertEqual("stop", result["data"]["verdict"])
+        self.assertEqual([], list(outside.iterdir()))
+
+    @contextmanager
+    def replacement_on_creation(self):
+        open_file = os.open
+        replacement = None
+
+        def replace_created_lock(path, flags, mode=0o777, *, dir_fd=None):
+            nonlocal replacement
+            fd = open_file(path, flags, mode, dir_fd=dir_fd)
+            if flags & os.O_CREAT and replacement is None:
+                original = self.heads / Path(path).name
+                original.rename(self.heads / "held-original")
+                original.write_text("replacement belongs to someone else", encoding="utf-8")
+                replacement = original
+            return fd
+
+        with patch.object(probe.os, "open", side_effect=replace_created_lock):
+            yield lambda: replacement
+
+    def test_cleanup_preserves_a_replacement_file(self) -> None:
+        with self.replacement_on_creation() as replaced:
+            result = self.probe_current_repository()
+        replacement = replaced()
+        self.assertIsNotNone(replacement)
+        self.assertTrue(replacement.exists(), "cleanup deleted a replacement file")
+        self.assertEqual("replacement belongs to someone else", replacement.read_text(encoding="utf-8"))
+        self.assertEqual("unknown", result["data"]["observation"]["status"])
+
+    def test_probe_removed_before_capture_leaves_no_leftover_report(self) -> None:
+        rename = os.rename
+
+        def remove_then_rename(src, dst, **kwargs):
+            if str(src).endswith(".lock") and kwargs.get("src_dir_fd") is not None:
+                os.unlink(src, dir_fd=kwargs["src_dir_fd"])
+            return rename(src, dst, **kwargs)
+
+        with patch.object(probe.os, "rename", side_effect=remove_then_rename):
+            result = self.probe_current_repository()
+        self.assertEqual("proceed", result["data"]["verdict"])
+        self.assertNotIn("could not be removed", result["data"]["message"])
+        self.assert_no_probe_files()
+
+    def test_unrestored_replacement_is_preserved_for_inspection(self) -> None:
+        with self.replacement_on_creation():
+            with patch.object(probe.os, "link", side_effect=PermissionError(errno.EPERM, "restore denied")):
+                result = self.probe_current_repository()
+        self.assertEqual("stop", result["data"]["verdict"])
+        captured = list((self.root / ".git").rglob("*.cleanup/*.lock"))
+        self.assertEqual(1, len(captured))
+        self.assertEqual("replacement belongs to someone else", captured[0].read_text(encoding="utf-8"))
+        action = result["data"]["observation"]["action"]
+        self.assertIn("restore any replacement files", action)
+        self.assertNotIn("Remove the named leftover probe files", action)
+
+    def test_cleanup_preserves_replacement_inserted_after_identity_check(self) -> None:
+        stat_file = os.stat
+        replacement = None
+
+        def replace_after_stat(path, *args, **kwargs):
+            nonlocal replacement
+            metadata = stat_file(path, *args, **kwargs)
+            name = Path(path).name
+            if kwargs.get("dir_fd") is not None and name.endswith(".lock") and replacement is None:
+                public = self.heads / name
+                replacement = public
+                if public.exists():
+                    public.rename(self.heads / "held-original")
+                public.write_text("replacement after stat", encoding="utf-8")
+            return metadata
+
+        with patch.object(probe.os, "stat", side_effect=replace_after_stat):
+            self.probe_current_repository()
+        self.assertIsNotNone(replacement)
+        self.assertTrue(replacement.exists(), "cleanup raced and deleted the replacement")
+        self.assertEqual("replacement after stat", replacement.read_text(encoding="utf-8"))
+
+    def test_close_failure_does_not_mask_cleanup_permission_denial(self) -> None:
+        close = os.close
+
+        def fail_close(fd: int) -> None:
+            close(fd)
+            raise OSError(errno.EIO, "close failed")
+
+        with patch.object(probe.os, "unlink", side_effect=PermissionError(errno.EACCES, "denied")):
+            with patch.object(probe.os, "close", side_effect=fail_close):
+                result = self.probe_current_repository()
+        self.assertEqual("stop", result["data"]["verdict"])
+        self.assertEqual("unavailable", result["data"]["observation"]["status"])
+
+
+class GitWriteProbeDirectoryReplacementTest(GitWriteProbeFixture):
+    def directory_replacement_result(self, deny_open: bool) -> dict:
+        open_file, close = os.open, os.close
+        common = self.root / ".git"
+        parent_metadata = common.stat()
+        private_fd = None
+        replacement = None
+
+        def replace_directory(path):
+            nonlocal replacement
+            replacement = common / path
+            replacement.rename(common / "held-cleanup")
+            replacement.mkdir(mode=0o700)
+
+        def observe_open(path, flags, mode=0o777, *, dir_fd=None):
+            nonlocal private_fd
+            parent = os.fstat(dir_fd) if dir_fd is not None else None
+            if (str(path).endswith(".cleanup") and parent is not None
+                    and (parent.st_dev, parent.st_ino) == (parent_metadata.st_dev, parent_metadata.st_ino)):
+                if deny_open and (common / path).exists():
+                    if replacement is None:
+                        replace_directory(path)
+                    raise PermissionError(errno.EACCES, "cleanup open denied")
+                private_fd = open_file(path, flags, mode, dir_fd=dir_fd)
+                return private_fd
+            return open_file(path, flags, mode, dir_fd=dir_fd)
+
+        def replace_before_close(fd):
+            if fd == private_fd and replacement is None:
+                replace_directory(next(common.glob("*.cleanup")).name)
+            close(fd)
+
+        with patch.object(probe.os, "open", side_effect=observe_open):
+            with patch.object(probe.os, "close", side_effect=replace_before_close):
+                result = self.probe_current_repository()
+        self.assertIsNotNone(replacement, "public directory substitution was not exercised")
+        self.assertTrue((common / "held-cleanup").exists(), "original directory was not moved")
+        self.assertTrue(replacement.exists(), "cleanup removed a foreign replacement directory")
+        return result
+
+    def test_cleanup_preserves_public_directory_replacement_when_open_is_denied(self) -> None:
+        self.assertEqual("stop", self.directory_replacement_result(True)["data"]["verdict"])
+
+    def test_cleanup_preserves_public_directory_replacement_after_close(self) -> None:
+        self.assertEqual("proceed", self.directory_replacement_result(False)["data"]["verdict"])
+
+
 def build_suite() -> unittest.TestSuite:
-    return unittest.defaultTestLoader.loadTestsFromTestCase(GitWriteProbeTest)
+    return unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
+                              for case in (GitWriteProbeTest, GitWriteProbeContainmentTest, GitWriteProbeDirectoryReplacementTest,
+                                           GitWriteProbeDescriptorTest))
 
 
 def main() -> int:

@@ -13,7 +13,7 @@ model: sonnet
 color: green
 disallowedTools: Skill, Agent, SendMessage
 maxTurns: 60
-effort: max
+effort: high
 ---
 
 # Artifact Author
@@ -117,10 +117,22 @@ Rules:
 - Write only between a `START` marker and its matching `END`. Never move,
   delete, or duplicate a marker.
 - Fill every slot the template's inventory declares.
-- Fill `document-title` with one static, HTML-escaped `<title>` element. Never
-  set `document.title` from an inline script: feature identifiers and names are
-  repository-derived data, and the gallery contract forbids interpolating that
-  data into script bodies.
+- Escape every value you take from the planning record, in every fill region,
+  `document-title` included. Planning text is untrusted data: it becomes text,
+  never markup. Escape `&`, `<`, `>`, `"`, and `'` before the value lands in
+  element text or a double-quoted attribute value. Only the tags and attributes
+  you write yourself are markup.
+- Fill `document-title` with one static `<title>` element holding the escaped
+  title. Set the page title only through that element: the gallery contract
+  keeps repository-derived data out of script bodies.
+- Keep every fill inert: no `<script>`, `<style>`, `<iframe>`, `<object>`,
+  `<embed>`, `<base>`, `<meta>`, or `<link>` element; no `on*` or `srcdoc`
+  attribute; no `javascript:`, `vbscript:`, or non-image, non-font `data:` URL;
+  no `<!` or `<?` construct other than a plain `<!-- ... -->` comment; and
+  only escaped text inside a `<title>` or `<textarea>`, closed in the same
+  region. The template's own scripts already provide the page's behavior. The
+  artifact review rejects a page whose fill carries active content and names
+  the region.
 - Leave no placeholder text behind.
 - Content comes from the planning record. Never invent it.
 
@@ -155,6 +167,18 @@ rename, read, or delete anything in the `artifacts/` directory with a native
 tool (`Write`, `Edit`, `Read`, `cp`, `mv`, `rm`, or a script). A path check handed back to you cannot bind the file your tool later
 touches: a link or rename between the check and the operation would redirect
 it. So the runner never hands out such a check, and you never act on a path.
+
+Before handing the rendered content to the runner, validate it in memory.
+Require all of these conditions:
+
+1. its bytes differ from the shipped template;
+2. it contains no sample-banner element using any recognized template class:
+   `sample-notice`, `notice`, or `note`;
+3. every declared `FILL` marker pair still appears exactly once and in order;
+4. its slot set equals the inventory exactly, and every marked region matches
+   the replacement map rather than the shipped-template region;
+5. no fill region carries active content, and every planning-derived value in
+   it is escaped.
 
 Invoke the loaded runner's `publish-artifact-page` helper in `apply` mode from
 the feature repository root, once per page. Its operation is also

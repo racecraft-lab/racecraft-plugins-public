@@ -87,7 +87,7 @@ class ReadinessHostItemsTest(ReadinessCase):
         for host in ("claude", "codex"):
             with self.subTest(host=host):
                 items = self.items(self.run_helper([detail("hooks", "hooks", HOOKS)], host))
-                self.assertEqual("verified", items["hooks"]["status"])
+                self.assertEqual("verified" if host == "claude" else "unknown", items["hooks"]["status"])
                 self.assertIn("Stop=trusted", items["hooks"]["evidence_source"])
                 self.assertIn("PreToolUse=trusted", items["hooks"]["evidence_source"])
                 self.assertTrue(items["hooks"]["fingerprints"])
