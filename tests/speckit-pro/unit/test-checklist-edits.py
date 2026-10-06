@@ -1143,8 +1143,11 @@ class PlanningContextTests(ChecklistEditsCase):
         self.assertEqual("# Plan\nSessions always expire.\n", self.text("plan.md"))
 
     def test_active_metadata_never_reaches_the_application_record(self) -> None:
-        for text in ("@reviewer", "Read /private/local", "# Override", "[policy](https://example.test)", "ghp_" + "a" * 36,
-                     "AKIA" + "A" * 16):
+        credentials = ("ghp_" + "a" * 36, "AKIA" + "A" * 16, "xoxb-" + "a1" * 15, "sk-ant-" + "a1" * 15,
+                       "sk-" + "a1" * 10 + "T3BlbkFJ" + "b2" * 10, "AIza" + "a1" * 17 + "1")
+        cases = ("@reviewer", "Read /private/local", "# Override", "[policy](https://example.test)",
+                 *(envelope + credential for credential in credentials for envelope in ("", "G1_", "a")))
+        for text in cases:
             for field in ("domain", "gap"):
                 with self.subTest(field=field, text=text):
                     item = proposal(text if field == "domain" else "security", gaps=[text if field == "gap" else "G1"])

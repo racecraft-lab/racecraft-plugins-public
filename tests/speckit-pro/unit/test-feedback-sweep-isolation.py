@@ -127,8 +127,9 @@ class SnapshotIsolationTests(unittest.TestCase):
 
     def test_credential_scanner_catches_bare_issuer_tokens_without_matching_prefix_prose(self) -> None:
         for index, secret in enumerate(issuer_secret_cases()):
-            with self.subTest(case=index):
-                self.assertTrue(sweep_isolation.secret_matches(secret))
+            for envelope in ("", "G1_", "a"):
+                with self.subTest(case=index, envelope=envelope):
+                    self.assertTrue(sweep_isolation.secret_matches(envelope + secret))
         for prose in (
             "a ghp_ prefixed classic token",
             "sk-ant- keys are issued per workspace",
@@ -140,8 +141,9 @@ class SnapshotIsolationTests(unittest.TestCase):
 
     def test_digit_free_github_token_shapes_are_credentials(self) -> None:
         for prefix, size in (("ghp_", 36), ("gho_", 36), ("ghu_", 36), ("ghs_", 36), ("ghr_", 76), ("github_pat_", 82)):
-            with self.subTest(prefix=prefix):
-                self.assertTrue(sweep_isolation.secret_matches(prefix + "a" * size))
+            for envelope in ("", "G1_", "a"):
+                with self.subTest(prefix=prefix, envelope=envelope):
+                    self.assertTrue(sweep_isolation.secret_matches(envelope + prefix + "a" * size))
 
     def test_outbound_redactor_removes_each_issuer_secret_and_preserves_url_context(self) -> None:
         for index, secret in enumerate(issuer_secret_cases()):
