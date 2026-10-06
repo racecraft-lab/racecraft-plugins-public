@@ -41,6 +41,7 @@ SPLIT = entry("split_recommendation", "split")
 DEFAULT = entry("unratified_default", "default")
 PR_PROBLEM = entry("pr_record_problem", "pr")
 STOP = entry("unregistered_stop", "stop")
+LOW = entry("low_confidence_answer", "low")
 HOOK = entry("optional_hook_run", "hook")
 
 
@@ -106,6 +107,14 @@ class DecisionsListTests(unittest.TestCase):
             sent = next(each for each in (NOTE, SKIP, SCOPE, SPLIT, DEFAULT, PR_PROBLEM, STOP, HOOK)
                         if each["kind"] == item["kind"])
             self.assertEqual(sent, {key: value for key, value in item.items() if key != "seq"})
+
+    def test_low_confidence_items_render_before_every_other_entry(self) -> None:
+        self.assertEqual("ok", self.append(NOTE, SKIP, SCOPE, LOW)["status"])
+        self.assertEqual("ok", self.append(SPLIT, entry("low_confidence_answer", "later"))["status"])
+        entries = self.listed()["entries"]
+        self.assertEqual(["low_confidence_answer"] * 2, [item["kind"] for item in entries[:2]])
+        self.assertEqual(["evidence low", "evidence later"], [item["evidence"] for item in entries[:2]])
+        self.assertEqual("scope_answer", entries[2]["kind"])
 
     def test_entries_of_one_class_keep_the_order_they_were_appended(self) -> None:
         self.append(SPLIT)

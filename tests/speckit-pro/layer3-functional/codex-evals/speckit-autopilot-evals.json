@@ -215,14 +215,14 @@
     {
       "id": 17,
       "prompt": "The clarify-executor returned its summary with one item under 'Unresolved for consensus': '[codebase] Q4: Which existing error-handling pattern should the new payment retry logic follow?' Walk me through how the Codex autopilot dispatches consensus for this single item. Which analyst(s) get spawn_agent? Does the synthesizer step still run?",
-      "expected_output": "Explains category-routed Round 1 dispatch: only codebase-analyst is spawned via spawn_agent (because the [codebase] tag specifies it). The synthesizer step still runs in the main orchestrator session as edit-applier with N=1. If codebase-analyst returns a high-confidence answer with no escape-hatch keyword, the orchestrator applies the artifact edit. Otherwise Round 2 spawns the remaining 2 analysts.",
+      "expected_output": "Explains plan-stage tier routing: parse-consensus-categories returns the low_confidence tier (no [security] tag or security keyword, and a missing executor confidence counts as low), so only codebase-analyst is spawned via spawn_agent because the [codebase] tag names it. The installed consensus-synthesizer is not dispatched for this item: it runs only for security items and for the Phase 6 confidence emit. After the analyst returns, the orchestrator calls parse-consensus-categories again with analyst_confidence and follows answer_source: analyst applies the analyst answer, executor keeps the executor recommendation. The item finishes after that one analyst, with no Round 2, and is recorded as a low_confidence_answer decision.",
       "expectations": [
-        "States that ONLY codebase-analyst is spawned in Round 1 because the item is tagged [codebase]",
-        "Explicitly does NOT spawn spec-context-analyst or domain-researcher in Round 1",
-        "Confirms that the consensus-synthesizer step still runs even when only 1 analyst ran",
-        "Mentions the single-analyst confidence rule (high → apply, low → escape to Round 2)",
-        "Mentions the escape-hatch keywords (insufficient context / no precedent / outside my scope) trigger Round 2",
-        "References the consensus-protocol.md reference document for full routing rules"
+        "States that ONLY codebase-analyst is spawned via spawn_agent because the item is tagged [codebase] and falls in the low_confidence tier",
+        "Explicitly does NOT spawn spec-context-analyst or domain-researcher",
+        "States that the consensus-synthesizer step does NOT run for this item, because it runs only for security items and the Phase 6 confidence emit",
+        "Mentions the single-analyst confidence rule (answer_source analyst → apply the analyst answer, executor → keep the executor recommendation)",
+        "States that the item finishes after the one analyst, with no Round 2 and no further analyst",
+        "References consensus-protocol.md or the plan-stage tier routing rules"
       ]
     },
     {
