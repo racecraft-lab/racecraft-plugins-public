@@ -1060,6 +1060,9 @@ class GuidanceTests(unittest.TestCase):
             self.assertNotIn("Domain 2 may depend on Domain 1's gap fixes", passage)
             self.assertIn("restore both files before any retry", passage)
             self.assertIn("its state is unknown", passage)
+            if "Phase" in anchor:
+                verify_prompt = passage.split('prompt: "Mode: verify', 1)[1].split('")', 1)[0]
+                self.assertIn("Reference slices: <brief.slices, verbatim>", verify_prompt)
 
 
 if __name__ == "__main__":

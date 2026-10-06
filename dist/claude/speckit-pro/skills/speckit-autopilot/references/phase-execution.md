@@ -567,8 +567,10 @@ After every domain executor has returned:
         [ROUND_3_TIEBREAK]: consensus-protocol.md#round-3-tiebreak (Round 3 agent tiebreak)
      c. autopilot-state.json: "<domain> Consensus" → completed
   6. runner helper `checklist-edits`, mode read_only → verify baseline
+     Reuse the phase brief inputs, readable files and dispatch context from
+     the original domain prompt (SKILL.md Step 2).
      For each domain: Agent(subagent_type: "speckit-pro:checklist-executor",
-          run_in_background: false, prompt: "Mode: verify\nRun /speckit-checklist with: <domain prompt>")
+          run_in_background: false, prompt: "Mode: verify\nRun /speckit-checklist with: <domain prompt>\nReference slices: <brief.slices, verbatim>")
      re-runs the domain checklist to verify gaps closed
      autopilot-state.json: domain task → completed
      Then runner helper `checklist-edits`, mode dry_run, with no domains, no
