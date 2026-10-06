@@ -93,7 +93,11 @@ SETTINGS_PROMISES = ("are the same key", "a key named twice", "also a table hold
                      "`features.apps` to false; another control's value never makes a control inapplicable",
                      "`auto_review` is conservative only under `never` or a granular policy with every category false",
                      "one key table", "`apps._default` takes only `enabled`",
-                     "such as `apps._default.default_tools_enabled`, switches nothing off")
+                     "such as `apps._default.default_tools_enabled`, switches nothing off",
+                     "`_default` is reserved only as an app id",
+                     "an OpenAI-managed marketplace (`openai-curated-remote`",
+                     "`features.plugins` false", "`features.codex_hooks` false", "`features.remote_plugin` false",
+                     "`project_doc_max_bytes` at most 32768")
 LEGACY_HOOK_ACTION = ("Send a complete codex_hook_trust observation that verifies each hook's identity and exact hash "
                       "against the shipped definitions, then rerun scaffold. Never trust a hook that is not "
                       "verified. Scaffold never broadens permissions or disables a control.")
@@ -949,7 +953,6 @@ class ReadinessCodexKeyTableTest(ReadinessCase):
             with self.subTest(key=key):
                 self.assert_item(self.item(no_tools({key: value, activation: "prompt"})), expected[0], (expected[1],))
         for key, activation in (("features.mcp_servers", 'mcp_servers."docs".enabled'),
-                                ("features.plugins", 'plugins."kit".mcp_servers."docs".enabled'),
                                 ("apps.enabled", 'apps."drive".enabled'), ("tools.apps", 'apps."drive".enabled')):
             with self.subTest(key=key):
                 self.assert_item(self.item(no_tools({key: False, activation: True})), "unavailable",
@@ -976,12 +979,128 @@ class ReadinessCodexKeyTableTest(ReadinessCase):
                 self.assertIsNone(module.rule_for(module.MODELED_PATTERNS, module.key_path(key)))
         self.assertFalse(module.matches(module.pattern("apps.*.enabled"), ("apps", "_default", "enabled")))
         self.assertTrue(module.matches(module.pattern("apps._default.enabled"), ("apps", "_default", "enabled")))
+        self.assertTrue(module.matches(module.pattern("mcp_servers.*.enabled"), ("mcp_servers", "_default", "enabled")))
+        self.assertTrue(module.matches(module.pattern("apps.*.tools.*.enabled"), ("apps", "drive", "tools", "_default", "enabled")))
         settings = module.canonical_settings({"apps._default.default_tools_enabled": False,
-                                              'apps."drive".default_tools_enabled': False})
+                                              'apps."drive".default_tools_enabled': False,
+                                              'plugins."demo@openai-curated-remote".enabled': False,
+                                              'plugins."kit@local".enabled': False})
         self.assertIsNone(module.read(settings, "apps.*.default_tools_enabled", "_default"))
         self.assertIs(False, module.read(settings, "apps.*.default_tools_enabled", "drive"))
+        self.assertIsNone(module.read(settings, "plugins.*.enabled", "demo@openai-curated-remote"))
+        self.assertIs(False, module.read(settings, "plugins.*.enabled", "kit@local"))
         with self.assertRaises(LookupError):
             module.read(settings, "apps._default.default_tools_enabled")
+
+
+# Cross-host review cr1263h: plugin-scope and hook-scope off switches, local versus OpenAI-managed plugin sources,
+# and `_default` in every position. A managed plugin key is `<name>@<marketplace>` for one of these marketplaces.
+MANAGED_MARKETPLACES = ("openai-curated-remote", "openai-curated", "openai-api-curated", "openai-bundled")
+LOCAL_PLUGINS = ("kit@local", "kit", "kit@contrib")
+
+
+def plugin_server(plugin: str, **changes: object) -> dict[str, object]:
+    """One plugin MCP server enabled with automatic approval, the surface a `none` aggregate denies."""
+    prefix = f'plugins."{plugin}".mcp_servers."docs"'
+    return {f"{prefix}.enabled": True, f"{prefix}.default_tools_approval_mode": "auto", **changes}
+
+
+# Daybreak F1263-9c553342: bounds on untrusted text reaching the model are never inert.
+CONTENT_LIMITS = ("project_doc_max_bytes", "tool_output_token_limit",
+                  'mcp_servers."docs".tools."search".output_token_limit')
+# Codex reserves `_default` as the apps default table only; everywhere else it is an ordinary name.
+DEFAULT_ELSEWHERE = {
+    "an MCP server": {'mcp_servers."_default".enabled': False,
+                      'mcp_servers."_default".tools."search".approval_mode': "prompt"},
+    "a bare MCP server": {"mcp_servers._default.enabled": False,
+                          "mcp_servers._default.default_tools_approval_mode": "prompt"},
+    "a denied MCP tool": {'mcp_servers."docs".disabled_tools': ["_default"],
+                          'mcp_servers."docs".tools."_default".approval_mode': "prompt"},
+    "an app tool": {'apps."drive".tools."_default".enabled': False,
+                    'apps."drive".tools."_default".approval_mode': "prompt"},
+    "a plugin": {'plugins."_default".enabled': False, 'plugins."_default".mcp_servers."docs".enabled': True},
+    "a plugin MCP server": {'plugins."kit".mcp_servers."_default".enabled': False,
+                            'plugins."kit".mcp_servers."_default".tools."search".approval_mode': "prompt"},
+    "a project": {'projects."_default".trust_level': "untrusted"},
+    "an unselected permissions profile": {'permissions."_default".network.enabled': True},
+    "an environment filter": {'shell_environment_policy.filters."_default"': "exclude"},
+}
+
+
+class ReadinessCodexPluginScopeTest(ReadinessCase):
+    """Cross-host review cr1263h: each off switch holds only where Codex reads it."""
+
+    default_host = "codex"
+    request_id = "test-codex-plugin-scope"
+
+    def test_a_local_off_value_never_verifies_a_managed_plugin(self) -> None:
+        for marketplace in MANAGED_MARKETPLACES:
+            plugin = f"demo@{marketplace}"
+            with self.subTest(plugin=plugin):
+                probe = {f'plugins."{plugin}".enabled': False, **plugin_server(plugin)}
+                self.assert_item(self.item(no_tools(probe)), "unavailable",
+                                 ("settings=1 outside, 2 contradicted, 0 unobservable",), ("Keep current controls",))
+                self.assert_item(self.item(no_tools({f'plugins."{plugin}".enabled': False})), "unavailable",
+                                 ("settings=1 outside, 0 contradicted",))
+                remote_off = {"features.remote_plugin": False, f'plugins."{plugin}".enabled': False,
+                              **plugin_server(plugin)}
+                self.assert_item(self.item(no_tools(remote_off)), "unavailable", ("settings=1 outside, 2 contradicted",))
+        for plugin in LOCAL_PLUGINS:
+            with self.subTest(plugin=plugin):
+                self.assert_item(self.item(no_tools({f'plugins."{plugin}".enabled': False, **plugin_server(plugin)})),
+                                 "verified", ("settings=accounted",))
+
+    def test_explicit_plugin_scope_off_switches_still_switch_off(self) -> None:
+        plugin = "demo@openai-curated-remote"
+        prefix = f'plugins."{plugin}".mcp_servers."docs"'
+        off = {
+            "the plugin MCP server off": plugin_server(plugin, **{f"{prefix}.enabled": False}),
+            "an empty plugin enabled-tools list": {f"{prefix}.enabled_tools": [],
+                                                   f"{prefix}.tools.\"search\".approval_mode": "auto"},
+            "a denied plugin tool": {f"{prefix}.disabled_tools": ["search"],
+                                     f"{prefix}.tools.\"search\".approval_mode": "auto"},
+            "plugins off": {"features.plugins": False, **plugin_server(plugin)},
+            "plugins off beside a local plugin": {"features.plugins": False, **plugin_server("kit@local")},
+            "plugins off alone": {"features.plugins": False},
+            "the remote catalog off alone": {"features.remote_plugin": False},
+        }
+        assert_each(self, off, "verified", ("settings=accounted",), no_tools)
+        for key in ("features.plugins", "features.remote_plugin"):
+            with self.subTest(key=key):
+                self.assert_item(self.item(no_tools({key: True})), "unavailable", ("settings=1 outside",))
+                self.assertEqual("unknown", self.item(no_tools({key: "unobservable"}))["status"])
+        self.refuse_each([no_tools({"features.plugins": "off"})])
+
+    def test_hook_scope_off_switches_are_judged_alone(self) -> None:
+        self.assert_item(self.item(settings(**{"features.codex_hooks": False})), "verified", ("settings=accounted",))
+        self.assertEqual("verified", self.item(settings(**{"features.codex_hooks": False, "features.hooks": False}))["status"])
+        for case in ({"features.codex_hooks": True}, {"features.hooks": False, "features.codex_hooks": True},
+                     {"features.hooks": True, "features.codex_hooks": False}):
+            with self.subTest(case=case):
+                self.assert_item(self.item(settings(**case)), "unavailable", ("settings=1 outside",))
+        self.refuse_each([settings(**{"features.codex_hooks": "no"})])
+
+    def test_default_is_reserved_only_as_an_app_id(self) -> None:
+        assert_each(self, DEFAULT_ELSEWHERE, "verified", ("settings=accounted",), no_tools)
+        for key in ("apps._default.default_tools_enabled", 'apps."_default".tools."upload".enabled'):
+            with self.subTest(key=key):
+                self.assert_item(self.item(no_tools({key: False})), "unavailable", ("settings=1 outside",))
+
+    def test_content_limits_are_never_inert(self) -> None:
+        """Daybreak F1263-9c553342: a larger bound on untrusted text is never accounted for."""
+        for key in CONTENT_LIMITS:
+            with self.subTest(key=key):
+                self.assert_item(self.item(settings(**{key: 1000000})), "unavailable", ("settings=1 outside",))
+                self.assertEqual("unknown", self.item(settings(**{key: "unobservable"}))["status"])
+        self.assertEqual("verified", self.item(settings(project_doc_max_bytes=32768))["status"])
+        self.assertEqual("verified", self.item(settings(project_doc_max_bytes=1024))["status"])
+        self.assertEqual("unavailable", self.item(settings(project_doc_max_bytes=32769))["status"])
+        # The model, not the configuration, sets the default output budgets, so no value is provably smaller.
+        for key in CONTENT_LIMITS[1:]:
+            with self.subTest(key=key, value=100):
+                self.assertEqual("unavailable", self.item(settings(**{key: 100}))["status"])
+        self.refuse_each([settings(project_doc_max_bytes="big"), settings(tool_output_token_limit=0),
+                          settings(**{CONTENT_LIMITS[2]: -1})])
 
 
 def build_suite() -> unittest.TestSuite:
@@ -992,7 +1111,8 @@ def build_suite() -> unittest.TestSuite:
                                loader.loadTestsFromTestCase(ReadinessCodexPostureEvidenceTest),
                                loader.loadTestsFromTestCase(ReadinessCodexPostureAggregateTest),
                                loader.loadTestsFromTestCase(ReadinessCodexAutoReviewTest),
-                               loader.loadTestsFromTestCase(ReadinessCodexKeyTableTest)])
+                               loader.loadTestsFromTestCase(ReadinessCodexKeyTableTest),
+                               loader.loadTestsFromTestCase(ReadinessCodexPluginScopeTest)])
 
 
 def main() -> int:

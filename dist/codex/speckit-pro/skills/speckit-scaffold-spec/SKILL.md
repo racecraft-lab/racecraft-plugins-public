@@ -1057,7 +1057,12 @@ the effect Codex gives it: `apps._default` takes only `enabled`,
 and `open_world_enabled`, and `apps._default.enabled` false disables only
 apps with no `[apps.<id>]` table. A key under a path Codex does not read it
 from, such as `apps._default.default_tools_enabled`, switches nothing off
-and makes the posture `unavailable`. Other keys are on
+and makes the posture `unavailable`. `_default` is reserved only as an app id;
+elsewhere it is an ordinary name. A plugin from an OpenAI-managed marketplace
+(`openai-curated-remote`, `openai-curated`, `openai-api-curated` or
+`openai-bundled`) keeps a workspace-managed or synced enabled state, so its
+local `plugins.<name>@<marketplace>.enabled` proves nothing and makes the
+posture `unavailable`; its per-server switches still hold. Other keys are on
 the helper's list of inert keys (model, display, notice and local history
 settings), or hold their conservative value: `allow_login_shell` false,
 `shell_environment_policy.inherit` `core` or `none`,
@@ -1066,13 +1071,19 @@ settings), or hold their conservative value: `allow_login_shell` false,
 `shell_environment_policy.exclude`, `shell_environment_policy.include_only` or
 `shell_environment_policy.filters.*` entry, since those only remove inherited
 variables; `projects.*.trust_level` `untrusted`, since trust activates project
-configuration, hooks and rules; `plugins.*.enabled` false and `features.hooks`
-false, since no summary judges plugin instructions or hooks beyond the shipped
-ones; and `check_for_update_on_startup` false, since the check sends a
-request. `shell_environment_policy.set.*`, `marketplaces.*.source`,
-`marketplaces.*.source_type`, `marketplaces.*.ref` and
-`marketplaces.*.sparse_paths` have no conservative value: they add a variable
-or select external plugin content. Rules name exact keys, and `*` stands for
+configuration, hooks and rules; `plugins.*.enabled` false (a user-configured
+marketplace only), `features.plugins` false and `features.remote_plugin`
+false, since no summary judges plugin instructions, agents or hooks;
+`features.hooks` false and its deprecated alias `features.codex_hooks` false,
+each judged alone, since no summary judges hooks beyond the shipped ones;
+`project_doc_max_bytes` at most 32768, the Codex default for project
+instructions read into context; and `check_for_update_on_startup` false,
+since the check sends a request. `shell_environment_policy.set.*`,
+`marketplaces.*.source`, `marketplaces.*.source_type`, `marketplaces.*.ref`,
+`marketplaces.*.sparse_paths`, `tool_output_token_limit` and
+`mcp_servers.*.tools.*.output_token_limit` have no conservative value: they
+add a variable, select external plugin content, or raise a bound on tool
+output whose default the model sets. Rules name exact keys, and `*` stands for
 one name you chose, such as a project, plugin or server name. Any other key,
 an unknown one or one nested under a known table included, makes the posture
 `unavailable`, or `unknown` when its value is unobservable. Values and key
