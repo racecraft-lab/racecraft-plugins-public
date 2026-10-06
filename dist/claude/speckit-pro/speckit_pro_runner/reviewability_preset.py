@@ -43,9 +43,11 @@ def state(registry: str, manifest_exists: bool) -> dict[str, Any]:
     """Classify trusted project evidence and supply the command when installation is needed."""
     state: dict[str, Any] = {"id": PRESET_ID, "status": "installed", "add_args": []}
     try:
-        registered = PRESET_ID in json.loads(registry).get("presets", {})
-    except (ValueError, AttributeError, TypeError):
-        registered = False
+        document = json.loads(registry)
+    except ValueError:
+        document = None
+    presets = document.get("presets") if isinstance(document, dict) else None
+    registered = isinstance(presets, dict) and PRESET_ID in presets
     if registered and manifest_exists:
         return state
     state["add_args"] = add_args()

@@ -206,6 +206,16 @@ class ReviewabilityPreset(ReadinessCase):
         shutil.copy(REPO_ROOT / ".specify/presets/.registry", root / ".specify/presets/.registry")
         self.assertEqual("installed", self.state(root)["status"])
 
+    def test_a_malformed_registry_never_reports_the_preset_installed(self) -> None:
+        root = self.root
+        shutil.copytree(REPO_ROOT / ".specify/presets" / PRESET_ID, root / ".specify/presets" / PRESET_ID)
+        for registry in ([PRESET_ID], {"presets": [PRESET_ID]}, {"presets": PRESET_ID}, {"presets": None}, "invalid"):
+            with self.subTest(registry=registry):
+                (root / ".specify/presets/.registry").write_text(json.dumps(registry))
+                state = self.state(root)
+                self.assertEqual("missing", state["status"])
+                self.assertEqual(["preset", "add", "--dev"], state["add_args"][:3])
+
     def test_the_shipped_preset_replaces_the_three_core_templates(self) -> None:
         manifest = (REPO_ROOT / ".specify/presets" / PRESET_ID / "preset.yml").read_text(encoding="utf-8")
         for name in PRESET_TEMPLATES:
