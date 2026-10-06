@@ -31,6 +31,8 @@ PACKET_SLUG = r"[a-z0-9][a-z0-9._-]*"
 SOURCE_FEATURE_PATTERN = re.compile(rf"^specs/(?P<feature>{PACKET_SLUG})$")
 # A run that finished with deferred items opens its top PR body with this section.
 DEFERRED_HEADING = "Deferred / not verified"
+# A run that used the shipped quality-gate defaults (ADR 0007) says so in the next section.
+UNRATIFIED_HEADING = "Unratified quality-gate defaults"
 PACKET_PATH_PATTERN = re.compile(
     rf"^(?P<source_feature_dir>specs/{PACKET_SLUG})/\.process/pr-packets/(?P<packet_id>{PACKET_SLUG})\.json$"
 )
@@ -178,9 +180,9 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
     elif mode not in {"single", "split", "draft"}:
         return invalid_packet_input("mode must be single, split, or draft when provided", field="mode")
 
-    deferred_items = normalize_deferred_items(inputs.get("deferred_items"), mode)
-    if isinstance(deferred_items, dict):
-        return deferred_items
+    notices = normalize_packet_notices(inputs, mode)
+    if "diagnostic" in notices:
+        return notices
 
     scope_evidence = normalize_scope_evidence(inputs, mode)
     if isinstance(scope_evidence, dict) and "diagnostic" in scope_evidence:
@@ -219,22 +221,22 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
     else:
         rendered_body = build_packet_body(
             generated_title["value"],
-            summary=markdown_block(inputs.get("summary"), "Generated SpecKit Pro review packet."),
-            what_changed=markdown_list(inputs.get("what_changed"), ["See changed-file scope evidence in the packet."]),
-            why_it_matters=markdown_block(inputs.get("why_it_matters"), "This prepares the completed SpecKit work for review."),
-            how_to_review=markdown_list(inputs.get("how_to_review"), ["Review the changed files and verification evidence in order."]),
-            how_to_uat=uat["how_to_uat"],
-            uat_heading=uat["uat_runbook_heading"],
-            verification=markdown_list(inputs.get("verification"), [item["summary"] for item in verification_evidence]),
-            scope=markdown_list(inputs.get("scope"), scope_evidence["changed_files"]),
-            known_gaps=markdown_list(inputs.get("known_gaps"), ["No known gaps for this PR."]),
-            deferred_items=deferred_items,
+            sections={
+                "summary": markdown_block(inputs.get("summary"), "Generated SpecKit Pro review packet."),
+                "what_changed": markdown_list(inputs.get("what_changed"), ["See changed-file scope evidence in the packet."]),
+                "why_it_matters": markdown_block(inputs.get("why_it_matters"), "This prepares the completed SpecKit work for review."),
+                "how_to_review": markdown_list(inputs.get("how_to_review"), ["Review the changed files and verification evidence in order."]),
+                "how_to_uat": uat["how_to_uat"],
+                "uat_heading": uat["uat_runbook_heading"],
+                "verification": markdown_list(inputs.get("verification"), [item["summary"] for item in verification_evidence]),
+                "scope": markdown_list(inputs.get("scope"), scope_evidence["changed_files"]),
+                "known_gaps": markdown_list(inputs.get("known_gaps"), ["No known gaps for this PR."]),
+            },
+            notices=notices,
         )
-    if deferred_items and first_section_heading(rendered_body) != DEFERRED_HEADING:
-        return invalid_packet_input(
-            f"a body for a run with deferred items must open with the ## {DEFERRED_HEADING} section",
-            field="body",
-        )
+    notice_failure = packet_notice_failure(rendered_body, notices)
+    if notice_failure is not None:
+        return notice_failure
 
     body_failures = packet_body_structure_failures(
         {
@@ -612,18 +614,12 @@ def normalize_source_markers(raw: Any, packet_id: str, title: str, source_featur
 def build_packet_body(
     title: str,
     *,
-    summary: str,
-    what_changed: str,
-    why_it_matters: str,
-    how_to_review: str,
-    how_to_uat: str,
-    uat_heading: str,
-    verification: str,
-    scope: str,
-    known_gaps: str,
-    deferred_items: list[dict[str, str]] | None = None,
+    sections: dict[str, str],
+    notices: dict[str, Any] | None = None,
 ) -> str:
     parts = [f"# {title}", ""]
+    notices = notices or {}
+    deferred_items = notices.get("deferred_items")
     if deferred_items:
         parts.extend([
             f"## {DEFERRED_HEADING}",
@@ -633,51 +629,51 @@ def build_packet_body(
             *(f"- **{item['item']}**: {item['reason']} To finish it: {item['finish']}" for item in deferred_items),
             "",
         ])
-    parts += [
-        "## Summary",
-        "",
-        "<!-- speckit-pro-editable:summary:start -->",
-        summary,
-        "<!-- speckit-pro-editable:summary:end -->",
-        "",
-        "## What Changed",
-        "",
-        "<!-- speckit-pro-editable:what_changed:start -->",
-        what_changed,
-        "<!-- speckit-pro-editable:what_changed:end -->",
-        "",
-        "## Why It Matters",
-        "",
-        "<!-- speckit-pro-editable:why_it_matters:start -->",
-        why_it_matters,
-        "<!-- speckit-pro-editable:why_it_matters:end -->",
-        "",
-        "## How To Review",
-        "",
-        how_to_review,
-        "",
-        "## How To UAT",
-        "",
-        how_to_uat,
-        "",
-        uat_heading,
-        "",
-        how_to_uat,
-        "",
-        "## Verification",
-        "",
-        verification,
-        "",
-        "## Scope",
-        "",
-        scope,
-        "",
-        "## Known Gaps",
-        "",
-        known_gaps,
-        "",
-    ]
+    unratified_defaults = notices.get("unratified_defaults")
+    if unratified_defaults:
+        parts.extend([f"## {UNRATIFIED_HEADING}", "", unratified_defaults.strip(), ""])
+    for heading, field in (
+        ("## Summary", "summary"), ("## What Changed", "what_changed"),
+        ("## Why It Matters", "why_it_matters"), ("## How To Review", "how_to_review"),
+        ("## How To UAT", "how_to_uat"), (sections["uat_heading"], "how_to_uat"),
+        ("## Verification", "verification"), ("## Scope", "scope"), ("## Known Gaps", "known_gaps"),
+    ):
+        parts.extend([heading, ""])
+        if field in {"summary", "what_changed", "why_it_matters"}:
+            parts.extend([f"<!-- speckit-pro-editable:{field}:start -->", sections[field],
+                          f"<!-- speckit-pro-editable:{field}:end -->", ""])
+        else:
+            parts.extend([sections[field], ""])
     return "\n".join(parts)
+
+
+def normalize_packet_notices(inputs: dict[str, Any], mode: str) -> dict[str, Any]:
+    deferred = normalize_deferred_items(inputs.get("deferred_items"), mode)
+    if isinstance(deferred, dict):
+        return deferred
+    flag = inputs.get("unratified_defaults")
+    if flag is not None and (not isinstance(flag, str) or not is_one_line(flag)):
+        return invalid_packet_input(
+            "unratified_defaults must be one non-blank line",
+            field="unratified_defaults",
+        )
+    return {"deferred_items": deferred, "unratified_defaults": flag,
+            "unratified_prefix": "\n" if mode == "draft" else f"\n## {UNRATIFIED_HEADING}\n\n"}
+
+
+def packet_notice_failure(body: str, notices: dict[str, Any]) -> dict[str, Any] | None:
+    if notices["deferred_items"] and first_section_heading(body) != DEFERRED_HEADING:
+        return invalid_packet_input(
+            f"a body for a run with deferred items must open with the ## {DEFERRED_HEADING} section",
+            field="body",
+        )
+    flag = notices["unratified_defaults"]
+    if flag and f'{notices["unratified_prefix"]}{flag.strip()}\n' not in body:
+        return invalid_packet_input(
+            "a body for a run on unratified defaults must carry the flag in its declared notice format",
+            field="body",
+        )
+    return None
 
 
 def normalize_deferred_items(raw: Any, mode: str) -> list[dict[str, str]] | dict[str, Any]:
