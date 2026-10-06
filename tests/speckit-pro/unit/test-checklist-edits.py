@@ -1114,6 +1114,11 @@ class UntrustedTextTests(ChecklistEditsCase):
         self.assertEqual("edits would write credential-shaped text", result["data"]["domains"][1]["conflicts"][0]["reason"])
         self.assertNotIn(first + second, self.text("spec.md"))
 
+
+
+class PlanningContextTests(ChecklistEditsCase):
+    """Composed text and persisted proposal metadata."""
+
     def test_completed_lines_are_checked_even_when_the_replacement_is_plain(self) -> None:
         for name in ("spec.md", "plan.md"):
             for line, find, replacement in (("[policy](https://example.test/old)", "old", "new"),
@@ -1161,8 +1166,6 @@ class UntrustedTextTests(ChecklistEditsCase):
                 result = self.apply(proposal("security", edit("G1", name, "Old", "New")))
                 self.assertEqual("conflict", result["data"]["domains"][0]["status"], result)
                 self.assertEqual(original, self.text(name))
-
-
 
 class PlanningTextTests(ChecklistEditsCase):
     """Active proposal carriers and their completed Markdown context."""
@@ -1325,7 +1328,7 @@ sys.exit(scope['run_counted'](suite, label='shipped-matrix'))
         self.assert_payload_cases(("RollbackFailureTests",), 47)
 
     def test_both_payloads_reject_the_untrusted_text_matrix(self) -> None:
-        self.assert_payload_cases(("UntrustedTextTests", "PlanningTextTests"))
+        self.assert_payload_cases(("UntrustedTextTests", "PlanningTextTests", "PlanningContextTests"))
 
     def test_both_payloads_plan_and_apply_the_same_proposals_in_the_same_order(self) -> None:
         proposals = [
@@ -1387,7 +1390,7 @@ if __name__ == "__main__":
                 unittest.defaultTestLoader.loadTestsFromTestCase(case)
                 for case in (ProposalTests, ConflictTests, RefusalTests, CompetingWriterTests, CanonicalResultTests, RollbackFailureTests, CommittedStateTests,
                              RecordStateTests,
-                             UntrustedTextTests, PlanningTextTests, HostParityTests, GuidanceTests)
+                             UntrustedTextTests, PlanningTextTests, PlanningContextTests, HostParityTests, GuidanceTests)
             ),
             label="test-checklist-edits",
         )
