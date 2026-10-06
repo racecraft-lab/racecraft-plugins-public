@@ -8,7 +8,9 @@ restates a path or a priority.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
+from typing import Any
 
 PRESET_ID = "speckit-pro-reviewability"
 # Lower resolves first. Core templates sit at the default 10, so the preset outranks them.
@@ -35,3 +37,17 @@ def add_args() -> list[str]:
     if not (source / "preset.yml").is_file():
         return []
     return ["preset", "add", "--dev", str(source), "--priority", str(PRIORITY)]
+
+
+def state(registry: str, manifest_exists: bool) -> dict[str, Any]:
+    """Classify trusted project evidence and supply the command when installation is needed."""
+    state: dict[str, Any] = {"id": PRESET_ID, "status": "installed", "add_args": []}
+    try:
+        registered = PRESET_ID in json.loads(registry).get("presets", {})
+    except (ValueError, AttributeError, TypeError):
+        registered = False
+    if registered and manifest_exists:
+        return state
+    state["add_args"] = add_args()
+    state["status"] = "missing" if state["add_args"] else "unavailable"
+    return state

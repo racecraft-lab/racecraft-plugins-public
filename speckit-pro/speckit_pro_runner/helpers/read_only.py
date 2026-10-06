@@ -1925,18 +1925,11 @@ def reviewability_preset_state(root: Path, repo_root: Path) -> dict[str, Any]:
     `status` is `installed` (its manifest exists and Spec Kit's registry lists it), `missing` (add_args installs
     it) or `unavailable` (the payload has no preset). Spec Kit resolves templates from the registry only.
     """
-    state: dict[str, Any] = {"id": reviewability_preset.PRESET_ID, "status": "installed", "add_args": []}
     presets = root / ".specify" / "presets"
-    registry = trusted_text(presets / ".registry", repo_root) or ""
-    try:
-        registered = reviewability_preset.PRESET_ID in json.loads(registry).get("presets", {})
-    except (ValueError, AttributeError, TypeError):
-        registered = False
-    if registered and trusted_file_exists(presets / reviewability_preset.PRESET_ID / "preset.yml", repo_root):
-        return state
-    state["add_args"] = reviewability_preset.add_args()
-    state["status"] = "missing" if state["add_args"] else "unavailable"
-    return state
+    return reviewability_preset.state(
+        trusted_text(presets / ".registry", repo_root) or "",
+        trusted_file_exists(presets / reviewability_preset.PRESET_ID / "preset.yml", repo_root),
+    )
 
 
 # The spec template writes `[NEEDS CLARIFICATION: <question>]`; the bare
