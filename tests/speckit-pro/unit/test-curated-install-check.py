@@ -9,6 +9,7 @@ import importlib.util
 import json
 import io
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -927,8 +928,51 @@ class OwnerAcceptanceTests(unittest.TestCase):
 
 
 
+class Hung(BaseException):
+    """Raised by `deadline` inside a blocked call; not an Exception, so the checker cannot swallow it."""
+
+
+@contextmanager
+def deadline(seconds):
+    def expire(*_args):
+        raise Hung
+    previous = signal.signal(signal.SIGALRM, expire)
+    signal.setitimer(signal.ITIMER_REAL, seconds)
+    try:
+        yield
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous)
+
+
+def fifo_at(relative):
+    """At the last install, replace the node at `relative` with a FIFO that nobody writes."""
+    def later(project, entry):
+        if entry is ENTRIES[-1]:
+            path = project / relative
+            shutil.rmtree(path) if path.is_dir() else path.unlink()
+            os.mkfifo(path)
+    return later
+
+
 class OwnerAcceptanceScopeTests(unittest.TestCase):
     """--owner-acceptance certifies only what its evidence covers."""
+
+    def test_a_fifo_at_any_evidence_path_fails_its_entry_without_blocking(self):
+        """cr1274j Medium: no evidence open may wait on a FIFO; the run reports `failed` instead of hanging."""
+        home = f"{check.REGISTRY_DIRS[TARGET['kind']]}/{TARGET['id']}"
+        skill = ".claude/skills/" + check.skill_name(f"speckit.{TARGET['id']}.run")
+        paths = {"manifest": f"{home}/{check.MANIFEST_NAMES[TARGET['kind']]}", "payload": f"{home}/commands/run.md",
+                 "registry": f"{check.REGISTRY_DIRS[TARGET['kind']]}/.registry", "skill": f"{skill}/SKILL.md",
+                 "configuration": ".specify/extensions.yml", "skill-directory": skill}
+        for name, relative in paths.items():
+            with self.subTest(fifo=name):
+                try:
+                    with deadline(5):
+                        code, statuses, _calls, _fresh, output = run_acceptance(after_install=fifo_at(relative))
+                except Hung:
+                    self.fail(f"owner acceptance blocked on a FIFO at {relative}")
+                self.assertEqual((code, statuses.get(TARGET["id"])), (1, "FAILED"), output)
 
     def test_a_later_install_that_breaks_an_earlier_entry_fails_it(self):
         """cr1274i High: only the tree after the last install is certified, so a later install's damage counts."""

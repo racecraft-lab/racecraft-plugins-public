@@ -148,7 +148,7 @@ def directory_state(info: os.stat_result) -> tuple[int, ...]:
 
 def registry_entries(project: Path, kind: str, entry_id: str | None = None) -> list[str] | None:
     """List the whole registry without following links; unknown evidence is not absence."""
-    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    flags = O_DIR
     try:
         with ExitStack() as descriptors:
             parent = os.open(project / ".specify", flags)
@@ -239,8 +239,9 @@ def entry_result(entry: dict[str, str], project: Path, trust_archives: bool) -> 
     return "unproven", []
 
 
-O_DIR = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
-O_FILE = os.O_RDONLY | os.O_NOFOLLOW
+# O_NONBLOCK: opening a FIFO or device left at an evidence path returns at once, and `fstat` then rejects it.
+O_FILE = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
+O_DIR = O_FILE | os.O_DIRECTORY
 # Spec Kit v1.1.0 facts the evidence is checked against (src/specify_cli at the v1.1.0 tag).
 DEFAULT_PRIORITY = 10  # `add --priority` default: extensions/command_add.py L26, presets/command_add.py L144-147
 SKILLS_DIR = (".claude", "skills")  # `init --integration claude`: integrations/claude/__init__.py L47-53
@@ -436,6 +437,7 @@ class BoundTree:
             child = os.open(name, O_DIR, dir_fd=fd)
             self.stack.callback(os.close, child)
             info = os.fstat(child)
+            require(stat.S_ISDIR(info.st_mode), f"{name} is not a directory")
             if depth == 0 and name in self.identities and (info.st_dev, info.st_ino) != self.identities[name]:
                 raise EvidenceError(f"{name} is not the directory `specify init` created for this run")
             self.bindings.append((fd, name, node_state(info)))
