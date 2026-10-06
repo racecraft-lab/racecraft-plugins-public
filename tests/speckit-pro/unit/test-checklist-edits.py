@@ -1623,11 +1623,13 @@ class GateFourTests(ChecklistEditsCase):
         checklists = self.feature / "checklists"
         locked: list[Path] = []
         real_open = os.open
+        denied: list[str] = []
 
         def open_readable(path: Any, *args: Any, **kwargs: Any) -> int:
             # Containers may run as root, which bypasses chmod(0). Inject the
             # actual failed-open condition at the OS boundary on every platform.
             if Path(path).name in {item.name for item in locked}:
+                denied.append(Path(path).name)
                 raise PermissionError("G4 fixture denies read access")
             return real_open(path, *args, **kwargs)
 
@@ -1652,8 +1654,11 @@ class GateFourTests(ChecklistEditsCase):
                 self.reset_tree()
                 mutate()
                 try:
+                    denied.clear()
                     with patch.object(os, "open", open_readable):
                         verdict = self.gate()
+                    if name in ("unreadable report", "unreadable checklists directory"):
+                        self.assertEqual([locked[-1].name], denied, "must reach the failed-open boundary")
                 finally:
                     while locked:
                         os.chmod(locked.pop(), 0o755)
