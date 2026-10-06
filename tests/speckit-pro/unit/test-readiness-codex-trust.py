@@ -276,62 +276,6 @@ class ReadinessCodexTrustTest(ReadinessCase):
         bad["status"] = "verified"
         assert_runner_response(self, self.run_helper([bad]), "input_error", 2)
 
-    def test_eight_field_posture_without_its_controls_never_verifies(self) -> None:
-        legacy = posture()
-        del legacy["posture"]["controls"]  # type: ignore[attr-defined]
-        self.assert_item(self.item(legacy), "unknown", ("controls=missing",), ("posture control",))
-        for name in CONTROLS:
-            partial = posture(controls={key: value for key, value in CONTROLS.items() if key != name})
-            with self.subTest(missing=name):
-                self.assertEqual("unknown", self.item(partial)["status"])
-            with self.subTest(unobservable=name):
-                self.assertEqual("unknown", self.item(controls(**{name: "unobservable"}))["status"])
-        self.assertEqual("unknown", self.item({"item": "codex_approval_posture",
-                                               "evidence_source": "codex session settings"})["status"])
-
-    def test_each_broadening_control_is_unavailable_never_verified(self) -> None:
-        for variant, changes in BROADENING_CONTROLS.items():
-            for name, value in changes:
-                with self.subTest(variant=variant, control=name, value=value):
-                    self.assert_item(self.item(controls(**{name: value})), "unavailable",
-                                     ("controls=1 outside",), ("Keep current controls", "never broadens"))
-
-    def test_a_prompt_summary_cannot_hide_a_broader_per_tool_approval(self) -> None:
-        contradictory = controls(mcp_tool_approval="auto", plugin_mcp_tool_approval="approve")
-        self.assertEqual("prompt", contradictory["posture"]["mcp_approval_mode"])  # type: ignore[index]
-        self.assert_item(self.item(contradictory), "unavailable", ("mcp_approval_mode=prompt", "controls=2 outside"))
-        assert_runner_response(self, self.run_helper([posture(), controls(web_search="live")]), "input_error", 2)
-
-    def test_controls_outside_their_scope_do_not_block_a_conservative_posture(self) -> None:
-        self.assert_item(self.item(posture()), "verified", ("controls=conservative",))
-        self.assertEqual("verified", self.item(controls(web_search="cached", permission_profile="read-only",
-                                                        app_tool_approval="none", mcp_tool_approval="none"))["status"])
-        workspace = {name: "writable" for name in ("workspace_slash_tmp", "workspace_tmpdir")}
-        read_only = posture(sandbox_mode="read-only", controls={
-            **CONTROLS, **workspace, "workspace_network_access": "enabled", "workspace_writable_roots": "unobservable"})
-        self.assertEqual("verified", self.item(read_only)["status"])
-        self.assertEqual("verified", self.item(controls(app_tool_approval="none", app_destructive_tools="enabled",
-                                                        app_open_world_tools="unobservable"))["status"])
-        self.assertEqual("unavailable", self.item(controls(**workspace))["status"])
-        self.assertEqual("unknown", self.item(posture(sandbox_mode="unobservable"))["status"])
-        self.assertEqual("unavailable", self.item(posture(sandbox_mode="unobservable", controls={
-            **CONTROLS, "workspace_network_access": "enabled"}))["status"])
-
-    def test_malformed_posture_controls_are_refused(self) -> None:
-        self.refuse_each([posture(controls=bad) for bad in (
-            None, [], "none", {**CONTROLS, "network_access": "disabled"}, {**CONTROLS, "web_search": "LIVE"},
-            {**CONTROLS, "workspace_network_access": True}, {**CONTROLS, "other_overrides": "maybe"},
-            {**CONTROLS, "workspace_writable_roots": "/" + "tmp"})])
-
-    def test_scaffold_documents_every_posture_control_and_its_values(self) -> None:
-        from speckit_pro_runner.helpers import readiness_host_items
-        self.assertEqual(set(CONTROLS), set(readiness_host_items.POSTURE_CONTROLS))
-        step = scaffold_step("codex")
-        for name, (safe, broad) in readiness_host_items.POSTURE_CONTROLS.items():
-            with self.subTest(control=name):
-                quoted = [f'"{value}"' for value in (*safe, *broad)]
-                self.assertIn(f'"{name}": ' + ", ".join(quoted[:-1]) + " or " + quoted[-1], step)
-
     def test_trusted_hook_records_the_exact_hash(self) -> None:
         item = self.item(shipped_trust())
         self.assert_item(item, "verified", (f"PreToolUse:0:0=trusted {SHIPPED_HASHES['PreToolUse:0:0']}",))
@@ -398,8 +342,74 @@ class ReadinessCodexTrustTest(ReadinessCase):
         self.assertIn("never broaden", scaffold_step("codex"))
 
 
+
+class ReadinessCodexPostureControlsTest(ReadinessCase):
+    """Security finding F1263-6fd5beee: controls beyond the eight-field summary never hide behind `verified`."""
+
+    default_host = "codex"
+    request_id = "test-codex-posture-controls"
+
+    def test_eight_field_posture_without_its_controls_never_verifies(self) -> None:
+        legacy = posture()
+        del legacy["posture"]["controls"]  # type: ignore[attr-defined]
+        self.assert_item(self.item(legacy), "unknown", ("controls=missing",), ("posture control",))
+        for name in CONTROLS:
+            partial = posture(controls={key: value for key, value in CONTROLS.items() if key != name})
+            with self.subTest(missing=name):
+                self.assertEqual("unknown", self.item(partial)["status"])
+            with self.subTest(unobservable=name):
+                self.assertEqual("unknown", self.item(controls(**{name: "unobservable"}))["status"])
+        self.assertEqual("unknown", self.item({"item": "codex_approval_posture",
+                                               "evidence_source": "codex session settings"})["status"])
+
+    def test_each_broadening_control_is_unavailable_never_verified(self) -> None:
+        for variant, changes in BROADENING_CONTROLS.items():
+            for name, value in changes:
+                with self.subTest(variant=variant, control=name, value=value):
+                    self.assert_item(self.item(controls(**{name: value})), "unavailable",
+                                     ("controls=1 outside",), ("Keep current controls", "never broadens"))
+
+    def test_a_prompt_summary_cannot_hide_a_broader_per_tool_approval(self) -> None:
+        contradictory = controls(mcp_tool_approval="auto", plugin_mcp_tool_approval="approve")
+        self.assertEqual("prompt", contradictory["posture"]["mcp_approval_mode"])  # type: ignore[index]
+        self.assert_item(self.item(contradictory), "unavailable", ("mcp_approval_mode=prompt", "controls=2 outside"))
+        assert_runner_response(self, self.run_helper([posture(), controls(web_search="live")]), "input_error", 2)
+
+    def test_controls_outside_their_scope_do_not_block_a_conservative_posture(self) -> None:
+        self.assert_item(self.item(posture()), "verified", ("controls=conservative",))
+        self.assertEqual("verified", self.item(controls(web_search="cached", permission_profile="read-only",
+                                                        app_tool_approval="none", mcp_tool_approval="none"))["status"])
+        workspace = {name: "writable" for name in ("workspace_slash_tmp", "workspace_tmpdir")}
+        read_only = posture(sandbox_mode="read-only", controls={
+            **CONTROLS, **workspace, "workspace_network_access": "enabled", "workspace_writable_roots": "unobservable"})
+        self.assertEqual("verified", self.item(read_only)["status"])
+        self.assertEqual("verified", self.item(controls(app_tool_approval="none", app_destructive_tools="enabled",
+                                                        app_open_world_tools="unobservable"))["status"])
+        self.assertEqual("unavailable", self.item(controls(**workspace))["status"])
+        self.assertEqual("unknown", self.item(posture(sandbox_mode="unobservable"))["status"])
+        self.assertEqual("unavailable", self.item(posture(sandbox_mode="unobservable", controls={
+            **CONTROLS, "workspace_network_access": "enabled"}))["status"])
+
+    def test_malformed_posture_controls_are_refused(self) -> None:
+        self.refuse_each([posture(controls=bad) for bad in (
+            None, [], "none", {**CONTROLS, "network_access": "disabled"}, {**CONTROLS, "web_search": "LIVE"},
+            {**CONTROLS, "workspace_network_access": True}, {**CONTROLS, "other_overrides": "maybe"},
+            {**CONTROLS, "workspace_writable_roots": "/" + "tmp"})])
+
+    def test_scaffold_documents_every_posture_control_and_its_values(self) -> None:
+        from speckit_pro_runner.helpers import readiness_host_items
+        self.assertEqual(set(CONTROLS), set(readiness_host_items.POSTURE_CONTROLS))
+        step = scaffold_step("codex")
+        for name, (safe, broad) in readiness_host_items.POSTURE_CONTROLS.items():
+            with self.subTest(control=name):
+                quoted = [f'"{value}"' for value in (*safe, *broad)]
+                self.assertIn(f'"{name}": ' + ", ".join(quoted[:-1]) + " or " + quoted[-1], step)
+
+
 def build_suite() -> unittest.TestSuite:
-    return unittest.defaultTestLoader.loadTestsFromTestCase(ReadinessCodexTrustTest)
+    loader = unittest.defaultTestLoader
+    return unittest.TestSuite([loader.loadTestsFromTestCase(ReadinessCodexTrustTest),
+                               loader.loadTestsFromTestCase(ReadinessCodexPostureControlsTest)])
 
 
 def main() -> int:

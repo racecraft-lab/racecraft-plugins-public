@@ -490,12 +490,21 @@ def posture_controls(detail: dict[str, Any]) -> dict[str, str] | None:
     return {name: value for name, value in observed.items() if name not in inert}
 
 
-def observe_codex_approval_posture(raw: dict[str, Any], observed_at: str, source: str) -> dict[str, Any]:
-    detail = raw["posture"]
-    if not isinstance(detail, dict) or detail.keys() - {"controls"} != {*POSTURE_CHOICES, *POSTURE_TIMEOUTS}:
-        raise SelectionError(f"codex_approval_posture.posture takes {sorted({*POSTURE_CHOICES, *POSTURE_TIMEOUTS})} "
-                             "and controls")
-    controls = posture_controls(detail)
+def control_gaps(controls: dict[str, str] | None) -> tuple[list[str], list[str], str]:
+    """Controls outside the conservative profile, unobservable controls, and their summary as counts.
+
+    Counts keep every summary fact within the record limit; the fingerprint holds each control value.
+    """
+    outside = [name for name, value in (controls or {}).items()
+               if value not in (*POSTURE_CONTROLS[name][0], "unobservable")]
+    unread = [name for name, value in (controls or {}).items() if value == "unobservable"]
+    text = ("missing" if controls is None else "conservative" if not outside and not unread
+            else f"{len(outside)} outside, {len(unread)} unobservable")
+    return outside, unread, text
+
+
+def posture_facts(detail: dict[str, Any]) -> dict[str, str]:
+    """The eight summary facts as enumerated words or whole seconds."""
     facts: dict[str, str] = {}
     for key, allowed in POSTURE_CHOICES.items():
         value = detail[key]
@@ -513,12 +522,17 @@ def observe_codex_approval_posture(raw: dict[str, Any], observed_at: str, source
                                                               or not 0 < value <= MAX_TIMEOUT_SECONDS):
             raise SelectionError(f"codex_approval_posture {key} must be whole seconds, null or \"unobservable\"")
         facts[key] = "default" if value is None else str(value)
-    outside = [name for name, value in (controls or {}).items() if value not in (*POSTURE_CONTROLS[name][0],
-                                                                                   "unobservable")]
-    unread = [name for name, value in (controls or {}).items() if value == "unobservable"]
-    # Counts keep every summary fact within the record limit; the fingerprint holds each control value.
-    controls_text = ("missing" if controls is None else "conservative" if not outside and not unread
-                     else f"{len(outside)} outside, {len(unread)} unobservable")
+    return facts
+
+
+def observe_codex_approval_posture(raw: dict[str, Any], observed_at: str, source: str) -> dict[str, Any]:
+    detail = raw["posture"]
+    if not isinstance(detail, dict) or detail.keys() - {"controls"} != {*POSTURE_CHOICES, *POSTURE_TIMEOUTS}:
+        raise SelectionError(f"codex_approval_posture.posture takes {sorted({*POSTURE_CHOICES, *POSTURE_TIMEOUTS})} "
+                             "and controls")
+    controls = posture_controls(detail)
+    facts = posture_facts(detail)
+    outside, unread, controls_text = control_gaps(controls)
     summary = ", ".join(f"{key}={value}" for key, value in facts.items()) + f", controls={controls_text}"
     prints = {"value:posture": digest(summary)}
     if controls is not None:
