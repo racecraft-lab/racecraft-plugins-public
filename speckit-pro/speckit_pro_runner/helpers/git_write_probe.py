@@ -10,9 +10,10 @@ from __future__ import annotations
 
 import errno
 import os
-import tempfile
+import secrets
+from contextlib import ExitStack, contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 from ..envelope import diagnostic, response
 from .gate_preflight_coverage import git_common_directory
@@ -29,14 +30,70 @@ STOP_ACTION = ("Approve git writes, or add the repository's .git directory to "
 
 
 DENIED = frozenset({errno.EACCES, errno.EPERM, errno.EROFS})
+PROBE_CLEANUP_DIRECTORY = ".speckit-git-write-probe.cleanup"
+ANCHORED_PROBE_SUPPORTED = (
+    hasattr(os, "O_NOFOLLOW") and hasattr(os, "O_DIRECTORY")
+    and hasattr(os, "geteuid")
+    and {os.open, os.stat, os.unlink, os.rename, os.link, os.mkdir, os.rmdir} <= os.supports_dir_fd
+    and os.stat in os.supports_follow_symlinks
+)
 
 
-def remove_probe_lock(lock: str) -> OSError | None:
-    """Retry cleanup once; an already removed probe needs no further cleanup."""
+def probe_error(errors: list[OSError]) -> OSError | None:
+    """A known permission denial takes priority over unrelated storage or teardown errors."""
+    return next((error for error in errors if error.errno in DENIED), next(iter(errors), None))
+
+
+def close_probe_descriptor(fd: int, errors: list[OSError]) -> None:
+    """Record teardown errors without masking the probe's earlier observations."""
+    try:
+        os.close(fd)
+    except OSError as error:
+        errors.append(error)
+
+
+@contextmanager
+def probe_directory(common: Path, directory: Path, errors: list[OSError]) -> Iterator[tuple[int, int]]:
+    """Hold each component below the canonical Git directory without following links."""
+    if not ANCHORED_PROBE_SUPPORTED:
+        raise OSError(errno.ENOTSUP, "descriptor-relative git write probe unavailable")
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    with ExitStack() as stack:
+        fd = os.open(common, flags)
+        common_fd = fd
+        stack.callback(close_probe_descriptor, fd, errors)
+        for component in directory.relative_to(common).parts:
+            try:
+                fd = os.open(component, flags, dir_fd=fd)
+            except OSError as error:
+                if error.errno in {errno.ELOOP, errno.ENOTDIR}:
+                    raise PermissionError(errno.EACCES, "unsafe git directory component") from error
+                raise
+            stack.callback(close_probe_descriptor, fd, errors)
+        yield common_fd, fd
+
+
+def create_probe_lock(directory_fd: int) -> tuple[int, str]:
+    """Exclusive creation with bounded retries for random-name collisions."""
+    for _ in range(100):
+        name = f".speckit-git-write-probe-{secrets.token_hex(16)}.lock"
+        try:
+            fd = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=directory_fd)
+        except FileExistsError:
+            continue
+        return fd, name
+    raise FileExistsError(errno.EEXIST, "git write probe names exhausted")
+
+
+def remove_probe_lock(lock: str, directory_fd: int, created: os.stat_result) -> OSError | None:
+    """Retry deletion only inside the probe's private cleanup directory."""
     blocked = None
     for _ in range(2):
         try:
-            os.unlink(lock)
+            current = os.stat(lock, dir_fd=directory_fd, follow_symlinks=False)
+            if (current.st_dev, current.st_ino) != (created.st_dev, created.st_ino):
+                return OSError(errno.ESTALE, "git write probe was replaced")
+            os.unlink(lock, dir_fd=directory_fd)
         except FileNotFoundError:
             return None
         except OSError as error:
@@ -46,29 +103,115 @@ def remove_probe_lock(lock: str) -> OSError | None:
     return blocked
 
 
-def create_and_remove_lock(directory: Path) -> tuple[OSError | None, str | None]:
-    """Create exclusively with fresh random names, returning any error and leftover basename."""
+def check_private_probe_directory(fd: int) -> None:
+    """Only this identity can mutate the namespace used to capture public entries."""
+    metadata = os.fstat(fd)
+    if metadata.st_uid != os.geteuid() or metadata.st_mode & 0o077:
+        raise PermissionError(errno.EACCES, "unsafe git probe cleanup directory")
+
+
+@contextmanager
+def probe_cleanup_directory(directory_fd: int, errors: list[OSError]) -> Iterator[int]:
+    """Retain one private parent: deleting its public name could remove a replacement."""
+    with ExitStack() as stack:
+        flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+        try:
+            fd = os.open(PROBE_CLEANUP_DIRECTORY, flags, dir_fd=directory_fd)
+        except FileNotFoundError:
+            os.mkdir(PROBE_CLEANUP_DIRECTORY, 0o700, dir_fd=directory_fd)
+            fd = os.open(PROBE_CLEANUP_DIRECTORY, flags, dir_fd=directory_fd)
+        stack.callback(close_probe_descriptor, fd, errors)
+        check_private_probe_directory(fd)
+        yield fd
+
+
+def capture_probe_lock(lock: str, directory_fd: int, cleanup_fd: int,
+                       created: os.stat_result) -> tuple[OSError | None, str | None]:
+    """Capture the public name before checking identity; never unlink that public name."""
+    private = lock + ".cleanup"
+    errors: list[OSError] = []
+    leftover = lock
+    private_fd = None
+    private_created = False
     try:
-        fd, lock = tempfile.mkstemp(prefix=".speckit-git-write-probe-", suffix=".lock", dir=directory)
+        os.mkdir(private, 0o700, dir_fd=cleanup_fd)
+        private_created = True
+        private_fd = os.open(private, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=cleanup_fd)
+        private_created = False  # An unverified directory is not ours to remove.
+        check_private_probe_directory(private_fd)
+        private_created = True
+        try:
+            os.rename(lock, lock, src_dir_fd=directory_fd, dst_dir_fd=private_fd)
+            captured = True
+        except FileNotFoundError:
+            captured = False  # Already removed by someone else: nothing of ours is left to clean.
+        if captured:
+            leftover = f"{PROBE_CLEANUP_DIRECTORY}/{private} ({lock})"
+            current = os.stat(lock, dir_fd=private_fd, follow_symlinks=False)
+            if (current.st_dev, current.st_ino) != (created.st_dev, created.st_ino):
+                # Exclusive link restores a captured replacement without overwriting a new public entry.
+                os.link(lock, lock, src_dir_fd=private_fd, dst_dir_fd=directory_fd, follow_symlinks=False)
+                os.unlink(lock, dir_fd=private_fd)
+                errors.append(OSError(errno.ESTALE, "git write probe was replaced"))
+            else:
+                cleanup = remove_probe_lock(lock, private_fd, created)
+                if cleanup is not None:
+                    raise cleanup
+        leftover = ""
     except OSError as error:
-        return error, None
-    blocked = None
-    try:
-        os.close(fd)
-    except OSError as error:
-        blocked = error
+        errors.append(error)
     finally:
-        cleanup = remove_probe_lock(lock)
-    return cleanup or blocked, Path(lock).name if cleanup else None
+        if private_fd is not None:
+            close_probe_descriptor(private_fd, errors)
+        if private_created:
+            try:
+                os.rmdir(private, dir_fd=cleanup_fd)
+            except OSError as error:
+                errors.append(error)
+                leftover = leftover or f"{PROBE_CLEANUP_DIRECTORY}/{private}"
+    return probe_error(errors), leftover or None
+
+
+def retire_probe_lock(lock: str, common_fd: int, directory_fd: int,
+                      created: os.stat_result) -> tuple[OSError | None, str | None]:
+    errors: list[OSError] = []
+    leftover: str | None = lock
+    try:
+        with probe_cleanup_directory(common_fd, errors) as cleanup_fd:
+            cleanup, leftover = capture_probe_lock(lock, directory_fd, cleanup_fd, created)
+            if cleanup is not None:
+                errors.append(cleanup)
+    except OSError as error:
+        errors.append(error)
+    return probe_error(errors), leftover or None
+
+
+def create_and_remove_lock(directory: Path, common: Path) -> tuple[OSError | None, str | None]:
+    """Create exclusively with fresh random names, returning any error and leftover basename."""
+    leftover = None
+    errors: list[OSError] = []
+    try:
+        with probe_directory(common, directory, errors) as (common_fd, directory_fd):
+            fd, lock = create_probe_lock(directory_fd)
+            leftover = lock
+            try:
+                cleanup, leftover = retire_probe_lock(lock, common_fd, directory_fd, os.fstat(fd))
+                if cleanup is not None:
+                    errors.append(cleanup)
+            finally:
+                close_probe_descriptor(fd, errors)
+    except OSError as error:
+        errors.append(error)
+    return probe_error(errors), leftover
 
 
 def probe_directories(common: Path) -> list[Path]:
     """Where scaffold writes: the refs directory (a stub file under reftable) and the git directory itself."""
     heads = common / "refs" / "heads"
-    directories = [heads] if heads.is_dir() else []
+    directories = [heads] if heads.is_dir() or heads.is_symlink() else []
     directories.append(common)
     metadata = common / "worktrees"
-    if metadata.exists():
+    if metadata.exists() or metadata.is_symlink():
         directories.append(metadata)
     return directories
 
@@ -100,15 +243,17 @@ def run_git_write_probe_helper(entry: Any, request: Any) -> dict[str, Any]:
         common: Path | None = git_common_directory(Path.cwd())
     except ValueError:
         common = None
-    results = [create_and_remove_lock(directory) for directory in ([] if common is None else probe_directories(common))]
+    results = [] if common is None else [create_and_remove_lock(directory, common) for directory in probe_directories(common)]
     errors = [error for error, _ in results if error is not None]
-    blocked = next((error for error in errors if error.errno in DENIED), next(iter(errors), None))
+    blocked = probe_error(errors)
     verdict, message, item = probe_result(blocked, common is not None)
     leftovers = [name for _, name in results if name is not None]
     if leftovers:
         message += " Probe files could not be removed under the repository's git directory: " + ", ".join(leftovers) + "."
         item["evidence_source"] += "; probe cleanup failed"
-        item["action"] = (item.get("action") or "Rerun scaffold.") + " Remove the named leftover probe files."
+        item["action"] = (item.get("action") or "Rerun scaffold.") + (
+            " Inspect the named leftover entries and restore any replacement files before removing only probe-owned files."
+        )
     data = {"verdict": verdict, "message": message, "observation": item}
     if verdict == "proceed":
         return response("ok", request_id=request.request_id, data=data)
