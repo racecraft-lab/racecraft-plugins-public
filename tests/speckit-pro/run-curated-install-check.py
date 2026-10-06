@@ -357,25 +357,30 @@ def declared(doc: dict, kind: str) -> tuple[list[str], list[str]]:
     return files, names
 
 
+def hook_entry(item: object, entry_id: str) -> dict | None:
+    """One extensions.yml hook as register_hooks writes it (extensions/__init__.py L5870-5885)."""
+    command = item.get("command") if isinstance(item, dict) else None
+    if not isinstance(item, dict) or not command:
+        return None
+    parts = str(command).split(".")  # alias-form refs are lifted to canonical names (L523-549)
+    command = f"speckit.{entry_id}.{parts[1]}" if len(parts) == 2 and parts[0] == entry_id else command
+    priority = item.get("priority")  # normalize_priority (L195-214)
+    valid = isinstance(priority, int) and not isinstance(priority, bool) and priority >= 1
+    return {"extension": entry_id, "command": command, "enabled": True, "optional": item.get("optional", True),
+            "priority": priority if valid else DEFAULT_PRIORITY, "prompt": item.get("prompt", f"Execute {command}?"),
+            "description": item.get("description", ""), "condition": item.get("condition")}
+
+
 def expected_hooks(doc: dict, entry_id: str) -> dict[str, list[dict]]:
-    """The extensions.yml entries register_hooks writes (extensions/__init__.py L5817-5905)."""
+    """The extensions.yml hooks register_hooks writes for this manifest (L5817-5905), last duplicate wins."""
     hooks = {}
     for event, config in (doc.get("hooks") or {}).items():
         entries: dict[str, dict] = {}
         for item in config if isinstance(config, list) else [config]:
-            command = item.get("command") if isinstance(item, dict) else None
-            if not command:
-                continue
-            parts = command.split(".")  # alias-form refs are lifted (L523-549)
-            command = f"speckit.{entry_id}.{parts[1]}" if len(parts) == 2 and parts[0] == entry_id else command
-            priority = item.get("priority")
-            entries.pop(command, None)
-            entries[command] = {
-                "extension": entry_id, "command": command, "enabled": True, "optional": item.get("optional", True),
-                "priority": priority if isinstance(priority, int) and not isinstance(priority, bool)
-                and priority >= 1 else DEFAULT_PRIORITY,
-                "prompt": item.get("prompt", f"Execute {command}?"), "description": item.get("description", ""),
-                "condition": item.get("condition")}
+            hook = hook_entry(item, entry_id)
+            if hook is not None:
+                entries.pop(hook["command"], None)
+                entries[hook["command"]] = hook
         if entries:
             hooks[event] = list(entries.values())
     return hooks
@@ -488,38 +493,45 @@ def completion_evidence(project: int, identities: dict[str, tuple[int, int]], en
                          + (", hooks and installed: match in .specify/extensions.yml" if kind == "extension" else "")]
 
 
+def registered_before(tree: BoundTree, entry: dict[str, str]) -> bool:
+    kind = entry["kind"]
+    if tree.exists((".specify", f"{kind}s", entry["id"])):
+        return True
+    if not tree.exists((".specify", f"{kind}s", ".registry")):
+        return False
+    registry = strict_json(tree.read((".specify", f"{kind}s", ".registry")))
+    records = registry.get(REGISTRY_KEYS[kind]) if isinstance(registry, dict) else None
+    return not isinstance(records, dict) or entry["id"] in records
+
+
+def configured_before(tree: BoundTree, entry_id: str) -> bool:
+    if not tree.exists((".specify", "extensions.yml")):
+        return False
+    config = load_yaml(tree.read((".specify", "extensions.yml")))
+    require(isinstance(config, dict), "extensions.yml is not a mapping")
+    assert isinstance(config, dict)
+    hooks = [hook for items in (config.get("hooks") or {}).values() for hook in items or []]
+    return entry_id in (config.get("installed") or []) or any(
+        isinstance(hook, dict) and hook.get("extension") == entry_id for hook in hooks)
+
+
 def prior_evidence(project: int, identities: dict[str, tuple[int, int]], entry: dict[str, str],
                    files: dict[str, bytes]) -> bool:
     """Whether anything this entry's install would write is already there (fails closed)."""
-    kind, entry_id = entry["kind"], entry["id"]
     try:
         with ExitStack() as stack:
             tree = BoundTree(stack, project, identities)
-            if tree.exists((".specify", f"{kind}s", entry_id)):
-                return True
-            if tree.exists((".specify", f"{kind}s", ".registry")):
-                registry = strict_json(tree.read((".specify", f"{kind}s", ".registry")))
-                if entry_id in ((registry.get(REGISTRY_KEYS[kind]) or {}) if isinstance(registry, dict) else {}):
-                    return True
-            doc = load_yaml(files[MANIFEST_NAMES[kind]])
-            _payload, names = declared(doc, kind) if isinstance(doc, dict) else ([], [])
+            doc = load_yaml(files[MANIFEST_NAMES[entry["kind"]]])
+            names = declared(doc, entry["kind"])[1] if isinstance(doc, dict) else []
             # A preset's skills replace core ones `specify init` wrote, so only an owned skill is prior.
-            if any(tree.exists((*SKILLS_DIR, skill_name(name), "SKILL.md"))
-                   and owned_by(tree.read((*SKILLS_DIR, skill_name(name), "SKILL.md")), entry_id) for name in names):
-                return True
-            if kind == "extension" and tree.exists((".specify", "extensions.yml")):
-                config = load_yaml(tree.read((".specify", "extensions.yml")))
-                require(isinstance(config, dict), "extensions.yml is not a mapping")
-                assert isinstance(config, dict)
-                hooks = config.get("hooks") or {}
-                if entry_id in (config.get("installed") or []) or any(
-                        isinstance(hook, dict) and hook.get("extension") == entry_id
-                        for items in hooks.values() for hook in items or []):
-                    return True
+            skills = [(*SKILLS_DIR, skill_name(name), "SKILL.md") for name in names]
+            found = (registered_before(tree, entry)
+                     or any(tree.exists(skill) and owned_by(tree.read(skill), entry["id"]) for skill in skills)
+                     or (entry["kind"] == "extension" and configured_before(tree, entry["id"])))
             tree.verify_unchanged()
+            return found
     except Exception:  # noqa: BLE001 (unknown prior state is not absence)
         return True
-    return False
 
 
 def operator_specify(args: list[str], cwd: Path) -> int:

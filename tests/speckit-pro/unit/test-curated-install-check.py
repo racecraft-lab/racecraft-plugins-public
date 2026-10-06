@@ -557,6 +557,17 @@ def yaml_scalar(value):
     return str(value) if isinstance(value, int) else json.dumps(value)
 
 
+def emit_list(items, pad, indent):
+    lines = []
+    for element in items:
+        if isinstance(element, dict):
+            first, *rest = emit_yaml(element, indent + 2)
+            lines += [f"{pad}- {first.lstrip()}", *rest]
+        else:
+            lines.append(f"{pad}- {yaml_scalar(element)}")
+    return lines
+
+
 def emit_yaml(value, indent=0):
     """Block YAML in yaml.dump's layout (list items under a key at the key's indent)."""
     pad, lines = " " * indent, []
@@ -564,13 +575,7 @@ def emit_yaml(value, indent=0):
         if isinstance(item, dict) and item:
             lines += [f"{pad}{key}:", *emit_yaml(item, indent + 2)]
         elif isinstance(item, list) and item:
-            lines.append(f"{pad}{key}:")
-            for element in item:
-                if isinstance(element, dict):
-                    first, *rest = emit_yaml(element, indent + 2)
-                    lines += [f"{pad}- {first.lstrip()}", *rest]
-                else:
-                    lines.append(f"{pad}- {yaml_scalar(element)}")
+            lines += [f"{pad}{key}:", *emit_list(item, pad, indent)]
         else:
             lines.append(f"{pad}{key}: " + ("{}" if item == {} else "[]" if item == [] else yaml_scalar(item)))
     return lines
@@ -793,6 +798,61 @@ def run_acceptance(shape=None, **case):
     return code, statuses, calls, fresh, stdout.getvalue()
 
 
+TARGET = ENTRIES[0]
+
+
+def foreign_tree(project):
+    """A complete, valid install of TARGET outside the project's own .specify."""
+    foreign = project / ".foreign"
+    if not (foreign / ".specify").exists():
+        (foreign / ".claude" / "skills").mkdir(parents=True)
+        v110_install(foreign, TARGET)
+    return foreign / ".specify"
+
+
+def move_in(project, entry):
+    """After TARGET's install, a foreign tree is moved in place of .specify."""
+    if entry is TARGET:
+        foreign = foreign_tree(project)
+        os.rename(project / ".specify", project / ".specify-moved-out")
+        os.rename(foreign, project / ".specify")
+
+
+def swap_per_open(real_open, holder):
+    """Each checker open under .specify sees the foreign tree, which is put back after the open."""
+    def hooked(path, flags, *args, **kwargs):
+        name = os.fspath(path)
+        if not (holder and called_from_checker() and (name == ".specify" or "/.specify/" in name)):
+            return real_open(path, flags, *args, **kwargs)
+        project = holder[0]
+        foreign = foreign_tree(project)
+        os.rename(project / ".specify", project / ".specify-real")
+        os.rename(foreign, project / ".specify")
+        try:
+            return real_open(path, flags, *args, **kwargs)
+        finally:
+            os.rename(project / ".specify", foreign)
+            os.rename(project / ".specify-real", project / ".specify")
+    return hooked
+
+
+def on_later_open(change):
+    """Change TARGET's registry when a file read after it (manifest, then skill) is opened."""
+    def factory(real_open, holder):
+        def hooked(path, flags, *args, **kwargs):
+            registry = holder[0] / check.REGISTRY_DIRS[TARGET["kind"]] / ".registry" if holder else None
+            if (registry and called_from_checker() and registry.exists()
+                    and os.fspath(path).endswith((check.MANIFEST_NAMES[TARGET["kind"]], "SKILL.md"))):
+                change(registry)
+            return real_open(path, flags, *args, **kwargs)
+        return hooked
+    return factory
+
+
+def rewrite(registry):
+    registry.write_text(registry.read_text() + " ")
+
+
 class OwnerAcceptanceTests(unittest.TestCase):
     """--owner-acceptance hands each install to the operator's terminal, then demands on-disk evidence."""
 
@@ -839,53 +899,7 @@ class OwnerAcceptanceTests(unittest.TestCase):
 
     def test_evidence_not_bound_to_this_runs_install_fails_its_entry(self):
         """cr1274g Medium and Daybreak F1274-37d435c0: planted, redirected, torn or late-changed evidence."""
-        target = ENTRIES[0]
-        kind_dir = check.REGISTRY_DIRS[target["kind"]]
-
-        def foreign_tree(project):
-            foreign = project / ".foreign"
-            if not (foreign / ".specify").exists():
-                (foreign / ".claude" / "skills").mkdir(parents=True)
-                v110_install(foreign, target)
-            return foreign / ".specify"
-
-        def move_in(project, entry):
-            if entry is target:
-                foreign = foreign_tree(project)
-                os.rename(project / ".specify", project / ".specify-moved-out")
-                os.rename(foreign, project / ".specify")
-
-        def swap_per_open(real_open, holder):
-            def hooked(path, flags, *args, **kwargs):
-                name = os.fspath(path)
-                if not (holder and called_from_checker() and (name == ".specify" or "/.specify/" in name)):
-                    return real_open(path, flags, *args, **kwargs)
-                project = holder[0]
-                foreign = foreign_tree(project)
-                os.rename(project / ".specify", project / ".specify-real")
-                os.rename(foreign, project / ".specify")
-                try:
-                    return real_open(path, flags, *args, **kwargs)
-                finally:
-                    os.rename(project / ".specify", foreign)
-                    os.rename(project / ".specify-real", project / ".specify")
-            return hooked
-
-        def on_later_open(change):
-            """Change the registry when a file read after it (manifest, then skill) is opened."""
-            def factory(real_open, holder):
-                def hooked(path, flags, *args, **kwargs):
-                    registry = holder[0] / kind_dir / ".registry" if holder else None
-                    if (registry and called_from_checker() and registry.exists()
-                            and os.fspath(path).endswith((check.MANIFEST_NAMES[target["kind"]], "SKILL.md"))):
-                        change(registry)
-                    return real_open(path, flags, *args, **kwargs)
-                return hooked
-            return factory
-
-        def rewrite(registry):
-            registry.write_text(registry.read_text() + " ")
-
+        target = TARGET
         scenarios = {
             "planted-before-install": {"planted": {target["id"]}, "defects": {target["id"]: "declined"}},
             "moved-in-foreign-tree": {"after_install": move_in},
