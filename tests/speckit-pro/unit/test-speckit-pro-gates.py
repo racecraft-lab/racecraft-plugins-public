@@ -3163,11 +3163,15 @@ class SourceSnapshotTests(unittest.TestCase):
         captured = self.snapshot_while("bytecode cache")
         self.assertEqual({Path(), Path("a.py"), Path("sub"), Path("sub/b.py")}, set(captured))
 
+    def survives(self, change: str) -> bool:
+        try:
+            self.snapshot_while(change)
+        except OSError:
+            return False
+        return True
+
     def test_a_source_change_while_reading_still_fails_the_snapshot(self) -> None:
-        for change in ("new source file", "replaced sibling"):
-            with self.subTest(change):
-                with self.assertRaises(OSError):
-                    self.snapshot_while(change)
+        self.assertEqual([], [change for change in ("new source file", "replaced sibling") if self.survives(change)])
 
 if __name__ == "__main__":
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(GateFoundationTests)

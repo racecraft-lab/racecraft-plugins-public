@@ -96,16 +96,12 @@ def write_file_atomic(
     *,
     trust_root: Path | None = None,
     expected_snapshot: dict[str, Any] | None = None,
-    expected_parent: tuple[int, int] | None = None,
-    exchange: bool = False,
 ) -> dict[str, Any]:
     return write_bytes_atomic(
         target,
         ensure_final_newline(content).encode("utf-8"),
         trust_root=trust_root,
         expected_snapshot=expected_snapshot,
-        expected_parent=expected_parent,
-        exchange=exchange,
     )
 
 
@@ -116,13 +112,12 @@ def write_bytes_atomic(
     trust_root: Path | None = None,
     mode: int | None = None,
     expected_snapshot: dict[str, Any] | None = None,
-    expected_parent: tuple[int, int] | None = None,
-    exchange: bool = False,
 ) -> dict[str, Any]:
-    """Replace `target` atomically; an expected snapshot or parent identity that no longer holds raises WritePreconditionChanged.
+    """Replace `target` atomically; an expected snapshot that no longer holds raises WritePreconditionChanged.
 
-    With `exchange` and an expected snapshot, the new file is swapped in and the displaced entry is checked
-    after the swap; an entry someone put there after the last check is swapped back and the write refused.
+    A snapshot that names the file's `identity` binds the write further: its optional `parent` identity must
+    still be the directory written into, and the new file is swapped in with the displaced entry checked
+    after the swap, so an entry put there after the last check is swapped back and the write refused.
     """
     created_dirs: list[str] = []
     if trust_root is None:
@@ -145,7 +140,8 @@ def write_bytes_atomic(
     try:
         try:
             # The descriptor pins the directory, so a rename after this check cannot redirect the write.
-            if expected_parent is not None and file_identity(os.fstat(parent_fd)) != expected_parent:
+            expected_parent = expected_snapshot.get("parent") if expected_snapshot is not None else None
+            if expected_parent is not None and file_identity(os.fstat(parent_fd)) != tuple(expected_parent):
                 raise WritePreconditionChanged("write target directory changed after snapshot capture")
             if trust_root is not None:
                 ensure_safe_write_target_fd(parent_fd, target_name)
@@ -170,7 +166,7 @@ def write_bytes_atomic(
                 ensure_safe_write_target_fd(parent_fd, target_name)
             if expected_snapshot is not None:
                 ensure_write_target_matches_snapshot_fd(parent_fd, target_name, expected_snapshot)
-            if not (exchange and expected_snapshot is not None
+            if not (expected_snapshot is not None and "identity" in expected_snapshot
                     and install_checked(parent_fd, tmp_name, target_name, expected_snapshot)):
                 os.replace(tmp_name, target_name, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
             replaced = True

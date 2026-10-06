@@ -24,7 +24,7 @@ from __future__ import annotations
 import json
 import os
 from collections.abc import Callable, Iterator
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass, field
 from functools import partial
 from pathlib import Path
@@ -202,8 +202,8 @@ def write_changed(root: Path, feature: Path, expected: dict[str, Any], progress:
         if after[name] == before[name]:
             continue
         try:
-            written = write_bytes_atomic(feature / name, after[name].encode("utf-8"), trust_root=root, exchange=True,
-                                         expected_snapshot=expected[name], expected_parent=expected["directory"])
+            written = write_bytes_atomic(feature / name, after[name].encode("utf-8"), trust_root=root,
+                                         expected_snapshot={**expected[name], "parent": expected["directory"]})
         except WritePreconditionChanged as error:
             if not (progress.applied or progress.partial):
                 raise ArtifactChanged([name]) from error
@@ -237,11 +237,9 @@ def entry_state(root: Path, path: Path) -> tuple[tuple[int, int], dict[str, Any]
     opened = open_safe_parent_fd(path, root, create=False)
     if opened is None:
         return None
-    directory, name, _created = opened
-    try:
-        return file_identity(os.fstat(directory)), snapshot_write_target_fd(directory, name)
-    finally:
-        os.close(directory)
+    with ExitStack() as cleanup:
+        cleanup.callback(os.close, opened[0])
+        return file_identity(os.fstat(opened[0])), snapshot_write_target_fd(opened[0], opened[1])
 
 
 def canonical_mismatches(root: Path, expected: dict[str, tuple[Path, tuple[int, int], dict[str, Any]]]) -> list[str]:
@@ -333,8 +331,8 @@ def locked_apply(root: Path, feature: Path, record: Path, mode: str,
         if record_before is None:  # refused above; this narrows the type
             raise CanonicalMismatch("the application record directory was not captured")
         progress.step, progress.record = "application record", {"schema_version": SCHEMA_VERSION, "domains": rows}
-        published = write_file_atomic(record, canonical_bytes(progress.record).decode("utf-8"), trust_root=root, exchange=True,
-                                      expected_snapshot=record_before[1], expected_parent=record_before[0])
+        published = write_file_atomic(record, canonical_bytes(progress.record).decode("utf-8"), trust_root=root,
+                                      expected_snapshot={**record_before[1], "parent": record_before[0]})
         progress.step = "verification"
         confirm(root, {**artifacts, record.name: (record, record_before[0], {"exists": True, **published})}, progress)
         progress.step = "lock release"
