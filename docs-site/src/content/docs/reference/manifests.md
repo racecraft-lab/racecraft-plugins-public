@@ -93,7 +93,7 @@ Marketplace, plugin, integration, and generated distribution manifests with runt
 
 - .specify/integrations/claude.manifest.json is categorized as SpecKit integration manifest. Source refs: `.specify/integrations/claude.manifest.json`.
 - Top-level fields: `files`, `installed_at`, `integration`, `version`. Source refs: `.specify/integrations/claude.manifest.json`.
-- The manifest declares version `1.0.1`. Source refs: `.specify/integrations/claude.manifest.json`.
+- The manifest declares version `1.1.0`. Source refs: `.specify/integrations/claude.manifest.json`.
 
 #### Sources
 
@@ -117,7 +117,7 @@ Marketplace, plugin, integration, and generated distribution manifests with runt
 
 - .specify/integrations/codex.manifest.json is categorized as SpecKit integration manifest. Source refs: `.specify/integrations/codex.manifest.json`.
 - Top-level fields: `files`, `installed_at`, `integration`, `version`. Source refs: `.specify/integrations/codex.manifest.json`.
-- The manifest declares version `1.0.1`. Source refs: `.specify/integrations/codex.manifest.json`.
+- The manifest declares version `1.1.0`. Source refs: `.specify/integrations/codex.manifest.json`.
 
 #### Sources
 
@@ -141,7 +141,7 @@ Marketplace, plugin, integration, and generated distribution manifests with runt
 
 - .specify/integrations/speckit.manifest.json is categorized as SpecKit integration manifest. Source refs: `.specify/integrations/speckit.manifest.json`.
 - Top-level fields: `files`, `installed_at`, `integration`, `version`. Source refs: `.specify/integrations/speckit.manifest.json`.
-- The manifest declares version `1.0.1`. Source refs: `.specify/integrations/speckit.manifest.json`.
+- The manifest declares version `1.1.0`. Source refs: `.specify/integrations/speckit.manifest.json`.
 
 #### Sources
 

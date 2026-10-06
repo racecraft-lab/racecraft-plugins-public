@@ -60,11 +60,12 @@ harnesses, checksum utilities, Unix text tools, Node, Corepack, `pnpm`, and
 Playwright — see the
 [contributing guide](https://racecraft-lab.github.io/racecraft-plugins-public/contribute-and-release/).
 
-Spec Kit's official docs recommend installing from the GitHub repository. This
-plugin's examples use the same GitHub source:
+Spec Kit's official docs recommend installing from a pinned GitHub release.
+SpecKit Pro pins v1.1.0 to its immutable commit; the runner owns this pin in
+`speckit_pro_runner/spec_kit_pin.py`:
 
 ```text
-uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
+uv tool install specify-cli --force --from git+https://github.com/github/spec-kit.git@f1d3a4f8337ebbd3ae22760a9c12e3352b93a175
 ```
 
 A `uv tool` or `pipx` install keeps PyYAML inside Spec Kit's own environment,
