@@ -1048,6 +1048,7 @@ class OwnerAcceptanceDescriptorTests(unittest.TestCase):
                 roots = []
 
                 def opened(*args, **kwargs):
+                    # Ownership passes to the caller; closing here would hide its leak.
                     roots.append(real_open(*args, **kwargs))
                     return roots[-1]
 
@@ -1070,9 +1071,11 @@ class OwnerAcceptanceDescriptorTests(unittest.TestCase):
                         result = check.run_acceptance([TARGET])
                         self.assertEqual(result[0][0], "installed" if phase is None else "not-run")
                 self.assertTrue(roots)
-                with self.assertRaises(OSError) as raised:
-                    os.fstat(roots[0])
-                self.assertEqual(raised.exception.errno, errno.EBADF)
+                for descriptor in roots:
+                    with self.subTest(descriptor=descriptor):
+                        with self.assertRaises(OSError) as raised:
+                            os.fstat(descriptor)
+                        self.assertEqual(raised.exception.errno, errno.EBADF)
 
 
 class YamlReaderTests(unittest.TestCase):
