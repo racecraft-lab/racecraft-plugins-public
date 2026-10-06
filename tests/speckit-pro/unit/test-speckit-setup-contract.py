@@ -188,8 +188,8 @@ def specify(root: Path, args: list[str]) -> tuple[int, str]:
     return 2, ""
 
 
-class ReviewabilityPreset(ReadinessCase):
-    """A fresh project (`self.root`: `specify init`, no preset) gets the shipped reviewability preset."""
+class ReviewabilityPresetFixture(ReadinessCase):
+    """Shared project preparation and the public preset detector seam."""
 
     def state(self, root: Path) -> dict[str, object]:
         return json.loads(detect_presets({"repo_root": str(root)}, root)["stdout"])["reviewability_preset"]
@@ -199,6 +199,9 @@ class ReviewabilityPreset(ReadinessCase):
         shutil.copytree(REPO_ROOT / ".specify/presets" / PRESET_ID, presets / PRESET_ID)
         shutil.copy(REPO_ROOT / ".specify/presets/.registry", presets / ".registry")
         return presets / PRESET_ID
+
+class PresetUpgrade(ReviewabilityPresetFixture):
+    """Recognized shipped content can be upgraded before Specify."""
 
     def test_known_legacy_priority_10_is_replaced_and_scaffold_can_continue(self) -> None:
         preset = self.root / ".specify/presets" / PRESET_ID
@@ -225,6 +228,9 @@ class ReviewabilityPreset(ReadinessCase):
         self.assertEqual("upgrade", result["status"])
         self.assertEqual((0, ""), specify(self.root, result["upgrade_args"]))
         self.assertEqual("installed", self.state(self.root)["status"])
+
+class PresetUpgradeRefusal(ReviewabilityPresetFixture):
+    """Replacement requires exact content and safe registry evidence."""
 
     def test_modified_or_unknown_legacy_registration_keeps_stopping(self) -> None:
         preset = self.root / ".specify/presets" / PRESET_ID
@@ -269,6 +275,9 @@ class ReviewabilityPreset(ReadinessCase):
             result = self.state(self.root)
             self.assertEqual("unavailable", result["status"])
             self.assertNotIn("upgrade_args", result)
+
+class ReviewabilityPreset(ReviewabilityPresetFixture):
+    """Fresh installation and coherent current-preset identity."""
 
     def test_arbitrary_object_registry_entries_are_not_installed(self) -> None:
         self.install_reviewed()
@@ -673,6 +682,7 @@ class PayloadCopySecurity(unittest.TestCase):
 if __name__ == "__main__":
     suite = unittest.TestSuite(
         unittest.defaultTestLoader.loadTestsFromTestCase(case)
-        for case in (SetupContract, TemplateResolution, ReviewabilityPreset, PayloadCopySecurity)
+        for case in (SetupContract, TemplateResolution, PresetUpgrade, PresetUpgradeRefusal,
+                     ReviewabilityPreset, PayloadCopySecurity)
     )
     raise SystemExit(run_counted(suite, label="test-speckit-setup-contract"))
