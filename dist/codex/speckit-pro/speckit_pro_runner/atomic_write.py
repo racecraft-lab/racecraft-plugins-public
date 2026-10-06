@@ -306,7 +306,7 @@ def install_checked(parent_fd: int, tmp_name: str, target_name: str, expected: d
     if swapped_back:
         raise WritePreconditionChanged("write target changed after snapshot capture")
     # The swap back failed or was refused, so the temporary name holds the competing entry; keep it, never delete it.
-    kept = f".{target_name}.kept-{uuid.uuid4().hex}"
+    kept = tmp_name.replace(".tmp-", ".kept-", 1)
     try:
         os.rename(tmp_name, kept, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
     except OSError:
@@ -412,7 +412,7 @@ def snapshot_write_target(target: Path, repo_root: Path) -> dict[str, Any]:
 
 def snapshot_write_target_fd(parent_fd: int, target_name: str) -> dict[str, Any]:
     try:
-        fd = os.open(target_name, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0), dir_fd=parent_fd)
+        fd = os.open(target_name, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0), dir_fd=parent_fd)
     except FileNotFoundError:
         return {"exists": False, "content": None, "mode": None, "digest": None, "identity": None}
     try:

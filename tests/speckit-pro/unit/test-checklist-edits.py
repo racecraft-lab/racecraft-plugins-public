@@ -835,6 +835,31 @@ class RollbackFailureTests(InterruptionCase):
                                  (result["data"]["applied"], result["data"]["failed"], result["data"]["partial"]), result)
                 self.assert_both_written()
 
+    def test_recovery_name_allocation_cannot_delete_the_displaced_entry(self) -> None:
+        for name in ("spec.md", "plan.md", "applied.json"):
+            with self.subTest(target=name):
+                self.reset()
+                target = self.root / (RECORD if name == "applied.json" else f"{FEATURE}/{name}")
+                target.parent.mkdir(parents=True, exist_ok=True)
+                if name == "applied.json":
+                    target.write_text("{}")
+                for kept in target.parent.glob(f".{name}.*"):
+                    kept.unlink()
+                with ExitStack() as injected:
+                    def compete() -> None:
+                        target.write_text("# Competitor\n")
+                        injected.enter_context(patch.object(atomic_write.uuid, "uuid4", side_effect=OSError("allocation failed")))
+
+                    injected.enter_context(self.failed_rollback(target, compete, raises=False))
+                    result = self.apply_both() if name != "applied.json" else self.apply()
+                kept = list(target.parent.glob(f".{name}.kept-*"))
+                self.assertEqual(["# Competitor\n"], [path.read_text() for path in kept])
+                self.assertEqual("apply_interrupted", result["diagnostics"][0]["code"], result)
+                if name == "applied.json":
+                    self.assertTrue(result["data"]["record_written"], result)
+                else:
+                    self.assertIn(name, result["data"]["partial"], result)
+
 
 class CommittedStateTests(InterruptionCase):
     """F1278-d7ff996f and F1278-afb94c5e: a failure after the first write reports what is on disk."""
@@ -1129,6 +1154,58 @@ def run_dist_command(host: str, root: Path, request: str, *, unreadable_record: 
 
 
 class HostParityTests(unittest.TestCase):
+    def test_displaced_fifos_never_block_a_checked_write_or_hide_its_outcome(self) -> None:
+        program = """
+import os, stat, sys
+from pathlib import Path
+from speckit_pro_runner import atomic_write
+root, name, outcome = Path(sys.argv[1]), sys.argv[2], sys.argv[3]
+target = root / name
+target.write_bytes(b'original')
+parent = os.open(root, os.O_RDONLY)
+expected = atomic_write.snapshot_write_target_fd(parent, name)
+os.close(parent)
+real, calls = atomic_write.swap_entries, 0
+def exchange_with_fifo(directory, first, second):
+    global calls
+    calls += 1
+    if calls == 1:
+        target.unlink()
+        os.mkfifo(target)
+        return real(directory, first, second)
+    if outcome == 'success':
+        return real(directory, first, second)
+    if outcome == 'error':
+        raise OSError('rollback failed')
+    return False
+atomic_write.swap_entries = exchange_with_fifo
+try:
+    atomic_write.write_bytes_atomic(target, b'proposal', trust_root=root, expected_snapshot=expected)
+except OSError as error:
+    if outcome == 'success':
+        assert isinstance(error, atomic_write.WritePreconditionChanged)
+        assert stat.S_ISFIFO(target.stat().st_mode)
+    else:
+        assert isinstance(error, atomic_write.AtomicWriteInterrupted)
+        assert target.read_bytes() == b'proposal'
+        kept = list(root.glob('.' + name + '.kept-*'))
+        assert len(kept) == 1 and stat.S_ISFIFO(kept[0].stat().st_mode)
+else:
+    raise AssertionError('FIFO substitution was accepted')
+"""
+        for host in ("source", *HOSTS):
+            payload = REPO / "speckit-pro" if host == "source" else REPO / "dist" / host / "speckit-pro"
+            for name in ("spec.md", "plan.md", "applied.json"):
+                for outcome in ("success", "unavailable", "error"):
+                    with self.subTest(host=host, target=name, rollback=outcome), tempfile.TemporaryDirectory() as temporary:
+                        try:
+                            done = subprocess.run([sys.executable, "-c", program, temporary, name, outcome],
+                                                  env={**os.environ, "PYTHONPATH": str(payload)},
+                                                  capture_output=True, text=True, timeout=3, check=False)
+                        except subprocess.TimeoutExpired:
+                            self.fail("checked writer blocked on the displaced FIFO")
+                        self.assertEqual(0, done.returncode, done.stdout + done.stderr)
+
     def test_both_payloads_cover_the_failed_rollback_matrix(self) -> None:
         # Preload the shipped modules before the shared test fixture adds source-tree imports.
         program = """
@@ -1147,7 +1224,7 @@ sys.exit(cases['run_counted'](suite, label='shipped-rollback-matrix'))
                                       env={**os.environ, "PYTHONPATH": str(payload)},
                                       capture_output=True, text=True, check=False)
                 self.assertEqual(0, done.returncode, done.stdout + done.stderr)
-                self.assertIn("44/44 passed", done.stdout)
+                self.assertIn("47/47 passed", done.stdout)
 
     def test_both_payloads_plan_and_apply_the_same_proposals_in_the_same_order(self) -> None:
         proposals = [
