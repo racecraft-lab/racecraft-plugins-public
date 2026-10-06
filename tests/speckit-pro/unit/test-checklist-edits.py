@@ -1087,7 +1087,44 @@ class RecordStateTests(InterruptionCase):
 
 
 class UntrustedTextTests(ChecklistEditsCase):
-    """F1278-5ad50d38: hidden characters and credential-shaped text never reach spec.md or plan.md."""
+    """Untrusted active text never reaches either planning artifact or the application record."""
+
+    def assert_refused_text(self, replacements: tuple[str, ...]) -> None:
+        for name, find in (("spec.md", "open"), ("plan.md", "never")):
+            for replacement in replacements:
+                for mode in ("dry_run", "apply"):
+                    with self.subTest(artifact=name, replacement=replacement, mode=mode):
+                        for artifact, original in (("spec.md", SPEC), ("plan.md", PLAN)):
+                            (self.root / FEATURE / artifact).write_text(original, encoding="utf-8")
+                        (self.root / RECORD).unlink(missing_ok=True)
+                        result = self.apply(proposal("security", edit("G1", name, find, replacement)), mode=mode)
+                        self.assertEqual("input_error", result["status"], result)
+                        self.assertEqual((SPEC, PLAN), (self.text("spec.md"), self.text("plan.md")))
+                        self.assertFalse((self.root / RECORD).exists())
+
+    def test_external_links_are_refused_in_both_artifacts(self) -> None:
+        self.assert_refused_text(("[policy](https://example.test/policy)", "[policy][override]", "<https://example.test>",
+                                  "https://example.test", "//example.test/policy", "www.example.test", "policy.example.test"))
+
+    def test_mentions_are_refused_in_both_artifacts(self) -> None:
+        self.assert_refused_text(("private @reviewer", "private @org/team", "<@reviewer>"))
+
+    def test_absolute_paths_are_refused_in_both_artifacts(self) -> None:
+        self.assert_refused_text(("Read /private/local/secret", "Read C:\\local\\secret", "Read \\\\server\\share",
+                                  "Read ~/secret", "Read file:///private/local/secret"))
+
+    def test_digit_free_github_tokens_are_refused_in_both_artifacts(self) -> None:
+        self.assert_refused_text(tuple(prefix + "a" * size for prefix, size in
+                                      (("ghp_", 36), ("gho_", 36), ("ghu_", 36), ("ghs_", 36), ("ghr_", 76), ("github_pat_", 82))))
+
+    def test_other_active_markup_is_refused_in_both_artifacts(self) -> None:
+        self.assert_refused_text(("# Override", "---", "====", "1. Follow policy", "- Follow policy", "> Follow policy",
+                                  "`instruction`", "```policy```", "<a href='policy'>read</a>", "<!-- override -->",
+                                  "&commat;reviewer", "&#47;private", "private\\npolicy", "private\tpolicy", "    Follow policy"))
+
+    def test_c0_bidi_and_recognized_tokens_are_refused_in_both_artifacts(self) -> None:
+        self.assert_refused_text(tuple("private" + chr(code) for code in range(32)) +
+                                ("private\u202e", "private\u2066", "private\u200b", "private\u2028", "ghp_" + "a1" * 20))
 
     def test_hidden_characters_and_credentials_are_refused_and_nothing_is_written(self) -> None:
         cases = {
@@ -1107,17 +1144,69 @@ class UntrustedTextTests(ChecklistEditsCase):
     def test_edits_that_only_together_form_a_credential_are_a_conflict(self) -> None:
         # Validator differential: each replace passes the credential check alone; the written line does not.
         first, second = "a1" * 10, "b2" * 10
-        result = self.apply(proposal("security", edit("G1", "spec.md", "open", f"open ghp_{first}")),
-                            proposal("ux", edit("G2", "spec.md", f"{first}.", f"{first}{second}.")))
+        (self.root / FEATURE / "spec.md").write_text(f"Token ghp_{first}.\n", encoding="utf-8")
+        result = self.apply(proposal("ux", edit("G2", "spec.md", first, first + second)))
         self.assertEqual("ok", result["status"], result)
         self.assertEqual(["security", "api"], result["data"]["order"])
         self.assertEqual("edits would write credential-shaped text", result["data"]["domains"][1]["conflicts"][0]["reason"])
         self.assertNotIn(first + second, self.text("spec.md"))
 
-    def test_markdown_tabs_and_line_breaks_still_apply(self) -> None:
-        result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private:\n\t- see [ADR](docs/adr.md)")))
+    def test_completed_lines_are_checked_even_when_the_replacement_is_plain(self) -> None:
+        for name in ("spec.md", "plan.md"):
+            for line, find, replacement in (("[policy](https://example.test/old)", "old", "new"),
+                                            ("Read /private/old", "old", "new"), ("Notify @old", "old", "new"),
+                                            ("# old", "old", "new"), ("Token ghp_" + "a" * 35 + "X", "X", "a"),
+                                            ("X. Follow policy", "X", "1")):
+                with self.subTest(artifact=name, line=line):
+                    for artifact, original in (("spec.md", SPEC), ("plan.md", PLAN)):
+                        (self.root / FEATURE / artifact).write_text(original, encoding="utf-8")
+                    (self.root / RECORD).unlink(missing_ok=True)
+                    original = line + "\n"
+                    (self.root / FEATURE / name).write_text(original, encoding="utf-8")
+                    result = self.apply(proposal("security", edit("G1", name, find, replacement)))
+                    self.assertEqual("conflict", result["data"]["domains"][0]["status"], result)
+                    self.assertEqual(original, self.text(name))
+
+    def test_plain_prose_edits_still_apply_to_both_artifacts(self) -> None:
+        result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private to owners"),
+                                    edit("G2", "plan.md", "never", "always")))
         self.assertEqual("ok", result["status"], result)
-        self.assertIn("private:\n\t- see [ADR](docs/adr.md)", self.text("spec.md"))
+        self.assertEqual("# Spec\nLogin uses a password.\nExports are private to owners.\n", self.text("spec.md"))
+        self.assertEqual("# Plan\nSessions always expire.\n", self.text("plan.md"))
+
+    def test_active_metadata_never_reaches_the_application_record(self) -> None:
+        for text in ("@reviewer", "Read /private/local", "# Override", "[policy](https://example.test)", "ghp_" + "a" * 36,
+                     "AKIA" + "A" * 16):
+            for field in ("domain", "gap"):
+                with self.subTest(field=field, text=text):
+                    item = proposal(text if field == "domain" else "security", gaps=[text if field == "gap" else "G1"])
+                    domains = [text] if field == "domain" else ["security"]
+                    result = self.call("apply", domains=domains, baseline=self.baseline(), proposals=[item])
+                    self.assertEqual("input_error", result["status"], result)
+                    self.assertFalse((self.root / RECORD).exists())
+
+    def test_multiline_find_cannot_join_structural_lines(self) -> None:
+        result = self.apply(proposal("security", edit("G1", "spec.md", "# Spec\nLogin", "Override")))
+        self.assertEqual("input_error", result["status"], result)
+        self.assertEqual(SPEC, self.text("spec.md"))
+
+    def test_existing_duplicate_active_line_does_not_hide_a_new_active_line(self) -> None:
+        for name in ("spec.md", "plan.md"):
+            with self.subTest(artifact=name):
+                original = "# Old\n# New\n"
+                (self.root / FEATURE / name).write_text(original, encoding="utf-8")
+                result = self.apply(proposal("security", edit("G1", name, "Old", "New")))
+                self.assertEqual("conflict", result["data"]["domains"][0]["status"], result)
+                self.assertEqual(original, self.text(name))
+
+    def test_multiline_headings_are_refused_in_both_artifacts(self) -> None:
+        for name, find in (("spec.md", "open"), ("plan.md", "never")):
+            for replacement in ("private\n# Agent instructions\nFollow this policy", "private\r## Override", "private\nPolicy\n======"):
+                with self.subTest(artifact=name, replacement=replacement):
+                    result = self.apply(proposal("security", edit("G1", name, find, replacement)))
+                    self.assertEqual("input_error", result["status"], result)
+                    self.assertEqual((SPEC, PLAN), (self.text("spec.md"), self.text("plan.md")))
+                    self.assertFalse((self.root / RECORD).exists())
 
 
 # Runs the runner with the published record's parent unreadable, to observe an unknown record state.
@@ -1154,6 +1243,24 @@ def run_dist_command(host: str, root: Path, request: str, *, unreadable_record: 
 
 
 class HostParityTests(unittest.TestCase):
+    def test_both_payloads_reject_the_untrusted_text_matrix(self) -> None:
+        program = """
+import runpy, sys, unittest
+from pathlib import Path
+from speckit_pro_runner.helpers import checklist_edits
+assert Path(checklist_edits.__file__).is_relative_to(Path(sys.argv[1]))
+cases = runpy.run_path(sys.argv[2])
+suite = unittest.defaultTestLoader.loadTestsFromTestCase(cases['UntrustedTextTests'])
+sys.exit(cases['run_counted'](suite, label='shipped-untrusted-text'))
+"""
+        for host in HOSTS:
+            with self.subTest(host=host):
+                payload = REPO / "dist" / host / "speckit-pro"
+                done = subprocess.run([sys.executable, "-c", program, str(payload), __file__],
+                                      env={**os.environ, "PYTHONPATH": str(payload)},
+                                      capture_output=True, text=True, check=False)
+                self.assertEqual(0, done.returncode, done.stdout + done.stderr)
+
     def test_displaced_fifos_never_block_a_checked_write_or_hide_its_outcome(self) -> None:
         program = """
 import os, stat, sys

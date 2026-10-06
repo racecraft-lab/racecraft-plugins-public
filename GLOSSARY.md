@@ -45,7 +45,7 @@ The agents a host launches together in one turn, such as the checklist domains o
 _Avoid_: parallel group, fan-out
 
 **Edit proposal**:
-A checklist domain executor's return: its gaps and the edits it would make to the spec and plan. The executor never writes them. The runner applies the proposals one domain at a time, in workflow order, and refuses the batch if an executor wrote either file.
+A checklist domain executor's return: its gaps and proposed plain prose changes to the spec and plan. Structural or reference changes remain gaps for review; the executor never writes either artifact.
 _Avoid_: patch, remediation, fix pass
 
 **Gate**:
