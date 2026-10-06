@@ -96,56 +96,6 @@ class ChecklistEditsCase(MutationRequestCase):
     def text(self, name: str) -> str:
         return (self.root / FEATURE / name).read_text(encoding="utf-8")
 
-    def failing_write(self, failing_call: int) -> Any:
-        def fail(number: int) -> None:
-            if number == failing_call:
-                raise OSError("disk full")
-
-        return self.before_write(fail)
-
-    def after_call(self, name: str, action: Callable[[], None]) -> Any:
-        """Patch checklist_edits.`name` so `action` runs right after each real call returns."""
-        real = getattr(checklist_edits, name)
-
-        def wrapped(*args: Any, **kwargs: Any) -> Any:
-            returned = real(*args, **kwargs)
-            action()
-            return returned
-
-        return patch.object(checklist_edits, name, wrapped)
-
-    def assert_interrupted_after_writes(self, result: dict[str, Any], record_written: bool) -> None:
-        """Every domain reached disk, nothing is half written, and the record is reported as it is on disk."""
-        self.assertEqual(("expected_failure", "apply_interrupted", ["security", "ux", "api"], [], record_written),
-                         (result["status"], result["diagnostics"][0]["code"], result["data"].get("applied"),
-                          result["data"].get("partial"), result["data"].get("record_written")), result)
-        self.assert_both_written()
-        self.assertEqual(record_written, (self.root / RECORD).is_file())
-
-    def around_lock(self, *, on_acquire: Callable[[], None] = lambda: None,
-                    on_release: Callable[[], None] = lambda: None) -> Any:
-        """Patch the apply lock so `on_acquire` runs before it is taken and `on_release` after it is released."""
-        real = checklist_edits.held_feature
-
-        @contextmanager
-        def hooked(*args: Any, exclusive: bool) -> Iterator[Any]:
-            if exclusive:
-                on_acquire()
-            with real(*args, exclusive=exclusive) as held:
-                yield held
-            if exclusive:
-                on_release()
-
-        return patch.object(checklist_edits, "held_feature", hooked)
-
-    def apply_both(self) -> dict[str, Any]:
-        return self.apply(proposal("security", edit("G1", "spec.md", "open", "private"),
-                                   edit("G2", "plan.md", "never", "always")))
-
-    def assert_both_written(self) -> None:
-        self.assertEqual("# Spec\nLogin uses a password.\nExports are private.\n", self.text("spec.md"))
-        self.assertEqual("# Plan\nSessions always expire.\n", self.text("plan.md"))
-
     @contextmanager
     def before_write(self, action: Callable[[int], None]) -> Iterator[None]:
         """Run `action(n)` just before the helper's n-th artifact write starts."""
@@ -508,7 +458,61 @@ def swap_feature_directory(root: Path) -> None:
     (feature / "plan.md").write_text(PLAN, encoding="utf-8")
 
 
-class CanonicalResultTests(ChecklistEditsCase):
+class InterruptionCase(ChecklistEditsCase):
+    """Fault-injection helpers for applies that fail after they began writing."""
+
+    def failing_write(self, failing_call: int) -> Any:
+        def fail(number: int) -> None:
+            if number == failing_call:
+                raise OSError("disk full")
+
+        return self.before_write(fail)
+
+    def after_call(self, name: str, action: Callable[[], None]) -> Any:
+        """Patch checklist_edits.`name` so `action` runs right after each real call returns."""
+        real = getattr(checklist_edits, name)
+
+        def wrapped(*args: Any, **kwargs: Any) -> Any:
+            returned = real(*args, **kwargs)
+            action()
+            return returned
+
+        return patch.object(checklist_edits, name, wrapped)
+
+    def assert_interrupted_after_writes(self, result: dict[str, Any], record_written: bool) -> None:
+        """Every domain reached disk, nothing is half written, and the record is reported as it is on disk."""
+        self.assertEqual(("expected_failure", "apply_interrupted", ["security", "ux", "api"], [], record_written),
+                         (result["status"], result["diagnostics"][0]["code"], result["data"].get("applied"),
+                          result["data"].get("partial"), result["data"].get("record_written")), result)
+        self.assert_both_written()
+        self.assertEqual(record_written, (self.root / RECORD).is_file())
+
+    def around_lock(self, *, on_acquire: Callable[[], None] = lambda: None,
+                    on_release: Callable[[], None] = lambda: None) -> Any:
+        """Patch the apply lock so `on_acquire` runs before it is taken and `on_release` after it is released."""
+        real = checklist_edits.held_feature
+
+        @contextmanager
+        def hooked(*args: Any, exclusive: bool) -> Iterator[Any]:
+            if exclusive:
+                on_acquire()
+            with real(*args, exclusive=exclusive) as held:
+                yield held
+            if exclusive:
+                on_release()
+
+        return patch.object(checklist_edits, "held_feature", hooked)
+
+    def apply_both(self) -> dict[str, Any]:
+        return self.apply(proposal("security", edit("G1", "spec.md", "open", "private"),
+                                   edit("G2", "plan.md", "never", "always")))
+
+    def assert_both_written(self) -> None:
+        self.assertEqual("# Spec\nLogin uses a password.\nExports are private.\n", self.text("spec.md"))
+        self.assertEqual("# Plan\nSessions always expire.\n", self.text("plan.md"))
+
+
+class CanonicalResultTests(InterruptionCase):
     """F1278-812f7be4 after the pre-checks: the result is checked against the canonical paths after acting."""
 
     def reset(self) -> None:
@@ -671,7 +675,7 @@ class CanonicalResultTests(ChecklistEditsCase):
                 self.assertEqual(("expected_failure", False), (result["status"], result["data"].get("record_written")), result)
                 self.assertEqual('{"competitor": true}\n', record.read_text(encoding="utf-8"))
 
-class CommittedStateTests(ChecklistEditsCase):
+class CommittedStateTests(InterruptionCase):
     """F1278-d7ff996f and F1278-afb94c5e: a failure after the first write reports what is on disk."""
 
     def test_a_half_written_first_domain_is_reported_as_partial(self) -> None:
@@ -733,7 +737,7 @@ class CommittedStateTests(ChecklistEditsCase):
         self.assert_interrupted_after_writes(result, record_written=True)
 
 
-class RecordStateTests(ChecklistEditsCase):
+class RecordStateTests(InterruptionCase):
     """F1278-afb94c5e: the application record's state is reported as observed on disk, never assumed."""
 
     def test_a_failure_before_record_publication_reports_both_artifacts_and_no_record(self) -> None:
