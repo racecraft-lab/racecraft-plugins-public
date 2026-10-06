@@ -358,7 +358,7 @@ def declared(doc: dict, kind: str) -> tuple[list[str], list[str]]:
 
 
 def hook_entry(item: object, entry_id: str) -> dict | None:
-    """One extensions.yml hook as register_hooks writes it (extensions/__init__.py L5870-5885)."""
+    """One extensions.yml hook as register_hooks writes it (extensions/__init__.py L5885-5896)."""
     command = item.get("command") if isinstance(item, dict) else None
     if not isinstance(item, dict) or not command:
         return None
@@ -425,7 +425,7 @@ def check_registration(tree: BoundTree, entry: dict[str, str], doc: dict, manife
 
 def owned_by(skill: bytes, entry_id: str) -> bool:
     """Whether a SKILL.md's metadata source names this entry: `<id>:<file>` from the registrar
-    (agents.py L436-476) or `extension:<id>` from extension skills (extensions/__init__.py L1730-1740)."""
+    (agents.py L425-476) or `extension:<id>` from extension skills (extensions/__init__.py L1730-1740)."""
     source = re.compile(rf"^\s*source:\s*['\"]?(?:extension:)?{re.escape(entry_id)}(?::[^'\"\s]*)?['\"]?\s*$",
                         re.MULTILINE)
     return bool(source.search(skill.decode("utf-8", errors="replace")))
