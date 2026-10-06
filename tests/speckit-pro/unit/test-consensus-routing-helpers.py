@@ -545,7 +545,7 @@ class ReferenceProseTests(unittest.TestCase):
         self.assertIn("parse-consensus-categories", round_one)
 
     def test_the_single_analyst_path_follows_runner_selection_without_escalation(self) -> None:
-        single = section_between(self.text, "### Single-analyst confidence rule", "### Two-analyst rule")
+        single = section_between(self.text, "### Single-analyst confidence rule", "### Three-analyst rules")
         self.assertEqual([True, False, False], [phrase in single for phrase in (
             "answer_source", "Fall through to Round 2", "synthesizer's output")])
 
@@ -563,6 +563,20 @@ class ReferenceProseTests(unittest.TestCase):
                 batch = section_between(text, "Stage 3 — Apply Artifact Edits", "### What stays serial")
                 self.assertNotIn("remaining (3 − |Sx|)", batch)
                 self.assertNotIn("[ESCAPE_TO_ROUND_2] OR low confidence", batch)
+                self.assertIn("ELSE IF Flags includes [ROUND_3_TIEBREAK] OR low confidence", batch)
+
+    def test_security_retry_exhaustion_and_phase_diagrams_match_the_tiers(self) -> None:
+        for host in HOSTS:
+            with self.subTest(host=host):
+                text = (host_skill_root(host) / TIER_REFERENCE).read_text(encoding="utf-8")
+                self.assertIn("If a retry fails or escapes again", text)
+                self.assertIn("If the replacement fails or escapes", text)
+                self.assertIn("Stage 6 — Apply accepted Round-2 edits serially; unresolved items go to Round 3", text)
+                self.assertNotIn("### Two-analyst rule", text)
+                self.assertNotIn("two disagreeing Round 1 analysts", text)
+                for item in ("item", "gap", "finding"):
+                    self.assertIn(f"one synthesizer per security {item}", text)
+                self.assertNotIn("N=1 high-confidence | N=2 both-agree", text)
 
 
 class SecurityKeywordCopyTests(unittest.TestCase):

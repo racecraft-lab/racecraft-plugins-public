@@ -13,9 +13,9 @@ Consensus dispatch runs as batched ordinary subagents; see
 - [Plan-Stage Tiers](#plan-stage-tiers) — security, low-confidence and recommendation routing (ADR 0022)
 - [Category-Routed Dispatch (Tier A)](#category-routed-dispatch-tier-a) — `[codebase|spec|domain|security|ambiguous]` routing rules + escape-hatch
 - [Batched Dispatch](#batched-dispatch) — multi-item fan-out in ONE tool turn
-- [Three-Analyst Consensus Rules (Round 2 / N=3)](#three-analyst-consensus-rules-round-2--n3) — full fan-out behavior
+- [Three-Analyst Consensus Rules (Round 2 / N=3)](#three-analyst-consensus-rules-round-2--n3) — security agreement rules
 - [The 3 Perspective Agents](#the-3-perspective-agents) — codebase-analyst / spec-context-analyst / domain-researcher
-- [Consensus Rules](#consensus-rules) — N=1, N=2, N=3 agreement rules + escape-hatch + STOP conditions
+- [Consensus Rules](#consensus-rules) — three-analyst agreement and tiebreak rules
 - [Security Keywords](#security-keywords) — always-all-3 trigger words
 - [Round 3 Tiebreak](#round-3-tiebreak) — a fresh analyst plus a max-effort `consensus-tiebreaker` resolve what Rounds 1 and 2 could not; nothing asks a human or stops
 - [Phase-Specific Consensus Flows](#phase-specific-consensus-flows) — Clarify, Checklist, Analyze patterns + per-phase prompt templates ("Specification Context" / "Question" / "Your Task" sub-sections appear inside each flow)
@@ -128,7 +128,7 @@ ROUND 1 — security (all three)
 ROUND 2 — retry failed or escaped analysts
   Retry only the failed or escaped analysts, once, with the missing context.
   Keep the successful Round-1 responses from the other perspectives.
-  If a retry fails, follow the fresh-analyst replacement in §Round 3 Tiebreak.
+  If a retry fails or escapes again, follow the fresh-analyst replacement in §Round 3 Tiebreak.
   Once all three responses are valid, run consensus-synthesizer with them.
   Apply the Consensus Rules below.
   APPLY edit OR flag [ROUND_3_TIEBREAK].
@@ -151,14 +151,6 @@ from the completed analyst response. Follow the returned `answer_source`:
 Missing or malformed analyst confidence keeps the executor recommendation.
 Record the outcome as `low_confidence_answer` and finish the item after this
 one analyst. No synthesizer or later analyst round runs for this tier.
-
-### Two-analyst rule (N=2)
-
-| Analysts | Action |
-|----------|--------|
-| Both agree | Apply edit, log, done |
-| Disagree | Fall through to Round 2 (spawn the missing analyst, re-synthesize) |
-| Either flagged escape-hatch | Fall through to Round 2 |
 
 ### Three-analyst rules (N=3)
 
@@ -286,12 +278,12 @@ Stage 2 — All synthesizers, ONE assistant message:
 Stage 3 — Apply Artifact Edits SERIALLY (orchestrator's own Edit calls):
   ROUND_2_QUEUE = []
   For each synthesizer result, in item order:
-    IF Flags = None AND (Confidence = high OR 2-of-3 OR 3-of-3 agree):
+    IF Flags = None AND Confidence = high AND agreement meets the Consensus Rules:
       Apply Artifact Edit to spec.md / plan.md / tasks.md
       Write a CRL row: Round=1, Routed Categories=Sx, Outcome=<outcome>, Analysts Used=Sx
     IF Flags includes [ESCAPE_TO_ROUND_2]:
       Push (Ix, failed or escaped analysts) onto ROUND_2_QUEUE
-    IF Flags includes [ROUND_3_TIEBREAK] OR low confidence: run the Round 3 tiebreak per
+    ELSE IF Flags includes [ROUND_3_TIEBREAK] OR low confidence: run the Round 3 tiebreak per
       §Round 3 Tiebreak after this batch's other edits are applied; the
       flag is the Round 3 trigger and never a question or a stop
 
@@ -299,7 +291,9 @@ If ROUND_2_QUEUE non-empty:
   Stage 4 — Retry only each queued item's failed or escaped analysts in ONE message;
             retain successful Round-1 responses from the other perspectives
   Stage 5 — All Round-2 synthesizers in ONE message
-  Stage 6 — Apply Round-2 edits serially (same as Stage 3), including §Round 3 Tiebreak.
+  Stage 6 — Apply accepted Round-2 edits serially; unresolved items go to Round 3.
+            A repeated escape exhausts the retry; use the fresh replacement below,
+            then Round 3 if it also fails or escapes. No item re-enters Round 2.
 ```
 
 ### What stays serial — and why
@@ -357,7 +351,6 @@ One rule set applies to every run; no setting changes it.
 | **All 3 disagree** | Flag as `[ROUND_3_TIEBREAK]` with all 3 perspectives, which starts the [Round 3 Tiebreak](#round-3-tiebreak). |
 | **Security item** (`[security]` tag, or keyword with any analyst returning `security_relevant: true` or omitting the field) | Apply only on 3/3 agreement. A 2/3 majority or all-disagree flags `[ROUND_3_TIEBREAK]` and starts the Round 3 tiebreak. |
 | **Keyword-only item** (every routed analyst returns `security_relevant: false`) | Use the ordinary rules above: a 2/3 majority applies. |
-| **Non-security route** (`Security Route: none`) | Use the item's own rule: a `security_relevant: true` answer does not raise the bar, so two disagreeing Round 1 analysts still escape to Round 2 and a 2/3 majority applies at N = 3. |
 
 ## Security Keywords
 
@@ -431,10 +424,11 @@ Then:
   item naming the item, the assumption, and the dissent, so the PR body lists
   them under `## Known Gaps`.
 
-An analyst that fails its retry is replaced by a fresh analyst, never by a
+An analyst that fails or escapes its retry is replaced by a fresh analyst, never by a
 human: dispatch one new instance of the same perspective with the same prompt.
-If it returns, the item continues under the ordinary rules with that answer.
-If the replacement also fails, raise the flag and run Round 3 on the answers in
+If it returns a valid answer without escape keywords, the item continues under
+the ordinary rules with that answer.
+If the replacement fails or escapes, raise the flag and run Round 3 on the answers in
 hand.
 
 **Product scope is the one deferral.** When the tiebreaker finds that the
@@ -460,9 +454,8 @@ Checklist, and Analyze consensus.
 Each flow follows the same pattern: executor handles Layer 1,
 main session handles Layer 2 (consensus) for unresolved items.
 
-> **Note on the diagrams below.** They depict the **Round 2**
-> (full fan-out) path that fires after a Round 1 escape, or
-> directly when an item carries a `[security]` tag or keyword. A
+> **Note on the diagrams below.** Security items start Round 1 with
+> all three analysts; Round 2 retries only failed or escaped analysts. A
 > `low_confidence` item spawns the one analyst
 > `parse-consensus-categories` returns and no synthesizer. The
 > synthesizer runs only for `security` items — see
@@ -488,13 +481,15 @@ clarify-executor prepares read-only Clarify Question Set
         ├── Stage 1: spawn all routed analysts for all items in ONE
         │   assistant message (background). Per-item routing comes
         │   from parse-consensus-categories (Category-Routed Dispatch).
+        │   Recommendation items finish with the executor answer;
+        │   low_confidence items finish via answer_source and the decisions list.
         │
         ├── Stage 2: spawn all consensus-synthesizers in ONE message
-        │   (one synthesizer per item).
+        │   (one synthesizer per security item).
         │
         ├── Stage 3: apply Artifact Edits SERIALLY in item order:
-        │   ├── Security item → apply only on 3/3; otherwise Round 3 tiebreak
-        │   ├── N=1 high-confidence | N=2 both-agree | N=3 2/3 or 3/3 agree
+        │   ├── Security tier → follow Consensus Rules; otherwise Round 3 tiebreak
+        │   ├── Accepted consensus
         │   │   → Edit spec.md with the consensus answer, remove marker
         │   ├── [ESCAPE_TO_ROUND_2] → enqueue for Round 2 batch
         │   └── All disagree (after Round 2) → [ROUND_3_TIEBREAK] → Round 3 tiebreak
@@ -550,14 +545,16 @@ checklist-executor runs /speckit-checklist domain
         see §Batched Dispatch above for the canonical 3-stage flow):
         │
         ├── Stage 1: spawn all routed analysts for all gaps in ONE
-        │   message (background). Per-gap routing per [<categories>].
+        │   message (background). Per-gap routing from parse-consensus-categories.
+        │   Recommendation gaps finish with the executor answer;
+        │   low_confidence gaps finish via answer_source and the decisions list.
         │
         ├── Stage 2: spawn all consensus-synthesizers in ONE message
-        │   (one synthesizer per gap).
+        │   (one synthesizer per security gap).
         │
         ├── Stage 3: apply Artifact Edits SERIALLY in gap order:
-        │   ├── Security item → apply only on 3/3; otherwise Round 3 tiebreak
-        │   ├── N=1 high-confidence | N=2 both-agree | N=3 2/3 or 3/3 agree
+        │   ├── Security tier → follow Consensus Rules; otherwise Round 3 tiebreak
+        │   ├── Accepted consensus
         │   │   → Apply edit to spec.md or plan.md, log to workflow
         │   ├── [ESCAPE_TO_ROUND_2] → enqueue for Round 2 batch
         │   └── All disagree (after Round 2) → [ROUND_3_TIEBREAK] → Round 3 tiebreak
@@ -610,14 +607,16 @@ analyze-executor runs /speckit-analyze
         see §Batched Dispatch above for the canonical 3-stage flow):
         │
         ├── Stage 1: spawn all routed analysts for all findings in ONE
-        │   message (background). Per-finding routing per [<categories>].
+        │   message (background). Per-finding routing from parse-consensus-categories.
+        │   Recommendation findings finish with the executor answer;
+        │   low_confidence findings finish via answer_source and the decisions list.
         │
         ├── Stage 2: spawn all consensus-synthesizers in ONE message
-        │   (one synthesizer per finding).
+        │   (one synthesizer per security finding).
         │
         ├── Stage 3: apply Artifact Edits SERIALLY in finding order:
-        │   ├── Security item → apply only on 3/3; otherwise Round 3 tiebreak
-        │   ├── N=1 high-confidence | N=2 both-agree | N=3 2/3 or 3/3 agree
+        │   ├── Security tier → follow Consensus Rules; otherwise Round 3 tiebreak
+        │   ├── Accepted consensus
         │   │   → Apply fix to tasks.md / spec.md / plan.md, log to workflow
         │   ├── [ESCAPE_TO_ROUND_2] → enqueue for Round 2 batch
         │   └── All disagree (after Round 2) → [ROUND_3_TIEBREAK] → Round 3 tiebreak
