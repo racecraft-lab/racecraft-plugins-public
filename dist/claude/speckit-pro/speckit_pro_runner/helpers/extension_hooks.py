@@ -4,6 +4,7 @@ Spec Kit writes this file as block YAML: `hooks:`, then one key per event, then 
 list of entries. The standard library has no YAML reader, so this module reads
 only that shape and fails closed on anything else, naming the line. Mandatory
 hooks are never returned: the loaded upstream command runs those itself.
+Optional records retain their event and consent text; listing is not approval.
 
 Quoted values keep their type: a quoted `"true"` is text, not a boolean, and a
 quoted `"null"` is a condition, not an absent one. A hook condition is run the
@@ -134,11 +135,13 @@ def hook_entries(text: str, event: str) -> list[tuple[int, dict[str, str]]]:
             entries[-1][1][field[2]] = field[3]
         elif current_field not in {"description", "prompt"}:
             raise ValueError(f"{HOOK_FILE} line {number}: {current_field} must be a single-line scalar")
+        else:
+            entries[-1][1][current_field] += " " + line.strip()
     return entries
 
 
-def entry_hook(fields: dict[str, str]) -> tuple[int, dict[str, str]] | None:
-    """Priority and the {extension, command} record for an entry that should be listed; None when it should not."""
+def entry_hook(fields: dict[str, str]) -> tuple[int, dict[str, str | bool]] | None:
+    """Priority and consent-bearing optional suggestion; None when excluded."""
     extension, command = scalar(fields.get("extension", "")), scalar(fields.get("command", ""))
     if not IDENTIFIER.fullmatch(extension) or not IDENTIFIER.fullmatch(command):
         raise ValueError("extension and command must be plain ids")
@@ -148,14 +151,19 @@ def entry_hook(fields: dict[str, str]) -> tuple[int, dict[str, str]] | None:
         raise ValueError("priority must be an integer") from None
     enabled, optional = flag(fields, "enabled"), flag(fields, "optional")
     if enabled and optional and condition_met(fields):
-        return priority, {"extension": extension, "command": command}
+        prompt, description = scalar(fields.get("prompt", "")), scalar(fields.get("description", ""))
+        if any(fields.get(name, "").lstrip().startswith(("|", ">")) for name in ("prompt", "description")):
+            raise ValueError("prompt and description must be plain or quoted scalars, not block scalars")
+        return priority, {"extension": extension, "command": command, "optional": True,
+                          "prompt": prompt, "description": description}
     return None
 
 
-def optional_hooks(root: Path, events: tuple[str, ...]) -> list[dict[str, str]]:
+def optional_hooks(root: Path, events: tuple[str, ...]) -> list[dict[str, str | bool]]:
     """Enabled optional hooks whose condition holds, per event in the order given, lowest priority number first.
 
-    A hook registered under several events is listed once, at its first place.
+    A hook registered under several events retains each event's confirmation.
+    Exact duplicate suggestions within one event are listed once.
     A missing file means no hooks. A file the runner cannot read or interpret
     raises ValueError so the caller never guesses.
     """
@@ -165,15 +173,16 @@ def optional_hooks(root: Path, events: tuple[str, ...]) -> list[dict[str, str]]:
         if os.path.lexists(path):
             raise ValueError(f"{HOOK_FILE} is not a readable regular file inside the project")
         return []
-    listed: list[dict[str, str]] = []
+    listed: list[dict[str, str | bool]] = []
     for event in events:
-        ranked: list[tuple[int, dict[str, str]]] = []
+        ranked: list[tuple[int, dict[str, str | bool]]] = []
         for number, fields in hook_entries(text, event):
             try:
                 found = entry_hook(fields)
             except ValueError as exc:
                 raise ValueError(f"{HOOK_FILE} entry at line {number}: {exc}") from None
             if found is not None:
+                found[1]["event"] = event
                 ranked.append(found)
         listed.extend(hook for _, hook in sorted(ranked, key=lambda pair: pair[0]) if hook not in listed)
     return listed

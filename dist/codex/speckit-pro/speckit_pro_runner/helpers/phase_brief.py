@@ -213,14 +213,15 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
         applies to the top-level agent only. Codex phase-executor omits file
         effort; this field supplies it per phase. Other phases follow their
         inventory row. Claude passes model and keeps agent effort; Codex passes both.
-    hooks: list[{extension: str, command: str}], the phase's optional hooks from
-        .specify/extensions.yml: before_<phase> then after_<phase>, enabled,
-        condition met (env conditions only; any other raises), each once, to
-        run after the phase and record in the decisions list. Mandatory hooks
-        belong to the loaded command; Clarify loads none and lists none.
+    hooks: list[{extension, command, event, optional: true, prompt, description}],
+        enabled optional suggestions (all other fields are strings) from
+        .specify/extensions.yml: before_<phase> then after_<phase>, once per event.
+        Env conditions must hold; others raise. Confirm the exact extension,
+        command and event or skip and record. Before stays before dispatch;
+        after stays afterward. Mandatory hooks belong to the loaded command;
+        Clarify loads none and lists none.
 
-    Empty reserved fields activate no new behavior. Input errors return no data;
-    an uninterpretable hook file is internal_failure, never a guessed list.
+    Input errors return no data; uninterpretable hooks are internal_failure.
     """
     try:
         phase, workflow, feature = checked_request(request.inputs)
