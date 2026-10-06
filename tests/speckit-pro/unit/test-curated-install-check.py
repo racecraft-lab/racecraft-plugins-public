@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import ast
+import errno
 import hashlib
 import importlib.util
 import json
@@ -1026,6 +1027,53 @@ class OwnerAcceptanceGuardTests(unittest.TestCase):
         with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as raised:
             check.main(["--owner-acceptance", "--trust-pinned-archives"])
         self.assertEqual(raised.exception.code, 2)
+
+
+class OwnerAcceptanceDescriptorTests(unittest.TestCase):
+    def test_project_descriptor_closes_on_every_acceptance_exit(self):
+        real_open = os.open
+        installed = [("installed", [])]
+        cases = (
+            ("success", None, None),
+            ("setup-refusal", "fresh_project", ["setup failed"]),
+            ("binding-refusal", "bind_project", check.EvidenceError("missing directory")),
+            ("setup-exception", "fresh_project", RuntimeError("setup")),
+            ("binding-exception", "bind_project", RuntimeError("binding")),
+            ("install-exception", "accept_entry", RuntimeError("install")),
+            ("final-exception", "final_evidence", RuntimeError("final pass")),
+        )
+        for name, phase, outcome in cases:
+            with self.subTest(exit=name):
+                roots = []
+
+                def opened(path, flags, *args, **kwargs):
+                    descriptor = real_open(path, flags, *args, **kwargs)
+                    if isinstance(path, Path):
+                        roots.append(descriptor)
+                    return descriptor
+
+                with (mock.patch.object(check.os, "open", side_effect=opened),
+                      mock.patch.object(check, "fresh_project", return_value=[]) as setup,
+                      mock.patch.object(check, "bind_project", return_value={}) as binding,
+                      mock.patch.object(check, "accept_entry", return_value=installed[0]) as install,
+                      mock.patch.object(check, "final_evidence", return_value=installed) as final):
+                    if phase:
+                        target = {"fresh_project": setup, "bind_project": binding,
+                                  "accept_entry": install, "final_evidence": final}[phase]
+                        if isinstance(outcome, Exception):
+                            target.side_effect = outcome
+                        else:
+                            target.return_value = outcome
+                    if isinstance(outcome, RuntimeError):
+                        with self.assertRaises(RuntimeError):
+                            check.run_acceptance([TARGET])
+                    else:
+                        result = check.run_acceptance([TARGET])
+                        self.assertEqual(result[0][0], "installed" if phase is None else "not-run")
+                self.assertEqual(len(roots), 1)
+                with self.assertRaises(OSError) as raised:
+                    os.fstat(roots[0])
+                self.assertEqual(raised.exception.errno, errno.EBADF)
 
 
 class YamlReaderTests(unittest.TestCase):
