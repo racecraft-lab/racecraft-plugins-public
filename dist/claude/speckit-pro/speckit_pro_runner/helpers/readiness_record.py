@@ -405,13 +405,19 @@ def current_fingerprints(prints: dict[str, str], root: Path, cache: dict[str, st
         kind, _, name = key.partition(":")
         if kind == "value":
             continue
-        if name not in cache:
-            if len(cache) >= MAX_FINGERPRINT_FILES:
-                return False
-            cache[name] = fingerprint_file(root, PurePosixPath(name), limit=FINGERPRINT_LIMIT_BYTES)
-        if cache[name] != value:
+        if saved_file_fingerprint(name, root, cache) != value:
             return False
     return True
+
+
+def saved_file_fingerprint(name: str, root: Path, cache: dict[str, str]) -> str | None:
+    """The one reader for files a saved record names: each read once per check, and at most
+    MAX_FINGERPRINT_FILES distinct files in all. None once the bound leaves the file unread."""
+    if name not in cache:
+        if len(cache) >= MAX_FINGERPRINT_FILES:
+            return None
+        cache[name] = fingerprint_file(root, PurePosixPath(name), limit=FINGERPRINT_LIMIT_BYTES)
+    return cache[name]
 
 
 def safe_reason(text: str) -> str:
@@ -469,17 +475,22 @@ def check_saved_item(name: str, item: Any) -> None:
         raise SelectionError("a fingerprint has a noncanonical, unsafe or unknown key or value")
 
 
-def changed_inputs(fingerprints: dict[str, str], root: Path) -> list[str]:
+def changed_inputs(fingerprints: dict[str, str], root: Path, cache: dict[str, str]) -> list[str]:
     """Each file input whose current fingerprint differs from the recorded one.
 
     `check_saved_item` has proven every key sound, so each file is read by its saved name; no lookup can miss.
+    A file the shared read bound leaves unread is an unknown comparison, never an unchanged input.
     """
     changed = []
     for key, recorded in fingerprints.items():
         kind, _, name = key.partition(":")
         if kind != "file":
             changed.append("unknown: value fingerprint comparison unavailable")
-        elif fingerprint_file(root, PurePosixPath(name), limit=FINGERPRINT_LIMIT_BYTES) != recorded:
+            continue
+        current = saved_file_fingerprint(name, root, cache)
+        if current is None:
+            changed.append(f"unknown: file fingerprint comparison skipped past the {MAX_FINGERPRINT_FILES}-file read bound")
+        elif current != recorded:
             changed.append(name)
     return changed
 
@@ -503,6 +514,7 @@ def stale_items(root: Path, host: str) -> list[tuple[str, str]]:
     if record.get("plugin_revision") != current:
         stale.append(("plugin_payload",
                       f"plugin revision changed from {safe_reason(str(record.get('plugin_revision')))} to {current}"))
+    reads: dict[str, str] = {}
     for name, item in items.items():
         if name in FRESH_ITEMS:
             stale.append((name, "unknown: requires a fresh run-start observation; saved status is not evidence"))
@@ -512,7 +524,7 @@ def stale_items(root: Path, host: str) -> list[tuple[str, str]]:
             stale.append((name, f"{item['status']}: {safe_reason(item['evidence_source'])}; "
                                 f"action: {safe_reason(str(item.get('action')))}"))
         stale.extend((name, safe_reason(changed) if changed.startswith("unknown:") else f"input changed: {safe_reason(changed)}")
-                     for changed in changed_inputs(item["fingerprints"], root))
+                     for changed in changed_inputs(item["fingerprints"], root, reads))
     return [(name, safe_reason("; ".join(dict.fromkeys(reason for item, reason in stale if item == name))))
             for name in dict(stale)]
 

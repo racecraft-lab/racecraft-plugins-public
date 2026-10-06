@@ -1672,6 +1672,60 @@ class G0SavedEvidenceTests(G0ReadinessFixture):
         self.assert_logged_once("project_integration", "unknown: value fingerprint")
 
 
+class G0FingerprintBoundTests(G0ReadinessFixture):
+    """G0 reads each saved file once per check and at most MAX_FINGERPRINT_FILES files in all."""
+
+    def g0_reads(self, host: str) -> tuple[dict, list[str]]:
+        """G0 on `host`'s rendered runner, with every saved-fingerprint file read it makes."""
+        request = {"schema_version": "1.0", "request_id": "test-g0", "helper_id": "g0-setup", "operation": "g0-setup",
+                   "mode": "read_only", "inputs": {"probe": "readiness", "surface": host, "workflow_file": "workflow.md"}}
+        done = subprocess.run([sys.executable, "-c", "\n".join([
+            "import atexit, json, runpy, sys",
+            "from speckit_pro_runner.helpers import readiness_record as record",
+            "reads, read = [], record.fingerprint_file",
+            "record.fingerprint_file = lambda root, relative, **kw: (reads.append(relative.as_posix()), read(root, relative, **kw))[1]",
+            "atexit.register(lambda: sys.stderr.write(json.dumps({'reads': reads}) + '\\n'))",
+            "runpy.run_module('speckit_pro_runner', run_name='__main__')",
+        ])], input=json.dumps(request), text=True, capture_output=True, check=False, cwd=self.root, timeout=60,
+            env={**os.environ, "PYTHONPATH": str(REPO_ROOT / "dist" / host / "speckit-pro")})
+        response = json.loads(done.stdout)
+        assert_runner_response(self, response, "ok", 0)
+        self.assertEqual("proceed", response["data"]["readiness"]["verdict"])
+        return response["data"]["readiness"], json.loads(done.stderr.splitlines()[-1])["reads"]
+
+    def evidence_files(self, prefix: str, count: int) -> list[str]:
+        names = [f"{prefix}-{n}.txt" for n in range(count)]
+        for name in names:
+            (self.root / name).write_text(f"{name}\n", encoding="utf-8")
+        return names
+
+    def assert_bounded(self, observations: list[dict[str, object]], unknown: str, read: str | None = None) -> None:
+        """Both hosts read each file once, stop at the bound, and report the unread comparison as unknown."""
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                self.write_record(observations, host=host)
+                readiness, reads = self.g0_reads(host)
+                self.assertEqual(sorted(set(reads)), sorted(reads), "each saved file is read once")
+                self.assertEqual(readiness_record.MAX_FINGERPRINT_FILES, len(reads))
+                reasons = {row["item"]: row["reason"] for row in readiness["stale"]}
+                self.assertIn("unknown: file fingerprint comparison", reasons[unknown])
+                self.assertNotIn("input changed", json.dumps(reasons), "an unread or unchanged input is never changed")
+                if read is not None:
+                    self.assertNotIn("file fingerprint comparison", reasons[read])
+
+    def test_reads_stop_at_the_bound_and_report_unknown_on_either_host(self) -> None:
+        files = self.evidence_files("evidence", readiness_record.MAX_FINGERPRINT_FILES + 1)
+        self.assert_bounded([observation("project_integration", files=files)], "project_integration")
+
+    def test_items_naming_one_file_share_its_single_read_on_either_host(self) -> None:
+        shared = self.evidence_files("shared", 40)
+        # Saved keys are sorted, so these extras are read after the shared files and the 65th file is never read.
+        extra = self.evidence_files("zz-extra", 25)
+        self.assert_bounded([observation("project_integration", files=shared),
+                             observation("formal_methods", files=shared + extra)], "formal_methods",
+                            read="project_integration")
+
+
 class G0WorkflowTests(G0ReadinessFixture):
     def test_appending_readiness_notes_twice_is_idempotent(self) -> None:
         entries = self.g0()["decisions"]
@@ -1718,7 +1772,7 @@ class G0WorkflowTests(G0ReadinessFixture):
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
     cases = (ReadinessRecordTest, PreviewEvidenceSecurityTest, HostProbePathSecurityTest, FeasibilityTest,
-             G0RecordValidationTests, G0SavedEvidenceTests, G0WorkflowTests)
+             G0RecordValidationTests, G0SavedEvidenceTests, G0FingerprintBoundTests, G0WorkflowTests)
     return unittest.TestSuite([loader.loadTestsFromTestCase(case) for case in cases])
 
 
