@@ -27,7 +27,7 @@ from ..gate_discovery import DEFAULT_BASE_BRANCH, SLOTS as GATE_SLOTS, resolve_s
 from .. import quality_gates
 from ..json_schema import json_schema_failures
 from ..runtime import detect_plugin_root
-from .. import spec_kit_pin
+from .. import reviewability_preset, spec_kit_pin
 from ..strict_input import unique_object
 from .formal_policy import apply_resume_guard, gate_checkpoint
 from .readiness_record import HOSTS, preview_surface
@@ -1916,7 +1916,17 @@ def detect_presets(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
         for key, template in (("tasks", "tasks-template"), ("spec", "spec-template"), ("plan", "plan-template")):
             path = str(base / f"{template}.md")
             templates[key] = f"  {template}: \n{wrap_path_80(path)}\n    (top layer from: {preset['name']} v{preset['version']})"
-    return make_result(json_text({"has_presets": bool(presets), "presets": presets, "extensions": extensions, "hooks": hooks, "templates": templates}))
+    return make_result(json_text({"has_presets": bool(presets), "presets": presets, "reviewability_preset": reviewability_preset_state(root, repo_root), "extensions": extensions, "hooks": hooks, "templates": templates}))
+
+
+def reviewability_preset_state(root: Path, repo_root: Path) -> dict[str, Any]:
+    """Whether the project has the reviewability preset, and the `specify` arguments that add it.
+
+    `installed` requires coherent registry evidence and the exact shipped preset bytes.
+    `missing` supplies add_args; `unavailable` means unsafe or unavailable evidence,
+    or a stale registration that needs repair before Spec Kit will accept add.
+    """
+    return reviewability_preset.state(root, repo_root)
 
 
 # The spec template writes `[NEEDS CLARIFICATION: <question>]`; the bare
