@@ -6,7 +6,6 @@ from itertools import product
 import json
 import os
 import re
-import subprocess
 import sys
 import tempfile
 import tomllib
@@ -22,6 +21,7 @@ from speckit_pro_runner.helpers import phase_brief
 from speckit_pro_runner.helpers.registry import dispatch_helper  # noqa: E402
 from test_result import run_counted  # noqa: E402
 from host_skill_views import host_skill_root  # noqa: E402
+from isolated_child import run_python  # noqa: E402
 
 
 def dispatch_brief(inputs, request_id=None):
@@ -64,14 +64,31 @@ def extensions_yml(*entries):
         "\n".join([head, *rest]) for head, rest in events.items()) + "\n"
 
 
+# The env.* names the hook-condition fixtures below read; no other parent variable reaches a child.
+HOOK_CONDITION_KEYS = ("SPK_CONSENT_MISSING", "SPK_CONSENT_MODE", "SPK_CONSENT_SET", "SPK_DISPLAY_NEVER_SET",
+                       "SPK_HOOK_MODE", "SPK_HOOK_SET", "SPK_HOOK_UNSET")
+SELECT_RUNNER = "import sys\nsys.path.insert(0, sys.argv.pop(1))\n"
+RUN_RUNNER = "import runpy\nrunpy.run_module('speckit_pro_runner', run_name='__main__', alter_sys=True)\n"
+
+
+def run_isolated(runner, program, *args, cwd=None, **kwargs):
+    """Run `program` in a child that imports only the selected runner and the standard library.
+
+    The shared helper starts `python -I` with a minimal environment, so neither a checkout- or
+    project-root module nor an inherited PYTHON* variable reaches the child. Of the parent's
+    other variables, only the HOOK_CONDITION_KEYS the fixtures set are forwarded.
+    """
+    conditions = {key: os.environ[key] for key in HOOK_CONDITION_KEYS if key in os.environ}
+    return run_python(["-c", SELECT_RUNNER + program, str(runner), *args], cwd=cwd, env_extra=conditions, **kwargs)
+
+
 def payload_briefs(inputs, include_status=False):
     """The brief each shipped payload returns, run from the current project directory."""
     request = {"schema_version": "1.0", "helper_id": "phase-brief", "operation": "phase-brief", "mode": "read_only", "inputs": inputs}
     reports = []
     for host in ("claude", "codex"):
         payload = REPO / "dist" / host / "speckit-pro"
-        done = subprocess.run([sys.executable, "-m", "speckit_pro_runner"], cwd=Path.cwd(), env={**os.environ, "PYTHONPATH": str(payload)},
-                              input=json.dumps(request), text=True, capture_output=True, check=False)
+        done = run_isolated(payload, RUN_RUNNER, cwd=Path.cwd(), input=json.dumps(request))
         if done.returncode and not include_status:
             raise AssertionError(done.stderr + done.stdout)
         report = json.loads(done.stdout)
@@ -119,9 +136,8 @@ with tempfile.TemporaryDirectory() as directory:
         reports.append(report)
 print(json.dumps(reports))
 '''
-    done = subprocess.run([sys.executable, "-c", program], cwd=root,
-                          env={**os.environ, "PYTHONPATH": str(root)},
-                          input=json.dumps([references, cases]), text=True, capture_output=True, check=False)
+    with project() as cwd:  # dispatch needs a project root; the throwaway one holds no code
+        done = run_isolated(root, program, cwd=cwd, input=json.dumps([references, cases]))
     if done.returncode:
         raise AssertionError(done.stderr + done.stdout)
     return json.loads(done.stdout)
@@ -214,16 +230,106 @@ for case in json.load(sys.stdin):
             os.chdir(previous)
 print(json.dumps(reports))
 '''
-    done = subprocess.run([sys.executable, "-c", program], cwd=runner,
-                          env={**os.environ, "PYTHONPATH": str(runner)}, input=json.dumps(cases),
-                          text=True, capture_output=True, check=False)
+    # Release regeneration replaces runner directories, and a checkout root may hold
+    # importable modules; the child starts in an empty directory with only `runner` selected.
+    done = run_isolated(runner, program, input=json.dumps(cases))
     if done.returncode:
         raise AssertionError(done.stderr + done.stdout)
     return json.loads(done.stdout)
 
 
+SHADOW_KINDS = ("runner", "json", "unittest")
+SHADOW_FORMS = ("regular", "symlink", "hard_link", "rename")
+
+
+def plant_shadow(root, store, kind, form):
+    """Place one contributor-controlled module at `root`; any import of it writes the returned marker."""
+    marker = store / "marker"
+    stamp = f"open({str(marker)!r}, 'a').write({kind!r})\n"
+    files = {"runner": {"speckit_pro_runner/__init__.py": stamp,
+                        "speckit_pro_runner/__main__.py": stamp + "print('{\"status\": \"checkout-shadow\"}')\n",
+                        "speckit_pro_runner/helpers/__init__.py": stamp,
+                        "speckit_pro_runner/helpers/registry.py":
+                            stamp + "def dispatch_helper(request):\n    return {'status': 'checkout-shadow'}\n"},
+             "json": {"json.py": stamp},
+             "unittest": {"unittest/__init__.py": stamp}}[kind]
+    top = next(iter(files)).split("/")[0]
+    source = {"regular": root, "rename": root / ".staged"}.get(form, store / "shadow")
+    for name, body in files.items():
+        (source / name).parent.mkdir(parents=True, exist_ok=True)
+        (source / name).write_text(body, encoding="utf-8")
+    if form == "rename":
+        (source / top).rename(root / top)
+    elif form == "symlink":
+        (root / top).symlink_to(source / top, target_is_directory=(source / top).is_dir())
+    elif form == "hard_link":
+        for name in files:
+            (root / name).parent.mkdir(parents=True, exist_ok=True)
+            os.link(source / name, root / name)
+    return marker
+
+
+class ChildImportIsolationTests(unittest.TestCase):
+    """A checkout- or project-root module never shadows the selected runner or the standard library."""
+
+    def test_consent_probe_ignores_checkout_root_modules_for_every_host(self):
+        case = {"phase": "Plan", "text": extensions_yml(hook("before_plan", "speckit.safe.run"))}
+        for (host, runner), kind, form in product(RUNNER_ROOTS, SHADOW_KINDS, SHADOW_FORMS):
+            with self.subTest(host=host, kind=kind, form=form), tempfile.TemporaryDirectory() as directory:
+                checkout, store = Path(directory) / "checkout", Path(directory) / "store"
+                checkout.mkdir()
+                store.mkdir()
+                marker = plant_shadow(checkout, store, kind, form)
+                with patch.dict(globals(), {"REPO": checkout}), patch.dict(os.environ, {"PYTHONPATH": str(checkout)}):
+                    reports = consent_probe(runner, [case])
+                self.assertFalse(marker.exists(), "checkout-root module executed")
+                self.assertEqual(reports[0]["result"]["status"], "ok", reports)
+                self.assertEqual(reports[0]["result"]["data"]["hooks"][0]["command"], "speckit.safe.run")
+
+    def test_children_receive_no_python_environment(self):
+        hostile = {"PYTHONPATH": str(REPO), "PYTHONHOME": str(REPO), "PYTHONSTARTUP": str(REPO / "startup.py"),
+                   "PYTHONSAFEPATH": "", "UNRELATED_SECRET": "review-sentinel",
+                   "SPK_UNRELATED_SECRET": "review-sentinel", "SPK_HOOK_SET": "1"}
+        with patch.dict(os.environ, hostile):
+            done = run_isolated(RUNNER_ROOTS[0][1], "import json, os\nprint(json.dumps(dict(os.environ)))\n")
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertNotIn("review-sentinel", done.stdout)
+        names = json.loads(done.stdout)
+        self.assertEqual([name for name in names if name.upper().startswith("PYTHON")], [])
+        self.assertEqual([name for name in names if name.startswith("SPK_")], ["SPK_HOOK_SET"])
+
+    def test_hook_condition_allowlist_names_exactly_the_fixture_variables(self):
+        source = Path(__file__).read_text(encoding="utf-8")
+        self.assertEqual(sorted(HOOK_CONDITION_KEYS), sorted(set(re.findall(r"env\.(SPK_[A-Z_]+)", source))))
+
+    def test_payload_hosts_ignore_project_root_modules(self):
+        inputs = {"phase": "Plan", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
+        for kind, form in product(SHADOW_KINDS, SHADOW_FORMS):
+            with (self.subTest(kind=kind, form=form), tempfile.TemporaryDirectory() as directory,
+                  project() as root):
+                marker = plant_shadow(root, Path(directory), kind, form)
+                reports = payload_briefs(inputs, include_status=True)
+                self.assertFalse(marker.exists(), "project-root module executed")
+                self.assertEqual([report["status"] for report in reports], ["ok", "ok"], reports)
+
+
 class OptionalHookDisplayBoundaryTests(unittest.TestCase):
     """Project display text never enters an execute-capable confirmation surface."""
+
+    def test_payload_refresh_cannot_delete_probe_working_directory(self):
+        for host in ("claude", "codex"):
+            with self.subTest(host=host), tempfile.TemporaryDirectory() as directory:
+                runner = Path(directory) / host
+                helpers = runner / "speckit_pro_runner/helpers"
+                helpers.mkdir(parents=True)
+                (helpers / "registry.py").write_text(
+                    "import shutil\nfrom pathlib import Path\n"
+                    "shutil.rmtree(Path(__file__).resolve().parents[2])\n"
+                    "def dispatch_helper(request):\n    return {'status': 'ok'}\n",
+                    encoding="utf-8",
+                )
+                reports = consent_probe(runner, [{"phase": "Plan", "text": ""}] * 2)
+                self.assertEqual(reports, [{"result": {"status": "ok"}, "opened": False}] * 2)
 
     def assert_fixed_consent(self, report, event, command="speckit.safe.run"):
         result = report["result"]
@@ -546,9 +652,7 @@ class PhaseBriefPathTests(InProjectCase):
                     request = {"schema_version": "1.0", "helper_id": "phase-brief", "operation": "phase-brief",
                                "mode": "read_only", "inputs": {**valid, key: value}}
                     payload = REPO / "dist" / host / "speckit-pro"
-                    done = subprocess.run([sys.executable, "-m", "speckit_pro_runner"],
-                                          cwd=payload, env={**os.environ, "PYTHONPATH": str(payload)},
-                                          input=json.dumps(request), text=True, capture_output=True, check=False)
+                    done = run_isolated(payload, RUN_RUNNER, input=json.dumps(request))
                     report = json.loads(done.stdout)
                     self.assertEqual(report["status"], "input_error")
                     self.assertEqual(report["data"], {})
@@ -598,9 +702,7 @@ class PhaseBriefSliceTests(InProjectCase):
                     with self.subTest(host=host, invalid=invalid):
                         text = expected + "\n## Next\n" + ("Setext\n===\n" if invalid else "excluded\n")
                         path.write_bytes(text.replace("\n", "\r\n").encode())
-                        done = subprocess.run([sys.executable, "-c", program, directory], cwd=payload,
-                                              env={**os.environ, "PYTHONPATH": str(payload)},
-                                              text=True, capture_output=True, check=False)
+                        done = run_isolated(payload, program, directory)
                         if invalid:
                             self.assertNotEqual(done.returncode, 0)
                             self.assertIn("setext underline", done.stderr)
@@ -1170,5 +1272,5 @@ class PhaseBriefExecutorContractTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, PhaseBriefPathTests, PhaseBriefModelTests, CodexEffectiveEffortTests, RetryLadderTopRungTests, PhaseBriefSliceTests, PhaseBriefEncodingTests, PhaseBriefEncodingHostTests, PhaseBriefEncodingPathTests, PhaseBriefHookTests, OptionalHookConsentTests, OptionalHookDisplayBoundaryTests, PhaseBriefExecutorContractTests))
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, PhaseBriefPathTests, PhaseBriefModelTests, CodexEffectiveEffortTests, RetryLadderTopRungTests, PhaseBriefSliceTests, PhaseBriefEncodingTests, PhaseBriefEncodingHostTests, PhaseBriefEncodingPathTests, PhaseBriefHookTests, OptionalHookConsentTests, OptionalHookDisplayBoundaryTests, ChildImportIsolationTests, PhaseBriefExecutorContractTests))
     sys.exit(run_counted(suite, label="test-phase-brief"))

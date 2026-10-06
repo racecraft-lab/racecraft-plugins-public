@@ -38,6 +38,38 @@ upgrade skills compare that file with the target project's installed presets and
 extensions, then ask the operator which missing entries to install. Do not copy
 the roster into this guide or infer that an entry outside it should be removed.
 
+Spec Kit v1.1.0 lists these entries in a discovery-only community catalog, so
+`add <id>` refuses them. Each entry names a commit-pinned `archive_url`; install
+with `spec_kit.cli_argv + ["<kind>", "add", "<id>", "--from", "<archive_url>"]`.
+The pin pins the bytes but does not vet them: it fixes the commit, so a moved
+tag cannot change what installs, and says nothing about what the code does. Spec
+Kit's trust model for `--from` asks the operator to review the release archive
+first. Before the operator confirms an entry, have them open the pinned archive,
+read its manifest and its commands, scripts, and hooks, and check where it comes
+from. Each kind has its own info command, and neither prints a download URL:
+run `specify extension info <id>` for an extension or `specify preset info <id>`
+for a preset, and read its `Repository` link
+([extension info](https://github.com/github/spec-kit/blob/v1.1.0/src/specify_cli/extensions/command_info.py#L245-L249),
+[preset info](https://github.com/github/spec-kit/blob/v1.1.0/src/specify_cli/presets/command_info.py#L90-L91)
+at v1.1.0). The roster's `archive_url` must be a commit archive of that same
+repository. Treat any mismatch, or a missing `Repository` link, as a reason to
+stop and report it.
+
+Keep the catalog stack as it is: Spec Kit says never to mark a discovery-only
+catalog install-allowed.
+
+- A preset installs without a prompt. Run it after the operator confirms the
+  argv.
+- An extension install asks "Continue with installation?" because the source is
+  an external URL. That prompt is the operator's trust decision. Give the operator
+  the argv to run in their own terminal and never answer it on their behalf.
+  Declining exits 0 and installs nothing. An agent run has no terminal, so the
+  prompt aborts with a nonzero exit and also installs nothing.
+- Afterward, inspect each entry using the installed-state evidence in "Inspect
+  before advising" above. Directory presence and a successful exit leave
+  completion unproven; report that status until owner-run acceptance establishes
+  the manifest identity, registration, and active configuration.
+
 ## Explain or discover
 
 - Explain a preset from its installed `preset.yml` and the templates or commands
