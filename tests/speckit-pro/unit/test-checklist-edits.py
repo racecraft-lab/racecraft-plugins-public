@@ -1469,8 +1469,7 @@ class GateFourTests(ChecklistEditsCase):
         real_open = os.open
 
         def record_open(*args: Any, **kwargs: Any) -> int:
-            descriptor = real_open(*args, **kwargs)
-            opened.add(descriptor)
+            opened.add(descriptor := real_open(*args, **kwargs))
             return descriptor
 
         try:
