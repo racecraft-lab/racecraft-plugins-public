@@ -1561,6 +1561,21 @@ class G0ReadinessFixture(unittest.TestCase):
 
 
 class G0RecordValidationTests(G0ReadinessFixture):
+    def test_malformed_timestamps_supply_no_evidence_on_either_host(self) -> None:
+        for host in ("claude", "codex"):
+            for level in ("record", "item"):
+                for value in ("not-a-timestamp", "2026-02-30T00:00:00Z"):
+                    with self.subTest(host=host, level=level, value=value):
+                        self.write_record(self.all_verified(), host=host)
+                        path = self.record_path(host)
+                        record = json.loads(path.read_text(encoding="utf-8"))
+                        target = record if level == "record" else record["items"]["project_integration"]
+                        target["observed_at"] = value
+                        path.write_text(json.dumps(record), encoding="utf-8")
+                        readiness = self.g0(host)
+                        self.assertEqual(["record"], [row["item"] for row in readiness["stale"]])
+                        self.assertIn("incompatible", readiness["stale"][0]["reason"])
+
     def test_missing_and_malformed_records_supply_no_evidence_and_g0_continues(self) -> None:
         self.assert_logged_once("record", "missing")
         self.record_path().parent.mkdir()

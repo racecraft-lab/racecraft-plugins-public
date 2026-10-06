@@ -435,6 +435,8 @@ def checked_items(record: Any, root: Path, host: str) -> dict[str, Any]:
                             "plugin_revision", "observed_at", "items"}, "record")
     for field in ("plugin_revision", "observed_at"):
         require_text(record[field], field)
+    if not timestamp(record["observed_at"]):
+        raise SelectionError("record observed_at must be a UTC timestamp")
     if record["host_version"] is not None:
         require_text(record["host_version"], "host_version")
     if record["execution_mode"] not in EXECUTION_MODES:
@@ -457,6 +459,8 @@ def check_saved_item(name: str, item: Any) -> None:
         raise SelectionError("an item lacks a known status, its evidence or its fingerprints")
     require_text(item["evidence_source"], "evidence_source")
     require_text(item.get("observed_at"), "observed_at")
+    if not timestamp(item["observed_at"]):
+        raise SelectionError("item observed_at must be a UTC timestamp")
     if item["status"] in NEEDS_ACTION:
         require_text(item.get("action"), "action")
     require_verified_fingerprints(name, item["status"], item["fingerprints"])
