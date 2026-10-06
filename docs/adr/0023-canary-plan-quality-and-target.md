@@ -11,7 +11,7 @@ The planning speed-ups (ADRs 0018 to 0022) remove most consensus, move executors
 
 - **Hooks fire once.** The base fixture registers one mandatory and one optional Spec Kit extension hook, each appending to a counter. The receipt asserts each fired exactly once per phase ([Hook double dispatch](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1175)).
 
-The plan-stage target (at most 30 minutes and 15M tokens per host on the base variant) is reported, not gated. Each receipt records the plan stage's time and tokens against it. On Codex, the token total includes child agents' rollouts, not just the root thread. The target counts as met after three consecutive green base-variant runs per host under it. A reviewed PR then sets the plan-stage budget no higher than the target, so planning cannot drift back above it.
+The plan-stage target (at most 30 minutes and 15M tokens per host on the base variant) is reported, not gated. The validator owns the limits and computes `target_met` from the measured plan-stage time and tokens; a receipt carries neither the limits nor a claimed result. On Codex, the token total is the sum of the root thread and child agents' rollouts, and the target reads that sum, never the stage's claimed total. A receipt names each variant at most once; a repeated name makes it invalid, and the validator then reports no variant and no target. The target counts as met after three consecutive green base-variant runs per host under it. A reviewed PR then sets the plan-stage budget no higher than the target, so planning cannot drift back above it.
 
 ## Considered Options
 
