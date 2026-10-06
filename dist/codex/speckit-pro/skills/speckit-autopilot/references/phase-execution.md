@@ -1039,9 +1039,11 @@ and keeps executing independent work.
               presence).
             - The parent session dispatches the installed
               `consensus-synthesizer` with the fresh analyst result, consumes
-              its actual result, applies any accepted serial artifact edit,
-              and persists the returned canonical `Pre-Implement Confidence`
-              block exactly once in the workflow file.
+              its actual result, and
+              persists the returned canonical `Pre-Implement Confidence`
+              block exactly once in the workflow file. This dispatch carries
+              no consensus item, so its result has no Artifact Edit; the
+              remediation pass already applied any edits.
             - Re-run confidence-gate.
             - Increment iteration_count.
        c. If iteration_count == 3 OR exit 0 reached: stop iterating.
@@ -2340,10 +2342,11 @@ Clarify, Checklist, and Analyze keep the shared analysts and those flows
 unchanged.
 
 **When consensus does not answer, the item takes a Round 3 tiebreak.** Three
-ways lead there: all three analysts disagreeing after Round 2, a Round-1 escape
-whose Round 2 still cannot resolve, and an analyst that fails its single
-retry. The first two return `human_review` from `sweep-apply-result` with basis
-`all_disagree` or `escape_unresolved`. An analyst that fails its retry is
+ways lead there: all three analysts disagreeing, a perspective that escapes,
+and an analyst that fails its single retry. The sweep has no Round 2: its
+synthesis runs once over the three accepted perspectives. The first two return
+`human_review` from `sweep-apply-result` with basis `all_disagree` or
+`escape_unresolved`. An analyst that fails its retry is
 replaced by a fresh analyst, not a human: call `launch_codex` for that
 perspective once more, which mints a new capability and replaces the failed
 perspective's record. If the replacement fails too, no synthesis is possible,

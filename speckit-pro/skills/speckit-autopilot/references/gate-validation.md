@@ -497,7 +497,8 @@ disagreement is named in `reason`.
        understanding" low → re-evaluate spec.md ambiguity;
        "Approach clarity" low → re-evaluate plan.md TBDs)
      - Re-invoke the synthesizer's pre-Implement confidence
-       emit (consensus-synthesizer agent, single fan-out)
+       emit (consensus-synthesizer agent, single fan-out); the
+       result is the block alone, with no Artifact Edit
      - Re-run confidence-gate
    - After 3 iterations OR exit 0: stop iterating
 ```

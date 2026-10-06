@@ -318,10 +318,12 @@ items via consensus if needed (see Rule 6).
 After EACH Clarify, Checklist, or Analyze executor returns, complete consensus
 before the next prompt. The parent applies accepted Clarify edits; all three
 executors surface remaining items with category tags. For every such item,
-call `parse-consensus-categories`, dispatch exactly the routed analysts in
-host-bounded batches, and consume their actual results. After every analyst
-round — including a round with one or two analysts — dispatch the runtime's
-named `consensus-synthesizer`, await it, validate and consume its actual returned
+call `parse-consensus-categories` with the item's confidence, dispatch exactly
+the routed analysts in host-bounded batches, and consume their actual results.
+A `low_confidence` item runs its one analyst and no synthesizer; an item with
+tier `recommendation` takes the executor's recommendation. After every
+`security` analyst round, dispatch the runtime's named `consensus-synthesizer`,
+await it, validate and consume its actual returned
 result, then apply accepted artifact edits serially and run gates in the parent.
 The parent MUST NOT synthesize directly or silently replace a missing, failed,
 or malformed synthesizer result. Such a result authorizes no edit and cannot
@@ -1105,8 +1107,8 @@ directions; do not infer a broader precedence rule.
   reroutes a task to verification reserves with `metadata_only: true`; the
   runner proves it against the committed baseline and spends no cycle. Never
   reset or bypass the ledger otherwise; `checkpoint_required` and ledger integrity errors still stop.
-- **Consensus cannot agree** (Round 2 all-disagree, a security item without
-  3/3, or an analyst that fails its retry): run the Round 3
+- **Consensus cannot agree** (all three analysts disagree, a security item
+  without 3/3, or an analyst that fails its retry): run the Round 3
   agent tiebreak, a fresh analyst plus a max-effort `consensus-tiebreaker`,
   record the most conservative option that satisfies the spec as an assumption
   with the dissent logged, and continue. Only a choice that changes product
