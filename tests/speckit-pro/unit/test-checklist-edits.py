@@ -14,6 +14,7 @@ import hashlib
 import json
 import os
 import shutil
+import stat
 import subprocess
 from pathlib import Path
 import sys
@@ -621,6 +622,14 @@ class CommittedStateTests(ChecklistEditsCase):
 
         return self.before_write(fail)
 
+    def apply_both(self) -> dict[str, Any]:
+        return self.apply(proposal("security", edit("G1", "spec.md", "open", "private"),
+                                   edit("G2", "plan.md", "never", "always")))
+
+    def assert_both_written(self) -> None:
+        self.assertEqual("# Spec\nLogin uses a password.\nExports are private.\n", self.text("spec.md"))
+        self.assertEqual("# Plan\nSessions always expire.\n", self.text("plan.md"))
+
     def test_a_half_written_first_domain_is_reported_as_partial(self) -> None:
         with self.failing_write(2):
             result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private"), edit("G2", "plan.md", "never", "always")))
@@ -635,6 +644,91 @@ class CommittedStateTests(ChecklistEditsCase):
         self.assertEqual((["security"], "ux", ["spec.md"]),
                          (result["data"]["applied"], result["data"]["failed"], result["data"].get("partial")), result)
         self.assertIn("private", self.text("spec.md"))
+        self.assertIn("a passkey", self.text("spec.md"))
+        self.assertEqual(PLAN, self.text("plan.md"))
+
+    def test_a_failure_before_record_publication_reports_both_artifacts_and_no_record(self) -> None:
+        with patch.object(checklist_edits, "write_file_atomic", side_effect=OSError("record publication failed")):
+            result = self.apply_both()
+        self.assertEqual(("expected_failure", "apply_interrupted", ["security", "ux", "api"], [], False),
+                         (result["status"], result["diagnostics"][0]["code"], result["data"].get("applied"),
+                          result["data"].get("partial"), result["data"].get("record_written")), result)
+        self.assert_both_written()
+        self.assertFalse((self.root / RECORD).exists())
+
+    def test_a_record_parent_open_failure_reports_both_artifacts_and_no_record(self) -> None:
+        real = checklist_edits.write_file_atomic
+
+        def fail_parent_open(path: Path, content: str, **kwargs: Any) -> Any:
+            with patch.object(atomic_write, "open_safe_parent_fd", side_effect=OSError("record parent open failed")):
+                return real(path, content, **kwargs)
+
+        with patch.object(checklist_edits, "write_file_atomic", fail_parent_open):
+            result = self.apply_both()
+        self.assertEqual(("expected_failure", "apply_interrupted", ["security", "ux", "api"], False),
+                         (result["status"], result["diagnostics"][0]["code"], result["data"].get("applied"),
+                          result["data"].get("record_written")), result)
+        self.assert_both_written()
+        self.assertFalse((self.root / RECORD).exists())
+
+    def test_a_record_parent_sync_failure_keeps_both_artifacts_and_the_record(self) -> None:
+        real = os.fsync
+        faults: list[int] = []
+
+        def fail_record_parent_sync(fd: int) -> None:
+            record = self.root / RECORD
+            info = os.fstat(fd)
+            if stat.S_ISDIR(info.st_mode) and record.is_file() and info.st_ino == record.parent.stat().st_ino:
+                faults.append(fd)
+                raise OSError("record parent sync failed")
+            real(fd)
+
+        with patch.object(os, "fsync", fail_record_parent_sync):
+            result = self.apply_both()
+        self.assertEqual(1, len(faults))
+        # The shared writer treats a directory sync failure after installation as best-effort.
+        self.assertEqual("ok", result["status"], result)
+        self.assert_both_written()
+        record = json.loads((self.root / RECORD).read_text(encoding="utf-8"))
+        self.assertEqual(["security", "ux", "api"], [row["domain"] for row in record["domains"]])
+
+    def test_a_first_artifact_failure_reports_no_current_domain_mutation(self) -> None:
+        with self.failing_write(1):
+            result = self.apply_both()
+        self.assertEqual(("expected_failure", [], "security", [], False),
+                         (result["status"], result["data"].get("applied"), result["data"].get("failed"),
+                          result["data"].get("partial"), result["data"].get("record_written")), result)
+        self.assertEqual((SPEC, PLAN), (self.text("spec.md"), self.text("plan.md")))
+        self.assertFalse((self.root / RECORD).exists())
+
+    def test_a_one_artifact_domain_cannot_split_its_edits(self) -> None:
+        for name, find, replacement in (("spec.md", "open", "private"), ("plan.md", "never", "always")):
+            with self.subTest(artifact=name):
+                with self.failing_write(1):
+                    result = self.apply(proposal("security", edit("G1", name, find, replacement)))
+                self.assertEqual(([], []), (result["data"].get("applied"), result["data"].get("partial")), result)
+                self.assertEqual((SPEC, PLAN), (self.text("spec.md"), self.text("plan.md")))
+                with self.failing_write(2):  # There is no second artifact write in this domain.
+                    result = self.apply(proposal("security", edit("G1", name, find, replacement)))
+                self.assertEqual("ok", result["status"], result)
+                self.assertIn(replacement, self.text(name))
+                (self.root / FEATURE / name).write_text(SPEC if name == "spec.md" else PLAN, encoding="utf-8")
+
+    def test_a_lock_failure_before_any_artifact_write_is_a_true_refusal(self) -> None:
+        real = checklist_edits.held_feature
+
+        @contextmanager
+        def fail_lock(*args: Any, exclusive: bool) -> Iterator[Any]:
+            if exclusive:
+                raise OSError("lock acquisition failed")
+            with real(*args, exclusive=exclusive) as held:
+                yield held
+
+        with patch.object(checklist_edits, "held_feature", fail_lock):
+            result = self.apply_both()
+        self.assertEqual("input_error", result["status"], result)
+        self.assertEqual((SPEC, PLAN), (self.text("spec.md"), self.text("plan.md")))
+        self.assertFalse((self.root / RECORD).exists())
 
     def test_a_record_published_before_its_failure_is_reported_written(self) -> None:
         real = checklist_edits.write_file_atomic
@@ -644,16 +738,18 @@ class CommittedStateTests(ChecklistEditsCase):
             raise OSError("directory sync failed")
 
         with patch.object(checklist_edits, "write_file_atomic", publish_then_fail):
-            result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
+            result = self.apply_both()
         self.assertEqual(("expected_failure", "apply_interrupted"), (result["status"], result["diagnostics"][0]["code"]), result)
         self.assertEqual((["security", "ux", "api"], True), (result["data"]["applied"], result["data"].get("record_written")), result)
         self.assertTrue((self.root / RECORD).is_file())
+        self.assert_both_written()
 
     def test_a_record_path_held_by_a_directory_is_refused_before_any_write(self) -> None:
         (self.root / RECORD).mkdir(parents=True)
-        result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
+        result = self.apply_both()
         self.assertEqual("input_error", result["status"], result)
         self.assertEqual(SPEC, self.text("spec.md"))
+        self.assertEqual(PLAN, self.text("plan.md"))
 
     def test_a_refusal_raised_after_the_writes_reports_them(self) -> None:
         # A ValueError, not an OSError, after the artifacts reached disk.
@@ -673,10 +769,11 @@ class CommittedStateTests(ChecklistEditsCase):
                 raise OSError("lock cleanup failed")
 
         with patch.object(checklist_edits, "held_feature", failing_release):
-            result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
+            result = self.apply_both()
         self.assertEqual(("expected_failure", ["security", "ux", "api"], True),
                          (result["status"], result["data"].get("applied"), result["data"].get("record_written")), result)
-        self.assertIn("private", self.text("spec.md"))
+        self.assert_both_written()
+        self.assertTrue((self.root / RECORD).is_file())
 
 
     def test_a_record_directory_swapped_for_a_link_is_not_followed(self) -> None:
