@@ -1924,8 +1924,8 @@ def reviewability_preset_state(root: Path, repo_root: Path) -> dict[str, Any]:
     """Whether the project has the reviewability preset, and the `specify` arguments that add it.
 
     `installed` requires coherent registry evidence and the exact shipped preset bytes.
-    `missing` supplies add_args; `unavailable` means unsafe or unavailable evidence,
-    or a stale registration that needs repair before Spec Kit will accept add.
+    `missing` supplies add_args; `upgrade` supplies upgrade_args for an exact known
+    shipped version; `unavailable` means unsafe, unknown or unavailable evidence.
     """
     return reviewability_preset.state(root, repo_root)
 
