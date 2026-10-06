@@ -78,6 +78,10 @@ def render_codex_agent(name: str, claude_text: str, codex_record: dict[str, Any]
         "sandbox_mode": sandbox,
         "developer_instructions": instructions,
     }
+    if values["model_reasoning_effort"] is None:
+        # Custom-file effort takes precedence; omit it so the brief's explicit spawn effort can apply.
+        # https://learn.chatgpt.com/docs/agent-configuration/subagents#custom-agents
+        del values["model_reasoning_effort"]
     lines = [f"{key} = {_basic_string(value)}" for key, value in values.items() if key != "developer_instructions"]
     text = GENERATED_NOTICE.format(source=source) + "\n".join(lines)
     text += f"\ndeveloper_instructions = {_multiline_string(instructions)}\n"
