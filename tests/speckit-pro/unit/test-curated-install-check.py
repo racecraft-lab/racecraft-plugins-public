@@ -127,7 +127,7 @@ class ExtensionArtifactTests(CuratedInstallCase):
                 with mock.patch.object(check.os, operation, side_effect=error("cannot inspect")):
                     self.assertTrue(self.check_result(entry, project))
 
-    def test_normal_abort_with_absent_or_empty_registry_passes(self):
+    def test_normal_abort_with_absent_or_empty_registry_has_no_refusal_failures(self):
         for entry in EXTENSIONS:
             for state in ("absent", "empty"):
                 with self.scenario(entry=entry["id"], state=state) as project:
@@ -271,6 +271,77 @@ class RegistryBindingTests(CuratedInstallCase):
 
                 with mock.patch.object(check.os, "open", side_effect=swap):
                     self.assertTrue(self.check_result(entry, project))
+
+
+class CompletedInstallTests(CuratedInstallCase):
+    """An aborted extension install is not an install: only a registered one is a pass."""
+
+    def run_main(self, args=(), *, init_exit=0, register=True, preset_ok=True):
+        installs = []
+
+        def specify(argv, project):
+            if argv[:1] == ["preset"]:
+                if preset_ok:
+                    (project / ".specify/presets" / argv[2]).mkdir(parents=True)
+                return subprocess.CompletedProcess([], 0 if preset_ok else 1, "", "")
+            if argv[:1] == ["extension"]:
+                return subprocess.CompletedProcess([], 1, check.TRUST_PROMPT, "")
+            installs.append(argv)
+            if register:
+                extension = argv[argv.index("--extension") + 1]
+                entry = next(entry for entry in EXTENSIONS if entry["archive_url"] == extension)
+                (project / ".specify/extensions" / entry["id"]).mkdir(parents=True)
+            return subprocess.CompletedProcess([], init_exit, "", "")
+
+        def setup(project):
+            (project / ".specify").mkdir(exist_ok=True)
+            return []
+
+        def init_project(project, extra=()):
+            (project / ".specify").mkdir(exist_ok=True)
+            if not extra:
+                return []
+            return [] if specify(["init", "--here", *extra], project).returncode == 0 else ["setup failed"]
+
+        stdout, stderr = io.StringIO(), io.StringIO()
+        with mock.patch.object(check, "fresh_project", side_effect=setup), mock.patch.object(
+            check, "init_project", side_effect=init_project
+        ), mock.patch.object(check, "specify", side_effect=specify), mock.patch.object(
+            check, "archive_declares_id", return_value=True
+        ), redirect_stdout(stdout), redirect_stderr(stderr):
+            status = check.main(list(args))
+        return status, stdout.getvalue(), stderr.getvalue(), installs
+
+    def test_default_run_reports_every_extension_unproven_and_never_zero(self):
+        status, stdout, stderr, installs = self.run_main()
+        self.assertEqual(status, 2)
+        self.assertIn("1/6 passed", stdout)
+        self.assertIn("5 unproven", stdout)
+        for entry in EXTENSIONS:
+            self.assertIn(f"UNPROVEN extension {entry['id']}: needs operator confirmation", stderr)
+        self.assertEqual(installs, [])
+
+    def test_opted_in_run_passes_only_when_each_extension_is_registered(self):
+        status, stdout, stderr, installs = self.run_main(["--trust-pinned-archives"])
+        self.assertEqual((status, stderr), (0, ""))
+        self.assertIn("6/6 passed", stdout)
+        self.assertEqual(len(installs), len(EXTENSIONS))
+        for argv in installs:
+            self.assertIn("--trust-extension-urls", argv)
+
+    def test_opted_in_run_fails_when_the_install_is_not_registered(self):
+        for label, options in (("unregistered", {"register": False}), ("nonzero", {"init_exit": 1})):
+            with self.subTest(case=label):
+                status, stdout, stderr, _ = self.run_main(["--trust-pinned-archives"], **options)
+                self.assertEqual(status, 1)
+                self.assertIn("1/6 passed", stdout)
+                for entry in EXTENSIONS:
+                    self.assertIn(f"FAIL extension {entry['id']}:", stderr)
+
+    def test_a_failed_preset_is_a_failure_not_unproven(self):
+        status, _, stderr, _ = self.run_main(preset_ok=False)
+        self.assertEqual(status, 1)
+        self.assertIn("FAIL preset", stderr)
 
 
 class CuratedRosterTests(CuratedInstallCase):

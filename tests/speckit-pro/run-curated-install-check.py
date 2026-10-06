@@ -11,8 +11,15 @@ skills give the operator, `<kind> add <id> --from <archive_url>`, in a fresh `sp
 - A preset installs without a prompt, so the check requires exit 0 and the preset directory.
 - An extension URL install stops at Spec Kit's own trust prompt, which only the operator answers.
   The check closes stdin, so the default is deny. It requires a normal nonzero exit after the
-  prompt (the discovery-only refusal is gone) and a verifiably empty registry, then downloads the archive and
-  requires an `extension.yml` that declares the entry's id.
+  prompt (the discovery-only refusal is gone), a verifiably empty registry, and an archive whose
+  `extension.yml` declares the entry's id. That proves the refusal is gone, not that an install
+  succeeds, so each extension is reported "unproven: needs operator confirmation" and the run exits 2.
+- With `--trust-pinned-archives` the operator authorizes the pinned archives. Each extension is then
+  installed in its own fresh project through `specify init --extension <archive_url>
+  --trust-extension-urls`, Spec Kit's documented non-interactive trust flag (`extension add` has none),
+  and passes only when it is registered. Run it yourself; no agent should.
+
+Exit codes: 0 every entry passed, 1 a failure, 2 no failure but some extension is unproven.
 """
 
 from __future__ import annotations
@@ -143,39 +150,71 @@ def check_entry(entry: dict[str, str], project: Path) -> list[str]:
     return failures
 
 
-def fresh_project(project: Path) -> list[str]:
-    """Initialize a Spec Kit project at the pinned version, or say why that is not possible."""
-    failures = check_cli_version(project)
-    if failures:
-        return failures
+def init_project(project: Path, extra: list[str] | tuple[str, ...] = ()) -> list[str]:
+    """Initialize a Spec Kit project in `project`, or say why that failed."""
     if subprocess.run(["git", "init", "-q", "."], cwd=project, capture_output=True, shell=False, check=False).returncode:
         return ["setup failed: git init"]
-    created = specify(["init", "--here", "--integration", "claude", "--force", "--script", "py"], project)
+    created = specify(["init", "--here", "--integration", "claude", "--force", "--script", "py", *extra], project)
     return [f"setup failed: specify init exit {created.returncode}"] if created.returncode else []
+
+
+def fresh_project(project: Path) -> list[str]:
+    """Initialize a Spec Kit project at the pinned version, or say why that is not possible."""
+    return check_cli_version(project) or init_project(project)
+
+
+def check_completed_install(entry: dict[str, str]) -> list[str]:
+    """Install one extension through Spec Kit's documented trust flag and require its registration."""
+    label = f"{entry['kind']} {entry['id']}"
+    with tempfile.TemporaryDirectory(prefix="curated-install-") as raw:
+        project = Path(raw)
+        failures = init_project(project, ["--extension", entry["archive_url"], "--trust-extension-urls"])
+        if failures:
+            return [f"{label}: completed install failed: {failures[0]}"]
+        if registry_entries(project, "extension", entry["id"]) is None:
+            return [f"{label}: not registered after the completed install"]
+    return []
+
+
+def entry_result(entry: dict[str, str], project: Path, trust_archives: bool) -> tuple[str, list[str]]:
+    """One of pass, fail or unproven, with the failures behind a fail."""
+    failures = check_entry(entry, project)
+    if not failures and entry["kind"] == "extension" and trust_archives:
+        failures = check_completed_install(entry)
+    if failures:
+        return "fail", failures
+    return ("unproven" if entry["kind"] == "extension" and not trust_archives else "pass"), []
 
 
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--curated-set", type=Path, default=CURATED_SET)
+    parser.add_argument(
+        "--trust-pinned-archives", action="store_true",
+        help="operator opt-in: install each extension from its pinned archive with Spec Kit's trust flag",
+    )
     args = parser.parse_args(argv)
     entries = json.loads(args.curated_set.read_text(encoding="utf-8"))["entries"]
     if not entries:
         print("FAIL curated set: no entries to verify", file=sys.stderr)
         return 1
-    failed_entries = 0
+    results: list[tuple[str, list[str]]] = []
     with tempfile.TemporaryDirectory(prefix="curated-install-") as raw:
         project = Path(raw)
         setup_failures = fresh_project(project)
         if setup_failures:
-            failed_entries = len(entries)
-        failures = setup_failures + [
-            failure for entry in ([] if setup_failures else entries) for failure in check_entry(entry, project)
-        ]
-    failed_entries = failed_entries or len({failure.split(":")[0] for failure in failures})
-    for failure in failures:
+            results = [("fail", setup_failures)] * len(entries)
+        else:
+            results = [entry_result(entry, project, args.trust_pinned_archives) for entry in entries]
+    for entry, (status, _failures) in zip(entries, results, strict=True):
+        if status == "unproven":
+            print(f"UNPROVEN {entry['kind']} {entry['id']}: needs operator confirmation", file=sys.stderr)
+    for failure in dict.fromkeys(failure for status, failures in results if status == "fail" for failure in failures):
         print(f"FAIL {failure}", file=sys.stderr)
-    print(f"run-curated-install-check: {len(entries) - failed_entries}/{len(entries)} passed")
-    return 1 if failures else 0
+    counts = {status: [result[0] for result in results].count(status) for status in ("pass", "fail", "unproven")}
+    unproven_note = f", {counts['unproven']} unproven (needs operator confirmation)" if counts["unproven"] else ""
+    print(f"run-curated-install-check: {counts['pass']}/{len(entries)} passed{unproven_note}")
+    return 1 if counts["fail"] else 2 if counts["unproven"] else 0
 
 
 if __name__ == "__main__":
