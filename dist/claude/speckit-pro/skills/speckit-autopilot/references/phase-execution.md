@@ -557,8 +557,9 @@ all domains' gaps, then a verify wave:
       Round 2 escape-hatch: also batched across all queued gaps.
       [ROUND_3_TIEBREAK]: consensus-protocol.md#round-3-tiebreak
    c. autopilot-state.json: each "<domain> Consensus" → completed
-5. Verify wave: ONE turn, the `pass: verify` entries of the first brief, each
-   with that domain's prompt plus a `Pass: verify` line; each re-runs its
+5. For each verify wave of the first brief: launch its `pass: verify` entries
+   in ONE turn, each with that domain's prompt plus a `Pass: verify` line;
+   consume every result before the next verify wave. Each entry re-runs its
    domain checklist, refreshes its report, and keeps spec.md and plan.md unchanged
 6. autopilot-state.json: every domain task → completed
 ```

@@ -535,6 +535,14 @@ class PhaseBriefWaveTests(InProjectCase):
         waves = self.waves("Checklist", domains=["security", "state-management", "ux"], items=list(self.ITEMS), max_agents=2)
         self.assertEqual([len(wave) for wave in waves], [1, 1, 1, 2, 1, 2, 2, 1])
 
+    def test_checklist_reference_preserves_the_briefs_verify_wave_boundaries(self):
+        waves = self.waves("Checklist", domains=["security", "ux"], max_agents=1)
+        self.assertEqual([[entry["inputs"]["domain"] for entry in wave] for wave in waves if "pass" in wave[0]["inputs"]],
+                         [["security"], ["ux"]])
+        text = " ".join((host_skill_root("claude") / "speckit-autopilot/references/phase-execution.md").read_text().split())
+        self.assertTrue("For each verify wave of the first brief" in text)
+        self.assertTrue("consume every result before the next verify wave" in text)
+
     def test_both_payload_hosts_return_the_same_sub_waves(self):
         inputs = {"phase": "Analyze", **self.BRIEF, "items": list(self.ITEMS), "max_agents": 2}
         source = dispatch_brief(inputs)["data"]["waves"]
@@ -641,6 +649,13 @@ class PhaseBriefWaveTests(InProjectCase):
         self.assertIn("model=entry.model.codex.model", self.loop("codex"))
         for host in ("claude", "codex"):
             self.assertTrue(all(needle in self.loop(host) for needle in ("### Dispatch waves", "Each brief wave")), host)
+
+    def test_consensus_reference_qualifies_the_briefs_host_neutral_roles(self):
+        entry = self.waves("Analyze", items=[{"line": "[security] Q1: credentials?"}])[0][0]
+        self.assertEqual(entry["agent"], "codebase-analyst")
+        for host in ("claude", "codex"):
+            text = (host_skill_root(host) / "speckit-autopilot/references/consensus-protocol.md").read_text()
+            self.assertTrue('Agent(subagent_type: "speckit-pro:" + <entry.agent>,' in text, host)
 
     def test_both_hosts_run_each_checklist_domain_in_its_own_wave(self):
         for host in ("claude", "codex"):

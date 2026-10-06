@@ -235,7 +235,7 @@ Stage 1 — All routed analysts, as the brief's waves (one turn each):
   A wave over the limit arrives as consecutive waves of at most `max_agents`.
   (A recommendation item has no entry: apply the recommendation, no dispatch.)
   For each entry of a wave, all in ONE turn:
-      Agent(subagent_type: <entry.agent>,
+      Agent(subagent_type: "speckit-pro:" + <entry.agent>,
             run_in_background: true,
             description: "SPEC-XXX consensus R1 [I<entry.inputs.item>]: <item>",
             prompt: <consensus prompt for entry.inputs.item from that analyst's perspective>)
