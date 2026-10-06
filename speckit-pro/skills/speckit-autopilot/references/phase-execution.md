@@ -826,7 +826,7 @@ edits in domain order, run the verify waves, then resolve all domains' gaps:
 3. After every domain executor has returned, run runner helper `checklist-edits`,
    mode apply, with the domain names in workflow order, the baseline, and each
    executor's Proposed Edits block. It applies one domain at a time in domain
-   order. Route a conflict or a gap with no edit to step 5. A refusal applies
+   order. Route a conflict or a gap with no edit to step 6. A refusal applies
    nothing: handle it as a gate failure under the Failure Escalation Protocol.
    An interrupted apply names what reached disk (applied domains, a half-written
    domain's files, canonical paths that moved or could not be verified, whether

@@ -898,7 +898,8 @@ its items returned. Each entry names its agent, prompt `inputs` and model. A dom
 takes that domain's workflow prompt, plus both `Pass: verify` and `Mode: verify` lines when its inputs
 say `pass: verify`; an analyst entry (`inputs.item` only) takes the consensus
 prompt for `items[inputs.item - 1]`, built from your own copy of that item. Checklist runs three requests: `domains` before the executors
-(domain waves and verify wave), `items` once every domain's unresolved items are
+(domain waves and verify wave; launch the verify wave only after `checklist-edits`
+applied every proposal), `items` once every domain's unresolved items are
 in (security and low-confidence waves, then the consensus rounds of
 [consensus-protocol.md](./references/consensus-protocol.md)), and
 `consensus_edited` only when a consensus edit changed an artifact for a domain
