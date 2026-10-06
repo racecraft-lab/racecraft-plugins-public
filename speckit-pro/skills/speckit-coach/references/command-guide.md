@@ -25,11 +25,12 @@ reference only. Do not invoke or execute Autopilot while answering.
 The normal core progression is:
 
 ```text
-constitution → specify → clarify (as needed) → plan → checklist (as needed) → tasks → analyze (as needed) → implement
+constitution → specify → clarify → plan → checklist (as needed) → tasks → analyze (as needed) → implement
 ```
 
-Treat Clarify, Checklist, and Analyze as conditional quality passes. A project or
-installed Spec Kit version may expose additional commands; inspect their active
+SpecKit Pro runs Clarify for every SPEC, as one session of at most 5
+questions. Treat Checklist and Analyze as conditional quality passes in plain
+Spec Kit. A project or installed Spec Kit version may expose additional commands; inspect their active
 definitions rather than treating this sequence as a closed command catalog.
 
 Do not advance around a missing prerequisite or failed gate. Name the artifact

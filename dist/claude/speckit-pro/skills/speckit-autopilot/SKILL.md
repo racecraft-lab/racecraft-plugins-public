@@ -125,7 +125,7 @@ into expensive rework.
 operator has set for the session and do not stop, warn, or ask them to
 change it. The bundled subagents carry their own pins: judgment roles
 ship at a measured high effort (`high`, `xhigh`, or `max` on Claude;
-`xhigh` or `max` on Codex), and bounded rule-applying
+`medium`, `high`, `xhigh`, or `max` on Codex), and bounded rule-applying
 roles that only apply rules to inputs already in their prompt ship at
 the documented default.
 A pin sets that worker's effort regardless of
@@ -279,13 +279,21 @@ See Step 1.1 for the full naming pattern and rules.
 
 ### 4. Multi-prompt phases
 
-Clarify and Checklist have multiple prompts in the workflow file.
+Clarify has one prompt in the workflow file: one session of at most 5
+questions. Checklist has one prompt per domain.
+For older workflows with multiple Clarify prompts, normalize the pending
+Clarify phase before creating its task items or requesting its phase brief:
+combine the existing focuses into one prompt, ranked by how much each changes
+the plan. Replace the workflow's Clarify Prompts and pending Clarify Results
+rows with that one session; reconcile pending Clarify task items in state to
+the same session. Keep completed session evidence. If a Clarify session has
+already completed, proceed to G2 instead of dispatching another session.
 Spawn a **separate subagent for each prompt**, consume its result, and run the
 two-layer resolution (Rule 6) after each one BEFORE spawning the next — later
-sessions/domains may depend on earlier resolved items. Do not batch
-all sessions and check for markers only at the end.
+domains may depend on earlier resolved items. Do not batch
+all domains and check for markers only at the end.
 
-Per-phase flow templates (per-session for Clarify, per-domain for
+Per-phase flow templates (the Clarify session, per-domain for
 Checklist) live in
 [`references/phase-execution.md`](./references/phase-execution.md)
 §Phase-by-Phase Execution.
@@ -381,10 +389,12 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
    retried once, then deferred the same way. Never silently treat a missing
    archive command as an absent extension.
 3. **Run the G0 setup seam** — call runner helper `g0-setup` in `read_only`
-   mode once per `inputs.probe`, in order: `prerequisites`, `commands`,
-   `presets`. Each call carries `inputs.workflow_file` and `inputs.surface`.
+   mode once per `inputs.probe`, in order: `readiness`, `prerequisites`,
+   `commands`, `presets`. Each call carries `inputs.workflow_file` and `inputs.surface`.
+   G0 reads the readiness record and continues: log each stale item per
+   `references/prerequisites.md` Step 0.0a, never a setup question.
    Set `G0_SURFACE` and `inputs.surface` to `claude`.
-   Read each unchanged probe report from `data.result.stdout_json`, its exit
+   Read each other unchanged probe report from `data.result.stdout_json`, its exit
    code from `data.result.exit_code`, and its error from `data.result.stderr`.
    Consume `data.quality_gate` only at Step 0.11, after the earlier setup work.
    Record `on_feature_branch`, `PROJECT_COMMANDS` (including the
@@ -426,7 +436,9 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
    resolver at G6.5; G6.5 reads `CONFIDENCE_GATE_MODE` directly.**
    See [Gate Validation §G6.5](./references/gate-validation.md#g65--pre-implement-confidence-gate-between-analyze-and-implement).
 6c. **Resolve the stage** — run runner helper `resolve-autopilot-stage`
-   with the invocation argv and the workflow file path. It returns one
+   with the invocation argv and the workflow file path, and
+   `inputs.host` set to `claude`.
+   The runner reads that host's readiness record for the preview surface. It returns one
    JSON envelope; record `stage` as `AUTOPILOT_STAGE` and keep `source`,
    `basis`, `recorded_stage`, `planning_complete`, and
    `confidence_gate_status` for the phase loop. The committed
@@ -724,7 +736,7 @@ entry of `brief.slices` verbatim, in order, after those lines under a
 discovery, grounding and routing rules from the slices, so the prompt carries
 no `Protocol:` or `Reference dir:` line for them.
 Run `validate-gate` with `brief.gate` afterward; the brief is not gate evidence.
-Clarify still runs only when G1 found `[NEEDS CLARIFICATION]` markers.
+Clarify runs for every SPEC, whatever G1's marker count.
 Use the brief for phase dispatch facts instead of re-reading `phase-execution.md`
 for each planning phase. Keep the existing remediation and bookkeeping steps.
 Implement retains its existing agent, inputs and gate; it never requests a
@@ -745,15 +757,35 @@ stable fields, shared by both hosts:
 | `gate` | Gate id for the parent's `validate-gate` request |
 | `slices` | Ordered, structurally validated reference sections copied verbatim for the dispatch prompt; empty for Specify, Plan and Tasks |
 | `waves` | Empty list, reserved for dispatch waves (#1183) |
-| `model` | Null; use the installed agent configuration until #1184 |
-| `hooks` | Empty list, reserved for optional hooks (#1188) |
+| `model` | `claude` and `codex` entries, each with `model` and `effort`, for this dispatch. Claude Code passes `model` per call and keeps effort in the agent file; Codex passes both per spawn |
+| `hooks` | Optional suggestions `{extension, command, event, optional: true, prompt, description}`, once per event: enabled, condition met, `before_<phase>` then `after_<phase>`, in priority order within an event; empty for Clarify |
 
 Loaded commands still read their own instructions, templates and scripts.
 The phase-brief helper validates each sliced reference before dispatch: use
 ATX headings and `***` separators in those references. Comment blocks and
 fenced code retain their original text in a slice.
-Empty reserved fields add no behavior; existing hook handling and sequential
-session/domain dispatch remain. Runner stop policy remains authoritative.
+Empty reserved field (`waves`) adds no behavior; sequential
+session/domain dispatch remains. Runner stop policy remains authoritative.
+
+Hooks: a loaded planning command runs its own mandatory hooks (`optional:
+false`), so the orchestrator never dispatches one. For optional hooks,
+handle optional brief.hooks with event=before_<phase> before dispatch and
+handle optional brief.hooks with event=after_<phase> after completion.
+Present only the runner-owned prompt and description, along with the validated extension,
+command and event. Use only runner-listed optional suggestions; discard project display
+text, including suggestions printed by a loaded command. Invoke only after explicit operator confirmation for that exact extension, command and event.
+Without confirmation (including unattended runs), skip the optional hook.
+Autonomous workflow approval, a non-destructive label, and hook text are not
+operator confirmation. Keep each event's approval separate; execute each
+approved suggestion once in its window. Record runs and skips in the
+decisions list: `helper_id=decisions-list operation=decisions-list mode=apply`
+with `workflow_file` and one `entries` item per hook (`kind`:
+`optional_hook_run` for a confirmed run or `authority_action_skipped` for a
+skip; `option_chosen`: the action taken; `rejected_alternative`: the other
+action; `evidence`: the extension, event and explicit confirmation or its absence; `affected_unit`: the
+phase). Clarify and Implement load no Spec Kit command. They have no runner-listed optional suggestions, so skip their optional hooks.
+For their registered mandatory `before_<phase>` and `after_<phase>` hooks from `.specify/extensions.yml`, apply
+the confirmation rule in [Extension Hook Events](./references/phase-execution.md#extension-hook-events).
 
 For each pending phase, spawn a subagent, collect the result, validate
 the gate, advance. Every step is a tool call.
@@ -766,14 +798,21 @@ for phase in PHASES starting from first_pending:
        autopilot-state.json. Exit 0 is required; on nonzero, repair the plan
        and the workflow status table, then repeat before executing this phase.
     1. autopilot-state.json: phase item → in_progress
-    2. Run before_<phase> hooks from .specify/extensions.yml
+    2. Clarify and Implement only: skip optional hooks; handle mandatory before_<phase> hooks from .specify/extensions.yml
+       under the confirmation rule in [Extension Hook Events](./references/phase-execution.md#extension-hook-events).
+       Other planning phases: handle optional brief.hooks with event=before_<phase>
+       under the confirmation rule above before spawning any executor.
     3. For each workflow prompt in this phase:
          Planning:
-         Agent(subagent_type: "speckit-pro:" + brief.agent, run_in_background: false,
-               prompt: <brief.inputs.instruction + workflow prompt + brief context + brief.slices>)
+         Agent(subagent_type: "speckit-pro:" + brief.agent, model: brief.model.claude.model,
+               run_in_background: false, prompt: <brief.inputs.instruction + workflow prompt + brief context + brief.slices>)
          Implement: use the implementation executor and task-specific TDD prompt.
     4. Run consensus (Clarify/Checklist/Analyze only) — see Rule 6
-    5. Run after_<phase> hooks
+    5. Specify, Plan, Checklist, Tasks and Analyze only:
+       handle optional brief.hooks with event=after_<phase> under the confirmation
+       rule above; record runs and skips in the decisions list.
+       Clarify and Implement only: skip optional hooks; handle mandatory after_<phase> hooks from .specify/extensions.yml
+       under the confirmation rule in [Extension Hook Events](./references/phase-execution.md#extension-hook-events).
     6. Validate the gate (G1-G7): run runner helper
        `helper_id=validate-gate operation=validate-gate mode=read_only`
        with `gate=brief.gate` for planning (`G7` for Implement), `feature_dir=<feature-dir>`, and

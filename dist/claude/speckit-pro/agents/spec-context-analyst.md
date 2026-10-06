@@ -11,7 +11,7 @@ color: purple
 disallowedTools: Write, Edit, MultiEdit, NotebookEdit, Skill, Agent, SendMessage
 maxTurns: 50
 background: true
-effort: max
+effort: high
 memory: local
 ---
 

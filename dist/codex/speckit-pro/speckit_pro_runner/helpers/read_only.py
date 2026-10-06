@@ -27,9 +27,10 @@ from ..gate_discovery import DEFAULT_BASE_BRANCH, SLOTS as GATE_SLOTS, resolve_s
 from .. import quality_gates
 from ..json_schema import json_schema_failures
 from ..runtime import detect_plugin_root
-from .. import spec_kit_pin
+from .. import reviewability_preset, spec_kit_pin
 from ..strict_input import unique_object
 from .formal_policy import apply_resume_guard, gate_checkpoint
+from .readiness_record import HOSTS, preview_surface
 from .feedback_sweep import (
     sweep_isolation_session,
     sweep_pr_feedback,
@@ -1446,7 +1447,7 @@ def check_prerequisites(inputs: dict[str, Any], repo_root: Path) -> dict[str, An
     if trusted_dir_exists(repo_root / ".specify", repo_root):
         checks.append(check("project_init", True, "Project initialized", ""))
     else:
-        checks.append(check("project_init", False, "SpecKit not initialized. Run: specify init --ai claude", ""))
+        checks.append(check("project_init", False, "SpecKit not initialized. Use speckit-install to verify the CLI and initialize the project.", ""))
         all_pass = False
     if trusted_file_exists(repo_root / ".specify" / "memory" / "constitution.md", repo_root):
         checks.append(check("constitution", True, "Constitution exists", ""))
@@ -1459,7 +1460,7 @@ def check_prerequisites(inputs: dict[str, Any], repo_root: Path) -> dict[str, An
         if not any(trusted_file_exists(repo_root / root / "skills" / cmd / "SKILL.md", repo_root) for root in (".claude", ".codex", ".agents")):
             missing.append(cmd)
     if missing:
-        checks.append(check("commands", False, f"Missing commands: {' '.join(missing)}. Run: specify integration install <claude|codex>", ""))
+        checks.append(check("commands", False, f"Missing commands: {' '.join(missing)}. Use speckit-install to verify the CLI and add integrations.", ""))
         all_pass = False
     else:
         checks.append(check("commands", True, "All SpecKit commands installed", ""))
@@ -1468,7 +1469,7 @@ def check_prerequisites(inputs: dict[str, Any], repo_root: Path) -> dict[str, An
         checks.append(check(
             "setup_contract", False,
             "SpecKit skills call script options their .specify scripts reject. Refresh shared infrastructure: "
-            "specify integration upgrade <key> --force --script sh, then restore local edits",
+            "use speckit-upgrade to verify the CLI and preserve local edits",
             "; ".join(setup_mismatches)))
         all_pass = False
     else:
@@ -1915,7 +1916,17 @@ def detect_presets(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
         for key, template in (("tasks", "tasks-template"), ("spec", "spec-template"), ("plan", "plan-template")):
             path = str(base / f"{template}.md")
             templates[key] = f"  {template}: \n{wrap_path_80(path)}\n    (top layer from: {preset['name']} v{preset['version']})"
-    return make_result(json_text({"has_presets": bool(presets), "presets": presets, "extensions": extensions, "hooks": hooks, "templates": templates}))
+    return make_result(json_text({"has_presets": bool(presets), "presets": presets, "reviewability_preset": reviewability_preset_state(root, repo_root), "extensions": extensions, "hooks": hooks, "templates": templates}))
+
+
+def reviewability_preset_state(root: Path, repo_root: Path) -> dict[str, Any]:
+    """Whether the project has the reviewability preset, and the `specify` arguments that add it.
+
+    `installed` requires coherent registry evidence and the exact shipped preset bytes.
+    `missing` supplies add_args; `unavailable` means unsafe or unavailable evidence,
+    or a stale registration that needs repair before Spec Kit will accept add.
+    """
+    return reviewability_preset.state(root, repo_root)
 
 
 # The spec template writes `[NEEDS CLARIFICATION: <question>]`; the bare
@@ -2792,7 +2803,7 @@ def resolve_autopilot_stage(inputs: dict[str, Any], repo_root: Path) -> dict[str
     from ..artifact_review import review_handoff
     try:
         formal = apply_resume_guard(repo_root, workflow_raw, parsed, signals)
-        review = review_handoff(text, repo_root, trusted_bytes)
+        review = review_handoff(text, repo_root, trusted_bytes, recorded_preview_surface(inputs.get("host"), repo_root))
     except ValueError as exc:
         return make_result("", f"error: {exc}\n", 2)
     review_pending = artifact_review_resume(text, signals, review)
@@ -2828,6 +2839,15 @@ def resolve_autopilot_stage(inputs: dict[str, Any], repo_root: Path) -> dict[str
         **({"artifact_review": review} if review["status"] != "absent" else {}),
         **({"formal_checkpoint": formal} if formal["required"] else {}),
     }))
+
+
+def recorded_preview_surface(host: Any, repo_root: Path) -> str:
+    """The readiness record's preview surface for the named host; `unknown` when no host is named."""
+    if host is None:
+        return "unknown"
+    if host not in HOSTS:
+        raise ValueError(f"host must be one of {list(HOSTS)}")
+    return preview_surface(repo_root, host)
 
 
 def artifact_review_resume(text: str, signals: dict[str, Any], review: dict[str, Any]) -> bool:
@@ -6234,18 +6254,20 @@ def spec_kit_cli_state(
     specify_path: str | None, repo_root: Path | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """The CLI rows for `check-prerequisites` and the `spec_kit` object skills read the pin from."""
-    installed_version = installed_specify_version(specify_path, repo_root) if specify_path else None
-    status = spec_kit_pin.version_status(installed_version, cli_found=specify_path is not None)
+    executable = verified_specify_executable(specify_path, repo_root) if specify_path else None
+    installed_version = installed_specify_version(str(executable), repo_root) if executable else None
+    status = spec_kit_pin.version_status(installed_version, cli_found=executable is not None)
     # CLI output is untrusted: echo only a plain release, never the raw token.
-    shown_version = spec_kit_pin.release_version(installed_version) or ("unparsed" if specify_path else None)
+    shown_version = spec_kit_pin.release_version(installed_version) or ("unparsed" if executable else None)
     spec_kit = {
         "pinned_version": spec_kit_pin.PINNED_VERSION,
         "installed_version": shown_version,
         "status": status,
+        "cli_argv": [str(executable)] if executable else [],
         "install_argv": spec_kit_pin.INSTALL_ARGV,
     }
     install = shlex.join(spec_kit_pin.INSTALL_ARGV)
-    if not specify_path:
+    if executable is None:
         return [check("speckit_cli", False, f"SpecKit CLI not found. Install: {install}", "")], spec_kit
     return [
         check("speckit_cli", True, "SpecKit CLI installed", f"{_home_relative(specify_path)} ({shown_version or 'version unreadable'})"),
@@ -6275,8 +6297,8 @@ def _home_relative(path: str) -> str:
         return Path(path).name or "specify"
 
 
-def installed_specify_version(specify_path: str, repo_root: Path | None = None) -> str | None:
-    """The version `specify version` reports, or None when it cannot run or has no version row."""
+def verified_specify_executable(specify_path: str, repo_root: Path | None = None) -> Path | None:
+    """The canonical external executable, or None when discovery cannot be attested."""
     # Windows does not use the child's PATH to locate an executable. Resolve in
     # the selected directory before launching, including user-local installs.
     executable = shutil.which("specify", path=str(Path(specify_path).parent))
@@ -6295,11 +6317,29 @@ def installed_specify_version(specify_path: str, repo_root: Path | None = None) 
             launch_path is None
             or Path(launch_path) != resolved
             or resolved != selected
-            or Path(executable).parent.resolve() == Path.cwd().resolve()
+            or any(candidate.parent.resolve() == Path.cwd().resolve()
+                   for candidate in (Path(specify_path), Path(executable)))
             or resolved.is_relative_to(workspace)
-            or any(parent.resolve() == workspace for parent in Path(executable).parents)
+            or any(parent.resolve() == workspace
+                   for candidate in (Path(specify_path), Path(executable)) for parent in candidate.parents)
         ):
             return None
+        return resolved
+    except (OSError, RuntimeError, ValueError):
+        return None
+
+
+def installed_specify_version(specify_path: str, repo_root: Path | None = None) -> str | None:
+    """The version `specify version` reports, or None when it cannot run or has no version row."""
+    executable = verified_specify_executable(specify_path, repo_root)
+    if executable is None:
+        return None
+    # Launch the name resolved inside the attested directory: the repository
+    # Bash-confinement gate can follow that form statically, not a bare Path value.
+    launch_path = shutil.which("specify", path=str(executable.parent))
+    if launch_path is None or Path(launch_path) != executable:
+        return None
+    try:
         result = subprocess.run(
             [launch_path, "version"], text=True, encoding="utf-8", capture_output=True, shell=False,
             check=False, timeout=SUBPROCESS_TIMEOUT_SECONDS, stdin=subprocess.DEVNULL,

@@ -14,6 +14,7 @@ The autopilot's pre-flight sequence. Run these before Step 1 (Parse Workflow Sta
 <!-- /host -->
 - [Step -1: Archive Sweep Startup](#step--1-archive-sweep-startup) — archive previously merged specs before workflow execution
 - [Step 0.0: Resolve Script Paths](#step-00-resolve-script-paths) — locate the plugin's `SKILL_SCRIPTS` directory
+- [Step 0.0a: Read the Readiness Record](#step-00a-read-the-readiness-record) — log each stale readiness item and continue
 <!-- host:claude: only Claude loads bundled agents straight from the plugin package -->
 - [Step 0.0b: Claude Agent Package Completeness](#step-00b-claude-agent-package-completeness) — verify bundled plugin agents are present
 <!-- /host -->
@@ -401,8 +402,10 @@ Verify the directory exists:
 Command("ls '<SKILL_SCRIPTS>/'")
 ```
 
-If it doesn't exist, STOP: "Plugin scripts not found. Reinstall
-the speckit-pro plugin."
+If it does not exist, log `readiness stale: plugin_payload` naming the
+missing directory (Step 0.0a) and continue. The Step 1.1 coverage guard runs
+from this directory, so a missing payload fails that guard closed and no phase
+is marked done.
 <!-- /host -->
 <!-- host:codex: Codex prints no skill base directory, so it resolves the path relative to this reference -->
 to the scripts directory. The scripts live at `../scripts/`, relative to this
@@ -410,8 +413,10 @@ reference file. Resolve this to an absolute path and store it as
 `SKILL_SCRIPTS` for all subsequent commands.
 
 Verify the directory exists by listing its contents. If it does
-not exist, STOP: "Plugin scripts not found. Reinstall the
-speckit-pro plugin."
+not exist, log `readiness stale: plugin_payload` naming the missing
+directory (Step 0.0a) and continue. The Step 1.1 coverage guard runs from this
+directory, so a missing payload fails that guard closed and no phase is marked
+done.
 <!-- /host -->
 
 **All script invocations below use the resolved `SKILL_SCRIPTS`
@@ -430,6 +435,40 @@ Runner helper transport: use the resolved Python 3.11+ interpreter as
 `<resolved_python>`, send one JSON request on stdin, and parse the one JSON
 response envelope from stdout. Every request includes `schema_version`,
 `request_id`, `helper_id`, `operation`, `mode`, and `inputs`.
+
+## Step 0.0a: Read the Readiness Record
+
+Scaffold writes the readiness record; G0 reads it and continues (ADR 0008).
+G0 never repairs or rewrites the record, asks a setup question, or sends the
+user back to scaffold:
+
+```text
+printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-read-readiness","helper_id":"g0-setup","operation":"g0-setup","mode":"read_only","inputs":{"probe":"readiness","surface":"<G0_SURFACE>","workflow_file":"<workflow-file-path>"}}' | <resolved_python> -m speckit_pro_runner
+```
+
+`data.readiness.verdict` is always `proceed`. `data.readiness.stale` names
+each item the record cannot vouch for: a missing or incompatible record, a
+changed plugin revision or input file, or an `unavailable` or `unknown` item.
+
+1. When `data.readiness.decisions` is not empty, record it with
+   `decisions-list` in `apply` mode. The runner leaves out entries the list
+   already holds, so a resume logs nothing twice.
+2. Persist `data.readiness.stale` as `readiness_observation` in
+   `autopilot-state.json` beside the workflow file.
+3. The runner records services, session boundaries and unavailable value
+   comparisons as unknown. Observe GitHub authentication, required MCP/Jev
+   connectivity and current session constraints through bounded, read-only
+   checks at run start. Retain those results in `readiness_observation`; an
+   unavailable probe stays unknown. Configuration and saved status supply no
+   live evidence, and these observations grant no authorization.
+
+A setup gap a later G0 step finds is logged the same way: one `readiness_stale`
+entry shaped like the runner's, whose `evidence` starts `readiness stale: <item>: `
+and names the gap and its fix. Submit the entry to `decisions-list` in `apply`
+mode; the runner deduplicates readiness entries. Then continue on the safe default the step names. Work that needs the
+missing capability defers through the Failure Escalation Protocol and is never
+marked done without it. The fix belongs to the next scaffold run and the UAT
+handoff.
 
 <!-- host:claude: Claude Code loads plugin agents straight from the plugin cache -->
 ## Step 0.0b: Claude Agent Package Completeness
@@ -465,13 +504,14 @@ brief puts the sections they need in the prompt as reference slices. The artifac
 carries a `Gallery dir: <plugin_root>/artifact-gallery/` line, and the agent reads the
 manifest and templates only from that directory.
 
-If the check fails, STOP. Claude Code loads plugin agents directly from the
-plugin cache, so autopilot cannot safely self-heal a missing Claude agent file.
-Tell the user to update/reinstall `speckit-pro`, run `/reload-plugins`, and
-retry.
+If the check fails, log `readiness stale: plugin_payload` with the missing
+agents and the fix (update `speckit-pro`, then `/reload-plugins`), as in
+Step 0.0a, and continue. A phase whose agent is missing defers through the
+Failure Escalation Protocol. Claude Code loads plugin agents directly from the
+plugin cache, so autopilot leaves agent files untouched.
 
-This check and its stop apply at setup or run start, before any phase work.
-Once phase work has begun, a plugin update is never a stop: follow
+This check runs at setup or run start, before any phase work. Once phase work
+has begun, a plugin update follows
 §Plugin Update Mid-Run: Record, Re-resolve, Continue in
 [phase-execution.md](./phase-execution.md).
 
@@ -481,9 +521,9 @@ Once phase work has begun, a plugin update is never a stop: follow
 <!-- host:codex: Codex has no plugin dependency mechanism, so it checks for typesafe-jev itself -->
 speckit-pro requires the typesafe-jev plugin. Codex has no plugin dependency
 mechanism, so check it here. Run `codex plugin list` with argv-only execution.
-If `typesafe-jev` is absent, STOP and tell the user to run
-`codex plugin add typesafe-jev@racecraft-plugins-public`, restart Codex, and
-retry.
+If `typesafe-jev` is absent, log `readiness stale: typesafe_jev` with the
+fix (`codex plugin add typesafe-jev@racecraft-plugins-public`, then a Codex
+restart), as in Step 0.0a, and continue: research runs in `sanitizer-only` mode.
 
 Then record how the research broker will screen web and docs results:
 <!-- /host -->
@@ -514,8 +554,9 @@ The helper never reads a key value. Write `data.screening_mode` and every
 
 <!-- host:claude: Claude installs typesafe-jev as a plugin dependency -->
 Claude Code installs the typesafe-jev plugin with speckit-pro. If Claude Code
-reports that speckit-pro is disabled by an unsatisfied dependency, tell the
-user to run `claude plugin install typesafe-jev@racecraft-plugins-public`.
+reports an unsatisfied typesafe-jev dependency, log `readiness stale:
+typesafe_jev` with `claude plugin install typesafe-jev@racecraft-plugins-public`
+as the fix, as in Step 0.0a, and continue.
 
 <!-- /host -->
 ## Step 0.1–0.7: Environment Checks
@@ -528,6 +569,10 @@ Read the unchanged probe report from `data.result.stdout_json`:
 - `all_pass`: if `false`, route each failed check's `message` to its owner: the orchestrator repairs a fixable check
   (a missing workflow directory, a stale binding), and the implement-executor repairs a failing project check; rerun the helper,
   then defer per the Failure Escalation Protocol when repair fails
+- `spec_kit.status`: `older`, `newer` or `unreadable` against `spec_kit.pinned_version`
+  is one entry under "Decisions for you" (the installed version beside the pinned one;
+  `spec_kit.install_argv` is an optional fix, and a `newer` CLI may be deliberate);
+  the run continues on the installed CLI
 - `branch`: current git branch name
 - `on_feature_branch`: if `true`, Specify must skip branch creation
 - `is_worktree`: if `true`, already in an isolated worktree
@@ -735,12 +780,13 @@ the rendered files with either selected runtime path:
 1. `.codex/agents/<agent>.toml`
 2. `$CODEX_HOME/agents/<agent>.toml` (default `~/.codex/agents/`)
 
-This check runs at setup or run start, before any phase work. Continue only
-when the helper returns `ok` with mutation status `no_op`. If it reports planned
-files, fails validation, or cannot inspect the selected path, STOP with its
-diagnostics. Tell the user to run `$speckit-pro:install`, approve the expected local write,
-restart Codex, and then retry autopilot. This pre-flight is read-only: never
-apply or autoheal agent files from inside autopilot.
+This check runs at setup or run start, before any phase work. `ok` with mutation
+status `no_op` means the agents are current. If it reports planned files, fails
+validation, or cannot inspect the selected path, log `readiness stale:
+plugin_payload` with its diagnostics and the fix (`$speckit-pro:install`, then a
+Codex restart), as in Step 0.0a, and continue. A phase whose agent is missing
+defers through the Failure Escalation Protocol. This check is read-only: agent
+files change only through `$speckit-pro:install`.
 
 The restart is needed because Codex builds its list of custom agents (names,
 descriptions, and file paths) once, when the session starts, so an agent file
@@ -752,8 +798,7 @@ agent takes effect at the next `spawn_agent` with no restart. Source: openai/cod
 `codex-rs/core/src/agent/role.rs` lines 51-67 and 143 (`apply_role_to_config`
 re-reads the role file on each spawn).
 
-Once phase work has begun, never rerun this check as a stop. A stale or
-refreshed agent file found mid-run follows §Plugin Update Mid-Run: Record,
+Once phase work has begun, a stale or refreshed agent file follows §Plugin Update Mid-Run: Record,
 Re-resolve, Continue in [phase-execution.md](./phase-execution.md).
 
 ## Step 0.10b: Implementation Agent Detection
@@ -808,8 +853,10 @@ Before application command discovery, run the selected-model preflight from
 [formal checkpoints](./formal-methods.md#selection-and-preflight) at WORKFLOW_ROOT.
 It is independent of app language and catalog/tool presence does not activate it.
 An absent legacy selection activates nothing.
-New-model authoring may be pending; missing existing files or tool setup blocks
-with a resumable diagnostic. Do not install a checker implicitly.
+New-model authoring may be pending. A setup gap it reports (a missing tool, a
+missing existing input, or an invalid configuration) is logged as
+`readiness stale: formal_methods` (Step 0.0a), and G0 continues. Each later
+formal checkpoint still requires its pass. Checker installs belong to scaffold.
 
 ```text
 printf '%s\n' '{"schema_version":"1.0","request_id":"autopilot-detect-commands","helper_id":"g0-setup","operation":"g0-setup","mode":"read_only","inputs":{"probe":"commands","surface":"<G0_SURFACE>","workflow_file":"<workflow-file-path>"}}' | <resolved_python> -m speckit_pro_runner
@@ -848,15 +895,26 @@ files exists in the repository, otherwise `unconfigured` and
 
 **`.specify/quality-gates.json` is the threshold authority.** The probe's
 `quality_gates.status` remains `present`, `missing`, or `invalid` (with
-`problems`). Read the seam's `data.quality_gate` at this step: on `stop`,
-print its `message` verbatim and STOP; on `proceed`, continue. The runner
-owns this decision and the host-specific coach command. Agents never edit
-this file.
+`problems`). Read the seam's `data.quality_gate` at this step. It always
+carries `verdict: proceed`; G0 never stops for this file. A missing or
+invalid file makes the runner add `unratified_defaults`: the file is ignored
+whole, and the slots run on the shipped defaults (complexity 10, CRAP 30,
+mutation-score floor 60, no skips, no opt-in slots) in memory. Agents never
+create or edit the file.
 
-With the file missing, the slot commands still show the shipped
-defaults (complexity 10, CRAP 30, mutation-score floor 60) so the
-operator can see what would run; they are not authoritative and
-do not unblock G0.
+When `data.quality_gate.unratified_defaults` is present:
+
+1. When the runner returns `unratified_defaults.record_decision: true`, record
+   `unratified_defaults.decision` with `decisions-list` in `apply` mode.
+   The runner matches the complete current observation, so an identical resume
+   adds no second entry and a changed problem gets its own entry.
+2. Persist the complete observation as `quality_gate_observation` in `autopilot-state.json`
+   beside the workflow file, and keep `unratified_defaults.flag` as `UNRATIFIED_FLAG`
+   in the workflow file's run notes. On resume, restore the flag from this state;
+   Step 0.11 refreshes it from the current probe. Clear that key and `UNRATIFIED_FLAG`
+   when the current probe reports a present file. The UAT runbook helper and the
+   PR packet helper take the flag as `inputs.unratified_defaults`
+   (see `post-implementation.md`).
 
 Three placeholders stay literal in the recorded command and are
 filled at every run:

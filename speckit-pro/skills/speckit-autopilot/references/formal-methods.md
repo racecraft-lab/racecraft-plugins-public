@@ -15,9 +15,11 @@ Invoke `formal-doctor` in `read_only` mode with `repo_root: WORKFLOW_ROOT` and
 `workflow_file: WORKFLOW_FILE`. It inspects selected tools and files only.
 `pending_authoring` for a new model may continue through Specify/Clarify/Plan;
 missing existing inputs, invalid configuration, or missing tools are setup gaps.
-Explain the precise gap using the [coach guide](../../speckit-coach/references/formal-methods-guide.md)
-and stop at a resumable checkpoint. Installation requires operator authorization.
-Do not run Grill Me in autopilot; use its existing Clarify/consensus flow.
+G0 logs each one as `readiness stale: formal_methods`, naming the precise gap from
+the [coach guide](../../speckit-coach/references/formal-methods-guide.md), and
+continues ([readiness record](./prerequisites.md#step-00a-read-the-readiness-record)).
+The Plan checkpoint still requires `verdict: pass`. Checker installs belong to
+scaffold. Grill Me stays out of autopilot; use its existing Clarify/consensus flow.
 
 When an explicitly selected catalog model uses `language: quint`, the same
 preflight, authoring, freshness, resume, and final/Post checkpoints apply. Read

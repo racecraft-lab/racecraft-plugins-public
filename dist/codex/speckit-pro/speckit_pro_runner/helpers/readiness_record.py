@@ -13,6 +13,7 @@ kept only as digests.
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
@@ -20,7 +21,7 @@ import stat
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
-from typing import Any
+from typing import Any, TypeGuard
 
 from .. import cli_probe, quality_gates
 from ..agent_materialization import digest
@@ -28,11 +29,12 @@ from ..envelope import diagnostic, response
 from ..atomic_write import write_bytes_atomic
 from ..canonical_json import canonical_bytes
 from ..private_state import ensure_private_directory
-from ..strict_input import SelectionError
+from ..strict_input import SelectionError, require_fields, require_text, unique_object
+from ..sweep_isolation import secret_matches
 from ..trusted_io import find_repo_root, trusted_bytes
 from ..verification_docker import DAEMON_ARCHITECTURES, PLATFORM, PLATFORM_OS
 from . import readiness_host_items as host_items
-from .readiness_values import NOT_OBSERVED_ACTION, clean_text, make_item
+from .readiness_values import LOCAL_PATH_RE, NOT_OBSERVED_ACTION, clean_text, make_item
 
 SCHEMA_VERSION = "readiness-record/v1"
 HOSTS = ("claude", "codex")
@@ -40,16 +42,29 @@ STATUSES = ("verified", "unavailable", "unknown", "not_applicable")
 NEEDS_ACTION = ("unavailable", "unknown")
 # Items scaffold observes and passes in. The runner observes the rest.
 CALLER_ITEMS = ("plugin_payload", "project_integration", "github_auth", "mcp_servers", "typesafe_jev",
-                "reviewability_report", "formal_methods",
+                "reviewability_report", "formal_methods", "preview_surface",
                 # Codex git write probe (`probe-git-write`); Claude Code records not_applicable.
                 "git_write")
 RUNNER_ITEMS = ("local_capability", "quality_gates", "verification_docker")
+# Auth, connectivity and session: G0 observes these fresh at run start and never trusts a saved status.
+FRESH_ITEMS = ("github_auth", "mcp_servers", "typesafe_jev")
+MANIFEST = "speckit-pro-runner.manifest.json"
+UNSAFE_REASON = re.compile(r"[^A-Za-z0-9 _./,:;'=>()-]")
 RECORD_DIRECTORY = ".specify/readiness"
 INPUT_KEYS = frozenset({"host", "host_version", "execution_mode", "plugin_revision", "observations"})
 OBSERVATION_KEYS = frozenset({"item", "status", "evidence_source", "action", "files", "values"})
 VALUE_NAME_RE = re.compile(r"[a-z][a-z0-9_]{0,40}")
 EXECUTION_MODES = ("interactive", "answers-file")
+RECORD_KEYS = frozenset({"schema_version", "binding", "host", "host_version", "execution_mode", "plugin_revision",
+                         "observed_at", "items"})
+ITEM_KEYS = frozenset({"status", "evidence_source", "observed_at", "fingerprints"})
+TIMESTAMP_RE = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z")
 DOCKER_PROBE_SECONDS = 10
+RECORD_LIMIT_BYTES = 1024 * 1024
+FINGERPRINT_LIMIT_BYTES = 1024 * 1024
+MAX_FINGERPRINT_FILES = 64
+DIGEST_RE = re.compile(r"sha256:[0-9a-f]{64}")
+HOST_VERSION_RE = re.compile(r"(?:codex-cli )?([0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?)(?: \(Claude Code\))?")
 
 
 def now() -> str:
@@ -62,16 +77,21 @@ def fingerprint_files(paths: Any, root: Path, label: str) -> dict[str, str]:
     prints: dict[str, str] = {}
     for raw in paths:
         text = clean_text(raw, f"{label}.files entry")
-        relative = PurePosixPath(text)
-        if relative.is_absolute() or ".." in relative.parts or "\\" in text:
+        if not inside_repository(text):
             raise SelectionError(f"{label}.files entry {text!r} must stay inside the repository")
+        relative = PurePosixPath(text)
         prints[f"file:{relative.as_posix()}"] = fingerprint_file(root, relative)
     return prints
 
 
-def fingerprint_file(root: Path, relative: PurePosixPath) -> str:
+def inside_repository(text: str) -> bool:
+    relative = PurePosixPath(text)
+    return bool(text) and not relative.is_absolute() and ".." not in relative.parts and "\\" not in text
+
+
+def fingerprint_file(root: Path, relative: PurePosixPath, *, limit: int | None = None) -> str:
     """A digest, `missing` for an absent file, or `unreadable` for one the runner cannot read safely."""
-    content = trusted_bytes(root / relative, root)
+    content = trusted_bytes(root / relative, root, limit=limit)
     if content is not None:
         return digest(content)
     return "unreadable" if os.path.lexists(root / relative) else "missing"
@@ -105,14 +125,21 @@ def caller_item(raw: Any, root: Path, observed_at: str) -> tuple[str, dict[str, 
         action = clean_text(raw["action"], f"{name}.action")
     fingerprints = {**fingerprint_files(raw.get("files", []), root, name),
                     **fingerprint_values(raw.get("values", {}), name)}
+    require_verified_fingerprints(name, status, fingerprints)
+    return name, make_item(status, clean_text(raw.get("evidence_source"), f"{name}.evidence_source"),
+                           observed_at, fingerprints, action)
+
+
+def require_verified_fingerprints(name: str, status: str, fingerprints: dict[str, str]) -> None:
+    """Shared proof requirements for scaffold observations and G0's saved evidence."""
+    if not all(isinstance(value, str) for value in fingerprints.values()):
+        raise SelectionError("fingerprints must map names to text")
     if status == "verified" and not any(value.startswith("sha256:") for value in fingerprints.values()):
         raise SelectionError(f"{name}: verified evidence needs an input fingerprint")
     if name == "reviewability_report" and status == "verified" and (
             "value:spec_id" not in fingerprints or not any(key.startswith("file:") and value.startswith("sha256:")
                                                           for key, value in fingerprints.items())):
         raise SelectionError("reviewability_report: verified evidence needs a report or roadmap file and spec_id")
-    return name, make_item(status, clean_text(raw.get("evidence_source"), f"{name}.evidence_source"),
-                           observed_at, fingerprints, action)
 
 
 def probe_temporary_directory(directory: Path) -> str | None:
@@ -236,6 +263,8 @@ def build_record(inputs: dict[str, Any], root: Path) -> dict[str, Any]:
     for name in CALLER_ITEMS:
         items.setdefault(name, make_item("unknown", "not observed by scaffold", observed_at, {}, NOT_OBSERVED_ACTION))
     items["local_capability"] = observe_local_capability()
+    if inputs["host"] == "codex":
+        host_items.reconcile_codex_items(items, observed_at)
     items["quality_gates"] = observe_quality_gates(root)
     items["verification_docker"] = observe_verification_docker(root)
     host_version = inputs.get("host_version")
@@ -264,6 +293,240 @@ def write_record(root: Path, record: dict[str, Any]) -> str:
     write_bytes_atomic(directory / f"{record['host']}.json", canonical_bytes(record) + b"\n",
                        trust_root=root, mode=0o600)
     return f"{RECORD_DIRECTORY}/{record['host']}.json"
+
+
+def preview_surface(root: Path, host: str) -> str:
+    """`available`, `unavailable` or `unknown`: what this worktree's record says about a preview surface (ADR 0019).
+
+    Only a record the writer could have written, for this host and worktree, with a well-formed item whose file
+    fingerprints still match, can speak; anything else is `unknown`, never a guess, because ADR 0008 treats a
+    missing, malformed or stale record as no evidence.
+    """
+    if host not in HOSTS:
+        return "unknown"
+    content = trusted_bytes(root / RECORD_DIRECTORY / f"{host}.json", root, limit=RECORD_LIMIT_BYTES)
+    try:
+        record = json.loads(content, object_pairs_hook=unique_object) if content is not None else None
+    except (ValueError, RecursionError):
+        return "unknown"
+    if not current_record(record, root, host):
+        return "unknown"
+    item = record["items"].get("preview_surface")
+    # Missing/unreadable sentinels and an empty observation cannot prove a terminal surface answer.
+    if not item["fingerprints"] or not all(DIGEST_RE.fullmatch(value) for value in item["fingerprints"].values()):
+        return "unknown"
+    return {"verified": "available", "unavailable": "unavailable"}.get(item["status"], "unknown")
+
+
+def current_record(record: Any, root: Path, host: str) -> TypeGuard[dict[str, Any]]:
+    if not isinstance(record, dict) or record.keys() != RECORD_KEYS:
+        return False
+    if record["schema_version"] != SCHEMA_VERSION or record["host"] != host \
+            or record["binding"] != {"worktree": digest(str(root))} or not timestamp(record["observed_at"]) \
+            or record["execution_mode"] not in EXECUTION_MODES:
+        return False
+    items = record["items"]
+    if not isinstance(items, dict) or items.keys() != set((*CALLER_ITEMS, *RUNNER_ITEMS, *host_items.HOST_ITEMS)):
+        return False
+    cache: dict[str, str] = {}
+    return all(sound_item(item, needs_digest=name in CALLER_ITEMS)
+               and current_fingerprints(item["fingerprints"], root, cache)
+               for name, item in items.items()) and current_versions(record, root, host)
+
+
+def current_versions(record: dict[str, Any], root: Path, host: str) -> bool:
+    """Bind to the executing plugin and an observable current host; unobservable is no evidence."""
+    try:
+        version = clean_text(record["host_version"], "host_version")
+        revision = clean_text(record["plugin_revision"], "plugin_revision")
+        package = Path(__file__).resolve().parents[1]
+        content = trusted_bytes(package / "speckit-pro-runner.manifest.json", package, limit=RECORD_LIMIT_BYTES)
+        manifest = json.loads(content, object_pairs_hook=unique_object) if content is not None else None
+    except (SelectionError, ValueError, RecursionError):
+        return False
+    if not isinstance(manifest, dict) or manifest.get("plugin_version") != revision:
+        return False
+    probe = cli_probe.probe(root, [host, "--version"], allowed=(host,), timeout=DOCKER_PROBE_SECONDS)
+    match = HOST_VERSION_RE.fullmatch(probe["stdout_tail"])
+    recorded = HOST_VERSION_RE.fullmatch(version)
+    return probe["exit_status"] == 0 and match is not None and recorded is not None \
+        and match[1] == recorded[1]
+
+
+def timestamp(value: Any) -> bool:
+    if not isinstance(value, str) or not TIMESTAMP_RE.fullmatch(value):
+        return False
+    try:
+        datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
+    except ValueError:
+        return False
+    return True
+
+
+def sound_item(item: Any, *, needs_digest: bool = True) -> bool:
+    """The shape `make_item` writes: a known status, clean evidence, a time, digests, and an action when one is due."""
+    if not isinstance(item, dict) or item.get("status") not in STATUSES:
+        return False
+    texts = ("evidence_source", "action") if item["status"] in NEEDS_ACTION else ("evidence_source",)
+    if item.keys() != ITEM_KEYS | set(texts) or not timestamp(item["observed_at"]):
+        return False
+    try:
+        if not all(clean_text(item[key], key) for key in texts):
+            return False
+    except SelectionError:
+        return False
+    prints = item["fingerprints"]
+    return isinstance(prints, dict) and all(sound_fingerprint(key, value) for key, value in prints.items()) \
+        and (not needs_digest or item["status"] != "verified" or any(DIGEST_RE.fullmatch(value) for value in prints.values()))
+
+
+def sound_fingerprint(key: Any, value: Any) -> bool:
+    if not isinstance(key, str) or not isinstance(value, str):
+        return False
+    kind, _, name = key.partition(":")
+    if kind == "value":
+        return VALUE_NAME_RE.fullmatch(name) is not None and DIGEST_RE.fullmatch(value) is not None
+    try:
+        if clean_text(name, "fingerprint file") != name:
+            return False
+        name.encode("utf-8", "strict")
+    except (SelectionError, UnicodeError):
+        return False
+    return kind == "file" and inside_repository(name) and PurePosixPath(name).as_posix() == name \
+        and name != "." and (DIGEST_RE.fullmatch(value) is not None or value in ("missing", "unreadable"))
+
+
+def current_fingerprints(prints: dict[str, str], root: Path, cache: dict[str, str] | None = None) -> bool:
+    """Every key is a value name or a repository file whose fingerprint has not changed since it was observed."""
+    cache = {} if cache is None else cache
+    for key, value in prints.items():
+        if not sound_fingerprint(key, value):
+            return False
+        kind, _, name = key.partition(":")
+        if kind == "value":
+            continue
+        if saved_file_fingerprint(name, root, cache) != value:
+            return False
+    return True
+
+
+def saved_file_fingerprint(name: str, root: Path, cache: dict[str, str]) -> str | None:
+    """The one reader for files a saved record names: each read once per check, and at most
+    MAX_FINGERPRINT_FILES distinct files in all. None once the bound leaves the file unread."""
+    if name not in cache:
+        if len(cache) >= MAX_FINGERPRINT_FILES:
+            return None
+        cache[name] = fingerprint_file(root, PurePosixPath(name), limit=FINGERPRINT_LIMIT_BYTES)
+    return cache[name]
+
+
+def safe_reason(text: str) -> str:
+    """Record text as one line of plain words: no markup, links, mentions, local paths or credentials."""
+    if LOCAL_PATH_RE.search(text) or secret_matches(text):
+        return "detail withheld: it held a path or a credential"
+    text = " ".join(UNSAFE_REASON.sub("?", text).split())[:300]
+    return text or "no detail"
+
+
+def loaded_revision() -> str | None:
+    try:
+        return str(json.loads(Path(__file__).resolve().parents[1].joinpath(MANIFEST).read_bytes())["plugin_version"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def checked_items(record: Any, root: Path, host: str) -> dict[str, Any]:
+    """The record's items, or SelectionError when it cannot be this host's record for this worktree."""
+    require_fields(record, {"schema_version", "host", "binding", "host_version", "execution_mode",
+                            "plugin_revision", "observed_at", "items"}, "record")
+    for field in ("plugin_revision", "observed_at"):
+        require_text(record[field], field)
+    if not timestamp(record["observed_at"]):
+        raise SelectionError("record observed_at must be a UTC timestamp")
+    if record["host_version"] is not None:
+        require_text(record["host_version"], "host_version")
+    if record["execution_mode"] not in EXECUTION_MODES:
+        raise SelectionError("record execution mode is unknown")
+    if not isinstance(record, dict) or record.get("schema_version") != SCHEMA_VERSION or record.get("host") != host:
+        raise SelectionError(f"not a {SCHEMA_VERSION} record for {host}")
+    if record.get("binding") != {"worktree": digest(str(root))}:
+        raise SelectionError("the record is bound to another worktree")
+    items = record.get("items")
+    if not isinstance(items, dict) or items.keys() != {*CALLER_ITEMS, *RUNNER_ITEMS, *host_items.HOST_ITEMS}:
+        raise SelectionError("the record has missing or unknown readiness items")
+    for name, item in items.items():
+        check_saved_item(name, item)
+    return items
+
+
+def check_saved_item(name: str, item: Any) -> None:
+    if not isinstance(item, dict) or item.get("status") not in STATUSES \
+            or not isinstance(item.get("evidence_source"), str) or not isinstance(item.get("fingerprints"), dict):
+        raise SelectionError("an item lacks a known status, its evidence or its fingerprints")
+    require_text(item["evidence_source"], "evidence_source")
+    require_text(item.get("observed_at"), "observed_at")
+    if not timestamp(item["observed_at"]):
+        raise SelectionError("item observed_at must be a UTC timestamp")
+    if item["status"] in NEEDS_ACTION:
+        require_text(item.get("action"), "action")
+    require_verified_fingerprints(name, item["status"], item["fingerprints"])
+    # The writer's own key rules: a key it would clean or normalize could never be read back by that name.
+    if not all(sound_fingerprint(key, value) for key, value in item["fingerprints"].items()):
+        raise SelectionError("a fingerprint has a noncanonical, unsafe or unknown key or value")
+
+
+def changed_inputs(fingerprints: dict[str, str], root: Path, cache: dict[str, str]) -> list[str]:
+    """Each file input whose current fingerprint differs from the recorded one.
+
+    `check_saved_item` has proven every key sound, so each file is read by its saved name; no lookup can miss.
+    A file the shared read bound leaves unread is an unknown comparison, never an unchanged input.
+    """
+    changed = []
+    for key, recorded in fingerprints.items():
+        kind, _, name = key.partition(":")
+        if kind != "file":
+            changed.append("unknown: value fingerprint comparison unavailable")
+            continue
+        current = saved_file_fingerprint(name, root, cache)
+        if current is None:
+            changed.append(f"unknown: file fingerprint comparison skipped past the {MAX_FINGERPRINT_FILES}-file read bound")
+        elif current != recorded:
+            changed.append(name)
+    return changed
+
+
+def stale_items(root: Path, host: str) -> list[tuple[str, str]]:
+    """Each readiness item G0 cannot rely on, with the reason. G0 only reads the record (ADR 0008).
+
+    A missing, unreadable or incompatible record supplies no verified evidence.
+    """
+    path = root / RECORD_DIRECTORY / f"{host}.json"
+    content = trusted_bytes(path, root, limit=RECORD_LIMIT_BYTES)
+    if content is None:
+        return [("record", "unreadable" if os.path.lexists(path) else "missing")]
+    try:
+        record = json.loads(content, object_pairs_hook=unique_object)
+        items = checked_items(record, root, host)
+    except (ValueError, RecursionError) as error:
+        return [("record", safe_reason(f"incompatible: {error}"))]
+    stale = [("session", "unknown: current host version, execution mode and permission boundary need fresh observations")]
+    current = loaded_revision()
+    if record.get("plugin_revision") != current:
+        stale.append(("plugin_payload",
+                      f"plugin revision changed from {safe_reason(str(record.get('plugin_revision')))} to {current}"))
+    reads: dict[str, str] = {}
+    for name, item in items.items():
+        if name in FRESH_ITEMS:
+            stale.append((name, "unknown: requires a fresh run-start observation; saved status is not evidence"))
+            continue
+        # Step 0.11's unratified-defaults decision already reports a missing or invalid quality-gates file.
+        if item["status"] in NEEDS_ACTION and name != "quality_gates":
+            stale.append((name, f"{item['status']}: {safe_reason(item['evidence_source'])}; "
+                                f"action: {safe_reason(str(item.get('action')))}"))
+        stale.extend((name, safe_reason(changed) if changed.startswith("unknown:") else f"input changed: {safe_reason(changed)}")
+                     for changed in changed_inputs(item["fingerprints"], root, reads))
+    return [(name, safe_reason("; ".join(dict.fromkeys(reason for item, reason in stale if item == name))))
+            for name in dict(stale)]
 
 
 def run_readiness_record_helper(entry: Any, request: Any) -> dict[str, Any]:

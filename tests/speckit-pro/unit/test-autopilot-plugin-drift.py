@@ -76,7 +76,7 @@ class MidRunPluginDriftSourceContractTests(unittest.TestCase):
         )
         self.assert_drift_rules(section)
         _assert_phrases(self, section, ("`validate-agent-install`", "`/reload-plugins`"))
-        install_check = _section(_claude_reference("prerequisites.md"), "If the check fails, STOP.", "## Step 0.0c")
+        install_check = _section(_claude_reference("prerequisites.md"), "If the check fails, log", "## Step 0.0c")
         _assert_phrases(self, install_check, ("at setup or run start", PLUGIN_DRIFT_HEADING))
         _assert_phrases(self, _claude_reference("error-recovery.md"), ("Plugin updated mid-run", PLUGIN_DRIFT_HEADING))
 

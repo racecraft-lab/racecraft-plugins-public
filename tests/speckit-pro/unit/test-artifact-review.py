@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import html
 import json
 import re
 import runpy
@@ -12,6 +13,7 @@ import sys
 import tempfile
 import unittest
 import unittest.mock
+from html.parser import HTMLParser
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -19,12 +21,32 @@ sys.path.insert(0, str(ROOT / "speckit-pro"))
 sys.path.insert(0, str(ROOT / "tests/speckit-pro/lib"))
 
 from speckit_pro_runner import artifact_review
+from speckit_pro_runner.helpers import readiness_record
+from speckit_pro_runner.agent_materialization import digest
 from speckit_pro_runner.helpers.read_only import resolve_autopilot_stage, trusted_bytes
 from guide_text import guide_text, host_source
 from test_result import run_counted
 
 
-class ArtifactReviewTests(unittest.TestCase):
+class _Rendered(HTMLParser):
+    """Test-side record of the elements, text and attribute values one fill parses to."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.tags: list[str] = []
+        self.text = ""
+        self.values = ""
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.tags.append(tag)
+        self.values += "".join(value or "" for _name, value in attrs)
+
+    def handle_data(self, data: str) -> None:
+        self.text += data
+
+
+class _ReviewFixture(unittest.TestCase):
+    """A feature with two generated draft pages and their pending review record."""
     @classmethod
     def setUpClass(cls) -> None:
         path = ROOT / "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py"
@@ -86,9 +108,9 @@ class ArtifactReviewTests(unittest.TestCase):
             text += "\n## Artifact Review Handoff\n\n```json\n" + json.dumps(record) + "\n```\n"
         return text
 
-    def review(self, record: dict | None = None) -> dict:
+    def review(self, record: dict | None = None, **surface: str) -> dict:
         return artifact_review.review_handoff(
-            self.workflow(self.record if record is None else record), self.root, trusted_bytes,
+            self.workflow(self.record if record is None else record), self.root, trusted_bytes, **surface,
         )
 
     def verify(self, index: int = 0) -> None:
@@ -106,6 +128,134 @@ class ArtifactReviewTests(unittest.TestCase):
         (self.root / "workflow.md").write_text(text or self.workflow(self.record))
         return resolve_autopilot_stage({"workflow_file": "workflow.md", "autopilot_args": args or []}, self.root)
 
+    def fill(self, identifier: str, region: str, content: str) -> None:
+        """Replace one fill region of a recorded page and re-fingerprint the page."""
+        page = next(page for page in self.record["pages"] if page["id"] == identifier)
+        path = self.root / page["path"]
+        pattern = re.compile(rf"(<!--\s*FILL:{region}:START\s*-->)(.*?)(<!--\s*FILL:{region}:END\s*-->)", re.DOTALL)
+        text, count = pattern.subn(lambda match: match.group(1) + content + match.group(3), path.read_text(encoding="utf-8"), count=1)
+        self.assertEqual(count, 1, f"{identifier} has no {region} region")
+        path.write_text(text, encoding="utf-8")
+        page["sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+class FillContentReviewTests(_ReviewFixture):
+    """Planning text in a fill renders inert, and active content fails review."""
+
+    def test_escaped_planning_markup_renders_inert_in_every_fill_context(self) -> None:
+        planning = '" onmouseover="alert(1)" x="<script>alert(2)</script><img src=x onerror=alert(3)>'
+        contexts = (
+            ("document-title", "<title>{}</title>", ["title"]),
+            ("tldr", "<p>{}</p>", ["p"]),
+            ("tldr", '<span title="{}">TL;DR</span>', ["span"]),
+            ("tldr", "<svg><title>{}</title></svg>", ["svg", "title"]),
+        )
+        for region, wrapper, structure in contexts:
+            with self.subTest(region=region, wrapper=wrapper):
+                escaped = wrapper.format(html.escape(planning, quote=True))
+                self.fill("spec-explainer", region, escaped)
+                self.assertEqual(self.review()["status"], "pending")
+                rendered = _Rendered()
+                rendered.feed(escaped)
+                rendered.close()
+                self.assertEqual(rendered.tags, structure)
+                self.assertIn(planning, rendered.text + rendered.values)
+                self.fill("spec-explainer", region, wrapper.format(planning))
+                with self.assertRaisesRegex(ValueError, f"active content: spec-explainer region {region}"):
+                    self.review()
+                self.fill("spec-explainer", region, escaped)
+
+    def test_active_content_in_fill_bytes_is_rejected_naming_the_region(self) -> None:
+        for content in (
+            "<script>alert(1)</script>",
+            "<SCRIPT >alert(1)</SCRIPT>",
+            "<p>ok</p><img src=x onerror=alert(1)>",
+            "<svg/onload=alert(1)>",
+            '<a href="java&#x09;script:alert(1)">x</a>',
+            '<a href="&#106avascript:alert(1)">x</a>',
+            '<a href=" vbscript:msgbox(1)">x</a>',
+            '<a href="data:text/html,x">x</a>',
+            '<p srcdoc="x">x</p>',
+            "<iframe></iframe>",
+            '<meta http-equiv="refresh" content="0">',
+            '<svg><a><animate attributeName="href" values="javascript:alert(1)"/></a></svg>',
+            "<svg><style><img src=x onerror=alert(1)></style></svg>",
+            "<!--x--!><img src=x onerror=alert(1)>-->",
+            "<!--><img src=x onerror=alert(1)>-->",
+            "<![CDATA[ ]><img src=x onerror=alert(1)> ]]>",
+            "<?x><img src=x onerror=alert(1)>?>",
+            "<p>unescaped < text</p>",
+            '<p>ok</p><img src=x title="',
+        ):
+            with self.subTest(content=content):
+                self.fill("implementation-plan", "plan-stats", content)
+                with self.assertRaisesRegex(ValueError, "active content: implementation-plan region plan-stats: "):
+                    self.review()
+
+    def test_parser_differentials_cannot_hide_active_content(self) -> None:
+        """A browser runs or exposes markup here that a naive parse reads as attribute or comment text."""
+        hidden = '<a title="</{0}><img src=x onerror=alert(1)>"></a>'
+        for content in (
+            *(f"<{name}>{hidden.format(name)}</{name}>" for name in (
+                "title", "textarea", "noscript", "xmp", "noembed", "noframes", "plaintext",
+            )),
+            '<TITLE><a title="</TiTlE ><img src=x onerror=alert(1)>"></a></TITLE>',
+            '<!-- -- ><a title=" --><img src=x onerror=alert(1)>"></a>',
+            '<!-- --\n><a title=" --><img src=x onerror=alert(1)>"></a>',
+            "</title><title>left open for the next region",
+            # A browser folds tag names over ASCII only; Python's re.IGNORECASE also folds
+            # long s (U+017F) to s and dotted or dotless I (U+0130, U+0131) to i.
+            '<noscript></noſcript><a title="</noscript><img src=x onerror=alert(1)>"></a>',
+            '<noframes></noframeſ><a title="</noframes><img src=x onerror=alert(1)>"></a>',
+            '<title></tİtle><a title="</title><img src=x onerror=alert(1)>"></a>',
+            '<textarea></textareaı><a title="</textarea><img src=x onerror=alert(1)>"></a>',
+            '<title></tıtle><a title="</title><img src=x onerror=alert(1)>"></a>',
+            '<title\x00><img src=x onerror=alert(1)></title>',
+            '<span title="<!--"><title>left open for the next region -->',
+            '<title><!-- </title><a title="--><img src=x onerror=alert(1)>"></a>',
+        ):
+            with self.subTest(content=content):
+                self.fill("implementation-plan", "plan-stats", content)
+                with self.assertRaisesRegex(ValueError, "active content: implementation-plan region plan-stats: "):
+                    self.review()
+
+    def test_inert_fill_markup_passes_review(self) -> None:
+        for content in (
+            '<p>Use <code>onChange={(e) <span class="kw">=&gt;</span> x}</code></p>',
+            '<p title="Data: a JavaScript: aside"><a href="#phase-1">Phase 1</a></p>',
+            "<!-- a reviewer note --><img src=\"data:image/png;base64,AA\" alt=\"\">",
+            "<p>Run <code>--check</code> -- then compare</p><textarea>&lt;b&gt;</textarea>",
+        ):
+            with self.subTest(content=content):
+                self.fill("implementation-plan", "plan-stats", content)
+                self.assertEqual(self.review()["status"], "pending")
+
+    def test_inert_comments_and_attributes_can_mention_raw_text_tags(self) -> None:
+        for content in (
+            "<!-- reviewer note: <title> -->",
+            "<p>Summary</p>\n<!-- reviewer note:\n<textarea> -->",
+            '<span title="<title>">Summary</span>',
+        ):
+            with self.subTest(content=content):
+                self.fill("implementation-plan", "plan-stats", content)
+                self.assertEqual(self.review()["status"], "pending")
+
+    def test_every_shipped_draft_sample_passes_review(self) -> None:
+        for identifier in ("code-approaches", "module-map"):
+            path = f"{self.feature}/artifacts/{identifier}.html"
+            template = self.gallery / f"templates/{identifier}.html"
+            (self.root / path).write_bytes(template.read_bytes())
+            self.record["template_hashes"][identifier] = hashlib.sha256(template.read_bytes()).hexdigest()
+            self.record["pages"].append({
+                "id": identifier, "generation": "generated", "path": path,
+                "sha256": hashlib.sha256(template.read_bytes()).hexdigest(),
+                "expected_title": identifier, "expected_content": f"{identifier} body",
+                "preview": {"status": "pending", "blocker": "Not observed yet", "observation": None},
+            })
+        self.assertEqual(self.review()["generated"], 4)
+
+
+class ArtifactReviewTests(_ReviewFixture):
     def test_valid_pending_record_is_not_a_validation_failure(self) -> None:
         result = self.review()
         self.assertEqual(result["status"], "pending")
@@ -113,6 +263,108 @@ class ArtifactReviewTests(unittest.TestCase):
         self.assertEqual(result["observer"], artifact_review.OBSERVER)
         self.assertTrue(result["reuse_artifacts"])
         self.assertEqual(result["verified"], 0)
+
+    def test_one_observer_dispatch_per_page_with_a_preview_surface(self) -> None:
+        for surface in ("available", "unknown"):
+            with self.subTest(surface=surface):
+                result = self.review(preview_surface=surface)
+                self.assertEqual(result["observer"], artifact_review.OBSERVER)
+                self.assertEqual(result["observer_dispatches"], ["implementation-plan", "spec-explainer"])
+                self.assertEqual(result["resume_action"], "preview")
+                self.assertNotIn("preview_note", result)
+        self.verify(0)
+        self.assertEqual(self.review(preview_surface="available")["observer_dispatches"], ["spec-explainer"])
+
+    def test_no_observer_dispatch_without_a_preview_surface(self) -> None:
+        result = self.review(preview_surface="unavailable")
+        self.assertIsNone(result["observer"])
+        self.assertEqual(result["observer_dispatches"], [])
+        self.assertEqual(result["status"], "unavailable")
+        self.assertEqual(result["resume_action"], "none")
+        self.assertEqual(result["preview_note"], artifact_review.NO_SURFACE_NOTE)
+        self.assertEqual([page["status"] for page in result["pages"]], ["unavailable", "unavailable"])
+        self.assertTrue(all(page["blocker"] == artifact_review.NO_SURFACE_NOTE for page in result["pages"]))
+        self.assertTrue(result["reuse_artifacts"])
+
+    def test_no_surface_keeps_verified_pages_and_policy_denials(self) -> None:
+        self.verify(0)
+        self.record["pages"][1]["preview"].update(status="denied", blocker="Origin access denied")
+        result = self.review(preview_surface="unavailable")
+        self.assertEqual([page["status"] for page in result["pages"]], ["verified", "denied"])
+        self.assertEqual(result["observer_dispatches"], [])
+        self.assertEqual(result["status"], "pending")
+
+    def test_stale_pages_regenerate_before_any_observer_dispatch(self) -> None:
+        (self.root / self.feature / "plan.md").write_text("Changed plan")
+        for surface in ("available", "unavailable"):
+            with self.subTest(surface=surface):
+                result = self.review(preview_surface=surface)
+                self.assertEqual(result["resume_action"], "generate")
+                self.assertEqual(result["observer_dispatches"], [])
+                self.assertNotIn("preview_note", result)
+
+    def test_a_surface_outside_the_closed_set_is_rejected(self) -> None:
+        for surface in ("headless", "", "Available"):
+            self.assertRaisesRegex(ValueError, "preview_surface must be one of", self.review, preview_surface=surface)
+
+    @unittest.mock.patch.object(readiness_record.cli_probe, "probe", return_value={"exit_status": 0, "stdout_tail": "2.1.0"})
+    def test_the_stage_helper_reads_the_surface_from_the_readiness_record(self, _probe) -> None:
+        def stage(host: str | None) -> dict:
+            (self.root / "workflow.md").write_text(self.workflow(self.record))
+            inputs = {"workflow_file": "workflow.md", "autopilot_args": [], **({"host": host} if host else {})}
+            return json.loads(resolve_autopilot_stage(inputs, self.root)["stdout"])["artifact_review"]
+        self.assertEqual(stage("claude")["observer_dispatches"], ["implementation-plan", "spec-explainer"])
+        self.write_readiness("claude", "unavailable")
+        self.assertEqual(stage(None)["observer_dispatches"], ["implementation-plan", "spec-explainer"])
+        self.assertEqual(stage("codex")["observer_dispatches"], ["implementation-plan", "spec-explainer"])
+        review = stage("claude")
+        self.assertEqual((review["observer"], review["observer_dispatches"], review["status"]), (None, [], "unavailable"))
+        self.write_readiness("claude", "verified")
+        self.assertEqual(stage("claude")["observer_dispatches"], ["implementation-plan", "spec-explainer"])
+        result = resolve_autopilot_stage({"workflow_file": "workflow.md", "autopilot_args": [], "host": "gemini"}, self.root)
+        self.assertEqual(result["exit_code"], 2)
+
+    def test_malformed_readiness_evidence_keeps_every_observer_dispatch(self) -> None:
+        (self.root / "workflow.md").write_text(self.workflow(self.record))
+        bare = {"schema_version": "readiness-record/v1", "binding": {"worktree": digest(str(self.root))},
+                "host": "claude", "items": {"preview_surface": {"status": "unavailable"}}}
+        for label, record in (("binding fields only", bare), ("no action", self.readiness("claude", "unavailable", None))):
+            with self.subTest(label):
+                self.write_readiness("claude", "unavailable", record)
+                inputs = {"workflow_file": "workflow.md", "autopilot_args": [], "host": "claude"}
+                review = json.loads(resolve_autopilot_stage(inputs, self.root)["stdout"])["artifact_review"]
+                self.assertEqual(review["observer"], artifact_review.OBSERVER)
+                self.assertEqual(review["observer_dispatches"], ["implementation-plan", "spec-explainer"])
+                self.assertNotIn("preview_note", review)
+
+    def readiness(self, host: str, status: str, action: str | None = "Run autopilot where a preview pane exists.") -> dict:
+        """A record shaped like the writer's, so only the field under test differs."""
+        inputs = {"host": host, "host_version": "2.1.0", "execution_mode": "interactive", "plugin_revision": "2.40.0",
+                  "observations": [{"item": "preview_surface", "status": status, "evidence_source": "session tools",
+                                    "values": {"surface": "pane"}, **({"action": action or "Rerun scaffold."} if status != "verified" else {})}]}
+        with unittest.mock.patch.object(readiness_record.shutil, "which", return_value=None):
+            record = readiness_record.build_record(inputs, self.root)
+        if action is None:
+            record["items"]["preview_surface"].pop("action", None)
+        return record
+
+    @unittest.mock.patch.object(readiness_record.cli_probe, "probe", return_value={"exit_status": 0, "stdout_tail": "2.1.0"})
+    def test_stale_or_incomplete_snapshot_keeps_dispatch_for_both_hosts(self, _probe) -> None:
+        (self.root / "workflow.md").write_text(self.workflow(self.record))
+        for host in ("claude", "codex"):
+            for field, value in (("host_version", "1.0.0"), ("plugin_revision", "1.0.0"), ("items", None)):
+                with self.subTest(host=host, field=field):
+                    record = self.readiness(host, "unavailable")
+                    record[field] = value if field != "items" else {"preview_surface": record["items"]["preview_surface"]}
+                    self.write_readiness(host, "unavailable", record)
+                    review = json.loads(resolve_autopilot_stage({"workflow_file": "workflow.md", "autopilot_args": [], "host": host}, self.root)["stdout"])["artifact_review"]
+                    self.assertEqual(["implementation-plan", "spec-explainer"], review["observer_dispatches"])
+                    self.assertNotIn("preview_note", review)
+
+    def write_readiness(self, host: str, status: str, record: dict | None = None) -> None:
+        directory = self.root / ".specify/readiness"
+        directory.mkdir(parents=True, exist_ok=True)
+        (directory / f"{host}.json").write_text(json.dumps(record or self.readiness(host, status)))
 
     def test_untrusted_html_outside_template_regions_is_rejected(self) -> None:
         path = self.root / self.record["pages"][0]["path"]
@@ -419,4 +671,5 @@ class ArtifactReviewTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    raise SystemExit(run_counted(unittest.defaultTestLoader.loadTestsFromTestCase(ArtifactReviewTests), label="test-artifact-review"))
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (FillContentReviewTests, ArtifactReviewTests))
+    raise SystemExit(run_counted(suite, label="test-artifact-review"))

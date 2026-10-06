@@ -1,6 +1,6 @@
 # Quality Gates Guide
 
-Use this reference when autopilot's G0 stops on a missing or invalid
+Use this reference when G0 records unratified defaults for a missing or invalid
 `.specify/quality-gates.json`, or when a user asks what the complexity,
 mutation, and dependency gates should be set to. The file is the authority
 for the thresholds the `COMPLEXITY`, `MUTATION`, and `DEPENDENCY_RULES` slots
@@ -180,9 +180,15 @@ workflow table. Add the slot with a one-line reason and today's date, validate,
 and confirm before writing. Remove the entry when the tool arrives; autopilot
 re-populates the slot on the next run.
 
-## Recovering from a G0 stop
+## Ratifying defaults after G0
 
-G0 fails with a message that names `.specify/quality-gates.json` and this
-flow. Create the file as above, re-run autopilot, and let Step 0.11 re-read
-it. Do not paste thresholds into the workflow file to get past the gate; the
-runner reads only this file.
+When `.specify/quality-gates.json` is missing or invalid, G0 continues on the
+shipped defaults in memory: complexity 10, CRAP 30, mutation-score floor 60,
+no skips, and no opt-in slots. An invalid file is ignored whole. Autopilot
+records the unratified-defaults observation and first problem in the decisions
+list and run state, and flags it in the PR body and UAT runbook.
+
+Use this flow to measure and propose thresholds, then write the file only after
+the operator confirms. Autopilot never creates or edits it. Re-run autopilot
+after ratification so Step 0.11 reads the confirmed file. The runner takes
+thresholds from this file, with shipped defaults as its fallback (ADR 0007).

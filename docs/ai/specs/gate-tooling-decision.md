@@ -135,7 +135,8 @@ therefore kept separate:
 `speckit_pro_runner/contracts/quality-gates.schema.json`, validator and
 `recommend` command in `speckit_pro_runner/quality_gates.py`). The values
 above are substituted only while that file is missing or invalid, so the
-operator can see what would run; G0 blocks until the file is present. G0 is
+run uses the shipped defaults in memory and records the unratified-defaults
+observation (ADR 0007), ignoring an invalid file whole and leaving it untouched. G0 is
 a measurement, never a vacuous pass: `COMPLEXITY` runs on the whole tracked
 source tree and records its baseline (pre-existing debt is recorded, exit 2
 blocks), `MUTATION` records `deferred` because whole-tree mutation is
@@ -279,7 +280,7 @@ Row fields:
 | `tool` | string | Human name used in the missing-tool prompt and the Prerequisites table. |
 | `install` | string | Exact install command. Needed by the "install" answer in the missing-tool prompt. |
 | `probe` | array of bare executable names, optional | Discovery reports `tool_present: true` only when every name resolves on PATH or under `node_modules/.bin`. Absent means presence is unknown. |
-| `command` | string | Exact command written into the PROJECT_COMMANDS slot. `{ceiling}`, `{complexity_ceiling}`, `{floor}`, `{survival_ceiling}`, and `{rules_path}` are filled at discovery from `.specify/quality-gates.json` (the shipped defaults are substituted only while that file is missing or invalid, and G0 blocks until it is present) and the signal path. `{paths}` and `{plugin_root}` stay literal and are filled at each run, which keeps machine-specific paths out of the workflow file. |
+| `command` | string | Exact command written into the PROJECT_COMMANDS slot. `{ceiling}`, `{complexity_ceiling}`, `{floor}`, `{survival_ceiling}`, and `{rules_path}` are filled at discovery from `.specify/quality-gates.json` (a missing or invalid file uses the shipped defaults in memory, recorded as unratified defaults at G0) and the signal path. `{paths}` and `{plugin_root}` stay literal and are filled at each run, which keeps machine-specific paths out of the workflow file. |
 
 Rules the validator enforces:
 

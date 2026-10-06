@@ -43,19 +43,33 @@ If the operator does not specify, ask before proceeding.
 
 ### 1. Ensure the SpecKit CLI is available
 
-Look up `specify` with argv-only execution, never through shell
-parsing: first on `PATH`, then at `~/.local/bin/specify`, where
-`uv tool install` puts it. This is where the runner's own
-prerequisite check looks.
+The runner owns the pinned Spec Kit version. Invoke
+`[resolved_python, "-m", "speckit_pro_runner"]` with this request on
+stdin, parse `data.stdout.text` as JSON, and read its `spec_kit` object
+(`status`, `installed_version`, `pinned_version`, `install_argv`, `cli_argv`):
 
-- If it is found, capture the version (for example, `specify 0.8.13`)
-  and move on.
-- If the CLI is missing:
+```json
+{"schema_version":"1.0","request_id":"install-spec-kit-pin","helper_id":"check-prerequisites","operation":"check-prerequisites","mode":"read_only","inputs":{"workflow_file":""}}
+```
+
+Use `spec_kit.cli_argv` as the executable prefix for every Spec Kit command
+below, including health checks, extensions, presets and upgrade handoffs.
+Append the listed arguments and launch the resulting array with `shell=False`.
+The runner supplies the verified absolute path; preserve it even if PATH,
+the current directory or a discovery link changes. If `cli_argv` is empty, STOP
+before any Spec Kit command; offer the pinned install, then verify again.
+Re-run `check-prerequisites` after any CLI install or replacement and pass the
+new `spec_kit` object to subsequent steps and handoffs. A declined version
+repair permits continuation only with a nonempty `cli_argv`.
+
+- If it is found, record `installed_version`. When `status` is `match`,
+  move on. When it is `older`, `newer` or `unreadable`, tell the
+  operator the installed version and the pinned one, and ask before
+  running `install_argv` (it replaces the CLI).
+- If the CLI is missing (`status` is `missing`):
   - Look up `uv` the same way.
-  - If `uv` is present, install the official SpecKit CLI by invoking
-    the equivalent of `uv tool install specify-cli --from
-    git+https://github.com/github/spec-kit.git` with argv-only
-    execution.
+  - If `uv` is present, install the pinned CLI by invoking
+    `install_argv` with argv-only execution.
   - If `uv` is missing, STOP and tell the operator to install `uv`
     from the official Astral documentation, then re-run
     `$speckit-pro:speckit-install`. SpecKit CLI is distributed as a `uv` tool.
@@ -70,7 +84,7 @@ as `PRESENT` or `ABSENT`.
 
 If `.specify/` is **PRESENT**:
 
-1. Invoke `specify integration list` with argv-only execution and
+1. Invoke `spec_kit.cli_argv + ["integration", "list"]` with argv-only execution and
    capture stdout and stderr to see which integrations are installed.
 2. Tell the operator: "This repo already has SpecKit installed
    (integrations: `<list>`). The right tool for this state is
@@ -81,7 +95,7 @@ If `.specify/` is **PRESENT**:
    `claude`-only repo), or (c) abort.
 4. On (a): STOP this skill and invoke `$speckit-pro:speckit-upgrade`.
 5. On (b): go directly to Step 4 with only the new integration(s) the
-   operator wants to add, and skip its bootstrap `specify init`.
+   operator wants to add, and skip its bootstrap `spec_kit.cli_argv + ["init"]`.
 6. On (c): STOP.
 
 If `.specify/` is **ABSENT**: continue to Step 3.
@@ -114,19 +128,19 @@ prompt.
 For a **fresh install** (Step 2 said ABSENT):
 
 1. Pick the operator's first integration key as the bootstrap key.
-2. Run `specify init --here --integration <first-key> --script sh` to
+2. Run `spec_kit.cli_argv + ["init", "--here", "--integration", "<first-key>", "--script", "sh"]` to
    scaffold `.specify/` (templates, scripts, constitution placeholder)
    AND install the first integration. For Codex, skills mode is the
    default and writes `.agents/skills/speckit-*/`, so no extra option
    is needed.
 3. For each additional integration the operator chose, run
-   `specify integration install <key> --script sh`.
+   `spec_kit.cli_argv + ["integration", "install", "<key>", "--script", "sh"]`.
 
 For **adding to an existing install** (Step 2 said PRESENT, operator
 chose option (b)):
 
-- Skip the bootstrap `specify init`. For each new integration the
-  operator chose, run `specify integration install <key> --script sh`.
+- Skip the bootstrap `spec_kit.cli_argv + ["init"]`. For each new integration the
+  operator chose, run `spec_kit.cli_argv + ["integration", "install", "<key>", "--script", "sh"]`.
 
 If any command returns non-zero, STOP. Do not retry or "fix" without
 operator input — the CLI's error message is the operator's signal.
@@ -154,6 +168,18 @@ AskUserQuestion picker preset for `$speckit-clarify` and
 See [presets-extensions-guide.md → The curated set](../speckit-coach/references/presets-extensions-guide.md)
 for the full list and rationale.
 
+First install the reviewability preset, which scaffold requires. Send this
+request and read `reviewability_preset` in the result:
+
+```json
+{"schema_version":"1.0","request_id":"install-reviewability-preset","helper_id":"detect-presets","operation":"detect-presets","mode":"read_only","inputs":{"repo_root":"."}}
+```
+
+When `status` is `missing`, run `spec_kit.cli_argv + add_args` without asking:
+it is part of the install, not a recommendation, then send the
+`check-prerequisites` request again and report a failing `template_resolution`
+check. When `status` is `unavailable`, report it and continue.
+
 Compare `.specify/extensions/` and `.specify/presets/` against the entries in
 `<plugin-root>/scripts/curated-set.json`.
 
@@ -162,16 +188,16 @@ Compare `.specify/extensions/` and `.specify/presets/` against the entries in
 
 - Otherwise, list the missing entries and ask which to install.
   Recommended default is **all**. For each accepted entry, give the
-  operator the `specify extension add <id>` or preset command from the
+  operator the `spec_kit.cli_argv + ["extension", "add", "<id>"]` or preset command from the
   curated set and run it only after they confirm. Skipped entries can be
   installed later with `$speckit-pro:speckit-upgrade`.
 
 ### 6. Verify
 
-Invoke `specify check` and `specify integration list` with argv-only
+Invoke `spec_kit.cli_argv + ["check"]` and `spec_kit.cli_argv + ["integration", "list"]` with argv-only
 execution, and capture stdout and stderr. Confirm:
 
-- `specify check` reports the project is ready.
+- `spec_kit.cli_argv + ["check"]` reports the project is ready.
 - Each chosen integration appears as `installed` in the integration
   list.
 - For Codex, `.agents/skills/speckit-*/SKILL.md` exists. That is the
@@ -260,7 +286,7 @@ ends here.
 
 ## Hard Constraints
 
-- Never run `specify init --here --force` from this skill. `--force`
+- Never run `spec_kit.cli_argv + ["init", "--here", "--force"]` from this skill. `--force`
   overwrites local customizations. Force-flagged behavior lives
   exclusively in the upgrade skill, where it is wrapped with
   backup/restore.
@@ -281,9 +307,9 @@ ends here.
 Stop and report — do not improvise — when:
 
 - `uv` is missing and the operator cannot install it.
-- `specify init` returns a non-zero exit code (network failure,
+- `spec_kit.cli_argv + ["init"]` returns a non-zero exit code (network failure,
   template fetch error, etc.).
-- `specify integration install <key>` fails (the operator may have a
+- `spec_kit.cli_argv + ["integration", "install", "<key>"]` fails (the operator may have a
   conflicting integration; surface the CLI's error message and let
   them decide).
 - The repo has detached HEAD or uncommitted changes that would
@@ -293,4 +319,4 @@ Stop and report — do not improvise — when:
 
 If a partial install happened (e.g., `claude` succeeded but `codex`
 failed), report exactly what landed and what did not. Recommend
-running `specify integration list` to see current state.
+running `spec_kit.cli_argv + ["integration", "list"]` to see current state.

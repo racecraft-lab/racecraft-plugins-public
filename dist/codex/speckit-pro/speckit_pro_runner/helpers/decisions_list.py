@@ -29,6 +29,7 @@ KINDS = {
     "readiness_stale": NOTE,
     "pr_record_problem": NOTE,
     "unregistered_stop": NOTE,
+    "optional_hook_run": NOTE,
 }
 
 
@@ -66,6 +67,19 @@ def _stored(path: Any) -> list[dict[str, Any]]:
     return stored
 
 
+def recorded(decision: dict[str, str], entries: list[dict[str, Any]]) -> bool:
+    """Whether the list already holds this exact decision, ignoring its sequence."""
+    return any(all(previous.get(field) == value for field, value in decision.items()) for previous in entries)
+
+
+def append_entries(stored: list[dict[str, Any]], new: list[dict[str, str]]) -> list[dict[str, Any]]:
+    entries = list(stored)
+    for item in new:
+        if item["kind"] != "readiness_stale" or not recorded(item, entries):
+            entries.append({"seq": len(entries) + 1, **item})
+    return entries
+
+
 def decisions_list(root: Any, inputs: dict[str, Any], mode: str) -> dict[str, Any]:
     """Read the list, or append a batch (planned in dry_run, written in apply)."""
     fields = {"workflow_file"} if mode == "read_only" else {"workflow_file", "entries"}
@@ -81,7 +95,7 @@ def decisions_list(root: Any, inputs: dict[str, Any], mode: str) -> dict[str, An
     new = [checked_entry(item) for item in batch]
     with exclusive_ledger(path) if mode == "apply" else nullcontext():
         stored = _stored(path)
-        entries = stored + [{"seq": len(stored) + index, **item} for index, item in enumerate(new, start=1)]
+        entries = append_entries(stored, new)
         if mode == "apply":
             durable_json(path, {"schema_version": SCHEMA_VERSION, "entries": entries})
     return {"entries": ordered(entries), "count": len(entries), "link": link,
