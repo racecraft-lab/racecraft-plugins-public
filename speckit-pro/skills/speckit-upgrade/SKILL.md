@@ -370,6 +370,13 @@ and presets. See
 [presets-extensions-guide.md → The curated set](../speckit-coach/references/presets-extensions-guide.md)
 for the full list.
 
+First add the reviewability preset when the project lacks it, because
+scaffold requires it. Send the `detect-presets` helper request with `repo_root`
+set to `.` and read `reviewability_preset`. When `status` is `missing`, run
+`spec_kit.cli_argv + add_args` without asking, then send the
+`check-prerequisites` request again and report a failing `template_resolution`
+check. When `status` is `unavailable`, report it and continue.
+
 Compare `.specify/extensions/` and `.specify/presets/` against the entries in
 <!-- host:claude: Claude resolves plugin files through CLAUDE_PLUGIN_ROOT -->
 `${CLAUDE_PLUGIN_ROOT}/scripts/curated-set.json`.
@@ -387,12 +394,6 @@ Compare `.specify/extensions/` and `.specify/presets/` against the entries in
   only after they confirm. Skipped entries leave the
   autopilot's post-implementation parallel group running with reduced
   coverage; it does not fail.
-
-Regardless of that choice, add the reviewability preset when the project
-lacks it, because scaffold requires it. Send the `detect-presets` helper
-request with `repo_root` set to `.` and read `reviewability_preset`. When
-`status` is `missing`, run `spec_kit.cli_argv + add_args` without asking. When
-`status` is `unavailable`, report it and continue.
 
 ### 9. Report
 

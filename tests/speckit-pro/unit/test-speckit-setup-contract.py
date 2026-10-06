@@ -199,9 +199,11 @@ class ReviewabilityPreset(ReadinessCase):
                     (0, f".specify/presets/{PRESET_ID}/templates/{name}.md"), specify(root, ["preset", "resolve", name])
                 )
 
-    def test_an_installed_preset_needs_no_command(self) -> None:
+    def test_a_registered_preset_needs_no_command_and_an_unregistered_one_is_added(self) -> None:
         root = self.root
         shutil.copytree(REPO_ROOT / ".specify/presets" / PRESET_ID, root / ".specify/presets" / PRESET_ID)
+        self.assertEqual("missing", self.state(root)["status"])
+        shutil.copy(REPO_ROOT / ".specify/presets/.registry", root / ".specify/presets/.registry")
         self.assertEqual("installed", self.state(root)["status"])
 
     def test_the_shipped_preset_replaces_the_three_core_templates(self) -> None:

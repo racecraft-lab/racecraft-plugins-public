@@ -15,4 +15,4 @@ specify preset resolve tasks-template
 ```
 
 Those commands should resolve to `.specify/presets/speckit-pro-reviewability/templates/...`.
-If they do not, rerun `$speckit-scaffold-spec` instead of patching core templates.
+If they do not, rerun the scaffold-spec skill instead of patching core templates.

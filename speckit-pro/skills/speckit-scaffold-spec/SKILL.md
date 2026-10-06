@@ -885,9 +885,10 @@ All file operations happen in the worktree directory.
 0. Install the generic `speckit-pro-reviewability` preset into the worktree
    when it is absent. From `<worktree_root>/`, send runner helper `detect-presets`
    with `repo_root` set to `.` and read `reviewability_preset`. When `status` is
-   `missing`, run `spec_kit.cli_argv + add_args` from `<worktree_root>/`. When
-   `status` is `unavailable`, or the command fails, STOP and report the missing
-   prerequisite.
+   `missing`, run `spec_kit.cli_argv + add_args` from `<worktree_root>/`, then
+   send `check-prerequisites` again and STOP on a failing `template_resolution`
+   check. When `status` is `unavailable`, or the command fails, STOP and report
+   the missing prerequisite.
 
    Verify resolution from `<worktree_root>/` with
    `spec_kit.cli_argv + ["preset", "resolve", "spec-template"]`,
