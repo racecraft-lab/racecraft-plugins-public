@@ -72,9 +72,6 @@ class ValidateCuratedSet(unittest.TestCase):
             entry_id = str(entry_id_val) if entry_id_val is not None else 'null'
             with self.subTest(msg=f"entry '{entry_id}' contains only operator-consumed fields"):
                 self.assertEqual(set(entry) if isinstance(entry, dict) else set(), {'id', 'kind', 'archive_url'})
-            with self.subTest(msg=f"entry '{entry_id}' pins a commit archive for the --from install"):
-                url = entry.get('archive_url') if isinstance(entry, dict) else None
-                self.assertTrue(isinstance(url, str) and ARCHIVE_URL.fullmatch(url), f'archive_url={url!r}')
             with self.subTest(msg=f"entry '{entry_id}' has valid kind (extension or preset)"):
                 kind = entry.get('kind') if isinstance(entry, dict) else None
                 self.assertIn(kind, ('extension', 'preset'), f"kind='{kind}' is not extension or preset")
@@ -83,6 +80,12 @@ class ValidateCuratedSet(unittest.TestCase):
             catalog[entry_id] = entry.get('kind') if isinstance(entry, dict) else None
         with self.subTest(msg='catalog retains the supported recommendations and kinds'):
             self.assertEqual(catalog, EXPECTED_ENTRIES)
+
+    def test_entries_pin_a_commit_archive(self) -> None:
+        for entry in json.loads(MANIFEST.read_text(encoding='utf-8'))['entries']:
+            with self.subTest(msg=f"entry '{entry['id']}' pins a commit archive for the --from install"):
+                url = entry.get('archive_url')
+                self.assertTrue(isinstance(url, str) and ARCHIVE_URL.fullmatch(url), f'archive_url={url!r}')
 
     def test_install_and_upgrade_skills_install_through_from(self) -> None:
         for skill in SKILLS_WITH_CURATED_STEP:
