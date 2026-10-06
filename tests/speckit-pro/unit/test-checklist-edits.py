@@ -32,6 +32,7 @@ from speckit_pro_runner.helpers import checklist_edits, read_only  # noqa: E402
 from speckit_pro_runner.helpers.registry import MUTATION_HELPERS  # noqa: E402
 from guide_text import PHASE_EXECUTION_GUIDES, guide_text, guide_view  # noqa: E402
 from mutation_request_case import MutationRequestCase  # noqa: E402
+from descriptor_observer import record_open_descriptors  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 HELPER_ID = "checklist-edits"
@@ -1465,27 +1466,20 @@ class GateFourTests(ChecklistEditsCase):
     def gate(self) -> dict[str, Any]:
         # Observe real OS descriptors across every clean and refused snapshot.
         # ExitStack callbacks must close them before the public gate returns.
-        opened: set[int] = set()
-        real_open = os.open
-
-        def record_open(*args: Any, **kwargs: Any) -> int:
-            opened.add(descriptor := real_open(*args, **kwargs))
-            return descriptor
-
-        try:
-            with patch.object(os, "open", record_open):
+        with record_open_descriptors() as opened:
+            try:
                 return dict(json.loads(read_only.validate_gate(G4_INPUTS, self.root)["stdout"]))
-        finally:
-            leaked = []
-            for descriptor in opened:
-                try:
-                    os.fstat(descriptor)
-                except OSError as error:
-                    self.assertEqual(errno.EBADF, error.errno)
-                else:
-                    leaked.append(descriptor)
-                    os.close(descriptor)
-            self.assertEqual([], leaked, "G4 left acquired descriptors open")
+            finally:
+                leaked = []
+                for descriptor in set(opened):
+                    try:
+                        os.fstat(descriptor)
+                    except OSError as error:
+                        self.assertEqual(errno.EBADF, error.errno)
+                    else:
+                        leaked.append(descriptor)
+                        os.close(descriptor)
+                self.assertEqual([], leaked, "G4 left acquired descriptors open")
 
     def test_g4_closes_acquired_descriptors_when_directory_open_fails(self) -> None:
         # Root/specs/feature, checklists, then root/specs/feature for revalidation.
