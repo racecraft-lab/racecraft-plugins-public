@@ -539,10 +539,11 @@ Reference dir: <plugin_root>/skills/speckit-autopilot/references/
 checklist-executor runs /speckit-checklist domain
     │
     ├── Layer 1: Executor runs checklist, researches each gap,
-    │   applies fixes, re-runs once to verify
+    │   proposes edits (the runner applies them in domain order),
+    │   then a verify run follows
     │
     ├── Executor returns summary with:
-    │   ├── Gaps fixed (with citations)
+    │   ├── Gaps and proposed edits (with citations)
     │   └── "Unresolved for consensus" section
     │
     └── Main session Layer 2 (BATCHED across all unresolved gaps —

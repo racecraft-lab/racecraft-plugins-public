@@ -36,6 +36,10 @@ _Avoid_: classifier, LLM judge
 The run's record of every judgment it made instead of asking the user: the option chosen, the rejected alternative and the evidence. It never asks for a reply; the reviewer accepts or overturns each entry at review.
 _Avoid_: end-of-run request, Decisions for you
 
+**Edit proposal**:
+A checklist domain executor's return: its gaps and the edits it would make to the spec and plan. The executor never writes them. The runner applies the proposals one domain at a time, in workflow order, and refuses the batch if an executor wrote either file.
+_Avoid_: patch, remediation, fix pass
+
 **Gate**:
 A checkpoint that validates whether a run meets its requirements at a fixed point. A gate is a check, never a phase.
 _Avoid_: quality gate, phase

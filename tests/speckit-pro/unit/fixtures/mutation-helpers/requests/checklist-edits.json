@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-checklist-edits",
+  "helper_id": "checklist-edits",
+  "operation": "checklist-edits",
+  "mode": "read_only",
+  "inputs": {
+    "workflow_file": "specs/example/.process/workflow.md",
+    "feature_dir": "specs/example"
+  }
+}

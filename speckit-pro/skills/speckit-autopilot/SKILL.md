@@ -431,7 +431,7 @@ For planning, use the runner's phase brief in Step 2 as the dispatch authority.
 | ----- | ----- | --------------- |
 | Specify, Plan, Tasks | `speckit-pro:phase-executor` | Heavy reasoning (Specify, Plan); mechanical for Tasks. Single skill invocation, single summary. |
 | Clarify | `speckit-pro:clarify-executor` | Read-only question set; parent answers and edits |
-| Checklist | `speckit-pro:checklist-executor` | Must run checklist AND remediate gaps with research |
+| Checklist | `speckit-pro:checklist-executor` | Must run checklist AND propose gap fixes with research |
 | Analyze | `speckit-pro:analyze-executor` | Resolve required defects at every severity using relevant evidence and the shared repair reservation |
 | Implement | per-task routing | Route tasks with TDD; dispatch validated capability batches or legacy singletons |
 
@@ -456,7 +456,7 @@ and `orchestrator-direct` (the orchestrator acting directly, not a subagent).
 | ----- | ----- | --------------- |
 | Specify, Plan, Tasks | `phase-executor` | Heavy reasoning (Specify, Plan); mechanical for Tasks. Single skill invocation, single summary. |
 | Clarify | `clarify-executor` | Read-only question set; parent answers and edits |
-| Checklist | `checklist-executor` | Must run checklist AND remediate gaps with research |
+| Checklist | `checklist-executor` | Must run checklist AND propose gap fixes with research |
 | Analyze | `analyze-executor` | Resolve required defects at every severity using relevant evidence and the shared repair reservation |
 | Implement | `implement-executor` | Strict TDD with validated capability batches of up to four sequential tasks; parallel waves must respect metadata ownership/dependencies and derived `subagent_slots`. Consume each actual per-task result before marking completion. Legacy workflows use singleton execution. |
 | Read-only consensus | analyst agents | Read-heavy code/spec/domain analysis |

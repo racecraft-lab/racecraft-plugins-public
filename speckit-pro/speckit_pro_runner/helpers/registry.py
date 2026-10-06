@@ -14,6 +14,7 @@ from .artifact_publication import run_artifact_publication_helper
 from .artifact_selection import run_artifact_selection_helper
 # The two CODEX_ names are re-exported: tests read them through the registry.
 from .install import CODEX_OPTIONAL_HELPER_NAME, CODEX_REQUIRED_AGENT_NAMES, run_install_helper  # noqa: F401
+from .checklist_edits import run_checklist_edits_helper
 from .decisions_list import run_decisions_list_helper
 from .egress_authorization import run_egress_authorization_helper
 from .execution_requests import run_execution_helper
@@ -687,6 +688,16 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         mutation_authoritative_request("decisions-list"),
         rollback="Appends are all-or-nothing; a refused batch writes nothing, so rerun it corrected.",
     ),
+    "checklist-edits": MutationEntry(
+        "checklist-edits",
+        "checklist-edits",
+        ("read_only", "dry_run", "apply"),
+        None,
+        "golden_only",
+        "golden_fixture",
+        mutation_authoritative_request("checklist-edits"),
+        rollback="A refused request writes nothing; after a partial apply, restore spec.md and plan.md from version control and redispatch the domains.",
+    ),
     "detect-stack-manager-plan": MutationEntry(
         "detect-stack-manager-plan",
         "detect-stack-manager-plan",
@@ -858,6 +869,9 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
 
     if entry.helper_id == "decisions-list":
         return run_decisions_list_helper(entry, request)
+
+    if entry.helper_id == "checklist-edits":
+        return run_checklist_edits_helper(entry, request)
 
     if entry.helper_id == "formal-check":
         return run_formal_helper(entry, request)

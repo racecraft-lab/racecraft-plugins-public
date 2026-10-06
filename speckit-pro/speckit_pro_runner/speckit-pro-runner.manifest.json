@@ -548,6 +548,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/checklist_edits.py",
+        "display": "speckit_pro_runner/helpers/checklist_edits.py"
+      },
+      "sha256": "7f5b741048944c4636e397cbf936639b92f5991d22cf2978d7235fa3af2fc4ff"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/helpers/codex_capabilities.py",
         "display": "speckit_pro_runner/helpers/codex_capabilities.py"
       },
@@ -735,7 +743,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "04d4c8f8ab378909c3c4fcb9c9ed145e7f600ebee7a4c9743dc55f1fe28ab6bc"
+      "sha256": "05cf7d5d7f7f34b78dd5c102e2d70b03bb8fa384b6eb3d759e9edcea69c8c7a3"
     },
     {
       "path": {

@@ -530,10 +530,13 @@ executor must not produce or substitute the G3 evidence it receives.
 
 ### Phase 4: Checklist
 
-Spawn a **separate subagent for each checklist domain**,
-with two-layer resolution **after each domain**:
+Spawn a **separate subagent for each checklist domain** in check-and-propose
+mode: each returns its gaps and proposed edits and writes neither `spec.md` nor
+`plan.md`. The runner applies the edits, then two-layer resolution follows:
 
 ```text
+Before the first domain:
+  0. runner helper `checklist-edits`, mode read_only → baseline
 For each checklist domain in the workflow file:
   1. autopilot-state.json: domain task → in_progress
   2. Agent(subagent_type: "speckit-pro:checklist-executor",
@@ -541,9 +544,15 @@ For each checklist domain in the workflow file:
           prompt: "Run /speckit-checklist with: <domain prompt>\nReference slices: <brief.slices, verbatim>")
      The phase brief supplies the slices; the executor reads no reference file.
      The checklist-executor runs the checklist, researches
-     gaps, applies fixes, and re-runs to verify (Layer 1)
-  3. Parse executor's "Unresolved for consensus" section
-  4. If unresolved gaps exist:
+     gaps, and returns them with Proposed Edits (Layer 1)
+After every domain executor has returned:
+  3. runner helper `checklist-edits`, mode apply, with the domain names in
+     workflow order, the baseline, and each executor's Proposed Edits block.
+     It applies one domain at a time in domain order. Route a conflict or a
+     gap with no edit to step 5. A refusal applies nothing: handle it as a
+     gate failure under the Failure Escalation Protocol
+  4. Parse each executor's "Unresolved for consensus" section
+  5. If unresolved gaps exist:
      a. autopilot-state.json: "<domain> Consensus" → in_progress
      b. BATCHED dispatch (see consensus-protocol.md §Batched Dispatch):
         Stage 1: spawn ALL routed analysts for ALL gaps in ONE
@@ -553,23 +562,26 @@ For each checklist domain in the workflow file:
                  to spec.md or plan.md.
         Round 2 escape-hatch: also batched across all queued gaps.
         [ROUND_3_TIEBREAK]: consensus-protocol.md#round-3-tiebreak (Round 3 agent tiebreak)
-     c. Re-run domain checklist to verify gaps closed
-     d. autopilot-state.json: "<domain> Consensus" → completed
-  5. autopilot-state.json: domain task → completed
-  6. Proceed to next domain
+     c. autopilot-state.json: "<domain> Consensus" → completed
+  6. For each domain: Agent(subagent_type: "speckit-pro:checklist-executor",
+          run_in_background: false, prompt: "Mode: verify\nRun /speckit-checklist with: <domain prompt>")
+     re-runs the domain checklist to verify gaps closed
+     autopilot-state.json: domain task → completed
 ```
 
 **Layer 1 (executor):** The checklist-executor handles
-gap research and remediation internally using the research
-broker's web search and library docs, and codebase exploration.
+gap research internally using the research
+broker's web search and library docs, and codebase exploration, and proposes
+the fix for each gap.
 
 **Layer 2 (consensus):** For gaps the executor flagged (low
 confidence, security tag or keyword), the main session follows the
 `tier` that `parse-consensus-categories` returns.
 
-**Why after each domain:** Domain 2 may depend on Domain
-1's gap fixes. Both layers complete before the next
-domain runs.
+**Why one domain at a time, in domain order:** Domain 2's edit may build on
+Domain 1's. The runner applies the proposals one at a time in workflow order,
+so two executors never write the same file at once and the result does not
+depend on which executor returned first.
 
 **Gate:** G4 — verify 0 `[Gap]` markers
 
