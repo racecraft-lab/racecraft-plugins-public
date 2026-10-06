@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import json
+import hashlib
 import re
 import stat
 import sys
@@ -21,7 +22,7 @@ from test_result import run_counted
 from host_skill_views import host_skill_root
 
 ROADMAP_TEMPLATE = PLUGIN_ROOT / 'skills/speckit-coach/templates/technical-roadmap-template.md'
-SPEC_TEMPLATES = (REPO_ROOT / '.specify/presets/speckit-pro-reviewability/templates/spec-template.md', REPO_ROOT / '.specify/templates/spec-template.md')
+SPEC_TEMPLATES = (REPO_ROOT / '.specify/presets/speckit-pro-reviewability/templates/spec-template.md',)
 PRESET_PLAN_TEMPLATE = REPO_ROOT / '.specify/presets/speckit-pro-reviewability/templates/plan-template.md'
 WORKFLOW_TEMPLATE = PLUGIN_ROOT / 'skills/speckit-coach/templates/workflow-template.md'
 AUTOPILOT_SKILL_DIR = PLUGIN_ROOT / 'skills/speckit-autopilot'
@@ -31,6 +32,11 @@ def _rel_repo(path: Path) -> str:
     return path.relative_to(REPO_ROOT).as_posix()
 
 class ValidateSpecTemplates(unittest.TestCase):
+
+    def test_core_spec_template_matches_its_upstream_install_manifest(self) -> None:
+        manifest = json.loads((REPO_ROOT / '.specify/integrations/speckit.manifest.json').read_text(encoding='utf-8'))
+        name = '.specify/templates/spec-template.md'
+        self.assertEqual(hashlib.sha256((REPO_ROOT / name).read_bytes()).hexdigest(), manifest['files'][name])
 
     def test_003_technical_roadmap_template_reviewability_vocabulary(self) -> None:
         with self.subTest(msg='technical-roadmap-template.md: exists'):

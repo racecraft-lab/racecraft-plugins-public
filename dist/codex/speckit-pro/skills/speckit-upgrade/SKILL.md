@@ -68,20 +68,31 @@ If **PRESENT**: continue.
 
 ### 2. Capture current versions and integrations
 
-Use argv-only execution to capture the `specify` version, run
-`specify self check`, and run `specify integration list`. Preserve
+Run the `check-prerequisites` helper with `workflow_file` empty and read its
+`spec_kit` object. Use `spec_kit.cli_argv` as the executable prefix for every
+Spec Kit command below, including health checks, integration upgrades,
+extensions and presets. Append the listed arguments and launch the resulting
+array with `shell=False`. The runner supplies the verified absolute path;
+preserve it even if PATH, the current directory or a discovery link changes.
+If `cli_argv` is empty, STOP before any Spec Kit command; offer the pinned
+install, then verify again. Re-run `check-prerequisites` after any CLI install
+or replacement and use the new `spec_kit` object for subsequent steps.
+A declined version repair permits continuation only with a nonempty `cli_argv`.
+
+Use argv-only execution to capture `spec_kit.cli_argv + ["version"]`, run
+`spec_kit.cli_argv + ["self", "check"]`, and run `spec_kit.cli_argv + ["integration", "list"]`. Preserve
 stdout, stderr, and exit status for each command in the report.
 
 Surface to the operator:
 
-- Current CLI version (e.g. `specify 0.6.1`).
-- Whether `specify self check` reports a newer release available.
+- Current CLI version (e.g. `0.6.1`).
+- Whether `spec_kit.cli_argv + ["self", "check"]` reports a newer release available.
 - Each installed integration with its current status.
 
-If the CLI itself is outdated, recommend that the operator run
-`uv tool install specify-cli --force --from
-git+https://github.com/github/spec-kit.git` and then re-invoke this
-skill. This skill does not run it. Ask the operator to either upgrade
+Send the `check-prerequisites` request shown in step 5a now and read the
+`spec_kit` object of its result. If `spec_kit.status` is not `match`, recommend that
+the operator run `install_argv` from it and then
+re-invoke this skill. This skill does not run it. Ask the operator to either upgrade
 the CLI first or confirm they want to proceed with the current CLI
 version, and wait for the answer before continuing.
 
@@ -115,7 +126,7 @@ For each integration the operator chose:
 
 #### 5a. Try the safe (no --force) upgrade first
 
-Invoke `specify integration upgrade <key> --script sh` with argv-only
+Invoke `spec_kit.cli_argv + ["integration", "upgrade", "<key>", "--script", "sh"]` with argv-only
 execution.
 
 The CLI is diff-aware: it compares manifest hashes and blocks if
@@ -177,7 +188,7 @@ that list to the operator and ask:
 >    and re-run after deciding which edits to keep.
 
 If `force-and-restore`, invoke
-`specify integration upgrade <key> --force --script sh` with
+`spec_kit.cli_argv + ["integration", "upgrade", "<key>", "--force", "--script", "sh"]` with
 argv-only execution.
 
 Then for each previously-modified file, compare the backup copy with
@@ -235,7 +246,7 @@ before deleting anything so the operator can confirm.
 
 ### 7. Verify
 
-Invoke `specify check` and `specify integration list` with argv-only
+Invoke `spec_kit.cli_argv + ["check"]` and `spec_kit.cli_argv + ["integration", "list"]` with argv-only
 execution. Preserve stdout, stderr, and exit status.
 
 Confirm each upgraded integration shows `installed` and reports the
@@ -306,7 +317,7 @@ Compare `.specify/extensions/` and `.specify/presets/` against the entries in
 
 - Otherwise, list the missing entries and ask which to install. Recommended
   default is **all**. For each accepted entry, give the operator the
-  `specify extension add <id>` or `specify preset add <id>` command and run it
+  `spec_kit.cli_argv + ["extension", "add", "<id>"]` or `spec_kit.cli_argv + ["preset", "add", "<id>"]` command and run it
   only after they confirm. Skipped entries leave the
   autopilot's post-implementation parallel group running with reduced
   coverage; it does not fail.
@@ -335,7 +346,7 @@ Return a concise upgrade summary:
    upgraded skills load.
 2. Skim the summary above — if you preferred the old version of
    any file, restore from $BACKUP/.
-3. Run `specify check` independently to confirm health.
+3. Run `spec_kit.cli_argv + ["check"]` independently to confirm health.
 ```
 
 Do not continue into any other workflow in the same skill. Upgrade
@@ -344,7 +355,7 @@ ends here.
 ## Hard Constraints
 
 - Always snapshot to `/tmp/specify-upgrade-backup-<STAMP>/` BEFORE
-  the first `specify integration upgrade` call.
+  the first `spec_kit.cli_argv + ["integration", "upgrade"]` call.
 - Never use `--force` on the first attempt. Try the safe path
   first; only escalate to `--force` after the operator has chosen
   `force-and-restore` and the backup exists.
@@ -360,7 +371,7 @@ ends here.
   operator says so.
 - Never touch this plugin's own files (`.claude-plugin/`,
   `codex-skills/`, the plugin's `commands/`).
-- If `specify integration upgrade` fails for reasons other than
+- If `spec_kit.cli_argv + ["integration", "upgrade"]` fails for reasons other than
   the diff-aware block (e.g., network failure, missing source
   bundle), STOP and report the exact error. Do not retry silently.
   The operator can re-run after fixing the underlying issue.
@@ -371,7 +382,7 @@ STOP and report — do not improvise — when:
 
 - The CLI itself is missing (uncommon for upgrade, but possible; hand
   off to `$speckit-pro:speckit-install`).
-- A `specify integration upgrade` call fails for non-diff reasons.
+- A `spec_kit.cli_argv + ["integration", "upgrade"]` call fails for non-diff reasons.
 - The backup directory could not be created (filesystem full,
   permission denied, etc.).
 - The operator declines all three options in Step 5b for a blocked

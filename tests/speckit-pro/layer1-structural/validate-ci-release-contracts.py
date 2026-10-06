@@ -11,7 +11,9 @@ import posixpath
 import re
 import shlex
 import sys
+import tempfile
 import unittest
+from unittest.mock import patch
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
@@ -1260,6 +1262,81 @@ class ValidateSupersededRunVerdicts(unittest.TestCase):
         sentinel = CONTAINER_DISPATCH_HELPER_FILE.read_text(encoding='utf-8')
         self.assertIn('if not passed and "cancelled" in {changes_result, heavy_result}:', sentinel)
         self.assertIn('return 0 if passed or superseded else 1', sentinel)
+
+class ValidateSpecKitPin(unittest.TestCase):
+    """The pinned Spec Kit source has one owner; no skill or agent names another."""
+
+    def test_no_guidance_names_an_unpinned_spec_kit_source(self) -> None:
+        sources = re.compile(
+            r'(?:git\+https?://github\.com/github/spec-kit|'
+            r'https?://github\.com/github/spec-kit(?:\.git|/archive/|/releases/download/)|'
+            r'https?://codeload\.github\.com/github/spec-kit/)'
+            r'[^\s`\'"<>)]*'
+        )
+        direct_install = re.compile(r'uv\s+tool\s+install\s+specify-cli')
+        scanned = 0
+        for tree in ('skills', 'codex-skills', 'agents', 'codex-agents'):
+            for path in sorted((PLUGIN_ROOT / tree).rglob('*')):
+                if path.suffix not in {'.md', '.toml'}:
+                    continue
+                scanned += 1
+                with self.subTest(path=path.relative_to(PLUGIN_ROOT).as_posix()):
+                    text = path.read_text(encoding='utf-8')
+                    self.assertIsNone(direct_install.search(text))
+                    for source in sources.findall(text):
+                        self.assertEqual(source, spec_kit_pin.PINNED_SOURCE)
+        self.assertGreater(scanned, 0, 'the scan found no guidance files')
+
+    def test_install_skills_take_the_pin_from_the_runner(self) -> None:
+        for skill in ('speckit-install', 'speckit-upgrade', 'speckit-scaffold-spec'):
+            with self.subTest(skill=skill):
+                text = (PLUGIN_ROOT / 'skills' / skill / 'SKILL.md').read_text(encoding='utf-8')
+                self.assertIn('install_argv', text)
+                self.assertIn('spec_kit', text)
+
+    def test_readme_install_command_matches_the_runner_pin(self) -> None:
+        text = (PLUGIN_ROOT / 'README.md').read_text(encoding='utf-8')
+        self.assertIn(shlex.join(spec_kit_pin.INSTALL_ARGV), text)
+
+    def test_dogfood_integrations_use_the_runner_pin(self) -> None:
+        for integration in ('speckit', 'claude', 'codex'):
+            with self.subTest(integration=integration):
+                path = REPO_ROOT / '.specify' / 'integrations' / f'{integration}.manifest.json'
+                self.assertEqual(json.loads(path.read_text(encoding='utf-8'))['version'], spec_kit_pin.PINNED_VERSION)
+
+    def test_pin_scan_rejects_mutated_skill_and_agent_sources(self) -> None:
+        sources = (
+            'git+https://github.com/github/spec-kit@main',
+            spec_kit_pin.PINNED_SOURCE + 'bad',
+            'https://github.com/github/spec-kit/archive/refs/heads/main.zip',
+            'https://codeload.github.com/github/spec-kit/zip/refs/heads/main',
+        )
+        for tree, suffix in (('skills', '.md'), ('agents', '.md'), ('codex-agents', '.toml')):
+            for source in sources:
+                with self.subTest(tree=tree, source=source), tempfile.TemporaryDirectory() as temporary:
+                    root = Path(temporary)
+                    for directory in ('skills', 'codex-skills', 'agents', 'codex-agents'):
+                        (root / directory).mkdir()
+                        (root / directory / 'safe.md').write_text('Read install_argv from the runner.\n', encoding='utf-8')
+                    (root / tree / f'fixture{suffix}').write_text(f'Install: pipx install {source}\n', encoding='utf-8')
+                    with patch.dict(globals(), PLUGIN_ROOT=root):
+                        result = unittest.TestResult()
+                        ValidateSpecKitPin('test_no_guidance_names_an_unpinned_spec_kit_source').run(result)
+                    self.assertTrue(result.failures, 'the structural scan accepted an unpinned source')
+
+class ValidateScaffoldPinMismatch(unittest.TestCase):
+    """Scaffold records a Spec Kit pin mismatch under an item the readiness writer accepts."""
+
+    def test_scaffold_records_a_pin_mismatch_under_a_valid_readiness_item(self) -> None:
+        text = (PLUGIN_ROOT / 'skills' / 'speckit-scaffold-spec' / 'SKILL.md').read_text(encoding='utf-8')
+        step0 = text.split('### 0. Ensure SpecKit CLI', 1)[1].split('### 1.', 1)[0]
+        row = next(line for line in text.splitlines() if line.startswith('| `project_integration` |'))
+        self.assertIn('`project_integration`', step0)
+        self.assertIn('Step 6.5', step0)
+        self.assertIn('spec_kit', row)
+        self.assertIn('pinned_version', row)
+        self.assertNotIn('other than `match`', row)
+        self.assertIn('`older`, `newer` or `unreadable`', row)
 
 # yaml_syntax_sane is shared by both workflow owners and regression tests.
 
