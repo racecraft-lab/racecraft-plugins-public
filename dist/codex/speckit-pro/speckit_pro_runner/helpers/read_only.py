@@ -2173,7 +2173,7 @@ def g4_snapshot(feature: Path, repo_root: Path) -> dict[str, bytes]:
 
 
 def g4_result(feature: Path, repo_root: Path) -> dict[str, Any]:
-    """Zero [Gap] markers in one bounded snapshot passes; `judged` holds the SHA-256 of every file the verdict covers."""
+    """Count captured gaps, but refuse advancement without a consumer bound to the captured bytes."""
     try:
         snapshot = g4_snapshot(feature, repo_root)
     except (OSError, ValueError) as error:
@@ -2186,7 +2186,11 @@ def g4_result(feature: Path, repo_root: Path) -> dict[str, Any]:
     gaps, reports = spec + plan + sum(counts.values()), len(counts)
     if gaps == 0:
         reason = f"0 [Gap] markers in spec.md, plan.md and {reports} checklist report{'s' if reports > 1 else ''}"
-        return make_result(json_text({"gate": "G4", "pass": True, "reason": reason, "markers": 0, "details": [], "judged": judged}))
+        # A last namespace check cannot protect a subsequent path read. Until
+        # downstream consumption is bound to this snapshot, clean bytes are
+        # diagnostics only: there is no sound live-tree passing verdict.
+        return make_result(json_text({"gate": "G4", "pass": False, "reason": reason + "; live input consumption is unbound",
+                                      "markers": 0, "details": [], "judged": judged, "blocked": "unbound_live_inputs"}), exit_code=1)
     reason = f"{gaps} [Gap] markers (spec:{spec}, plan:{plan}, checklists:{sum(counts.values())})"
     return make_result(json_text({"gate": "G4", "pass": False, "reason": reason, "markers": gaps, "details": [], "judged": judged}),
                        exit_code=1)

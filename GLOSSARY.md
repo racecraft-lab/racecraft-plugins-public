@@ -49,7 +49,7 @@ A checklist domain executor's return: its gaps and proposed plain prose changes 
 _Avoid_: patch, remediation, fix pass
 
 **Gate**:
-A checkpoint that validates whether a run meets its requirements at a fixed point. A gate is a check, never a phase.
+A checkpoint that validates whether a run meets its requirements at a fixed point. A gate is a check, never a phase. Captured clean content alone cannot authorize later work on mutable inputs; unproven consumption stays blocked.
 _Avoid_: quality gate, phase
 
 **Harm halt**:

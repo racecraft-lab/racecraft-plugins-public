@@ -187,13 +187,13 @@ must not rewrite their provenance.
 
 ### G4 — After Checklist
 
-**Check:** All gap markers resolved in one bounded snapshot of the feature.
+**Check:** Count gaps in a bounded snapshot; block advancement when live input consumption is unbound.
 
 ```
 1. Find all checklist files: specs/<feature>/checklists/*.md
-2. Count [Gap] markers across ALL files: grep -c "\[Gap\]" checklists/*.md,
-   plus spec.md and plan.md (runner `validate-gate` G4 counts all three)
-3. Total must be 0
+2. Invoke runner `validate-gate` G4 to count [Gap] markers in the reports,
+   spec.md and plan.md. Do not substitute pathname scans for the runner.
+3. Any marker fails; a zero count alone cannot authorize advancement.
 4. The runner reads each file once into memory and judges only those bytes.
    It fails closed when spec.md, plan.md or checklists/ is missing, linked or
    unreadable, when checklists/ holds no report, a nested directory, a link or
@@ -201,7 +201,9 @@ must not rewrite their provenance.
    checklists/ is flat: reports are direct *.md files; at least one is required.
    Every entry counts toward the 64-entry limit and must be a regular file.
    Regular non-report entries (such as .gitkeep) are ignored, not read or judged.
-5. The result's `judged` field holds the SHA-256 of every file the verdict covers.
+5. The result's `judged` digests and marker counts are diagnostics only.
+   With zero markers, the runner returns pass=false, exit code 1 and
+   blocked=unbound_live_inputs; the next consumer is not bound to those bytes.
 ```
 
 The runner holds directory descriptors and opens files relative to them without
@@ -212,11 +214,18 @@ only the captured bytes during its read transaction. Only those bytes are counte
 and hashed. Report names use ASCII letters, digits, dot, underscore and hyphen;
 unsafe names fail without being echoed.
 
-The verdict covers the returned digests, not later edits. An input can change
-after its last validation, including before G4 returns; no point-in-time reader
-can freeze a directory tree. A change after G4 returns is caught only by a later
-digest check. Binding Phase 5 Tasks to consumer-side re-verification of G4's `judged`
-digests is tracked in
+Stop before committing or dispatching Tasks when the runner returns
+`blocked=unbound_live_inputs`. Record the exact failed G4 output and defer through
+the Failure Escalation Protocol. Recounting markers, retrying the same capture,
+writing a coverage receipt or declaring verified domains cannot turn this blocked result into a pass.
+Both hosts consume the same runner result; neither may reinterpret zero markers
+or `judged` digests as a successful gate.
+
+An input can change after its last validation, including before G4 returns.
+The runner therefore refuses to authorize live pathname consumption even when
+its captured bytes are clean. Restoring passing G4 requires a consumer that uses
+exactly the judged bytes, rather than another check followed by mutable path
+reads. Consumer binding is tracked in
 [issue #1284](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1284).
 G4 does not attest that an executor ran.
 
