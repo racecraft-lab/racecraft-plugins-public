@@ -10,6 +10,7 @@ workflow order under one lock, so no two writes touch the files at once.
 from collections.abc import Callable, Iterator
 from contextlib import ExitStack, contextmanager
 import fcntl
+from functools import partial
 import hashlib
 import json
 import os
@@ -55,6 +56,10 @@ def proposal(domain: str, *edits: dict[str, str], gaps: list[str] | None = None)
     return {"domain": domain, "gaps": [{"id": gap, "description": f"{domain} {gap}"} for gap in ids], "edits": list(edits)}
 
 
+def raise_error(error: Exception) -> None:
+    raise error
+
+
 def digest(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
@@ -90,6 +95,37 @@ class ChecklistEditsCase(MutationRequestCase):
 
     def text(self, name: str) -> str:
         return (self.root / FEATURE / name).read_text(encoding="utf-8")
+
+    def failing_write(self, failing_call: int) -> Any:
+        def fail(number: int) -> None:
+            if number == failing_call:
+                raise OSError("disk full")
+
+        return self.before_write(fail)
+
+    def around_lock(self, *, on_acquire: Callable[[], None] = lambda: None,
+                    on_release: Callable[[], None] = lambda: None) -> Any:
+        """Patch the apply lock so `on_acquire` runs before it is taken and `on_release` after it is released."""
+        real = checklist_edits.held_feature
+
+        @contextmanager
+        def hooked(*args: Any, exclusive: bool) -> Iterator[Any]:
+            if exclusive:
+                on_acquire()
+            with real(*args, exclusive=exclusive) as held:
+                yield held
+            if exclusive:
+                on_release()
+
+        return patch.object(checklist_edits, "held_feature", hooked)
+
+    def apply_both(self) -> dict[str, Any]:
+        return self.apply(proposal("security", edit("G1", "spec.md", "open", "private"),
+                                   edit("G2", "plan.md", "never", "always")))
+
+    def assert_both_written(self) -> None:
+        self.assertEqual("# Spec\nLogin uses a password.\nExports are private.\n", self.text("spec.md"))
+        self.assertEqual("# Plan\nSessions always expire.\n", self.text("plan.md"))
 
     @contextmanager
     def before_write(self, action: Callable[[int], None]) -> Iterator[None]:
@@ -626,21 +662,6 @@ class CanonicalResultTests(ChecklistEditsCase):
 class CommittedStateTests(ChecklistEditsCase):
     """F1278-d7ff996f and F1278-afb94c5e: a failure after the first write reports what is on disk."""
 
-    def failing_write(self, failing_call: int) -> Any:
-        def fail(number: int) -> None:
-            if number == failing_call:
-                raise OSError("disk full")
-
-        return self.before_write(fail)
-
-    def apply_both(self) -> dict[str, Any]:
-        return self.apply(proposal("security", edit("G1", "spec.md", "open", "private"),
-                                   edit("G2", "plan.md", "never", "always")))
-
-    def assert_both_written(self) -> None:
-        self.assertEqual("# Spec\nLogin uses a password.\nExports are private.\n", self.text("spec.md"))
-        self.assertEqual("# Plan\nSessions always expire.\n", self.text("plan.md"))
-
     def test_a_half_written_first_domain_is_reported_as_partial(self) -> None:
         with self.failing_write(2):
             result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private"), edit("G2", "plan.md", "never", "always")))
@@ -657,6 +678,54 @@ class CommittedStateTests(ChecklistEditsCase):
         self.assertIn("private", self.text("spec.md"))
         self.assertIn("a passkey", self.text("spec.md"))
         self.assertEqual(PLAN, self.text("plan.md"))
+
+    def test_a_first_artifact_failure_reports_no_current_domain_mutation(self) -> None:
+        with self.failing_write(1):
+            result = self.apply_both()
+        self.assertEqual(("expected_failure", [], "security", [], False),
+                         (result["status"], result["data"].get("applied"), result["data"].get("failed"),
+                          result["data"].get("partial"), result["data"].get("record_written")), result)
+        self.assertEqual((SPEC, PLAN), (self.text("spec.md"), self.text("plan.md")))
+        self.assertFalse((self.root / RECORD).exists())
+
+    def test_a_one_artifact_domain_cannot_split_its_edits(self) -> None:
+        for name, find, replacement in (("spec.md", "open", "private"), ("plan.md", "never", "always")):
+            with self.subTest(artifact=name):
+                with self.failing_write(1):
+                    result = self.apply(proposal("security", edit("G1", name, find, replacement)))
+                self.assertEqual(([], []), (result["data"].get("applied"), result["data"].get("partial")), result)
+                self.assertEqual((SPEC, PLAN), (self.text("spec.md"), self.text("plan.md")))
+                with self.failing_write(2):  # There is no second artifact write in this domain.
+                    result = self.apply(proposal("security", edit("G1", name, find, replacement)))
+                self.assertEqual("ok", result["status"], result)
+                self.assertIn(replacement, self.text(name))
+                (self.root / FEATURE / name).write_text(SPEC if name == "spec.md" else PLAN, encoding="utf-8")
+
+    def test_a_lock_failure_before_any_artifact_write_is_a_true_refusal(self) -> None:
+        with self.around_lock(on_acquire=partial(raise_error, OSError("lock acquisition failed"))):
+            result = self.apply_both()
+        self.assertEqual("input_error", result["status"], result)
+        self.assertEqual((SPEC, PLAN), (self.text("spec.md"), self.text("plan.md")))
+        self.assertFalse((self.root / RECORD).exists())
+
+    def test_a_refusal_raised_after_the_writes_reports_them(self) -> None:
+        # A ValueError, not an OSError, after the artifacts reached disk.
+        with patch.object(checklist_edits, "write_file_atomic", side_effect=ValueError("record directory is not usable")):
+            result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
+        self.assertEqual(("expected_failure", ["security", "ux", "api"]), (result["status"], result["data"].get("applied")), result)
+        self.assertIn("private", self.text("spec.md"))
+
+    def test_a_lock_release_failure_after_the_writes_reports_them(self) -> None:
+        with self.around_lock(on_release=partial(raise_error, OSError("lock cleanup failed"))):
+            result = self.apply_both()
+        self.assertEqual(("expected_failure", ["security", "ux", "api"], True),
+                         (result["status"], result["data"].get("applied"), result["data"].get("record_written")), result)
+        self.assert_both_written()
+        self.assertTrue((self.root / RECORD).is_file())
+
+
+class RecordStateTests(ChecklistEditsCase):
+    """F1278-afb94c5e: the application record's state is reported as observed on disk, never assumed."""
 
     def test_a_failure_before_record_publication_reports_both_artifacts_and_no_record(self) -> None:
         with patch.object(checklist_edits, "write_file_atomic", side_effect=OSError("record publication failed")):
@@ -751,15 +820,6 @@ class CommittedStateTests(ChecklistEditsCase):
                 self.assertIn("publication completed", result["diagnostics"][0]["message"])
                 self.assertNotIn("not written", result["diagnostics"][0]["message"])
 
-    def test_a_first_artifact_failure_reports_no_current_domain_mutation(self) -> None:
-        with self.failing_write(1):
-            result = self.apply_both()
-        self.assertEqual(("expected_failure", [], "security", [], False),
-                         (result["status"], result["data"].get("applied"), result["data"].get("failed"),
-                          result["data"].get("partial"), result["data"].get("record_written")), result)
-        self.assertEqual((SPEC, PLAN), (self.text("spec.md"), self.text("plan.md")))
-        self.assertFalse((self.root / RECORD).exists())
-
     def test_both_payloads_report_unknown_for_an_unreadable_published_record(self) -> None:
         for host in HOSTS:
             with self.subTest(host=host):
@@ -770,7 +830,7 @@ class CommittedStateTests(ChecklistEditsCase):
                     proposal("security", edit("G1", "spec.md", "open", "private"), edit("G2", "plan.md", "never", "always")),
                     proposal("ux"), proposal("api"),
                 ]}
-                result = run_dist_helper(host, self.root, "apply", inputs, fail_record_open=True)
+                result = run_dist_command(host, self.root, UNREADABLE_RECORD_RUNNER, dist_request("apply", inputs))
                 self.assertEqual(("expected_failure", ["security", "ux", "api"]),
                                  (result["status"], result["data"].get("applied")), result)
                 self.assertIsNone(result["data"]["record_written"], result)
@@ -778,60 +838,25 @@ class CommittedStateTests(ChecklistEditsCase):
                 self.assert_both_written()
                 self.assertTrue((self.root / RECORD).is_file())
 
-    def test_a_one_artifact_domain_cannot_split_its_edits(self) -> None:
-        for name, find, replacement in (("spec.md", "open", "private"), ("plan.md", "never", "always")):
-            with self.subTest(artifact=name):
-                with self.failing_write(1):
-                    result = self.apply(proposal("security", edit("G1", name, find, replacement)))
-                self.assertEqual(([], []), (result["data"].get("applied"), result["data"].get("partial")), result)
-                self.assertEqual((SPEC, PLAN), (self.text("spec.md"), self.text("plan.md")))
-                with self.failing_write(2):  # There is no second artifact write in this domain.
-                    result = self.apply(proposal("security", edit("G1", name, find, replacement)))
-                self.assertEqual("ok", result["status"], result)
-                self.assertIn(replacement, self.text(name))
-                (self.root / FEATURE / name).write_text(SPEC if name == "spec.md" else PLAN, encoding="utf-8")
-
     def test_a_missing_or_different_published_record_is_reported_as_observed(self) -> None:
         for content in (None, b"not JSON", b"\xff", b'{"other": true}'):
             with self.subTest(content=content):
                 (self.root / FEATURE / "spec.md").write_text(SPEC, encoding="utf-8")
                 (self.root / FEATURE / "plan.md").write_text(PLAN, encoding="utf-8")
-                real = checklist_edits.held_feature
+                def change_record(observed: bytes | None = content) -> None:
+                    record = self.root / RECORD
+                    if observed is None:
+                        record.unlink()
+                    else:
+                        record.write_bytes(observed)
+                    raise OSError("record changed at lock release")
 
-                @contextmanager
-                def change_on_release(*args: Any, exclusive: bool) -> Iterator[Any]:
-                    with real(*args, exclusive=exclusive) as held:
-                        yield held
-                    if exclusive:
-                        record = self.root / RECORD
-                        if content is None:
-                            record.unlink()
-                        else:
-                            record.write_bytes(content)
-                        raise OSError("record changed at lock release")
-
-                with patch.object(checklist_edits, "held_feature", change_on_release):
+                with self.around_lock(on_release=change_record):
                     result = self.apply_both()
                 self.assertEqual(("expected_failure", ["security", "ux", "api"], False),
                                  (result["status"], result["data"].get("applied"), result["data"].get("record_written")), result)
                 self.assert_both_written()
                 self.assertIn("absent or different (publication completed)", result["diagnostics"][0]["message"])
-
-    def test_a_lock_failure_before_any_artifact_write_is_a_true_refusal(self) -> None:
-        real = checklist_edits.held_feature
-
-        @contextmanager
-        def fail_lock(*args: Any, exclusive: bool) -> Iterator[Any]:
-            if exclusive:
-                raise OSError("lock acquisition failed")
-            with real(*args, exclusive=exclusive) as held:
-                yield held
-
-        with patch.object(checklist_edits, "held_feature", fail_lock):
-            result = self.apply_both()
-        self.assertEqual("input_error", result["status"], result)
-        self.assertEqual((SPEC, PLAN), (self.text("spec.md"), self.text("plan.md")))
-        self.assertFalse((self.root / RECORD).exists())
 
     def test_a_record_published_before_its_failure_is_reported_written(self) -> None:
         real = checklist_edits.write_file_atomic
@@ -854,31 +879,6 @@ class CommittedStateTests(ChecklistEditsCase):
         self.assertEqual(SPEC, self.text("spec.md"))
         self.assertEqual(PLAN, self.text("plan.md"))
 
-    def test_a_refusal_raised_after_the_writes_reports_them(self) -> None:
-        # A ValueError, not an OSError, after the artifacts reached disk.
-        with patch.object(checklist_edits, "write_file_atomic", side_effect=ValueError("record directory is not usable")):
-            result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
-        self.assertEqual(("expected_failure", ["security", "ux", "api"]), (result["status"], result["data"].get("applied")), result)
-        self.assertIn("private", self.text("spec.md"))
-
-    def test_a_lock_release_failure_after_the_writes_reports_them(self) -> None:
-        real = checklist_edits.held_feature
-
-        @contextmanager
-        def failing_release(*args: Any, exclusive: bool) -> Iterator[Any]:
-            with real(*args, exclusive=exclusive) as held:
-                yield held
-            if exclusive:
-                raise OSError("lock cleanup failed")
-
-        with patch.object(checklist_edits, "held_feature", failing_release):
-            result = self.apply_both()
-        self.assertEqual(("expected_failure", ["security", "ux", "api"], True),
-                         (result["status"], result["data"].get("applied"), result["data"].get("record_written")), result)
-        self.assert_both_written()
-        self.assertTrue((self.root / RECORD).is_file())
-
-
     def test_a_record_directory_swapped_for_a_link_is_not_followed(self) -> None:
         # Validator differential: the record path is checked link-free, then must be written the same way.
         outside = self.root / "outside"
@@ -895,6 +895,7 @@ class CommittedStateTests(ChecklistEditsCase):
         self.assertEqual([], sorted(path.name for path in outside.iterdir()))
         self.assertEqual(("expected_failure", "application record", None),
                          (result["status"], result["data"].get("failed"), result["data"].get("record_written")), result)
+
 
 class UntrustedTextTests(ChecklistEditsCase):
     """F1278-5ad50d38: hidden characters and credential-shaped text never reach spec.md or plan.md."""
@@ -930,14 +931,9 @@ class UntrustedTextTests(ChecklistEditsCase):
         self.assertIn("private:\n\t- see [ADR](docs/adr.md)", self.text("spec.md"))
 
 
-def run_dist_helper(host: str, root: Path, mode: str, inputs: dict[str, Any], *, fail_record_open: bool = False) -> dict[str, Any]:
-    """Send one request to the runner a host's payload ships, from inside a throwaway checkout."""
-    document = json.loads(FIXTURE.read_text(encoding="utf-8"))
-    request = {**document, "mode": mode, "inputs": {**document["inputs"], "workflow_file": WORKFLOW, "feature_dir": FEATURE, **inputs}}
-    environment = {**os.environ, "PYTHONPATH": str(REPO / "dist" / host / "speckit-pro")}
-    command = [sys.executable, "-m", "speckit_pro_runner"]
-    if fail_record_open:
-        command = [sys.executable, "-c", """
+RUNNER = [sys.executable, "-m", "speckit_pro_runner"]
+# Runs the runner with the published record's parent unreadable, to observe an unknown record state.
+UNREADABLE_RECORD_RUNNER = [sys.executable, "-c", """
 import os, runpy, sys
 from pathlib import Path
 record = Path(sys.argv[1])
@@ -950,9 +946,25 @@ def fail_after_publication(path, *args, **kwargs):
 os.open = fail_after_publication
 runpy.run_module('speckit_pro_runner', run_name='__main__')
 """, RECORD]
-    done = subprocess.run(command, input=json.dumps(request), capture_output=True,
-                          text=True, env=environment, cwd=root, check=not fail_record_open)
+
+
+def dist_request(mode: str, inputs: dict[str, Any]) -> str:
+    """The committed request fixture for this feature, with the mode and inputs of one call."""
+    document = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    return json.dumps({**document, "mode": mode,
+                       "inputs": {**document["inputs"], "workflow_file": WORKFLOW, "feature_dir": FEATURE, **inputs}})
+
+
+def run_dist_command(host: str, root: Path, command: list[str], request: str) -> dict[str, Any]:
+    """Run `command` against a host's shipped payload, from inside a throwaway checkout; the response is JSON."""
+    environment = {**os.environ, "PYTHONPATH": str(REPO / "dist" / host / "speckit-pro")}
+    done = subprocess.run(command, input=request, capture_output=True, text=True, env=environment, cwd=root, check=False)
     return json.loads(done.stdout)
+
+
+def run_dist_helper(host: str, root: Path, mode: str, inputs: dict[str, Any]) -> dict[str, Any]:
+    """Send one request to the runner a host's payload ships."""
+    return run_dist_command(host, root, RUNNER, dist_request(mode, inputs))
 
 
 class HostParityTests(unittest.TestCase):
@@ -1012,6 +1024,7 @@ if __name__ == "__main__":
             unittest.TestSuite(
                 unittest.defaultTestLoader.loadTestsFromTestCase(case)
                 for case in (ProposalTests, ConflictTests, RefusalTests, CompetingWriterTests, CanonicalResultTests, CommittedStateTests,
+                             RecordStateTests,
                              UntrustedTextTests, HostParityTests, GuidanceTests)
             ),
             label="test-checklist-edits",
