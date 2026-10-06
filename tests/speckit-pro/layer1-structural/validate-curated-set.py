@@ -95,6 +95,13 @@ class CuratedGuidanceContracts(unittest.TestCase):
         with self.subTest(msg='guide says what the pin guarantees and what the operator reviews'):
             for phrase in ('pins the bytes but does not vet them', 'specify extension info', 'commands, scripts, and hooks'):
                 self.assertIn(phrase, guide)
+        with self.subTest(msg='each kind is inspected with its own info command, which prints no archive URL'):
+            # Spec Kit v1.1.0 extensions/command_info.py and presets/command_info.py print a
+            # Repository link and never the download URL; `extension info` cannot see presets.
+            for phrase in ('`specify extension info <id>` for an extension', '`specify preset info <id>` for a preset',
+                           'Repository'):
+                self.assertIn(phrase, guide)
+            self.assertNotIn('prints the candidate archive URL', guide)
         with self.subTest(msg='directory presence leaves completed installation unproven'):
             self.assertIn('Directory presence and a successful exit leave completion unproven', guide)
             self.assertIn('owner-run acceptance', guide)
