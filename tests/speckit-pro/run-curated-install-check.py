@@ -10,8 +10,8 @@ skills give the operator, `<kind> add <id> --from <archive_url>`, in a fresh `sp
 
 - A preset installs without a prompt, so the check requires exit 0 and the preset directory.
 - An extension URL install stops at Spec Kit's own trust prompt, which only the operator answers.
-  The check closes stdin, so the default is deny. It requires that the prompt is reached (the
-  discovery-only refusal is gone) and that nothing was installed, then downloads the archive and
+  The check closes stdin, so the default is deny. It requires a normal nonzero exit after the
+  prompt (the discovery-only refusal is gone) and a verifiably empty registry, then downloads the archive and
   requires an `extension.yml` that declares the entry's id.
 """
 
@@ -27,6 +27,7 @@ import sys
 import tempfile
 import urllib.request
 import zipfile
+from contextlib import ExitStack
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "speckit-pro"))
@@ -76,24 +77,44 @@ def archive_declares_id(url: str, kind: str, entry_id: str) -> bool:
     return False
 
 
+def registry_entries(project: Path, kind: str) -> list[str] | None:
+    """List the whole registry without following links; unknown evidence is not absence."""
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    try:
+        with ExitStack() as descriptors:
+            parent = os.open(project / ".specify", flags)
+            descriptors.callback(os.close, parent)
+            try:
+                registry = os.open(Path(REGISTRY_DIRS[kind]).name, flags, dir_fd=parent)
+            except FileNotFoundError:
+                return []
+            descriptors.callback(os.close, registry)
+            return os.listdir(registry)
+    except OSError:
+        return None
+
+
 def check_entry(entry: dict[str, str], project: Path) -> list[str]:
     label = f"{entry['kind']} {entry['id']}"
     if "archive_url" not in entry:
         return [f"{label}: no archive_url, and Spec Kit refuses a bare add on its default catalogs"]
     result = specify(install_args(entry), project)
     output = result.stdout + result.stderr
-    installed = (project / REGISTRY_DIRS[entry["kind"]] / entry["id"]).exists()
     failures = []
     if DISCOVERY_ONLY in output:
         failures.append(f"{label}: refused as discovery-only")
     if entry["kind"] == "preset":
+        target = project / REGISTRY_DIRS[entry["kind"]] / entry["id"]
+        installed = target.is_dir() and not target.is_symlink() and registry_entries(project, "preset") is not None
         if result.returncode != 0 or not installed:
             failures.append(f"{label}: exit {result.returncode}, installed={installed}")
         return failures
     if TRUST_PROMPT not in output:
         failures.append(f"{label}: did not reach the trust prompt")
-    if installed:
-        failures.append(f"{label}: installed without the operator answering the trust prompt")
+    if result.returncode <= 0:
+        failures.append(f"{label}: expected a normal nonzero abort, got exit {result.returncode}")
+    if registry_entries(project, entry["kind"]) != []:
+        failures.append(f"{label}: registry is not verifiably empty after the unanswered trust prompt")
     if not archive_declares_id(entry["archive_url"], entry["kind"], entry["id"]):
         failures.append(f"{label}: archive has no {MANIFEST_NAMES[entry['kind']]} declaring this id")
     return failures

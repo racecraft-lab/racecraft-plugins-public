@@ -93,6 +93,7 @@
         { "path": "tests/speckit-pro/unit/test-consensus-synthesizer-regressions.py", "label": "test-consensus-synthesizer-regressions" },
         { "path": "tests/speckit-pro/unit/test-corrective-authorization-runner-routes.py", "label": "test-corrective-authorization-runner-routes" },
         { "path": "tests/speckit-pro/unit/test-crap-score.py", "label": "test-crap-score" },
+        { "path": "tests/speckit-pro/unit/test-curated-install-check.py", "label": "test-curated-install-check" },
         { "path": "tests/speckit-pro/unit/test-decisions-list.py", "label": "test-decisions-list" },
         { "path": "tests/speckit-pro/unit/test-dispatch-fixture-shape.py", "label": "test-dispatch-fixture-shape" },
         { "path": "tests/speckit-pro/unit/test-docs-artifact.py", "label": "test-docs-artifact" },
