@@ -204,12 +204,17 @@ must not rewrite their provenance.
 5. The result's `judged` field holds the SHA-256 of every file the verdict covers.
 ```
 
-G4 is a point-in-time check of the files it read. It runs in the main session
-after every checklist executor and consensus agent has returned, so the only
-writers left are the orchestrator and the operator: the same parties that act
-on the verdict. A change made after G4 read a file is a new edit to the planning
-documents, not something the gate can stop. `judged` shows exactly which content
-passed, so a later step can tell whether the tree still matches.
+The runner holds directory descriptors and opens files relative to them without
+following links. Its shared tree reader rejects hard links and changes in device,
+inode, mode, link count, size, mtime_ns or ctime_ns across the read. The bounded
+read must match the recorded size. G4 also checks the captured namespace before
+accepting the snapshot: missing, added, replaced or renamed inputs fail closed.
+Only the captured bytes are counted and hashed. Report names use ASCII letters,
+digits, dot, underscore and hyphen; unsafe names fail without being echoed.
+
+The verdict covers the returned digests, not future edits. A later consumer must
+re-verify those digests if it relies on this verdict after the feature changes.
+G4 does not attest that an executor ran or freeze the filesystem after return.
 
 G4 counts only `[Gap]` markers, by design. Unticked checklist items are
 reviewer-owned, so they do not fail G4. They are deferred to PR review, and

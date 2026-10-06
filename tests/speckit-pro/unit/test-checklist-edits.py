@@ -1517,24 +1517,59 @@ class GateFourTests(ChecklistEditsCase):
         self.forge_receipt()
 
     @contextmanager
-    def after_scan(self, mutate: Callable[[], None]) -> Iterator[None]:
-        """Run `mutate` once, right after G4 reads the last checklist report."""
+    def during_read(self, target: Path, mutate: Callable[[], None], *, torn: bool = False) -> Iterator[None]:
+        """Inject at the descriptor boundary, including buffered descriptor consumers."""
+        identity = target.stat().st_ino
+        real_read, real_fdopen = os.read, os.fdopen
         fired: list[bool] = []
 
-        def hooked(real: Callable[..., Any], path: Path, *args: Any, **kwargs: Any) -> Any:
-            value = real(path, *args, **kwargs)
-            if not fired and Path(path).name == "security.md":
+        def read(fd: int, size: int) -> bytes:
+            selected = os.fstat(fd).st_ino == identity
+            chunk = real_read(fd, min(size, 4096) if selected else size)
+            if selected and not fired and (bool(chunk) if torn else not chunk):
+                fired.append(True)
+                mutate()
+            return chunk
+
+        @contextmanager
+        def stream(fd: int, *args: Any, **kwargs: Any) -> Iterator[Any]:
+            with real_fdopen(fd, *args, **kwargs) as opened:
+                class Reader:
+                    def read(self, size: int = -1) -> bytes:
+                        chunks: list[bytes] = []
+                        remaining = size
+                        while remaining != 0:
+                            chunk = read(opened.fileno(), 4096 if remaining < 0 else min(4096, remaining))
+                            if not chunk:
+                                break
+                            chunks.append(chunk)
+                            if remaining > 0:
+                                remaining -= len(chunk)
+                        return b"".join(chunks)
+                yield Reader()
+
+        with patch.object(os, "read", read), patch.object(os, "fdopen", stream):
+            yield
+        self.assertTrue(fired, "fault did not reach the descriptor read")
+
+    @contextmanager
+    def after_read(self, target: Path, mutate: Callable[[], None]) -> Iterator[None]:
+        """Mutate after a complete stable read, before the remaining snapshot checks."""
+        fired: list[bool] = []
+        def hooked(real: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
+            value = real(*args, **kwargs)
+            name = args[1] if isinstance(args[0], int) else Path(args[0]).name
+            if name == target.name and not fired:
                 fired.append(True)
                 mutate()
             return value
-
         with ExitStack() as stack:
-            for name in ("trusted_lines", "trusted_text", "trusted_bytes"):
+            for name in ("read_tree_entry", "trusted_bytes"):
                 real = getattr(read_only, name, None)
                 if real is not None:
                     stack.enter_context(patch.object(read_only, name, partial(hooked, real)))
             yield
-        self.assertTrue(fired, "G4 never read the checklist report")
+        self.assertTrue(fired, "fault did not reach a complete file read")
 
     # F1281-fa5e5023: a verification claim is not evidence that any verify pass ran, and no domain list is stored.
     def test_checklist_edits_records_no_domain_list_and_refuses_every_verification_claim(self) -> None:
@@ -1634,41 +1669,92 @@ class GateFourTests(ChecklistEditsCase):
                         (self.feature / name).symlink_to(self.outside / "security.md")
                     self.assertFalse(self.gate()["pass"])
 
-    # F1281-e0d72cb8: the verdict describes one tree, so a change during the scan fails closed.
-    # F1281-e0d72cb8: the verdict covers exactly the bytes G4 read, and G4 returns their digests,
-    # so a change after a file was read can never borrow that verdict.
-    def test_g4_verdict_is_bound_to_the_digests_it_judged(self) -> None:
-        checklists = self.feature / "checklists"
+    def swap_entry(self, target: Path, variant: str) -> None:
+        """Every recorded replacement shape, with an explicit gap in replacement content."""
+        if variant == "hard link":
+            os.link(target, self.root / "alias.md")
+            (self.root / "alias.md").write_text(GAP_LINE, encoding="utf-8")
+            return
+        saved = self.root / "previous"
+        target.rename(saved)
+        if variant == "regular":
+            if saved.is_dir():
+                shutil.copytree(saved, target)
+                (target / "gap.md").write_text(GAP_LINE, encoding="utf-8")
+            else:
+                target.write_text(GAP_LINE, encoding="utf-8")
+        elif variant == "file":
+            target.write_text(GAP_LINE, encoding="utf-8")
+        elif variant == "in-root link":
+            target.symlink_to(saved, target_is_directory=saved.is_dir())
+        elif variant == "out-of-root link":
+            target.symlink_to(self.outside if saved.is_dir() else self.outside / "security.md")
+        elif variant == "fifo":
+            os.mkfifo(target)
 
-        def add_report() -> None:
-            (checklists / "ux.md").write_text(GAP_LINE, encoding="utf-8")
+    def test_g4_refuses_every_post_read_namespace_mutation(self) -> None:
+        for inject in (self.during_read, self.after_read):
+            for relative in ("spec.md", "plan.md", "checklists/security.md", "checklists", "."):
+                variants = ("deleted", "regular", "in-root link", "out-of-root link")
+                variants += ("file",) if relative == "checklists" else ()
+                variants += ("fifo", "hard link") if relative.endswith(".md") else ()
+                for variant in variants:
+                    with self.subTest(target=relative, variant=variant):
+                        self.reset_tree()
+                        target = self.feature / relative
+                        trigger = target if relative.endswith(".md") else self.feature / "checklists/security.md"
+                        with inject(trigger, partial(self.swap_entry, target, variant)):
+                            verdict = self.gate()
+                        self.assertFalse(verdict["pass"], verdict)
+            for nested in (False, True):
+                with self.subTest(added_report_nested=nested):
+                    self.reset_tree()
+                    report = self.feature / "checklists/security.md"
+                    def add_report() -> None:
+                        parent = report.parent / "nested" if nested else report.parent
+                        parent.mkdir(exist_ok=True)
+                        (parent / "added.md").write_text(GAP_LINE, encoding="utf-8")
+                    with inject(report, add_report):
+                        self.assertFalse(self.gate()["pass"])
 
-        def edit_through_hard_link() -> None:
-            with open(self.root / "alias.md", "a", encoding="utf-8") as alias:
-                alias.write(GAP_LINE)
+    def test_g4_refuses_torn_reads_and_transient_hard_links(self) -> None:
+        before = b"a" * 4096 + b"[Gap]" + b"b" * 4091
+        after = b"[Gap]" + b"a" * 4091 + b"b" * 4096
+        for relative in ("spec.md", "plan.md", "checklists/security.md"):
+            for alias in (False, True):
+                with self.subTest(target=relative, hard_link=alias):
+                    self.reset_tree()
+                    target = self.feature / relative
+                    target.write_bytes(before)
+                    def rewrite() -> None:
+                        writer = self.root / "alias.md" if alias else target
+                        if alias:
+                            os.link(target, writer)
+                        writer.write_bytes(after)
+                        if alias:
+                            writer.unlink()
+                    with self.during_read(target, rewrite, torn=True):
+                        verdict = self.gate()
+                    self.assertFalse(verdict["pass"], verdict)
+                    self.assertNotIn("judged", verdict, "a torn buffer must not be judged")
 
-        def replace_feature() -> None:
-            self.feature.rename(self.root / "previous")
-            shutil.copytree(self.root / "previous", self.feature, symlinks=True)
-            self.replace_with_gap("spec.md")
-
-        variants: dict[str, Callable[[], None]] = {
-            "spec.md replaced": lambda: self.replace_with_gap("spec.md"),
-            "plan.md replaced": lambda: self.replace_with_gap("plan.md"),
-            "report added": add_report,
-            "report deleted": lambda: (checklists / "security.md").unlink(),
-            "report replaced": lambda: self.replace_with_gap("checklists/security.md"),
-            "report edited through a hard link": edit_through_hard_link,
-            "directory linked": self.link_checklists_out_of_root,
-            "feature directory replaced": replace_feature}
-        for name, mutate in variants.items():
-            with self.subTest(variant=name):
+    def test_g4_rejects_preexisting_hard_links_and_reports_exact_clean_digests(self) -> None:
+        expected = {"spec.md": digest(SPEC), "plan.md": digest(PLAN), "checklists/security.md": digest(CLEAN_REPORT)}
+        self.assertEqual(expected, self.gate()["judged"])
+        for relative in expected:
+            with self.subTest(target=relative):
                 self.reset_tree()
-                os.link(checklists / "security.md", self.root / "alias.md")
-                judged = {"spec.md": digest(SPEC), "plan.md": digest(PLAN), "checklists/security.md": digest(CLEAN_REPORT)}
-                with self.after_scan(mutate):
-                    verdict = self.gate()
-                self.assertEqual((True, judged), (verdict["pass"], verdict.get("judged")), name)
+                os.link(self.feature / relative, self.root / "alias.md")
+                self.assertFalse(self.gate()["pass"])
+
+    def test_g4_rejects_unsafe_report_names_without_echoing_them(self) -> None:
+        for name in ("[click](evil).md", "@everyone.md", "bidi\u202e.md", "line\nfeed.md", "control\x7f.md", "<tag>.md"):
+            with self.subTest(name=ascii(name)):
+                self.reset_tree()
+                (self.feature / "checklists" / name).write_text(CLEAN_REPORT, encoding="utf-8")
+                verdict = self.gate()
+                self.assertFalse(verdict["pass"], verdict)
+                self.assertNotIn(name, json.dumps(verdict, ensure_ascii=False))
 
     # F1281-2350a979: fixed bounds on report count and total bytes fail closed; the flat layout bounds depth.
     def test_g4_fails_closed_beyond_its_report_count_or_byte_limits(self) -> None:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+from contextlib import ExitStack
 import hashlib
 import itertools
 import json
@@ -79,6 +80,8 @@ from ..trusted_io import (
     request_path_display,
     resolve_input_path,
     resolve_repo_root,
+    read_tree_entry,
+    tree_entry_signature,
     trusted_bytes,
     trusted_dir_exists,
     trusted_file_exists,
@@ -2109,41 +2112,64 @@ G4_MAX_REPORTS = 64
 G4_MAX_BYTES = 8 * 1024 * 1024
 
 
-def g4_reports(directory: Path) -> list[Path]:
-    """Markdown reports in flat checklists/, with bounded type validation of every entry.
-
-    Regular non-report entries are ignored; a listing error, unsafe entry, too many entries or no report fails closed.
-    """
-    if not stat.S_ISDIR(os.lstat(directory).st_mode):
-        raise ValueError("checklists/ must be a directory, not a link or a file")
+def g4_reports(directory: int) -> dict[str, os.stat_result]:
+    """Capture the bounded flat entry set through a held directory descriptor."""
     with os.scandir(directory) as listing:
         names = sorted(entry.name for entry in itertools.islice(listing, G4_MAX_REPORTS + 1))
     if len(names) > G4_MAX_REPORTS:
         raise ValueError(f"checklists/ holds more than {G4_MAX_REPORTS} entries")
-    entries = [directory / name for name in names]
-    for path in entries:
-        if not stat.S_ISREG(os.lstat(path).st_mode):
-            raise ValueError(f"checklists/ holds a directory, link or special file: {path.name}")
-    reports = [path for path in entries if path.suffix == ".md"]
-    if not reports:
+    entries = {name: os.stat(name, dir_fd=directory, follow_symlinks=False) for name in names}
+    for name, info in entries.items():
+        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+            raise ValueError("checklists/ holds a directory, link or special file")
+        if name.endswith(".md") and re.fullmatch(r"[A-Za-z0-9_.-]+", name) is None:
+            raise ValueError("checklists/ holds an unsafe report name")
+    if not any(name.endswith(".md") for name in entries):
         raise ValueError("checklists/ holds no checklist report")
-    return reports
+    return entries
+
+
+def g4_check_entries(directory: int, entries: dict[str, os.stat_result]) -> None:
+    """Refuse a changed name, inode or mutation signature without re-reading content."""
+    for name, before in entries.items():
+        after = os.stat(name, dir_fd=directory, follow_symlinks=False)
+        if tree_entry_signature(before) != tree_entry_signature(after):
+            raise ValueError("G4 input changed during capture")
 
 
 def g4_snapshot(feature: Path, repo_root: Path) -> dict[str, bytes]:
-    """Read spec.md, plan.md and every checklist report once, through the contained reader, within G4_MAX_BYTES in all.
-
-    The verdict is computed from these bytes only, and G4 returns their digests.
-    """
-    files = {"spec.md": feature / "spec.md", "plan.md": feature / "plan.md",
-             **{f"checklists/{path.name}": path for path in g4_reports(feature / "checklists")}}
-    snapshot: dict[str, bytes] = {}
-    for name, path in files.items():
-        content = trusted_bytes(path, repo_root, limit=G4_MAX_BYTES - sum(map(len, snapshot.values())))
-        if content is None:
-            raise ValueError(f"G4 cannot read {name} as a contained regular file within {G4_MAX_BYTES} bytes in all")
-        snapshot[name] = content
-    return snapshot
+    """Capture stable bounded bytes relative to held parents, then validate their namespace."""
+    with ExitStack() as stack:
+        feature_fd = trusted_open_directory(feature, repo_root)
+        if feature_fd is None:
+            raise ValueError("G4 feature directory is missing, linked or unreadable")
+        stack.callback(os.close, feature_fd)
+        directory_fd = os.open("checklists", os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=feature_fd)
+        stack.callback(os.close, directory_fd)
+        reports = g4_reports(directory_fd)
+        shared = {name: os.stat(name, dir_fd=feature_fd, follow_symlinks=False) for name in ("spec.md", "plan.md")}
+        files = [(name, feature_fd, name, info) for name, info in shared.items()]
+        files += [(f"checklists/{name}", directory_fd, name, info) for name, info in reports.items() if name.endswith(".md")]
+        snapshot: dict[str, bytes] = {}
+        for key, parent, name, info in files:
+            if not stat.S_ISREG(info.st_mode):
+                raise ValueError("G4 requires regular files")
+            content = read_tree_entry(parent, name, info, byte_limit=G4_MAX_BYTES - sum(map(len, snapshot.values())))[Path()][1]
+            if content is None:
+                raise ValueError("G4 requires file content")
+            snapshot[key] = content
+        g4_check_entries(feature_fd, shared)
+        g4_check_entries(directory_fd, reports)
+        if set(g4_reports(directory_fd)) != set(reports):
+            raise ValueError("G4 checklist entries changed during capture")
+        g4_check_entries(feature_fd, {"checklists": os.fstat(directory_fd)})
+        current_fd = trusted_open_directory(feature, repo_root)
+        if current_fd is None:
+            raise ValueError("G4 feature directory changed during capture")
+        stack.callback(os.close, current_fd)
+        if tree_entry_signature(os.fstat(current_fd)) != tree_entry_signature(os.fstat(feature_fd)):
+            raise ValueError("G4 feature directory changed during capture")
+        return snapshot
 
 
 def g4_result(feature: Path, repo_root: Path) -> dict[str, Any]:
@@ -2151,7 +2177,7 @@ def g4_result(feature: Path, repo_root: Path) -> dict[str, Any]:
     try:
         snapshot = g4_snapshot(feature, repo_root)
     except (OSError, ValueError) as error:
-        reason = f"G4 cannot read {Path(error.filename).name}: {error.strerror}" if isinstance(error, OSError) and error.filename else str(error)
+        reason = "G4 cannot read stable regular inputs" if isinstance(error, OSError) else str(error)
         return make_result(json_text({"gate": "G4", "pass": False, "reason": reason, "markers": 0, "details": []}), exit_code=1)
     counts = {name: sum(1 for line in content.decode("utf-8", errors="replace").splitlines() if "[Gap]" in line)
               for name, content in snapshot.items()}

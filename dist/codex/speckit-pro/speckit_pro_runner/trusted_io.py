@@ -542,7 +542,8 @@ def captured_tree_names(fd: int) -> list[str]:
 
 
 def read_tree_entry(parent_fd: int, name: str, expected: os.stat_result | None = None,
-                    *, signatures: dict[Path, tuple[int, ...]] | None = None) -> dict[Path, tuple[int, bytes | None]]:
+                    *, signatures: dict[Path, tuple[int, ...]] | None = None,
+                    byte_limit: int | None = None) -> dict[Path, tuple[int, bytes | None]]:
     """Read one entry through its parent descriptor; reject links and changing evidence."""
     before = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
     if expected is not None and tree_entry_signature(before) != tree_entry_signature(expected):
@@ -562,7 +563,10 @@ def read_tree_entry(parent_fd: int, name: str, expected: os.stat_result | None =
             if before.st_nlink != 1:
                 raise OSError("hard-linked tree file refused")
             with os.fdopen(os.dup(fd), "rb") as stream:
-                captured = {Path(): (stat.S_IMODE(before.st_mode), stream.read())}
+                content = stream.read() if byte_limit is None else stream.read(byte_limit + 1)
+                if byte_limit is not None and (len(content) > byte_limit or len(content) != before.st_size):
+                    raise OSError("tree file exceeded its byte limit or changed size")
+                captured = {Path(): (stat.S_IMODE(before.st_mode), content)}
         after = os.fstat(fd)
         named = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
         if tree_entry_signature(before) != tree_entry_signature(after) or tree_entry_signature(after) != tree_entry_signature(named):
