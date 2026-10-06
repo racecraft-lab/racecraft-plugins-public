@@ -555,6 +555,37 @@ DEFECTS = ("declined", "no-registry", "malformed-registry", "other-id", "disable
            "registry-hash", "registry-version", "manifest-differs", "manifest-symlink", "not-listed")
 
 
+def install_record(manifest, defect):
+    """The registry entry v1.1.0 writes for a --from install, with one field wrong for a defect."""
+    record = {"version": "9.9.9" if defect == "manifest-differs" else "1.0.0", "source": "local",
+              "manifest_hash": "sha256:" + hashlib.sha256(manifest).hexdigest(), "enabled": True, "priority": 10,
+              "registered_commands": {}, "registered_skills": {}, "installed_at": "2026-10-06T00:00:00+00:00"}
+    wrong = {"catalog-source": ("source", {"kind": "catalog", "catalog": "default"}), "disabled": ("enabled", False),
+             "registry-hash": ("manifest_hash", "sha256:" + hashlib.sha256(b"other").hexdigest()),
+             "registry-version": ("version", "2.0.0")}
+    if defect in wrong:
+        record[wrong[defect][0]] = wrong[defect][1]
+    return record
+
+
+def register(base, kind, entry_id, record, defect):
+    registry_path = base / ".registry"
+    try:  # v1.1.0 _load (L763-791) starts fresh from an absent or malformed registry
+        registry = json.loads(registry_path.read_text())
+    except (FileNotFoundError, ValueError):
+        registry = {"schema_version": "1.0", check.REGISTRY_KEYS[kind]: {}}
+    if defect != "no-registry":
+        registry[check.REGISTRY_KEYS[kind]]["other" if defect == "other-id" else entry_id] = record
+    registry_path.write_text("{not json" if defect == "malformed-registry" else json.dumps(registry, indent=2))
+
+
+def list_installed(project, entry_id):
+    config = project / check.EXTENSION_CONFIG
+    listed = check.installed_ids(config.read_bytes()) if config.exists() else []
+    config.write_text("installed:\n" + "".join(f"- {item}\n" for item in [*listed, entry_id])
+                      + "settings:\n  auto_execute_hooks: true\nhooks: {}\n", encoding="utf-8")
+
+
 def v110_install(project, entry, defect=None):
     """What Spec Kit v1.1.0 leaves after `<kind> add <id> --from <url>`, optionally missing one piece.
 
@@ -576,26 +607,43 @@ def v110_install(project, entry, defect=None):
         target.symlink_to(base / "elsewhere.yml")
     else:
         target.write_bytes(manifest)
-    record = {"version": "9.9.9" if defect in ("manifest-differs",) else "1.0.0",
-              "source": {"kind": "catalog", "catalog": "default"} if defect == "catalog-source" else "local",
-              "manifest_hash": "sha256:" + hashlib.sha256(b"other" if defect == "registry-hash" else manifest).hexdigest(),
-              "enabled": defect != "disabled", "priority": 10, "registered_commands": {}, "registered_skills": {},
-              "installed_at": "2026-10-06T00:00:00+00:00"}
-    if defect == "registry-version":
-        record["version"] = "2.0.0"
-    registry_path = base / ".registry"
-    try:  # v1.1.0 _load (L763-791) starts fresh from an absent or malformed registry
-        registry = json.loads(registry_path.read_text())
-    except (FileNotFoundError, ValueError):
-        registry = {"schema_version": "1.0", check.REGISTRY_KEYS[kind]: {}}
-    if defect != "no-registry":
-        registry[check.REGISTRY_KEYS[kind]]["other" if defect == "other-id" else entry_id] = record
-    registry_path.write_text("{not json" if defect == "malformed-registry" else json.dumps(registry, indent=2))
+    register(base, kind, entry_id, install_record(manifest, defect), defect)
     if kind == "extension" and defect != "not-listed":
-        config = project / check.EXTENSION_CONFIG
-        listed = check.installed_ids(config.read_bytes()) if config.exists() else []
-        config.write_text("installed:\n" + "".join(f"- {item}\n" for item in [*listed, entry_id])
-                          + "settings:\n  auto_execute_hooks: true\nhooks: {}\n", encoding="utf-8")
+        list_installed(project, entry_id)
+
+
+def run_acceptance(shape=None, **case):
+    """Run --owner-acceptance against a fake v1.1.0 CLI; returns exit code, statuses, calls, setup mock, output.
+
+    `case` may set defects ({id: defect}), interactive, archive (archive_manifest side effect)
+    and start_error (raised when specify starts).
+    """
+    calls = []
+
+    def fake_run(argv, **kwargs):
+        calls.append((argv, kwargs))
+        if case.get("start_error") is not None:
+            raise case["start_error"]
+        entry = next(entry for entry in ENTRIES if argv[1:4] == [entry["kind"], "add", entry["id"]])
+        if argv[1:] == PINNED_ARGS(entry):
+            v110_install(Path(kwargs["cwd"]), entry, case.get("defects", {}).get(entry["id"]))
+            return subprocess.CompletedProcess(argv, 0)
+        return subprocess.CompletedProcess(argv, 1)  # v1.1.0 refuses a bare add as discovery-only
+
+    def pinned(url, kind):
+        return pinned_manifest(next(entry for entry in ENTRIES if entry["archive_url"] == url))
+
+    stdout = io.StringIO()
+    with (mock.patch.object(check, "interactive", return_value=case.get("interactive", True)),
+          mock.patch.object(check, "fresh_project", return_value=[]) as fresh,
+          mock.patch.object(check, "archive_manifest", side_effect=case.get("archive", pinned)),
+          mock.patch.object(check.subprocess, "run", side_effect=fake_run),
+          mock.patch.object(check, "install_args", shape or check.install_args),
+          redirect_stdout(stdout), redirect_stderr(io.StringIO())):
+        code = check.main(["--owner-acceptance"])
+    statuses = {line.split()[2].rstrip(":"): line.split()[0] for line in stdout.getvalue().splitlines()
+                if line.split()[:1] in (["INSTALLED"], ["FAILED"], ["NOT-RUN"])}
+    return code, statuses, calls, fresh, stdout.getvalue()
 
 
 class OwnerAcceptanceTests(unittest.TestCase):
@@ -603,44 +651,17 @@ class OwnerAcceptanceTests(unittest.TestCase):
 
     PRE_CHANGE = staticmethod(lambda entry: [entry["kind"], "add", entry["id"]])
 
-    def accept(self, *, shape=None, defects=None, interactive=True, archive=None, start_error=None):
-        calls = []
-
-        def fake_run(argv, **kwargs):
-            calls.append((argv, kwargs))
-            if start_error is not None:
-                raise start_error
-            entry = next(entry for entry in ENTRIES if argv[1:4] == [entry["kind"], "add", entry["id"]])
-            if argv[1:] == PINNED_ARGS(entry):
-                v110_install(Path(kwargs["cwd"]), entry, (defects or {}).get(entry["id"]))
-                return subprocess.CompletedProcess(argv, 0)
-            return subprocess.CompletedProcess(argv, 1)  # v1.1.0 refuses a bare add as discovery-only
-
-        stdout = io.StringIO()
-        with (mock.patch.object(check, "interactive", return_value=interactive),
-              mock.patch.object(check, "fresh_project", return_value=[]) as fresh,
-              mock.patch.object(check, "archive_manifest",
-                                side_effect=archive or (lambda url, kind: pinned_manifest(
-                                    next(entry for entry in ENTRIES if entry["archive_url"] == url)))),
-              mock.patch.object(check.subprocess, "run", side_effect=fake_run),
-              mock.patch.object(check, "install_args", shape or check.install_args),
-              redirect_stdout(stdout), redirect_stderr(io.StringIO())):
-            code = check.main(["--owner-acceptance"])
-        statuses = {line.split()[2].rstrip(":"): line.split()[0] for line in stdout.getvalue().splitlines()
-                    if line.split()[:1] in (["INSTALLED"], ["FAILED"], ["NOT-RUN"])}
-        return code, statuses, calls, fresh, stdout.getvalue()
-
     def test_pre_change_shape_is_red_and_pinned_shape_is_green(self):
-        code, statuses, _calls, _fresh, output = self.accept(shape=self.PRE_CHANGE)
+        code, statuses, _calls, _fresh, output = run_acceptance(shape=self.PRE_CHANGE)
         self.assertEqual((code, set(statuses.values()), len(statuses)), (1, {"FAILED"}, len(ENTRIES)), output)
         self.assertIn(f"0/{len(ENTRIES)} installed", output)
-        code, statuses, _calls, _fresh, output = self.accept()
+        code, statuses, _calls, _fresh, output = run_acceptance()
         self.assertEqual((code, set(statuses.values()), len(statuses)), (0, {"INSTALLED"}, len(ENTRIES)), output)
         self.assertIn(f"{len(ENTRIES)}/{len(ENTRIES)} installed", output)
         self.assertIn("matches the pinned archive and the registry", output)
 
     def test_each_install_inherits_the_terminal_and_never_bypasses_the_prompt(self):
-        _code, _statuses, calls, _fresh, _output = self.accept()
+        _code, _statuses, calls, _fresh, _output = run_acceptance()
         self.assertEqual([argv for argv, _kwargs in calls], [["specify", *check.install_args(entry)] for entry in ENTRIES])
         allowed = {*BASE_KEYS, *check.NETWORK_KEYS, *check.TERMINAL_KEYS}
         for argv, kwargs in calls:
@@ -654,14 +675,14 @@ class OwnerAcceptanceTests(unittest.TestCase):
             if defect == "not-listed" and entry["kind"] != "extension":
                 continue
             with self.subTest(entry=entry["id"], defect=defect):
-                code, statuses, _calls, _fresh, output = self.accept(defects={entry["id"]: defect})
+                code, statuses, _calls, _fresh, output = run_acceptance(defects={entry["id"]: defect})
                 self.assertEqual(code, 1, output)
                 self.assertEqual(statuses.pop(entry["id"]), "FAILED", output)
                 if defect != "malformed-registry":  # a malformed registry also hides later same-kind entries
                     self.assertEqual(set(statuses.values()), {"INSTALLED"}, output)
 
     def test_without_a_terminal_nothing_runs(self):
-        code, statuses, calls, fresh, output = self.accept(interactive=False)
+        code, statuses, calls, fresh, output = run_acceptance(interactive=False)
         self.assertEqual((code, set(statuses.values()), calls), (1, {"NOT-RUN"}, []), output)
         fresh.assert_not_called()
         self.assertIn("interactive terminal", output)
@@ -671,7 +692,7 @@ class OwnerAcceptanceTests(unittest.TestCase):
             raise OSError("offline")
         for case in ({"archive": unavailable}, {"start_error": FileNotFoundError("specify")}):
             with self.subTest(case=next(iter(case))):
-                code, statuses, calls, _fresh, output = self.accept(**case)
+                code, statuses, calls, _fresh, output = run_acceptance(**case)
                 self.assertEqual((code, set(statuses.values())), (1, {"NOT-RUN"}), output)
                 self.assertEqual(len(calls), 0 if "archive" in case else len(ENTRIES))
 
