@@ -2,7 +2,7 @@
 """Live check: each curated install command works in a fresh project at the pinned Spec Kit.
 
 This is an operator-run, networked check and is not part of any suite layer. It needs the pinned
-`specify` CLI on PATH (or `--specify`) and reaches github.com. It fails, never skips, when the CLI
+`specify` CLI first on PATH and reaches github.com. It fails, never skips, when the CLI
 is missing or is not the pinned version.
 
 For every entry in `speckit-pro/scripts/curated-set.json` it runs the argv the install and upgrade
@@ -41,20 +41,21 @@ MANIFEST_NAMES = {"extension": "extension.yml", "preset": "preset.yml"}
 REGISTRY_DIRS = {"extension": ".specify/extensions", "preset": ".specify/presets"}
 
 
-def install_argv(specify: str, entry: dict[str, str]) -> list[str]:
-    """The argv the install and upgrade skills hand the operator for one curated entry."""
-    return [specify, entry["kind"], "add", entry["id"], "--from", entry["archive_url"]]
+def install_args(entry: dict[str, str]) -> list[str]:
+    """The arguments after `specify` that the install and upgrade skills hand the operator."""
+    return [entry["kind"], "add", entry["id"], "--from", entry["archive_url"]]
 
 
-def run(argv: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
+def specify(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
+    """Run the `specify` found on PATH, with stdin closed so a trust prompt defaults to deny."""
     return subprocess.run(
-        argv, cwd=cwd, stdin=subprocess.DEVNULL, capture_output=True, text=True,
+        ["specify", *args], cwd=cwd, stdin=subprocess.DEVNULL, capture_output=True, text=True,
         env={**os.environ, "NO_COLOR": "1"}, timeout=COMMAND_TIMEOUT_SECONDS, shell=False, check=False,
     )
 
 
-def check_cli_version(specify: str, cwd: Path) -> list[str]:
-    result = run([specify, "version"], cwd)
+def check_cli_version(cwd: Path) -> list[str]:
+    result = specify(["version"], cwd)
     status = spec_kit_pin.version_status(
         spec_kit_pin.parse_cli_version(result.stdout) if result.returncode == 0 else None,
         cli_found=True,
@@ -75,11 +76,11 @@ def archive_declares_id(url: str, kind: str, entry_id: str) -> bool:
     return False
 
 
-def check_entry(specify: str, entry: dict[str, str], project: Path) -> list[str]:
+def check_entry(entry: dict[str, str], project: Path) -> list[str]:
     label = f"{entry['kind']} {entry['id']}"
     if "archive_url" not in entry:
         return [f"{label}: no archive_url, and Spec Kit refuses a bare add on its default catalogs"]
-    result = run(install_argv(specify, entry), project)
+    result = specify(install_args(entry), project)
     output = result.stdout + result.stderr
     installed = (project / REGISTRY_DIRS[entry["kind"]] / entry["id"]).exists()
     failures = []
@@ -98,41 +99,36 @@ def check_entry(specify: str, entry: dict[str, str], project: Path) -> list[str]
     return failures
 
 
-def fresh_project(specify: str, project: Path) -> list[str]:
+def fresh_project(project: Path) -> list[str]:
     """Initialize a Spec Kit project at the pinned version, or say why that is not possible."""
-    failures = check_cli_version(specify, project)
-    for setup in (["git", "init", "-q", "."],
-                  [specify, "init", "--here", "--integration", "claude", "--force", "--script", "sh"]):
-        if failures:
-            break
-        completed = run(setup, project)
-        if completed.returncode != 0:
-            failures.append(f"setup failed: {' '.join(setup[:2])} exit {completed.returncode}")
-    return failures
+    failures = check_cli_version(project)
+    if failures:
+        return failures
+    if subprocess.run(["git", "init", "-q", "."], cwd=project, capture_output=True, shell=False, check=False).returncode:
+        return ["setup failed: git init"]
+    created = specify(["init", "--here", "--integration", "claude", "--force", "--script", "py"], project)
+    return [f"setup failed: specify init exit {created.returncode}"] if created.returncode else []
 
 
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--specify", default="specify", help="path to the pinned specify CLI")
     parser.add_argument("--curated-set", type=Path, default=CURATED_SET)
     args = parser.parse_args(argv)
     entries = json.loads(args.curated_set.read_text(encoding="utf-8"))["entries"]
     failed_entries = 0
     with tempfile.TemporaryDirectory(prefix="curated-install-") as raw:
         project = Path(raw)
-        setup_failures = fresh_project(args.specify, project)
-        for failure in setup_failures:
-            print(f"FAIL {failure}", file=sys.stderr)
+        setup_failures = fresh_project(project)
         if setup_failures:
             failed_entries = len(entries)
-        else:
-            for entry in entries:
-                failures = check_entry(args.specify, entry, project)
-                failed_entries += bool(failures)
-                for failure in failures:
-                    print(f"FAIL {failure}", file=sys.stderr)
+        failures = setup_failures + [
+            failure for entry in ([] if setup_failures else entries) for failure in check_entry(entry, project)
+        ]
+    failed_entries = failed_entries or len({failure.split(":")[0] for failure in failures})
+    for failure in failures:
+        print(f"FAIL {failure}", file=sys.stderr)
     print(f"run-curated-install-check: {len(entries) - failed_entries}/{len(entries)} passed")
-    return 1 if failed_entries else 0
+    return 1 if failures else 0
 
 
 if __name__ == "__main__":
