@@ -225,11 +225,6 @@ def apply_proposals(texts: dict[str, str], domains: list[str], proposals: dict[s
     return rows
 
 
-def publish_record(root: Path, record: Path, value: dict[str, Any]) -> None:
-    """Write the record through the same link-free walk that checked its path."""
-    write_file_atomic(record, canonical_bytes(value).decode("utf-8"), trust_root=root)
-
-
 def record_on_disk(root: Path, record: Path, value: dict[str, Any] | None) -> bool:
     """Whether the record this apply meant to publish is the one on disk."""
     content = trusted_bytes(record, root)
@@ -291,7 +286,8 @@ def locked_apply(root: Path, feature: Path, record: Path, mode: str,
                 raise ArtifactChanged(changed)
             return rows
         progress.step, progress.record = "application record", {"schema_version": SCHEMA_VERSION, "domains": rows}
-        publish_record(root, record, progress.record)
+        # The same link-free descriptor walk that checked the record path writes it.
+        write_file_atomic(record, canonical_bytes(progress.record).decode("utf-8"), trust_root=root)
         progress.step = "lock release"
     return rows
 

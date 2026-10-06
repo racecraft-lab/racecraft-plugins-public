@@ -283,7 +283,7 @@ class RefusalTests(ChecklistEditsCase):
                 self.assertEqual("input_error", self.call("read_only", feature_dir=bad)["status"])
 
     def test_a_record_write_failure_reports_the_domains_already_applied(self) -> None:
-        with patch.object(checklist_edits, "publish_record", side_effect=OSError("disk full")):
+        with patch.object(checklist_edits, "write_file_atomic", side_effect=OSError("disk full")):
             result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
         self.assertEqual("expected_failure", result["status"], result)
         self.assertEqual(["security", "ux", "api"], result["data"]["applied"])
@@ -446,13 +446,13 @@ class CommittedStateTests(ChecklistEditsCase):
         self.assertIn("private", self.text("spec.md"))
 
     def test_a_record_published_before_its_failure_is_reported_written(self) -> None:
-        real = checklist_edits.publish_record
+        real = checklist_edits.write_file_atomic
 
-        def publish_then_fail(root: Path, path: Path, value: dict[str, Any]) -> None:
-            real(root, path, value)
+        def publish_then_fail(path: Path, content: str, **kwargs: Any) -> None:
+            real(path, content, **kwargs)
             raise OSError("directory sync failed")
 
-        with patch.object(checklist_edits, "publish_record", publish_then_fail):
+        with patch.object(checklist_edits, "write_file_atomic", publish_then_fail):
             result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
         self.assertEqual(("expected_failure", "apply_interrupted"), (result["status"], result["diagnostics"][0]["code"]), result)
         self.assertEqual((["security", "ux", "api"], True), (result["data"]["applied"], result["data"].get("record_written")), result)
@@ -467,7 +467,7 @@ class CommittedStateTests(ChecklistEditsCase):
 
     def test_a_refusal_raised_after_the_writes_reports_them(self) -> None:
         # A ValueError, not an OSError, after the artifacts reached disk.
-        with patch.object(checklist_edits, "publish_record", side_effect=ValueError("record directory is not usable")):
+        with patch.object(checklist_edits, "write_file_atomic", side_effect=ValueError("record directory is not usable")):
             result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
         self.assertEqual(("expected_failure", ["security", "ux", "api"]), (result["status"], result["data"].get("applied")), result)
         self.assertIn("private", self.text("spec.md"))
