@@ -1114,6 +1114,23 @@ hooks:
             "provides": {"commands": [{"name": "speckit.cleanup.run", "aliases": ["speckit.cleanup", "x, y"]}]},
             "installed": ["review"], "hooks": {"after_implement": [hook]}})
 
+    def test_character_ranges_remain_escaped_for_analysis(self):
+        # Static analyzers must receive escaped endpoints, not decoded Unicode literals.
+        with mock.patch.object(check.re, "search", wraps=check.re.search) as search:
+            self.assertEqual(check.read_yaml(b'a: text\n'), {"a": "text"})
+        self.assertTrue(search.call_args_list[0].args[0].isascii())
+
+    def test_character_range_boundaries(self):
+        allowed = (0x20, 0x21, 0x7E, 0xA0, 0xD7FF, 0xE000, 0xFFFD, 0x10000, 0x10FFFF)
+        refused = (0, 8, 9, 0xD, 0x1F, 0x7F, 0x85, 0x9F, 0x2028, 0x2029, 0xFFFE, 0xFFFF)
+        for codepoint in allowed:
+            with self.subTest(allowed=codepoint):
+                value = chr(codepoint)
+                self.assertEqual(check.read_yaml(f'a: "{value}"\n'.encode()), {"a": value})
+        for codepoint in refused:
+            with self.subTest(refused=codepoint), self.assertRaises(check.EvidenceError):
+                check.read_yaml(f'a: "{chr(codepoint)}"\n'.encode())
+
     def test_refuses_what_it_cannot_read_exactly(self):
         refused = {
             "duplicate key": "a: 1\na: 2\n", "nested duplicate": "a:\n  b: 1\n  b: 1\n",

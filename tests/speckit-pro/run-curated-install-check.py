@@ -393,7 +393,7 @@ def read_yaml(data: bytes) -> object:
     any duplicate key."""
     text = data.decode("utf-8")
     # Only `\n` breaks lines and no tab or character PyYAML rejects appears (yaml/reader.py NON_PRINTABLE).
-    require(re.search("[^\n\x20-\x7e\xa0-\ud7ff\ue000-\ufffd\U00010000-\U0010ffff]|[\u2028\u2029]", text) is None,
+    require(re.search(r"[^\n\x20-\x7e\xa0-\ud7ff\ue000-\ufffd\U00010000-\U0010ffff]|[\u2028\u2029]", text) is None,
             "unsupported YAML character")
     rows = []
     for number, line in enumerate(text.split("\n")):
