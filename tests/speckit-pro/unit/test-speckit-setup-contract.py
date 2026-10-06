@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import shutil
 import sys
 import subprocess
 import tempfile
@@ -14,8 +15,10 @@ from unittest.mock import patch
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO_ROOT / "speckit-pro"), str(REPO_ROOT / "tests/speckit-pro/lib")]
 
+from speckit_pro_runner.gates import payloads  # noqa: E402
 from speckit_pro_runner.helpers.read_only import (  # noqa: E402
     check_prerequisites,
+    detect_presets,
     setup_contract_mismatches,
     template_resolution_error,
 )
@@ -151,8 +154,91 @@ class TemplateResolution(unittest.TestCase):
         self.assertFalse(item["pass"])
         self.assertFalse(report["all_pass"])
 
+
+PRESET_ID = "speckit-pro-reviewability"
+PRESET_TEMPLATES = ("spec-template", "plan-template", "tasks-template")
+# The `specify` v1.1.0 surface scaffold uses, checked against the pinned CLI by hand:
+# `preset add --dev DIR --priority N` copies DIR to .specify/presets/<id>/ and registers it;
+# `preset resolve NAME` names the top layer that provides the template.
+SPECIFY_STUB = """import json, pathlib, shutil, sys
+args = sys.argv[1:]
+presets = pathlib.Path(".specify/presets")
+if args[:2] == ["preset", "add"] and args[2] == "--dev" and args[4] == "--priority":
+    source = pathlib.Path(args[3])
+    target = presets / source.name
+    shutil.copytree(source, target)
+    registry = presets / ".registry"
+    registry.write_text(json.dumps({"presets": {source.name: {"priority": int(args[5])}}}))
+elif args[:2] == ["preset", "resolve"]:
+    hits = sorted(presets.glob("*/templates/" + args[2] + ".md"))
+    if not hits:
+        raise SystemExit("not found: " + args[2])
+    print(hits[0].as_posix())
+else:
+    raise SystemExit("unsupported: " + " ".join(args))
+"""
+
+
+class ReviewabilityPreset(unittest.TestCase):
+    """A fresh project gets the shipped reviewability preset through `specify preset add`."""
+
+    def fresh_project(self) -> Path:
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        root = Path(temp.name).resolve()
+        (root / ".specify").mkdir()
+        (root / "specify_stub.py").write_text(SPECIFY_STUB, encoding="utf-8")
+        return root
+
+    def specify(self, root: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [sys.executable, str(root / "specify_stub.py"), *args],
+            cwd=root, shell=False, capture_output=True, text=True, check=False,
+        )
+
+    def state(self, root: Path) -> dict[str, object]:
+        return json.loads(detect_presets({"repo_root": str(root)}, root)["stdout"])["reviewability_preset"]
+
+    def test_a_fresh_project_ends_with_the_preset_installed_and_step_5_0_passing(self) -> None:
+        root = self.fresh_project()
+        before = self.state(root)
+        self.assertEqual("missing", before["status"])
+        self.assertEqual(["preset", "add", "--dev"], before["add_args"][:3])
+        self.assertEqual(["--priority", "5"], before["add_args"][4:])
+        added = self.specify(root, before["add_args"])
+        self.assertEqual(0, added.returncode, added.stderr)
+        self.assertEqual({"status": "installed", "add_args": []}, {k: v for k, v in self.state(root).items() if k != "id"})
+        for name in PRESET_TEMPLATES:
+            with self.subTest(template=name):
+                resolved = self.specify(root, ["preset", "resolve", name])
+                self.assertEqual(0, resolved.returncode, resolved.stderr)
+                self.assertEqual(f".specify/presets/{PRESET_ID}/templates/{name}.md", resolved.stdout.strip())
+
+    def test_an_installed_preset_needs_no_command(self) -> None:
+        root = self.fresh_project()
+        shutil.copytree(REPO_ROOT / ".specify/presets" / PRESET_ID, root / ".specify/presets" / PRESET_ID)
+        self.assertEqual("installed", self.state(root)["status"])
+
+    def test_the_shipped_preset_replaces_the_three_core_templates(self) -> None:
+        manifest = (REPO_ROOT / ".specify/presets" / PRESET_ID / "preset.yml").read_text(encoding="utf-8")
+        for name in PRESET_TEMPLATES:
+            with self.subTest(template=name):
+                self.assertIn(f'replaces: "{name}"', manifest)
+                self.assertTrue((REPO_ROOT / ".specify/presets" / PRESET_ID / "templates" / f"{name}.md").is_file())
+
+    def test_both_host_payloads_carry_the_preset(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            payloads.build_installed_plugin_payloads(REPO_ROOT, Path(tmp))
+            for host in ("claude", "codex"):
+                with self.subTest(host=host):
+                    shipped = Path(tmp) / host / "speckit-pro/presets" / PRESET_ID
+                    self.assertTrue((shipped / "preset.yml").is_file())
+                    for name in PRESET_TEMPLATES:
+                        self.assertTrue((shipped / "templates" / f"{name}.md").is_file())
+
+
 if __name__ == "__main__":
     suite = unittest.TestSuite(
-        unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (SetupContract, TemplateResolution)
+        unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (SetupContract, TemplateResolution, ReviewabilityPreset)
     )
     raise SystemExit(run_counted(suite, label="test-speckit-setup-contract"))

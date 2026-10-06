@@ -27,7 +27,7 @@ from ..gate_discovery import DEFAULT_BASE_BRANCH, SLOTS as GATE_SLOTS, resolve_s
 from .. import quality_gates
 from ..json_schema import json_schema_failures
 from ..runtime import detect_plugin_root
-from .. import spec_kit_pin
+from .. import reviewability_preset, spec_kit_pin
 from ..strict_input import unique_object
 from .formal_policy import apply_resume_guard, gate_checkpoint
 from .readiness_record import HOSTS, preview_surface
@@ -1916,7 +1916,20 @@ def detect_presets(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
         for key, template in (("tasks", "tasks-template"), ("spec", "spec-template"), ("plan", "plan-template")):
             path = str(base / f"{template}.md")
             templates[key] = f"  {template}: \n{wrap_path_80(path)}\n    (top layer from: {preset['name']} v{preset['version']})"
-    return make_result(json_text({"has_presets": bool(presets), "presets": presets, "extensions": extensions, "hooks": hooks, "templates": templates}))
+    return make_result(json_text({"has_presets": bool(presets), "presets": presets, "reviewability_preset": reviewability_preset_state(root, repo_root), "extensions": extensions, "hooks": hooks, "templates": templates}))
+
+
+def reviewability_preset_state(root: Path, repo_root: Path) -> dict[str, Any]:
+    """Whether the project has the reviewability preset, and the `specify` arguments that add it.
+
+    `status` is `installed`, `missing` (add_args installs it) or `unavailable` (the payload has no preset).
+    """
+    state: dict[str, Any] = {"id": reviewability_preset.PRESET_ID, "status": "installed", "add_args": []}
+    if trusted_file_exists(root / ".specify" / "presets" / reviewability_preset.PRESET_ID / "preset.yml", repo_root):
+        return state
+    state["add_args"] = reviewability_preset.add_args()
+    state["status"] = "missing" if state["add_args"] else "unavailable"
+    return state
 
 
 # The spec template writes `[NEEDS CLARIFICATION: <question>]`; the bare

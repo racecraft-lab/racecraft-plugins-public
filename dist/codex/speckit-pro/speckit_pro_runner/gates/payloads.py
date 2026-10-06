@@ -11,7 +11,7 @@ import tempfile
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from .. import RUNNER_VERSION
+from .. import RUNNER_VERSION, reviewability_preset
 from ..envelope import diagnostic, is_diagnostic, response
 from ..host_skills import emit_host_files, render_host_skills
 from ..install_inventory import read_install_inventory
@@ -318,6 +318,7 @@ def build_installed_plugin_payloads(repo_root: Path, dist_root: Path) -> None:
     ]:
         copy_optional_installed_plugin(source / name, claude / name)
     copy_optional_installed_plugin(repo_root / "LICENSE", claude / "LICENSE")
+    copy_optional_installed_plugin(repo_root / reviewability_preset.SOURCE_PATH, claude / reviewability_preset.PAYLOAD_PATH)
     render_payload_skills(source, "claude", claude / "skills")
     emit_host_files(claude.glob("agents/*.md"), "claude")
     remove_payload_shell_scripts_installed_plugin(claude)
@@ -334,6 +335,7 @@ def build_installed_plugin_payloads(repo_root: Path, dist_root: Path) -> None:
     ]:
         copy_optional_installed_plugin(source / name, codex / name)
     copy_optional_installed_plugin(repo_root / "LICENSE", codex / "LICENSE")
+    copy_optional_installed_plugin(repo_root / reviewability_preset.SOURCE_PATH, codex / reviewability_preset.PAYLOAD_PATH)
     render_payload_skills(source, "codex", codex / "skills")
     rewrite_codex_manifest_installed_plugin(codex)
     for text_file in codex.rglob("*"):

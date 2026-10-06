@@ -254,6 +254,17 @@ Compare `.specify/extensions/` and `.specify/presets/` against the entries in
   installed later with `$speckit-pro:speckit-upgrade`.
 <!-- /host -->
 
+Regardless of that choice, install the reviewability preset, which scaffold
+requires. Send this request and read `reviewability_preset` in the result:
+
+```json
+{"schema_version":"1.0","request_id":"install-reviewability-preset","helper_id":"detect-presets","operation":"detect-presets","mode":"read_only","inputs":{"repo_root":"."}}
+```
+
+When `status` is `missing`, run `spec_kit.cli_argv + add_args` without asking:
+it is part of the install, not a recommendation. When `status` is
+`unavailable`, report it and continue.
+
 ### 6. Verify
 
 Invoke `spec_kit.cli_argv + ["check"]` and `spec_kit.cli_argv + ["integration", "list"]` with argv-only

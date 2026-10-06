@@ -479,7 +479,7 @@
         "value": "speckit_pro_runner/gates/payloads.py",
         "display": "speckit_pro_runner/gates/payloads.py"
       },
-      "sha256": "bbe166b4165221eede37139d16c4b5cbd3495624af60102b376c38c087bde158"
+      "sha256": "15aad3ab4316186d42c6491c2d79f5707d7a03ba08f7e2f27f720c6cdcd2278d"
     },
     {
       "path": {
@@ -703,7 +703,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "672443f9a7021f87f8f87fafabb790dfa2799e4f420e8cd13e34bd3b79399c05"
+      "sha256": "1c8eb7a8f4a3b5e8eec50fede8b0171a6545ff2c1682ab997c7aa7428e7b692a"
     },
     {
       "path": {
@@ -880,6 +880,14 @@
         "display": "speckit_pro_runner/research_preflight.py"
       },
       "sha256": "54d05f9b51a56eaf5e641d87661f0d9106daff6bca795b31b0bd76c77d626965"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/reviewability_preset.py",
+        "display": "speckit_pro_runner/reviewability_preset.py"
+      },
+      "sha256": "6fd4944c562cae9ae3b235b1d728c6086d370c4b8dbfd053c447d297fff1d851"
     },
     {
       "path": {
