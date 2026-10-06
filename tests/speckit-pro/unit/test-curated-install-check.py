@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import importlib.util
 import json
@@ -25,7 +26,8 @@ from script_loader import load_script  # noqa: E402
 from test_result import run_counted  # noqa: E402
 from isolated_child import BASE_KEYS, run_python  # noqa: E402
 
-check = load_script("curated_install_check", REPO_ROOT / "tests/speckit-pro/run-curated-install-check.py")
+VERIFIER = REPO_ROOT / "tests/speckit-pro/run-curated-install-check.py"
+check = load_script("curated_install_check", VERIFIER)
 ENTRIES = json.loads(check.CURATED_SET.read_text(encoding="utf-8"))["entries"]
 EXTENSIONS = [entry for entry in ENTRIES if entry["kind"] == "extension"]
 
@@ -546,7 +548,9 @@ class ChildEnvironmentTests(unittest.TestCase):
                 self.assertEqual(call.kwargs["env"], expected[call.args[0][0]])
 
 
-FIXTURE_YAML: dict[bytes, object] = {}
+# Spec Kit v1.1.0's canonical events (events/__init__.py L73-80); a test may make a fixture manifest declare one.
+EVENTS = ("session_start", "pre_tool_use", "post_tool_use", "session_end", "user_prompt_submit", "stop")
+EVENT_DECLARATIONS: dict[str, str] = {}
 
 
 def yaml_scalar(value):
@@ -581,20 +585,9 @@ def emit_yaml(value, indent=0):
     return lines
 
 
-def yaml_bytes(doc, text=None):
-    """YAML text for `doc`, registered so the fake loader returns exactly `doc` for it."""
-    data = (text if text is not None else "\n".join(emit_yaml(doc)) + "\n").encode()
-    FIXTURE_YAML[data] = doc
-    return data
-
-
-def fake_load_yaml(data):
-    if data not in FIXTURE_YAML:
-        raise check.EvidenceError("unparseable fixture YAML")
-    value = FIXTURE_YAML[data]
-    if isinstance(value, Exception):
-        raise value
-    return json.loads(json.dumps(value))
+def yaml_bytes(doc, tail=b""):
+    """`doc` as block YAML, then `tail` (raw YAML appended after it)."""
+    return "\n".join(emit_yaml(doc)).encode() + b"\n" + tail
 
 
 def fixture_doc(entry):
@@ -615,7 +608,16 @@ def fixture_doc(entry):
                          "config": [{"name": f"{entry_id}-config.yml", "template": "config-template.yml"}]},
             "hooks": {"after_implement": {"command": command, "optional": True, "prompt": "Run it?",
                                           "description": "fixture hook", "condition": None}},
-            "defaults": {"version": "2.0.0"}}
+            "defaults": {"version": "2.0.0"}} | (
+        {"events": {EVENT_DECLARATIONS[entry_id]: {"command": command, "matcher": "Bash", "timeout": 30}}}
+        if entry_id in EVENT_DECLARATIONS else {})
+
+
+def commands(doc, kind):
+    """Each command name the manifest declares (aliases too) with its file."""
+    if kind == "preset":
+        return {item["name"]: item["file"] for item in doc["provides"]["templates"]}
+    return {name: item["file"] for item in doc["provides"]["commands"] for name in [item["name"], *item["aliases"]]}
 
 
 def fixture_archive(entry):
@@ -632,7 +634,8 @@ HOOK_FIELDS = {"extension": "other", "command": "speckit.other.run", "enabled": 
 DEFECTS = ("declined", "no-registry", "malformed-registry", "other-id", "disabled", "catalog-source",
            "registry-hash", "registry-version", "priority-999", "stale-timestamp", "manifest-differs",
            "manifest-symlink", "manifest-hardlink", "payload-missing", "payload-differs", "registered-empty",
-           "skill-missing", "skill-foreign")
+           "skill-missing", "skill-foreign", "skill-body-source", "skill-no-frontmatter", "skill-no-metadata",
+           "skill-top-level-source", "skill-duplicate-metadata", "skill-duplicate-source", "skill-unclosed")
 EXTENSION_DEFECTS = ("not-listed", "duplicate-installed", "hooks-absent", *(f"hook-{field}" for field in HOOK_FIELDS))
 EXIT_CODES = (1, 37, -signal.SIGTERM, -signal.SIGINT, -signal.SIGKILL)
 
@@ -640,7 +643,7 @@ EXIT_CODES = (1, 37, -signal.SIGTERM, -signal.SIGINT, -signal.SIGKILL)
 def install_record(entry, doc, manifest, defect):
     """The registry entry v1.1.0 writes for a --from install (extensions/__init__.py L3128-3146,
     presets/_manager.py L416-424; installed_at from registry add(), L832-843), one field wrong for a defect."""
-    names = check.declared(doc, entry["kind"])[1]
+    names = list(commands(doc, entry["kind"]))
     record = {"version": "1.0.0", "source": "local", "manifest_hash": "sha256:" + hashlib.sha256(manifest).hexdigest(),
               "enabled": True, "priority": 10, "registered_commands": {"claude": names}, "registered_skills": [],
               "installed_at": datetime.now(timezone.utc).isoformat()}
@@ -665,22 +668,39 @@ def register(base, kind, entry_id, record, defect):
     registry_path.write_text("{not json" if defect == "malformed-registry" else json.dumps(registry, indent=2))
 
 
-def write_skills(project, entry, names, defect):
+def skill_text(entry, file, defect, first):
+    """SKILL.md as v1.1.0 writes it (agents.py L425-490; `<kind>:<id>` from the extension and preset
+    skill writers), or one ownership spoof: cr1274h High and Daybreak F1274-c0db0694."""
+    own = f"{entry['id']}:{file}" if first else f"{entry['kind']}:{entry['id']}"
+    head = "name: fixture\ndescription: 'Fixture: a command'\n"
+    meta = "metadata:\n  author: fixture\n  source: {}\n".format
+    spoof = f"\n# Skill\n\nsource: {own}\n"
+    return {
+        "skill-foreign": f"---\n{head}{meta('other:commands/run.md')}---\n\n# Skill\n",
+        "skill-body-source": f"---\n{head}{meta('other:commands/run.md')}---\n{spoof}",
+        "skill-no-frontmatter": f"# Skill\n{spoof}",
+        "skill-no-metadata": f"---\n{head}---\n{spoof}",
+        "skill-top-level-source": f"---\n{head}source: {own}\n{meta('other:commands/run.md')}---\n{spoof}",
+        "skill-duplicate-metadata": f"---\n{head}{meta('other:commands/run.md')}{meta(own)}---\n",
+        "skill-duplicate-source": f"---\n{head}{meta('other:commands/run.md')}  source: {own}\n---\n",
+        "skill-unclosed": f"---\n{head}{meta(own)}\n# Skill\n",
+    }.get(defect if first else None, f"---\n{head}{meta(own)}user-invocable: true\n---\n\n# Skill\n")
+
+
+def write_skills(project, entry, doc, defect):
     """SKILL.md per command and alias in .claude/skills (agents.py L579-594, L929-1012)."""
-    for index, name in enumerate(names):
+    for index, (name, file) in enumerate(commands(doc, entry["kind"]).items()):
         if defect == "skill-missing" and index == 0:
             continue
-        owner = "other" if defect == "skill-foreign" and index == 0 else entry["id"]
         skill = project / ".claude" / "skills" / check.skill_name(name)
         skill.mkdir(parents=True, exist_ok=True)
-        (skill / "SKILL.md").write_text(f"---\nname: {skill.name}\nmetadata:\n  author: fixture\n"
-                                        f"  source: {owner}:commands/run.md\n---\n\n# Skill\n", encoding="utf-8")
+        (skill / "SKILL.md").write_text(skill_text(entry, file, defect, index == 0), encoding="utf-8")
 
 
 def write_configuration(project, entry, doc, defect):
     """extensions.yml as register_extension and register_hooks leave it (L5724-5741, L5817-5905)."""
     config_path = project / ".specify" / "extensions.yml"
-    config = fake_load_yaml(config_path.read_bytes()) if config_path.exists() else {"installed": [], "hooks": {}}
+    config = check.read_yaml(config_path.read_bytes()) if config_path.exists() else {"installed": [], "hooks": {}}
     if defect != "not-listed":
         config["installed"].append(entry["id"])
     for event, hooks in check.expected_hooks(doc, entry["id"]).items():
@@ -689,12 +709,7 @@ def write_configuration(project, entry, doc, defect):
         if defect and defect.startswith("hook-"):
             hooks = [{**hook, defect[5:]: HOOK_FIELDS[defect[5:]]} for hook in hooks]
         config["hooks"].setdefault(event, []).extend(hooks)
-    if defect == "duplicate-installed":
-        text = "\n".join(emit_yaml(config)) + "\ninstalled: []\n"
-        FIXTURE_YAML[text.encode()] = check.EvidenceError("duplicate YAML key")
-        config_path.write_text(text, encoding="utf-8")
-        return
-    config_path.write_bytes(yaml_bytes(config))
+    config_path.write_bytes(yaml_bytes(config, b"installed: []\n" if defect == "duplicate-installed" else b""))
 
 
 def v110_install(project, entry, defect=None):
@@ -723,14 +738,13 @@ def v110_install(project, entry, defect=None):
     target = home / check.MANIFEST_NAMES[kind]
     if defect == "manifest-differs":
         manifest = manifest + b"# altered after the pin\n"
-        FIXTURE_YAML[manifest] = doc
         target.write_bytes(manifest)
     elif defect in ("manifest-symlink", "manifest-hardlink"):
         target.rename(base / f"{entry_id}.held")
         (target.symlink_to if defect == "manifest-symlink" else lambda source: os.link(source, target))(
             base / f"{entry_id}.held")
     register(base, kind, entry_id, install_record(entry, doc, manifest, defect), defect)
-    write_skills(project, entry, check.declared(doc, kind)[1], defect)
+    write_skills(project, entry, doc, defect)
     if kind == "extension":
         write_configuration(project, entry, doc, defect)
 
@@ -784,8 +798,6 @@ def run_acceptance(shape=None, **case):
     hook = case["open_hook"](real_open, holder) if "open_hook" in case else real_open
     stdout = io.StringIO()
     with (mock.patch.object(check, "interactive", return_value=case.get("interactive", True)),
-          mock.patch.object(check, "yaml_available", return_value=True),
-          mock.patch.object(check, "load_yaml", side_effect=fake_load_yaml),
           mock.patch.object(check, "fresh_project", side_effect=setup) as fresh,
           mock.patch.object(check.os, "open", side_effect=hook),
           mock.patch.object(check, "pinned_archive", side_effect=case.get("archive", archive)),
@@ -915,20 +927,27 @@ class OwnerAcceptanceTests(unittest.TestCase):
 
 
 
+class OwnerAcceptanceScopeTests(unittest.TestCase):
+    """--owner-acceptance certifies only what its evidence covers."""
+
+    def test_an_entry_declaring_events_is_never_certified(self):
+        """Daybreak F1274-ec6eb5b5: manifest events become native hooks and a dispatcher outside this evidence."""
+        for entry, event in product(EXTENSIONS, EVENTS):
+            with self.subTest(entry=entry["id"], event=event), mock.patch.dict(EVENT_DECLARATIONS, {entry["id"]: event}):
+                code, statuses, _calls, _fresh, output = run_acceptance()
+                self.assertEqual((code, statuses.pop(entry["id"])), (1, "FAILED"), output)
+                self.assertIn("declares Spec Kit events", output)
+                self.assertEqual(set(statuses.values()), {"INSTALLED"}, output)
+
+
 class OwnerAcceptanceGuardTests(unittest.TestCase):
     """--owner-acceptance runs nothing it cannot verify, and stays apart from the legacy option."""
 
-    def test_without_a_terminal_or_yaml_nothing_runs(self):
+    def test_without_a_terminal_nothing_runs(self):
         code, statuses, calls, fresh, output = run_acceptance(interactive=False)
         self.assertEqual((code, set(statuses.values()), calls), (1, {"NOT-RUN"}, []), output)
         fresh.assert_not_called()
         self.assertIn("interactive terminal", output)
-        with mock.patch.object(check, "yaml_available", return_value=False), redirect_stdout(io.StringIO()) as out:
-            with mock.patch.object(check, "interactive", return_value=True), \
-                    mock.patch.object(check, "fresh_project") as setup:
-                self.assertEqual(check.main(["--owner-acceptance"]), 1)
-        setup.assert_not_called()
-        self.assertIn("PyYAML", out.getvalue())
 
     def test_unavailable_archive_or_cli_is_not_run(self):
         def unavailable(url):
@@ -944,11 +963,70 @@ class OwnerAcceptanceGuardTests(unittest.TestCase):
             check.main(["--owner-acceptance", "--trust-pinned-archives"])
         self.assertEqual(raised.exception.code, 2)
 
-    @unittest.skipUnless(importlib.util.find_spec("yaml"), "PyYAML is the owner's runtime dependency")
-    def test_real_loader_rejects_duplicate_keys(self):
-        self.assertEqual(check.load_yaml(b"installed:\n- review\nhooks: {}\n"), {"installed": ["review"], "hooks": {}})
-        with self.assertRaises(check.EvidenceError):
-            check.load_yaml(b"installed:\n- review\ninstalled: []\n")
+
+class YamlReaderTests(unittest.TestCase):
+    """cr1274h Medium: the evidence reader is standard library only, reads what PyYAML reads for the
+    shapes Spec Kit v1.1.0 writes, and refuses the rest, duplicate keys included."""
+
+    DUMPED = """\
+schema_version: "1.0"  # a pinned manifest's layout
+provides:
+  commands:
+    - name: "speckit.cleanup.run"
+      aliases: ["speckit.cleanup", 'x, y']
+
+installed:
+- review
+hooks:
+  after_implement:
+  - extension: review
+    enabled: true
+    optional: off
+    priority: 10
+    prompt: Converged? Run verify-tasks in a fresh session as the final gate before
+      opening a PR
+    description: 'It''s folded: a quoted value that also runs past the eighty column
+      limit'
+    condition: null
+    empty:
+    escaped: "tab\\there \\"quoted\\""
+"""
+
+    def test_reads_spec_kit_layouts(self):
+        hook = {"extension": "review", "enabled": True, "optional": False, "priority": 10,
+                "prompt": "Converged? Run verify-tasks in a fresh session as the final gate before opening a PR",
+                "description": "It's folded: a quoted value that also runs past the eighty column limit",
+                "condition": None, "empty": None, "escaped": 'tab\there "quoted"'}
+        self.assertEqual(check.read_yaml(self.DUMPED.encode()), {
+            "schema_version": "1.0",
+            "provides": {"commands": [{"name": "speckit.cleanup.run", "aliases": ["speckit.cleanup", "x, y"]}]},
+            "installed": ["review"], "hooks": {"after_implement": [hook]}})
+
+    def test_refuses_what_it_cannot_read_exactly(self):
+        refused = {
+            "duplicate key": "a: 1\na: 2\n", "nested duplicate": "a:\n  b: 1\n  b: 1\n",
+            "duplicate in a list item": "- a: 1\n  a: 1\n", "anchor": "a: &x 1\n", "alias": "a: *x\n",
+            "tag": "a: !!str 1\n", "block scalar": "a: |\n  text\n", "folded block scalar": "a: >\n  text\n",
+            "multi-line double quote": 'a: "one\n  two"\n', "blank line inside a value": "a: one\n\n  two\n",
+            "tab": "a:\t1\n", "carriage return": "a: 1\r\nb: 2\r\n", "float": "a: 1.5\n",
+            "timestamp": "a: 2024-01-01\n", "octal": "a: 012\n", "non-string key": "on: 1\n",
+            "document marker": "---\na: 1\n", "flow mapping": "a: {b: 1}\n", "unclosed quote": "a: 'open\n", "hex escape": 'a: "\\x41"\n',
+            "stray indentation": "a:\n    b: 1\n  c: 2\n", "mapping in a plain scalar": "a: b: c\n",
+        }
+        for name, text in refused.items():
+            with self.subTest(name=name), self.assertRaises(check.EvidenceError):
+                check.read_yaml(text.encode())
+
+    def test_imports_only_the_standard_library_and_this_repository(self):
+        """A clean `python3 -I -S` (CI's interpreter) can run the verifier: no import, even a deferred one,
+        reaches a third-party package."""
+        tree = ast.parse(VERIFIER.read_text(encoding="utf-8"))
+        names = {alias.name for node in ast.walk(tree) if isinstance(node, ast.Import) for alias in node.names}
+        names |= {node.module for node in ast.walk(tree) if isinstance(node, ast.ImportFrom) and node.module}
+        for name in sorted({name.split(".")[0] for name in names} - set(sys.stdlib_module_names)):
+            with self.subTest(module=name):
+                spec = importlib.util.find_spec(name)
+                self.assertTrue(spec and spec.origin and Path(spec.origin).resolve().is_relative_to(REPO_ROOT), spec)
 
 
 if __name__ == "__main__":

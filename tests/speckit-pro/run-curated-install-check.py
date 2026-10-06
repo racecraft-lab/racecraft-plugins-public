@@ -25,7 +25,7 @@ never exits 0: completed installs need owner-run acceptance.
 `python3 tests/speckit-pro/run-curated-install-check.py --owner-acceptance`. It refuses to start
 without an interactive terminal. Each `<kind> add <id> --from <archive_url>` inherits the terminal,
 so the owner reads and answers Spec Kit's own trust prompt; nothing here pipes, scripts or bypasses
-it. It needs PyYAML in this python3 to read the YAML evidence, and checks that before any install.
+it. YAML evidence is read with the standard library (`read_yaml`), which refuses what it cannot read exactly.
 
 An entry is `installed` only when `specify` exits 0 and every piece of Spec Kit v1.1.0's on-disk
 evidence holds; otherwise it is `failed`, or `not-run` when nothing was attempted:
@@ -39,10 +39,13 @@ evidence holds; otherwise it is `failed`, or `not-run` when nothing was attempte
 - registration: `.specify/<kind>s/.registry` has the id with that manifest's hash and declared
   version, `source: local`, `enabled: true`, the default priority 10, and an `installed_at` inside
   this install's window;
-- registered artifacts: every declared command and alias is registered, and its
-  `.claude/skills/<skill>/SKILL.md` names this entry as its source;
-- active configuration (extensions): `.specify/extensions.yml`, parsed with duplicate keys refused,
-  lists the id under `installed:` and carries exactly the hooks the manifest declares.
+- registered artifacts: every declared command and alias is registered, and the frontmatter
+  `metadata.source` of its `.claude/skills/<skill>/SKILL.md` is exactly one Spec Kit writes for it
+  (the body is never read);
+- active configuration (extensions): `.specify/extensions.yml`, read with duplicate keys refused,
+  lists the id under `installed:` and carries exactly the hooks the manifest declares;
+- events: an entry whose manifest declares `events:` is never certified, because its native hooks
+  and dispatcher are outside this evidence. No curated entry declares events.
 
 It exits 0 only when every curated entry is `installed`, and 1 otherwise.
 """
@@ -247,29 +250,160 @@ class EvidenceError(Exception):
     """One piece of completed-install evidence is missing, foreign or inconsistent."""
 
 
-def load_yaml(data: bytes) -> object:
-    """Parse YAML the way Spec Kit does (PyYAML safe loading), but refuse duplicate keys."""
-    import yaml  # noqa: PLC0415 (owner-run only; checked before any install)
-
-    class StrictLoader(yaml.SafeLoader):
-        pass
-
-    def mapping(loader: yaml.SafeLoader, node: yaml.MappingNode) -> dict:
-        keys = [key.value for key, _value in node.value]
-        if len(keys) != len(set(keys)):
-            raise EvidenceError("duplicate YAML key")
-        return loader.construct_mapping(node, deep=True)
-
-    StrictLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, mapping)
-    return yaml.load(data, Loader=StrictLoader)  # noqa: S506 (SafeLoader subclass)
+# PyYAML 1.1 implicit types (yaml/resolver.py): words it constructs as null or bool, and the other
+# int, float, timestamp, merge and value forms, which this reader refuses rather than misread.
+YAML_WORDS = {spelling: value for word, value in (("null", None), ("true", True), ("yes", True), ("on", True),
+                                                  ("false", False), ("no", False), ("off", False))
+              for spelling in (word, word.title(), word.upper())} | {"~": None}
+YAML_INT = re.compile(r"[-+]?(?:0|[1-9][0-9]*)")
+YAML_OTHER = re.compile(r"[-+]?(?:0b[01_]+|0[0-7_]+|0x[0-9a-fA-F_]+|[0-9][0-9_]*(?::[0-5]?[0-9])+(?:\.[0-9_]*)?"
+                        r"|[1-9][0-9_]*|[0-9][0-9_]*\.[0-9_]*(?:[eE][-+][0-9]+)?|\.[0-9_]+(?:[eE][-+][0-9]+)?"
+                        r"|\.(?:inf|Inf|INF|nan|NaN|NAN))|[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}(?:[Tt ].*)?|<<|=")
+YAML_KEY = re.compile(r"([A-Za-z_][\w.-]*):(?: +(.*))?")
+YAML_ESCAPES = {"\\": "\\", '"': '"', "/": "/", "n": "\n", "t": "\t", "r": "\r", "0": "\0"}
+YAML_FLOW_ITEM = re.compile(r" *('(?:[^']|'')*'|\"(?:[^\"\\]|\\.)*\"|[^,\[\]{}#'\" ?:][^,\[\]{}#:]*?) *([,\]])")
 
 
-def yaml_available() -> bool:
-    try:
-        import yaml  # noqa: F401, PLC0415
-    except ImportError:
-        return False
-    return True
+def quoted(text: str, start: int) -> tuple[str, int] | None:
+    """The quoted scalar opening at `start` and the index after it, or None when it does not close."""
+    quote, out, index = text[start], [], start + 1
+    while index < len(text):
+        char, after = text[index], text[index + 1:index + 2]
+        if char == quote and not (quote == "'" and after == "'"):
+            return "".join(out), index + 1
+        if char == quote or (quote == '"' and char == "\\"):  # `''` or a backslash escape
+            require(char == "'" or after in YAML_ESCAPES, "unsupported YAML escape")
+            out.append("'" if char == "'" else YAML_ESCAPES[after])
+            index += 2
+        else:
+            out.append(char)
+            index += 1
+    return None
+
+
+def plain(text: str) -> object:
+    require(text != "" and text[0] not in "[]{}#&*!|>%@`,'\"?:" and text != "-"
+            and not text.startswith("- ") and ": " not in text and not text.endswith(":"),
+            "unsupported YAML plain scalar")
+    if text in YAML_WORDS:
+        return YAML_WORDS[text]
+    if YAML_INT.fullmatch(text):
+        return int(text)
+    require(YAML_OTHER.fullmatch(text) is None, "unsupported implicit YAML type")
+    return text
+
+
+def flow(text: str) -> tuple[list | dict, str]:
+    """`{}`, `[]`, or a one-line sequence of scalars, and the text after it."""
+    if text.startswith(("{}", "[]")):
+        return ({} if text[0] == "{" else []), text[2:]
+    require(text[0] == "[", "unsupported YAML flow collection")
+    items, index, end = [], 1, ","
+    while end == ",":
+        match = YAML_FLOW_ITEM.match(text, index)
+        require(match is not None, "unsupported YAML flow sequence")
+        assert match is not None
+        item, end = match.groups()
+        found = quoted(item, 0) if item[0] in "'\"" else None
+        items.append(found[0] if found else plain(item))
+        index = match.end()
+    return items, text[index:]
+
+
+def continues(rows: list[list], index: int, indent: int) -> bool:
+    """Whether row `index` continues the scalar above it: deeper, with no blank or comment line between."""
+    return index < len(rows) and rows[index][1] > indent and rows[index][0] == rows[index - 1][0] + 1
+
+
+def scalar(rows: list[list], index: int, text: str, indent: int) -> tuple[object, int]:
+    """A value that starts on row `index`, folding PyYAML's wrapped plain and single-quoted lines."""
+    index += 1
+    if text[0] in "[{":
+        value, rest = flow(text)
+    elif text[0] in "'\"":
+        while (found := quoted(text, 0)) is None and text[0] == "'" and continues(rows, index, indent):
+            text, index = text.rstrip(" ") + " " + rows[index][2].strip(" "), index + 1
+        require(found is not None, "unclosed or multi-line double-quoted YAML scalar")
+        assert found is not None
+        value, rest = found[0], text[found[1]:]
+    else:
+        lines = [text.split(" #", 1)]
+        while len(lines[-1]) == 1 and continues(rows, index, indent):
+            lines.append(rows[index][2].split(" #", 1))
+            index += 1
+        return plain(" ".join(line[0].strip(" ") for line in lines)), index
+    require(rest.strip(" ") == "" or re.match(r" +#", rest) is not None, "unexpected text after a YAML value")
+    return value, index
+
+
+def nested(rows: list[list], index: int, indent: int, same_indent_sequence: bool) -> tuple[object, int]:
+    """The block under an empty `key:` or `-`, or null when there is none."""
+    if index < len(rows) and (rows[index][1] > indent or (same_indent_sequence and rows[index][1] == indent
+                                                          and re.match(r"-( |$)", rows[index][2]))):
+        return block(rows, index, rows[index][1])
+    return None, index
+
+
+def block(rows: list[list], index: int, indent: int) -> tuple[object, int]:
+    """The block mapping or sequence whose rows sit at `indent`, starting at row `index`."""
+    if re.match(r"-( |$)", rows[index][2]):
+        return block_sequence(rows, index, indent)
+    return block_mapping(rows, index, indent)
+
+
+def block_mapping(rows: list[list], index: int, indent: int) -> tuple[dict, int]:
+    result: dict[str, object] = {}
+    while index < len(rows) and rows[index][1] == indent:
+        match = YAML_KEY.fullmatch(rows[index][2])
+        require(match is not None, "unsupported YAML line")
+        assert match is not None
+        key, text = match.group(1), (match.group(2) or "").rstrip(" ")
+        require(key not in YAML_WORDS, "unsupported non-string YAML key")
+        require(key not in result, "duplicate YAML key")
+        if text == "" or text.startswith("#"):
+            result[key], index = nested(rows, index + 1, indent, True)
+        else:
+            result[key], index = scalar(rows, index, text, indent)
+    return result, index
+
+
+def block_sequence(rows: list[list], index: int, indent: int) -> tuple[list, int]:
+    items = []
+    while index < len(rows) and rows[index][1] == indent and re.match(r"-( |$)", rows[index][2]):
+        number, _indent, body = rows[index]
+        text = body[1:].lstrip(" ").rstrip(" ")
+        if text == "" or text.startswith("#"):
+            value, index = nested(rows, index + 1, indent, False)
+        elif YAML_KEY.fullmatch(text) or re.match(r"-( |$)", text):
+            rows[index] = [number, indent + len(body) - len(body[1:].lstrip(" ")), text]
+            value, index = block(rows, index, rows[index][1])
+        else:
+            value, index = scalar(rows, index, text, indent)
+        items.append(value)
+    return items, index
+
+
+def read_yaml(data: bytes) -> object:
+    """Read YAML with the standard library: the block subset Spec Kit v1.1.0's pinned manifests,
+    `extensions.yml` (yaml.dump) and SKILL.md frontmatter (yaml.dump/safe_dump) use, giving what
+    PyYAML's safe loader gives. Anything else is refused, never guessed: anchors, aliases, tags,
+    block scalars, multi-line double quotes, blank lines inside a value, other implicit types and
+    any duplicate key."""
+    text = data.decode("utf-8")
+    # Only `\n` breaks lines and no tab or character PyYAML rejects appears (yaml/reader.py NON_PRINTABLE).
+    require(re.search("[^\n\x20-\x7e\xa0-\ud7ff\ue000-\ufffd\U00010000-\U0010ffff]|[\u2028\u2029]", text) is None,
+            "unsupported YAML character")
+    rows = []
+    for number, line in enumerate(text.split("\n")):
+        body = line.lstrip(" ")
+        if body and not body.startswith("#"):
+            require(body.rstrip(" ") not in ("---", "...") and body[0] != "%", "unsupported YAML line")
+            rows.append([number, len(line) - len(body), body])
+    if not rows:
+        return None
+    value, index = block(rows, 0, rows[0][1])
+    require(index == len(rows), "unsupported YAML indentation")
+    return value
 
 
 def pinned_archive(url: str) -> dict[str, bytes]:
@@ -343,18 +477,17 @@ def skill_name(command: str) -> str:
     return "speckit-" + short.replace(".", "-")
 
 
-def declared(doc: dict, kind: str) -> tuple[list[str], list[str]]:
-    """The payload files and the command names (with aliases) the pinned manifest declares."""
+def declared(doc: dict, kind: str) -> tuple[list[str], dict[str, str]]:
+    """The payload files the pinned manifest declares, and each command name (aliases too) with its file."""
     provides = doc.get("provides") or {}
     if kind == "preset":
         templates = provides.get("templates") or []
         return ([item["file"] for item in templates],
-                [item["name"] for item in templates if item.get("type") == "command"])
+                {item["name"]: item["file"] for item in templates if item.get("type") == "command"})
     commands = provides.get("commands") or []
     files = [item["file"] for item in commands] + [item["file"] for item in provides.get("scripts") or []]
     files += [item["template"] for item in provides.get("config") or [] if item.get("template")]
-    names = [name for item in commands for name in [item["name"], *(item.get("aliases") or [])]]
-    return files, names
+    return files, {name: item["file"] for item in commands for name in [item["name"], *(item.get("aliases") or [])]}
 
 
 def hook_entry(item: object, entry_id: str) -> dict | None:
@@ -423,29 +556,34 @@ def check_registration(tree: BoundTree, entry: dict[str, str], doc: dict, manife
     return record
 
 
-def owned_by(skill: bytes, entry_id: str) -> bool:
-    """Whether a SKILL.md's metadata source names this entry: `<id>:<file>` from the registrar
-    (agents.py L425-476) or `extension:<id>` from extension skills (extensions/__init__.py L1730-1740)."""
-    source = re.compile(rf"^\s*source:\s*['\"]?(?:extension:)?{re.escape(entry_id)}(?::[^'\"\s]*)?['\"]?\s*$",
-                        re.MULTILINE)
-    return bool(source.search(skill.decode("utf-8", errors="replace")))
+def owns_skill(skill: bytes, entry: dict[str, str], file: str) -> bool:
+    """Whether a SKILL.md's frontmatter `metadata.source` is exactly one Spec Kit writes for this
+    entry's command: `<id>:<file>` (agents.py L461-466), `extension:<id>` (extensions/__init__.py
+    L1736-1741) or `preset:<id>` (presets/_manager_skills.py L800-805). The frontmatter ends at the
+    first `---` line (agents.py L130-149); the body is never read, so its text cannot claim ownership."""
+    lines = skill.decode("utf-8").split("\n")
+    require(lines[0] == "---" and "---" in lines[1:], "SKILL.md has no closed frontmatter")
+    front = read_yaml("\n".join(lines[1:lines.index("---", 1)]).encode())
+    metadata = front.get("metadata") if isinstance(front, dict) else None
+    source = metadata.get("source") if isinstance(metadata, dict) else None
+    return isinstance(source, str) and source in (f"{entry['id']}:{file}", f"{entry['kind']}:{entry['id']}")
 
 
-def check_artifacts(tree: BoundTree, entry: dict[str, str], record: dict, names: list[str]) -> None:
+def check_artifacts(tree: BoundTree, entry: dict[str, str], record: dict, names: dict[str, str]) -> None:
     """Each declared command is registered and its skill is on disk, bound to this entry."""
     commands = record.get("registered_commands")
     skills = record.get("registered_skills")
     registered = {name for values in (commands or {}).values() if isinstance(values, list) for name in values}
     registered |= set(skills) if isinstance(skills, list) else set()
-    for name in names:
+    for name, file in names.items():
         require(name in registered or skill_name(name) in registered, f"command {name} is not registered")
-        require(owned_by(tree.read((*SKILLS_DIR, skill_name(name), "SKILL.md")), entry["id"]),
+        require(owns_skill(tree.read((*SKILLS_DIR, skill_name(name), "SKILL.md")), entry, file),
                 f"skill for {name} does not come from this {entry['kind']}")
 
 
 def check_configuration(tree: BoundTree, entry_id: str, doc: dict) -> None:
     """The active extensions.yml lists the id and carries exactly the manifest's hooks."""
-    config = load_yaml(tree.read((".specify", "extensions.yml")))
+    config = read_yaml(tree.read((".specify", "extensions.yml")))
     require(isinstance(config, dict), "extensions.yml is not a mapping")
     assert isinstance(config, dict)
     installed = config.get("installed")
@@ -467,10 +605,13 @@ def completion_evidence(project: int, identities: dict[str, tuple[int, int]], en
         with ExitStack() as stack:
             tree = BoundTree(stack, project, identities)
             pinned = files[MANIFEST_NAMES[kind]]
-            doc = load_yaml(pinned)
+            doc = read_yaml(pinned)
             require(isinstance(doc, dict) and (doc.get(kind) or {}).get("id") == entry_id,
                     "pinned manifest does not declare this id")
             assert isinstance(doc, dict)
+            # Manifest events become native hooks and a dispatcher outside this evidence
+            # (events/__init__.py L1071-1100, L1350-1392), so such an entry is never certified here.
+            require("events" not in doc, "the manifest declares Spec Kit events, which this check does not verify")
             home = (".specify", f"{kind}s", entry_id)
             manifest = tree.read((*home, MANIFEST_NAMES[kind]))
             require(manifest == pinned, "installed manifest differs from the pinned archive's")
@@ -485,7 +626,7 @@ def completion_evidence(project: int, identities: dict[str, tuple[int, int]], en
             tree.verify_unchanged()
     except (EvidenceError, OSError, ValueError, KeyError, TypeError, AttributeError) as error:
         return "failed", [f"{label}: {error}"]
-    except Exception as error:  # noqa: BLE001 (a YAML parse error is missing evidence, not a crash)
+    except Exception as error:  # noqa: BLE001 (unreadable evidence is missing evidence, not a crash)
         return "failed", [f"{label}: unreadable evidence ({type(error).__name__})"]
     return "installed", [f"{label}: version {doc[kind]['version']}, manifest and {len(payload)} declared files match "
                          f"the pinned archive, registered from source local with priority {DEFAULT_PRIORITY}, "
@@ -507,7 +648,7 @@ def registered_before(tree: BoundTree, entry: dict[str, str]) -> bool:
 def configured_before(tree: BoundTree, entry_id: str) -> bool:
     if not tree.exists((".specify", "extensions.yml")):
         return False
-    config = load_yaml(tree.read((".specify", "extensions.yml")))
+    config = read_yaml(tree.read((".specify", "extensions.yml")))
     require(isinstance(config, dict), "extensions.yml is not a mapping")
     assert isinstance(config, dict)
     hooks = [hook for items in (config.get("hooks") or {}).values() for hook in items or []]
@@ -521,12 +662,13 @@ def prior_evidence(project: int, identities: dict[str, tuple[int, int]], entry: 
     try:
         with ExitStack() as stack:
             tree = BoundTree(stack, project, identities)
-            doc = load_yaml(files[MANIFEST_NAMES[entry["kind"]]])
-            names = declared(doc, entry["kind"])[1] if isinstance(doc, dict) else []
+            doc = read_yaml(files[MANIFEST_NAMES[entry["kind"]]])
+            names = declared(doc, entry["kind"])[1] if isinstance(doc, dict) else {}
             # A preset's skills replace core ones `specify init` wrote, so only an owned skill is prior.
-            skills = [(*SKILLS_DIR, skill_name(name), "SKILL.md") for name in names]
+            skills = {(*SKILLS_DIR, skill_name(name), "SKILL.md"): file for name, file in names.items()}
             found = (registered_before(tree, entry)
-                     or any(tree.exists(skill) and owned_by(tree.read(skill), entry["id"]) for skill in skills)
+                     or any(tree.exists(skill) and owns_skill(tree.read(skill), entry, file)
+                            for skill, file in skills.items())
                      or (entry["kind"] == "extension" and configured_before(tree, entry["id"])))
             tree.verify_unchanged()
             return found
@@ -604,9 +746,6 @@ def owner_acceptance(entries: list[dict[str, str]]) -> int:
     """Install every curated entry with the operator at the terminal; 0 only when all are installed."""
     if not interactive():
         results = [("not-run", ["owner acceptance needs an interactive terminal; run it yourself"])] * len(entries)
-    elif not yaml_available():
-        results = [("not-run", ["owner acceptance reads YAML evidence with PyYAML; install it for this python3"])
-                   ] * len(entries)
     else:
         results = run_acceptance(entries)
     for entry, (status, details) in zip(entries, results, strict=True):
