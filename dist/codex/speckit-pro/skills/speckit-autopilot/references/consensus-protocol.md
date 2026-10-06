@@ -492,7 +492,7 @@ clarify-executor prepares read-only Clarify Question Set
         │   ├── Accepted consensus
         │   │   → Edit spec.md with the consensus answer, remove marker
         │   ├── [ESCAPE_TO_ROUND_2] → enqueue for Round 2 batch
-        │   └── All disagree (after Round 2) → [ROUND_3_TIEBREAK] → Round 3 tiebreak
+        │   └── All disagree → [ROUND_3_TIEBREAK] → Round 3 tiebreak
 ```
 
 The diagram above is per-item educational. The actual dispatch is
@@ -557,7 +557,7 @@ checklist-executor runs /speckit-checklist domain
         │   ├── Accepted consensus
         │   │   → Apply edit to spec.md or plan.md, log to workflow
         │   ├── [ESCAPE_TO_ROUND_2] → enqueue for Round 2 batch
-        │   └── All disagree (after Round 2) → [ROUND_3_TIEBREAK] → Round 3 tiebreak
+        │   └── All disagree → [ROUND_3_TIEBREAK] → Round 3 tiebreak
 ```
 
 The diagram above is per-gap educational. Actual dispatch is
@@ -619,7 +619,7 @@ analyze-executor runs /speckit-analyze
         │   ├── Accepted consensus
         │   │   → Apply fix to tasks.md / spec.md / plan.md, log to workflow
         │   ├── [ESCAPE_TO_ROUND_2] → enqueue for Round 2 batch
-        │   └── All disagree (after Round 2) → [ROUND_3_TIEBREAK] → Round 3 tiebreak
+        │   └── All disagree → [ROUND_3_TIEBREAK] → Round 3 tiebreak
 ```
 
 The diagram above is per-finding educational. Actual dispatch is

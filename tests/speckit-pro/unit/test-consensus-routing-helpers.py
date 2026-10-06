@@ -576,7 +576,7 @@ class SecurityRoundReferenceTests(unittest.TestCase):
             "Stage 6 — Apply accepted Round-2 edits serially; unresolved items go to Round 3",
             *(f"one synthesizer per security {item}" for item in ("item", "gap", "finding")),
         )
-        retired = ("### Two-analyst rule", "two disagreeing Round 1 analysts", "N=1 high-confidence | N=2 both-agree")
+        retired = ("### Two-analyst rule", "two disagreeing Round 1 analysts", "N=1 high-confidence | N=2 both-agree", "All disagree (after Round 2)")
         for host in HOSTS:
             with self.subTest(host=host):
                 text = (host_skill_root(host) / TIER_REFERENCE).read_text(encoding="utf-8")
