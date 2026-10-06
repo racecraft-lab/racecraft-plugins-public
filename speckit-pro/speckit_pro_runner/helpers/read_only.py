@@ -1922,14 +1922,10 @@ def detect_presets(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
 def reviewability_preset_state(root: Path, repo_root: Path) -> dict[str, Any]:
     """Whether the project has the reviewability preset, and the `specify` arguments that add it.
 
-    `status` is `installed` (its manifest exists and Spec Kit's registry lists it), `missing` (add_args installs
-    it) or `unavailable` (the payload has no preset). Spec Kit resolves templates from the registry only.
+    `installed` requires coherent registry evidence and the exact shipped preset bytes.
+    `missing` supplies add_args; `unavailable` means unsafe or unavailable evidence.
     """
-    presets = root / ".specify" / "presets"
-    return reviewability_preset.state(
-        trusted_text(presets / ".registry", repo_root) or "",
-        trusted_file_exists(presets / reviewability_preset.PRESET_ID / "preset.yml", repo_root),
-    )
+    return reviewability_preset.state(root, repo_root)
 
 
 # The spec template writes `[NEEDS CLARIFICATION: <question>]`; the bare

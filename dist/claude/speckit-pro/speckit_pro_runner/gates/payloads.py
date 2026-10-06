@@ -17,6 +17,7 @@ from ..host_skills import emit_host_files, render_host_skills
 from ..install_inventory import read_install_inventory
 from ..path_utils import find_repo_root, is_relative_to, sha256_file, sha256_text
 from ..runtime import runner_source_files
+from ..trusted_io import create_tree_directory, open_tree_parent, trusted_tree_snapshot, write_tree_snapshot
 from .gate_response import gate_base_data
 
 FIXTURE_BOUNDARY = Path("tests") / "speckit-pro" / "unit" / "fixtures" / "runner-gates"
@@ -299,11 +300,39 @@ def installed_plugin_build_target(request: Any, repo_root: Path) -> Path | None 
 
 
 def build_installed_plugin_payloads(repo_root: Path, dist_root: Path) -> None:
+    # Normalize the caller's OS temporary-directory prefix, preserving the output leaf.
+    dist_root = dist_root.parent.resolve() / dist_root.name
+    with tempfile.TemporaryDirectory(prefix="plugin-payload-") as temporary:
+        captured_root = Path(temporary).resolve()
+        for relative in (Path("speckit-pro"), reviewability_preset.SOURCE_PATH, Path("LICENSE")):
+            source_path = repo_root / relative
+            try:
+                expected = source_path.lstat()
+            except FileNotFoundError:
+                if relative == Path("LICENSE"):
+                    continue
+                raise
+            captured = trusted_tree_snapshot(source_path, repo_root, expected=expected)
+            write_tree_snapshot(captured_root / relative, captured, captured_root)
+        rendered = captured_root / "dist"
+        render_captured_plugin_payloads(captured_root, rendered)
+        for host in ("claude", "codex"):
+            relative = Path(host) / "speckit-pro"
+            captured = trusted_tree_snapshot(rendered / relative, rendered)
+            destination = dist_root / relative
+            reset_payload_dir(destination, dist_root)
+            write_tree_snapshot(destination, captured, dist_root)
+
+
+def render_captured_plugin_payloads(repo_root: Path, dist_root: Path) -> None:
+    """Render host transformations only inside the private captured build tree."""
     source = repo_root / "speckit-pro"
     claude = dist_root / "claude" / "speckit-pro"
     codex = dist_root / "codex" / "speckit-pro"
     if not source.is_dir():
         raise FileNotFoundError(f"source plugin directory not found: {source}")
+    preset_source = repo_root / reviewability_preset.SOURCE_PATH
+    preset_snapshot = trusted_tree_snapshot(preset_source, repo_root, expected=preset_source.lstat())
 
     reset_payload_dir(claude, dist_root)
     for name in CLAUDE_REQUIRED_PAYLOAD_PATHS:
@@ -318,7 +347,7 @@ def build_installed_plugin_payloads(repo_root: Path, dist_root: Path) -> None:
     ]:
         copy_optional_installed_plugin(source / name, claude / name)
     copy_optional_installed_plugin(repo_root / "LICENSE", claude / "LICENSE")
-    copy_optional_installed_plugin(repo_root / reviewability_preset.SOURCE_PATH, claude / reviewability_preset.PAYLOAD_PATH)
+    write_tree_snapshot(claude / reviewability_preset.PAYLOAD_PATH, preset_snapshot, dist_root)
     render_payload_skills(source, "claude", claude / "skills")
     emit_host_files(claude.glob("agents/*.md"), "claude")
     remove_payload_shell_scripts_installed_plugin(claude)
@@ -335,7 +364,7 @@ def build_installed_plugin_payloads(repo_root: Path, dist_root: Path) -> None:
     ]:
         copy_optional_installed_plugin(source / name, codex / name)
     copy_optional_installed_plugin(repo_root / "LICENSE", codex / "LICENSE")
-    copy_optional_installed_plugin(repo_root / reviewability_preset.SOURCE_PATH, codex / reviewability_preset.PAYLOAD_PATH)
+    write_tree_snapshot(codex / reviewability_preset.PAYLOAD_PATH, preset_snapshot, dist_root)
     render_payload_skills(source, "codex", codex / "skills")
     rewrite_codex_manifest_installed_plugin(codex)
     for text_file in codex.rglob("*"):
@@ -345,13 +374,19 @@ def build_installed_plugin_payloads(repo_root: Path, dist_root: Path) -> None:
 
 
 def reset_payload_dir(path: Path, allowed_root: Path) -> None:
-    resolved_path = path.resolve(strict=False)
-    resolved_allowed = allowed_root.resolve(strict=False)
-    if not is_relative_to(resolved_path, resolved_allowed):
+    if not path.is_relative_to(allowed_root) or ".." in path.parts:
         raise ValueError(f"refusing to reset path outside payload root: {path}")
-    if path.exists():
-        shutil.rmtree(path)
-    path.mkdir(parents=True, exist_ok=True)
+    if not shutil.rmtree.avoids_symlink_attacks:
+        raise OSError("safe payload reset unavailable")
+    parent_fd = open_tree_parent(path, Path(path.anchor))
+    try:
+        try:
+            shutil.rmtree(path.name, dir_fd=parent_fd)
+        except FileNotFoundError:
+            pass
+        os.close(create_tree_directory(parent_fd, path.name))
+    finally:
+        os.close(parent_fd)
 
 
 def copy_required_installed_plugin(src: Path, dst: Path) -> None:
@@ -361,16 +396,12 @@ def copy_required_installed_plugin(src: Path, dst: Path) -> None:
 
 
 def copy_optional_installed_plugin(src: Path, dst: Path) -> None:
-    if src.is_dir():
-        shutil.copytree(
-            src,
-            dst,
-            dirs_exist_ok=True,
-            ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
-        )
-    elif src.is_file():
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, dst)
+    try:
+        expected = src.lstat()
+    except FileNotFoundError:
+        return
+    captured = trusted_tree_snapshot(src, Path(src.anchor), expected=expected)
+    write_tree_snapshot(dst, captured, Path(dst.anchor))
 
 
 def remove_payload_shell_scripts_installed_plugin(root: Path) -> None:
