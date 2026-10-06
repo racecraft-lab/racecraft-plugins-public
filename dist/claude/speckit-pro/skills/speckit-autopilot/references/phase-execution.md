@@ -552,7 +552,8 @@ After every domain executor has returned:
      gap with no edit to step 5. A refusal applies nothing: handle it as a
      gate failure under the Failure Escalation Protocol. An interrupted apply
      names what reached disk (applied domains, a half-written domain's files,
-     whether the record was written): restore both files before any retry
+     canonical paths that moved, whether the record was written): restore both
+     files before any retry
   4. Parse each executor's "Unresolved for consensus" section
   5. If unresolved gaps exist:
      a. autopilot-state.json: "<domain> Consensus" → in_progress

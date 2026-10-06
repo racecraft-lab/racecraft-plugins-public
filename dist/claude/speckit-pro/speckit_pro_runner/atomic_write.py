@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import ctypes
+import errno
+import functools
 import hashlib
 import os
 import stat
+import sys
 import uuid
+import collections.abc
 from pathlib import Path
 from typing import Any
 
@@ -91,12 +96,16 @@ def write_file_atomic(
     *,
     trust_root: Path | None = None,
     expected_snapshot: dict[str, Any] | None = None,
+    expected_parent: tuple[int, int] | None = None,
+    exchange: bool = False,
 ) -> dict[str, Any]:
     return write_bytes_atomic(
         target,
         ensure_final_newline(content).encode("utf-8"),
         trust_root=trust_root,
         expected_snapshot=expected_snapshot,
+        expected_parent=expected_parent,
+        exchange=exchange,
     )
 
 
@@ -108,8 +117,13 @@ def write_bytes_atomic(
     mode: int | None = None,
     expected_snapshot: dict[str, Any] | None = None,
     expected_parent: tuple[int, int] | None = None,
+    exchange: bool = False,
 ) -> dict[str, Any]:
-    """Replace `target` atomically; an expected snapshot or parent identity that no longer holds raises WritePreconditionChanged."""
+    """Replace `target` atomically; an expected snapshot or parent identity that no longer holds raises WritePreconditionChanged.
+
+    With `exchange` and an expected snapshot, the new file is swapped in and the displaced entry is checked
+    after the swap; an entry someone put there after the last check is swapped back and the write refused.
+    """
     created_dirs: list[str] = []
     if trust_root is None:
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -126,7 +140,7 @@ def write_bytes_atomic(
     failure: OSError | None = None
     replaced = False
     applied_mode: int | None = None
-    identity: tuple[int, int] | None = None
+    identity: tuple[int, int, int] | None = None
     tmp_cleanup_errors: list[str] = []
     try:
         try:
@@ -146,7 +160,7 @@ def write_bytes_atomic(
             if existing_mode is not None:
                 os.fchmod(tmp_fd, existing_mode)
             tmp_stat = os.fstat(tmp_fd)
-            applied_mode, identity = stat.S_IMODE(tmp_stat.st_mode), file_identity(tmp_stat)
+            applied_mode, identity = stat.S_IMODE(tmp_stat.st_mode), entry_identity(tmp_stat)
             with os.fdopen(tmp_fd, "wb") as fh:
                 tmp_fd = -1
                 fh.write(content)
@@ -156,7 +170,9 @@ def write_bytes_atomic(
                 ensure_safe_write_target_fd(parent_fd, target_name)
             if expected_snapshot is not None:
                 ensure_write_target_matches_snapshot_fd(parent_fd, target_name, expected_snapshot)
-            os.replace(tmp_name, target_name, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
+            if not (exchange and expected_snapshot is not None
+                    and install_checked(parent_fd, tmp_name, target_name, expected_snapshot)):
+                os.replace(tmp_name, target_name, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
             replaced = True
             try:
                 os.fsync(parent_fd)
@@ -209,6 +225,76 @@ def write_bytes_atomic(
 def file_identity(file_stat: os.stat_result) -> tuple[int, int]:
     """The device and inode pair: one file or directory whatever path reaches it."""
     return file_stat.st_dev, file_stat.st_ino
+
+
+def entry_identity(file_stat: os.stat_result) -> tuple[int, int, int]:
+    """A file's identity plus its link count, so a hard-link alias added to it counts as a change."""
+    return file_stat.st_dev, file_stat.st_ino, file_stat.st_nlink
+
+
+@functools.cache
+def entry_swapper() -> collections.abc.Callable[[int, str, str], int] | None:
+    """The platform call that atomically swaps two names in one directory, or None when there is none."""
+    try:
+        libc = ctypes.CDLL(None, use_errno=True)
+        if sys.platform == "darwin":
+            call, flag = libc.renameatx_np, 0x2  # RENAME_SWAP
+        elif sys.platform.startswith("linux"):
+            call, flag = libc.renameat2, 0x2  # RENAME_EXCHANGE
+        else:
+            return None
+    except (OSError, AttributeError):
+        return None
+    call.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
+    call.restype = ctypes.c_int
+
+    def swap(directory_fd: int, first: str, second: str) -> int:
+        if call(directory_fd, os.fsencode(first), directory_fd, os.fsencode(second), flag) == 0:
+            return 0
+        return ctypes.get_errno()
+
+    return swap
+
+
+def swap_entries(directory_fd: int, first: str, second: str) -> bool:
+    """Swap two names atomically; False when this platform or filesystem cannot."""
+    swapper = entry_swapper()
+    if swapper is None:
+        return False
+    failure = swapper(directory_fd, first, second)
+    if failure == 0:
+        return True
+    if failure in (errno.EINVAL, errno.ENOSYS, errno.ENOTSUP, errno.EOPNOTSUPP):
+        return False
+    raise OSError(failure, os.strerror(failure))
+
+
+def install_checked(parent_fd: int, tmp_name: str, target_name: str, expected: dict[str, Any]) -> bool:
+    """Put `tmp_name` at `target_name` only if what it displaces still matches `expected`.
+
+    Returns False, having changed nothing, when the platform cannot swap; the caller then replaces.
+    """
+    if not expected.get("exists"):
+        try:
+            os.link(tmp_name, target_name, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
+        except FileExistsError as error:
+            raise WritePreconditionChanged("write target appeared after snapshot capture") from error
+        return True
+    if not swap_entries(parent_fd, tmp_name, target_name):
+        return False
+    try:
+        displaced_matches = write_target_matches_snapshot(snapshot_write_target_fd(parent_fd, tmp_name), expected)
+    except OSError:
+        displaced_matches = False
+    if displaced_matches:
+        return True
+    try:
+        swap_entries(parent_fd, tmp_name, target_name)
+    except OSError as error:
+        kept = f".{target_name}.kept-{uuid.uuid4().hex}"
+        os.rename(tmp_name, kept, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
+        raise WritePreconditionChanged(f"write target changed after snapshot capture; the competing entry is kept as {kept}") from error
+    raise WritePreconditionChanged("write target changed after snapshot capture")
 
 
 def open_safe_parent_fd(target: Path, trust_root: Path, *, create: bool) -> tuple[int, str, list[str]] | None:
@@ -327,7 +413,7 @@ def snapshot_write_target_fd(parent_fd: int, target_name: str) -> dict[str, Any]
         "content": content,
         "mode": stat.S_IMODE(file_stat.st_mode),
         "digest": hashlib.sha256(content).hexdigest(),
-        "identity": file_identity(file_stat),
+        "identity": entry_identity(file_stat),
     }
 
 

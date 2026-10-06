@@ -409,7 +409,8 @@ for phase in PHASES starting from first_pending:
        applies one domain at a time in domain order. A conflict or a gap with no edit
        goes to consensus below; a refusal applies nothing and is a gate failure under
        the Failure Escalation Protocol. An interrupted apply names what reached disk
-       (applied domains, a half-written domain's files, whether the record was written):
+       (applied domains, a half-written domain's files, canonical paths that moved,
+       whether the record was written):
        restore both files before any retry. After consensus, take a read_only baseline, spawn
        each domain's executor again with `Mode: verify` to confirm its gaps closed, then
        run `checklist-edits` in dry_run mode with no domains, no proposals and that
@@ -811,7 +812,8 @@ After every domain executor has returned:
      gap with no edit to step 5. A refusal applies nothing: handle it as a
      gate failure under the Failure Escalation Protocol. An interrupted apply
      names what reached disk (applied domains, a half-written domain's files,
-     whether the record was written): restore both files before any retry
+     canonical paths that moved, whether the record was written): restore both
+     files before any retry
   4. Parse each executor's "Unresolved for consensus" section
   5. If unresolved gaps exist:
      a. autopilot-state.json: "<domain> Consensus" → in_progress

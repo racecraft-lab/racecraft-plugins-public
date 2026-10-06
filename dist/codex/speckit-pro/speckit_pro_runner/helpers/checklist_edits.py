@@ -8,7 +8,9 @@ wrote an artifact. Otherwise they apply the proposals one domain at a time in th
 workflow's domain order, under one lock on the feature directory, so no two writes
 touch the files at once, whichever workflow file names the feature. Each write
 replaces its file only while the directory and the file are still the ones this run
-read or last wrote, so a change made by anyone else is refused, never overwritten.
+read or last wrote, and swaps it in so a change made after that check is put back,
+never overwritten. After acting, a fresh walk from the repository root confirms the
+canonical paths hold what this run wrote; only then is the result `ok`.
 A domain whose edit does not match exactly once applies none of its edits and is
 reported as a conflict; later domains still run. Every listed domain needs a proposal,
 which is empty when it found no gaps, so a missing return is refused rather than read
@@ -29,7 +31,7 @@ from pathlib import Path
 from typing import Any
 
 from ..atomic_write import (WritePreconditionChanged, file_identity, open_safe_parent_fd, snapshot_write_target_fd,
-                            write_bytes_atomic, write_file_atomic)
+                            write_bytes_atomic, write_file_atomic, write_target_matches_snapshot)
 from ..canonical_json import canonical_bytes
 from ..envelope import diagnostic, response
 from ..execution_control import confined_path, ignore_owned_directory, workflow_process_directory
@@ -43,6 +45,10 @@ ARTIFACTS = ("spec.md", "plan.md")
 MAX_TEXT = 20000
 # Markdown keeps its tabs and line breaks; every other control, format or separator character is refused.
 EDIT_TEXT_KEEPS = "\t\n\r"
+
+
+class CanonicalMismatch(ValueError):
+    """After acting, a canonical path no longer holds what this run wrote there."""
 
 
 class ArtifactChanged(Exception):
@@ -61,6 +67,7 @@ class Progress:
     step: str = ""
     partial: list[str] = field(default_factory=list)
     record: dict[str, Any] | None = None
+    moved: list[str] = field(default_factory=list)
 
     @property
     def started(self) -> bool:
@@ -195,7 +202,7 @@ def write_changed(root: Path, feature: Path, expected: dict[str, Any], progress:
         if after[name] == before[name]:
             continue
         try:
-            written = write_bytes_atomic(feature / name, after[name].encode("utf-8"), trust_root=root,
+            written = write_bytes_atomic(feature / name, after[name].encode("utf-8"), trust_root=root, exchange=True,
                                          expected_snapshot=expected[name], expected_parent=expected["directory"])
         except WritePreconditionChanged as error:
             if not (progress.applied or progress.partial):
@@ -223,6 +230,31 @@ def apply_proposals(texts: dict[str, str], domains: list[str], proposals: dict[s
                      "edits_applied": 0 if conflicts else len(edits), "conflicts": conflicts,
                      "unproposed_gaps": [gap for gap in gaps if all(edit["gap"] != gap for edit in edits)]})
     return rows
+
+
+def entry_state(root: Path, path: Path) -> tuple[tuple[int, int], dict[str, Any]] | None:
+    """The identity of `path`'s directory and the entry's snapshot, reached by a fresh no-follow walk from `root`."""
+    opened = open_safe_parent_fd(path, root, create=False)
+    if opened is None:
+        return None
+    directory, name, _created = opened
+    try:
+        return file_identity(os.fstat(directory)), snapshot_write_target_fd(directory, name)
+    finally:
+        os.close(directory)
+
+
+def canonical_mismatches(root: Path, expected: dict[str, tuple[Path, tuple[int, int], dict[str, Any]]]) -> list[str]:
+    """The labels whose canonical path no longer holds the expected entry, in the expected directory."""
+    moved = []
+    for label, (path, directory, snapshot) in expected.items():
+        try:
+            state = entry_state(root, path)
+        except OSError:
+            state = None
+        if state is None or state[0] != directory or not write_target_matches_snapshot(state[1], snapshot):
+            moved.append(label)
+    return moved
 
 
 def record_on_disk(root: Path, record: Path, value: dict[str, Any] | None) -> bool:
@@ -255,16 +287,23 @@ def checklist_edits(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, 
     except (OSError, ValueError) as error:
         if not progress.started:
             raise
-        written = progress.step in {"application record", "lock release"} and record_on_disk(root, record, progress.record)
+        written = progress.record is not None and record_on_disk(root, record, progress.record)
         raise ApplyInterrupted(progress, written, str(error)) from error
     return {"order": [row["domain"] for row in rows if row["status"] == "applied"], "domains": rows, "link": link,
             "writes_state": mode == "apply"}
 
 
+def confirm(root: Path, expected: dict[str, tuple[Path, tuple[int, int], dict[str, Any]]], progress: Progress) -> None:
+    """Raise unless every canonical path still holds what this run wrote or read there."""
+    progress.moved = canonical_mismatches(root, expected)
+    if progress.moved:
+        raise CanonicalMismatch(f"the canonical path no longer holds what this run wrote: {', '.join(progress.moved)}")
+
+
 def locked_apply(root: Path, feature: Path, record: Path, mode: str,
                  checked: tuple[list[str], dict[str, str], dict[str, tuple[list[str], list[dict[str, str]]]]],
                  progress: Progress) -> list[dict[str, Any]]:
-    """Under the feature lock: check the baseline, apply each domain, publish the record; dry_run reads twice."""
+    """Under the feature lock: check the baseline, apply each domain, publish the record, then confirm the canonical tree holds them."""
     domains, baseline, proposals = checked
     if mode == "apply":
         ignore_owned_directory(record.parent)  # a broken record directory refuses before any write
@@ -277,17 +316,27 @@ def locked_apply(root: Path, feature: Path, record: Path, mode: str,
         expected: dict[str, Any] = {name: {key: snapshots[name][key] for key in ("exists", "digest", "mode", "identity")}
                                     for name in ARTIFACTS}
         expected["directory"] = file_identity(os.fstat(directory))
+        record_before = entry_state(root, record) if mode == "apply" else None
+        if mode == "apply" and record_before is None:
+            raise SelectionError("the application record directory must exist and stay link-free")
         write = partial(write_changed, root, feature, expected, progress) if mode == "apply" else None
         rows = apply_proposals(texts, domains, proposals, write, progress)
+        # Verify after acting: a check before a write can always be raced, the canonical tree afterwards cannot lie.
+        artifacts = {name: (feature / name, expected["directory"], expected[name]) for name in ARTIFACTS}
         if mode == "dry_run":
-            # A check must see the baseline from start to finish, not just at its first read.
-            changed = changed_since(read_artifacts(directory), baseline)
+            changed = canonical_mismatches(root, artifacts)
             if changed:
                 raise ArtifactChanged(changed)
             return rows
+        progress.step = "verification"
+        confirm(root, artifacts, progress)
+        if record_before is None:  # refused above; this narrows the type
+            raise CanonicalMismatch("the application record directory was not captured")
         progress.step, progress.record = "application record", {"schema_version": SCHEMA_VERSION, "domains": rows}
-        # The same link-free descriptor walk that checked the record path writes it.
-        write_file_atomic(record, canonical_bytes(progress.record).decode("utf-8"), trust_root=root)
+        published = write_file_atomic(record, canonical_bytes(progress.record).decode("utf-8"), trust_root=root, exchange=True,
+                                      expected_snapshot=record_before[1], expected_parent=record_before[0])
+        progress.step = "verification"
+        confirm(root, {**artifacts, record.name: (record, record_before[0], {"exists": True, **published})}, progress)
         progress.step = "lock release"
     return rows
 
@@ -316,7 +365,7 @@ def run_checklist_edits_helper(entry: Any, request: Any) -> dict[str, Any]:
         )
         return response("expected_failure", request_id=request.request_id,
                         data={"applied": progress.applied, "failed": progress.step, "partial": progress.partial,
-                              "record_written": error.record_written}, diagnostics=[refusal])
+                              "moved": progress.moved, "record_written": error.record_written}, diagnostics=[refusal])
     except ArtifactChanged as error:
         refusal = diagnostic(
             "artifact_changed_during_check",

@@ -24,6 +24,7 @@ from unittest.mock import patch
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO / "speckit-pro"), str(REPO / "tests/speckit-pro/lib")]
+from speckit_pro_runner import atomic_write  # noqa: E402
 from speckit_pro_runner.helpers import checklist_edits  # noqa: E402
 from speckit_pro_runner.helpers.registry import MUTATION_HELPERS  # noqa: E402
 from guide_text import PHASE_EXECUTION_GUIDES, guide_text, guide_view  # noqa: E402
@@ -420,6 +421,182 @@ class CompetingWriterTests(ChecklistEditsCase):
         self.assertEqual(("expected_failure", ["spec.md"]), (result["status"], result["data"].get("changed")), result)
 
 
+
+def same_text_swaps(root: Path, name: str) -> dict[str, Callable[[], None]]:
+    """Swaps that keep the bytes but change which file the canonical name holds, or add an alias to it."""
+    target = root / FEATURE / name
+    other = root / "elsewhere.md"
+
+    def replace() -> None:
+        other.write_bytes(target.read_bytes())
+        os.replace(other, target)
+
+    def link() -> None:
+        other.unlink(missing_ok=True)
+        other.write_bytes(target.read_bytes())
+        target.unlink()
+        os.link(other, target)
+
+    def alias() -> None:
+        os.link(target, root / "alias.md")
+
+    return {"same-text replacement": replace, "same-text hard-link substitution": link, "added hard-link alias": alias}
+
+
+def swap_feature_directory(root: Path) -> None:
+    """Rename the feature away and put a competitor's copy of the original artifacts under its name."""
+    feature = root / FEATURE
+    feature.rename(root / "specs/001-detached")
+    feature.mkdir()
+    (feature / "spec.md").write_text(SPEC, encoding="utf-8")
+    (feature / "plan.md").write_text(PLAN, encoding="utf-8")
+
+
+class CanonicalResultTests(ChecklistEditsCase):
+    """F1278-812f7be4 after the pre-checks: the result is checked against the canonical paths after acting."""
+
+    def reset(self) -> None:
+        for name, text in (("spec.md", SPEC), ("plan.md", PLAN)):
+            (self.root / FEATURE / name).unlink(missing_ok=True)
+            (self.root / FEATURE / name).write_text(text, encoding="utf-8")
+        for extra in ("alias.md", "elsewhere.md"):
+            (self.root / extra).unlink(missing_ok=True)
+
+    def test_a_check_with_no_domains_refuses_a_same_text_swap_made_after_its_read(self) -> None:
+        for name in ("spec.md", "plan.md"):
+            for form in same_text_swaps(self.root, name):
+                with self.subTest(name=name, form=form):
+                    self.reset()
+                    swap = same_text_swaps(self.root, name)[form]
+                    real = checklist_edits.read_artifacts
+                    calls = [0]
+
+                    def read_then_swap(*args: Any) -> Any:
+                        contents = real(*args)
+                        calls[0] += 1
+                        if calls[0] == 1:
+                            swap()
+                        return contents
+
+                    before = self.baseline()
+                    with patch.object(checklist_edits, "read_artifacts", read_then_swap):
+                        result = self.call("dry_run", domains=[], baseline=before, proposals=[])
+                    self.assertEqual("expected_failure", result["status"], result)
+                    self.assertIn(name, result["data"].get("changed", []), result)
+
+    def test_a_feature_directory_swapped_after_the_parent_check_is_never_reported_applied(self) -> None:
+        real = atomic_write.ensure_safe_write_target_fd
+        done = [False]
+
+        def check_then_swap(parent_fd: int, name: str) -> None:
+            real(parent_fd, name)
+            if name == "spec.md" and not done[0]:
+                done[0] = True
+                swap_feature_directory(self.root)
+
+        with patch.object(atomic_write, "ensure_safe_write_target_fd", check_then_swap):
+            result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
+        self.assertEqual(("expected_failure", "apply_interrupted"), (result["status"], result["diagnostics"][0]["code"]), result)
+        self.assertIn("spec.md", result["data"].get("moved", []), result)
+        self.assertFalse(result["data"]["record_written"], result)
+        self.assertEqual(SPEC, self.text("spec.md"))
+
+    def test_a_feature_directory_swapped_after_the_last_write_is_never_reported_applied(self) -> None:
+        real = checklist_edits.write_bytes_atomic
+
+        def write_then_swap(path: Path, content: bytes, **kwargs: Any) -> Any:
+            written = real(path, content, **kwargs)
+            swap_feature_directory(self.root)
+            return written
+
+        with patch.object(checklist_edits, "write_bytes_atomic", write_then_swap):
+            result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
+        self.assertEqual(("expected_failure", "apply_interrupted"), (result["status"], result["diagnostics"][0]["code"]), result)
+        self.assertIn("spec.md", result["data"].get("moved", []), result)
+        self.assertFalse(result["data"]["record_written"], result)
+        self.assertFalse((self.root / RECORD).exists())
+        self.assertEqual(SPEC, self.text("spec.md"))
+
+    def test_a_record_directory_swapped_after_it_opens_is_never_reported_written(self) -> None:
+        real = atomic_write.ensure_safe_write_target_fd
+        done = [False]
+
+        def check_then_swap(parent_fd: int, name: str) -> None:
+            real(parent_fd, name)
+            if name == "applied.json" and not done[0]:
+                done[0] = True
+                directory = (self.root / RECORD).parent
+                directory.rename(self.root / "detached-record")
+                directory.mkdir()
+
+        with patch.object(atomic_write, "ensure_safe_write_target_fd", check_then_swap):
+            result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
+        self.assertEqual(("expected_failure", False), (result["status"], result["data"].get("record_written")), result)
+        self.assertIn("applied.json", result["data"].get("moved", []), result)
+        self.assertFalse((self.root / RECORD).exists())
+
+    def test_an_artifact_substituted_after_the_final_check_is_kept_and_reported(self) -> None:
+        edits = {"spec.md": edit("G1", "spec.md", "open", "private"), "plan.md": edit("G1", "plan.md", "never", "always")}
+        for name, change_edit in edits.items():
+            with self.subTest(name=name):
+                self.reset()
+                real = atomic_write.ensure_write_target_matches_snapshot_fd
+                done = [False]
+
+                def check_then_substitute(parent_fd: int, target_name: str, expected: dict[str, Any]) -> None:
+                    real(parent_fd, target_name, expected)
+                    if target_name == name and not done[0]:
+                        done[0] = True
+                        other = self.root / "elsewhere.md"
+                        other.write_text("# Competitor\n", encoding="utf-8")
+                        os.replace(other, self.root / FEATURE / name)
+
+                with patch.object(atomic_write, "ensure_write_target_matches_snapshot_fd", check_then_substitute):
+                    result = self.apply(proposal("security", change_edit))
+                self.assertEqual(("expected_failure", [name]), (result["status"], result["data"].get("changed")), result)
+                self.assertEqual("# Competitor\n", self.text(name))
+
+    def test_a_concurrent_record_is_kept_and_reported(self) -> None:
+        for prior in (False, True):
+            with self.subTest(prior_record=prior):
+                self.reset()
+                record = self.root / RECORD
+                record.unlink(missing_ok=True)
+                if prior:
+                    record.parent.mkdir(parents=True, exist_ok=True)
+                    record.write_text('{"earlier": true}\n', encoding="utf-8")
+                real = checklist_edits.write_file_atomic
+
+                def compete_then_write(path: Path, content: str, **kwargs: Any) -> Any:
+                    path.write_text('{"competitor": true}\n', encoding="utf-8")
+                    return real(path, content, **kwargs)
+
+                with patch.object(checklist_edits, "write_file_atomic", compete_then_write):
+                    result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
+                self.assertEqual(("expected_failure", False), (result["status"], result["data"].get("record_written")), result)
+                self.assertEqual('{"competitor": true}\n', record.read_text(encoding="utf-8"))
+
+    def test_a_record_substituted_after_the_final_check_is_kept_and_reported(self) -> None:
+        for prior in (False, True):
+            with self.subTest(prior_record=prior):
+                self.reset()
+                record = self.root / RECORD
+                record.unlink(missing_ok=True)
+                if prior:
+                    record.parent.mkdir(parents=True, exist_ok=True)
+                    record.write_text('{"earlier": true}\n', encoding="utf-8")
+                real = atomic_write.ensure_write_target_matches_snapshot_fd
+
+                def check_then_compete(parent_fd: int, target_name: str, expected: dict[str, Any]) -> None:
+                    real(parent_fd, target_name, expected)
+                    if target_name == "applied.json":
+                        record.write_text('{"competitor": true}\n', encoding="utf-8")
+
+                with patch.object(atomic_write, "ensure_write_target_matches_snapshot_fd", check_then_compete):
+                    result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
+                self.assertEqual(("expected_failure", False), (result["status"], result["data"].get("record_written")), result)
+                self.assertEqual('{"competitor": true}\n', record.read_text(encoding="utf-8"))
+
 class CommittedStateTests(ChecklistEditsCase):
     """F1278-d7ff996f and F1278-afb94c5e: a failure after the first write reports what is on disk."""
 
@@ -458,12 +635,11 @@ class CommittedStateTests(ChecklistEditsCase):
         self.assertEqual((["security", "ux", "api"], True), (result["data"]["applied"], result["data"].get("record_written")), result)
         self.assertTrue((self.root / RECORD).is_file())
 
-    def test_a_record_path_held_by_a_directory_is_reported_unwritten(self) -> None:
+    def test_a_record_path_held_by_a_directory_is_refused_before_any_write(self) -> None:
         (self.root / RECORD).mkdir(parents=True)
         result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
-        self.assertEqual(("expected_failure", ["security", "ux", "api"], False),
-                         (result["status"], result["data"]["applied"], result["data"].get("record_written")), result)
-        self.assertIn("private", self.text("spec.md"))
+        self.assertEqual("input_error", result["status"], result)
+        self.assertEqual(SPEC, self.text("spec.md"))
 
     def test_a_refusal_raised_after_the_writes_reports_them(self) -> None:
         # A ValueError, not an OSError, after the artifacts reached disk.
@@ -605,7 +781,7 @@ if __name__ == "__main__":
         run_counted(
             unittest.TestSuite(
                 unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                for case in (ProposalTests, ConflictTests, RefusalTests, CompetingWriterTests, CommittedStateTests,
+                for case in (ProposalTests, ConflictTests, RefusalTests, CompetingWriterTests, CanonicalResultTests, CommittedStateTests,
                              UntrustedTextTests, HostParityTests, GuidanceTests)
             ),
             label="test-checklist-edits",
