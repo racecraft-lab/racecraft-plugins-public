@@ -460,25 +460,23 @@ def check_saved_item(name: str, item: Any) -> None:
     if item["status"] in NEEDS_ACTION:
         require_text(item.get("action"), "action")
     require_verified_fingerprints(name, item["status"], item["fingerprints"])
-    for key in item["fingerprints"]:
-        if key.startswith("file:") and PurePosixPath(key[5:]).as_posix() != key[5:]:
-            raise SelectionError("a file fingerprint has a noncanonical path")
+    # The writer's own key rules: a key it would clean or normalize could never be read back by that name.
+    if not all(sound_fingerprint(key, value) for key, value in item["fingerprints"].items()):
+        raise SelectionError("a fingerprint has a noncanonical, unsafe or unknown key or value")
 
 
-def changed_inputs(name: str, fingerprints: dict[str, Any], root: Path) -> list[str]:
-    """Each file input whose current fingerprint differs from the recorded one."""
+def changed_inputs(fingerprints: dict[str, str], root: Path) -> list[str]:
+    """Each file input whose current fingerprint differs from the recorded one.
+
+    `check_saved_item` has proven every key sound, so each file is read by its saved name; no lookup can miss.
+    """
     changed = []
     for key, recorded in fingerprints.items():
-        if not key.startswith("file:"):
+        kind, _, name = key.partition(":")
+        if kind != "file":
             changed.append("unknown: value fingerprint comparison unavailable")
-            continue
-        if key.startswith("file:"):
-            try:
-                same = fingerprint_files([key[5:]], root, name)[key] == recorded
-            except SelectionError:
-                same = False
-            if not same:
-                changed.append(key[5:])
+        elif fingerprint_file(root, PurePosixPath(name), limit=FINGERPRINT_LIMIT_BYTES) != recorded:
+            changed.append(name)
     return changed
 
 
@@ -488,7 +486,7 @@ def stale_items(root: Path, host: str) -> list[tuple[str, str]]:
     A missing, unreadable or incompatible record supplies no verified evidence.
     """
     path = root / RECORD_DIRECTORY / f"{host}.json"
-    content = trusted_bytes(path, root)
+    content = trusted_bytes(path, root, limit=RECORD_LIMIT_BYTES)
     if content is None:
         return [("record", "unreadable" if os.path.lexists(path) else "missing")]
     try:
@@ -510,7 +508,7 @@ def stale_items(root: Path, host: str) -> list[tuple[str, str]]:
             stale.append((name, f"{item['status']}: {safe_reason(item['evidence_source'])}; "
                                 f"action: {safe_reason(str(item.get('action')))}"))
         stale.extend((name, safe_reason(changed) if changed.startswith("unknown:") else f"input changed: {safe_reason(changed)}")
-                     for changed in changed_inputs(name, item["fingerprints"], root))
+                     for changed in changed_inputs(item["fingerprints"], root))
     return [(name, safe_reason("; ".join(dict.fromkeys(reason for item, reason in stale if item == name))))
             for name in dict(stale)]
 

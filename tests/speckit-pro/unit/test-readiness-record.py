@@ -1587,6 +1587,18 @@ class G0RecordValidationTests(G0ReadinessFixture):
             self.record_path().write_text(json.dumps(record), encoding="utf-8")
             self.assert_logged_once("record", "incompatible")
 
+    def test_fingerprint_key_the_writer_would_normalize_continues_stale(self) -> None:
+        # Path cleaning rewrites these keys, so a lookup by the saved key would raise KeyError.
+        for key in ("file:.specify/constitution.md ", "file: .specify/constitution.md"):
+            with self.subTest(key=key):
+                self.write_record(self.all_verified())
+                record = json.loads(self.record_path().read_text(encoding="utf-8"))
+                record["items"]["project_integration"]["fingerprints"] = {key: "sha256:" + "0" * 64}
+                self.record_path().write_text(json.dumps(record), encoding="utf-8")
+                stale = self.g0()["stale"]
+                self.assertEqual(["record"], [row["item"] for row in stale])
+                self.assertIn("incompatible", stale[0]["reason"])
+
     def test_stale_plugin_revision_is_logged(self) -> None:
         self.write_record(self.all_verified())
         self.assertNotIn("plugin revision changed", json.dumps(self.g0()["stale"]))
