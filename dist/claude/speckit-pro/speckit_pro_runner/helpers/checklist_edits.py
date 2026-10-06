@@ -5,34 +5,42 @@ A checklist domain executor returns its gaps and proposed edits and writes neith
 `read_only` returns the digests of the two files, taken before the executors run.
 `dry_run` and `apply` refuse when either digest has moved, which means an executor
 wrote an artifact. Otherwise they apply the proposals one domain at a time in the
-workflow's domain order, under one lock, so no two writes touch the files at once.
+workflow's domain order, under one lock on the feature directory, so no two writes
+touch the files at once, whichever workflow file names the feature. Each write
+replaces its file only while the directory and the file are still the ones this run
+read or last wrote, so a change made by anyone else is refused, never overwritten.
 A domain whose edit does not match exactly once applies none of its edits and is
 reported as a conflict; later domains still run. Every listed domain needs a proposal,
 which is empty when it found no gaps, so a missing return is refused rather than read
 as a clean domain. `dry_run` with no domains and no proposals only compares the digests,
-which is how the orchestrator checks that a verify run wrote nothing.
+which is how the orchestrator checks that a verify run wrote nothing. Once a write
+has started, any failure reports what reached disk instead of a refusal.
 """
 
 from __future__ import annotations
 
-import hashlib
-from dataclasses import dataclass
-from collections.abc import Callable
-from contextlib import nullcontext
+import json
+import os
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
+from dataclasses import dataclass, field
 from functools import partial
 from pathlib import Path
 from typing import Any
 
-from ..atomic_write import write_bytes_atomic
+from ..atomic_write import WritePreconditionChanged, file_identity, open_safe_parent_fd, snapshot_write_target_fd, write_bytes_atomic
 from ..envelope import diagnostic, response
-from ..execution_control import confined_path, durable_json, exclusive_ledger, workflow_process_directory
-from ..strict_input import SelectionError, require_fields, require_text
+from ..execution_control import confined_path, durable_json, ignore_owned_directory, workflow_process_directory
+from ..strict_input import SelectionError, has_hidden_characters, require_fields, require_text
+from ..sweep_isolation import secret_matches
 from ..trusted_io import trusted_bytes
 from .execution_requests import Refusal, run_contained_helper
 
 SCHEMA_VERSION = "checklist-edits/v1"
 ARTIFACTS = ("spec.md", "plan.md")
 MAX_TEXT = 20000
+# Markdown keeps its tabs and line breaks; every other control, format or separator character is refused.
+EDIT_TEXT_KEEPS = "\t\n\r"
 
 
 class ArtifactChanged(Exception):
@@ -44,11 +52,35 @@ class ArtifactChanged(Exception):
 
 
 @dataclass
-class ApplyInterrupted(Exception):
-    """A write failed after earlier domains reached disk; `applied` names them."""
+class Progress:
+    """What this apply has put on disk, so a failure after a write reports the truth."""
 
-    domain: str
-    applied: list[str]
+    applied: list[str] = field(default_factory=list)
+    step: str = ""
+    partial: list[str] = field(default_factory=list)
+    record: dict[str, Any] | None = None
+
+    @property
+    def started(self) -> bool:
+        return bool(self.step)
+
+
+@dataclass
+class ApplyInterrupted(Exception):
+    """A step failed after the apply began writing; the fields say what is on disk."""
+
+    progress: Progress
+    record_written: bool
+    reason: str
+
+
+def checked_text(value: Any, label: str, *, keep: str = "") -> str:
+    """Bounded text that hides nothing from a reader: no control, format or separator character outside `keep`."""
+    if not isinstance(value, str) or len(value) > MAX_TEXT:
+        raise SelectionError(f"{label} must be text of at most {MAX_TEXT} characters")
+    if has_hidden_characters(value, keep=keep):
+        raise SelectionError(f"{label} must not contain control, format or line separator characters")
+    return value
 
 
 def checked_proposal(value: Any) -> tuple[str, list[str], list[dict[str, str]]]:
@@ -60,7 +92,7 @@ def checked_proposal(value: Any) -> tuple[str, list[str], list[dict[str, str]]]:
     for raw in item["gaps"]:
         gap = require_fields(raw, {"id", "description"}, "gap")
         require_text(gap["description"], "gap description")
-        gaps.append(require_text(gap["id"], "gap id"))
+        gaps.append(checked_text(require_text(gap["id"], "gap id"), "gap id"))
     if len(set(gaps)) != len(gaps):
         raise SelectionError("proposal: gap ids must be unique")
     edits = []
@@ -70,11 +102,11 @@ def checked_proposal(value: Any) -> tuple[str, list[str], list[dict[str, str]]]:
             raise SelectionError("edit: gap must name a gap in this proposal")
         if edit["file"] not in ARTIFACTS:
             raise SelectionError(f"edit: file must be one of {list(ARTIFACTS)}")
-        require_text(edit["find"], "find")
-        if not isinstance(edit["replace"], str) or max(len(edit["find"]), len(edit["replace"])) > MAX_TEXT:
-            raise SelectionError(f"edit: find and replace are text of at most {MAX_TEXT} characters")
+        checked_text(require_text(edit["find"], "find"), "edit find", keep=EDIT_TEXT_KEEPS)
+        if secret_matches(checked_text(edit["replace"], "edit replace", keep=EDIT_TEXT_KEEPS)):
+            raise SelectionError("edit replace looks like a credential; planning artifacts never store one")
         edits.append({key: edit[key] for key in ("gap", "file", "find", "replace")})
-    return require_text(item["domain"], "domain"), gaps, edits
+    return checked_text(require_text(item["domain"], "domain"), "domain"), gaps, edits
 
 
 def checked_request(request: dict[str, Any]) -> tuple[list[str], dict[str, str], dict[str, tuple[list[str], list[dict[str, str]]]]]:
@@ -113,43 +145,87 @@ def apply_domain(texts: dict[str, str], edits: list[dict[str, str]]) -> tuple[di
     return (texts if conflicts else work), conflicts
 
 
-def read_artifacts(root: Path, feature: Path) -> dict[str, bytes]:
-    contents = {}
+@contextmanager
+def held_feature(root: Path, feature: Path, *, exclusive: bool) -> Iterator[int]:
+    """The feature directory's descriptor, locked when `exclusive`, so every path that names it shares one lock."""
+    opened = open_safe_parent_fd(feature / ARTIFACTS[0], root, create=False)
+    if opened is None:
+        raise SelectionError("feature_dir must be an existing contained directory")
+    directory = opened[0]
+    try:
+        if exclusive:
+            try:
+                import fcntl  # POSIX only; importing it at module level would break the registry elsewhere.
+            except ImportError as error:
+                raise SelectionError("checklist-edits needs POSIX file locks to apply or check proposals") from error
+            try:
+                fcntl.flock(directory, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError as error:
+                raise SelectionError("another checklist-edits run holds this feature; retry after it finishes") from error
+        yield directory
+    finally:
+        os.close(directory)
+
+
+def read_artifacts(directory: int) -> dict[str, dict[str, Any]]:
+    """Each artifact's snapshot, read without following links: content, digest, mode and file identity."""
+    snapshots = {}
     for name in ARTIFACTS:
-        content = trusted_bytes(feature / name, root)
-        if content is None:
+        snapshot = snapshot_write_target_fd(directory, name)
+        if not snapshot["exists"]:
             raise SelectionError(f"{name} must be an existing file in feature_dir")
-        contents[name] = content
-    return contents
+        snapshots[name] = snapshot
+    return snapshots
 
 
-def digest(content: bytes) -> str:
-    return hashlib.sha256(content).hexdigest()
+def changed_since(snapshots: dict[str, dict[str, Any]], baseline: dict[str, str]) -> list[str]:
+    return [name for name in ARTIFACTS if snapshots[name]["digest"] != baseline[name]]
 
 
-def write_changed(root: Path, feature: Path, before: dict[str, str], after: dict[str, str]) -> None:
+def write_changed(root: Path, feature: Path, expected: dict[str, Any], progress: Progress,
+                  before: dict[str, str], after: dict[str, str]) -> None:
+    """Write each changed artifact only while it and its directory are still what this run last saw."""
     for name in ARTIFACTS:
-        if after[name] != before[name]:
-            write_bytes_atomic(feature / name, after[name].encode("utf-8"), trust_root=root)
+        if after[name] == before[name]:
+            continue
+        try:
+            written = write_bytes_atomic(feature / name, after[name].encode("utf-8"), trust_root=root,
+                                         expected_snapshot=expected[name], expected_parent=expected["directory"])
+        except WritePreconditionChanged as error:
+            if not (progress.applied or progress.partial):
+                raise ArtifactChanged([name]) from error
+            raise
+        expected[name] = {"exists": True, "digest": written["digest"], "mode": written["mode"], "identity": written["identity"]}
+        progress.partial.append(name)
 
 
 def apply_proposals(texts: dict[str, str], domains: list[str], proposals: dict[str, tuple[list[str], list[dict[str, str]]]],
-                    write: Callable[[dict[str, str], dict[str, str]], None] | None) -> list[dict[str, Any]]:
+                    write: Callable[[dict[str, str], dict[str, str]], None] | None, progress: Progress) -> list[dict[str, Any]]:
     """One row per proposed domain, in domain order; `write` puts each domain's result on disk before the next starts."""
     rows: list[dict[str, Any]] = []
     for domain in domains:
         gaps, edits = proposals[domain]
         updated, conflicts = apply_domain(texts, edits)
         if write is not None:
-            try:
-                write(texts, updated)
-            except OSError as error:
-                raise ApplyInterrupted(domain, [row["domain"] for row in rows if row["status"] == "applied"]) from error
+            progress.step, progress.partial = domain, []
+            write(texts, updated)
+            if not conflicts:
+                progress.applied.append(domain)
+            progress.partial = []
         texts = updated
         rows.append({"domain": domain, "gaps": len(gaps), "status": "conflict" if conflicts else "applied",
                      "edits_applied": 0 if conflicts else len(edits), "conflicts": conflicts,
                      "unproposed_gaps": [gap for gap in gaps if all(edit["gap"] != gap for edit in edits)]})
     return rows
+
+
+def record_on_disk(root: Path, record: Path, value: dict[str, Any] | None) -> bool:
+    """Whether the record this apply meant to publish is the one on disk."""
+    content = trusted_bytes(record, root)
+    try:
+        return value is not None and content is not None and json.loads(content) == value
+    except ValueError:
+        return False
 
 
 def checklist_edits(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, Any]:
@@ -161,27 +237,52 @@ def checklist_edits(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, 
         raise SelectionError("workflow_file must be an existing contained file")
     feature = confined_path(root, require_text(request["feature_dir"], "feature_dir"))
     if mode == "read_only":
-        return {"baseline": {name: digest(content) for name, content in read_artifacts(root, feature).items()},
-                "writes_state": False}
+        with held_feature(root, feature, exclusive=False) as directory:
+            return {"baseline": {name: snapshot["digest"] for name, snapshot in read_artifacts(directory).items()},
+                    "writes_state": False}
     domains, baseline, proposals = checked_request(request)
     link = workflow_process_directory(workflow).joinpath("checklist-edits", "applied.json").as_posix()
     record = confined_path(root, link)
-    # The baseline is checked under the lock, so no writer can slip in between the check and the first write.
-    with exclusive_ledger(record) if mode == "apply" else nullcontext():
-        contents = read_artifacts(root, feature)
-        changed = [name for name in ARTIFACTS if digest(contents[name]) != baseline[name]]
-        if changed:
-            raise ArtifactChanged(changed)
-        texts = {name: content.decode("utf-8") for name, content in contents.items()}
-        write = partial(write_changed, root, feature) if mode == "apply" else None
-        rows = apply_proposals(texts, domains, proposals, write)
-        if mode == "apply":
-            try:
-                durable_json(record, {"schema_version": SCHEMA_VERSION, "domains": rows})
-            except OSError as error:
-                raise ApplyInterrupted("application record", [row["domain"] for row in rows if row["status"] == "applied"]) from error
+    progress = Progress()
+    try:
+        rows = locked_apply(root, feature, record, mode, (domains, baseline, proposals), progress)
+    except (OSError, ValueError) as error:
+        if not progress.started:
+            raise
+        written = progress.step in {"application record", "lock release"} and record_on_disk(root, record, progress.record)
+        raise ApplyInterrupted(progress, written, str(error)) from error
     return {"order": [row["domain"] for row in rows if row["status"] == "applied"], "domains": rows, "link": link,
             "writes_state": mode == "apply"}
+
+
+def locked_apply(root: Path, feature: Path, record: Path, mode: str,
+                 checked: tuple[list[str], dict[str, str], dict[str, tuple[list[str], list[dict[str, str]]]]],
+                 progress: Progress) -> list[dict[str, Any]]:
+    """Under the feature lock: check the baseline, apply each domain, publish the record; dry_run reads twice."""
+    domains, baseline, proposals = checked
+    if mode == "apply":
+        ignore_owned_directory(record.parent)  # a broken record directory refuses before any write
+    with held_feature(root, feature, exclusive=True) as directory:
+        snapshots = read_artifacts(directory)
+        changed = changed_since(snapshots, baseline)
+        if changed:
+            raise ArtifactChanged(changed)
+        texts = {name: snapshot["content"].decode("utf-8") for name, snapshot in snapshots.items()}
+        expected: dict[str, Any] = {name: {key: snapshots[name][key] for key in ("exists", "digest", "mode", "identity")}
+                                    for name in ARTIFACTS}
+        expected["directory"] = file_identity(os.fstat(directory))
+        write = partial(write_changed, root, feature, expected, progress) if mode == "apply" else None
+        rows = apply_proposals(texts, domains, proposals, write, progress)
+        if mode == "dry_run":
+            # A check must see the baseline from start to finish, not just at its first read.
+            changed = changed_since(read_artifacts(directory), baseline)
+            if changed:
+                raise ArtifactChanged(changed)
+            return rows
+        progress.step, progress.record = "application record", {"schema_version": SCHEMA_VERSION, "domains": rows}
+        durable_json(record, progress.record)
+        progress.step = "lock release"
+    return rows
 
 
 REFUSAL = Refusal(
@@ -195,19 +296,24 @@ def run_checklist_edits_helper(entry: Any, request: Any) -> dict[str, Any]:
     try:
         return run_contained_helper(entry, request, checklist_edits, REFUSAL)
     except ApplyInterrupted as error:
+        progress = error.progress
+        partial_note = f" and {', '.join(progress.partial)} of {progress.step!r}" if progress.partial else ""
         refusal = diagnostic(
             "apply_interrupted",
-            f"writing {error.domain!r} failed after {len(error.applied)} domain(s) were applied; spec.md and plan.md hold them.",
+            f"{progress.step!r} failed ({error.reason}) after the apply began writing; on disk: "
+            f"{len(progress.applied)} applied domain(s){partial_note}; application record "
+            f"{'written' if error.record_written else 'not written'}.",
             remediation_summary="Restore spec.md and plan.md from version control before retrying.",
             remediation_actions=["Restore both files, then take a fresh baseline with read_only.",
                                  "Redispatch the domains; the retry would otherwise report an executor write."],
         )
         return response("expected_failure", request_id=request.request_id,
-                        data={"applied": error.applied, "failed": error.domain}, diagnostics=[refusal])
+                        data={"applied": progress.applied, "failed": progress.step, "partial": progress.partial,
+                              "record_written": error.record_written}, diagnostics=[refusal])
     except ArtifactChanged as error:
         refusal = diagnostic(
             "artifact_changed_during_check",
-            f"{error}; a checklist executor wrote a planning artifact, and nothing was applied.",
+            f"{error}; another writer (an executor or a second run) changed a planning artifact, and nothing was applied.",
             remediation_summary="Executors propose edits and never write spec.md or plan.md.",
             remediation_actions=["Review the unexpected change in the named file.",
                                  "Take a fresh baseline with read_only and redispatch the domains."],

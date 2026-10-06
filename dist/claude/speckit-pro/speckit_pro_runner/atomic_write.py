@@ -107,7 +107,9 @@ def write_bytes_atomic(
     trust_root: Path | None = None,
     mode: int | None = None,
     expected_snapshot: dict[str, Any] | None = None,
+    expected_parent: tuple[int, int] | None = None,
 ) -> dict[str, Any]:
+    """Replace `target` atomically; an expected snapshot or parent identity that no longer holds raises WritePreconditionChanged."""
     created_dirs: list[str] = []
     if trust_root is None:
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -124,9 +126,13 @@ def write_bytes_atomic(
     failure: OSError | None = None
     replaced = False
     applied_mode: int | None = None
+    identity: tuple[int, int] | None = None
     tmp_cleanup_errors: list[str] = []
     try:
         try:
+            # The descriptor pins the directory, so a rename after this check cannot redirect the write.
+            if expected_parent is not None and file_identity(os.fstat(parent_fd)) != expected_parent:
+                raise WritePreconditionChanged("write target directory changed after snapshot capture")
             if trust_root is not None:
                 ensure_safe_write_target_fd(parent_fd, target_name)
             existing_mode = mode if mode is not None else current_file_mode_fd(parent_fd, target_name)
@@ -139,7 +145,8 @@ def write_bytes_atomic(
             )
             if existing_mode is not None:
                 os.fchmod(tmp_fd, existing_mode)
-            applied_mode = stat.S_IMODE(os.fstat(tmp_fd).st_mode)
+            tmp_stat = os.fstat(tmp_fd)
+            applied_mode, identity = stat.S_IMODE(tmp_stat.st_mode), file_identity(tmp_stat)
             with os.fdopen(tmp_fd, "wb") as fh:
                 tmp_fd = -1
                 fh.write(content)
@@ -194,8 +201,14 @@ def write_bytes_atomic(
     return {
         "digest": hashlib.sha256(content).hexdigest(),
         "mode": applied_mode,
+        "identity": identity,
         "created_parent_dirs": created_dirs,
     }
+
+
+def file_identity(file_stat: os.stat_result) -> tuple[int, int]:
+    """The device and inode pair: one file or directory whatever path reaches it."""
+    return file_stat.st_dev, file_stat.st_ino
 
 
 def open_safe_parent_fd(target: Path, trust_root: Path, *, create: bool) -> tuple[int, str, list[str]] | None:
@@ -320,7 +333,7 @@ def snapshot_write_target_fd(parent_fd: int, target_name: str) -> dict[str, Any]
     try:
         fd = os.open(target_name, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0), dir_fd=parent_fd)
     except FileNotFoundError:
-        return {"exists": False, "content": None, "mode": None, "digest": None}
+        return {"exists": False, "content": None, "mode": None, "digest": None, "identity": None}
     try:
         file_stat = os.fstat(fd)
         if stat.S_ISLNK(file_stat.st_mode) or not stat.S_ISREG(file_stat.st_mode):
@@ -336,6 +349,7 @@ def snapshot_write_target_fd(parent_fd: int, target_name: str) -> dict[str, Any]
         "content": content,
         "mode": stat.S_IMODE(file_stat.st_mode),
         "digest": hashlib.sha256(content).hexdigest(),
+        "identity": file_identity(file_stat),
     }
 
 
@@ -345,6 +359,8 @@ def write_target_matches_snapshot(current: dict[str, Any], expected: dict[str, A
         return False
     if not expected_exists:
         return True
+    if "identity" in expected and current.get("identity") != expected["identity"]:
+        return False
     return current.get("digest") == expected.get("digest") and current.get("mode") == expected.get("mode")
 
 

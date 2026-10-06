@@ -7,6 +7,9 @@ run, refuses to apply when either changed, and then applies one domain at a time
 workflow order under one lock, so no two writes touch the files at once.
 """
 
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
+import fcntl
 import hashlib
 import json
 import os
@@ -30,6 +33,7 @@ HELPER_ID = "checklist-edits"
 FEATURE = "specs/001-feature"
 WORKFLOW = f"{FEATURE}/.process/workflow.md"
 RECORD = f"{FEATURE}/.process/checklist-edits/applied.json"
+OTHER_WORKFLOW = "docs/workflows/other.md"
 FIXTURE = REPO / "tests/speckit-pro/unit/fixtures/mutation-helpers/requests" / f"{HELPER_ID}.json"
 HOSTS = ("claude", "codex")
 RETIRED = ("then applies them to spec.md or plan.md", "then edit the artifact")
@@ -52,11 +56,23 @@ def digest(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+def feature_locked(root: Path) -> bool:
+    """Whether another descriptor holds the feature directory's lock right now."""
+    directory = os.open(root / FEATURE, os.O_RDONLY)
+    try:
+        fcntl.flock(directory, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        return True
+    finally:
+        os.close(directory)
+    return False
+
+
 class ChecklistEditsCase(MutationRequestCase):
     """A checkout with a spec and a plan; the helpers send one batch of proposals."""
 
     helper_id = HELPER_ID
-    files = {WORKFLOW: "# Workflow\n", f"{FEATURE}/spec.md": SPEC, f"{FEATURE}/plan.md": PLAN}
+    files = {WORKFLOW: "# Workflow\n", OTHER_WORKFLOW: "# Workflow\n", f"{FEATURE}/spec.md": SPEC, f"{FEATURE}/plan.md": PLAN}
     fixed_inputs = {"workflow_file": WORKFLOW, "feature_dir": FEATURE}
 
     def baseline(self) -> dict[str, str]:
@@ -71,6 +87,20 @@ class ChecklistEditsCase(MutationRequestCase):
 
     def text(self, name: str) -> str:
         return (self.root / FEATURE / name).read_text(encoding="utf-8")
+
+    @contextmanager
+    def before_write(self, action: Callable[[int], None]) -> Iterator[None]:
+        """Run `action(n)` just before the helper's n-th artifact write starts."""
+        real = checklist_edits.write_bytes_atomic
+        count = [0]
+
+        def hooked(path: Path, content: bytes, **kwargs: Any) -> Any:
+            count[0] += 1
+            action(count[0])
+            return real(path, content, **kwargs)
+
+        with patch.object(checklist_edits, "write_bytes_atomic", hooked):
+            yield
 
 
 class ProposalTests(ChecklistEditsCase):
@@ -117,8 +147,7 @@ class ProposalTests(ChecklistEditsCase):
         real = checklist_edits.write_bytes_atomic
 
         def watched(path: Path, content: bytes, **kwargs: Any) -> Any:
-            lock = self.root / RECORD
-            inside.append(lock.with_suffix(".lock").is_dir())
+            inside.append(feature_locked(self.root))
             writes.append(path.name)
             return real(path, content, **kwargs)
 
@@ -130,7 +159,7 @@ class ProposalTests(ChecklistEditsCase):
         self.assertEqual("ok", result["status"], result)
         self.assertTrue(inside and all(inside), inside)
         self.assertEqual(["spec.md", "plan.md", "spec.md"], writes)
-        self.assertFalse((self.root / RECORD).with_suffix(".lock").exists())
+        self.assertFalse(feature_locked(self.root))
 
     def test_the_record_lists_each_domain_in_the_order_it_was_applied(self) -> None:
         self.apply(
@@ -173,13 +202,13 @@ class ConflictTests(ChecklistEditsCase):
 class RefusalTests(ChecklistEditsCase):
     """A request that breaks the contract writes nothing."""
 
-    def test_an_existing_lock_refuses_the_batch_without_stealing_it_or_writing(self) -> None:
-        lock = (self.root / RECORD).with_suffix(".lock")
-        lock.parent.mkdir(parents=True)
-        lock.mkdir()
+    def test_a_held_lock_refuses_the_batch_without_stealing_it_or_writing(self) -> None:
+        holder = os.open(self.root / FEATURE, os.O_RDONLY)
+        self.addCleanup(os.close, holder)
+        fcntl.flock(holder, fcntl.LOCK_EX | fcntl.LOCK_NB)
         result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
         self.assertEqual("input_error", result["status"], result)
-        self.assertTrue(lock.is_dir())
+        self.assertIn("holds this feature", json.dumps(result))
         self.assertEqual((SPEC, PLAN), (self.text("spec.md"), self.text("plan.md")))
 
     def test_an_artifact_written_while_the_executors_ran_refuses_the_batch(self) -> None:
@@ -245,7 +274,7 @@ class RefusalTests(ChecklistEditsCase):
         self.assertEqual(("expected_failure", ["security"], "ux"), (result["status"], result["data"]["applied"], result["data"]["failed"]))
         self.assertEqual(("apply_interrupted", "# Spec\nLogin uses a password.\nExports are private.\n", PLAN),
                          (result["diagnostics"][0]["code"], self.text("spec.md"), self.text("plan.md")))
-        self.assertFalse((self.root / RECORD).with_suffix(".lock").exists())
+        self.assertFalse(feature_locked(self.root))
 
     def test_a_feature_directory_outside_the_repository_is_refused(self) -> None:
         for bad in ("../elsewhere", "/etc"):
@@ -260,6 +289,238 @@ class RefusalTests(ChecklistEditsCase):
         self.assertEqual("apply_interrupted", result["diagnostics"][0]["code"])
         self.assertIn("Restore", result["diagnostics"][0]["remediation"]["summary"])
         self.assertIn("private", self.text("spec.md"))
+
+
+def target_changes(root: Path, name: str) -> dict[str, Callable[[], None]]:
+    """The receipt's changes to one artifact after the helper read it, keyed by form."""
+    target = root / FEATURE / name
+    other = root / "elsewhere.md"
+
+    def mutate() -> None:
+        target.write_text(target.read_text(encoding="utf-8") + "Concurrent.\n", encoding="utf-8")
+
+    def replace() -> None:
+        other.write_text("# Replaced\n", encoding="utf-8")
+        os.replace(other, target)
+
+    def delete() -> None:
+        target.unlink()
+
+    def link(text: str) -> Callable[[], None]:
+        def substitute() -> None:
+            other.unlink(missing_ok=True)
+            other.write_text(text, encoding="utf-8")
+            target.unlink()
+            os.link(other, target)
+        return substitute
+
+    return {"content mutation": mutate, "regular-file replacement": replace, "deletion": delete,
+            "hard-link substitution": link("# Linked\n"), "same-text hard-link substitution": link(target.read_text(encoding="utf-8"))}
+
+
+class CompetingWriterTests(ChecklistEditsCase):
+    """cr1278 High and F1278-812f7be4: no change made by anyone else is lost or overwritten with stale text."""
+
+    def test_two_workflows_on_one_feature_never_lose_an_edit_reported_applied(self) -> None:
+        # The Codex interleaving: both start from one baseline; the inner apply runs inside the outer one.
+        baseline = self.baseline()
+        inner: dict[str, Any] = {}
+
+        def competitor(number: int) -> None:
+            if number == 1:
+                inner.update(self.apply(proposal("ux", edit("G2", "spec.md", "a password", "a passkey")),
+                                        workflow_file=OTHER_WORKFLOW, baseline=baseline))
+
+        with self.before_write(competitor):
+            outer = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")), baseline=baseline)
+        final = self.text("spec.md")
+        lost = [word for word, result in (("passkey", inner), ("private", outer)) if result["status"] == "ok" and word not in final]
+        self.assertEqual([], lost, (inner, outer, final))
+        self.assertEqual("input_error", inner["status"], inner)
+        self.assertEqual("ok", outer["status"], outer)
+
+    def test_a_target_changed_after_the_read_refuses_the_batch_and_keeps_the_change(self) -> None:
+        edits = {"spec.md": edit("G1", "spec.md", "open", "private"), "plan.md": edit("G1", "plan.md", "never", "always")}
+        for name, change_edit in edits.items():
+            for form in target_changes(self.root, name):
+                with self.subTest(name=name, form=form):
+                    for artifact, text in (("spec.md", SPEC), ("plan.md", PLAN)):
+                        (self.root / FEATURE / artifact).unlink(missing_ok=True)
+                        (self.root / FEATURE / artifact).write_text(text, encoding="utf-8")
+                    change = target_changes(self.root, name)[form]
+                    baseline = self.baseline()
+                    target = self.root / FEATURE / name
+                    seen: dict[str, Any] = {}
+
+                    def act(number: int) -> None:
+                        if number == 1:
+                            change()
+                            seen["text"] = target.read_text(encoding="utf-8") if target.exists() else None
+                            seen["inode"] = target.stat().st_ino if target.exists() else None
+
+                    with self.before_write(act):
+                        result = self.apply(proposal("security", change_edit), baseline=baseline)
+                    self.assertEqual(("expected_failure", [name]), (result["status"], result["data"].get("changed")), result)
+                    self.assertEqual((seen["text"], seen["inode"]),
+                                     (target.read_text(encoding="utf-8"), target.stat().st_ino) if target.exists() else (None, None))
+
+    def test_a_replaced_feature_directory_is_not_written(self) -> None:
+        moved = self.root / "specs/001-moved"
+
+        def act(number: int) -> None:
+            if number == 1:
+                (self.root / FEATURE).rename(moved)
+                (self.root / FEATURE).mkdir()
+                (self.root / FEATURE / "spec.md").write_text(SPEC, encoding="utf-8")
+                (self.root / FEATURE / "plan.md").write_text(PLAN, encoding="utf-8")
+
+        with self.before_write(act):
+            result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
+        self.assertEqual("expected_failure", result["status"], result)
+        self.assertEqual((SPEC, SPEC), (self.text("spec.md"), (moved / "spec.md").read_text(encoding="utf-8")))
+
+    def test_a_change_between_the_two_writes_of_a_domain_is_kept_and_reported(self) -> None:
+        def act(number: int) -> None:
+            if number == 2:
+                (self.root / FEATURE / "plan.md").write_text(PLAN + "Concurrent.\n", encoding="utf-8")
+
+        with self.before_write(act):
+            result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private"), edit("G2", "plan.md", "never", "always")))
+        self.assertEqual(("expected_failure", "apply_interrupted"), (result["status"], result["diagnostics"][0]["code"]), result)
+        self.assertEqual(([], "security", ["spec.md"]), (result["data"]["applied"], result["data"]["failed"], result["data"]["partial"]))
+        self.assertEqual(PLAN + "Concurrent.\n", self.text("plan.md"))
+
+    def test_a_change_between_domains_is_kept_and_reported(self) -> None:
+        def act(number: int) -> None:
+            if number == 2:
+                (self.root / FEATURE / "spec.md").write_text("# Spec\nConcurrent.\nExports are private.\nLogin uses a password.\n", encoding="utf-8")
+
+        with self.before_write(act):
+            result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")),
+                                proposal("ux", edit("G2", "spec.md", "a password", "a passkey")))
+        self.assertEqual(("expected_failure", ["security"], "ux", []),
+                         (result["status"], result["data"].get("applied"), result["data"].get("failed"), result["data"].get("partial")), result)
+        self.assertIn("Concurrent.", self.text("spec.md"))
+
+    def test_a_check_with_no_domains_refuses_a_change_made_after_its_read(self) -> None:
+        real = checklist_edits.read_artifacts
+        calls = [0]
+
+        def read_then_change(*args: Any) -> Any:
+            contents = real(*args)
+            calls[0] += 1
+            if calls[0] == 1:
+                (self.root / FEATURE / "spec.md").write_text(SPEC + "A late write.\n", encoding="utf-8")
+            return contents
+
+        before = self.baseline()
+        with patch.object(checklist_edits, "read_artifacts", read_then_change):
+            result = self.call("dry_run", domains=[], baseline=before, proposals=[])
+        self.assertEqual(("expected_failure", ["spec.md"]), (result["status"], result["data"].get("changed")), result)
+
+
+class CommittedStateTests(ChecklistEditsCase):
+    """F1278-d7ff996f and F1278-afb94c5e: a failure after the first write reports what is on disk."""
+
+    def failing_write(self, failing_call: int) -> Any:
+        real = checklist_edits.write_bytes_atomic
+        calls = [0]
+
+        def failing(path: Path, content: bytes, **kwargs: Any) -> Any:
+            calls[0] += 1
+            if calls[0] == failing_call:
+                raise OSError("disk full")
+            return real(path, content, **kwargs)
+
+        return patch.object(checklist_edits, "write_bytes_atomic", failing)
+
+    def test_a_half_written_first_domain_is_reported_as_partial(self) -> None:
+        with self.failing_write(2):
+            result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private"), edit("G2", "plan.md", "never", "always")))
+        self.assertEqual(("expected_failure", [], "security", ["spec.md"]),
+                         (result["status"], result["data"]["applied"], result["data"]["failed"], result["data"].get("partial")), result)
+        self.assertEqual(("# Spec\nLogin uses a password.\nExports are private.\n", PLAN), (self.text("spec.md"), self.text("plan.md")))
+
+    def test_a_half_written_later_domain_is_reported_as_partial(self) -> None:
+        with self.failing_write(3):
+            result = self.apply(proposal("security", edit("G1", "spec.md", "a password", "a passkey")),
+                                proposal("ux", edit("G2", "spec.md", "open", "private"), edit("G3", "plan.md", "never", "always")))
+        self.assertEqual((["security"], "ux", ["spec.md"]),
+                         (result["data"]["applied"], result["data"]["failed"], result["data"].get("partial")), result)
+        self.assertIn("private", self.text("spec.md"))
+
+    def test_a_record_published_before_its_failure_is_reported_written(self) -> None:
+        real = checklist_edits.durable_json
+
+        def publish_then_fail(path: Path, value: dict[str, Any]) -> None:
+            real(path, value)
+            raise OSError("directory sync failed")
+
+        with patch.object(checklist_edits, "durable_json", publish_then_fail):
+            result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
+        self.assertEqual(("expected_failure", "apply_interrupted"), (result["status"], result["diagnostics"][0]["code"]), result)
+        self.assertEqual((["security", "ux", "api"], True), (result["data"]["applied"], result["data"].get("record_written")), result)
+        self.assertTrue((self.root / RECORD).is_file())
+
+    def test_a_record_path_held_by_a_directory_is_reported_unwritten(self) -> None:
+        (self.root / RECORD).mkdir(parents=True)
+        result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
+        self.assertEqual(("expected_failure", ["security", "ux", "api"], False),
+                         (result["status"], result["data"]["applied"], result["data"].get("record_written")), result)
+        self.assertIn("private", self.text("spec.md"))
+
+    def test_a_refusal_raised_after_the_writes_reports_them(self) -> None:
+        # The record directory's ignore rule turns into a directory mid-apply: a ValueError, not an OSError.
+        def act(number: int) -> None:
+            ignore = self.root / RECORD
+            ignore = ignore.parent / ".gitignore"
+            ignore.unlink(missing_ok=True)
+            ignore.mkdir(parents=True, exist_ok=True)
+
+        with self.before_write(act):
+            result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
+        self.assertEqual(("expected_failure", ["security", "ux", "api"]), (result["status"], result["data"].get("applied")), result)
+        self.assertIn("private", self.text("spec.md"))
+
+    def test_a_lock_release_failure_after_the_writes_reports_them(self) -> None:
+        real = checklist_edits.held_feature
+
+        @contextmanager
+        def failing_release(*args: Any, exclusive: bool) -> Iterator[Any]:
+            with real(*args, exclusive=exclusive) as held:
+                yield held
+            if exclusive:
+                raise OSError("lock cleanup failed")
+
+        with patch.object(checklist_edits, "held_feature", failing_release):
+            result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
+        self.assertEqual(("expected_failure", ["security", "ux", "api"], True),
+                         (result["status"], result["data"].get("applied"), result["data"].get("record_written")), result)
+        self.assertIn("private", self.text("spec.md"))
+
+
+class UntrustedTextTests(ChecklistEditsCase):
+    """F1278-5ad50d38: hidden characters and credential-shaped text never reach spec.md or plan.md."""
+
+    def test_hidden_characters_and_credentials_are_refused_and_nothing_is_written(self) -> None:
+        cases = {
+            "bidi override": edit("G1", "spec.md", "open", "open \u202eetavirp"),
+            "isolate": edit("G1", "spec.md", "open", "\u2066private\u2069"),
+            "terminal escape": edit("G1", "spec.md", "open", "\x1b[2Jprivate"),
+            "line separator": edit("G1", "spec.md", "open", "private\u2028"),
+            "hidden find": edit("G1", "spec.md", "open\u200b", "private"),
+            "credential": edit("G1", "spec.md", "open", "private; token: ghp_" + "a1" * 20),
+        }
+        for label, bad in cases.items():
+            with self.subTest(label):
+                result = self.apply(proposal("security", bad))
+                self.assertEqual("input_error", result["status"], result)
+                self.assertEqual((SPEC, PLAN), (self.text("spec.md"), self.text("plan.md")))
+
+    def test_markdown_tabs_and_line_breaks_still_apply(self) -> None:
+        result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private:\n\t- see [ADR](docs/adr.md)")))
+        self.assertEqual("ok", result["status"], result)
+        self.assertIn("private:\n\t- see [ADR](docs/adr.md)", self.text("spec.md"))
 
 
 def run_dist_helper(host: str, root: Path, mode: str, inputs: dict[str, Any]) -> dict[str, Any]:
@@ -327,7 +588,8 @@ if __name__ == "__main__":
         run_counted(
             unittest.TestSuite(
                 unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                for case in (ProposalTests, ConflictTests, RefusalTests, HostParityTests, GuidanceTests)
+                for case in (ProposalTests, ConflictTests, RefusalTests, CompetingWriterTests, CommittedStateTests,
+                             UntrustedTextTests, HostParityTests, GuidanceTests)
             ),
             label="test-checklist-edits",
         )
