@@ -49,10 +49,11 @@ DISCOVERY_ONLY = "discovery-only"
 TRUST_PROMPT = "Continue with installation?"
 MANIFEST_NAMES = {"extension": "extension.yml", "preset": "preset.yml"}
 REGISTRY_DIRS = {"extension": ".specify/extensions", "preset": ".specify/presets"}
-# `specify` reaches github.com, so the operator's proxy, CA and token settings pass; no PYTHON* does.
-NETWORK_KEYS = ("HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "no_proxy",
-                "all_proxy", "SSL_CERT_FILE", "SSL_CERT_DIR", "REQUESTS_CA_BUNDLE", "GH_TOKEN", "GITHUB_TOKEN",
-                "XDG_CONFIG_HOME", "XDG_CACHE_HOME", "XDG_DATA_HOME")
+# Only what pinned Spec Kit v1.1.0 reads to reach github.com: GITHUB_TOKEN/GH_TOKEN
+# (authentication/github_http.py), and, through its urllib.request.build_opener openers
+# (authentication/http.py), urllib's <scheme>_proxy/no_proxy variables and OpenSSL's default CA paths.
+NETWORK_KEYS = ("GH_TOKEN", "GITHUB_TOKEN", "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "http_proxy", "https_proxy",
+                "no_proxy", "SSL_CERT_FILE", "SSL_CERT_DIR")
 
 
 def install_args(entry: dict[str, str]) -> list[str]:

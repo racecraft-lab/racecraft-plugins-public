@@ -64,6 +64,9 @@ def extensions_yml(*entries):
         "\n".join([head, *rest]) for head, rest in events.items()) + "\n"
 
 
+# The env.* names the hook-condition fixtures below read; no other parent variable reaches a child.
+HOOK_CONDITION_KEYS = ("SPK_CONSENT_MISSING", "SPK_CONSENT_MODE", "SPK_CONSENT_SET", "SPK_DISPLAY_NEVER_SET",
+                       "SPK_HOOK_MODE", "SPK_HOOK_SET", "SPK_HOOK_UNSET")
 SELECT_RUNNER = "import sys\nsys.path.insert(0, sys.argv.pop(1))\n"
 RUN_RUNNER = "import runpy\nrunpy.run_module('speckit_pro_runner', run_name='__main__', alter_sys=True)\n"
 
@@ -72,11 +75,11 @@ def run_isolated(runner, program, *args, cwd=None, **kwargs):
     """Run `program` in a child that imports only the selected runner and the standard library.
 
     The shared helper starts `python -I` with a minimal environment, so neither a checkout- or
-    project-root module nor an inherited PYTHON* variable reaches the child. Only the SPK_*
-    variables the hook conditions under test read are forwarded.
+    project-root module nor an inherited PYTHON* variable reaches the child. Of the parent's
+    other variables, only the HOOK_CONDITION_KEYS the fixtures set are forwarded.
     """
-    spk = {key: value for key, value in os.environ.items() if key.startswith("SPK_")}
-    return run_python(["-c", SELECT_RUNNER + program, str(runner), *args], cwd=cwd, env_extra=spk, **kwargs)
+    conditions = {key: os.environ[key] for key in HOOK_CONDITION_KEYS if key in os.environ}
+    return run_python(["-c", SELECT_RUNNER + program, str(runner), *args], cwd=cwd, env_extra=conditions, **kwargs)
 
 
 def payload_briefs(inputs, include_status=False):
@@ -285,14 +288,19 @@ class ChildImportIsolationTests(unittest.TestCase):
 
     def test_children_receive_no_python_environment(self):
         hostile = {"PYTHONPATH": str(REPO), "PYTHONHOME": str(REPO), "PYTHONSTARTUP": str(REPO / "startup.py"),
-                   "PYTHONSAFEPATH": "", "UNRELATED_SECRET": "1", "SPK_HOOK_PROBE": "1"}
+                   "PYTHONSAFEPATH": "", "UNRELATED_SECRET": "review-sentinel",
+                   "SPK_UNRELATED_SECRET": "review-sentinel", "SPK_HOOK_SET": "1"}
         with patch.dict(os.environ, hostile):
-            done = run_isolated(RUNNER_ROOTS[0][1], "import json, os\nprint(json.dumps(sorted(os.environ)))\n")
+            done = run_isolated(RUNNER_ROOTS[0][1], "import json, os\nprint(json.dumps(dict(os.environ)))\n")
         self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertNotIn("review-sentinel", done.stdout)
         names = json.loads(done.stdout)
         self.assertEqual([name for name in names if name.upper().startswith("PYTHON")], [])
-        self.assertNotIn("UNRELATED_SECRET", names)
-        self.assertIn("SPK_HOOK_PROBE", names)
+        self.assertEqual([name for name in names if name.startswith("SPK_")], ["SPK_HOOK_SET"])
+
+    def test_hook_condition_allowlist_names_exactly_the_fixture_variables(self):
+        source = Path(__file__).read_text(encoding="utf-8")
+        self.assertEqual(sorted(HOOK_CONDITION_KEYS), sorted(set(re.findall(r"env\.(SPK_[A-Z_]+)", source))))
 
     def test_payload_hosts_ignore_project_root_modules(self):
         inputs = {"phase": "Plan", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}

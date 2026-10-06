@@ -20,7 +20,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "tests" / "speckit-pro" / "lib"))
 from script_loader import load_script  # noqa: E402
 from test_result import run_counted  # noqa: E402
-from isolated_child import run_python  # noqa: E402
+from isolated_child import BASE_KEYS, run_python  # noqa: E402
 
 check = load_script("curated_install_check", REPO_ROOT / "tests/speckit-pro/run-curated-install-check.py")
 ENTRIES = json.loads(check.CURATED_SET.read_text(encoding="utf-8"))["entries"]
@@ -497,6 +497,10 @@ class CuratedRosterTests(CuratedInstallCase):
 
 
 HOSTILE_PYTHON_ENV = ("PYTHONPATH", "PYTHONHOME", "PYTHONSTARTUP", "PYTHONSAFEPATH")
+# Spec Kit v1.1.0 reads GITHUB_TOKEN/GH_TOKEN (authentication/github_http.py); its urllib openers
+# (authentication/http.py build_opener) read the *_proxy family and OpenSSL's SSL_CERT_FILE/SSL_CERT_DIR.
+PINNED_NETWORK_KEYS = ("GH_TOKEN", "GITHUB_TOKEN", "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "http_proxy",
+                       "https_proxy", "no_proxy", "SSL_CERT_FILE", "SSL_CERT_DIR")
 
 
 class ChildEnvironmentTests(unittest.TestCase):
@@ -517,21 +521,26 @@ class ChildEnvironmentTests(unittest.TestCase):
             self.assertFalse(marker.exists(), "inherited PYTHONPATH module executed")
             self.assertTrue(outcome.wasSuccessful(), outcome.failures + outcome.errors)
 
-    def test_specify_and_git_children_get_a_minimal_environment(self):
-        hostile = {key: "/hostile" for key in HOSTILE_PYTHON_ENV} | {"UNRELATED_SECRET": "1"}
-        with (tempfile.TemporaryDirectory() as raw, mock.patch.dict(os.environ, hostile),
+    def test_network_keys_are_exactly_those_the_pinned_cli_reads(self):
+        """spec-kit v1.1.0 reads GitHub tokens itself; its urllib openers read the proxy and OpenSSL CA variables."""
+        self.assertEqual(sorted(check.NETWORK_KEYS), sorted(PINNED_NETWORK_KEYS))
+
+    def test_specify_and_git_children_get_exactly_the_minimal_environment(self):
+        unconsumed = ("REQUESTS_CA_BUNDLE", "XDG_CONFIG_HOME", "XDG_CACHE_HOME", "XDG_DATA_HOME", "ALL_PROXY",
+                      "all_proxy", "UNRELATED_SECRET", "SPECKIT_CATALOG_URL")
+        parent = {key: "/hostile" for key in (*HOSTILE_PYTHON_ENV, *unconsumed)}
+        parent |= {key: "kept-" + key for key in (*BASE_KEYS, *PINNED_NETWORK_KEYS)}
+        with (tempfile.TemporaryDirectory() as raw, mock.patch.dict(os.environ, parent, clear=True),
               mock.patch.object(check.subprocess, "run",
                                 return_value=subprocess.CompletedProcess([], 1, "", "")) as run):
             check.specify(["--version"], Path(raw))
             check.init_project(Path(raw))
         self.assertEqual([call.args[0][0] for call in run.call_args_list], ["specify", "git"])
+        expected = {"specify": {key: "kept-" + key for key in (*BASE_KEYS, *PINNED_NETWORK_KEYS)} | {"NO_COLOR": "1"},
+                    "git": {key: "kept-" + key for key in BASE_KEYS}}
         for call in run.call_args_list:
             with self.subTest(child=call.args[0][0]):
-                env = call.kwargs["env"]
-                self.assertEqual([key for key in env if key.upper().startswith("PYTHON")], [])
-                self.assertNotIn("UNRELATED_SECRET", env)
-                self.assertEqual(env.get("PATH"), os.environ.get("PATH"))
-        self.assertEqual(run.call_args_list[0].kwargs["env"]["NO_COLOR"], "1")
+                self.assertEqual(call.kwargs["env"], expected[call.args[0][0]])
 
 
 if __name__ == "__main__":
