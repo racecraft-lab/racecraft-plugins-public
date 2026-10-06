@@ -22,6 +22,7 @@ from speckit_pro_runner.helpers.read_only import (  # noqa: E402
     setup_contract_mismatches,
     template_resolution_error,
 )
+from readiness_case import ReadinessCase  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 SCRIPT = """#!/usr/bin/env bash
@@ -177,20 +178,14 @@ def specify(root: Path, args: list[str]) -> tuple[int, str]:
     return 2, ""
 
 
-class ReviewabilityPreset(unittest.TestCase):
-    """A fresh project gets the shipped reviewability preset through `specify preset add`."""
-
-    def fresh_project(self) -> Path:
-        """A project that ran `specify init` and holds no preset."""
-        project = Path(self.enterContext(tempfile.TemporaryDirectory()))
-        project.joinpath(".specify").mkdir()
-        return project.resolve()
+class ReviewabilityPreset(ReadinessCase):
+    """A fresh project (`self.root`: `specify init`, no preset) gets the shipped reviewability preset."""
 
     def state(self, root: Path) -> dict[str, object]:
         return json.loads(detect_presets({"repo_root": str(root)}, root)["stdout"])["reviewability_preset"]
 
     def test_a_fresh_project_ends_with_the_preset_installed_and_step_5_0_passing(self) -> None:
-        root = self.fresh_project()
+        root = self.root
         before = self.state(root)
         self.assertEqual("missing", before["status"])
         self.assertEqual(["preset", "add", "--dev"], before["add_args"][:3])
@@ -205,7 +200,7 @@ class ReviewabilityPreset(unittest.TestCase):
                 )
 
     def test_an_installed_preset_needs_no_command(self) -> None:
-        root = self.fresh_project()
+        root = self.root
         shutil.copytree(REPO_ROOT / ".specify/presets" / PRESET_ID, root / ".specify/presets" / PRESET_ID)
         self.assertEqual("installed", self.state(root)["status"])
 
