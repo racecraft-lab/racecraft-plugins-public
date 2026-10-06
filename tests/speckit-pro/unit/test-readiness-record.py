@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import copy
+import itertools
 import os
 import re
 import shutil
@@ -913,29 +914,24 @@ class HostProbePathSecurityTest(unittest.TestCase):
             "env-shebang": "#!/usr/bin/env spk-helper\n",
             "subprocess": f"#!{sys.executable}\nimport subprocess\nraise SystemExit(subprocess.run(['spk-helper']).returncode)\n",
         }
-        for cli in ("git", "gh", "docker"):
-            for consumer, body in consumers.items():
-                for location in (self.tools, helpers):
-                    for form in ("symlink", "hardlink"):
-                        with self.subTest(cli=cli, consumer=consumer, location=location.name, form=form):
-                            launcher = self.tools / cli
-                            launcher.write_text(body, encoding="utf-8")
-                            launcher.chmod(0o755)
-                            helper = location / "spk-helper"
-                            if form == "symlink":
-                                helper.symlink_to(payload)
-                            else:
-                                os.link(payload, helper)
-                            try:
-                                path = os.pathsep.join(map(str, (self.tools, helpers)))
-                                with unittest.mock.patch.dict(os.environ, {"PATH": path}):
-                                    result = self.probe(self.root, [cli, "--version"], allowed=(cli,), timeout=2)
-                                self.assertFalse(self.marker.exists(), "worktree-linked helper ran")
-                                self.assertNotEqual(0, result["exit_status"])
-                            finally:
-                                launcher.unlink()
-                                helper.unlink()
-                                self.marker.unlink(missing_ok=True)
+        links = {"symlink": lambda helper: helper.symlink_to(payload), "hardlink": lambda helper: os.link(payload, helper)}
+        path = os.pathsep.join(map(str, (self.tools, helpers)))
+        for cli, consumer, location, form in itertools.product(("git", "gh", "docker"), consumers, (self.tools, helpers), links):
+            with self.subTest(cli=cli, consumer=consumer, location=location.name, form=form):
+                launcher = self.tools / cli
+                launcher.write_text(consumers[consumer], encoding="utf-8")
+                launcher.chmod(0o755)
+                helper = location / "spk-helper"
+                links[form](helper)
+                try:
+                    with unittest.mock.patch.dict(os.environ, {"PATH": path}):
+                        result = self.probe(self.root, [cli, "--version"], allowed=(cli,), timeout=2)
+                    self.assertFalse(self.marker.exists(), "worktree-linked helper ran")
+                    self.assertNotEqual(0, result["exit_status"])
+                finally:
+                    launcher.unlink()
+                    helper.unlink()
+                    self.marker.unlink(missing_ok=True)
 
     def test_trusted_installed_hosts_survive_poisoned_path(self) -> None:
         for host in ("codex", "claude"):
