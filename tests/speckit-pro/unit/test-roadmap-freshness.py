@@ -90,13 +90,9 @@ class RoadmapFreshnessTests(unittest.TestCase):
         return sha
 
     def check(self, **inputs: object) -> dict[str, object]:
-        request = SimpleNamespace(
-            helper_id=HELPER_ID,
-            operation=HELPER_ID,
-            request_id="roadmap-freshness-test",
-            mode="read_only",
-            inputs={"roadmap_path": ROADMAP, **inputs},
-        )
+        request = SimpleNamespace(helper_id=HELPER_ID, operation=HELPER_ID,
+                                  request_id="roadmap-freshness-test", mode="read_only",
+                                  inputs={"roadmap_path": ROADMAP, **inputs})
         # Model a protected Git installation at the OS permission boundary:
         # root CI owns system binaries, which the hardened probe rightly rejects.
         # Keep path validation, subprocesses, fetches and blob comparisons real.
