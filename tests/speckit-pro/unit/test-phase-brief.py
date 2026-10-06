@@ -583,8 +583,9 @@ class PhaseBriefHookTests(unittest.TestCase):
             hook("after_plan", "speckit.off.run", "off", enabled="false"),
             hook("after_tasks", "speckit.tasks.run", "tasks"),
         )
-        self.assertEqual([(item["extension"], item["command"]) for item in self.hooks("Plan", text)],
-                         [("git", "speckit.git.commit")])
+        self.assertEqual(self.hooks("Plan", text), [{"extension": "git", "command": "speckit.git.commit",
+                                                   "event": "after_plan", "optional": True,
+                                                   "prompt": "", "description": ""}])
 
     def test_before_hooks_come_first_and_a_repeated_command_is_listed_once(self):
         text = extensions_yml(
