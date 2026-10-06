@@ -27,9 +27,36 @@ SHIPPED_HASHES = {
     "PreToolUse:1:0": "64c3c89dcaf3998da20e44de2c3c781e817ff626ac2fb1783661cdddc4dde3f3",
     "Stop:0:0": "687b42d9949fa82703e298dab0826652619d2a4f4b22844ec6efabe7e405d261",
 }
+# Every effective control beyond the eight-field summary, each at its conservative value.
+CONTROLS = {"workspace_network_access": "disabled", "workspace_writable_roots": "none",
+            "workspace_slash_tmp": "excluded", "workspace_tmpdir": "excluded", "permission_profile": "none",
+            "web_search": "disabled", "web_search_tool": "disabled", "app_approvals_reviewer": "user",
+            "auto_review_policy": "unset", "app_tool_approval": "prompt", "app_destructive_tools": "disabled",
+            "app_open_world_tools": "disabled", "mcp_tool_approval": "prompt", "plugin_mcp_tool_approval": "none",
+            "other_overrides": "none"}
 POSTURE = {"approval_policy": "on-request", "sandbox_mode": "workspace-write", "approvals_reviewer": "user",
            "mcp_approval_mode": "prompt", "mcp_consent": "granted", "mcp_startup_timeout_sec": 10,
-           "mcp_tool_timeout_sec": 60, "external_delegation": "allowed"}
+           "mcp_tool_timeout_sec": 60, "external_delegation": "allowed", "controls": CONTROLS}
+# Security finding F1263-6fd5beee: each named variant and the control value that represents it.
+BROADENING_CONTROLS = {
+    "workspace-write network access": [("workspace_network_access", "enabled")],
+    "extra workspace-write writable roots": [("workspace_writable_roots", "added")],
+    "/tmp left writable": [("workspace_slash_tmp", "writable")],
+    "TMPDIR left writable": [("workspace_tmpdir", "writable")],
+    "default_permissions or custom permission profile": [("permission_profile", value)
+                                                         for value in ("custom", "workspace", "danger-full-access")],
+    "web search external-data path": [("web_search", "indexed"), ("web_search", "live"),
+                                      ("web_search_tool", "enabled")],
+    "app approval reviewer or auto-review policy": [("app_approvals_reviewer", "auto_review"),
+                                                    ("auto_review_policy", "set")],
+    "app tool approval, destructive and open-world controls": [
+        *(("app_tool_approval", mode) for mode in ("auto", "writes", "approve")),
+        ("app_destructive_tools", "enabled"), ("app_open_world_tools", "enabled")],
+    "MCP server and per-tool approval beside a prompt summary": [("mcp_tool_approval", mode)
+                                                                 for mode in ("auto", "writes", "approve")],
+    "plugin-provided MCP tool approval": [("plugin_mcp_tool_approval", mode) for mode in ("auto", "writes", "approve")],
+    "an unmodeled approval, sandbox or tool override": [("other_overrides", "present")],
+}
 LEGACY_HOOK_ACTION = ("Send a complete codex_hook_trust observation that verifies each hook's identity and exact hash "
                       "against the shipped definitions, then rerun scaffold. Never trust a hook that is not "
                       "verified. Scaffold never broadens permissions or disables a control.")
@@ -40,6 +67,10 @@ ACCESS = {"loopback": "allowed", "temp_dir": "healthy", "egress_policy_ref": "eg
 def posture(**changes: object) -> dict[str, object]:
     return {"item": "codex_approval_posture", "evidence_source": "codex session settings",
             "posture": {**POSTURE, **changes}}
+
+
+def controls(**changes: object) -> dict[str, object]:
+    return posture(controls={**CONTROLS, **changes})
 
 
 def hook_trust(*entries: dict[str, object]) -> dict[str, object]:
@@ -244,6 +275,62 @@ class ReadinessCodexTrustTest(ReadinessCase):
         bad = posture()
         bad["status"] = "verified"
         assert_runner_response(self, self.run_helper([bad]), "input_error", 2)
+
+    def test_eight_field_posture_without_its_controls_never_verifies(self) -> None:
+        legacy = posture()
+        del legacy["posture"]["controls"]  # type: ignore[attr-defined]
+        self.assert_item(self.item(legacy), "unknown", ("controls=missing",), ("posture control",))
+        for name in CONTROLS:
+            partial = posture(controls={key: value for key, value in CONTROLS.items() if key != name})
+            with self.subTest(missing=name):
+                self.assertEqual("unknown", self.item(partial)["status"])
+            with self.subTest(unobservable=name):
+                self.assertEqual("unknown", self.item(controls(**{name: "unobservable"}))["status"])
+        self.assertEqual("unknown", self.item({"item": "codex_approval_posture",
+                                               "evidence_source": "codex session settings"})["status"])
+
+    def test_each_broadening_control_is_unavailable_never_verified(self) -> None:
+        for variant, changes in BROADENING_CONTROLS.items():
+            for name, value in changes:
+                with self.subTest(variant=variant, control=name, value=value):
+                    self.assert_item(self.item(controls(**{name: value})), "unavailable",
+                                     ("controls=1 outside",), ("Keep current controls", "never broadens"))
+
+    def test_a_prompt_summary_cannot_hide_a_broader_per_tool_approval(self) -> None:
+        contradictory = controls(mcp_tool_approval="auto", plugin_mcp_tool_approval="approve")
+        self.assertEqual("prompt", contradictory["posture"]["mcp_approval_mode"])  # type: ignore[index]
+        self.assert_item(self.item(contradictory), "unavailable", ("mcp_approval_mode=prompt", "controls=2 outside"))
+        assert_runner_response(self, self.run_helper([posture(), controls(web_search="live")]), "input_error", 2)
+
+    def test_controls_outside_their_scope_do_not_block_a_conservative_posture(self) -> None:
+        self.assert_item(self.item(posture()), "verified", ("controls=conservative",))
+        self.assertEqual("verified", self.item(controls(web_search="cached", permission_profile="read-only",
+                                                        app_tool_approval="none", mcp_tool_approval="none"))["status"])
+        workspace = {name: "writable" for name in ("workspace_slash_tmp", "workspace_tmpdir")}
+        read_only = posture(sandbox_mode="read-only", controls={
+            **CONTROLS, **workspace, "workspace_network_access": "enabled", "workspace_writable_roots": "unobservable"})
+        self.assertEqual("verified", self.item(read_only)["status"])
+        self.assertEqual("verified", self.item(controls(app_tool_approval="none", app_destructive_tools="enabled",
+                                                        app_open_world_tools="unobservable"))["status"])
+        self.assertEqual("unavailable", self.item(controls(**workspace))["status"])
+        self.assertEqual("unknown", self.item(posture(sandbox_mode="unobservable"))["status"])
+        self.assertEqual("unavailable", self.item(posture(sandbox_mode="unobservable", controls={
+            **CONTROLS, "workspace_network_access": "enabled"}))["status"])
+
+    def test_malformed_posture_controls_are_refused(self) -> None:
+        self.refuse_each([posture(controls=bad) for bad in (
+            None, [], "none", {**CONTROLS, "network_access": "disabled"}, {**CONTROLS, "web_search": "LIVE"},
+            {**CONTROLS, "workspace_network_access": True}, {**CONTROLS, "other_overrides": "maybe"},
+            {**CONTROLS, "workspace_writable_roots": "/" + "tmp"})])
+
+    def test_scaffold_documents_every_posture_control_and_its_values(self) -> None:
+        from speckit_pro_runner.helpers import readiness_host_items
+        self.assertEqual(set(CONTROLS), set(readiness_host_items.POSTURE_CONTROLS))
+        step = scaffold_step("codex")
+        for name, (safe, broad) in readiness_host_items.POSTURE_CONTROLS.items():
+            with self.subTest(control=name):
+                quoted = [f'"{value}"' for value in (*safe, *broad)]
+                self.assertIn(f'"{name}": ' + ", ".join(quoted[:-1]) + " or " + quoted[-1], step)
 
     def test_trusted_hook_records_the_exact_hash(self) -> None:
         item = self.item(shipped_trust())

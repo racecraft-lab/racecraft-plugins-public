@@ -1163,13 +1163,36 @@ you send for these.
 | --- | --- | --- |
 | `codex_agents` | `agents`: `{"installation": {...}, "inventory": [{"agent": "<name>", "state": "current", "stale" or "missing", "repair": "none", "applied", "declined" or "failed"}], "expected_revision": "<plugin_revision>", "loaded_revision": "<version>"}` | reusing the `install-codex-agents` `mode="dry_run"` plan from step -0.5 for `inventory`, and its repair outcome in `repair`; copy the selected installation inputs into `installation` exactly as that request sent them, with no added keys; omit `loaded_revision` unless this session reports the revision it loaded, since a repaired agent loads only after a restart |
 | `extension_versions` | `extensions`: `{"extension": "<id>", "installed": "<version>" or null, "expected": "<version>" or null}` | reading each required extension's version from `spec_kit.cli_argv + ["extension", "list"]`; `expected` is its project pin or curated-set version, and a drifted or missing extension is flagged |
-| `codex_approval_posture` | `posture`: `{"approval_policy": "on-request", "never", "on-failure" or {"granular": {"sandbox_approval": <bool>, "rules": <bool>, "mcp_elicitations": <bool>, "request_permissions": <bool>, "skill_approval": <bool>}}, "sandbox_mode": "read-only", "workspace-write" or "danger-full-access", "approvals_reviewer": "user" or "auto_review", "mcp_approval_mode": "auto", "prompt", "writes" or "approve", "mcp_consent": "granted" or "not_granted", "mcp_startup_timeout_sec": <seconds>, null or "unobservable", "mcp_tool_timeout_sec": <seconds>, null or "unobservable", "external_delegation": "allowed" or "blocked"}` | reading an effective running-thread source; use `/status` or `/permissions` only for values they actually expose in this version, and do not change settings while inspecting; their complete live approval, sandbox and MCP coverage is unconfirmed. Send `"unobservable"` for anything unreadable; send null for a timeout only when its effective setting is confirmed unset. Disk configuration alone does not prove launch overrides or running-thread permissions |
+| `codex_approval_posture` | `posture`: `{"approval_policy": "on-request", "never", "on-failure" or {"granular": {"sandbox_approval": <bool>, "rules": <bool>, "mcp_elicitations": <bool>, "request_permissions": <bool>, "skill_approval": <bool>}}, "sandbox_mode": "read-only", "workspace-write" or "danger-full-access", "approvals_reviewer": "user" or "auto_review", "mcp_approval_mode": "auto", "prompt", "writes" or "approve", "mcp_consent": "granted" or "not_granted", "mcp_startup_timeout_sec": <seconds>, null or "unobservable", "mcp_tool_timeout_sec": <seconds>, null or "unobservable", "external_delegation": "allowed" or "blocked", "controls": {"workspace_network_access": "disabled" or "enabled", "workspace_writable_roots": "none" or "added", "workspace_slash_tmp": "excluded" or "writable", "workspace_tmpdir": "excluded" or "writable", "permission_profile": "none", "read-only", "workspace", "danger-full-access" or "custom", "web_search": "disabled", "cached", "indexed" or "live", "web_search_tool": "disabled" or "enabled", "app_approvals_reviewer": "user" or "auto_review", "auto_review_policy": "unset" or "set", "app_tool_approval": "none", "prompt", "auto", "writes" or "approve", "app_destructive_tools": "disabled" or "enabled", "app_open_world_tools": "disabled" or "enabled", "mcp_tool_approval": "none", "prompt", "auto", "writes" or "approve", "plugin_mcp_tool_approval": "none", "prompt", "auto", "writes" or "approve", "other_overrides": "none" or "present"}}` | reading an effective running-thread source; use `/status` or `/permissions` only for values they actually expose in this version, and do not change settings while inspecting; their complete live approval, sandbox and MCP coverage is unconfirmed. Send `"unobservable"` for anything unreadable; send null for a timeout only when its effective setting is confirmed unset. Disk configuration alone does not prove launch overrides or running-thread permissions |
 | `codex_hook_trust` | `hooks`: `{"hook": "<Event:group-index:handler-index>", "state": "trusted", "untrusted" or "unobservable", "hash": "<SHA-256 digest>" or null, "enabled": true, false or null}` | reviewing every shipped handler in `/hooks`; obtain the exact hash from an effective hook metadata source when available. Codex 0.160.0 `hooks/list` returns `sha256:` plus 64 lowercase hex digits; whether `/hooks` prints the hash is unconfirmed. The helper compares the complete shipped handler set and normalized expected hashes. Send `trusted` only with its trusted hash and observable enablement; ask the user to review and trust untrusted hooks in `/hooks`, never trust them yourself |
 | `codex_local_access` | `access`: `{"loopback": "allowed", "blocked" or "unobservable", "temp_dir": "healthy", "leaky" or "unobservable", "egress_policy_ref": "<name>" or null, "egress_policy_digest": "<hex digest>" or null}` | running one bounded loopback connection to a local port you open, reusing the `local_capability` temporary directory probe result, and naming the applicable egress policy by reference and digest together, or both null when none applies; do not copy its entries |
 
+Read each posture control from the effective configuration, launch overrides
+included, and send `"unobservable"` for any you cannot read:
+`workspace_network_access`, `workspace_writable_roots`, `workspace_slash_tmp`
+and `workspace_tmpdir` are `sandbox_workspace_write.network_access`, any
+`writable_roots` entry, `exclude_slash_tmp` and `exclude_tmpdir_env_var`;
+`permission_profile` is `default_permissions` (`none` when unset, `custom` for
+a `permissions.<name>` profile); `web_search` is the top-level mode and
+`web_search_tool` is `tools.web_search`; `app_approvals_reviewer` is
+`auto_review` when `apps._default` or any app reviews automatically;
+`auto_review_policy` is `set` when `auto_review.policy` or `extra_policy` is
+set. `app_tool_approval`, `mcp_tool_approval` and `plugin_mcp_tool_approval`
+are `prompt` only when every enabled tool of every app, MCP server, or
+plugin-provided MCP server prompts after default and per-tool overrides,
+another observed mode otherwise, and `none` when no such tool is enabled.
+`app_destructive_tools` and `app_open_world_tools` are `enabled` when any app
+allows tools with that hint. `other_overrides` is `present` when the effective
+configuration sets any other approval, sandbox, permission, network, app,
+plugin or MCP control. Without `controls`, or with any control unobservable,
+the posture is never `verified`.
+
 The helper owns the conservative scaffold posture profile: confined sandbox,
-MCP prompt mode, granted consent and delegation, and timeouts no larger than
-the documented defaults. A complete supported approval policy (including the
+MCP prompt mode, granted consent and delegation, timeouts no larger than
+the documented defaults, and every posture control at its first, conservative
+value (`permission_profile` also `read-only`, `web_search` also `cached`, tool
+approval also `none`). Workspace controls do not apply under a `read-only`
+sandbox, nor the two app tool hints when no app tool is enabled. A complete supported approval policy (including the
 five granular booleans) and either supported reviewer are observations, not
 consent; `never` does not remove sandbox controls. Other observed profiles are
 `unavailable`, and unreadable values remain `unknown`. This profile is a

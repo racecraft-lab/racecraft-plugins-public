@@ -393,6 +393,31 @@ POSTURE_CHOICES = {
     "external_delegation": ("allowed", "blocked"),
 }
 POSTURE_TIMEOUTS = ("mcp_startup_timeout_sec", "mcp_tool_timeout_sec")
+TOOL_APPROVAL_MODES = (("none", "prompt"), ("auto", "writes", "approve"))
+# Effective controls beyond the summary above, as (conservative values, other values). Without every one
+# observed the posture is never verified; a value outside the conservative set is unavailable.
+POSTURE_CONTROLS = {
+    "workspace_network_access": (("disabled",), ("enabled",)),
+    "workspace_writable_roots": (("none",), ("added",)),
+    "workspace_slash_tmp": (("excluded",), ("writable",)),
+    "workspace_tmpdir": (("excluded",), ("writable",)),
+    "permission_profile": (("none", "read-only"), ("workspace", "danger-full-access", "custom")),
+    "web_search": (("disabled", "cached"), ("indexed", "live")),
+    "web_search_tool": (("disabled",), ("enabled",)),
+    "app_approvals_reviewer": (("user",), ("auto_review",)),
+    "auto_review_policy": (("unset",), ("set",)),
+    "app_tool_approval": TOOL_APPROVAL_MODES,
+    "app_destructive_tools": (("disabled",), ("enabled",)),
+    "app_open_world_tools": (("disabled",), ("enabled",)),
+    "mcp_tool_approval": TOOL_APPROVAL_MODES,
+    "plugin_mcp_tool_approval": TOOL_APPROVAL_MODES,
+    "other_overrides": (("none",), ("present",)),
+}
+# Controls that cannot act in an observed state: workspace-write settings under a read-only sandbox,
+# and app tool hints when no app tool is enabled.
+INERT_CONTROLS = {("sandbox_mode", "read-only"): ("workspace_network_access", "workspace_writable_roots",
+                                                  "workspace_slash_tmp", "workspace_tmpdir"),
+                  ("app_tool_approval", "none"): ("app_destructive_tools", "app_open_world_tools")}
 MAX_TIMEOUT_SECONDS = 86400
 HASH_RE = re.compile(r"(?:(?i:sha256):)?[0-9a-fA-F]{64}")
 GRANULAR_KEYS = ("sandbox_approval", "rules", "mcp_elicitations", "request_permissions", "skill_approval")
@@ -450,10 +475,27 @@ def shipped_codex_hooks() -> dict[str, str] | None:
         return None
 
 
+def posture_controls(detail: dict[str, Any]) -> dict[str, str] | None:
+    """The observed controls that can act; a control the caller left out is unobservable."""
+    if "controls" not in detail:
+        return None
+    controls = detail["controls"]
+    if not isinstance(controls, dict) or not controls.keys() <= POSTURE_CONTROLS.keys():
+        raise SelectionError(f"codex_approval_posture.posture.controls takes {sorted(POSTURE_CONTROLS)}")
+    observed = {name: choice(controls.get(name, "unobservable"), (*safe, *other, "unobservable"),
+                             f"codex_approval_posture control {name}")
+                for name, (safe, other) in POSTURE_CONTROLS.items()}
+    inert = {name for (key, value), names in INERT_CONTROLS.items()
+             if {**detail, **observed}.get(key) == value for name in names}
+    return {name: value for name, value in observed.items() if name not in inert}
+
+
 def observe_codex_approval_posture(raw: dict[str, Any], observed_at: str, source: str) -> dict[str, Any]:
     detail = raw["posture"]
-    if not isinstance(detail, dict) or detail.keys() != {*POSTURE_CHOICES, *POSTURE_TIMEOUTS}:
-        raise SelectionError(f"codex_approval_posture.posture takes {sorted({*POSTURE_CHOICES, *POSTURE_TIMEOUTS})}")
+    if not isinstance(detail, dict) or detail.keys() - {"controls"} != {*POSTURE_CHOICES, *POSTURE_TIMEOUTS}:
+        raise SelectionError(f"codex_approval_posture.posture takes {sorted({*POSTURE_CHOICES, *POSTURE_TIMEOUTS})} "
+                             "and controls")
+    controls = posture_controls(detail)
     facts: dict[str, str] = {}
     for key, allowed in POSTURE_CHOICES.items():
         value = detail[key]
@@ -471,22 +513,31 @@ def observe_codex_approval_posture(raw: dict[str, Any], observed_at: str, source
                                                               or not 0 < value <= MAX_TIMEOUT_SECONDS):
             raise SelectionError(f"codex_approval_posture {key} must be whole seconds, null or \"unobservable\"")
         facts[key] = "default" if value is None else str(value)
-    summary = ", ".join(f"{key}={value}" for key, value in facts.items())
+    outside = [name for name, value in (controls or {}).items() if value not in (*POSTURE_CONTROLS[name][0],
+                                                                                   "unobservable")]
+    unread = [name for name, value in (controls or {}).items() if value == "unobservable"]
+    # Counts keep every summary fact within the record limit; the fingerprint holds each control value.
+    controls_text = ("missing" if controls is None else "conservative" if not outside and not unread
+                     else f"{len(outside)} outside, {len(unread)} unobservable")
+    summary = ", ".join(f"{key}={value}" for key, value in facts.items()) + f", controls={controls_text}"
     prints = {"value:posture": digest(summary)}
+    if controls is not None:
+        prints["value:posture_controls"] = digest(controls)
     # Every bounded posture fact fits; shorten only the source label to retain all observations.
     source = describe(source[:MAX_TEXT - len(summary) - 3], summary, "codex_approval_posture.evidence_source")
     refused = [key for key in POSTURE_ACTIONS if facts[key] in ("blocked", "not_granted")]
     if refused:
         return make_item("unavailable", source, observed_at, prints, POSTURE_ACTIONS[refused[0]])
     if facts["sandbox_mode"] == "danger-full-access" or facts["mcp_approval_mode"] in ("auto", "writes", "approve") \
-            or any(type(detail[key]) is int and detail[key] > limit for key, limit in POSTURE_DEFAULT_TIMEOUTS.items()):
+            or any(type(detail[key]) is int and detail[key] > limit for key, limit in POSTURE_DEFAULT_TIMEOUTS.items()) \
+            or outside:
         return make_item("unavailable", source, observed_at, prints,
                          "Keep current controls; review the observed posture against the conservative scaffold profile "
                          "before using the affected capability. " + NEVER_BROADEN)
-    if "unobservable" in facts.values():
+    if "unobservable" in facts.values() or controls is None or unread:
         return make_item("unknown", source, observed_at, prints, "Read the Codex approval, sandbox, reviewer and "
-                         "MCP settings from an effective running-thread source; leave unreadable values unobservable "
-                         "and rerun scaffold. " + NEVER_BROADEN)
+                         "MCP settings and every posture control from an effective running-thread source; leave "
+                         "unreadable values unobservable and rerun scaffold. " + NEVER_BROADEN)
     return make_item("verified", source, observed_at, prints)
 
 
