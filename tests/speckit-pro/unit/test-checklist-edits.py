@@ -9,6 +9,7 @@ workflow order under one lock, so no two writes touch the files at once.
 
 from collections.abc import Callable, Iterator
 from contextlib import ExitStack, contextmanager
+import errno
 import fcntl
 from functools import partial
 import hashlib
@@ -1462,7 +1463,49 @@ class GateFourTests(ChecklistEditsCase):
         (self.feature / "checklists/security.md").write_text(CLEAN_REPORT, encoding="utf-8")
 
     def gate(self) -> dict[str, Any]:
-        return dict(json.loads(read_only.validate_gate(G4_INPUTS, self.root)["stdout"]))
+        # Observe real OS descriptors across every clean and refused snapshot.
+        # ExitStack callbacks must close them before the public gate returns.
+        opened: set[int] = set()
+        real_open = os.open
+
+        def record_open(*args: Any, **kwargs: Any) -> int:
+            descriptor = real_open(*args, **kwargs)
+            opened.add(descriptor)
+            return descriptor
+
+        try:
+            with patch.object(os, "open", record_open):
+                return dict(json.loads(read_only.validate_gate(G4_INPUTS, self.root)["stdout"]))
+        finally:
+            leaked = []
+            for descriptor in opened:
+                try:
+                    os.fstat(descriptor)
+                except OSError as error:
+                    self.assertEqual(errno.EBADF, error.errno)
+                else:
+                    leaked.append(descriptor)
+                    os.close(descriptor)
+            self.assertEqual([], leaked, "G4 left acquired descriptors open")
+
+    def test_g4_closes_acquired_descriptors_when_directory_open_fails(self) -> None:
+        # Root/specs/feature, checklists, then root/specs/feature for revalidation.
+        for fail_at in range(1, 8):
+            with self.subTest(directory_open=fail_at):
+                real_open = os.open
+                calls = 0
+
+                def refuse_open(path: Any, flags: int, *args: Any, **kwargs: Any) -> int:
+                    nonlocal calls
+                    if flags & os.O_DIRECTORY:
+                        calls += 1
+                        if calls == fail_at:
+                            raise PermissionError("G4 fixture denies directory acquisition")
+                    return real_open(path, flags, *args, **kwargs)
+
+                with patch.object(os, "open", refuse_open):
+                    self.assertFalse(self.gate()["pass"])
+                self.assertEqual(fail_at, calls, "the acquisition failure must be exercised")
 
     def test_g4_requires_a_markdown_report_not_a_placeholder(self) -> None:
         checklists = self.feature / "checklists"
