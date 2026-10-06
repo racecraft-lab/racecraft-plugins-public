@@ -872,7 +872,10 @@ Runner stop policy remains authoritative.
 A wave is the agents a host launches together (ADR 0018). The request may add
 `domains` (Checklist only: each `/speckit-checklist <domain>` name under
 `brief.inputs.prompt_section`, in file order) and `items` (Clarify, Checklist
-and Analyze: each unresolved item as `{line, confidence}`). `brief.waves` then
+and Analyze: each unresolved item as `{line, confidence}`), and must carry
+`max_agents` with either (the host's concurrent-agent limit, below). A wave
+larger than `max_agents` arrives as consecutive waves of at most that size, in
+order. `brief.waves` then
 lists, in order: the domain waves, the security wave (the three analysts of
 each security item), the low-confidence wave (the routed analyst of each
 low-confidence item), and the verify wave (each domain's `pass: verify`
@@ -881,8 +884,15 @@ unchanged); a wave with no agents is omitted. A checklist executor still
 edits `spec.md` and `plan.md` itself, so the brief gives each domain its own
 wave and no two writers run at once; one wave per domain is the rule the
 brief names, never a choice to batch them.
+Pass `max_agents=subagent_slots`, derived as in the capacity rule above. The
+cap is `agents.max_concurrent_threads_per_session` (legacy alias
+`agents.max_threads`; spawned threads, primary excluded; Codex picks the
+default when unset; see the Codex
+[configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference)).
+With no count exposed, `subagent_slots` is 1.
 Launch every entry of a wave in one turn, then consume every result before the
-next wave. Each entry names its agent, prompt `inputs` and model. A domain entry
+next wave. A synthesizer or the confidence rule starts only after every wave of
+its items returned. Each entry names its agent, prompt `inputs` and model. A domain entry
 takes that domain's workflow prompt, plus a `Pass: verify` line when its inputs
 say `pass: verify`; an analyst entry (`inputs.item` only) takes the consensus
 prompt for `items[inputs.item - 1]`, built from your own copy of that item. Checklist runs two requests: `domains` before the executors

@@ -784,7 +784,7 @@ all domains' gaps, then a verify wave:
 ```text
 1. autopilot-state.json: every domain task → in_progress
 2. Request the phase brief with `domains` (the `/speckit-checklist <domain>`
-   names under brief.inputs.prompt_section, in file order).
+   names under brief.inputs.prompt_section, in file order) and `max_agents`.
    Domain waves, in file order, each launched and consumed before the next
    (one entry per wave, with its own domain prompt):
      Agent(subagent_type: "speckit-pro:checklist-executor", model: entry.model.claude.model,
@@ -797,7 +797,7 @@ all domains' gaps, then a verify wave:
 3. Collect each executor's "Unresolved for consensus" items, in domain order
 4. If unresolved gaps exist:
    a. autopilot-state.json: each affected "<domain> Consensus" → in_progress
-   b. Request the phase brief again with `items`, then follow
+   b. Request the phase brief again with `items` and `max_agents`, then follow
       consensus-protocol.md §Batched Dispatch: the brief's security wave and
       low-confidence wave, each in ONE turn; await → synthesizers in ONE
       message; apply each Artifact Edit SERIALLY to spec.md or plan.md.

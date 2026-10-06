@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
-from typing import Any
+from typing import Any, NamedTuple
 
 from ..strict_input import require_text
 from .read_only import consensus_route
@@ -16,6 +16,8 @@ CONSENSUS_PHASES = frozenset({"Clarify", "Checklist", "Analyze"})
 DOMAIN_NAME = re.compile(r"[a-z0-9][a-z0-9_-]{0,63}")
 MAX_DOMAINS, MAX_ITEMS, MAX_LINE = 12, 100, 2000
 ITEM_FIELDS = {"line", "confidence"}
+WAVE_INPUTS = ("domains", "items", "max_agents")
+MAX_AGENTS = 1000
 # Checklist executors still edit spec.md and plan.md themselves, so concurrent domain runs could drop each other's
 # edits. False gives each domain run a wave of its own. Flip it once executors only propose edits (#1201).
 CHECKLIST_DOMAINS_PARALLEL = False
@@ -48,6 +50,25 @@ def checked_items(phase: str, raw: Any) -> list[dict[str, Any]]:
     return raw
 
 
+class WaveRequest(NamedTuple):
+    domains: list[str]
+    items: list[dict[str, Any]]
+    max_agents: int
+
+
+def checked_wave_request(phase: str, raw: dict[str, Any]) -> WaveRequest:
+    """The optional wave inputs the caller supplied. `max_agents`, the host's concurrent-agent limit, is required with
+    `domains` or `items`: Claude Code's SUBAGENT_WAVE_SIZE, Codex's subagent_slots (1 when the host exposes no count)."""
+    domains = checked_domains(phase, raw["domains"]) if "domains" in raw else []
+    items = checked_items(phase, raw["items"]) if "items" in raw else []
+    limit = raw.get("max_agents", 1)
+    if ("domains" in raw or "items" in raw) and "max_agents" not in raw:
+        raise ValueError("max_agents is required with domains or items")
+    if isinstance(limit, bool) or not isinstance(limit, int) or not 0 < limit <= MAX_AGENTS:
+        raise ValueError(f"max_agents must be a whole number from 1 to {MAX_AGENTS}")
+    return WaveRequest(domains, items, limit)
+
+
 def dispatch(agent: str, model_for: ModelFor, **inputs: Any) -> dict[str, Any]:
     return {"agent": agent, "inputs": inputs, "model": model_for(agent)}
 
@@ -77,8 +98,13 @@ def checklist_waves(domains: list[str], model_for: ModelFor) -> tuple[list[list[
     return ([runs] if CHECKLIST_DOMAINS_PARALLEL else [[run] for run in runs]), verify
 
 
-def compose_waves(domains: list[str], items: list[dict[str, Any]], model_for: ModelFor) -> list[list[dict[str, Any]]]:
+def compose_waves(request: WaveRequest, model_for: ModelFor) -> list[list[dict[str, Any]]]:
     """Domain waves ({domain}), the security and low-confidence waves ({item}), then the verify wave
-    ({domain, pass: "verify"}); a wave with no agents is dropped, so no domains and no items give no waves."""
-    runs, verify = checklist_waves(domains, model_for)
-    return [wave for wave in [*runs, *consensus_waves(items, model_for), verify] if wave]
+    ({domain, pass: "verify"}); a wave with no agents is dropped, so no domains and no items give no waves.
+
+    A wave larger than the host's limit becomes consecutive sub-waves of at most `max_agents`, in entry order.
+    """
+    runs, verify = checklist_waves(request.domains, model_for)
+    size = request.max_agents
+    return [wave[start:start + size] for wave in [*runs, *consensus_waves(request.items, model_for), verify]
+            for start in range(0, len(wave), size)]

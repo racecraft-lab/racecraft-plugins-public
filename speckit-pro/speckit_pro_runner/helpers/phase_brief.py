@@ -12,7 +12,7 @@ from ..agent_inventory import AGENT_INVENTORY
 from ..envelope import diagnostic, response
 from ..strict_input import require_fields, require_text
 from ..trusted_io import resolve_repo_root
-from .dispatch_waves import checked_domains, checked_items, compose_waves
+from .dispatch_waves import WAVE_INPUTS, WaveRequest, checked_wave_request, compose_waves
 from .extension_hooks import optional_hooks
 
 PHASES = {
@@ -42,7 +42,6 @@ EXECUTOR_SLICES = (
 HOOK_PHASES = frozenset(PHASES) - {"Clarify"}
 SLICE_PHASES = frozenset({"Clarify", "Checklist", "Analyze"})
 PROMPT_SECTIONS = {"Clarify": "Clarify Prompts", "Checklist": "Step 2: Run Enriched Checklist Prompts"}
-WAVE_INPUTS = ("domains", "items")
 
 
 def brief_path(value: Any, label: str) -> str:
@@ -153,7 +152,7 @@ def phase_model(phase: str, agent: str) -> dict[str, dict[str, str]]:
     return model
 
 
-def brief_data(phase: str, workflow: str, feature: str, domains: list[str], items: list[dict[str, Any]]) -> dict[str, Any]:
+def brief_data(phase: str, workflow: str, feature: str, waves: WaveRequest) -> dict[str, Any]:
     """Assemble one validated phase's brief; raises when a packaged reference is unreadable."""
     agent, gate, artifacts = PHASES[phase]
     skill = None if phase == "Clarify" else f"speckit-{phase.lower()}"
@@ -165,12 +164,12 @@ def brief_data(phase: str, workflow: str, feature: str, domains: list[str], item
                    "skill": skill},
         "readable_files": [workflow, ".specify/memory/constitution.md", ".specify/extensions.yml"] + [feature + "/" + name for name in artifacts],
         "gate": gate, "slices": phase_slices(phase), "model": phase_model(phase, agent), "hooks": [],
-        "waves": compose_waves(domains, items, lambda role: phase_model(phase, role)),
+        "waves": compose_waves(waves, lambda role: phase_model(phase, role)),
     }
 
 
-def checked_request(raw: Any) -> tuple[str, str, str, list[str], list[dict[str, Any]]]:
-    """The closed phase-brief inputs as (phase, workflow_file, feature_dir, domains, items); anything else raises ValueError."""
+def checked_request(raw: Any) -> tuple[str, str, str, WaveRequest]:
+    """The closed phase-brief inputs as (phase, workflow_file, feature_dir, waves); anything else raises ValueError."""
     optional = {key: raw[key] for key in WAVE_INPUTS if isinstance(raw, dict) and key in raw}
     inputs = require_fields({key: value for key, value in raw.items() if key not in optional} if isinstance(raw, dict) else raw,
                             {"phase", "workflow_file", "feature_dir"}, "phase-brief inputs")
@@ -181,9 +180,7 @@ def checked_request(raw: Any) -> tuple[str, str, str, list[str], list[dict[str, 
         raise ValueError("feature_dir must name a directory")
     if phase not in PHASES:
         raise ValueError("phase must be Specify, Clarify, Plan, Checklist, Tasks or Analyze")
-    domains = checked_domains(phase, optional["domains"]) if "domains" in optional else []
-    items = checked_items(phase, optional["items"]) if "items" in optional else []
-    return phase, workflow, feature, domains, items
+    return phase, workflow, feature, checked_wave_request(phase, optional)
 
 
 def internal_failure(request: Any, code: str, exc: Exception) -> dict[str, Any]:
@@ -193,7 +190,7 @@ def internal_failure(request: Any, code: str, exc: Exception) -> dict[str, Any]:
 def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     """Return phase-brief/v1 dispatch data; gate and stop decisions stay separate.
 
-    The closed request inputs are phase, workflow_file and feature_dir strings, and optional domains and items
+    The closed request inputs are phase, workflow_file and feature_dir strings, and optional domains, items and max_agents
     for waves (dispatch_waves.py).
     Paths reject parent segments and control, format and line separator characters.
     feature_dir is workflow-root relative; workflow_file may be absolute but must name a file.
@@ -237,7 +234,7 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     Input errors return no data; uninterpretable hooks are internal_failure.
     """
     try:
-        phase, workflow, feature, domains, items = checked_request(request.inputs)
+        phase, workflow, feature, waves = checked_request(request.inputs)
     except ValueError as exc:
         return response("input_error", request_id=request.request_id,
                         diagnostics=[diagnostic("invalid_phase_brief", str(exc))])
@@ -245,7 +242,7 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     if isinstance(root, dict):
         return response("missing_prerequisite", request_id=request.request_id, diagnostics=[root])
     try:
-        data = brief_data(phase, workflow, feature, domains, items)
+        data = brief_data(phase, workflow, feature, waves)
     except (OSError, ValueError) as exc:
         return internal_failure(request, "phase_brief_slices_unavailable", exc)
     try:

@@ -481,7 +481,7 @@ class PhaseBriefTests(InProjectCase):
 class PhaseBriefWaveTests(InProjectCase):
     """Dispatch waves (ADR 0018, P4): the agents a host launches together, then the next wave."""
 
-    BRIEF = {"workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
+    BRIEF = {"workflow_file": "docs/workflow.md", "feature_dir": "specs/example", "max_agents": 20}
     ANALYSTS = ("codebase-analyst", "spec-context-analyst", "domain-researcher")
     ITEMS = (
         {"line": "[security] Q1: where do tokens live?", "confidence": "high"},
@@ -520,6 +520,44 @@ class PhaseBriefWaveTests(InProjectCase):
         with patch.object(dispatch_waves, "CHECKLIST_DOMAINS_PARALLEL", True):
             waves = self.waves("Checklist", domains=["security", "ux"])
         self.assertEqual([[entry["inputs"].get("pass") for entry in wave] for wave in waves], [[None, None], ["verify", "verify"]])
+
+    def test_a_wave_larger_than_the_host_limit_runs_as_ordered_sub_waves(self):
+        items = [{"line": "[security] Q1: where do tokens live?"}, {"line": "[security] Q2: who may read secrets?"}]
+        whole = self.waves("Analyze", items=items)
+        self.assertEqual([len(wave) for wave in whole], [6])
+        for limit, sizes in ((4, [4, 2]), (2, [2, 2, 2]), (1, [1] * 6)):
+            with self.subTest(limit=limit):
+                waves = self.waves("Analyze", items=items, max_agents=limit)
+                self.assertEqual([len(wave) for wave in waves], sizes)
+                self.assertEqual([entry for wave in waves for entry in wave], whole[0])
+
+    def test_every_kind_of_wave_is_bounded_by_the_host_limit(self):
+        waves = self.waves("Checklist", domains=["security", "state-management", "ux"], items=list(self.ITEMS), max_agents=2)
+        self.assertEqual([len(wave) for wave in waves], [1, 1, 1, 2, 1, 2, 2, 1])
+
+    def test_both_payload_hosts_return_the_same_sub_waves(self):
+        inputs = {"phase": "Analyze", **self.BRIEF, "items": list(self.ITEMS), "max_agents": 2}
+        source = dispatch_brief(inputs)["data"]["waves"]
+        self.assertEqual([len(wave) for wave in source], [2, 1, 2])
+        self.assertEqual([report["waves"] for report in payload_briefs(inputs)], [source, source])
+
+    def test_wave_inputs_need_the_host_limit_and_it_must_be_a_positive_count(self):
+        bare = {"phase": "Analyze", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example", "items": list(self.ITEMS)}
+        for extra in ({}, {"max_agents": 0}, {"max_agents": -1}, {"max_agents": True}, {"max_agents": "4"}, {"max_agents": 1.5},
+                      {"max_agents": 1001}):
+            with self.subTest(extra=extra):
+                result = dispatch_brief({**bare, **extra})
+                self.assertEqual((result["status"], result["data"]), ("input_error", {}))
+
+    def test_both_hosts_name_their_own_limit_and_cite_its_source(self):
+        needles = {"claude": ("max_agents=SUBAGENT_WAVE_SIZE", "CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS", "code.claude.com/docs/en/env-vars"),
+                   "codex": ("max_agents=subagent_slots", "agents.max_concurrent_threads_per_session",
+                             "learn.chatgpt.com/docs/config-file/config-reference")}
+        for host, expected in needles.items():
+            with self.subTest(host=host):
+                loop = self.loop(host)
+                for needle in expected:
+                    self.assertIn(needle, loop)
 
     def test_analyst_entries_carry_the_item_number_and_never_its_text(self):
         entries = [entry for wave in self.waves("Analyze", items=list(self.ITEMS)) for entry in wave]

@@ -228,9 +228,11 @@ serial (write contention on spec.md / plan.md / tasks.md).
 
 ```text
 Stage 1 — All routed analysts, as the brief's waves (one turn each):
-  Request the phase brief with `items` (each unresolved item's line and confidence).
+  Request the phase brief with `items` (each unresolved item's line and confidence)
+  and `max_agents` (the host's concurrent-agent limit).
   Its security wave holds the three analysts of every security item; its
   low-confidence wave holds the one routed analyst of every low-confidence item.
+  A wave over the limit arrives as consecutive waves of at most `max_agents`.
   (A recommendation item has no entry: apply the recommendation, no dispatch.)
   For each entry of a wave, all in ONE turn:
       Agent(subagent_type: <entry.agent>,
