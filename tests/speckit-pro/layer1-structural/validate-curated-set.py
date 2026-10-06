@@ -88,11 +88,17 @@ class ValidateCuratedSet(unittest.TestCase):
                 self.assertTrue(isinstance(url, str) and ARCHIVE_URL.fullmatch(url), f'archive_url={url!r}')
 
     def test_install_and_upgrade_skills_install_through_from(self) -> None:
+        guide = ' '.join((PLUGIN_ROOT / 'skills' / 'speckit-coach' / 'references' / 'presets-extensions-guide.md').read_text(encoding='utf-8').split())
+        with self.subTest(msg='guide says what the pin guarantees and what the operator reviews'):
+            for phrase in ('pins the bytes but does not vet them', 'specify extension info', 'commands, scripts, and hooks'):
+                self.assertIn(phrase, guide)
         for skill in SKILLS_WITH_CURATED_STEP:
             text = (PLUGIN_ROOT / 'skills' / skill / 'SKILL.md').read_text(encoding='utf-8')
             flat = ' '.join(text.split())
             with self.subTest(msg=f'{skill} names the --from install shape'):
                 self.assertIn(INSTALL_SHAPE, flat)
+            with self.subTest(msg=f'{skill} asks the operator to vet the pinned archive before confirming'):
+                self.assertIn('pins the bytes but does not vet them', flat)
             with self.subTest(msg=f'{skill} no longer tells the operator to add by catalog id'):
                 self.assertNotIn('"extension", "add", "<id>"]', flat)
 

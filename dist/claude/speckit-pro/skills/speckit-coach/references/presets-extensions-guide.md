@@ -41,6 +41,14 @@ the roster into this guide or infer that an entry outside it should be removed.
 Spec Kit v1.1.0 lists these entries in a discovery-only community catalog, so
 `add <id>` refuses them. Each entry names a commit-pinned `archive_url`; install
 with `spec_kit.cli_argv + ["<kind>", "add", "<id>", "--from", "<archive_url>"]`.
+The pin pins the bytes but does not vet them: it fixes the commit, so a moved
+tag cannot change what installs, and says nothing about what the code does. Spec
+Kit's trust model for `--from` asks the operator to review the release archive
+first. Before the operator confirms an entry, have them open the pinned archive,
+read its manifest and its commands, scripts, and hooks, and compare it with
+`specify extension info <id>` (it prints the candidate archive URL). Treat any
+mismatch as a reason to stop and report it.
+
 Keep the catalog stack as it is: Spec Kit says never to mark a discovery-only
 catalog install-allowed.
 
