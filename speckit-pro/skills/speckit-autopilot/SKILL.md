@@ -508,13 +508,21 @@ See Step 1.1 for the full naming pattern and rules.
 
 ### 4. Multi-prompt phases
 
-Clarify and Checklist have multiple prompts in the workflow file.
+Clarify has one prompt in the workflow file: one session of at most 5
+questions. Checklist has one prompt per domain.
+For older workflows with multiple Clarify prompts, normalize the pending
+Clarify phase before creating its task items or requesting its phase brief:
+combine the existing focuses into one prompt, ranked by how much each changes
+the plan. Replace the workflow's Clarify Prompts and pending Clarify Results
+rows with that one session; reconcile pending Clarify task items in state to
+the same session. Keep completed session evidence. If a Clarify session has
+already completed, proceed to G2 instead of dispatching another session.
 Spawn a **separate subagent for each prompt**, consume its result, and run the
 two-layer resolution (Rule 6) after each one BEFORE spawning the next — later
-sessions/domains may depend on earlier resolved items. Do not batch
-all sessions and check for markers only at the end.
+domains may depend on earlier resolved items. Do not batch
+all domains and check for markers only at the end.
 
-Per-phase flow templates (per-session for Clarify, per-domain for
+Per-phase flow templates (the Clarify session, per-domain for
 Checklist) live in
 [`references/phase-execution.md`](./references/phase-execution.md)
 <!-- host:claude: the Claude phase reference groups the flows per phase -->
@@ -1095,7 +1103,7 @@ entry of `brief.slices` verbatim, in order, after those lines under a
 discovery, grounding and routing rules from the slices, so the prompt carries
 no `Protocol:` or `Reference dir:` line for them.
 Run `validate-gate` with `brief.gate` afterward; the brief is not gate evidence.
-Clarify still runs only when G1 found `[NEEDS CLARIFICATION]` markers.
+Clarify runs for every SPEC, whatever G1's marker count.
 Use the brief for phase dispatch facts instead of re-reading `phase-execution.md`
 for each planning phase. Keep the existing remediation and bookkeeping steps.
 Implement retains its existing agent, inputs and gate; it never requests a
@@ -1117,14 +1125,25 @@ stable fields, shared by both hosts:
 | `slices` | Ordered, structurally validated reference sections copied verbatim for the dispatch prompt; empty for Specify, Plan and Tasks |
 | `waves` | Empty list, reserved for dispatch waves (#1183) |
 | `model` | Null; use the installed agent configuration until #1184 |
-| `hooks` | Empty list, reserved for optional hooks (#1188) |
+| `hooks` | The phase's optional hooks, each `{extension, command}` once: enabled, condition met, registered under `before_<phase>` then `after_<phase>`, in priority order within an event; empty for Clarify |
 
 Loaded commands still read their own instructions, templates and scripts.
 The phase-brief helper validates each sliced reference before dispatch: use
 ATX headings and `***` separators in those references. Comment blocks and
 fenced code retain their original text in a slice.
-Empty reserved fields add no behavior; existing hook handling and sequential
-session/domain dispatch remain. Runner stop policy remains authoritative.
+Empty reserved fields (`waves`, `model`) add no behavior; sequential
+session/domain dispatch remains. Runner stop policy remains authoritative.
+
+Hooks: a loaded planning command runs its own mandatory hooks (`optional:
+false`), so the orchestrator never dispatches one. Run each entry of
+`brief.hooks` once after the phase, in order, and record the batch in the
+decisions list: `helper_id=decisions-list operation=decisions-list mode=apply`
+with `workflow_file` and one `entries` item per hook (`kind`:
+`optional_hook_run`; `option_chosen`: the command run; `rejected_alternative`:
+skipping it; `evidence`: the extension that registered it; `affected_unit`: the
+phase). Clarify and Implement load no Spec Kit command, so for those two the
+orchestrator runs the registered hooks of `before_<phase>` and `after_<phase>`
+from `.specify/extensions.yml`.
 
 For each pending phase, spawn a subagent, collect the result, validate
 the gate, advance. Every step is a tool call.
@@ -1138,7 +1157,7 @@ for phase in PHASES starting from first_pending:
        and the workflow status table, then repeat before executing this phase.
     1. autopilot-state.json: phase item → in_progress
 <!-- host:claude: Claude dispatches with Agent -->
-    2. Run before_<phase> hooks from .specify/extensions.yml
+    2. Clarify and Implement only: run before_<phase> hooks from .specify/extensions.yml
     3. For each workflow prompt in this phase:
          Planning:
          Agent(subagent_type: "speckit-pro:" + brief.agent, run_in_background: false,
@@ -1146,7 +1165,7 @@ for phase in PHASES starting from first_pending:
          Implement: use the implementation executor and task-specific TDD prompt.
 <!-- /host -->
 <!-- host:codex: Codex dispatches with spawn_agent -->
-    2. Run before_<phase> hooks from .specify/extensions.yml
+    2. Clarify and Implement only: run before_<phase> hooks from .specify/extensions.yml
     3. For each workflow prompt in this phase:
          Planning:
          spawn_agent(agent_type=brief.agent,
@@ -1155,7 +1174,9 @@ for phase in PHASES starting from first_pending:
          Implement: use the implementation executor and task-specific TDD prompt.
 <!-- /host -->
     4. Run consensus (Clarify/Checklist/Analyze only) — see Rule 6
-    5. Run after_<phase> hooks
+    5. Specify, Plan, Checklist, Tasks and Analyze only: run each brief.hooks entry once
+       and record the batch in the decisions list.
+       Clarify and Implement only: run after_<phase> hooks from .specify/extensions.yml
     6. Validate the gate (G1-G7): run runner helper
        `helper_id=validate-gate operation=validate-gate mode=read_only`
        with `gate=brief.gate` for planning (`G7` for Implement), `feature_dir=<feature-dir>`, and
@@ -1332,6 +1353,27 @@ the exact workflow prompt plus `WORKFLOW_ROOT`, `PRESET_CONVENTIONS`, and
 tell Specify to use that branch and existing spec directory rather than create
 another. Rule 6 and the consensus reference own resolution between prompts. Do
 not reconstruct those contracts from this entrypoint.
+
+### Artifact page selection
+
+At every artifact-author dispatch, including regeneration, pass the current
+plan and the optional research and design-concept paths inside the established
+workflow root. Require the author to invoke the loaded runner's
+`select-artifact-pages` helper in `read_only` mode before filling templates,
+per its agent instructions. The helper owns selection; the author consumes
+`selected_pages` in returned order and reports one outcome per selected page.
+A non-`ok` selection is a whole-set artifact gap under the existing fail-open
+reporting protocol. The author publishes each page only through the runner's
+`publish-artifact-page` helper, which performs every artifact file operation
+through one held directory descriptor; the author never touches `artifacts/`
+with a native tool.
+
+<!-- host:claude: Claude supplies inputs through the Agent tool's prompt -->
+Pass those planning inputs in the `speckit-pro:artifact-author` Agent prompt.
+<!-- /host -->
+<!-- host:codex: Codex supplies inputs through the installed agent's spawn_agent prompt -->
+Pass those planning inputs in the installed `artifact-author` spawn_agent prompt.
+<!-- /host -->
 
 ## Step 3: Post-Implementation
 
