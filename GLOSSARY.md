@@ -12,6 +12,10 @@ _Avoid_: pilot run, evidence run, canary
 A file holding every scaffold interview answer in advance, so scaffold runs without asking. A missing or unknown answer fails scaffold rather than turning into a question.
 _Avoid_: pre-answered interview, scaffold script
 
+**Application record**:
+The checklist run's account of the domain edits it applied. An interrupted run distinguishes a record known to be present, known to be absent or different, and one whose state could not be verified.
+_Avoid_: presumed absence
+
 **Blocked-for-UAT**:
 Work a run cannot finish or verify and hands to human review with its reason and evidence, while independent safe work continues. Accepting a documented gap does not make that work complete.
 _Avoid_: completed with deferrals, failed run, waived completion

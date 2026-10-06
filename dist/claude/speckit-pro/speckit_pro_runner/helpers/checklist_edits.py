@@ -37,7 +37,6 @@ from ..envelope import diagnostic, response
 from ..execution_control import confined_path, ignore_owned_directory, workflow_process_directory
 from ..strict_input import SelectionError, has_hidden_characters, require_fields, require_text
 from ..sweep_isolation import secret_matches
-from ..trusted_io import trusted_bytes
 from .execution_requests import Refusal, run_contained_helper
 
 SCHEMA_VERSION = "checklist-edits/v1"
@@ -67,6 +66,7 @@ class Progress:
     step: str = ""
     partial: list[str] = field(default_factory=list)
     record: dict[str, Any] | None = None
+    record_published: bool = False
     moved: list[str] = field(default_factory=list)
 
     @property
@@ -79,7 +79,7 @@ class ApplyInterrupted(Exception):
     """A step failed after the apply began writing; the fields say what is on disk."""
 
     progress: Progress
-    record_written: bool
+    record_written: bool | None
     reason: str
 
 
@@ -255,11 +255,18 @@ def canonical_mismatches(root: Path, expected: dict[str, tuple[Path, tuple[int, 
     return moved
 
 
-def record_on_disk(root: Path, record: Path, value: dict[str, Any] | None) -> bool:
-    """Whether the record this apply meant to publish is the one on disk."""
-    content = trusted_bytes(record, root)
+def record_on_disk(root: Path, record: Path, value: dict[str, Any] | None) -> bool | None:
+    """Whether the intended record is canonical; an unreadable entry is unknown, not absent."""
+    if value is None:
+        return False
     try:
-        return value is not None and content is not None and json.loads(content) == value
+        state = entry_state(root, record)
+    except (OSError, ValueError):
+        return None
+    if state is None or not state[1]["exists"]:
+        return False
+    try:
+        return json.loads(state[1]["content"]) == value
     except ValueError:
         return False
 
@@ -295,7 +302,7 @@ def confirm(root: Path, expected: dict[str, tuple[Path, tuple[int, int], dict[st
     """Raise unless every canonical path still holds what this run wrote or read there."""
     progress.moved = canonical_mismatches(root, expected)
     if progress.moved:
-        raise CanonicalMismatch(f"the canonical path no longer holds what this run wrote: {', '.join(progress.moved)}")
+        raise CanonicalMismatch(f"could not confirm the canonical path holds what this run wrote: {', '.join(progress.moved)}")
 
 
 def locked_apply(root: Path, feature: Path, record: Path, mode: str,
@@ -333,6 +340,7 @@ def locked_apply(root: Path, feature: Path, record: Path, mode: str,
         progress.step, progress.record = "application record", {"schema_version": SCHEMA_VERSION, "domains": rows}
         published = write_file_atomic(record, canonical_bytes(progress.record).decode("utf-8"), trust_root=root,
                                       expected_snapshot={**record_before[1], "parent": record_before[0]})
+        progress.record_published = True
         progress.step = "verification"
         confirm(root, {**artifacts, record.name: (record, record_before[0], {"exists": True, **published})}, progress)
         progress.step = "lock release"
@@ -352,11 +360,14 @@ def run_checklist_edits_helper(entry: Any, request: Any) -> dict[str, Any]:
     except ApplyInterrupted as error:
         progress = error.progress
         partial_note = f" and {', '.join(progress.partial)} of {progress.step!r}" if progress.partial else ""
+        record_note = {True: "present", False: "absent or different", None: "state unknown"}[error.record_written]
+        if progress.record_published:
+            record_note += " (publication completed)"
         refusal = diagnostic(
             "apply_interrupted",
             f"{progress.step!r} failed ({error.reason}) after the apply began writing; on disk: "
             f"{len(progress.applied)} applied domain(s){partial_note}; application record "
-            f"{'written' if error.record_written else 'not written'}.",
+            f"{record_note}.",
             remediation_summary="Restore spec.md and plan.md from version control before retrying.",
             remediation_actions=["Restore both files, then take a fresh baseline with read_only.",
                                  "Redispatch the domains; the retry would otherwise report an executor write."],
