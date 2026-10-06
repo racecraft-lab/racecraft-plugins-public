@@ -157,44 +157,33 @@ class TemplateResolution(unittest.TestCase):
 
 PRESET_ID = "speckit-pro-reviewability"
 PRESET_TEMPLATES = ("spec-template", "plan-template", "tasks-template")
-# The `specify` v1.1.0 surface scaffold uses, checked against the pinned CLI by hand:
-# `preset add --dev DIR --priority N` copies DIR to .specify/presets/<id>/ and registers it;
-# `preset resolve NAME` names the top layer that provides the template.
-SPECIFY_STUB = """import json, pathlib, shutil, sys
-args = sys.argv[1:]
-presets = pathlib.Path(".specify/presets")
-if args[:2] == ["preset", "add"] and args[2] == "--dev" and args[4] == "--priority":
-    source = pathlib.Path(args[3])
-    target = presets / source.name
-    shutil.copytree(source, target)
-    registry = presets / ".registry"
-    registry.write_text(json.dumps({"presets": {source.name: {"priority": int(args[5])}}}))
-elif args[:2] == ["preset", "resolve"]:
-    hits = sorted(presets.glob("*/templates/" + args[2] + ".md"))
-    if not hits:
-        raise SystemExit("not found: " + args[2])
-    print(hits[0].as_posix())
-else:
-    raise SystemExit("unsupported: " + " ".join(args))
-"""
+
+
+def specify(root: Path, args: list[str]) -> tuple[int, str]:
+    """The `specify` v1.1.0 surface scaffold uses, as checked against the pinned CLI by hand.
+
+    `preset add --dev DIR --priority N` copies DIR to .specify/presets/<id>/ and registers it;
+    `preset resolve NAME` names the top layer that provides the template.
+    """
+    presets = root / ".specify/presets"
+    if args[:3] == ["preset", "add", "--dev"] and args[4:5] == ["--priority"]:
+        source = Path(args[3])
+        shutil.copytree(source, presets / source.name)
+        (presets / ".registry").write_text(json.dumps({"presets": {source.name: {"priority": int(args[5])}}}))
+        return 0, ""
+    if args[:2] == ["preset", "resolve"]:
+        hits = sorted(presets.glob(f"*/templates/{args[2]}.md"))
+        return (0, hits[0].relative_to(root).as_posix()) if hits else (1, "")
+    return 2, ""
 
 
 class ReviewabilityPreset(unittest.TestCase):
     """A fresh project gets the shipped reviewability preset through `specify preset add`."""
 
     def fresh_project(self) -> Path:
-        temp = tempfile.TemporaryDirectory()
-        self.addCleanup(temp.cleanup)
-        root = Path(temp.name).resolve()
+        root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
         (root / ".specify").mkdir()
-        (root / "specify_stub.py").write_text(SPECIFY_STUB, encoding="utf-8")
         return root
-
-    def specify(self, root: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(
-            [sys.executable, str(root / "specify_stub.py"), *args],
-            cwd=root, shell=False, capture_output=True, text=True, check=False,
-        )
 
     def state(self, root: Path) -> dict[str, object]:
         return json.loads(detect_presets({"repo_root": str(root)}, root)["stdout"])["reviewability_preset"]
@@ -205,14 +194,14 @@ class ReviewabilityPreset(unittest.TestCase):
         self.assertEqual("missing", before["status"])
         self.assertEqual(["preset", "add", "--dev"], before["add_args"][:3])
         self.assertEqual(["--priority", "5"], before["add_args"][4:])
-        added = self.specify(root, before["add_args"])
-        self.assertEqual(0, added.returncode, added.stderr)
-        self.assertEqual({"status": "installed", "add_args": []}, {k: v for k, v in self.state(root).items() if k != "id"})
+        self.assertEqual((0, ""), specify(root, before["add_args"]))
+        after = self.state(root)
+        self.assertEqual(("installed", []), (after["status"], after["add_args"]))
         for name in PRESET_TEMPLATES:
             with self.subTest(template=name):
-                resolved = self.specify(root, ["preset", "resolve", name])
-                self.assertEqual(0, resolved.returncode, resolved.stderr)
-                self.assertEqual(f".specify/presets/{PRESET_ID}/templates/{name}.md", resolved.stdout.strip())
+                self.assertEqual(
+                    (0, f".specify/presets/{PRESET_ID}/templates/{name}.md"), specify(root, ["preset", "resolve", name])
+                )
 
     def test_an_installed_preset_needs_no_command(self) -> None:
         root = self.fresh_project()
