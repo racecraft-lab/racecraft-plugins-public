@@ -4,7 +4,8 @@ Spec Kit writes this file as block YAML: `hooks:`, then one key per event, then 
 list of entries. The standard library has no YAML reader, so this module reads
 only that shape and fails closed on anything else, naming the line. Mandatory
 hooks are never returned: the loaded upstream command runs those itself.
-Optional records retain their event and consent text; listing is not approval.
+Optional records retain their event and runner-owned consent text; listing is
+not approval. Project prompt and description values never leave this module.
 
 Quoted values keep their type: a quoted `"true"` is text, not a boolean, and a
 quoted `"null"` is a condition, not an absent one. A hook condition is run the
@@ -18,11 +19,16 @@ import os
 import re
 from pathlib import Path
 
-from ..trusted_io import trusted_text
+from ..trusted_io import trusted_open_regular_file
 
 HOOK_FILE = ".specify/extensions.yml"
 DEFAULT_PRIORITY = 10
-IDENTIFIER = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
+MAX_HOOK_BYTES = 65536
+MAX_DISPLAY_LENGTH = 1024
+MAX_DISPLAY_CONTINUATIONS = 16
+CONSENT_PROMPT = "Run this optional extension hook?"
+CONSENT_DESCRIPTION = "Confirm the exact extension, command and event."
+IDENTIFIER = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
 FIELD = re.compile(r"^( *)([A-Za-z_][\w-]*):[ \t]*(.*)$")
 ITEM = re.compile(r"^( *)-( +)([A-Za-z_][\w-]*):[ \t]*(.*)$")
 EMPTY_VALUES = frozenset({"", "null", "~"})
@@ -90,6 +96,7 @@ def hook_entries(text: str, event: str) -> list[tuple[int, dict[str, str]]]:
     event_indent: int | None = None
     dash_indent = field_indent = -1
     current_field = ""
+    continuations = 0
     for number, line in enumerate(text.splitlines(), start=1):
         if not line.strip() or line.lstrip().startswith("#"):
             continue
@@ -117,7 +124,7 @@ def hook_entries(text: str, event: str) -> list[tuple[int, dict[str, str]]]:
             name, value = match[2], scalar(match[3])
             in_event = name == event
             if value not in {"", "[]"}:
-                raise ValueError(f"{HOOK_FILE} line {number}: {name} must be a list of hook entries")
+                raise ValueError(f"{HOOK_FILE} line {number}: event must be a list of hook entries")
             continue
         if not in_event:
             continue
@@ -125,6 +132,7 @@ def hook_entries(text: str, event: str) -> list[tuple[int, dict[str, str]]]:
         if item is not None and (not entries or indent <= dash_indent):
             dash_indent, field_indent = indent, len(item[1]) + 1 + len(item[2])
             current_field = item[3]
+            continuations = 0
             entries.append((number, {item[3]: item[4]}))
             continue
         field = FIELD.match(line)
@@ -132,10 +140,14 @@ def hook_entries(text: str, event: str) -> list[tuple[int, dict[str, str]]]:
             raise ValueError(f"{HOOK_FILE} line {number}: expected a hook entry")
         if indent == field_indent and field is not None:
             current_field = field[2]
+            continuations = 0
             entries[-1][1][field[2]] = field[3]
         elif current_field not in {"description", "prompt"}:
-            raise ValueError(f"{HOOK_FILE} line {number}: {current_field} must be a single-line scalar")
+            raise ValueError(f"{HOOK_FILE} line {number}: only prompt and description may continue across lines")
         else:
+            continuations += 1
+            if continuations > MAX_DISPLAY_CONTINUATIONS:
+                raise ValueError(f"{HOOK_FILE} line {number}: display field has too many continuation lines")
             entries[-1][1][current_field] += " " + line.strip()
     return entries
 
@@ -151,11 +163,15 @@ def entry_hook(fields: dict[str, str]) -> tuple[int, dict[str, str | bool]] | No
         raise ValueError("priority must be an integer") from None
     enabled, optional = flag(fields, "enabled"), flag(fields, "optional")
     if enabled and optional and condition_met(fields):
-        prompt, description = scalar(fields.get("prompt", "")), scalar(fields.get("description", ""))
+        # Parse for compatibility/errors only. Natural-language allowlists or
+        # escaping cannot make instructions inert to the deciding agent.
+        for name in ("prompt", "description"):
+            if len(scalar(fields.get(name, ""))) > MAX_DISPLAY_LENGTH:
+                raise ValueError("prompt and description exceed the display field limit")
         if any(fields.get(name, "").lstrip().startswith(("|", ">")) for name in ("prompt", "description")):
             raise ValueError("prompt and description must be plain or quoted scalars, not block scalars")
         return priority, {"extension": extension, "command": command, "optional": True,
-                          "prompt": prompt, "description": description}
+                          "prompt": CONSENT_PROMPT, "description": CONSENT_DESCRIPTION}
     return None
 
 
@@ -168,11 +184,19 @@ def optional_hooks(root: Path, events: tuple[str, ...]) -> list[dict[str, str | 
     raises ValueError so the caller never guesses.
     """
     path = root / HOOK_FILE
-    text = trusted_text(path, root)
-    if text is None:
+    fd = trusted_open_regular_file(path, root)
+    if fd is None:
         if os.path.lexists(path):
             raise ValueError(f"{HOOK_FILE} is not a readable regular file inside the project")
         return []
+    try:
+        with os.fdopen(fd, "rb") as stream:
+            content = stream.read(MAX_HOOK_BYTES + 1)
+        if len(content) > MAX_HOOK_BYTES:
+            raise ValueError(f"{HOOK_FILE} exceeds the hook configuration byte limit")
+        text = content.decode("utf-8")
+    except (OSError, UnicodeError):
+        raise ValueError(f"{HOOK_FILE} is not readable UTF-8 hook configuration") from None
     listed: list[dict[str, str | bool]] = []
     for event in events:
         ranked: list[tuple[int, dict[str, str | bool]]] = []

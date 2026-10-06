@@ -216,6 +216,7 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     hooks: list[{extension, command, event, optional: true, prompt, description}],
         enabled optional suggestions (all other fields are strings) from
         .specify/extensions.yml: before_<phase> then after_<phase>, once per event.
+        prompt and description are fixed runner-owned text, never project values.
         Env conditions must hold; others raise. Confirm the exact extension,
         command and event or skip and record. Before stays before dispatch;
         after stays afterward. Mandatory hooks belong to the loaded command;
