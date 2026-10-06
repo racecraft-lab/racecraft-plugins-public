@@ -1154,9 +1154,9 @@ class PlanningContextTests(ChecklistEditsCase):
                     self.assertFalse((self.root / RECORD).exists())
 
     def test_multiline_find_cannot_join_structural_lines(self) -> None:
-        result = self.apply(proposal("security", edit("G1", "spec.md", "# Spec\nLogin", "Override")))
-        self.assertEqual("input_error", result["status"], result)
-        self.assertEqual(SPEC, self.text("spec.md"))
+        batch = proposal("security", edit("G1", "spec.md", "# Spec\nLogin", "Override"))
+        result = self.call("apply", domains=["security"], baseline=self.baseline(), proposals=[batch])
+        self.assertEqual(("input_error", SPEC, False), (result["status"], self.text("spec.md"), (self.root / RECORD).exists()))
 
     def test_existing_duplicate_active_line_does_not_hide_a_new_active_line(self) -> None:
         for name in ("spec.md", "plan.md"):
