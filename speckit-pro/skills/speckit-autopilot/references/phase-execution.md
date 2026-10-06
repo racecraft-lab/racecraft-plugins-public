@@ -408,7 +408,8 @@ for phase in PHASES starting from first_pending:
        in workflow order, the baseline, and each executor's Proposed Edits block. It
        applies one domain at a time in domain order. A conflict or a gap with no edit
        goes to consensus below; a refusal applies nothing and is a gate failure under
-       the Failure Escalation Protocol. After consensus, take a read_only baseline, spawn
+       the Failure Escalation Protocol. An interrupted apply names the domains already
+       written: restore both files before any retry. After consensus, take a read_only baseline, spawn
        each domain's executor again with `Mode: verify` to confirm its gaps closed, then
        run `checklist-edits` in dry_run mode with no domains, no proposals and that
        baseline: a refusal means a verify run wrote an artifact.

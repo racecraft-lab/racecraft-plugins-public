@@ -252,6 +252,15 @@ class RefusalTests(ChecklistEditsCase):
             with self.subTest(bad):
                 self.assertEqual("input_error", self.call("read_only", feature_dir=bad)["status"])
 
+    def test_a_record_write_failure_reports_the_domains_already_applied(self) -> None:
+        with patch.object(checklist_edits, "durable_json", side_effect=OSError("disk full")):
+            result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
+        self.assertEqual("expected_failure", result["status"], result)
+        self.assertEqual(["security", "ux", "api"], result["data"]["applied"])
+        self.assertEqual("apply_interrupted", result["diagnostics"][0]["code"])
+        self.assertIn("Restore", result["diagnostics"][0]["remediation"]["summary"])
+        self.assertIn("private", self.text("spec.md"))
+
 
 def run_dist_helper(host: str, root: Path, mode: str, inputs: dict[str, Any]) -> dict[str, Any]:
     """Send one request to the runner a host's payload ships, from inside a throwaway checkout."""
@@ -310,6 +319,7 @@ class GuidanceTests(unittest.TestCase):
             for phrase in ("runner helper `checklist-edits`", "in domain order", "dry_run"):
                 self.assertIn(phrase, passage, guide)
             self.assertNotIn("Domain 2 may depend on Domain 1's gap fixes", passage)
+            self.assertIn("restore both files before any retry", passage)
 
 
 if __name__ == "__main__":

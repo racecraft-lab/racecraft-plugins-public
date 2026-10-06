@@ -176,7 +176,10 @@ def checklist_edits(root: Path, inputs: dict[str, Any], mode: str) -> dict[str, 
         write = partial(write_changed, root, feature) if mode == "apply" else None
         rows = apply_proposals(texts, domains, proposals, write)
         if mode == "apply":
-            durable_json(record, {"schema_version": SCHEMA_VERSION, "domains": rows})
+            try:
+                durable_json(record, {"schema_version": SCHEMA_VERSION, "domains": rows})
+            except OSError as error:
+                raise ApplyInterrupted("application record", [row["domain"] for row in rows if row["status"] == "applied"]) from error
     return {"order": [row["domain"] for row in rows if row["status"] == "applied"], "domains": rows, "link": link,
             "writes_state": mode == "apply"}
 
