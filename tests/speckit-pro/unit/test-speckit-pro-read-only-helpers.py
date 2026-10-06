@@ -5071,7 +5071,7 @@ class G0SetupTests(unittest.TestCase):
                                       return_value=Path("/fixture/bin/specify") if case["specify"] else None), \
                                 patch("speckit_pro_runner.helpers.read_only.installed_specify_version", return_value=None):
                             actual = g0_setup({"surface": surface, "probe": probe, "workflow_file": "workflow.md"}, root)
-                        actual = json.loads(json.dumps(actual).replace(str(PLUGIN_ROOT), "<plugin-root>"))
+                        actual = json.loads(json.dumps(actual).replace(str(PLUGIN_ROOT), "<plugin-root>").replace(str(REPO_ROOT), "<repo-root>"))
                         self.assertEqual(case["probes"][probe], actual["result"])
                         if probe == "commands":
                             self.assertEqual(case["quality_gate"][surface], actual["quality_gate"])
@@ -5094,7 +5094,7 @@ class G0SetupTests(unittest.TestCase):
             skill = (view / "SKILL.md").read_text(encoding="utf-8")
             prereqs = (view / "references" / "prerequisites.md").read_text(encoding="utf-8")
             self.assertIn(f"to `{surface}`", skill)
-            self.assertEqual(3, prereqs.count('"helper_id":"g0-setup"'))
+            self.assertEqual(4, prereqs.count('"helper_id":"g0-setup"'))
             self.assertIn("data.quality_gate", prereqs)
             self.assertNotIn("G0 blocked:", prereqs)
             assert_g0_guidance(self, host_skill_root(surface))

@@ -170,6 +170,18 @@ AskUserQuestion picker preset for `/speckit-clarify` and
 See [presets-extensions-guide.md → The curated set](../speckit-coach/references/presets-extensions-guide.md)
 for the full list and rationale.
 
+First install the reviewability preset, which scaffold requires. Send this
+request and read `reviewability_preset` in the result:
+
+```json
+{"schema_version":"1.0","request_id":"install-reviewability-preset","helper_id":"detect-presets","operation":"detect-presets","mode":"read_only","inputs":{"repo_root":"."}}
+```
+
+When `status` is `missing`, run `spec_kit.cli_argv + add_args` without asking:
+it is part of the install, not a recommendation, then send the
+`check-prerequisites` request again and report a failing `template_resolution`
+check. When `status` is `unavailable`, report it and continue.
+
 Compare `.specify/extensions/` and `.specify/presets/` against the entries in
 `${CLAUDE_PLUGIN_ROOT}/scripts/curated-set.json`.
 

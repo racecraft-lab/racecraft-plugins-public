@@ -1,4 +1,4 @@
-"""G0 setup probes, unratified-defaults observation, and project baseline plan, without setup writes."""
+"""G0 setup probes, readiness read, unratified-defaults observation, and project baseline plan, without setup writes."""
 
 from __future__ import annotations
 
@@ -11,7 +11,8 @@ from ..envelope import response
 from ..quality_gates import SHIPPED_DEFAULTS
 from ..strict_input import SelectionError, require_fields, require_text
 from ..trusted_io import resolve_repo_root, validate_bounded_inputs
-from .decisions_list import decisions_list
+from .decisions_list import decisions_list, recorded
+from .readiness_record import FRESH_ITEMS, RECORD_DIRECTORY, stale_items
 from .read_only import (
     BASELINE_SLOTS, EXIT_STATUS, check_prerequisites, detect_commands, detect_presets, helper_failure_diagnostic, output_capture,
 )
@@ -43,9 +44,11 @@ def g0_setup(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
                    {"probe", "surface", "workflow_file"}, "g0-setup inputs")
     probe = require_text(inputs["probe"], "probe")
     surface = require_text(inputs["surface"], "surface")
-    if probe not in PROBES or surface not in {"claude", "codex"}:
-        raise SelectionError("probe must be prerequisites, commands, or presets; surface must be claude or codex")
+    if probe not in {*PROBES, "readiness"} or surface not in {"claude", "codex"}:
+        raise SelectionError("probe must be readiness, prerequisites, commands, or presets; surface must be claude or codex")
     workflow = require_text(inputs["workflow_file"], "workflow_file")
+    if probe == "readiness":
+        return {"probe": probe, "readiness": readiness(repo_root, surface, workflow)}
     helper_id, run_probe = PROBES[probe]
     legacy_inputs = {"workflow_file": workflow}
     problem = validate_bounded_inputs(helper_id, legacy_inputs, repo_root)
@@ -60,14 +63,26 @@ def g0_setup(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
         if quality["status"] != "present":
             observed = unratified_defaults(quality, surface)
             entries = decisions_list(repo_root, {"workflow_file": workflow}, "read_only")["entries"]
-            observed["record_decision"] = not any(
-                all(previous.get(field) == value for field, value in observed["decision"].items())
-                for previous in entries
-            )
+            observed["record_decision"] = not recorded(observed["decision"], entries)
             gate["unratified_defaults"] = observed
         data["quality_gate"] = gate
         data["baseline"] = baseline_plan(result["stdout_json"]["commands"], inputs.get("project_commands", {}))
     return data
+
+
+def readiness(root: Path, surface: str, workflow: str) -> dict[str, Any]:
+    """G0 reads the readiness record and continues: each stale item is one decisions-list note (ADR 0008)."""
+    stale = [{"item": item, "reason": reason} for item, reason in stale_items(root, surface)]
+    entries = decisions_list(root, {"workflow_file": workflow}, "read_only")["entries"]
+    decisions = [{
+        "kind": "readiness_stale",
+        "option_chosen": "Continued G0 on safe defaults without this readiness evidence.",
+        "rejected_alternative": "Stopping G0 to ask a setup question or to rerun scaffold.",
+        "evidence": f"readiness stale: {row['item']}: {row['reason']}",
+        "affected_unit": f"{RECORD_DIRECTORY}/{surface}.json",
+    } for row in stale]
+    return {"verdict": "proceed", "stale": stale, "observe_fresh": list(FRESH_ITEMS),
+            "decisions": [decision for decision in decisions if not recorded(decision, entries)]}
 
 
 def unratified_defaults(quality: dict[str, Any], surface: str) -> dict[str, Any]:
@@ -104,7 +119,7 @@ def run_g0_setup_helper(entry: Any, request: Any) -> dict[str, Any]:
         return response("input_error", request_id=request.request_id, data={"problems": [str(exc)]})
     # Prerequisite failures still go to repair. The quality observation is
     # consumed at Step 0.11, after the same earlier setup work as before this seam.
-    exit_code = int(data["result"]["exit_code"])
+    exit_code = int(data["result"]["exit_code"]) if "result" in data else 0
     if exit_code == 0:
         return response("ok", request_id=request.request_id, data=data)
     # Same status and diagnostic the standalone probe reported for a failure.

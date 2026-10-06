@@ -882,9 +882,13 @@ workflow prompts. Pass the doc path forward.
 
 All file operations happen in the worktree directory.
 
-0. Require the generic `speckit-pro-reviewability` preset to already exist in
-   the worktree. If the preset is absent, STOP and report the missing
-   prerequisite.
+0. Install the generic `speckit-pro-reviewability` preset into the worktree
+   when it is absent. From `<worktree_root>/`, send runner helper `detect-presets`
+   with `repo_root` set to `.` and read `reviewability_preset`. When `status` is
+   `missing`, run `spec_kit.cli_argv + add_args` from `<worktree_root>/`, then
+   send `check-prerequisites` again and STOP on a failing `template_resolution`
+   check. When `status` is `unavailable`, or the command fails, STOP and report
+   the missing prerequisite.
 
    Verify resolution from `<worktree_root>/` with
    `spec_kit.cli_argv + ["preset", "resolve", "spec-template"]`,
@@ -1355,6 +1359,8 @@ equal the resolver's `branch_name` and must not be `main`; otherwise STOP.
    `specs/<branch-name>/SPEC-MOC.md`, then commit with
    `chore(SPEC-XXX): add design concept and workflow for autopilot`.
    When Step 6.4 wrote `.specify/quality-gates.json`, add it to the same commit.
+   When Step 5.0 installed the reviewability preset, add `.specify/presets/` to
+   it too, so the branch carries the preset.
 
 2. Push the WORKTREE BRANCH to the detected remote:
    From `<worktree_root>/`, run `git push -u <remote> <branch-name>`.
