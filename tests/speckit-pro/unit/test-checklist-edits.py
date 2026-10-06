@@ -962,11 +962,6 @@ def run_dist_command(host: str, root: Path, command: list[str], request: str) ->
     return json.loads(done.stdout)
 
 
-def run_dist_helper(host: str, root: Path, mode: str, inputs: dict[str, Any]) -> dict[str, Any]:
-    """Send one request to the runner a host's payload ships."""
-    return run_dist_command(host, root, RUNNER, dist_request(mode, inputs))
-
-
 class HostParityTests(unittest.TestCase):
     def test_both_payloads_plan_and_apply_the_same_proposals_in_the_same_order(self) -> None:
         proposals = [
@@ -983,8 +978,9 @@ class HostParityTests(unittest.TestCase):
                 (root / WORKFLOW).write_text("# Workflow\n", encoding="utf-8")
                 (root / FEATURE / "spec.md").write_text(SPEC, encoding="utf-8")
                 (root / FEATURE / "plan.md").write_text(PLAN, encoding="utf-8")
-                baseline = run_dist_helper(host, root, "read_only", {})["data"]["baseline"]
-                applied = run_dist_helper(host, root, "apply", {"domains": DOMAINS, "baseline": baseline, "proposals": proposals})
+                baseline = run_dist_command(host, root, RUNNER, dist_request("read_only", {}))["data"]["baseline"]
+                applied = run_dist_command(host, root, RUNNER, dist_request("apply", {"domains": DOMAINS, "baseline": baseline,
+                                                                             "proposals": proposals}))
                 outcomes.append((applied["status"], applied["data"]["order"], applied["data"]["domains"],
                                  (root / FEATURE / "spec.md").read_text(encoding="utf-8")))
         self.assertEqual("ok", outcomes[0][0])
