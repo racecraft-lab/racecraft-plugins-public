@@ -138,6 +138,20 @@ class ExtensionArtifactTests(CuratedInstallCase):
 
 
 class CuratedInstallWorkflowTests(CuratedInstallCase):
+    def test_main_reports_missing_cli_without_a_traceback(self):
+        with tempfile.TemporaryDirectory() as raw:
+            result = subprocess.run(
+                [sys.executable, str(check.__file__)], cwd=REPO_ROOT,
+                env={**os.environ, "PATH": raw}, capture_output=True, text=True,
+                timeout=30, shell=False, check=False,
+            )
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(
+            result.stderr,
+            f"FAIL specify is missing against the pinned {check.spec_kit_pin.PINNED_VERSION}\n",
+        )
+        self.assertIn("run-curated-install-check: 0/6 passed", result.stdout)
+
     def test_prompt_discovery_refusal_and_archive_identity_still_fail_closed(self):
         for entry in EXTENSIONS:
             with self.scenario(entry=entry["id"]) as project:

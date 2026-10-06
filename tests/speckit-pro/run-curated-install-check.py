@@ -63,11 +63,14 @@ def specify(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
 
 
 def check_cli_version(cwd: Path) -> list[str]:
-    result = specify(["version"], cwd)
-    status = spec_kit_pin.version_status(
-        spec_kit_pin.parse_cli_version(result.stdout) if result.returncode == 0 else None,
-        cli_found=True,
-    )
+    try:
+        result = specify(["version"], cwd)
+    except FileNotFoundError:
+        installed_version, cli_found = None, False
+    else:
+        installed_version = spec_kit_pin.parse_cli_version(result.stdout) if result.returncode == 0 else None
+        cli_found = True
+    status = spec_kit_pin.version_status(installed_version, cli_found=cli_found)
     if status != "match":
         return [f"specify is {status} against the pinned {spec_kit_pin.PINNED_VERSION}"]
     return []
