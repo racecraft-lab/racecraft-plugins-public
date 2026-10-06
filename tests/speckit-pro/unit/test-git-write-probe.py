@@ -410,7 +410,7 @@ class GitWriteProbeContainmentTest(GitWriteProbeFixture):
 
 
 class GitWriteProbeDirectoryReplacementTest(GitWriteProbeFixture):
-    def directory_replacement_result(self, deny_open: bool) -> tuple[dict, Path]:
+    def directory_replacement_result(self, deny_open: bool) -> dict:
         open_file, close = os.open, os.close
         common = self.root / ".git"
         parent_metadata = common.stat()
@@ -446,17 +446,14 @@ class GitWriteProbeDirectoryReplacementTest(GitWriteProbeFixture):
                 result = self.probe_current_repository()
         self.assertIsNotNone(replacement, "public directory substitution was not exercised")
         self.assertTrue((common / "held-cleanup").exists(), "original directory was not moved")
-        return result, replacement
+        self.assertTrue(replacement.exists(), "cleanup removed a foreign replacement directory")
+        return result
 
     def test_cleanup_preserves_public_directory_replacement_when_open_is_denied(self) -> None:
-        result, replacement = self.directory_replacement_result(True)
-        self.assertTrue(replacement.exists(), "cleanup removed a foreign replacement directory")
-        self.assertEqual("stop", result["data"]["verdict"])
+        self.assertEqual("stop", self.directory_replacement_result(True)["data"]["verdict"])
 
     def test_cleanup_preserves_public_directory_replacement_after_close(self) -> None:
-        result, replacement = self.directory_replacement_result(False)
-        self.assertTrue(replacement.exists(), "cleanup removed a foreign replacement directory")
-        self.assertEqual("proceed", result["data"]["verdict"])
+        self.assertEqual("proceed", self.directory_replacement_result(False)["data"]["verdict"])
 
 
 def build_suite() -> unittest.TestSuite:
