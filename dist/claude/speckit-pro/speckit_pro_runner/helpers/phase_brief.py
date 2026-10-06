@@ -10,7 +10,7 @@ from unicodedata import category, normalize
 
 from ..agent_inventory import AGENT_INVENTORY
 from ..envelope import diagnostic, response
-from ..strict_input import require_fields, require_text
+from ..strict_input import has_hidden_characters, require_fields, require_text
 from ..trusted_io import resolve_repo_root
 from .extension_hooks import optional_hooks
 
@@ -46,7 +46,7 @@ PROMPT_SECTIONS = {"Clarify": "Clarify Prompts", "Checklist": "Step 2: Run Enric
 def brief_path(value: Any, label: str) -> str:
     """Validate path text without filesystem access, with portable separators."""
     text = require_text(value, label)
-    if any(category(char) in {"Cc", "Cf", "Zl", "Zp"} for char in text):
+    if has_hidden_characters(text):
         raise ValueError(f"{label} must not contain control, format or line separator characters")
     # Check compatibility-normalized text too, but preserve the caller's path.
     normalized = normalize("NFKC", text).rstrip()
