@@ -668,9 +668,10 @@ class CanonicalResultTests(InterruptionCase):
 
                 with patch.object(atomic_write, "swap_entries", compete_then_fail_rollback):
                     result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
-                self.assertEqual(("expected_failure", "artifact_changed_during_check", ["spec.md"], 2),
-                                 (result["status"], result["diagnostics"][0]["code"], result["data"].get("changed"), calls[0]),
+                self.assertEqual(("expected_failure", "apply_interrupted", ["spec.md"], 2),
+                                 (result["status"], result["diagnostics"][0]["code"], result["data"].get("partial"), calls[0]),
                                  result)
+                self.assertIn("Exports are private.", self.text("spec.md"))
                 kept = sorted((self.root / FEATURE).glob(".spec.md.kept-*"))
                 self.assertEqual(["# Competitor\n"], [path.read_text(encoding="utf-8") for path in kept])
                 self.assertEqual([], sorted((self.root / FEATURE).glob(".spec.md.tmp-*")))
@@ -718,6 +719,122 @@ class CanonicalResultTests(InterruptionCase):
                     result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
                 self.assertEqual(("expected_failure", False), (result["status"], result["data"].get("record_written")), result)
                 self.assertEqual('{"competitor": true}\n', record.read_text(encoding="utf-8"))
+
+class RollbackFailureTests(InterruptionCase):
+    """F1278-8834bd5e: failed recovery cannot turn a committed exchange into a refusal."""
+
+    def failed_rollback(self, target: Path, change: Callable[[], None], *, raises: bool,
+                        rename_fails: bool = False) -> Any:
+        real = atomic_write.swap_entries
+        calls = [0]
+
+        def exchange_target_then_fail_rollback(directory: int, first: str, second: str) -> bool:
+            if second != target.name:
+                return real(directory, first, second)
+            calls[0] += 1
+            if calls[0] == 1:
+                change()
+                return real(directory, first, second)
+            if raises:
+                raise OSError("rollback I/O failure")
+            return False
+
+        injected = ExitStack()
+        injected.enter_context(patch.object(atomic_write, "swap_entries", exchange_target_then_fail_rollback))
+        if rename_fails:
+            injected.enter_context(patch.object(atomic_write.os, "rename", side_effect=OSError("recovery rename failed")))
+        return injected
+
+    def test_failed_rollbacks_report_every_committed_target_and_keep_every_displaced_form(self) -> None:
+        for name in ("spec.md", "plan.md", "applied.json"):
+            for form in ("content", "replacement", "recreation", "hard-link", "alias", "symlink"):
+                for raises in (False, True):
+                    with self.subTest(target=name, form=form, raises=raises):
+                        self.reset()
+                        target = self.root / (RECORD if name == "applied.json" else f"{FEATURE}/{name}")
+                        target.parent.mkdir(parents=True, exist_ok=True)
+                        target.unlink(missing_ok=True)
+                        target.write_text("{}" if name == "applied.json" else SPEC if name == "spec.md" else PLAN)
+                        for kept in target.parent.glob(f".{name}.*"):
+                            kept.unlink()
+                        other = self.root / "elsewhere.md"
+                        other.write_text("# Competitor\n")
+
+                        def change() -> None:
+                            if form == "content":
+                                target.write_text("# Competitor\n")
+                            elif form == "replacement":
+                                os.replace(other, target)
+                            elif form == "alias":
+                                os.link(target, self.root / "alias.md")
+                            else:
+                                target.unlink()
+                                if form == "recreation":
+                                    target.write_text("# Competitor\n")
+                                elif form == "hard-link":
+                                    os.link(other, target)
+                                else:
+                                    target.symlink_to(other)
+
+                        with self.failed_rollback(target, change, raises=raises):
+                            result = self.apply_both() if name != "applied.json" else self.apply()
+                        self.assertEqual(("expected_failure", "apply_interrupted"),
+                                         (result["status"], result["diagnostics"][0]["code"]), result)
+                        self.assertNotIn("nothing was applied", result["diagnostics"][0]["message"])
+                        if name == "applied.json":
+                            self.assertTrue(result["data"]["record_written"], result)
+                            self.assertEqual(DOMAINS, result["data"]["applied"])
+                            self.assertEqual((SPEC, PLAN), (self.text("spec.md"), self.text("plan.md")))
+                        else:
+                            self.assertEqual(["spec.md"] if name == "spec.md" else ["spec.md", "plan.md"],
+                                             result["data"]["partial"], result)
+                            self.assertIn("private" if name == "spec.md" else "always", self.text(name))
+                        kept = list(target.parent.glob(f".{name}.kept-*"))
+                        self.assertEqual(1, len(kept))
+                        self.assertEqual(form == "symlink", kept[0].is_symlink())
+                        expected = ("{}" if name == "applied.json" else SPEC if name == "spec.md" else PLAN) if form == "alias" else "# Competitor\n"
+                        self.assertEqual(expected, kept[0].read_text())
+                        if form == "alias":
+                            self.assertTrue(kept[0].samefile(self.root / "alias.md"))
+                        if form in ("hard-link", "symlink"):
+                            self.assertEqual("# Competitor\n", other.read_text())
+
+    def test_failed_recovery_rename_keeps_the_displaced_temporary_entry(self) -> None:
+        for name in ("spec.md", "plan.md", "applied.json"):
+            for raises in (False, True):
+                with self.subTest(target=name, raises=raises):
+                    self.reset()
+                    target = self.root / (RECORD if name == "applied.json" else f"{FEATURE}/{name}")
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    if name == "applied.json":
+                        target.write_text("{}")
+                    for temporary in target.parent.glob(f".{name}.*"):
+                        temporary.unlink()
+                    with self.failed_rollback(target, partial(target.write_text, "# Competitor\n"),
+                                              raises=raises, rename_fails=True):
+                        result = self.apply_both() if name != "applied.json" else self.apply()
+                    self.assertEqual("apply_interrupted", result["diagnostics"][0]["code"], result)
+                    temporary = list(target.parent.glob(f".{name}.tmp-*"))
+                    self.assertEqual(["# Competitor\n"], [path.read_text() for path in temporary])
+                    self.assertIn(temporary[0].name, result["diagnostics"][0]["message"])
+                    if name == "applied.json":
+                        self.assertTrue(result["data"]["record_written"], result)
+                    else:
+                        self.assertIn(name, result["data"]["partial"], result)
+                        self.assertIn("private" if name == "spec.md" else "always", self.text(name))
+
+    def test_failed_rollbacks_in_later_domains_report_the_current_write(self) -> None:
+        for raises in (False, True):
+            with self.subTest(raises=raises):
+                self.reset()
+                target = self.root / FEATURE / "plan.md"
+                with self.failed_rollback(target, partial(target.write_text, "# Competitor\n"), raises=raises):
+                    result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")),
+                                        proposal("ux", edit("G2", "plan.md", "never", "always")))
+                self.assertEqual((["security"], "ux", ["plan.md"]),
+                                 (result["data"]["applied"], result["data"]["failed"], result["data"]["partial"]), result)
+                self.assert_both_written()
+
 
 class CommittedStateTests(InterruptionCase):
     """F1278-d7ff996f and F1278-afb94c5e: a failure after the first write reports what is on disk."""
@@ -1012,6 +1129,26 @@ def run_dist_command(host: str, root: Path, request: str, *, unreadable_record: 
 
 
 class HostParityTests(unittest.TestCase):
+    def test_both_payloads_cover_the_failed_rollback_matrix(self) -> None:
+        # Preload the shipped modules before the shared test fixture adds source-tree imports.
+        program = """
+import runpy, sys, unittest
+from pathlib import Path
+from speckit_pro_runner.helpers import checklist_edits
+assert Path(checklist_edits.__file__).is_relative_to(Path(sys.argv[1]))
+cases = runpy.run_path(sys.argv[2])
+suite = unittest.defaultTestLoader.loadTestsFromTestCase(cases['RollbackFailureTests'])
+sys.exit(cases['run_counted'](suite, label='shipped-rollback-matrix'))
+"""
+        for host in HOSTS:
+            with self.subTest(host=host):
+                payload = REPO / "dist" / host / "speckit-pro"
+                done = subprocess.run([sys.executable, "-c", program, str(payload), __file__],
+                                      env={**os.environ, "PYTHONPATH": str(payload)},
+                                      capture_output=True, text=True, check=False)
+                self.assertEqual(0, done.returncode, done.stdout + done.stderr)
+                self.assertIn("44/44 passed", done.stdout)
+
     def test_both_payloads_plan_and_apply_the_same_proposals_in_the_same_order(self) -> None:
         proposals = [
             proposal("ux", edit("G2", "spec.md", "a code", "a code by email")),
@@ -1070,7 +1207,7 @@ if __name__ == "__main__":
         run_counted(
             unittest.TestSuite(
                 unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                for case in (ProposalTests, ConflictTests, RefusalTests, CompetingWriterTests, CanonicalResultTests, CommittedStateTests,
+                for case in (ProposalTests, ConflictTests, RefusalTests, CompetingWriterTests, CanonicalResultTests, RollbackFailureTests, CommittedStateTests,
                              RecordStateTests,
                              UntrustedTextTests, HostParityTests, GuidanceTests)
             ),

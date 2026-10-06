@@ -30,7 +30,7 @@ from functools import partial
 from pathlib import Path
 from typing import Any
 
-from ..atomic_write import (AtomicSwapUnavailable, WritePreconditionChanged, file_identity, open_safe_parent_fd, snapshot_write_target_fd,
+from ..atomic_write import (AtomicSwapUnavailable, AtomicWriteInterrupted, WritePreconditionChanged, file_identity, open_safe_parent_fd, snapshot_write_target_fd,
                             write_bytes_atomic, write_file_atomic, write_target_matches_snapshot)
 from ..canonical_json import canonical_bytes
 from ..envelope import diagnostic, response
@@ -214,6 +214,10 @@ def write_changed(root: Path, feature: Path, expected: dict[str, Any], progress:
         try:
             written = write_bytes_atomic(feature / name, after[name].encode("utf-8"), trust_root=root,
                                          expected_snapshot={**expected[name], "parent": expected["directory"]})
+        except AtomicWriteInterrupted:
+            progress.partial.append(name)
+            progress.written.append(name)
+            raise
         except AtomicSwapUnavailable as error:
             # A platform limit, not a competing writer; after a write it is an interruption like any other.
             if not progress.written:

@@ -32,6 +32,10 @@ class AtomicSwapUnavailable(OSError):
     """The platform or filesystem cannot swap two names atomically, so a checked write is refused, never downgraded."""
 
 
+class AtomicWriteInterrupted(OSError):
+    """The new entry reached disk but rollback failed; the displaced entry must survive cleanup."""
+
+
 def atomic_write_cleanup_errors(exc: OSError) -> list[str]:
     errors = getattr(exc, "cleanup_errors", None)
     return errors if isinstance(errors, list) else []
@@ -189,14 +193,15 @@ def write_bytes_atomic(
             except OSError:
                 # Best-effort cleanup only; a close error cannot safely change the write outcome.
                 pass
-        try:
-            os.unlink(tmp_name, dir_fd=parent_fd)
-        except FileNotFoundError:
-            # The temp name is absent after successful replace; cleanup is already complete.
-            pass
-        except OSError:
-            # Best-effort cleanup only; the write outcome is already determined.
-            tmp_cleanup_errors.append(f"{tmp_name}:OSError")
+        if not isinstance(failure, AtomicWriteInterrupted):
+            try:
+                os.unlink(tmp_name, dir_fd=parent_fd)
+            except FileNotFoundError:
+                # The temp name is absent after successful replace; cleanup is already complete.
+                pass
+            except OSError:
+                # Best-effort cleanup only; the write outcome is already determined.
+                tmp_cleanup_errors.append(f"{tmp_name}:OSError")
         close_error: OSError | None = None
         try:
             os.close(parent_fd)
@@ -297,8 +302,11 @@ def install_checked(parent_fd: int, tmp_name: str, target_name: str, expected: d
         raise WritePreconditionChanged("write target changed after snapshot capture")
     # The swap back failed or was refused, so the temporary name holds the competing entry; keep it, never delete it.
     kept = f".{target_name}.kept-{uuid.uuid4().hex}"
-    os.rename(tmp_name, kept, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
-    raise WritePreconditionChanged(f"write target changed after snapshot capture; the competing entry is kept as {kept}") from rollback_error
+    try:
+        os.rename(tmp_name, kept, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
+    except OSError:
+        kept = tmp_name  # Recovery rename failed; this name now belongs to the competitor, not cleanup.
+    raise AtomicWriteInterrupted(f"write reached disk but rollback failed; the competing entry is kept as {kept}") from rollback_error
 
 
 def open_safe_parent_fd(target: Path, trust_root: Path, *, create: bool) -> tuple[int, str, list[str]] | None:
