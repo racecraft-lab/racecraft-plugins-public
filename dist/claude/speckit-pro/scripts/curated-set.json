@@ -1,30 +1,36 @@
 {
   "version": 1,
-  "description": "Manual recommendations that the install and upgrade skills may offer for operator-confirmed installation with native Spec Kit commands.",
+  "description": "Manual recommendations that the install and upgrade skills may offer for operator-confirmed installation with native Spec Kit commands. Each entry installs from its pinned archive with --from, because Spec Kit v1.1.0 refuses these ids on its default catalogs (discovery-only).",
   "entries": [
     {
       "id": "review",
-      "kind": "extension"
+      "kind": "extension",
+      "archive_url": "https://github.com/ismaelJimenez/spec-kit-review/archive/094f4a89754d6a442730fa474d4e0f5b99951f0e.zip"
     },
     {
       "id": "verify",
-      "kind": "extension"
+      "kind": "extension",
+      "archive_url": "https://github.com/ismaelJimenez/spec-kit-verify/archive/a6d8f3804d2e2877485b60f363ed025a3ff8b42f.zip"
     },
     {
       "id": "verify-tasks",
-      "kind": "extension"
+      "kind": "extension",
+      "archive_url": "https://github.com/datastone-inc/spec-kit-verify-tasks/archive/eab64d40c17af9848a3122be6e00cd16663f49f3.zip"
     },
     {
       "id": "cleanup",
-      "kind": "extension"
+      "kind": "extension",
+      "archive_url": "https://github.com/dsrednicki/spec-kit-cleanup/archive/08be0dde31f8addb952b428bca6fcbfa20e38381.zip"
     },
     {
       "id": "retrospective",
-      "kind": "extension"
+      "kind": "extension",
+      "archive_url": "https://github.com/emi-dm/spec-kit-retrospective/archive/6e2888aa956f738ce14ff03544c1069bf3a39308.zip"
     },
     {
       "id": "claude-ask-questions",
-      "kind": "preset"
+      "kind": "preset",
+      "archive_url": "https://github.com/0xrafasec/spec-kit-preset-claude-ask-questions/archive/85bdb502d07ba61947b72937a97a970c70d3c339.zip"
     }
   ]
 }

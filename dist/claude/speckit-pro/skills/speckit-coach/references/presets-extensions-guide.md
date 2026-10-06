@@ -38,6 +38,21 @@ upgrade skills compare that file with the target project's installed presets and
 extensions, then ask the operator which missing entries to install. Do not copy
 the roster into this guide or infer that an entry outside it should be removed.
 
+Spec Kit v1.1.0 lists these entries in a discovery-only community catalog, so
+`add <id>` refuses them. Each entry names a commit-pinned `archive_url`; install
+with `spec_kit.cli_argv + ["<kind>", "add", "<id>", "--from", "<archive_url>"]`.
+Keep the catalog stack as it is: Spec Kit says never to mark a discovery-only
+catalog install-allowed.
+
+- A preset installs without a prompt. Run it after the operator confirms the
+  argv.
+- An extension install asks "Continue with installation?" because the source is
+  an external URL. That prompt is the operator's trust decision. Give the operator
+  the argv to run in their own terminal and never answer it on their behalf.
+  Declining exits 0 and installs nothing.
+- Afterward, confirm each entry by listing `.specify/extensions/` and
+  `.specify/presets/`. An exit code alone does not show an install.
+
 ## Explain or discover
 
 - Explain a preset from its installed `preset.yml` and the templates or commands

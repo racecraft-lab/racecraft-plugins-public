@@ -178,8 +178,11 @@ Compare `.specify/extensions/` and `.specify/presets/` against the entries in
 
 - Otherwise, list the missing entries and ask which to install.
   Recommended default is **all**. For each accepted entry, give the
-  operator the `spec_kit.cli_argv + ["extension", "add", "<id>"]` or preset command from the
-  curated set and run it only after they confirm. Skipped entries can be
+  operator the `spec_kit.cli_argv + ["<kind>", "add", "<id>", "--from", "<archive_url>"]`
+  command from the curated set (`<kind>` is `extension` or `preset`) and run it
+  only after they confirm. Spec Kit refuses a bare `add <id>` for these entries.
+  [The curated set](../speckit-coach/references/presets-extensions-guide.md)
+  says how to handle the trust prompt and verify the result. Skipped entries can be
   installed later with `/speckit-pro:speckit-upgrade`.
 
 ### 6. Verify
