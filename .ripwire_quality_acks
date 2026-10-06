@@ -1583,3 +1583,7 @@ ack dead-code:new-symbol ac5cf593140247b5 0 Mock side_effect invokes this specif
 ack dead-code:new-symbol b1a3011258698bc8 0 Mock side_effect invokes the late preset replacement callback; all six cases failed on the old checker and passed after the fix.
 ack dead-code:new-symbol fc4c3b30ab9a8b36 0 Unittest discovers the missing-CLI test; 278 checks passed including the real subprocess boundary with an empty PATH.
 ack verbosity cc1c8a15aab96a6f 87 CuratedInstallWorkflowTests is a discovered test container, not one executable routine; its longest method is 18 lines and 278 checks passed.
+
+# Verified phase-brief test discovery and container false positives.
+ack dead-code:new-symbol 60d7af8a40fa1680 0 Unittest discovers the payload refresh regression; it failed for both hosts before the cwd fix and passed 50 repetitions, 100 host cases, after it.
+ack verbosity 1dd6d331083872da 132 OptionalHookDisplayBoundaryTests is a discovered test container, not one executable routine; its longest method is 20 lines and 10341 phase-brief checks passed.
