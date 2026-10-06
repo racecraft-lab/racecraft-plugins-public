@@ -81,4 +81,13 @@ def classify_snapshot(
     expected = {path: content for path, (_, content) in shipped.items()}
     if registered and installed == expected:
         return {"id": PRESET_ID, "status": "installed", "add_args": []}
+    if isinstance(presets, dict) and PRESET_ID in presets:
+        # Spec Kit rejects add while this registration remains, even without files.
+        return {
+            "id": PRESET_ID, "status": "unavailable", "add_args": [],
+            "reason": (
+                f"Preset {PRESET_ID} is registered but does not match the shipped preset. "
+                f"Repair the registration with specify preset remove {PRESET_ID}, then retry."
+            ),
+        }
     return {"id": PRESET_ID, "status": "missing", "add_args": args}
