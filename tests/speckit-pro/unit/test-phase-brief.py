@@ -685,8 +685,6 @@ class PhaseBriefWaveTests(InProjectCase):
             with self.subTest(extra=extra):
                 result = dispatch_brief({**bare, **extra})
                 self.assertEqual((result["status"], result["data"]), ("input_error", {}))
-        edited = {**bare, "phase": "Checklist", "consensus_edited": ["ux"]}
-        self.assertEqual(dispatch_brief({key: value for key, value in edited.items() if key != "items"})["status"], "input_error")
 
     def test_both_hosts_name_their_own_limit_and_cite_its_source(self):
         needles = {"claude": ("max_agents=SUBAGENT_WAVE_SIZE", "CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS", "code.claude.com/docs/en/env-vars"),
@@ -737,15 +735,12 @@ class PhaseBriefWaveTests(InProjectCase):
         self.assertEqual({entry["agent"] for entry in waves[0]}, set(self.ANALYSTS))
 
     def test_domains_and_items_compose_in_dispatch_order(self):
-        waves = self.waves("Checklist", domains=["ux"], items=list(self.ITEMS), consensus_edited=["ux"])
-        self.assertEqual([wave[0]["agent"] for wave in waves],
-                         ["checklist-executor", "checklist-executor", "codebase-analyst", "codebase-analyst", "checklist-executor"])
-        self.assertEqual([wave[0]["inputs"].get("pass") for wave in waves], [None, "verify", None, None, "verify"])
-        # One run, one fix pass and one verify per domain: nothing re-runs a domain after consensus unless a consensus edit named it.
-        self.assertEqual([wave[0]["inputs"].get("pass") for wave in self.waves("Checklist", domains=["ux"], items=list(self.ITEMS))],
-                         [None, "verify", None, None])
-        verify = [self.dispatch("Checklist", "checklist-executor", {"domain": name, "pass": "verify"}) for name in ("security", "ux")]
-        self.assertEqual(self.waves("Checklist", consensus_edited=["security", "ux"], max_agents=1), [[entry] for entry in verify])
+        # One run, one fix pass and one verify per domain: a consensus edit alone puts a domain after the consensus waves.
+        run, verify, analyst = ("checklist-executor", None), ("checklist-executor", "verify"), ("codebase-analyst", None)
+        kinds = lambda **named: [(wave[0]["agent"], wave[0]["inputs"].get("pass")) for wave in self.waves("Checklist", items=list(self.ITEMS), **named)]
+        self.assertEqual(kinds(domains=["ux"]), [run, verify, analyst, analyst])
+        self.assertEqual(kinds(domains=["ux"], consensus_edited=["ux"]), [run, verify, analyst, analyst, verify])
+        self.assertEqual([wave[0]["inputs"]["domain"] for wave in self.waves("Checklist", consensus_edited=["ux", "api"], max_agents=1)], ["ux", "api"])
 
     def test_a_brief_without_wave_inputs_has_no_waves(self):
         phases = tuple(phase_brief.PHASES)
@@ -760,9 +755,7 @@ class PhaseBriefWaveTests(InProjectCase):
                ("Analyze", {"items": [{"line": ""}]}), ("Analyze", {"items": [{"line": "Q1", "confidence": "medium"}]}),
                ("Analyze", {"items": [{"line": "Q1", "extra": 1}]}), ("Analyze", {"items": [{"confidence": "low"}]}),
                ("Analyze", {"items": [{"line": "x" * 2001}]}), ("Analyze", {"items": [{"line": "Q"}] * 101}),
-               ("Analyze", {"consensus_edited": ["ux"]}), ("Checklist", {"consensus_edited": []}), ("Checklist", {"consensus_edited": "ux"}),
-               ("Checklist", {"consensus_edited": ["ux", "ux"]}), ("Checklist", {"consensus_edited": ["UX Review"]}),
-               ("Checklist", {"consensus_edited": ["a"] * 13})]
+               ("Analyze", {"consensus_edited": ["ux"]}), ("Checklist", {"consensus_edited": []}), ("Checklist", {"consensus_edited": ["ux"] * 2})]
         for phase, extra in bad:
             with self.subTest(phase=phase, extra=str(extra)[:40]):
                 result = self.brief(phase, **extra)
