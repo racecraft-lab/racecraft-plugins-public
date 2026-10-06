@@ -171,7 +171,7 @@ def brief_data(phase: str, workflow: str, feature: str, waves: WaveRequest) -> d
 
 
 def checked_request(raw: Any) -> tuple[str, str, str, WaveRequest, dict[str, str] | None]:
-    """The closed phase-brief inputs as (phase, workflow_file, feature_dir, waves); anything else raises ValueError."""
+    """Validate the phase, paths, waves and Tasks-only G4 digest binding."""
     optional = {key: raw[key] for key in (*WAVE_INPUTS, "g4_judged") if isinstance(raw, dict) and key in raw}
     inputs = require_fields({key: value for key, value in raw.items() if key not in optional} if isinstance(raw, dict) else raw,
                             {"phase", "workflow_file", "feature_dir"}, "phase-brief inputs")
@@ -207,23 +207,18 @@ def observed_checklist_waves(root: Path, workflow: str, feature: str, waves: Wav
 def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     """Return phase-brief/v1 dispatch data; gate and stop decisions stay separate.
 
-    The closed request inputs are phase, workflow_file and feature_dir strings, and Tasks-only g4_judged and optional domains, items, verify_items, verify_baseline and max_agents
-    for waves (dispatch_waves.py).
-    Paths reject parent segments and control, format and line separator characters.
-    feature_dir is workflow-root relative; workflow_file may be absolute but must name a file.
-    Tasks requires g4_judged, the preceding G4 digest map. Before returning a Tasks
-    brief, the G4 owner re-reads the bounded inputs and refuses any digest or report-set drift.
-    Other phases remain lexical except for verify_baseline's on-disk comparison.
-    Successful data has exactly these fields. Records have only the named keys;
-    a wave dispatch's inputs is an open JSON object for its prompt arguments.
+    Closed inputs: phase, workflow_file, feature_dir; Tasks requires g4_judged.
+    dispatch_waves.py owns optional domains, items, verify_items, verify_baseline and max_agents.
+    Paths reject traversal and hidden characters; feature_dir is workflow-root relative.
+    G4 re-reads bounded Tasks inputs and refuses digest/report-set drift before dispatch.
+    verify_baseline compares on-disk checklist digests; other validation is lexical.
 
     schema_version: str, the literal "phase-brief/v1".
-    phase: str, one of Specify, Clarify, Plan, Checklist, Tasks, Analyze.
-    agent: str, host-neutral installed executor role, without a namespace.
+    phase: str, Specify/Clarify/Plan/Checklist/Tasks/Analyze; agent: host-neutral executor role.
     inputs: {workflow_file: str, feature_dir: str, prompt_section: str,
         instruction: str, skill: str | null}; workflow context, verbatim prompt
         heading and dispatch prefix. skill is a bare skill id, null for Clarify;
-        hosts add their invocation syntax. feature_dir loses trailing slashes.
+        hosts add invocation syntax; feature_dir loses trailing slashes.
     readable_files: list[str], ordered phase input paths when present, relative
         to the workflow root unless absolute; a trailing slash means contents.
         Loaded command instructions, templates and scripts remain implicit.
@@ -248,7 +243,7 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
         Env conditions must hold; others raise. Confirm the exact extension,
         command and event or skip and record. Before stays before dispatch;
         after stays afterward. Mandatory hooks belong to the loaded command;
-        Clarify loads none and lists none.
+        Clarify lists none.
 
     Input errors return no data; uninterpretable hooks are internal_failure.
     """

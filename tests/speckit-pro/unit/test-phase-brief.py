@@ -243,8 +243,8 @@ for case in json.load(sys.stdin):
                     (feature / "checklists").mkdir(parents=True)
                     inputs["g4_judged"] = {}
                     for name in ("spec.md", "plan.md", "checklists/security.md"):
-                        (feature / name).write_bytes(b"clean fixture\n")
-                        inputs["g4_judged"][name] = hashlib.sha256(b"clean fixture\n").hexdigest()
+                        (feature / name).write_bytes(b"clean fixture\\n")
+                        inputs["g4_judged"][name] = hashlib.sha256(b"clean fixture\\n").hexdigest()
                 request = SimpleNamespace(helper_id="phase-brief", operation="phase-brief", mode="read_only",
                                           request_id=None, inputs=inputs)
                 report = dispatch_helper(request)
@@ -1026,7 +1026,7 @@ class ChecklistCheckpointTests(InProjectCase):
                              [[2, 2, 2], [1]])
 
 
-class PhaseBriefModelTests(unittest.TestCase):
+class PhaseBriefModelTests(InProjectCase):
     def test_brief_names_the_model_for_each_dispatch(self):
         # The owner's plan-stage table (issue 1150); Specify and Tasks run phase-executor below its Plan default.
         sonnet, plan_claude = {"model": "sonnet", "effort": "high"}, {"model": "opus", "effort": "high"}
@@ -1051,7 +1051,7 @@ class PhaseBriefModelTests(unittest.TestCase):
                     self.assertNotIn("model_reasoning_effort=", loop)
 
 
-class CodexEffectiveEffortTests(unittest.TestCase):
+class CodexEffectiveEffortTests(InProjectCase):
     def test_codex_dispatch_runs_the_effort_the_table_names(self):
         # Custom-file effort wins over explicit spawn effort, which wins over [agents] defaults.
         # https://learn.chatgpt.com/docs/agent-configuration/subagents#custom-agents
