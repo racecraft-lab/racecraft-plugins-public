@@ -525,9 +525,20 @@ def descriptor_read_supported() -> bool:
 
 
 def tree_entry_signature(info: os.stat_result) -> tuple[int, ...]:
-    """Identity and mutation evidence for a captured filesystem entry."""
+    """Identity and mutation evidence for a captured filesystem entry.
+
+    A directory's times, size and link count also move when an ignored bytecode cache appears in it,
+    so a directory is compared by identity and mode here, and by its captured entries in read_tree_directory.
+    """
+    if stat.S_ISDIR(info.st_mode):
+        return (info.st_dev, info.st_ino, info.st_mode)
     return (info.st_dev, info.st_ino, info.st_mode, info.st_nlink,
             info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+
+
+def captured_tree_names(fd: int) -> list[str]:
+    """A directory's entries a tree snapshot captures: everything but bytecode caches."""
+    return sorted(name for name in os.listdir(fd) if name != "__pycache__" and not name.endswith(".pyc"))
 
 
 def read_tree_entry(parent_fd: int, name: str, expected: os.stat_result | None = None) -> dict[Path, tuple[int, bytes | None]]:
@@ -563,11 +574,17 @@ def read_tree_entry(parent_fd: int, name: str, expected: os.stat_result | None =
 def read_tree_directory(fd: int) -> dict[Path, tuple[int, bytes | None]]:
     """Capture a directory without ever traversing a child pathname."""
     captured: dict[Path, tuple[int, bytes | None]] = {Path(): (stat.S_IMODE(os.fstat(fd).st_mode), None)}
-    for name in sorted(os.listdir(fd)):
-        if name == "__pycache__" or name.endswith(".pyc"):
-            continue
+    names = captured_tree_names(fd)
+    signatures = {}
+    for name in names:
+        signatures[name] = tree_entry_signature(os.stat(name, dir_fd=fd, follow_symlinks=False))
         for relative, entry in read_tree_entry(fd, name).items():
             captured[Path(name) / relative] = entry
+    # Every captured entry must still be there, unchanged, with nothing added beside it.
+    if captured_tree_names(fd) != names or any(
+            tree_entry_signature(os.stat(name, dir_fd=fd, follow_symlinks=False)) != signature
+            for name, signature in signatures.items()):
+        raise OSError("tree directory changed while reading")
     return captured
 
 
