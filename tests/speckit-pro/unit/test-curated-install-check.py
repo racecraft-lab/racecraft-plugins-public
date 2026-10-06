@@ -156,6 +156,26 @@ class ExtensionArtifactTests(CuratedInstallCase):
 
 
 class CuratedInstallWorkflowTests(CuratedInstallCase):
+    def test_late_preset_replacement_cannot_certify_completion(self):
+        entry = next(entry for entry in ENTRIES if entry["kind"] == "preset")
+        real_stat = os.stat
+        for shape, trust in product(("file", "directory", "empty-directory-link"), (False, True)):
+            with self.scenario(shape=shape, trust=trust) as project:
+                target = project / ".specify/presets" / entry["id"]
+                target.mkdir(parents=True)
+
+                def replace_after_snapshot(path, *args, **kwargs):
+                    info = real_stat(path, *args, **kwargs)
+                    if path == project / ".specify":
+                        target.rename(target.parent / "previous")
+                        create_artifact(target, shape)
+                    return info
+
+                with mock.patch.object(check, "specify", return_value=subprocess.CompletedProcess([], 0, "", "")), mock.patch.object(
+                    check.os, "stat", side_effect=replace_after_snapshot
+                ):
+                    self.assertEqual(check.entry_result(entry, project, trust), ("unproven", []))
+
     def test_preset_artifacts_are_unproven_not_completed(self):
         entry = next(entry for entry in ENTRIES if entry["kind"] == "preset")
         variants = ("absent-registry", "malformed-registry", "empty-mapping", "different-id", "disabled", "missing-manifest", "wrong-manifest-id")
