@@ -549,9 +549,8 @@ class PhaseBriefWaveTests(InProjectCase):
         self.assertEqual([wave[0]["inputs"].get("pass") for wave in waves], [None, None, None, "verify"])
 
     def test_a_brief_without_wave_inputs_has_no_waves(self):
-        for phase in ("Specify", "Clarify", "Plan", "Checklist", "Tasks", "Analyze"):
-            with self.subTest(phase=phase):
-                self.assertEqual(self.waves(phase), [])
+        phases = tuple(phase_brief.PHASES)
+        self.assertEqual({phase: self.waves(phase) for phase in phases}, dict.fromkeys(phases, []))
 
     def test_wave_inputs_the_phase_cannot_use_return_no_dispatch_facts(self):
         bad = [("Plan", {"domains": ["ux"]}), ("Analyze", {"domains": ["ux"]}), ("Clarify", {"domains": ["ux"]}),
@@ -576,16 +575,17 @@ class PhaseBriefWaveTests(InProjectCase):
                 self.assertTrue(source)
                 self.assertEqual([report["waves"] for report in payload_briefs(inputs)], [source, source])
 
+    def loop(self, host):
+        return (host_skill_root(host) / "speckit-autopilot/SKILL.md").read_text().split("## Step 2: Main Execution Loop", 1)[1]
+
     def test_both_hosts_launch_a_wave_in_one_turn_and_wait_for_all_of_it(self):
-        needles = {"claude": ("run_in_background: true", "model: entry.model.claude.model"),
-                   "codex": ("issue one spawn_agent per entry in one turn", "model=entry.model.codex.model",
-                             "one bounded wait_agent loop until every entry returned")}
-        for host, expected in needles.items():
-            with self.subTest(host=host):
-                skill = (host_skill_root(host) / "speckit-autopilot/SKILL.md").read_text()
-                loop = skill.split("## Step 2: Main Execution Loop", 1)[1]
-                for needle in ("### Dispatch waves", "Each brief wave", *expected):
-                    self.assertIn(needle, loop)
+        for host, needle in (("claude", "run_in_background: true"), ("codex", "one bounded wait_agent loop until every entry returned")):
+            self.assertIn(needle, self.loop(host), host)
+        self.assertIn("model: entry.model.claude.model", self.loop("claude"))
+        self.assertIn("issue one spawn_agent per entry in one turn", self.loop("codex"))
+        self.assertIn("model=entry.model.codex.model", self.loop("codex"))
+        for host in ("claude", "codex"):
+            self.assertTrue(all(needle in self.loop(host) for needle in ("### Dispatch waves", "Each brief wave")), host)
 
     def test_both_hosts_run_the_checklist_domains_as_one_wave(self):
         for host in ("claude", "codex"):
