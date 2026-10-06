@@ -30,7 +30,7 @@ from functools import partial
 from pathlib import Path
 from typing import Any
 
-from ..atomic_write import (WritePreconditionChanged, file_identity, open_safe_parent_fd, snapshot_write_target_fd,
+from ..atomic_write import (AtomicSwapUnavailable, WritePreconditionChanged, file_identity, open_safe_parent_fd, snapshot_write_target_fd,
                             write_bytes_atomic, write_file_atomic, write_target_matches_snapshot)
 from ..canonical_json import canonical_bytes
 from ..envelope import diagnostic, response
@@ -48,6 +48,14 @@ EDIT_TEXT_KEEPS = "\t\n\r"
 
 class CanonicalMismatch(ValueError):
     """After acting, a canonical path no longer holds what this run wrote there."""
+
+
+class SwapUnavailable(Exception):
+    """The first write found no atomic swap on this filesystem; nothing was written."""
+
+    def __init__(self, artifact: str) -> None:
+        super().__init__(f"this filesystem cannot swap {artifact} atomically")
+        self.artifact = artifact
 
 
 class ArtifactChanged(Exception):
@@ -204,6 +212,11 @@ def write_changed(root: Path, feature: Path, expected: dict[str, Any], progress:
         try:
             written = write_bytes_atomic(feature / name, after[name].encode("utf-8"), trust_root=root,
                                          expected_snapshot={**expected[name], "parent": expected["directory"]})
+        except AtomicSwapUnavailable as error:
+            # A platform limit, not a competing writer; after a write it is an interruption like any other.
+            if not (progress.applied or progress.partial):
+                raise SwapUnavailable(name) from error
+            raise
         except WritePreconditionChanged as error:
             if not (progress.applied or progress.partial):
                 raise ArtifactChanged([name]) from error
@@ -375,6 +388,16 @@ def run_checklist_edits_helper(entry: Any, request: Any) -> dict[str, Any]:
         return response("expected_failure", request_id=request.request_id,
                         data={"applied": progress.applied, "failed": progress.step, "partial": progress.partial,
                               "moved": progress.moved, "record_written": error.record_written}, diagnostics=[refusal])
+    except SwapUnavailable as error:
+        refusal = diagnostic(
+            "atomic_swap_unavailable",
+            f"{error}, so checklist-edits cannot replace it without risking a lost competing change; nothing was applied.",
+            remediation_summary="Apply from a local filesystem with atomic rename swaps; retrying on this one fails the same way.",
+            remediation_actions=["Move the checkout to a local APFS, ext4, XFS, Btrfs or tmpfs volume, not exFAT, SMB, NFS or FUSE.",
+                                 "Take a fresh baseline with read_only there and apply the same proposals."],
+        )
+        return response("expected_failure", request_id=request.request_id,
+                        data={"applied": [], "artifact": error.artifact}, diagnostics=[refusal])
     except ArtifactChanged as error:
         refusal = diagnostic(
             "artifact_changed_during_check",

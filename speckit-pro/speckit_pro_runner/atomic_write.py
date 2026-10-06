@@ -28,6 +28,10 @@ class WritePreconditionChanged(OSError):
     """Raised when a write target no longer matches its captured snapshot."""
 
 
+class AtomicSwapUnavailable(OSError):
+    """The platform or filesystem cannot swap two names atomically, so a checked write is refused, never downgraded."""
+
+
 def atomic_write_cleanup_errors(exc: OSError) -> list[str]:
     errors = getattr(exc, "cleanup_errors", None)
     return errors if isinstance(errors, list) else []
@@ -277,7 +281,7 @@ def install_checked(parent_fd: int, tmp_name: str, target_name: str, expected: d
             raise WritePreconditionChanged("write target appeared after snapshot capture") from error
         return True
     if not swap_entries(parent_fd, tmp_name, target_name):
-        raise WritePreconditionChanged("checked atomic swap is unavailable; write refused")
+        raise AtomicSwapUnavailable("checked atomic swap is unavailable on this filesystem; write refused")
     try:
         displaced_matches = write_target_matches_snapshot(snapshot_write_target_fd(parent_fd, tmp_name), expected)
     except OSError:

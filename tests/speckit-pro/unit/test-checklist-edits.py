@@ -557,6 +557,17 @@ class CanonicalResultTests(ChecklistEditsCase):
                 self.assertEqual(("expected_failure", [name]), (result["status"], result["data"].get("changed")), result)
                 self.assertEqual("# Competitor\n", self.text(name))
 
+    def test_a_filesystem_without_atomic_swap_is_refused_as_such_not_blamed_on_a_writer(self) -> None:
+        # Review 6016254217: no competing write, the platform just cannot swap.
+        with patch.object(atomic_write, "swap_entries", return_value=False):
+            result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
+        self.assertEqual(("expected_failure", "atomic_swap_unavailable"), (result["status"], result["diagnostics"][0]["code"]), result)
+        self.assertNotIn("changed", result["data"], result)
+        self.assertEqual(([], "spec.md"), (result["data"]["applied"], result["data"]["artifact"]), result)
+        self.assertNotIn("redispatch", json.dumps(result["diagnostics"]).lower())
+        self.assertEqual((SPEC, PLAN), (self.text("spec.md"), self.text("plan.md")))
+        self.assertFalse((self.root / RECORD).exists())
+
     def test_an_unavailable_swap_refuses_the_write_and_keeps_a_competing_edit(self) -> None:
         target = self.root / FEATURE / "spec.md"
 

@@ -71,7 +71,7 @@
         "value": "speckit_pro_runner/atomic_write.py",
         "display": "speckit_pro_runner/atomic_write.py"
       },
-      "sha256": "d1a38abb842437a3efdb1e69e44c544391178fdb4f05505d941383deb50bca2e"
+      "sha256": "3ec0c1585cf12220fc64e86509ebe842bce88bd5ca39e9aad1acff70929287c4"
     },
     {
       "path": {
@@ -551,7 +551,7 @@
         "value": "speckit_pro_runner/helpers/checklist_edits.py",
         "display": "speckit_pro_runner/helpers/checklist_edits.py"
       },
-      "sha256": "198fa0c6968b0cb7f60586982e760bc1c409ff6e3241d70067ad73321a17b238"
+      "sha256": "8dcab9bd1d6f4f207a05832489a3e7490efd511ba656d316e6fcc17680aa4caa"
     },
     {
       "path": {
