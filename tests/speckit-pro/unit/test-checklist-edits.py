@@ -38,8 +38,9 @@ PLAN = "# Plan\nSessions never expire.\n"
 DOMAINS = ["security", "ux", "api"]
 
 
-def edit(gap: str, file: str, find: str, replace: str) -> dict[str, str]:
-    return {"gap": gap, "file": file, "find": find, "replace": replace}
+def edit(*fields: str) -> dict[str, str]:
+    """One proposed edit from (gap, file, find, replace)."""
+    return dict(zip(("gap", "file", "find", "replace"), fields))
 
 
 def proposal(domain: str, *edits: dict[str, str], gaps: list[str] | None = None) -> dict[str, Any]:
