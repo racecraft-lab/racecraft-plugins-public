@@ -16,6 +16,7 @@ which is how the orchestrator checks that a verify run wrote nothing.
 from __future__ import annotations
 
 import hashlib
+from dataclasses import dataclass
 from collections.abc import Callable
 from contextlib import nullcontext
 from functools import partial
@@ -42,13 +43,12 @@ class ArtifactChanged(Exception):
         self.changed = changed
 
 
+@dataclass
 class ApplyInterrupted(Exception):
     """A write failed after earlier domains reached disk; `applied` names them."""
 
-    def __init__(self, domain: str, applied: list[str]) -> None:
-        super().__init__(f"writing {domain!r} failed after {len(applied)} domain(s) were applied")
-        self.domain = domain
-        self.applied = applied
+    domain: str
+    applied: list[str]
 
 
 def checked_proposal(value: Any) -> tuple[str, list[str], list[dict[str, str]]]:
@@ -194,7 +194,7 @@ def run_checklist_edits_helper(entry: Any, request: Any) -> dict[str, Any]:
     except ApplyInterrupted as error:
         refusal = diagnostic(
             "apply_interrupted",
-            f"{error}; spec.md and plan.md hold the domains applied so far.",
+            f"writing {error.domain!r} failed after {len(error.applied)} domain(s) were applied; spec.md and plan.md hold them.",
             remediation_summary="Restore spec.md and plan.md from version control before retrying.",
             remediation_actions=["Restore both files, then take a fresh baseline with read_only.",
                                  "Redispatch the domains; the retry would otherwise report an executor write."],
