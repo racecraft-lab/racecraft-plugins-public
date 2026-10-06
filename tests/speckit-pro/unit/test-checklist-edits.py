@@ -830,7 +830,7 @@ class RecordStateTests(ChecklistEditsCase):
                     proposal("security", edit("G1", "spec.md", "open", "private"), edit("G2", "plan.md", "never", "always")),
                     proposal("ux"), proposal("api"),
                 ]}
-                result = run_dist_command(host, self.root, UNREADABLE_RECORD_RUNNER, dist_request("apply", inputs))
+                result = run_dist_command(host, self.root, dist_request("apply", inputs), unreadable_record=True)
                 self.assertEqual(("expected_failure", ["security", "ux", "api"]),
                                  (result["status"], result["data"].get("applied")), result)
                 self.assertIsNone(result["data"]["record_written"], result)
@@ -931,9 +931,8 @@ class UntrustedTextTests(ChecklistEditsCase):
         self.assertIn("private:\n\t- see [ADR](docs/adr.md)", self.text("spec.md"))
 
 
-RUNNER = [sys.executable, "-m", "speckit_pro_runner"]
 # Runs the runner with the published record's parent unreadable, to observe an unknown record state.
-UNREADABLE_RECORD_RUNNER = [sys.executable, "-c", """
+UNREADABLE_RECORD_RUNNER = """
 import os, runpy, sys
 from pathlib import Path
 record = Path(sys.argv[1])
@@ -945,7 +944,7 @@ def fail_after_publication(path, *args, **kwargs):
     return original_open(path, *args, **kwargs)
 os.open = fail_after_publication
 runpy.run_module('speckit_pro_runner', run_name='__main__')
-""", RECORD]
+"""
 
 
 def dist_request(mode: str, inputs: dict[str, Any]) -> str:
@@ -955,9 +954,12 @@ def dist_request(mode: str, inputs: dict[str, Any]) -> str:
                        "inputs": {**document["inputs"], "workflow_file": WORKFLOW, "feature_dir": FEATURE, **inputs}})
 
 
-def run_dist_command(host: str, root: Path, command: list[str], request: str) -> dict[str, Any]:
-    """Run `command` against a host's shipped payload, from inside a throwaway checkout; the response is JSON."""
+def run_dist_command(host: str, root: Path, request: str, *, unreadable_record: bool = False) -> dict[str, Any]:
+    """Run a host's shipped runner from inside a throwaway checkout, optionally with the record unreadable."""
     environment = {**os.environ, "PYTHONPATH": str(REPO / "dist" / host / "speckit-pro")}
+    command = [sys.executable, "-m", "speckit_pro_runner"]
+    if unreadable_record:
+        command = [sys.executable, "-c", UNREADABLE_RECORD_RUNNER, RECORD]
     done = subprocess.run(command, input=request, capture_output=True, text=True, env=environment, cwd=root, check=False)
     return json.loads(done.stdout)
 
@@ -978,9 +980,8 @@ class HostParityTests(unittest.TestCase):
                 (root / WORKFLOW).write_text("# Workflow\n", encoding="utf-8")
                 (root / FEATURE / "spec.md").write_text(SPEC, encoding="utf-8")
                 (root / FEATURE / "plan.md").write_text(PLAN, encoding="utf-8")
-                baseline = run_dist_command(host, root, RUNNER, dist_request("read_only", {}))["data"]["baseline"]
-                applied = run_dist_command(host, root, RUNNER, dist_request("apply", {"domains": DOMAINS, "baseline": baseline,
-                                                                             "proposals": proposals}))
+                baseline = run_dist_command(host, root, dist_request("read_only", {}))["data"]["baseline"]
+                applied = run_dist_command(host, root, dist_request("apply", {"domains": DOMAINS, "baseline": baseline, "proposals": proposals}))
                 outcomes.append((applied["status"], applied["data"]["order"], applied["data"]["domains"],
                                  (root / FEATURE / "spec.md").read_text(encoding="utf-8")))
         self.assertEqual("ok", outcomes[0][0])
