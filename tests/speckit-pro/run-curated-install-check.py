@@ -8,7 +8,8 @@ is missing or is not the pinned version.
 For every entry in `speckit-pro/scripts/curated-set.json` it runs the argv the install and upgrade
 skills give the operator, `<kind> add <id> --from <archive_url>`, in a fresh `specify init` project:
 
-- A preset installs without a prompt, so the check requires exit 0 and the preset directory.
+- A preset installs without a prompt. The probe requires exit 0 and its directory, but reports
+  completion unproven: those observations do not establish registration or manifest identity.
 - An extension URL install stops at Spec Kit's own trust prompt, which only the operator answers.
   The check closes stdin, so the default is deny. It requires a normal nonzero exit after the
   prompt (the discovery-only refusal is gone), a verifiably empty registry, and an archive whose
@@ -136,9 +137,9 @@ def check_entry(entry: dict[str, str], project: Path) -> list[str]:
     if DISCOVERY_ONLY in output:
         failures.append(f"{label}: refused as discovery-only")
     if entry["kind"] == "preset":
-        installed = registry_entries(project, "preset", entry["id"]) is not None
-        if result.returncode != 0 or not installed:
-            failures.append(f"{label}: exit {result.returncode}, installed={installed}")
+        directory_observed = registry_entries(project, "preset", entry["id"]) is not None
+        if result.returncode != 0 or not directory_observed:
+            failures.append(f"{label}: exit {result.returncode}, directory_observed={directory_observed}")
         return failures
     if TRUST_PROMPT not in output:
         failures.append(f"{label}: did not reach the trust prompt")
@@ -179,7 +180,7 @@ def entry_result(entry: dict[str, str], project: Path, trust_archives: bool) -> 
         failures = check_completed_install(entry)
     if failures:
         return "fail", failures
-    return ("unproven" if entry["kind"] == "extension" and not trust_archives else "pass"), []
+    return "unproven", []
 
 
 def main(argv: list[str]) -> int:
@@ -204,11 +205,12 @@ def main(argv: list[str]) -> int:
             results = [entry_result(entry, project, args.trust_pinned_archives) for entry in entries]
     for entry, (status, _failures) in zip(entries, results, strict=True):
         if status == "unproven":
-            print(f"UNPROVEN {entry['kind']} {entry['id']}: needs operator confirmation", file=sys.stderr)
+            reason = "needs operator confirmation" if entry["kind"] == "extension" else "needs owner-run acceptance"
+            print(f"UNPROVEN {entry['kind']} {entry['id']}: {reason}", file=sys.stderr)
     for failure in dict.fromkeys(failure for status, failures in results if status == "fail" for failure in failures):
         print(f"FAIL {failure}", file=sys.stderr)
     counts = {status: [result[0] for result in results].count(status) for status in ("pass", "fail", "unproven")}
-    unproven_note = f", {counts['unproven']} unproven (needs operator confirmation)" if counts["unproven"] else ""
+    unproven_note = f", {counts['unproven']} unproven (needs owner-run acceptance)" if counts["unproven"] else ""
     print(f"run-curated-install-check: {counts['pass']}/{len(entries)} passed{unproven_note}")
     return 1 if counts["fail"] else 2 if counts["unproven"] else 0
 

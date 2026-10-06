@@ -95,6 +95,10 @@ class CuratedGuidanceContracts(unittest.TestCase):
         with self.subTest(msg='guide says what the pin guarantees and what the operator reviews'):
             for phrase in ('pins the bytes but does not vet them', 'specify extension info', 'commands, scripts, and hooks'):
                 self.assertIn(phrase, guide)
+        with self.subTest(msg='directory presence leaves completed installation unproven'):
+            self.assertIn('Directory presence and a successful exit leave completion unproven', guide)
+            self.assertIn('owner-run acceptance', guide)
+            self.assertNotIn('confirm each entry by listing', guide)
         for skill in SKILLS_WITH_CURATED_STEP:
             text = (PLUGIN_ROOT / 'skills' / skill / 'SKILL.md').read_text(encoding='utf-8')
             flat = ' '.join(text.split())

@@ -138,6 +138,28 @@ class ExtensionArtifactTests(CuratedInstallCase):
 
 
 class CuratedInstallWorkflowTests(CuratedInstallCase):
+    def test_preset_artifacts_are_unproven_not_completed(self):
+        entry = next(entry for entry in ENTRIES if entry["kind"] == "preset")
+        variants = ("absent-registry", "malformed-registry", "empty-mapping", "different-id", "disabled", "missing-manifest", "wrong-manifest-id")
+        for variant, trust in product(variants, (False, True)):
+            with self.scenario(variant=variant, trust=trust) as project:
+                target = project / ".specify/presets" / entry["id"]
+                target.mkdir(parents=True)
+                data = {"presets": {entry["id"]: {"enabled": True}}}
+                if variant == "empty-mapping":
+                    data["presets"] = {}
+                elif variant == "different-id":
+                    data["presets"] = {"different-preset": {"enabled": True}}
+                elif variant == "disabled":
+                    data["presets"][entry["id"]]["enabled"] = False
+                if variant != "absent-registry":
+                    (target.parent / ".registry").write_text("{" if variant == "malformed-registry" else json.dumps(data), encoding="utf-8")
+                if variant != "missing-manifest":
+                    declared = "different-preset" if variant == "wrong-manifest-id" else entry["id"]
+                    (target / "preset.yml").write_text(f'preset:\n  id: {declared}\n', encoding="utf-8")
+                with mock.patch.object(check, "specify", return_value=subprocess.CompletedProcess([], 0, "", "")):
+                    self.assertEqual(check.entry_result(entry, project, trust), ("unproven", []))
+
     def test_main_reports_missing_cli_without_a_traceback(self):
         with tempfile.TemporaryDirectory() as raw:
             result = subprocess.run(
@@ -178,7 +200,7 @@ class CuratedInstallWorkflowTests(CuratedInstallCase):
         ), mock.patch.object(check, "archive_declares_id", return_value=True), redirect_stdout(stdout), redirect_stderr(stderr):
             status = check.main([])
         self.assertEqual(status, 1)
-        self.assertIn("1/6 passed", stdout.getvalue())
+        self.assertIn("0/6 passed", stdout.getvalue())
         for entry in EXTENSIONS:
             self.assertIn(f"FAIL extension {entry['id']}:", stderr.getvalue())
 
@@ -366,8 +388,9 @@ class CompletedInstallTests(CuratedInstallCase):
     def test_default_run_reports_every_extension_unproven_and_never_zero(self):
         status, stdout, stderr, installs = self.run_main()
         self.assertEqual(status, 2)
-        self.assertIn("1/6 passed", stdout)
-        self.assertIn("5 unproven", stdout)
+        self.assertIn("0/6 passed", stdout)
+        self.assertIn("6 unproven", stdout)
+        self.assertIn("UNPROVEN preset claude-ask-questions: needs owner-run acceptance", stderr)
         for entry in EXTENSIONS:
             self.assertIn(f"UNPROVEN extension {entry['id']}: needs operator confirmation", stderr)
         self.assertEqual(installs, [])
@@ -375,7 +398,7 @@ class CompletedInstallTests(CuratedInstallCase):
     def test_legacy_opt_in_fails_closed_without_attempting_installs(self):
         status, stdout, stderr, installs = self.run_main(["--trust-pinned-archives"])
         self.assertEqual(status, 1)
-        self.assertIn("1/6 passed", stdout)
+        self.assertIn("0/6 passed", stdout)
         for entry in EXTENSIONS:
             self.assertIn(f"FAIL extension {entry['id']}: completed install is unproven; owner-run acceptance is required", stderr)
         self.assertEqual(installs, [])
@@ -385,7 +408,7 @@ class CompletedInstallTests(CuratedInstallCase):
             with self.subTest(case=label):
                 status, stdout, stderr, _ = self.run_main(["--trust-pinned-archives"], **options)
                 self.assertEqual(status, 1)
-                self.assertIn("1/6 passed", stdout)
+                self.assertIn("0/6 passed", stdout)
                 for entry in EXTENSIONS:
                     self.assertIn(f"FAIL extension {entry['id']}:", stderr)
 

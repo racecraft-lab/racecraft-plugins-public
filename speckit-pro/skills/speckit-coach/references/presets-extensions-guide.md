@@ -59,8 +59,10 @@ catalog install-allowed.
   the argv to run in their own terminal and never answer it on their behalf.
   Declining exits 0 and installs nothing. An agent run has no terminal, so the
   prompt aborts with a nonzero exit and also installs nothing.
-- Afterward, confirm each entry by listing `.specify/extensions/` and
-  `.specify/presets/`. An exit code alone does not show an install.
+- Afterward, inspect each entry using the installed-state evidence in "Inspect
+  before advising" above. Directory presence and a successful exit leave
+  completion unproven; report that status until owner-run acceptance establishes
+  the manifest identity, registration, and active configuration.
 
 ## Explain or discover
 
