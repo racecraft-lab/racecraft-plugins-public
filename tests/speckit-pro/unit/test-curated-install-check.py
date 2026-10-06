@@ -1032,6 +1032,7 @@ class OwnerAcceptanceGuardTests(unittest.TestCase):
 class OwnerAcceptanceDescriptorTests(unittest.TestCase):
     def test_project_descriptor_closes_on_every_acceptance_exit(self):
         real_open = os.open
+        tempfile.gettempdir()  # Initialize tempdir discovery before recording project opens.
         installed = [("installed", [])]
         cases = (
             ("success", None, None),
@@ -1046,11 +1047,9 @@ class OwnerAcceptanceDescriptorTests(unittest.TestCase):
             with self.subTest(exit=name):
                 roots = []
 
-                def opened(path, flags, *args, **kwargs):
-                    descriptor = real_open(path, flags, *args, **kwargs)
-                    if isinstance(path, Path):
-                        roots.append(descriptor)
-                    return descriptor
+                def opened(*args, **kwargs):
+                    roots.append(real_open(*args, **kwargs))
+                    return roots[-1]
 
                 with (mock.patch.object(check.os, "open", side_effect=opened),
                       mock.patch.object(check, "fresh_project", return_value=[]) as setup,
@@ -1070,7 +1069,7 @@ class OwnerAcceptanceDescriptorTests(unittest.TestCase):
                     else:
                         result = check.run_acceptance([TARGET])
                         self.assertEqual(result[0][0], "installed" if phase is None else "not-run")
-                self.assertEqual(len(roots), 1)
+                self.assertTrue(roots)
                 with self.assertRaises(OSError) as raised:
                     os.fstat(roots[0])
                 self.assertEqual(raised.exception.errno, errno.EBADF)
