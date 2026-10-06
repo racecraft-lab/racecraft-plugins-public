@@ -83,6 +83,11 @@ def terminate_child(child: subprocess.Popen[bytes] | None, signum: int = signal.
 
 
 
+def observed_group_absence(pgid: int, observations: list[dict[str, object]] | None) -> bool:
+    """Only this group's recorded ESRCH makes later cleanup terminal."""
+    return any(item.get("pgid") == pgid and item.get("errno") == errno.ESRCH for item in observations or ())
+
+
 _REAL_POPEN = subprocess.Popen  # captured before any test patches the module attribute
 
 
@@ -261,7 +266,10 @@ def cleanup_child(
     evidence = observations if isinstance(observations, CleanupEvidence) else None
     observations = observations.observations if isinstance(observations, CleanupEvidence) else observations
 
-    absent = False  # Set by the first ESRCH: the original group is gone, and any later answer is another group.
+    absent = observed_group_absence(pgid, observations)
+    if absent:
+        reap_leader(child)
+        return False
 
     def probe(*, record_eperm: bool = True) -> int | None:
         """Return ESRCH or EPERM from a zero-signal group probe, or None if a member answered."""

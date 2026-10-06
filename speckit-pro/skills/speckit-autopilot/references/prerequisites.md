@@ -848,15 +848,26 @@ files exists in the repository, otherwise `unconfigured` and
 
 **`.specify/quality-gates.json` is the threshold authority.** The probe's
 `quality_gates.status` remains `present`, `missing`, or `invalid` (with
-`problems`). Read the seam's `data.quality_gate` at this step: on `stop`,
-print its `message` verbatim and STOP; on `proceed`, continue. The runner
-owns this decision and the host-specific coach command. Agents never edit
-this file.
+`problems`). Read the seam's `data.quality_gate` at this step. It always
+carries `verdict: proceed`; G0 never stops for this file. A missing or
+invalid file makes the runner add `unratified_defaults`: the file is ignored
+whole, and the slots run on the shipped defaults (complexity 10, CRAP 30,
+mutation-score floor 60, no skips, no opt-in slots) in memory. Agents never
+create or edit the file.
 
-With the file missing, the slot commands still show the shipped
-defaults (complexity 10, CRAP 30, mutation-score floor 60) so the
-operator can see what would run; they are not authoritative and
-do not unblock G0.
+When `data.quality_gate.unratified_defaults` is present:
+
+1. When the runner returns `unratified_defaults.record_decision: true`, record
+   `unratified_defaults.decision` with `decisions-list` in `apply` mode.
+   The runner matches the complete current observation, so an identical resume
+   adds no second entry and a changed problem gets its own entry.
+2. Persist the complete observation as `quality_gate_observation` in `autopilot-state.json`
+   beside the workflow file, and keep `unratified_defaults.flag` as `UNRATIFIED_FLAG`
+   in the workflow file's run notes. On resume, restore the flag from this state;
+   Step 0.11 refreshes it from the current probe. Clear that key and `UNRATIFIED_FLAG`
+   when the current probe reports a present file. The UAT runbook helper and the
+   PR packet helper take the flag as `inputs.unratified_defaults`
+   (see `post-implementation.md`).
 
 Three placeholders stay literal in the recorded command and are
 filled at every run:

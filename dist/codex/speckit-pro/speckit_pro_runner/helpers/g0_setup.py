@@ -1,18 +1,22 @@
-"""G0's setup probes, quality-gates stop, and the project baseline plan, without setup writes."""
+"""G0 setup probes, unratified-defaults observation, and project baseline plan, without setup writes."""
 
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
 from ..envelope import response
+from ..quality_gates import SHIPPED_DEFAULTS
 from ..strict_input import SelectionError, require_fields, require_text
 from ..trusted_io import resolve_repo_root, validate_bounded_inputs
+from .decisions_list import decisions_list
 from .read_only import (
     BASELINE_SLOTS, EXIT_STATUS, check_prerequisites, detect_commands, detect_presets, helper_failure_diagnostic, output_capture,
 )
 
+UNSAFE_TEXT = re.compile(r"[^A-Za-z0-9 _.,:;'=>()-]")
 PROBES = {
     "prerequisites": ("check-prerequisites", check_prerequisites),
     "commands": ("detect-commands", detect_commands),
@@ -33,7 +37,7 @@ def baseline_plan(commands: dict[str, str], project_commands: Any) -> dict[str, 
 
 
 def g0_setup(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
-    """Preserve each probe's result; commands also reports the current G0 stop."""
+    """Preserve each probe, the unratified-defaults observation, and the baseline plan."""
     optional = {"repo_root", "project_commands"} if inputs.get("probe") == "commands" else {"repo_root"}
     require_fields({key: value for key, value in inputs.items() if key not in optional},
                    {"probe", "surface", "workflow_file"}, "g0-setup inputs")
@@ -52,17 +56,41 @@ def g0_setup(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     data: dict[str, Any] = {"probe": probe, "result": result}
     if probe == "commands":
         quality = result["stdout_json"]["quality_gates"]
-        gate = {"verdict": "proceed", "message": ""}
+        gate: dict[str, Any] = {"verdict": "proceed", "message": ""}
         if quality["status"] != "present":
-            detail = "missing" if quality["status"] == "missing" else f"invalid: {quality['problems'][0]}"
-            sigil = "/" if surface == "claude" else "$"
-            gate = {"verdict": "stop", "message": (
-                f"G0 blocked: .specify/quality-gates.json is {detail}.\n"
-                f"Run `{sigil}speckit-pro:speckit-coach quality gates` to create it. Agents never edit this file."
-            )}
+            observed = unratified_defaults(quality, surface)
+            entries = decisions_list(repo_root, {"workflow_file": workflow}, "read_only")["entries"]
+            observed["record_decision"] = not any(
+                all(previous.get(field) == value for field, value in observed["decision"].items())
+                for previous in entries
+            )
+            gate["unratified_defaults"] = observed
         data["quality_gate"] = gate
         data["baseline"] = baseline_plan(result["stdout_json"]["commands"], inputs.get("project_commands", {}))
     return data
+
+
+def unratified_defaults(quality: dict[str, Any], surface: str) -> dict[str, Any]:
+    """The observation for a missing or invalid file: G0 runs on the shipped defaults (ADR 0007)."""
+    # The problem text can quote keys from the file. Keep plain words only, so it
+    # cannot carry markup, links, mentions, control characters, or paths into the PR.
+    problem = " ".join(UNSAFE_TEXT.sub("?", str(quality.get("problems", [""])[0])).split())[:300] or "no detail"
+    detail = "missing" if quality["status"] == "missing" else f"invalid: {problem}"
+    sigil = "/" if surface == "claude" else "$"
+    defaults = (f"complexity {SHIPPED_DEFAULTS['complexity']}, CRAP {SHIPPED_DEFAULTS['crap']}, "
+                f"mutation-score floor {SHIPPED_DEFAULTS['mutation_score_floor']}, no skips, no opt-in slots")
+    return {
+        "flag": (f"Unratified quality-gate defaults: .specify/quality-gates.json is {detail}; "
+                 f"this run used the shipped defaults ({defaults}). "
+                 f"Run `{sigil}speckit-pro:speckit-coach quality gates` to ratify them."),
+        "decision": {
+            "kind": "unratified_default",
+            "option_chosen": f"Ran G0 on the shipped quality-gate defaults ({defaults}).",
+            "rejected_alternative": "Stopping G0 until the quality-gates file is created.",
+            "evidence": f".specify/quality-gates.json is {detail}.",
+            "affected_unit": ".specify/quality-gates.json",
+        },
+    }
 
 
 def run_g0_setup_helper(entry: Any, request: Any) -> dict[str, Any]:
@@ -74,8 +102,8 @@ def run_g0_setup_helper(entry: Any, request: Any) -> dict[str, Any]:
         data = g0_setup(request.inputs, root)
     except SelectionError as exc:
         return response("input_error", request_id=request.request_id, data={"problems": [str(exc)]})
-    # Prerequisite failures still go to repair. The quality stop is consumed
-    # at Step 0.11, after the same earlier setup work as before this seam.
+    # Prerequisite failures still go to repair. The quality observation is
+    # consumed at Step 0.11, after the same earlier setup work as before this seam.
     exit_code = int(data["result"]["exit_code"])
     if exit_code == 0:
         return response("ok", request_id=request.request_id, data=data)
