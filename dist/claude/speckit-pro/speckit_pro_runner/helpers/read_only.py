@@ -1923,7 +1923,8 @@ def reviewability_preset_state(root: Path, repo_root: Path) -> dict[str, Any]:
     """Whether the project has the reviewability preset, and the `specify` arguments that add it.
 
     `status` is `installed` (its manifest exists and Spec Kit's registry lists it), `missing` (add_args installs
-    it) or `unavailable` (the payload has no preset). Spec Kit resolves templates from the registry only.
+    it) or `unavailable` (the payload has no preset or a stale registration needs repair).
+    Spec Kit resolves templates from the registry only.
     """
     presets = root / ".specify" / "presets"
     return reviewability_preset.state(

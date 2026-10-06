@@ -218,6 +218,10 @@ class ReviewabilityPreset(ReadinessCase):
         self.assertEqual("missing", self.state(root)["status"])
         shutil.copy(REPO_ROOT / ".specify/presets/.registry", root / ".specify/presets/.registry")
         self.assertEqual("installed", self.state(root)["status"])
+        shutil.rmtree(root / ".specify/presets" / PRESET_ID)
+        stale = self.state(root)
+        self.assertEqual(("unavailable", []), (stale["status"], stale["add_args"]))
+        self.assertIn(f"specify preset remove {PRESET_ID}", stale["reason"])
 
     def test_a_malformed_registry_never_reports_the_preset_installed(self) -> None:
         root = self.root

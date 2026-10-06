@@ -48,7 +48,14 @@ def state(registry: str, manifest_exists: bool) -> dict[str, Any]:
         document = None
     presets = document.get("presets") if isinstance(document, dict) else None
     registered = isinstance(presets, dict) and PRESET_ID in presets
-    if registered and manifest_exists:
+    if registered:
+        if not manifest_exists:
+            # Spec Kit rejects add while this registration remains, even without files.
+            state["status"] = "unavailable"
+            state["reason"] = (
+                f"Preset {PRESET_ID} is registered but preset.yml is missing. "
+                f"Repair the registration with specify preset remove {PRESET_ID}, then retry."
+            )
         return state
     state["add_args"] = add_args()
     state["status"] = "missing" if state["add_args"] else "unavailable"

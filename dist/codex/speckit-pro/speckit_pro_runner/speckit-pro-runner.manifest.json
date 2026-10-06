@@ -703,7 +703,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "2a2517772c8fc664f6eacc6032a3397ad2226702fa1b5e4537628a54bc24982b"
+      "sha256": "4ee77567d234c31d8e977b5bc46d0e41ac1cef2268b1fa3436dd6e62d11af3a3"
     },
     {
       "path": {
@@ -887,7 +887,7 @@
         "value": "speckit_pro_runner/reviewability_preset.py",
         "display": "speckit_pro_runner/reviewability_preset.py"
       },
-      "sha256": "0bcbf4e096007668a8f867dd1ede0d754332dcba8adcd004476736b5f0791210"
+      "sha256": "84164874ae4b7c65bec7c326011895a756920614cd7525f1b6270c5d1bd820ce"
     },
     {
       "path": {
