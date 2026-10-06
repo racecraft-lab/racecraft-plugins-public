@@ -10,6 +10,7 @@ all run for real.
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -24,7 +25,12 @@ from test_result import run_counted  # noqa: E402
 
 HELPER_ID = "check-roadmap-freshness"
 ROADMAP = "docs/ai/technical-roadmap.md"
+GIT_EXECUTABLE = shutil.which("git")
+if GIT_EXECUTABLE is None:
+    raise RuntimeError("Git is required by the roadmap integration fixture")
 GIT_ENV = {
+    # Use the fixture's selected Git, independently of ambient helper directories.
+    "PATH": str(Path(GIT_EXECUTABLE).parent),
     "GIT_CONFIG_GLOBAL": os.devnull,
     "GIT_CONFIG_SYSTEM": os.devnull,
     "GIT_CONFIG_NOSYSTEM": "1",
