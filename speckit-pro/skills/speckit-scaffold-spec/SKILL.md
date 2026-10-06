@@ -321,17 +321,28 @@ session because this process cannot reload changed custom agents safely.
 
 Check for the official SpecKit CLI before parsing or mutating the repository:
 
-Use command execution to confirm `command -v specify` finds the official
-`specify` CLI after including common user-local binary directories
-(`$HOME/.local/bin`, `/opt/homebrew/bin`, `/usr/local/bin`) on PATH.
+Send the `check-prerequisites` helper request (`workflow_file` empty) and read
+the `spec_kit` object in its output; it is the only source for whether the CLI is present. `status` is `missing`, `older`, `newer`,
+`unreadable` or `match`; `install_argv` is the pinned install.
 
-If missing and `uv` exists, install it:
+Use `spec_kit.cli_argv` as the executable prefix for every Spec Kit command
+below, including preset resolution, extension observations and initialization
+recommendations. Append the listed arguments and launch the resulting array
+with `shell=False`. The runner supplies the verified absolute path; preserve it
+even if PATH, the current directory or a discovery link changes.
+If `cli_argv` is empty, STOP before any Spec Kit command; offer the pinned
+install, then verify again. Re-run `check-prerequisites` after any CLI install
+or replacement and use the new `spec_kit` object for subsequent steps.
+A declined version repair permits continuation only with a nonempty `cli_argv`.
 
-Run `uv tool install specify-cli --from git+https://github.com/github/spec-kit.git`.
+If `status` is `missing` and `uv` exists, run `install_argv`. If `status` is
+`older`, `newer` or `unreadable`, keep the `spec_kit` object for the
+`project_integration` observation in Step 6.5 and offer the operator
+`install_argv`; continue on the installed CLI when they decline.
 
-If `uv` is unavailable or install fails, STOP and tell the operator to install
-SpecKit with that command. Do not continue with setup without the `specify`
-command. Do not run `specify init --here --force` automatically: project
+If `uv` is unavailable or the install fails, STOP and give the operator
+`install_argv` to run. Do not continue with setup without the `specify`
+command. Do not run `spec_kit.cli_argv + ["init", "--here", "--force"]` automatically: project
 initialization and forced refreshes can overwrite managed files. Recommend it
 only when `.specify/` is absent and the operator explicitly approves project
 initialization.
@@ -876,9 +887,9 @@ All file operations happen in the worktree directory.
    prerequisite.
 
    Verify resolution from `<worktree_root>/` with
-   `specify preset resolve spec-template`,
-   `specify preset resolve plan-template`, and
-   `specify preset resolve tasks-template`. Each command should resolve to
+   `spec_kit.cli_argv + ["preset", "resolve", "spec-template"]`,
+   `spec_kit.cli_argv + ["preset", "resolve", "plan-template"]`, and
+   `spec_kit.cli_argv + ["preset", "resolve", "tasks-template"]`. Each command should resolve to
    `.specify/presets/speckit-pro-reviewability/` or to a project-specific
    higher-priority override that intentionally includes the reviewability
    sections.
@@ -1107,7 +1118,7 @@ per item:
 | `item` | Observe it now by |
 | --- | --- |
 | `plugin_payload` | retaining any agent gap from the start of this run; fingerprint the revision and selected installation/routing inputs; verify the session's loaded revision, since disk inventory alone does not prove it; otherwise record `unknown` with a reload/restart action |
-| `project_integration` | reusing the Specify and bootstrap results, then running helper `detect-commands` with empty `inputs={}`; fingerprint the project assets and confirmed command sources |
+| `project_integration` | reusing the Specify and bootstrap results, then running helper `detect-commands` with empty `inputs={}`; fingerprint the project assets and confirmed command sources; when Step 0 left a `spec_kit` status of `older`, `newer` or `unreadable`, record `unavailable` with `install_argv` as the action and `installed_version` and `pinned_version` in `values` |
 | `github_auth` | running one bounded GitHub authentication status check; keep only its pass or fail |
 | `mcp_servers` | running helper `research-broker-preflight` with empty `inputs={}`, then bounded live observations of required MCP tools/startup/auth; configuration alone does not prove connectivity, so record `unknown` when live evidence is absent |
 | `typesafe_jev` | checking whether this session exposes the Jev `evaluate` tool |
@@ -1151,7 +1162,7 @@ you send for these.
 | `item` | Detail key | Observe it now by |
 | --- | --- | --- |
 | `codex_agents` | `agents`: `{"installation": {...}, "inventory": [{"agent": "<name>", "state": "current", "stale" or "missing", "repair": "none", "applied", "declined" or "failed"}], "expected_revision": "<plugin_revision>", "loaded_revision": "<version>"}` | reusing the `install-codex-agents` `mode="dry_run"` plan from step -0.5 for `inventory`, and its repair outcome in `repair`; copy the selected installation inputs into `installation` exactly as that request sent them, with no added keys; omit `loaded_revision` unless this session reports the revision it loaded, since a repaired agent loads only after a restart |
-| `extension_versions` | `extensions`: `{"extension": "<id>", "installed": "<version>" or null, "expected": "<version>" or null}` | reading each required extension's version from `specify extension list`; `expected` is its project pin or curated-set version, and a drifted or missing extension is flagged |
+| `extension_versions` | `extensions`: `{"extension": "<id>", "installed": "<version>" or null, "expected": "<version>" or null}` | reading each required extension's version from `spec_kit.cli_argv + ["extension", "list"]`; `expected` is its project pin or curated-set version, and a drifted or missing extension is flagged |
 | `codex_approval_posture` | `posture`: `{"approval_policy": "on-request", "never", "on-failure" or {"granular": {"sandbox_approval": <bool>, "rules": <bool>, "mcp_elicitations": <bool>, "request_permissions": <bool>, "skill_approval": <bool>}}, "sandbox_mode": "read-only", "workspace-write" or "danger-full-access", "approvals_reviewer": "user" or "auto_review", "mcp_approval_mode": "auto", "prompt", "writes" or "approve", "mcp_consent": "granted" or "not_granted", "mcp_startup_timeout_sec": <seconds>, null or "unobservable", "mcp_tool_timeout_sec": <seconds>, null or "unobservable", "external_delegation": "allowed" or "blocked"}` | reading an effective running-thread source; use `/status` or `/permissions` only for values they actually expose in this version, and do not change settings while inspecting; their complete live approval, sandbox and MCP coverage is unconfirmed. Send `"unobservable"` for anything unreadable; send null for a timeout only when its effective setting is confirmed unset. Disk configuration alone does not prove launch overrides or running-thread permissions |
 | `codex_hook_trust` | `hooks`: `{"hook": "<Event:group-index:handler-index>", "state": "trusted", "untrusted" or "unobservable", "hash": "<SHA-256 digest>" or null, "enabled": true, false or null}` | reviewing every shipped handler in `/hooks`; obtain the exact hash from an effective hook metadata source when available. Codex 0.160.0 `hooks/list` returns `sha256:` plus 64 lowercase hex digits; whether `/hooks` prints the hash is unconfirmed. The helper compares the complete shipped handler set and normalized expected hashes. Send `trusted` only with its trusted hash and observable enablement; ask the user to review and trust untrusted hooks in `/hooks`, never trust them yourself |
 | `codex_local_access` | `access`: `{"loopback": "allowed", "blocked" or "unobservable", "temp_dir": "healthy", "leaky" or "unobservable", "egress_policy_ref": "<name>" or null, "egress_policy_digest": "<hex digest>" or null}` | running one bounded loopback connection to a local port you open, reusing the `local_capability` temporary directory probe result, and naming the applicable egress policy by reference and digest together, or both null when none applies; do not copy its entries |
