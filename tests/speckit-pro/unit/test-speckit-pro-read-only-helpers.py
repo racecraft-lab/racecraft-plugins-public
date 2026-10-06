@@ -7,6 +7,7 @@ import argparse
 import copy
 import functools
 import hashlib
+import itertools
 import json
 import os
 import re
@@ -61,8 +62,10 @@ from speckit_pro_runner.helpers import registry  # noqa: E402
 from speckit_pro_runner.pr_contract import PACKET_TITLE_SCOPE_PATTERN, PACKET_TITLE_VALUE_PATTERN  # noqa: E402
 
 EXPECTED_HELPERS = [
+    "select-artifact-pages",
     "g0-setup",
     "formal-doctor",
+    "probe-git-write",
     "scaffold-answers",
     "phase-brief",
     "helper-registry-dispatch",
@@ -110,6 +113,7 @@ JSON_STDOUT_PARITY_HELPERS = {"atomicity-route"}
 
 HELPER_CASES: dict[str, dict[str, object]] = {
     "g0-setup": {"probe": "commands", "surface": "codex", "workflow_file": WORKFLOW_FILE},
+    "probe-git-write": {},
     "scaffold-answers": {"answers_file": "missing-answers.json", "spec_id": "SPEC-009"},
     "formal-doctor": {"repo_root": ".", "workflow_file": "tests/speckit-pro/unit/fixtures/formal-methods/disabled-workflow.md"},
     "check-prerequisites": {"workflow_file": WORKFLOW_FILE},
@@ -161,6 +165,7 @@ HELPER_CASES: dict[str, dict[str, object]] = {
     "validate-pr-workflow-contract": {"title": "feat(FEATURE-001): Validate helper contract"},
     "validate-pr-packet-read-only": {"packet_path": "tests/speckit-pro/unit/fixtures/read-only-helpers/missing-pr-packet.json"},
     "estimate-spec-size": {"user_stories": 2, "files": 3, "frs": 4},
+    "select-artifact-pages": {"plan_file": FEATURE_DIR + "/plan.md"},
     "research-broker-preflight": {},
     "render-egress-authorization": json.loads(
         (REPO_ROOT / "tests/speckit-pro/unit/fixtures/read-only-helpers/requests/render-egress-authorization.json")
@@ -305,6 +310,167 @@ class _ReadOnlyHelperRunner:
         self.assertEqual(planner["tool"], "plan-layers")
         self.assertEqual(planner["contract_version"], 1)
         return completed, response, planner
+
+
+class SpecKitExecutableReuseTests(unittest.TestCase):
+    operations = (
+        ["integration", "list"],
+        ["init", "--here", "--integration", "claude", "--script", "sh"],
+        ["init", "--here", "--integration", "codex", "--script", "sh"],
+        ["integration", "install", "claude", "--script", "sh"],
+        ["integration", "install", "codex", "--script", "sh"],
+        ["check"], ["self", "check"],
+        ["integration", "upgrade", "claude", "--script", "sh"],
+        ["integration", "upgrade", "codex", "--force", "--script", "sh"],
+        ["extension", "add", "fixture"], ["preset", "add", "fixture"],
+        ["preset", "resolve", "spec-template"],
+        ["preset", "resolve", "plan-template"],
+        ["preset", "resolve", "tasks-template"], ["extension", "list"],
+    )
+
+    def test_rejected_candidates_expose_no_launch_argv_at_any_command_site(self) -> None:
+        from speckit_pro_runner.helpers.read_only import spec_kit_cli_state
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            checkout = root / "checkout"
+            checkout.mkdir()
+            trusted = root / "trusted" / "specify"
+            trusted.parent.mkdir()
+            trusted.touch()
+            trusted.chmod(0o755)
+            local = checkout / "specify"
+            local.touch()
+            local.chmod(0o755)
+            windows = checkout / "specify.exe"
+            windows.touch()
+            windows.chmod(0o755)
+            outward = checkout / "outward" / "specify"
+            outward.parent.mkdir()
+            outward.symlink_to(trusted)
+            inward = root / "lookup" / "specify"
+            inward.parent.mkdir()
+            inward.symlink_to(local)
+            alias = root / "checkout-alias"
+            alias.symlink_to(checkout, target_is_directory=True)
+            cases = (
+                ("direct-checkout", local, local),
+                ("relative-current-directory", "specify", local),
+                ("windows-root-lookup", trusted, windows),
+                ("checkout-link-outward", outward, outward),
+                ("checkout-link-reselected-external", outward, trusted),
+                ("external-link-inward", inward, inward),
+                ("checkout-directory-link", alias / "specify", alias / "specify"),
+            )
+            for platform in ("linux", "win32"):
+                for variant, selected, lookup in cases:
+                    for operation in self.operations:
+                        with self.subTest(platform=platform, variant=variant, operation=operation), patch(
+                            "speckit_pro_runner.helpers.read_only.Path.cwd", return_value=checkout,
+                        ), patch("speckit_pro_runner.helpers.read_only.sys.platform", platform), patch(
+                            "speckit_pro_runner.helpers.read_only.shutil.which", return_value=str(lookup),
+                        ), patch("speckit_pro_runner.helpers.read_only.subprocess.run") as run:
+                            rows, state = spec_kit_cli_state(str(selected), checkout)
+                            self.assertEqual(state["status"], "missing")
+                            self.assertFalse(rows[0]["pass"])
+                            self.assertEqual(state.get("cli_argv"), [])
+                            run.assert_not_called()
+
+    def test_absolute_launch_survives_alias_link_and_rename_replacement(self) -> None:
+        from speckit_pro_runner.helpers.read_only import spec_kit_cli_state
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            checkout = root / "checkout"
+            checkout.mkdir()
+            # A private 0755 stub, not the interpreter: hosted Linux runners ship interpreters
+            # with group-write bits, which the trust check rightly rejects.
+            trusted = root / "trusted" / "specify"
+            trusted.parent.mkdir()
+            trusted.touch()
+            trusted.chmod(0o755)
+            hostile = checkout / "specify.exe"
+            hostile.write_text("rejected checkout executable\n", encoding="utf-8")
+            hostile.chmod(0o755)
+            alias = root / "lookup" / "specify"
+            alias.parent.mkdir()
+            for platform in ("linux", "win32"):
+                for replacement in ("link", "rename"):
+                    alias.unlink(missing_ok=True)
+                    alias.symlink_to(trusted)
+                    with patch("speckit_pro_runner.helpers.read_only.sys.platform", platform), patch(
+                        "speckit_pro_runner.helpers.read_only.Path.cwd", return_value=checkout,
+                    ), patch(
+                        "speckit_pro_runner.helpers.read_only.shutil.which",
+                        side_effect=lambda _name, *, path: str(trusted if path == str(trusted.parent) else alias),
+                    ), patch(
+                        "speckit_pro_runner.helpers.read_only.subprocess.run",
+                        return_value=SimpleNamespace(stdout="CLI Version    1.1.0", returncode=0),
+                    ):
+                        rows, state = spec_kit_cli_state(str(alias), checkout)
+                    self.assertTrue(rows[0]["pass"])
+                    self.assertEqual(state.get("cli_argv"), [str(trusted)])
+                    alias.unlink()
+                    if replacement == "link":
+                        alias.symlink_to(hostile)
+                    else:
+                        staged = alias.with_name("replacement")
+                        staged.write_bytes(hostile.read_bytes())
+                        staged.chmod(0o755)
+                        staged.replace(alias)
+                    for operation in self.operations:
+                        with self.subTest(platform=platform, replacement=replacement, operation=operation):
+                            result = subprocess.run(
+                                [sys.executable, "-c", "import json, sys; print(json.dumps(sys.argv[1:]))", *operation],
+                                cwd=checkout, shell=False,
+                                capture_output=True, text=True, check=True,
+                                env={**os.environ, "PATH": str(checkout)},
+                            )
+                            self.assertEqual(json.loads(result.stdout), operation)
+
+    def test_both_hosts_use_verified_argv_for_every_later_spec_kit_launch(self) -> None:
+        from speckit_pro_runner.host_skills import render_host_skills
+
+        plugin = Path(__file__).resolve().parents[3] / "speckit-pro"
+        with tempfile.TemporaryDirectory() as temporary:
+            for host in ("claude", "codex"):
+                destination = Path(temporary) / host
+                render_host_skills(plugin, host, destination)
+                for skill in ("speckit-install", "speckit-upgrade", "speckit-scaffold-spec"):
+                    with self.subTest(host=host, skill=skill):
+                        text = (destination / skill / "SKILL.md").read_text(encoding="utf-8")
+                        self.assertIn("spec_kit.cli_argv", text)
+                        self.assertIn("If `cli_argv` is empty, STOP", text)
+                        self.assertIn("Re-run `check-prerequisites` after", text)
+                        self.assertIn("every Spec Kit command", " ".join(text.split()))
+                        self.assertIn("shell=False", text)
+                        body = text[text.index("\n---", 4) + 4:]
+                        self.assertNotRegex(body, r"`specify\s")
+
+    def test_prerequisite_repair_fields_delegate_to_verified_launch_skills(self) -> None:
+        from speckit_pro_runner.helpers.read_only import check_prerequisites
+
+        with tempfile.TemporaryDirectory() as temporary:
+            checkout = Path(temporary).resolve()
+            local = checkout / "specify.exe"
+            local.touch()
+            local.chmod(0o755)
+            skill = checkout / ".claude" / "skills" / "speckit-checklist" / "SKILL.md"
+            skill.parent.mkdir(parents=True)
+            skill.write_text("Run `.specify/scripts/bash/check-prerequisites.sh --template spec`.\n", encoding="utf-8")
+            for selected in (local, Path(sys.executable).resolve()):
+                with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value=str(selected)), patch(
+                    "speckit_pro_runner.helpers.read_only.shutil.which", return_value=str(selected),
+                ):
+                    report = json.loads(check_prerequisites({"workflow_file": ""}, checkout)["stdout"])
+                for name, repair_skill in (("project_init", "speckit-install"),
+                                           ("commands", "speckit-install"),
+                                           ("setup_contract", "speckit-upgrade")):
+                    with self.subTest(accepted=selected != local, field=name):
+                        row = next(item for item in report["checks"] if item["check"] == name)
+                        self.assertFalse(row["pass"])
+                        self.assertNotRegex(row["message"] + row["detail"], r"\bspecify(?:\.exe)?\s+(?:init|integration)")
+                        self.assertIn(repair_skill, row["message"])
 
 
 class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
@@ -3345,6 +3511,9 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
                 with self.subTest(executable=executable, version=version), patch(
                     "speckit_pro_runner.helpers.read_only.find_specify", return_value=executable,
                 ), patch(
+                    "speckit_pro_runner.helpers.read_only.verified_specify_executable",
+                    return_value=Path(executable) if executable else None,
+                ), patch(
                     "speckit_pro_runner.helpers.read_only.installed_specify_version",
                     return_value=version,
                 ):
@@ -3377,6 +3546,9 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
         hostile = "9" * 5000 + "\x1b[31m"
         with patch(
             "speckit_pro_runner.helpers.read_only.installed_specify_version", return_value=hostile,
+        ), patch(
+            "speckit_pro_runner.helpers.read_only.verified_specify_executable",
+            return_value=Path.home() / ".local" / "bin" / "specify",
         ):
             rows, state = spec_kit_cli_state(str(Path.home() / ".local" / "bin" / "specify"))
         self.assertEqual(state["installed_version"], "unparsed")
@@ -3444,7 +3616,7 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
                 "speckit_pro_runner.helpers.read_only.sys.platform", "linux",
             ), patch(
                 "speckit_pro_runner.helpers.read_only.shutil.which",
-                side_effect=[None, str(alias), str(alias), str(attested)],
+                side_effect=[None, str(alias), str(alias), str(attested), str(attested)],
             ) as which, patch(
                 "speckit_pro_runner.helpers.read_only.trusted_executable",
                 side_effect=[attested, attested],
@@ -3528,7 +3700,7 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
                     self.assertIsNone(installed_specify_version(str(selected)))
                     run.assert_not_called()
 
-    def test_spec_kit_cli_state_rejects_workspace_and_cwd_probes_without_blocking(self) -> None:
+    def test_spec_kit_cli_state_blocks_workspace_and_cwd_candidates(self) -> None:
         from speckit_pro_runner.helpers.read_only import spec_kit_cli_state
 
         with tempfile.TemporaryDirectory() as temporary:
@@ -3544,8 +3716,9 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
                     "speckit_pro_runner.helpers.read_only.shutil.which", return_value=str(binary),
                 ), patch("speckit_pro_runner.helpers.read_only.subprocess.run") as run:
                     rows, state = spec_kit_cli_state(str(binary), workspace)
-                    self.assertEqual(state["status"], "unreadable")
-                    self.assertTrue(all(row["pass"] for row in rows))
+                    self.assertEqual(state["status"], "missing")
+                    self.assertEqual(state["cli_argv"], [])
+                    self.assertFalse(rows[0]["pass"])
                     run.assert_not_called()
 
     def test_installed_specify_version_treats_decoding_failure_as_unreadable(self) -> None:
@@ -4566,14 +4739,18 @@ class ReadOnlyHelperTests(_ReadOnlyHelperRunner, unittest.TestCase):
 
     def test_helper_python_authoritative_records(self) -> None:
         for helper_id in self.filtered_helpers():
-            if helper_id in {"helper-registry-dispatch", "scaffold-answers", "g0-setup", "phase-brief"}:
+            if helper_id in {"helper-registry-dispatch", "scaffold-answers", "g0-setup", "probe-git-write", "phase-brief"}:
                 continue
             with self.subTest(helper_id=helper_id):
                 completed, response, stderr_records = run_runner(helper_request(helper_id, HELPER_CASES[helper_id]))
                 data = response["data"]
-                if helper_id == "formal-doctor":
+                if helper_id in {"formal-doctor", "select-artifact-pages"}:
                     self.assertEqual(completed.returncode, 0)
-                    self.assertEqual(data["verdict"], "disabled")
+                    field, expected = {
+                        "formal-doctor": ("verdict", "disabled"),
+                        "select-artifact-pages": ("selected_pages", ["implementation-plan", "spec-explainer", "module-map"]),
+                    }[helper_id]
+                    self.assertEqual(data[field], expected)
                     self.assertFalse(data["writes_state"])
                     self.assertEqual(stderr_records, [])
                     continue
@@ -4849,6 +5026,16 @@ class PlanLayersPlannerCaseTests(unittest.TestCase):
                 self.assertEqual(found, expected)
 
 
+def assert_g0_guidance(case: unittest.TestCase, skills: Path) -> None:
+    guide = (skills / "speckit-coach/references/quality-gates-guide.md").read_text(encoding="utf-8")
+    workflow = (skills / "speckit-coach/templates/workflow-template.md").read_text(encoding="utf-8")
+    case.assertIn("G0 continues on the", guide)
+    case.assertIn("invalid file is ignored whole", guide)
+    case.assertIn("G0 runs on unratified defaults in memory", workflow)
+    source = (PLUGIN_ROOT / "skills/speckit-autopilot/SKILL.md").read_text(encoding="utf-8")
+    case.assertNotIn("G0 stop message", source)
+
+
 class G0SetupTests(unittest.TestCase):
     @staticmethod
     def fixture_files(root: Path) -> dict[str, bytes]:
@@ -4880,6 +5067,8 @@ class G0SetupTests(unittest.TestCase):
                     before = self.fixture_files(root)
                     for probe in ("prerequisites", "commands", "presets"):
                         with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value=case["specify"]), \
+                                patch("speckit_pro_runner.helpers.read_only.verified_specify_executable",
+                                      return_value=Path("/fixture/bin/specify") if case["specify"] else None), \
                                 patch("speckit_pro_runner.helpers.read_only.installed_specify_version", return_value=None):
                             actual = g0_setup({"surface": surface, "probe": probe, "workflow_file": "workflow.md"}, root)
                         actual = json.loads(json.dumps(actual).replace(str(PLUGIN_ROOT), "<plugin-root>"))
@@ -4908,6 +5097,177 @@ class G0SetupTests(unittest.TestCase):
             self.assertEqual(3, prereqs.count('"helper_id":"g0-setup"'))
             self.assertIn("data.quality_gate", prereqs)
             self.assertNotIn("G0 blocked:", prereqs)
+            assert_g0_guidance(self, host_skill_root(surface))
+
+
+class G0UnratifiedDefaultsTests(unittest.TestCase):
+    def test_g0_records_each_current_observation_once_on_resume(self) -> None:
+        from speckit_pro_runner.helpers.decisions_list import decisions_list
+        from speckit_pro_runner.helpers.g0_setup import g0_setup, unratified_defaults
+
+        with helper_project() as root:
+            G0SetupTests.prepare_fixture(root, None)
+            unrelated = dict(unratified_defaults({"status": "missing"}, "claude")["decision"],
+                             affected_unit="deployment-region")
+            decisions_list(root, {"workflow_file": "workflow.md", "entries": [unrelated]}, "apply")
+            for text, should_record in ((None, True), (None, False), ("{", True), ("{", False)):
+                with self.subTest(text=text, should_record=should_record):
+                    if text is not None:
+                        (root / ".specify/quality-gates.json").write_text(text, encoding="utf-8")
+                    with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value="specify"):
+                        observed = g0_setup({"surface": "claude", "probe": "commands",
+                                             "workflow_file": "workflow.md"}, root)["quality_gate"]["unratified_defaults"]
+                    self.assertEqual(should_record, observed["record_decision"])
+                    if observed["record_decision"]:
+                        decisions_list(root, {"workflow_file": "workflow.md", "entries": [observed["decision"]]}, "apply")
+            entries = decisions_list(root, {"workflow_file": "workflow.md"}, "read_only")["entries"]
+            self.assertEqual(3, len(entries))
+            self.assertIn("invalid: cannot parse JSON", entries[-1]["evidence"])
+
+    def test_g0_summary_uses_the_threshold_owner(self) -> None:
+        from speckit_pro_runner.helpers.g0_setup import unratified_defaults
+
+        defaults = {"complexity": 7, "crap": 25, "mutation_score_floor": 70}
+        with patch("speckit_pro_runner.helpers.g0_setup.SHIPPED_DEFAULTS", defaults):
+            observed = unratified_defaults({"status": "missing"}, "codex")
+        for text in ("complexity 7", "CRAP 25", "mutation-score floor 70"):
+            self.assertIn(text, observed["flag"])
+            self.assertIn(text, observed["decision"]["option_chosen"])
+
+    def test_g0_observation_is_persisted_in_both_host_run_states(self) -> None:
+        from speckit_pro_runner.host_parity import emit_host
+
+        source = REPO_ROOT / "speckit-pro/skills/speckit-autopilot/references/prerequisites.md"
+        for host in ("claude", "codex"):
+            rendered = emit_host(source.read_text(encoding="utf-8"), host)
+            with self.subTest(host=host):
+                self.assertIn("record_decision", rendered)
+                self.assertIn("as `quality_gate_observation` in `autopilot-state.json`", rendered)
+                self.assertIn("Clear that key and `UNRATIFIED_FLAG`", rendered)
+
+    def test_g0_continues_on_unratified_defaults_and_never_writes_the_file(self) -> None:
+        from speckit_pro_runner.helpers.decisions_list import checked_entry, decisions_list
+        from speckit_pro_runner.helpers.g0_setup import g0_setup
+
+        for name, text, detail in (("missing", None, "missing"), ("invalid", "{", "invalid: cannot parse JSON")):
+            with self.subTest(case=name), helper_project() as root:
+                G0SetupTests.prepare_fixture(root, text)
+                inputs = {"surface": "claude", "probe": "commands", "workflow_file": "workflow.md"}
+                with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value="specify"):
+                    gate = g0_setup(inputs, root)["quality_gate"]
+                self.assertEqual(("proceed", ""), (gate["verdict"], gate["message"]))
+                observed = gate["unratified_defaults"]
+                self.assertNotIn("\n", observed["flag"])
+                self.assertIn(detail, observed["flag"])
+                self.assertIn(detail, observed["decision"]["evidence"])
+                self.assertEqual(observed["decision"], checked_entry(observed["decision"]))
+                self.assertEqual(text is not None, (root / ".specify" / "quality-gates.json").exists())
+                if text is not None:
+                    self.assertEqual(text, (root / ".specify" / "quality-gates.json").read_text(encoding="utf-8"))
+                recorded = decisions_list(
+                    root, {"workflow_file": "workflow.md", "entries": [observed["decision"]]}, "apply")
+                self.assertEqual(["unratified_default"], [item["kind"] for item in recorded["entries"]])
+
+    def test_unratified_flag_carries_no_markup_or_paths_from_file_content(self) -> None:
+        from speckit_pro_runner import quality_gates
+        from speckit_pro_runner.helpers.g0_setup import unratified_defaults
+
+        hostile = "![x](https://evil.example/p.png) <img src=//evil/x> @org/admins \x1b[31m ‮ " + "/".join(("", "Users", "fixture", ".ssh")) + " `x`"
+        problems = quality_gates.validate({hostile: 1})
+        observed = unratified_defaults({"status": "invalid", "problems": problems}, "claude")
+        text = observed["flag"] + observed["decision"]["evidence"]
+        for fragment in ("![", "](", "<", "@", "\x1b", "‮", "/Users", "`x`"):
+            self.assertNotIn(fragment, text)
+        self.assertIn("unknown top-level keys", observed["flag"])
+
+    def test_g0_present_file_raises_no_unratified_observation(self) -> None:
+        from speckit_pro_runner.helpers.g0_setup import g0_setup
+
+        valid = '{"schema_version": "1.0", "thresholds": {"complexity": 8, "crap": 30, "mutation_score_floor": 60}}'
+        with helper_project() as root:
+            G0SetupTests.prepare_fixture(root, valid)
+            with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value="specify"):
+                gate = g0_setup({"surface": "codex", "probe": "commands", "workflow_file": "workflow.md"}, root)
+        self.assertNotIn("unratified_defaults", gate["quality_gate"])
+
+
+class G0BaselineStageTests(unittest.TestCase):
+    """The project baseline (typecheck, tests, build, lint) belongs to implement entry, not plan-stage G0."""
+
+    SCRIPTS = {"typecheck": "tsc", "test": "vitest", "test:integration": "vitest run it", "build": "tsc -b", "lint": "eslint ."}
+
+    def commands_data(self, root: Path, surface: str, **extra: object) -> dict[str, object]:
+        from speckit_pro_runner.helpers.g0_setup import g0_setup
+
+        with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value="/usr/bin/specify"), \
+                patch("speckit_pro_runner.helpers.read_only.installed_specify_version", return_value=None):
+            return g0_setup({"surface": surface, "probe": "commands", "workflow_file": "workflow.md", **extra}, root)
+
+    def test_recorded_project_commands_supply_missing_slots_and_override_detection(self) -> None:
+        for surface in ("claude", "codex"):
+            with self.subTest(surface=surface), helper_project() as root:
+                G0SetupTests.prepare_fixture(root, None)
+                (root / "package.json").write_text(json.dumps({"scripts": {"test": "vitest", "lint": "eslint ."}}), encoding="utf-8")
+                data = self.commands_data(root, surface, project_commands={
+                    "TYPECHECK": "python3 tools/typecheck.py", "UNIT_TEST": "python3 tools/test.py",
+                    "LINT": "N/A", "FULL_VERIFY": "python3 tools/verify.py",
+                })
+                self.assertEqual([], data["baseline"]["plan_stage"])
+                self.assertEqual([
+                    {"slot": "TYPECHECK", "command": "python3 tools/typecheck.py"},
+                    {"slot": "UNIT_TEST", "command": "python3 tools/test.py"},
+                ], data["baseline"]["implement_entry"])
+
+    def test_plan_stage_g0_runs_no_project_command_and_implement_entry_records_the_baseline(self) -> None:
+        for surface in ("claude", "codex"):
+            with self.subTest(surface=surface), helper_project() as root:
+                G0SetupTests.prepare_fixture(root, None)
+                (root / "package.json").write_text(json.dumps({"scripts": self.SCRIPTS}), encoding="utf-8")
+                before = G0SetupTests.fixture_files(root)
+                with patch("subprocess.Popen", wraps=subprocess.Popen) as spawned:
+                    data = self.commands_data(root, surface)
+                self.assertEqual(before, G0SetupTests.fixture_files(root), "plan-stage G0 must not write")
+                for call in spawned.call_args_list:
+                    argv = call.args[0] if call.args else call.kwargs.get("args")
+                    argv = argv.split() if isinstance(argv, str) else list(argv)
+                    self.assertNotIn(argv[0], {"npm", "pnpm", "yarn", "bun"}, f"plan-stage G0 ran a project command: {argv}")
+                baseline = data["baseline"]
+                self.assertEqual([], baseline["plan_stage"])
+                self.assertEqual(
+                    [("BUILD", "npm build"), ("TYPECHECK", "npm typecheck"), ("LINT", "npm lint"),
+                     ("UNIT_TEST", "npm test"), ("INTEGRATION_TEST", "npm test:integration")],
+                    [(row["slot"], row["command"]) for row in baseline["implement_entry"]],
+                )
+
+    def test_a_project_without_a_command_slot_plans_only_the_slots_it_has(self) -> None:
+        with helper_project() as root:
+            G0SetupTests.prepare_fixture(root, None)
+            (root / "package.json").write_text(json.dumps({"scripts": {"test": "vitest"}}), encoding="utf-8")
+            baseline = self.commands_data(root, "codex")["baseline"]
+            self.assertEqual([], baseline["plan_stage"])
+            self.assertEqual(["UNIT_TEST"], [row["slot"] for row in baseline["implement_entry"]])
+
+    def test_guidance_runs_the_baseline_at_implement_entry_on_both_hosts(self) -> None:
+        for surface in ("claude", "codex"):
+            with self.subTest(surface=surface):
+                view = host_skill_root(surface) / "speckit-autopilot" / "references"
+                phases = (view / "phase-execution.md").read_text(encoding="utf-8")
+                if surface == "claude":  # Codex runs Phase 0 from SKILL.md and prerequisites.md alone
+                    plan_stage = phases.split("Phase 0: Prerequisites", 1)[1].split("Phase 1: Specify", 1)[0]
+                    for slot in ("TYPECHECK", "UNIT_TEST", "INTEGRATION_TEST", "BUILD", "LINT"):
+                        self.assertNotIn(slot, plan_stage, f"plan-stage Phase 0 must not run {slot}")
+                skill = (view.parent / "SKILL.md").read_text(encoding="utf-8")
+                step = skill.split("4. **Constitution validation**", 1)[1].split("\n5. **", 1)[0]
+                self.assertNotIn("PROJECT_COMMANDS", step)
+                entry = phases.split("#### Phase 7 Setup: Project Baseline", 1)[1].split("#### Phase 7 Setup:", 1)[0]
+                self.assertIn("`data.baseline.implement_entry`", entry)
+                self.assertIn("blocked-for-UAT", entry)
+                prereqs = (view / "prerequisites.md").read_text(encoding="utf-8")
+                step_09 = prereqs.split("## Step 0.9: Constitution Validation", 1)[1].split("\n## Step 0.1", 1)[0]
+                self.assertNotIn("PROJECT_COMMANDS", step_09)
+                gates = (view / "gate-validation.md").read_text(encoding="utf-8")
+                g0 = gates.split("### G0", 1)[1].split("### G1", 1)[0]
+                self.assertNotIn("TYPECHECK command", g0)
 
 
 class G0PinTests(unittest.TestCase):
@@ -4922,6 +5282,8 @@ class G0PinTests(unittest.TestCase):
                     G0SetupTests.prepare_fixture(root, None)
                     found = status != "missing"
                     with patch("speckit_pro_runner.helpers.read_only.find_specify", return_value="specify" if found else None), \
+                            patch("speckit_pro_runner.helpers.read_only.verified_specify_executable",
+                                  return_value=Path("/fixture/bin/specify") if found else None), \
                             patch("speckit_pro_runner.helpers.read_only.installed_specify_version", return_value=version):
                         data = g0_setup({"surface": surface, "probe": "prerequisites", "workflow_file": "workflow.md"}, root)
                     result = data["result"]
@@ -5026,7 +5388,6 @@ def receipt():
             "decisions_by_kind": {"design": 2}, "retry_attempts": 0, "blocked_for_uat": 0,
             "feature_offers": {feature: {"evaluated": True, "offered": True, "answer": "declined"}
                                for feature in ("formal_methods", "verification_docker")},
-            "plan_target": {"wall_seconds_limit": 1800, "tokens_limit": 15000000, "target_met": True},
             "plan_quality": {
                 "phases_run": ["specify", "clarify", "plan", "checklist", "tasks", "analyze"], "clarify_sessions": 1,
                 "requirements_total": 4, "untraced_requirements": [], "open_gaps": [], "open_findings": [],
@@ -5056,18 +5417,9 @@ class CanaryReceiptTests(unittest.TestCase):
             value["host"] = host
             if host == "claude-code":
                 value["install_probe"] = {"loaded_plugins": ["speckit-pro@1.0.0"], "evidence": "init.json"}
+                for stage in value["variants"][0]["stages"].values():
+                    stage.pop("codex_tokens")
             self.assertEqual([], self.validator.validate_receipt(value))
-
-    def test_base_receipt_without_plan_target_fails_schema_validation(self):
-        for host in ("claude-code", "codex"):
-            value = receipt()
-            value["host"] = host
-            if host == "claude-code":
-                value["install_probe"] = {"loaded_plugins": ["speckit-pro@1.0.0"], "evidence": "init.json"}
-            del value["variants"][0]["plan_target"]
-            with self.subTest(host=host):
-                failures = self.validator.json_schema_failures(value, self.validator.SCHEMA, self.validator.SCHEMA, "receipt")
-                self.assertTrue(any("plan_target" in failure["message"] for failure in failures), failures)
 
     def test_rejects_questions_nonterminal_plan_missing_runbook_and_unregistered_stop(self):
         for key, bad in (("questions_after_scaffold", 1), ("planning_end", "paused"),
@@ -5102,7 +5454,9 @@ class CanaryReceiptTests(unittest.TestCase):
                 completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
                                            capture_output=True, text=True, check=False)
                 self.assertEqual(1, completed.returncode, completed.stdout)
-                self.assertTrue(self.validator.validate_receipt(value))
+                report = self.validator.receipt_report(value)
+                self.assertFalse(report["valid"])
+                json.dumps(report, allow_nan=False)
 
 
 class CanaryVariantCase(unittest.TestCase):
@@ -5115,6 +5469,8 @@ class CanaryVariantCase(unittest.TestCase):
             value["host"] = host
             if host == "claude-code":
                 value["install_probe"] = {"loaded_plugins": ["speckit-pro@1.0.0"], "evidence": "init.json"}
+                for stage in value["variants"][0]["stages"].values():
+                    stage.pop("codex_tokens")
         self.variant_evidence = {
             "base": {}, "missing_question_guard": {
                 "verdict": "fail", "failed_assertions": ["question_guard"], "question_guard": {
@@ -5333,43 +5689,48 @@ class CanaryVariantContractTests(CanaryVariantCase):
 
 class CanaryPlanTargetTests(CanaryVariantCase):
     def test_over_target_reports_false_without_failing_the_gate_for_either_host(self):
-        for host, value in self.receipts.items():
-            variant = value["variants"][0]
+        for host, original in self.receipts.items():
             for metric, actual in (("wall_seconds", 1801), ("tokens", 15000001)):
+                value = copy.deepcopy(original)
+                variant = value["variants"][0]
                 with self.subTest(host=host, metric=metric):
                     variant["stages"]["plan"].update(wall_seconds=1, tokens=10)
                     variant["stages"]["plan"][metric] = actual
-                    variant["stages"]["plan"]["codex_tokens"]["root_tokens"] = variant["stages"]["plan"]["tokens"]
-                    variant["plan_target"]["target_met"] = False
+                    if host == "codex":
+                        variant["stages"]["plan"]["codex_tokens"]["root_tokens"] = variant["stages"]["plan"]["tokens"]
                     report = self.validator.receipt_report(value)
                     self.assertTrue(report["valid"], report)
                     result = report["variants"][0]
                     self.assertEqual("pass", result["gate_verdict"])
                     self.assertFalse(result["plan_target"]["target_met"])
                     self.assertEqual(actual, result["plan_target"][metric])
+                    self.assertEqual(1800, result["plan_target"]["wall_seconds_limit"])
+                    self.assertEqual(15000000, result["plan_target"]["tokens_limit"])
+                    self.assertNotIn("plan_target", variant)
 
 
-    def test_target_boundaries_and_claims_are_checked_independently_of_budget(self):
-        for host, value in self.receipts.items():
-            variant = value["variants"][0]
-            plan = variant["stages"]["plan"]
-            plan.update(wall_seconds=1800, tokens=15000000,
-                        codex_tokens={"root_tokens": 15000000, "child_rollout_tokens": []})
-            with self.subTest(host=host):
-                report = self.validator.receipt_report(value)
-                self.assertTrue(report["valid"], report)
-                self.assertTrue(report["variants"][0]["plan_target"]["target_met"])
-                variant["plan_target"]["target_met"] = False
-                self.assertIn("base.plan_target", self.validator.validate_receipt(value))
-                plan["wall_seconds"] = 1801
-                self.assertEqual([], self.validator.validate_receipt(value))
-                variant["plan_target"]["target_met"] = True
-                self.assertIn("base.plan_target", self.validator.validate_receipt(value))
+    def test_target_boundaries_are_reported_independently_of_an_explicit_budget(self):
+        for host, original in self.receipts.items():
+            for seconds, tokens in ((1800, 15000000), (1800.4, 15000000), (1800, 15000001)):
+                value = copy.deepcopy(original)
+                plan = value["variants"][0]["stages"]["plan"]
+                plan.update(wall_seconds=seconds, tokens=tokens)
+                if host == "codex":
+                    plan["codex_tokens"]["root_tokens"] = tokens
+                limits = copy.deepcopy(self.validator.load_budget())
+                limits[host]["base"]["plan"] = {"wall_seconds": 1700, "tokens": 14000000}
+                with self.subTest(host=host, seconds=seconds, tokens=tokens):
+                    report = self.validator.receipt_report(value, limits)
+                    self.assertFalse(report["valid"])
+                    self.assertEqual(["base.plan.wall_seconds_budget", "base.plan.tokens_budget"],
+                                     report["failed_assertions"])
+                    target = report["variants"][0]["plan_target"]
+                    self.assertFalse(target["target_met"])
+                    self.assertEqual((seconds, tokens), (target["wall_seconds"], target["tokens"]))
 
     def test_cli_reports_an_over_target_receipt_as_valid_for_both_hosts(self):
         for host, value in self.receipts.items():
             value["variants"][0]["stages"]["plan"]["wall_seconds"] = 1801
-            value["variants"][0]["plan_target"]["target_met"] = False
             with self.subTest(host=host), tempfile.TemporaryDirectory() as directory:
                 source = Path(directory) / "receipt.json"
                 source.write_text(json.dumps(value), encoding="utf-8")
@@ -5382,29 +5743,44 @@ class CanaryPlanTargetTests(CanaryVariantCase):
 
 
 class CanaryPlanTargetContractTests(CanaryVariantCase):
-    def test_target_fields_fail_closed_when_missing_malformed_or_changed(self):
+    def test_receipts_reject_target_claims_and_limits_for_both_hosts(self):
         for host, original in self.receipts.items():
-            for field, bad in (("wall_seconds_limit", 1801), ("tokens_limit", 15000001),
-                               ("target_met", "false"), ("unexpected", True)):
-                value = copy.deepcopy(original)
-                value["variants"][0]["plan_target"][field] = bad
-                with self.subTest(host=host, field=field):
-                    self.assertTrue(self.validator.validate_receipt(value))
-            for field in ("wall_seconds_limit", "tokens_limit", "target_met"):
-                value = copy.deepcopy(original)
-                del value["variants"][0]["plan_target"][field]
-                with self.subTest(host=host, missing=field):
-                    self.assertTrue(self.validator.validate_receipt(value))
+            for name in ("base", "oversized_plan"):
+                for target in ({}, {"target_met": True}, {"wall_seconds_limit": 1800, "tokens_limit": 15000000}):
+                    value = copy.deepcopy(original)
+                    value["variants"][0].update(name=name, plan_target=target, **self.variant_evidence[name])
+                    with self.subTest(host=host, name=name, target=target):
+                        self.assertTrue(self.validator.validate_receipt(value))
 
     def test_only_the_base_variant_reports_the_target(self):
         for host, value in self.receipts.items():
             variant = value["variants"][0]
             variant.update(name="oversized_plan", **self.variant_evidence["oversized_plan"])
-            del variant["plan_target"]
             with self.subTest(host=host):
                 report = self.validator.receipt_report(value)
                 self.assertTrue(report["valid"], report)
                 self.assertNotIn("plan_target", report["variants"][0])
+
+
+    def test_inconsistent_plan_tokens_cannot_report_target_met_through_api_or_cli(self):
+        value = self.receipts["codex"]
+        plan = value["variants"][0]["stages"]["plan"]
+        plan.update(wall_seconds=1, tokens=16000000,
+                    codex_tokens={"root_tokens": 10, "child_rollout_tokens": [20]})
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "receipt.json"
+            source.write_text(json.dumps(value), encoding="utf-8")
+            completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
+                                       capture_output=True, text=True, check=False)
+        self.assertEqual(1, completed.returncode, completed.stdout)
+        for seam, report in (("api", self.validator.receipt_report(value)),
+                             ("cli", json.loads(completed.stdout))):
+            with self.subTest(seam=seam):
+                self.assertFalse(report["valid"])
+                self.assertEqual(["base.plan.tokens_sum"], report["failed_assertions"])
+                self.assertEqual({"wall_seconds_limit": 1800, "tokens_limit": 15000000,
+                                  "wall_seconds": 1, "tokens": 30, "target_met": False},
+                                 report["variants"][0]["plan_target"])
 
 
 class CanaryCodexTokenTests(CanaryVariantCase):
@@ -5412,20 +5788,26 @@ class CanaryCodexTokenTests(CanaryVariantCase):
         value = self.receipts["codex"]
         plan = value["variants"][0]["stages"]["plan"]
         plan.update(tokens=16000000, codex_tokens={"root_tokens": 9000000, "child_rollout_tokens": [4000000, 3000000]})
-        value["variants"][0]["plan_target"]["target_met"] = False
         report = self.validator.receipt_report(value)
         self.assertTrue(report["valid"], report)
         target = report["variants"][0]["plan_target"]
         self.assertEqual(16000000, target["tokens"])
         self.assertFalse(target["target_met"])
-        plan["tokens"] = 9000000
-        value["variants"][0]["plan_target"]["target_met"] = True
-        self.assertIn("base.plan.tokens_sum", self.validator.validate_receipt(value))
+        for children, measured in (([15000000], 15000010), ([20], 30)):
+            plan.update(tokens=10, codex_tokens={"root_tokens": 10, "child_rollout_tokens": children})
+            with self.subTest(measured=measured):
+                report = self.validator.receipt_report(value)
+                self.assertFalse(report["valid"])
+                self.assertEqual(["base.plan.tokens_sum"], report["failed_assertions"])
+                target = report["variants"][0]["plan_target"]
+                self.assertEqual(measured, target["tokens"])
+                # A summed breakdown cannot establish success while the claimed total contradicts it.
+                self.assertFalse(target["target_met"])
 
 
     def test_each_codex_stage_checks_its_sum_and_allows_equal_child_counts(self):
         for name in ("scaffold", "plan", "plan_review", "implement"):
-            value = self.receipts["codex"]
+            value = copy.deepcopy(self.receipts["codex"])
             stage = value["variants"][0]["stages"][name]
             stage.update(tokens=27, codex_tokens={"root_tokens": 7, "child_rollout_tokens": [10, 10]})
             with self.subTest(stage=name):
@@ -5448,13 +5830,335 @@ class CanaryCodexTokenTests(CanaryVariantCase):
                 with self.subTest(stage=name, bad=bad):
                     self.assertTrue(self.validator.validate_receipt(value))
 
+    def test_claude_rejects_codex_breakdowns_on_every_stage(self):
+        for name in ("scaffold", "plan", "plan_review", "implement"):
+            value = copy.deepcopy(self.receipts["claude-code"])
+            value["variants"][0]["stages"][name]["codex_tokens"] = {"root_tokens": 10, "child_rollout_tokens": []}
+            with self.subTest(stage=name):
+                self.assertTrue(self.validator.validate_receipt(value))
+
+    def test_a_codex_stage_schema_error_is_reported_once(self):
+        value = self.receipts["codex"]
+        value["variants"][0]["stages"]["plan"]["wall_seconds"] = "bad"
+        report = self.validator.receipt_report(value)
+        self.assertEqual(["receipt.schema: 1"], report["failed_assertions"])
+
     def test_claude_uses_its_stage_total_without_a_codex_breakdown(self):
         value = self.receipts["claude-code"]
-        for stage in value["variants"][0]["stages"].values():
-            del stage["codex_tokens"]
         report = self.validator.receipt_report(value)
         self.assertTrue(report["valid"], report)
         self.assertEqual(10, report["variants"][0]["plan_target"]["tokens"])
+
+
+class CanaryTargetValidityCase(CanaryVariantCase):
+    """Runs one receipt through the API and a copied CLI; it holds no tests of its own."""
+
+    def setUp(self):
+        super().setUp()
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        self.cli = self.root / "tests/speckit-pro/layer6-integration/validate-canary-receipt.py"
+        self.cli.parent.mkdir(parents=True)
+        shutil.copy2(self.validator.__file__, self.cli)
+        shutil.copy2(Path(self.validator.__file__).with_name("canary-receipt.schema.json"), self.cli.parent)
+        self.checked_cases = 0
+
+    def complete_receipt(self, host):
+        value = copy.deepcopy(self.receipts[host])
+        base = value["variants"][0]
+        value["variants"] = [dict(copy.deepcopy(base), name=name, **copy.deepcopy(evidence))
+                             for name, evidence in ((name, self.variant_evidence[name]) for name in
+                                                    ("base", "oversized_plan", "missing_question_guard", "security_interrupt", "security_block"))]
+        return value
+
+    def field_paths(self, value, path=()):
+        children = value.items() if isinstance(value, dict) else enumerate(value) if isinstance(value, list) else ()
+        for key, child in children:
+            yield (*path, key)
+            yield from self.field_paths(child, (*path, key))
+
+    def changed(self, value, changes):
+        value = copy.deepcopy(value)
+        for path, bad in changes:
+            parent = functools.reduce(lambda parent, key: parent[key], path[:-1], value)
+            parent[path[-1]] = bad
+        return value
+
+    def assert_target_validity(self, value, counters, *, valid=False, failure=None, limits=None):
+        limits = self.validator.load_budget() if limits is None else limits
+        source, companion = self.root / "receipt.json", self.root / "hooks.json"
+        source.write_text(json.dumps(value), encoding="utf-8")
+        argv = [sys.executable, str(self.cli), str(source)]
+        if counters is not self.validator.MISSING_HOOK_COUNTERS:
+            companion.write_text(json.dumps(counters), encoding="utf-8")
+            argv.extend(["--hook-counters", str(companion)])
+        self.cli.with_name("canary-budget.json").write_text(json.dumps(
+            {"schema_version": "canary-budget/v1", "policy": "test limits", "limits": limits}), encoding="utf-8")
+        completed = subprocess.run(argv,
+                                   env={**os.environ, "PYTHONPATH": str(PLUGIN_ROOT)},
+                                   capture_output=True, text=True, check=False)
+        self.assertEqual(int(not valid), completed.returncode, completed.stdout + completed.stderr)
+        reports = (("api", self.validator.receipt_report(value, limits, hook_counters=counters)),
+                   ("cli", json.loads(completed.stdout)))
+        for seam, report in reports:
+            with self.subTest(seam=seam):
+                self.assertEqual(valid, report["valid"], report)
+                if failure is not None:
+                    self.assertIn(failure, report["failed_assertions"])
+                if not valid:
+                    self.assertTrue(report["failed_assertions"], report)
+                targets = [result["plan_target"] for result in report["variants"] if "plan_target" in result]
+                self.assertTrue(targets or not valid, report)
+                for target in targets:
+                    self.assertEqual(valid, target["target_met"], report)
+        self.checked_cases += 1
+        return dict(reports)
+
+
+class CanaryReceiptTargetValidityTests(CanaryTargetValidityCase):
+    """Every rejected receipt must reject target success, regardless of the failing field."""
+
+    def test_each_receipt_and_hook_field_rejects_target_success_through_api_and_cli(self):
+        for host in self.receipts:
+            value, counters = self.complete_receipt(host), hook_counters()
+            self.assert_target_validity(value, counters, valid=True)
+            for document, original in (("receipt", value), ("hooks", counters)):
+                for path in self.field_paths(original):
+                    with self.subTest(host=host, document=document, path=path):
+                        corrupted = self.changed(original, [(path, None)])
+                        self.assert_target_validity(corrupted if document == "receipt" else value,
+                                                    corrupted if document == "hooks" else counters)
+        print(f"target validity field matrix: {self.checked_cases - 2} corruptions, API and CLI")
+
+    def semantic_cases(self, value):
+        base = ("variants", 0)
+        for index, variant in enumerate(value["variants"]):
+            name = variant["name"]
+            for field, bad, label in (("verdict", "pass" if name == "missing_question_guard" else "fail", "verdict"),
+                                      ("failed_assertions", ["other"], "verdict"),
+                                      ("questions_after_scaffold", 0 if name == "security_interrupt" else 1, "questions_after_scaffold"),
+                                      ("unregistered_stops", 1, "unregistered_stops"), ("planning_end", "paused", "planning_end"),
+                                      ("implement_end", "paused", "implement_end"), ("uat_runbook", " ", "uat_runbook")):
+                yield [(("variants", index, field), bad)], f"{name}.{label}"
+            yield [(("variants", index, "plan_target"), {"target_met": True})], None
+            if value["host"] == "codex":
+                for stage in ("scaffold", "plan", "plan_review", "implement"):
+                    yield [(("variants", index, "stages", stage, "tokens"), 11)], f"{name}.{stage}.tokens_sum"
+        for field, bad in (("umask", "022"), ("task_list_calls", 1)):
+            yield [(base + (field,), bad)], f"base.{field}"
+        for feature in ("formal_methods", "verification_docker"):
+            for field, bad in (("evaluated", False), ("offered", False), ("answer", "accepted")):
+                yield [(base + ("feature_offers", feature, field), bad)], "base.feature_offers"
+        quality = base + ("plan_quality",)
+        for field, label in (("untraced_requirements", "untraced_requirements"), ("open_gaps", "open_gap"),
+                             ("open_findings", "open_finding"), ("open_clarifications", "open_clarification"),
+                             ("blocked_for_uat_listed", "blocked_for_uat_listed")):
+            yield [(quality + (field,), ["item-1"])], f"base.plan_quality.{label}"
+        phases = value["variants"][0]["plan_quality"]["phases_run"]
+        for phase in phases:
+            yield [(quality + ("phases_run",), [p for p in phases if p != phase])], "base.plan_quality.phases_run"
+        for catch in ("catch-1", "catch-2"):
+            yield [(quality + ("planted_catches", catch), "left_in_place")], f"base.plan_quality.planted_catches.{catch}"
+        yield [(quality + ("planted_catches",), {})], "base.plan_quality.planted_catches.catch-1"
+        if value["host"] == "codex":
+            for field in ("headless_install", "skill_expansion"):
+                yield [(("install_probe", field), "failed")], f"install_probe.{field}"
+        else:
+            yield [(("install_probe", "loaded_plugins"), [])], "install_probe.loaded_plugins"
+            for stage in ("scaffold", "plan", "plan_review", "implement"):
+                yield [(base + ("stages", stage, "codex_tokens"), {"root_tokens": 10, "child_rollout_tokens": []})], None
+        yield [(("release_status_allowed",), True)], "local.release_status_allowed"
+        for field, bad, label in (("split_recommendation_recorded", False, "split_recommendation_recorded"),
+                                  ("full_plan_built", False, "full_plan_built"), ("stops", 1, "stops")):
+            yield [(("variants", 1, field), bad)], f"oversized_plan.{label}"
+        for field, bad in (("runner_permit_verified", False), ("simulated_responder_answered", False),
+                           ("pause_classification", "unregistered")):
+            yield [(("variants", 3, "security_interrupt", field), bad)], f"security_interrupt.{field}"
+        yield [(("variants", 3, "questions_after_scaffold"), 0)], "security_interrupt.questions_after_scaffold"
+        for field, bad in (("verdict", "pass"), ("failed_assertions", []), ("question_guard", {})):
+            yield [(("variants", 2, field), bad)], None
+        for field, bad in (("gap_recorded", False), ("guarded_work_completed", 1), ("guarded_work_passed", 1)):
+            yield [(("variants", 2, "question_guard", field), bad)], "missing_question_guard.question_guard"
+        for field in ("affected_work", "affected_work_blocked_for_uat", "independent_work", "independent_work_completed"):
+            yield [(("variants", 4, "security_block", field), 0)], "security_block.security_block"
+        yield [(("variants", 4, "blocked_for_uat"), 1)], "security_block.security_block"
+
+    def test_each_semantic_failure_rejects_target_success_through_api_and_cli(self):
+        for host in self.receipts:
+            value = self.complete_receipt(host)
+            for changes, failure in self.semantic_cases(value):
+                with self.subTest(host=host, changes=changes):
+                    self.assert_target_validity(self.changed(value, changes), hook_counters(), failure=failure)
+        print(f"target validity semantic matrix: {self.checked_cases} corruptions, API and CLI")
+
+    def test_release_hooks_input_and_budgets_reject_target_success_through_api_and_cli(self):
+        for host in self.receipts:
+            value, counters = self.complete_receipt(host), hook_counters()
+            self.assert_target_validity(dict(value, unexpected=True), counters)
+            release = dict(copy.deepcopy(value), trigger="scheduled", dirty_tree=False, release_status_allowed=True)
+            self.assert_target_validity(release, counters, valid=True)
+            for changes in ((("fixture_tag",), "other"), (("variants",), release["variants"][:-1])):
+                self.assert_target_validity(self.changed(release, [changes]), counters)
+            self.assert_target_validity(release, None)
+            self.assert_target_validity(release, self.validator.MISSING_HOOK_COUNTERS, failure="hook_counters.missing")
+            for kind in ("mandatory", "optional"):
+                for field, bad in (("optional", kind == "mandatory"), ("fires", 0), ("unattributed_fires", 1)):
+                    self.assert_target_validity(value, self.changed(counters, [(("hooks", kind, field), bad)]))
+                for event in ("after_specify", "after_plan", "after_tasks"):
+                    self.assert_target_validity(value, self.changed(counters, [(("hooks", kind, "phases", event), 0)]))
+            for stage in ("scaffold", "plan", "implement"):
+                for metric, limit in (("wall_seconds", 0.5), ("tokens", 1)):
+                    limits = self.validator.load_budget()
+                    limits[host]["base"][stage][metric] = limit
+                    self.assert_target_validity(value, counters, limits=limits, failure=f"base.{stage}.{metric}_budget")
+            for bad in (float("nan"), float("inf"), float("-inf")):
+                self.assert_target_validity(self.changed(value, [(("variants", 0, "stages", "plan", "wall_seconds"), bad)]), counters)
+            for catches in ({"unknown": "fixed"}, {f"catch-{n}": "fixed" for n in range(3)}):
+                self.assert_target_validity(self.changed(value, [(("variants", 0, "plan_quality", "planted_catches"), catches)]), counters)
+            self.assert_target_validity(dict(value, variants=value["variants"] + [value["variants"][0]]), counters)
+        print(f"target validity release/hooks/input/budget matrix: {self.checked_cases - 2} corruptions, API and CLI")
+
+    def test_cli_read_and_parse_failures_never_report_target_success(self):
+        value = self.complete_receipt("codex")
+        self.assert_target_validity(value, hook_counters(), valid=True)
+        source = self.root / "receipt.json"
+        bodies = (b"not json", b'{"host":"codex","host":"codex"}', b"\xff", b"[" * 3000,
+                  b" " * (self.validator.MAX_RECEIPT_BYTES + 1), None)
+        for body in bodies:
+            with self.subTest(input_kind=None if body is None else body[:30]):
+                if body is None:
+                    source.unlink()
+                else:
+                    source.write_bytes(body)
+                completed = subprocess.run([sys.executable, str(self.cli), str(source)],
+                                           env={**os.environ, "PYTHONPATH": str(PLUGIN_ROOT)},
+                                           capture_output=True, text=True, check=False)
+                report = json.loads(completed.stdout)
+                self.assertEqual(1, completed.returncode, report)
+                self.assertFalse(report["valid"], report)
+                self.assertEqual([], report["variants"], report)
+        print(f"target validity CLI input matrix: {len(bodies)} read/parse failures")
+
+
+class CanaryVariantIdentityTests(CanaryTargetValidityCase):
+    """Class: variant-identity ambiguity. A receipt whose variant names repeat has no single
+    report per identity, so it must be invalid and publish no per-variant report or target."""
+
+    TRIGGERS = ("local", "scheduled", "on_demand")
+
+    def with_trigger(self, value, trigger):
+        value = copy.deepcopy(value)
+        if trigger != "local":
+            value.update(trigger=trigger, dirty_tree=False, release_status_allowed=True)
+        return value
+
+    def set_plan(self, variant, metric, amount):
+        plan = variant["stages"]["plan"]
+        plan[metric] = amount
+        if metric == "tokens" and "codex_tokens" in plan:
+            plan["codex_tokens"] = {"root_tokens": amount, "child_rollout_tokens": []}
+
+    def assert_ambiguous(self, value, name):
+        reports = self.assert_target_validity(value, hook_counters(), failure=f"receipt.duplicate_variant: {name}")
+        for seam, report in reports.items():
+            with self.subTest(seam=seam):
+                self.assertEqual([], report["variants"], report)
+
+    def test_conflicting_base_duplicates_report_no_target_through_api_and_cli(self):
+        for host in self.receipts:
+            base = self.complete_receipt(host)["variants"][0]
+            for trigger in self.TRIGGERS:
+                for metric, over in (("wall_seconds", 1801), ("tokens", 15000001)):
+                    for copies in range(2, len(self.validator.VARIANTS) + 1):
+                        for position in range(copies):
+                            entries = [copy.deepcopy(base) for _ in range(copies)]
+                            self.set_plan(entries[position], metric, over)
+                            value = dict(self.receipts[host], variants=entries)
+                            with self.subTest(host=host, trigger=trigger, metric=metric, copies=copies, position=position):
+                                self.assert_ambiguous(self.with_trigger(value, trigger), "base")
+        print(f"variant identity base-conflict matrix: {self.checked_cases} receipts, API and CLI")
+
+    def test_each_name_duplicated_at_each_position_is_ambiguous_through_api_and_cli(self):
+        for host in self.receipts:
+            complete = self.complete_receipt(host)
+            for trigger in self.TRIGGERS:
+                # Renaming one entry to an identity already present, for every source and position pair.
+                for source, position in itertools.permutations(range(len(complete["variants"])), 2):
+                    value = copy.deepcopy(complete)
+                    value["variants"][position] = copy.deepcopy(value["variants"][source])
+                    name = value["variants"][source]["name"]
+                    with self.subTest(host=host, trigger=trigger, source=source, position=position):
+                        self.assert_ambiguous(self.with_trigger(value, trigger), name)
+                # Two through five entries of one identity, with no other entry.
+                for variant in complete["variants"]:
+                    for copies in range(2, len(self.validator.VARIANTS) + 1):
+                        value = dict(complete, variants=[copy.deepcopy(variant) for _ in range(copies)])
+                        with self.subTest(host=host, trigger=trigger, name=variant["name"], copies=copies):
+                            self.assert_ambiguous(self.with_trigger(value, trigger), variant["name"])
+        print(f"variant identity name/position matrix: {self.checked_cases} receipts, API and CLI")
+
+    def test_a_repeated_mapping_reference_is_ambiguous_through_api_and_cli(self):
+        for host in self.receipts:
+            base = self.complete_receipt(host)["variants"][0]
+            for copies in range(2, len(self.validator.VARIANTS) + 1):
+                with self.subTest(host=host, copies=copies):
+                    self.assert_ambiguous(dict(self.receipts[host], variants=[base] * copies), "base")
+
+    def test_unique_identities_keep_one_report_per_variant(self):
+        for host in self.receipts:
+            for trigger in self.TRIGGERS:
+                value = self.with_trigger(self.complete_receipt(host), trigger)
+                with self.subTest(host=host, trigger=trigger):
+                    reports = self.assert_target_validity(value, hook_counters(), valid=True)
+                    for report in reports.values():
+                        names = [result["name"] for result in report["variants"]]
+                        self.assertEqual(sorted(self.validator.VARIANTS), sorted(names))
+                        self.assertEqual(1, sum("plan_target" in result for result in report["variants"]))
+
+    def test_api_reports_from_one_snapshot_of_a_list_that_changes_between_reads(self):
+        """A list that yields different entries to each read must not pass the identity check with one
+        roster and report another."""
+        for host in self.receipts:
+            base = self.complete_receipt(host)["variants"][0]
+            over = copy.deepcopy(base)
+            self.set_plan(over, "wall_seconds", 1801)
+
+            class ShiftingVariants(list):
+                reads = 0
+
+                def __iter__(self):
+                    ShiftingVariants.reads += 1
+                    return iter([base] if ShiftingVariants.reads < 4 else [over, base])
+
+            value = dict(self.receipts[host], variants=ShiftingVariants([base]))
+            report = self.validator.receipt_report(value)
+            with self.subTest(host=host):
+                targets = [result["plan_target"] for result in report["variants"] if "plan_target" in result]
+                self.assertEqual(1, len(targets), report)
+                self.assertEqual(report["valid"], targets[0]["target_met"], report)
+
+    def test_duplicate_json_keys_on_every_target_selection_key_fail_closed_in_the_cli(self):
+        """The CLI is the only seam that can see a repeated key; each one the target reads must fail closed."""
+        repeats = (("host", "claude-code"), ("trigger", "scheduled"), ("variants", []), ("name", "oversized_plan"),
+                   ("stages", {}), ("plan", {"wall_seconds": 1801, "tokens": 10}), ("wall_seconds", 1801),
+                   ("tokens", 15000001), ("codex_tokens", {"root_tokens": 15000001, "child_rollout_tokens": []}),
+                   ("root_tokens", 15000001), ("child_rollout_tokens", [15000001]))
+        source = self.root / "receipt.json"
+        for host in self.receipts:
+            text = json.dumps(self.complete_receipt(host))
+            for key, other in repeats:
+                marker = f'"{key}": '
+                if marker not in text:
+                    continue  # claude-code stages carry no codex token keys
+                with self.subTest(host=host, key=key):
+                    source.write_text(text.replace(marker, f"{marker}{json.dumps(other)}, {marker}", 1), encoding="utf-8")
+                    completed = subprocess.run([sys.executable, str(self.cli), str(source)],
+                                               env={**os.environ, "PYTHONPATH": str(PLUGIN_ROOT)},
+                                               capture_output=True, text=True, check=False)
+                    report = json.loads(completed.stdout)
+                    self.assertEqual((1, False, ["input.invalid"], []),
+                                     (completed.returncode, report["valid"], report["failed_assertions"], report["variants"]))
 
 
 class CanaryBudgetCase(unittest.TestCase):
@@ -5483,16 +6187,16 @@ class CanaryBudgetTests(CanaryBudgetCase):
 
     def test_an_overrun_belongs_only_to_the_variant_entry_that_ran_over(self):
         value = receipt()
-        value["variants"].append(copy.deepcopy(value["variants"][0]))
+        value["variants"].append(dict(copy.deepcopy(value["variants"][0]), name="oversized_plan",
+                                      split_recommendation_recorded=True, full_plan_built=True, stops=0))
         value["variants"][1]["stages"]["plan"]["wall_seconds"] = 6
         report = self.validator.receipt_report(value, self.budget(5, 100))
-        self.assertEqual(["base.plan.wall_seconds_budget"], report["failed_assertions"])
+        self.assertEqual(["oversized_plan.plan.wall_seconds_budget"], report["failed_assertions"])
         self.assertEqual(["pass", "fail"], [variant["gate_verdict"] for variant in report["variants"]])
 
     def test_an_unset_limit_reports_unbudgeted_and_never_a_pass(self):
         value = receipt()
         value["variants"][0]["stages"]["plan"]["tokens"] = 10**9
-        value["variants"][0]["plan_target"]["target_met"] = False
         value["variants"][0]["stages"]["plan"]["codex_tokens"]["root_tokens"] = 10**9
         unset = self.budget(5, None)
         report = self.validator.receipt_report(value, unset)
@@ -5824,6 +6528,25 @@ class CanaryCatchInputTests(CanaryVariantCase):
 class CanaryReceiptOutputTests(CanaryVariantCase):
     """Receipt and companion schema diagnostics carry only constant identifiers and counts."""
 
+    def test_nonfinite_and_overflow_reports_are_strict_json_for_both_hosts(self):
+        for host, original in self.receipts.items():
+            for literal in ("NaN", "Infinity", "-Infinity", "1e400", "-1e400"):
+                value = copy.deepcopy(original)
+                value["variants"][0]["stages"]["plan"]["wall_seconds"] = 12345.5
+                body = json.dumps(value).replace("12345.5", literal)
+                with self.subTest(host=host, literal=literal), tempfile.TemporaryDirectory() as directory:
+                    report = self.validator.receipt_report(json.loads(body))
+                    self.assertFalse(report["valid"], report)
+                    json.dumps(report, allow_nan=False)
+                    source = Path(directory) / "receipt.json"
+                    source.write_text(body, encoding="utf-8")
+                    completed = subprocess.run([sys.executable, self.validator.__file__, str(source)],
+                                               capture_output=True, text=True, check=False)
+                    self.assertEqual(1, completed.returncode, completed.stdout)
+                    output = json.loads(completed.stdout, parse_constant=self.validator.reject_nonfinite)
+                    self.assertFalse(output["valid"])
+                    self.assertEqual("", completed.stderr)
+
     def test_schema_errors_never_reflect_supplied_keys_or_values(self):
         marker = "untrusted-schema-marker"
         for host, original in self.receipts.items():
@@ -5921,11 +6644,12 @@ def main() -> int:
     args = parser.parse_args()
     _ReadOnlyHelperRunner.helper_filter = args.helper
     suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                               for case in (ReadOnlyHelperTests, PlanLayersRepairRouteTests, PlanLayersPlannerCaseTests,
-                                            PacketTitlePatternTests, G0SetupTests, G0PinTests, G0SetupFailureTests, ScaffoldAnswersTests, CanaryReceiptTests,
+                               for case in (SpecKitExecutableReuseTests, ReadOnlyHelperTests, PlanLayersRepairRouteTests, PlanLayersPlannerCaseTests,
+                                            PacketTitlePatternTests, G0SetupTests, G0BaselineStageTests, G0PinTests, G0UnratifiedDefaultsTests, G0SetupFailureTests, ScaffoldAnswersTests, CanaryReceiptTests,
                                             CanaryFeatureOfferTests, CanaryVariantAssertionsTests, CanaryVariantContractTests,
                                             CanaryGateVerdictTests, CanaryGuardGapContractTests,
                                             CanaryPlanTargetTests, CanaryPlanTargetContractTests, CanaryCodexTokenTests,
+                                            CanaryReceiptTargetValidityTests, CanaryVariantIdentityTests,
                                             CanaryPlanQualityTests, CanaryPlantedCatchTests, CanaryCatchInputTests, CanaryReceiptInputTests,
                                             CanaryReceiptOutputTests, CanaryHookCounterTests, CanaryBudgetTests, CanaryBudgetFileTests))
     result = unittest.TextTestRunner(verbosity=1).run(suite)

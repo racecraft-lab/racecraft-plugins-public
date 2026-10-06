@@ -95,6 +95,6 @@ For roadmap decomposition, prefer delivery slices over technical layers when a s
 For a request to repair an existing SpecKit Pro project:
 
 1. Confirm the target root and inspect `git status`; preserve unrelated changes.
-2. Inspect presets and resolve each affected core template with `specify preset resolve`. Move durable local customizations into a project preset rather than modifying core templates.
+2. Inspect presets and resolve each affected core template with `spec_kit.cli_argv + ["preset", "resolve", "<template>"]`, taking `cli_argv` from the `check-prerequisites` helper and never launching bare `specify`. Move durable local customizations into a project preset rather than modifying core templates.
 3. Restore a core template only from a reviewed source (version control, verified backup, or official template); never reconstruct it by guesswork.
 4. Preserve any host PR template and run the relevant project checks before reporting the resolved template paths, restored files, and remaining manual follow-up.

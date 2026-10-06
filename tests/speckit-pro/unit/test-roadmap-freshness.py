@@ -10,11 +10,13 @@ all run for real.
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
 from types import SimpleNamespace
 import unittest
+import unittest.mock
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO / "speckit-pro"), str(REPO / "tests/speckit-pro/lib")]
@@ -23,7 +25,12 @@ from test_result import run_counted  # noqa: E402
 
 HELPER_ID = "check-roadmap-freshness"
 ROADMAP = "docs/ai/technical-roadmap.md"
+GIT_EXECUTABLE = shutil.which("git")
+if GIT_EXECUTABLE is None:
+    raise RuntimeError("Git is required by the roadmap integration fixture")
 GIT_ENV = {
+    # Use the fixture's selected Git, independently of ambient helper directories.
+    "PATH": str(Path(GIT_EXECUTABLE).parent),
     "GIT_CONFIG_GLOBAL": os.devnull,
     "GIT_CONFIG_SYSTEM": os.devnull,
     "GIT_CONFIG_NOSYSTEM": "1",
@@ -89,14 +96,17 @@ class RoadmapFreshnessTests(unittest.TestCase):
         return sha
 
     def check(self, **inputs: object) -> dict[str, object]:
-        request = SimpleNamespace(
-            helper_id=HELPER_ID,
-            operation=HELPER_ID,
-            request_id="roadmap-freshness-test",
-            mode="read_only",
-            inputs={"roadmap_path": ROADMAP, **inputs},
-        )
-        return dispatch_helper(request)
+        request = SimpleNamespace(helper_id=HELPER_ID, operation=HELPER_ID,
+                                  request_id="roadmap-freshness-test", mode="read_only",
+                                  inputs={"roadmap_path": ROADMAP, **inputs})
+        # Model a protected Git installation at the OS permission boundary:
+        # root CI owns system binaries, which the hardened probe rightly rejects.
+        # Keep path validation, subprocesses, fetches and blob comparisons real.
+        native_access = os.access
+        with unittest.mock.patch("speckit_pro_runner.cli_probe.os.geteuid", return_value=-1), \
+             unittest.mock.patch("speckit_pro_runner.cli_probe.os.access", side_effect=lambda path, mode, **options:
+                                 False if mode == os.W_OK else native_access(path, mode, **options)):
+            return dispatch_helper(request)
 
     def test_request_fixture_replays_the_registered_read_only_operation(self) -> None:
         fixture = REPO / "tests/speckit-pro/unit/fixtures/read-only-helpers/requests" / f"{HELPER_ID}.json"

@@ -25,6 +25,7 @@ if str(SHARED_LIB) not in sys.path:
     sys.path.insert(0, str(SHARED_LIB))
 
 from test_result import run_counted  # noqa: E402
+import trigger_process  # noqa: E402
 
 
 CURRENT_INVENTORY = [
@@ -73,6 +74,39 @@ def write_blocking_claude(binary_dir: Path) -> Path:
     return launcher
 
 
+class SignalFixtureAbsenceTests(unittest.TestCase):
+    @unittest.skipIf(os.name == "nt", "POSIX process-group contract")
+    def test_completed_leader_fixture_preserves_prior_absence(self) -> None:
+        runner = import_runner()
+        child = mock.Mock(pid=43210, returncode=0)
+        child.poll.return_value = 0
+        error = runner.ClaudeQueryError("lingering owned descendants")
+        error.exit_code, error.stderr, error.timed_out = 0, b"", False
+        error.stdout = b'{"descendant_pid": 43211}'
+        error.unexpected_descendants, error.cleanup_error = True, None
+        calls = []
+
+        def query(*_args: object, **kwargs: object) -> None:
+            runner.subprocess.Popen([])
+            if kwargs.get("process_evidence") is not None:
+                kwargs["process_evidence"].update(cleanup_observations=[{"pgid": child.pid, "errno": 3}])
+            raise error
+
+        def reused_group(_pgid: int, signum: int) -> None:
+            calls.append(signum)
+            if not signum:
+                raise ProcessLookupError(3, "original group absent")
+
+        with (
+            mock.patch(__name__ + ".import_runner", return_value=runner),
+            mock.patch.object(subprocess, "Popen", return_value=child),
+            mock.patch.object(runner, "run_claude_query", side_effect=query),
+            mock.patch.object(os, "killpg", side_effect=reused_group),
+        ):
+            Layer2SignalRestorationTests().test_completed_leaders_lingering_descendant_is_cleaned_but_invalid()
+        self.assertEqual(calls, [], "the fixture cannot reuse an absent group")
+
+
 class Layer2SignalRestorationTests(unittest.TestCase):
     def test_unexecutable_actor_is_rejected_before_creating_aliases(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -104,6 +138,7 @@ class Layer2SignalRestorationTests(unittest.TestCase):
             owned.append(child)
             return child
 
+        execution = {}
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             try:
@@ -115,22 +150,18 @@ class Layer2SignalRestorationTests(unittest.TestCase):
                     with self.assertRaises(runner.ClaudeQueryError) as raised:
                         runner.run_claude_query(
                             "/stub/claude", root, root / "empty-mcp.json", "q", "sonnet", 5,
-                            expected_skill="fixture:target",
+                            expected_skill="fixture:target", process_evidence=execution,
                         )
                 self.assertEqual((raised.exception.exit_code, raised.exception.stderr, raised.exception.timed_out), (0, b"", False))
                 self.assertIn("descendant_pid", json.loads(raised.exception.stdout))
                 self.assertTrue(raised.exception.unexpected_descendants)
                 self.assertIsNone(raised.exception.cleanup_error)
                 self.assertEqual(owned[0].poll(), 0)
-                with self.assertRaises(ProcessLookupError):
-                    os.killpg(owned[0].pid, 0)
+                self.assertEqual(execution["cleanup_observations"][-1]["errno"], 3)
                 self.assertIsNone(runner.ACTIVE_CHILD)
             finally:
                 for child in owned:
-                    try:
-                        os.killpg(child.pid, signal.SIGKILL)
-                    except ProcessLookupError:
-                        pass
+                    trigger_process.cleanup_child(child, observations=execution.get("cleanup_observations", []))
                     child.wait(timeout=5)
 
     def test_signal_cleanup_contract(self) -> None:
@@ -254,5 +285,6 @@ class Layer2SignalRestorationTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(Layer2SignalRestorationTests)
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (
+        Layer2SignalRestorationTests, SignalFixtureAbsenceTests))
     raise SystemExit(run_counted(suite, label="test-trigger-signal-restoration"))

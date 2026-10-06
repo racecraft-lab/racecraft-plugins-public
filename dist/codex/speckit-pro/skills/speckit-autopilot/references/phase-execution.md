@@ -209,10 +209,10 @@ when the Codex task was invoked from its parent checkout. Set that root as the
 `workdir` for every shell call; invoke helpers from it; resolve every direct
 read, write, state, and Git path against it; and include the exact root plus the
 same directive in every executor and consensus prompt. Every
-`consensus-synthesizer`, `clarify-executor`, `checklist-executor`, and `analyze-executor` prompt
-also carries a `Protocol:` line with `<plugin-root>/skills/speckit-autopilot/references/consensus-protocol.md`,
+`consensus-synthesizer` prompt also carries a `Protocol:` line with
+`<plugin-root>/skills/speckit-autopilot/references/consensus-protocol.md`,
 where `<plugin-root>` is the root the runner reported as `plugin_root`, so
-those agents read the active protocol and never a cached copy. Validate agent-returned
+that agent reads the active protocol and never a cached copy. Validate agent-returned
 paths against `WORKFLOW_ROOT` before applying them. Never infer the execution
 root from the task's default checkout.
 
@@ -222,9 +222,10 @@ for phase in PHASES starting from first_pending:
        If Archive Sweep or any canonical phase family
        is missing, STOP and repair the plan before executing this phase.
     1. autopilot-state.json: mark the current phase item as "in_progress"
-    2. Check .specify/extensions.yml for before_<phase> hooks
-       → run accepted hooks (non-destructive), skip duplicates
-    3. Read the workflow file's prompt(s) for this phase
+    2. Clarify and Implement only: check .specify/extensions.yml for
+       before_<phase> hooks → run accepted hooks (non-destructive), skip duplicates
+    3. Normalize Clarify through Rule 4 before reading phase prompts.
+       Read the workflow file's prompt(s) for this phase
     4. For EACH prompt in the phase:
        a. Resolve <executor>:
           use the matching installed SpecKit custom agent
@@ -248,8 +249,10 @@ for phase in PHASES starting from first_pending:
        consensus-protocol.md#round-3-tiebreak: a fresh analyst plus a
        max-effort `consensus-tiebreaker` resolve it in an interactive and an
        unattended run alike; it never asks the operator and never stops the run.
-    6. Check .specify/extensions.yml for after_<phase> hooks
-       → run accepted hooks (non-destructive), skip duplicates
+    6. Specify, Plan, Checklist, Tasks and Analyze only: run each brief.hooks entry once
+       and record the batch in the decisions list.
+       Clarify and Implement only: check .specify/extensions.yml for after_<phase>
+       hooks → run accepted hooks (non-destructive), skip duplicates
     7. Validate gate directly in the main session:
        Before Tasks, after Analyze/review remediation, and after the final
        producing tests, run the applicable planning/final formal checkpoint
@@ -1463,6 +1466,11 @@ Resume with: `$speckit-pro:speckit-autopilot <workflow-file> --stage implement`
 - **The resume/status block** names the stage the run stopped at and the exact
   command that resumes it.
 
+When G0 recorded `UNRATIFIED_FLAG`, include that exact one-line warning below the
+Artifacts table and pass it as `inputs.unratified_defaults` to the packet helper.
+This flags the initial draft as well as the final PR body; keep the draft's two
+H2 sections. Omit the warning and input when G0 found a valid ratified file.
+
 **Forbidden in a draft description**: a release-note fence, any verification
 section, any scope or UAT section, and any placeholder final-writeup content. The
 pull request sits in draft state, so the repository's PR checks do not run
@@ -1776,6 +1784,30 @@ runs before each PR like any other gate.
 The Phase 6.5 [Autonomy Boundary Preflight](#autonomy-boundary-preflight)
 collects its egress authorization at run start through
 `check-gate-preflight-coverage`.
+
+#### Phase 7 Setup: Project Baseline
+
+The project baseline (typecheck, test, build, lint) belongs to this step. Run it
+once, after the feedback sweep below and before the first task is dispatched.
+
+1. A Prerequisites table that already records the baseline stays as recorded
+   (SKILL.md Step 0.6e).
+2. Call runner helper `g0-setup` with `inputs.probe` set to `commands` and
+   `inputs.project_commands` set to the recorded `PROJECT_COMMANDS` object.
+   Read `data.baseline.implement_entry`: the helper applies recorded commands
+   before selecting and ordering runnable slots, including slots absent from
+   detection. Each row's `command` is ready to run.
+3. Run each row's `command` in order. Record each pass or fail in the
+   workflow file's Prerequisites table, with the test count for the
+   `UNIT_TEST` and `INTEGRATION_TEST` rows (a diagnostic; see
+   [Gate Validation §G7](./gate-validation.md#g7--after-implement)).
+4. If a check fails, route the failing check to the implement-executor, which
+   repairs it (a red baseline included); run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
+   A deferral records that gate blocked-for-UAT with the check's output as its
+   evidence (ADR 0012); the gate never passes. The first task is dispatched once
+   each check passes or its failure is deferred with its evidence. When the
+   retry ladder (#1060, ADR 0004) replaces the allowance loop, the failing
+   check climbs the ladder and blocked-for-UAT follows its third failure.
 
 #### Phase 7 Setup: The Pull-Request Feedback Sweep
 

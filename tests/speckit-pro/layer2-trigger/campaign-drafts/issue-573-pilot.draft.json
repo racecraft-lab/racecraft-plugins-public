@@ -1,5 +1,5 @@
 {
-  "schema_version": "trigger-experiment/v1",
+  "schema_version": "trigger-experiment-template/v1",
   "experiment_id": "issue-573-pilot-2026-09-12",
   "trials": 3,
   "trial_timeout_seconds": 180,
@@ -74,11 +74,6 @@
       "model": "gpt-6-sol",
       "cli_version": "codex-cli 0.156.1"
     }
-  },
-  "identities": {
-    "observer": "978e9b656a2091820a43295f7d0927c827c30a0f3cb474f9b350f0db907d8505",
-    "catalog": "4afa4f5329bec37ffe1eabb00d785812ffc1ce7a64c9a21b3e3f112a33355eb0",
-    "fixture": "c094071e16a77dab28275236262066f77b78fd9ee7cdc3cbfbcb78147b36edfe"
   },
   "controlled_difference": {
     "path": "NO_SPECKIT_SKILL_DESCRIPTION",

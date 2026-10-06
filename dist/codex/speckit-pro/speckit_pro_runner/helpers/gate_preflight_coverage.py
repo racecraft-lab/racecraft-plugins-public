@@ -107,16 +107,24 @@ def _paths(value: Any, field: str) -> list[Path]:
     return paths
 
 
-def private_record_dir(root: Path) -> Path:
-    """Where the private autonomy record lives: inside the git common directory, shared by every worktree."""
+def git_common_directory(root: Path) -> Path:
+    """The git directory every worktree of `root` shares; ValueError when git cannot report it."""
     try:
         done = subprocess.run(["git", "-C", str(root), "rev-parse", "--git-common-dir"], text=True,
                               capture_output=True, shell=False, check=False, timeout=GIT_TIMEOUT_SECONDS)
     except (OSError, subprocess.SubprocessError) as error:
-        raise ValueError("git could not report the common directory, so the private record path is unknown") from error
+        raise ValueError("git could not report the common directory") from error
     if done.returncode != 0 or not done.stdout.strip():
-        raise ValueError("git could not report the common directory, so the private record path is unknown")
-    return (root / done.stdout.strip()).resolve() / "speckit-pro" / "autonomy-boundary"
+        raise ValueError("git could not report the common directory")
+    return (root / done.stdout.strip()).resolve()
+
+
+def private_record_dir(root: Path) -> Path:
+    """Where the private autonomy record lives: inside the git common directory, shared by every worktree."""
+    try:
+        return git_common_directory(root) / "speckit-pro" / "autonomy-boundary"
+    except ValueError as error:
+        raise ValueError("git could not report the common directory, so the private record path is unknown") from error
 
 
 def _slug(text: str) -> str:

@@ -21,15 +21,10 @@ gate never becomes a pass.
 **Check:** Constitution principles validated against the current codebase.
 
 ```
-1. TYPECHECK command → must pass (0 errors)
-2. UNIT_TEST + INTEGRATION_TEST commands → must pass (record count as baseline)
-3. BUILD command → must pass
-4. LINT command → must pass
-(use PROJECT_COMMANDS discovered in Step 0.11)
-5. Architecture patterns verified (e.g., patterns documented in CLAUDE.md)
-6. Workflow file's Prerequisites table filled with baselines
-7. Constitution Check summary line set to "✅ Verified"
-8. Reviewability setup gate passes:
+1. Architecture patterns verified (e.g., patterns documented in CLAUDE.md)
+2. Workflow file's Prerequisites table filled with the quality-gate baselines
+3. Constitution Check summary line set to "✅ Verified"
+4. Reviewability setup gate passes:
    `runner helper reviewability-gate setup <workflow-or-roadmap>`
    must be `pass`, `warn`, or a recorded `exception`; `block` stops before
    Specify and requires spec decomposition.
@@ -41,7 +36,10 @@ gate never becomes a pass.
    missing budget number is a `block` that no pragma excuses.
 ```
 
-**Auto-Fix:** Spawn a repair agent for the failing typecheck/test/build check within the gate's allowance. These are foundational health checks.
+The typecheck, test, build, and lint baseline belongs to implement entry
+(phase-execution.md, Phase 7 Setup: Project Baseline).
+
+**Auto-Fix:** Spawn a repair agent for the failing check within the gate's allowance.
 
 **Failure Escalation:** If a check still fails, run the repair loop within its allowance, then defer per the Failure Escalation Protocol. Record which checks failed with their output.
 
@@ -51,11 +49,10 @@ gate never becomes a pass.
 
 ```
 Search spec.md for "[NEEDS CLARIFICATION]" and "[NEEDS CLARIFICATION: ...]" markers.
-- If markers found → Proceed to Clarify phase
-- If no markers → Skip Clarify, proceed to Plan
+- Record the marker count; Clarify runs next either way (one session, at most 5 questions)
 ```
 
-This is a routing decision, not a pass/fail gate. The presence of markers is expected and normal.
+G1 records the count. It does not route: every SPEC runs Clarify. Markers are expected and normal.
 
 ### G2 — After Clarify
 
@@ -67,7 +64,7 @@ This is a routing decision, not a pass/fail gate. The presence of markers is exp
 3. Clarifications section exists in spec.md with documented decisions
 ```
 
-**Auto-Fix:** Re-run clarify focused on remaining markers. Spawn consensus agents for each unresolved question.
+**Auto-Fix:** Resolve remaining markers through G2's repair loop within the existing Clarify session's allowance. Spawn consensus agents for each unresolved question without dispatching another Clarify session.
 
 **Failure Escalation:** If markers remain when the shared reservation ends, run the repair loop within its allowance, then defer per the Failure Escalation Protocol; its last tier for a remaining consensus item is the Round 3 tiebreak (see consensus-protocol.md §Round 3 Tiebreak). An item that changes product scope the spec and roadmap do not settle is applied provisionally with its most conservative option and listed in the end-of-run request; the run continues. Record the remaining ambiguities with all 3 agent perspectives.
 
@@ -526,7 +523,7 @@ and no placeholder tests exist.
 (use PROJECT_COMMANDS discovered in Step 0.11)
 6. Verify the requirement-to-test mapping names real integration coverage:
    inspect existing or new test files and assertions, not spec-ID filenames
-7. Verify requirement-linked behavioral coverage; preserve G0 count as diagnostic,
+7. Verify requirement-linked behavioral coverage; preserve the baseline count recorded at implement entry as diagnostic,
    not a test-count growth requirement
 8. Verify NO placeholder tests in new files:
    Search for placeholder test markers
@@ -589,8 +586,8 @@ unexcepted block or gate error holds PR preparation and records the
 
 | Gate | After | Check | Auto-Fix Strategy | Repair allowance |
 |------|-------|-------|-------------------|--------------|
-| G1 | Specify | NEEDS CLARIFICATION markers | N/A (routing) | N/A |
-| G2 | Clarify | 0 markers remain | Re-run clarify | Gate's own 2 rounds for planning documents; else Shared |
+| G1 | Specify | NEEDS CLARIFICATION markers (recorded; Clarify always runs) | N/A | N/A |
+| G2 | Clarify | 0 markers remain | Resolve remaining markers through G2's repair loop within the existing Clarify session's allowance | Gate's own 2 rounds for planning documents; else Shared |
 | G3 | Plan | Artifacts exist, gates pass | Re-run plan | Gate's own 2 rounds for planning documents; else Shared |
 | G4 | Checklist | 0 [Gap] markers | Research + consensus remediation | Gate's own 2 rounds for planning documents; else Shared |
 | G5 | Tasks | FR coverage, valid required execution metadata, and no gate task waiting on its own dependents | Generate missing tasks; split looping gate tasks | Gate's own 2 rounds for planning documents; else Shared |

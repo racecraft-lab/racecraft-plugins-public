@@ -96,9 +96,13 @@ class ReadinessCodexTrustTest(ReadinessCase):
         self.assertEqual("verified", self.item(shipped_trust())["status"])
 
     def test_disagreeing_codex_hook_observations_are_refused(self) -> None:
-        legacy = {"item": "hooks", "evidence_source": "definition review",
-                  "hooks": [dict(hook="PreToolUse", defined=True, trust="untrusted")]}
-        assert_runner_response(self, self.run_helper([legacy, shipped_trust()]), "input_error", 2)
+        # The overlap refusal runs before any hook-name comparison, so a legacy
+        # observation with an arbitrary name is refused the same way.
+        for name, trust in (("PreToolUse", "untrusted"), ("Bogus", "trusted")):
+            with self.subTest(hook=name):
+                legacy = {"item": "hooks", "evidence_source": "definition review",
+                          "hooks": [dict(hook=name, defined=True, trust=trust)]}
+                assert_runner_response(self, self.run_helper([legacy, shipped_trust()]), "input_error", 2)
         for empty in ({"item": "hooks", "evidence_source": "definition review", "hooks": []},
                       {"item": "hooks", "evidence_source": "definition review"}):
             with self.subTest(empty=empty):
@@ -202,6 +206,25 @@ class ReadinessCodexTrustTest(ReadinessCase):
             self.assertIn(fact, item["evidence_source"])
         self.assertTrue(item["fingerprints"]["value:posture"].startswith("sha256:"))
         self.assertNotIn("action", item)
+
+    def test_long_posture_source_preserves_all_observed_facts(self) -> None:
+        source = ("Effective running-thread approval, sandbox, reviewer and MCP settings observed "
+                  "from the active Codex configuration source")
+        granular = dict.fromkeys(("sandbox_approval", "rules", "mcp_elicitations", "request_permissions",
+                                  "skill_approval"), False)
+        for label in (source, source.ljust(400, ".")):
+            with self.subTest(source_length=len(label)):
+                observation = posture(approval_policy={"granular": granular})
+                observation["evidence_source"] = label
+                item = self.item(observation)
+                self.assertEqual("verified", item["status"])
+                self.assertTrue(item["evidence_source"].startswith("Effective running-thread"))
+                for fact in ("sandbox_approval=false", "rules=false", "mcp_elicitations=false",
+                             "request_permissions=false", "skill_approval=false", "sandbox_mode=workspace-write",
+                             "approvals_reviewer=user", "mcp_approval_mode=prompt", "mcp_consent=granted",
+                             "external_delegation=allowed", "mcp_startup_timeout_sec=10", "mcp_tool_timeout_sec=60"):
+                    self.assertIn(fact, item["evidence_source"])
+                self.assertLessEqual(len(item["evidence_source"]), 400)
 
     def test_unobservable_or_blocked_posture_never_verifies(self) -> None:
         unknown = self.item(posture(approvals_reviewer="unobservable"))

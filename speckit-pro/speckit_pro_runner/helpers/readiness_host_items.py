@@ -473,7 +473,8 @@ def observe_codex_approval_posture(raw: dict[str, Any], observed_at: str, source
         facts[key] = "default" if value is None else str(value)
     summary = ", ".join(f"{key}={value}" for key, value in facts.items())
     prints = {"value:posture": digest(summary)}
-    source = describe(source, summary, "codex_approval_posture.evidence_source")
+    # Every bounded posture fact fits; shorten only the source label to retain all observations.
+    source = describe(source[:MAX_TEXT - len(summary) - 3], summary, "codex_approval_posture.evidence_source")
     refused = [key for key in POSTURE_ACTIONS if facts[key] in ("blocked", "not_granted")]
     if refused:
         return make_item("unavailable", source, observed_at, prints, POSTURE_ACTIONS[refused[0]])

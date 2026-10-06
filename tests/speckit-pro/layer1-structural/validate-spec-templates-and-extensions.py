@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import json
+import hashlib
 import re
 import stat
 import sys
@@ -18,15 +19,24 @@ for _import_root in (LIB_DIR, PLUGIN_ROOT):
         sys.path.insert(0, str(_import_root))
 
 from test_result import run_counted
+from host_skill_views import host_skill_root
 
 ROADMAP_TEMPLATE = PLUGIN_ROOT / 'skills/speckit-coach/templates/technical-roadmap-template.md'
-SPEC_TEMPLATES = (REPO_ROOT / '.specify/presets/speckit-pro-reviewability/templates/spec-template.md', REPO_ROOT / '.specify/templates/spec-template.md')
+SPEC_TEMPLATES = (REPO_ROOT / '.specify/presets/speckit-pro-reviewability/templates/spec-template.md',)
 PRESET_PLAN_TEMPLATE = REPO_ROOT / '.specify/presets/speckit-pro-reviewability/templates/plan-template.md'
+WORKFLOW_TEMPLATE = PLUGIN_ROOT / 'skills/speckit-coach/templates/workflow-template.md'
+AUTOPILOT_SKILL_DIR = PLUGIN_ROOT / 'skills/speckit-autopilot'
+SCAFFOLD_SKILL = PLUGIN_ROOT / 'skills/speckit-scaffold-spec/SKILL.md'
 
 def _rel_repo(path: Path) -> str:
     return path.relative_to(REPO_ROOT).as_posix()
 
 class ValidateSpecTemplates(unittest.TestCase):
+
+    def test_core_spec_template_matches_its_upstream_install_manifest(self) -> None:
+        manifest = json.loads((REPO_ROOT / '.specify/integrations/speckit.manifest.json').read_text(encoding='utf-8'))
+        name = '.specify/templates/spec-template.md'
+        self.assertEqual(hashlib.sha256((REPO_ROOT / name).read_bytes()).hexdigest(), manifest['files'][name])
 
     def test_003_technical_roadmap_template_reviewability_vocabulary(self) -> None:
         with self.subTest(msg='technical-roadmap-template.md: exists'):
@@ -75,6 +85,74 @@ class ValidateSpecTemplates(unittest.TestCase):
         for name, needle in checks:
             with self.subTest(msg=name):
                 self.assertIn(needle, preset_plan_content)
+
+def markdown_section(content: str, heading: str) -> str:
+    """Return a section's text from its heading line to the next heading of equal or higher level."""
+    level = len(heading) - len(heading.lstrip('#'))
+    match = re.search(rf'^{re.escape(heading)}\s*$(.*?)(?=^#{{1,{level}}} |\Z)', content, re.M | re.S)
+    return match.group(1) if match else ''
+
+class ValidateOneClarifySession(unittest.TestCase):
+    """Every SPEC runs one Clarify session of at most 5 questions (one planning path)."""
+
+    def setUp(self) -> None:
+        self.template = WORKFLOW_TEMPLATE.read_text(encoding='utf-8')
+        self.clarify = markdown_section(self.template, '## Phase 2: Clarify')
+
+    def assert_absent(self, text: str, pattern: str) -> None:
+        match = re.search(pattern, text)
+        self.assertIsNone(match, f'contradicting clarify text: {match.group(0) if match else ""}')
+
+    def test_workflow_template_has_one_clarify_session(self) -> None:
+        prompts = markdown_section(self.clarify, '### Clarify Prompts')
+        self.assertEqual(1, prompts.count('/speckit-clarify'), 'the template carries exactly one clarify prompt')
+        self.assertEqual(1, len(re.findall(r'^#### Session \d+', prompts, re.M)))
+        results = markdown_section(self.clarify, '### Clarify Results')
+        self.assertEqual(1, len(re.findall(r'^\| \d+ \|', results, re.M)), 'Clarify Results has one session row')
+
+    def test_workflow_template_caps_the_session_at_five_questions(self) -> None:
+        self.assertIn('at most 5 questions', self.clarify)
+
+    def test_workflow_template_does_not_make_clarify_optional(self) -> None:
+        overview = re.search(r'^\| Clarify \|.*$', self.template, re.M)
+        self.assertIsNotNone(overview, 'Workflow Overview has a Clarify row')
+        self.assert_absent(overview.group(0), r'(?i)optional')
+        self.assert_absent(self.clarify, r'(?i)\bwhen to run:\*\*\s*when')
+
+    def test_phase_reference_has_no_marker_gate_on_clarify(self) -> None:
+        text = (AUTOPILOT_SKILL_DIR / 'references/phase-execution.md').read_text(encoding='utf-8')
+        section = markdown_section(text, '### Phase 2: Clarify')
+        self.assertTrue(section, 'the Phase 2 section is present')
+        self.assert_absent(text, r'Phase 2: Clarify \(Conditional\)')
+        self.assert_absent(text, r'(?i)only runs if G1')
+        self.assert_absent(text, r'(?i)separate subagent for each clarify session')
+        self.assertIn('one session', text.lower())
+
+    def test_autopilot_skill_has_no_marker_gate_on_clarify(self) -> None:
+        text = (AUTOPILOT_SKILL_DIR / 'SKILL.md').read_text(encoding='utf-8')
+        gate_text = (AUTOPILOT_SKILL_DIR / 'references/gate-validation.md').read_text(encoding='utf-8')
+        self.assert_absent(text, r'(?i)clarify still runs only when')
+        self.assert_absent(text, r'(?i)Clarify and Checklist have multiple prompts')
+        self.assert_absent(gate_text, r'(?i)skip clarify')
+        self.assertNotRegex(gate_text, r'(?i)re-run clarify')
+        self.assertIn('without dispatching another clarify session', gate_text.lower())
+
+    def test_scaffold_seeds_one_clarify_session(self) -> None:
+        text = SCAFFOLD_SKILL.read_text(encoding='utf-8')
+        self.assert_absent(text, r'(?i)one focus per open\s+behavior area')
+        self.assertIn('one clarify session', text.lower())
+
+    def test_both_hosts_consolidate_older_clarify_prompts_before_dispatch(self) -> None:
+        for host in ('claude', 'codex'):
+            with self.subTest(host=host):
+                root = host_skill_root(host) / 'speckit-autopilot'
+                skill = (root / 'SKILL.md').read_text(encoding='utf-8')
+                rule = markdown_section(skill, '### 4. Multi-prompt phases')
+                self.assertRegex(rule, r'(?s)older workflows.*multiple Clarify prompts')
+                self.assertRegex(rule, r'(?s)combine.*one prompt')
+                self.assertRegex(rule, r'(?s)before creating.*task.*phase brief')
+                phase = (root / 'references/phase-execution.md').read_text(encoding='utf-8')
+                self.assertIn('Normalize Clarify through Rule 4 before reading phase prompts.', phase)
 
 FROZEN_MARKER = "🧊 Frozen"
 HEALTH_PROGRAM = "https://github.com/racecraft-lab/racecraft-plugins-public/issues/1038"
