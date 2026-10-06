@@ -70,6 +70,7 @@ def checklist_waves(domains: list[str], model_for: ModelFor) -> tuple[list[dict[
 
 
 def compose_waves(domains: list[str], items: list[dict[str, Any]], model_for: ModelFor) -> list[list[dict[str, Any]]]:
-    """Domain wave, then the consensus waves for the items, then the verify wave; a wave with no agents is dropped."""
+    """Domain wave ({domain}), the security wave and low-confidence wave ({item, line}), then the verify wave
+    ({domain, pass: "verify"}); a wave with no agents is dropped, so no domains and no items give no waves."""
     run, verify = checklist_waves(domains, model_for) if domains else ([], [])
     return [wave for wave in [run, *consensus_waves(items, model_for), verify] if wave]

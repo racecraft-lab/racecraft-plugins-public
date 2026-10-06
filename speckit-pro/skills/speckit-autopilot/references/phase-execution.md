@@ -784,10 +784,10 @@ resolution over all domains' gaps, then a verify wave:
 1. autopilot-state.json: every domain task → in_progress
 2. Request the phase brief with `domains` (the `/speckit-checklist <domain>`
    names under brief.inputs.prompt_section, in file order).
-   Domain wave: ONE turn, one entry per domain:
+   Domain wave: ONE turn, one entry per domain, each with its own domain prompt:
      Agent(subagent_type: "speckit-pro:checklist-executor", model: entry.model.claude.model,
            run_in_background: true,
-           prompt: "Run /speckit-checklist with: <that domain's prompt>\nReference slices: <brief.slices, verbatim>")
+           prompt: "Run /speckit-checklist with: <domain prompt>\nReference slices: <brief.slices, verbatim>")
    The phase brief supplies the slices; the executor reads no reference file.
    Each checklist-executor runs the checklist, researches gaps,
    applies fixes, and re-runs once to verify (Layer 1).

@@ -193,11 +193,8 @@ def internal_failure(request: Any, code: str, exc: Exception) -> dict[str, Any]:
 def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     """Return phase-brief/v1 dispatch data; gate and stop decisions stay separate.
 
-    The closed request inputs are phase, workflow_file and feature_dir strings,
-    plus two optional wave inputs. domains: 1 to 12 distinct lowercase checklist
-    domain names, Checklist only. items: up to 100 unresolved consensus items,
-    each {line: str, confidence?: "low" | "high"} (low when absent), for Clarify,
-    Checklist and Analyze.
+    The closed request inputs are phase, workflow_file and feature_dir strings, and optional domains and items
+    for waves (dispatch_waves.py).
     Paths reject parent segments and control, format and line separator characters.
     feature_dir is workflow-root relative; workflow_file may be absolute but must name a file.
     Validation is lexical: no files opened, symlinks resolved or read permissions enforced.
@@ -221,15 +218,9 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
         Clarify, Checklist and Analyze carry discovery, grounding and
         category-tag sections; the other phases return [].
     waves: list[list[{agent: str, inputs: object, model: ModelSelection}]],
-        ordered sequential waves;
-        each inner list contains concurrent dispatches, with a host-neutral
-        role, JSON prompt inputs and its own model selection per dispatch;
-        ModelSelection has the same shape as model below. In order, a wave
-        holds: every domain's checklist-executor ({domain}); the three analysts
-        of each security item ({item, line}, item = 1-based position in items);
-        the one routed analyst of each low-confidence item; the verify re-run of
-        each domain ({domain, pass: "verify"}). A wave with no agents is
-        omitted, so a brief without domains or items has none.
+        ordered sequential waves; each inner list holds concurrent dispatches, with a
+        host-neutral role, JSON prompt inputs and its own model selection (the shape of
+        model below); empty without domains or items.
     model: {claude: {model: str, effort: str},
         codex: {model: str, effort: str}}, host-specific dispatch configuration;
         applies to the top-level agent only. Codex phase-executor omits file
