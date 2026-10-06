@@ -207,14 +207,18 @@ must not rewrite their provenance.
 The runner holds directory descriptors and opens files relative to them without
 following links. Its shared tree reader rejects hard links and changes in device,
 inode, mode, link count, size, mtime_ns or ctime_ns across the read. The bounded
-read must match the recorded size. G4 also checks the captured namespace before
-accepting the snapshot: missing, added, replaced or renamed inputs fail closed.
-Only the captured bytes are counted and hashed. Report names use ASCII letters,
-digits, dot, underscore and hyphen; unsafe names fail without being echoed.
+read must match the recorded size. G4 checks the captured namespace and judges
+only the captured bytes during its read transaction. Only those bytes are counted
+and hashed. Report names use ASCII letters, digits, dot, underscore and hyphen;
+unsafe names fail without being echoed.
 
-The verdict covers the returned digests, not future edits. A later consumer must
-re-verify those digests if it relies on this verdict after the feature changes.
-G4 does not attest that an executor ran or freeze the filesystem after return.
+The verdict covers the returned digests, not later edits. An input can change
+after its last validation, including before G4 returns; no point-in-time reader
+can freeze a directory tree. A change after G4 returns is caught only by a later
+digest check. Binding Phase 5 Tasks to consumer-side re-verification of G4's `judged`
+digests is tracked in
+[issue #1284](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1284).
+G4 does not attest that an executor ran.
 
 G4 counts only `[Gap]` markers, by design. Unticked checklist items are
 reviewer-owned, so they do not fail G4. They are deferred to PR review, and
