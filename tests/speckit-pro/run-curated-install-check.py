@@ -77,19 +77,38 @@ def archive_declares_id(url: str, kind: str, entry_id: str) -> bool:
     return False
 
 
-def registry_entries(project: Path, kind: str) -> list[str] | None:
+def registry_entries(project: Path, kind: str, entry_id: str | None = None) -> list[str] | None:
     """List the whole registry without following links; unknown evidence is not absence."""
     flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
     try:
         with ExitStack() as descriptors:
             parent = os.open(project / ".specify", flags)
             descriptors.callback(os.close, parent)
+            bindings = [(project / ".specify", parent, None)]
+            name = Path(REGISTRY_DIRS[kind]).name
             try:
-                registry = os.open(Path(REGISTRY_DIRS[kind]).name, flags, dir_fd=parent)
+                registry = os.open(name, flags, dir_fd=parent)
             except FileNotFoundError:
-                return []
-            descriptors.callback(os.close, registry)
-            return os.listdir(registry)
+                registry = None
+            entries = []
+            if registry is not None:
+                descriptors.callback(os.close, registry)
+                bindings.append((Path(name), registry, parent))
+                if entry_id is not None:
+                    target = os.open(entry_id, flags, dir_fd=registry)
+                    descriptors.callback(os.close, target)
+                    bindings.append((Path(entry_id), target, registry))
+                entries = os.listdir(registry)
+            if not all(os.path.samestat(os.fstat(fd), os.stat(path, dir_fd=base, follow_symlinks=False))
+                       for path, fd, base in reversed(bindings)):
+                return None
+            if registry is None:
+                try:
+                    os.stat(name, dir_fd=parent, follow_symlinks=False)
+                except FileNotFoundError:
+                    return [] if entry_id is None else None
+                return None
+            return entries
     except OSError:
         return None
 
@@ -104,8 +123,7 @@ def check_entry(entry: dict[str, str], project: Path) -> list[str]:
     if DISCOVERY_ONLY in output:
         failures.append(f"{label}: refused as discovery-only")
     if entry["kind"] == "preset":
-        target = project / REGISTRY_DIRS[entry["kind"]] / entry["id"]
-        installed = target.is_dir() and not target.is_symlink() and registry_entries(project, "preset") is not None
+        installed = registry_entries(project, "preset", entry["id"]) is not None
         if result.returncode != 0 or not installed:
             failures.append(f"{label}: exit {result.returncode}, installed={installed}")
         return failures
@@ -136,6 +154,9 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--curated-set", type=Path, default=CURATED_SET)
     args = parser.parse_args(argv)
     entries = json.loads(args.curated_set.read_text(encoding="utf-8"))["entries"]
+    if not entries:
+        print("FAIL curated set: no entries to verify", file=sys.stderr)
+        return 1
     failed_entries = 0
     with tempfile.TemporaryDirectory(prefix="curated-install-") as raw:
         project = Path(raw)

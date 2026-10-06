@@ -11,7 +11,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from contextlib import redirect_stderr, redirect_stdout
+from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from itertools import product
 from pathlib import Path
 from unittest import mock
@@ -46,7 +46,13 @@ def create_artifact(target, shape):
     target.symlink_to(source, target_is_directory=True)
 
 
-class CuratedInstallCheckTests(unittest.TestCase):
+class CuratedInstallCase(unittest.TestCase):
+    @contextmanager
+    def scenario(self, **variants):
+        """Give each variant a fresh project and its own counted assertion."""
+        with self.subTest(**variants), tempfile.TemporaryDirectory() as raw:
+            yield Path(raw)
+
     def check_result(self, entry, project, code=1, output=check.TRUST_PROMPT):
         parent = project / ".specify"
         if not parent.exists() and not parent.is_symlink():
@@ -57,22 +63,25 @@ class CuratedInstallCheckTests(unittest.TestCase):
         ):
             return check.check_entry(entry, project)
 
+
+class ExtensionExitTests(CuratedInstallCase):
     def test_zero_exit_is_not_a_verified_noninteractive_abort(self):
         for entry in EXTENSIONS:
-            with self.subTest(entry=entry["id"]), tempfile.TemporaryDirectory() as raw:
-                self.assertTrue(self.check_result(entry, Path(raw), code=0))
+            with self.scenario(entry=entry["id"]) as project:
+                self.assertTrue(self.check_result(entry, project, code=0))
 
     def test_signal_exit_is_not_a_verified_noninteractive_abort(self):
         for entry in EXTENSIONS:
             for signum in (signal.SIGTERM, signal.SIGINT, signal.SIGKILL):
-                with self.subTest(entry=entry["id"], signum=signum), tempfile.TemporaryDirectory() as raw:
-                    self.assertTrue(self.check_result(entry, Path(raw), code=-signum))
+                with self.scenario(entry=entry["id"], signum=signum) as project:
+                    self.assertTrue(self.check_result(entry, project, code=-signum))
 
+
+class ExtensionArtifactTests(CuratedInstallCase):
     def test_partial_sibling_artifacts_are_not_an_empty_installation(self):
         for entry in EXTENSIONS:
             for shape in ("file", "directory", "renamed-target"):
-                with self.subTest(entry=entry["id"], shape=shape), tempfile.TemporaryDirectory() as raw:
-                    project = Path(raw)
+                with self.scenario(entry=entry["id"], shape=shape) as project:
                     registry = project / ".specify/extensions"
                     registry.mkdir(parents=True)
                     target = registry / (entry["id"] + ".partial")
@@ -88,8 +97,7 @@ class CuratedInstallCheckTests(unittest.TestCase):
 
     def test_dangling_exact_target_is_not_absent(self):
         for entry in EXTENSIONS:
-            with self.subTest(entry=entry["id"]), tempfile.TemporaryDirectory() as raw:
-                project = Path(raw)
+            with self.scenario(entry=entry["id"]) as project:
                 registry = project / ".specify/extensions"
                 registry.mkdir(parents=True)
                 (registry / entry["id"]).symlink_to("missing")
@@ -98,8 +106,7 @@ class CuratedInstallCheckTests(unittest.TestCase):
     def test_exact_and_sibling_links_and_hard_links_are_artifacts(self):
         shapes = ("directory", "file", "symlink", "dangling-link", "hard-link")
         for entry, exact, shape in product(EXTENSIONS, (True, False), shapes):
-            with self.subTest(entry=entry["id"], exact=exact, shape=shape), tempfile.TemporaryDirectory() as raw:
-                project = Path(raw)
+            with self.scenario(entry=entry["id"], exact=exact, shape=shape) as project:
                 name = entry["id"] if exact else ".partial"
                 create_artifact(project / ".specify/extensions" / name, shape)
                 self.assertTrue(self.check_result(entry, project))
@@ -108,16 +115,14 @@ class CuratedInstallCheckTests(unittest.TestCase):
         components = (".specify", ".specify/extensions")
         shapes = ("file", "empty-directory-link", "dangling-link")
         for entry, component, shape in product(EXTENSIONS, components, shapes):
-            with self.subTest(entry=entry["id"], component=component, shape=shape), tempfile.TemporaryDirectory() as raw:
-                project = Path(raw)
+            with self.scenario(entry=entry["id"], component=component, shape=shape) as project:
                 create_artifact(project / component, shape)
                 self.assertTrue(self.check_result(entry, project))
 
     def test_inspection_errors_are_not_absence(self):
         for entry in EXTENSIONS:
             for error in (PermissionError, OSError):
-                with self.subTest(entry=entry["id"], error=error.__name__), tempfile.TemporaryDirectory() as raw:
-                    project = Path(raw)
+                with self.scenario(entry=entry["id"], error=error.__name__) as project:
                     (project / ".specify/extensions").mkdir(parents=True)
                     with mock.patch.object(check.os, "listdir", side_effect=error("cannot inspect")):
                         self.assertTrue(self.check_result(entry, project))
@@ -125,17 +130,17 @@ class CuratedInstallCheckTests(unittest.TestCase):
     def test_normal_abort_with_absent_or_empty_registry_passes(self):
         for entry in EXTENSIONS:
             for state in ("absent", "empty"):
-                with self.subTest(entry=entry["id"], state=state), tempfile.TemporaryDirectory() as raw:
-                    project = Path(raw)
+                with self.scenario(entry=entry["id"], state=state) as project:
                     (project / ".specify").mkdir()
                     if state == "empty":
                         (project / ".specify/extensions").mkdir()
                     self.assertEqual(self.check_result(entry, project), [])
 
+
+class CuratedInstallWorkflowTests(CuratedInstallCase):
     def test_prompt_discovery_refusal_and_archive_identity_still_fail_closed(self):
         for entry in EXTENSIONS:
-            with self.subTest(entry=entry["id"]), tempfile.TemporaryDirectory() as raw:
-                project = Path(raw)
+            with self.scenario(entry=entry["id"]) as project:
                 self.assertTrue(self.check_result(entry, project, output=""))
                 self.assertTrue(self.check_result(entry, project, output=check.TRUST_PROMPT + check.DISCOVERY_ONLY))
                 with mock.patch.object(check, "specify", return_value=subprocess.CompletedProcess([], 1, check.TRUST_PROMPT, "")), mock.patch.object(
@@ -166,22 +171,19 @@ class CuratedInstallCheckTests(unittest.TestCase):
     def test_preset_requires_a_real_directory_not_any_resolving_path(self):
         entry = next(entry for entry in ENTRIES if entry["kind"] == "preset")
         for shape in ("file", "empty-directory-link", "dangling-link"):
-            with self.subTest(shape=shape), tempfile.TemporaryDirectory() as raw:
-                project = Path(raw)
+            with self.scenario(shape=shape) as project:
                 create_artifact(project / ".specify/presets" / entry["id"], shape)
                 self.assertTrue(self.check_result(entry, project, code=0))
 
     def test_preset_success_requires_zero_exit_and_unredirected_parents(self):
         entry = next(entry for entry in ENTRIES if entry["kind"] == "preset")
         for code in (0, 1, -signal.SIGTERM):
-            with self.subTest(code=code), tempfile.TemporaryDirectory() as raw:
-                project = Path(raw)
+            with self.scenario(code=code) as project:
                 (project / ".specify/presets" / entry["id"]).mkdir(parents=True)
                 failures = self.check_result(entry, project, code=code)
                 self.assertEqual(bool(failures), code != 0)
         for component in (".specify", ".specify/presets"):
-            with self.subTest(component=component), tempfile.TemporaryDirectory() as raw:
-                project = Path(raw)
+            with self.scenario(component=component) as project:
                 target = project / component
                 target.parent.mkdir(parents=True, exist_ok=True)
                 source = project / "redirect"
@@ -189,6 +191,60 @@ class CuratedInstallCheckTests(unittest.TestCase):
                 (source / suffix / entry["id"]).mkdir(parents=True)
                 target.symlink_to(source, target_is_directory=True)
                 self.assertTrue(self.check_result(entry, project, code=0))
+
+
+class RegistryBindingTests(CuratedInstallCase):
+    def test_registry_and_parent_swaps_after_open_cannot_hide_artifacts(self):
+        real_listdir = os.listdir
+        for entry, component, replacement in product(
+            EXTENSIONS, (".specify", ".specify/extensions"), ("directory", "symlink")
+        ):
+            with self.scenario(entry=entry["id"], component=component, replacement=replacement) as project:
+                (project / ".specify/extensions").mkdir(parents=True)
+
+                def swap(descriptor):
+                    target = project / component
+                    target.rename(target.with_name(target.name + "-old"))
+                    source = project / "replacement"
+                    source.mkdir()
+                    if replacement == "symlink":
+                        target.symlink_to(source, target_is_directory=True)
+                    else:
+                        source.rename(target)
+                    registry = project / ".specify/extensions"
+                    registry.mkdir(exist_ok=True)
+                    (registry / (entry["id"] + ".partial")).write_text("artifact", encoding="utf-8")
+                    return real_listdir(descriptor)
+
+                with mock.patch.object(check.os, "listdir", side_effect=swap):
+                    self.assertTrue(self.check_result(entry, project))
+
+    def test_missing_registry_cannot_hide_a_parent_swap(self):
+        real_open = os.open
+        for entry in EXTENSIONS:
+            with self.scenario(entry=entry["id"]) as project:
+                (project / ".specify").mkdir()
+
+                def swap(path, flags, **kwargs):
+                    descriptor = real_open(path, flags, **kwargs)
+                    if path == project / ".specify":
+                        path.rename(project / ".specify-old")
+                        registry = project / ".specify/extensions"
+                        registry.mkdir(parents=True)
+                        (registry / ".partial").write_text("artifact", encoding="utf-8")
+                    return descriptor
+
+                with mock.patch.object(check.os, "open", side_effect=swap):
+                    self.assertTrue(self.check_result(entry, project))
+
+
+class CuratedRosterTests(CuratedInstallCase):
+    def test_empty_roster_cannot_pass_without_checking_any_entry(self):
+        with self.scenario(roster="empty") as project:
+            roster = project / "curated.json"
+            roster.write_text('{"entries": []}', encoding="utf-8")
+            with mock.patch.object(check, "fresh_project", return_value=[]), redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+                self.assertEqual(check.main(["--curated-set", str(roster)]), 1)
 
 
 if __name__ == "__main__":
