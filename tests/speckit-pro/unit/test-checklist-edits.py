@@ -1486,15 +1486,15 @@ class GateFourTests(ChecklistEditsCase):
         """Run `mutate` once, right after G4 reads the last checklist report."""
         fired: list[bool] = []
 
-        def hooked(real: Callable[..., Any], path: Path, *args: Any) -> Any:
-            value = real(path, *args)
+        def hooked(real: Callable[..., Any], path: Path, *args: Any, **kwargs: Any) -> Any:
+            value = real(path, *args, **kwargs)
             if not fired and Path(path).name == "security.md":
                 fired.append(True)
                 mutate()
             return value
 
         with ExitStack() as stack:
-            for name in ("trusted_lines", "trusted_text"):
+            for name in ("trusted_lines", "trusted_text", "trusted_bytes"):
                 real = getattr(read_only, name, None)
                 if real is not None:
                     stack.enter_context(patch.object(read_only, name, partial(hooked, real)))
@@ -1556,6 +1556,38 @@ class GateFourTests(ChecklistEditsCase):
                 self.forge_receipt()
                 self.assertFalse(self.gate()["pass"], name)
 
+    def test_g4_fails_closed_on_any_checklist_entry_it_cannot_read_or_classify(self) -> None:
+        # checklists/ is flat: a nested directory, readable or not, fails G4 instead of hiding a [Gap] report.
+        checklists = self.feature / "checklists"
+        locked: list[Path] = []
+
+        def nested(mode: int) -> None:
+            (checklists / "hidden").mkdir()
+            (checklists / "hidden/gap.md").write_text(GAP_LINE, encoding="utf-8")
+            os.chmod(checklists / "hidden", mode)
+            locked.append(checklists / "hidden")
+
+        def lock(path: Path) -> None:
+            os.chmod(path, 0)
+            locked.append(path)
+
+        variants: dict[str, Callable[[], None]] = {
+            "readable nested directory": lambda: nested(0o755),
+            "unreadable nested directory": lambda: nested(0),
+            "unreadable report": lambda: lock(checklists / "security.md"),
+            "unreadable checklists directory": lambda: lock(checklists),
+            "fifo": lambda: os.mkfifo(checklists / "pipe.md")}
+        for name, mutate in variants.items():
+            with self.subTest(variant=name):
+                self.reset_tree()
+                mutate()
+                try:
+                    verdict = self.gate()
+                finally:
+                    while locked:
+                        os.chmod(locked.pop(), 0o755)
+                self.assertFalse(verdict["pass"], (name, verdict))
+
     def test_g4_fails_closed_on_missing_or_linked_shared_artifacts(self) -> None:
         for name in ("spec.md", "plan.md"):
             for linked in (False, True):
@@ -1568,7 +1600,9 @@ class GateFourTests(ChecklistEditsCase):
                     self.assertFalse(self.gate()["pass"])
 
     # F1281-e0d72cb8: the verdict describes one tree, so a change during the scan fails closed.
-    def test_g4_fails_closed_when_the_tree_changes_during_its_scan(self) -> None:
+    # F1281-e0d72cb8: the verdict covers exactly the bytes G4 read, and G4 returns their digests,
+    # so a change after a file was read can never borrow that verdict.
+    def test_g4_verdict_is_bound_to_the_digests_it_judged(self) -> None:
         checklists = self.feature / "checklists"
 
         def add_report() -> None:
@@ -1596,10 +1630,29 @@ class GateFourTests(ChecklistEditsCase):
             with self.subTest(variant=name):
                 self.reset_tree()
                 os.link(checklists / "security.md", self.root / "alias.md")
-                self.forge_receipt()
+                judged = {"spec.md": digest(SPEC), "plan.md": digest(PLAN), "checklists/security.md": digest(CLEAN_REPORT)}
                 with self.after_scan(mutate):
                     verdict = self.gate()
-                self.assertFalse(verdict["pass"], (name, verdict))
+                self.assertEqual((True, judged), (verdict["pass"], verdict.get("judged")), name)
+
+    # F1281-2350a979: fixed bounds on report count and total bytes fail closed; the flat layout bounds depth.
+    def test_g4_fails_closed_beyond_its_report_count_or_byte_limits(self) -> None:
+        checklists = self.feature / "checklists"
+
+        def reports(count: int, content: bytes) -> None:
+            for index in range(count):
+                (checklists / f"extra-{index}.md").write_bytes(content)
+
+        variants: dict[str, tuple[Callable[[], None], bool]] = {
+            "64 reports": (lambda: reports(63, CLEAN_REPORT.encode()), True),
+            "65 reports": (lambda: reports(64, CLEAN_REPORT.encode()), False),
+            "one report over the byte limit": (lambda: reports(1, b"x" * 8 * 1024 * 1024), False),
+            "reports over the byte limit together": (lambda: reports(3, b"x" * 3 * 1024 * 1024), False)}
+        for name, (mutate, passes) in variants.items():
+            with self.subTest(variant=name):
+                self.reset_tree()
+                mutate()
+                self.assertEqual(passes, self.gate()["pass"], name)
 
 
 def checklist_passages() -> list[str]:

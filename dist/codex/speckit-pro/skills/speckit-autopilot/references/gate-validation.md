@@ -187,17 +187,27 @@ must not rewrite their provenance.
 
 ### G4 — After Checklist
 
-**Check:** All gap markers resolved across one stable read of the feature.
+**Check:** All gap markers resolved in one bounded snapshot of the feature.
 
 ```
 1. Find all checklist files: specs/<feature>/checklists/*.md
 2. Count [Gap] markers across ALL files: grep -c "\[Gap\]" checklists/*.md,
    plus spec.md and plan.md (runner `validate-gate` G4 counts all three)
 3. Total must be 0
-4. The runner reads each file once and fails closed when spec.md, plan.md or
-   checklists/ is missing, linked or unreadable, when checklists/ holds no report,
-   a link or a special file, or when any of them changed during the read.
+4. The runner reads each file once into memory and judges only those bytes.
+   It fails closed when spec.md, plan.md or checklists/ is missing, linked or
+   unreadable, when checklists/ holds no report, a nested directory, a link or
+   a special file, or more than 64 entries, or when the files exceed 8 MiB in all.
+   checklists/ is flat: reports sit directly under it.
+5. The result's `judged` field holds the SHA-256 of every file the verdict covers.
 ```
+
+G4 is a point-in-time check of the files it read. It runs in the main session
+after every checklist executor and consensus agent has returned, so the only
+writers left are the orchestrator and the operator: the same parties that act
+on the verdict. A change made after G4 read a file is a new edit to the planning
+documents, not something the gate can stop. `judged` shows exactly which content
+passed, so a later step can tell whether the tree still matches.
 
 G4 counts only `[Gap]` markers, by design. Unticked checklist items are
 reviewer-owned, so they do not fail G4. They are deferred to PR review, and

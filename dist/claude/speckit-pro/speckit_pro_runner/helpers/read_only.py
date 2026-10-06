@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import itertools
 import json
 import math
 import os
@@ -2104,62 +2105,62 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     return make_result(json_text({"gate": gate, "pass": False, "reason": f"{count} CRITICAL/HIGH findings remain", "markers": count, "analysis_findings": findings, "details": []}), exit_code=1)
 
 
-def g4_identity(path: Path) -> tuple[int, ...]:
-    """What changes when an entry is replaced, renamed over, relinked or rewritten."""
-    info = os.lstat(path)
-    return info.st_mode, info.st_dev, info.st_ino, info.st_nlink, info.st_size, info.st_mtime_ns, info.st_ctime_ns
+G4_MAX_REPORTS = 64
+G4_MAX_BYTES = 8 * 1024 * 1024
 
 
-def g4_entries(directory: Path) -> tuple[list[Path], list[Path]]:
-    """Every entry under checklists/ and its reports. A missing or linked directory, a link or special file, or no report fails closed."""
+def g4_reports(directory: Path) -> list[Path]:
+    """Every report in the flat checklists/ directory, at most G4_MAX_REPORTS. A listing error, a nested directory,
+    a link, a special file, too many entries or no report fails closed, so nothing unread can hide a [Gap] marker."""
     if not stat.S_ISDIR(os.lstat(directory).st_mode):
         raise ValueError("checklists/ must be a directory, not a link or a file")
-    entries = sorted(directory.rglob("*"))
-    reports = []
-    for path in entries:
-        mode = os.lstat(path).st_mode
-        if stat.S_ISREG(mode):
-            reports.append(path)
-        elif not stat.S_ISDIR(mode):
-            raise ValueError(f"checklists/ holds a link or special file: {path.name}")
+    with os.scandir(directory) as listing:
+        names = sorted(entry.name for entry in itertools.islice(listing, G4_MAX_REPORTS + 1))
+    if len(names) > G4_MAX_REPORTS:
+        raise ValueError(f"checklists/ holds more than {G4_MAX_REPORTS} entries")
+    reports = [directory / name for name in names]
+    for path in reports:
+        if not stat.S_ISREG(os.lstat(path).st_mode):
+            raise ValueError(f"checklists/ holds a directory, link or special file: {path.name}")
     if not reports:
         raise ValueError("checklists/ holds no checklist report")
-    return entries, reports
+    return reports
 
 
-def g4_scan(feature: Path, repo_root: Path) -> tuple[dict[str, int], int]:
-    """Count [Gap] lines in one stable read of spec.md, plan.md and every checklist report.
+def g4_snapshot(feature: Path, repo_root: Path) -> dict[str, bytes]:
+    """Read spec.md, plan.md and every checklist report once, through the contained reader, within G4_MAX_BYTES in all.
 
-    Each file is read once through the contained reader. Every entry is checked again after the reads,
-    so a change during the scan fails closed instead of mixing two trees.
+    The verdict is computed from these bytes only, and G4 returns their digests.
     """
-    directory = feature / "checklists"
-    entries, reports = g4_entries(directory)
-    files = [feature / "spec.md", feature / "plan.md", *reports]
-    watched = [directory, *entries, *files[:2]]
-    before = [g4_identity(path) for path in watched]
-    texts = [trusted_text(path, repo_root) for path in files]
-    if any(text is None for text in texts):
-        raise ValueError("G4 reads spec.md, plan.md and every checklist report as contained regular files")
-    if g4_entries(directory)[0] != entries or [g4_identity(path) for path in watched] != before:
-        raise ValueError("the feature changed while G4 read it; run the gate again")
-    counts = [sum(1 for line in str(text).splitlines() if "[Gap]" in line) for text in texts]
-    return {"spec": counts[0], "plan": counts[1], "checklists": sum(counts[2:])}, len(reports)
+    files = {"spec.md": feature / "spec.md", "plan.md": feature / "plan.md",
+             **{f"checklists/{path.name}": path for path in g4_reports(feature / "checklists")}}
+    snapshot: dict[str, bytes] = {}
+    for name, path in files.items():
+        content = trusted_bytes(path, repo_root, limit=G4_MAX_BYTES - sum(map(len, snapshot.values())))
+        if content is None:
+            raise ValueError(f"G4 cannot read {name} as a contained regular file within {G4_MAX_BYTES} bytes in all")
+        snapshot[name] = content
+    return snapshot
 
 
 def g4_result(feature: Path, repo_root: Path) -> dict[str, Any]:
-    """Zero [Gap] markers over a stable, complete read passes; anything G4 cannot read fails closed."""
+    """Zero [Gap] markers in one bounded snapshot passes; `judged` holds the SHA-256 of every file the verdict covers."""
     try:
-        counts, reports = g4_scan(feature, repo_root)
+        snapshot = g4_snapshot(feature, repo_root)
     except (OSError, ValueError) as error:
         reason = f"G4 cannot read {Path(error.filename).name}: {error.strerror}" if isinstance(error, OSError) and error.filename else str(error)
         return make_result(json_text({"gate": "G4", "pass": False, "reason": reason, "markers": 0, "details": []}), exit_code=1)
-    gaps = sum(counts.values())
+    counts = {name: sum(1 for line in content.decode("utf-8", errors="replace").splitlines() if "[Gap]" in line)
+              for name, content in snapshot.items()}
+    judged = {name: hashlib.sha256(content).hexdigest() for name, content in snapshot.items()}
+    spec, plan = counts.pop("spec.md"), counts.pop("plan.md")
+    gaps, reports = spec + plan + sum(counts.values()), len(counts)
     if gaps == 0:
         reason = f"0 [Gap] markers in spec.md, plan.md and {reports} checklist report{'s' if reports > 1 else ''}"
-        return make_result(json_text({"gate": "G4", "pass": True, "reason": reason, "markers": 0, "details": []}))
-    reason = f"{gaps} [Gap] markers (spec:{counts['spec']}, plan:{counts['plan']}, checklists:{counts['checklists']})"
-    return make_result(json_text({"gate": "G4", "pass": False, "reason": reason, "markers": gaps, "details": []}), exit_code=1)
+        return make_result(json_text({"gate": "G4", "pass": True, "reason": reason, "markers": 0, "details": [], "judged": judged}))
+    reason = f"{gaps} [Gap] markers (spec:{spec}, plan:{plan}, checklists:{sum(counts.values())})"
+    return make_result(json_text({"gate": "G4", "pass": False, "reason": reason, "markers": gaps, "details": [], "judged": judged}),
+                       exit_code=1)
 
 
 COVERAGE_TASK_HEADER = re.compile(r"tasks?(?:\s*\(s\)|\s*ids?)?", re.IGNORECASE)
