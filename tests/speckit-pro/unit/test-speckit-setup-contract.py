@@ -173,6 +173,15 @@ def specify(root: Path, args: list[str]) -> tuple[int, str]:
         shutil.copytree(source, presets / source.name)
         (presets / ".registry").write_text(json.dumps({"presets": {source.name: {"priority": int(args[5]), "enabled": True}}}))
         return 0, ""
+    if args[:2] == ["preset", "update"]:
+        preset_id = args[2]
+        registry = json.loads((presets / ".registry").read_text())
+        if preset_id not in registry["presets"]:
+            return 1, "not installed"
+        shutil.rmtree(presets / preset_id)
+        del registry["presets"][preset_id]
+        (presets / ".registry").write_text(json.dumps(registry))
+        return specify(root, ["preset", "add", *args[3:]])
     if args[:2] == ["preset", "resolve"]:
         hits = sorted(presets.glob(f"*/templates/{args[2]}.md"))
         return (0, hits[0].relative_to(root).as_posix()) if hits else (1, "")
@@ -191,11 +200,81 @@ class ReviewabilityPreset(ReadinessCase):
         shutil.copy(REPO_ROOT / ".specify/presets/.registry", presets / ".registry")
         return presets / PRESET_ID
 
+    def test_known_legacy_priority_10_is_replaced_and_scaffold_can_continue(self) -> None:
+        preset = self.root / ".specify/presets" / PRESET_ID
+        shutil.copytree(REPO_ROOT / "tests/speckit-pro/unit/fixtures/reviewability-preset/legacy", preset)
+        (preset.parent / ".registry").write_text(json.dumps({"presets": {PRESET_ID: {
+            "enabled": True, "priority": 10, "version": "1.0.0",
+        }}}))
+        before = self.state(self.root)
+        self.assertEqual("upgrade", before["status"])
+        self.assertEqual(["preset", "update", PRESET_ID, "--dev"], before["upgrade_args"][:4])
+        self.assertEqual(["--priority", "5"], before["upgrade_args"][-2:])
+        self.assertEqual((0, ""), specify(self.root, before["upgrade_args"]))
+        self.assertEqual("installed", self.state(self.root)["status"])
+        for name in PRESET_TEMPLATES:
+            self.assertEqual((0, f".specify/presets/{PRESET_ID}/templates/{name}.md"),
+                             specify(self.root, ["preset", "resolve", name]))
+
+    def test_current_content_at_legacy_priority_is_upgradeable(self) -> None:
+        self.install_reviewed()
+        (self.root / ".specify/presets/.registry").write_text(json.dumps({"presets": {
+            PRESET_ID: {"enabled": True, "priority": 10},
+        }}))
+        result = self.state(self.root)
+        self.assertEqual("upgrade", result["status"])
+        self.assertEqual((0, ""), specify(self.root, result["upgrade_args"]))
+        self.assertEqual("installed", self.state(self.root)["status"])
+
+    def test_modified_or_unknown_legacy_registration_keeps_stopping(self) -> None:
+        preset = self.root / ".specify/presets" / PRESET_ID
+        fixture = REPO_ROOT / "tests/speckit-pro/unit/fixtures/reviewability-preset/legacy"
+        shutil.copytree(fixture, preset)
+        registry = preset.parent / ".registry"
+        for entry in ({"enabled": True, "priority": 10}, {"enabled": True, "priority": 5}):
+            registry.write_text(json.dumps({"presets": {PRESET_ID: entry}}))
+            self.assertEqual("upgrade", self.state(self.root)["status"])
+            for path in sorted(fixture.rglob("*")):
+                if not path.is_file():
+                    continue
+                target = preset / path.relative_to(fixture)
+                original = target.read_bytes()
+                for content in (original + b"modified", None):
+                    with self.subTest(priority=entry["priority"], path=path.name, missing=content is None):
+                        if content is None:
+                            target.unlink()
+                        else:
+                            target.write_bytes(content)
+                        result = self.state(self.root)
+                        self.assertEqual(("unavailable", []), (result["status"], result["add_args"]))
+                        self.assertNotIn("upgrade_args", result)
+                        self.assertIn("is registered but does not match the shipped preset", result["reason"])
+                        target.write_bytes(original)
+            extra = preset / "extra.md"
+            extra.write_text("custom policy")
+            self.assertEqual("unavailable", self.state(self.root)["status"])
+            extra.unlink()
+        for entry in ({"enabled": False, "priority": 10}, {"enabled": True, "priority": "10"},
+                      {"enabled": True, "priority": 7}, {"enabled": True, "priority": True}):
+            registry.write_text(json.dumps({"presets": {PRESET_ID: entry}}))
+            self.assertEqual("unavailable", self.state(self.root)["status"])
+
+    def test_upgrade_refuses_unexpected_registered_commands_or_skills(self) -> None:
+        self.install_reviewed()
+        for metadata in ({"registered_commands": {"claude": ["custom"]}},
+                         {"registered_skills": ["custom"]}, {"registered_commands": None},
+                         {"registered_skills": "custom"}):
+            entry = {"enabled": True, "priority": 10, **metadata}
+            (self.root / ".specify/presets/.registry").write_text(json.dumps({"presets": {PRESET_ID: entry}}))
+            result = self.state(self.root)
+            self.assertEqual("unavailable", result["status"])
+            self.assertNotIn("upgrade_args", result)
+
     def test_arbitrary_object_registry_entries_are_not_installed(self) -> None:
         self.install_reviewed()
         for entry in ({}, {"attacker": "instructions"}, {"enabled": False, "priority": 5},
                       {"enabled": True, "priority": "5"}, {"enabled": True, "priority": True},
-                      {"enabled": True, "priority": 10}):
+                      {"enabled": True, "priority": 7}):
             with self.subTest(entry=entry):
                 (self.root / ".specify/presets/.registry").write_text(json.dumps({"presets": {PRESET_ID: entry}}))
                 result = self.state(self.root)
