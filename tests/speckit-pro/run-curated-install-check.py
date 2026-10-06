@@ -77,6 +77,11 @@ def archive_declares_id(url: str, kind: str, entry_id: str) -> bool:
     return False
 
 
+def directory_state(info: os.stat_result) -> tuple[int, ...]:
+    """Bind an inspection to both directory identity and its content-change timestamps."""
+    return info.st_dev, info.st_ino, info.st_mode, info.st_mtime_ns, info.st_ctime_ns
+
+
 def registry_entries(project: Path, kind: str, entry_id: str | None = None) -> list[str] | None:
     """List the whole registry without following links; unknown evidence is not absence."""
     flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
@@ -84,7 +89,7 @@ def registry_entries(project: Path, kind: str, entry_id: str | None = None) -> l
         with ExitStack() as descriptors:
             parent = os.open(project / ".specify", flags)
             descriptors.callback(os.close, parent)
-            bindings = [(project / ".specify", parent, None)]
+            bindings = [(project / ".specify", None, directory_state(os.fstat(parent)))]
             name = Path(REGISTRY_DIRS[kind]).name
             try:
                 registry = os.open(name, flags, dir_fd=parent)
@@ -93,14 +98,14 @@ def registry_entries(project: Path, kind: str, entry_id: str | None = None) -> l
             entries = []
             if registry is not None:
                 descriptors.callback(os.close, registry)
-                bindings.append((Path(name), registry, parent))
+                bindings.append((Path(name), parent, directory_state(os.fstat(registry))))
                 if entry_id is not None:
                     target = os.open(entry_id, flags, dir_fd=registry)
                     descriptors.callback(os.close, target)
-                    bindings.append((Path(entry_id), target, registry))
+                    bindings.append((Path(entry_id), registry, directory_state(os.fstat(target))))
                 entries = os.listdir(registry)
-            if not all(os.path.samestat(os.fstat(fd), os.stat(path, dir_fd=base, follow_symlinks=False))
-                       for path, fd, base in reversed(bindings)):
+            if not all(directory_state(os.stat(path, dir_fd=base, follow_symlinks=False)) == before
+                       for path, base, before in reversed(bindings)):
                 return None
             if registry is None:
                 try:

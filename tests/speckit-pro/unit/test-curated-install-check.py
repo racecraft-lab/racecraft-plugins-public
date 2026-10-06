@@ -194,6 +194,21 @@ class CuratedInstallWorkflowTests(CuratedInstallCase):
 
 
 class RegistryBindingTests(CuratedInstallCase):
+    def test_in_place_artifact_creation_during_enumeration_is_not_absence(self):
+        real_listdir = os.listdir
+        for entry in EXTENSIONS:
+            with self.scenario(entry=entry["id"]) as project:
+                registry = project / ".specify/extensions"
+                registry.mkdir(parents=True)
+
+                def mutate(descriptor):
+                    names = real_listdir(descriptor)
+                    (registry / (entry["id"] + ".partial")).write_text("artifact", encoding="utf-8")
+                    return names
+
+                with mock.patch.object(check.os, "listdir", side_effect=mutate):
+                    self.assertTrue(self.check_result(entry, project))
+
     def test_registry_and_parent_swaps_after_open_cannot_hide_artifacts(self):
         real_listdir = os.listdir
         for entry, component, replacement in product(
