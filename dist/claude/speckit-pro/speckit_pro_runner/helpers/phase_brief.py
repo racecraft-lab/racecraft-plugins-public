@@ -190,7 +190,7 @@ def internal_failure(request: Any, code: str, exc: Exception) -> dict[str, Any]:
 def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     """Return phase-brief/v1 dispatch data; gate and stop decisions stay separate.
 
-    The closed request inputs are phase, workflow_file and feature_dir strings, and optional domains, items and max_agents
+    The closed request inputs are phase, workflow_file and feature_dir strings, and optional domains, items, consensus_edited and max_agents
     for waves (dispatch_waves.py).
     Paths reject parent segments and control, format and line separator characters.
     feature_dir is workflow-root relative; workflow_file may be absolute but must name a file.

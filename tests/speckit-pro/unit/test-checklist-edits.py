@@ -1439,10 +1439,14 @@ class GuidanceTests(unittest.TestCase):
     def test_the_phase_four_flow_applies_proposals_through_the_helper_on_both_hosts(self) -> None:
         # Each host's own checklist passage: Claude's Phase 4 section, Codex's checklist-only loop step.
         for guide, anchor in zip(PHASE_EXECUTION_GUIDES, ("### Phase 4: Checklist", "Checklist only:"), strict=True):
-            passage = guide_view(guide).split(anchor, 1)[1][:3500]
-            apply_at, consensus_at, verify_at = (passage.find(text) for text in ("mode apply" if "Phase" in anchor else "in apply mode",
-                                                                               "consensus", "Mode: verify"))
-            self.assertTrue(0 <= apply_at < consensus_at < verify_at, (guide, apply_at, consensus_at, verify_at))
+            passage = guide_view(guide).split(anchor, 1)[1][:5000]
+            claude = "Phase" in anchor
+            apply_at, verify_at, consensus_at, rerun_at = (
+                passage.find(text) for text in ("mode apply" if claude else "in apply mode", "Mode: verify",
+                                                "Request the phase brief again with `items`" if claude else "Request the phase brief with items",
+                                                "`consensus_edited`"))
+            self.assertTrue(0 <= apply_at < verify_at < consensus_at < rerun_at, (guide, apply_at, verify_at, consensus_at, rerun_at))
+            self.assertIn("Never re-run a domain consensus did not edit" if claude else "With no such domain, nothing runs again", passage)
             for phrase in ("runner helper `checklist-edits`", "in domain order", "dry_run"):
                 self.assertIn(phrase, passage, guide)
             self.assertNotIn("Domain 2 may depend on Domain 1's gap fixes", passage)

@@ -251,12 +251,13 @@ for phase in PHASES starting from first_pending:
        the Failure Escalation Protocol. An interrupted apply names what reached disk
        (applied domains, a half-written domain's files, canonical paths that moved or could not be verified,
        whether the record was written or its state is unknown):
-       restore both files before any retry. After consensus, take a read_only baseline, spawn
+       restore both files before any retry. Then take a read_only baseline, spawn
        each verify wave of the first brief with both `Pass: verify` and `Mode: verify`,
        reusing the original domain prompt, phase brief inputs, readable files and
        dispatch context; consume every result before the next verify wave, then
        run `checklist-edits` in dry_run mode with no domains, no proposals and that
-       baseline: a refusal means a verify run wrote an artifact.
+       baseline: a refusal means a verify run wrote an artifact. Each domain runs
+       once, is fixed once and is verified once.
     5. Run consensus in main session if needed:
        Parse executor's "Unresolved for consensus" section, in workflow order.
        Request the phase brief with items and max_agents=subagent_slots.
@@ -274,6 +275,10 @@ for phase in PHASES starting from first_pending:
        consensus-protocol.md#round-3-tiebreak: a fresh analyst plus a
        max-effort `consensus-tiebreaker` resolve it in an interactive and an
        unattended run alike; it never asks the operator and never stops the run.
+       Checklist only: after consensus, re-run a domain only when a consensus edit
+       changed an artifact for it: request the brief with `consensus_edited` (those
+       domains, in domain order) and `max_agents=subagent_slots`, then repeat the
+       baseline, verify wave and dry_run check. With no such domain, nothing runs again.
     6. Specify, Plan, Checklist, Tasks and Analyze only:
        handle optional brief.hooks with event=after_<phase> under the confirmation
        rule in Extension Hook Events; record runs and skips in the decisions list.

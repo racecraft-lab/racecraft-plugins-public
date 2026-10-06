@@ -415,12 +415,13 @@ for phase in PHASES starting from first_pending:
        the Failure Escalation Protocol. An interrupted apply names what reached disk
        (applied domains, a half-written domain's files, canonical paths that moved or could not be verified,
        whether the record was written or its state is unknown):
-       restore both files before any retry. After consensus, take a read_only baseline, spawn
+       restore both files before any retry. Then take a read_only baseline, spawn
        each verify wave of the first brief with both `Pass: verify` and `Mode: verify`,
        reusing the original domain prompt, phase brief inputs, readable files and
        dispatch context; consume every result before the next verify wave, then
        run `checklist-edits` in dry_run mode with no domains, no proposals and that
-       baseline: a refusal means a verify run wrote an artifact.
+       baseline: a refusal means a verify run wrote an artifact. Each domain runs
+       once, is fixed once and is verified once.
     5. Run consensus in main session if needed:
        Parse executor's "Unresolved for consensus" section, in workflow order.
        Request the phase brief with items and max_agents=subagent_slots.
@@ -438,6 +439,10 @@ for phase in PHASES starting from first_pending:
        consensus-protocol.md#round-3-tiebreak: a fresh analyst plus a
        max-effort `consensus-tiebreaker` resolve it in an interactive and an
        unattended run alike; it never asks the operator and never stops the run.
+       Checklist only: after consensus, re-run a domain only when a consensus edit
+       changed an artifact for it: request the brief with `consensus_edited` (those
+       domains, in domain order) and `max_agents=subagent_slots`, then repeat the
+       baseline, verify wave and dry_run check. With no such domain, nothing runs again.
     6. Specify, Plan, Checklist, Tasks and Analyze only:
        handle optional brief.hooks with event=after_<phase> under the confirmation
        rule in Extension Hook Events; record runs and skips in the decisions list.
@@ -802,8 +807,8 @@ executor must not produce or substitute the G3 evidence it receives.
 
 Run the checklist domains as dispatch waves in check-and-propose mode:
 each returns its gaps and proposed edits and writes neither `spec.md` nor
-`plan.md`. Apply edits in domain order, then resolve all domains' gaps and
-run the verify waves:
+`plan.md`. Each domain runs once, is fixed once and is verified once. Apply
+edits in domain order, run the verify waves, then resolve all domains' gaps:
 
 ```text
 0. runner helper `checklist-edits`, mode read_only → baseline
@@ -827,16 +832,7 @@ run the verify waves:
    domain's files, canonical paths that moved or could not be verified, whether
    the record was written or its state is unknown): restore both files before any retry
 4. Collect each executor's "Unresolved for consensus" items, in domain order
-5. If unresolved gaps exist:
-   a. autopilot-state.json: each affected "<domain> Consensus" → in_progress
-   b. Request the phase brief again with `items` and `max_agents`, then follow
-      consensus-protocol.md §Batched Dispatch: the brief's security wave and
-      low-confidence wave, each in ONE turn; await → synthesizers in ONE
-      message; apply each Artifact Edit SERIALLY to spec.md or plan.md.
-      Round 2 escape-hatch: also batched across all queued gaps.
-      [ROUND_3_TIEBREAK]: consensus-protocol.md#round-3-tiebreak
-   c. autopilot-state.json: each "<domain> Consensus" → completed
-6. runner helper `checklist-edits`, mode read_only → verify baseline
+5. runner helper `checklist-edits`, mode read_only → verify baseline
    Reuse the phase brief inputs, readable files and dispatch context from
    the original domain prompt (SKILL.md Step 2).
    For each verify wave of the first brief: launch its `pass: verify` entries in ONE turn:
@@ -848,6 +844,22 @@ run the verify waves:
    spec.md and plan.md unchanged.
    Then runner helper `checklist-edits`, mode dry_run, with no domains, no
    proposals and the verify baseline: a refusal means a verify run wrote an artifact
+6. If unresolved gaps exist:
+   a. autopilot-state.json: each affected "<domain> Consensus" → in_progress
+   b. Request the phase brief again with `items` and `max_agents`, then follow
+      consensus-protocol.md §Batched Dispatch: the brief's security wave and
+      low-confidence wave, each in ONE turn; await → synthesizers in ONE
+      message; apply each Artifact Edit SERIALLY to spec.md or plan.md.
+      Round 2 escape-hatch: also batched across all queued gaps.
+      [ROUND_3_TIEBREAK]: consensus-protocol.md#round-3-tiebreak
+   c. Re-run a domain only when a consensus edit changed an artifact for it:
+      its executor returned an item that an applied Artifact Edit resolved in
+      `spec.md` or `plan.md`. With no such domain, nothing runs again.
+      Otherwise take a read_only baseline, request the phase brief with
+      `consensus_edited` (those domains, in domain order) and `max_agents`,
+      launch its verify wave as in step 5, then run `checklist-edits` in
+      dry_run mode as there. Never re-run a domain consensus did not edit.
+   d. autopilot-state.json: each "<domain> Consensus" → completed
 7. autopilot-state.json: every domain task → completed
 ```
 
@@ -863,8 +875,9 @@ confidence, security tag or keyword), the main session follows the
 **Why ordered application after a wave:** Executors only propose edits, so
 independent domain checks can run together. Domain 2's edit may build on
 Domain 1's: the runner applies proposals one at a time in workflow order,
-so the result does not depend on which executor returned first. Consensus
-edits stay serial, and the verify waves re-run every domain after the last edit.
+so the result does not depend on which executor returned first. The verify
+waves re-run every domain once after those edits. Consensus edits stay serial,
+and only the domains they changed run a further time.
 
 **Gate:** G4 — verify 0 `[Gap]` markers
 

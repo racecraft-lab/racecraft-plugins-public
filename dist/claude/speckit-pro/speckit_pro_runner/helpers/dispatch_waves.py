@@ -16,22 +16,22 @@ CONSENSUS_PHASES = frozenset({"Clarify", "Checklist", "Analyze"})
 DOMAIN_NAME = re.compile(r"[a-z0-9][a-z0-9_-]{0,63}")
 MAX_DOMAINS, MAX_ITEMS, MAX_LINE = 12, 100, 2000
 ITEM_FIELDS = {"line", "confidence"}
-WAVE_INPUTS = ("domains", "items", "max_agents")
+WAVE_INPUTS = ("domains", "items", "consensus_edited", "max_agents")
 MAX_AGENTS = 1000
 # Checklist executors only propose edits; checklist-edits applies them in domain order after every result returns.
 # Keeping the switch retains the serial fallback for executors that write shared artifacts.
 CHECKLIST_DOMAINS_PARALLEL = True
 
 
-def checked_domains(phase: str, raw: Any) -> list[str]:
+def checked_domains(phase: str, raw: Any, field: str = "domains") -> list[str]:
     """Checklist domain names in dispatch order; ValueError when the phase has no domains or the list is unusable."""
     if phase != CHECKLIST_PHASE:
-        raise ValueError("domains apply to the Checklist phase only")
+        raise ValueError(f"{field} apply to the Checklist phase only")
     if not isinstance(raw, list) or not 0 < len(raw) <= MAX_DOMAINS:
-        raise ValueError(f"domains must list 1 to {MAX_DOMAINS} names")
+        raise ValueError(f"{field} must list 1 to {MAX_DOMAINS} names")
     names = [require_text(name, "domain") for name in raw]
     if len(set(names)) != len(names) or not all(DOMAIN_NAME.fullmatch(name) for name in names):
-        raise ValueError("domains must be distinct lowercase names of letters, digits, hyphens and underscores")
+        raise ValueError(f"{field} must be distinct lowercase names of letters, digits, hyphens and underscores")
     return names
 
 
@@ -53,6 +53,7 @@ def checked_items(phase: str, raw: Any) -> list[dict[str, Any]]:
 class WaveRequest(NamedTuple):
     domains: list[str]
     items: list[dict[str, Any]]
+    consensus_edited: list[str]
     max_agents: int
 
 
@@ -61,12 +62,13 @@ def checked_wave_request(phase: str, raw: dict[str, Any]) -> WaveRequest:
     `domains` or `items`: Claude Code's SUBAGENT_WAVE_SIZE, Codex's subagent_slots (1 when the host exposes no count)."""
     domains = checked_domains(phase, raw["domains"]) if "domains" in raw else []
     items = checked_items(phase, raw["items"]) if "items" in raw else []
+    edited = checked_domains(phase, raw["consensus_edited"], "consensus_edited") if "consensus_edited" in raw else []
     limit = raw.get("max_agents", 1)
-    if ("domains" in raw or "items" in raw) and "max_agents" not in raw:
-        raise ValueError("max_agents is required with domains or items")
+    if any(key in raw for key in WAVE_INPUTS[:3]) and "max_agents" not in raw:
+        raise ValueError("max_agents is required with domains, items or consensus_edited")
     if isinstance(limit, bool) or not isinstance(limit, int) or not 0 < limit <= MAX_AGENTS:
         raise ValueError(f"max_agents must be a whole number from 1 to {MAX_AGENTS}")
-    return WaveRequest(domains, items, limit)
+    return WaveRequest(domains, items, edited, limit)
 
 
 def dispatch(agent: str, model_for: ModelFor, **inputs: Any) -> dict[str, Any]:
@@ -88,23 +90,27 @@ def consensus_waves(items: list[dict[str, Any]], model_for: ModelFor) -> list[li
     return [waves["security"], waves["low_confidence"]]
 
 
-def checklist_waves(domains: list[str], model_for: ModelFor) -> tuple[list[list[dict[str, Any]]], list[dict[str, Any]]]:
-    """The domain-run waves, one per domain unless CHECKLIST_DOMAINS_PARALLEL, and the verify wave of every domain.
+def verify_wave(domains: list[str], model_for: ModelFor) -> list[dict[str, Any]]:
+    """One verify pass per domain; a verify pass keeps spec.md and plan.md unchanged, so its entries share a wave."""
+    return [dispatch("checklist-executor", model_for, domain=name, **{"pass": "verify"}) for name in domains]
 
-    A verify pass keeps spec.md and plan.md unchanged, so its entries can share a wave either way.
-    """
+
+def checklist_waves(domains: list[str], model_for: ModelFor) -> tuple[list[list[dict[str, Any]]], list[dict[str, Any]]]:
+    """The domain-run waves, one per domain unless CHECKLIST_DOMAINS_PARALLEL, and the verify wave of every domain."""
     runs = [dispatch("checklist-executor", model_for, domain=name) for name in domains]
-    verify = [dispatch("checklist-executor", model_for, domain=name, **{"pass": "verify"}) for name in domains]
-    return ([runs] if CHECKLIST_DOMAINS_PARALLEL else [[run] for run in runs]), verify
+    return ([runs] if CHECKLIST_DOMAINS_PARALLEL else [[run] for run in runs]), verify_wave(domains, model_for)
 
 
 def compose_waves(request: WaveRequest, model_for: ModelFor) -> list[list[dict[str, Any]]]:
-    """Domain waves ({domain}), the security and low-confidence waves ({item}), then the verify wave
-    ({domain, pass: "verify"}); a wave with no agents is dropped, so no domains and no items give no waves.
+    """Domain waves ({domain}), the verify wave ({domain, pass: "verify"}), the security and low-confidence waves
+    ({item}), then one more verify wave for the domains a consensus edit changed. Each domain is run once, fixed once
+    and verified once; nothing re-runs a domain after consensus unless `consensus_edited` names it. A wave with no
+    agents is dropped, so no domains, items or edited domains give no waves.
 
     A wave larger than the host's limit becomes consecutive sub-waves of at most `max_agents`, in entry order.
     """
     runs, verify = checklist_waves(request.domains, model_for)
     size = request.max_agents
-    return [wave[start:start + size] for wave in [*runs, *consensus_waves(request.items, model_for), verify]
+    rerun = verify_wave(request.consensus_edited, model_for)
+    return [wave[start:start + size] for wave in [*runs, verify, *consensus_waves(request.items, model_for), rerun]
             for start in range(0, len(wave), size)]
