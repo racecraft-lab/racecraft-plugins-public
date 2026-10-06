@@ -27,9 +27,8 @@
     "An explicit `[security]` tag, or, on a keyword route, any analyst returning `security_relevant: true`, keeps unanimity"
   ],
   "ConsensusSynthesizerRegressionTests.test_security_relevant_raises_the_bar_only_on_a_security_route#1": [
-    "| **Non-security route** (`Security Route: none`) |",
-    "a `security_relevant: true` answer does not raise the bar",
-    "two disagreeing Round 1 analysts still escape to Round 2"
+    "| **Security item** (`[security]` tag, or keyword with any analyst returning `security_relevant: true` or omitting the field) | Apply only on 3/3 agreement.",
+    "| **Keyword-only item** (every routed analyst returns `security_relevant: false`) | Use the ordinary rules above: a 2/3 majority applies. |"
   ],
   "ConsensusSynthesizerRegressionTests.test_escape_phrases_and_security_override_are_complete#1": [
     "insufficient context",
@@ -60,9 +59,9 @@
   ],
   "Round3TiebreakGuidanceTests.test_round3_tiebreak_replaces_every_consensus_human_stop_in_the_protocol#1": [
     "## Round 3 Tiebreak",
-    "a Round 2 all-disagree",
+    "all three analysts disagreeing, in Round 1 or after a Round 2 retry",
     "a security item without 3/3 agreement",
-    "an analyst that fails its retry",
+    "an analyst that fails or escapes its retry",
     "one fresh `spec-context-analyst`",
     "a `consensus-tiebreaker` at max effort",
     "all prior analyst answers, the constitution, and the technical roadmap",
@@ -76,7 +75,7 @@
     "never a mid-run stop",
     "An interactive run and an unattended run behave the same",
     "Outcome `[ROUND 3]`",
-    "IF Flags includes [ROUND_3_TIEBREAK]: run the Round 3 tiebreak"
+    "ELSE IF Flags includes [ROUND_3_TIEBREAK] OR low confidence: run the Round 3 tiebreak"
   ],
   "Round3TiebreakGuidanceTests.test_round3_tiebreak_replaces_every_consensus_human_stop_in_the_protocol#2": [
     "AskUserQuestion",

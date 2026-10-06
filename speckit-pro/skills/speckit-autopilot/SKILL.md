@@ -1541,8 +1541,8 @@ directions; do not infer a broader precedence rule.
   reroutes a task to verification reserves with `metadata_only: true`; the
   runner proves it against the committed baseline and spends no cycle. Never
   reset or bypass the ledger otherwise; `checkpoint_required` and ledger integrity errors still stop.
-- **Consensus cannot agree** (Round 2 all-disagree, a security item without
-  3/3, or an analyst that fails its retry): run the Round 3
+- **Consensus cannot agree** (all three analysts disagree, a security item
+  without 3/3, or an analyst that fails its retry): run the Round 3
   agent tiebreak, a fresh analyst plus a max-effort `consensus-tiebreaker`,
   record the most conservative option that satisfies the spec as an assumption
   with the dissent logged, and continue. Only a choice that changes product

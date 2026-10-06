@@ -256,7 +256,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 ### Consensus Tiebreaker
 
-- **Purpose:** Resolves a consensus item that Rounds 1 and 2 could not settle (Round 2 all-disagree, a security item without 3/3, or a failed analyst).
+- **Purpose:** Resolves a consensus item that the earlier rounds could not settle (all three analysts disagree, a security item without 3/3, or a failed analyst).
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro consensus-tiebreaker agent
 - **Claude Code:** plugin agent (required)

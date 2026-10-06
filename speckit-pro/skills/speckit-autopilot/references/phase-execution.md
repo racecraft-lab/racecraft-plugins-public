@@ -3064,10 +3064,11 @@ Clarify, Checklist, and Analyze keep the shared analysts and those flows
 unchanged.
 
 **When consensus does not answer, the item takes a Round 3 tiebreak.** Three
-ways lead there: all three analysts disagreeing after Round 2, a Round-1 escape
-whose Round 2 still cannot resolve, and an analyst that fails its single
-retry. The first two return `human_review` from `sweep-apply-result` with basis
-`all_disagree` or `escape_unresolved`. An analyst that fails its retry is
+ways lead there: all three analysts disagreeing, a perspective that escapes,
+and an analyst that fails its single retry. The sweep has no Round 2: its
+synthesis runs once over the three accepted perspectives. The first two return
+`human_review` from `sweep-apply-result` with basis `all_disagree` or
+`escape_unresolved`. An analyst that fails its retry is
 <!-- host:claude: Claude isolates each sweep call in a claude --print launcher guarded by hooks -->
 replaced by a fresh analyst, not a human: launch that perspective once more
 through `launch_claude`, which mints a new capability and replaces the failed

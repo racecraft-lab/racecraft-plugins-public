@@ -576,12 +576,29 @@ class SecurityRoundReferenceTests(unittest.TestCase):
             "Stage 6 — Apply accepted Round-2 edits serially; unresolved items go to Round 3",
             *(f"one synthesizer per security {item}" for item in ("item", "gap", "finding")),
         )
-        retired = ("### Two-analyst rule", "two disagreeing Round 1 analysts", "N=1 high-confidence | N=2 both-agree", "All disagree (after Round 2)")
         for host in HOSTS:
             with self.subTest(host=host):
                 text = (host_skill_root(host) / TIER_REFERENCE).read_text(encoding="utf-8")
                 self.assertEqual([], [phrase for phrase in required if phrase not in text])
-                self.assertEqual([], [phrase for phrase in retired if phrase in text])
+
+    def test_no_retired_round_phrase_returns_in_source_or_rendered_text(self) -> None:
+        # Whitespace is collapsed first, so a phrase wrapped across lines in a
+        # YAML description or a Markdown paragraph still counts as present.
+        surfaces = [
+            ("source", PLUGIN_ROOT),
+            *((f"view:{host}", host_skill_root(host)) for host in HOSTS),
+            *((f"dist:{host}", REPO_ROOT / "dist" / host / "speckit-pro") for host in HOSTS),
+        ]
+        for surface, root in surfaces:
+            found = sorted(
+                f"{path.relative_to(root)}: {phrase}"
+                for path in root.rglob("*")
+                if path.suffix in RETIRED_PHRASE_SUFFIXES and path.is_file() and path.name != "CHANGELOG.md"
+                for phrase in RETIRED_ROUND_PHRASES
+                if phrase in " ".join(path.read_text(encoding="utf-8", errors="replace").split())
+            )
+            with self.subTest(surface=surface):
+                self.assertEqual([], found)
 
 
 class SecurityKeywordCopyTests(unittest.TestCase):
@@ -659,6 +676,26 @@ PLAN_STAGE_CONSENSUS_AGENTS = (
     "spec-context-analyst", "domain-researcher", "consensus-synthesizer", "consensus-tiebreaker",
 )
 DECISION_MODEL_MARKERS = ("typesafe-jev", "decision model", "typed judgment")
+# Wording of the retired one- and two-analyst Round 1 and of an all-disagree
+# that only Round 2 could reach. Security Round 1 already has all three
+# analysts, so all-disagree flags Round 3 in whichever round it happens.
+RETIRED_ROUND_PHRASES = (
+    "### Two-analyst rule",
+    "two disagreeing Round 1 analysts",
+    "N=1 high-confidence | N=2 both-agree",
+    "All disagree (after Round 2)",
+    "Round 2 all-disagree",
+    "a Round-1 escape that Round 2 cannot resolve",
+    "disagreeing after Round 2",
+    "whose Round 2 still cannot resolve",
+    "Rounds 1 and 2 could not settle",
+    "Rounds 1 and 2 could not agree",
+    "Round 1, single-analyst, synthesizer flagged high",
+    "Round 1, two-analyst, agreement",
+    "Round 2, classic agreement counts",
+    "OR its response contains escape-hatch keywords",
+)
+RETIRED_PHRASE_SUFFIXES = frozenset({".md", ".toml", ".json", ".yaml", ".yml"})
 
 
 def run_dist_helper(host: str, line: str, confidence: str, analyst_confidence: str | None = None) -> dict[str, object]:

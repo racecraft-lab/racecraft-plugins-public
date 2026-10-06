@@ -115,14 +115,17 @@ ROUND 1 — security (all three)
   Enter these rounds only when its tier is security.
   Spawn all three analysts it returns and await their responses.
 
-  IF an analyst failed OR its response contains escape-hatch keywords
-     ("insufficient context", "not in this codebase", "no precedent",
-      "outside my scope", "cannot answer from this perspective"):
-       queue only that analyst for ROUND 2.
+  IF an analyst failed (no valid response):
+       queue only that analyst for ROUND 2; the item is not synthesized yet.
 
   ELSE:
        Run consensus-synthesizer with all three responses.
-       Apply the Consensus Rules below: APPLY edit and log, OR flag [ROUND_3_TIEBREAK].
+       IF its Flags include [ESCAPE_TO_ROUND_2] (a response carried an escape
+          phrase such as "insufficient context", "not in this codebase",
+          "no precedent", "outside my scope", or
+          "cannot answer from this perspective"):
+            queue only the escaped analysts for ROUND 2.
+       ELSE apply the Consensus Rules below: APPLY edit and log, OR flag [ROUND_3_TIEBREAK].
        Low synthesizer confidence goes to ROUND 3, not another analyst fan-out.
 
 ROUND 2 — retry failed or escaped analysts
@@ -380,9 +383,10 @@ Consensus that cannot agree is resolved by agents, never by a question or a
 stop. A synthesizer result flagged `[ROUND_3_TIEBREAK]` is the Round 3
 trigger; it asks no human. Three situations raise it:
 
-- a Round 2 all-disagree (or a Round-1 escape that Round 2 cannot resolve),
+- all three analysts disagreeing, in Round 1 or after a Round 2 retry,
 - a security item without 3/3 agreement, and
-- an analyst that fails its retry (see below).
+- an analyst that fails or escapes its retry and whose fresh replacement
+  also fails or escapes (see below).
 
 The parent orchestrator, never an executor, analyst, or synthesizer, runs
 Round 3 after the batch's other edits are applied. An interactive run and an
@@ -778,10 +782,10 @@ from the log alone.
 
 | # | Type    | Question/Gap/Finding         | Categories         | Round | Outcome        | Resolution                 | Analysts Used                          |
 |---|---------|------------------------------|--------------------|-------|----------------|----------------------------|----------------------------------------|
-| 1 | Clarify | Session token format?        | [domain]           | 1     | high-confidence| JWT with 24h expiry        | domain-researcher                      |
-| 2 | Gap     | Rate limit thresholds        | [codebase, domain] | 1     | both-agree     | Added to spec §4.2         | codebase-analyst, domain-researcher    |
-| 3 | Finding | Missing integration tests    | [ambiguous]        | 2     | 3/3            | Added task T050            | codebase-analyst, spec-context-analyst, domain-researcher |
-| 4 | Clarify | Bcrypt vs argon2?            | [codebase]         | 1→2   | escape-hatch   | Argon2 (NIST SP 800-63B)   | codebase-analyst (Round 1) + spec-context-analyst, domain-researcher (Round 2) |
+| 1 | Clarify | Session token format?        | [security]         | 1     | 3/3            | JWT with 24h expiry        | codebase-analyst, spec-context-analyst, domain-researcher |
+| 2 | Gap     | Token budget per request     | [domain]           | 1     | 2/3            | Added to spec §4.2         | All (keyword `token`; every analyst `security_relevant: false`) |
+| 3 | Finding | Password reset rate limit    | [codebase]         | 2     | 3/3            | Added task T050            | All (keyword `password`); domain-researcher failed in Round 1 and answered on its Round 2 retry |
+| 4 | Clarify | Bcrypt vs argon2?            | [security]         | 1→2   | escape-hatch   | Argon2 (NIST SP 800-63B)   | All; codebase-analyst escaped in Round 1 and answered on its Round 2 retry |
 | 5 | Finding | OAuth callback URL handling  | [security]         | 1→3   | [ROUND 3]      | assumption: reject unknown callback URLs; dissent: allow-list per tenant | All (security tag → all-3; not unanimous) + fresh spec-context-analyst |
 ```
 
@@ -800,8 +804,6 @@ the source discriminator, so a breach of the threshold can be attributed to
 sweep rows or to phase rows without either being excluded from the rate.
 
 **Outcome values:**
-- `high-confidence` — Round 1, single-analyst, synthesizer flagged high
-- `both-agree` — Round 1, two-analyst, agreement
-- `3/3`, `2/3` — Round 2, classic agreement counts
-- `escape-hatch` — Round 1 escaped to Round 2 (count this in the 10% trigger metric)
-- `[ROUND 3]` — the item took the Round 3 tiebreak (Round 2 all-disagree, a security item without 3/3, or a failed analyst). The Resolution cell reads `assumption: <chosen option>; dissent: <positions not chosen>`, or adds `scope deferred` when the synthesizer flagged `[SCOPE_DEFERRED]`. Count it in the 10% trigger metric like an escape
+- `3/3`, `2/3` — the three-analyst agreement count, in Round 1 or after a Round 2 retry (a 2/3 row is a keyword-only item whose analysts all returned `security_relevant: false`)
+- `escape-hatch` — an analyst escaped in Round 1 and was retried in Round 2 (count this in the 10% trigger metric)
+- `[ROUND 3]` — the item took the Round 3 tiebreak (all three disagree, a security item without 3/3, or a failed analyst). The Resolution cell reads `assumption: <chosen option>; dissent: <positions not chosen>`, or adds `scope deferred` when the synthesizer flagged `[SCOPE_DEFERRED]`. Count it in the 10% trigger metric like an escape
