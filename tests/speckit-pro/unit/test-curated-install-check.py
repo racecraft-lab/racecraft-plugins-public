@@ -63,6 +63,11 @@ class CuratedInstallCase(unittest.TestCase):
         ):
             return check.check_entry(entry, project)
 
+    def assert_artifact_rejected(self, entry, relative, shape):
+        with self.scenario(entry=entry["id"], path=relative, shape=shape) as project:
+            create_artifact(project / relative, shape)
+            self.assertTrue(self.check_result(entry, project))
+
 
 class ExtensionExitTests(CuratedInstallCase):
     def test_zero_exit_is_not_a_verified_noninteractive_abort(self):
@@ -106,26 +111,21 @@ class ExtensionArtifactTests(CuratedInstallCase):
     def test_exact_and_sibling_links_and_hard_links_are_artifacts(self):
         shapes = ("directory", "file", "symlink", "dangling-link", "hard-link")
         for entry, exact, shape in product(EXTENSIONS, (True, False), shapes):
-            with self.scenario(entry=entry["id"], exact=exact, shape=shape) as project:
-                name = entry["id"] if exact else ".partial"
-                create_artifact(project / ".specify/extensions" / name, shape)
-                self.assertTrue(self.check_result(entry, project))
+            name = entry["id"] if exact else ".partial"
+            self.assert_artifact_rejected(entry, ".specify/extensions/" + name, shape)
 
     def test_registry_and_parent_redirects_cannot_prove_absence(self):
         components = (".specify", ".specify/extensions")
         shapes = ("file", "empty-directory-link", "dangling-link")
         for entry, component, shape in product(EXTENSIONS, components, shapes):
-            with self.scenario(entry=entry["id"], component=component, shape=shape) as project:
-                create_artifact(project / component, shape)
-                self.assertTrue(self.check_result(entry, project))
+            self.assert_artifact_rejected(entry, component, shape)
 
     def test_inspection_errors_are_not_absence(self):
-        for entry in EXTENSIONS:
-            for error in (PermissionError, OSError):
-                with self.scenario(entry=entry["id"], error=error.__name__) as project:
-                    (project / ".specify/extensions").mkdir(parents=True)
-                    with mock.patch.object(check.os, "listdir", side_effect=error("cannot inspect")):
-                        self.assertTrue(self.check_result(entry, project))
+        for entry, operation, error in product(EXTENSIONS, ("listdir", "fstat"), (PermissionError, OSError)):
+            with self.scenario(entry=entry["id"], operation=operation, error=error.__name__) as project:
+                (project / ".specify/extensions").mkdir(parents=True)
+                with mock.patch.object(check.os, operation, side_effect=error("cannot inspect")):
+                    self.assertTrue(self.check_result(entry, project))
 
     def test_normal_abort_with_absent_or_empty_registry_passes(self):
         for entry in EXTENSIONS:
@@ -197,13 +197,16 @@ class RegistryBindingTests(CuratedInstallCase):
     def test_registry_and_parent_swaps_after_open_cannot_hide_artifacts(self):
         real_listdir = os.listdir
         for entry, component, replacement in product(
-            EXTENSIONS, (".specify", ".specify/extensions"), ("directory", "symlink")
+            ENTRIES, ("parent", "registry"), ("directory", "symlink")
         ):
             with self.scenario(entry=entry["id"], component=component, replacement=replacement) as project:
-                (project / ".specify/extensions").mkdir(parents=True)
+                registry = project / check.REGISTRY_DIRS[entry["kind"]]
+                registry.mkdir(parents=True)
+                if entry["kind"] == "preset":
+                    (registry / entry["id"]).mkdir()
 
                 def swap(descriptor):
-                    target = project / component
+                    target = project / ".specify" if component == "parent" else registry
                     target.rename(target.with_name(target.name + "-old"))
                     source = project / "replacement"
                     source.mkdir()
@@ -211,13 +214,28 @@ class RegistryBindingTests(CuratedInstallCase):
                         target.symlink_to(source, target_is_directory=True)
                     else:
                         source.rename(target)
-                    registry = project / ".specify/extensions"
                     registry.mkdir(exist_ok=True)
                     (registry / (entry["id"] + ".partial")).write_text("artifact", encoding="utf-8")
                     return real_listdir(descriptor)
 
                 with mock.patch.object(check.os, "listdir", side_effect=swap):
-                    self.assertTrue(self.check_result(entry, project))
+                    self.assertTrue(self.check_result(entry, project, code=0 if entry["kind"] == "preset" else 1))
+
+    def test_preset_target_swap_cannot_preserve_success(self):
+        entry = next(entry for entry in ENTRIES if entry["kind"] == "preset")
+        real_listdir = os.listdir
+        for shape in ("file", "directory", "empty-directory-link"):
+            with self.scenario(shape=shape) as project:
+                target = project / ".specify/presets" / entry["id"]
+                target.mkdir(parents=True)
+
+                def swap(descriptor):
+                    target.rename(target.with_name(target.name + "-old"))
+                    create_artifact(target, shape)
+                    return real_listdir(descriptor)
+
+                with mock.patch.object(check.os, "listdir", side_effect=swap):
+                    self.assertTrue(self.check_result(entry, project, code=0))
 
     def test_missing_registry_cannot_hide_a_parent_swap(self):
         real_open = os.open
