@@ -1,22 +1,34 @@
 """The Codex configuration inventory behind `codex_approval_posture` (ADR 0008, security finding F1263-946bd436).
 
-Scaffold sends every configuration key set in any effective layer as a dotted TOML key path with its value.
+Scaffold sends every configuration key set in any effective layer as a dotted TOML key path with its value. The
+inventory is the evidence: the posture verifies only when every key in it proves the conservative profile.
+
+Key grammar. A key path is one or more segments joined by single dots, with no whitespace. A segment is bare
+(letters, digits, `_` and `-`) or a double-quoted string of printable characters without `"` or `\\`. A quoted
+segment names the same key as the bare segment with the same text, and a quoted dot stays inside its segment.
+Each path is canonicalized once into its segment texts. Two keys with the same canonical path, a key that is
+also a table holding another key, and any key outside the grammar make a malformed inventory, which is refused.
+
 Each key is accounted for in one of three ways, or the posture never verifies:
 
-- a summary fact or posture control already judges it (`MODELED_SETTINGS`);
-- it cannot act on approvals, the sandbox, the process environment, egress or execution (`INERT_SETTINGS`);
+- a summary fact or posture control models it (`MODELED_SETTINGS`), and its value agrees with that fact or
+  control; a value that contradicts an observed fact or acting control is `contradicted`, so `unavailable`;
+- it cannot act on approvals, the sandbox, the process environment, egress, execution, external content or
+  configuration activation (`INERT_SETTINGS`);
 - it holds its conservative value (`CONSERVATIVE_SETTINGS`).
 
-Any other key, a name this module does not know included, is `outside` when its value was observed and
-`unobservable` when it was not. A key absent from every layer keeps the Codex default, which no project file
-sets. Key lists follow the Codex configuration reference (learn.chatgpt.com/docs/config-file/config-reference).
-Patterns match one segment per `*`; a final `**` matches one or more. Values and key names never reach the
-record as text: one digest holds each key path and its class, never a value.
+Rules name exact leaves; a `*` matches one user-named segment, such as a profile, app or server name, and
+nothing matches recursively. Any other key, an unknown descendant of a known table included, is `outside` when
+its value was observed and `unobservable` when it was not; so is a modeled or conservative key whose value is
+`"unobservable"`. A key absent from every layer keeps the Codex default. Key lists follow the Codex
+configuration reference (learn.chatgpt.com/docs/config-file/config-reference). Values and key names never reach
+the record as text: one digest holds each key path and its class, never a value.
 """
 
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from typing import Any
 
 from ..agent_materialization import digest
@@ -28,6 +40,12 @@ MAX_KEY = 256
 # One TOML key segment: bare, or double-quoted without quotes, escapes or control characters.
 SEGMENT_RE = re.compile(r'[A-Za-z0-9_-]+|"[^"\\\x00-\x1f\x7f]+"')
 
+Settings = dict[tuple[str, ...], Any]
+Check = Callable[[Any], bool]
+# What one modeled key, given its path, value and the whole inventory, requires of the summary: each target
+# fact or control name with the test its observed value must pass.
+Forces = Callable[[tuple[str, ...], Any, Settings], dict[str, Check]]
+
 
 def pattern(key: str) -> tuple[str, ...]:
     """A rule key as segments; a quoted segment may hold dots."""
@@ -38,38 +56,159 @@ def patterns(*keys: str) -> tuple[tuple[str, ...], ...]:
     return tuple(pattern(key) for key in keys)
 
 
-# Keys a summary fact or posture control judges. Their values are read there, so they are accounted for here.
-MODELED_SETTINGS = patterns(
-    "approval_policy", *(f"approval_policy.granular.{name}" for name in (
-        "sandbox_approval", "rules", "mcp_elicitations", "request_permissions", "skill_approval")),
-    "sandbox_mode", "approvals_reviewer",
-    *(f"sandbox_workspace_write.{name}" for name in (
-        "network_access", "writable_roots", "exclude_slash_tmp", "exclude_tmpdir_env_var")),
-    "default_permissions", "permissions.*.**",  # any custom profile in use is `permission_profile=custom`
-    "web_search", "tools.web_search", "tools.web_search.**", "features.web_search", "features.web_search_cached",
-    "features.web_search_request",
-    "features.apps", *(f"apps.*.{name}" for name in (
-        "approvals_reviewer", "default_tools_approval_mode", "default_tools_enabled", "destructive_enabled",
-        "enabled", "open_world_enabled")), "apps.*.tools.*.approval_mode", "apps.*.tools.*.enabled",
-    "auto_review.policy", "auto_review.extra_policy",
-    *(f"mcp_servers.*.{name}" for name in (
-        "default_tools_approval_mode", "enabled_tools", "disabled_tools", "enabled", "startup_timeout_sec",
-        "startup_timeout_ms", "tool_timeout_sec")), "mcp_servers.*.tools.*.approval_mode",
-    "plugins.*.enabled", *(f"plugins.*.mcp_servers.*.{name}" for name in (
-        "default_tools_approval_mode", "enabled_tools", "disabled_tools", "enabled")),
-    "plugins.*.mcp_servers.*.tools.*.approval_mode",
-    "features.hooks",  # each loaded hook is judged by codex_hook_trust
+BOOLEAN = "boolean"
+NAMES = "names"
+TEXT = "text"
+NUMBER = "number"
+SCALAR = "scalar"
+ANY = "any"
+BROAD_MODES = ("auto", "writes", "approve")
+APPROVAL_MODES = ("prompt", *BROAD_MODES)
+BUILTIN_PROFILES = {":read-only": "read-only", ":workspace": "workspace", ":danger-full-access": "danger-full-access"}
+GRANULAR = ("sandbox_approval", "rules", "mcp_elicitations", "request_permissions", "skill_approval")
+
+
+def one_of(*values: Any) -> Check:
+    return lambda observed: observed in values
+
+
+def sets(target: str, convert: Callable[[Any], Any] = lambda value: value) -> Forces:
+    """The key alone sets the fact or control, so the summary must hold exactly its value."""
+    return lambda path, value, settings: {target: one_of(convert(value))}
+
+
+def never_off(path: tuple[str, ...], settings: Settings) -> bool:
+    return False
+
+
+def broadens(target: str, trigger: tuple[Any, ...], allowed: tuple[Any, ...],
+             off: Callable[[tuple[str, ...], Settings], bool] = never_off) -> Forces:
+    """One entry of an aggregate control: a value in `trigger` requires `allowed` unless the inventory switches
+    its app, server or tool off. Another value settles nothing alone, since other entries decide the aggregate."""
+    return lambda path, value, settings: ({target: one_of(*allowed)}
+                                          if value in trigger and not off(path, settings) else {})
+
+
+def nothing(path: tuple[str, ...], value: Any, settings: Settings) -> dict[str, Check]:
+    """Enablement and tool lists only scope the entries whose approval and hint keys the controls judge."""
+    return {}
+
+
+def app_off(path: tuple[str, ...], settings: Settings) -> bool:
+    return settings.get(("features", "apps")) is False or (
+        path[1] != "_default" and settings.get(("apps", path[1], "enabled")) is False)
+
+
+def app_tool_off(path: tuple[str, ...], settings: Settings) -> bool:
+    return app_off(path, settings) or settings.get((*path[:4], "enabled")) is False
+
+
+def server_off(path: tuple[str, ...], settings: Settings) -> bool:
+    return settings.get((*path[:2], "enabled")) is False
+
+
+def plugin_server_off(path: tuple[str, ...], settings: Settings) -> bool:
+    return settings.get((*path[:2], "enabled")) is False or settings.get((*path[:4], "enabled")) is False
+
+
+def timeout(target: str, per_second: int = 1) -> Forces:
+    """A server timeout the summary must cover: the summary is whole seconds no smaller than it."""
+    return lambda path, value, settings: {target: lambda observed: type(observed) is int
+                                          and value <= observed * per_second}
+
+
+def custom_profile(path: tuple[str, ...], value: Any, settings: Settings) -> dict[str, Check]:
+    """A leaf of the selected profile, or of a profile named like a built-in one, makes the profile custom."""
+    name = path[1]
+    if name.startswith(":") or settings.get(("default_permissions",)) == name:
+        return {"permission_profile": one_of("custom")}
+    return {}
+
+
+def granular(name: str) -> Forces:
+    return lambda path, value, settings: {"approval_policy": one_of("granular"),
+                                          f"approval_policy.granular.{name}": one_of(value)}
+
+
+def switch(on: str, off: str) -> Callable[[Any], str]:
+    return lambda value: on if value else off
+
+
+PERMISSION_LEAVES = (
+    "description", "extends", "filesystem.glob_scan_max_depth", "filesystem.*", "filesystem.*.*",
+    *(f"network.{name}" for name in (
+        "allow_local_binding", "allow_upstream_proxy", "dangerously_allow_all_unix_sockets",
+        "dangerously_allow_non_loopback_proxy", "enable_socks5", "enable_socks5_udp", "enabled", "mode",
+        "proxy_url", "socks_url", "domains.*", "unix_sockets.*")),
+    "workspace_roots.*",
 )
-# Keys that cannot act on approvals, the sandbox, the process environment, egress or execution.
+WEB_SEARCH_TOOL_LEAVES = ("context_size", "allowed_domains", *(f"location.{name}" for name in (
+    "country", "region", "city", "timezone")))
+APP_APPROVAL = broadens("app_tool_approval", BROAD_MODES, BROAD_MODES, app_off)
+MCP_APPROVAL = broadens("mcp_tool_approval", BROAD_MODES, BROAD_MODES, server_off)
+PLUGIN_MCP_APPROVAL = broadens("plugin_mcp_tool_approval", BROAD_MODES, BROAD_MODES, plugin_server_off)
+# Keys a summary fact or posture control models, as (accepted values or a kind, what the value requires of
+# the summary). Facts are approval_policy (with its granular flags), sandbox_mode, approvals_reviewer and
+# both MCP timeouts; every other target is a posture control. A web search tool table enables the tool.
+MODELED_SETTINGS: dict[str, tuple[Any, Forces]] = {
+    "approval_policy": (("on-request", "never", "on-failure", "untrusted"), sets("approval_policy")),
+    **{f"approval_policy.granular.{name}": (BOOLEAN, granular(name)) for name in GRANULAR},
+    "sandbox_mode": (("read-only", "workspace-write", "danger-full-access"), sets("sandbox_mode")),
+    "approvals_reviewer": (("user", "auto_review"), sets("approvals_reviewer")),
+    "sandbox_workspace_write.network_access": (BOOLEAN, sets("workspace_network_access",
+                                                             switch("enabled", "disabled"))),
+    "sandbox_workspace_write.writable_roots": (NAMES, sets("workspace_writable_roots", switch("added", "none"))),
+    "sandbox_workspace_write.exclude_slash_tmp": (BOOLEAN, sets("workspace_slash_tmp",
+                                                                switch("excluded", "writable"))),
+    "sandbox_workspace_write.exclude_tmpdir_env_var": (BOOLEAN, sets("workspace_tmpdir",
+                                                                     switch("excluded", "writable"))),
+    "default_permissions": (TEXT, sets("permission_profile", lambda value: BUILTIN_PROFILES.get(value, "custom"))),
+    **{f"permissions.*.{leaf}": (SCALAR, custom_profile) for leaf in PERMISSION_LEAVES},
+    "web_search": (("disabled", "cached", "indexed", "live"), sets("web_search")),
+    "tools.web_search": (BOOLEAN, sets("web_search_tool", switch("enabled", "disabled"))),
+    **{f"tools.web_search.{leaf}": (SCALAR, sets("web_search_tool", lambda value: "enabled"))
+       for leaf in WEB_SEARCH_TOOL_LEAVES},
+    "features.web_search": (BOOLEAN, broadens("web_search", (True,), ("indexed", "live"))),
+    "features.web_search_request": (BOOLEAN, broadens("web_search", (True,), ("indexed", "live"))),
+    "features.web_search_cached": (BOOLEAN, broadens("web_search", (True,), ("cached",))),
+    "features.apps": (BOOLEAN, broadens("app_tool_approval", (False,), ("none",))),
+    "apps.*.approvals_reviewer": (("user", "auto_review"),
+                                  broadens("app_approvals_reviewer", ("auto_review",), ("auto_review",))),
+    "apps.*.default_tools_approval_mode": (APPROVAL_MODES, APP_APPROVAL),
+    "apps.*.default_tools_enabled": (BOOLEAN, nothing),
+    "apps.*.enabled": (BOOLEAN, nothing),
+    "apps.*.destructive_enabled": (BOOLEAN, broadens("app_destructive_tools", (True,), ("enabled",), app_off)),
+    "apps.*.open_world_enabled": (BOOLEAN, broadens("app_open_world_tools", (True,), ("enabled",), app_off)),
+    "apps.*.tools.*.approval_mode": (APPROVAL_MODES, broadens("app_tool_approval", BROAD_MODES, BROAD_MODES,
+                                                              app_tool_off)),
+    "apps.*.tools.*.enabled": (BOOLEAN, nothing),
+    "auto_review.policy": (TEXT, sets("auto_review_policy", lambda value: "set")),
+    "auto_review.extra_policy": (TEXT, sets("auto_review_policy", lambda value: "set")),
+    "mcp_servers.*.default_tools_approval_mode": (APPROVAL_MODES, MCP_APPROVAL),
+    "mcp_servers.*.tools.*.approval_mode": (APPROVAL_MODES, MCP_APPROVAL),
+    "mcp_servers.*.enabled": (BOOLEAN, nothing),
+    "mcp_servers.*.enabled_tools": (NAMES, nothing),
+    "mcp_servers.*.disabled_tools": (NAMES, nothing),
+    "mcp_servers.*.startup_timeout_sec": (NUMBER, timeout("mcp_startup_timeout_sec")),
+    "mcp_servers.*.startup_timeout_ms": (NUMBER, timeout("mcp_startup_timeout_sec", 1000)),
+    "mcp_servers.*.tool_timeout_sec": (NUMBER, timeout("mcp_tool_timeout_sec")),
+    "plugins.*.mcp_servers.*.default_tools_approval_mode": (APPROVAL_MODES, PLUGIN_MCP_APPROVAL),
+    "plugins.*.mcp_servers.*.tools.*.approval_mode": (APPROVAL_MODES, PLUGIN_MCP_APPROVAL),
+    "plugins.*.mcp_servers.*.enabled": (BOOLEAN, nothing),
+    "plugins.*.mcp_servers.*.enabled_tools": (NAMES, nothing),
+    "plugins.*.mcp_servers.*.disabled_tools": (NAMES, nothing),
+}
+MODELED_PATTERNS = {pattern(key): key for key in MODELED_SETTINGS}
+# Keys that cannot act on approvals, the sandbox, the process environment, egress, execution, external
+# content or configuration activation: model choice, display, notices and local history.
 INERT_SETTINGS = patterns(
     "model", "model_reasoning_effort", "model_reasoning_summary", "model_verbosity",
     "model_supports_reasoning_summaries", "model_context_window", "model_auto_compact_token_limit",
     "model_auto_compact_token_limit_scope", "plan_mode_reasoning_effort", "review_model", "service_tier",
     "personality", "hide_agent_reasoning", "show_raw_agent_reasoning", "file_opener", "disable_paste_burst",
-    "check_for_update_on_startup", "suppress_unstable_features_warning", "windows_wsl_setup_acknowledged",
+    "suppress_unstable_features_warning", "windows_wsl_setup_acknowledged",
     "tool_output_token_limit", "background_terminal_max_timeout", "project_doc_max_bytes",
-    "history.persistence", "history.max_bytes", "projects.*.trust_level",
-    "marketplaces.*.source", "marketplaces.*.source_type", "marketplaces.*.ref", "marketplaces.*.sparse_paths",
+    "history.persistence", "history.max_bytes",
     "mcp_servers.*.tools.*.output_token_limit",
     "agents.default_subagent_model", "agents.default_subagent_reasoning_effort",
     "agents.max_concurrent_threads_per_session", "agents.max_threads", "agents.interrupt_message",
@@ -84,13 +223,12 @@ INERT_SETTINGS = patterns(
         "notification_method", "notifications", "raw_output_mode", "resume_cwd", "show_tooltips", "status_line",
         "terminal_title", "theme", "vim_mode_default")),
 )
-BOOLEAN = "boolean"
-NAMES = "names"
-TEXT = "text"
-ANY = "any"
 # Keys whose value decides, as (accepted values or a kind, conservative values). Environment filters only
 # remove inherited variables, so every well-formed filter is conservative; `set` adds or replaces a variable
-# and has no conservative value.
+# and has no conservative value. Project trust activates project configuration, hooks and rules; an enabled
+# plugin adds instructions, agents and hooks no summary judges; `features.hooks` turns on hooks beyond the
+# shipped ones `codex_hook_trust` compares; a marketplace selects external plugin content; and the update
+# check sends a request. Each is conservative only switched off, and a marketplace never is.
 CONSERVATIVE_SETTINGS: dict[str, tuple[Any, Any]] = {
     "allow_login_shell": (BOOLEAN, (False,)),
     "shell_environment_policy.inherit": (("all", "core", "none"), ("core", "none")),
@@ -100,12 +238,20 @@ CONSERVATIVE_SETTINGS: dict[str, tuple[Any, Any]] = {
     "shell_environment_policy.include_only": (NAMES, ANY),
     "shell_environment_policy.filters.*": (("include", "exclude"), ("include", "exclude")),
     "shell_environment_policy.set.*": (TEXT, ()),
+    "projects.*.trust_level": (("trusted", "untrusted"), ("untrusted",)),
+    "plugins.*.enabled": (BOOLEAN, (False,)),
+    "features.hooks": (BOOLEAN, (False,)),
+    "marketplaces.*.source": (TEXT, ()),
+    "marketplaces.*.source_type": (("git", "local"), ()),
+    "marketplaces.*.ref": (TEXT, ()),
+    "marketplaces.*.sparse_paths": (NAMES, ()),
+    "check_for_update_on_startup": (BOOLEAN, (False,)),
 }
 CONSERVATIVE_PATTERNS = {pattern(key): key for key in CONSERVATIVE_SETTINGS}
 
 
 def key_path(key: Any) -> tuple[str, ...]:
-    """The segments of a dotted TOML key path; quoted segments keep their text without the quotes."""
+    """The canonical segments of a dotted TOML key path; quoted segments keep their text without the quotes."""
     if not isinstance(key, str) or not 0 < len(key) <= MAX_KEY:
         raise SelectionError(f"codex_approval_posture settings keys are dotted key paths of at most {MAX_KEY} "
                              "characters")
@@ -126,10 +272,12 @@ def key_path(key: Any) -> tuple[str, ...]:
 
 
 def matches(rule: tuple[str, ...], path: tuple[str, ...]) -> bool:
-    if rule and rule[-1] == "**":
-        head = rule[:-1]
-        return len(path) > len(head) and matches(head, path[:len(head)])
+    """One path segment per rule segment; `*` matches one user-named segment."""
     return len(rule) == len(path) and all(want in ("*", got) for want, got in zip(rule, path, strict=True))
+
+
+def rule_for(rules: dict[tuple[str, ...], str], path: tuple[str, ...]) -> str | None:
+    return next((key for segments, key in rules.items() if matches(segments, path)), None)
 
 
 def well_formed(value: Any, accepted: Any) -> bool:
@@ -139,29 +287,61 @@ def well_formed(value: Any, accepted: Any) -> bool:
         return isinstance(value, list) and all(isinstance(entry, str) and entry for entry in value)
     if accepted == TEXT:
         return isinstance(value, str)
+    if accepted == NUMBER:
+        return type(value) in (int, float) and value > 0
+    if accepted == SCALAR:
+        return isinstance(value, (str, bool, int, float, list))
     return isinstance(value, str) and value in accepted
 
 
-def setting_class(path: tuple[str, ...], value: Any) -> str:
-    """`modeled`, `inert`, `conservative`, `outside` or `unobservable` for one observed key."""
+def accepted_value(rule: str, value: Any, accepted: Any) -> None:
+    if not well_formed(value, accepted):
+        raise SelectionError(f"codex_approval_posture setting {rule} has a malformed value")
+
+
+def contradicts(required: dict[str, Check], summary: dict[str, Any]) -> bool:
+    """Whether an observed summary fact or acting control fails what the key requires of it."""
+    return any(target in summary and summary[target] != UNOBSERVABLE and not check(summary[target])
+               for target, check in required.items())
+
+
+def setting_class(path: tuple[str, ...], value: Any, settings: Settings, summary: dict[str, Any]) -> str:
+    """`modeled`, `contradicted`, `inert`, `conservative`, `outside` or `unobservable` for one observed key."""
     if isinstance(value, dict):
         raise SelectionError("codex_approval_posture settings name each key of a table by its dotted path")
-    if any(matches(rule, path) for rule in MODELED_SETTINGS):
-        return "modeled"
     if any(matches(rule, path) for rule in INERT_SETTINGS):
         return "inert"
     if value == UNOBSERVABLE:
         return UNOBSERVABLE
-    rule = next((key for segments, key in CONSERVATIVE_PATTERNS.items() if matches(segments, path)), None)
+    modeled = rule_for(MODELED_PATTERNS, path)
+    if modeled is not None:
+        accepted, forces = MODELED_SETTINGS[modeled]
+        accepted_value(modeled, value, accepted)
+        return "contradicted" if contradicts(forces(path, value, settings), summary) else "modeled"
+    rule = rule_for(CONSERVATIVE_PATTERNS, path)
     if rule is None:
         return "outside"
     accepted, conservative = CONSERVATIVE_SETTINGS[rule]
-    if not well_formed(value, accepted):
-        raise SelectionError(f"codex_approval_posture setting {rule} has a malformed value")
+    accepted_value(rule, value, accepted)
     return "conservative" if conservative == ANY or value in conservative else "outside"
 
 
-def posture_settings(detail: dict[str, Any]) -> dict[tuple[str, ...], str] | None:
+def canonical_settings(settings: dict[str, Any]) -> Settings:
+    """Each key once by its canonical path; a repeated path, or a key that is also a table, is malformed."""
+    canonical: Settings = {}
+    for key, value in settings.items():
+        path = key_path(key)
+        if path in canonical:
+            raise SelectionError("codex_approval_posture settings name one key path twice; a quoted segment and "
+                                 "a bare segment with the same text are the same key")
+        canonical[path] = value
+    tables = {path[:end] for path in canonical for end in range(1, len(path))}
+    if tables & canonical.keys():
+        raise SelectionError("codex_approval_posture settings give one key both a value and keys under it")
+    return canonical
+
+
+def posture_settings(detail: dict[str, Any], summary: dict[str, Any]) -> dict[tuple[str, ...], str] | None:
     """Each observed key's class, or None when the inventory is missing or could not be read."""
     if "settings" not in detail or detail["settings"] == UNOBSERVABLE:
         return None
@@ -169,23 +349,23 @@ def posture_settings(detail: dict[str, Any]) -> dict[tuple[str, ...], str] | Non
     if not isinstance(settings, dict) or len(settings) > MAX_SETTINGS:
         raise SelectionError(f"codex_approval_posture.posture.settings is an object of at most {MAX_SETTINGS} "
                              "dotted keys, or \"unobservable\"")
-    classes = {}
-    for key, value in settings.items():
-        path = key_path(key)
-        classes[path] = setting_class(path, value)
-    return classes
+    canonical = canonical_settings(settings)
+    return {path: setting_class(path, value, canonical, summary) for path, value in canonical.items()}
 
 
-def settings_gaps(detail: dict[str, Any]) -> tuple[int, int, str, dict[str, str]]:
-    """Counts of keys outside the conservative profile and of unread keys, their summary, and the fingerprint.
+def settings_gaps(detail: dict[str, Any], summary: dict[str, Any]) -> tuple[int, int, str, dict[str, str]]:
+    """Keys that keep the posture from verifying (outside or contradicted), unread keys, their summary and the
+    fingerprint. `summary` maps each observed fact and acting control to its value.
 
     A missing or unreadable inventory counts as one unread key. The fingerprint holds each key path and class, never a value.
     """
-    classes = posture_settings(detail)
+    classes = posture_settings(detail, summary)
     if classes is None:
         return 0, 1, UNOBSERVABLE if "settings" in detail else "missing", {}
     outside = sum(kind == "outside" for kind in classes.values())
+    contradicted = sum(kind == "contradicted" for kind in classes.values())
     unread = sum(kind == UNOBSERVABLE for kind in classes.values())
-    text = "accounted" if not outside and not unread else f"{outside} outside, {unread} unobservable"
-    return outside, unread, text, {"value:posture_settings": digest(sorted([list(path), kind]
-                                                                            for path, kind in classes.items()))}
+    text = ("accounted" if not outside and not contradicted and not unread
+            else f"{outside} outside, {contradicted} contradicted, {unread} unobservable")
+    return outside + contradicted, unread, text, {"value:posture_settings": digest(sorted(
+        [list(path), kind] for path, kind in classes.items()))}

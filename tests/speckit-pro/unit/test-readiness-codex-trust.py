@@ -35,8 +35,8 @@ CONTROLS = {"workspace_network_access": "disabled", "workspace_writable_roots": 
             "app_open_world_tools": "disabled", "mcp_tool_approval": "prompt", "plugin_mcp_tool_approval": "none"}
 # Every configuration key set in any effective layer, as dotted TOML key paths: inert, judged by a summary
 # fact or control, or at its conservative value.
-SETTINGS = {"model": "gpt-6.1-sol", "model_reasoning_effort": "high", 'projects."repo".trust_level': "trusted",
-            'plugins."speckit-pro@racecraft".enabled': True, "features.hooks": True, "approval_policy": "on-request",
+SETTINGS = {"model": "gpt-6.1-sol", "model_reasoning_effort": "high", 'projects."repo".trust_level': "untrusted",
+            'plugins."speckit-pro@racecraft".enabled': False, "features.hooks": False, "approval_policy": "on-request",
             "sandbox_mode": "workspace-write", "sandbox_workspace_write.network_access": False}
 POSTURE = {"approval_policy": "on-request", "sandbox_mode": "workspace-write", "approvals_reviewer": "user",
            "mcp_approval_mode": "prompt", "mcp_consent": "granted", "mcp_startup_timeout_sec": 10,
@@ -104,6 +104,13 @@ def settings(**changes: object) -> dict[str, object]:
     return posture(settings={**SETTINGS, **changes})
 
 
+def granular_posture(granular: dict[str, bool]) -> dict[str, object]:
+    """A granular approval policy with the inventory keys that set it."""
+    inventory = {key: value for key, value in SETTINGS.items() if key != "approval_policy"}
+    return posture(approval_policy={"granular": granular}, settings={
+        **inventory, **{f"approval_policy.granular.{name}": flag for name, flag in granular.items()}})
+
+
 def hook_trust(*entries: dict[str, object]) -> dict[str, object]:
     return {"item": "codex_hook_trust", "evidence_source": "/hooks review", "hooks": list(entries)}
 
@@ -135,7 +142,7 @@ class ReadinessCodexTrustTest(ReadinessCase):
     def test_granular_policy_is_structured_and_preserves_prompt_categories(self) -> None:
         granular = dict.fromkeys(("sandbox_approval", "rules", "mcp_elicitations", "request_permissions",
                                   "skill_approval"), False)
-        item = self.item(posture(approval_policy={"granular": granular}))
+        item = self.item(granular_posture(granular))
         self.assert_item(item, "verified", ("sandbox_approval=false", "skill_approval=false"))
         self.refuse_each([posture(approval_policy="granular"),
                           posture(approval_policy={"granular": {"rules": True}})])
@@ -271,7 +278,7 @@ class ReadinessCodexTrustTest(ReadinessCase):
                                   "skill_approval"), False)
         for label in (source, source.ljust(400, ".")):
             with self.subTest(source_length=len(label)):
-                observation = posture(approval_policy={"granular": granular})
+                observation = granular_posture(granular)
                 observation["evidence_source"] = label
                 item = self.item(observation)
                 self.assertEqual("verified", item["status"])
@@ -411,7 +418,7 @@ class ReadinessCodexPostureControlsTest(ReadinessCase):
         self.assertEqual("verified", self.item(controls(web_search="cached", permission_profile="read-only",
                                                         app_tool_approval="none", mcp_tool_approval="none"))["status"])
         workspace = {name: "writable" for name in ("workspace_slash_tmp", "workspace_tmpdir")}
-        read_only = posture(sandbox_mode="read-only", controls={
+        read_only = posture(sandbox_mode="read-only", settings={**SETTINGS, "sandbox_mode": "read-only"}, controls={
             **CONTROLS, **workspace, "workspace_network_access": "enabled", "workspace_writable_roots": "unobservable"})
         self.assertEqual("verified", self.item(read_only)["status"])
         self.assertEqual("verified", self.item(controls(app_tool_approval="none", app_destructive_tools="enabled",
@@ -503,13 +510,186 @@ class ReadinessCodexPostureSettingsTest(ReadinessCase):
         for key in readiness_posture_settings.CONSERVATIVE_SETTINGS:
             with self.subTest(key=key):
                 self.assertIn(f"`{key}`", step)
+        for promise in ("are the same key", "a key named twice", "also a table holding",
+                        "A contradiction makes the posture `unavailable`", "one nested under a known table"):
+            with self.subTest(promise=promise):
+                self.assertIn(promise, " ".join(step.split()))
+
+
+# Cross-host review of 90c516e01 and Daybreak F1263-fcc0990b: a modeled key must agree with the summary fact or
+# control that models it. Each case alone contradicts the conservative summary, so the posture is unavailable.
+CONTRADICTIONS = {
+    "network access beside a disabled control": {"sandbox_workspace_write.network_access": True},
+    "danger-full-access beside workspace-write": {"sandbox_mode": "danger-full-access"},
+    "approval policy": {"approval_policy": "never"},
+    "a granular category beside on-request": {"approval_policy.granular.rules": True},
+    "approvals reviewer": {"approvals_reviewer": "auto_review"},
+    "writable roots": {"sandbox_workspace_write.writable_roots": ["repo"]},
+    "/tmp writable": {"sandbox_workspace_write.exclude_slash_tmp": False},
+    "TMPDIR writable": {"sandbox_workspace_write.exclude_tmpdir_env_var": False},
+    "a built-in permission profile": {"default_permissions": ":workspace"},
+    "a custom permission profile": {"default_permissions": "builder"},
+    "a leaf of the selected custom profile": {"default_permissions": "builder",
+                                             'permissions."builder".network.enabled': True},
+    "a profile named like a built-in": {'permissions.":workspace".network.enabled': True},
+    "web search mode": {"web_search": "live"},
+    "web search tool": {"tools.web_search": True},
+    "a web search tool table": {"tools.web_search.context_size": "high"},
+    "legacy web search": {"features.web_search": True},
+    "legacy live web search": {"features.web_search_request": True},
+    "legacy cached web search beside disabled": {"features.web_search_cached": True},
+    "apps off beside a prompting app tool": {"features.apps": False},
+    "an app reviewer": {'apps."drive".approvals_reviewer': "auto_review"},
+    "an app default approval": {'apps."drive".default_tools_approval_mode': "auto"},
+    "an app tool approval": {'apps."drive".tools."upload".approval_mode': "writes"},
+    "destructive app tools": {'apps."drive".destructive_enabled': True},
+    "open-world app tools": {'apps."drive".open_world_enabled': True},
+    "auto-review policy": {"auto_review.policy": "approve reads"},
+    "auto-review extra policy": {"auto_review.extra_policy": "approve reads"},
+    "an MCP default approval": {'mcp_servers."docs".default_tools_approval_mode': "approve"},
+    "an MCP tool approval": {'mcp_servers."docs".tools."search".approval_mode': "auto"},
+    "an MCP startup timeout": {'mcp_servers."docs".startup_timeout_sec': 30},
+    "an MCP startup timeout in milliseconds": {'mcp_servers."docs".startup_timeout_ms': 30000},
+    "an MCP tool timeout": {'mcp_servers."docs".tool_timeout_sec': 120},
+    "a plugin MCP default approval": {'plugins."kit".mcp_servers."docs".default_tools_approval_mode': "auto"},
+    "a plugin MCP tool approval": {'plugins."kit".mcp_servers."docs".tools."search".approval_mode': "writes"},
+}
+# Modeled keys whose values agree with the conservative summary, or cannot act, so the posture still verifies.
+AGREEING_SETTINGS = {
+    "sandbox_workspace_write.exclude_slash_tmp": True, "sandbox_workspace_write.exclude_tmpdir_env_var": True,
+    "sandbox_workspace_write.writable_roots": [], "web_search": "disabled", "tools.web_search": False,
+    "features.web_search_request": False, 'apps."drive".approvals_reviewer': "user",
+    'apps."drive".default_tools_approval_mode': "prompt", 'apps."drive".tools."upload".approval_mode': "prompt",
+    'apps."drive".destructive_enabled': False, 'apps."off".enabled': False,
+    'apps."off".default_tools_approval_mode': "auto", 'mcp_servers."docs".default_tools_approval_mode': "prompt",
+    'mcp_servers."docs".startup_timeout_sec': 10, 'mcp_servers."docs".tool_timeout_sec': 60,
+    'mcp_servers."docs".enabled_tools': ["search"], 'permissions."spare".network.enabled': True,
+}
+# Daybreak F1263-d253526b: a contributor-selected Git marketplace beside an enabled plugin.
+GIT_MARKETPLACE = {'marketplaces."contrib".source': "https://example.invalid/contrib.git",
+                   'marketplaces."contrib".source_type': "git", 'marketplaces."contrib".ref': "main",
+                   'marketplaces."contrib".sparse_paths': ["plugins/kit"]}
+ENABLED_PLUGIN = {'plugins."kit@contrib".enabled': True}
+# Keys that select external content, activate configuration or hooks, or send data: never inert.
+ACTIVATING_SETTINGS = {**GIT_MARKETPLACE, **ENABLED_PLUGIN, "features.hooks": True,
+                       'projects."repo".trust_level': "trusted", "check_for_update_on_startup": True}
+
+
+def sample_key(rule: str) -> str:
+    """A concrete key path for a rule: each user-named segment becomes one quoted name."""
+    return rule.replace("*", '"x"')
+
+
+class ReadinessCodexPostureEvidenceTest(ReadinessCase):
+    """Cross-host review of 90c516e01: the inventory is the evidence, and the posture verifies only when it proves it."""
+
+    default_host = "codex"
+    request_id = "test-codex-posture-evidence"
+
+    def test_one_canonical_path_per_key_whatever_the_order(self) -> None:
+        bare, quoted = "allow_login_shell", '"allow_login_shell"'
+        self.refuse_each([posture(settings={bare: True, quoted: False}), posture(settings={quoted: False, bare: True}),
+                          posture(settings={"shell_environment_policy.inherit": "core",
+                                            '"shell_environment_policy".inherit': "all",
+                                            'shell_environment_policy."inherit"': "none"}),
+                          posture(settings={"tools.web_search": False, "tools.web_search.context_size": "low"}),
+                          posture(settings={"'allow_login_shell'": False}),
+                          posture(settings={"shell_environment_policy . inherit": "core"})])
+        self.assertEqual("unavailable", self.item(posture(settings={bare: True}))["status"])
+
+    def test_a_quoted_segment_holding_a_dot_is_one_segment(self) -> None:
+        self.assert_item(self.item(settings(**{'"sandbox_workspace_write.network_access"': False})), "unavailable",
+                         ("settings=1 outside",))
+        self.assertEqual("verified", self.item(settings(**{
+            'shell_environment_policy.filters."*.TOKEN"': "exclude"}))["status"])
+
+    def test_no_wildcard_lets_an_unknown_descendant_verify(self) -> None:
+        for key in ("tools.web_search.future_escape_hatch", "permissions.profile.future_escape_hatch",
+                    'permissions."profile".network.future.escape', 'mcp_servers."docs".tools."search".future_mode',
+                    "tools.web_search.location.future"):
+            with self.subTest(key=key):
+                self.assert_item(self.item(settings(**{key: True})), "unavailable", ("settings=1 outside",))
+            with self.subTest(key=key, value="unobservable"):
+                self.assert_item(self.item(settings(**{key: "unobservable"})), "unknown", ("1 unobservable",))
+
+    def test_rules_are_exact_and_belong_to_one_list(self) -> None:
+        from speckit_pro_runner.helpers import readiness_posture_settings as module
+        rules = {"modeled": list(module.MODELED_PATTERNS), "inert": list(module.INERT_SETTINGS),
+                 "conservative": list(module.CONSERVATIVE_PATTERNS)}
+        for name, patterns in rules.items():
+            for rule in patterns:
+                self.assertNotIn("**", rule, name)
+                for other, other_patterns in rules.items():
+                    if other != name:
+                        self.assertFalse(any(module.matches(rule, seen) or module.matches(seen, rule)
+                                             for seen in other_patterns), (name, rule, other))
+
+    def test_a_modeled_value_that_contradicts_its_summary_is_unavailable(self) -> None:
+        for case, changes in CONTRADICTIONS.items():
+            with self.subTest(case=case):
+                self.assert_item(self.item(posture(settings=changes)), "unavailable",
+                                 ("settings=0 outside, ", " contradicted"), ("Keep current controls",))
+
+    def test_a_modeled_value_that_agrees_with_its_summary_verifies(self) -> None:
+        self.assert_item(self.item(settings(**AGREEING_SETTINGS)), "verified", ("settings=accounted",))
+        self.assertEqual("verified", self.item(posture(
+            settings={"default_permissions": ":read-only"},
+            controls={**CONTROLS, "permission_profile": "read-only"}))["status"])
+        granular = dict.fromkeys(("sandbox_approval", "rules", "mcp_elicitations", "request_permissions",
+                                  "skill_approval"), True)
+        self.assertEqual("verified", self.item(posture(approval_policy={"granular": granular}, settings={
+            f"approval_policy.granular.{name}": flag for name, flag in granular.items()}))["status"])
+        self.assertEqual("unavailable", self.item(posture(approval_policy={"granular": granular}, settings={
+            "approval_policy.granular.rules": False}))["status"])
+        # A workspace-write key cannot act under a read-only sandbox, so its control is not compared.
+        self.assertEqual("verified", self.item(posture(sandbox_mode="read-only", settings={
+            "sandbox_mode": "read-only", "sandbox_workspace_write.network_access": True}))["status"])
+
+    def test_an_unreadable_modeled_value_is_unknown(self) -> None:
+        from speckit_pro_runner.helpers import readiness_posture_settings
+        for rule in readiness_posture_settings.MODELED_SETTINGS:
+            with self.subTest(key=sample_key(rule)):
+                self.assert_item(self.item(posture(settings={sample_key(rule): "unobservable"})), "unknown",
+                                 ("settings=0 outside, 0 contradicted, 1 unobservable",))
+
+    def test_a_malformed_modeled_value_is_refused(self) -> None:
+        self.refuse_each([posture(settings=bad) for bad in (
+            {"sandbox_workspace_write.network_access": "yes"}, {"sandbox_mode": "everything"},
+            {'mcp_servers."docs".tool_timeout_sec': True}, {'apps."drive".default_tools_approval_mode': "always"},
+            {"sandbox_workspace_write.writable_roots": "repo"})])
+
+    def test_plugin_supply_chain_and_activation_keys_are_never_inert(self) -> None:
+        from speckit_pro_runner.helpers import readiness_posture_settings as module
+        inert = module.INERT_SETTINGS
+        for key in ACTIVATING_SETTINGS:
+            path = module.key_path(key)
+            self.assertFalse(any(module.matches(rule, path) for rule in inert), key)
+        self.assert_item(self.item(settings(**GIT_MARKETPLACE, **ENABLED_PLUGIN)), "unavailable",
+                         ("settings=5 outside",))
+        for key, value in ACTIVATING_SETTINGS.items():
+            with self.subTest(key=key):
+                self.assert_item(self.item(settings(**{key: value})), "unavailable", ("settings=1 outside",))
+        unread = dict.fromkeys(GIT_MARKETPLACE, "unobservable")
+        self.assert_item(self.item(settings(**unread, **ENABLED_PLUGIN)), "unavailable",
+                         ("settings=1 outside, 0 contradicted, 4 unobservable",))
+        self.assertEqual("unknown", self.item(settings(**unread))["status"])
+        local = {'marketplaces."local".source': "local-marketplace", 'marketplaces."local".source_type': "local"}
+        self.assertEqual("unavailable", self.item(settings(**local))["status"])
+        for key, value in (('plugins."kit@contrib".enabled', False), ("features.hooks", False),
+                           ('projects."repo".trust_level', "untrusted"), ("check_for_update_on_startup", False)):
+            with self.subTest(key=key, value=value):
+                self.assertEqual("verified", self.item(settings(**{key: value}))["status"])
+        record = json.dumps(self.run_helper([settings(**GIT_MARKETPLACE)])["data"]["record"])
+        self.assertNotIn("example.invalid", record)
+        self.assertNotIn("contrib", record)
 
 
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
     return unittest.TestSuite([loader.loadTestsFromTestCase(ReadinessCodexTrustTest),
                                loader.loadTestsFromTestCase(ReadinessCodexPostureControlsTest),
-                               loader.loadTestsFromTestCase(ReadinessCodexPostureSettingsTest)])
+                               loader.loadTestsFromTestCase(ReadinessCodexPostureSettingsTest),
+                               loader.loadTestsFromTestCase(ReadinessCodexPostureEvidenceTest)])
 
 
 def main() -> int:

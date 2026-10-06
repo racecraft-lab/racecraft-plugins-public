@@ -526,6 +526,16 @@ def posture_facts(detail: dict[str, Any]) -> dict[str, str]:
     return facts
 
 
+def posture_summary(detail: dict[str, Any], controls: dict[str, str] | None) -> dict[str, Any]:
+    """Each summary fact and acting control as the configuration inventory reconciles it (checked first)."""
+    summary: dict[str, Any] = {key: detail[key] for key in ("sandbox_mode", "approvals_reviewer", *POSTURE_TIMEOUTS)}
+    policy = detail["approval_policy"]
+    summary["approval_policy"] = "granular" if isinstance(policy, dict) else policy
+    if isinstance(policy, dict):
+        summary.update({f"approval_policy.granular.{name}": flag for name, flag in policy["granular"].items()})
+    return {**summary, **(controls or {})}
+
+
 def observe_codex_approval_posture(raw: dict[str, Any], observed_at: str, source: str) -> dict[str, Any]:
     detail = raw["posture"]
     if not isinstance(detail, dict) or detail.keys() - {"controls", "settings"} != {*POSTURE_CHOICES, *POSTURE_TIMEOUTS}:
@@ -534,7 +544,7 @@ def observe_codex_approval_posture(raw: dict[str, Any], observed_at: str, source
     controls = posture_controls(detail)
     facts = posture_facts(detail)
     outside, unread, controls_text = control_gaps(controls)
-    settings_outside, settings_unread, settings_text, settings_prints = settings_gaps(detail)
+    settings_outside, settings_unread, settings_text, settings_prints = settings_gaps(detail, posture_summary(detail, controls))
     summary = (", ".join(f"{key}={value}" for key, value in facts.items())
                + f", controls={controls_text}, settings={settings_text}")
     prints = {"value:posture": digest(summary), **settings_prints}

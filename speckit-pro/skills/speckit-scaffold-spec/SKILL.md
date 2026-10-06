@@ -1189,23 +1189,44 @@ Send `settings` as the inventory of every configuration key set in any
 effective layer (user, project, profile, managed and launch overrides), each
 as a dotted TOML key path with its effective value, such as
 `"shell_environment_policy.set.PATH": "<value>"` or
-`"projects.\"<name>\".trust_level": "trusted"`. Quote a segment that holds a
-dot or another character outside letters, digits, `_` and `-`. Name each key
-of a table by its own path; a table sent as one value is refused. Include the
-keys the controls above summarize and keys you do not recognize. Send
-`"unobservable"` for a key whose value you cannot read, and send `settings`
-as `"unobservable"` when you cannot list every layer. The helper accounts for
-each key: a summary fact or control judges it, it is on the helper's list of
-inert keys (model, display and notice settings), or it holds its conservative
-value: `allow_login_shell` false, `shell_environment_policy.inherit` `core` or
-`none`, `shell_environment_policy.ignore_default_excludes` false,
+`"projects.\"<name>\".trust_level": "untrusted"`. A key path is segments
+joined by single dots with no spaces; a segment is bare (letters, digits, `_`
+and `-`) or double-quoted without `"` or `\`. Quote a segment that holds a
+dot or another character outside the bare set; a quoted dot stays inside its
+segment. A quoted segment and a bare one with the same text are the same key,
+so send each key once: a key named twice, a key that is also a table holding
+another key, or a key outside this grammar is refused. Name each key of a
+table by its own path; a table sent as one value is refused. Include the keys
+the controls above summarize and keys you do not recognize. Send
+`"unobservable"` for a key whose value you cannot read, and send `settings` as
+`"unobservable"` when you cannot list every layer.
+
+The helper accounts for each key, and the posture verifies only when the
+inventory proves it. A key a summary fact or control models must agree with
+that fact or control where it is observed and can act: for example
+`sandbox_mode`, `sandbox_workspace_write.network_access`, `default_permissions`,
+`web_search`, `tools.web_search`, and each app, MCP or plugin MCP approval mode
+or timeout. A contradiction makes the posture `unavailable`. Other keys are on
+the helper's list of inert keys (model, display, notice and local history
+settings), or hold their conservative value: `allow_login_shell` false,
+`shell_environment_policy.inherit` `core` or `none`,
+`shell_environment_policy.ignore_default_excludes` false,
 `shell_environment_policy.experimental_use_profile` false, and any
 `shell_environment_policy.exclude`, `shell_environment_policy.include_only` or
 `shell_environment_policy.filters.*` entry, since those only remove inherited
-variables. `shell_environment_policy.set.*` has no conservative value. Any
-other key, an unknown one included, makes the posture `unavailable`, or
-`unknown` when its value is unobservable. Values and key names stay out of the
-record; the helper keeps one digest of each key path and its class.
+variables; `projects.*.trust_level` `untrusted`, since trust activates project
+configuration, hooks and rules; `plugins.*.enabled` false and `features.hooks`
+false, since no summary judges plugin instructions or hooks beyond the shipped
+ones; and `check_for_update_on_startup` false, since the check sends a
+request. `shell_environment_policy.set.*`, `marketplaces.*.source`,
+`marketplaces.*.source_type`, `marketplaces.*.ref` and
+`marketplaces.*.sparse_paths` have no conservative value: they add a variable
+or select external plugin content. Rules name exact keys, and `*` stands for
+one name you chose, such as a project, plugin or server name. Any other key,
+an unknown one or one nested under a known table included, makes the posture
+`unavailable`, or `unknown` when its value is unobservable. Values and key
+names stay out of the record; the helper keeps one digest of each key path and
+its class.
 
 The helper owns the conservative scaffold posture profile: confined sandbox,
 MCP prompt mode, granted consent and delegation, timeouts no larger than
