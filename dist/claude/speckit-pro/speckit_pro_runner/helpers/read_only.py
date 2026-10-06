@@ -2034,27 +2034,7 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
             exit_code=1,
         )
     if gate == "G4":
-        spec_gaps = count_pattern([spec], r"\[Gap\]", repo_root)
-        plan_gaps = count_pattern([plan], r"\[Gap\]", repo_root)
-        checklist_gaps = count_pattern_dir(feature / "checklists", r"\[Gap\]", repo_root)
-        gaps = spec_gaps + plan_gaps + checklist_gaps
-        if gaps == 0:
-            problem = coverage_problem(repo_root, feature)
-            return make_result(json_text({"gate": "G4", "pass": problem is None,
-                                         "reason": problem or "0 [Gap] markers; checklist coverage is current",
-                                         "markers": 0, "details": []}), exit_code=1 if problem else 0)
-        return make_result(
-            json_text(
-                {
-                    "gate": "G4",
-                    "pass": False,
-                    "reason": f"{gaps} [Gap] markers (spec:{spec_gaps}, plan:{plan_gaps}, checklists:{checklist_gaps})",
-                    "markers": gaps,
-                    "details": [],
-                }
-            ),
-            exit_code=1,
-        )
+        return g4_checklist_result(feature, repo_root)
     if gate == "G5":
         if not trusted_file_exists(tasks, repo_root):
             return make_result(json_text({"gate": "G5", "pass": False, "reason": "tasks.md not found", "markers": 0, "details": []}), exit_code=1)
@@ -2123,6 +2103,32 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     if count == 0:
         return make_result(json_text({"gate": gate, "pass": True, "reason": "0 CRITICAL/HIGH findings", "markers": 0, "analysis_findings": findings, "details": []}))
     return make_result(json_text({"gate": gate, "pass": False, "reason": f"{count} CRITICAL/HIGH findings remain", "markers": count, "analysis_findings": findings, "details": []}), exit_code=1)
+
+
+def g4_checklist_result(feature: Path, repo_root: Path) -> dict[str, Any]:
+    """A clean marker count requires current complete-domain coverage evidence."""
+    spec, plan = feature / "spec.md", feature / "plan.md"
+    spec_gaps = count_pattern([spec], r"\[Gap\]", repo_root)
+    plan_gaps = count_pattern([plan], r"\[Gap\]", repo_root)
+    checklist_gaps = count_pattern_dir(feature / "checklists", r"\[Gap\]", repo_root)
+    gaps = spec_gaps + plan_gaps + checklist_gaps
+    if gaps == 0:
+        problem = coverage_problem(repo_root, feature)
+        return make_result(json_text({"gate": "G4", "pass": problem is None,
+                                     "reason": problem or "0 [Gap] markers; checklist coverage is current",
+                                     "markers": 0, "details": []}), exit_code=1 if problem else 0)
+    return make_result(
+        json_text(
+            {
+                "gate": "G4",
+                "pass": False,
+                "reason": f"{gaps} [Gap] markers (spec:{spec_gaps}, plan:{plan_gaps}, checklists:{checklist_gaps})",
+                "markers": gaps,
+                "details": [],
+            }
+        ),
+        exit_code=1,
+    )
 
 
 COVERAGE_TASK_HEADER = re.compile(r"tasks?(?:\s*\(s\)|\s*ids?)?", re.IGNORECASE)

@@ -767,7 +767,8 @@ class PhaseBriefWaveTests(InProjectCase):
     def test_misattributed_consensus_domain_is_rejected(self):
         baseline = self.checklist_snapshot()["baseline"]
         result = self.brief("Checklist", domains=["security", "ux"], consensus_edited=["api"], verify_baseline=baseline)
-        self.assertEqual((result["status"], result["data"]), ("input_error", {}))
+        self.assertEqual(result["status"], "input_error")
+        self.assertIn("original checklist domains", result["diagnostics"][0]["message"])
 
     def checklist_snapshot(self):
         feature = Path(self.BRIEF["feature_dir"])
@@ -783,15 +784,17 @@ class PhaseBriefWaveTests(InProjectCase):
             "proposals": [{"domain": name, "gaps": [], "edits": []} for name in domains]}, "apply")
         return baseline
 
+    def assert_final_wave(self, inputs, expected):
+        for result in [dispatch_brief(inputs), *payload_briefs(inputs, include_status=True)]:
+            self.assertEqual(result["status"], "ok", result)
+            self.assertEqual([[entry["inputs"] for entry in wave] for wave in result["data"]["waves"]], expected)
+
     def shared_edit_checkpoint(self, artifact, **extra):
         baseline = self.checklist_snapshot()
         Path(self.BRIEF["feature_dir"], artifact).write_text("Changed shared requirements\n")
         inputs = {"phase": "Checklist", **self.BRIEF, "domains": ["security", "ux"],
                   "verify_baseline": baseline["baseline"], **extra}
-        for result in [dispatch_brief(inputs), *payload_briefs(inputs, include_status=True)]:
-            self.assertEqual(result["status"], "ok", result)
-            self.assertEqual([[entry["inputs"] for entry in wave] for wave in result["data"]["waves"]],
-                             [[{"domain": "security", "pass": "verify"}, {"domain": "ux", "pass": "verify"}]])
+        self.assert_final_wave(inputs, [[{"domain": "security", "pass": "verify"}, {"domain": "ux", "pass": "verify"}]])
 
     def test_final_checkpoint_cannot_drop_original_domains(self):
         baseline = self.checklist_snapshot()["baseline"]
@@ -809,10 +812,7 @@ class PhaseBriefWaveTests(InProjectCase):
         replacement.replace(target)
         inputs = {"phase": "Checklist", **self.BRIEF, "domains": ["security", "ux"],
                   "verify_baseline": baseline["baseline"], "max_agents": 1}
-        for result in [dispatch_brief(inputs), *payload_briefs(inputs, include_status=True)]:
-            self.assertEqual(result["status"], "ok", result)
-            self.assertEqual([[entry["inputs"] for entry in wave] for wave in result["data"]["waves"]],
-                             [[{"domain": "security", "pass": "verify"}], [{"domain": "ux", "pass": "verify"}]])
+        self.assert_final_wave(inputs, [[{"domain": "security", "pass": "verify"}], [{"domain": "ux", "pass": "verify"}]])
 
     def test_final_checkpoint_fails_closed_on_missing_or_linked_shared_artifacts(self):
         baseline = self.checklist_snapshot()

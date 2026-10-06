@@ -189,6 +189,17 @@ def internal_failure(request: Any, code: str, exc: Exception) -> dict[str, Any]:
     return response("internal_failure", request_id=request.request_id, diagnostics=[diagnostic(code, str(exc))])
 
 
+def observed_checklist_waves(root: Path, workflow: str, feature: str, waves: WaveRequest) -> WaveRequest:
+    """Bind the final wave to original domains and observed shared-artifact changes."""
+    if waves.verify_baseline is None:
+        return waves
+    if read_coverage(root, root / feature)["domains"] != waves.domains:
+        raise ValueError("final verification requires every original domain in order")
+    snapshot = checklist_edits(root, {"workflow_file": workflow, "feature_dir": feature}, "read_only")
+    changed = snapshot["baseline"] != waves.verify_baseline
+    return waves._replace(consensus_edited=waves.domains if changed else [])
+
+
 def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     """Return phase-brief/v1 dispatch data; gate and stop decisions stay separate.
 
@@ -247,12 +258,7 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     if isinstance(root, dict):
         return response("missing_prerequisite", request_id=request.request_id, diagnostics=[root])
     try:
-        if waves.verify_baseline is not None:
-            if read_coverage(root, root / feature)["domains"] != waves.domains:
-                raise ValueError("final verification requires every original domain in order")
-            snapshot = checklist_edits(root, {"workflow_file": workflow, "feature_dir": feature}, "read_only")
-            changed = snapshot["baseline"] != waves.verify_baseline
-            waves = waves._replace(consensus_edited=waves.domains if changed else [])
+        waves = observed_checklist_waves(root, workflow, feature, waves)
         data = brief_data(phase, workflow, feature, waves)
     except (OSError, ValueError) as exc:
         return internal_failure(request, "phase_brief_slices_unavailable", exc)

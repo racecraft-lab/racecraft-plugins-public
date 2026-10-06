@@ -59,6 +59,18 @@ class WaveRequest(NamedTuple):
     verify_baseline: dict[str, str] | None
 
 
+def checked_verify_baseline(phase: str, domains: list[str], raw: dict[str, Any]) -> dict[str, str] | None:
+    """The final checkpoint has both shared-artifact digests, original domains and no consensus work."""
+    baseline = None
+    if "verify_baseline" in raw:
+        if phase != CHECKLIST_PHASE or not domains or "items" in raw or "verify_items" in raw:
+            raise ValueError("verify_baseline requires original Checklist domains and no consensus items")
+        baseline = require_fields(raw["verify_baseline"], set(ARTIFACTS), "verify_baseline")
+        if any(not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value) for value in baseline.values()):
+            raise ValueError("verify_baseline must contain SHA-256 digests")
+    return baseline
+
+
 def checked_checklist_inputs(phase: str, raw: dict[str, Any], domains: list[str],
                              items: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[str], dict[str, str] | None]:
     """Merge verify gaps and validate the shared-artifact checkpoint or legacy edit attribution."""
@@ -71,13 +83,7 @@ def checked_checklist_inputs(phase: str, raw: dict[str, Any], domains: list[str]
         raise ValueError("consensus_edited requires a shared-artifact verify_baseline checkpoint")
     if edited and (not domains or not set(edited) <= set(domains)):
         raise ValueError("consensus_edited must name original checklist domains")
-    baseline = None
-    if "verify_baseline" in raw:
-        if phase != CHECKLIST_PHASE or not domains or "items" in raw or "verify_items" in raw:
-            raise ValueError("verify_baseline requires original Checklist domains and no consensus items")
-        baseline = require_fields(raw["verify_baseline"], set(ARTIFACTS), "verify_baseline")
-        if any(not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value) for value in baseline.values()):
-            raise ValueError("verify_baseline must contain SHA-256 digests")
+    baseline = checked_verify_baseline(phase, domains, raw)
     return items, edited, baseline
 
 

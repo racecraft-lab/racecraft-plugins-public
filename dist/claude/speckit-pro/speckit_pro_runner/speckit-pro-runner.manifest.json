@@ -583,7 +583,7 @@
         "value": "speckit_pro_runner/helpers/dispatch_waves.py",
         "display": "speckit_pro_runner/helpers/dispatch_waves.py"
       },
-      "sha256": "26b892062e4c06a9b5cd66543d0d2c0090f86173c2199cf98166c5112b7a2b24"
+      "sha256": "17bcd934612d38a7de3c15988e7eee3a18ea25255b4c50dbc4ac82a97104668f"
     },
     {
       "path": {
@@ -679,7 +679,7 @@
         "value": "speckit_pro_runner/helpers/phase_brief.py",
         "display": "speckit_pro_runner/helpers/phase_brief.py"
       },
-      "sha256": "c4ae6a54ae6f829f19ac550e0f89fc9c710c41a49ebd437117a0ecc72e999a84"
+      "sha256": "6f0950b53a06b0c4a34d26b9aeb7f939b2b445f314d16943670365795868bd27"
     },
     {
       "path": {
@@ -727,7 +727,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "704897f7943fedf55bf09bae31e9212c69f0dd246e8f97c10ee18f5e52665761"
+      "sha256": "ca43812d8cd8d340c737fd30de6390a54205c1e43c8683579d52a6d5f443a31d"
     },
     {
       "path": {

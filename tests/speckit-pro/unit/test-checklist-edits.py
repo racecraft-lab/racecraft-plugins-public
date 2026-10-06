@@ -1464,8 +1464,7 @@ class CoverageTests(ChecklistEditsCase):
         self.assertFalse(json.loads(gate["stdout"])["pass"])
 
     def test_final_verify_gaps_return_to_consensus_on_both_hosts(self) -> None:
-        for guide, anchor in zip(PHASE_EXECUTION_GUIDES, ("### Phase 4: Checklist", "Checklist only:"), strict=True):
-            passage = " ".join(guide_view(guide).split(anchor, 1)[1][:8000].split())
+        for passage in checklist_passages():
             self.assertIn("final verify-pass unresolved items return to consensus", passage)
             self.assertIn("verified_domains", passage)
 
@@ -1484,6 +1483,13 @@ class CoverageTests(ChecklistEditsCase):
             self.assertFalse(json.loads(result["stdout"])["pass"], artifact)
             (self.root / FEATURE / artifact).write_text(original)
 
+def checklist_passages() -> list[str]:
+    """Each host's checklist flow rendered from the shared source."""
+    return [" ".join(guide_view(guide).split(anchor, 1)[1][:8000].split())
+            for guide, anchor in zip(PHASE_EXECUTION_GUIDES,
+                                     ("### Phase 4: Checklist", "Checklist only:"), strict=True)]
+
+
 class GuidanceTests(unittest.TestCase):
     """The prose points at the helper and never tells an executor to write the artifacts."""
 
@@ -1494,8 +1500,7 @@ class GuidanceTests(unittest.TestCase):
             self.assertEqual([], [(relative, phrase) for phrase in RETIRED if phrase in text])
 
     def test_verify_gaps_join_initial_consensus_queue_before_dispatch_on_both_hosts(self) -> None:
-        for guide, anchor in zip(PHASE_EXECUTION_GUIDES, ("### Phase 4: Checklist", "Checklist only:"), strict=True):
-            passage = " ".join(guide_view(guide).split(anchor, 1)[1][:6500].split())
+        for passage in checklist_passages():
             self.assertIn("initial run items plus every verify-pass 'Unresolved for consensus' item", passage)
             self.assertIn("verify_items", passage)
             queue_at = passage.index("initial run items plus every verify-pass")
@@ -1503,8 +1508,7 @@ class GuidanceTests(unittest.TestCase):
             self.assertLess(queue_at, dispatch_at)
 
     def test_final_checkpoint_is_required_even_without_consensus_edited_on_both_hosts(self) -> None:
-        for guide, anchor in zip(PHASE_EXECUTION_GUIDES, ("### Phase 4: Checklist", "Checklist only:"), strict=True):
-            passage = " ".join(guide_view(guide).split(anchor, 1)[1][:6500].split())
+        for passage in checklist_passages():
             self.assertIn("Always request the final phase brief", passage)
             self.assertIn("verify_baseline", passage)
             self.assertIn("before marking any domain completed", passage)
