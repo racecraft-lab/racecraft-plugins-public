@@ -31,7 +31,7 @@
         "value": "speckit_pro_runner/agent_inventory.json",
         "display": "speckit_pro_runner/agent_inventory.json"
       },
-      "sha256": "5d42793d8b22be731ba3a41d20bd4594dfd7157eec6a4a6409f5bc182d16d6a5"
+      "sha256": "774eb9bb92eb4a9a4aa3c09cf280874599bf08748cce189844a1d1ffe18730da"
     },
     {
       "path": {
@@ -63,7 +63,7 @@
         "value": "speckit_pro_runner/artifact_review.py",
         "display": "speckit_pro_runner/artifact_review.py"
       },
-      "sha256": "7fbfd6b6fd5d065e3675fe1930c7cbfce1c8636845fe1cef0f6ca47fc2795b4f"
+      "sha256": "2be55da74bd007919bea1930a74d423949c54e67069abb65cd8ffa1ed8348afc"
     },
     {
       "path": {
@@ -103,7 +103,7 @@
         "value": "speckit_pro_runner/codex_agent_generator.py",
         "display": "speckit_pro_runner/codex_agent_generator.py"
       },
-      "sha256": "0a938335b0ed6a4471adc9df9535f095f233a1f9799b21e6636e75f5c860a825"
+      "sha256": "43158370aa0ff67bfb994ac2bfa7afb5f56fc6c8978410431831c31b2182b73e"
     },
     {
       "path": {
@@ -583,7 +583,7 @@
         "value": "speckit_pro_runner/helpers/extension_hooks.py",
         "display": "speckit_pro_runner/helpers/extension_hooks.py"
       },
-      "sha256": "930aefb29fadd5d5437cfce572bb66b33db49f8ea94a88a5cab0b395135de629"
+      "sha256": "5f07d2f1f9d459d53e7fac1e173e69961274c23f1346428316fce2178be18c60"
     },
     {
       "path": {
@@ -623,7 +623,7 @@
         "value": "speckit_pro_runner/helpers/git_write_probe.py",
         "display": "speckit_pro_runner/helpers/git_write_probe.py"
       },
-      "sha256": "f507f45e223b4bbcf9ab7eaea26d748bebb67dceda8942316de3b031a4942562"
+      "sha256": "e17eee5bafd3640405388360a417a46276ff6eb0722a22dffc6aa1949778adf7"
     },
     {
       "path": {
@@ -655,7 +655,7 @@
         "value": "speckit_pro_runner/helpers/phase_brief.py",
         "display": "speckit_pro_runner/helpers/phase_brief.py"
       },
-      "sha256": "95fb7386bf2698e0e61f4f3127bdd1755237cbaf93cd3cbf3a268fc839048c21"
+      "sha256": "25c0996f6b6c13c8ffa58e4907dd5e51f4ead35dc3353aa41cf7071280b6dfb3"
     },
     {
       "path": {
