@@ -198,6 +198,19 @@ class ReviewabilityPreset(ReadinessCase):
                 self.assertEqual(
                     (0, f".specify/presets/{PRESET_ID}/templates/{name}.md"), specify(root, ["preset", "resolve", name])
                 )
+        # Step 5.0 also requires the PATH interpreter to parse preset manifests.
+        # Probe the external interpreter boundary; keep prerequisite policy real.
+        for yaml_available in (True, False):
+            with self.subTest(yaml_available=yaml_available), \
+                    patch("speckit_pro_runner.helpers.read_only.sys.platform", "linux"), \
+                    patch("speckit_pro_runner.helpers.read_only.shutil.which", return_value="/tools/python3"), \
+                    patch("speckit_pro_runner.helpers.read_only.subprocess.run", side_effect=lambda argv, **kwargs:
+                          subprocess.CompletedProcess(argv, int(argv[-1] == "import yaml" and not yaml_available), "", "")):
+                report = json.loads(check_prerequisites({"workflow_file": ""}, root)["stdout"])
+                [resolution] = [item for item in report["checks"] if item["check"] == "template_resolution"]
+                self.assertEqual(yaml_available, resolution["pass"])
+                if not yaml_available:
+                    self.assertFalse(report["all_pass"])
 
     def test_a_registered_preset_needs_no_command_and_an_unregistered_one_is_added(self) -> None:
         root = self.root
