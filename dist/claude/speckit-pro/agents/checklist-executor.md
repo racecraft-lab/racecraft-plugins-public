@@ -39,7 +39,8 @@ mandatory hooks only. Optional suggestions do not
 authorize this executor to invoke their commands.
 
 A prompt that carries `Pass: verify` is a verify pass: do rules 1 and 2
-only, report the counts and each remaining `[Gap]`, and change no artifact.
+only, refresh the domain's checklist report, and report the counts and each
+remaining `[Gap]`. Keep spec.md and plan.md unchanged.
 
 1. **Run the checklist command.** Use the Skill tool to invoke
    `/speckit-checklist` with the provided domain prompt.

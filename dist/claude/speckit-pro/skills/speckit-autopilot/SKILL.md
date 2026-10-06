@@ -777,7 +777,8 @@ and Analyze: each unresolved item as `{line, confidence}`). `brief.waves` then
 lists, in order: the domain wave, the security wave (the three analysts of
 each security item), the low-confidence wave (the routed analyst of each
 low-confidence item), and the verify wave (each domain's `pass: verify`
-re-run); a wave with no agents is omitted.
+re-run, refreshing its checklist report while keeping spec.md and plan.md
+unchanged); a wave with no agents is omitted.
 Launch every entry of a wave in one turn, then consume every result before the
 next wave. Each entry names its agent, prompt `inputs` and model. A domain entry
 takes that domain's workflow prompt, plus a `Pass: verify` line when its inputs
@@ -823,16 +824,19 @@ for phase in PHASES starting from first_pending:
        under the confirmation rule in [Extension Hook Events](./references/phase-execution.md#extension-hook-events).
        Other planning phases: handle optional brief.hooks with event=before_<phase>
        under the confirmation rule above before spawning any executor.
-    3. For each workflow prompt in this phase:
+    3. Checklist: use the Dispatch waves flow below instead of the per-prompt dispatch.
+       Other phases: for each workflow prompt in this phase:
          Planning:
          Agent(subagent_type: "speckit-pro:" + brief.agent, model: brief.model.claude.model,
                run_in_background: false, prompt: <brief.inputs.instruction + workflow prompt + brief context + brief.slices>)
          Implement: use the implementation executor and task-specific TDD prompt.
+       Checklist uses the ordered flow in step 4; this is the launch mechanism for each wave.
        Each brief wave: launch all its entries in one turn, each
          Agent(subagent_type: "speckit-pro:" + entry.agent, model: entry.model.claude.model,
                run_in_background: true, prompt: <entry.inputs + the wave prompt, see Dispatch waves>),
        then consume every entry's terminal result before the next wave.
-    4. Run consensus (Clarify/Checklist/Analyze only) — see Rule 6
+    4. Checklist: domain wave -> consensus -> verify wave (Dispatch waves above).
+       Other phases: run consensus (Clarify/Analyze only) — see Rule 6
     5. Specify, Plan, Checklist, Tasks and Analyze only:
        handle optional brief.hooks with event=after_<phase> under the confirmation
        rule above; record runs and skips in the decisions list.

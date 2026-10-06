@@ -557,7 +557,7 @@ resolution over all domains' gaps, then a verify wave:
    c. autopilot-state.json: each "<domain> Consensus" → completed
 5. Verify wave: ONE turn, the `pass: verify` entries of the first brief, each
    with that domain's prompt plus a `Pass: verify` line; each re-runs its
-   domain checklist and changes nothing
+   domain checklist, refreshes its report, and keeps spec.md and plan.md unchanged
 6. autopilot-state.json: every domain task → completed
 ```
 

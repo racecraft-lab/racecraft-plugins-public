@@ -595,11 +595,20 @@ class PhaseBriefWaveTests(InProjectCase):
                 self.assertNotIn("BEFORE spawning the next", skill)
                 self.assertNotIn("Do not batch all domains", skill)
 
-    def test_the_checklist_executor_changes_nothing_on_a_verify_pass_on_both_hosts(self):
+    def test_checklist_main_loop_uses_the_wave_flow_instead_of_serial_dispatch(self):
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                loop = self.loop(host)
+                self.assertIn("Checklist: use the Dispatch waves flow below instead of the per-prompt dispatch", loop)
+                self.assertIn("Other phases: for each workflow prompt", loop)
+                self.assertIn("domain wave -> consensus -> verify wave", loop)
+                self.assertIn("Other phases: run consensus", loop)
+
+    def test_the_checklist_executor_only_refreshes_checklist_reports_on_a_verify_pass_on_both_hosts(self):
         for root, suffix in ((REPO / "speckit-pro/agents", ".md"), (REPO / "speckit-pro/codex-agents", ".toml")):
             with self.subTest(root=str(root.relative_to(REPO))):
                 text = " ".join((root / ("checklist-executor" + suffix)).read_text().split())
-                self.assertIn("`Pass: verify` is a verify pass: do rules 1 and 2 only, report the counts and each remaining `[Gap]`, and change no artifact",
+                self.assertIn("`Pass: verify` is a verify pass: do rules 1 and 2 only, refresh the domain's checklist report, and report the counts and each remaining `[Gap]`. Keep spec.md and plan.md unchanged",
                               text)
 
 
