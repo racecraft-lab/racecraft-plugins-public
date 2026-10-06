@@ -408,8 +408,10 @@ for phase in PHASES starting from first_pending:
        in workflow order, the baseline, and each executor's Proposed Edits block. It
        applies one domain at a time in domain order. A conflict or a gap with no edit
        goes to consensus below; a refusal applies nothing and is a gate failure under
-       the Failure Escalation Protocol. After consensus, spawn each domain's executor
-       again with `Mode: verify` to confirm its gaps closed.
+       the Failure Escalation Protocol. After consensus, take a read_only baseline, spawn
+       each domain's executor again with `Mode: verify` to confirm its gaps closed, then
+       run `checklist-edits` in dry_run mode with no domains, no proposals and that
+       baseline: a refusal means a verify run wrote an artifact.
     5. Run consensus in main session if needed:
        Parse executor's "Unresolved for consensus" section.
        For each item → spawn the category-routed analysts (codebase-analyst,
@@ -805,7 +807,8 @@ After every domain executor has returned:
      workflow order, the baseline, and each executor's Proposed Edits block.
      It applies one domain at a time in domain order. Route a conflict or a
      gap with no edit to step 5. A refusal applies nothing: handle it as a
-     gate failure under the Failure Escalation Protocol
+     gate failure under the Failure Escalation Protocol. An interrupted apply
+     names the domains already written: restore both files before any retry
   4. Parse each executor's "Unresolved for consensus" section
   5. If unresolved gaps exist:
      a. autopilot-state.json: "<domain> Consensus" → in_progress
@@ -818,10 +821,13 @@ After every domain executor has returned:
         Round 2 escape-hatch: also batched across all queued gaps.
         [ROUND_3_TIEBREAK]: consensus-protocol.md#round-3-tiebreak (Round 3 agent tiebreak)
      c. autopilot-state.json: "<domain> Consensus" → completed
-  6. For each domain: Agent(subagent_type: "speckit-pro:checklist-executor",
+  6. runner helper `checklist-edits`, mode read_only → verify baseline
+     For each domain: Agent(subagent_type: "speckit-pro:checklist-executor",
           run_in_background: false, prompt: "Mode: verify\nRun /speckit-checklist with: <domain prompt>")
      re-runs the domain checklist to verify gaps closed
      autopilot-state.json: domain task → completed
+     Then runner helper `checklist-edits`, mode dry_run, with no domains, no
+     proposals and the verify baseline: a refusal means a verify run wrote an artifact
 ```
 
 **Layer 1 (executor):** The checklist-executor handles

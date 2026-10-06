@@ -62,8 +62,11 @@ class ChecklistEditsCase(MutationRequestCase):
     def baseline(self) -> dict[str, str]:
         return dict(self.read_only_data()["baseline"])
 
-    def apply(self, *proposals: dict[str, Any], mode: str = "apply", **inputs: object) -> dict[str, Any]:
-        fields: dict[str, Any] = {"domains": DOMAINS, "baseline": self.baseline(), "proposals": list(proposals)}
+    def apply(self, *proposals: Any, mode: str = "apply", **inputs: object) -> dict[str, Any]:
+        """Send the proposals, with an empty one for each listed domain that sent none, as a clean domain would."""
+        sent = {item["domain"] for item in proposals if isinstance(item, dict)}
+        padded = [*proposals, *(proposal(name) for name in DOMAINS if name not in sent)]
+        fields: dict[str, Any] = {"domains": DOMAINS, "baseline": self.baseline(), "proposals": padded}
         return self.call(mode, **{**fields, **inputs})
 
     def text(self, name: str) -> str:
@@ -73,8 +76,10 @@ class ChecklistEditsCase(MutationRequestCase):
 class ProposalTests(ChecklistEditsCase):
     """Proposals apply one domain at a time, in workflow order, under the lock."""
 
-    def test_the_committed_request_fixture_is_served_by_the_registry(self) -> None:
+    def test_the_registry_serves_the_committed_request_fixture(self) -> None:
+        self.assertEqual(HELPER_ID, json.loads(FIXTURE.read_text(encoding="utf-8"))["helper_id"])
         self.assertEqual(("read_only", "dry_run", "apply"), MUTATION_HELPERS[HELPER_ID].modes)
+        self.assertEqual(["plan.md", "spec.md"], sorted(self.read_only_data()["baseline"]))
 
     def test_read_only_returns_the_digests_of_both_artifacts_and_writes_nothing(self) -> None:
         result = self.call("read_only")
@@ -102,7 +107,7 @@ class ProposalTests(ChecklistEditsCase):
                 (self.root / FEATURE / "plan.md").write_text(PLAN, encoding="utf-8")
                 result = self.apply(*arrival)
                 self.assertEqual("ok", result["status"], result)
-                self.assertEqual(["security", "ux"], result["data"]["order"])
+                self.assertEqual(["security", "ux", "api"], result["data"]["order"])
                 self.assertEqual("# Spec\nLogin uses a password and a code sent by email.\nExports are open.\n", self.text("spec.md"))
                 self.assertEqual("# Plan\nSessions expire.\n", self.text("plan.md"))
 
@@ -133,7 +138,7 @@ class ProposalTests(ChecklistEditsCase):
             proposal("security", edit("G1", "plan.md", "never", "always")),
         )
         record = json.loads((self.root / RECORD).read_text(encoding="utf-8"))
-        self.assertEqual(["security", "api"], [row["domain"] for row in record["domains"]])
+        self.assertEqual(["security", "ux", "api"], [row["domain"] for row in record["domains"]])
         self.assertEqual("checklist-edits/v1", record["schema_version"])
 
 
@@ -146,11 +151,12 @@ class ConflictTests(ChecklistEditsCase):
             proposal("ux", edit("G3", "spec.md", "a password", "a passkey")),
         )
         self.assertEqual("ok", result["status"], result)
-        first, second = result["data"]["domains"]
+        first, second, third = result["data"]["domains"]
         self.assertEqual(("conflict", 0), (first["status"], first["edits_applied"]))
         self.assertEqual([{"gap": "G2", "file": "plan.md", "reason": "find text not found"}], first["conflicts"])
         self.assertEqual("applied", second["status"])
-        self.assertEqual(["ux"], result["data"]["order"])
+        self.assertEqual(["ux", "api"], result["data"]["order"])
+        self.assertEqual(("applied", 0), (third["status"], third["edits_applied"]))
         self.assertEqual("# Spec\nLogin uses a passkey.\nExports are open.\n", self.text("spec.md"))
         self.assertEqual(PLAN, self.text("plan.md"))
 
@@ -209,6 +215,38 @@ class RefusalTests(ChecklistEditsCase):
         self.assertEqual("input_error", self.apply(baseline={"spec.md": "x"})["status"])
         self.assertFalse((self.root / RECORD).exists())
 
+    def test_a_listed_domain_with_no_proposal_is_refused_not_read_as_clean(self) -> None:
+        result = self.call("apply", domains=DOMAINS, baseline=self.baseline(), proposals=[proposal("ux", edit("G1", "spec.md", "open", "private"))])
+        self.assertEqual("input_error", result["status"], result)
+        self.assertIn("missing ['security', 'api']", json.dumps(result))
+        self.assertEqual(SPEC, self.text("spec.md"))
+
+    def test_a_check_with_no_domains_compares_the_digests_only(self) -> None:
+        before = self.baseline()
+        check = {"domains": [], "baseline": before, "proposals": []}
+        self.assertEqual("ok", self.call("dry_run", **check)["status"])
+        (self.root / FEATURE / "spec.md").write_text(SPEC + "A verify run wrote this.\n", encoding="utf-8")
+        result = self.call("dry_run", **check)
+        self.assertEqual(("expected_failure", ["spec.md"]), (result["status"], result["data"]["changed"]))
+
+    def test_a_write_failure_names_the_domains_already_applied(self) -> None:
+        real = checklist_edits.write_bytes_atomic
+        calls: list[str] = []
+
+        def failing(path: Path, content: bytes, **kwargs: Any) -> Any:
+            calls.append(path.name)
+            if len(calls) == 2:
+                raise OSError("disk full")
+            return real(path, content, **kwargs)
+
+        with patch.object(checklist_edits, "write_bytes_atomic", failing):
+            result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")),
+                                proposal("ux", edit("G2", "plan.md", "never", "always")))
+        self.assertEqual(("expected_failure", ["security"], "ux"), (result["status"], result["data"]["applied"], result["data"]["failed"]))
+        self.assertEqual(("apply_interrupted", "# Spec\nLogin uses a password.\nExports are private.\n", PLAN),
+                         (result["diagnostics"][0]["code"], self.text("spec.md"), self.text("plan.md")))
+        self.assertFalse((self.root / RECORD).with_suffix(".lock").exists())
+
     def test_a_feature_directory_outside_the_repository_is_refused(self) -> None:
         for bad in ("../elsewhere", "/etc"):
             with self.subTest(bad):
@@ -230,6 +268,7 @@ class HostParityTests(unittest.TestCase):
         proposals = [
             proposal("ux", edit("G2", "spec.md", "a code", "a code by email")),
             proposal("security", edit("G1", "spec.md", "a password", "a password and a code")),
+            proposal("api"),
         ]
         outcomes = []
         for host in HOSTS:
@@ -245,7 +284,7 @@ class HostParityTests(unittest.TestCase):
                 outcomes.append((applied["status"], applied["data"]["order"], applied["data"]["domains"],
                                  (root / FEATURE / "spec.md").read_text(encoding="utf-8")))
         self.assertEqual("ok", outcomes[0][0])
-        self.assertEqual(["security", "ux"], outcomes[0][1])
+        self.assertEqual(["security", "ux", "api"], outcomes[0][1])
         self.assertEqual(outcomes[0], outcomes[1])
 
 
@@ -262,10 +301,15 @@ class GuidanceTests(unittest.TestCase):
             self.assertEqual([], [(relative, phrase) for phrase in RETIRED if phrase in text])
 
     def test_the_phase_four_flow_applies_proposals_through_the_helper_on_both_hosts(self) -> None:
-        for guide in PHASE_EXECUTION_GUIDES:
-            text = guide_view(guide)
-            self.assertEqual((True, True, False), ("runner helper `checklist-edits`" in text, "in domain order" in text,
-                                                   "Domain 2 may depend on Domain 1's gap fixes" in text), guide)
+        # Each host's own checklist passage: Claude's Phase 4 section, Codex's checklist-only loop step.
+        for guide, anchor in zip(PHASE_EXECUTION_GUIDES, ("### Phase 4: Checklist", "Checklist only:"), strict=True):
+            passage = guide_view(guide).split(anchor, 1)[1][:3500]
+            apply_at, consensus_at, verify_at = (passage.find(text) for text in ("mode apply" if "Phase" in anchor else "in apply mode",
+                                                                               "consensus", "Mode: verify"))
+            self.assertTrue(0 <= apply_at < consensus_at < verify_at, (guide, apply_at, consensus_at, verify_at))
+            for phrase in ("runner helper `checklist-edits`", "in domain order", "dry_run"):
+                self.assertIn(phrase, passage, guide)
+            self.assertNotIn("Domain 2 may depend on Domain 1's gap fixes", passage)
 
 
 if __name__ == "__main__":

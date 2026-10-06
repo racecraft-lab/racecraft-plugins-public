@@ -175,7 +175,8 @@ counts from them to decide whether the next gate can run.
 One `json` block, a proposal for this domain. Each gap `id` is the `G<n>` above; each
 edit names a gap, `spec.md` or `plan.md`, a `find` text that occurs exactly once in
 that file, and its `replace` text. A gap with no edit counts under "remaining".
-Send the block to the runner unchanged.
+Send the block even when you found no gaps, with empty lists: the runner refuses a
+domain that returned no block. The block goes to the runner unchanged.
 
 ```json
 {"domain": "<domain name>",

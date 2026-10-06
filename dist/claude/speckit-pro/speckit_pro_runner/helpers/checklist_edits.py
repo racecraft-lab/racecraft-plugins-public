@@ -7,7 +7,10 @@ A checklist domain executor returns its gaps and proposed edits and writes neith
 wrote an artifact. Otherwise they apply the proposals one domain at a time in the
 workflow's domain order, under one lock, so no two writes touch the files at once.
 A domain whose edit does not match exactly once applies none of its edits and is
-reported as a conflict; later domains still run.
+reported as a conflict; later domains still run. Every listed domain needs a proposal,
+which is empty when it found no gaps, so a missing return is refused rather than read
+as a clean domain. `dry_run` with no domains and no proposals only compares the digests,
+which is how the orchestrator checks that a verify run wrote nothing.
 """
 
 from __future__ import annotations
@@ -37,6 +40,15 @@ class ArtifactChanged(Exception):
     def __init__(self, changed: list[str]) -> None:
         super().__init__(f"{', '.join(changed)} changed since the baseline")
         self.changed = changed
+
+
+class ApplyInterrupted(Exception):
+    """A write failed after earlier domains reached disk; `applied` names them."""
+
+    def __init__(self, domain: str, applied: list[str]) -> None:
+        super().__init__(f"writing {domain!r} failed after {len(applied)} domain(s) were applied")
+        self.domain = domain
+        self.applied = applied
 
 
 def checked_proposal(value: Any) -> tuple[str, list[str], list[dict[str, str]]]:
@@ -81,6 +93,9 @@ def checked_request(request: dict[str, Any]) -> tuple[list[str], dict[str, str],
         if domain not in domains or domain in proposals:
             raise SelectionError(f"proposal: {domain!r} is not a listed domain or has more than one proposal")
         proposals[domain] = (gaps, edits)
+    missing = [name for name in domains if name not in proposals]
+    if missing:
+        raise SelectionError(f"every listed domain needs a proposal, empty when it found no gaps; missing {missing}")
     return domains, {name: require_text(baseline[name], "baseline digest") for name in ARTIFACTS}, proposals
 
 
@@ -121,12 +136,15 @@ def write_changed(root: Path, feature: Path, before: dict[str, str], after: dict
 def apply_proposals(texts: dict[str, str], domains: list[str], proposals: dict[str, tuple[list[str], list[dict[str, str]]]],
                     write: Callable[[dict[str, str], dict[str, str]], None] | None) -> list[dict[str, Any]]:
     """One row per proposed domain, in domain order; `write` puts each domain's result on disk before the next starts."""
-    rows = []
-    for domain in (name for name in domains if name in proposals):
+    rows: list[dict[str, Any]] = []
+    for domain in domains:
         gaps, edits = proposals[domain]
         updated, conflicts = apply_domain(texts, edits)
         if write is not None:
-            write(texts, updated)
+            try:
+                write(texts, updated)
+            except OSError as error:
+                raise ApplyInterrupted(domain, [row["domain"] for row in rows if row["status"] == "applied"]) from error
         texts = updated
         rows.append({"domain": domain, "gaps": len(gaps), "status": "conflict" if conflicts else "applied",
                      "edits_applied": 0 if conflicts else len(edits), "conflicts": conflicts,
@@ -173,6 +191,16 @@ REFUSAL = Refusal(
 def run_checklist_edits_helper(entry: Any, request: Any) -> dict[str, Any]:
     try:
         return run_contained_helper(entry, request, checklist_edits, REFUSAL)
+    except ApplyInterrupted as error:
+        refusal = diagnostic(
+            "apply_interrupted",
+            f"{error}; spec.md and plan.md hold the domains applied so far.",
+            remediation_summary="Restore spec.md and plan.md from version control before retrying.",
+            remediation_actions=["Restore both files, then take a fresh baseline with read_only.",
+                                 "Redispatch the domains; the retry would otherwise report an executor write."],
+        )
+        return response("expected_failure", request_id=request.request_id,
+                        data={"applied": error.applied, "failed": error.domain}, diagnostics=[refusal])
     except ArtifactChanged as error:
         refusal = diagnostic(
             "artifact_changed_during_check",
