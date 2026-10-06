@@ -40,7 +40,7 @@ DOMAINS = ["security", "ux", "api"]
 
 def edit(*fields: str) -> dict[str, str]:
     """One proposed edit from (gap, file, find, replace)."""
-    return dict(zip(("gap", "file", "find", "replace"), fields))
+    return dict(zip(("gap", "file", "find", "replace"), fields, strict=True))
 
 
 def proposal(domain: str, *edits: dict[str, str], gaps: list[str] | None = None) -> dict[str, Any]:
