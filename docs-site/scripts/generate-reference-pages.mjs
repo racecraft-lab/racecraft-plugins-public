@@ -329,7 +329,8 @@ async function buildAgentsPage() {
     ].filter(Boolean);
     const sources = [];
     for (const source of sourceRefs) sources.push(await citation(source));
-    const codexModel = role.codex.model ? ` Codex uses \`${role.codex.model}\` with \`${role.codex.effort}\` effort.` : '';
+    const codexEffort = role.codex.effort ? ` with \`${role.codex.effort}\` effort` : ', with effort set per dispatch by the phase brief';
+    const codexModel = role.codex.model ? ` Codex uses \`${role.codex.model}\`${codexEffort}.` : '';
     const exception = role.exception_reason || 'Responsibilities align; runtime prompts remain separately authored and retain platform-specific model, effort, sandbox, and memory settings.';
     records.push({
       id: name,

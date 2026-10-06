@@ -317,6 +317,10 @@ Users do not need to know about a setting; the autopilot adapts.
 - Pass every auto-applied fallback and every deferred item to
   `pr-packet-output` as `known_gaps`, so the PR body lists them under
   `## Known Gaps`.
+- When Step 0.11 recorded `UNRATIFIED_FLAG`, pass it to `pr-packet-output` as
+  `unratified_defaults`; the runner renders it in the final body's
+  `## Unratified quality-gate defaults` section. Initial drafts carry the same
+  warning below the Artifacts table, as described in Phase Execution.
 - Missing optional extensions are logged and skipped. Do not fail the entire
   autopilot because an optional extension command is unavailable.
 - Never mark the workflow complete until every planned Post item is completed or
@@ -856,6 +860,7 @@ mandatory. Invoke the registered `generate-uat-skeleton` mutation helper in `dry
 - `output_path=<feature-dir>/.process/uat-runbook.md`
 - `workflow_file=<current workflow file>` when available
 - `project_commands=<PROJECT_COMMANDS object>`
+- `unratified_defaults=<UNRATIFIED_FLAG>` when Step 0.11 recorded one
 
 **Terms lint (advisory).** When `docs/ai/specs/ubiquitous-language.md` exists,
 run

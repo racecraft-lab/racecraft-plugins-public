@@ -33,7 +33,7 @@ captured during scoping.
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ⏳ Pending | |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Optional but recommended |
+| Clarify | `/speckit-clarify` | ⏳ Pending | One session, at most 5 questions |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
@@ -89,7 +89,9 @@ Use `references/gate-validation.md` from the installed `speckit-autopilot` skill
 
 Filled from `detect-commands` at Step 0.11. One row per slot; the operator answer column holds the missing-tool outcome (`install` by default, then `skip (spec)`, or a recorded operator `skip (repo)`) and is the record autopilot reads before it defaults. A `skip (repo)` answer is durable only once the operator adds it to `.specify/quality-gates.json` `skips`.
 
-**Thresholds file:** `.specify/quality-gates.json` <!-- present / missing / invalid --> <!-- complexity N, CRAP N, mutation floor N; basis --> (G0 blocks unless present)
+**Thresholds file:** `.specify/quality-gates.json` <!-- present / missing / invalid --> <!-- complexity N, CRAP N, mutation floor N; basis --> (missing or invalid: G0 runs on unratified defaults in memory)
+
+**Unratified defaults:** <!-- none / current flag with first problem; recorded in decisions list and run state, carried to PR body and UAT runbook -->
 
 **Hardener:** not run <!-- not needed (score N ≥ floor F) | delegated: iteration k of cap: N → M ... floor reached / cap reached | fallback (reason): ... | rejected candidate: reason --> (fires once per spec when MUTATION is populated)
 
@@ -215,39 +217,23 @@ Use these markers in spec.md for traceability through later phases:
 
 ## Phase 2: Clarify
 
-**When to run:** When spec has areas that could be interpreted multiple ways. 10-20 minutes here saves hours of rework later.
-
-**Best Practice:** Maximum 5 targeted questions per Clarify session.
+**When to run:** Every SPEC, after Specify. One session of at most 5 questions. The spec's `[NEEDS CLARIFICATION]` count does not decide whether it runs.
 
 ### Clarify Prompts
 
-#### Session 1: UX Focus
+#### Session 1
 
 ```text
-/speckit-clarify Focus on UX: user flows, interactions, loading states, error states
+/speckit-clarify Focus on the decisions that most change the plan: user flows, API contracts, integration points, error and edge behavior
 ```
 
-#### Session 2: API Focus
-
-```text
-/speckit-clarify Focus on API: endpoint contracts, error responses, streaming behavior, rate limiting
-```
-
-#### Session 3: Integration Focus
-
-```text
-/speckit-clarify Focus on integration: external services, data dependencies, authentication
-```
-
-<!-- Add or modify sessions based on your project's domains -->
+<!-- Narrow the focus to this SPEC's open questions. Keep one session of at most 5 questions. -->
 
 ### Clarify Results
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
 | 1 | | | |
-| 2 | | | |
-| 3 | | | |
 
 ---
 

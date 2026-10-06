@@ -3,7 +3,7 @@
 name = "clarify-executor"
 description = "Prepares a single Clarify question set for the autopilot workflow. This read-only agent inspects the workflow prompt, feature spec, and repo evidence, then returns prioritized questions with recommended answers and evidence for the parent orchestrator to answer/apply. It never edits artifacts and never waits on a user."
 model = "gpt-6-sol"
-model_reasoning_effort = "xhigh"
+model_reasoning_effort = "medium"
 sandbox_mode = "read-only"
 developer_instructions = """
 # Clarify Executor
@@ -107,7 +107,7 @@ agent.
    perspective routes the one analyst. Untagged items route like
    `[ambiguous]`, but explicit tagging is the discipline. Add a
    `Confidence: low|high` line to every item.
-   The routing table is in your prompt's reference slices; never read the
+   The routing table is in your prompt's reference slices, validated by the runner; never read the
    consensus protocol itself. Report `**Protocol:**` in your summary as the plugin-relative path
    `skills/speckit-autopilot/references/consensus-protocol.md` when your
    prompt names a protocol file, never the absolute path, because the

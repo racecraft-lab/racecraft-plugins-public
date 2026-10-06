@@ -3,14 +3,18 @@
 from __future__ import annotations
 
 import concurrent.futures
+import contextlib
 import copy
+import fcntl
 import hashlib
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "lib"))
@@ -19,6 +23,7 @@ import trigger_approval_fixtures as approvals
 import trigger_campaign_pins as pins
 import trigger_carry_forward as carry
 import trigger_comparison as comparison
+import git_fixture
 from test_result import run_counted
 from trigger_inventory import load_inventory, plan_inventory
 
@@ -527,15 +532,7 @@ class CampaignTests(unittest.TestCase):
 
 
 class CampaignDraftBindingTests(unittest.TestCase):
-    """Committed freeze drafts must keep binding the shipped corpus.
-
-    ``compare-trigger-evals.py validate`` is the launch-time gate, but nothing
-    ran it over the drafts kept in the repository, so a corpus revision that
-    landed after they were generated left both of them unable to validate
-    against the inventory they name. Rebind them from the provider-free planner
-    whenever the inventory changes; the freeze-time model, CLI, observer,
-    catalog, fixture and description pins stay with the draft.
-    """
+    """Stable templates retain the reviewed corpus and bind identities at check time."""
 
     def test_committed_campaign_drafts_match_the_provider_free_planner(self):
         layer = ROOT / "layer2-trigger"
@@ -544,7 +541,7 @@ class CampaignDraftBindingTests(unittest.TestCase):
         drafts = {"issue-573-pilot.draft.json": "pilot", "issue-573-full.draft.json": "full"}
         for name, scope in sorted(drafts.items()):
             with self.subTest(draft=name):
-                draft = json.loads((layer / "campaign-drafts" / name).read_bytes())
+                draft = comparison.bind_template(json.loads((layer / "campaign-drafts" / name).read_bytes()))
                 plan = plan_inventory(inventory, layer, scope, inventory_path=inventory_path)
                 cases = comparison.validate_inventory_binding(draft, inventory)
                 self.assertEqual(len(cases), len(plan["roster"]))
@@ -555,37 +552,487 @@ class CampaignDraftBindingTests(unittest.TestCase):
 
 
 class DraftIdentityTests(unittest.TestCase):
-    def test_committed_campaign_drafts_bind_the_current_identities(self):
-        """A draft names the observer, catalog and fixture it was planned against.
+    def test_independent_observer_and_host_catalog_edits_merge_without_draft_conflicts(self):
+        sources = sorted((ROOT / "layer2-trigger/campaign-drafts").glob("*.draft.json"))
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = Path(temporary)
+            test_root = repo / "tests/speckit-pro"
 
-        A library, skill or fixture edit changes those digests. This fails until
-        ``compare-trigger-evals.py rebind`` refreshes each draft, so a stale draft
-        cannot be used unnoticed.
-        """
-        current = comparison.snapshot_identities(comparison.measurement_snapshot())
-        drafts = sorted((ROOT / "layer2-trigger" / "campaign-drafts").glob("*.draft.json"))
+            def git(*args):
+                return git_fixture.git_stdout(repo, *args)
+
+            for source in sources:
+                target = test_root / "layer2-trigger/campaign-drafts" / source.name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(source.read_bytes())
+            edits = (test_root / "layer2-trigger/observer.py",
+                     test_root / "lib/observer.py",
+                     repo / "speckit-pro/skills/example/SKILL.md",
+                     repo / "speckit-pro/codex-skills/example/SKILL.md")
+            for path in edits:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("original\n")
+            git("init", "-b", "main")
+            git("add", ".")
+            git("commit", "-m", "Initial templates")
+            bindings = []
+            for branch, changed in (("first", edits[::2]), ("second", edits[1::2])):
+                git("checkout", "-b", branch, "main")
+                for path in changed:
+                    path.write_text(branch + "\n")
+                with mock.patch.object(comparison, "ROOT", test_root):
+                    bindings.append(comparison.bind_template(json.loads(sources[0].read_bytes()))["identities"])
+                git("add", ".")
+                git("commit", "-m", branch)
+            git("checkout", "main")
+            git("merge", "--no-edit", "first")
+            git("merge", "--no-edit", "second")
+            self.assertEqual(git("status", "--porcelain"), "")
+            for key in ("observer", "catalog"):
+                self.assertNotEqual(bindings[0][key], bindings[1][key])
+            for source in sources:
+                self.assertEqual((test_root / "layer2-trigger/campaign-drafts" / source.name).read_bytes(),
+                                 source.read_bytes())
+
+    def test_unbound_or_malformed_templates_cannot_be_used_as_frozen_evidence(self):
+        source = ROOT / "layer2-trigger/campaign-drafts/issue-573-pilot.draft.json"
+        template = json.loads(source.read_bytes())
+        with self.assertRaisesRegex(ValueError, "unsupported experiment schema"):
+            comparison.validate_experiment(template)
+        with self.assertRaisesRegex(ValueError, "rebind --manifest <template> --out"):
+            comparison.validate_experiment(template)
+        for patch in ({"identities": {"observer": "0" * 64}}, {"launch_authorized": True},
+                      {"qualification_established": True}, {"output_directory": "evidence"},
+                      {"schema_version": "unknown"}, {"roster": []}):
+            with self.subTest(patch=patch), self.assertRaises(ValueError):
+                comparison.bind_template({**template, **patch})
+
+    def test_template_rebind_requires_new_output_and_never_overwrites_evidence(self):
+        script = ROOT / "layer2-trigger/compare-trigger-evals.py"
+        source = ROOT / "layer2-trigger/campaign-drafts/issue-573-pilot.draft.json"
+        with tempfile.TemporaryDirectory() as temporary:
+            draft = Path(temporary).resolve() / "template.json"
+            draft.write_bytes(source.read_bytes())
+            for extra in ([], ["--out", str(draft)]):
+                with self.subTest(extra=extra):
+                    result = subprocess.run([sys.executable, str(script), "rebind", "--manifest", str(draft),
+                                             *extra], capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+                    self.assertEqual(draft.read_bytes(), source.read_bytes())
+
+    def test_template_binds_to_a_separate_manifest_without_rewriting_the_draft(self):
+        source = ROOT / "layer2-trigger/campaign-drafts/issue-573-pilot.draft.json"
+        script = ROOT / "layer2-trigger/compare-trigger-evals.py"
+        template = json.loads(source.read_bytes())
+        template["schema_version"] = "trigger-experiment-template/v1"
+        template.pop("identities", None)
+        with tempfile.TemporaryDirectory() as temporary:
+            draft = Path(temporary).resolve() / "template.json"
+            bound = Path(temporary) / "bound.json"
+            draft.write_text(json.dumps(template) + "\n")
+            before = draft.read_bytes()
+            result = subprocess.run([sys.executable, str(script), "rebind", "--manifest",
+                                     str(draft), "--out", str(bound)], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            manifest = json.loads(bound.read_bytes())
+            self.assertEqual(draft.read_bytes(), before)
+            self.assertEqual(manifest["schema_version"], "trigger-experiment/v1")
+            self.assertEqual(manifest["identities"],
+                             comparison.snapshot_identities(comparison.measurement_snapshot()))
+            self.assertEqual({k: v for k, v in manifest.items() if k not in {"schema_version", "identities"}},
+                             {k: v for k, v in template.items() if k != "schema_version"})
+
+    def test_committed_templates_bind_and_validate_without_changing_source(self):
+        script = ROOT / "layer2-trigger/compare-trigger-evals.py"
+        drafts = sorted((ROOT / "layer2-trigger/campaign-drafts").glob("*.draft.json"))
         self.assertTrue(drafts, "no committed campaign drafts found")
         for path in drafts:
-            with self.subTest(draft=path.name):
-                self.assertEqual(json.loads(path.read_bytes())["identities"], current)
+            with self.subTest(draft=path.name), tempfile.TemporaryDirectory() as temporary:
+                before = path.read_bytes()
+                self.assertNotIn("identities", json.loads(before))
+                bound = Path(temporary) / "bound.json"
+                subprocess.run([sys.executable, str(script), "rebind", "--manifest", str(path),
+                                "--out", str(bound)], capture_output=True, text=True, check=True)
+                result = subprocess.run([sys.executable, str(script), "validate", "--manifest", str(bound),
+                                         "--inventory", str(ROOT / "layer2-trigger/case-inventory.json")],
+                                        capture_output=True, text=True, check=True)
+                self.assertTrue(json.loads(result.stdout)["identities_current"])
+                self.assertEqual(path.read_bytes(), before)
+                self.assertEqual({row["host"] for row in json.loads(bound.read_bytes())["roster"]},
+                                 {"claude", "codex"})
 
     def test_rebind_refreshes_a_stale_draft_and_only_its_identities(self):
         source = ROOT / "layer2-trigger" / "campaign-drafts" / "issue-573-pilot.draft.json"
         script = ROOT / "layer2-trigger" / "compare-trigger-evals.py"
         with tempfile.TemporaryDirectory() as temporary:
-            draft = Path(temporary) / "stale.draft.json"
-            stale = json.loads(source.read_bytes())
+            draft = Path(temporary).resolve() / "stale.draft.json"
+            stale = comparison.bind_template(json.loads(source.read_bytes()))
             stale["identities"]["observer"] = "0" * 64
             draft.write_text(json.dumps(stale, indent=2) + "\n")
             args = [sys.executable, str(script)]
             inventory = ["--manifest", str(draft), "--inventory", str(ROOT / "layer2-trigger" / "case-inventory.json")]
-            before = json.loads(subprocess.run([*args, "validate", *inventory], capture_output=True, text=True, check=True).stdout)
+            before = subprocess.run([*args, "validate", *inventory], capture_output=True, text=True)
+            self.assertEqual(before.returncode, 2, before.stdout + before.stderr)
+            self.assertIn("stale", json.loads(before.stdout)["error"])
             subprocess.run([*args, "rebind", "--manifest", str(draft)], capture_output=True, text=True, check=True)
             after = json.loads(subprocess.run([*args, "validate", *inventory], capture_output=True, text=True, check=True).stdout)
             rebound = json.loads(draft.read_bytes())
-        self.assertEqual((before["identities_current"], after["identities_current"]), (False, True))
+        self.assertTrue(after["identities_current"])
         self.assertEqual({key: value for key, value in rebound.items() if key != "identities"},
                          {key: value for key, value in stale.items() if key != "identities"})
+
+    def test_rebind_refuses_a_symlinked_template_or_template_directory(self):
+        source = ROOT / "layer2-trigger/campaign-drafts/issue-573-pilot.draft.json"
+        script = ROOT / "layer2-trigger/compare-trigger-evals.py"
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            outside = base / "outside"
+            outside.mkdir()
+            (outside / "reviewed.draft.json").write_bytes(source.read_bytes())
+            linked_file = base / "repo/campaign-drafts/reviewed.draft.json"
+            linked_file.parent.mkdir(parents=True)
+            linked_file.symlink_to(outside / "reviewed.draft.json")
+            linked_directory = base / "repo/linked-drafts"
+            linked_directory.symlink_to(outside, target_is_directory=True)
+            for manifest in (linked_file, linked_directory / "reviewed.draft.json"):
+                with self.subTest(manifest=manifest.relative_to(base).as_posix()):
+                    bound = base / f"bound-{manifest.parent.name}.json"
+                    result = subprocess.run([sys.executable, str(script), "rebind", "--manifest", str(manifest),
+                                             "--out", str(bound)], capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+                    self.assertIn("symlink", json.loads(result.stdout)["error"])
+                    self.assertFalse(bound.exists())
+
+    def test_rebind_refuses_an_oversized_template(self):
+        source = ROOT / "layer2-trigger/campaign-drafts/issue-573-pilot.draft.json"
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            template = base / "oversized.draft.json"
+            payload = source.read_bytes().rstrip()
+            template.write_bytes(payload + b" " * (comparison.MAX_DRAFT_BYTES + 1 - len(payload)))
+            bound = base / "bound.json"
+            with self.assertRaisesRegex(ValueError, "exceeds"):
+                comparison.rebind_identities(template, bound)
+            self.assertFalse(bound.exists())
+
+    def test_rebind_refuses_an_in_place_concrete_draft_reached_through_a_symlink(self):
+        source = ROOT / "layer2-trigger/campaign-drafts/issue-573-pilot.draft.json"
+        script = ROOT / "layer2-trigger/compare-trigger-evals.py"
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            stale = comparison.bind_template(json.loads(source.read_bytes()))
+            stale["identities"]["observer"] = "0" * 64
+            target = base / "outside/stale.draft.json"
+            target.parent.mkdir()
+            target.write_text(json.dumps(stale, indent=2) + "\n")
+            before = target.read_bytes()
+            link = base / "repo/stale.draft.json"
+            link.parent.mkdir()
+            link.symlink_to(target)
+            result = subprocess.run([sys.executable, str(script), "rebind", "--manifest", str(link)],
+                                    capture_output=True, text=True)
+            self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+            self.assertIn("symlink", json.loads(result.stdout)["error"])
+            self.assertEqual(target.read_bytes(), before)
+            self.assertTrue(link.is_symlink())
+
+
+def draft_folders(case: unittest.TestCase, payload: bytes | None = None) -> Path:
+    """Create sibling drafts/ and outside/ folders, each holding payload as reviewed.draft.json when given."""
+    temporary = tempfile.TemporaryDirectory()
+    case.addCleanup(temporary.cleanup)
+    base = Path(temporary.name).resolve()
+    for folder in ("drafts", "outside"):
+        (base / folder).mkdir()
+        if payload is not None:
+            (base / folder / "reviewed.draft.json").write_bytes(payload)
+    return base
+
+
+def descriptor_holds(info: os.stat_result) -> bool:
+    """Return whether this process has a descriptor open on the file info describes."""
+    for name in os.listdir("/dev/fd"):
+        try:
+            opened = os.fstat(int(name))
+        except OSError:
+            continue
+        if (opened.st_dev, opened.st_ino) == (info.st_dev, info.st_ino):
+            return True
+    return False
+
+
+def once_before_open(fires, act):
+    """Return an os.open that runs act once, just before the first call that fires(path, flags) accepts."""
+    real_open, fired = os.open, []
+
+    def hooked(path, flags, *args, **kwargs):
+        if not fired and fires(path, flags):
+            fired.append(path)
+            act()
+        return real_open(path, flags, *args, **kwargs)
+
+    return hooked, fired
+
+
+class DraftComponentSwapTests(unittest.TestCase):
+    """A directory swapped for a symlink mid-open must not move a draft read or refresh outside."""
+
+    SOURCE = ROOT / "layer2-trigger/campaign-drafts/issue-573-pilot.draft.json"
+
+    def swap_once(self, base: Path, fires):
+        """Return an os.open that swaps drafts/ for a symlink to outside/ before the first matching call."""
+
+        def swap():
+            (base / "drafts").rename(base / "drafts.old")
+            (base / "drafts").symlink_to(base / "outside", target_is_directory=True)
+
+        return once_before_open(fires, swap)
+
+    def draft_pair(self, payload: bytes) -> tuple[Path, Path]:
+        base = draft_folders(self, payload)
+        return base, base / "drafts/reviewed.draft.json"
+
+    def test_read_refuses_a_directory_swapped_before_the_draft_opens(self):
+        payload = self.SOURCE.read_bytes()
+        base, draft = self.draft_pair(payload)
+        hook, swapped = self.swap_once(base, lambda path, _flags: "drafts" in Path(os.fspath(path)).parts)
+        with mock.patch.object(comparison.os, "open", hook), self.assertRaisesRegex(ValueError, "symlink"):
+            comparison.rebind_identities(draft, base / "bound.json")
+        self.assertTrue(swapped, "the swap seam never fired")
+        self.assertFalse((base / "bound.json").exists())
+
+    def test_in_place_refresh_writes_the_draft_it_read_not_the_swapped_target(self):
+        stale = comparison.bind_template(json.loads(self.SOURCE.read_bytes()))
+        stale["identities"]["observer"] = "0" * 64
+        payload = (json.dumps(stale, indent=2) + "\n").encode()
+        base, draft = self.draft_pair(payload)
+        hook, swapped = self.swap_once(base, lambda _path, flags: bool(flags & os.O_WRONLY))
+        with mock.patch.object(comparison.os, "open", hook):
+            comparison.rebind_identities(draft)
+        self.assertTrue(swapped, "the swap seam never fired")
+        self.assertEqual((base / "outside/reviewed.draft.json").read_bytes(), payload)
+        refreshed = json.loads((base / "drafts.old/reviewed.draft.json").read_bytes())
+        self.assertEqual(refreshed["identities"], comparison.snapshot_identities(comparison.measurement_snapshot()))
+
+
+class DraftConfinementTests(unittest.TestCase):
+    """A draft read or refresh must touch only its own single-named file and release every descriptor."""
+
+    SOURCE = ROOT / "layer2-trigger/campaign-drafts/issue-573-pilot.draft.json"
+
+    def stale_payload(self) -> bytes:
+        stale = comparison.bind_template(json.loads(self.SOURCE.read_bytes()))
+        stale["identities"]["observer"] = "0" * 64
+        return (json.dumps(stale, indent=2) + "\n").encode()
+
+    def test_template_read_and_in_place_refresh_refuse_a_hard_linked_draft(self):
+        for mode, payload, out in (("template", self.SOURCE.read_bytes(), "bound.json"),
+                                   ("in-place", self.stale_payload(), None)):
+            with self.subTest(mode=mode):
+                base = draft_folders(self)
+                (base / "outside/reviewed.draft.json").write_bytes(payload)
+                os.link(base / "outside/reviewed.draft.json", base / "drafts/reviewed.draft.json")
+                with self.assertRaisesRegex(ValueError, "hard link"):
+                    comparison.rebind_identities(base / "drafts/reviewed.draft.json", out and base / out)
+                self.assertEqual((base / "outside/reviewed.draft.json").read_bytes(), payload)
+                self.assertFalse((base / "bound.json").exists())
+
+    def test_in_place_refresh_refuses_a_hard_link_added_after_the_read(self):
+        base, payload = draft_folders(self), self.stale_payload()
+        draft = base / "drafts/reviewed.draft.json"
+        draft.write_bytes(payload)
+        real_open = os.open
+
+        def linking_open(path, flags, *args, **kwargs):
+            if flags & os.O_WRONLY and not (base / "outside/reviewed.draft.json").exists():
+                os.link(draft, base / "outside/reviewed.draft.json")
+            return real_open(path, flags, *args, **kwargs)
+
+        with mock.patch.object(comparison.os, "open", linking_open), self.assertRaisesRegex(ValueError, "hard link"):
+            comparison.rebind_identities(draft)
+        self.assertEqual(draft.read_bytes(), payload)
+        self.assertEqual(os.listdir(base / "drafts"), ["reviewed.draft.json"])
+
+    def test_a_directory_named_as_the_draft_releases_every_descriptor(self):
+        base = draft_folders(self)
+        (base / "drafts/reviewed.draft.json").mkdir()
+        before = len(os.listdir("/dev/fd"))
+        for _ in range(3):
+            with self.assertRaisesRegex(ValueError, "regular file"):
+                comparison.rebind_identities(base / "drafts/reviewed.draft.json", base / "bound.json")
+        self.assertEqual(len(os.listdir("/dev/fd")), before)
+        self.assertFalse((base / "bound.json").exists())
+
+
+class DraftReplaceTests(unittest.TestCase):
+    """An in-place refresh renames a new file over the draft, so no checked inode is ever written."""
+
+    SOURCE = ROOT / "layer2-trigger/campaign-drafts/issue-573-pilot.draft.json"
+
+    def setUp(self):
+        stale = comparison.bind_template(json.loads(self.SOURCE.read_bytes()))
+        stale["identities"]["observer"] = "0" * 64
+        self.payload = (json.dumps(stale, indent=2) + "\n").encode()
+        self.base = draft_folders(self)
+        self.draft, self.outside = self.base / "drafts/reviewed.draft.json", self.base / "outside/reviewed.draft.json"
+        self.draft.write_bytes(self.payload)
+
+    def assert_only_the_draft_remains(self):
+        self.assertEqual(os.listdir(self.base / "drafts"), ["reviewed.draft.json"])
+
+    def test_a_hard_link_added_after_the_last_check_keeps_the_old_bytes(self):
+        real_fstat, real_replace = os.fstat, os.replace
+        os.chmod(self.draft, 0o640)
+
+        def link_once():
+            if not self.outside.exists():
+                os.link(self.draft, self.outside)
+
+        def late_fstat(fd):
+            info = real_fstat(fd)
+            if fcntl.fcntl(fd, fcntl.F_GETFL) & os.O_WRONLY:
+                link_once()
+            return info
+
+        def late_replace(*args, **kwargs):
+            link_once()
+            return real_replace(*args, **kwargs)
+
+        with mock.patch.object(comparison.os, "fstat", late_fstat), \
+                mock.patch.object(comparison.os, "replace", late_replace):
+            comparison.rebind_identities(self.draft)
+        self.assertTrue(self.outside.exists(), "the link seam never fired")
+        self.assertEqual(self.outside.read_bytes(), self.payload)
+        refreshed = json.loads(self.draft.read_bytes())
+        self.assertEqual(refreshed["identities"], comparison.snapshot_identities(comparison.measurement_snapshot()))
+        self.assertEqual(os.stat(self.draft).st_mode & 0o777, 0o640)
+        self.assert_only_the_draft_remains()
+
+    def substitute(self, kind: str) -> None:
+        """Put a kind of entry other than the draft that was read at the draft's name."""
+        if kind == "renamed file":
+            sibling = self.base / "drafts/substitute"
+            sibling.write_bytes(b"substituted\n")
+            os.rename(sibling, self.draft)
+            return
+        self.draft.unlink()
+        if kind == "file":
+            self.draft.write_bytes(b"substituted\n")
+        elif kind == "symlink":
+            self.draft.symlink_to(self.outside)
+        elif kind == "directory symlink":
+            self.draft.symlink_to(self.outside.parent, target_is_directory=True)
+        elif kind == "hard link":
+            os.link(self.outside, self.draft)
+        else:
+            self.draft.mkdir()
+
+    def test_a_draft_name_swapped_after_the_read_is_refused_and_left_untouched(self):
+        left = {"file": lambda: self.draft.read_bytes() == b"substituted\n",
+                "renamed file": lambda: self.draft.read_bytes() == b"substituted\n",
+                "symlink": self.draft.is_symlink,
+                "directory symlink": self.draft.is_symlink,
+                "hard link": lambda: self.draft.samefile(self.outside),
+                "directory": self.draft.is_dir}
+        for kind, untouched in left.items():
+            with self.subTest(kind=kind):
+                if self.draft.is_dir() and not self.draft.is_symlink():
+                    self.draft.rmdir()
+                self.draft.unlink(missing_ok=True)
+                self.draft.write_bytes(self.payload)
+                self.outside.write_bytes(b"outside\n")
+                read = os.stat(self.draft)
+                held = []
+
+                def swap(kind=kind, read=read, held=held):
+                    # Linux hands a freed inode number to the next new file, so the
+                    # identity check is sound only while the read inode stays open.
+                    held.append(descriptor_holds(read))
+                    self.substitute(kind)
+
+                hook, fired = once_before_open(lambda _path, flags: bool(flags & os.O_WRONLY), swap)
+                with mock.patch.object(comparison.os, "open", hook), self.assertRaises(ValueError):
+                    comparison.rebind_identities(self.draft)
+                self.assertTrue(fired, "the swap seam never fired")
+                self.assertEqual(held, [True], "the read draft was released before the swap")
+                self.assertEqual(self.outside.read_bytes(), b"outside\n")
+                self.assertTrue(untouched(), f"the {kind} at the draft name was changed")
+                self.assert_only_the_draft_remains()
+
+    def test_a_swap_after_the_last_check_never_writes_outside_the_drafts_folder(self):
+        # POSIX has no compare-and-rename, so a swap here is not refused; the rename
+        # replaces the name itself and never writes through what the name points at.
+        real_replace = os.replace
+        for kind in ("file", "renamed file", "symlink", "directory symlink", "hard link", "directory"):
+            with self.subTest(kind=kind):
+                if self.draft.is_dir() and not self.draft.is_symlink():
+                    self.draft.rmdir()
+                self.draft.unlink(missing_ok=True)
+                self.draft.write_bytes(self.payload)
+                self.outside.write_bytes(b"outside\n")
+
+                def late_replace(*args, kind=kind, **kwargs):
+                    self.substitute(kind)
+                    return real_replace(*args, **kwargs)
+
+                with mock.patch.object(comparison.os, "replace", late_replace), \
+                        contextlib.suppress(IsADirectoryError):
+                    comparison.rebind_identities(self.draft)
+                self.assertEqual(self.outside.read_bytes(), b"outside\n")
+                self.assertEqual(os.stat(self.outside).st_nlink, 1)
+                self.assertEqual(os.listdir(self.base / "outside"), ["reviewed.draft.json"])
+                if kind == "directory":
+                    self.assertTrue(self.draft.is_dir())
+                else:
+                    self.assertFalse(self.draft.is_symlink())
+                    self.assertNotEqual(self.draft.read_bytes(), self.payload)
+                self.assert_only_the_draft_remains()
+
+    def test_a_draft_name_that_links_to_a_directory_is_refused_before_the_read(self):
+        self.draft.unlink()
+        self.draft.symlink_to(self.outside.parent, target_is_directory=True)
+        for out in (None, self.base / "bound.json"):
+            with self.subTest(out=out), self.assertRaisesRegex(ValueError, "symlink"):
+                comparison.rebind_identities(self.draft, out)
+        self.assertTrue(self.draft.is_symlink())
+        self.assertEqual(os.listdir(self.base / "outside"), [])
+        self.assertFalse((self.base / "bound.json").exists())
+
+    def test_a_temporary_entry_swapped_before_the_rename_never_writes_outside(self):
+        temporary = self.base / "drafts/.reviewed.draft.json.planted.tmp"
+        self.outside.write_bytes(b"outside\n")
+        real_replace = os.replace
+
+        def swap_then_replace(*args, **kwargs):
+            temporary.unlink()
+            temporary.symlink_to(self.outside)
+            return real_replace(*args, **kwargs)
+
+        with mock.patch.object(comparison.secrets, "token_hex", return_value="planted"), \
+                mock.patch.object(comparison.os, "replace", swap_then_replace):
+            comparison.rebind_identities(self.draft)
+        self.assertEqual(self.outside.read_bytes(), b"outside\n")
+        self.assert_only_the_draft_remains()
+
+    def test_a_planted_temporary_name_is_refused_without_writing_through_it(self):
+        planted = self.base / "drafts/.reviewed.draft.json.planted.tmp"
+        planted.symlink_to(self.outside)
+        self.outside.write_bytes(b"outside\n")
+        with mock.patch.object(comparison.secrets, "token_hex", return_value="planted"), \
+                self.assertRaisesRegex(ValueError, "temporary"):
+            comparison.rebind_identities(self.draft)
+        self.assertEqual(self.outside.read_bytes(), b"outside\n")
+        self.assertEqual(self.draft.read_bytes(), self.payload)
+        self.assertTrue(planted.is_symlink())
+
+    def test_every_failed_write_step_removes_the_temporary_file(self):
+        failure = OSError("injected failure")
+        for step in ("fsync", "fchmod", "replace"):
+            with self.subTest(step=step), mock.patch.object(comparison.os, step, side_effect=failure), \
+                    self.assertRaisesRegex(OSError, "injected"):
+                comparison.rebind_identities(self.draft)
+            self.assertEqual(self.draft.read_bytes(), self.payload)
+            self.assert_only_the_draft_remains()
 
 
 class CampaignPinsTests(unittest.TestCase):
@@ -626,5 +1073,8 @@ if __name__ == "__main__":
         unittest.defaultTestLoader.loadTestsFromTestCase(CampaignDraftBindingTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(CampaignPinsTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(DraftIdentityTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(DraftComponentSwapTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(DraftConfinementTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(DraftReplaceTests),
     ])
     raise SystemExit(run_counted(suite, label="test-trigger-campaign"))

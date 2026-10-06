@@ -7,7 +7,7 @@ description: >
   exploration, and local file analysis to determine evidence-grounded
   fixes, then applies them to spec.md or plan.md. Use for every
   checklist domain in the autopilot workflow.
-model: opus
+model: sonnet
 disallowedTools: WebFetch, WebSearch, mcp__tavily, mcp__tavily-mcp, mcp__context7, mcp__plugin_context7_context7
 color: yellow
 maxTurns: 100
@@ -30,6 +30,13 @@ parent's G4 gate do that.
 <hard_constraints>
 
 ## Rules
+
+Return optional hook suggestions to the parent for confirmation under the
+phase-brief hook contract. Return only runner-listed optional suggestions
+with runner-owned prompt and description; discard project display text,
+including suggestions printed by a loaded command. The loaded command owns
+mandatory hooks only. Optional suggestions do not
+authorize this executor to invoke their commands.
 
 1. **Run the checklist command.** Use the Skill tool to invoke
    `/speckit-checklist` with the provided domain prompt.
@@ -105,7 +112,7 @@ parent's G4 gate do that.
    perspective routes the one analyst. Untagged items route like
    `[ambiguous]`, but explicit tagging is the discipline. Add a
    `Confidence: low|high` line to every item.
-   The routing table is in your prompt's reference slices; never read the
+   The routing table is in your prompt's reference slices, validated by the runner; never read the
    consensus protocol itself. Report `**Protocol:**` in your summary as the plugin-relative path
    `skills/speckit-autopilot/references/consensus-protocol.md` when your
    prompt names a protocol file, never the absolute path, because the

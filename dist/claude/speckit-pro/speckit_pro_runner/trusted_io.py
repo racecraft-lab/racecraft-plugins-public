@@ -386,27 +386,33 @@ def trusted_text(path: Path, repo_root: Path | None = None) -> str | None:
     return None if content is None else content.decode("utf-8", errors="replace")
 
 
-def trusted_bytes(path: Path, repo_root: Path | None = None) -> bytes | None:
+def trusted_bytes(path: Path, repo_root: Path | None = None, *, limit: int | None = None) -> bytes | None:
     if repo_root is not None:
-        return trusted_bytes_descriptor(path, repo_root)
+        return trusted_bytes_descriptor(path, repo_root, limit=limit)
     try:
         if not path.is_file():
             return None
-        return path.read_bytes()
+        with path.open("rb") as stream:
+            content = stream.read() if limit is None else stream.read(limit + 1)
+        return content if limit is None or len(content) <= limit else None
     except OSError:
         return None
 
 
-def trusted_bytes_descriptor(path: Path, repo_root: Path) -> bytes | None:
+def trusted_bytes_descriptor(path: Path, repo_root: Path, *, limit: int | None = None) -> bytes | None:
     fd = trusted_open_regular_file(path, repo_root)
     if fd is None:
         return None
     try:
         chunks: list[bytes] = []
+        size = 0
         while True:
-            chunk = os.read(fd, 1024 * 1024)
+            chunk = os.read(fd, 1024 * 1024 if limit is None else min(1024 * 1024, limit + 1 - size))
             if not chunk:
                 break
+            size += len(chunk)
+            if limit is not None and size > limit:
+                return None
             chunks.append(chunk)
         return b"".join(chunks)
     except OSError:
@@ -450,7 +456,8 @@ def trusted_open_regular_file(path: Path, repo_root: Path) -> int | None:
             )
             os.close(parent_fd)
             parent_fd = next_fd
-        fd = os.open(target_name, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=parent_fd)
+        # Check the opened descriptor without waiting for a writer if an untrusted leaf is a FIFO.
+        fd = os.open(target_name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=parent_fd)
         file_stat = os.fstat(fd)
         if stat.S_ISLNK(file_stat.st_mode) or not stat.S_ISREG(file_stat.st_mode):
             os.close(fd)
@@ -514,7 +521,146 @@ def trusted_open_directory(path: Path, repo_root: Path) -> int | None:
 
 
 def descriptor_read_supported() -> bool:
-    return os.name != "nt" and hasattr(os, "O_NOFOLLOW")
+    return os.name != "nt" and hasattr(os, "O_NOFOLLOW") and hasattr(os, "O_NONBLOCK")
+
+
+def tree_entry_signature(info: os.stat_result) -> tuple[int, ...]:
+    """Identity and mutation evidence for a captured filesystem entry."""
+    return (info.st_dev, info.st_ino, info.st_mode, info.st_nlink,
+            info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+
+
+def read_tree_entry(parent_fd: int, name: str, expected: os.stat_result | None = None) -> dict[Path, tuple[int, bytes | None]]:
+    """Read one entry through its parent descriptor; reject links and changing evidence."""
+    before = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+    if expected is not None and tree_entry_signature(before) != tree_entry_signature(expected):
+        raise OSError("tree entry changed before capture")
+    if not (stat.S_ISDIR(before.st_mode) or stat.S_ISREG(before.st_mode)):
+        raise OSError("tree entry must be a regular file or directory")
+    flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
+    if stat.S_ISDIR(before.st_mode):
+        flags |= os.O_DIRECTORY
+    fd = os.open(name, flags, dir_fd=parent_fd)
+    try:
+        if tree_entry_signature(before) != tree_entry_signature(os.fstat(fd)):
+            raise OSError("tree entry changed while opening")
+        if stat.S_ISDIR(before.st_mode):
+            captured = read_tree_directory(fd)
+        else:
+            if before.st_nlink != 1:
+                raise OSError("hard-linked tree file refused")
+            with os.fdopen(os.dup(fd), "rb") as stream:
+                captured = {Path(): (stat.S_IMODE(before.st_mode), stream.read())}
+        after = os.fstat(fd)
+        named = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+        if tree_entry_signature(before) != tree_entry_signature(after) or tree_entry_signature(after) != tree_entry_signature(named):
+            raise OSError("tree entry changed while reading")
+        return captured
+    finally:
+        os.close(fd)
+
+
+def read_tree_directory(fd: int) -> dict[Path, tuple[int, bytes | None]]:
+    """Capture a directory without ever traversing a child pathname."""
+    captured: dict[Path, tuple[int, bytes | None]] = {Path(): (stat.S_IMODE(os.fstat(fd).st_mode), None)}
+    for name in sorted(os.listdir(fd)):
+        if name == "__pycache__" or name.endswith(".pyc"):
+            continue
+        for relative, entry in read_tree_entry(fd, name).items():
+            captured[Path(name) / relative] = entry
+    return captured
+
+
+def trusted_tree_snapshot(path: Path, repo_root: Path, *, expected: os.stat_result | None = None) -> dict[Path, tuple[int, bytes | None]]:
+    """Capture one coherent tree, bound to a no-follow parent and entry identity.
+
+    Callers consume these bytes rather than reopen the captured source by pathname.
+    Missing, linked, special, hard-linked or concurrently changed entries raise OSError.
+    """
+    if repo_root.is_symlink():
+        raise OSError("linked tree root refused")
+    parent_fd = trusted_open_directory(path.parent, repo_root)
+    if parent_fd is None:
+        raise OSError("unsafe tree parent")
+    try:
+        before = os.fstat(parent_fd)
+        captured = read_tree_entry(parent_fd, path.name, expected)
+        check_fd = trusted_open_directory(path.parent, repo_root)
+        if check_fd is None:
+            raise OSError("tree parent changed while reading")
+        try:
+            if tree_entry_signature(before) != tree_entry_signature(os.fstat(check_fd)):
+                raise OSError("tree parent changed while reading")
+        finally:
+            os.close(check_fd)
+        return captured
+    finally:
+        os.close(parent_fd)
+
+
+def create_tree_directory(parent_fd: int, name: str) -> int:
+    """Create/open a child directory without following a pre-existing or swapped link."""
+    try:
+        os.mkdir(name, dir_fd=parent_fd)
+    except FileExistsError:
+        # Reuse only after the no-follow directory open below validates the entry.
+        pass
+    return os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent_fd)
+
+
+def write_tree_snapshot(path: Path, captured: dict[Path, tuple[int, bytes | None]], root: Path) -> None:
+    """Publish captured bytes using no-follow directories and exclusively created leaves.
+
+    Writes stay on the opened directories even if another process renames them. No later
+    pathname replace, unlink, truncation or metadata operation can follow a swapped leaf.
+    """
+    root_fd = open_tree_parent(path, root)
+    try:
+        write_tree_entries(root_fd, Path(path.name), captured)
+    finally:
+        os.close(root_fd)
+
+
+def open_tree_parent(path: Path, root: Path) -> int:
+    """Create/open the parent chain under root, binding every component without links."""
+    if not descriptor_read_supported():
+        raise OSError("descriptor-relative tree writes unavailable")
+    relative = path.relative_to(root)
+    if not relative.parts or ".." in relative.parts:
+        raise OSError("tree destination escapes root")
+    fd = trusted_open_directory(root, Path(root.anchor))
+    if fd is None:
+        raise OSError("unsafe tree publication root")
+    try:
+        for part in relative.parts[:-1]:
+            next_fd = create_tree_directory(fd, part)
+            os.close(fd)
+            fd = next_fd
+        return fd
+    except BaseException:
+        os.close(fd)
+        raise
+
+
+def write_tree_entries(root_fd: int, relative: Path, captured: dict[Path, tuple[int, bytes | None]]) -> None:
+    """Write each captured entry through directory descriptors; never mutate existing files."""
+    for suffix, (mode, content) in captured.items():
+        target = relative / suffix
+        if ".." in target.parts or target.is_absolute():
+            raise OSError("unsafe captured tree path")
+        fd = os.dup(root_fd)
+        try:
+            parts = target.parts if content is None else target.parts[:-1]
+            for part in parts:
+                next_fd = create_tree_directory(fd, part)
+                os.close(fd)
+                fd = next_fd
+            if content is not None:
+                leaf_fd = os.open(target.name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, mode & 0o777, dir_fd=fd)
+                with os.fdopen(leaf_fd, "wb") as stream:
+                    stream.write(content)
+        finally:
+            os.close(fd)
 
 
 def trusted_lines(path: Path, repo_root: Path | None = None) -> list[str]:

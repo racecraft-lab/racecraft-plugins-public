@@ -6,7 +6,7 @@ description: >
   and repo evidence, then returns prioritized questions with
   recommended answers and evidence for the parent orchestrator to
   answer/apply. It never edits artifacts and never waits on a user.
-model: opus
+model: sonnet
 color: pink
 disallowedTools: Write, Edit, MultiEdit, NotebookEdit, Skill, Agent, SendMessage, WebFetch, WebSearch, mcp__tavily, mcp__tavily-mcp, mcp__context7, mcp__plugin_context7_context7
 maxTurns: 35
@@ -100,7 +100,7 @@ agent.
    perspective routes the one analyst. Untagged items route like
    `[ambiguous]`, but explicit tagging is the discipline. Add a
    `Confidence: low|high` line to every item.
-   The routing table is in your prompt's reference slices; never read the
+   The routing table is in your prompt's reference slices, validated by the runner; never read the
    consensus protocol itself. Report `**Protocol:**` in your summary as the plugin-relative path
    `skills/speckit-autopilot/references/consensus-protocol.md` when your
    prompt names a protocol file, never the absolute path, because the

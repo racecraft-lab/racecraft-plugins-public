@@ -24,6 +24,7 @@ for _import_root in (LIB_DIR, PLUGIN_ROOT):
     if str(_import_root) not in sys.path:
         sys.path.insert(0, str(_import_root))
 
+from speckit_pro_runner.reviewability_preset import SOURCE_PATH as PRESET_SOURCE_PATH
 from test_result import run_counted
 from host_skill_views import host_skill_root
 
@@ -37,11 +38,12 @@ def run_refresh(repo_root: Path) -> subprocess.CompletedProcess[str]:
     return subprocess.run([sys.executable, '-B', str(repo_root / 'scripts' / REFRESH.name)], cwd=repo_root, text=True, capture_output=True, shell=False, check=False)
 
 def copy_refresh_inputs(work: Path) -> None:
-    """Copy what the full refresh reads into an empty directory: itself, the plugin source and registries."""
+    """Copy what the full refresh reads into an empty directory: itself, the plugin source, the shipped preset and registries."""
     for relative in ('scripts/' + REFRESH.name, 'LICENSE', *MARKETPLACE_FILES):
         (work / relative).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(REPO_ROOT / relative, work / relative)
     shutil.copytree(SOURCE_ROOT, work / 'speckit-pro', ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
+    shutil.copytree(REPO_ROOT / PRESET_SOURCE_PATH, work / PRESET_SOURCE_PATH)
 
 def _display_path(path: Path) -> str:
     try:
