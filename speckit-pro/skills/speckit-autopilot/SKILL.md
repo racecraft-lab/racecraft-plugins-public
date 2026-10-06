@@ -508,13 +508,21 @@ See Step 1.1 for the full naming pattern and rules.
 
 ### 4. Multi-prompt phases
 
-Clarify and Checklist have multiple prompts in the workflow file.
+Clarify has one prompt in the workflow file: one session of at most 5
+questions. Checklist has one prompt per domain.
+For older workflows with multiple Clarify prompts, normalize the pending
+Clarify phase before creating its task items or requesting its phase brief:
+combine the existing focuses into one prompt, ranked by how much each changes
+the plan. Replace the workflow's Clarify Prompts and pending Clarify Results
+rows with that one session; reconcile pending Clarify task items in state to
+the same session. Keep completed session evidence. If a Clarify session has
+already completed, proceed to G2 instead of dispatching another session.
 Spawn a **separate subagent for each prompt**, consume its result, and run the
 two-layer resolution (Rule 6) after each one BEFORE spawning the next — later
-sessions/domains may depend on earlier resolved items. Do not batch
-all sessions and check for markers only at the end.
+domains may depend on earlier resolved items. Do not batch
+all domains and check for markers only at the end.
 
-Per-phase flow templates (per-session for Clarify, per-domain for
+Per-phase flow templates (the Clarify session, per-domain for
 Checklist) live in
 [`references/phase-execution.md`](./references/phase-execution.md)
 <!-- host:claude: the Claude phase reference groups the flows per phase -->
@@ -1088,7 +1096,7 @@ entry of `brief.slices` verbatim, in order, after those lines under a
 discovery, grounding and routing rules from the slices, so the prompt carries
 no `Protocol:` or `Reference dir:` line for them.
 Run `validate-gate` with `brief.gate` afterward; the brief is not gate evidence.
-Clarify still runs only when G1 found `[NEEDS CLARIFICATION]` markers.
+Clarify runs for every SPEC, whatever G1's marker count.
 Use the brief for phase dispatch facts instead of re-reading `phase-execution.md`
 for each planning phase. Keep the existing remediation and bookkeeping steps.
 Implement retains its existing agent, inputs and gate; it never requests a
