@@ -373,8 +373,6 @@ class ReleasePrDispatchTests(unittest.TestCase):
                     "release-please--branches--main--components--speckit-pro",
                     "-f",
                     "pr_number=302",
-                    "-f",
-                    "pr_title=chore(main): release speckit-pro 2.19.0",
                 ],
             ],
             [argv for argv, _kwargs in calls],

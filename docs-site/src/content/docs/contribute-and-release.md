@@ -208,7 +208,15 @@ regeneration; the ancestry check is the fail-closed backstop for any resolved
 review reply that cites such a commit.
 
 The manual `PR Checks` and `PR Metadata` dispatch is observable repository
-behavior. If you
+behavior. Manual workflow jobs do not satisfy required pull request checks.
+`PR Metadata` accepts only `pr_number`, fetches that open pull request's actual
+title, body, labels and draft state, and requires its head repository, branch
+and SHA to match the dispatch. Its manual job names carry a `manual-` prefix;
+PR-event runs retain the required context names. Drafts skip validation, and
+missing or mismatched evidence fails the job before validation.
+
+See [GitHub's required-check event rules](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks#checks-from-some-workflow-jobs-are-not-evaluated).
+If you
 explain the GitHub-token reason, scope it to this repository's workflow comments
 and GitHub's recursion guard behavior rather than treating it as a general
 platform rule for every event.

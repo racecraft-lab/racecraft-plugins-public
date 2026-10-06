@@ -592,13 +592,19 @@ class ComposeReleaseNotesTests(unittest.TestCase):
         self.assertIsNone(COMPOSER.extract_release_note(template))
 
     @inventory_check
-    def test_metadata_dispatch_preserves_body_for_fence_validation(self) -> None:
+    def test_metadata_dispatch_fetches_body_instead_of_caller_text(self) -> None:
         workflow = (REPO_ROOT / ".github/workflows/pr-metadata.yml").read_text(encoding="utf-8")
         dispatch = workflow.split("  workflow_dispatch:", 1)[1].split("# Top-level:", 1)[0]
-        self.assertIn("      pr_body:", dispatch)
-        self.assertIn("github.event.pull_request.body || inputs.pr_body", workflow)
-        body = "```release-note\nAnchored artifact publication.\n```"
-        self.assertEqual(run_validation(title="fix(core): anchor artifacts", body=body).returncode, 0)
+        self.assertNotIn("      pr_body:", dispatch)
+        self.assertNotIn("inputs.pr_body", workflow)
+        resolver = load_script("pr_metadata", REPO_ROOT / "scripts" / "pr_metadata.py")
+        event, fetched = metadata_fixture()
+        fetched["body"] = ""
+        api = mock.Mock(return_value=fetched)
+        metadata = resolver.resolve_metadata("workflow_dispatch", event, REPOSITORY, "refs/heads/release/main", "a" * 40, api=api)
+        api.assert_called_once_with(["api", f"repos/{REPOSITORY}/pulls/7"], resolver.MetadataError)
+        self.assertEqual(metadata["body"], "")
+        self.assertEqual(run_validation(title=metadata["title"], body=metadata["body"]).returncode, 1)
 
     def test_required_check_fails_feat_fix_without_exactly_one_nonempty_block(self) -> None:
         bodies = (
@@ -1127,10 +1133,141 @@ class SharedReleaseNoteContractTests(unittest.TestCase):
             self.assertEqual(("fix(x): y", "b", {"a"}, True), COMPOSER.validation_inputs_from_environment())
 
 
+def metadata_fixture() -> tuple[dict, dict]:
+    return (
+        {"inputs": {"pr_number": "7", "pr_title": "fix(core): fabricated", "pr_body": "```release-note\nFabricated note.\n```"}},
+        {
+            "number": 7, "state": "open", "title": "fix(core): actual", "body": "",
+            "labels": [], "draft": False,
+            "base": {"repo": {"full_name": REPOSITORY}},
+            "head": {"repo": {"full_name": REPOSITORY}, "ref": "release/main", "sha": "a" * 40},
+        },
+    )
+
+
+class MetadataDispatchTests(unittest.TestCase):
+    def test_dispatch_cli_emits_only_fetched_metadata_without_output_injection(self) -> None:
+        resolver = load_script("pr_metadata", REPO_ROOT / "scripts" / "pr_metadata.py")
+        event, fetched = metadata_fixture()
+        fetched["body"] = "\nmetadata=forged\ndraft=false\nEOF\r\n$(touch marker) `command`"
+        fetched["title"] = "fix(core): actual\nTITLE=forged"
+        fetched["labels"] = [{"name": "label\nmetadata=forged"}]
+        fetched["draft"] = True
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            event_path, output_path, summary_path = (root / name for name in ("event.json", "output", "summary"))
+            event_path.write_text(json.dumps(event), encoding="utf-8")
+            env = {"GITHUB_EVENT_PATH": str(event_path), "GITHUB_OUTPUT": str(output_path), "GITHUB_STEP_SUMMARY": str(summary_path), "GITHUB_EVENT_NAME": "workflow_dispatch", "GITHUB_REPOSITORY": REPOSITORY, "GITHUB_REF": "refs/heads/release/main", "GITHUB_SHA": "a" * 40}
+            with mock.patch("subprocess.run", return_value=subprocess.CompletedProcess([], 0, json.dumps(fetched), "")) as run:
+                self.assertEqual(resolver.main(env), 0)
+            run.assert_called_once_with(["gh", "api", f"repos/{REPOSITORY}/pulls/7"], text=True, capture_output=True, check=False, shell=False)
+            lines = output_path.read_text(encoding="utf-8").splitlines()
+            self.assertEqual(len(lines), 2)
+            self.assertEqual(lines[1], "draft=true")
+            metadata = json.loads(lines[0].removeprefix("metadata="))
+            for field in ("body", "title", "draft"):
+                self.assertEqual(metadata[field], fetched[field])
+            self.assertEqual(metadata["labels"], ["label\nmetadata=forged"])
+            self.assertIn("do not satisfy required pull request checks", summary_path.read_text(encoding="utf-8"))
+            for response in (subprocess.CompletedProcess([], 1, "", "API failed"), subprocess.CompletedProcess([], 0, "not json", ""), subprocess.CompletedProcess([], 0, json.dumps({**fetched, "number": 8}), "")):
+                with self.subTest(msg=f"API exit={response.returncode}, body={response.stdout}"), mock.patch("subprocess.run", return_value=response), contextlib.redirect_stderr(io.StringIO()):
+                    output_path.write_text("", encoding="utf-8")
+                    self.assertEqual(resolver.main(env), 1)
+                    self.assertEqual(output_path.read_bytes(), b"")
+
+    def test_dispatch_rejects_missing_or_malformed_evidence(self) -> None:
+        resolver = load_script("pr_metadata", REPO_ROOT / "scripts" / "pr_metadata.py")
+        event, fetched = metadata_fixture()
+        for number in (None, "", "0", "-1", "7/../8", "07", True, 7):
+            with self.subTest(msg=f"invalid number {number!r}"), self.assertRaises(resolver.MetadataError):
+                api = mock.Mock(return_value=fetched)
+                try:
+                    resolver.resolve_metadata("workflow_dispatch", {"inputs": {"pr_number": number}}, REPOSITORY, "refs/heads/release/main", "a" * 40, api=api)
+                finally:
+                    api.assert_not_called()
+        for field in ("title", "body", "labels", "draft", "head", "base", "number", "state"):
+            missing = {key: value for key, value in fetched.items() if key != field}
+            with self.subTest(msg=f"missing {field}"), self.assertRaises(resolver.MetadataError):
+                resolver.resolve_metadata("workflow_dispatch", event, REPOSITORY, "refs/heads/release/main", "a" * 40, api=mock.Mock(return_value=missing))
+        for changes in ({"labels": ["label"]}, {"labels": [{"name": None}]}, {"draft": "false"}, {"title": None}, {"body": 1}, {"head": None}, {"head": {**fetched["head"], "repo": None}}):
+            with self.subTest(msg=f"malformed {changes}"), self.assertRaises(resolver.MetadataError):
+                resolver.resolve_metadata("workflow_dispatch", event, REPOSITORY, "refs/heads/release/main", "a" * 40, api=mock.Mock(return_value={**fetched, **changes}))
+        for event_name in ("push", "pull_request_target", ""):
+            with self.subTest(msg=f"unsupported event {event_name}"), self.assertRaises(resolver.MetadataError):
+                resolver.resolve_metadata(event_name, event, REPOSITORY, "refs/heads/release/main", "a" * 40)
+
+    def test_pr_events_use_event_metadata_and_preserve_empty_values(self) -> None:
+        resolver = load_script("pr_metadata", REPO_ROOT / "scripts" / "pr_metadata.py")
+        event, fetched = metadata_fixture()
+        api = mock.Mock(side_effect=AssertionError("PR events must not re-fetch mutable metadata"))
+        metadata = resolver.resolve_metadata("pull_request", {**event, "pull_request": fetched}, REPOSITORY, "refs/pull/7/merge", "b" * 40, api=api)
+        self.assertEqual(metadata, {"title": "fix(core): actual", "body": "", "labels": [], "draft": False})
+        api.assert_not_called()
+        self.assertEqual(resolver.metadata_fields({**fetched, "body": None})["body"], "")
+
+    def test_dispatch_number_ref_sha_and_repository_are_bound(self) -> None:
+        resolver = load_script("pr_metadata", REPO_ROOT / "scripts" / "pr_metadata.py")
+        event, fetched = metadata_fixture()
+        mutations = (
+            ("wrong PR", {"number": 8}, "refs/heads/release/main", "a" * 40),
+            ("wrong base repository", {"base": {"repo": {"full_name": "other/repository"}}}, "refs/heads/release/main", "a" * 40),
+            ("fork", {"head": {**fetched["head"], "repo": {"full_name": "other/repository"}}}, "refs/heads/release/main", "a" * 40),
+            ("wrong branch same commit", {}, "refs/heads/other", "a" * 40),
+            ("tag same commit", {}, "refs/tags/release/main", "a" * 40),
+            ("stale commit", {}, "refs/heads/release/main", "b" * 40),
+            ("closed PR", {"state": "closed"}, "refs/heads/release/main", "a" * 40),
+        )
+        for name, changes, ref, sha in mutations:
+            with self.subTest(msg=name), self.assertRaises(resolver.MetadataError):
+                resolver.resolve_metadata("workflow_dispatch", event, REPOSITORY, ref, sha, api=mock.Mock(return_value={**fetched, **changes}))
+
+    def test_dispatch_fetches_title_instead_of_caller_text(self) -> None:
+        workflow = (REPO_ROOT / ".github/workflows/pr-metadata.yml").read_text(encoding="utf-8")
+        self.assertNotIn("inputs.pr_title", workflow)
+        self.assertNotIn("      pr_title:", workflow)
+        resolver = load_script("pr_metadata", REPO_ROOT / "scripts" / "pr_metadata.py")
+        event, fetched = metadata_fixture()
+        fetched["title"] = "invalid actual title"
+        metadata = resolver.resolve_metadata("workflow_dispatch", event, REPOSITORY, "refs/heads/release/main", "a" * 40, api=mock.Mock(return_value=fetched))
+        self.assertEqual(metadata["title"], "invalid actual title")
+        completed = subprocess.run([sys.executable, str(REPO_ROOT / "scripts" / "check-pr-title.py"), metadata["title"]], cwd=REPO_ROOT, text=True, capture_output=True, check=False)
+        self.assertNotEqual(completed.returncode, 0)
+
+    def test_dispatch_preserves_actual_labels_and_draft(self) -> None:
+        workflow = (REPO_ROOT / ".github/workflows/pr-metadata.yml").read_text(encoding="utf-8")
+        self.assertNotIn("|| '[]'", workflow)
+        self.assertNotIn("github.event.pull_request.draft || false", workflow)
+        resolver = load_script("pr_metadata", REPO_ROOT / "scripts" / "pr_metadata.py")
+        event, fetched = metadata_fixture()
+        for labels, draft in (([{"name": "release-note/skip"}], False), ([], True)):
+            with self.subTest(msg=f"labels={labels}, draft={draft}"):
+                metadata = resolver.resolve_metadata("workflow_dispatch", event, REPOSITORY, "refs/heads/release/main", "a" * 40, api=mock.Mock(return_value={**fetched, "labels": labels, "draft": draft}))
+                self.assertEqual(metadata["labels"], [label["name"] for label in labels])
+                self.assertIs(metadata["draft"], draft)
+                self.assertEqual(run_validation(title=metadata["title"], body=metadata["body"], labels=tuple(metadata["labels"]), draft=metadata["draft"]).returncode, 0)
+
+    def test_dispatch_jobs_are_explicitly_advisory_and_consume_bound_metadata(self) -> None:
+        workflow = (REPO_ROOT / ".github/workflows/pr-metadata.yml").read_text(encoding="utf-8")
+        for job in ("validate-pr-title", "validate-release-note"):
+            with self.subTest(msg=job):
+                self.assertIn(f"name: ${{{{ github.event_name == 'workflow_dispatch' && 'manual-{job}' || '{job}' }}}}", workflow)
+                block = workflow.split(f"  {job}:\n", 1)[1].split("\n  #", 1)[0]
+                self.assertIn("run: python3 scripts/pr_metadata.py", block)
+                self.assertIn("pull-requests: read", block)
+                self.assertIn("if: steps.metadata.outputs.draft == 'false'", block)
+                self.assertIn("fromJSON(steps.metadata.outputs.metadata).title", block)
+                self.assertLess(block.index("run: python3 scripts/pr_metadata.py"), block.index("if: steps.metadata.outputs.draft"))
+                self.assertNotIn("continue-on-error", block)
+                self.assertNotIn("${{", block.split("run: python3 scripts/pr_metadata.py", 1)[1].split("run:", 1)[1])
+        for field in ("body", "labels", "draft"):
+            self.assertIn(f"fromJSON(steps.metadata.outputs.metadata).{field}", workflow)
+        self.assertIn("do not satisfy required pull request checks", workflow)
+
+
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
     return unittest.TestSuite(
-        loader.loadTestsFromTestCase(case) for case in (ComposeReleaseNotesTests, SharedReleaseNoteContractTests)
+        loader.loadTestsFromTestCase(case) for case in (ComposeReleaseNotesTests, SharedReleaseNoteContractTests, MetadataDispatchTests)
     )
 
 
