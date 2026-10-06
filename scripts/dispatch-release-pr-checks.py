@@ -98,8 +98,8 @@ def dispatch_release_pr_checks(
     run: Callable[..., subprocess.CompletedProcess[Any]] = subprocess.run,
 ) -> None:
     for release_pr in release_prs:
-        # PR Checks runs the suite; PR Metadata runs the required title and
-        # release-note checks. Each workflow accepts only its own inputs.
+        # PR Checks runs the suite; PR Metadata fetches and authenticates the
+        # PR's title/release note. Manual runs are advisory, not required checks.
         dispatches = (
             (
                 "PR Checks",
@@ -127,8 +127,6 @@ def dispatch_release_pr_checks(
                     release_pr["branch"],
                     "-f",
                     f"pr_number={release_pr['number']}",
-                    "-f",
-                    f"pr_title={release_pr['title']}",
                 ],
             ),
         )
