@@ -277,6 +277,32 @@ class ReviewabilityPreset(ReadinessCase):
         self.assertTrue(swapped, "the evidence race was exercised")
         self.assertNotEqual("installed", result["status"])
 
+    def test_registry_template_and_directory_links_fail_closed(self) -> None:
+        self.install_reviewed()
+        files = [Path(".specify/presets/.registry"), *[
+            Path(".specify/presets") / PRESET_ID / "templates" / f"{name}.md" for name in PRESET_TEMPLATES
+        ]]
+        directories = [Path(".specify"), Path(".specify/presets"),
+                       Path(".specify/presets") / PRESET_ID,
+                       Path(".specify/presets") / PRESET_ID / "templates"]
+        for index, (relative, hard_link) in enumerate([
+            *[(path, hard) for path in files for hard in (False, True)],
+            *[(path, False) for path in directories],
+        ]):
+            with self.subTest(path=relative.as_posix(), hard_link=hard_link):
+                root = self.root / "cases" / str(index)
+                shutil.copytree(self.root / ".specify", root / ".specify")
+                path = root / relative
+                outside = root / "outside"
+                directory = path.is_dir()
+                path.rename(outside)
+                if hard_link:
+                    os.link(outside, path)
+                else:
+                    path.symlink_to(outside, target_is_directory=directory)
+                result = self.state(root)
+                self.assertEqual(("unavailable", []), (result["status"], result["add_args"]))
+
     def test_a_fresh_project_ends_with_the_preset_installed_and_step_5_0_passing(self) -> None:
         root = self.root
         before = self.state(root)
@@ -405,14 +431,14 @@ class PayloadCopySecurity(unittest.TestCase):
                         payloads.copy_optional_installed_plugin(self.source, destination)
                     except OSError:
                         pass
-                self.assertTrue(swapped, "the filesystem race was exercised")
-                if destination.exists():
-                    self.assertEqual("reviewed", (destination / "leaf.md").read_text())
+                copied = (destination / "leaf.md").read_text() if destination.exists() else "reviewed"
                 if link:
                     self.source.unlink()
                 else:
                     shutil.rmtree(self.source)
                 (self.root / "reviewed").rename(self.source)
+                self.assertTrue(swapped, "the filesystem race was exercised")
+                self.assertEqual("reviewed", copied)
 
     def test_destination_and_intermediate_directory_swaps_never_follow_links(self) -> None:
         for component in ("payload", "middle"):
@@ -507,6 +533,52 @@ class PayloadCopySecurity(unittest.TestCase):
         skill.symlink_to(outside)
         with self.assertRaises(OSError):
             payloads.build_installed_plugin_payloads(repo, self.root / "dist")
+
+    def test_output_normalization_never_follows_a_swapped_parent(self) -> None:
+        parent = self.root / "requested"
+        parent.mkdir()
+        original_resolve = Path.resolve
+
+        def swap_before_resolve(path, *args, **kwargs):
+            if path == parent:
+                parent.rename(self.root / "detached")
+                parent.symlink_to(self.outside, target_is_directory=True)
+            return original_resolve(path, *args, **kwargs)
+
+        with patch.object(Path, "resolve", swap_before_resolve):
+            try:
+                payloads.build_installed_plugin_payloads(REPO_ROOT, parent / "dist")
+            except OSError:
+                pass
+        self.assertEqual(["leaf.md"], sorted(path.name for path in self.outside.iterdir()))
+
+    def test_publication_root_open_cannot_follow_a_swapped_ancestor(self) -> None:
+        middle = self.root / "requested"
+        output = middle / "dist"
+        middle.mkdir()
+        (self.outside / "dist").mkdir()
+        original_mkdir = os.mkdir
+        swapped = False
+
+        def swap_after_reset(path, *args, **kwargs):
+            nonlocal swapped
+            result = original_mkdir(path, *args, **kwargs)
+            parent_fd = kwargs.get("dir_fd")
+            host = output / "claude"
+            if (not swapped and str(path) == "speckit-pro" and parent_fd is not None
+                    and host.exists() and host.stat().st_ino == os.fstat(parent_fd).st_ino):
+                swapped = True
+                middle.rename(self.root / "detached")
+                middle.symlink_to(self.outside, target_is_directory=True)
+            return result
+
+        with patch("os.mkdir", side_effect=swap_after_reset):
+            try:
+                payloads.build_installed_plugin_payloads(REPO_ROOT, output)
+            except OSError:
+                pass
+        self.assertTrue(swapped, "the public root-open race was exercised")
+        self.assertEqual([], list((self.outside / "dist").iterdir()))
 
 
 if __name__ == "__main__":

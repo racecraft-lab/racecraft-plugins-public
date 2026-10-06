@@ -300,8 +300,13 @@ def installed_plugin_build_target(request: Any, repo_root: Path) -> Path | None 
 
 
 def build_installed_plugin_payloads(repo_root: Path, dist_root: Path) -> None:
-    # Normalize the caller's OS temporary-directory prefix, preserving the output leaf.
-    dist_root = dist_root.parent.resolve() / dist_root.name
+    # Only the OS temp prefix may be an alias (e.g. macOS /var). Preserve every
+    # caller-controlled component for the descriptor-relative no-follow traversal.
+    temporary_root = Path(tempfile.gettempdir())
+    canonical_temporary_root = temporary_root.resolve()
+    repo_root, dist_root = [canonical_temporary_root / path.relative_to(temporary_root)
+                           if path.is_relative_to(temporary_root) else path
+                           for path in (repo_root, dist_root)]
     with tempfile.TemporaryDirectory(prefix="plugin-payload-") as temporary:
         captured_root = Path(temporary).resolve()
         for relative in (Path("speckit-pro"), reviewability_preset.SOURCE_PATH, Path("LICENSE")):
@@ -313,6 +318,8 @@ def build_installed_plugin_payloads(repo_root: Path, dist_root: Path) -> None:
                     continue
                 raise
             captured = trusted_tree_snapshot(source_path, repo_root, expected=expected)
+            if relative == Path("speckit-pro"):
+                validate_required_payload_source(source_path, captured)
             write_tree_snapshot(captured_root / relative, captured, captured_root)
         rendered = captured_root / "dist"
         render_captured_plugin_payloads(captured_root, rendered)
@@ -322,6 +329,14 @@ def build_installed_plugin_payloads(repo_root: Path, dist_root: Path) -> None:
             destination = dist_root / relative
             reset_payload_dir(destination, dist_root)
             write_tree_snapshot(destination, captured, dist_root)
+
+
+def validate_required_payload_source(source: Path, captured: dict[Path, tuple[int, bytes | None]]) -> None:
+    """Report missing mandatory directories against the caller's captured source, not staging."""
+    required = {*CLAUDE_REQUIRED_PAYLOAD_PATHS, *CODEX_REQUIRED_PAYLOAD_PATHS, "skills", "codex-skills"}
+    for name in sorted(required):
+        if Path(name) not in captured or captured[Path(name)][1] is not None:
+            raise FileNotFoundError(f"required source path missing: {source / name}")
 
 
 def render_captured_plugin_payloads(repo_root: Path, dist_root: Path) -> None:
@@ -381,9 +396,11 @@ def reset_payload_dir(path: Path, allowed_root: Path) -> None:
     parent_fd = open_tree_parent(path, Path(path.anchor))
     try:
         try:
-            shutil.rmtree(path.name, dir_fd=parent_fd)
+            os.stat(path.name, dir_fd=parent_fd, follow_symlinks=False)
         except FileNotFoundError:
-            pass
+            os.close(create_tree_directory(parent_fd, path.name))
+            return
+        shutil.rmtree(path.name, dir_fd=parent_fd)
         os.close(create_tree_directory(parent_fd, path.name))
     finally:
         os.close(parent_fd)

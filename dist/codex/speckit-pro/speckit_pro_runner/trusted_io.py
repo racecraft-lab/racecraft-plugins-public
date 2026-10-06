@@ -627,7 +627,9 @@ def open_tree_parent(path: Path, root: Path) -> int:
     relative = path.relative_to(root)
     if not relative.parts or ".." in relative.parts:
         raise OSError("tree destination escapes root")
-    fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    fd = trusted_open_directory(root, Path(root.anchor))
+    if fd is None:
+        raise OSError("unsafe tree publication root")
     try:
         for part in relative.parts[:-1]:
             next_fd = create_tree_directory(fd, part)
