@@ -1019,6 +1019,18 @@ def plugin_server(plugin: str, **changes: object) -> dict[str, object]:
 # Daybreak F1263-9c553342: bounds on untrusted text reaching the model are never inert.
 CONTENT_LIMITS = ("project_doc_max_bytes", "tool_output_token_limit",
                   'mcp_servers."docs".tools."search".output_token_limit')
+# Cross-host review cr1263j: each numeric row as (what 0 records, the largest value its Codex type and TOML
+# integer range admit, the validator family). A u64 or usize read from TOML tops out at i64::MAX; an f64 of
+# seconds converts through Duration::try_from_secs_f64, which admits a finite value from 0 to below 2^64.
+TOML_INT_MAX = 2**63 - 1
+F64_SECONDS_MAX = 18446744073709549568.0  # the largest f64 below 2^64
+NUMERIC_ROWS = {
+    "project_doc_max_bytes": ("verified", TOML_INT_MAX, "integer"),
+    "tool_output_token_limit": ("unavailable", TOML_INT_MAX, "integer"),
+    'mcp_servers."docs".startup_timeout_ms': ("verified", TOML_INT_MAX, "integer"),
+    'mcp_servers."docs".startup_timeout_sec': ("verified", F64_SECONDS_MAX, "seconds"),
+    'mcp_servers."docs".tool_timeout_sec': ("verified", F64_SECONDS_MAX, "seconds"),
+}
 # Codex reserves `_default` as the apps default table only; everywhere else it is an ordinary name.
 DEFAULT_ELSEWHERE = {
     "an MCP server": {'mcp_servers."_default".enabled': False,
@@ -1122,14 +1134,45 @@ class ReadinessCodexPluginScopeTest(ReadinessCase):
             with self.subTest(key=key, value=value):
                 self.assertEqual("unavailable", self.item(settings(**{key: value}))["status"])
 
-    def test_counts_take_whole_numbers_in_their_codex_range(self) -> None:
-        """Cross-host review cr1263i: an unsigned byte or token count is a whole number; one budget is non-zero."""
-        for key in CONTENT_LIMITS[:2]:
-            self.refuse_each([settings(**{key: bad}) for bad in (1.5, -1, True, "32768", [1], 0.0)])
-        self.refuse_each([settings(**{CONTENT_LIMITS[2]: bad}) for bad in (0, 1.5, -1, True, "8000")])
-        self.refuse_each([settings(**{'mcp_servers."docs".startup_timeout_ms': bad}) for bad in (0, 1.5, True)])
+
+
+class ReadinessCodexNumericTypeTest(ReadinessCase):
+    """Cross-host reviews cr1263i and cr1263j: one validator per Rust type, with that type's real bounds."""
+
+    default_host = "codex"
+    request_id = "test-codex-numeric-types"
+
+    def test_each_numeric_row_takes_exactly_its_codex_type(self) -> None:
+        for key, (zero, top, kind) in NUMERIC_ROWS.items():
+            with self.subTest(key=key, value=0):
+                self.assertEqual(zero, self.item(settings(**{key: 0}))["status"])
+            with self.subTest(key=key, value="max"):
+                self.assertEqual("unavailable", self.item(settings(**{key: top}))["status"])
+            over = (TOML_INT_MAX + 1, 2**64, 2**64 - 1) if kind == "integer" else (2.0**64, float(2**64 - 1), 2**64)
+            self.refuse_each([settings(**{key: bad}) for bad in (*over, -1, True, False, "10", [1], {})])
+            if kind == "integer":
+                self.refuse_each([settings(**{key: bad}) for bad in (1.5, 0.0, 10.0)])
+            else:
+                self.refuse_each([settings(**{key: bad}) for bad in (-0.5, -1.0)])
+                self.assertEqual("verified", self.item(settings(**{key: 1.5}))["status"])
+                self.assertEqual("verified", self.item(settings(**{key: 0.0}))["status"])
+        self.refuse_each([settings(**{CONTENT_LIMITS[2]: 0})])
         self.assertEqual("verified", self.item(settings(**{'mcp_servers."docs".startup_timeout_ms': 10000}))["status"])
-        self.assertEqual("verified", self.item(settings(**{'mcp_servers."docs".startup_timeout_sec': 9.5}))["status"])
+        self.assertEqual("verified", self.item(settings(**{'mcp_servers."docs".startup_timeout_ms': 1}))["status"])
+        self.assertEqual("verified", self.item(settings(**{'mcp_servers."docs".tool_timeout_sec': 60}))["status"])
+        self.assertEqual("unavailable", self.item(settings(**{'mcp_servers."docs".tool_timeout_sec': 60.5}))["status"])
+
+    def test_every_numeric_row_names_its_rust_type(self) -> None:
+        from speckit_pro_runner.helpers import readiness_posture_settings as module
+        numeric = {**{key: accepted for key, (accepted, _) in module.MODELED_SETTINGS.items()},
+                   **{key: accepted for key, (accepted, _) in module.CONSERVATIVE_SETTINGS.items()}}
+        numeric = {key: accepted for key, accepted in numeric.items() if accepted in module.NUMERIC_TYPES}
+        rows = {key.replace('"docs"', "*").replace('"search"', "*") for key in (*NUMERIC_ROWS, CONTENT_LIMITS[2])}
+        self.assertEqual(rows, set(numeric))
+        for key, accepted in numeric.items():
+            with self.subTest(key=key):
+                self.assertIn(accepted, module.CODEX_KEYS[key][2])
+        self.assertEqual({"usize", "u64", "f64 seconds", "NonZeroUsize"}, set(numeric.values()))
 
 
 def build_suite() -> unittest.TestSuite:
@@ -1141,7 +1184,8 @@ def build_suite() -> unittest.TestSuite:
                                loader.loadTestsFromTestCase(ReadinessCodexPostureAggregateTest),
                                loader.loadTestsFromTestCase(ReadinessCodexAutoReviewTest),
                                loader.loadTestsFromTestCase(ReadinessCodexKeyTableTest),
-                               loader.loadTestsFromTestCase(ReadinessCodexPluginScopeTest)])
+                               loader.loadTestsFromTestCase(ReadinessCodexPluginScopeTest),
+                               loader.loadTestsFromTestCase(ReadinessCodexNumericTypeTest)])
 
 
 def main() -> int:

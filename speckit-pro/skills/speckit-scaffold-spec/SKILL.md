@@ -1244,6 +1244,9 @@ agents or hooks; `features.hooks` false and its deprecated alias
 `features.codex_hooks` false, each judged alone, since no summary judges hooks
 beyond the shipped ones; `project_doc_max_bytes` a whole number at most 32768,
 the Codex default for project instructions read into context (0 reads none);
+each numeric key takes exactly its Codex type and range (a whole number from
+0 for `u64` and `usize` keys, from 1 for `NonZeroUsize`, and a finite
+non-negative number of seconds for the timeouts), else it is refused;
 and `check_for_update_on_startup` false,
 since the check sends a request. `shell_environment_policy.set.*`,
 `marketplaces.*.source`, `marketplaces.*.source_type`, `marketplaces.*.ref`,

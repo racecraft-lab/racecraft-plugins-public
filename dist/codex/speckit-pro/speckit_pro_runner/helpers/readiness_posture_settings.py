@@ -39,6 +39,7 @@ its class, never a value.
 
 from __future__ import annotations
 
+import math
 import re
 from collections.abc import Callable
 from typing import Any
@@ -237,10 +238,16 @@ CODEX_KEYS: dict[str, Row] = {
                                          "exposes none", MCP_FILTER),
     f"{MCP}.disabled_tools": row(MODELED, "deny list applied after `enabled_tools`: a listed tool is off",
                                  MCP_FILTER),
-    f"{MCP}.startup_timeout_sec": row(MODELED, "this server's startup timeout, default 10 s"),
-    f"{MCP}.startup_timeout_ms": row(MODELED, "alias of `startup_timeout_sec` in whole milliseconds (u64)",
-                                     "config/src/mcp_types.rs RawMcpServerConfig"),
-    f"{MCP}.tool_timeout_sec": row(MODELED, "this server's per-tool timeout, default 60 s"),
+    f"{MCP}.startup_timeout_sec": row(MODELED, "this server's startup timeout, default 10 s; f64 seconds, 0 to "
+                                               "below 2^64", "config/src/mcp_types.rs RawMcpServerConfig "
+                                               "Option<f64>, f64 seconds via Duration::try_from_secs_f64"),
+    f"{MCP}.startup_timeout_ms": row(MODELED, "alias of `startup_timeout_sec` in whole milliseconds; u64, 0 is "
+                                              "valid", "config/src/mcp_types.rs RawMcpServerConfig Option<u64> "
+                                              "via Duration::from_millis"),
+    f"{MCP}.tool_timeout_sec": row(MODELED, "this server's per-tool timeout, default 60 s; f64 seconds, 0 to "
+                                            "below 2^64", "config/src/mcp_types.rs RawMcpServerConfig "
+                                            "Option<Duration> with option_duration_secs (f64 seconds via "
+                                            "Duration::try_from_secs_f64)"),
     f"{PLUGIN_MCP}.default_tools_approval_mode": row(MODELED, "default approval for a plugin-provided server's "
                                                               "tools", PLUGIN_LOADER),
     f"{PLUGIN_MCP}.tools.*.approval_mode": row(MODELED, "per-tool approval override for a plugin-provided MCP "
@@ -280,15 +287,15 @@ CODEX_KEYS: dict[str, Row] = {
     "features.codex_hooks": row(CONSERVATIVE, "deprecated alias of `features.hooks`; judged alone, so either "
                                               "spelling at `true` is outside", HOOKS_ALIAS),
     "project_doc_max_bytes": row(CONSERVATIVE, "whole bytes of project instructions read into the model's context "
-                                               "(0 reads none); conservative at or under the 32 KiB default",
-                                 CONTENT_DEFAULT),
-    "tool_output_token_limit": row(CONSERVATIVE, "whole tokens of tool output kept in history (Option<usize>); the "
-                                                 "model sets the default, so no value is provably conservative",
-                                   "config/src/config_toml.rs ConfigToml"),
+                                               "(usize; 0 reads none); conservative at or under the 32 KiB default",
+                                 f"{CONTENT_DEFAULT}; config/src/config_toml.rs ConfigToml Option<usize>"),
+    "tool_output_token_limit": row(CONSERVATIVE, "whole tokens of tool output kept in history (usize); the model "
+                                                 "sets the default, so no value is provably conservative",
+                                   "config/src/config_toml.rs ConfigToml Option<usize>"),
     f"{MCP}.tools.*.output_token_limit": row(CONSERVATIVE, "whole non-zero tokens of one MCP tool's serialized "
                                                            "output (NonZeroUsize); the model sets the default, so "
                                                            "no value is provably conservative",
-                                             "config/src/mcp_types.rs McpServerToolConfig"),
+                                             "config/src/mcp_types.rs McpServerToolConfig Option<NonZeroUsize>"),
     **rows(CONSERVATIVE, "selects external plugin content; no conservative value", "marketplaces.*.source",
            "marketplaces.*.source_type", "marketplaces.*.ref", "marketplaces.*.sparse_paths"),
     "check_for_update_on_startup": row(CONSERVATIVE, "sends an update request on startup; `false` is conservative"),
@@ -319,9 +326,17 @@ def read(settings: Settings, rule: str, *names: str) -> Any:
 BOOLEAN = "boolean"
 NAMES = "names"
 TEXT = "text"
-NUMBER = "number"
-COUNT = "count"
-POSITIVE_COUNT = "positive count"
+# Numeric kinds, one per Rust type behind the key. An integer key is read from TOML, whose integers are i64
+# (toml::Value::Integer), so a u64 or usize tops out at i64::MAX; a NonZeroUsize starts at 1. A seconds key
+# is an f64 that Codex converts with Duration::try_from_secs_f64, which admits a finite, non-negative value
+# below 2^64 (an integer counts after conversion to f64, so 2^64 - 1 rounds up and overflows).
+U64 = "u64"
+USIZE = "usize"
+NON_ZERO_USIZE = "NonZeroUsize"
+F64_SECONDS = "f64 seconds"
+TOML_INT_MAX = 2**63 - 1
+INTEGER_TYPES = {U64: (0, TOML_INT_MAX), USIZE: (0, TOML_INT_MAX), NON_ZERO_USIZE: (1, TOML_INT_MAX)}
+NUMERIC_TYPES = (*INTEGER_TYPES, F64_SECONDS)
 SCALAR = "scalar"
 ANY = "any"
 BROAD_MODES = ("auto", "writes", "approve")
@@ -518,9 +533,9 @@ MODELED_SETTINGS: dict[str, tuple[Any, Forces]] = {
     "auto_review.policy": (TEXT, sets("auto_review_policy", lambda value: "set")),
     "auto_review.extra_policy": (TEXT, sets("auto_review_policy", lambda value: "set")),
     **mcp_rules(MCP, "mcp_tool_approval", server_off, server_tool_off),
-    f"{MCP}.startup_timeout_sec": (NUMBER, timeout("mcp_startup_timeout_sec")),
-    f"{MCP}.startup_timeout_ms": (POSITIVE_COUNT, timeout("mcp_startup_timeout_sec", 1000)),
-    f"{MCP}.tool_timeout_sec": (NUMBER, timeout("mcp_tool_timeout_sec")),
+    f"{MCP}.startup_timeout_sec": (F64_SECONDS, timeout("mcp_startup_timeout_sec")),
+    f"{MCP}.startup_timeout_ms": (U64, timeout("mcp_startup_timeout_sec", 1000)),
+    f"{MCP}.tool_timeout_sec": (F64_SECONDS, timeout("mcp_tool_timeout_sec")),
     **mcp_rules(PLUGIN_MCP, "plugin_mcp_tool_approval", plugin_server_off, plugin_server_tool_off),
 }
 check_table(MODELED, MODELED_SETTINGS)
@@ -547,9 +562,9 @@ CONSERVATIVE_SETTINGS: dict[str, tuple[Any, Any]] = {
     "features.remote_plugin": (BOOLEAN, (False,)),
     "features.hooks": (BOOLEAN, (False,)),
     "features.codex_hooks": (BOOLEAN, (False,)),
-    "project_doc_max_bytes": (COUNT, lambda value: value <= PROJECT_DOC_MAX_BYTES),
-    "tool_output_token_limit": (COUNT, ()),
-    f"{MCP}.tools.*.output_token_limit": (POSITIVE_COUNT, ()),
+    "project_doc_max_bytes": (USIZE, lambda value: value <= PROJECT_DOC_MAX_BYTES),
+    "tool_output_token_limit": (USIZE, ()),
+    f"{MCP}.tools.*.output_token_limit": (NON_ZERO_USIZE, ()),
     "marketplaces.*.source": (TEXT, ()),
     "marketplaces.*.source_type": (("git", "local"), ()),
     "marketplaces.*.ref": (TEXT, ()),
@@ -588,15 +603,24 @@ def well_formed(value: Any, accepted: Any) -> bool:
         return isinstance(value, list) and all(isinstance(entry, str) and entry for entry in value)
     if accepted == TEXT:
         return isinstance(value, str)
-    if accepted == NUMBER:
-        return type(value) in (int, float) and value > 0
-    if accepted == COUNT:
-        return type(value) is int and value >= 0
-    if accepted == POSITIVE_COUNT:
-        return type(value) is int and value > 0
+    if accepted in INTEGER_TYPES:
+        low, high = INTEGER_TYPES[accepted]
+        return type(value) is int and low <= value <= high
+    if accepted == F64_SECONDS:
+        return type(value) in (int, float) and seconds_in_range(value)
     if accepted == SCALAR:
         return isinstance(value, (str, bool, int, float, list))
     return isinstance(value, str) and value in accepted
+
+
+def seconds_in_range(value: int | float) -> bool:
+    """What Duration::try_from_secs_f64 admits: finite, not negative and below 2^64 seconds, once an integer has
+    become an f64."""
+    try:
+        seconds = float(value)
+    except OverflowError:
+        return False
+    return math.isfinite(seconds) and 0 <= seconds < 2.0**64
 
 
 def accepted_value(rule: str, value: Any, accepted: Any) -> None:
