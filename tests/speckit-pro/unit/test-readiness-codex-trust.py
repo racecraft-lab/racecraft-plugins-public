@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import itertools
 import json
 import sys
 import unittest
@@ -90,7 +91,9 @@ SETTINGS_PROMISES = ("are the same key", "a key named twice", "also a table hold
                      "A contradiction makes the posture `unavailable`", "one nested under a known table",
                      "reconciled with its aggregate before the aggregate counts", "it rules out `none`",
                      "`features.apps` to false; another control's value never makes a control inapplicable",
-                     "`auto_review` is conservative only under `never` or a granular policy with every category false")
+                     "`auto_review` is conservative only under `never` or a granular policy with every category false",
+                     "one key table", "`apps._default` takes only `enabled`",
+                     "such as `apps._default.default_tools_enabled`, switches nothing off")
 LEGACY_HOOK_ACTION = ("Send a complete codex_hook_trust observation that verifies each hook's identity and exact hash "
                       "against the shipped definitions, then rerun scaffold. Never trust a hook that is not "
                       "verified. Scaffold never broadens permissions or disables a control.")
@@ -350,6 +353,20 @@ class ReadinessCodexTrustTest(ReadinessCase):
             with self.subTest(label):
                 item = self.item(observation)
                 self.assertEqual(("unavailable", LEGACY_HOOK_ACTION), (item["status"], item["action"]))
+
+    def test_mixed_hook_evidence_without_every_hash_is_never_recommended_for_trust(self) -> None:
+        """Daybreak F1263-f9a03fc7, residual: a hash-bound untrusted hook beside a hashless unobservable one."""
+        for label, hashless in (("omitted hash", {}), ("null hash", {"hash": None}),
+                                ("omitted hash, unobservable enablement", {"enabled": None}),
+                                ("null hash, unobservable enablement", {"hash": None, "enabled": None})):
+            observation = shipped_trust(state="untrusted")
+            second = observation["hooks"][1]  # type: ignore[index]
+            second.pop("hash")
+            second.update({"state": "unobservable", **hashless})
+            with self.subTest(label):
+                item = self.item(observation)
+                self.assertEqual(("unavailable", LEGACY_HOOK_ACTION), (item["status"], item["action"]))
+                self.assertNotIn("Review and trust", item["action"])
 
     def test_hook_trust_without_a_readable_hash_is_unknown_and_trust_needs_a_hash(self) -> None:
         item = self.item(shipped_trust(state="unobservable", hash=None))
@@ -842,6 +859,131 @@ class ReadinessCodexAutoReviewTest(ReadinessCase):
         self.assertEqual("unknown", self.item(auto_reviewed("unobservable"))["status"])
 
 
+# Daybreak F1263-13e52d6c: the checker reads a key only under the path Codex supports for it. Each family of
+# tool settings, as (its key prefix, the prompting approval mode that rules out a `none` aggregate, its tool).
+FAMILIES = {
+    "the apps default table": ('apps."_default"', 'apps."_default".default_tools_approval_mode', "upload"),
+    "the bare apps default table": ("apps._default", "apps._default.default_tools_approval_mode", "upload"),
+    "an app": ('apps."drive"', 'apps."drive".tools."upload".approval_mode', "upload"),
+    "an MCP server": ('mcp_servers."docs"', 'mcp_servers."docs".tools."search".approval_mode', "search"),
+    "a plugin MCP server": ('plugins."kit".mcp_servers."docs"',
+                            'plugins."kit".mcp_servers."docs".tools."search".approval_mode', "search"),
+}
+# Every off switch the checker reads, as the leaf under a family prefix and its off value (`{tool}` is the
+# family's tool name).
+OFF_SWITCHES = {"enabled": False, "default_tools_enabled": False, 'tools."{tool}".enabled': False,
+                "enabled_tools": [], "disabled_tools": ["{tool}"]}
+# Where Codex reads each switch: the families whose keys it switches off. `apps._default.enabled` is supported
+# but disables only apps with no `[apps.<id>]` table, so it switches off no key the inventory names.
+SWITCHES_OFF = {"enabled": {"an app", "an MCP server", "a plugin MCP server"},
+                "default_tools_enabled": {"an app"}, 'tools."{tool}".enabled': {"an app"},
+                "enabled_tools": {"an MCP server", "a plugin MCP server"},
+                "disabled_tools": {"an MCP server", "a plugin MCP server"}}
+NAMES_NOTHING = {("the apps default table", "enabled"), ("the bare apps default table", "enabled")}
+# Daybreak's High probe: the valid default activation beside the ignored false key, bare and quoted.
+IGNORED_DEFAULT = {"apps._default.enabled": True, "apps._default.default_tools_enabled": False}
+IGNORED_DEFAULT_QUOTED = {'apps."_default".enabled': True, 'apps."_default".default_tools_enabled': False}
+
+
+class ReadinessCodexKeyTableTest(ReadinessCase):
+    """Daybreak F1263-13e52d6c: a key switches something off only under the path Codex reads it from."""
+
+    default_host = "codex"
+    request_id = "test-codex-key-table"
+
+    def test_an_ignored_default_tools_key_never_switches_app_tools_off(self) -> None:
+        read_tool = {'apps."drive".tools."repos/list".approval_mode': "prompt"}
+        hints = {"apps._default.destructive_enabled": True, "apps._default.open_world_enabled": True}
+        for label, changes, contradicted in (
+                ("bare _default", IGNORED_DEFAULT, 1), ("quoted _default", IGNORED_DEFAULT_QUOTED, 1),
+                ("a connected read tool", {**IGNORED_DEFAULT, **read_tool}, 2),
+                ("destructive and open-world tools", {**IGNORED_DEFAULT_QUOTED, **hints}, 3),
+                ("the ignored key true", {**IGNORED_DEFAULT, "apps._default.default_tools_enabled": True}, 1)):
+            with self.subTest(label):
+                self.assert_item(self.item(no_tools(changes)), "unavailable",
+                                 (f"settings=1 outside, {contradicted} contradicted, 0 unobservable",),
+                                 ("Keep current controls",))
+        unread = {**IGNORED_DEFAULT, "apps._default.default_tools_enabled": "unobservable"}
+        self.assert_item(self.item(no_tools(unread)), "unavailable", ("settings=0 outside, 1 contradicted, 1 unobservable",))
+        self.assertEqual("unknown", self.item(no_tools({"apps._default.default_tools_enabled": "unobservable"}))["status"])
+        self.assertEqual("unavailable", self.item(no_tools({"apps._default.default_tools_enabled": False}))["status"])
+        # Without the ignored key the activation alone is contradicted, so removing it never verifies either.
+        self.assert_item(self.item(no_tools({"apps._default.enabled": True})), "unavailable",
+                         ("settings=0 outside, 1 contradicted",))
+
+    def test_supported_off_switches_still_switch_off(self) -> None:
+        legitimate = {
+            "apps off": {"apps._default.enabled": True, "features.apps": False,
+                         'apps."drive".tools."repos/list".approval_mode': "prompt"},
+            "the app's default tools off": {'apps."drive".enabled': True, 'apps."drive".default_tools_enabled': False,
+                                            'apps."drive".tools."repos/list".approval_mode': "prompt"},
+            "the apps default off": {"apps._default.enabled": False},
+            "the quoted apps default off": {'apps."_default".enabled': False},
+        }
+        assert_each(self, legitimate, "verified", ("settings=accounted",), no_tools)
+
+    def test_the_apps_default_switch_disables_only_apps_without_a_table(self) -> None:
+        """Codex keeps an app with any `[apps.<id>]` key at its own `enabled`, default true."""
+        for label, activation in (("the app's prompting tool", {'apps."drive".tools."upload".approval_mode': "prompt"}),
+                                  ("the app's reviewer", {'apps."drive".approvals_reviewer': "user",
+                                                          'apps."drive".default_tools_approval_mode': "prompt"}),
+                                  ("the default approval mode", {"apps._default.default_tools_approval_mode": "prompt"}),
+                                  ("the default hints", {"apps._default.destructive_enabled": True})):
+            with self.subTest(label):
+                self.assert_item(self.item(no_tools({"apps._default.enabled": False, **activation})), "unavailable",
+                                 ("settings=0 outside, 1 contradicted",))
+
+    def test_an_off_switch_under_an_unsupported_path_switches_nothing_off(self) -> None:
+        for (family, (prefix, activation, tool)), (leaf, off) in itertools.product(FAMILIES.items(),
+                                                                                 OFF_SWITCHES.items()):
+            key = f"{prefix}.{leaf.format(tool=tool)}"
+            value = [tool] if off == ["{tool}"] else off
+            if family in SWITCHES_OFF[leaf]:
+                expected = ("verified", "settings=accounted")
+            elif (family, leaf) in NAMES_NOTHING:
+                expected = ("unavailable", "settings=0 outside, 1 contradicted")
+            else:
+                expected = ("unavailable", "settings=1 outside, 1 contradicted")
+                with self.subTest(key=key, alone=True):
+                    self.assert_item(self.item(no_tools({key: value})), "unavailable", ("settings=1 outside",))
+            with self.subTest(key=key):
+                self.assert_item(self.item(no_tools({key: value, activation: "prompt"})), expected[0], (expected[1],))
+        for key, activation in (("features.mcp_servers", 'mcp_servers."docs".enabled'),
+                                ("features.plugins", 'plugins."kit".mcp_servers."docs".enabled'),
+                                ("apps.enabled", 'apps."drive".enabled'), ("tools.apps", 'apps."drive".enabled')):
+            with self.subTest(key=key):
+                self.assert_item(self.item(no_tools({key: False, activation: True})), "unavailable",
+                                 ("settings=1 outside, 1 contradicted",))
+        self.assertEqual("verified", self.item(no_tools({'"features"."apps"': False, 'apps."drive".enabled': True,
+                                                         'apps."drive".default_tools_enabled': True}))["status"])
+
+    def test_the_key_table_is_the_single_source_of_every_rule(self) -> None:
+        from speckit_pro_runner.helpers import readiness_posture_settings as module
+        rules = {"modeled": set(module.MODELED_SETTINGS), "conservative": set(module.CONSERVATIVE_SETTINGS),
+                 "inert": {".".join(f'"{part}"' if "." in part else part for part in rule)
+                           for rule in module.INERT_SETTINGS}}
+        self.assertEqual(set(module.CODEX_KEYS), rules["modeled"] | rules["conservative"] | rules["inert"])
+        self.assertEqual(sum(len(keys) for keys in rules.values()), len(module.CODEX_KEYS))
+        for key, (kind, effect, cite) in module.CODEX_KEYS.items():
+            with self.subTest(key=key):
+                self.assertIn(key, rules[kind])
+                self.assertTrue(effect and cite)
+                self.assertIn("config-reference", cite)
+                self.assertEqual(key.startswith("apps._default."), "_default" in module.pattern(key))
+        for key in ("apps._default.default_tools_enabled", 'apps._default.tools."upload".enabled',
+                    "apps._default.enabled_tools", 'mcp_servers."docs".default_tools_enabled'):
+            with self.subTest(key=key):
+                self.assertIsNone(module.rule_for(module.MODELED_PATTERNS, module.key_path(key)))
+        self.assertFalse(module.matches(module.pattern("apps.*.enabled"), ("apps", "_default", "enabled")))
+        self.assertTrue(module.matches(module.pattern("apps._default.enabled"), ("apps", "_default", "enabled")))
+        settings = module.canonical_settings({"apps._default.default_tools_enabled": False,
+                                              'apps."drive".default_tools_enabled': False})
+        self.assertIsNone(module.read(settings, "apps.*.default_tools_enabled", "_default"))
+        self.assertIs(False, module.read(settings, "apps.*.default_tools_enabled", "drive"))
+        with self.assertRaises(LookupError):
+            module.read(settings, "apps._default.default_tools_enabled")
+
+
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
     return unittest.TestSuite([loader.loadTestsFromTestCase(ReadinessCodexTrustTest),
@@ -849,7 +991,8 @@ def build_suite() -> unittest.TestSuite:
                                loader.loadTestsFromTestCase(ReadinessCodexPostureSettingsTest),
                                loader.loadTestsFromTestCase(ReadinessCodexPostureEvidenceTest),
                                loader.loadTestsFromTestCase(ReadinessCodexPostureAggregateTest),
-                               loader.loadTestsFromTestCase(ReadinessCodexAutoReviewTest)])
+                               loader.loadTestsFromTestCase(ReadinessCodexAutoReviewTest),
+                               loader.loadTestsFromTestCase(ReadinessCodexKeyTableTest)])
 
 
 def main() -> int:

@@ -417,9 +417,9 @@ POSTURE_CONTROLS = {
 # Controls that cannot act when the settings inventory itself switches their precondition off: workspace-write
 # settings under `sandbox_mode = "read-only"`, and app tool hints under `features.apps = false`. Another
 # control's value never makes a control inert, since an aggregate is trusted only after the inventory.
-INERT_CONTROLS = {(("sandbox_mode",), "read-only"): ("workspace_network_access", "workspace_writable_roots",
-                                                     "workspace_slash_tmp", "workspace_tmpdir"),
-                  (("features", "apps"), False): ("app_destructive_tools", "app_open_world_tools")}
+INERT_CONTROLS = {("sandbox_mode", "read-only"): ("workspace_network_access", "workspace_writable_roots",
+                                                  "workspace_slash_tmp", "workspace_tmpdir"),
+                  ("features.apps", False): ("app_destructive_tools", "app_open_world_tools")}
 MAX_TIMEOUT_SECONDS = 86400
 HASH_RE = re.compile(r"(?:(?i:sha256):)?[0-9a-fA-F]{64}")
 GRANULAR_KEYS = ("sandbox_approval", "rules", "mcp_elicitations", "request_permissions", "skill_approval")
@@ -487,7 +487,7 @@ def posture_controls(detail: dict[str, Any]) -> dict[str, str] | None:
     observed = {name: choice(controls.get(name, "unobservable"), (*safe, *other, "unobservable"),
                              f"codex_approval_posture control {name}")
                 for name, (safe, other) in POSTURE_CONTROLS.items()}
-    inert = {name for (path, value), names in INERT_CONTROLS.items() if proves(detail, path, value)
+    inert = {name for (rule, value), names in INERT_CONTROLS.items() if proves(detail, rule, value)
              for name in names}
     return {name: value for name, value in observed.items() if name not in inert}
 
@@ -620,8 +620,9 @@ def observe_codex_hook_trust(raw: dict[str, Any], observed_at: str, source: str)
             return make_item("unavailable", source, observed_at, prints,
                              "Keep current controls; review why a required shipped hook is disabled, then rerun scaffold. "
                              + NEVER_BROADEN)
+        # Trust is recommended only with every hook's exact hash in the evidence (security finding F1263-f9a03fc7).
         return make_item("unavailable", source, observed_at, prints, LEGACY_CODEX_HOOK_ACTION if any(
-            state == "untrusted" and found is None for _, state, found in hooks) else
+            found is None for _, _, found in hooks) else
                          "Review and trust the hooks in /hooks, then restart Codex and rerun scaffold. " + NEVER_BROADEN)
     if status == "unknown":
         return make_item("unknown", source, observed_at, prints, "Review the hooks in /hooks, then rerun scaffold.")

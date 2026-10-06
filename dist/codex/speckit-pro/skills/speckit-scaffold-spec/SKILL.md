@@ -1050,7 +1050,14 @@ or timeout. A contradiction makes the posture `unavailable`. The tool approval
 controls aggregate every app, MCP server and plugin MCP server, so each
 explicit enablement, enabled-tools list and approval mode is reconciled with
 its aggregate before the aggregate counts: unless the inventory switches that
-app, server, plugin or tool off, it rules out `none`. Other keys are on
+app, server, plugin or tool off, it rules out `none`. The helper reads each
+key under the exact path Codex reads it from, listed in one key table with
+the effect Codex gives it: `apps._default` takes only `enabled`,
+`approvals_reviewer`, `default_tools_approval_mode`, `destructive_enabled`
+and `open_world_enabled`, and `apps._default.enabled` false disables only
+apps with no `[apps.<id>]` table. A key under a path Codex does not read it
+from, such as `apps._default.default_tools_enabled`, switches nothing off
+and makes the posture `unavailable`. Other keys are on
 the helper's list of inert keys (model, display, notice and local history
 settings), or hold their conservative value: `allow_login_shell` false,
 `shell_environment_policy.inherit` `core` or `none`,
