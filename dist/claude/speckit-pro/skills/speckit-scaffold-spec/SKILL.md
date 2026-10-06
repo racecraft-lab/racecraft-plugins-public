@@ -188,6 +188,7 @@ returned by `resolve-scaffold-worktree-placement` and verified inside the
 worktree. Never write `main`, a guessed branch, or a display label into that
 field.
 
+
 ## Answers-file mode
 
 With `--answers-file`, first call runner helper `scaffold-answers` in
@@ -837,12 +838,12 @@ with read-only formal-doctor against WORKFLOW_ROOT after population.
   `SPEC-<ID>-design-concept.md`. Quote specific Q&A entries when a
   prompt needs to capture *why* a particular decision was made.
 
-- **Clarify Prompts:** Use the design concept's Open Questions section
-  to seed the autopilot's clarify session focuses. Anything still open
-  after the grill-me interview is exactly what the Clarify phase should
-  be told to dig into. Generate session focuses from the unresolved
-  branches and the spec's main surfaces, one focus per open
-  behavior area.
+- **Clarify Prompts:** Write one clarify session, never more: every SPEC
+  runs one Clarify session of at most 5 questions. Use the design
+  concept's Open Questions section to seed its focus. Anything still open
+  after the grill-me interview is exactly what the session should be told
+  to dig into. Fold the unresolved branches and the spec's main surfaces
+  into that one focus, ranked by how much each changes the plan.
 
 - **Plan Prompt:** Combine the tech stack from CLAUDE.md / AGENTS.md, the
   constitution, the roadmap scope description, AND the
@@ -952,6 +953,7 @@ per item:
 | `mcp_servers` | running helper `research-broker-preflight` with empty `inputs={}`, then bounded live observations of required MCP tools/startup/auth; configuration alone does not prove connectivity, so record `unknown` when live evidence is absent |
 | `typesafe_jev` | checking whether this session exposes the Jev `evaluate` tool |
 | `reviewability_report` | reusing the setup gate result, with its report or roadmap path in `files` and SPEC-ID as `values.spec_id` |
+| `git_write` | recording `not_applicable` with `evidence_source` "Claude Code runs no git write probe" |
 | `formal_methods` | judging whether the Design Concept's design suits a formal model, by the [coach's formal-methods guide](../speckit-coach/references/formal-methods-guide.md): `verified` when it suits one, `not_applicable` when it does not; cite the deciding behavior as `evidence_source` |
 
 Claude Code items. Send only the raw observation (`item`, `evidence_source`, and
@@ -990,7 +992,9 @@ Hook items, on both hosts:
   `verification_docker` (whether a Linux/arm64 Docker daemon answers) itself.
   Omit `host_version` when the host does not report it.
 - When the response is `input_error`, correct the field its diagnostic names
-  and send the request once more.
+  and send the request once more. Keep evidence and action text subject to
+  the helper's privacy validation; never write the readiness record directly
+  to bypass a rejected field.
 - Print one line per `unavailable` or `unknown` item with its action, then
   continue. A declined fix, a failed fix, or a failed write leaves scaffold
   finishing normally.

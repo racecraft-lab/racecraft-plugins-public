@@ -229,8 +229,8 @@ and print its summary:
 
 - One task per single-prompt phase (Specify, Plan, Tasks,
   Analyze, Implement)
-- One task **per prompt** for multi-prompt phases (each
-  Clarify session, each Checklist domain)
+- One task for the Clarify session, and one task **per prompt** for
+  Checklist (each domain)
 - One task for consensus/remediation after multi-prompt
   phases (only runs if needed)
 - Parse the workflow file to get session/domain names
@@ -244,9 +244,7 @@ it does NOT invoke a `/speckit-*` command.
 
 1. Read `.specify/memory/constitution.md` — extract all
    numbered principles
-2. Run automated checks using PROJECT_COMMANDS from Step
-   0.11 (BUILD, TYPECHECK, LINT, UNIT_TEST, INTEGRATION_TEST),
-   then record the G0 baseline for every populated quality-gate
+2. Record the G0 baseline for every populated quality-gate
    slot per the Step 0.11 rule: `COMPLEXITY` on the whole
    tracked source tree (a measurement; only exit 2 blocks),
    `MUTATION` as `deferred`, `DEPENDENCY_RULES` as a real
@@ -254,16 +252,20 @@ it does NOT invoke a `/speckit-*` command.
    when opted in
 3. Verify structural patterns documented in CLAUDE.md
    (e.g., source code organization, module boundaries)
-4. Record baselines in the workflow file's Prerequisites
+4. Record the results in the workflow file's Prerequisites
    table
 5. Set the "Constitution Check" summary line
 
-**Gate:** G0 — all automated checks must pass, `DEPENDENCY_RULES`
-must pass, and no blocking slot may exit 2. A missing or invalid
-`.specify/quality-gates.json` is not a failure: G0 runs on the unratified
-defaults that Step 0.11 records. A `COMPLEXITY` baseline over
-the ceiling is recorded, not a block. If any fail, route the failing gate to the implement-executor, which repairs
-it (a red baseline included); run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
+Plan-stage G0 reads the codebase and records the quality-gate slots; the
+typecheck, test, build, and lint baseline belongs to
+[Phase 7 Setup: Project Baseline](#phase-7-setup-project-baseline).
+
+**Gate:** G0 — `DEPENDENCY_RULES` must pass, and no blocking slot may
+exit 2. A missing or invalid `.specify/quality-gates.json` is not a failure:
+G0 runs on the unratified defaults that Step 0.11 records. A `COMPLEXITY`
+baseline over the ceiling is recorded, not a block. If any fail, route the
+failing gate to the implement-executor, which repairs it; run the repair loop
+within its allowance, then defer per the Failure Escalation Protocol.
 
 **Doctor Health Check (ALWAYS — plugin skill):**
 After G0 passes, run `/speckit.speckit-utils.doctor` for a full
@@ -326,30 +328,30 @@ prefix: "Already on feature branch `<branch>`. Do NOT run
 **Commit:**
 `git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json && git commit -m "feat(SPEC-XXX): complete specify phase"`
 
-### Phase 2: Clarify (Conditional)
+### Phase 2: Clarify
 
-Only runs if G1 detected `[NEEDS CLARIFICATION]` markers.
+Every SPEC runs Clarify: one session of at most 5 questions. G1's marker
+count does not decide whether it runs.
 
-Spawn a **separate subagent for each clarify session**.
+Normalize Clarify through Rule 4 before reading phase prompts.
+Spawn **one subagent** for the session.
 The clarify-executor is read-only. It returns a `Clarify Question Set`
 with prioritized questions, recommended answers, evidence, and
 suggested artifact updates. The parent orchestrator answers returned
 questions and applies accepted edits in the main session.
 
 ```text
-For each clarify session in the workflow file:
+For the clarify session in the workflow file:
   1. autopilot-state.json: session task → in_progress
   2. Agent(subagent_type: "speckit-pro:clarify-executor",
           run_in_background: false,
           prompt: """
             Prepare a Clarify Question Set for: <session prompt>
-            Protocol: <plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md
-            Reference dir: <plugin_root>/skills/speckit-autopilot/references/
+            Reference slices: <brief.slices, verbatim>
           """)
-     The `Protocol:` and `Reference dir:` lines are built from the
-     `plugin_root` that `validate-agent-install` returned
-     (prerequisites.md Step 0.0b).
-  3. Parent answers returned questions and edits spec/workflow/state
+     The phase brief supplies the slices; the executor reads no reference file.
+  3. Parent answers returned questions (at most 5) and edits
+     spec/workflow/state
   4. Re-scan spec.md for `[NEEDS CLARIFICATION]` markers and record the
      remaining count in the session result
   5. Parse executor's "Unresolved for consensus" section
@@ -368,7 +370,6 @@ For each clarify session in the workflow file:
   7. After accepted consensus edits, re-scan spec.md and update the recorded
      remaining-marker count
   8. autopilot-state.json: session task → completed
-  9. Proceed to next session
 ```
 
 **Layer 1 (executor):** The clarify-executor researches possible
@@ -385,9 +386,7 @@ perspectives and applies consensus rules. An item that ends in
 interactive and an unattended run alike; it never asks the operator and never
 stops the run.
 
-**Why after each session:** Session 2 may depend on
-Session 1's resolved questions. Both layers complete
-before the next session runs.
+Both layers complete before G2 runs.
 
 **Gate:** G2 — verify 0 markers remain
 
@@ -538,11 +537,8 @@ For each checklist domain in the workflow file:
   1. autopilot-state.json: domain task → in_progress
   2. Agent(subagent_type: "speckit-pro:checklist-executor",
           run_in_background: false,
-          prompt: "Run /speckit-checklist with: <domain prompt>\nProtocol: <plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md\nReference dir: <plugin_root>/skills/speckit-autopilot/references/")
-     The `Protocol:` line is the active consensus protocol and
-     `Reference dir:` is the directory that holds it, both
-     built from the `plugin_root` that `validate-agent-install`
-     returned (prerequisites.md Step 0.0b).
+          prompt: "Run /speckit-checklist with: <domain prompt>\nReference slices: <brief.slices, verbatim>")
+     The phase brief supplies the slices; the executor reads no reference file.
      The checklist-executor runs the checklist, researches
      gaps, applies fixes, and re-runs to verify (Layer 1)
   3. Parse executor's "Unresolved for consensus" section
@@ -793,8 +789,8 @@ Items it can't resolve are flagged in its
 1. autopilot-state.json: "Analyze" → in_progress
 2. Agent(subagent_type: "speckit-pro:analyze-executor",
         run_in_background: false,
-        prompt: "Run /speckit-analyze with: <prompt>\nProtocol: <plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md\nReference dir: <plugin_root>/skills/speckit-autopilot/references/")
-   The `Protocol:` and `Reference dir:` lines are built as in Phase 4.
+        prompt: "Run /speckit-analyze with: <prompt>\nReference slices: <brief.slices, verbatim>")
+   The phase brief supplies the slices, as in Phase 4.
    The executor handles research + remediation (Layer 1)
 3. Parse executor's "Unresolved for consensus" section
 4. If unresolved findings exist:
@@ -1573,6 +1569,30 @@ no egress inventory. Its Step -2 run-start permission probe settles the runner
 and `git status` prompts before any phase work. The command then runs under the
 session's permission settings, and a denial the probe could not know is a blocked
 action (below).
+
+#### Phase 7 Setup: Project Baseline
+
+The project baseline (typecheck, test, build, lint) belongs to this step. Run it
+once, after the feedback sweep below and before the first task is dispatched.
+
+1. A Prerequisites table that already records the baseline stays as recorded
+   (SKILL.md Step 0.6e).
+2. Call runner helper `g0-setup` with `inputs.probe` set to `commands` and
+   `inputs.project_commands` set to the recorded `PROJECT_COMMANDS` object.
+   Read `data.baseline.implement_entry`: the helper applies recorded commands
+   before selecting and ordering runnable slots, including slots absent from
+   detection. Each row's `command` is ready to run.
+3. Run each row's `command` in order. Record each pass or fail in the
+   workflow file's Prerequisites table, with the test count for the
+   `UNIT_TEST` and `INTEGRATION_TEST` rows (a diagnostic; see
+   [Gate Validation §G7](./gate-validation.md#g7--after-implement)).
+4. If a check fails, route the failing check to the implement-executor, which
+   repairs it (a red baseline included); run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
+   A deferral records that gate blocked-for-UAT with the check's output as its
+   evidence (ADR 0012); the gate never passes. The first task is dispatched once
+   each check passes or its failure is deferred with its evidence. When the
+   retry ladder (#1060, ADR 0004) replaces the allowance loop, the failing
+   check climbs the ladder and blocked-for-UAT follows its third failure.
 
 #### Phase 7 Setup: The Pull-Request Feedback Sweep
 
@@ -3587,6 +3607,14 @@ If extension hook events are configured (detected in Step
 the autopilot must handle prompts that fire at each phase.
 Hooks are configured in `.specify/extensions.yml`.
 
+**Who runs a hook.** The loaded Spec Kit command runs the mandatory hooks
+(`optional: false`) of its own `before_` and `after_` events, so for Specify,
+Plan, Checklist, Tasks and Analyze the orchestrator never dispatches one.
+`brief.hooks` lists the phase's optional hooks; the orchestrator runs each once
+after the phase and records the batch in the decisions list. Clarify and
+Implement load no Spec Kit command, so this section's rules stay the
+orchestrator's for those two phases.
+
 **Extension detection priority (Step 0.11):**
 1. `.specify/extensions/.registry` (JSON) — MOST authoritative.
    Check each extension's `enabled` field.
@@ -3608,18 +3636,25 @@ Hooks are configured in `.specify/extensions.yml`.
 | `before_implement` | Before Phase 7 starts | **Accept** — checklist pre-checks |
 | `after_implement` | After Phase 7 completes | **Accept** — e.g., verify, review, retrospective |
 
+The rows apply as written to Implement (and to Clarify's events). For Specify,
+Plan, Checklist, Tasks and Analyze, the loaded command only prints optional
+hooks as suggestions, so `brief.hooks` carries them: the optional `before_` and
+`after_` hooks of the phase, each once, run after the phase (ADR 0018). A
+condition the runner cannot evaluate (anything but `env.NAME is set` or
+`env.NAME ==|!= 'value'`) fails the brief request; handle it through runner
+error recovery, never by guessing.
+
 **Where hooks fire in the execution loop:**
 
 ```text
 for each phase:
-  1. Check .specify/extensions.yml for before_<phase> hooks
-  2. If hooks exist → run accepted hooks, skip duplicates
-  3. Spawn subagent for the phase
-  4. Receive result
-  5. Check .specify/extensions.yml for after_<phase> hooks
-  6. If hooks exist → run accepted hooks, skip duplicates
-  7. Validate gate
-  8. Advance
+  1. Clarify and Implement: run accepted before_<phase> hooks
+  2. Spawn subagent for the phase (the loaded command runs its mandatory hooks)
+  3. Receive result
+  4. Other planning phases: run each brief.hooks entry once, record the batch
+     in the decisions list. Clarify and Implement: run accepted after_<phase> hooks
+  5. Validate gate
+  6. Advance
 ```
 
 ### Hook Handling Rules
@@ -3630,9 +3665,10 @@ for each phase:
    the autopilot already runs the same check (e.g., cleanup
    vs the autopilot's own lint/test verification), skip to
    avoid redundancy
-3. **Document decisions in workflow file** — log which hooks
-   were accepted, skipped, and why
-4. **Check ALL 8 events** — don't assume only after_tasks
+3. **Document decisions** — log which hooks were accepted,
+   skipped, and why: in the decisions list for `brief.hooks`
+   runs, in the workflow file for Clarify and Implement
+4. **Check every event the orchestrator owns** — don't assume only after_tasks
    and after_implement have hooks. Extensions may register
    hooks for any event. Read `.specify/extensions.yml` to
    know which events have hooks configured.
@@ -3644,8 +3680,8 @@ for each phase:
   acceptance rules above (non-destructive, no duplication).
   The autopilot does NOT literally respond to a prompt — it
   invokes the hook's command directly via `Skill()`.
-- `optional: false` — The hook auto-executes without prompting.
-  The autopilot should always run these.
+- `optional: false` — The hook is mandatory. The loaded command runs it;
+  the orchestrator runs it only for Clarify and Implement.
 - `enabled: false` — The hook is disabled. Skip it entirely.
 
 ### Preset-Aware Phase Execution

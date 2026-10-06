@@ -446,22 +446,22 @@ The helper resolves the loaded plugin root that owns
 including `uat-runbook-author.md`. If `plugin_root` is supplied in `inputs`,
 it must equal that loaded root.
 
-Keep the returned `plugin_root`. Every consensus-synthesizer,
-clarify-executor, checklist-executor, and analyze-executor prompt carries a `Protocol:` line
-set to `<plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md`,
-so those agents read the active protocol and never a cached copy from another
-version. Each one reports `**Protocol:**` in the plugin-relative form
+Keep the returned `plugin_root`. Every consensus-synthesizer prompt carries a
+`Protocol:` line set to `<plugin_root>/skills/speckit-autopilot/references/consensus-protocol.md`,
+so that agent reads the active protocol and never a cached copy from another
+version. It reports `**Protocol:**` in the plugin-relative form
 `skills/speckit-autopilot/references/consensus-protocol.md`; check that value
 against the sent line with `<plugin_root>/` removed. Never copy the expanded
 path into the workflow file, state, implementation notes, or a pull request
 body.
 
-Every clarify-, checklist-, analyze-, and implement-executor prompt, every
-consensus analyst prompt, and every artifact-author, formal-model-author, and
-uat-runbook-author prompt also carries a
-`Reference dir: <plugin_root>/skills/speckit-autopilot/references/` line. Those agents read
-`capability-discovery.md` and `grounding.md` only from that directory and never
-search the plugin cache for another copy. The artifact-author prompt also
+Every implement-executor prompt, every consensus analyst prompt, and every
+artifact-author, formal-model-author, and uat-runbook-author prompt also
+carries a `Reference dir: <plugin_root>/skills/speckit-autopilot/references/`
+line. Those agents read `capability-discovery.md` and `grounding.md` only from
+that directory and never search the plugin cache for another copy. Clarify,
+checklist and analyze executor prompts carry neither line: the runner's phase
+brief puts the sections they need in the prompt as reference slices. The artifact-author prompt also
 carries a `Gallery dir: <plugin_root>/artifact-gallery/` line, and the agent reads the
 manifest and templates only from that directory.
 
@@ -702,20 +702,20 @@ Read the workflow file's Prerequisites table. If already
 `Verified`, skip (resuming a workflow). Otherwise:
 
 1. Read constitution from `.specify/memory/constitution.md`
-2. For each principle, run the appropriate PROJECT_COMMANDS
-   check (typecheck, test suite, build, lint). For code
-   review items (KISS, YAGNI, SOLID), mark `Verified` —
-   these are validated during implementation.
+2. For each principle, verify it against the codebase by reading:
+   structure, documented patterns, module boundaries. The project baseline
+   belongs to implement entry (`references/phase-execution.md`, Phase 7
+   Setup: Project Baseline). For code review items (KISS, YAGNI, SOLID), mark
+   `Verified`; these are validated during implementation.
 3. Record the G0 baseline for every populated quality-gate slot
    per the Step 0.11 rule: `COMPLEXITY` on the whole tracked
    source tree (a measurement; only exit 2 blocks), `MUTATION`
    as `deferred`, `DEPENDENCY_RULES` as a real blocking run,
    `DEPENDENCY_AUDIT` as a real blocking run only when opted in
 4. Update the workflow file's table with results and baselines
-5. If any check or populated blocking gate fails, route the failing check to the implement-executor, which repairs it
-   (a red baseline included). Rerun the check, and
-   run the repair loop within its allowance, then defer per the Failure Escalation Protocol with `stop_reason:all_tiers_failed`.
-   Phase 1 starts once the check passes, or once the failure is deferred with its evidence.
+5. If a populated blocking gate fails, route the failing gate to the implement-executor, which repairs it.
+   Rerun the gate, and run the repair loop within its allowance, then defer per the Failure Escalation Protocol with `stop_reason:all_tiers_failed`.
+   Phase 1 starts once the gate passes, or once the failure is deferred with its evidence.
 
 <!-- host:codex: Codex registers custom agents from installed TOML files at session start -->
 ## Step 0.10: Codex Agent Availability Check

@@ -4,6 +4,39 @@
   "mode": "read_only",
   "helpers": [
     {
+      "helper_id": "select-artifact-pages",
+      "operation": "select-artifact-pages",
+      "promotion_status": "python_authoritative",
+      "failure_classes": [
+        "artifact_selection_invalid"
+      ],
+      "rejected_stdout_schema": {
+        "status": "input_error",
+        "data": "object"
+      },
+      "deterministic_remediation": {
+        "summary": "Correct planning inputs or record a whole-set artifact gap.",
+        "actions": [
+          "Retry with readable planning files."
+        ]
+      },
+      "subprocess_policy": {
+        "shell": false,
+        "bounded_input": true,
+        "timeout_seconds": 0
+      },
+      "path_boundary_policy": {
+        "boundary": "repo_or_plugin",
+        "rejects": [
+          "traversal",
+          "external_absolute_path",
+          "symlink_escape"
+        ]
+      },
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/read-only-helpers/requests/select-artifact-pages.json",
+      "rollback": "Keep page selection in the runner and restore both hosts together."
+    },
+    {
       "helper_id": "g0-setup",
       "operation": "g0-setup",
       "promotion_status": "python_authoritative",
@@ -55,6 +88,16 @@
       "path_boundary_policy": {"boundary": "workflow_root", "rejects": ["traversal", "symlink_escape", "archivable_model_inputs"]},
       "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/read-only-helpers/requests/formal-doctor.json",
       "rollback": "Keep selected checkpoints pending until setup is repaired."
+    },
+    {
+      "helper_id": "probe-git-write", "operation": "probe-git-write",
+      "promotion_status": "python_authoritative", "failure_classes": ["git_not_writable"],
+      "rejected_stdout_schema": {"status": "expected_failure", "data": "object"},
+      "deterministic_remediation": {"summary": "Approve git writes, or add the repository .git to sandbox_workspace_write.writable_roots.", "actions": ["Rerun scaffold."]},
+      "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
+      "path_boundary_policy": {"boundary": "task_checkout", "rejects": ["external_absolute_path", "symlink_escape"]},
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/read-only-helpers/requests/probe-git-write.json",
+      "rollback": "Remove the Git Write Probe step and helper together."
     },
     {
       "helper_id": "scaffold-answers", "operation": "scaffold-answers",
