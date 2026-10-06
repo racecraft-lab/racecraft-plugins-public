@@ -19,6 +19,8 @@ sys.path.insert(0, str(ROOT / "speckit-pro"))
 sys.path.insert(0, str(ROOT / "tests/speckit-pro/lib"))
 
 from speckit_pro_runner import artifact_review
+from speckit_pro_runner.helpers import readiness_record
+from speckit_pro_runner.agent_materialization import digest
 from speckit_pro_runner.helpers.read_only import resolve_autopilot_stage, trusted_bytes
 from guide_text import guide_text, host_source
 from test_result import run_counted
@@ -86,9 +88,9 @@ class ArtifactReviewTests(unittest.TestCase):
             text += "\n## Artifact Review Handoff\n\n```json\n" + json.dumps(record) + "\n```\n"
         return text
 
-    def review(self, record: dict | None = None) -> dict:
+    def review(self, record: dict | None = None, **surface: str) -> dict:
         return artifact_review.review_handoff(
-            self.workflow(self.record if record is None else record), self.root, trusted_bytes,
+            self.workflow(self.record if record is None else record), self.root, trusted_bytes, **surface,
         )
 
     def verify(self, index: int = 0) -> None:
@@ -113,6 +115,108 @@ class ArtifactReviewTests(unittest.TestCase):
         self.assertEqual(result["observer"], artifact_review.OBSERVER)
         self.assertTrue(result["reuse_artifacts"])
         self.assertEqual(result["verified"], 0)
+
+    def test_one_observer_dispatch_per_page_with_a_preview_surface(self) -> None:
+        for surface in ("available", "unknown"):
+            with self.subTest(surface=surface):
+                result = self.review(preview_surface=surface)
+                self.assertEqual(result["observer"], artifact_review.OBSERVER)
+                self.assertEqual(result["observer_dispatches"], ["implementation-plan", "spec-explainer"])
+                self.assertEqual(result["resume_action"], "preview")
+                self.assertNotIn("preview_note", result)
+        self.verify(0)
+        self.assertEqual(self.review(preview_surface="available")["observer_dispatches"], ["spec-explainer"])
+
+    def test_no_observer_dispatch_without_a_preview_surface(self) -> None:
+        result = self.review(preview_surface="unavailable")
+        self.assertIsNone(result["observer"])
+        self.assertEqual(result["observer_dispatches"], [])
+        self.assertEqual(result["status"], "unavailable")
+        self.assertEqual(result["resume_action"], "none")
+        self.assertEqual(result["preview_note"], artifact_review.NO_SURFACE_NOTE)
+        self.assertEqual([page["status"] for page in result["pages"]], ["unavailable", "unavailable"])
+        self.assertTrue(all(page["blocker"] == artifact_review.NO_SURFACE_NOTE for page in result["pages"]))
+        self.assertTrue(result["reuse_artifacts"])
+
+    def test_no_surface_keeps_verified_pages_and_policy_denials(self) -> None:
+        self.verify(0)
+        self.record["pages"][1]["preview"].update(status="denied", blocker="Origin access denied")
+        result = self.review(preview_surface="unavailable")
+        self.assertEqual([page["status"] for page in result["pages"]], ["verified", "denied"])
+        self.assertEqual(result["observer_dispatches"], [])
+        self.assertEqual(result["status"], "pending")
+
+    def test_stale_pages_regenerate_before_any_observer_dispatch(self) -> None:
+        (self.root / self.feature / "plan.md").write_text("Changed plan")
+        for surface in ("available", "unavailable"):
+            with self.subTest(surface=surface):
+                result = self.review(preview_surface=surface)
+                self.assertEqual(result["resume_action"], "generate")
+                self.assertEqual(result["observer_dispatches"], [])
+                self.assertNotIn("preview_note", result)
+
+    def test_a_surface_outside_the_closed_set_is_rejected(self) -> None:
+        for surface in ("headless", "", "Available"):
+            self.assertRaisesRegex(ValueError, "preview_surface must be one of", self.review, preview_surface=surface)
+
+    @unittest.mock.patch.object(readiness_record.cli_probe, "probe", return_value={"exit_status": 0, "stdout_tail": "2.1.0"})
+    def test_the_stage_helper_reads_the_surface_from_the_readiness_record(self, _probe) -> None:
+        def stage(host: str | None) -> dict:
+            (self.root / "workflow.md").write_text(self.workflow(self.record))
+            inputs = {"workflow_file": "workflow.md", "autopilot_args": [], **({"host": host} if host else {})}
+            return json.loads(resolve_autopilot_stage(inputs, self.root)["stdout"])["artifact_review"]
+        self.assertEqual(stage("claude")["observer_dispatches"], ["implementation-plan", "spec-explainer"])
+        self.write_readiness("claude", "unavailable")
+        self.assertEqual(stage(None)["observer_dispatches"], ["implementation-plan", "spec-explainer"])
+        self.assertEqual(stage("codex")["observer_dispatches"], ["implementation-plan", "spec-explainer"])
+        review = stage("claude")
+        self.assertEqual((review["observer"], review["observer_dispatches"], review["status"]), (None, [], "unavailable"))
+        self.write_readiness("claude", "verified")
+        self.assertEqual(stage("claude")["observer_dispatches"], ["implementation-plan", "spec-explainer"])
+        result = resolve_autopilot_stage({"workflow_file": "workflow.md", "autopilot_args": [], "host": "gemini"}, self.root)
+        self.assertEqual(result["exit_code"], 2)
+
+    def test_malformed_readiness_evidence_keeps_every_observer_dispatch(self) -> None:
+        (self.root / "workflow.md").write_text(self.workflow(self.record))
+        bare = {"schema_version": "readiness-record/v1", "binding": {"worktree": digest(str(self.root))},
+                "host": "claude", "items": {"preview_surface": {"status": "unavailable"}}}
+        for label, record in (("binding fields only", bare), ("no action", self.readiness("claude", "unavailable", None))):
+            with self.subTest(label):
+                self.write_readiness("claude", "unavailable", record)
+                inputs = {"workflow_file": "workflow.md", "autopilot_args": [], "host": "claude"}
+                review = json.loads(resolve_autopilot_stage(inputs, self.root)["stdout"])["artifact_review"]
+                self.assertEqual(review["observer"], artifact_review.OBSERVER)
+                self.assertEqual(review["observer_dispatches"], ["implementation-plan", "spec-explainer"])
+                self.assertNotIn("preview_note", review)
+
+    def readiness(self, host: str, status: str, action: str | None = "Run autopilot where a preview pane exists.") -> dict:
+        """A record shaped like the writer's, so only the field under test differs."""
+        inputs = {"host": host, "host_version": "2.1.0", "execution_mode": "interactive", "plugin_revision": "2.40.0",
+                  "observations": [{"item": "preview_surface", "status": status, "evidence_source": "session tools",
+                                    "values": {"surface": "pane"}, **({"action": action or "Rerun scaffold."} if status != "verified" else {})}]}
+        with unittest.mock.patch.object(readiness_record.shutil, "which", return_value=None):
+            record = readiness_record.build_record(inputs, self.root)
+        if action is None:
+            record["items"]["preview_surface"].pop("action", None)
+        return record
+
+    @unittest.mock.patch.object(readiness_record.cli_probe, "probe", return_value={"exit_status": 0, "stdout_tail": "2.1.0"})
+    def test_stale_or_incomplete_snapshot_keeps_dispatch_for_both_hosts(self, _probe) -> None:
+        (self.root / "workflow.md").write_text(self.workflow(self.record))
+        for host in ("claude", "codex"):
+            for field, value in (("host_version", "1.0.0"), ("plugin_revision", "1.0.0"), ("items", None)):
+                with self.subTest(host=host, field=field):
+                    record = self.readiness(host, "unavailable")
+                    record[field] = value if field != "items" else {"preview_surface": record["items"]["preview_surface"]}
+                    self.write_readiness(host, "unavailable", record)
+                    review = json.loads(resolve_autopilot_stage({"workflow_file": "workflow.md", "autopilot_args": [], "host": host}, self.root)["stdout"])["artifact_review"]
+                    self.assertEqual(["implementation-plan", "spec-explainer"], review["observer_dispatches"])
+                    self.assertNotIn("preview_note", review)
+
+    def write_readiness(self, host: str, status: str, record: dict | None = None) -> None:
+        directory = self.root / ".specify/readiness"
+        directory.mkdir(parents=True, exist_ok=True)
+        (directory / f"{host}.json").write_text(json.dumps(record or self.readiness(host, status)))
 
     def test_untrusted_html_outside_template_regions_is_rejected(self) -> None:
         path = self.root / self.record["pages"][0]["path"]
