@@ -385,19 +385,24 @@ class CompletedInstallTests(CuratedInstallCase):
         self.assertIn("0/6 passed", stdout)
         self.assertEqual(installs, [])
 
-    def test_default_run_reports_every_extension_unproven_and_never_zero(self):
-        status, stdout, stderr, installs = self.run_main()
-        self.assert_no_completion_claim(status, stdout, installs, 2)
-        self.assertIn("6 unproven", stdout)
-        self.assertIn("UNPROVEN preset claude-ask-questions: needs owner-run acceptance", stderr)
+    def assert_probe_state(self, legacy):
+        args, expected_status, prefix, message = (
+            (["--trust-pinned-archives"], 1, "FAIL", "completed install is unproven; owner-run acceptance is required")
+            if legacy else ([], 2, "UNPROVEN", "needs operator confirmation")
+        )
+        status, stdout, stderr, installs = self.run_main(args)
+        self.assert_no_completion_claim(status, stdout, installs, expected_status)
         for entry in EXTENSIONS:
-            self.assertIn(f"UNPROVEN extension {entry['id']}: needs operator confirmation", stderr)
+            self.assertIn(f"{prefix} extension {entry['id']}: {message}", stderr)
+        self.assertIn("UNPROVEN preset claude-ask-questions: needs owner-run acceptance", stderr)
+        if not legacy:
+            self.assertIn("6 unproven", stdout)
+
+    def test_default_run_reports_every_extension_unproven_and_never_zero(self):
+        self.assert_probe_state(False)
 
     def test_legacy_opt_in_fails_closed_without_attempting_installs(self):
-        status, stdout, stderr, installs = self.run_main(["--trust-pinned-archives"])
-        self.assert_no_completion_claim(status, stdout, installs, 1)
-        for entry in EXTENSIONS:
-            self.assertIn(f"FAIL extension {entry['id']}: completed install is unproven; owner-run acceptance is required", stderr)
+        self.assert_probe_state(True)
 
     def test_legacy_opt_in_never_uses_init_results(self):
         for result in ([], ["setup failed"]):
