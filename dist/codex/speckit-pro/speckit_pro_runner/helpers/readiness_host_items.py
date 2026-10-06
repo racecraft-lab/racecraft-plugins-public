@@ -18,6 +18,7 @@ from typing import Any
 from ..agent_materialization import digest
 from ..strict_input import SelectionError
 from ..sweep_isolation import secret_matches
+from .readiness_posture_settings import proves, settings_gaps
 from .readiness_values import MAX_TEXT, NOT_OBSERVED_ACTION, clean_text, make_item
 
 CLAUDE_ONLY_ITEMS = ("permission_probe", "plugin_scope", "mcp_authentication")
@@ -201,7 +202,7 @@ def observe_hooks(raw: dict[str, Any], observed_at: str, source: str, host: str)
                          "Update the speckit-pro plugin so its required hooks are defined, then rerun scaffold.")
     status = hook_trust_status([trust for _, _, trust in hooks])
     if status == "unavailable":
-        review = ("Review and trust the hooks in /hooks, then restart Codex and rerun scaffold." if host == "codex"
+        review = (LEGACY_CODEX_HOOK_ACTION if host == "codex"
                   else "Enable the speckit-pro plugin, check its hooks in /hooks, accept the workspace trust "
                        "dialog, then rerun scaffold.")
         return make_item("unavailable", source, observed_at, prints, review)
@@ -380,6 +381,10 @@ def observe_extension_versions(raw: dict[str, Any], observed_at: str, source: st
 # These record observed facts, never consent. Every printed action comes from a fixed template, and every
 # recorded value is an enumerated word, a bounded integer, a name or a hex digest, never free text or a path.
 NEVER_BROADEN = "Scaffold never broadens permissions or disables a control."
+# Legacy hook evidence has no exact hash, so its action never asks the user to trust anything.
+LEGACY_CODEX_HOOK_ACTION = ("Send a complete codex_hook_trust observation that verifies each hook's identity and exact hash "
+                            "against the shipped definitions, then rerun scaffold. Never trust a hook that is not "
+                            "verified. " + NEVER_BROADEN)
 POSTURE_CHOICES = {
     "approval_policy": ("on-request", "never", "on-failure"),
     "sandbox_mode": ("read-only", "workspace-write", "danger-full-access"),
@@ -389,6 +394,32 @@ POSTURE_CHOICES = {
     "external_delegation": ("allowed", "blocked"),
 }
 POSTURE_TIMEOUTS = ("mcp_startup_timeout_sec", "mcp_tool_timeout_sec")
+TOOL_APPROVAL_MODES = (("none", "prompt"), ("auto", "writes", "approve"))
+# Effective controls beyond the summary above, as (conservative values, other values). Without every one
+# observed the posture is never verified; a value outside the conservative set is unavailable. Every other
+# configuration key is judged from the `settings` inventory (readiness_posture_settings).
+POSTURE_CONTROLS = {
+    "workspace_network_access": (("disabled",), ("enabled",)),
+    "workspace_writable_roots": (("none",), ("added",)),
+    "workspace_slash_tmp": (("excluded",), ("writable",)),
+    "workspace_tmpdir": (("excluded",), ("writable",)),
+    "permission_profile": (("none", "read-only"), ("workspace", "danger-full-access", "custom")),
+    "web_search": (("disabled", "cached"), ("indexed", "live")),
+    "web_search_tool": (("disabled",), ("enabled",)),
+    "app_approvals_reviewer": (("user",), ("auto_review",)),
+    "auto_review_policy": (("unset",), ("set",)),
+    "app_tool_approval": TOOL_APPROVAL_MODES,
+    "app_destructive_tools": (("disabled",), ("enabled",)),
+    "app_open_world_tools": (("disabled",), ("enabled",)),
+    "mcp_tool_approval": TOOL_APPROVAL_MODES,
+    "plugin_mcp_tool_approval": TOOL_APPROVAL_MODES,
+}
+# Controls that cannot act when the settings inventory itself switches their precondition off: workspace-write
+# settings under `sandbox_mode = "read-only"`, and app tool hints under `features.apps = false`. Another
+# control's value never makes a control inert, since an aggregate is trusted only after the inventory.
+INERT_CONTROLS = {("sandbox_mode", "read-only"): ("workspace_network_access", "workspace_writable_roots",
+                                                  "workspace_slash_tmp", "workspace_tmpdir"),
+                  ("features.apps", False): ("app_destructive_tools", "app_open_world_tools")}
 MAX_TIMEOUT_SECONDS = 86400
 HASH_RE = re.compile(r"(?:(?i:sha256):)?[0-9a-fA-F]{64}")
 GRANULAR_KEYS = ("sandbox_approval", "rules", "mcp_elicitations", "request_permissions", "skill_approval")
@@ -446,10 +477,36 @@ def shipped_codex_hooks() -> dict[str, str] | None:
         return None
 
 
-def observe_codex_approval_posture(raw: dict[str, Any], observed_at: str, source: str) -> dict[str, Any]:
-    detail = raw["posture"]
-    if not isinstance(detail, dict) or detail.keys() != {*POSTURE_CHOICES, *POSTURE_TIMEOUTS}:
-        raise SelectionError(f"codex_approval_posture.posture takes {sorted({*POSTURE_CHOICES, *POSTURE_TIMEOUTS})}")
+def posture_controls(detail: dict[str, Any]) -> dict[str, str] | None:
+    """The observed controls that can act; a control the caller left out is unobservable."""
+    if "controls" not in detail:
+        return None
+    controls = detail["controls"]
+    if not isinstance(controls, dict) or not controls.keys() <= POSTURE_CONTROLS.keys():
+        raise SelectionError(f"codex_approval_posture.posture.controls takes {sorted(POSTURE_CONTROLS)}")
+    observed = {name: choice(controls.get(name, "unobservable"), (*safe, *other, "unobservable"),
+                             f"codex_approval_posture control {name}")
+                for name, (safe, other) in POSTURE_CONTROLS.items()}
+    inert = {name for (rule, value), names in INERT_CONTROLS.items() if proves(detail, rule, value)
+             for name in names}
+    return {name: value for name, value in observed.items() if name not in inert}
+
+
+def control_gaps(controls: dict[str, str] | None) -> tuple[list[str], list[str], str]:
+    """Controls outside the conservative profile, unobservable controls, and their summary as counts.
+
+    Counts keep every summary fact within the record limit; the fingerprint holds each control value.
+    """
+    outside = [name for name, value in (controls or {}).items()
+               if value not in (*POSTURE_CONTROLS[name][0], "unobservable")]
+    unread = [name for name, value in (controls or {}).items() if value == "unobservable"]
+    text = ("missing" if controls is None else "conservative" if not outside and not unread
+            else f"{len(outside)} outside, {len(unread)} unobservable")
+    return outside, unread, text
+
+
+def posture_facts(detail: dict[str, Any]) -> dict[str, str]:
+    """The eight summary facts as enumerated words or whole seconds."""
     facts: dict[str, str] = {}
     for key, allowed in POSTURE_CHOICES.items():
         value = detail[key]
@@ -467,22 +524,58 @@ def observe_codex_approval_posture(raw: dict[str, Any], observed_at: str, source
                                                               or not 0 < value <= MAX_TIMEOUT_SECONDS):
             raise SelectionError(f"codex_approval_posture {key} must be whole seconds, null or \"unobservable\"")
         facts[key] = "default" if value is None else str(value)
-    summary = ", ".join(f"{key}={value}" for key, value in facts.items())
-    prints = {"value:posture": digest(summary)}
+    return facts
+
+
+def posture_summary(detail: dict[str, Any], controls: dict[str, str] | None) -> dict[str, Any]:
+    """Each summary fact and acting control as the configuration inventory reconciles it (checked first)."""
+    summary: dict[str, Any] = {key: detail[key] for key in ("sandbox_mode", "approvals_reviewer", *POSTURE_TIMEOUTS)}
+    policy = detail["approval_policy"]
+    summary["approval_policy"] = "granular" if isinstance(policy, dict) else policy
+    if isinstance(policy, dict):
+        summary.update({f"approval_policy.granular.{name}": flag for name, flag in policy["granular"].items()})
+    return {**summary, **(controls or {})}
+
+
+def reviewer_decides_prompts(detail: dict[str, Any]) -> bool:
+    """Whether `auto_review` sends approval prompts to the reviewer subagent instead of the operator: true unless
+    no prompt can arise (`never`, or a granular policy with every category false); unknown policies stay unknown."""
+    policy = detail["approval_policy"]
+    if detail["approvals_reviewer"] != "auto_review" or policy == "unobservable":
+        return False
+    return any(policy["granular"].values()) if isinstance(policy, dict) else policy != "never"
+
+
+def observe_codex_approval_posture(raw: dict[str, Any], observed_at: str, source: str) -> dict[str, Any]:
+    detail = raw["posture"]
+    if not isinstance(detail, dict) or detail.keys() - {"controls", "settings"} != {*POSTURE_CHOICES, *POSTURE_TIMEOUTS}:
+        raise SelectionError(f"codex_approval_posture.posture takes {sorted({*POSTURE_CHOICES, *POSTURE_TIMEOUTS})}, "
+                             "controls and settings")
+    controls = posture_controls(detail)
+    facts = posture_facts(detail)
+    outside, unread, controls_text = control_gaps(controls)
+    settings_outside, settings_unread, settings_text, settings_prints = settings_gaps(detail, posture_summary(detail, controls))
+    summary = (", ".join(f"{key}={value}" for key, value in facts.items())
+               + f", controls={controls_text}, settings={settings_text}")
+    prints = {"value:posture": digest(summary), **settings_prints}
+    if controls is not None:
+        prints["value:posture_controls"] = digest(controls)
     # Every bounded posture fact fits; shorten only the source label to retain all observations.
     source = describe(source[:MAX_TEXT - len(summary) - 3], summary, "codex_approval_posture.evidence_source")
     refused = [key for key in POSTURE_ACTIONS if facts[key] in ("blocked", "not_granted")]
     if refused:
         return make_item("unavailable", source, observed_at, prints, POSTURE_ACTIONS[refused[0]])
     if facts["sandbox_mode"] == "danger-full-access" or facts["mcp_approval_mode"] in ("auto", "writes", "approve") \
-            or any(type(detail[key]) is int and detail[key] > limit for key, limit in POSTURE_DEFAULT_TIMEOUTS.items()):
+            or reviewer_decides_prompts(detail) \
+            or any(type(detail[key]) is int and detail[key] > limit for key, limit in POSTURE_DEFAULT_TIMEOUTS.items()) \
+            or outside or settings_outside:
         return make_item("unavailable", source, observed_at, prints,
                          "Keep current controls; review the observed posture against the conservative scaffold profile "
                          "before using the affected capability. " + NEVER_BROADEN)
-    if "unobservable" in facts.values():
+    if "unobservable" in facts.values() or controls is None or unread or settings_unread:
         return make_item("unknown", source, observed_at, prints, "Read the Codex approval, sandbox, reviewer and "
-                         "MCP settings from an effective running-thread source; leave unreadable values unobservable "
-                         "and rerun scaffold. " + NEVER_BROADEN)
+                         "MCP settings, every posture control and every configuration key set in an effective "
+                         "layer; leave unreadable values unobservable and rerun scaffold. " + NEVER_BROADEN)
     return make_item("verified", source, observed_at, prints)
 
 
@@ -527,7 +620,9 @@ def observe_codex_hook_trust(raw: dict[str, Any], observed_at: str, source: str)
             return make_item("unavailable", source, observed_at, prints,
                              "Keep current controls; review why a required shipped hook is disabled, then rerun scaffold. "
                              + NEVER_BROADEN)
-        return make_item("unavailable", source, observed_at, prints,
+        # Trust is recommended only with every hook's exact hash in the evidence (security finding F1263-f9a03fc7).
+        return make_item("unavailable", source, observed_at, prints, LEGACY_CODEX_HOOK_ACTION if any(
+            found is None for _, _, found in hooks) else
                          "Review and trust the hooks in /hooks, then restart Codex and rerun scaffold. " + NEVER_BROADEN)
     if status == "unknown":
         return make_item("unknown", source, observed_at, prints, "Review the hooks in /hooks, then rerun scaffold.")
@@ -573,12 +668,19 @@ CODEX_TRUST_OBSERVERS = {"codex_approval_posture": observe_codex_approval_postur
                          "codex_local_access": observe_codex_local_access}
 
 
-def reconcile_codex_items(items: dict[str, dict[str, Any]], observed_at: str) -> None:
-    """One Codex trust result and no caller override of the runner's temporary probe."""
+def names_item(observations: list[Any], name: str) -> bool:
+    """Whether the caller sent an observation for `name`, whatever it holds."""
+    return any(isinstance(raw, dict) and raw.get("item") == name for raw in observations)
+
+
+def reconcile_codex_items(items: dict[str, dict[str, Any]], observed_at: str, legacy_hooks_observed: bool) -> None:
+    """One Codex trust result and no caller override of the runner's temporary probe.
+
+    Any legacy `hooks` observation, an empty one included, overlaps exact `codex_hook_trust` evidence.
+    """
     trust = items["codex_hook_trust"]
-    definitions = items["hooks"]
     if trust["fingerprints"]:
-        if definitions["fingerprints"]:
+        if legacy_hooks_observed:
             raise SelectionError("Codex hooks and codex_hook_trust observations overlap; use only the exact-hash observation")
         items["hooks"] = trust
     access = items["codex_local_access"]

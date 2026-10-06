@@ -94,7 +94,7 @@ class ReadinessHostItemsTest(ReadinessCase):
                 untrusted = [{"hook": "Stop", "defined": True, "trust": "untrusted"}]
                 item = self.items(self.run_helper([detail("hooks", "hooks", untrusted)], host))["hooks"]
                 self.assertEqual("unavailable", item["status"])
-                self.assertIn("/hooks", item["action"])
+                self.assertIn("/hooks" if host == "claude" else "codex_hook_trust", item["action"])
                 missing = [{"hook": "Stop", "defined": False, "trust": "unobservable"}]
                 item = self.items(self.run_helper([detail("hooks", "hooks", missing)], host))["hooks"]
                 self.assertEqual("unavailable", item["status"])
