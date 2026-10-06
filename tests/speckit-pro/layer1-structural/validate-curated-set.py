@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import json
+import re
 import sys
 import unittest
 
@@ -17,6 +18,12 @@ if str(LIB_DIR) not in sys.path:
 from test_result import run_counted
 
 MANIFEST = PLUGIN_ROOT / 'scripts' / 'curated-set.json'
+# Spec Kit v1.1.0 refuses `add <id>` for community-catalog entries (discovery-only), so each
+# entry carries the archive the install command takes through `--from`. Pinning a commit
+# keeps the vetted bytes fixed even when the upstream tag moves.
+ARCHIVE_URL = re.compile(r'https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/archive/[0-9a-f]{40}\.zip')
+INSTALL_SHAPE = '["<kind>", "add", "<id>", "--from", "<archive_url>"]'
+SKILLS_WITH_CURATED_STEP = ('speckit-install', 'speckit-upgrade')
 EXPECTED_ENTRIES = {'review': 'extension', 'verify': 'extension', 'verify-tasks': 'extension', 'cleanup': 'extension', 'retrospective': 'extension', 'claude-ask-questions': 'preset'}
 
 def _jq_field(value: object) -> str:
@@ -64,7 +71,7 @@ class ValidateCuratedSet(unittest.TestCase):
             entry_id_val = entry.get('id') if isinstance(entry, dict) else None
             entry_id = str(entry_id_val) if entry_id_val is not None else 'null'
             with self.subTest(msg=f"entry '{entry_id}' contains only operator-consumed fields"):
-                self.assertEqual(set(entry) if isinstance(entry, dict) else set(), {'id', 'kind'})
+                self.assertEqual(set(entry) if isinstance(entry, dict) else set(), {'id', 'kind', 'archive_url'})
             with self.subTest(msg=f"entry '{entry_id}' has valid kind (extension or preset)"):
                 kind = entry.get('kind') if isinstance(entry, dict) else None
                 self.assertIn(kind, ('extension', 'preset'), f"kind='{kind}' is not extension or preset")
@@ -73,6 +80,42 @@ class ValidateCuratedSet(unittest.TestCase):
             catalog[entry_id] = entry.get('kind') if isinstance(entry, dict) else None
         with self.subTest(msg='catalog retains the supported recommendations and kinds'):
             self.assertEqual(catalog, EXPECTED_ENTRIES)
+
+    def test_entries_pin_a_commit_archive(self) -> None:
+        for entry in json.loads(MANIFEST.read_text(encoding='utf-8'))['entries']:
+            with self.subTest(msg=f"entry '{entry['id']}' pins a commit archive for the --from install"):
+                url = entry.get('archive_url')
+                self.assertTrue(isinstance(url, str) and ARCHIVE_URL.fullmatch(url), f'archive_url={url!r}')
+
+
+class CuratedGuidanceContracts(unittest.TestCase):
+
+    def test_install_and_upgrade_skills_install_through_from(self) -> None:
+        guide = ' '.join((PLUGIN_ROOT / 'skills' / 'speckit-coach' / 'references' / 'presets-extensions-guide.md').read_text(encoding='utf-8').split())
+        with self.subTest(msg='guide says what the pin guarantees and what the operator reviews'):
+            for phrase in ('pins the bytes but does not vet them', 'specify extension info', 'commands, scripts, and hooks'):
+                self.assertIn(phrase, guide)
+        with self.subTest(msg='each kind is inspected with its own info command, which prints no archive URL'):
+            # Spec Kit v1.1.0 extensions/command_info.py and presets/command_info.py print a
+            # Repository link and never the download URL; `extension info` cannot see presets.
+            for phrase in ('`specify extension info <id>` for an extension', '`specify preset info <id>` for a preset',
+                           'Repository'):
+                self.assertIn(phrase, guide)
+            self.assertNotIn('prints the candidate archive URL', guide)
+        with self.subTest(msg='directory presence leaves completed installation unproven'):
+            self.assertIn('Directory presence and a successful exit leave completion unproven', guide)
+            self.assertIn('owner-run acceptance', guide)
+            self.assertNotIn('confirm each entry by listing', guide)
+        for skill in SKILLS_WITH_CURATED_STEP:
+            text = (PLUGIN_ROOT / 'skills' / skill / 'SKILL.md').read_text(encoding='utf-8')
+            flat = ' '.join(text.split())
+            with self.subTest(msg=f'{skill} names the --from install shape'):
+                self.assertIn(INSTALL_SHAPE, flat)
+            with self.subTest(msg=f'{skill} asks the operator to vet the pinned archive before confirming'):
+                self.assertIn('pins the bytes but does not vet them', flat)
+            with self.subTest(msg=f'{skill} no longer tells the operator to add by catalog id'):
+                self.assertNotIn('"extension", "add", "<id>"]', flat)
+
 
 def main() -> int:
     suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])

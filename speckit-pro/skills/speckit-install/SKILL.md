@@ -257,8 +257,15 @@ Compare `.specify/extensions/` and `.specify/presets/` against the entries in
 
 - Otherwise, list the missing entries and ask which to install.
   Recommended default is **all**. For each accepted entry, give the
-  operator the `spec_kit.cli_argv + ["extension", "add", "<id>"]` or preset command from the
-  curated set and run it only after they confirm. Skipped entries can be
+  operator the `spec_kit.cli_argv + ["<kind>", "add", "<id>", "--from", "<archive_url>"]`
+  command from the curated set (`<kind>` is `extension` or `preset`). Spec Kit
+  refuses a bare `add <id>` for these entries. Run a preset command yourself after
+  the operator confirms. Do not run an extension command: it stops at Spec Kit's
+  trust prompt, so the operator runs it in their own terminal. The pin
+  pins the bytes but does not vet them: before the operator confirms, ask them to
+  review the archive's commands, scripts, and hooks.
+  [The curated set](../speckit-coach/references/presets-extensions-guide.md)
+  says how to vet the archive and verify the result. Skipped entries can be
 <!-- host:claude: Claude names skills with a slash -->
   installed later with `/speckit-pro:speckit-upgrade`.
 <!-- /host -->
