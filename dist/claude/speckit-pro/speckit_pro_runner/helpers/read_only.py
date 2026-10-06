@@ -2147,11 +2147,10 @@ def g4_reports(directory: int) -> dict[str, os.stat_result]:
     return entries
 
 
-def g4_check_entries(directory: int, entries: dict[str, os.stat_result]) -> None:
+def g4_check_entries(directory: int, entries: dict[str, os.stat_result], kind: str | None = None) -> None:
     """Refuse a changed name, inode or mutation signature without re-reading content."""
     for name, before in entries.items():
-        kind = name if name in ("spec.md", "plan.md") else "checklists entry" if name == "checklists" else "checklist report"
-        with g4_input_kind(kind):
+        with g4_input_kind(kind or name):
             after = os.stat(name, dir_fd=directory, follow_symlinks=False)
             if tree_entry_signature(before) != tree_entry_signature(after):
                 raise ValueError("G4 input changed during capture")
@@ -2186,11 +2185,11 @@ def g4_snapshot(feature: Path, repo_root: Path) -> dict[str, bytes]:
                     raise ValueError("G4 requires file content")
                 snapshot[key] = content
         g4_check_entries(feature_fd, shared)
-        g4_check_entries(directory_fd, reports)
+        g4_check_entries(directory_fd, reports, "checklist report")
         with g4_input_kind("checklist report set"):
             if set(g4_reports(directory_fd)) != set(reports):
                 raise ValueError("G4 checklist entries changed during capture")
-        g4_check_entries(feature_fd, {"checklists": os.fstat(directory_fd)})
+        g4_check_entries(feature_fd, {"checklists": os.fstat(directory_fd)}, "checklists entry")
         with g4_input_kind("feature entry"):
             current_fd = trusted_open_directory(feature, repo_root)
             if current_fd is None:

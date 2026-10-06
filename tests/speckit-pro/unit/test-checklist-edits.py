@@ -1803,7 +1803,11 @@ class GateFourTests(ChecklistEditsCase):
                         self.reset_tree()
                         target = self.feature / relative
                         trigger = target if relative.endswith(".md") else self.feature / "checklists/security.md"
-                        with inject(trigger, partial(self.swap_entry, target, variant)):
+                        def mutate() -> None:
+                            self.swap_entry(target, variant)
+                            if relative in ("spec.md", "plan.md", ".") and variant in ("regular", "hard link"):
+                                self.forge_receipt()
+                        with inject(trigger, mutate):
                             verdict = self.gate()
                         self.assertFalse(verdict["pass"], verdict)
             for nested in (False, True):
@@ -1834,8 +1838,14 @@ class GateFourTests(ChecklistEditsCase):
                 fired.append(True)
                 mutate()
 
-        def checks(directory: int, entries: dict[str, os.stat_result]) -> None:
-            original_checks(directory, entries)
+        def checks(directory: int, entries: dict[str, os.stat_result], kind: str | None = None) -> None:
+            if window == "entry recheck":
+                for name, info in entries.items():
+                    original_checks(directory, {name: info}, kind)
+                    if relative == name or relative == f"checklists/{name}":
+                        fire()
+                return
+            original_checks(directory, entries, kind)
             if relative in ("spec.md", "plan.md") and relative in entries:
                 fire()
             if relative == "checklists" and "checklists" in entries:
@@ -1868,7 +1878,7 @@ class GateFourTests(ChecklistEditsCase):
             return result
 
         with ExitStack() as stack:
-            if window == "last check":
+            if window in ("entry recheck", "last check"):
                 for name, hook in (("g4_check_entries", checks), ("g4_reports", reports),
                                    ("trusted_open_directory", directory)):
                     stack.enter_context(patch.object(read_only, name, hook))
@@ -1884,7 +1894,7 @@ class GateFourTests(ChecklistEditsCase):
         targets = {"spec.md": leaves, "plan.md": leaves,
                    "checklists/security.md": (*leaves, "add report", "add nested report"),
                    "checklists": directories, ".": directories}
-        for window in ("last check", "snapshot return", "verdict serialization"):
+        for window in ("entry recheck", "last check", "snapshot return", "verdict serialization"):
             for relative, variants in targets.items():
                 for variant in variants:
                     with self.subTest(window=window, target=relative, variant=variant):
@@ -1904,14 +1914,67 @@ class GateFourTests(ChecklistEditsCase):
                                     writer.unlink()
                             else:
                                 self.swap_entry(target, variant)
+                            if variant in ("regular", "direct write", "transient hard link"):
+                                self.forge_receipt()
                         with self.after_last_validation(relative, mutate, window):
-                            judged = self.gate()["judged"]
+                            verdict = self.gate()
+                        if not verdict["pass"]:
+                            self.assertNotIn("judged", verdict, "unsafe capture must not supply dispatch evidence")
+                            continue
+                        judged = verdict["judged"]
                         with patch.object(phase_brief, "resolve_repo_root", return_value=self.root):
                             result = dispatch_helper(SimpleNamespace(helper_id="phase-brief", operation="phase-brief", mode="read_only",
                                      request_id=None, inputs={"phase": "Tasks", "workflow_file": WORKFLOW, "feature_dir": FEATURE, "g4_judged": judged}))
                         self.assertEqual("input_error", result["status"])
                         self.assertEqual({}, result["data"])
                         self.assertEqual("g4_input_drift", result["diagnostics"][0]["code"])
+
+    def test_g4_report_drift_diagnostics_keep_shared_basenames_distinct(self) -> None:
+        for name in ("spec.md", "plan.md"):
+            with self.subTest(report=name):
+                self.reset_tree()
+                report = self.feature / "checklists" / name
+                (self.feature / "checklists/security.md").rename(report)
+                judged = self.gate()["judged"]
+                real_read = read_only.read_tree_entry
+                reached = []
+                def mutate_report(directory: int, entry: str, *args: Any, **kwargs: Any) -> Any:
+                    result = real_read(directory, entry, *args, **kwargs)
+                    if entry == name and os.fstat(directory).st_ino == report.parent.stat().st_ino:
+                        reached.append(True)
+                        report.write_text(GAP_LINE, encoding="utf-8")
+                    return result
+                with patch.object(read_only, "read_tree_entry", mutate_report):
+                    with self.assertRaises(read_only.G4InputDrift) as refusal:
+                        read_only.check_g4_inputs(self.feature, self.root, judged)
+                self.assertIn("checklist report", str(refusal.exception))
+                self.assertNotIn(name, str(refusal.exception))
+                self.assertEqual([True], reached)
+
+    def test_g4_judges_completed_changes_and_refuses_device_inputs(self) -> None:
+        for relative in ("spec.md", "plan.md", "checklists/security.md"):
+            with self.subTest(input=relative, mutation="before read"):
+                self.reset_tree()
+                (self.feature / relative).write_text(GAP_LINE, encoding="utf-8")
+                result = self.gate()
+                self.assertFalse(result["pass"])
+                self.assertEqual(digest(GAP_LINE), result["judged"][relative])
+            for device_mode in (stat.S_IFCHR, stat.S_IFBLK):
+                with self.subTest(input=relative, device=device_mode):
+                    self.reset_tree()
+                    real_stat = os.stat
+                    reached = []
+                    def device(path: Any, *args: Any, **kwargs: Any) -> os.stat_result:
+                        info = real_stat(path, *args, **kwargs)
+                        if path == Path(relative).name and kwargs.get("dir_fd") is not None:
+                            reached.append(True)
+                            fields = list(info)
+                            fields[0] = device_mode | 0o600
+                            return os.stat_result(fields)
+                        return info
+                    with patch.object(os, "stat", device):
+                        self.assertFalse(self.gate()["pass"])
+                    self.assertEqual([True], reached, "device kind must reach the contained stat")
 
     def test_g4_refuses_torn_reads_and_transient_hard_links(self) -> None:
         before = b"a" * 4096 + b"[Gap]" + b"b" * 4091
