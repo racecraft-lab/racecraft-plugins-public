@@ -229,8 +229,8 @@ and print its summary:
 
 - One task per single-prompt phase (Specify, Plan, Tasks,
   Analyze, Implement)
-- One task **per prompt** for multi-prompt phases (each
-  Clarify session, each Checklist domain)
+- One task for the Clarify session, and one task **per prompt** for
+  Checklist (each domain)
 - One task for consensus/remediation after multi-prompt
   phases (only runs if needed)
 - Parse the workflow file to get session/domain names
@@ -329,18 +329,20 @@ prefix: "Already on feature branch `<branch>`. Do NOT run
 **Commit:**
 `git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json && git commit -m "feat(SPEC-XXX): complete specify phase"`
 
-### Phase 2: Clarify (Conditional)
+### Phase 2: Clarify
 
-Only runs if G1 detected `[NEEDS CLARIFICATION]` markers.
+Every SPEC runs Clarify: one session of at most 5 questions. G1's marker
+count does not decide whether it runs.
 
-Spawn a **separate subagent for each clarify session**.
+Normalize Clarify through Rule 4 before reading phase prompts.
+Spawn **one subagent** for the session.
 The clarify-executor is read-only. It returns a `Clarify Question Set`
 with prioritized questions, recommended answers, evidence, and
 suggested artifact updates. The parent orchestrator answers returned
 questions and applies accepted edits in the main session.
 
 ```text
-For each clarify session in the workflow file:
+For the clarify session in the workflow file:
   1. autopilot-state.json: session task → in_progress
   2. Agent(subagent_type: "speckit-pro:clarify-executor",
           run_in_background: false,
@@ -349,7 +351,8 @@ For each clarify session in the workflow file:
             Reference slices: <brief.slices, verbatim>
           """)
      The phase brief supplies the slices; the executor reads no reference file.
-  3. Parent answers returned questions and edits spec/workflow/state
+  3. Parent answers returned questions (at most 5) and edits
+     spec/workflow/state
   4. Re-scan spec.md for `[NEEDS CLARIFICATION]` markers and record the
      remaining count in the session result
   5. Parse executor's "Unresolved for consensus" section
@@ -368,7 +371,6 @@ For each clarify session in the workflow file:
   7. After accepted consensus edits, re-scan spec.md and update the recorded
      remaining-marker count
   8. autopilot-state.json: session task → completed
-  9. Proceed to next session
 ```
 
 **Layer 1 (executor):** The clarify-executor researches possible
@@ -385,9 +387,7 @@ perspectives and applies consensus rules. An item that ends in
 interactive and an unattended run alike; it never asks the operator and never
 stops the run.
 
-**Why after each session:** Session 2 may depend on
-Session 1's resolved questions. Both layers complete
-before the next session runs.
+Both layers complete before G2 runs.
 
 **Gate:** G2 — verify 0 markers remain
 
