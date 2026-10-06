@@ -963,7 +963,7 @@ def run_dist_command(host: str, root: Path, request: str, *, unreadable_record: 
     command = [sys.executable, "-m", "speckit_pro_runner"]
     if unreadable_record:
         command = [sys.executable, "-c", UNREADABLE_RECORD_RUNNER, RECORD]
-    done = subprocess.run(command, input=request, capture_output=True, text=True, env=environment, cwd=root, check=False)
+    done = subprocess.run(command, input=request, capture_output=True, text=True, env=environment, cwd=root, check=not unreadable_record)
     return json.loads(done.stdout)
 
 
