@@ -6,7 +6,6 @@ from itertools import product
 import json
 import os
 import re
-import subprocess
 import sys
 import tempfile
 import tomllib
@@ -22,6 +21,7 @@ from speckit_pro_runner.helpers import phase_brief
 from speckit_pro_runner.helpers.registry import dispatch_helper  # noqa: E402
 from test_result import run_counted  # noqa: E402
 from host_skill_views import host_skill_root  # noqa: E402
+from isolated_child import run_python  # noqa: E402
 
 
 def dispatch_brief(inputs, request_id=None):
@@ -71,15 +71,12 @@ RUN_RUNNER = "import runpy\nrunpy.run_module('speckit_pro_runner', run_name='__m
 def run_isolated(runner, program, *args, cwd=None, **kwargs):
     """Run `program` in a child that imports only the selected runner and the standard library.
 
-    `-I` keeps the working directory, PYTHONPATH and user site-packages off the child's
-    sys.path, so a checkout- or project-root module cannot shadow either one. The child
-    starts in a fresh empty directory unless the caller names the project it must read.
+    The shared helper starts `python -I` with a minimal environment, so neither a checkout- or
+    project-root module nor an inherited PYTHON* variable reaches the child. Only the SPK_*
+    variables the hook conditions under test read are forwarded.
     """
-    with ExitStack() as stack:
-        if cwd is None:
-            cwd = stack.enter_context(tempfile.TemporaryDirectory())
-        return subprocess.run([sys.executable, "-I", "-c", SELECT_RUNNER + program, str(runner), *args],
-                              cwd=cwd, text=True, capture_output=True, check=False, **kwargs)
+    spk = {key: value for key, value in os.environ.items() if key.startswith("SPK_")}
+    return run_python(["-c", SELECT_RUNNER + program, str(runner), *args], cwd=cwd, env_extra=spk, **kwargs)
 
 
 def payload_briefs(inputs, include_status=False):
@@ -285,6 +282,17 @@ class ChildImportIsolationTests(unittest.TestCase):
                 self.assertFalse(marker.exists(), "checkout-root module executed")
                 self.assertEqual(reports[0]["result"]["status"], "ok", reports)
                 self.assertEqual(reports[0]["result"]["data"]["hooks"][0]["command"], "speckit.safe.run")
+
+    def test_children_receive_no_python_environment(self):
+        hostile = {"PYTHONPATH": str(REPO), "PYTHONHOME": str(REPO), "PYTHONSTARTUP": str(REPO / "startup.py"),
+                   "PYTHONSAFEPATH": "", "UNRELATED_SECRET": "1", "SPK_HOOK_PROBE": "1"}
+        with patch.dict(os.environ, hostile):
+            done = run_isolated(RUNNER_ROOTS[0][1], "import json, os\nprint(json.dumps(sorted(os.environ)))\n")
+        self.assertEqual(done.returncode, 0, done.stderr)
+        names = json.loads(done.stdout)
+        self.assertEqual([name for name in names if name.upper().startswith("PYTHON")], [])
+        self.assertNotIn("UNRELATED_SECRET", names)
+        self.assertIn("SPK_HOOK_PROBE", names)
 
     def test_payload_hosts_ignore_project_root_modules(self):
         inputs = {"phase": "Plan", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}

@@ -37,7 +37,9 @@ import zipfile
 from contextlib import ExitStack
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "speckit-pro"))
+from isolated_child import minimal_env  # noqa: E402
 from speckit_pro_runner import spec_kit_pin  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -47,6 +49,10 @@ DISCOVERY_ONLY = "discovery-only"
 TRUST_PROMPT = "Continue with installation?"
 MANIFEST_NAMES = {"extension": "extension.yml", "preset": "preset.yml"}
 REGISTRY_DIRS = {"extension": ".specify/extensions", "preset": ".specify/presets"}
+# `specify` reaches github.com, so the operator's proxy, CA and token settings pass; no PYTHON* does.
+NETWORK_KEYS = ("HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "no_proxy",
+                "all_proxy", "SSL_CERT_FILE", "SSL_CERT_DIR", "REQUESTS_CA_BUNDLE", "GH_TOKEN", "GITHUB_TOKEN",
+                "XDG_CONFIG_HOME", "XDG_CACHE_HOME", "XDG_DATA_HOME")
 
 
 def install_args(entry: dict[str, str]) -> list[str]:
@@ -58,7 +64,8 @@ def specify(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
     """Run the `specify` found on PATH, with stdin closed so a trust prompt defaults to deny."""
     return subprocess.run(
         ["specify", *args], cwd=cwd, stdin=subprocess.DEVNULL, capture_output=True, text=True,
-        env={**os.environ, "NO_COLOR": "1"}, timeout=COMMAND_TIMEOUT_SECONDS, shell=False, check=False,
+        env=minimal_env({"NO_COLOR": "1"}, keys=NETWORK_KEYS), timeout=COMMAND_TIMEOUT_SECONDS,
+        shell=False, check=False,
     )
 
 
@@ -155,7 +162,8 @@ def check_entry(entry: dict[str, str], project: Path) -> list[str]:
 
 def init_project(project: Path) -> list[str]:
     """Initialize a Spec Kit project in `project`, or say why that failed."""
-    if subprocess.run(["git", "init", "-q", "."], cwd=project, capture_output=True, shell=False, check=False).returncode:
+    if subprocess.run(["git", "init", "-q", "."], cwd=project, env=minimal_env(), capture_output=True,
+                      shell=False, check=False).returncode:
         return ["setup failed: git init"]
     created = specify(["init", "--here", "--integration", "claude", "--force", "--script", "py"], project)
     return [f"setup failed: specify init exit {created.returncode}"] if created.returncode else []

@@ -20,6 +20,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "tests" / "speckit-pro" / "lib"))
 from script_loader import load_script  # noqa: E402
 from test_result import run_counted  # noqa: E402
+from isolated_child import run_python  # noqa: E402
 
 check = load_script("curated_install_check", REPO_ROOT / "tests/speckit-pro/run-curated-install-check.py")
 ENTRIES = json.loads(check.CURATED_SET.read_text(encoding="utf-8"))["entries"]
@@ -187,11 +188,7 @@ class CuratedInstallWorkflowTests(CuratedInstallCase):
 
     def test_main_reports_missing_cli_without_a_traceback(self):
         with tempfile.TemporaryDirectory() as raw:
-            result = subprocess.run(
-                [sys.executable, str(check.__file__)], cwd=REPO_ROOT,
-                env={**os.environ, "PATH": raw}, capture_output=True, text=True,
-                timeout=30, shell=False, check=False,
-            )
+            result = run_python([str(check.__file__)], env_extra={"PATH": raw}, timeout=30)
         self.assertEqual(result.returncode, 1)
         self.assertEqual(
             result.stderr,
@@ -497,6 +494,44 @@ class CuratedRosterTests(CuratedInstallCase):
             roster.write_text('{"entries": []}', encoding="utf-8")
             with mock.patch.object(check, "fresh_project", return_value=[]), redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
                 self.assertEqual(check.main(["--curated-set", str(roster)]), 1)
+
+
+HOSTILE_PYTHON_ENV = ("PYTHONPATH", "PYTHONHOME", "PYTHONSTARTUP", "PYTHONSAFEPATH")
+
+
+class ChildEnvironmentTests(unittest.TestCase):
+    """No child the check or its tests start inherits the parent's Python environment."""
+
+    def test_inherited_pythonpath_cannot_forge_the_missing_cli_result(self):
+        """A PYTHONPATH json.py that prints the expected missing-CLI result never runs."""
+        with tempfile.TemporaryDirectory() as raw:
+            marker = Path(raw) / "marker"
+            stderr = f"FAIL specify is missing against the pinned {check.spec_kit_pin.PINNED_VERSION}\n"
+            (Path(raw) / "json.py").write_text(
+                f"import os, sys\nopen({str(marker)!r}, 'a').write('json')\n"
+                f"sys.stderr.write({stderr!r})\nsys.stdout.write('run-curated-install-check: 0/6 passed\\n')\n"
+                "sys.stdout.flush()\nsys.stderr.flush()\nos._exit(1)\n", encoding="utf-8")
+            with mock.patch.dict(os.environ, {"PYTHONPATH": raw}):
+                outcome = unittest.TextTestRunner(stream=io.StringIO()).run(
+                    CuratedInstallWorkflowTests("test_main_reports_missing_cli_without_a_traceback"))
+            self.assertFalse(marker.exists(), "inherited PYTHONPATH module executed")
+            self.assertTrue(outcome.wasSuccessful(), outcome.failures + outcome.errors)
+
+    def test_specify_and_git_children_get_a_minimal_environment(self):
+        hostile = {key: "/hostile" for key in HOSTILE_PYTHON_ENV} | {"UNRELATED_SECRET": "1"}
+        with (tempfile.TemporaryDirectory() as raw, mock.patch.dict(os.environ, hostile),
+              mock.patch.object(check.subprocess, "run",
+                                return_value=subprocess.CompletedProcess([], 1, "", "")) as run):
+            check.specify(["--version"], Path(raw))
+            check.init_project(Path(raw))
+        self.assertEqual([call.args[0][0] for call in run.call_args_list], ["specify", "git"])
+        for call in run.call_args_list:
+            with self.subTest(child=call.args[0][0]):
+                env = call.kwargs["env"]
+                self.assertEqual([key for key in env if key.upper().startswith("PYTHON")], [])
+                self.assertNotIn("UNRELATED_SECRET", env)
+                self.assertEqual(env.get("PATH"), os.environ.get("PATH"))
+        self.assertEqual(run.call_args_list[0].kwargs["env"]["NO_COLOR"], "1")
 
 
 if __name__ == "__main__":
