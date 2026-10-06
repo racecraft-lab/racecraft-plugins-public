@@ -18,7 +18,7 @@ from unicodedata import category
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO / "speckit-pro"), str(REPO / "tests/speckit-pro/lib")]
-from speckit_pro_runner.helpers import phase_brief
+from speckit_pro_runner.helpers import dispatch_waves, phase_brief
 from speckit_pro_runner.helpers.registry import dispatch_helper  # noqa: E402
 from test_result import run_counted  # noqa: E402
 from host_skill_views import host_skill_root  # noqa: E402
@@ -95,7 +95,7 @@ def reference_probe(root, references, cases):
 import json, sys, tempfile
 from pathlib import Path
 from types import SimpleNamespace
-from speckit_pro_runner.helpers import phase_brief
+from speckit_pro_runner.helpers import dispatch_waves, phase_brief
 from speckit_pro_runner.helpers.registry import dispatch_helper
 references, cases = json.load(sys.stdin)
 reports = []
@@ -502,16 +502,33 @@ class PhaseBriefWaveTests(InProjectCase):
         """One wave entry: the role, its prompt inputs and its own model on each host."""
         return {"agent": agent, "inputs": inputs or named, "model": phase_brief.phase_model(phase, agent)}
 
-    def test_checklist_domains_form_one_wave_and_their_verify_reruns_the_next(self):
+    def test_checklist_domains_run_one_wave_each_then_their_verify_reruns_together(self):
         domains = ["security", "state-management", "ux"]
-        run = [self.dispatch("Checklist", "checklist-executor", domain=name) for name in domains]
+        runs = [[self.dispatch("Checklist", "checklist-executor", domain=name)] for name in domains]
         verify = [self.dispatch("Checklist", "checklist-executor", {"domain": name, "pass": "verify"}) for name in domains]
-        self.assertEqual(self.waves("Checklist", domains=domains), [run, verify])
+        self.assertEqual(self.waves("Checklist", domains=domains), [*runs, verify])
+
+    def test_no_two_checklist_domain_runs_share_a_wave_while_their_writes_are_serial(self):
+        # Executors still edit spec.md and plan.md themselves, so concurrent runs could drop each other's edits.
+        inputs = {"phase": "Checklist", **self.BRIEF, "domains": ["security", "state-management", "ux"]}
+        for waves in (dispatch_brief(inputs)["data"]["waves"], *[report["waves"] for report in payload_briefs(inputs)]):
+            runs = [[entry for entry in wave if "pass" not in entry["inputs"]] for wave in waves]
+            self.assertEqual([len(wave) for wave in runs], [1, 1, 1, 0])
+            self.assertEqual([wave[0]["inputs"]["domain"] for wave in runs[:3]], ["security", "state-management", "ux"])
+
+    def test_one_switch_puts_every_domain_run_in_one_wave(self):
+        with patch.object(dispatch_waves, "CHECKLIST_DOMAINS_PARALLEL", True):
+            waves = self.waves("Checklist", domains=["security", "ux"])
+        self.assertEqual([[entry["inputs"].get("pass") for entry in wave] for wave in waves], [[None, None], ["verify", "verify"]])
+
+    def test_analyst_entries_carry_the_item_number_and_never_its_text(self):
+        entries = [entry for wave in self.waves("Analyze", items=list(self.ITEMS)) for entry in wave]
+        self.assertEqual([entry["inputs"] for entry in entries], [{"item": 1}] * 3 + [{"item": 2}, {"item": 4}])
+        self.assertNotIn("tokens", json.dumps(entries))
 
     def test_a_consensus_round_and_the_low_confidence_analysts_each_form_a_wave(self):
-        security = [self.dispatch("Analyze", name, item=1, line=self.ITEMS[0]["line"]) for name in self.ANALYSTS]
-        low = [self.dispatch("Analyze", "codebase-analyst", item=2, line=self.ITEMS[1]["line"]),
-               self.dispatch("Analyze", "spec-context-analyst", item=4, line=self.ITEMS[3]["line"])]
+        security = [self.dispatch("Analyze", name, item=1) for name in self.ANALYSTS]
+        low = [self.dispatch("Analyze", "codebase-analyst", item=2), self.dispatch("Analyze", "spec-context-analyst", item=4)]
         self.assertEqual(self.waves("Analyze", items=list(self.ITEMS)), [security, low])
 
     def test_every_consensus_phase_composes_its_waves_from_the_same_rules(self):
@@ -587,11 +604,11 @@ class PhaseBriefWaveTests(InProjectCase):
         for host in ("claude", "codex"):
             self.assertTrue(all(needle in self.loop(host) for needle in ("### Dispatch waves", "Each brief wave")), host)
 
-    def test_both_hosts_run_the_checklist_domains_as_one_wave(self):
+    def test_both_hosts_run_each_checklist_domain_in_its_own_wave(self):
         for host in ("claude", "codex"):
             with self.subTest(host=host):
                 skill = " ".join((host_skill_root(host) / "speckit-autopilot/SKILL.md").read_text().split())
-                self.assertIn("Checklist domains run as one dispatch wave", skill)
+                self.assertIn("Checklist domains run one dispatch wave each while their executors write the shared artifacts", skill)
                 self.assertNotIn("BEFORE spawning the next", skill)
                 self.assertNotIn("Do not batch all domains", skill)
 
@@ -601,7 +618,7 @@ class PhaseBriefWaveTests(InProjectCase):
                 loop = self.loop(host)
                 self.assertIn("Checklist: use the Dispatch waves flow below instead of the per-prompt dispatch", loop)
                 self.assertIn("Other phases: for each workflow prompt", loop)
-                self.assertIn("domain wave -> consensus -> verify wave", loop)
+                self.assertIn("domain waves -> consensus -> verify wave", loop)
                 self.assertIn("Other phases: run consensus", loop)
 
     def test_the_checklist_executor_only_refreshes_checklist_reports_on_a_verify_pass_on_both_hosts(self):

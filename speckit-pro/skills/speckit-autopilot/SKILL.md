@@ -519,9 +519,10 @@ rows with that one session; reconcile pending Clarify task items in state to
 the same session. Keep completed session evidence. If a Clarify session has
 already completed, proceed to G2 instead of dispatching another session.
 Spawn a **separate subagent for each prompt**. Clarify has one. Checklist
-domains run as one dispatch wave (see Phase brief contract), then the two-layer
-resolution (Rule 6) runs once over every domain's unresolved items, then the
-verify wave re-runs each domain.
+domains run one dispatch wave each while their executors write the shared
+artifacts (see Dispatch waves), then the two-layer resolution (Rule 6) runs
+once over every domain's unresolved items, then the verify wave re-runs each
+domain.
 
 Per-phase flow templates (the Clarify session, per-domain for
 Checklist) live in
@@ -1144,17 +1145,20 @@ A wave is the agents a host launches together (ADR 0018). The request may add
 `domains` (Checklist only: each `/speckit-checklist <domain>` name under
 `brief.inputs.prompt_section`, in file order) and `items` (Clarify, Checklist
 and Analyze: each unresolved item as `{line, confidence}`). `brief.waves` then
-lists, in order: the domain wave, the security wave (the three analysts of
+lists, in order: the domain waves, the security wave (the three analysts of
 each security item), the low-confidence wave (the routed analyst of each
 low-confidence item), and the verify wave (each domain's `pass: verify`
 re-run, refreshing its checklist report while keeping spec.md and plan.md
-unchanged); a wave with no agents is omitted.
+unchanged); a wave with no agents is omitted. A checklist executor still
+edits `spec.md` and `plan.md` itself, so the brief gives each domain its own
+wave and no two writers run at once; one wave per domain is the rule the
+brief names, never a choice to batch them.
 Launch every entry of a wave in one turn, then consume every result before the
 next wave. Each entry names its agent, prompt `inputs` and model. A domain entry
 takes that domain's workflow prompt, plus a `Pass: verify` line when its inputs
-say `pass: verify`; an analyst entry takes the item's
-consensus prompt. Checklist runs two requests: `domains` before the executors
-(domain wave and verify wave), `items` once every domain's unresolved items are
+say `pass: verify`; an analyst entry (`inputs.item` only) takes the consensus
+prompt for `items[inputs.item - 1]`, built from your own copy of that item. Checklist runs two requests: `domains` before the executors
+(domain waves and verify wave), `items` once every domain's unresolved items are
 in (security and low-confidence waves, then the consensus rounds of
 [consensus-protocol.md](./references/consensus-protocol.md)). Run the verify
 wave after the serial artifact edits.
@@ -1227,7 +1231,7 @@ for phase in PHASES starting from first_pending:
                      message=<entry.inputs + the wave prompt, see Dispatch waves>),
        then one bounded wait_agent loop until every entry returned its terminal result.
 <!-- /host -->
-    4. Checklist: domain wave -> consensus -> verify wave (Dispatch waves above).
+    4. Checklist: domain waves -> consensus -> verify wave (Dispatch waves above).
        Other phases: run consensus (Clarify/Analyze only) — see Rule 6
     5. Specify, Plan, Checklist, Tasks and Analyze only:
        handle optional brief.hooks with event=after_<phase> under the confirmation

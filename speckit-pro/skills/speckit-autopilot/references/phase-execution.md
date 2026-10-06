@@ -777,21 +777,23 @@ executor must not produce or substitute the G3 evidence it receives.
 <!-- host:claude: Claude documents each phase's dispatch, gate, and commit in its own section -->
 ### Phase 4: Checklist
 
-Run every checklist domain as **one dispatch wave**, then two-layer
-resolution over all domains' gaps, then a verify wave:
+Run the checklist domains as dispatch waves, one domain per wave while their
+executors edit the shared artifacts themselves, then two-layer resolution over
+all domains' gaps, then a verify wave:
 
 ```text
 1. autopilot-state.json: every domain task → in_progress
 2. Request the phase brief with `domains` (the `/speckit-checklist <domain>`
    names under brief.inputs.prompt_section, in file order).
-   Domain wave: ONE turn, one entry per domain, each with its own domain prompt:
+   Domain waves, in file order, each launched and consumed before the next
+   (one entry per wave, with its own domain prompt):
      Agent(subagent_type: "speckit-pro:checklist-executor", model: entry.model.claude.model,
            run_in_background: true,
            prompt: "Run /speckit-checklist with: <domain prompt>\nReference slices: <brief.slices, verbatim>")
    The phase brief supplies the slices; the executor reads no reference file.
    Each checklist-executor runs the checklist, researches gaps,
    applies fixes, and re-runs once to verify (Layer 1).
-   Await every domain, then consume each terminal result.
+   Consume each domain's terminal result before the next wave.
 3. Collect each executor's "Unresolved for consensus" items, in domain order
 4. If unresolved gaps exist:
    a. autopilot-state.json: each affected "<domain> Consensus" → in_progress
@@ -816,10 +818,12 @@ broker's web search and library docs, and codebase exploration.
 confidence, security tag or keyword), the main session follows the
 `tier` that `parse-consensus-categories` returns.
 
-**Why a wave:** The domains are independent checks, so waiting on each
-costs time and buys nothing. They do read the same `spec.md` and `plan.md`:
-consensus edits stay serial, and the verify wave re-runs every domain after
-the last edit, so an overlap between two domains' fixes shows before G4.
+**Why one wave per domain:** Every executor repairs `spec.md` and `plan.md`
+itself, and two writers at once can drop each other's edits. The brief
+therefore never puts two domain runs in one wave. Once executors only propose
+edits and the runner applies them in domain order, the brief puts all domain
+runs in one wave. Consensus edits stay serial, and the verify wave re-runs
+every domain after the last edit; it keeps `spec.md` and `plan.md` unchanged.
 
 **Gate:** G4 — verify 0 `[Gap]` markers
 

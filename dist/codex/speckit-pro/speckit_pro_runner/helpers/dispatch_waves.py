@@ -16,6 +16,9 @@ CONSENSUS_PHASES = frozenset({"Clarify", "Checklist", "Analyze"})
 DOMAIN_NAME = re.compile(r"[a-z0-9][a-z0-9_-]{0,63}")
 MAX_DOMAINS, MAX_ITEMS, MAX_LINE = 12, 100, 2000
 ITEM_FIELDS = {"line", "confidence"}
+# Checklist executors still edit spec.md and plan.md themselves, so concurrent domain runs could drop each other's
+# edits. False gives each domain run a wave of its own. Flip it once executors only propose edits (#1201).
+CHECKLIST_DOMAINS_PARALLEL = False
 
 
 def checked_domains(phase: str, raw: Any) -> list[str]:
@@ -53,24 +56,29 @@ def consensus_waves(items: list[dict[str, Any]], model_for: ModelFor) -> list[li
     """The analysts of a security round form one wave and the single analysts of low-confidence items another.
 
     Items the executor answered with confidence (tier `recommendation`) have no analysts. `item` is the 1-based
-    position in the supplied list, the order the Consensus Resolution Log keeps.
+    position in the supplied list, the order the Consensus Resolution Log keeps. An entry never repeats the item's
+    text: the orchestrator already holds it, so no item text passes through the helper into a dispatch prompt.
     """
     waves: dict[str, list[dict[str, Any]]] = {"security": [], "low_confidence": [], "recommendation": []}
     for number, item in enumerate(items, 1):
         route = consensus_route(item)
-        waves[route["tier"]] += [dispatch(analyst.removeprefix("speckit-pro:"), model_for, item=number, line=item["line"])
+        waves[route["tier"]] += [dispatch(analyst.removeprefix("speckit-pro:"), model_for, item=number)
                                  for analyst in route["analysts"]]
     return [waves["security"], waves["low_confidence"]]
 
 
-def checklist_waves(domains: list[str], model_for: ModelFor) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Every domain's executor in one wave, and the verify re-run of each domain in the wave that follows."""
-    return ([dispatch("checklist-executor", model_for, domain=name) for name in domains],
-            [dispatch("checklist-executor", model_for, domain=name, **{"pass": "verify"}) for name in domains])
+def checklist_waves(domains: list[str], model_for: ModelFor) -> tuple[list[list[dict[str, Any]]], list[dict[str, Any]]]:
+    """The domain-run waves, one per domain unless CHECKLIST_DOMAINS_PARALLEL, and the verify wave of every domain.
+
+    A verify pass keeps spec.md and plan.md unchanged, so its entries can share a wave either way.
+    """
+    runs = [dispatch("checklist-executor", model_for, domain=name) for name in domains]
+    verify = [dispatch("checklist-executor", model_for, domain=name, **{"pass": "verify"}) for name in domains]
+    return ([runs] if CHECKLIST_DOMAINS_PARALLEL else [[run] for run in runs]), verify
 
 
 def compose_waves(domains: list[str], items: list[dict[str, Any]], model_for: ModelFor) -> list[list[dict[str, Any]]]:
-    """Domain wave ({domain}), the security wave and low-confidence wave ({item, line}), then the verify wave
+    """Domain waves ({domain}), the security and low-confidence waves ({item}), then the verify wave
     ({domain, pass: "verify"}); a wave with no agents is dropped, so no domains and no items give no waves."""
-    run, verify = checklist_waves(domains, model_for) if domains else ([], [])
-    return [wave for wave in [run, *consensus_waves(items, model_for), verify] if wave]
+    runs, verify = checklist_waves(domains, model_for)
+    return [wave for wave in [*runs, *consensus_waves(items, model_for), verify] if wave]
