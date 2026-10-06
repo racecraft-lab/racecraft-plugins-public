@@ -603,6 +603,7 @@ def create_tree_directory(parent_fd: int, name: str) -> int:
     try:
         os.mkdir(name, dir_fd=parent_fd)
     except FileExistsError:
+        # Reuse only after the no-follow directory open below validates the entry.
         pass
     return os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent_fd)
 

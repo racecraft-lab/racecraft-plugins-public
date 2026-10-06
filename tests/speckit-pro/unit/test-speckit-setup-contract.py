@@ -437,6 +437,7 @@ class PayloadCopySecurity(unittest.TestCase):
                     try:
                         payloads.copy_optional_installed_plugin(self.source, destination)
                     except OSError:
+                        # Refusal is safe; the assertions below still require the swap and reviewed bytes.
                         pass
                 copied = (destination / "leaf.md").read_text() if destination.exists() else "reviewed"
                 if link:
@@ -556,6 +557,7 @@ class PayloadCopySecurity(unittest.TestCase):
             try:
                 payloads.build_installed_plugin_payloads(REPO_ROOT, parent / "dist")
             except OSError:
+                # Refusal is safe; the outside-directory assertion below must still hold.
                 pass
         self.assertEqual(["leaf.md"], sorted(path.name for path in self.outside.iterdir()))
 
@@ -583,6 +585,7 @@ class PayloadCopySecurity(unittest.TestCase):
             try:
                 payloads.build_installed_plugin_payloads(REPO_ROOT, output)
             except OSError:
+                # Refusal is safe; the assertions below still require the race and no outside writes.
                 pass
         self.assertTrue(swapped, "the public root-open race was exercised")
         self.assertEqual([], list((self.outside / "dist").iterdir()))
