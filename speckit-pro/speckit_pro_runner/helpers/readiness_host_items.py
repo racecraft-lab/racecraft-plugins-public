@@ -18,7 +18,7 @@ from typing import Any
 from ..agent_materialization import digest
 from ..strict_input import SelectionError
 from ..sweep_isolation import secret_matches
-from .readiness_posture_settings import settings_gaps
+from .readiness_posture_settings import proves, settings_gaps
 from .readiness_values import MAX_TEXT, NOT_OBSERVED_ACTION, clean_text, make_item
 
 CLAUDE_ONLY_ITEMS = ("permission_probe", "plugin_scope", "mcp_authentication")
@@ -414,11 +414,12 @@ POSTURE_CONTROLS = {
     "mcp_tool_approval": TOOL_APPROVAL_MODES,
     "plugin_mcp_tool_approval": TOOL_APPROVAL_MODES,
 }
-# Controls that cannot act in an observed state: workspace-write settings under a read-only sandbox,
-# and app tool hints when no app tool is enabled.
-INERT_CONTROLS = {("sandbox_mode", "read-only"): ("workspace_network_access", "workspace_writable_roots",
-                                                  "workspace_slash_tmp", "workspace_tmpdir"),
-                  ("app_tool_approval", "none"): ("app_destructive_tools", "app_open_world_tools")}
+# Controls that cannot act when the settings inventory itself switches their precondition off: workspace-write
+# settings under `sandbox_mode = "read-only"`, and app tool hints under `features.apps = false`. Another
+# control's value never makes a control inert, since an aggregate is trusted only after the inventory.
+INERT_CONTROLS = {(("sandbox_mode",), "read-only"): ("workspace_network_access", "workspace_writable_roots",
+                                                     "workspace_slash_tmp", "workspace_tmpdir"),
+                  (("features", "apps"), False): ("app_destructive_tools", "app_open_world_tools")}
 MAX_TIMEOUT_SECONDS = 86400
 HASH_RE = re.compile(r"(?:(?i:sha256):)?[0-9a-fA-F]{64}")
 GRANULAR_KEYS = ("sandbox_approval", "rules", "mcp_elicitations", "request_permissions", "skill_approval")
@@ -486,8 +487,8 @@ def posture_controls(detail: dict[str, Any]) -> dict[str, str] | None:
     observed = {name: choice(controls.get(name, "unobservable"), (*safe, *other, "unobservable"),
                              f"codex_approval_posture control {name}")
                 for name, (safe, other) in POSTURE_CONTROLS.items()}
-    inert = {name for (key, value), names in INERT_CONTROLS.items()
-             if {**detail, **observed}.get(key) == value for name in names}
+    inert = {name for (path, value), names in INERT_CONTROLS.items() if proves(detail, path, value)
+             for name in names}
     return {name: value for name, value in observed.items() if name not in inert}
 
 
@@ -536,6 +537,15 @@ def posture_summary(detail: dict[str, Any], controls: dict[str, str] | None) -> 
     return {**summary, **(controls or {})}
 
 
+def reviewer_decides_prompts(detail: dict[str, Any]) -> bool:
+    """Whether `auto_review` sends approval prompts to the reviewer subagent instead of the operator: true unless
+    no prompt can arise (`never`, or a granular policy with every category false); unknown policies stay unknown."""
+    policy = detail["approval_policy"]
+    if detail["approvals_reviewer"] != "auto_review" or policy == "unobservable":
+        return False
+    return any(policy["granular"].values()) if isinstance(policy, dict) else policy != "never"
+
+
 def observe_codex_approval_posture(raw: dict[str, Any], observed_at: str, source: str) -> dict[str, Any]:
     detail = raw["posture"]
     if not isinstance(detail, dict) or detail.keys() - {"controls", "settings"} != {*POSTURE_CHOICES, *POSTURE_TIMEOUTS}:
@@ -556,6 +566,7 @@ def observe_codex_approval_posture(raw: dict[str, Any], observed_at: str, source
     if refused:
         return make_item("unavailable", source, observed_at, prints, POSTURE_ACTIONS[refused[0]])
     if facts["sandbox_mode"] == "danger-full-access" or facts["mcp_approval_mode"] in ("auto", "writes", "approve") \
+            or reviewer_decides_prompts(detail) \
             or any(type(detail[key]) is int and detail[key] > limit for key, limit in POSTURE_DEFAULT_TIMEOUTS.items()) \
             or outside or settings_outside:
         return make_item("unavailable", source, observed_at, prints,
@@ -609,7 +620,8 @@ def observe_codex_hook_trust(raw: dict[str, Any], observed_at: str, source: str)
             return make_item("unavailable", source, observed_at, prints,
                              "Keep current controls; review why a required shipped hook is disabled, then rerun scaffold. "
                              + NEVER_BROADEN)
-        return make_item("unavailable", source, observed_at, prints,
+        return make_item("unavailable", source, observed_at, prints, LEGACY_CODEX_HOOK_ACTION if any(
+            state == "untrusted" and found is None for _, state, found in hooks) else
                          "Review and trust the hooks in /hooks, then restart Codex and rerun scaffold. " + NEVER_BROADEN)
     if status == "unknown":
         return make_item("unknown", source, observed_at, prints, "Review the hooks in /hooks, then rerun scaffold.")

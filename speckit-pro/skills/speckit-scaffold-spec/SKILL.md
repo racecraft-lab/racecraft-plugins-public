@@ -1206,7 +1206,11 @@ inventory proves it. A key a summary fact or control models must agree with
 that fact or control where it is observed and can act: for example
 `sandbox_mode`, `sandbox_workspace_write.network_access`, `default_permissions`,
 `web_search`, `tools.web_search`, and each app, MCP or plugin MCP approval mode
-or timeout. A contradiction makes the posture `unavailable`. Other keys are on
+or timeout. A contradiction makes the posture `unavailable`. The tool approval
+controls aggregate every app, MCP server and plugin MCP server, so each
+explicit enablement, enabled-tools list and approval mode is reconciled with
+its aggregate before the aggregate counts: unless the inventory switches that
+app, server, plugin or tool off, it rules out `none`. Other keys are on
 the helper's list of inert keys (model, display, notice and local history
 settings), or hold their conservative value: `allow_login_shell` false,
 `shell_environment_policy.inherit` `core` or `none`,
@@ -1232,10 +1236,15 @@ The helper owns the conservative scaffold posture profile: confined sandbox,
 MCP prompt mode, granted consent and delegation, timeouts no larger than
 the documented defaults, and every posture control at its first, conservative
 value (`permission_profile` also `read-only`, `web_search` also `cached`, tool
-approval also `none`). Workspace controls do not apply under a `read-only`
-sandbox, nor the two app tool hints when no app tool is enabled. A complete supported approval policy (including the
+approval also `none`). Workspace controls do not apply when `settings` sets
+`sandbox_mode` to `read-only`, nor the two app tool hints when it sets
+`features.apps` to false; another control's value never makes a control
+inapplicable. A complete supported approval policy (including the
 five granular booleans) and either supported reviewer are observations, not
-consent; `never` does not remove sandbox controls. Other observed profiles are
+consent; `never` does not remove sandbox controls. `auto_review` is
+conservative only under `never` or a granular policy with every category
+false, since otherwise the reviewer subagent, not the operator, decides
+approval prompts. Other observed profiles are
 `unavailable`, and unreadable values remain `unknown`. This profile is a
 conservative readiness check, not an ADR-defined security threshold.
 

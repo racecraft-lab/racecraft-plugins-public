@@ -7,6 +7,7 @@ import json
 import sys
 import unittest
 import unittest.mock
+from collections.abc import Callable
 from pathlib import Path
 
 TEST_DIR = Path(__file__).resolve().parent
@@ -84,6 +85,12 @@ NARROWING_SETTINGS = {"shell_environment_policy.inherit": "core",
                       'shell_environment_policy.filters."HOME"': "include",
                       "shell_environment_policy.exclude": ["AWS_*"], "shell_environment_policy.include_only": ["PATH"],
                       "shell_environment_policy.experimental_use_profile": False, "allow_login_shell": False}
+# What the scaffold step promises about the settings inventory, reconciliation and skipped controls.
+SETTINGS_PROMISES = ("are the same key", "a key named twice", "also a table holding",
+                     "A contradiction makes the posture `unavailable`", "one nested under a known table",
+                     "reconciled with its aggregate before the aggregate counts", "it rules out `none`",
+                     "`features.apps` to false; another control's value never makes a control inapplicable",
+                     "`auto_review` is conservative only under `never` or a granular policy with every category false")
 LEGACY_HOOK_ACTION = ("Send a complete codex_hook_trust observation that verifies each hook's identity and exact hash "
                       "against the shipped definitions, then rerun scaffold. Never trust a hook that is not "
                       "verified. Scaffold never broadens permissions or disables a control.")
@@ -123,6 +130,15 @@ def shipped_trust(**changes: object) -> dict[str, object]:
     entries = [{**hook(digest=value, name=name), "enabled": True} for name, value in SHIPPED_HASHES.items()]
     entries[0].update(changes)
     return hook_trust(*entries)
+
+
+def assert_each(test: ReadinessCase, cases: dict[str, dict[str, object]], status: str, evidence: tuple[str, ...],
+                build: Callable[[dict[str, object]], dict[str, object]] = lambda changes: posture(settings=changes),
+                action: tuple[str, ...] = ()) -> None:
+    """Each named case's observation, built from its settings, records `status` with `evidence`."""
+    for case, changes in cases.items():
+        with test.subTest(case=case):
+            test.assert_item(test.item(build(changes)), status, evidence, action)
 
 
 def access(**changes: object) -> dict[str, object]:
@@ -324,6 +340,17 @@ class ReadinessCodexTrustTest(ReadinessCase):
         self.assert_item(item, "unavailable", (f"PreToolUse:0:0=untrusted {SHIPPED_HASHES['PreToolUse:0:0']}",),
                          ("Review and trust the hooks in /hooks", "restart Codex"))
 
+    def test_untrusted_hook_without_an_observed_hash_is_never_recommended_for_trust(self) -> None:
+        """Daybreak F1263-f9a03fc7: no trust recommendation without the exact hash under review."""
+        omitted = shipped_trust(state="untrusted")
+        del omitted["hooks"][0]["hash"]  # type: ignore[index]
+        for label, observation in (("omitted hash", omitted), ("null hash", shipped_trust(state="untrusted", hash=None)),
+                                   ("null hash, unobservable enablement",
+                                    shipped_trust(state="untrusted", hash=None, enabled=None))):
+            with self.subTest(label):
+                item = self.item(observation)
+                self.assertEqual(("unavailable", LEGACY_HOOK_ACTION), (item["status"], item["action"]))
+
     def test_hook_trust_without_a_readable_hash_is_unknown_and_trust_needs_a_hash(self) -> None:
         item = self.item(shipped_trust(state="unobservable", hash=None))
         self.assertEqual("unknown", item["status"])
@@ -421,8 +448,11 @@ class ReadinessCodexPostureControlsTest(ReadinessCase):
         read_only = posture(sandbox_mode="read-only", settings={**SETTINGS, "sandbox_mode": "read-only"}, controls={
             **CONTROLS, **workspace, "workspace_network_access": "enabled", "workspace_writable_roots": "unobservable"})
         self.assertEqual("verified", self.item(read_only)["status"])
-        self.assertEqual("verified", self.item(controls(app_tool_approval="none", app_destructive_tools="enabled",
-                                                        app_open_world_tools="unobservable"))["status"])
+        # The app tool hints are inert only when the inventory switches apps off.
+        hints = {**CONTROLS, "app_tool_approval": "none", "app_destructive_tools": "enabled",
+                 "app_open_world_tools": "unobservable"}
+        self.assertEqual("verified", self.item(posture(controls=hints, settings={
+            **SETTINGS, "features.apps": False}))["status"])
         self.assertEqual("unavailable", self.item(controls(**workspace))["status"])
         self.assertEqual("unknown", self.item(posture(sandbox_mode="unobservable"))["status"])
         self.assertEqual("unavailable", self.item(posture(sandbox_mode="unobservable", controls={
@@ -510,8 +540,7 @@ class ReadinessCodexPostureSettingsTest(ReadinessCase):
         for key in readiness_posture_settings.CONSERVATIVE_SETTINGS:
             with self.subTest(key=key):
                 self.assertIn(f"`{key}`", step)
-        for promise in ("are the same key", "a key named twice", "also a table holding",
-                        "A contradiction makes the posture `unavailable`", "one nested under a known table"):
+        for promise in SETTINGS_PROMISES:
             with self.subTest(promise=promise):
                 self.assertIn(promise, " ".join(step.split()))
 
@@ -625,10 +654,8 @@ class ReadinessCodexPostureEvidenceTest(ReadinessCase):
                                              for seen in other_patterns), (name, rule, other))
 
     def test_a_modeled_value_that_contradicts_its_summary_is_unavailable(self) -> None:
-        for case, changes in CONTRADICTIONS.items():
-            with self.subTest(case=case):
-                self.assert_item(self.item(posture(settings=changes)), "unavailable",
-                                 ("settings=0 outside, ", " contradicted"), ("Keep current controls",))
+        assert_each(self, CONTRADICTIONS, "unavailable", ("settings=0 outside, ", " contradicted"),
+                    action=("Keep current controls",))
 
     def test_a_modeled_value_that_agrees_with_its_summary_verifies(self) -> None:
         self.assert_item(self.item(settings(**AGREEING_SETTINGS)), "verified", ("settings=accounted",))
@@ -684,12 +711,145 @@ class ReadinessCodexPostureEvidenceTest(ReadinessCase):
         self.assertNotIn("contrib", record)
 
 
+# Cross-host review of d2db22fc8: an aggregate control is never trusted ahead of the explicit inventory it
+# summarizes. The review's probe: explicit app activation behind app_tool_approval="none".
+APP_ACTIVATION = {"features.apps": True, 'apps."drive".enabled': True, 'apps."drive".default_tools_enabled': True,
+                  'apps."drive".tools."upload".enabled': True, 'apps."drive".tools."upload".approval_mode': "prompt",
+                  'apps."drive".destructive_enabled': True, 'apps."drive".open_world_enabled': True}
+NO_TOOLS = {**CONTROLS, "app_tool_approval": "none", "mcp_tool_approval": "none", "plugin_mcp_tool_approval": "none"}
+
+
+def no_tools(changes: dict[str, object]) -> dict[str, object]:
+    """Every tool approval aggregate `none` beside the conservative inventory plus `changes`."""
+    return posture(controls=NO_TOOLS, settings={**SETTINGS, **changes})
+
+# Each explicit key alone implies an enabled tool, or a tool hint, that a `none` aggregate denies.
+AGGREGATE_CONTRADICTIONS = {
+    "an enabled app": {'apps."drive".enabled': True},
+    "an app's default-enabled tools": {'apps."drive".default_tools_enabled': True},
+    "an enabled app tool": {'apps."drive".tools."upload".enabled': True},
+    "a prompting app tool": {'apps."drive".tools."upload".approval_mode': "prompt"},
+    "a prompting app default": {'apps."drive".default_tools_approval_mode': "prompt"},
+    "the default app enabled": {'apps."_default".enabled': True},
+    "destructive app tools": {'apps."drive".destructive_enabled': True},
+    "open-world app tools": {'apps."drive".open_world_enabled': True},
+    "an enabled MCP server": {'mcp_servers."docs".enabled': True},
+    "an MCP enabled-tools list": {'mcp_servers."docs".enabled_tools': ["search"]},
+    "a prompting MCP tool": {'mcp_servers."docs".tools."search".approval_mode': "prompt"},
+    "a prompting MCP default": {'mcp_servers."docs".default_tools_approval_mode': "prompt"},
+    "an enabled plugin MCP server": {'plugins."kit".mcp_servers."docs".enabled': True},
+    "a plugin MCP enabled-tools list": {'plugins."kit".mcp_servers."docs".enabled_tools': ["search"]},
+    "a prompting plugin MCP tool": {'plugins."kit".mcp_servers."docs".tools."search".approval_mode': "prompt"},
+    "a prompting plugin MCP default": {'plugins."kit".mcp_servers."docs".default_tools_approval_mode': "prompt"},
+}
+# The same keys where the inventory itself switches the app, server, plugin or tool off: `none` holds.
+AGGREGATE_PRECONDITION_OFF = {
+    "apps off": {**APP_ACTIVATION, "features.apps": False},
+    "the app off": {**{key: value for key, value in APP_ACTIVATION.items() if key != "features.apps"},
+                    'apps."drive".enabled': False},
+    "the app's default tools off": {'apps."drive".enabled': True, 'apps."drive".default_tools_enabled': False,
+                                    'apps."drive".tools."upload".approval_mode': "prompt"},
+    "the app tool off": {'apps."drive".tools."upload".enabled': False,
+                         'apps."drive".tools."upload".approval_mode': "auto"},
+    "the MCP server off": {'mcp_servers."docs".enabled': False, 'mcp_servers."docs".enabled_tools': ["search"],
+                           'mcp_servers."docs".tools."search".approval_mode': "prompt"},
+    "an empty MCP enabled-tools list": {'mcp_servers."docs".enabled': True, 'mcp_servers."docs".enabled_tools': [],
+                                        'mcp_servers."docs".tools."search".approval_mode': "prompt"},
+    "the MCP tool disabled": {'mcp_servers."docs".disabled_tools': ["search"],
+                              'mcp_servers."docs".tools."search".approval_mode': "prompt"},
+    "the plugin off": {'plugins."kit".enabled': False, 'plugins."kit".mcp_servers."docs".enabled': True,
+                       'plugins."kit".mcp_servers."docs".tools."search".approval_mode': "prompt"},
+}
+
+
+class ReadinessCodexPostureAggregateTest(ReadinessCase):
+    """Cross-host review of d2db22fc8: reconcile the explicit inventory before trusting the aggregate controls."""
+
+    default_host = "codex"
+    request_id = "test-codex-posture-aggregate"
+
+    def test_explicit_app_activation_cannot_hide_behind_a_none_aggregate(self) -> None:
+        # `none` contradicts the four activations and both hints; `prompt` contradicts only the two hints.
+        for aggregate, contradicted in (("none", 6), ("prompt", 2)):
+            with self.subTest(aggregate=aggregate):
+                probe = posture(controls={**CONTROLS, "app_tool_approval": aggregate},
+                                settings={**SETTINGS, **APP_ACTIVATION})
+                self.assert_item(self.item(probe), "unavailable", (
+                    f"settings=0 outside, {contradicted} contradicted, 0 unobservable",), ("Keep current controls",))
+
+    def test_dormant_app_settings_verify_when_apps_are_off(self) -> None:
+        dormant = {**SETTINGS, **APP_ACTIVATION, "features.apps": False}
+        self.assert_item(self.item(posture(controls={**CONTROLS, "app_tool_approval": "none"}, settings=dormant)),
+                         "verified", ("controls=conservative", "settings=accounted"))
+        self.assertEqual("verified", self.item(posture(controls={
+            **CONTROLS, "app_tool_approval": "none", "app_destructive_tools": "enabled",
+            "app_open_world_tools": "enabled"}, settings=dormant))["status"])
+
+    def test_each_explicit_activation_contradicts_a_none_aggregate(self) -> None:
+        assert_each(self, AGGREGATE_CONTRADICTIONS, "unavailable", ("settings=0 outside, 1 contradicted",), no_tools)
+
+    def test_a_none_aggregate_holds_where_the_inventory_switches_its_precondition_off(self) -> None:
+        assert_each(self, AGGREGATE_PRECONDITION_OFF, "verified", ("settings=accounted",), no_tools)
+
+    def test_a_control_is_skipped_only_when_the_inventory_proves_its_precondition(self) -> None:
+        hints = {**NO_TOOLS, "app_destructive_tools": "enabled", "app_open_world_tools": "unobservable"}
+        self.assert_item(self.item(posture(controls=hints)), "unavailable", ("controls=1 outside, 1 unobservable",))
+        self.assertEqual("unavailable", self.item(posture(controls=hints, settings={
+            **SETTINGS, "features.apps": "unobservable"}))["status"])
+        unproven = {key: value for key, value in SETTINGS.items() if key != "sandbox_mode"}
+        writable = {**CONTROLS, "workspace_slash_tmp": "writable", "workspace_tmpdir": "unobservable"}
+        self.assert_item(self.item(posture(sandbox_mode="read-only", controls=writable, settings=unproven)),
+                         "unavailable", ("controls=1 outside, 1 unobservable",))
+        self.assertEqual("verified", self.item(posture(sandbox_mode="read-only", controls=writable, settings={
+            **unproven, "sandbox_mode": "read-only"}))["status"])
+
+
+GRANULAR_CATEGORIES = ("sandbox_approval", "rules", "mcp_elicitations", "request_permissions", "skill_approval")
+
+
+def auto_reviewed(policy: object) -> dict[str, object]:
+    """`approvals_reviewer = auto_review` under `policy`, matching in the summary and the inventory."""
+    inventory: dict[str, object] = {key: value for key, value in SETTINGS.items() if key != "approval_policy"}
+    if isinstance(policy, dict):
+        inventory.update({f"approval_policy.granular.{name}": flag for name, flag in policy["granular"].items()})
+    else:
+        inventory["approval_policy"] = policy
+    return posture(approval_policy=policy, approvals_reviewer="auto_review",
+                   settings={**inventory, "approvals_reviewer": "auto_review"})
+
+
+class ReadinessCodexAutoReviewTest(ReadinessCase):
+    """Daybreak F1263-a39e0934: automatic review is conservative only when no approval prompt can reach it."""
+
+    default_host = "codex"
+    request_id = "test-codex-auto-review"
+
+    def test_auto_review_of_reachable_prompts_is_unavailable(self) -> None:
+        for policy in ("on-request", "on-failure"):
+            with self.subTest(policy=policy):
+                self.assert_item(self.item(auto_reviewed(policy)), "unavailable",
+                                 ("approvals_reviewer=auto_review", "settings=accounted"), ("Keep current controls",))
+        for category in GRANULAR_CATEGORIES:
+            granular = {name: name == category for name in GRANULAR_CATEGORIES}
+            with self.subTest(granular=category):
+                self.assert_item(self.item(auto_reviewed({"granular": granular})), "unavailable",
+                                 ("approvals_reviewer=auto_review", "settings=accounted"))
+
+    def test_auto_review_verifies_when_no_prompt_reaches_the_reviewer(self) -> None:
+        self.assert_item(self.item(auto_reviewed("never")), "verified", ("approvals_reviewer=auto_review",))
+        silent = dict.fromkeys(GRANULAR_CATEGORIES, False)
+        self.assertEqual("verified", self.item(auto_reviewed({"granular": silent}))["status"])
+        self.assertEqual("unknown", self.item(auto_reviewed("unobservable"))["status"])
+
+
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
     return unittest.TestSuite([loader.loadTestsFromTestCase(ReadinessCodexTrustTest),
                                loader.loadTestsFromTestCase(ReadinessCodexPostureControlsTest),
                                loader.loadTestsFromTestCase(ReadinessCodexPostureSettingsTest),
-                               loader.loadTestsFromTestCase(ReadinessCodexPostureEvidenceTest)])
+                               loader.loadTestsFromTestCase(ReadinessCodexPostureEvidenceTest),
+                               loader.loadTestsFromTestCase(ReadinessCodexPostureAggregateTest),
+                               loader.loadTestsFromTestCase(ReadinessCodexAutoReviewTest)])
 
 
 def main() -> int:

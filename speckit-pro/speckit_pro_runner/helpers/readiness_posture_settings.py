@@ -90,8 +90,27 @@ def broadens(target: str, trigger: tuple[Any, ...], allowed: tuple[Any, ...],
 
 
 def nothing(path: tuple[str, ...], value: Any, settings: Settings) -> dict[str, Check]:
-    """Enablement and tool lists only scope the entries whose approval and hint keys the controls judge."""
+    """A disabled-tools list only narrows the tools the other keys enable."""
     return {}
+
+
+def some_tool(observed: Any) -> bool:
+    return observed != "none"
+
+
+def enables(target: str, off: Callable[[tuple[str, ...], Settings], bool]) -> Forces:
+    """An explicit enablement (true, or a non-empty tool list) means a tool is enabled unless the inventory
+    switches it off, so the aggregate `target` cannot be `none`."""
+    return lambda path, value, settings: ({target: some_tool}
+                                          if (value is True or isinstance(value, list) and value)
+                                          and not off(path, settings) else {})
+
+
+def covers(target: str, off: Callable[[tuple[str, ...], Settings], bool]) -> Forces:
+    """An approval mode for tools the inventory does not switch off: the aggregate `target` must cover it, so a
+    broad mode needs a broad aggregate and `prompt` rules out `none`."""
+    return lambda path, value, settings: ({} if off(path, settings) else
+                                          {target: one_of(*BROAD_MODES) if value in BROAD_MODES else some_tool})
 
 
 def app_off(path: tuple[str, ...], settings: Settings) -> bool:
@@ -99,16 +118,43 @@ def app_off(path: tuple[str, ...], settings: Settings) -> bool:
         path[1] != "_default" and settings.get(("apps", path[1], "enabled")) is False)
 
 
+def app_tools_off(path: tuple[str, ...], settings: Settings) -> bool:
+    """The app is off, or its tools are off by default (an explicitly enabled tool forces on its own)."""
+    return app_off(path, settings) or settings.get(("apps", path[1], "default_tools_enabled")) is False
+
+
 def app_tool_off(path: tuple[str, ...], settings: Settings) -> bool:
-    return app_off(path, settings) or settings.get((*path[:4], "enabled")) is False
+    """The app is off, or the tool is: its own `enabled` decides, else the app's default."""
+    return app_off(path, settings) or settings.get(
+        (*path[:4], "enabled"), settings.get(("apps", path[1], "default_tools_enabled"))) is False
+
+
+def tools_off(server: tuple[str, ...], settings: Settings) -> bool:
+    """An MCP server switched off, or one whose enabled-tools list is empty."""
+    return settings.get((*server, "enabled")) is False or settings.get((*server, "enabled_tools")) == []
+
+
+def tool_listed_off(server: tuple[str, ...], tool: str, settings: Settings) -> bool:
+    """A tool the server's lists switch off: named in `disabled_tools`, or left out of `enabled_tools`."""
+    enabled = settings.get((*server, "enabled_tools"))
+    disabled = settings.get((*server, "disabled_tools"))
+    return (isinstance(disabled, list) and tool in disabled) or (isinstance(enabled, list) and tool not in enabled)
 
 
 def server_off(path: tuple[str, ...], settings: Settings) -> bool:
-    return settings.get((*path[:2], "enabled")) is False
+    return tools_off(path[:2], settings)
+
+
+def server_tool_off(path: tuple[str, ...], settings: Settings) -> bool:
+    return server_off(path, settings) or tool_listed_off(path[:2], path[3], settings)
 
 
 def plugin_server_off(path: tuple[str, ...], settings: Settings) -> bool:
-    return settings.get((*path[:2], "enabled")) is False or settings.get((*path[:4], "enabled")) is False
+    return settings.get((*path[:2], "enabled")) is False or tools_off(path[:4], settings)
+
+
+def plugin_server_tool_off(path: tuple[str, ...], settings: Settings) -> bool:
+    return plugin_server_off(path, settings) or tool_listed_off(path[:4], path[5], settings)
 
 
 def timeout(target: str, per_second: int = 1) -> Forces:
@@ -144,12 +190,12 @@ PERMISSION_LEAVES = (
 )
 WEB_SEARCH_TOOL_LEAVES = ("context_size", "allowed_domains", *(f"location.{name}" for name in (
     "country", "region", "city", "timezone")))
-APP_APPROVAL = broadens("app_tool_approval", BROAD_MODES, BROAD_MODES, app_off)
-MCP_APPROVAL = broadens("mcp_tool_approval", BROAD_MODES, BROAD_MODES, server_off)
-PLUGIN_MCP_APPROVAL = broadens("plugin_mcp_tool_approval", BROAD_MODES, BROAD_MODES, plugin_server_off)
 # Keys a summary fact or posture control models, as (accepted values or a kind, what the value requires of
 # the summary). Facts are approval_policy (with its granular flags), sandbox_mode, approvals_reviewer and
 # both MCP timeouts; every other target is a posture control. A web search tool table enables the tool.
+# The tool approval controls aggregate every app, MCP server and plugin MCP server, so each explicit
+# enablement or approval mode is reconciled with its aggregate first; only an inventory that switches the app,
+# server, plugin or tool off leaves `none` unchallenged.
 MODELED_SETTINGS: dict[str, tuple[Any, Forces]] = {
     "approval_policy": (("on-request", "never", "on-failure", "untrusted"), sets("approval_policy")),
     **{f"approval_policy.granular.{name}": (BOOLEAN, granular(name)) for name in GRANULAR},
@@ -174,28 +220,29 @@ MODELED_SETTINGS: dict[str, tuple[Any, Forces]] = {
     "features.apps": (BOOLEAN, broadens("app_tool_approval", (False,), ("none",))),
     "apps.*.approvals_reviewer": (("user", "auto_review"),
                                   broadens("app_approvals_reviewer", ("auto_review",), ("auto_review",))),
-    "apps.*.default_tools_approval_mode": (APPROVAL_MODES, APP_APPROVAL),
-    "apps.*.default_tools_enabled": (BOOLEAN, nothing),
-    "apps.*.enabled": (BOOLEAN, nothing),
+    "apps.*.default_tools_approval_mode": (APPROVAL_MODES, covers("app_tool_approval", app_off)),
+    "apps.*.default_tools_enabled": (BOOLEAN, enables("app_tool_approval", app_off)),
+    "apps.*.enabled": (BOOLEAN, enables("app_tool_approval", app_tools_off)),
     "apps.*.destructive_enabled": (BOOLEAN, broadens("app_destructive_tools", (True,), ("enabled",), app_off)),
     "apps.*.open_world_enabled": (BOOLEAN, broadens("app_open_world_tools", (True,), ("enabled",), app_off)),
-    "apps.*.tools.*.approval_mode": (APPROVAL_MODES, broadens("app_tool_approval", BROAD_MODES, BROAD_MODES,
-                                                              app_tool_off)),
-    "apps.*.tools.*.enabled": (BOOLEAN, nothing),
+    "apps.*.tools.*.approval_mode": (APPROVAL_MODES, covers("app_tool_approval", app_tool_off)),
+    "apps.*.tools.*.enabled": (BOOLEAN, enables("app_tool_approval", app_off)),
     "auto_review.policy": (TEXT, sets("auto_review_policy", lambda value: "set")),
     "auto_review.extra_policy": (TEXT, sets("auto_review_policy", lambda value: "set")),
-    "mcp_servers.*.default_tools_approval_mode": (APPROVAL_MODES, MCP_APPROVAL),
-    "mcp_servers.*.tools.*.approval_mode": (APPROVAL_MODES, MCP_APPROVAL),
-    "mcp_servers.*.enabled": (BOOLEAN, nothing),
-    "mcp_servers.*.enabled_tools": (NAMES, nothing),
+    "mcp_servers.*.default_tools_approval_mode": (APPROVAL_MODES, covers("mcp_tool_approval", server_off)),
+    "mcp_servers.*.tools.*.approval_mode": (APPROVAL_MODES, covers("mcp_tool_approval", server_tool_off)),
+    "mcp_servers.*.enabled": (BOOLEAN, enables("mcp_tool_approval", server_off)),
+    "mcp_servers.*.enabled_tools": (NAMES, enables("mcp_tool_approval", server_off)),
     "mcp_servers.*.disabled_tools": (NAMES, nothing),
     "mcp_servers.*.startup_timeout_sec": (NUMBER, timeout("mcp_startup_timeout_sec")),
     "mcp_servers.*.startup_timeout_ms": (NUMBER, timeout("mcp_startup_timeout_sec", 1000)),
     "mcp_servers.*.tool_timeout_sec": (NUMBER, timeout("mcp_tool_timeout_sec")),
-    "plugins.*.mcp_servers.*.default_tools_approval_mode": (APPROVAL_MODES, PLUGIN_MCP_APPROVAL),
-    "plugins.*.mcp_servers.*.tools.*.approval_mode": (APPROVAL_MODES, PLUGIN_MCP_APPROVAL),
-    "plugins.*.mcp_servers.*.enabled": (BOOLEAN, nothing),
-    "plugins.*.mcp_servers.*.enabled_tools": (NAMES, nothing),
+    "plugins.*.mcp_servers.*.default_tools_approval_mode": (APPROVAL_MODES,
+                                                            covers("plugin_mcp_tool_approval", plugin_server_off)),
+    "plugins.*.mcp_servers.*.tools.*.approval_mode": (APPROVAL_MODES,
+                                                      covers("plugin_mcp_tool_approval", plugin_server_tool_off)),
+    "plugins.*.mcp_servers.*.enabled": (BOOLEAN, enables("plugin_mcp_tool_approval", plugin_server_off)),
+    "plugins.*.mcp_servers.*.enabled_tools": (NAMES, enables("plugin_mcp_tool_approval", plugin_server_off)),
     "plugins.*.mcp_servers.*.disabled_tools": (NAMES, nothing),
 }
 MODELED_PATTERNS = {pattern(key): key for key in MODELED_SETTINGS}
@@ -300,7 +347,10 @@ def accepted_value(rule: str, value: Any, accepted: Any) -> None:
 
 
 def contradicts(required: dict[str, Check], summary: dict[str, Any]) -> bool:
-    """Whether an observed summary fact or acting control fails what the key requires of it."""
+    """Whether an observed summary fact or acting control fails what the key requires of it.
+
+    A target is absent only when the caller sent no controls (the posture is then never verified) or when the
+    inventory proves the control's precondition off (`proves`), so an absent target cannot act."""
     return any(target in summary and summary[target] != UNOBSERVABLE and not check(summary[target])
                for target, check in required.items())
 
@@ -339,6 +389,16 @@ def canonical_settings(settings: dict[str, Any]) -> Settings:
     if tables & canonical.keys():
         raise SelectionError("codex_approval_posture settings give one key both a value and keys under it")
     return canonical
+
+
+def proves(detail: dict[str, Any], path: tuple[str, ...], value: Any) -> bool:
+    """Whether the observed inventory sets `path` to exactly `value`; without a readable inventory, nothing is
+    proven."""
+    settings = detail.get("settings")
+    if not isinstance(settings, dict) or len(settings) > MAX_SETTINGS:
+        return False
+    found = canonical_settings(settings).get(path)
+    return type(found) is type(value) and found == value
 
 
 def posture_settings(detail: dict[str, Any], summary: dict[str, Any]) -> dict[tuple[str, ...], str] | None:
