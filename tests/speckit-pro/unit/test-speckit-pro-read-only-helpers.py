@@ -5094,7 +5094,7 @@ class G0SetupTests(unittest.TestCase):
             skill = (view / "SKILL.md").read_text(encoding="utf-8")
             prereqs = (view / "references" / "prerequisites.md").read_text(encoding="utf-8")
             self.assertIn(f"to `{surface}`", skill)
-            self.assertEqual(3, prereqs.count('"helper_id":"g0-setup"'))
+            self.assertEqual(4, prereqs.count('"helper_id":"g0-setup"'))
             self.assertIn("data.quality_gate", prereqs)
             self.assertNotIn("G0 blocked:", prereqs)
             assert_g0_guidance(self, host_skill_root(surface))

@@ -1511,10 +1511,269 @@ class FeasibilityTest(unittest.TestCase):
                 self.assertNotIn(questions["codex" if host == "claude" else "claude"], offer)
 
 
+AUTOPILOT_TEXTS = ("SKILL.md", "references/prerequisites.md", "references/formal-methods.md")
+# A setup question: autopilot stops, or tells the user, to install, restart or reload something.
+SETUP_QUESTIONS = (re.compile(r"(?i)\b(?:stop|tell|instruct)\b[^.]{0,160}?\b(?:install|restart|reload|plugin add)\b"),
+                   re.compile(r"(?i)\breinstall\b"))
+
+
+class G0ReadinessFixture(unittest.TestCase):
+    """G0 reads the record and continues; every stale item is one decisions-list note (ADR 0008)."""
+
+    record_path = ReadinessRecordTest.record_path
+    run_helper = ReadinessRecordTest.run_helper
+    all_verified = ReadinessRecordTest.all_verified
+
+    def setUp(self) -> None:
+        ReadinessRecordTest.setUp(self)
+        (self.root / "workflow.md").write_text("fixture\n", encoding="utf-8")
+        (self.root / ".specify" / "constitution.md").write_text("principles\n", encoding="utf-8")
+        manifest = REPO_ROOT / "speckit-pro" / "speckit_pro_runner" / "speckit-pro-runner.manifest.json"
+        self.revision = json.loads(manifest.read_text(encoding="utf-8"))["plugin_version"]
+
+    def write_record(self, observations: list[dict[str, object]], **inputs: object) -> None:
+        response = self.run_helper(observations, **{"plugin_revision": self.revision, **inputs})
+        assert_runner_response(self, response, "ok", 0)
+
+    def runner(self, helper_id: str, mode: str, inputs: dict[str, object]) -> dict:
+        _, response, _ = run_runner({"schema_version": "1.0", "request_id": "test-g0", "helper_id": helper_id,
+                                     "operation": helper_id, "mode": mode, "inputs": inputs}, cwd=self.root)
+        assert_runner_response(self, response, "ok", 0)
+        return response["data"]
+
+    def g0(self, host: str = "claude") -> dict:
+        before = {path: path.read_bytes() for path in self.root.rglob("*") if path.is_file()}
+        data = self.runner("g0-setup", "read_only", {"probe": "readiness", "surface": host, "workflow_file": "workflow.md"})
+        after = {path: path.read_bytes() for path in self.root.rglob("*") if path.is_file()}
+        self.assertEqual(before, after, "G0 never repairs or rewrites the record")
+        self.assertEqual("proceed", data["readiness"]["verdict"])
+        return data["readiness"]
+
+    def assert_logged_once(self, item: str, reason: str) -> None:
+        readiness = self.g0()
+        self.assertIn(item, [row["item"] for row in readiness["stale"]])
+        logged = [d for d in readiness["decisions"] if d["evidence"].startswith(f"readiness stale: {item}: ")]
+        self.assertEqual(1, len(logged), readiness)
+        self.assertEqual("readiness_stale", logged[0]["kind"])
+        self.assertIn(reason, logged[0]["evidence"])
+        self.runner("decisions-list", "apply", {"workflow_file": "workflow.md", "entries": readiness["decisions"]})
+        self.assertEqual([], self.g0()["decisions"], "a resume logs nothing twice")
+
+
+class G0RecordValidationTests(G0ReadinessFixture):
+    def test_malformed_timestamps_supply_no_evidence_on_either_host(self) -> None:
+        for host in ("claude", "codex"):
+            for level in ("record", "item"):
+                for value in ("not-a-timestamp", "2026-02-30T00:00:00Z"):
+                    with self.subTest(host=host, level=level, value=value):
+                        self.write_record(self.all_verified(), host=host)
+                        path = self.record_path(host)
+                        record = json.loads(path.read_text(encoding="utf-8"))
+                        target = record if level == "record" else record["items"]["project_integration"]
+                        target["observed_at"] = value
+                        path.write_text(json.dumps(record), encoding="utf-8")
+                        readiness = self.g0(host)
+                        self.assertEqual(["record"], [row["item"] for row in readiness["stale"]])
+                        self.assertIn("incompatible", readiness["stale"][0]["reason"])
+
+    def test_missing_and_malformed_records_supply_no_evidence_and_g0_continues(self) -> None:
+        self.assert_logged_once("record", "missing")
+        self.record_path().parent.mkdir()
+        self.record_path().write_text("{", encoding="utf-8")
+        self.assert_logged_once("record", "incompatible")
+        self.record_path().write_text("[" * 1100 + "0" + "]" * 1100, encoding="utf-8")
+        self.assert_logged_once("record", "incompatible")
+
+    def test_record_for_another_worktree_is_incompatible(self) -> None:
+        self.write_record(self.all_verified())
+        record = json.loads(self.record_path().read_text(encoding="utf-8"))
+        record["binding"]["worktree"] = "sha256:" + "0" * 64
+        self.record_path().write_text(json.dumps(record), encoding="utf-8")
+        self.assert_logged_once("record", "another worktree")
+
+    def test_truncated_record_and_noncanonical_fingerprint_continue_stale(self) -> None:
+        for change in (lambda r: r.update(items={}), lambda r: r.update(host_version=[]),
+                lambda r: r["items"]["project_integration"].update(fingerprints={}),
+                lambda r: r["items"]["project_integration"].update(
+                fingerprints={"file:foo//bar": "sha256:" + "0" * 64})):
+            self.write_record(self.all_verified())
+            record = json.loads(self.record_path().read_text(encoding="utf-8"))
+            change(record)
+            self.record_path().write_text(json.dumps(record), encoding="utf-8")
+            self.assert_logged_once("record", "incompatible")
+
+    def test_fingerprint_key_the_writer_would_normalize_continues_stale(self) -> None:
+        # Path cleaning rewrites these keys, so a lookup by the saved key would raise KeyError.
+        for key in ("file:.specify/constitution.md ", "file: .specify/constitution.md"):
+            with self.subTest(key=key):
+                self.write_record(self.all_verified())
+                record = json.loads(self.record_path().read_text(encoding="utf-8"))
+                record["items"]["project_integration"]["fingerprints"] = {key: "sha256:" + "0" * 64}
+                self.record_path().write_text(json.dumps(record), encoding="utf-8")
+                stale = self.g0()["stale"]
+                self.assertEqual(["record"], [row["item"] for row in stale])
+                self.assertIn("incompatible", stale[0]["reason"])
+
+    def test_stale_plugin_revision_is_logged(self) -> None:
+        self.write_record(self.all_verified())
+        self.assertNotIn("plugin revision changed", json.dumps(self.g0()["stale"]))
+        self.write_record(self.all_verified(), plugin_revision="0.0.1")
+        self.assert_logged_once("plugin_payload", f"plugin revision changed from 0.0.1 to {self.revision}")
+
+
+class G0SavedEvidenceTests(G0ReadinessFixture):
+    def test_unknown_item_is_logged_without_markup_or_local_paths(self) -> None:
+        observations = self.all_verified()
+        observations[1] = observation("project_integration", "unknown")
+        self.write_record(observations)
+        record = json.loads(self.record_path().read_text(encoding="utf-8"))
+        record["items"]["project_integration"]["evidence_source"] = f"<img src=x> [a](b) @org {HOME}/fixture/key"
+        self.record_path().write_text(json.dumps(record), encoding="utf-8")
+        text = json.dumps(self.g0())
+        for fragment in ("<img", "](", "@org", HOME):
+            self.assertNotIn(fragment, text)
+        self.assert_logged_once("project_integration", "unknown")
+
+    def test_record_credentials_are_withheld_before_text_reduction(self) -> None:
+        self.write_record([observation("project_integration", "unknown")])
+        self.record_path().write_text(self.record_path().read_text(encoding="utf-8").replace(
+            'project_integration probe', 'api_key=\\"fixturecredentialvalue\\"'), encoding="utf-8")
+        self.assertNotIn("fixturecredentialvalue", json.dumps(self.g0()))
+
+    def test_changed_fingerprint_is_logged(self) -> None:
+        observations = self.all_verified()
+        observations[1] = observation("project_integration", files=[".specify/constitution.md"])
+        self.write_record(observations)
+        self.assertNotIn("input changed: .specify/constitution.md", json.dumps(self.g0()["stale"]))
+        (self.root / ".specify" / "constitution.md").write_text("changed\n", encoding="utf-8")
+        self.assert_logged_once("project_integration", "input changed: .specify/constitution.md")
+
+    def test_auth_connectivity_and_session_items_are_observed_fresh_not_trusted(self) -> None:
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                observations = self.all_verified()
+                observations[2] = observation("github_auth", "unavailable")
+                observations.append({"item": "hooks", "evidence_source": "fixture hooks",
+                                     "hooks": [{"hook": "Stop", "defined": True, "trust": "trusted"}]})
+                self.write_record(observations, host=host)
+                readiness = self.g0(host)
+                self.assertEqual(["github_auth", "mcp_servers", "typesafe_jev"], readiness["observe_fresh"])
+                stale = {row["item"] for row in readiness["stale"]}
+                self.assertNotIn("record", stale, "the writer's host item schema must be readable by G0")
+                self.assertIn("github_auth", stale)
+                self.assertIn("hooks", stale, "saved host value fingerprints are not fresh evidence")
+                off_host = ("permission_probe", "plugin_scope", "mcp_authentication") if host == "codex" else (
+                    "codex_agents", "extension_versions")
+                self.assertFalse(set(off_host) & stale, "off-host items remain not_applicable")
+                self.assertIn("unknown", json.dumps(readiness["stale"]))
+
+    def test_unobservable_value_fingerprints_are_unknown(self) -> None:
+        self.write_record([observation("project_integration", values={"policy": "fixture"})])
+        self.assert_logged_once("project_integration", "unknown: value fingerprint")
+
+
+class G0FingerprintBoundTests(G0ReadinessFixture):
+    """G0 reads each saved file once per check and at most MAX_FINGERPRINT_FILES files in all."""
+
+    def g0_reads(self, host: str) -> tuple[dict, list[str]]:
+        """G0 on `host`'s rendered runner, with every saved-fingerprint file read it makes."""
+        request = {"schema_version": "1.0", "request_id": "test-g0", "helper_id": "g0-setup", "operation": "g0-setup",
+                   "mode": "read_only", "inputs": {"probe": "readiness", "surface": host, "workflow_file": "workflow.md"}}
+        done = subprocess.run([sys.executable, "-c", "\n".join([
+            "import atexit, json, runpy, sys",
+            "from speckit_pro_runner.helpers import readiness_record as record",
+            "reads, read = [], record.fingerprint_file",
+            "record.fingerprint_file = lambda root, relative, **kw: (reads.append(relative.as_posix()), read(root, relative, **kw))[1]",
+            "atexit.register(lambda: sys.stderr.write(json.dumps({'reads': reads}) + '\\n'))",
+            "runpy.run_module('speckit_pro_runner', run_name='__main__')",
+        ])], input=json.dumps(request), text=True, capture_output=True, check=False, cwd=self.root, timeout=60,
+            env={**os.environ, "PYTHONPATH": str(REPO_ROOT / "dist" / host / "speckit-pro")})
+        response = json.loads(done.stdout)
+        assert_runner_response(self, response, "ok", 0)
+        self.assertEqual("proceed", response["data"]["readiness"]["verdict"])
+        return response["data"]["readiness"], json.loads(done.stderr.splitlines()[-1])["reads"]
+
+    def evidence_files(self, prefix: str, count: int) -> list[str]:
+        names = [f"{prefix}-{n}.txt" for n in range(count)]
+        for name in names:
+            (self.root / name).write_text(f"{name}\n", encoding="utf-8")
+        return names
+
+    def assert_bounded(self, observations: list[dict[str, object]], unknown: str, read: str | None = None) -> None:
+        """Both hosts read each file once, stop at the bound, and report the unread comparison as unknown."""
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                self.write_record(observations, host=host)
+                readiness, reads = self.g0_reads(host)
+                self.assertEqual(sorted(set(reads)), sorted(reads), "each saved file is read once")
+                self.assertEqual(readiness_record.MAX_FINGERPRINT_FILES, len(reads))
+                reasons = {row["item"]: row["reason"] for row in readiness["stale"]}
+                self.assertIn("unknown: file fingerprint comparison", reasons[unknown])
+                self.assertNotIn("input changed", json.dumps(reasons), "an unread or unchanged input is never changed")
+                if read is not None:
+                    self.assertNotIn("file fingerprint comparison", reasons[read])
+
+    def test_reads_stop_at_the_bound_and_report_unknown_on_either_host(self) -> None:
+        files = self.evidence_files("evidence", readiness_record.MAX_FINGERPRINT_FILES + 1)
+        self.assert_bounded([observation("project_integration", files=files)], "project_integration")
+
+    def test_items_naming_one_file_share_its_single_read_on_either_host(self) -> None:
+        shared = self.evidence_files("shared", 40)
+        # Saved keys are sorted, so these extras are read after the shared files and the 65th file is never read.
+        extra = self.evidence_files("zz-extra", 25)
+        self.assert_bounded([observation("project_integration", files=shared),
+                             observation("formal_methods", files=shared + extra)], "formal_methods",
+                            read="project_integration")
+
+
+class G0WorkflowTests(G0ReadinessFixture):
+    def test_appending_readiness_notes_twice_is_idempotent(self) -> None:
+        entries = self.g0()["decisions"]
+        for _ in range(2):
+            result = self.runner("decisions-list", "apply", {"workflow_file": "workflow.md", "entries": entries})
+        self.assertEqual(len(entries), result["count"])
+
+    def test_many_changed_inputs_fit_the_decisions_contract(self) -> None:
+        files = [f"file-{index}-" + "x" * 50 for index in range(30)]
+        self.write_record([observation("project_integration", files=files)])
+        for name in files:
+            (self.root / name).write_text("changed", encoding="utf-8")
+        entries = self.g0()["decisions"]
+        self.runner("decisions-list", "apply", {"workflow_file": "workflow.md", "entries": entries})
+
+    def test_autopilot_asks_no_setup_question_on_either_host(self) -> None:
+        for host in ("claude", "codex"):
+            view = host_skill_root(host) / "speckit-autopilot"
+            for name in AUTOPILOT_TEXTS:
+                text = (view / name).read_text(encoding="utf-8")
+                for pattern in SETUP_QUESTIONS:
+                    with self.subTest(host=host, file=name, pattern=pattern.pattern):
+                        self.assertIsNone(pattern.search(text))
+            prerequisites = (view / "references" / "prerequisites.md").read_text(encoding="utf-8")
+            with self.subTest(host=host):
+                self.assertIn('"inputs":{"probe":"readiness"', prerequisites)
+                self.assertIn("data.readiness.decisions", prerequisites)
+                self.assertIn("`readiness_stale`", prerequisites)
+
+    def test_g0_has_no_selected_formal_setup_stop(self) -> None:
+        for host in ("claude", "codex"):
+            view = host_skill_root(host) / "speckit-autopilot" / "references"
+            preflight = (view / "prerequisites.md").read_text(encoding="utf-8")
+            preflight = preflight.split("## Step 0.11", 1)[1].split("```", 1)[0]
+            selection = (view / "formal-methods.md").read_text(encoding="utf-8")
+            selection = selection.split("## Selection and preflight", 1)[1].split("\n## ", 1)[0]
+            setup_gap = selection.split("formal-doctor", 1)[1].split("\n\n", 1)[0]
+            for name, text in (("prerequisites", preflight), ("formal-methods", setup_gap)):
+                with self.subTest(host=host, text=name):
+                    self.assertNotRegex(text, r"(?i)\b(?:stop|stops|block|blocks)\b")
+                    self.assertIn("`readiness stale: formal_methods`", text)
+
+
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
-    return unittest.TestSuite([loader.loadTestsFromTestCase(case) for case in (
-        ReadinessRecordTest, PreviewEvidenceSecurityTest, HostProbePathSecurityTest, FeasibilityTest)])
+    cases = (ReadinessRecordTest, PreviewEvidenceSecurityTest, HostProbePathSecurityTest, FeasibilityTest,
+             G0RecordValidationTests, G0SavedEvidenceTests, G0FingerprintBoundTests, G0WorkflowTests)
+    return unittest.TestSuite([loader.loadTestsFromTestCase(case) for case in cases])
 
 
 def main() -> int:

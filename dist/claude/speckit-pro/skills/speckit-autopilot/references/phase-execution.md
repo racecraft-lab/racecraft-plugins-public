@@ -378,9 +378,10 @@ codebase exploration, and local file analysis. It does not
 edit artifacts. It returns questions and recommendations to the parent.
 
 **Layer 2 (consensus):** For items the executor flagged
-(low confidence, conflicting sources, security keywords),
-the main session spawns 3 consensus agents to get distinct
-perspectives and applies consensus rules. An item that ends in
+(low confidence, security tag or keyword), the main session follows the
+`tier` that `parse-consensus-categories` returns: 3 consensus agents and the
+consensus rules for a security item, one analyst for a low-confidence item.
+An item that ends in
 `[ROUND_3_TIEBREAK]` takes the Round 3 agent tiebreak in
 [consensus-protocol.md](./consensus-protocol.md#round-3-tiebreak), in an
 interactive and an unattended run alike; it never asks the operator and never
@@ -562,9 +563,9 @@ For each checklist domain in the workflow file:
 gap research and remediation internally using the research
 broker's web search and library docs, and codebase exploration.
 
-**Layer 2 (consensus):** For gaps the executor couldn't
-resolve (shared reservation exhausted, low confidence, security
-keywords), the main session spawns 3 consensus agents.
+**Layer 2 (consensus):** For gaps the executor flagged (low
+confidence, security tag or keyword), the main session follows the
+`tier` that `parse-consensus-categories` returns.
 
 **Why after each domain:** Domain 2 may depend on Domain
 1's gap fixes. Both layers complete before the next
@@ -894,7 +895,8 @@ to proceed, surface a remediation hint, or stop.
             - After remediation completes, dispatch the
               consensus-synthesizer agent (single fan-out), with the
               `Protocol:` line, to re-emit the pre-Implement
-              Confidence block to the workflow file.
+              Confidence block to the workflow file (confidence block
+              only; no Artifact Edit).
             - Re-run confidence-gate.
             - Increment iteration_count.
        c. If iteration_count == 3 OR exit 0 reached: stop iterating.
@@ -2126,10 +2128,11 @@ Clarify, Checklist, and Analyze keep the shared analysts and those flows
 unchanged.
 
 **When consensus does not answer, the item takes a Round 3 tiebreak.** Three
-ways lead there: all three analysts disagreeing after Round 2, a Round-1 escape
-whose Round 2 still cannot resolve, and an analyst that fails its single
-retry. The first two return `human_review` from `sweep-apply-result` with basis
-`all_disagree` or `escape_unresolved`. An analyst that fails its retry is
+ways lead there: all three analysts disagreeing, a perspective that escapes,
+and an analyst that fails its single retry. The sweep has no Round 2: its
+synthesis runs once over the three accepted perspectives. The first two return
+`human_review` from `sweep-apply-result` with basis `all_disagree` or
+`escape_unresolved`. An analyst that fails its retry is
 replaced by a fresh analyst, not a human: launch that perspective once more
 through `launch_claude`, which mints a new capability and replaces the failed
 perspective's record. If the replacement fails too, no synthesis is possible,

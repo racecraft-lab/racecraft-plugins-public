@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for the two consensus runner helpers.
+"""Unit tests for the two consensus runner helpers and the plan-stage tiers.
 
 `parse-consensus-categories` turns one executor "Unresolved for consensus" line
 into the analyst set the orchestrator must dispatch. `aggregate-crl` turns a
@@ -17,8 +17,11 @@ test-speckit-pro-read-only-helpers.py.
 
 from __future__ import annotations
 
+import inspect
 import json
+import os
 import re
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -33,8 +36,10 @@ if str(PLUGIN_ROOT) not in sys.path:
 if str(SHARED_LIB) not in sys.path:
     sys.path.insert(0, str(SHARED_LIB))
 
+from host_skill_views import host_skill_root  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
+from speckit_pro_runner.helpers import read_only, run_finalization  # noqa: E402
 from speckit_pro_runner.helpers.read_only import (  # noqa: E402
     CONSENSUS_SECURITY_KEYWORDS,
     aggregate_crl,
@@ -98,15 +103,17 @@ def section_between(text: str, start: str, end: str) -> str:
     return text[head : text.index(end, head)]
 
 
-def route(line: str) -> tuple[dict[str, object], int]:
+def route(line: str, confidence: str | None = None, **answer_inputs: object) -> tuple[dict[str, object], int]:
     """Run parse-consensus-categories over one unresolved-item line."""
+    inputs = {"line": line} if confidence is None else {"line": line, "confidence": confidence}
+    inputs.update(answer_inputs)
     with tempfile.TemporaryDirectory() as raw_root:
-        result = parse_consensus_categories({"line": line}, Path(raw_root).resolve())
+        result = parse_consensus_categories(inputs, Path(raw_root).resolve())
     return json.loads(result["stdout"]), int(result["exit_code"])
 
 
-def analysts_for(line: str) -> list[str]:
-    payload, exit_code = route(line)
+def analysts_for(line: str, confidence: str | None = None) -> list[str]:
+    payload, exit_code = route(line, confidence)
     assert exit_code == 0, exit_code
     return list(payload["analysts"])
 
@@ -207,42 +214,24 @@ class RoutingTests(unittest.TestCase):
         self.assertEqual(analysts_for("[spec] Q: what does permissioning mean here?"), [SPEC])
         self.assertEqual(analysts_for("[domain] Q: is the design sessionless by default?"), [DOMAIN])
 
-    def test_ambiguous_tag_routes_to_all_three(self) -> None:
-        payload, _ = route("[ambiguous] Q4: unclear which perspective applies")
-        self.assertEqual(payload["analysts"], ALL_THREE)
-        self.assertIn("ambiguous", payload["reason"])
+    def test_untagged_ambiguous_unknown_and_empty_prefixes_route_to_the_generic_domain(self) -> None:
+        # A low-confidence item with no usable category still gets exactly one
+        # second opinion, from the generic domain perspective (ADR 0022).
+        lines = {
+            "Q5: no category prefix was written at all": [],
+            "[ambiguous] Q4: unclear which perspective applies": ["ambiguous"],
+            "[frobnicate] Q6: a tag nobody defined": ["frobnicate"],
+            "[NEEDS CLARIFICATION] Q8: leaked marker": ["needs clarification"],
+            "[] Q9: an empty prefix": [],
+        }
+        routed = {line: route(line, "low") for line in lines}
+        self.assertEqual({line: (payload["tags"], payload["analysts"], code) for line, (payload, code) in routed.items()},
+                         {line: (tags, [DOMAIN], 0) for line, tags in lines.items()})
 
-    def test_missing_prefix_routes_to_all_three(self) -> None:
-        payload, exit_code = route("Q5: no category prefix was written at all")
-        self.assertEqual(exit_code, 0)
-        self.assertEqual(payload["tags"], [])
-        self.assertEqual(payload["analysts"], ALL_THREE)
-
-    def test_unknown_tag_routes_to_all_three(self) -> None:
-        payload, _ = route("[frobnicate] Q6: a tag nobody defined")
-        self.assertEqual(payload["tags"], ["frobnicate"])
-        self.assertEqual(payload["analysts"], ALL_THREE)
-        self.assertIn("unknown", payload["reason"])
-
-    def test_known_tag_beside_an_unknown_tag_still_routes_to_all_three(self) -> None:
-        self.assertEqual(analysts_for("[codebase, frobnicate] Q7: half-known"), ALL_THREE)
-
-    def test_marker_from_another_phase_is_an_unknown_tag_not_a_route(self) -> None:
-        self.assertEqual(analysts_for("[NEEDS CLARIFICATION] Q8: leaked marker"), ALL_THREE)
-
-    def test_empty_bracket_routes_to_all_three(self) -> None:
-        payload, _ = route("[] Q9: an empty prefix")
-        self.assertEqual(payload["tags"], [])
-        self.assertEqual(payload["analysts"], ALL_THREE)
-
-    def test_multi_tag_dispatches_the_union(self) -> None:
-        self.assertEqual(analysts_for("[codebase, domain] Q10: bcrypt or argon2?"), [CODEBASE, DOMAIN])
-
-    def test_union_order_follows_the_table_not_the_line(self) -> None:
-        self.assertEqual(
-            analysts_for("[domain, codebase] Q11: same union, reversed"),
-            analysts_for("[codebase, domain] Q11: same union"),
-        )
+    def test_the_first_known_tag_decides_a_multi_tag_item(self) -> None:
+        self.assertEqual(analysts_for("[codebase, domain] Q10: bcrypt or argon2?", "low"), [CODEBASE])
+        self.assertEqual(analysts_for("[domain, codebase] Q11: same pair, reversed", "low"), [DOMAIN])
+        self.assertEqual(analysts_for("[frobnicate, spec] Q7: half-known", "low"), [SPEC])
 
     def test_repeated_tag_dispatches_one_analyst(self) -> None:
         self.assertEqual(analysts_for("[spec, spec] Q12: repeated tag"), [SPEC])
@@ -263,6 +252,72 @@ class RoutingTests(unittest.TestCase):
     def test_output_never_names_a_shell_script(self) -> None:
         result_text = json.dumps(route("[spec] Q15: any item")[0])
         self.assertNotIn(".sh", result_text)
+
+
+class TierTests(unittest.TestCase):
+    """ADR 0022: consensus only for security and low-confidence items."""
+
+    def test_security_items_keep_all_three_whatever_the_confidence(self) -> None:
+        for line in (
+            "[security] Q1: how is the signing key stored?",
+            "[codebase] Q2: where is the session token stored?",
+        ):
+            for confidence in ("low", "high"):
+                with self.subTest(line=line, confidence=confidence):
+                    payload, exit_code = route(line, confidence)
+                    self.assertEqual(exit_code, 0)
+                    self.assertEqual(payload["tier"], "security")
+                    self.assertEqual(payload["analysts"], ALL_THREE)
+
+    def test_low_confidence_items_get_one_analyst_by_their_tag(self) -> None:
+        for tag, analyst in (("codebase", CODEBASE), ("spec", SPEC), ("domain", DOMAIN)):
+            with self.subTest(tag=tag):
+                payload, exit_code = route(f"[{tag}] Q3: which pattern applies?", "low")
+                self.assertEqual(exit_code, 0)
+                self.assertEqual(payload["tier"], "low_confidence")
+                self.assertEqual(payload["analysts"], [analyst])
+
+    def test_an_untagged_low_confidence_item_routes_to_one_generic_domain_analyst(self) -> None:
+        payload, _ = route("Q4: nothing tags this item", "low")
+        self.assertEqual(payload["tier"], "low_confidence")
+        self.assertEqual(payload["analysts"], [DOMAIN])
+
+    def test_every_other_item_takes_the_recommendation_with_no_analyst(self) -> None:
+        for line in ("[codebase] Q5: which pattern applies?", "Q6: untagged", "[ambiguous] Q7: unclear"):
+            with self.subTest(line=line):
+                payload, exit_code = route(line, "high")
+                self.assertEqual(exit_code, 0)
+                self.assertEqual(payload["tier"], "recommendation")
+                self.assertEqual(payload["analysts"], [])
+                self.assertIsNone(payload["security_route"])
+
+    def test_a_missing_confidence_is_low_and_never_a_free_pass(self) -> None:
+        self.assertEqual(route("[spec] Q8: which decision applies?")[0], route("[spec] Q8: which decision applies?", "low")[0])
+
+    def test_confidence_is_case_insensitive_and_anything_else_is_refused(self) -> None:
+        self.assertEqual(route("[spec] Q9: x", "HIGH")[0]["tier"], "recommendation")
+        for bad in ("medium", "", "0.9"):
+            with self.subTest(confidence=bad):
+                payload, exit_code = route("[spec] Q9: x", bad)
+                self.assertEqual(exit_code, 2)
+                self.assertIn("confidence", payload["error"])
+
+    def test_the_reasons_name_no_removed_trigger(self) -> None:
+        for line, confidence in (("[spec] Q: a", "low"), ("[spec] Q: a", "high"), ("Q: b", "low")):
+            reason = str(route(line, confidence)[0]["reason"]).casefold()
+            self.assertNotIn("disagree", reason)
+            self.assertNotIn("fix pass", reason)
+
+    def test_low_confidence_answer_selection_requires_explicit_high_analyst_confidence(self) -> None:
+        for confidence, source in (("high", "analyst"), ("low", "executor"),
+                                   (None, "executor"), ("medium", "executor"), (True, "executor")):
+            with self.subTest(analyst_confidence=confidence):
+                payload, code = route("[spec] Q: which decision applies?", "low",
+                                      analyst_confidence=confidence)
+                self.assertEqual(code, 0)
+                self.assertEqual(payload["answer_source"], source)
+        self.assertEqual(route("Q: which decision applies?", "high",
+                               analyst_confidence="high")[0]["answer_source"], "executor")
 
 
 class AggregationTests(unittest.TestCase):
@@ -403,6 +458,11 @@ class DispatchFixtureAgreementTests(unittest.TestCase):
     transcripts and never opens `prompt.txt`, so a fixture whose item text routes
     somewhere its `expected.json` forbids stays green until the first `--live`
     run. Routing each fixture's own item here closes that gap without a live run.
+
+    ADR 0022 retired the multi-analyst Round 1 for non-security items: a
+    low-confidence item gets one analyst. A fixture recorded for the old union or
+    the ambiguous fan-out therefore only needs the helper's one analyst to be among
+    the ones it allows; security fan-out and single-tag fixtures stay exact.
     """
 
     def test_every_tagged_dispatch_fixture_agrees_with_the_helper(self) -> None:
@@ -417,14 +477,22 @@ class DispatchFixtureAgreementTests(unittest.TestCase):
                 continue
             checked += 1
             expected = json.loads(expected_file.read_text(encoding="utf-8"))
-            analysts = set(analysts_for(item))
+            payload, _ = route(item, "low")
+            analysts = set(payload["analysts"])
             with self.subTest(fixture=fixture.name):
                 required = KNOWN_ANALYSTS.intersection(expected.get("must_dispatch_to", []))
-                self.assertEqual(
-                    required - analysts,
-                    set(),
-                    f"{fixture.name}: expected.json requires analysts the helper does not return for {item!r}",
-                )
+                if payload["tier"] == "security" or len(required) == 1:
+                    self.assertEqual(
+                        required - analysts,
+                        set(),
+                        f"{fixture.name}: expected.json requires analysts the helper does not return for {item!r}",
+                    )
+                else:
+                    self.assertLessEqual(
+                        analysts,
+                        required,
+                        f"{fixture.name}: the helper returns an analyst expected.json does not list for {item!r}",
+                    )
                 self.assertEqual(
                     analysts.intersection(expected.get("must_not_dispatch_to", [])),
                     set(),
@@ -473,8 +541,64 @@ class ReferenceProseTests(unittest.TestCase):
         self.assertIn("parse-consensus-categories", paragraph)
 
     def test_the_round_one_pseudocode_names_the_helper(self) -> None:
-        round_one = section_between(self.text, "ROUND 1 — category-routed", "ROUND 2 — full fan-out")
+        round_one = section_between(self.text, "ROUND 1 — security (all three)", "ROUND 2 — retry failed or escaped analysts")
         self.assertIn("parse-consensus-categories", round_one)
+
+    def test_the_single_analyst_path_follows_runner_selection_without_escalation(self) -> None:
+        single = section_between(self.text, "### Single-analyst confidence rule", "### Three-analyst rules")
+        self.assertEqual([True, False, False], [phrase in single for phrase in (
+            "answer_source", "Fall through to Round 2", "synthesizer's output")])
+
+
+class SecurityRoundReferenceTests(unittest.TestCase):
+    """Plan-stage rounds are security-only and every retry path is bounded."""
+
+    def test_security_rounds_retry_only_failed_or_escaped_analysts_on_both_hosts(self) -> None:
+        surfaces = [("source", REFERENCE_DOC), *((host, host_skill_root(host) / TIER_REFERENCE) for host in HOSTS)]
+        for surface, path in surfaces:
+            with self.subTest(surface=surface):
+                text = path.read_text(encoding="utf-8")
+                rounds = section_between(text, "### Two-round protocol", "### Single-analyst confidence rule")
+                self.assertIn("Spawn all three analysts", rounds)
+                self.assertIn("Retry only the failed or escaped analysts", rounds)
+                self.assertIn("Keep the successful Round-1 responses", rounds)
+                for retired in ("1 ≤ N ≤ 3", "edit-applier", "remaining (3 - N)", "ELSE (low confidence"):
+                    self.assertNotIn(retired, rounds)
+                batch = section_between(text, "Stage 3 — Apply Artifact Edits", "### What stays serial")
+                self.assertNotIn("remaining (3 − |Sx|)", batch)
+                self.assertNotIn("[ESCAPE_TO_ROUND_2] OR low confidence", batch)
+                self.assertIn("ELSE IF Flags includes [ROUND_3_TIEBREAK] OR low confidence", batch)
+
+    def test_security_retry_exhaustion_and_phase_diagrams_match_the_tiers(self) -> None:
+        required = (
+            "If a retry fails or escapes again",
+            "If the replacement fails or escapes",
+            "Stage 6 — Apply accepted Round-2 edits serially; unresolved items go to Round 3",
+            *(f"one synthesizer per security {item}" for item in ("item", "gap", "finding")),
+        )
+        for host in HOSTS:
+            with self.subTest(host=host):
+                text = (host_skill_root(host) / TIER_REFERENCE).read_text(encoding="utf-8")
+                self.assertEqual([], [phrase for phrase in required if phrase not in text])
+
+    def test_no_retired_round_phrase_returns_in_source_or_rendered_text(self) -> None:
+        # Whitespace is collapsed first, so a phrase wrapped across lines in a
+        # YAML description or a Markdown paragraph still counts as present.
+        surfaces = [
+            ("source", PLUGIN_ROOT),
+            *((f"view:{host}", host_skill_root(host)) for host in HOSTS),
+            *((f"dist:{host}", REPO_ROOT / "dist" / host / "speckit-pro") for host in HOSTS),
+        ]
+        for surface, root in surfaces:
+            found = sorted(
+                f"{path.relative_to(root)}: {phrase}"
+                for path in root.rglob("*")
+                if path.suffix in RETIRED_PHRASE_SUFFIXES and path.is_file() and path.name != "CHANGELOG.md"
+                for phrase in RETIRED_ROUND_PHRASES
+                if phrase in " ".join(path.read_text(encoding="utf-8", errors="replace").split())
+            )
+            with self.subTest(surface=surface):
+                self.assertEqual([], found)
 
 
 class SecurityKeywordCopyTests(unittest.TestCase):
@@ -535,16 +659,152 @@ class SettingsSurfaceTests(unittest.TestCase):
                     self.assertIsNone(offered, f"{path.name} still offers {phrase!r}")
 
 
+HOSTS = ("claude", "codex")
+TIER_REFERENCE = "speckit-autopilot/references/consensus-protocol.md"
+TIER_ITEMS = (
+    ("[security] Q1: how is the signing key stored?", "high"),
+    ("[codebase] Q2: where is the session token stored?", "low"),
+    ("[spec] Q3: which decision applies?", "low"),
+    ("[domain, codebase] Q4: bcrypt or argon2?", "low"),
+    ("Q5: nothing tags this item", "low"),
+    ("[ambiguous] Q6: unclear which perspective applies", "low"),
+    ("[codebase] Q7: which pattern applies?", "high"),
+    ("Q8: untagged and confident", "high"),
+)
+PLAN_STAGE_CONSENSUS_AGENTS = (
+    "clarify-executor", "checklist-executor", "analyze-executor", "codebase-analyst",
+    "spec-context-analyst", "domain-researcher", "consensus-synthesizer", "consensus-tiebreaker",
+)
+DECISION_MODEL_MARKERS = ("typesafe-jev", "decision model", "typed judgment")
+# Wording of the retired one- and two-analyst Round 1 and of an all-disagree
+# that only Round 2 could reach. Security Round 1 already has all three
+# analysts, so all-disagree flags Round 3 in whichever round it happens.
+RETIRED_ROUND_PHRASES = (
+    "### Two-analyst rule",
+    "two disagreeing Round 1 analysts",
+    "N=1 high-confidence | N=2 both-agree",
+    "All disagree (after Round 2)",
+    "Round 2 all-disagree",
+    "a Round-1 escape that Round 2 cannot resolve",
+    "disagreeing after Round 2",
+    "whose Round 2 still cannot resolve",
+    "Rounds 1 and 2 could not settle",
+    "Rounds 1 and 2 could not agree",
+    "Round 1, single-analyst, synthesizer flagged high",
+    "Round 1, two-analyst, agreement",
+    "Round 2, classic agreement counts",
+    "OR its response contains escape-hatch keywords",
+    "single-analyst, category-routed Round 1",
+    "two-analyst, category-routed Round 1",
+    "spawns the remaining analysts",
+    "Analysts Run:** N (1, 2, or 3)",
+)
+RETIRED_PHRASE_SUFFIXES = frozenset({".md", ".toml", ".json", ".yaml", ".yml"})
+
+
+def run_dist_helper(host: str, line: str, confidence: str, analyst_confidence: str | None = None) -> dict[str, object]:
+    """Route one item through the runner a host's payload ships."""
+    request = {
+        "schema_version": "1.0",
+        "request_id": "tier-parity",
+        "helper_id": "parse-consensus-categories",
+        "operation": "parse-consensus-categories",
+        "mode": "read_only",
+        "inputs": {"line": line, "confidence": confidence, "analyst_confidence": analyst_confidence},
+    }
+    environment = {**os.environ, "PYTHONPATH": str(REPO_ROOT / "dist" / host / "speckit-pro")}
+    done = subprocess.run(
+        [sys.executable, "-m", "speckit_pro_runner"], input=json.dumps(request), capture_output=True,
+        text=True, env=environment, cwd=REPO_ROOT, check=True,
+    )
+    return json.loads(json.loads(done.stdout)["data"]["stdout"]["text"])
+
+
+class HostParityTests(unittest.TestCase):
+    def test_both_payloads_route_every_item_identically(self) -> None:
+        for line, confidence in TIER_ITEMS:
+            with self.subTest(line=line, confidence=confidence):
+                for analyst_confidence in (None, "high"):
+                    routed = [run_dist_helper(host, line, confidence, analyst_confidence) for host in HOSTS]
+                    self.assertEqual(routed[0], routed[1])
+                    tier = routed[0]["tier"]
+                    expected = None if tier == "security" else (
+                        "analyst" if tier == "low_confidence" and analyst_confidence == "high" else "executor")
+                    self.assertEqual(routed[0]["answer_source"], expected)
+
+    def test_the_rendered_tier_section_is_the_same_on_both_hosts(self) -> None:
+        texts = [
+            section_between(
+                (host_skill_root(host) / TIER_REFERENCE).read_text(encoding="utf-8"),
+                "## Plan-Stage Tiers\n",
+                "\n## Category-Routed Dispatch",
+            )
+            for host in HOSTS
+        ]
+        self.assertEqual(texts[0], texts[1])
+        for tier in ("security", "low_confidence", "recommendation"):
+            self.assertIn(f"`{tier}`", texts[0])
+
+
+class NoDecisionModelTests(unittest.TestCase):
+    """ADR 0020: the plan stage routes with runner rules, never a decision model."""
+
+    def test_the_routing_helper_calls_no_decision_model(self) -> None:
+        source = inspect.getsource(read_only.parse_consensus_categories).casefold()
+        self.assertEqual([marker for marker in ("jev", "evaluate", "typesafe", "subprocess", "urllib") if marker in source], [])
+
+    def test_no_plan_stage_consensus_agent_or_reference_names_a_decision_model(self) -> None:
+        paths = [PLUGIN_ROOT / "agents" / f"{name}.md" for name in PLAN_STAGE_CONSENSUS_AGENTS]
+        paths += [PLUGIN_ROOT / "codex-agents" / f"{name}.toml" for name in PLAN_STAGE_CONSENSUS_AGENTS]
+        paths += [host_skill_root(host) / TIER_REFERENCE for host in HOSTS]
+        for path in paths:
+            text = path.read_text(encoding="utf-8").casefold()
+            for marker in DECISION_MODEL_MARKERS:
+                with self.subTest(path=path.name, marker=marker):
+                    self.assertNotIn(marker, text)
+
+
+class RetryLadderTests(unittest.TestCase):
+    """ADR 0004: the ladder's second rung still dispatches consensus analysts."""
+
+    DIAGNOSIS = "guided by a consensus diagnosis"
+
+    def test_the_second_rung_keeps_its_consensus_diagnosis_on_both_hosts(self) -> None:
+        for host in HOSTS:
+            root = host_skill_root(host) / "speckit-autopilot"
+            for name in ("SKILL.md", "references/stop-policy.md", "references/phase-execution.md"):
+                text = " ".join((root / name).read_text(encoding="utf-8").split())
+                with self.subTest(host=host, file=name):
+                    self.assertIn(self.DIAGNOSIS, text)
+        self.assertIn(
+            "dispatch the consensus analysts on the failure evidence first",
+            " ".join((host_skill_root("claude") / "speckit-autopilot/references/phase-execution.md")
+                     .read_text(encoding="utf-8").split()),
+        )
+
+    def test_the_runner_still_names_the_diagnosis_and_the_tiers_do_not_gate_it(self) -> None:
+        self.assertIn("consensus analysts' diagnosis", inspect.getsource(run_finalization))
+        ladder = " ".join((host_skill_root("claude") / "speckit-autopilot/references/phase-execution.md")
+                          .read_text(encoding="utf-8").split())
+        start = ladder.index("dispatch the consensus analysts on the failure evidence first")
+        self.assertNotIn("parse-consensus-categories", ladder[start - 400 : start + 400])
+
+
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
     suite = unittest.TestSuite()
     for case in (
         RoutingTests,
+        TierTests,
         AggregationTests,
         DispatchFixtureAgreementTests,
         ReferenceProseTests,
+        SecurityRoundReferenceTests,
         SecurityKeywordCopyTests,
         SettingsSurfaceTests,
+        HostParityTests,
+        NoDecisionModelTests,
+        RetryLadderTests,
     ):
         suite.addTests(loader.loadTestsFromTestCase(case))
     return suite

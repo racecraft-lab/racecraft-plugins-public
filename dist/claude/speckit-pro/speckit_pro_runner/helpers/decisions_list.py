@@ -1,8 +1,8 @@
 """The decisions list: every judgment a run made instead of asking, in one runner-owned file.
 
-The runner is the only writer. Entries sort spec-affecting first, then authority
-skips, then notes; one malformed entry refuses the whole batch. The terminal
-message is the count and a link, nothing else (ADR 0010).
+The runner is the only writer. Entries sort low-confidence answers first (ADR 0022),
+then spec-affecting, then authority skips, then notes; one malformed entry refuses the
+whole batch. The terminal message is the count and a link, nothing else (ADR 0010).
 """
 
 from __future__ import annotations
@@ -19,9 +19,10 @@ from ..trusted_io import resolve_repo_root
 SCHEMA_VERSION = "decisions-list/v1"
 MAX_TEXT = 1000
 TEXT_FIELDS = ("option_chosen", "rejected_alternative", "evidence", "affected_unit")
-SPEC_AFFECTING, AUTHORITY_SKIP, NOTE = 0, 1, 2
+LOW_CONFIDENCE, SPEC_AFFECTING, AUTHORITY_SKIP, NOTE = 0, 1, 2, 3
 # The closed set of kinds, each with its sort class.
 KINDS = {
+    "low_confidence_answer": LOW_CONFIDENCE,
     "scope_answer": SPEC_AFFECTING,
     "split_recommendation": SPEC_AFFECTING,
     "unratified_default": SPEC_AFFECTING,
@@ -67,6 +68,19 @@ def _stored(path: Any) -> list[dict[str, Any]]:
     return stored
 
 
+def recorded(decision: dict[str, str], entries: list[dict[str, Any]]) -> bool:
+    """Whether the list already holds this exact decision, ignoring its sequence."""
+    return any(all(previous.get(field) == value for field, value in decision.items()) for previous in entries)
+
+
+def append_entries(stored: list[dict[str, Any]], new: list[dict[str, str]]) -> list[dict[str, Any]]:
+    entries = list(stored)
+    for item in new:
+        if item["kind"] != "readiness_stale" or not recorded(item, entries):
+            entries.append({"seq": len(entries) + 1, **item})
+    return entries
+
+
 def decisions_list(root: Any, inputs: dict[str, Any], mode: str) -> dict[str, Any]:
     """Read the list, or append a batch (planned in dry_run, written in apply)."""
     fields = {"workflow_file"} if mode == "read_only" else {"workflow_file", "entries"}
@@ -82,7 +96,7 @@ def decisions_list(root: Any, inputs: dict[str, Any], mode: str) -> dict[str, An
     new = [checked_entry(item) for item in batch]
     with exclusive_ledger(path) if mode == "apply" else nullcontext():
         stored = _stored(path)
-        entries = stored + [{"seq": len(stored) + index, **item} for index, item in enumerate(new, start=1)]
+        entries = append_entries(stored, new)
         if mode == "apply":
             durable_json(path, {"schema_version": SCHEMA_VERSION, "entries": entries})
     return {"entries": ordered(entries), "count": len(entries), "link": link,
