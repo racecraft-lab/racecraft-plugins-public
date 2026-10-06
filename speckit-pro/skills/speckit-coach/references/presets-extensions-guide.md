@@ -49,7 +49,8 @@ catalog install-allowed.
 - An extension install asks "Continue with installation?" because the source is
   an external URL. That prompt is the operator's trust decision. Give the operator
   the argv to run in their own terminal and never answer it on their behalf.
-  Declining exits 0 and installs nothing.
+  Declining exits 0 and installs nothing. An agent run has no terminal, so the
+  prompt aborts with a nonzero exit and also installs nothing.
 - Afterward, confirm each entry by listing `.specify/extensions/` and
   `.specify/presets/`. An exit code alone does not show an install.
 
