@@ -286,6 +286,7 @@ def current_file_mode_fd(parent_fd: int, name: str) -> int | None:
 
 
 def snapshot_write_target(target: Path, repo_root: Path) -> dict[str, Any]:
+    """The descriptor snapshot by path, plus the parents a write would create; it keeps no file identity."""
     created_parent_dirs = missing_parent_dirs(target, repo_root)
     opened = open_safe_parent_fd(target, repo_root, create=False)
     if opened is None:
@@ -298,35 +299,12 @@ def snapshot_write_target(target: Path, repo_root: Path) -> dict[str, Any]:
         }
     parent_fd, target_name, _created_dirs = opened
     try:
-        try:
-            fd = os.open(target_name, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0), dir_fd=parent_fd)
-        except FileNotFoundError:
-            return {
-                "exists": False,
-                "content": None,
-                "mode": None,
-                "digest": None,
-                "created_parent_dirs": created_parent_dirs,
-            }
-        try:
-            file_stat = os.fstat(fd)
-            if stat.S_ISLNK(file_stat.st_mode) or not stat.S_ISREG(file_stat.st_mode):
-                raise OSError("unsafe existing target")
-            with os.fdopen(fd, "rb") as stream:
-                fd = -1
-                content = stream.read()
-        finally:
-            if fd >= 0:
-                os.close(fd)
-        return {
-            "exists": True,
-            "content": content,
-            "mode": stat.S_IMODE(file_stat.st_mode),
-            "digest": hashlib.sha256(content).hexdigest(),
-            "created_parent_dirs": created_parent_dirs,
-        }
+        snapshot = snapshot_write_target_fd(parent_fd, target_name)
     finally:
         os.close(parent_fd)
+    # Path snapshots stay content preconditions, as their callers have always relied on.
+    snapshot.pop("identity")
+    return {**snapshot, "created_parent_dirs": created_parent_dirs}
 
 
 def snapshot_write_target_fd(parent_fd: int, target_name: str) -> dict[str, Any]:
