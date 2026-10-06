@@ -15,6 +15,7 @@ import sys
 import tempfile
 from types import SimpleNamespace
 import unittest
+import unittest.mock
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO / "speckit-pro"), str(REPO / "tests/speckit-pro/lib")]
@@ -96,7 +97,14 @@ class RoadmapFreshnessTests(unittest.TestCase):
             mode="read_only",
             inputs={"roadmap_path": ROADMAP, **inputs},
         )
-        return dispatch_helper(request)
+        # Model a protected Git installation at the OS permission boundary:
+        # root CI owns system binaries, which the hardened probe rightly rejects.
+        # Keep path validation, subprocesses, fetches and blob comparisons real.
+        native_access = os.access
+        with unittest.mock.patch("speckit_pro_runner.cli_probe.os.geteuid", return_value=-1), \
+             unittest.mock.patch("speckit_pro_runner.cli_probe.os.access", side_effect=lambda path, mode, **options:
+                                 False if mode == os.W_OK else native_access(path, mode, **options)):
+            return dispatch_helper(request)
 
     def test_request_fixture_replays_the_registered_read_only_operation(self) -> None:
         fixture = REPO / "tests/speckit-pro/unit/fixtures/read-only-helpers/requests" / f"{HELPER_ID}.json"
