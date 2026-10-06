@@ -30,6 +30,7 @@ from typing import Any
 
 from ..atomic_write import (WritePreconditionChanged, file_identity, open_safe_parent_fd, snapshot_write_target_fd,
                             write_bytes_atomic, write_file_atomic)
+from ..canonical_json import canonical_bytes
 from ..envelope import diagnostic, response
 from ..execution_control import confined_path, ignore_owned_directory, workflow_process_directory
 from ..strict_input import SelectionError, has_hidden_characters, require_fields, require_text
@@ -226,7 +227,7 @@ def apply_proposals(texts: dict[str, str], domains: list[str], proposals: dict[s
 
 def publish_record(root: Path, record: Path, value: dict[str, Any]) -> None:
     """Write the record through the same link-free walk that checked its path."""
-    write_file_atomic(record, json.dumps(value, sort_keys=True, indent=2, allow_nan=False), trust_root=root)
+    write_file_atomic(record, canonical_bytes(value).decode("utf-8"), trust_root=root)
 
 
 def record_on_disk(root: Path, record: Path, value: dict[str, Any] | None) -> bool:
