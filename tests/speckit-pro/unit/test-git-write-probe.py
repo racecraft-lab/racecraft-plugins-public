@@ -53,6 +53,29 @@ class GitWriteProbeFixture(unittest.TestCase):
     def assert_no_probe_files(self) -> None:
         self.assertEqual([], list((self.root / ".git").rglob(".speckit-git-write-probe-*.lock")))
 
+    def directory_denial_result(self, directory: Path) -> dict:
+        if os.name != "nt" and hasattr(os, "geteuid") and os.geteuid() != 0:
+            mode = directory.stat().st_mode
+            os.chmod(directory, 0o555)
+            self.addCleanup(os.chmod, directory, mode)
+            _, result, _ = run_runner(REQUEST, cwd=self.root)
+            return result
+        # Root bypasses POSIX modes; Windows directory modes cannot prove denial.
+        open_file = os.open
+
+        def deny_directory(path, flags: int, mode: int = 0o777, *, dir_fd=None) -> int:
+            target = os.fstat(dir_fd) if dir_fd is not None else None
+            denied = directory.stat()
+            if flags & os.O_CREAT and target is not None and (target.st_dev, target.st_ino) == (denied.st_dev, denied.st_ino):
+                raise PermissionError(errno.EACCES, "directory write denied")
+            return open_file(path, flags, mode, dir_fd=dir_fd)
+
+        with patch.object(probe.os, "open", side_effect=deny_directory):
+            return self.probe_current_repository()
+
+
+
+class GitWriteProbeDescriptorTest(unittest.TestCase):
     def assert_helper_descriptor_cleanup(self, common: Path, scenario: str) -> None:
         open_file, close, rename = os.open, os.close, os.rename
         live: set[int] = set()
@@ -104,29 +127,6 @@ class GitWriteProbeFixture(unittest.TestCase):
             for fd in live:
                 close(fd)
 
-    def directory_denial_result(self, directory: Path) -> dict:
-        if os.name != "nt" and hasattr(os, "geteuid") and os.geteuid() != 0:
-            mode = directory.stat().st_mode
-            os.chmod(directory, 0o555)
-            self.addCleanup(os.chmod, directory, mode)
-            _, result, _ = run_runner(REQUEST, cwd=self.root)
-            return result
-        # Root bypasses POSIX modes; Windows directory modes cannot prove denial.
-        open_file = os.open
-
-        def deny_directory(path, flags: int, mode: int = 0o777, *, dir_fd=None) -> int:
-            target = os.fstat(dir_fd) if dir_fd is not None else None
-            denied = directory.stat()
-            if flags & os.O_CREAT and target is not None and (target.st_dev, target.st_ino) == (denied.st_dev, denied.st_ino):
-                raise PermissionError(errno.EACCES, "directory write denied")
-            return open_file(path, flags, mode, dir_fd=dir_fd)
-
-        with patch.object(probe.os, "open", side_effect=deny_directory):
-            return self.probe_current_repository()
-
-
-
-class GitWriteProbeTest(GitWriteProbeFixture):
     def test_helper_closes_descriptors_on_success_and_storage_failures(self) -> None:
         scenarios = ("success", "component_open", "cleanup_open", "created_cleanup_validation",
                      "existing_cleanup_validation", "capture_open", "capture_validation", "capture_rename")
@@ -140,6 +140,8 @@ class GitWriteProbeTest(GitWriteProbeFixture):
                     existing.chmod(0o755)
                 self.assert_helper_descriptor_cleanup(common, scenario)
 
+
+class GitWriteProbeTest(GitWriteProbeFixture):
     def test_root_runs_execute_both_directory_denial_cases_without_skips(self) -> None:
         with patch.object(os, "geteuid", return_value=0, create=True):
             module = runpy.run_path(str(Path(__file__)), run_name="root_probe_tests")
@@ -522,7 +524,8 @@ class GitWriteProbeDirectoryReplacementTest(GitWriteProbeFixture):
 
 def build_suite() -> unittest.TestSuite:
     return unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
-                              for case in (GitWriteProbeTest, GitWriteProbeContainmentTest, GitWriteProbeDirectoryReplacementTest))
+                              for case in (GitWriteProbeTest, GitWriteProbeContainmentTest, GitWriteProbeDirectoryReplacementTest,
+                                           GitWriteProbeDescriptorTest))
 
 
 def main() -> int:
