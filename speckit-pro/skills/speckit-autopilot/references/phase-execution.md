@@ -302,8 +302,8 @@ and print its summary:
 
 - One task per single-prompt phase (Specify, Plan, Tasks,
   Analyze, Implement)
-- One task **per prompt** for multi-prompt phases (each
-  Clarify session, each Checklist domain)
+- One task for the Clarify session, and one task **per prompt** for
+  Checklist (each domain)
 - One task for consensus/remediation after multi-prompt
   phases (only runs if needed)
 - Parse the workflow file to get session/domain names
@@ -387,9 +387,10 @@ for phase in PHASES starting from first_pending:
        If Archive Sweep or any canonical phase family
        is missing, STOP and repair the plan before executing this phase.
     1. autopilot-state.json: mark the current phase item as "in_progress"
-    2. Check .specify/extensions.yml for before_<phase> hooks
-       → run accepted hooks (non-destructive), skip duplicates
-    3. Read the workflow file's prompt(s) for this phase
+    2. Clarify and Implement only: check .specify/extensions.yml for
+       before_<phase> hooks → run accepted hooks (non-destructive), skip duplicates
+    3. Normalize Clarify through Rule 4 before reading phase prompts.
+       Read the workflow file's prompt(s) for this phase
     4. For EACH prompt in the phase:
        a. Resolve <executor>:
           use the matching installed SpecKit custom agent
@@ -413,8 +414,10 @@ for phase in PHASES starting from first_pending:
        consensus-protocol.md#round-3-tiebreak: a fresh analyst plus a
        max-effort `consensus-tiebreaker` resolve it in an interactive and an
        unattended run alike; it never asks the operator and never stops the run.
-    6. Check .specify/extensions.yml for after_<phase> hooks
-       → run accepted hooks (non-destructive), skip duplicates
+    6. Specify, Plan, Checklist, Tasks and Analyze only: run each brief.hooks entry once
+       and record the batch in the decisions list.
+       Clarify and Implement only: check .specify/extensions.yml for after_<phase>
+       hooks → run accepted hooks (non-destructive), skip duplicates
     7. Validate gate directly in the main session:
        Before Tasks, after Analyze/review remediation, and after the final
        producing tests, run the applicable planning/final formal checkpoint
@@ -546,18 +549,20 @@ prefix: "Already on feature branch `<branch>`. Do NOT run
 **Commit:**
 `git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json && git commit -m "feat(SPEC-XXX): complete specify phase"`
 
-### Phase 2: Clarify (Conditional)
+### Phase 2: Clarify
 
-Only runs if G1 detected `[NEEDS CLARIFICATION]` markers.
+Every SPEC runs Clarify: one session of at most 5 questions. G1's marker
+count does not decide whether it runs.
 
-Spawn a **separate subagent for each clarify session**.
+Normalize Clarify through Rule 4 before reading phase prompts.
+Spawn **one subagent** for the session.
 The clarify-executor is read-only. It returns a `Clarify Question Set`
 with prioritized questions, recommended answers, evidence, and
 suggested artifact updates. The parent orchestrator answers returned
 questions and applies accepted edits in the main session.
 
 ```text
-For each clarify session in the workflow file:
+For the clarify session in the workflow file:
   1. autopilot-state.json: session task → in_progress
   2. Agent(subagent_type: "speckit-pro:clarify-executor",
           run_in_background: false,
@@ -566,7 +571,8 @@ For each clarify session in the workflow file:
             Reference slices: <brief.slices, verbatim>
           """)
      The phase brief supplies the slices; the executor reads no reference file.
-  3. Parent answers returned questions and edits spec/workflow/state
+  3. Parent answers returned questions (at most 5) and edits
+     spec/workflow/state
   4. Re-scan spec.md for `[NEEDS CLARIFICATION]` markers and record the
      remaining count in the session result
   5. Parse executor's "Unresolved for consensus" section
@@ -585,7 +591,6 @@ For each clarify session in the workflow file:
   7. After accepted consensus edits, re-scan spec.md and update the recorded
      remaining-marker count
   8. autopilot-state.json: session task → completed
-  9. Proceed to next session
 ```
 
 **Layer 1 (executor):** The clarify-executor researches possible
@@ -602,9 +607,7 @@ perspectives and applies consensus rules. An item that ends in
 interactive and an unattended run alike; it never asks the operator and never
 stops the run.
 
-**Why after each session:** Session 2 may depend on
-Session 1's resolved questions. Both layers complete
-before the next session runs.
+Both layers complete before G2 runs.
 
 **Gate:** G2 — verify 0 markers remain
 
@@ -4825,6 +4828,14 @@ If extension hook events are configured (detected in Step
 the autopilot must handle prompts that fire at each phase.
 Hooks are configured in `.specify/extensions.yml`.
 
+**Who runs a hook.** The loaded Spec Kit command runs the mandatory hooks
+(`optional: false`) of its own `before_` and `after_` events, so for Specify,
+Plan, Checklist, Tasks and Analyze the orchestrator never dispatches one.
+`brief.hooks` lists the phase's optional hooks; the orchestrator runs each once
+after the phase and records the batch in the decisions list. Clarify and
+Implement load no Spec Kit command, so this section's rules stay the
+orchestrator's for those two phases.
+
 **Extension detection priority (Step 0.11):**
 1. `.specify/extensions/.registry` (JSON) — MOST authoritative.
    Check each extension's `enabled` field.
@@ -4846,18 +4857,25 @@ Hooks are configured in `.specify/extensions.yml`.
 | `before_implement` | Before Phase 7 starts | **Accept** — checklist pre-checks |
 | `after_implement` | After Phase 7 completes | **Accept** — e.g., verify, review, retrospective |
 
+The rows apply as written to Implement (and to Clarify's events). For Specify,
+Plan, Checklist, Tasks and Analyze, the loaded command only prints optional
+hooks as suggestions, so `brief.hooks` carries them: the optional `before_` and
+`after_` hooks of the phase, each once, run after the phase (ADR 0018). A
+condition the runner cannot evaluate (anything but `env.NAME is set` or
+`env.NAME ==|!= 'value'`) fails the brief request; handle it through runner
+error recovery, never by guessing.
+
 **Where hooks fire in the execution loop:**
 
 ```text
 for each phase:
-  1. Check .specify/extensions.yml for before_<phase> hooks
-  2. If hooks exist → run accepted hooks, skip duplicates
-  3. Spawn subagent for the phase
-  4. Receive result
-  5. Check .specify/extensions.yml for after_<phase> hooks
-  6. If hooks exist → run accepted hooks, skip duplicates
-  7. Validate gate
-  8. Advance
+  1. Clarify and Implement: run accepted before_<phase> hooks
+  2. Spawn subagent for the phase (the loaded command runs its mandatory hooks)
+  3. Receive result
+  4. Other planning phases: run each brief.hooks entry once, record the batch
+     in the decisions list. Clarify and Implement: run accepted after_<phase> hooks
+  5. Validate gate
+  6. Advance
 ```
 
 ### Hook Handling Rules
@@ -4868,9 +4886,10 @@ for each phase:
    the autopilot already runs the same check (e.g., cleanup
    vs the autopilot's own lint/test verification), skip to
    avoid redundancy
-3. **Document decisions in workflow file** — log which hooks
-   were accepted, skipped, and why
-4. **Check ALL 8 events** — don't assume only after_tasks
+3. **Document decisions** — log which hooks were accepted,
+   skipped, and why: in the decisions list for `brief.hooks`
+   runs, in the workflow file for Clarify and Implement
+4. **Check every event the orchestrator owns** — don't assume only after_tasks
    and after_implement have hooks. Extensions may register
    hooks for any event. Read `.specify/extensions.yml` to
    know which events have hooks configured.
@@ -4882,8 +4901,8 @@ for each phase:
   acceptance rules above (non-destructive, no duplication).
   The autopilot does NOT literally respond to a prompt — it
   invokes the hook's command directly via `Skill()`.
-- `optional: false` — The hook auto-executes without prompting.
-  The autopilot should always run these.
+- `optional: false` — The hook is mandatory. The loaded command runs it;
+  the orchestrator runs it only for Clarify and Implement.
 - `enabled: false` — The hook is disabled. Skip it entirely.
 
 ### Preset-Aware Phase Execution

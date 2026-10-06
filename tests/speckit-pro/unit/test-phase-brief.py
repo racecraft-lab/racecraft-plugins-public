@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 import tempfile
+from contextlib import ExitStack, contextmanager
 from unittest.mock import patch
 from types import SimpleNamespace
 import unittest
@@ -25,12 +26,67 @@ def dispatch_brief(inputs, request_id=None):
                                            mode="read_only", request_id=request_id, inputs=inputs))
 
 
+@contextmanager
+def project(extensions=None):
+    """Run from a throwaway Spec Kit project, so the brief never reads this repository's own hook file."""
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory).resolve()
+        (root / ".specify").mkdir()
+        if extensions is not None:
+            (root / ".specify/extensions.yml").write_text(extensions, encoding="utf-8")
+        previous = Path.cwd()
+        os.chdir(root)
+        try:
+            yield root
+        finally:
+            os.chdir(previous)
+
+
+def hook(event, command, extension="ext", **fields):
+    """One registered hook as Spec Kit writes it into .specify/extensions.yml."""
+    lines = [f"  {event}:", f"  - extension: {extension}", f"    command: {command}"]
+    lines += [f"    {key}: {value}" for key, value in {"enabled": "true", "optional": "true", "condition": "null", **fields}.items()
+              if value is not None]
+    return "\n".join(lines)
+
+
+def extensions_yml(*entries):
+    """Group hook entries by event under one hooks: mapping, as the project file lays them out."""
+    events = {}
+    for entry in entries:
+        head, *rest = entry.split("\n")
+        events.setdefault(head, []).extend(rest)
+    return "installed: []\nsettings:\n  auto_execute_hooks: true\nhooks:\n" + "\n".join(
+        "\n".join([head, *rest]) for head, rest in events.items()) + "\n"
+
+
+def payload_briefs(inputs):
+    """The brief each shipped payload returns, run from the current project directory."""
+    request = {"schema_version": "1.0", "helper_id": "phase-brief", "operation": "phase-brief", "mode": "read_only", "inputs": inputs}
+    reports = []
+    for host in ("claude", "codex"):
+        payload = REPO / "dist" / host / "speckit-pro"
+        done = subprocess.run([sys.executable, "-m", "speckit_pro_runner"], cwd=Path.cwd(), env={**os.environ, "PYTHONPATH": str(payload)},
+                              input=json.dumps(request), text=True, capture_output=True, check=False)
+        reports.append(json.loads(done.stdout)["data"] if done.returncode == 0 else done.stderr + done.stdout)
+    return reports
+
+
 REFERENCES = REPO / "speckit-pro/skills/speckit-autopilot/references"
 WHOLE_REFERENCES = ("capability-discovery.md", "grounding.md", "execution-efficiency.md", "consensus-protocol.md")
 SLICE_AGENTS = ("clarify-executor", "checklist-executor", "analyze-executor")
 
 
-class PhaseBriefTests(unittest.TestCase):
+class InProjectCase(unittest.TestCase):
+    """Briefs read the project's hook file, so every case runs in a project of its own."""
+
+    def setUp(self):
+        stack = ExitStack()
+        self.addCleanup(stack.close)
+        stack.enter_context(project())
+
+
+class PhaseBriefTests(InProjectCase):
     def test_dispatch_input_names_the_action(self):
         cases = {"Specify": "Run the speckit-specify skill with:",
                  "Clarify": "Prepare a Clarify Question Set for:",
@@ -48,19 +104,10 @@ class PhaseBriefTests(unittest.TestCase):
     def test_payload_hosts_return_identical_briefs(self):
         for phase in ("Specify", "Clarify", "Plan", "Checklist", "Tasks", "Analyze"):
             with self.subTest(phase=phase):
-                request = {"schema_version": "1.0", "helper_id": "phase-brief",
-                           "operation": "phase-brief", "mode": "read_only",
-                           "inputs": {"phase": phase, "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}}
-                reports = []
-                for host in ("claude", "codex"):
-                    payload = REPO / "dist" / host / "speckit-pro"
-                    done = subprocess.run([sys.executable, "-m", "speckit_pro_runner"],
-                                          cwd=payload, env={**os.environ, "PYTHONPATH": str(payload)},
-                                          input=json.dumps(request), text=True, capture_output=True, check=False)
-                    self.assertEqual(done.returncode, 0, done.stderr + done.stdout)
-                    reports.append(json.loads(done.stdout)["data"])
+                inputs = {"phase": phase, "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
+                reports = payload_briefs(inputs)
                 self.assertEqual(reports[0], reports[1])
-                self.assertEqual(reports[0], dispatch_brief(request["inputs"])["data"])
+                self.assertEqual(reports[0], dispatch_brief(inputs)["data"])
 
     def test_invalid_requests_return_no_dispatch_facts(self):
         valid = {"phase": "Plan", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
@@ -161,7 +208,7 @@ class PhaseBriefTests(unittest.TestCase):
                 self.assertEqual(bool(brief["slices"]), agent in SLICE_AGENTS)
 
 
-class PhaseBriefSliceTests(unittest.TestCase):
+class PhaseBriefSliceTests(InProjectCase):
     def test_invalid_structure_returns_no_dispatch_material(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(phase_brief, "REFERENCES", Path(directory)):
             path = Path(directory) / "capability-discovery.md"
@@ -311,6 +358,159 @@ class PhaseBriefSliceTests(unittest.TestCase):
                 self.assertIn("verbatim", loop.split("brief.slices", 1)[1][:400])
 
 
+class PhaseBriefHookTests(unittest.TestCase):
+    """The brief lists optional hooks only; upstream commands own the mandatory ones (ADR 0018)."""
+
+    PLANNING = ("Specify", "Plan", "Checklist", "Tasks", "Analyze")
+
+    def hooks(self, phase, text):
+        with project(text):
+            result = dispatch_brief({"phase": phase, "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"})
+        self.assertEqual(result["status"], "ok", result)
+        return result["data"]["hooks"]
+
+    def test_the_brief_lists_optional_hooks_only(self):
+        text = extensions_yml(
+            hook("after_plan", "speckit.git.commit", "git"),
+            hook("after_plan", "speckit.verify.run", "verify", optional="false"),
+            hook("after_plan", "speckit.off.run", "off", enabled="false"),
+            hook("after_tasks", "speckit.tasks.run", "tasks"),
+        )
+        self.assertEqual(self.hooks("Plan", text), [{"extension": "git", "command": "speckit.git.commit"}])
+
+    def test_before_hooks_come_first_and_a_repeated_command_is_listed_once(self):
+        text = extensions_yml(
+            hook("after_plan", "speckit.git.commit", "git"),
+            hook("after_plan", "speckit.after.run", "after"),
+            hook("before_plan", "speckit.git.commit", "git"),
+            hook("before_plan", "speckit.before.run", "before"),
+            hook("before_plan", "speckit.gate.run", "gate", optional="false"),
+        )
+        self.assertEqual([item["command"] for item in self.hooks("Plan", text)],
+                         ["speckit.git.commit", "speckit.before.run", "speckit.after.run"])
+
+    def test_conditions_the_runner_can_evaluate_gate_the_listing(self):
+        text = extensions_yml(
+            hook("after_plan", "speckit.set.run", "a", condition="\"env.SPK_HOOK_SET is set\""),
+            hook("after_plan", "speckit.unset.run", "b", condition="\"env.SPK_HOOK_UNSET is set\""),
+            hook("after_plan", "speckit.equal.run", "c", condition="\"env.SPK_HOOK_MODE == 'fast'\""),
+            hook("after_plan", "speckit.differs.run", "d", condition="\"env.SPK_HOOK_MODE != 'fast'\""),
+            hook("after_plan", "speckit.empty.run", "e", condition="\"\""),
+        )
+        with patch.dict(os.environ, {"SPK_HOOK_SET": "1", "SPK_HOOK_MODE": "fast"}):
+            self.assertEqual([item["command"] for item in self.hooks("Plan", text)],
+                             ["speckit.set.run", "speckit.equal.run", "speckit.empty.run"])
+        with patch.dict(os.environ, {"SPK_HOOK_MODE": "slow"}):
+            self.assertEqual([item["command"] for item in self.hooks("Plan", text)],
+                             ["speckit.differs.run", "speckit.empty.run"])
+
+    def test_no_phase_lists_a_mandatory_hook(self):
+        text = extensions_yml(*(hook(f"after_{phase.lower()}", f"speckit.mandatory.{phase.lower()}", "m", optional="false")
+                                for phase in self.PLANNING + ("Clarify",)))
+        for phase in self.PLANNING + ("Clarify",):
+            with self.subTest(phase=phase):
+                self.assertEqual(self.hooks(phase, text), [])
+
+    def test_each_phase_lists_its_own_after_event(self):
+        text = extensions_yml(*(hook(f"after_{phase.lower()}", f"speckit.opt.{phase.lower()}", "o") for phase in self.PLANNING))
+        for phase in self.PLANNING:
+            with self.subTest(phase=phase):
+                self.assertEqual(self.hooks(phase, text), [{"extension": "o", "command": f"speckit.opt.{phase.lower()}"}])
+
+    def test_a_missing_optional_field_defaults_to_optional(self):
+        text = extensions_yml(hook("after_plan", "speckit.default.run", "d", optional=None))
+        self.assertEqual(self.hooks("Plan", text), [{"extension": "d", "command": "speckit.default.run"}])
+
+    def test_hooks_run_in_priority_then_file_order(self):
+        text = extensions_yml(
+            hook("after_plan", "speckit.c.run", "c", priority=20),
+            hook("after_plan", "speckit.a.run", "a"),
+            hook("after_plan", "speckit.b.run", "b", priority=10),
+            hook("after_plan", "speckit.first.run", "f", priority=1),
+        )
+        self.assertEqual([item["command"] for item in self.hooks("Plan", text)],
+                         ["speckit.first.run", "speckit.a.run", "speckit.b.run", "speckit.c.run"])
+
+    def test_clarify_keeps_orchestrator_hook_handling(self):
+        # The clarify executor never runs the upstream command, so no loaded command owns its hooks.
+        text = extensions_yml(hook("after_clarify", "speckit.git.commit", "git"))
+        self.assertEqual(self.hooks("Clarify", text), [])
+
+    def test_quoted_values_and_wrapped_text_parse(self):
+        text = extensions_yml(hook("after_plan", "\"speckit.git.commit\"", "'git'", priority="10 # default",
+                                   description="Commit the plan\n      across two lines: still one field",
+                                   prompt="\"Commit?\""))
+        self.assertEqual(self.hooks("Plan", text), [{"extension": "git", "command": "speckit.git.commit"}])
+
+    def test_a_wider_gap_after_the_dash_parses(self):
+        text = "hooks:\n  after_plan:\n    -   extension: git\n        command: speckit.git.commit\n"
+        self.assertEqual(self.hooks("Plan", text), [{"extension": "git", "command": "speckit.git.commit"}])
+
+    def test_no_project_hooks_means_no_listed_hooks(self):
+        for text in (None, "", "installed: []\n", "hooks: {}\n", "hooks:\n  after_plan: []\n"):
+            with self.subTest(text=text):
+                self.assertEqual(self.hooks("Plan", text), [])
+
+    def test_unreadable_hook_configuration_fails_closed(self):
+        bad = {
+            "event is a scalar": "hooks:\n  after_plan: nonsense\n",
+            "entry without a command": "hooks:\n  after_plan:\n  - extension: git\n    enabled: true\n",
+            "unknown enabled value": extensions_yml(hook("after_plan", "speckit.a.run", enabled="maybe")),
+            "unknown optional value": extensions_yml(hook("after_plan", "speckit.a.run", optional="maybe")),
+            "hooks is a list": "hooks:\n- command: speckit.a.run\n",
+            "tab indentation": "hooks:\n\tafter_plan: []\n",
+            "flow entry": "hooks:\n  after_plan:\n  - {extension: git, command: speckit.git.commit}\n",
+            "mapping, not a list": "hooks:\n  after_plan:\n    extension: git\n    command: speckit.git.commit\n",
+            "field before any entry": "hooks:\n  after_plan:\n   extension: git\n",
+            "misaligned field": "hooks:\n  after_plan:\n  - extension: git\n   command: speckit.git.commit\n",
+            "continued command": "hooks:\n  after_plan:\n  - extension: git\n    command: speckit.git.commit\n      extra-argument\n",
+            "nested command list": "hooks:\n  after_plan:\n  - extension: git\n    command: speckit.git.commit\n      - speckit.other.run\n",
+            "stray text": "hooks:\n  after_plan:\n  - command: speckit.a.run\nnonsense\n",
+            "unterminated quote": extensions_yml(hook("after_plan", "speckit.a.run", optional="\"true")),
+            "text after a closing quote": extensions_yml(hook("after_plan", "\"speckit.a.run\"x")),
+            "quoted boolean": extensions_yml(hook("after_plan", "speckit.a.run", optional="'true'")),
+            "quoted null condition": extensions_yml(hook("after_plan", "speckit.a.run", condition="\"null\"")),
+            "config condition": extensions_yml(hook("after_plan", "speckit.a.run", condition="\"config.flag is set\"")),
+            "unknown condition": extensions_yml(hook("after_plan", "speckit.a.run", condition="whenever")),
+            "unknown escape": extensions_yml(hook("after_plan", "speckit.a.run", condition="\"env.A\\q\"")),
+        }
+        for label, text in bad.items():
+            with self.subTest(label):
+                with project(text):
+                    result = dispatch_brief({"phase": "Plan", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"})
+                self.assertEqual(result["status"], "internal_failure", result)
+                self.assertEqual(result["data"], {})
+                self.assertEqual(result["diagnostics"][0]["code"], "phase_brief_hooks_unavailable")
+
+    def test_both_payload_hosts_list_the_same_hooks(self):
+        text = extensions_yml(hook("after_plan", "speckit.git.commit", "git"), hook("after_plan", "speckit.m.run", "m", optional="false"))
+        with project(text):
+            reports = payload_briefs({"phase": "Plan", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"})
+        self.assertEqual([report["hooks"] for report in reports], [[{"extension": "git", "command": "speckit.git.commit"}]] * 2)
+
+    def test_both_hosts_leave_mandatory_hooks_to_upstream_commands(self):
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                root = host_skill_root(host) / "speckit-autopilot"
+                skill = (root / "SKILL.md").read_text()
+                loop = skill.split("## Step 2: Main Execution Loop", 1)[1].split("\n## ", 1)[0]
+                steps = loop.split("for phase in PHASES starting from first_pending:", 1)[1].split("6. Validate the gate", 1)[0]
+                self.assertIn("brief.hooks", steps)
+                self.assertIn("Specify, Plan, Checklist, Tasks and Analyze only: run each brief.hooks entry once", steps)
+                if host == "codex":
+                    self.assertIn("Specify, Plan, Checklist, Tasks and Analyze only: run each brief.hooks entry once",
+                                  (root / "references/phase-execution.md").read_text())
+                self.assertNotRegex(steps, r"(?m)^\s*2\. Run before_<phase> hooks\s*from")
+                self.assertNotRegex(steps, r"(?m)^\s*5\. Run after_<phase> hooks\s*$")
+                for text in (skill, (root / "references/phase-execution.md").read_text()):
+                    self.assertNotIn("`optional: false` — The hook auto-executes", text)
+                    self.assertNotIn("The autopilot should always run these", text)
+                self.assertIn("`before_<phase>` then `after_<phase>`", skill)
+                self.assertNotIn("the autopilot skips them", (root / "references/phase-execution.md").read_text())
+                self.assertIn("mandatory", loop.lower())
+                self.assertIn("decisions list", loop)
+
+
 class PhaseBriefExecutorContractTests(unittest.TestCase):
     def test_no_executor_is_told_to_read_the_references_whole(self):
         sources = [(REPO / "speckit-pro/agents" / (name + ".md")) for name in SLICE_AGENTS]
@@ -345,5 +545,5 @@ class PhaseBriefExecutorContractTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, PhaseBriefSliceTests, PhaseBriefExecutorContractTests))
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, PhaseBriefSliceTests, PhaseBriefHookTests, PhaseBriefExecutorContractTests))
     sys.exit(run_counted(suite, label="test-phase-brief"))

@@ -992,12 +992,12 @@ with read-only formal-doctor against WORKFLOW_ROOT after population.
   `SPEC-<ID>-design-concept.md`. Quote specific Q&A entries when a
   prompt needs to capture *why* a particular decision was made.
 
-- **Clarify Prompts:** Use the design concept's Open Questions section
-  to seed the autopilot's clarify session focuses. Anything still open
-  after the grill-me interview is exactly what the Clarify phase should
-  be told to dig into. Generate session focuses from the unresolved
-  branches and the spec's main surfaces, one focus per open
-  behavior area.
+- **Clarify Prompts:** Write one clarify session, never more: every SPEC
+  runs one Clarify session of at most 5 questions. Use the design
+  concept's Open Questions section to seed its focus. Anything still open
+  after the grill-me interview is exactly what the session should be told
+  to dig into. Fold the unresolved branches and the spec's main surfaces
+  into that one focus, ranked by how much each changes the plan.
 
 - **Plan Prompt:** Combine the tech stack from CLAUDE.md / AGENTS.md, the
   constitution, the roadmap scope description, AND the

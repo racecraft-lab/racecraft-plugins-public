@@ -49,11 +49,10 @@ The typecheck, test, build, and lint baseline belongs to implement entry
 
 ```
 Search spec.md for "[NEEDS CLARIFICATION]" and "[NEEDS CLARIFICATION: ...]" markers.
-- If markers found → Proceed to Clarify phase
-- If no markers → Skip Clarify, proceed to Plan
+- Record the marker count; Clarify runs next either way (one session, at most 5 questions)
 ```
 
-This is a routing decision, not a pass/fail gate. The presence of markers is expected and normal.
+G1 records the count. It does not route: every SPEC runs Clarify. Markers are expected and normal.
 
 ### G2 — After Clarify
 
@@ -65,7 +64,7 @@ This is a routing decision, not a pass/fail gate. The presence of markers is exp
 3. Clarifications section exists in spec.md with documented decisions
 ```
 
-**Auto-Fix:** Re-run clarify focused on remaining markers. Spawn consensus agents for each unresolved question.
+**Auto-Fix:** Resolve remaining markers through G2's repair loop within the existing Clarify session's allowance. Spawn consensus agents for each unresolved question without dispatching another Clarify session.
 
 **Failure Escalation:** If markers remain when the shared reservation ends, run the repair loop within its allowance, then defer per the Failure Escalation Protocol; its last tier for a remaining consensus item is the Round 3 tiebreak (see consensus-protocol.md §Round 3 Tiebreak). An item that changes product scope the spec and roadmap do not settle is applied provisionally with its most conservative option and listed in the end-of-run request; the run continues. Record the remaining ambiguities with all 3 agent perspectives.
 
@@ -592,8 +591,8 @@ unexcepted block or gate error holds PR preparation and records the
 
 | Gate | After | Check | Auto-Fix Strategy | Repair allowance |
 |------|-------|-------|-------------------|--------------|
-| G1 | Specify | NEEDS CLARIFICATION markers | N/A (routing) | N/A |
-| G2 | Clarify | 0 markers remain | Re-run clarify | Gate's own 2 rounds for planning documents; else Shared |
+| G1 | Specify | NEEDS CLARIFICATION markers (recorded; Clarify always runs) | N/A | N/A |
+| G2 | Clarify | 0 markers remain | Resolve remaining markers through G2's repair loop within the existing Clarify session's allowance | Gate's own 2 rounds for planning documents; else Shared |
 | G3 | Plan | Artifacts exist, gates pass | Re-run plan | Gate's own 2 rounds for planning documents; else Shared |
 | G4 | Checklist | 0 [Gap] markers | Research + consensus remediation | Gate's own 2 rounds for planning documents; else Shared |
 | G5 | Tasks | FR coverage, valid required execution metadata, and no gate task waiting on its own dependents | Generate missing tasks; split looping gate tasks | Gate's own 2 rounds for planning documents; else Shared |

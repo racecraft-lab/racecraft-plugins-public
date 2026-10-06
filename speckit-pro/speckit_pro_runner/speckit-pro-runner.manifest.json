@@ -559,7 +559,7 @@
         "value": "speckit_pro_runner/helpers/decisions_list.py",
         "display": "speckit_pro_runner/helpers/decisions_list.py"
       },
-      "sha256": "0d50297f1969f3a150f5e2885d3a87fbda62331ab6d98b67256e88e0cd728e04"
+      "sha256": "5ad4826926688e742ced36b1a2f9d6b8afc8b44dd9c906c14207ff9f19d28dbb"
     },
     {
       "path": {
@@ -576,6 +576,14 @@
         "display": "speckit_pro_runner/helpers/execution_requests.py"
       },
       "sha256": "ae7fff6902b6e4b5cbf0205c9db2b913bf4c929ffe9795e4a30f95bd8432aa72"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/extension_hooks.py",
+        "display": "speckit_pro_runner/helpers/extension_hooks.py"
+      },
+      "sha256": "930aefb29fadd5d5437cfce572bb66b33db49f8ea94a88a5cab0b395135de629"
     },
     {
       "path": {
@@ -647,7 +655,7 @@
         "value": "speckit_pro_runner/helpers/phase_brief.py",
         "display": "speckit_pro_runner/helpers/phase_brief.py"
       },
-      "sha256": "9688b0d70fc86c20446415e21665da194c75ec736a2f8ef62bf00f221593beb6"
+      "sha256": "3701039f8a693ef6efc447bb08dc488423ab36c9f2a7f6bce34adebd7db092ec"
     },
     {
       "path": {

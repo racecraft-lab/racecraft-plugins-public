@@ -10,6 +10,8 @@ from unicodedata import category
 
 from ..envelope import diagnostic, response
 from ..strict_input import require_fields, require_text
+from ..trusted_io import resolve_repo_root
+from .extension_hooks import optional_hooks
 
 PHASES = {
     "Specify": ("phase-executor", "G1", ()),
@@ -27,6 +29,8 @@ EXECUTOR_SLICES = (
                       "G3 \u2014 Separate grounded fact from inference", "G4 \u2014 Cite in the evidence note")),
     ("consensus-protocol.md", ("Category tags", "Security Keywords")),
 )
+# Only a loaded Spec Kit command runs hooks for its own phase. The clarify executor loads none, so Clarify lists no hooks.
+HOOK_PHASES = frozenset(PHASES) - {"Clarify"}
 SLICE_PHASES = frozenset({"Clarify", "Checklist", "Analyze"})
 PROMPT_SECTIONS = {"Clarify": "Clarify Prompts", "Checklist": "Step 2: Run Enriched Checklist Prompts"}
 
@@ -134,6 +138,23 @@ def brief_data(phase: str, workflow: str, feature: str) -> dict[str, Any]:
     }
 
 
+def checked_request(raw: Any) -> tuple[str, str, str]:
+    """The closed phase-brief inputs as (phase, workflow_file, feature_dir); anything else raises ValueError."""
+    inputs = require_fields(raw, {"phase", "workflow_file", "feature_dir"}, "phase-brief inputs")
+    phase = require_text(inputs["phase"], "phase")
+    workflow = brief_path(inputs["workflow_file"], "workflow_file")
+    feature = brief_path(inputs["feature_dir"], "feature_dir").rstrip("/")
+    if not feature:
+        raise ValueError("feature_dir must name a directory")
+    if phase not in PHASES:
+        raise ValueError("phase must be Specify, Clarify, Plan, Checklist, Tasks or Analyze")
+    return phase, workflow, feature
+
+
+def internal_failure(request: Any, code: str, exc: Exception) -> dict[str, Any]:
+    return response("internal_failure", request_id=request.request_id, diagnostics=[diagnostic(code, str(exc))])
+
+
 def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     """Return phase-brief/v1 dispatch data; gate and stop decisions stay separate.
 
@@ -170,27 +191,29 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
         applies to the top-level agent only, never every wave member;
         null preserves installed agent defaults until #1184. Claude consumes
         model per call and keeps effort in the agent; Codex consumes both.
-    hooks: list[{extension: str, command: str}], ordered optional extension
-        command ids to run once after the phase and record in decisions;
-        mandatory hooks belong to loaded commands; [] until #1188.
+    hooks: list[{extension: str, command: str}], the phase's optional hooks from
+        .specify/extensions.yml: before_<phase> then after_<phase>, enabled,
+        condition met (env conditions only; any other raises), each once, to
+        run after the phase and record in the decisions list. Mandatory hooks
+        belong to the loaded command; Clarify loads none and lists none.
 
-    Empty reserved fields activate no new behavior. Input errors return no data.
+    Empty reserved fields activate no new behavior. Input errors return no data;
+    an uninterpretable hook file is internal_failure, never a guessed list.
     """
     try:
-        inputs = require_fields(request.inputs, {"phase", "workflow_file", "feature_dir"}, "phase-brief inputs")
-        phase = require_text(inputs["phase"], "phase")
-        workflow = brief_path(inputs["workflow_file"], "workflow_file")
-        feature = brief_path(inputs["feature_dir"], "feature_dir").rstrip("/")
-        if not feature:
-            raise ValueError("feature_dir must name a directory")
-        if phase not in PHASES:
-            raise ValueError("phase must be Specify, Clarify, Plan, Checklist, Tasks or Analyze")
+        phase, workflow, feature = checked_request(request.inputs)
     except ValueError as exc:
         return response("input_error", request_id=request.request_id,
                         diagnostics=[diagnostic("invalid_phase_brief", str(exc))])
+    root = resolve_repo_root({})
+    if isinstance(root, dict):
+        return response("missing_prerequisite", request_id=request.request_id, diagnostics=[root])
     try:
         data = brief_data(phase, workflow, feature)
     except (OSError, ValueError) as exc:
-        return response("internal_failure", request_id=request.request_id,
-                        diagnostics=[diagnostic("phase_brief_slices_unavailable", str(exc))])
+        return internal_failure(request, "phase_brief_slices_unavailable", exc)
+    try:
+        data["hooks"] = optional_hooks(root, ("before_" + phase.lower(), "after_" + phase.lower())) if phase in HOOK_PHASES else []
+    except ValueError as exc:
+        return internal_failure(request, "phase_brief_hooks_unavailable", exc)
     return response("ok", request_id=request.request_id, data=data)
