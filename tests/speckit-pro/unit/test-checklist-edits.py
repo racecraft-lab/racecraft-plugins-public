@@ -461,6 +461,13 @@ def swap_feature_directory(root: Path) -> None:
 class InterruptionCase(ChecklistEditsCase):
     """Fault-injection helpers for applies that fail after they began writing."""
 
+    def reset(self) -> None:
+        for name, text in (("spec.md", SPEC), ("plan.md", PLAN)):
+            (self.root / FEATURE / name).unlink(missing_ok=True)
+            (self.root / FEATURE / name).write_text(text, encoding="utf-8")
+        for extra in ("alias.md", "elsewhere.md"):
+            (self.root / extra).unlink(missing_ok=True)
+
     def failing_write(self, failing_call: int) -> Any:
         def fail(number: int) -> None:
             if number == failing_call:
@@ -514,13 +521,6 @@ class InterruptionCase(ChecklistEditsCase):
 
 class CanonicalResultTests(InterruptionCase):
     """F1278-812f7be4 after the pre-checks: the result is checked against the canonical paths after acting."""
-
-    def reset(self) -> None:
-        for name, text in (("spec.md", SPEC), ("plan.md", PLAN)):
-            (self.root / FEATURE / name).unlink(missing_ok=True)
-            (self.root / FEATURE / name).write_text(text, encoding="utf-8")
-        for extra in ("alias.md", "elsewhere.md"):
-            (self.root / extra).unlink(missing_ok=True)
 
     def test_a_check_with_no_domains_refuses_a_same_text_swap_made_after_its_read(self) -> None:
         for name in ("spec.md", "plan.md"):
@@ -731,12 +731,6 @@ class CommittedStateTests(InterruptionCase):
         self.assertEqual(("expected_failure", ["security", "ux", "api"]), (result["status"], result["data"].get("applied")), result)
         self.assertIn("private", self.text("spec.md"))
 
-    def test_a_lock_release_failure_after_the_writes_reports_them(self) -> None:
-        with self.around_lock(on_release=partial(raise_error, OSError("lock cleanup failed"))):
-            result = self.apply_both()
-        self.assert_interrupted_after_writes(result, record_written=True)
-
-
 class RecordStateTests(InterruptionCase):
     """F1278-afb94c5e: the application record's state is reported as observed on disk, never assumed."""
 
@@ -867,10 +861,19 @@ class RecordStateTests(InterruptionCase):
                 self.assert_both_written()
                 self.assertIn("absent or different (publication completed)", result["diagnostics"][0]["message"])
 
-    def test_a_record_published_before_its_failure_is_reported_written(self) -> None:
-        with self.after_call("write_file_atomic", partial(raise_error, OSError("directory sync failed"))):
-            result = self.apply_both()
-        self.assert_interrupted_after_writes(result, record_written=True)
+    def test_a_failure_after_the_record_is_published_reports_it_written(self) -> None:
+        # Same contract, two faults: the record's own publication step, then the lock release after it.
+        faults = {
+            "record publication": lambda: self.after_call("write_file_atomic", partial(raise_error, OSError("directory sync failed"))),
+            "lock release": lambda: self.around_lock(on_release=partial(raise_error, OSError("lock cleanup failed"))),
+        }
+        for label, fault in faults.items():
+            with self.subTest(fault=label):
+                self.reset()
+                (self.root / RECORD).unlink(missing_ok=True)
+                with fault():
+                    result = self.apply_both()
+                self.assert_interrupted_after_writes(result, record_written=True)
 
     def test_a_record_path_held_by_a_directory_is_refused_before_any_write(self) -> None:
         (self.root / RECORD).mkdir(parents=True)
