@@ -559,7 +559,7 @@
         "value": "speckit_pro_runner/helpers/decisions_list.py",
         "display": "speckit_pro_runner/helpers/decisions_list.py"
       },
-      "sha256": "bf02ba538561dfc17d34d3ccf3c35c08aff1ae6220b62fd7da208c8db9e5e2d7"
+      "sha256": "1afe557ee5ffc39b9b18bffd7c2937b6fae847e5f805506daeabd6258d607553"
     },
     {
       "path": {
@@ -575,7 +575,7 @@
         "value": "speckit_pro_runner/helpers/execution_requests.py",
         "display": "speckit_pro_runner/helpers/execution_requests.py"
       },
-      "sha256": "ae7fff6902b6e4b5cbf0205c9db2b913bf4c929ffe9795e4a30f95bd8432aa72"
+      "sha256": "0d5a27747b7e5dce6986cda0432d3f5ec1c906311d7f9ec6b2dbc7a8333f2dc1"
     },
     {
       "path": {
