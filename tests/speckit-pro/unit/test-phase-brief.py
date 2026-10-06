@@ -17,7 +17,7 @@ from unicodedata import category
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO / "speckit-pro"), str(REPO / "tests/speckit-pro/lib")]
-from speckit_pro_runner.helpers import dispatch_waves, phase_brief
+from speckit_pro_runner.helpers import dispatch_waves, phase_brief, checklist_edits
 from speckit_pro_runner.helpers.registry import dispatch_helper  # noqa: E402
 from test_result import run_counted  # noqa: E402
 from host_skill_views import host_skill_root  # noqa: E402
@@ -112,7 +112,7 @@ def reference_probe(root, references, cases):
 import json, sys, tempfile
 from pathlib import Path
 from types import SimpleNamespace
-from speckit_pro_runner.helpers import dispatch_waves, phase_brief
+from speckit_pro_runner.helpers import dispatch_waves, phase_brief, checklist_edits
 from speckit_pro_runner.helpers.registry import dispatch_helper
 references, cases = json.load(sys.stdin)
 reports = []
@@ -734,11 +734,123 @@ class PhaseBriefWaveTests(InProjectCase):
         self.assertEqual(len(waves), 1)
         self.assertEqual({entry["agent"] for entry in waves[0]}, set(self.ANALYSTS))
 
-    def test_domains_and_items_compose_in_dispatch_order(self):  # a domain re-runs after consensus only when an edit named it
+    def test_domains_and_items_compose_in_dispatch_order(self):  # any attributed shared edit re-verifies every original domain
         run, verify, analyst = ("checklist-executor", None), ("checklist-executor", "verify"), ("codebase-analyst", None)
         kinds = lambda **named: [(wave[0]["agent"], wave[0]["inputs"].get("pass")) for wave in self.waves("Checklist", items=list(self.ITEMS), **named)]
         self.assertEqual(kinds(domains=["ux"]), [run, verify, analyst, analyst])
         self.assertEqual(kinds(domains=["ux"], consensus_edited=["ux"]), [run, verify, analyst, analyst, verify])
+
+    def test_shared_spec_edit_reverifies_every_original_domain(self):
+        self.shared_edit_checkpoint("spec.md", consensus_edited=["security"])
+
+    def test_shared_plan_edit_reverifies_every_original_domain(self):
+        self.shared_edit_checkpoint("plan.md", consensus_edited=["security"])
+
+    def test_missing_consensus_edited_cannot_suppress_shared_edit_verification(self):
+        self.shared_edit_checkpoint("spec.md")
+
+    def test_underinclusive_consensus_attribution_cannot_limit_verification(self):
+        self.shared_edit_checkpoint("plan.md", consensus_edited=["ux"])
+
+    def test_no_consensus_edit_keeps_each_domain_at_two_runs(self):
+        snapshot = self.checklist_snapshot()
+        inputs = {"phase": "Checklist", **self.BRIEF, "domains": ["security", "ux"]}
+        first = dispatch_brief(inputs)["data"]["waves"]
+        for result in [dispatch_brief(inputs | {"verify_baseline": snapshot["baseline"]}),
+                       *payload_briefs(inputs | {"verify_baseline": snapshot["baseline"]}, include_status=True)]:
+            self.assertEqual(result["status"], "ok", result)
+            self.assertEqual(result["data"]["waves"], [])
+            self.assertEqual([entry["inputs"]["domain"] for wave in first for entry in wave],
+                             ["security", "ux", "security", "ux"])
+
+    def test_misattributed_consensus_domain_is_rejected(self):
+        result = self.brief("Checklist", domains=["security", "ux"], consensus_edited=["api"])
+        self.assertEqual((result["status"], result["data"]), ("input_error", {}))
+
+    def checklist_snapshot(self):
+        feature = Path(self.BRIEF["feature_dir"])
+        feature.mkdir(parents=True)
+        Path("docs").mkdir()
+        Path(self.BRIEF["workflow_file"]).write_text("Checklist workflow\n")
+        for name in ("spec.md", "plan.md"):
+            (feature / name).write_text("Initial requirements\n")
+        return checklist_edits.checklist_edits(Path.cwd(),
+            {key: self.BRIEF[key] for key in ("workflow_file", "feature_dir")}, "read_only")
+
+    def shared_edit_checkpoint(self, artifact, **extra):
+        baseline = self.checklist_snapshot()
+        Path(self.BRIEF["feature_dir"], artifact).write_text("Changed shared requirements\n")
+        inputs = {"phase": "Checklist", **self.BRIEF, "domains": ["security", "ux"],
+                  "verify_baseline": baseline["baseline"], **extra}
+        for result in [dispatch_brief(inputs), *payload_briefs(inputs, include_status=True)]:
+            self.assertEqual(result["status"], "ok", result)
+            self.assertEqual([[entry["inputs"] for entry in wave] for wave in result["data"]["waves"]],
+                             [[{"domain": "security", "pass": "verify"}, {"domain": "ux", "pass": "verify"}]])
+
+    def test_final_checkpoint_observes_atomic_replacements_and_host_limits(self):
+        baseline = self.checklist_snapshot()
+        target = Path(self.BRIEF["feature_dir"], "plan.md")
+        replacement = target.with_name("replacement.md")
+        replacement.write_text("Changed plan through atomic rename\n")
+        replacement.replace(target)
+        inputs = {"phase": "Checklist", **self.BRIEF, "domains": ["security", "ux"],
+                  "verify_baseline": baseline["baseline"], "max_agents": 1}
+        for result in [dispatch_brief(inputs), *payload_briefs(inputs, include_status=True)]:
+            self.assertEqual(result["status"], "ok", result)
+            self.assertEqual([[entry["inputs"] for entry in wave] for wave in result["data"]["waves"]],
+                             [[{"domain": "security", "pass": "verify"}], [{"domain": "ux", "pass": "verify"}]])
+
+    def test_final_checkpoint_fails_closed_on_missing_or_linked_shared_artifacts(self):
+        baseline = self.checklist_snapshot()
+        inputs = {"phase": "Checklist", **self.BRIEF, "domains": ["security", "ux"],
+                  "verify_baseline": baseline["baseline"]}
+        for name in ("spec.md", "plan.md"):
+            target = Path(self.BRIEF["feature_dir"], name)
+            content = target.read_bytes()
+            target.unlink()
+            for linked in (False, True):
+                if linked:
+                    target.symlink_to(Path.cwd() / self.BRIEF["workflow_file"])
+                for result in [dispatch_brief(inputs), *payload_briefs(inputs, include_status=True)]:
+                    self.assertNotEqual(result["status"], "ok", result)
+                    self.assertEqual(result["data"], {})
+                if linked:
+                    target.unlink()
+            target.write_bytes(content)
+
+    def test_checkpoint_and_verify_items_reject_unbound_or_malformed_inputs(self):
+        digest = "0" * 64
+        baseline = {"spec.md": digest, "plan.md": digest}
+        cases = [{"verify_baseline": baseline},
+                 {"domains": ["ux"], "verify_baseline": {}},
+                 {"domains": ["ux"], "verify_baseline": baseline | {"tasks.md": digest}},
+                 {"domains": ["ux"], "verify_baseline": baseline | {"plan.md": "bad"}},
+                 {"domains": ["ux"], "verify_baseline": baseline, "items": []},
+                 {"domains": ["ux"], "verify_baseline": baseline, "verify_items": []},
+                 {"verify_items": ["gap"]},
+                 {"items": [{"line": "gap"}] * 100, "verify_items": [{"line": "new gap"}]}]
+        for extra in cases:
+            result = self.brief("Checklist", **extra)
+            self.assertEqual((result["status"], result["data"]), ("input_error", {}))
+        for phase in ("Clarify", "Analyze", "Plan"):
+            for extra in ({"verify_baseline": baseline}, {"verify_items": []}):
+                result = self.brief(phase, **extra)
+                self.assertEqual((result["status"], result["data"]), ("input_error", {}))
+
+    def test_legacy_consensus_labels_widen_to_all_original_domains(self):
+        for named in (["security"], ["ux"]):
+            waves = self.waves("Checklist", domains=["security", "ux"], consensus_edited=named, max_agents=1)
+            self.assertEqual([entry["inputs"] for wave in waves[-2:] for entry in wave],
+                             [{"domain": "security", "pass": "verify"}, {"domain": "ux", "pass": "verify"}])
+
+    def test_verify_pass_gap_reaches_consensus_with_initial_items_preserved(self):
+        inputs = {"phase": "Checklist", **self.BRIEF,
+                  "items": [{"line": "[codebase] initial apply conflict", "confidence": "low"}],
+                  "verify_items": [{"line": "[security] new cookie/session requirement gap", "confidence": "high"}]}
+        for result in [dispatch_brief(inputs), *payload_briefs(inputs, include_status=True)]:
+            self.assertEqual(result["status"], "ok", result)
+            self.assertEqual([[entry["inputs"]["item"] for entry in wave] for wave in result["data"]["waves"]],
+                             [[2, 2, 2], [1]])
 
     def test_a_brief_without_wave_inputs_has_no_waves(self):
         phases = tuple(phase_brief.PHASES)
@@ -804,7 +916,7 @@ class PhaseBriefWaveTests(InProjectCase):
                 loop = self.loop(host)
                 self.assertIn("Checklist: use the Dispatch waves flow below instead of the per-prompt dispatch", loop)
                 self.assertIn("Other phases: for each workflow prompt", loop)
-                self.assertIn("domain waves -> verify wave -> consensus -> re-verify of consensus-edited domains only", loop)
+                self.assertIn("domain waves -> verify wave -> consensus -> final shared-artifact checkpoint", loop)
                 self.assertIn("Other phases: run consensus", loop)
 
     def test_the_checklist_executor_only_refreshes_checklist_reports_on_a_verify_pass_on_both_hosts(self):

@@ -783,9 +783,12 @@ lists, in order: the domain waves, the verify wave (each domain's
 `pass: verify` re-run, refreshing its checklist report while keeping spec.md
 and plan.md unchanged), the security wave (the three analysts of each
 security item), the low-confidence wave (the routed analyst of each
-low-confidence item), and the second verify wave (`pass: verify` for only the
-domains named in `consensus_edited`, those a consensus edit changed an
-artifact for); a wave with no agents is omitted. Checklist executors only
+low-confidence item). The final checkpoint request supplies `domains` (the
+original full list), `verify_baseline` (the pre-consensus spec/plan digests from
+`checklist-edits`, read_only), and `max_agents`. The runner reads both shared
+artifacts: if either changed, it returns only `pass: verify` waves for every
+original domain; otherwise it returns no waves. Missing or unreadable evidence
+fails closed. Legacy `consensus_edited` labels cannot narrow coverage. Checklist executors only
 propose edits, so domain checks share a wave within the host limit. The
 runner applies their proposals one domain at a time, in workflow order.
 Pass `max_agents=SUBAGENT_WAVE_SIZE`. It comes from
@@ -799,12 +802,19 @@ takes that domain's workflow prompt, plus both `Pass: verify` and `Mode: verify`
 say `pass: verify`; an analyst entry (`inputs.item` only) takes the consensus
 prompt for `items[inputs.item - 1]`, built from your own copy of that item. Checklist runs three requests: `domains` before the executors
 (domain waves and verify wave; launch the verify wave only after `checklist-edits`
-applied every proposal), `items` once every domain's unresolved items are
-in (security and low-confidence waves, then the consensus rounds of
-[consensus-protocol.md](./references/consensus-protocol.md)), and
-`consensus_edited` only when a consensus edit changed an artifact for a domain
-(its second verify wave, run after the serial artifact edits). With no such
-domain, send no third request: nothing re-runs a domain after consensus.
+applied every proposal), `items` plus `verify_items` after the first verify pass
+(initial run items plus every verify-pass 'Unresolved for consensus' item,
+including apply conflicts, in domain order within each list). Item numbers index
+`items + verify_items`; use that combined queue for analyst prompts and the
+Consensus Resolution Log. Follow the consensus rounds of
+[consensus-protocol.md](./references/consensus-protocol.md), applying edits serially.
+Always request the final phase brief with the original `domains`,
+`verify_baseline` saved before consensus and `max_agents`, even with no queued
+items or edit labels, before marking any domain completed. Consume every returned
+verify wave and guard it with a fresh `checklist-edits` read_only baseline and
+dry_run as for the first verify pass. With no shared edit the final brief is empty,
+so each domain still runs exactly twice. A missing `consensus_edited` cannot
+suppress verification: the runner compares disk content, not attribution.
 
 Hooks: a loaded planning command runs its own mandatory hooks (`optional:
 false`), so the orchestrator never dispatches one. For optional hooks,
@@ -852,7 +862,7 @@ for phase in PHASES starting from first_pending:
          Agent(subagent_type: "speckit-pro:" + entry.agent, model: entry.model.claude.model,
                run_in_background: true, prompt: <entry.inputs + the wave prompt, see Dispatch waves>),
        then consume every entry's terminal result before the next wave.
-    4. Checklist: domain waves -> verify wave -> consensus -> re-verify of consensus-edited domains only (Dispatch waves above).
+    4. Checklist: domain waves -> verify wave -> consensus -> final shared-artifact checkpoint (Dispatch waves above).
        Before the first domain wave: runner helper `checklist-edits`, mode read_only → baseline.
        After every domain executor returned: `checklist-edits`, mode apply, with
        domain names in workflow order, the baseline and each Proposed Edits block.
@@ -866,9 +876,13 @@ for phase in PHASES starting from first_pending:
        the original domain prompt, brief inputs, readable files and dispatch context.
        Then `checklist-edits`, mode dry_run, with no domains, no proposals and
        the verify baseline: a refusal means a verify run wrote an artifact.
-       After consensus, only for the domains a consensus edit changed an artifact for:
-       request the brief with `consensus_edited`, then repeat the baseline, verify
-       wave and dry_run check. With no such domain, nothing runs again.
+       Build the consensus queue from initial run items plus every verify-pass 'Unresolved for consensus' item.
+       Request the phase brief with items and verify_items, preserving initial apply conflicts.
+       Always request the final phase brief with the original domains, verify_baseline
+       saved before consensus and max_agents before marking any domain completed.
+       Consume its returned verify waves using a fresh baseline and dry_run guard.
+       The runner compares shared spec.md/plan.md digests: any change verifies every
+       domain, no change returns no final wave, and missing evidence fails closed.
        Other phases: run consensus (Clarify/Analyze only) — see Rule 6
     5. Specify, Plan, Checklist, Tasks and Analyze only:
        handle optional brief.hooks with event=after_<phase> under the confirmation

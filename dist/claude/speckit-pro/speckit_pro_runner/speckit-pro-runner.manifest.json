@@ -575,7 +575,7 @@
         "value": "speckit_pro_runner/helpers/dispatch_waves.py",
         "display": "speckit_pro_runner/helpers/dispatch_waves.py"
       },
-      "sha256": "8ff4460aa0333def5320790d2a78efc07451505031a030e9aea22a619906ee62"
+      "sha256": "865ee58fc1055325fb18acdc53924951f059d48b85f415ad77464a874c671ff2"
     },
     {
       "path": {
@@ -671,7 +671,7 @@
         "value": "speckit_pro_runner/helpers/phase_brief.py",
         "display": "speckit_pro_runner/helpers/phase_brief.py"
       },
-      "sha256": "aa961f20bdda43c066672951ed2a1b868d97960ba1339923c5e44a82faa7bea5"
+      "sha256": "b57fc0e35e9bae28bf7a5a5a351b048374161e3f70141d97413b2b6356f4cd10"
     },
     {
       "path": {

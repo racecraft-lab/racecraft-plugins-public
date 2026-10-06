@@ -569,23 +569,27 @@ edits in domain order, run the verify waves, then resolve all domains' gaps:
    spec.md and plan.md unchanged.
    Then runner helper `checklist-edits`, mode dry_run, with no domains, no
    proposals and the verify baseline: a refusal means a verify run wrote an artifact
-6. If unresolved gaps exist:
+6. Build the consensus queue from initial run items plus every verify-pass 'Unresolved for consensus' item.
+   Retain apply conflicts and gaps with no edit; preserve domain order within each list.
+   Item numbers index items + verify_items; use that combined queue for prompts and logs.
+   If unresolved gaps exist:
    a. autopilot-state.json: each affected "<domain> Consensus" → in_progress
-   b. Request the phase brief again with `items` and `max_agents`, then follow
+   b. Request the phase brief again with `items`, `verify_items` and `max_agents`, then follow
       consensus-protocol.md §Batched Dispatch: the brief's security wave and
       low-confidence wave, each in ONE turn; await → synthesizers in ONE
       message; apply each Artifact Edit SERIALLY to spec.md or plan.md.
       Round 2 escape-hatch: also batched across all queued gaps.
       [ROUND_3_TIEBREAK]: consensus-protocol.md#round-3-tiebreak
-   c. Re-run a domain only when a consensus edit changed an artifact for it:
-      its executor returned an item that an applied Artifact Edit resolved in
-      `spec.md` or `plan.md`. With no such domain, nothing runs again.
-      Otherwise take a read_only baseline, request the phase brief with
-      `consensus_edited` (those domains, in domain order) and `max_agents`,
-      launch its verify wave as in step 5, then run `checklist-edits` in
-      dry_run mode as there. Never re-run a domain consensus did not edit.
-   d. autopilot-state.json: each "<domain> Consensus" → completed
-7. autopilot-state.json: every domain task → completed
+7. Always request the final phase brief with the original domains, verify_baseline
+   saved in step 5 before consensus and max_agents, even with no queued items or
+   edit labels, before marking any domain completed. The runner compares both
+   shared artifacts on disk: any spec.md/plan.md change returns only verify waves
+   for every original domain; no change returns none. Missing or unreadable evidence
+   fails closed; consensus_edited is unnecessary. For returned waves, take a fresh
+   read_only baseline, launch every verify wave as in step 5, consume all results,
+   then run checklist-edits in dry_run mode with that baseline. Keep Consensus
+   items incomplete until this checkpoint succeeds; then mark them completed.
+8. autopilot-state.json: every domain task → completed
 ```
 
 **Layer 1 (executor):** The checklist-executor handles
@@ -602,7 +606,7 @@ independent domain checks can run together. Domain 2's edit may build on
 Domain 1's: the runner applies proposals one at a time in workflow order,
 so the result does not depend on which executor returned first. The verify
 waves re-run every domain once after those edits. Consensus edits stay serial,
-and only the domains they changed run a further time.
+and the final checkpoint refreshes every domain when either shared artifact changed.
 
 **Gate:** G4 — verify 0 `[Gap]` markers
 

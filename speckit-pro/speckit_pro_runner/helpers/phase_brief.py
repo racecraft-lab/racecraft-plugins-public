@@ -12,6 +12,7 @@ from ..agent_inventory import AGENT_INVENTORY
 from ..envelope import diagnostic, response
 from ..strict_input import has_hidden_characters, require_fields, require_text
 from ..trusted_io import resolve_repo_root
+from .checklist_edits import checklist_edits
 from .dispatch_waves import WAVE_INPUTS, WaveRequest, checked_wave_request, compose_waves
 from .extension_hooks import optional_hooks
 
@@ -190,11 +191,14 @@ def internal_failure(request: Any, code: str, exc: Exception) -> dict[str, Any]:
 def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     """Return phase-brief/v1 dispatch data; gate and stop decisions stay separate.
 
-    The closed request inputs are phase, workflow_file and feature_dir strings, and optional domains, items, consensus_edited and max_agents
+    The closed request inputs are phase, workflow_file and feature_dir strings, and optional domains, items, verify_items, consensus_edited, verify_baseline and max_agents
     for waves (dispatch_waves.py).
     Paths reject parent segments and control, format and line separator characters.
     feature_dir is workflow-root relative; workflow_file may be absolute but must name a file.
-    Validation is lexical: no files opened, symlinks resolved or read permissions enforced.
+    Validation is lexical except for verify_baseline: the checklist-edits owner reads the contained
+    workflow and shared artifacts without following links. Missing or unreadable evidence fails closed.
+    verify_baseline is the pre-consensus read_only snapshot; that request emits only final verify waves.
+    verify_items appends verify-pass unresolved items after initial items, preserving dispatch positions.
     Successful data has exactly these fields. Records have only the named keys;
     a wave dispatch's inputs is an open JSON object for its prompt arguments.
 
@@ -242,6 +246,10 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     if isinstance(root, dict):
         return response("missing_prerequisite", request_id=request.request_id, diagnostics=[root])
     try:
+        if waves.verify_baseline is not None:
+            snapshot = checklist_edits(root, {"workflow_file": workflow, "feature_dir": feature}, "read_only")
+            changed = snapshot["baseline"] != waves.verify_baseline
+            waves = waves._replace(consensus_edited=waves.domains if changed else [])
         data = brief_data(phase, workflow, feature, waves)
     except (OSError, ValueError) as exc:
         return internal_failure(request, "phase_brief_slices_unavailable", exc)

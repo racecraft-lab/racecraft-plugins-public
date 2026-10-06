@@ -260,7 +260,11 @@ for phase in PHASES starting from first_pending:
        once, is fixed once and is verified once.
     5. Run consensus in main session if needed:
        Parse executor's "Unresolved for consensus" section, in workflow order.
-       Request the phase brief with items and max_agents=subagent_slots.
+       Checklist: build the queue from initial run items plus every verify-pass 'Unresolved for consensus' item.
+       Retain apply conflicts and gaps with no edit. Request the phase brief with items
+       (initial run) and verify_items (verify reports), plus max_agents=subagent_slots.
+       Item numbers index items + verify_items; use that combined queue for prompts.
+       Other phases: Request the phase brief with items and max_agents=subagent_slots.
        For each brief wave: issue one spawn_agent per entry in one turn,
        with entry.agent, entry.model.codex.model and entry.model.codex.effort,
        and the category-routed prompt for that item's position (Rule 7).
@@ -270,15 +274,19 @@ for phase in PHASES starting from first_pending:
        the items returned, follow consensus-protocol.md: dispatch and consume
        the actual security synthesizers, accept the routed low-confidence
        analysts without a synthesizer, and apply accepted artifact edits serially.
-       Mark the corresponding Consensus item complete in autopilot-state.json.
+       Other phases: mark the corresponding Consensus item complete in autopilot-state.json.
        An item that ends in [ROUND_3_TIEBREAK] follows
        consensus-protocol.md#round-3-tiebreak: a fresh analyst plus a
        max-effort `consensus-tiebreaker` resolve it in an interactive and an
        unattended run alike; it never asks the operator and never stops the run.
-       Checklist only: after consensus, re-run a domain only when a consensus edit
-       changed an artifact for it: request the brief with `consensus_edited` (those
-       domains, in domain order) and `max_agents=subagent_slots`, then repeat the
-       baseline, verify wave and dry_run check. With no such domain, nothing runs again.
+       Checklist only: Always request the final phase brief with the original domains,
+       verify_baseline saved before consensus and max_agents=subagent_slots, even with
+       no queued items or edit labels, before marking any domain completed.
+       The runner compares both shared artifacts on disk: any spec.md/plan.md change
+       returns only verify waves for every original domain; no change returns none.
+       Missing or unreadable evidence fails closed; consensus_edited is unnecessary.
+       Consume every returned wave with a fresh read_only baseline and dry_run guard
+       as above. Keep Consensus items incomplete until this checkpoint succeeds.
     6. Specify, Plan, Checklist, Tasks and Analyze only:
        handle optional brief.hooks with event=after_<phase> under the confirmation
        rule in Extension Hook Events; record runs and skips in the decisions list.

@@ -6,7 +6,7 @@ import re
 from collections.abc import Callable
 from typing import Any, NamedTuple
 
-from ..strict_input import require_text
+from ..strict_input import require_fields, require_text
 from .read_only import consensus_route
 
 ModelFor = Callable[[str], dict[str, dict[str, str]]]
@@ -16,7 +16,7 @@ CONSENSUS_PHASES = frozenset({"Clarify", "Checklist", "Analyze"})
 DOMAIN_NAME = re.compile(r"[a-z0-9][a-z0-9_-]{0,63}")
 MAX_DOMAINS, MAX_ITEMS, MAX_LINE = 12, 100, 2000
 ITEM_FIELDS = {"line", "confidence"}
-WAVE_INPUTS = ("domains", "items", "consensus_edited", "max_agents")
+WAVE_INPUTS = ("domains", "items", "verify_items", "consensus_edited", "verify_baseline", "max_agents")
 MAX_AGENTS = 1000
 # Checklist executors only propose edits; checklist-edits applies them in domain order after every result returns.
 # Keeping the switch retains the serial fallback for executors that write shared artifacts.
@@ -55,6 +55,27 @@ class WaveRequest(NamedTuple):
     items: list[dict[str, Any]]
     consensus_edited: list[str]
     max_agents: int
+    verify_baseline: dict[str, str] | None
+
+
+def checked_checklist_inputs(phase: str, raw: dict[str, Any], domains: list[str],
+                             items: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[str], dict[str, str] | None]:
+    """Merge verify gaps and validate the shared-artifact checkpoint or legacy edit attribution."""
+    edited = checked_domains(phase, raw["consensus_edited"], "consensus_edited") if "consensus_edited" in raw else []
+    if "verify_items" in raw:
+        if phase != CHECKLIST_PHASE:
+            raise ValueError("verify_items apply to the Checklist phase only")
+        items = checked_items(phase, items + checked_items(phase, raw["verify_items"]))
+    if edited and (not domains or not set(edited) <= set(domains)):
+        raise ValueError("consensus_edited must name original checklist domains")
+    baseline = None
+    if "verify_baseline" in raw:
+        if phase != CHECKLIST_PHASE or not domains or "items" in raw or "verify_items" in raw:
+            raise ValueError("verify_baseline requires original Checklist domains and no consensus items")
+        baseline = require_fields(raw["verify_baseline"], {"spec.md", "plan.md"}, "verify_baseline")
+        if any(not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value) for value in baseline.values()):
+            raise ValueError("verify_baseline must contain SHA-256 digests")
+    return items, edited, baseline
 
 
 def checked_wave_request(phase: str, raw: dict[str, Any]) -> WaveRequest:
@@ -62,13 +83,13 @@ def checked_wave_request(phase: str, raw: dict[str, Any]) -> WaveRequest:
     `domains` or `items`: Claude Code's SUBAGENT_WAVE_SIZE, Codex's subagent_slots (1 when the host exposes no count)."""
     domains = checked_domains(phase, raw["domains"]) if "domains" in raw else []
     items = checked_items(phase, raw["items"]) if "items" in raw else []
-    edited = checked_domains(phase, raw["consensus_edited"], "consensus_edited") if "consensus_edited" in raw else []
+    items, edited, baseline = checked_checklist_inputs(phase, raw, domains, items)
     limit = raw.get("max_agents", 1)
     if any(key in raw for key in WAVE_INPUTS if key != "max_agents") and "max_agents" not in raw:
-        raise ValueError("max_agents is required with domains, items or consensus_edited")
+        raise ValueError("max_agents is required with wave inputs")
     if isinstance(limit, bool) or not isinstance(limit, int) or not 0 < limit <= MAX_AGENTS:
         raise ValueError(f"max_agents must be a whole number from 1 to {MAX_AGENTS}")
-    return WaveRequest(domains, items, edited, limit)
+    return WaveRequest(domains, items, edited, limit, baseline)
 
 
 def dispatch(agent: str, model_for: ModelFor, **inputs: Any) -> dict[str, Any]:
@@ -103,14 +124,15 @@ def checklist_waves(domains: list[str], model_for: ModelFor) -> tuple[list[list[
 
 def compose_waves(request: WaveRequest, model_for: ModelFor) -> list[list[dict[str, Any]]]:
     """Domain waves ({domain}), the verify wave ({domain, pass: "verify"}), the security and low-confidence waves
-    ({item}), then one more verify wave for the domains a consensus edit changed. Each domain is run once, fixed once
-    and verified once; nothing re-runs a domain after consensus unless `consensus_edited` names it. A wave with no
-    agents is dropped, so no domains, items or edited domains give no waves.
+    ({item}), then one more verify wave for every original domain when shared artifacts changed.
+    A verify_baseline request emits only that final wave; phase_brief compares the on-disk artifacts first.
+    Legacy consensus_edited attribution widens to all original domains, never just the named domains.
+    A wave with no agents is dropped.
 
     A wave larger than the host's limit becomes consecutive sub-waves of at most `max_agents`, in entry order.
     """
-    runs, verify = checklist_waves(request.domains, model_for)
+    runs, verify = ([], []) if request.verify_baseline is not None else checklist_waves(request.domains, model_for)
     size = request.max_agents
-    rerun = verify_wave(request.consensus_edited, model_for)
+    rerun = verify_wave(request.domains if request.consensus_edited else [], model_for)
     return [wave[start:start + size] for wave in [*runs, verify, *consensus_waves(request.items, model_for), rerun]
             for start in range(0, len(wave), size)]

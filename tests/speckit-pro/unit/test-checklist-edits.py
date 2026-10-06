@@ -1436,6 +1436,23 @@ class GuidanceTests(unittest.TestCase):
             self.assertEqual([], [(relative, phrase) for phrase in ("Proposed Edits", "Do not edit spec.md or plan.md") if phrase not in text])
             self.assertEqual([], [(relative, phrase) for phrase in RETIRED if phrase in text])
 
+    def test_verify_gaps_join_initial_consensus_queue_before_dispatch_on_both_hosts(self) -> None:
+        for guide, anchor in zip(PHASE_EXECUTION_GUIDES, ("### Phase 4: Checklist", "Checklist only:"), strict=True):
+            passage = " ".join(guide_view(guide).split(anchor, 1)[1][:6500].split())
+            self.assertIn("initial run items plus every verify-pass 'Unresolved for consensus' item", passage)
+            self.assertIn("verify_items", passage)
+            queue_at = passage.index("initial run items plus every verify-pass")
+            dispatch_at = passage.index("phase brief", queue_at)
+            self.assertLess(queue_at, dispatch_at)
+
+    def test_final_checkpoint_is_required_even_without_consensus_edited_on_both_hosts(self) -> None:
+        for guide, anchor in zip(PHASE_EXECUTION_GUIDES, ("### Phase 4: Checklist", "Checklist only:"), strict=True):
+            passage = " ".join(guide_view(guide).split(anchor, 1)[1][:6500].split())
+            self.assertIn("Always request the final phase brief", passage)
+            self.assertIn("verify_baseline", passage)
+            self.assertIn("before marking any domain completed", passage)
+            self.assertNotIn("send no third request", passage)
+
     def test_the_phase_four_flow_applies_proposals_through_the_helper_on_both_hosts(self) -> None:
         # Each host's own checklist passage: Claude's Phase 4 section, Codex's checklist-only loop step.
         for guide, anchor in zip(PHASE_EXECUTION_GUIDES, ("### Phase 4: Checklist", "Checklist only:"), strict=True):
@@ -1444,9 +1461,9 @@ class GuidanceTests(unittest.TestCase):
             apply_at, verify_at, consensus_at, rerun_at = (
                 passage.find(text) for text in ("mode apply" if claude else "in apply mode", "Mode: verify",
                                                 "Request the phase brief again with `items`" if claude else "Request the phase brief with items",
-                                                "`consensus_edited`"))
+                                                "verify_baseline"))
             self.assertTrue(0 <= apply_at < verify_at < consensus_at < rerun_at, (guide, apply_at, verify_at, consensus_at, rerun_at))
-            self.assertIn("Never re-run a domain consensus did not edit" if claude else "With no such domain, nothing runs again", passage)
+            self.assertIn("every original domain", passage)
             for phrase in ("runner helper `checklist-edits`", "in domain order", "dry_run"):
                 self.assertIn(phrase, passage, guide)
             self.assertNotIn("Domain 2 may depend on Domain 1's gap fixes", passage)
