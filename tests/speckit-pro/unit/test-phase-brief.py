@@ -164,13 +164,14 @@ reports = []
 original_open = os.open
 for case in json.load(sys.stdin):
     with tempfile.TemporaryDirectory() as directory:
-        root = Path(directory)
+        root = Path(directory) / "project"
+        root.mkdir()
         parent = root / ".specify"
         parent.mkdir()
         target = parent / "extensions.yml"
         target.write_text(case["text"], encoding="utf-8")
         topology = case.get("topology", "regular")
-        replacement = root / "replacement.yml"
+        replacement = Path(directory) / "replacement.yml"
         replacement.write_text(case.get("replacement", case["text"]), encoding="utf-8")
         if topology == "pre_open":
             replacement.replace(target)
@@ -257,6 +258,23 @@ class OptionalHookDisplayBoundaryTests(unittest.TestCase):
                 with self.subTest(host=host, event=case["event"], field=case["field"], form=case["form"]):
                     self.assertEqual(report["result"]["status"], "internal_failure")
                     self.assertEqual(report["result"]["data"], {})
+
+    def test_every_host_event_display_controls_cannot_smuggle_hook_fields(self):
+        replacements = ("command: speckit.other.run", "extension: other", "optional: false", "enabled: false",
+                        "condition: env.SPK_DISPLAY_NEVER_SET is set", "priority: invalid")
+        cases = []
+        for phase, window, field, separator, replacement in product(
+                PhaseBriefHookTests.PLANNING, ("before", "after"), ("prompt", "description"),
+                UNSUPPORTED_SEPARATORS, replacements):
+            event = f"{window}_{phase.lower()}"
+            cases.append({"phase": phase, "event": event, "field": field, "separator": separator,
+                          "replacement": replacement, "text": extensions_yml(hook(
+                              event, "speckit.safe.run", **{field: "Approve" + separator + "    " + replacement}))})
+        for host, runner in RUNNER_ROOTS:
+            for case, report in zip(cases, consent_probe(runner, cases), strict=True):
+                with self.subTest(host=host, event=case["event"], field=case["field"],
+                                  separator=repr(case["separator"]), replacement=case["replacement"]):
+                    self.assert_fixed_consent(report, case["event"])
 
     def test_every_host_event_regular_preopen_and_hardlink_contents_are_inert(self):
         self.check_topologies(("regular", "pre_open", "hard_link"))

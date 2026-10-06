@@ -6,6 +6,8 @@ only that shape and fails closed on anything else, naming the line. Mandatory
 hooks are never returned: the loaded upstream command runs those itself.
 Optional records retain their event and runner-owned consent text; listing is
 not approval. Project prompt and description values never leave this module.
+Only LF separates configuration lines; scalar parsing strips CRLF tails.
+Other display controls stay inside discarded text, never become field syntax.
 
 Quoted values keep their type: a quoted `"true"` is text, not a boolean, and a
 quoted `"null"` is a condition, not an absent one. A hook condition is run the
@@ -97,7 +99,7 @@ def hook_entries(text: str, event: str) -> list[tuple[int, dict[str, str]]]:
     dash_indent = field_indent = -1
     current_field = ""
     continuations = 0
-    for number, line in enumerate(text.splitlines(), start=1):
+    for number, line in enumerate(text.split("\n"), start=1):
         if not line.strip() or line.lstrip().startswith("#"):
             continue
         if "\t" in line[: len(line) - len(line.lstrip())]:
