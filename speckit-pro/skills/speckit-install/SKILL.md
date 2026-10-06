@@ -239,6 +239,8 @@ request and read `reviewability_preset` in the result:
 {"schema_version":"1.0","request_id":"install-reviewability-preset","helper_id":"detect-presets","operation":"detect-presets","mode":"read_only","inputs":{"repo_root":"."}}
 ```
 
+When `status` is `upgrade`, run `spec_kit.cli_argv + upgrade_args`, stop on
+failure, then require `installed` from `detect-presets` and report the upgrade.
 When `status` is `missing`, run `spec_kit.cli_argv + add_args` without asking:
 it is part of the install, not a recommendation, then send the
 `check-prerequisites` request again and report a failing `template_resolution`

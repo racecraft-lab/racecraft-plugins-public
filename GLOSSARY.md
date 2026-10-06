@@ -79,6 +79,10 @@ _Avoid_: planning pause, implement preflight, artifact delivery
 The part of an autopilot run that takes a SPEC from specify through analyze and ends when the review artifacts and the draft PR are ready. The other stages are implement and full.
 _Avoid_: planning run, planning phase
 
+**Legacy reviewability preset**:
+An earlier shipped reviewability preset whose complete content is recognized by the plugin. A preset with project modifications or unknown content is not a legacy reviewability preset.
+_Avoid_: stale preset, old registration
+
 **Optional hook suggestion**:
 An extension action offered for a specific event that requires explicit operator confirmation. Its consent message is supplied by the runner, rather than by the project registering the action.
 _Avoid_: hook approval, automatic hook, project consent

@@ -882,13 +882,18 @@ workflow prompts. Pass the doc path forward.
 
 All file operations happen in the worktree directory.
 
-0. Install the generic `speckit-pro-reviewability` preset into the worktree
-   when it is absent. From `<worktree_root>/`, send runner helper `detect-presets`
-   with `repo_root` set to `.` and read `reviewability_preset`. When `status` is
-   `missing`, run `spec_kit.cli_argv + add_args` from `<worktree_root>/`, then
-   send `check-prerequisites` again and STOP on a failing `template_resolution`
-   check. When `status` is `unavailable`, or the command fails, STOP and report
-   the missing prerequisite.
+0. Ensure the generic `speckit-pro-reviewability` preset is current in the
+   worktree. From `<worktree_root>/`, send runner helper `detect-presets` with
+   `repo_root` set to `.` and read `reviewability_preset`:
+   - `missing`: run `spec_kit.cli_argv + add_args` from `<worktree_root>/`.
+   - `upgrade`: run `spec_kit.cli_argv + upgrade_args` there. The runner has
+     verified a known shipped version; this replaces it with the current preset.
+   - `unavailable`: STOP and report the runner's reason.
+
+   STOP if either command fails. After adding or upgrading, send `detect-presets`
+   again and require `installed`, then send `check-prerequisites` again and STOP
+   on a failing `template_resolution` check. After a verified upgrade, report:
+   "Upgraded speckit-pro-reviewability to the current shipped preset."
 
    Verify resolution from `<worktree_root>/` with
    `spec_kit.cli_argv + ["preset", "resolve", "spec-template"]`,
@@ -1365,7 +1370,7 @@ equal the resolver's `branch_name` and must not be `main`; otherwise STOP.
    `specs/<branch-name>/SPEC-MOC.md`, then commit with
    `chore(SPEC-XXX): add design concept and workflow for autopilot`.
    When Step 6.4 wrote `.specify/quality-gates.json`, add it to the same commit.
-   When Step 5.0 installed the reviewability preset, add `.specify/presets/` to
+   When Step 5.0 installed or upgraded the reviewability preset, add `.specify/presets/` to
    it too, so the branch carries the preset.
 
 2. Push the WORKTREE BRANCH to the detected remote:

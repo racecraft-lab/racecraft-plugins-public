@@ -311,7 +311,9 @@ for the full list.
 
 First add the reviewability preset when the project lacks it, because
 scaffold requires it. Send the `detect-presets` helper request with `repo_root`
-set to `.` and read `reviewability_preset`. When `status` is `missing`, run
+set to `.` and read `reviewability_preset`. When `status` is `upgrade`, run
+`spec_kit.cli_argv + upgrade_args`, stop on failure, then require `installed`
+from `detect-presets` and report the upgrade. When `status` is `missing`, run
 `spec_kit.cli_argv + add_args` without asking, then send the
 `check-prerequisites` request again and report a failing `template_resolution`
 check. When `status` is `unavailable`, report it and continue.
