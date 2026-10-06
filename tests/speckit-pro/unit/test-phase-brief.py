@@ -214,7 +214,8 @@ for case in json.load(sys.stdin):
             os.chdir(previous)
 print(json.dumps(reports))
 '''
-    done = subprocess.run([sys.executable, "-c", program], cwd=runner,
+    # Release regeneration replaces runner directories; keep the probe's cwd outside them.
+    done = subprocess.run([sys.executable, "-c", program], cwd=REPO,
                           env={**os.environ, "PYTHONPATH": str(runner)}, input=json.dumps(cases),
                           text=True, capture_output=True, check=False)
     if done.returncode:
@@ -224,6 +225,21 @@ print(json.dumps(reports))
 
 class OptionalHookDisplayBoundaryTests(unittest.TestCase):
     """Project display text never enters an execute-capable confirmation surface."""
+
+    def test_payload_refresh_cannot_delete_probe_working_directory(self):
+        for host in ("claude", "codex"):
+            with self.subTest(host=host), tempfile.TemporaryDirectory() as directory:
+                runner = Path(directory) / host
+                helpers = runner / "speckit_pro_runner/helpers"
+                helpers.mkdir(parents=True)
+                (helpers / "registry.py").write_text(
+                    "import shutil\nfrom pathlib import Path\n"
+                    "shutil.rmtree(Path(__file__).resolve().parents[2])\n"
+                    "def dispatch_helper(request):\n    return {'status': 'ok'}\n",
+                    encoding="utf-8",
+                )
+                reports = consent_probe(runner, [{"phase": "Plan", "text": ""}] * 2)
+                self.assertEqual(reports, [{"result": {"status": "ok"}, "opened": False}] * 2)
 
     def assert_fixed_consent(self, report, event, command="speckit.safe.run"):
         result = report["result"]
