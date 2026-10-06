@@ -541,6 +541,17 @@ def captured_tree_names(fd: int) -> list[str]:
     return sorted(name for name in os.listdir(fd) if name != "__pycache__" and not name.endswith(".pyc"))
 
 
+def read_tree_file(fd: int, before: os.stat_result, byte_limit: int | None) -> bytes:
+    """Read one single-link descriptor, optionally bounded to its captured size."""
+    if before.st_nlink != 1:
+        raise OSError("hard-linked tree file refused")
+    with os.fdopen(os.dup(fd), "rb") as stream:
+        content = stream.read() if byte_limit is None else stream.read(byte_limit + 1)
+    if byte_limit is not None and (len(content) > byte_limit or len(content) != before.st_size):
+        raise OSError("tree file exceeded its byte limit or changed size")
+    return content
+
+
 def read_tree_entry(parent_fd: int, name: str, expected: os.stat_result | None = None,
                     *, signatures: dict[Path, tuple[int, ...]] | None = None,
                     byte_limit: int | None = None) -> dict[Path, tuple[int, bytes | None]]:
@@ -560,13 +571,7 @@ def read_tree_entry(parent_fd: int, name: str, expected: os.stat_result | None =
         if stat.S_ISDIR(before.st_mode):
             captured = read_tree_directory(fd, signatures=signatures)
         else:
-            if before.st_nlink != 1:
-                raise OSError("hard-linked tree file refused")
-            with os.fdopen(os.dup(fd), "rb") as stream:
-                content = stream.read() if byte_limit is None else stream.read(byte_limit + 1)
-                if byte_limit is not None and (len(content) > byte_limit or len(content) != before.st_size):
-                    raise OSError("tree file exceeded its byte limit or changed size")
-                captured = {Path(): (stat.S_IMODE(before.st_mode), content)}
+            captured = {Path(): (stat.S_IMODE(before.st_mode), read_tree_file(fd, before, byte_limit))}
         after = os.fstat(fd)
         named = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
         if tree_entry_signature(before) != tree_entry_signature(after) or tree_entry_signature(after) != tree_entry_signature(named):

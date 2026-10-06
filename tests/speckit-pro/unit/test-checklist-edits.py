@@ -1508,14 +1508,6 @@ class GateFourTests(ChecklistEditsCase):
                           encoding="utf-8")
         return target
 
-    def replace_with_gap(self, relative: str) -> None:
-        """Swap a file for a [Gap] version through an atomic rename, then refresh the forged receipt."""
-        target = self.feature / relative
-        staged = target.with_name(target.name + ".new")
-        staged.write_text(target.read_text(encoding="utf-8") + GAP_LINE, encoding="utf-8")
-        os.replace(staged, target)
-        self.forge_receipt()
-
     @contextmanager
     def during_read(self, target: Path, mutate: Callable[[], None], *, torn: bool = False) -> Iterator[None]:
         """Inject at the descriptor boundary, including buffered descriptor consumers."""
