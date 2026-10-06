@@ -540,8 +540,8 @@ class PhaseBriefWaveTests(InProjectCase):
         self.assertEqual([[entry["inputs"]["domain"] for entry in wave] for wave in waves if "pass" in wave[0]["inputs"]],
                          [["security"], ["ux"]])
         text = " ".join((host_skill_root("claude") / "speckit-autopilot/references/phase-execution.md").read_text().split())
-        self.assertTrue("For each verify wave of the first brief" in text)
-        self.assertTrue("consume every result before the next verify wave" in text)
+        self.assertIn("For each verify wave of the first brief", text)
+        self.assertIn("consume every result before the next verify wave", text)
 
     def test_both_payload_hosts_return_the_same_sub_waves(self):
         inputs = {"phase": "Analyze", **self.BRIEF, "items": list(self.ITEMS), "max_agents": 2}
