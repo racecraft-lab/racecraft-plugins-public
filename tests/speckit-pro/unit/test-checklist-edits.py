@@ -620,6 +620,19 @@ class CanonicalResultTests(InterruptionCase):
         self.assertEqual((SPEC, PLAN), (self.text("spec.md"), self.text("plan.md")))
         self.assertFalse((self.root / RECORD).exists())
 
+    def test_no_op_domains_before_the_first_real_write_do_not_count_as_written(self) -> None:
+        # Review 6017139882: an empty security proposal ran first, then the ux write found no atomic swap.
+        before = {name: (self.root / FEATURE / name).read_bytes() for name in ("spec.md", "plan.md")}
+        for fault, code in ((partial(patch.object, atomic_write, "swap_entries", return_value=False), "atomic_swap_unavailable"),
+                            (partial(patch.object, atomic_write, "ensure_write_target_matches_snapshot_fd",
+                                     side_effect=atomic_write.WritePreconditionChanged("changed")), "artifact_changed_during_check")):
+            with self.subTest(code=code):
+                with fault():
+                    result = self.apply(proposal("security"), proposal("ux", edit("G1", "spec.md", "open", "private")))
+                self.assertEqual(("expected_failure", code), (result["status"], result["diagnostics"][0]["code"]), result)
+                self.assertEqual(before, {name: (self.root / FEATURE / name).read_bytes() for name in before})
+                self.assertFalse((self.root / RECORD).exists())
+
     def test_an_unavailable_swap_refuses_the_write_and_keeps_a_competing_edit(self) -> None:
         target = self.root / FEATURE / "spec.md"
 

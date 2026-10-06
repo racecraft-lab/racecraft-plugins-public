@@ -71,6 +71,8 @@ class Progress:
     """What this apply has put on disk, so a failure after a write reports the truth."""
 
     applied: list[str] = field(default_factory=list)
+    # Artifact writes that reached disk; a domain that changed nothing completes without one.
+    written: list[str] = field(default_factory=list)
     step: str = ""
     partial: list[str] = field(default_factory=list)
     record: dict[str, Any] | None = None
@@ -214,15 +216,16 @@ def write_changed(root: Path, feature: Path, expected: dict[str, Any], progress:
                                          expected_snapshot={**expected[name], "parent": expected["directory"]})
         except AtomicSwapUnavailable as error:
             # A platform limit, not a competing writer; after a write it is an interruption like any other.
-            if not (progress.applied or progress.partial):
+            if not progress.written:
                 raise SwapUnavailable(name) from error
             raise
         except WritePreconditionChanged as error:
-            if not (progress.applied or progress.partial):
+            if not progress.written:
                 raise ArtifactChanged([name]) from error
             raise
         expected[name] = {"exists": True, "digest": written["digest"], "mode": written["mode"], "identity": written["identity"]}
         progress.partial.append(name)
+        progress.written.append(name)
 
 
 def apply_proposals(texts: dict[str, str], domains: list[str], proposals: dict[str, tuple[list[str], list[dict[str, str]]]],
