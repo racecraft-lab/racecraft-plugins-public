@@ -32,7 +32,7 @@ def minimal_env(extra: Mapping[str, str] | None = None, *, keys: Iterable[str] =
 
 
 def run_python(args: Sequence[str], *, cwd: Path | str | None = None, env_extra: Mapping[str, str] | None = None,
-               env_keys: Iterable[str] = (), **kwargs: Any) -> subprocess.CompletedProcess[str]:
+               **kwargs: Any) -> subprocess.CompletedProcess[str]:
     """Run `sys.executable -I *args` with a minimal environment.
 
     `-I` keeps the working directory, the script's directory, every PYTHON* variable and
@@ -43,5 +43,5 @@ def run_python(args: Sequence[str], *, cwd: Path | str | None = None, env_extra:
     with ExitStack() as stack:
         if cwd is None:
             cwd = stack.enter_context(tempfile.TemporaryDirectory())
-        return subprocess.run([sys.executable, "-I", *args], cwd=cwd, env=minimal_env(env_extra, keys=env_keys),
+        return subprocess.run([sys.executable, "-I", *args], cwd=cwd, env=minimal_env(env_extra),
                               text=True, capture_output=True, shell=False, check=False, **kwargs)
