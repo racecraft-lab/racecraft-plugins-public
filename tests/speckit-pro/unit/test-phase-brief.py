@@ -2,6 +2,7 @@
 """Planning briefs through the runner's public helper dispatch seam."""
 
 from pathlib import Path
+from itertools import product
 import json
 import os
 import subprocess
@@ -29,6 +30,72 @@ def dispatch_brief(inputs, request_id=None):
 REFERENCES = REPO / "speckit-pro/skills/speckit-autopilot/references"
 WHOLE_REFERENCES = ("capability-discovery.md", "grounding.md", "execution-efficiency.md", "consensus-protocol.md")
 SLICE_AGENTS = ("clarify-executor", "checklist-executor", "analyze-executor")
+UNSUPPORTED_SEPARATORS = ("\r", "\v", "\f", "\x1c", "\x1d", "\x1e", "\x85", "\u2028", "\u2029")
+
+
+def reference_probe(root, references, cases):
+    """Run the section and dispatch seams using the selected shipped runner."""
+    program = '''
+import json, sys, tempfile
+from pathlib import Path
+from types import SimpleNamespace
+from speckit_pro_runner.helpers import phase_brief
+from speckit_pro_runner.helpers.registry import dispatch_helper
+references, cases = json.load(sys.stdin)
+reports = []
+with tempfile.TemporaryDirectory() as directory:
+    phase_brief.REFERENCES = Path(directory)
+    for case in cases:
+        for name, text in references.items():
+            (Path(directory) / name).write_bytes(text.encode("utf-8"))
+        (Path(directory) / case["name"]).write_bytes(case["text"].encode("utf-8"))
+        try:
+            section = phase_brief.reference_section(case["name"], case["heading"])
+            report = {"section": section}
+        except ValueError as error:
+            report = {"error": str(error)}
+        report["dispatch"] = []
+        for phase in ("Clarify", "Checklist", "Analyze"):
+            inputs = {"phase": phase, "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
+            request = SimpleNamespace(helper_id="phase-brief", operation="phase-brief", mode="read_only",
+                                      request_id="encoding-probe", inputs=inputs)
+            report["dispatch"].append(dispatch_helper(request))
+        reports.append(report)
+print(json.dumps(reports))
+'''
+    done = subprocess.run([sys.executable, "-c", program], cwd=root,
+                          env={**os.environ, "PYTHONPATH": str(root)},
+                          input=json.dumps([references, cases]), text=True, capture_output=True, check=False)
+    if done.returncode:
+        raise AssertionError(done.stderr + done.stdout)
+    return json.loads(done.stdout)
+
+
+def reference_encoding_cases(separators):
+    """Place each boundary fixture in every named slice's reference window."""
+    references = {name: "".join("## " + heading + "\nsafe\n" for heading in headings)
+                  for name, headings in phase_brief.EXECUTOR_SLICES}
+    windows = [(name, heading) for name, headings in phase_brief.EXECUTOR_SLICES for heading in headings]
+    markers = {
+        "equal": ("## Next\n", ""),
+        "higher": ("# Next\n", ""),
+        "backtick": ("```\n## Hidden\nkept\n```\n", "\n```\n## Hidden\nkept\n```"),
+        "tilde": ("~~~\n## Hidden\nkept\n~~~\n", "\n~~~\n## Hidden\nkept\n~~~"),
+    }
+    cases = []
+    for (name, heading), separator, (marker, (body, tail)) in product(windows, separators, markers.items()):
+        target = "## " + heading + "\nsafe\n"
+        replacement = "## " + heading + "\nsafe" + separator + body + "## Excluded\nEXCLUDED\n"
+        text = references[name].replace(target, replacement)
+        if separator in ("\n", "\r\n"):
+            text = text.replace("safe", "safe\ttext").replace("\r\n", "\n").replace("\n", separator)
+        cases.append({"name": name, "heading": heading, "text": text, "separator": separator, "marker": marker,
+                      "expected": "## " + heading + "\nsafe\ttext" + tail})
+    return references, cases
+
+
+RUNNER_ROOTS = (("source", REPO / "speckit-pro"), ("claude", REPO / "dist/claude/speckit-pro"),
+                ("codex", REPO / "dist/codex/speckit-pro"))
 
 
 class PhaseBriefTests(unittest.TestCase):
@@ -222,7 +289,7 @@ class PhaseBriefSliceTests(unittest.TestCase):
         self.assertNotIn(directory, result["diagnostics"][0]["message"])
 
     def test_payload_hosts_enforce_reference_structure(self):
-        expected = "## Target\n<!--\n## Hidden\n```\n-->\nbody\v```"
+        expected = "## Target\n<!--\n## Hidden\n```\n-->\nbody\t```"
         program = ("import json,sys; from pathlib import Path; "
                    "from speckit_pro_runner.helpers import phase_brief; "
                    "phase_brief.REFERENCES=Path(sys.argv[1]); "
@@ -268,12 +335,6 @@ class PhaseBriefSliceTests(unittest.TestCase):
     def test_only_lf_and_crlf_split_reference_lines(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(phase_brief, "REFERENCES", Path(directory)):
             path = Path(directory) / "sample.md"
-            for separator in ("\r", "\v", "\f", "\x1c", "\x1d", "\x1e", "\x85", "\u2028", "\u2029"):
-                for marker in ("```", "## Hidden"):
-                    with self.subTest(separator=repr(separator), marker=marker):
-                        expected = "## Target\nbody" + separator + marker
-                        path.write_bytes((expected + "\n## Next\nexcluded\n").encode())
-                        self.assertEqual(phase_brief.reference_section("sample.md", "Target"), expected)
             for separator in ("\n", "\r\n"):
                 with self.subTest(separator=repr(separator)):
                     path.write_bytes(separator.join(("## Target", "body", "## Next", "excluded")).encode())
@@ -360,6 +421,100 @@ class PhaseBriefSliceTests(unittest.TestCase):
                 self.assertIn("verbatim", loop.split("brief.slices", 1)[1][:400])
 
 
+class PhaseBriefEncodingTests(unittest.TestCase):
+    def assert_reference_encoding_rejected(self, text):
+        with tempfile.TemporaryDirectory() as directory, patch.object(phase_brief, "REFERENCES", Path(directory)):
+            (Path(directory) / "sample.md").write_bytes(text.encode())
+            with self.assertRaisesRegex(ValueError, "unsupported control or line separator"):
+                phase_brief.reference_section("sample.md", "Target")
+
+    def test_reference_rejects_nonstandard_heading_boundaries(self):
+        levels = [(level, boundary) for level in range(1, 7) for boundary in range(1, level + 1)]
+        for separator, (level, boundary) in product(UNSUPPORTED_SEPARATORS, levels):
+            with self.subTest(separator=repr(separator), level=level, boundary=boundary):
+                text = "#" * level + " Target\nsafe" + separator + "#" * boundary + " Next\nEXCLUDED\n"
+                self.assert_reference_encoding_rejected(text)
+
+    def test_reference_rejects_nonstandard_fence_boundaries(self):
+        for separator, fence, edge in product(UNSUPPORTED_SEPARATORS, ("```", "~~~"), ("opener", "closer")):
+            with self.subTest(separator=repr(separator), fence=fence, edge=edge):
+                text = ("## Target\nsafe" + separator + fence + "\n## Hidden\nkept\n" + fence + "\n## Next\nEXCLUDED\n"
+                        if edge == "opener" else "## Target\n" + fence + "\nkept" + separator + fence + "\n## Next\nEXCLUDED\n")
+                self.assert_reference_encoding_rejected(text)
+
+    def test_reference_rejects_controls_throughout_the_document(self):
+        # Enumerate C0/C1 independently of the production Unicode-category check.
+        controls = [chr(code) for code in (*range(32), *range(127, 160)) if code not in (9, 10)]
+        controls += ["\u2028", "\u2029"]
+        templates = {
+            "before": "prefix{control}text\n## Target\nsafe\n## Next\nEXCLUDED\n",
+            "inside": "## Target\nsafe{control}text\n## Next\nEXCLUDED\n",
+            "after": "## Target\nsafe\n## Next\nEXCLUDED{control}text\n",
+            "comment": "## Target\n<!--\nhidden{control}text\n-->\n## Next\nEXCLUDED\n",
+            "comment_opener": "## Target\nsafe{control}<!--\nhidden\n-->\n## Next\nEXCLUDED\n",
+            "comment_closer": "## Target\n<!--\nhidden{control}-->\n## Next\nEXCLUDED\n",
+            "fence": "## Target\n```\nhidden{control}text\n```\n## Next\nEXCLUDED\n",
+            "setext": "## Target\nsafe{control}===\n## Next\nEXCLUDED\n",
+        }
+        for control, (position, template) in product(controls, templates.items()):
+            with self.subTest(control=repr(control), position=position):
+                self.assert_reference_encoding_rejected(template.format(control=control))
+
+
+class PhaseBriefEncodingHostTests(unittest.TestCase):
+    def check_reference_encoding(self, separators, verify):
+        references, cases = reference_encoding_cases(separators)
+        for host, root in RUNNER_ROOTS:
+            reports = reference_probe(root, references, cases)
+            self.assertEqual(len(reports), len(cases))
+            for case, report in zip(cases, reports, strict=True):
+                with self.subTest(host=host, name=case["name"], heading=case["heading"],
+                                  separator=repr(case["separator"]), marker=case["marker"]):
+                    self.assertEqual(len(report["dispatch"]), 3)
+                    verify(case, report)
+
+    def assert_invalid_encoding_rejected(self, case, report):
+        self.assertIn("unsupported control or line separator", report.get("error", ""))
+        for result in report["dispatch"]:
+            self.assertEqual(result["status"], "internal_failure")
+            self.assertEqual(result["data"], {})
+            self.assertEqual(result["request_id"], "encoding-probe")
+            self.assertIn("unsupported control or line separator", result["diagnostics"][0]["message"])
+
+    def assert_supported_encoding_preserved(self, case, report):
+        self.assertEqual(report.get("section"), case["expected"])
+        for result in report["dispatch"]:
+            self.assertEqual(result["status"], "ok")
+            self.assertIn(case["expected"], result["data"]["slices"])
+            self.assertNotIn("EXCLUDED", "\n".join(result["data"]["slices"]))
+
+    def test_all_hosts_and_slice_windows_reject_invalid_encoding(self):
+        self.check_reference_encoding(UNSUPPORTED_SEPARATORS, self.assert_invalid_encoding_rejected)
+
+    def test_all_hosts_and_slice_windows_preserve_supported_encoding(self):
+        self.check_reference_encoding(("\n", "\r\n"), self.assert_supported_encoding_preserved)
+
+
+class PhaseBriefEncodingPathTests(unittest.TestCase):
+    def test_reference_encoding_checks_bytes_after_link_or_rename(self):
+        for separator, marker, topology in product(UNSUPPORTED_SEPARATORS, ("## Next", "```"), ("link", "rename")):
+            with self.subTest(separator=repr(separator), marker=marker, topology=topology):
+                with tempfile.TemporaryDirectory() as directory, patch.object(phase_brief, "REFERENCES", Path(directory)):
+                    target = Path(directory) / "sample.md"
+                    replacement = Path(directory) / "replacement.md"
+                    text = "## Target\nsafe" + separator + marker + "\nEXCLUDED\n"
+                    if marker == "```":
+                        text += "```\n"
+                    replacement.write_bytes(text.encode())
+                    if topology == "link":
+                        target.symlink_to(replacement.name)
+                    else:
+                        target.write_text("## Target\nsafe\n## Next\n")
+                        replacement.replace(target)
+                    with self.assertRaisesRegex(ValueError, "unsupported control or line separator"):
+                        phase_brief.reference_section("sample.md", "Target")
+
+
 class PhaseBriefExecutorContractTests(unittest.TestCase):
     def test_no_executor_is_told_to_read_the_references_whole(self):
         sources = [(REPO / "speckit-pro/agents" / (name + ".md")) for name in SLICE_AGENTS]
@@ -394,5 +549,5 @@ class PhaseBriefExecutorContractTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, PhaseBriefModelTests, CodexEffectiveEffortTests, RetryLadderTopRungTests, PhaseBriefSliceTests, PhaseBriefExecutorContractTests))
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, PhaseBriefModelTests, CodexEffectiveEffortTests, RetryLadderTopRungTests, PhaseBriefSliceTests, PhaseBriefEncodingTests, PhaseBriefEncodingHostTests, PhaseBriefEncodingPathTests, PhaseBriefExecutorContractTests))
     sys.exit(run_counted(suite, label="test-phase-brief"))

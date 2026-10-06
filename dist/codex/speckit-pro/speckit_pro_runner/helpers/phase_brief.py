@@ -102,6 +102,11 @@ def reference_section(name: str, heading: str) -> str:
         lines = re.split(r"\r?\n", (REFERENCES / name).read_bytes().decode("utf-8"))
     except (OSError, UnicodeError) as exc:
         raise ValueError(f"references/{name}: cannot read section {heading!r}") from exc
+    # LF/CRLF have already been consumed. Validate every remaining character
+    # before comments, fences, or section boundaries can skip any content.
+    # Never dispatch separators the structural parser does not recognize.
+    if any(category(char) in {"Cc", "Zl", "Zp"} for char in "".join(lines).replace("\t", "")):
+        raise ValueError(f"references/{name}: unsupported control or line separator")
     start: int | None = None
     level = 0
     # Validate the entire reference before returning any dispatch material.
