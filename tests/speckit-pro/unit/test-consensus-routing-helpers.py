@@ -549,6 +549,10 @@ class ReferenceProseTests(unittest.TestCase):
         self.assertEqual([True, False, False], [phrase in single for phrase in (
             "answer_source", "Fall through to Round 2", "synthesizer's output")])
 
+
+class SecurityRoundReferenceTests(unittest.TestCase):
+    """Plan-stage rounds are security-only and every retry path is bounded."""
+
     def test_security_rounds_retry_only_failed_or_escaped_analysts_on_both_hosts(self) -> None:
         surfaces = [("source", REFERENCE_DOC), *((host, host_skill_root(host) / TIER_REFERENCE) for host in HOSTS)]
         for surface, path in surfaces:
@@ -754,6 +758,7 @@ def build_suite() -> unittest.TestSuite:
         AggregationTests,
         DispatchFixtureAgreementTests,
         ReferenceProseTests,
+        SecurityRoundReferenceTests,
         SecurityKeywordCopyTests,
         SettingsSurfaceTests,
         HostParityTests,
