@@ -249,6 +249,24 @@ class GalleryGuidanceTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertTrue(PLANNED_RULE in text, f"{path} does not state the planned-entry rule")
 
+    def test_both_author_hosts_escape_every_fill_and_keep_fills_inert(self) -> None:
+        clauses = (
+            "Escape every value you take from the planning record, in every fill region, `document-title` included",
+            "Escape `&`, `<`, `>`, `\"`, and `'` before the value lands in element text or a double-quoted attribute value",
+            "no `on*` or `srcdoc` attribute",
+            "no `javascript:`, `vbscript:`, or non-image, non-font `data:` URL",
+            "only escaped text inside a `<title>` or `<textarea>`, closed in the same region",
+            "The artifact review rejects a page whose fill carries active content and names the region",
+            "no fill region carries active content",
+        )
+        for path in ("agents/artifact-author.md", "codex-agents/artifact-author.toml"):
+            text = " ".join(read(REPO_ROOT / "speckit-pro" / path).replace('\\"', '"').replace("\\'", "'").split())
+            for clause in clauses:
+                with self.subTest(path=path, clause=clause):
+                    self.assertIn(clause, text)
+            with self.subTest(path=path, clause="title-only escaping"):
+                self.assertNotIn("Fill `document-title` with one static, HTML-escaped `<title>` element.", text)
+
     def test_contract_names_the_suite_that_enforces_each_rule(self) -> None:
         text = " ".join(read(GALLERY / "SPA-CONTRACT.md").split())
         self.assertNotIn("repository tests validate the contracts below", text)
