@@ -14,7 +14,7 @@ import unittest
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from itertools import product
 from pathlib import Path
-from unittest import mock
+import unittest.mock as mock
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "tests" / "speckit-pro" / "lib"))
@@ -271,6 +271,43 @@ class RegistryBindingTests(CuratedInstallCase):
 
                 with mock.patch.object(check.os, "open", side_effect=swap):
                     self.assertTrue(self.check_result(entry, project))
+
+
+class RegistryDescriptorTests(CuratedInstallCase):
+    """Every descriptor registry_entries opens is closed on every exit path."""
+
+    @staticmethod
+    def open_descriptors():
+        return len(os.listdir("/dev/fd"))
+
+    def test_inspection_closes_every_descriptor_it_opens(self):
+        real_listdir = os.listdir
+        extension = next(entry for entry in ENTRIES if entry["kind"] == "extension")
+        preset = next(entry for entry in ENTRIES if entry["kind"] == "preset")
+        for case in ("missing-specify", "missing-registry", "listing", "mutated", "failed-inspection"):
+            with self.scenario(case=case) as project:
+                kind, entry_id = extension["kind"], None
+                if case != "missing-specify":
+                    (project / ".specify").mkdir()
+                if case not in ("missing-registry", "missing-specify"):
+                    (project / check.REGISTRY_DIRS[kind]).mkdir(parents=True)
+                if case == "mutated":
+                    kind, entry_id = preset["kind"], preset["id"]
+                    (project / check.REGISTRY_DIRS[kind] / entry_id).mkdir(parents=True)
+                before = self.open_descriptors()
+                if case == "mutated":
+                    def mutate(descriptor):
+                        (project / ".specify").rename(project / ".specify-old")
+                        return real_listdir(descriptor)
+
+                    with mock.patch.object(check.os, "listdir", side_effect=mutate):
+                        self.assertIsNone(check.registry_entries(project, kind, entry_id))
+                elif case == "failed-inspection":
+                    with mock.patch.object(check.os, "listdir", side_effect=OSError("cannot list")):
+                        self.assertIsNone(check.registry_entries(project, kind, entry_id))
+                else:
+                    check.registry_entries(project, kind, entry_id)
+                self.assertEqual(self.open_descriptors(), before)
 
 
 class CompletedInstallTests(CuratedInstallCase):
