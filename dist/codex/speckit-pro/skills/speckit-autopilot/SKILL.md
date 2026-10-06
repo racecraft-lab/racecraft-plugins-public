@@ -1042,6 +1042,22 @@ tell Specify to use that branch and existing spec directory rather than create
 another. Rule 6 and the consensus reference own resolution between prompts. Do
 not reconstruct those contracts from this entrypoint.
 
+### Artifact page selection
+
+At every artifact-author dispatch, including regeneration, pass the current
+plan and the optional research and design-concept paths inside the established
+workflow root. Require the author to invoke the loaded runner's
+`select-artifact-pages` helper in `read_only` mode before filling templates,
+per its agent instructions. The helper owns selection; the author consumes
+`selected_pages` in returned order and reports one outcome per selected page.
+A non-`ok` selection is a whole-set artifact gap under the existing fail-open
+reporting protocol. The author publishes each page only through the runner's
+`publish-artifact-page` helper, which performs every artifact file operation
+through one held directory descriptor; the author never touches `artifacts/`
+with a native tool.
+
+Pass those planning inputs in the installed `artifact-author` spawn_agent prompt.
+
 ## Step 3: Post-Implementation
 
 After Phase 7 passes G7, read and execute
