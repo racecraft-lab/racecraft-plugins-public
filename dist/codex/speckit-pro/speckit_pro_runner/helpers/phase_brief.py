@@ -15,7 +15,7 @@ from ..trusted_io import resolve_repo_root
 from .checklist_edits import checklist_edits
 from .dispatch_waves import WAVE_INPUTS, WaveRequest, checked_wave_request, compose_waves
 from .extension_hooks import optional_hooks
-from .read_only import checked_g4_judged, check_g4_inputs
+from .read_only import G4InputDrift, checked_g4_judged, check_g4_inputs
 
 PHASES = {
     "Specify": ("phase-executor", "G1", ()),
@@ -255,15 +255,13 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     root = resolve_repo_root({})
     if isinstance(root, dict):
         return response("missing_prerequisite", request_id=request.request_id, diagnostics=[root])
-    if judged is not None:
-        try:
-            check_g4_inputs(root / feature, root, judged)
-        except ValueError as exc:
-            # The owner reports only runner-controlled file kinds, never content.
-            return response("input_error", request_id=request.request_id,
-                            diagnostics=[diagnostic("g4_input_drift", str(exc))])
     try:
+        if judged is not None:
+            check_g4_inputs(root / feature, root, judged)
         data = brief_data(phase, workflow, feature, observed_checklist_waves(root, workflow, feature, waves))
+    except G4InputDrift as exc:
+        return response("input_error", request_id=request.request_id,
+                        diagnostics=[diagnostic("g4_input_drift", str(exc))])
     except (OSError, ValueError) as exc:
         return internal_failure(request, "phase_brief_slices_unavailable", exc)
     try:

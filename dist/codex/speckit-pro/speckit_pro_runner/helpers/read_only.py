@@ -2207,21 +2207,25 @@ def checked_g4_judged(raw: Any) -> dict[str, str]:
     return dict(raw)
 
 
+class G4InputDrift(ValueError):
+    """A Tasks input no longer matches the preceding G4 snapshot."""
+
+
 def check_g4_inputs(feature: Path, repo_root: Path, judged: dict[str, str]) -> None:
     """Refuse Tasks dispatch unless a fresh bounded G4 read matches every prior judged digest."""
     current = json.loads(g4_result(feature, repo_root)["stdout"])
     actual = current.get("judged")
     if not isinstance(actual, dict):
-        raise ValueError("G4 input drift: shared artifact, checklist report or feature namespace is unsafe or unreadable")
+        raise G4InputDrift("G4 input drift: shared artifact, checklist report or feature namespace is unsafe or unreadable")
     for name in ("spec.md", "plan.md"):
         if actual.get(name) != judged[name]:
-            raise ValueError(f"G4 input drift: {name}")
+            raise G4InputDrift(f"G4 input drift: {name}")
     reports = {name: digest for name, digest in actual.items() if name.startswith("checklists/")}
     expected = {name: digest for name, digest in judged.items() if name.startswith("checklists/")}
     if reports != expected:
-        raise ValueError("G4 input drift: checklist report set or content")
+        raise G4InputDrift("G4 input drift: checklist report set or content")
     if not current["pass"]:
-        raise ValueError("G4 input drift: shared artifact or checklist report contains gaps")
+        raise G4InputDrift("G4 input drift: shared artifact or checklist report contains gaps")
 
 
 COVERAGE_TASK_HEADER = re.compile(r"tasks?(?:\s*\(s\)|\s*ids?)?", re.IGNORECASE)
