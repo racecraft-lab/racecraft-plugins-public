@@ -10,6 +10,8 @@ from ..envelope import diagnostic, response
 from ..formal.helper import run_formal_helper
 from ..research_preflight import run_research_broker_preflight_helper
 from .archive_sweep import run_archive_sweep_helper
+from .artifact_publication import run_artifact_publication_helper
+from .artifact_selection import run_artifact_selection_helper
 # The two CODEX_ names are re-exported: tests read them through the registry.
 from .install import CODEX_OPTIONAL_HELPER_NAME, CODEX_REQUIRED_AGENT_NAMES, run_install_helper  # noqa: F401
 from .decisions_list import run_decisions_list_helper
@@ -117,6 +119,10 @@ def deferred_authoritative_request() -> str:
 
 
 HELPERS: dict[str, HelperEntry] = {
+    "select-artifact-pages": HelperEntry(
+        "select-artifact-pages", "select-artifact-pages", None, "python_authoritative", "python_contract",
+        authoritative_request("select-artifact-pages"),
+    ),
     "phase-brief": HelperEntry(
         "phase-brief", "phase-brief", None, "python_authoritative", "python_contract",
         authoritative_request("phase-brief"),
@@ -690,6 +696,12 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         "command_plan",
         mutation_authoritative_request("detect-stack-manager-plan"),
     ),
+    "publish-artifact-page": MutationEntry(
+        "publish-artifact-page", "publish-artifact-page", ("dry_run", "apply"), None,
+        "golden_only", "fixture_semantic", mutation_authoritative_request("publish-artifact-page"),
+        ("descriptor-bound-publication",),
+        rollback="Delete the page under the feature artifacts directory; the next artifact run republishes it.",
+    ),
     "write-readiness-record": MutationEntry(
         "write-readiness-record", "write-readiness-record", ("dry_run", "apply"), None,
         "golden_only", "fixture_semantic", mutation_authoritative_request("write-readiness-record"),
@@ -722,6 +734,7 @@ def mutation_registry_report() -> dict[str, Any]:
 
 # Helpers with their own response contracts share one dispatch path.
 SPECIAL_HELPER_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
+    "select-artifact-pages": run_artifact_selection_helper,
     "formal-doctor": run_formal_helper,
     "research-broker-preflight": run_research_broker_preflight_helper,
     "render-egress-authorization": run_egress_authorization_helper,
@@ -845,6 +858,9 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
 
     if entry.helper_id == "write-readiness-record":
         return run_readiness_record_helper(entry, request)
+
+    if entry.helper_id == "publish-artifact-page":
+        return run_artifact_publication_helper(entry, request)
 
     if entry.helper_id == "propose-quality-gates":
         return run_quality_gates_proposal_helper(entry, request)
