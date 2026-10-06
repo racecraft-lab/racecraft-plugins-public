@@ -25,15 +25,24 @@ never exits 0: completed installs need owner-run acceptance.
 `python3 tests/speckit-pro/run-curated-install-check.py --owner-acceptance`. It refuses to start
 without an interactive terminal. Each `<kind> add <id> --from <archive_url>` inherits the terminal,
 so the owner reads and answers Spec Kit's own trust prompt; nothing here pipes, scripts or bypasses
-it. After each command it reads Spec Kit v1.1.0's on-disk evidence and reports the entry
-`installed`, `failed` or `not-run`:
+it. It needs PyYAML in this python3 to read the YAML evidence, and checks that before any install.
 
-- manifest identity: `.specify/<kind>s/<id>/<manifest>` is a regular file byte-identical to the
-  manifest in the pinned archive, declares the id, and hashes to the registry's `manifest_hash`;
-- registration: `.specify/<kind>s/.registry` lists the id with that hash, a version the manifest
-  declares, and `source: local` (what a `--from` install records);
-- active configuration: the registry entry is `enabled: true`, and an extension is listed under
-  `installed:` in `.specify/extensions.yml`.
+An entry is `installed` only when `specify` exits 0 and every piece of Spec Kit v1.1.0's on-disk
+evidence holds; otherwise it is `failed`, or `not-run` when nothing was attempted:
+
+- bound to this run: reads are descriptor-relative and no-follow from the project directory this
+  run created, `.specify` and `.claude` must be the directories its `specify init` made, nothing
+  the install writes may exist before it, every file read is a singly linked regular file, and
+  every node read is re-checked unchanged after the last read;
+- manifest and payload identity: the installed manifest and every file it declares are
+  byte-identical to the pinned archive's;
+- registration: `.specify/<kind>s/.registry` has the id with that manifest's hash and declared
+  version, `source: local`, `enabled: true`, the default priority 10, and an `installed_at` inside
+  this install's window;
+- registered artifacts: every declared command and alias is registered, and its
+  `.claude/skills/<skill>/SKILL.md` names this entry as its source;
+- active configuration (extensions): `.specify/extensions.yml`, parsed with duplicate keys refused,
+  lists the id under `installed:` and carries exactly the hooks the manifest declares.
 
 It exits 0 only when every curated entry is `installed`, and 1 otherwise.
 """
@@ -53,6 +62,7 @@ import tempfile
 import urllib.request
 import zipfile
 from contextlib import ExitStack
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
@@ -225,75 +235,291 @@ def entry_result(entry: dict[str, str], project: Path, trust_archives: bool) -> 
     return "unproven", []
 
 
-def regular_file(path: Path) -> bytes | None:
-    """The bytes of `path` when it is a regular file reached through no link; otherwise None."""
-    if os.path.realpath(path) != str(path):
-        return None
+O_DIR = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+O_FILE = os.O_RDONLY | os.O_NOFOLLOW
+# Spec Kit v1.1.0 facts the evidence is checked against (src/specify_cli at the v1.1.0 tag).
+DEFAULT_PRIORITY = 10  # `add --priority` default: extensions/command_add.py L26, presets/command_add.py L144-147
+SKILLS_DIR = (".claude", "skills")  # `init --integration claude`: integrations/claude/__init__.py L47-53
+CLOCK_SLACK = timedelta(seconds=2)
+
+
+class EvidenceError(Exception):
+    """One piece of completed-install evidence is missing, foreign or inconsistent."""
+
+
+def load_yaml(data: bytes) -> object:
+    """Parse YAML the way Spec Kit does (PyYAML safe loading), but refuse duplicate keys."""
+    import yaml  # noqa: PLC0415 (owner-run only; checked before any install)
+
+    class StrictLoader(yaml.SafeLoader):
+        pass
+
+    def mapping(loader: yaml.SafeLoader, node: yaml.MappingNode) -> dict:
+        keys = [key.value for key, _value in node.value]
+        if len(keys) != len(set(keys)):
+            raise EvidenceError("duplicate YAML key")
+        return loader.construct_mapping(node, deep=True)
+
+    StrictLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, mapping)
+    return yaml.load(data, Loader=StrictLoader)  # noqa: S506 (SafeLoader subclass)
+
+
+def yaml_available() -> bool:
     try:
-        descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
-    except OSError:
-        return None
-    with os.fdopen(descriptor, "rb") as handle:
-        return handle.read() if stat.S_ISREG(os.fstat(handle.fileno()).st_mode) else None
+        import yaml  # noqa: F401, PLC0415
+    except ImportError:
+        return False
+    return True
 
 
-def installed_ids(config: bytes) -> list[str]:
-    """The block `installed:` list Spec Kit's yaml.dump writes to .specify/extensions.yml."""
-    lines = config.decode("utf-8", errors="replace").splitlines()
-    if "installed:" not in lines:
-        return []
-    items = []
-    for line in lines[lines.index("installed:") + 1:]:
-        match = re.fullmatch(r"(?:  )?- ['\"]?([^'\"\s]+)['\"]?", line)
-        if not match:
-            break
-        items.append(match.group(1))
-    return items
+def pinned_archive(url: str) -> dict[str, bytes]:
+    """Every file under the pinned archive's top directory, keyed by its path below it."""
+    with urllib.request.urlopen(url, timeout=COMMAND_TIMEOUT_SECONDS) as response:  # noqa: S310 (https URL from the curated set)
+        archive = zipfile.ZipFile(io.BytesIO(response.read()))
+    return {name.split("/", 1)[1]: archive.read(name) for name in archive.namelist()
+            if "/" in name and not name.endswith("/")}
 
 
-def registry_record(project: Path, kind: str, entry_id: str) -> dict | None:
-    raw = regular_file(project / REGISTRY_DIRS[kind] / ".registry")
-    try:
-        registry = json.loads(raw) if raw is not None else None
-    except ValueError:
-        return None
+def node_state(info: os.stat_result) -> tuple[int, ...]:
+    return info.st_dev, info.st_ino, info.st_mode, info.st_nlink, info.st_size, info.st_mtime_ns, info.st_ctime_ns
+
+
+class BoundTree:
+    """Descriptor-relative, no-follow reads under the project this run created.
+
+    Every directory and file read is bound to the state it was read in; `verify_unchanged`
+    re-checks all of them after the last read, so evidence comes from one consistent tree.
+    """
+
+    def __init__(self, stack: ExitStack, root: int, identities: dict[str, tuple[int, int]]):
+        self.stack, self.root, self.identities = stack, root, identities
+        self.bindings: list[tuple[int, str, tuple[int, ...]]] = []
+
+    def directory(self, parts: tuple[str, ...]) -> int:
+        fd = self.root
+        for depth, name in enumerate(parts):
+            child = os.open(name, O_DIR, dir_fd=fd)
+            self.stack.callback(os.close, child)
+            info = os.fstat(child)
+            if depth == 0 and name in self.identities and (info.st_dev, info.st_ino) != self.identities[name]:
+                raise EvidenceError(f"{name} is not the directory `specify init` created for this run")
+            self.bindings.append((fd, name, node_state(info)))
+            fd = child
+        return fd
+
+    def read(self, parts: tuple[str, ...]) -> bytes:
+        parent = self.directory(parts[:-1])
+        with os.fdopen(os.open(parts[-1], O_FILE, dir_fd=parent), "rb") as handle:
+            info = os.fstat(handle.fileno())
+            if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+                raise EvidenceError(f"{'/'.join(parts)} is not a regular, singly linked file")
+            data = handle.read()
+            if node_state(os.fstat(handle.fileno())) != node_state(info):
+                raise EvidenceError(f"{'/'.join(parts)} changed while it was read")
+        self.bindings.append((parent, parts[-1], node_state(info)))
+        return data
+
+    def exists(self, parts: tuple[str, ...]) -> bool:
+        try:
+            parent = self.directory(parts[:-1])
+            os.stat(parts[-1], dir_fd=parent, follow_symlinks=False)
+        except FileNotFoundError:
+            return False
+        return True
+
+    def verify_unchanged(self) -> None:
+        for parent, name, state in self.bindings:
+            try:
+                current = node_state(os.stat(name, dir_fd=parent, follow_symlinks=False))
+            except OSError as error:
+                raise EvidenceError(f"{name} changed after it was read") from error
+            if current != state:
+                raise EvidenceError(f"{name} changed after it was read")
+
+
+def skill_name(command: str) -> str:
+    """The skill directory Spec Kit writes for a command (agents.py L579-594, extensions L1427-1432)."""
+    short = command[len("speckit."):] if command.startswith("speckit.") else command
+    return "speckit-" + short.replace(".", "-")
+
+
+def declared(doc: dict, kind: str) -> tuple[list[str], list[str]]:
+    """The payload files and the command names (with aliases) the pinned manifest declares."""
+    provides = doc.get("provides") or {}
+    if kind == "preset":
+        templates = provides.get("templates") or []
+        return ([item["file"] for item in templates],
+                [item["name"] for item in templates if item.get("type") == "command"])
+    commands = provides.get("commands") or []
+    files = [item["file"] for item in commands] + [item["file"] for item in provides.get("scripts") or []]
+    files += [item["template"] for item in provides.get("config") or [] if item.get("template")]
+    names = [name for item in commands for name in [item["name"], *(item.get("aliases") or [])]]
+    return files, names
+
+
+def expected_hooks(doc: dict, entry_id: str) -> dict[str, list[dict]]:
+    """The extensions.yml entries register_hooks writes (extensions/__init__.py L5817-5905)."""
+    hooks = {}
+    for event, config in (doc.get("hooks") or {}).items():
+        entries: dict[str, dict] = {}
+        for item in config if isinstance(config, list) else [config]:
+            command = item.get("command") if isinstance(item, dict) else None
+            if not command:
+                continue
+            parts = command.split(".")  # alias-form refs are lifted (L523-549)
+            command = f"speckit.{entry_id}.{parts[1]}" if len(parts) == 2 and parts[0] == entry_id else command
+            priority = item.get("priority")
+            entries.pop(command, None)
+            entries[command] = {
+                "extension": entry_id, "command": command, "enabled": True, "optional": item.get("optional", True),
+                "priority": priority if isinstance(priority, int) and not isinstance(priority, bool)
+                and priority >= 1 else DEFAULT_PRIORITY,
+                "prompt": item.get("prompt", f"Execute {command}?"), "description": item.get("description", ""),
+                "condition": item.get("condition")}
+        if entries:
+            hooks[event] = list(entries.values())
+    return hooks
+
+
+def require(ok: bool, reason: str) -> None:
+    if not ok:
+        raise EvidenceError(reason)
+
+
+def strict_json(data: bytes) -> object:
+    def pairs(items: list[tuple[str, object]]) -> dict:
+        require(len({key for key, _value in items}) == len(items), "duplicate JSON key")
+        return dict(items)
+    return json.loads(data, object_pairs_hook=pairs)
+
+
+def check_registration(tree: BoundTree, entry: dict[str, str], doc: dict, manifest: bytes,
+                       window: tuple[datetime, datetime]) -> dict:
+    kind, entry_id = entry["kind"], entry["id"]
+    registry = strict_json(tree.read((".specify", f"{kind}s", ".registry")))
     records = registry.get(REGISTRY_KEYS[kind]) if isinstance(registry, dict) else None
     record = records.get(entry_id) if isinstance(records, dict) else None
-    return record if isinstance(record, dict) else None
+    require(isinstance(record, dict), f"not registered in {REGISTRY_DIRS[kind]}/.registry")
+    assert isinstance(record, dict)
+    require(record.get("manifest_hash") == "sha256:" + hashlib.sha256(manifest).hexdigest(),
+            "registry manifest_hash does not match the installed manifest")
+    require(record.get("version") == (doc.get(kind) or {}).get("version"), "registry version is not the manifest's")
+    require(record.get("source") == "local", "registry source is not the local archive a --from install records")
+    require(record.get("enabled") is True, "registry entry is not enabled")
+    require(record.get("priority") == DEFAULT_PRIORITY and not isinstance(record.get("priority"), bool),
+            f"registry priority is not the default {DEFAULT_PRIORITY} the command used")
+    try:
+        installed_at = datetime.fromisoformat(str(record.get("installed_at")))
+    except ValueError:
+        installed_at = None
+    require(installed_at is not None and installed_at.tzinfo is not None
+            and window[0] - CLOCK_SLACK <= installed_at <= window[1] + CLOCK_SLACK,
+            "registry entry was not written by this run's install")
+    return record
 
 
-def completion_evidence(project: Path, entry: dict[str, str], pinned: bytes) -> tuple[str, list[str]]:
-    """`installed` with its evidence, or `failed` with every missing piece of it."""
+def owned_by(skill: bytes, entry_id: str) -> bool:
+    """Whether a SKILL.md's metadata source names this entry: `<id>:<file>` from the registrar
+    (agents.py L436-476) or `extension:<id>` from extension skills (extensions/__init__.py L1730-1740)."""
+    source = re.compile(rf"^\s*source:\s*['\"]?(?:extension:)?{re.escape(entry_id)}(?::[^'\"\s]*)?['\"]?\s*$",
+                        re.MULTILINE)
+    return bool(source.search(skill.decode("utf-8", errors="replace")))
+
+
+def check_artifacts(tree: BoundTree, entry: dict[str, str], record: dict, names: list[str]) -> None:
+    """Each declared command is registered and its skill is on disk, bound to this entry."""
+    commands = record.get("registered_commands")
+    skills = record.get("registered_skills")
+    registered = {name for values in (commands or {}).values() if isinstance(values, list) for name in values}
+    registered |= set(skills) if isinstance(skills, list) else set()
+    for name in names:
+        require(name in registered or skill_name(name) in registered, f"command {name} is not registered")
+        require(owned_by(tree.read((*SKILLS_DIR, skill_name(name), "SKILL.md")), entry["id"]),
+                f"skill for {name} does not come from this {entry['kind']}")
+
+
+def check_configuration(tree: BoundTree, entry_id: str, doc: dict) -> None:
+    """The active extensions.yml lists the id and carries exactly the manifest's hooks."""
+    config = load_yaml(tree.read((".specify", "extensions.yml")))
+    require(isinstance(config, dict), "extensions.yml is not a mapping")
+    assert isinstance(config, dict)
+    installed = config.get("installed")
+    require(isinstance(installed, list) and entry_id in installed, "not listed under installed: in extensions.yml")
+    hooks = config.get("hooks") or {}
+    require(isinstance(hooks, dict), "extensions.yml hooks is not a mapping")
+    actual = {event: [hook for hook in items if isinstance(hook, dict) and hook.get("extension") == entry_id]
+              for event, items in hooks.items() if isinstance(items, list)}
+    actual = {event: items for event, items in actual.items() if items}
+    require(actual == expected_hooks(doc, entry_id), "hook registrations differ from the manifest's")
+
+
+def completion_evidence(project: int, identities: dict[str, tuple[int, int]], entry: dict[str, str],
+                        files: dict[str, bytes], window: tuple[datetime, datetime]) -> tuple[str, list[str]]:
+    """`installed` with its evidence, or `failed` naming the first evidence that does not hold."""
     kind, entry_id = entry["kind"], entry["id"]
     label = f"{kind} {entry_id}"
-    record = registry_record(project, kind, entry_id)
-    if record is None:
-        return "failed", [f"{label}: not registered in {REGISTRY_DIRS[kind]}/.registry"]
-    manifest = regular_file(project / REGISTRY_DIRS[kind] / entry_id / MANIFEST_NAMES[kind])
-    if manifest is None:
-        return "failed", [f"{label}: no regular installed {MANIFEST_NAMES[kind]}"]
-    digest = "sha256:" + hashlib.sha256(manifest).hexdigest()
-    version = record.get("version")
-    checks = [
-        (manifest == pinned, "installed manifest differs from the pinned archive's"),
-        (declares_id(manifest, entry_id), "installed manifest does not declare this id"),
-        (record.get("manifest_hash") == digest, "registry manifest_hash does not match the installed manifest"),
-        (isinstance(version, str) and re.search(rf"^\s+version:\s*[\"']?{re.escape(str(version))}[\"']?\s*$",
-                                                 manifest.decode("utf-8", errors="replace"), re.MULTILINE) is not None,
-         "registry version is not the manifest's"),
-        (record.get("source") == "local", "registry source is not the local archive a --from install records"),
-        (record.get("enabled") is True, "registry entry is not enabled"),
-    ]
-    if kind == "extension":
-        config = regular_file(project / EXTENSION_CONFIG)
-        checks.append((config is not None and entry_id in installed_ids(config),
-                       f"not listed under installed: in {EXTENSION_CONFIG}"))
-    failures = [f"{label}: {reason}" for ok, reason in checks if not ok]
-    if failures:
-        return "failed", failures
-    active = f", listed in {EXTENSION_CONFIG}" if kind == "extension" else ""
-    return "installed", [f"{label}: version {version}, manifest {digest} matches the pinned archive and the "
-                         f"registry, registered from source local, enabled{active}"]
+    try:
+        with ExitStack() as stack:
+            tree = BoundTree(stack, project, identities)
+            pinned = files[MANIFEST_NAMES[kind]]
+            doc = load_yaml(pinned)
+            require(isinstance(doc, dict) and (doc.get(kind) or {}).get("id") == entry_id,
+                    "pinned manifest does not declare this id")
+            assert isinstance(doc, dict)
+            home = (".specify", f"{kind}s", entry_id)
+            manifest = tree.read((*home, MANIFEST_NAMES[kind]))
+            require(manifest == pinned, "installed manifest differs from the pinned archive's")
+            payload, names = declared(doc, kind)
+            for path in payload:
+                require(path in files and tree.read((*home, *path.split("/"))) == files[path],
+                        f"declared file {path} is missing or differs from the pinned archive's")
+            record = check_registration(tree, entry, doc, manifest, window)
+            check_artifacts(tree, entry, record, names)
+            if kind == "extension":
+                check_configuration(tree, entry_id, doc)
+            tree.verify_unchanged()
+    except (EvidenceError, OSError, ValueError, KeyError, TypeError, AttributeError) as error:
+        return "failed", [f"{label}: {error}"]
+    except Exception as error:  # noqa: BLE001 (a YAML parse error is missing evidence, not a crash)
+        return "failed", [f"{label}: unreadable evidence ({type(error).__name__})"]
+    return "installed", [f"{label}: version {doc[kind]['version']}, manifest and {len(payload)} declared files match "
+                         f"the pinned archive, registered from source local with priority {DEFAULT_PRIORITY}, "
+                         f"enabled, {len(names)} commands registered with skills"
+                         + (", hooks and installed: match in .specify/extensions.yml" if kind == "extension" else "")]
+
+
+def prior_evidence(project: int, identities: dict[str, tuple[int, int]], entry: dict[str, str],
+                   files: dict[str, bytes]) -> bool:
+    """Whether anything this entry's install would write is already there (fails closed)."""
+    kind, entry_id = entry["kind"], entry["id"]
+    try:
+        with ExitStack() as stack:
+            tree = BoundTree(stack, project, identities)
+            if tree.exists((".specify", f"{kind}s", entry_id)):
+                return True
+            if tree.exists((".specify", f"{kind}s", ".registry")):
+                registry = strict_json(tree.read((".specify", f"{kind}s", ".registry")))
+                if entry_id in ((registry.get(REGISTRY_KEYS[kind]) or {}) if isinstance(registry, dict) else {}):
+                    return True
+            doc = load_yaml(files[MANIFEST_NAMES[kind]])
+            _payload, names = declared(doc, kind) if isinstance(doc, dict) else ([], [])
+            # A preset's skills replace core ones `specify init` wrote, so only an owned skill is prior.
+            if any(tree.exists((*SKILLS_DIR, skill_name(name), "SKILL.md"))
+                   and owned_by(tree.read((*SKILLS_DIR, skill_name(name), "SKILL.md")), entry_id) for name in names):
+                return True
+            if kind == "extension" and tree.exists((".specify", "extensions.yml")):
+                config = load_yaml(tree.read((".specify", "extensions.yml")))
+                require(isinstance(config, dict), "extensions.yml is not a mapping")
+                assert isinstance(config, dict)
+                hooks = config.get("hooks") or {}
+                if entry_id in (config.get("installed") or []) or any(
+                        isinstance(hook, dict) and hook.get("extension") == entry_id
+                        for items in hooks.values() for hook in items or []):
+                    return True
+            tree.verify_unchanged()
+    except Exception:  # noqa: BLE001 (unknown prior state is not absence)
+        return True
+    return False
 
 
 def operator_specify(args: list[str], cwd: Path) -> int:
@@ -303,24 +529,31 @@ def operator_specify(args: list[str], cwd: Path) -> int:
     return subprocess.run(["specify", *args], cwd=cwd, env=env, shell=False, check=False).returncode
 
 
-def accept_entry(entry: dict[str, str], project: Path) -> tuple[str, list[str]]:
+def accept_entry(entry: dict[str, str], project: Path, root: int,
+                 identities: dict[str, tuple[int, int]]) -> tuple[str, list[str]]:
     label = f"{entry['kind']} {entry['id']}"
     if "archive_url" not in entry:
         return "not-run", [f"{label}: no archive_url"]
     try:
-        pinned = archive_manifest(entry["archive_url"], entry["kind"])
+        files = pinned_archive(entry["archive_url"])
     except (OSError, zipfile.BadZipFile) as error:
         return "not-run", [f"{label}: pinned archive unavailable ({type(error).__name__})"]
-    if pinned is None:
+    if MANIFEST_NAMES[entry["kind"]] not in files:
         return "not-run", [f"{label}: pinned archive has no {MANIFEST_NAMES[entry['kind']]}"]
+    if prior_evidence(root, identities, entry, files):
+        return "failed", [f"{label}: install evidence existed before this run's install"]
     args = install_args(entry)
     print(f"\n== {label}: specify {' '.join(args)}", flush=True)
     print("   Review the prompt and answer it yourself.", flush=True)
+    started = datetime.now(timezone.utc)
     try:
-        operator_specify(args, project)
+        code = operator_specify(args, project)
     except OSError as error:
         return "not-run", [f"{label}: specify did not start ({type(error).__name__})"]
-    return completion_evidence(project, entry, pinned)
+    if code != 0:
+        how = f"was terminated by signal {-code}" if code < 0 else f"exited {code}"
+        return "failed", [f"{label}: specify {how}"]
+    return completion_evidence(root, identities, entry, files, (started, datetime.now(timezone.utc)))
 
 
 def interactive() -> bool:
@@ -328,18 +561,42 @@ def interactive() -> bool:
     return sys.stdin.isatty() and sys.stdout.isatty()
 
 
+def bind_project(root: int) -> dict[str, tuple[int, int]]:
+    """The identity of each directory `specify init` created, for every later read to match."""
+    identities = {}
+    for name in (".specify", SKILLS_DIR[0]):
+        info = os.stat(name, dir_fd=root, follow_symlinks=False)
+        if not stat.S_ISDIR(info.st_mode):
+            raise EvidenceError(f"{name} is not a directory after init")
+        identities[name] = (info.st_dev, info.st_ino)
+    return identities
+
+
+def run_acceptance(entries: list[dict[str, str]]) -> list[tuple[str, list[str]]]:
+    with tempfile.TemporaryDirectory(prefix="curated-acceptance-") as raw, ExitStack() as stack:
+        project = Path(raw).resolve()
+        root = os.open(project, O_DIR)
+        stack.callback(os.close, root)
+        setup_failures = fresh_project(project)
+        if not setup_failures:
+            try:
+                identities = bind_project(root)
+            except (OSError, EvidenceError) as error:
+                setup_failures = [f"setup failed: {error}"]
+        if setup_failures:
+            return [("not-run", setup_failures)] * len(entries)
+        return [accept_entry(entry, project, root, identities) for entry in entries]
+
+
 def owner_acceptance(entries: list[dict[str, str]]) -> int:
     """Install every curated entry with the operator at the terminal; 0 only when all are installed."""
     if not interactive():
         results = [("not-run", ["owner acceptance needs an interactive terminal; run it yourself"])] * len(entries)
+    elif not yaml_available():
+        results = [("not-run", ["owner acceptance reads YAML evidence with PyYAML; install it for this python3"])
+                   ] * len(entries)
     else:
-        with tempfile.TemporaryDirectory(prefix="curated-acceptance-") as raw:
-            project = Path(raw).resolve()
-            setup_failures = fresh_project(project)
-            if setup_failures:
-                results = [("not-run", setup_failures)] * len(entries)
-            else:
-                results = [accept_entry(entry, project) for entry in entries]
+        results = run_acceptance(entries)
     for entry, (status, details) in zip(entries, results, strict=True):
         print(f"{status.upper()} {entry['kind']} {entry['id']}: " + "; ".join(details))
     installed = [status for status, _details in results].count("installed")

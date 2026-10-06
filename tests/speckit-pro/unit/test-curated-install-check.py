@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import io
 import os
@@ -14,6 +15,7 @@ import tempfile
 import unittest
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from itertools import product
+from datetime import datetime, timezone
 from pathlib import Path
 import unittest.mock as mock
 
@@ -544,25 +546,104 @@ class ChildEnvironmentTests(unittest.TestCase):
                 self.assertEqual(call.kwargs["env"], expected[call.args[0][0]])
 
 
-def pinned_manifest(entry, version="1.0.0"):
-    """A manifest shaped like the curated archives': schema, then the kind's id and version."""
-    return (f'schema_version: "1.0"\n{entry["kind"]}:\n  id: {entry["id"]}\n  name: {entry["id"]}\n'
-            f'  version: {version}\n  description: fixture\n').encode()
+FIXTURE_YAML: dict[bytes, object] = {}
+
+
+def yaml_scalar(value):
+    if value is None:
+        return "null"
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return str(value) if isinstance(value, int) else json.dumps(value)
+
+
+def emit_yaml(value, indent=0):
+    """Block YAML in yaml.dump's layout (list items under a key at the key's indent)."""
+    pad, lines = " " * indent, []
+    for key, item in value.items():
+        if isinstance(item, dict) and item:
+            lines += [f"{pad}{key}:", *emit_yaml(item, indent + 2)]
+        elif isinstance(item, list) and item:
+            lines.append(f"{pad}{key}:")
+            for element in item:
+                if isinstance(element, dict):
+                    first, *rest = emit_yaml(element, indent + 2)
+                    lines += [f"{pad}- {first.lstrip()}", *rest]
+                else:
+                    lines.append(f"{pad}- {yaml_scalar(element)}")
+        else:
+            lines.append(f"{pad}{key}: " + ("{}" if item == {} else "[]" if item == [] else yaml_scalar(item)))
+    return lines
+
+
+def yaml_bytes(doc, text=None):
+    """YAML text for `doc`, registered so the fake loader returns exactly `doc` for it."""
+    data = (text if text is not None else "\n".join(emit_yaml(doc)) + "\n").encode()
+    FIXTURE_YAML[data] = doc
+    return data
+
+
+def fake_load_yaml(data):
+    if data not in FIXTURE_YAML:
+        raise check.EvidenceError("unparseable fixture YAML")
+    value = FIXTURE_YAML[data]
+    if isinstance(value, Exception):
+        raise value
+    return json.loads(json.dumps(value))
+
+
+def fixture_doc(entry):
+    """A pinned manifest shaped like the curated ones: payload, aliases, hooks and a nested version."""
+    entry_id, kind = entry["id"], entry["kind"]
+    if kind == "preset":
+        return {"schema_version": "1.0",
+                "preset": {"id": entry_id, "name": entry_id, "version": "1.0.0", "description": "fixture"},
+                "requires": {"speckit_version": ">=0.6.0"},
+                "provides": {"templates": [{"type": "command", "name": name, "file": f"commands/{name}.md",
+                                            "replaces": name} for name in ("speckit.clarify", "speckit.checklist")]}}
+    command = f"speckit.{entry_id}.run"
+    return {"schema_version": "1.0",
+            "extension": {"id": entry_id, "name": entry_id, "version": "1.0.0", "description": "fixture"},
+            "requires": {"speckit_version": ">=0.1.0"},
+            "provides": {"commands": [{"name": command, "file": "commands/run.md", "aliases": [f"speckit.{entry_id}"]}],
+                         "scripts": [{"name": "run.sh", "file": "scripts/bash/run.sh", "executable": True}],
+                         "config": [{"name": f"{entry_id}-config.yml", "template": "config-template.yml"}]},
+            "hooks": {"after_implement": {"command": command, "optional": True, "prompt": "Run it?",
+                                          "description": "fixture hook", "condition": None}},
+            "defaults": {"version": "2.0.0"}}
+
+
+def fixture_archive(entry):
+    """The pinned archive's files below its top directory."""
+    doc = fixture_doc(entry)
+    payload, _names = check.declared(doc, entry["kind"])
+    return {check.MANIFEST_NAMES[entry["kind"]]: yaml_bytes(doc), "README.md": b"readme\n",
+            **{path: f"payload {entry['id']} {path}\n".encode() for path in payload}}
 
 
 PINNED_ARGS = check.install_args
+HOOK_FIELDS = {"extension": "other", "command": "speckit.other.run", "enabled": False, "optional": False,
+               "priority": 5, "prompt": "Altered?", "description": "altered", "condition": "env.X is set"}
 DEFECTS = ("declined", "no-registry", "malformed-registry", "other-id", "disabled", "catalog-source",
-           "registry-hash", "registry-version", "manifest-differs", "manifest-symlink", "not-listed")
+           "registry-hash", "registry-version", "priority-999", "stale-timestamp", "manifest-differs",
+           "manifest-symlink", "manifest-hardlink", "payload-missing", "payload-differs", "registered-empty",
+           "skill-missing", "skill-foreign")
+EXTENSION_DEFECTS = ("not-listed", "duplicate-installed", "hooks-absent", *(f"hook-{field}" for field in HOOK_FIELDS))
+EXIT_CODES = (1, 37, -signal.SIGTERM, -signal.SIGINT, -signal.SIGKILL)
 
 
-def install_record(manifest, defect):
-    """The registry entry v1.1.0 writes for a --from install, with one field wrong for a defect."""
-    record = {"version": "9.9.9" if defect == "manifest-differs" else "1.0.0", "source": "local",
-              "manifest_hash": "sha256:" + hashlib.sha256(manifest).hexdigest(), "enabled": True, "priority": 10,
-              "registered_commands": {}, "registered_skills": {}, "installed_at": "2026-10-06T00:00:00+00:00"}
+def install_record(entry, doc, manifest, defect):
+    """The registry entry v1.1.0 writes for a --from install (extensions/__init__.py L3128-3146,
+    presets/_manager.py L416-424; installed_at from registry add(), L832-843), one field wrong for a defect."""
+    names = check.declared(doc, entry["kind"])[1]
+    record = {"version": "1.0.0", "source": "local", "manifest_hash": "sha256:" + hashlib.sha256(manifest).hexdigest(),
+              "enabled": True, "priority": 10, "registered_commands": {"claude": names}, "registered_skills": [],
+              "installed_at": datetime.now(timezone.utc).isoformat()}
     wrong = {"catalog-source": ("source", {"kind": "catalog", "catalog": "default"}), "disabled": ("enabled", False),
              "registry-hash": ("manifest_hash", "sha256:" + hashlib.sha256(b"other").hexdigest()),
-             "registry-version": ("version", "2.0.0")}
+             "registry-version": ("version", "2.0.0"), "priority-999": ("priority", 999),
+             "stale-timestamp": ("installed_at", "2020-01-01T00:00:00+00:00"),
+             "registered-empty": ("registered_commands", {})}
     if defect in wrong:
         record[wrong[defect][0]] = wrong[defect][1]
     return record
@@ -579,64 +660,130 @@ def register(base, kind, entry_id, record, defect):
     registry_path.write_text("{not json" if defect == "malformed-registry" else json.dumps(registry, indent=2))
 
 
-def list_installed(project, entry_id):
-    config = project / check.EXTENSION_CONFIG
-    listed = check.installed_ids(config.read_bytes()) if config.exists() else []
-    config.write_text("installed:\n" + "".join(f"- {item}\n" for item in [*listed, entry_id])
-                      + "settings:\n  auto_execute_hooks: true\nhooks: {}\n", encoding="utf-8")
+def write_skills(project, entry, names, defect):
+    """SKILL.md per command and alias in .claude/skills (agents.py L579-594, L929-1012)."""
+    for index, name in enumerate(names):
+        if defect == "skill-missing" and index == 0:
+            continue
+        owner = "other" if defect == "skill-foreign" and index == 0 else entry["id"]
+        skill = project / ".claude" / "skills" / check.skill_name(name)
+        skill.mkdir(parents=True, exist_ok=True)
+        (skill / "SKILL.md").write_text(f"---\nname: {skill.name}\nmetadata:\n  author: fixture\n"
+                                        f"  source: {owner}:commands/run.md\n---\n\n# Skill\n", encoding="utf-8")
+
+
+def write_configuration(project, entry, doc, defect):
+    """extensions.yml as register_extension and register_hooks leave it (L5724-5741, L5817-5905)."""
+    config_path = project / ".specify" / "extensions.yml"
+    config = fake_load_yaml(config_path.read_bytes()) if config_path.exists() else {"installed": [], "hooks": {}}
+    if defect != "not-listed":
+        config["installed"].append(entry["id"])
+    for event, hooks in check.expected_hooks(doc, entry["id"]).items():
+        if defect == "hooks-absent":
+            continue
+        if defect and defect.startswith("hook-"):
+            hooks = [{**hook, defect[5:]: HOOK_FIELDS[defect[5:]]} for hook in hooks]
+        config["hooks"].setdefault(event, []).extend(hooks)
+    if defect == "duplicate-installed":
+        text = "\n".join(emit_yaml(config)) + "\ninstalled: []\n"
+        FIXTURE_YAML[text.encode()] = check.EvidenceError("duplicate YAML key")
+        config_path.write_text(text, encoding="utf-8")
+        return
+    config_path.write_bytes(yaml_bytes(config))
 
 
 def v110_install(project, entry, defect=None):
     """What Spec Kit v1.1.0 leaves after `<kind> add <id> --from <url>`, optionally missing one piece.
 
-    extensions/__init__.py L2544, L2992 and presets/_manager.py L400-404 copy the archive to
-    .specify/<kind>s/<id>; L3128-3146 and L416-424 register version, source "local" (no catalog),
-    the manifest's sha256 and enabled true in .specify/<kind>s/.registry (L747-750, presets
-    _registry.py L12-25); register_extension (L5724-5741) lists the id under installed: in
-    .specify/extensions.yml, written by yaml.dump in block style (L5710-5722).
+    The archive is copied to .specify/<kind>s/<id> (extensions/__init__.py L2544, L2992;
+    presets/_manager.py L400-404) and registered in .specify/<kind>s/.registry (L747-750,
+    presets/_registry.py L12-25); commands become skills in .claude/skills; an extension is listed
+    and its hooks registered in .specify/extensions.yml.
     """
     if defect == "declined":
         return
     kind, entry_id = entry["kind"], entry["id"]
+    files = fixture_archive(entry)
+    doc = fixture_doc(entry)
     base = project / check.REGISTRY_DIRS[kind]
-    manifest = pinned_manifest(entry, "9.9.9" if defect == "manifest-differs" else "1.0.0")
-    (base / entry_id).mkdir(parents=True, exist_ok=True)
-    target = base / entry_id / check.MANIFEST_NAMES[kind]
-    if defect == "manifest-symlink":
-        (base / "elsewhere.yml").write_bytes(manifest)
-        target.symlink_to(base / "elsewhere.yml")
-    else:
+    home = base / entry_id
+    for path, data in files.items():
+        if defect == "payload-missing" and path == check.declared(doc, kind)[0][0]:
+            continue
+        target = home / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(b"tampered\n" if defect == "payload-differs" and path == check.declared(doc, kind)[0][0]
+                           else data)
+    manifest = files[check.MANIFEST_NAMES[kind]]
+    target = home / check.MANIFEST_NAMES[kind]
+    if defect == "manifest-differs":
+        manifest = manifest + b"# altered after the pin\n"
+        FIXTURE_YAML[manifest] = doc
         target.write_bytes(manifest)
-    register(base, kind, entry_id, install_record(manifest, defect), defect)
-    if kind == "extension" and defect != "not-listed":
-        list_installed(project, entry_id)
+    elif defect in ("manifest-symlink", "manifest-hardlink"):
+        target.rename(base / f"{entry_id}.held")
+        (target.symlink_to if defect == "manifest-symlink" else lambda source: os.link(source, target))(
+            base / f"{entry_id}.held")
+    register(base, kind, entry_id, install_record(entry, doc, manifest, defect), defect)
+    write_skills(project, entry, check.declared(doc, kind)[1], defect)
+    if kind == "extension":
+        write_configuration(project, entry, doc, defect)
+
+
+def called_from_checker():
+    """Whether the innermost non-mock caller is the checker, so attack hooks spare tempdir cleanup."""
+    frame = sys._getframe(1)
+    while frame is not None and frame.f_globals.get("__name__") in ("unittest.mock", __name__):
+        frame = frame.f_back
+    return frame is not None and frame.f_globals.get("__name__") == check.__name__
 
 
 def run_acceptance(shape=None, **case):
     """Run --owner-acceptance against a fake v1.1.0 CLI; returns exit code, statuses, calls, setup mock, output.
 
-    `case` may set defects ({id: defect}), interactive, archive (archive_manifest side effect)
-    and start_error (raised when specify starts).
+    `case` may set defects ({id: defect}), interactive, archive (pinned_archive side effect),
+    start_error (raised when specify starts), exit_code, planted (ids whose full evidence exists
+    before their install), after_install(project, entry) and open_hook(real_open, holder) -> os.open.
     """
-    calls = []
+    calls, holder = [], []
+
+    def setup(project):
+        project = Path(project)
+        holder.append(project)
+        (project / ".specify").mkdir()  # what `specify init --integration claude` leaves, core skills included
+        for core in ("speckit-clarify", "speckit-checklist", "speckit-implement"):
+            (project / ".claude" / "skills" / core).mkdir(parents=True)
+            (project / ".claude" / "skills" / core / "SKILL.md").write_text(
+                f"---\nname: {core}\nmetadata:\n  source: templates/commands/{core}.md\n---\n", encoding="utf-8")
+        for entry in ENTRIES:
+            if entry["id"] in case.get("planted", ()):
+                v110_install(project, entry)
+        return []
 
     def fake_run(argv, **kwargs):
         calls.append((argv, kwargs))
         if case.get("start_error") is not None:
             raise case["start_error"]
         entry = next(entry for entry in ENTRIES if argv[1:4] == [entry["kind"], "add", entry["id"]])
-        if argv[1:] == PINNED_ARGS(entry):
-            v110_install(Path(kwargs["cwd"]), entry, case.get("defects", {}).get(entry["id"]))
-            return subprocess.CompletedProcess(argv, 0)
-        return subprocess.CompletedProcess(argv, 1)  # v1.1.0 refuses a bare add as discovery-only
+        if argv[1:] != PINNED_ARGS(entry):
+            return subprocess.CompletedProcess(argv, 1)  # v1.1.0 refuses a bare add as discovery-only
+        v110_install(Path(kwargs["cwd"]), entry, case.get("defects", {}).get(entry["id"]))
+        if case.get("after_install"):
+            case["after_install"](Path(kwargs["cwd"]), entry)
+        return subprocess.CompletedProcess(argv, case.get("exit_code", 0))
 
-    def pinned(url, kind):
-        return pinned_manifest(next(entry for entry in ENTRIES if entry["archive_url"] == url))
+    def archive(url):
+        return fixture_archive(next(entry for entry in ENTRIES if entry["archive_url"] == url))
 
+    real_open = os.open
+    hook = case["open_hook"](real_open, holder) if "open_hook" in case else real_open
     stdout = io.StringIO()
     with (mock.patch.object(check, "interactive", return_value=case.get("interactive", True)),
-          mock.patch.object(check, "fresh_project", return_value=[]) as fresh,
-          mock.patch.object(check, "archive_manifest", side_effect=case.get("archive", pinned)),
+          mock.patch.object(check, "yaml_available", return_value=True),
+          mock.patch.object(check, "load_yaml", side_effect=fake_load_yaml),
+          mock.patch.object(check, "fresh_project", side_effect=setup) as fresh,
+          mock.patch.object(check.os, "open", side_effect=hook),
+          mock.patch.object(check, "pinned_archive", side_effect=case.get("archive", archive)),
           mock.patch.object(check.subprocess, "run", side_effect=fake_run),
           mock.patch.object(check, "install_args", shape or check.install_args),
           redirect_stdout(stdout), redirect_stderr(io.StringIO())):
@@ -658,7 +805,7 @@ class OwnerAcceptanceTests(unittest.TestCase):
         code, statuses, _calls, _fresh, output = run_acceptance()
         self.assertEqual((code, set(statuses.values()), len(statuses)), (0, {"INSTALLED"}, len(ENTRIES)), output)
         self.assertIn(f"{len(ENTRIES)}/{len(ENTRIES)} installed", output)
-        self.assertIn("matches the pinned archive and the registry", output)
+        self.assertIn("match the pinned archive", output)
 
     def test_each_install_inherits_the_terminal_and_never_bypasses_the_prompt(self):
         _code, _statuses, calls, _fresh, _output = run_acceptance()
@@ -671,24 +818,101 @@ class OwnerAcceptanceTests(unittest.TestCase):
                 self.assertLessEqual(set(kwargs["env"]), allowed)
 
     def test_each_missing_piece_of_evidence_fails_only_its_entry(self):
-        for entry, defect in product(ENTRIES, DEFECTS):
-            if defect == "not-listed" and entry["kind"] != "extension":
+        """Daybreak F1274-d655dfdc and the earlier evidence grid: one wrong piece fails its entry."""
+        for entry, defect in product(ENTRIES, (*DEFECTS, *EXTENSION_DEFECTS)):
+            if defect in EXTENSION_DEFECTS and entry["kind"] != "extension":
                 continue
             with self.subTest(entry=entry["id"], defect=defect):
                 code, statuses, _calls, _fresh, output = run_acceptance(defects={entry["id"]: defect})
                 self.assertEqual(code, 1, output)
                 self.assertEqual(statuses.pop(entry["id"]), "FAILED", output)
-                if defect != "malformed-registry":  # a malformed registry also hides later same-kind entries
+                if defect not in ("malformed-registry", "duplicate-installed"):  # these hide later same-kind entries
                     self.assertEqual(set(statuses.values()), {"INSTALLED"}, output)
 
-    def test_without_a_terminal_nothing_runs(self):
+    def test_a_failed_or_killed_install_is_never_certified(self):
+        """Daybreak F1274-86cae5d5: a nonzero or signal exit fails every entry despite matching evidence."""
+        for code in EXIT_CODES:
+            with self.subTest(exit_code=code):
+                exit_code, statuses, _calls, _fresh, output = run_acceptance(exit_code=code)
+                self.assertEqual((exit_code, set(statuses.values())), (1, {"FAILED"}), output)
+                self.assertIn("signal" if code < 0 else f"exited {code}", output)
+
+    def test_evidence_not_bound_to_this_runs_install_fails_its_entry(self):
+        """cr1274g Medium and Daybreak F1274-37d435c0: planted, redirected, torn or late-changed evidence."""
+        target = ENTRIES[0]
+        kind_dir = check.REGISTRY_DIRS[target["kind"]]
+
+        def foreign_tree(project):
+            foreign = project / ".foreign"
+            if not (foreign / ".specify").exists():
+                (foreign / ".claude" / "skills").mkdir(parents=True)
+                v110_install(foreign, target)
+            return foreign / ".specify"
+
+        def move_in(project, entry):
+            if entry is target:
+                foreign = foreign_tree(project)
+                os.rename(project / ".specify", project / ".specify-moved-out")
+                os.rename(foreign, project / ".specify")
+
+        def swap_per_open(real_open, holder):
+            def hooked(path, flags, *args, **kwargs):
+                name = os.fspath(path)
+                if not (holder and called_from_checker() and (name == ".specify" or "/.specify/" in name)):
+                    return real_open(path, flags, *args, **kwargs)
+                project = holder[0]
+                foreign = foreign_tree(project)
+                os.rename(project / ".specify", project / ".specify-real")
+                os.rename(foreign, project / ".specify")
+                try:
+                    return real_open(path, flags, *args, **kwargs)
+                finally:
+                    os.rename(project / ".specify", foreign)
+                    os.rename(project / ".specify-real", project / ".specify")
+            return hooked
+
+        def on_later_open(change):
+            """Change the registry when a file read after it (manifest, then skill) is opened."""
+            def factory(real_open, holder):
+                def hooked(path, flags, *args, **kwargs):
+                    registry = holder[0] / kind_dir / ".registry" if holder else None
+                    if (registry and called_from_checker() and registry.exists()
+                            and os.fspath(path).endswith((check.MANIFEST_NAMES[target["kind"]], "SKILL.md"))):
+                        change(registry)
+                    return real_open(path, flags, *args, **kwargs)
+                return hooked
+            return factory
+
+        def rewrite(registry):
+            registry.write_text(registry.read_text() + " ")
+
+        scenarios = {
+            "planted-before-install": {"planted": {target["id"]}, "defects": {target["id"]: "declined"}},
+            "moved-in-foreign-tree": {"after_install": move_in},
+            "foreign-tree-swapped-per-open": {"defects": {target["id"]: "declined"}, "open_hook": swap_per_open},
+            "registry-gone-after-read": {"open_hook": on_later_open(
+                lambda registry: registry.rename(registry.with_name(".registry-gone")))},
+            "registry-rewritten-after-read": {"open_hook": on_later_open(rewrite)},
+        }
+        for name, case in scenarios.items():
+            with self.subTest(scenario=name):
+                code, statuses, _calls, _fresh, output = run_acceptance(**case)
+                self.assertEqual((code, statuses.get(target["id"])), (1, "FAILED"), output)
+
+    def test_without_a_terminal_or_yaml_nothing_runs(self):
         code, statuses, calls, fresh, output = run_acceptance(interactive=False)
         self.assertEqual((code, set(statuses.values()), calls), (1, {"NOT-RUN"}, []), output)
         fresh.assert_not_called()
         self.assertIn("interactive terminal", output)
+        with mock.patch.object(check, "yaml_available", return_value=False), redirect_stdout(io.StringIO()) as out:
+            with mock.patch.object(check, "interactive", return_value=True), \
+                    mock.patch.object(check, "fresh_project") as setup:
+                self.assertEqual(check.main(["--owner-acceptance"]), 1)
+        setup.assert_not_called()
+        self.assertIn("PyYAML", out.getvalue())
 
     def test_unavailable_archive_or_cli_is_not_run(self):
-        def unavailable(url, kind):
+        def unavailable(url):
             raise OSError("offline")
         for case in ({"archive": unavailable}, {"start_error": FileNotFoundError("specify")}):
             with self.subTest(case=next(iter(case))):
@@ -700,6 +924,12 @@ class OwnerAcceptanceTests(unittest.TestCase):
         with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as raised:
             check.main(["--owner-acceptance", "--trust-pinned-archives"])
         self.assertEqual(raised.exception.code, 2)
+
+    @unittest.skipUnless(importlib.util.find_spec("yaml"), "PyYAML is the owner's runtime dependency")
+    def test_real_loader_rejects_duplicate_keys(self):
+        self.assertEqual(check.load_yaml(b"installed:\n- review\nhooks: {}\n"), {"installed": ["review"], "hooks": {}})
+        with self.assertRaises(check.EvidenceError):
+            check.load_yaml(b"installed:\n- review\ninstalled: []\n")
 
 
 if __name__ == "__main__":
