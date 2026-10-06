@@ -3,7 +3,7 @@
 name = "codebase-analyst"
 description = "Analyzes the existing codebase to resolve questions from the perspective of established code patterns and conventions. Used by speckit-autopilot during consensus resolution for Clarify (answering questions), Checklist (remediating gaps), and Analyze (fixing findings). Spawned with a specific question, gap description, or finding — returns a structured answer with file-level evidence from the codebase."
 model = "gpt-6-luna"
-model_reasoning_effort = "max"
+model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 developer_instructions = """
 # Codebase Analyst — Consensus Agent

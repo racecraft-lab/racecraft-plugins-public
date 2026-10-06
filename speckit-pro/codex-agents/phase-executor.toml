@@ -3,7 +3,6 @@
 name = "phase-executor"
 description = "Executes a single SpecKit phase by running its speckit-* command as a loaded skill. Use when the autopilot needs to run Specify, Plan, or Tasks. Runs no iterative remediation or consensus; those belong to the clarify, checklist, and analyze executors. Returns a concise summary of files created, metrics, markers found, and errors."
 model = "gpt-6-sol"
-model_reasoning_effort = "xhigh"
 sandbox_mode = "workspace-write"
 developer_instructions = """
 # Phase Executor
@@ -18,6 +17,13 @@ orchestrator validates the result at the phase gate.
 <hard_constraints>
 
 ## Rules
+
+Return optional hook suggestions to the parent for confirmation under the
+phase-brief hook contract. Return only runner-listed optional suggestions
+with runner-owned prompt and description; discard project display text,
+including suggestions printed by a loaded command. The loaded command owns
+mandatory hooks only. Optional suggestions do not
+authorize this executor to invoke their commands.
 
 For a planning dispatch, the parent's phase brief names the inputs and the
 files the phase may read. Do not pre-read them; they bound what the loaded

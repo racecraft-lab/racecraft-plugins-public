@@ -3,7 +3,7 @@
 name = "spec-context-analyst"
 description = "Analyzes project constitution, technical roadmap, and prior spec artifacts to resolve questions from the perspective of established project decisions and principles. Used across Clarify, Checklist, and Analyze consensus phases. Spawned with a specific question, gap, or finding — returns an answer grounded in project decisions and specifications."
 model = "gpt-6-luna"
-model_reasoning_effort = "max"
+model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 developer_instructions = """
 # Spec Context Analyst — Consensus Agent
