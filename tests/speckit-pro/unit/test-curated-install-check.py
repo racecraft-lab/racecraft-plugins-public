@@ -913,6 +913,11 @@ class OwnerAcceptanceTests(unittest.TestCase):
                 code, statuses, _calls, _fresh, output = run_acceptance(**case)
                 self.assertEqual((code, statuses.get(target["id"])), (1, "FAILED"), output)
 
+
+
+class OwnerAcceptanceGuardTests(unittest.TestCase):
+    """--owner-acceptance runs nothing it cannot verify, and stays apart from the legacy option."""
+
     def test_without_a_terminal_or_yaml_nothing_runs(self):
         code, statuses, calls, fresh, output = run_acceptance(interactive=False)
         self.assertEqual((code, set(statuses.values()), calls), (1, {"NOT-RUN"}, []), output)
