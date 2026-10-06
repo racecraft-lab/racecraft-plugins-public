@@ -807,7 +807,8 @@ def dispatch_helper(request: Any) -> dict[str, Any]:
     return run_registered_helper(entry, request)
 
 
-def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, Any]:
+def mutation_request_refusal(entry: MutationEntry, request: Any) -> dict[str, Any] | None:
+    """The refusal for a request that does not fit the registered mutation helper, or None to route it."""
     if request.operation != entry.operation:
         return response(
             "input_error",
@@ -840,6 +841,14 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
                 )
             ],
         )
+
+    return None
+
+
+def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, Any]:
+    refusal = mutation_request_refusal(entry, request)
+    if refusal is not None:
+        return refusal
 
     if entry.helper_id == "mutation-registry-dispatch":
         return response("ok", request_id=request.request_id, data=mutation_registry_report())
