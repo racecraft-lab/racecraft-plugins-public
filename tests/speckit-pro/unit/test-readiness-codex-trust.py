@@ -32,11 +32,15 @@ CONTROLS = {"workspace_network_access": "disabled", "workspace_writable_roots": 
             "workspace_slash_tmp": "excluded", "workspace_tmpdir": "excluded", "permission_profile": "none",
             "web_search": "disabled", "web_search_tool": "disabled", "app_approvals_reviewer": "user",
             "auto_review_policy": "unset", "app_tool_approval": "prompt", "app_destructive_tools": "disabled",
-            "app_open_world_tools": "disabled", "mcp_tool_approval": "prompt", "plugin_mcp_tool_approval": "none",
-            "other_overrides": "none"}
+            "app_open_world_tools": "disabled", "mcp_tool_approval": "prompt", "plugin_mcp_tool_approval": "none"}
+# Every configuration key set in any effective layer, as dotted TOML key paths: inert, judged by a summary
+# fact or control, or at its conservative value.
+SETTINGS = {"model": "gpt-6.1-sol", "model_reasoning_effort": "high", 'projects."repo".trust_level': "trusted",
+            'plugins."speckit-pro@racecraft".enabled': True, "features.hooks": True, "approval_policy": "on-request",
+            "sandbox_mode": "workspace-write", "sandbox_workspace_write.network_access": False}
 POSTURE = {"approval_policy": "on-request", "sandbox_mode": "workspace-write", "approvals_reviewer": "user",
            "mcp_approval_mode": "prompt", "mcp_consent": "granted", "mcp_startup_timeout_sec": 10,
-           "mcp_tool_timeout_sec": 60, "external_delegation": "allowed", "controls": CONTROLS}
+           "mcp_tool_timeout_sec": 60, "external_delegation": "allowed", "controls": CONTROLS, "settings": SETTINGS}
 # Security finding F1263-6fd5beee: each named variant and the control value that represents it.
 BROADENING_CONTROLS = {
     "workspace-write network access": [("workspace_network_access", "enabled")],
@@ -55,8 +59,31 @@ BROADENING_CONTROLS = {
     "MCP server and per-tool approval beside a prompt summary": [("mcp_tool_approval", mode)
                                                                  for mode in ("auto", "writes", "approve")],
     "plugin-provided MCP tool approval": [("plugin_mcp_tool_approval", mode) for mode in ("auto", "writes", "approve")],
-    "an unmodeled approval, sandbox or tool override": [("other_overrides", "present")],
 }
+# Security finding F1263-946bd436: each named variant as the settings that represent it.
+ENVIRONMENT_VARIANTS = {
+    "set.PATH": {"shell_environment_policy.set.PATH": "repo-bin:usr-bin"},
+    "set.PYTHONPATH": {"shell_environment_policy.set.PYTHONPATH": "repo-lib"},
+    "inherit=all with ignore_default_excludes=true": {"shell_environment_policy.inherit": "all",
+                                                      "shell_environment_policy.ignore_default_excludes": True},
+    "allow_login_shell=true": {"allow_login_shell": True},
+    "experimental_use_profile=true": {"shell_environment_policy.experimental_use_profile": True},
+}
+# The class: a key the model does not know, at the top level or nested under a table it knows.
+UNKNOWN_SETTINGS = {
+    "an unknown future key": {"future_escape_hatch": True},
+    "an unknown key under shell_environment_policy": {"shell_environment_policy.future_inherit": "everything"},
+    "an unknown key under sandbox_workspace_write": {"sandbox_workspace_write.future_roots": ["repo"]},
+    "an unknown key under tui": {"tui.future_option": True},
+    "an unknown key under a modeled MCP server": {'mcp_servers."docs".future_mode': "auto"},
+}
+# Filters that only remove inherited variables never add or replace one, so they may verify.
+NARROWING_SETTINGS = {"shell_environment_policy.inherit": "core",
+                      "shell_environment_policy.ignore_default_excludes": False,
+                      'shell_environment_policy.filters."*TOKEN*"': "exclude",
+                      'shell_environment_policy.filters."HOME"': "include",
+                      "shell_environment_policy.exclude": ["AWS_*"], "shell_environment_policy.include_only": ["PATH"],
+                      "shell_environment_policy.experimental_use_profile": False, "allow_login_shell": False}
 LEGACY_HOOK_ACTION = ("Send a complete codex_hook_trust observation that verifies each hook's identity and exact hash "
                       "against the shipped definitions, then rerun scaffold. Never trust a hook that is not "
                       "verified. Scaffold never broadens permissions or disables a control.")
@@ -71,6 +98,10 @@ def posture(**changes: object) -> dict[str, object]:
 
 def controls(**changes: object) -> dict[str, object]:
     return posture(controls={**CONTROLS, **changes})
+
+
+def settings(**changes: object) -> dict[str, object]:
+    return posture(settings={**SETTINGS, **changes})
 
 
 def hook_trust(*entries: dict[str, object]) -> dict[str, object]:
@@ -393,7 +424,7 @@ class ReadinessCodexPostureControlsTest(ReadinessCase):
     def test_malformed_posture_controls_are_refused(self) -> None:
         self.refuse_each([posture(controls=bad) for bad in (
             None, [], "none", {**CONTROLS, "network_access": "disabled"}, {**CONTROLS, "web_search": "LIVE"},
-            {**CONTROLS, "workspace_network_access": True}, {**CONTROLS, "other_overrides": "maybe"},
+            {**CONTROLS, "workspace_network_access": True}, {**CONTROLS, "other_overrides": "none"},
             {**CONTROLS, "workspace_writable_roots": "/" + "tmp"})])
 
     def test_scaffold_documents_every_posture_control_and_its_values(self) -> None:
@@ -406,10 +437,79 @@ class ReadinessCodexPostureControlsTest(ReadinessCase):
                 self.assertIn(f'"{name}": ' + ", ".join(quoted[:-1]) + " or " + quoted[-1], step)
 
 
+class ReadinessCodexPostureSettingsTest(ReadinessCase):
+    """Security finding F1263-946bd436: a setting the model does not account for never hides behind `verified`."""
+
+    default_host = "codex"
+    request_id = "test-codex-posture-settings"
+
+    def test_each_environment_variant_is_unavailable_never_verified(self) -> None:
+        for variant, changes in ENVIRONMENT_VARIANTS.items():
+            with self.subTest(variant=variant):
+                self.assert_item(self.item(settings(**changes)), "unavailable",
+                                 (f"settings={len(changes)} outside",), ("Keep current controls", "never broadens"))
+            with self.subTest(variant=variant, value="unobservable"):
+                unread = dict.fromkeys(changes, "unobservable")
+                self.assert_item(self.item(settings(**unread)), "unknown", (f"{len(changes)} unobservable",))
+
+    def test_an_unknown_key_is_unavailable_when_observed_and_unknown_when_not(self) -> None:
+        for case, changes in UNKNOWN_SETTINGS.items():
+            with self.subTest(case=case):
+                self.assert_item(self.item(settings(**changes)), "unavailable", ("settings=1 outside",))
+            with self.subTest(case=case, value="unobservable"):
+                self.assertEqual("unknown", self.item(settings(**dict.fromkeys(changes, "unobservable")))["status"])
+
+    def test_narrowing_only_environment_filters_may_verify(self) -> None:
+        self.assert_item(self.item(settings(**NARROWING_SETTINGS)), "verified", ("settings=accounted",))
+        self.assertEqual("verified", self.item(settings(**{"shell_environment_policy.inherit": "none"}))["status"])
+
+    def test_inert_and_modeled_settings_verify_and_conservative_controls_still_judge_them(self) -> None:
+        self.assert_item(self.item(posture()), "verified", ("controls=conservative", "settings=accounted"))
+        self.assertEqual("verified", self.item(posture(settings={}))["status"])
+        # A key a control models is judged by that control, so its value here cannot verify a broader control.
+        broad = controls(workspace_network_access="enabled")
+        broad["posture"]["settings"] = {**SETTINGS, "sandbox_workspace_write.network_access": True}  # type: ignore[index]
+        self.assertEqual("unavailable", self.item(broad)["status"])
+
+    def test_missing_or_unreadable_settings_never_verify(self) -> None:
+        legacy = posture()
+        del legacy["posture"]["settings"]  # type: ignore[attr-defined]
+        self.assert_item(self.item(legacy), "unknown", ("settings=missing",), ("every configuration key",))
+        self.assert_item(self.item(posture(settings="unobservable")), "unknown", ("settings=unobservable",))
+
+    def test_malformed_settings_are_refused(self) -> None:
+        self.refuse_each([posture(settings=bad) for bad in (
+            None, [], "none", {"shell_environment_policy": {"inherit": "all"}},
+            {"shell_environment_policy.set": {"PATH": "repo-bin"}}, {"": True}, {"a..b": True}, {" model": "x"},
+            {'a."b': True}, {"a.b\n": True}, {"allow_login_shell": "yes"}, {"allow_login_shell": 1},
+            {"shell_environment_policy.inherit": "everything"}, {"shell_environment_policy.include_only": "PATH"},
+            {"shell_environment_policy.include_only": [1]}, {'shell_environment_policy.filters."X"': "allow"},
+            {"shell_environment_policy.set.PATH": 1}, {f"key{n}": True for n in range(600)})])
+
+    def test_observed_values_and_key_names_never_reach_the_record(self) -> None:
+        response = self.run_helper([settings(**ENVIRONMENT_VARIANTS["set.PATH"])])
+        record = json.dumps(response["data"]["record"])
+        self.assertNotIn("repo-bin", record)
+        self.assertNotIn("shell_environment_policy", record)
+        item = self.items(response)["codex_approval_posture"]
+        self.assertTrue(item["fingerprints"]["value:posture_settings"].startswith("sha256:"))
+        self.assertNotEqual(item["fingerprints"]["value:posture_settings"],
+                            self.item(posture())["fingerprints"]["value:posture_settings"])
+
+    def test_scaffold_documents_the_settings_inventory_and_each_conservative_value(self) -> None:
+        from speckit_pro_runner.helpers import readiness_posture_settings
+        step = scaffold_step("codex")
+        self.assertIn('"settings": {"<dotted key>": <value>', step)
+        for key in readiness_posture_settings.CONSERVATIVE_SETTINGS:
+            with self.subTest(key=key):
+                self.assertIn(f"`{key}`", step)
+
+
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
     return unittest.TestSuite([loader.loadTestsFromTestCase(ReadinessCodexTrustTest),
-                               loader.loadTestsFromTestCase(ReadinessCodexPostureControlsTest)])
+                               loader.loadTestsFromTestCase(ReadinessCodexPostureControlsTest),
+                               loader.loadTestsFromTestCase(ReadinessCodexPostureSettingsTest)])
 
 
 def main() -> int:

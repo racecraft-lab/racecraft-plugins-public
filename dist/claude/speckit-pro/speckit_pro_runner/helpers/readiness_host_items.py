@@ -18,6 +18,7 @@ from typing import Any
 from ..agent_materialization import digest
 from ..strict_input import SelectionError
 from ..sweep_isolation import secret_matches
+from .readiness_posture_settings import settings_gaps
 from .readiness_values import MAX_TEXT, NOT_OBSERVED_ACTION, clean_text, make_item
 
 CLAUDE_ONLY_ITEMS = ("permission_probe", "plugin_scope", "mcp_authentication")
@@ -395,7 +396,8 @@ POSTURE_CHOICES = {
 POSTURE_TIMEOUTS = ("mcp_startup_timeout_sec", "mcp_tool_timeout_sec")
 TOOL_APPROVAL_MODES = (("none", "prompt"), ("auto", "writes", "approve"))
 # Effective controls beyond the summary above, as (conservative values, other values). Without every one
-# observed the posture is never verified; a value outside the conservative set is unavailable.
+# observed the posture is never verified; a value outside the conservative set is unavailable. Every other
+# configuration key is judged from the `settings` inventory (readiness_posture_settings).
 POSTURE_CONTROLS = {
     "workspace_network_access": (("disabled",), ("enabled",)),
     "workspace_writable_roots": (("none",), ("added",)),
@@ -411,7 +413,6 @@ POSTURE_CONTROLS = {
     "app_open_world_tools": (("disabled",), ("enabled",)),
     "mcp_tool_approval": TOOL_APPROVAL_MODES,
     "plugin_mcp_tool_approval": TOOL_APPROVAL_MODES,
-    "other_overrides": (("none",), ("present",)),
 }
 # Controls that cannot act in an observed state: workspace-write settings under a read-only sandbox,
 # and app tool hints when no app tool is enabled.
@@ -527,14 +528,16 @@ def posture_facts(detail: dict[str, Any]) -> dict[str, str]:
 
 def observe_codex_approval_posture(raw: dict[str, Any], observed_at: str, source: str) -> dict[str, Any]:
     detail = raw["posture"]
-    if not isinstance(detail, dict) or detail.keys() - {"controls"} != {*POSTURE_CHOICES, *POSTURE_TIMEOUTS}:
-        raise SelectionError(f"codex_approval_posture.posture takes {sorted({*POSTURE_CHOICES, *POSTURE_TIMEOUTS})} "
-                             "and controls")
+    if not isinstance(detail, dict) or detail.keys() - {"controls", "settings"} != {*POSTURE_CHOICES, *POSTURE_TIMEOUTS}:
+        raise SelectionError(f"codex_approval_posture.posture takes {sorted({*POSTURE_CHOICES, *POSTURE_TIMEOUTS})}, "
+                             "controls and settings")
     controls = posture_controls(detail)
     facts = posture_facts(detail)
     outside, unread, controls_text = control_gaps(controls)
-    summary = ", ".join(f"{key}={value}" for key, value in facts.items()) + f", controls={controls_text}"
-    prints = {"value:posture": digest(summary)}
+    settings_outside, settings_unread, settings_text, settings_prints = settings_gaps(detail)
+    summary = (", ".join(f"{key}={value}" for key, value in facts.items())
+               + f", controls={controls_text}, settings={settings_text}")
+    prints = {"value:posture": digest(summary), **settings_prints}
     if controls is not None:
         prints["value:posture_controls"] = digest(controls)
     # Every bounded posture fact fits; shorten only the source label to retain all observations.
@@ -544,14 +547,14 @@ def observe_codex_approval_posture(raw: dict[str, Any], observed_at: str, source
         return make_item("unavailable", source, observed_at, prints, POSTURE_ACTIONS[refused[0]])
     if facts["sandbox_mode"] == "danger-full-access" or facts["mcp_approval_mode"] in ("auto", "writes", "approve") \
             or any(type(detail[key]) is int and detail[key] > limit for key, limit in POSTURE_DEFAULT_TIMEOUTS.items()) \
-            or outside:
+            or outside or settings_outside:
         return make_item("unavailable", source, observed_at, prints,
                          "Keep current controls; review the observed posture against the conservative scaffold profile "
                          "before using the affected capability. " + NEVER_BROADEN)
-    if "unobservable" in facts.values() or controls is None or unread:
+    if "unobservable" in facts.values() or controls is None or unread or settings_unread:
         return make_item("unknown", source, observed_at, prints, "Read the Codex approval, sandbox, reviewer and "
-                         "MCP settings and every posture control from an effective running-thread source; leave "
-                         "unreadable values unobservable and rerun scaffold. " + NEVER_BROADEN)
+                         "MCP settings, every posture control and every configuration key set in an effective "
+                         "layer; leave unreadable values unobservable and rerun scaffold. " + NEVER_BROADEN)
     return make_item("verified", source, observed_at, prints)
 
 
