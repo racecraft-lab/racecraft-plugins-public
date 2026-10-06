@@ -46,6 +46,24 @@ def create_artifact(target, shape):
     target.symlink_to(source, target_is_directory=True)
 
 
+def create_completion_evidence(entry, project, variant):
+    """Materialize successful-init leftovers without treating them as acceptance."""
+    target = project / check.REGISTRY_DIRS[entry["kind"]] / entry["id"]
+    target.mkdir(parents=True)
+    mapping = entry["kind"] + "s"
+    records = {
+        "empty-mapping": {},
+        "different-id": {"different-entry": {"enabled": True}},
+        "disabled": {entry["id"]: {"enabled": False}},
+    }
+    data = {mapping: records.get(variant, {entry["id"]: {"enabled": True}})}
+    if variant != "absent-registry":
+        (target.parent / ".registry").write_text("{" if variant == "malformed-registry" else json.dumps(data), encoding="utf-8")
+    if variant != "missing-manifest":
+        declared = "different-entry" if variant == "wrong-manifest-id" else entry["id"]
+        (target / check.MANIFEST_NAMES[entry["kind"]]).write_text(f'{entry["kind"]}:\n  id: {declared}\n', encoding="utf-8")
+
+
 class CuratedInstallCase(unittest.TestCase):
     @contextmanager
     def scenario(self, **variants):
@@ -143,20 +161,7 @@ class CuratedInstallWorkflowTests(CuratedInstallCase):
         variants = ("absent-registry", "malformed-registry", "empty-mapping", "different-id", "disabled", "missing-manifest", "wrong-manifest-id")
         for variant, trust in product(variants, (False, True)):
             with self.scenario(variant=variant, trust=trust) as project:
-                target = project / ".specify/presets" / entry["id"]
-                target.mkdir(parents=True)
-                data = {"presets": {entry["id"]: {"enabled": True}}}
-                if variant == "empty-mapping":
-                    data["presets"] = {}
-                elif variant == "different-id":
-                    data["presets"] = {"different-preset": {"enabled": True}}
-                elif variant == "disabled":
-                    data["presets"][entry["id"]]["enabled"] = False
-                if variant != "absent-registry":
-                    (target.parent / ".registry").write_text("{" if variant == "malformed-registry" else json.dumps(data), encoding="utf-8")
-                if variant != "missing-manifest":
-                    declared = "different-preset" if variant == "wrong-manifest-id" else entry["id"]
-                    (target / "preset.yml").write_text(f'preset:\n  id: {declared}\n', encoding="utf-8")
+                create_completion_evidence(entry, project, variant)
                 with mock.patch.object(check, "specify", return_value=subprocess.CompletedProcess([], 0, "", "")):
                     self.assertEqual(check.entry_result(entry, project, trust), ("unproven", []))
 
@@ -424,21 +429,7 @@ class CompletedInstallEvidenceTests(CuratedInstallCase):
     def assert_completion_unproven(self, variant):
         for entry in EXTENSIONS:
             with self.scenario(entry=entry["id"], variant=variant) as project:
-                target = project / ".specify/extensions" / entry["id"]
-                target.mkdir(parents=True)
-                registry = target.parent / ".registry"
-                data = {"extensions": {entry["id"]: {"enabled": True}}}
-                if variant == "empty-mapping":
-                    data["extensions"] = {}
-                elif variant == "different-id":
-                    data["extensions"] = {"different-extension": {"enabled": True}}
-                elif variant == "disabled":
-                    data["extensions"][entry["id"]]["enabled"] = False
-                if variant != "absent-registry":
-                    registry.write_text("{" if variant == "malformed-registry" else json.dumps(data), encoding="utf-8")
-                if variant != "missing-manifest":
-                    declared = "different-extension" if variant == "wrong-manifest-id" else entry["id"]
-                    (target / "extension.yml").write_text(f'extension:\n  id: {declared}\n', encoding="utf-8")
+                create_completion_evidence(entry, project, variant)
                 # Model init's successful exit without trusting its artifacts. No CLI runs.
                 with mock.patch.object(check.tempfile, "TemporaryDirectory") as temporary, mock.patch.object(
                     check, "init_project", return_value=[]
