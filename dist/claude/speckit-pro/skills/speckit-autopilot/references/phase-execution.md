@@ -530,33 +530,35 @@ executor must not produce or substitute the G3 evidence it receives.
 
 ### Phase 4: Checklist
 
-Spawn a **separate subagent for each checklist domain**,
-with two-layer resolution **after each domain**:
+Run every checklist domain as **one dispatch wave**, then two-layer
+resolution over all domains' gaps, then a verify wave:
 
 ```text
-For each checklist domain in the workflow file:
-  1. autopilot-state.json: domain task → in_progress
-  2. Agent(subagent_type: "speckit-pro:checklist-executor",
-          run_in_background: false,
-          prompt: "Run /speckit-checklist with: <domain prompt>\nReference slices: <brief.slices, verbatim>")
-     The phase brief supplies the slices; the executor reads no reference file.
-     The checklist-executor runs the checklist, researches
-     gaps, applies fixes, and re-runs to verify (Layer 1)
-  3. Parse executor's "Unresolved for consensus" section
-  4. If unresolved gaps exist:
-     a. autopilot-state.json: "<domain> Consensus" → in_progress
-     b. BATCHED dispatch (see consensus-protocol.md §Batched Dispatch):
-        Stage 1: spawn ALL routed analysts for ALL gaps in ONE
-                 assistant message via run_in_background: true.
-        Stage 2: await all → spawn ALL synthesizers in ONE message.
-        Stage 3: apply each synthesizer's Artifact Edit SERIALLY
-                 to spec.md or plan.md.
-        Round 2 escape-hatch: also batched across all queued gaps.
-        [ROUND_3_TIEBREAK]: consensus-protocol.md#round-3-tiebreak (Round 3 agent tiebreak)
-     c. Re-run domain checklist to verify gaps closed
-     d. autopilot-state.json: "<domain> Consensus" → completed
-  5. autopilot-state.json: domain task → completed
-  6. Proceed to next domain
+1. autopilot-state.json: every domain task → in_progress
+2. Request the phase brief with `domains` (the `/speckit-checklist <domain>`
+   names under brief.inputs.prompt_section, in file order).
+   Domain wave: ONE turn, one entry per domain:
+     Agent(subagent_type: "speckit-pro:checklist-executor", model: entry.model.claude.model,
+           run_in_background: true,
+           prompt: "Run /speckit-checklist with: <that domain's prompt>\nReference slices: <brief.slices, verbatim>")
+   The phase brief supplies the slices; the executor reads no reference file.
+   Each checklist-executor runs the checklist, researches gaps,
+   applies fixes, and re-runs once to verify (Layer 1).
+   Await every domain, then consume each terminal result.
+3. Collect each executor's "Unresolved for consensus" items, in domain order
+4. If unresolved gaps exist:
+   a. autopilot-state.json: each affected "<domain> Consensus" → in_progress
+   b. Request the phase brief again with `items`, then follow
+      consensus-protocol.md §Batched Dispatch: the brief's security wave and
+      low-confidence wave, each in ONE turn; await → synthesizers in ONE
+      message; apply each Artifact Edit SERIALLY to spec.md or plan.md.
+      Round 2 escape-hatch: also batched across all queued gaps.
+      [ROUND_3_TIEBREAK]: consensus-protocol.md#round-3-tiebreak
+   c. autopilot-state.json: each "<domain> Consensus" → completed
+5. Verify wave: ONE turn, the `pass: verify` entries of the first brief, each
+   with that domain's prompt plus a `Pass: verify` line; each re-runs its
+   domain checklist and changes nothing
+6. autopilot-state.json: every domain task → completed
 ```
 
 **Layer 1 (executor):** The checklist-executor handles
@@ -567,9 +569,10 @@ broker's web search and library docs, and codebase exploration.
 confidence, security tag or keyword), the main session follows the
 `tier` that `parse-consensus-categories` returns.
 
-**Why after each domain:** Domain 2 may depend on Domain
-1's gap fixes. Both layers complete before the next
-domain runs.
+**Why a wave:** The domains are independent checks, so waiting on each
+costs time and buys nothing. They do read the same `spec.md` and `plan.md`:
+consensus edits stay serial, and the verify wave re-runs every domain after
+the last edit, so an overlap between two domains' fixes shows before G4.
 
 **Gate:** G4 — verify 0 `[Gap]` markers
 

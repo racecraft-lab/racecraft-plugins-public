@@ -478,6 +478,131 @@ class PhaseBriefTests(InProjectCase):
                 self.assertEqual(bool(brief["slices"]), agent in SLICE_AGENTS)
 
 
+class PhaseBriefWaveTests(InProjectCase):
+    """Dispatch waves (ADR 0018, P4): the agents a host launches together, then the next wave."""
+
+    BRIEF = {"workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
+    ANALYSTS = ("codebase-analyst", "spec-context-analyst", "domain-researcher")
+    ITEMS = (
+        {"line": "[security] Q1: where do tokens live?", "confidence": "high"},
+        {"line": "[codebase] Q2: reuse the batch helper?", "confidence": "low"},
+        {"line": "[domain] Q3: which retry limit?", "confidence": "high"},
+        {"line": "[spec, domain] Q4: which story owns this?"},
+    )
+
+    def brief(self, phase, **extra):
+        return dispatch_brief({"phase": phase, **self.BRIEF, **extra})
+
+    def waves(self, phase, **extra):
+        result = self.brief(phase, **extra)
+        self.assertEqual(result["status"], "ok", result)
+        return result["data"]["waves"]
+
+    def dispatch(self, phase, agent, inputs=None, **named):
+        """One wave entry: the role, its prompt inputs and its own model on each host."""
+        return {"agent": agent, "inputs": inputs or named, "model": phase_brief.phase_model(phase, agent)}
+
+    def test_checklist_domains_form_one_wave_and_their_verify_reruns_the_next(self):
+        domains = ["security", "state-management", "ux"]
+        run = [self.dispatch("Checklist", "checklist-executor", domain=name) for name in domains]
+        verify = [self.dispatch("Checklist", "checklist-executor", {"domain": name, "pass": "verify"}) for name in domains]
+        self.assertEqual(self.waves("Checklist", domains=domains), [run, verify])
+
+    def test_a_consensus_round_and_the_low_confidence_analysts_each_form_a_wave(self):
+        security = [self.dispatch("Analyze", name, item=1, line=self.ITEMS[0]["line"]) for name in self.ANALYSTS]
+        low = [self.dispatch("Analyze", "codebase-analyst", item=2, line=self.ITEMS[1]["line"]),
+               self.dispatch("Analyze", "spec-context-analyst", item=4, line=self.ITEMS[3]["line"])]
+        self.assertEqual(self.waves("Analyze", items=list(self.ITEMS)), [security, low])
+
+    def test_every_consensus_phase_composes_its_waves_from_the_same_rules(self):
+        for phase in ("Clarify", "Checklist", "Analyze"):
+            with self.subTest(phase=phase):
+                waves = self.waves(phase, items=list(self.ITEMS))
+                self.assertEqual([[entry["inputs"]["item"] for entry in wave] for wave in waves], [[1, 1, 1], [2, 4]])
+                self.assertEqual({entry["agent"] for entry in waves[0]}, set(self.ANALYSTS))
+
+    def test_each_wave_entry_names_the_model_of_its_own_agent(self):
+        for entry in [entry for wave in self.waves("Analyze", items=list(self.ITEMS)) for entry in wave]:
+            self.assertEqual(entry["model"], {"claude": {"model": "sonnet", "effort": "high"},
+                                              "codex": {"model": "gpt-6-luna", "effort": "high"}}, entry["agent"])
+        entry = self.waves("Checklist", domains=["ux"])[0][0]
+        self.assertEqual(entry["model"], self.brief("Checklist")["data"]["model"])
+
+    def test_items_the_executor_answered_dispatch_no_analyst(self):
+        items = [{"line": "[codebase] Q1: reuse?", "confidence": "high"}, {"line": "Q2: which name?", "confidence": "high"}]
+        self.assertEqual(self.waves("Analyze", items=items), [])
+        self.assertEqual(self.waves("Analyze", items=[]), [])
+
+    def test_a_missing_confidence_counts_as_low_and_an_unknown_tag_routes_to_the_domain_analyst(self):
+        waves = self.waves("Clarify", items=[{"line": "[ambiguous] Q1: which name?"}])
+        self.assertEqual([[entry["agent"] for entry in wave] for wave in waves], [["domain-researcher"]])
+
+    def test_a_security_keyword_in_the_text_widens_the_item_to_the_full_wave(self):
+        waves = self.waves("Analyze", items=[{"line": "[codebase] Q1: how are credentials stored?", "confidence": "low"}])
+        self.assertEqual(len(waves), 1)
+        self.assertEqual({entry["agent"] for entry in waves[0]}, set(self.ANALYSTS))
+
+    def test_domains_and_items_compose_in_dispatch_order(self):
+        waves = self.waves("Checklist", domains=["ux"], items=list(self.ITEMS))
+        self.assertEqual([wave[0]["agent"] for wave in waves],
+                         ["checklist-executor", "codebase-analyst", "codebase-analyst", "checklist-executor"])
+        self.assertEqual([wave[0]["inputs"].get("pass") for wave in waves], [None, None, None, "verify"])
+
+    def test_a_brief_without_wave_inputs_has_no_waves(self):
+        for phase in ("Specify", "Clarify", "Plan", "Checklist", "Tasks", "Analyze"):
+            with self.subTest(phase=phase):
+                self.assertEqual(self.waves(phase), [])
+
+    def test_wave_inputs_the_phase_cannot_use_return_no_dispatch_facts(self):
+        bad = [("Plan", {"domains": ["ux"]}), ("Analyze", {"domains": ["ux"]}), ("Clarify", {"domains": ["ux"]}),
+               ("Specify", {"items": []}), ("Plan", {"items": []}), ("Tasks", {"items": []}),
+               ("Checklist", {"domains": []}), ("Checklist", {"domains": "ux"}), ("Checklist", {"domains": ["ux", "ux"]}),
+               ("Checklist", {"domains": ["UX Review"]}), ("Checklist", {"domains": [""]}), ("Checklist", {"domains": [7]}),
+               ("Checklist", {"domains": ["a"] * 13}), ("Analyze", {"items": "Q1"}), ("Analyze", {"items": ["Q1"]}),
+               ("Analyze", {"items": [{"line": ""}]}), ("Analyze", {"items": [{"line": "Q1", "confidence": "medium"}]}),
+               ("Analyze", {"items": [{"line": "Q1", "extra": 1}]}), ("Analyze", {"items": [{"confidence": "low"}]}),
+               ("Analyze", {"items": [{"line": "x" * 2001}]}), ("Analyze", {"items": [{"line": "Q"}] * 101})]
+        for phase, extra in bad:
+            with self.subTest(phase=phase, extra=str(extra)[:40]):
+                result = self.brief(phase, **extra)
+                self.assertEqual((result["status"], result["data"]), ("input_error", {}))
+
+    def test_both_payload_hosts_return_identical_waves(self):
+        for phase, extra in (("Checklist", {"domains": ["security", "ux"], "items": list(self.ITEMS)}),
+                             ("Clarify", {"items": list(self.ITEMS)}), ("Analyze", {"items": list(self.ITEMS)})):
+            with self.subTest(phase=phase):
+                inputs = {"phase": phase, **self.BRIEF, **extra}
+                source = dispatch_brief(inputs)["data"]["waves"]
+                self.assertTrue(source)
+                self.assertEqual([report["waves"] for report in payload_briefs(inputs)], [source, source])
+
+    def test_both_hosts_launch_a_wave_in_one_turn_and_wait_for_all_of_it(self):
+        needles = {"claude": ("run_in_background: true", "model: entry.model.claude.model"),
+                   "codex": ("issue one spawn_agent per entry in one turn", "model=entry.model.codex.model",
+                             "one bounded wait_agent loop until every entry returned")}
+        for host, expected in needles.items():
+            with self.subTest(host=host):
+                skill = (host_skill_root(host) / "speckit-autopilot/SKILL.md").read_text()
+                loop = skill.split("## Step 2: Main Execution Loop", 1)[1]
+                for needle in ("### Dispatch waves", "Each brief wave", *expected):
+                    self.assertIn(needle, loop)
+
+    def test_both_hosts_run_the_checklist_domains_as_one_wave(self):
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                skill = " ".join((host_skill_root(host) / "speckit-autopilot/SKILL.md").read_text().split())
+                self.assertIn("Checklist domains run as one dispatch wave", skill)
+                self.assertNotIn("BEFORE spawning the next", skill)
+                self.assertNotIn("Do not batch all domains", skill)
+
+    def test_the_checklist_executor_changes_nothing_on_a_verify_pass_on_both_hosts(self):
+        for root, suffix in ((REPO / "speckit-pro/agents", ".md"), (REPO / "speckit-pro/codex-agents", ".toml")):
+            with self.subTest(root=str(root.relative_to(REPO))):
+                text = " ".join((root / ("checklist-executor" + suffix)).read_text().split())
+                self.assertIn("`Pass: verify` is a verify pass: do rules 1 and 2 only, report the counts and each remaining `[Gap]`, and change no artifact",
+                              text)
+
+
 class PhaseBriefModelTests(unittest.TestCase):
     def test_brief_names_the_model_for_each_dispatch(self):
         # The owner's plan-stage table (issue 1150); Specify and Tasks run phase-executor below its Plan default.
@@ -1170,5 +1295,5 @@ class PhaseBriefExecutorContractTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, PhaseBriefPathTests, PhaseBriefModelTests, CodexEffectiveEffortTests, RetryLadderTopRungTests, PhaseBriefSliceTests, PhaseBriefEncodingTests, PhaseBriefEncodingHostTests, PhaseBriefEncodingPathTests, PhaseBriefHookTests, OptionalHookConsentTests, OptionalHookDisplayBoundaryTests, PhaseBriefExecutorContractTests))
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, PhaseBriefWaveTests, PhaseBriefPathTests, PhaseBriefModelTests, CodexEffectiveEffortTests, RetryLadderTopRungTests, PhaseBriefSliceTests, PhaseBriefEncodingTests, PhaseBriefEncodingHostTests, PhaseBriefEncodingPathTests, PhaseBriefHookTests, OptionalHookConsentTests, OptionalHookDisplayBoundaryTests, PhaseBriefExecutorContractTests))
     sys.exit(run_counted(suite, label="test-phase-brief"))

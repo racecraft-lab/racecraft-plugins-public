@@ -564,6 +564,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/dispatch_waves.py",
+        "display": "speckit_pro_runner/helpers/dispatch_waves.py"
+      },
+      "sha256": "702f0875b02f672fbf785755dd8be4959b6c170c308d94c31973004672641399"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/helpers/egress_authorization.py",
         "display": "speckit_pro_runner/helpers/egress_authorization.py"
       },
@@ -655,7 +663,7 @@
         "value": "speckit_pro_runner/helpers/phase_brief.py",
         "display": "speckit_pro_runner/helpers/phase_brief.py"
       },
-      "sha256": "25c0996f6b6c13c8ffa58e4907dd5e51f4ead35dc3353aa41cf7071280b6dfb3"
+      "sha256": "9de2bfa8383f63d23705166292282ea4922703af25b8f46cf1dab1bd39057ca8"
     },
     {
       "path": {

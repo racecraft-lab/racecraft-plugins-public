@@ -36,6 +36,10 @@ _Avoid_: classifier, LLM judge
 The run's record of every judgment it made instead of asking the user: the option chosen, the rejected alternative and the evidence. It never asks for a reply; the reviewer accepts or overturns each entry at review.
 _Avoid_: end-of-run request, Decisions for you
 
+**Dispatch wave**:
+The agents a host launches together in one turn, such as the checklist domains or the analysts of one consensus round. The next wave starts only after every agent of the wave returned. A wave holds independent work; edits to a shared artifact stay serial.
+_Avoid_: parallel group, fan-out
+
 **Gate**:
 A checkpoint that validates whether a run meets its requirements at a fixed point. A gate is a check, never a phase.
 _Avoid_: quality gate, phase
