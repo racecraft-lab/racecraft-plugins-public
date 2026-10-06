@@ -198,7 +198,9 @@ must not rewrite their provenance.
    It fails closed when spec.md, plan.md or checklists/ is missing, linked or
    unreadable, when checklists/ holds no report, a nested directory, a link or
    a special file, or more than 64 entries, or when the files exceed 8 MiB in all.
-   checklists/ is flat: reports sit directly under it.
+   checklists/ is flat: reports are direct *.md files; at least one is required.
+   Every entry counts toward the 64-entry limit and must be a regular file.
+   Regular non-report entries (such as .gitkeep) are ignored, not read or judged.
 5. The result's `judged` field holds the SHA-256 of every file the verdict covers.
 ```
 

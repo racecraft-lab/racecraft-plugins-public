@@ -2110,18 +2110,21 @@ G4_MAX_BYTES = 8 * 1024 * 1024
 
 
 def g4_reports(directory: Path) -> list[Path]:
-    """Every report in the flat checklists/ directory, at most G4_MAX_REPORTS. A listing error, a nested directory,
-    a link, a special file, too many entries or no report fails closed, so nothing unread can hide a [Gap] marker."""
+    """Markdown reports in flat checklists/, with bounded type validation of every entry.
+
+    Regular non-report entries are ignored; a listing error, unsafe entry, too many entries or no report fails closed.
+    """
     if not stat.S_ISDIR(os.lstat(directory).st_mode):
         raise ValueError("checklists/ must be a directory, not a link or a file")
     with os.scandir(directory) as listing:
         names = sorted(entry.name for entry in itertools.islice(listing, G4_MAX_REPORTS + 1))
     if len(names) > G4_MAX_REPORTS:
         raise ValueError(f"checklists/ holds more than {G4_MAX_REPORTS} entries")
-    reports = [directory / name for name in names]
-    for path in reports:
+    entries = [directory / name for name in names]
+    for path in entries:
         if not stat.S_ISREG(os.lstat(path).st_mode):
             raise ValueError(f"checklists/ holds a directory, link or special file: {path.name}")
+    reports = [path for path in entries if path.suffix == ".md"]
     if not reports:
         raise ValueError("checklists/ holds no checklist report")
     return reports

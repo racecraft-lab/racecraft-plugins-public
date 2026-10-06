@@ -1464,6 +1464,41 @@ class GateFourTests(ChecklistEditsCase):
     def gate(self) -> dict[str, Any]:
         return dict(json.loads(read_only.validate_gate(G4_INPUTS, self.root)["stdout"]))
 
+    def test_g4_requires_a_markdown_report_not_a_placeholder(self) -> None:
+        checklists = self.feature / "checklists"
+        for name in (".gitkeep", "notes.txt", "security.MD"):
+            with self.subTest(entry=name):
+                self.reset_tree()
+                (checklists / "security.md").unlink()
+                placeholder = checklists / name
+                placeholder.write_bytes(b"")
+                result = self.gate()
+                self.assertFalse(result["pass"], result)
+                self.assertIn("no checklist report", result["reason"])
+                placeholder.unlink()
+
+    def test_g4_ignores_non_reports_but_validates_every_entry(self) -> None:
+        checklists = self.feature / "checklists"
+        placeholder = checklists / ".gitkeep"
+        placeholder.write_text(GAP_LINE, encoding="utf-8")
+        result = self.gate()
+        self.assertTrue(result["pass"], result)
+        self.assertIn("1 checklist report", result["reason"])
+        self.assertEqual({"spec.md", "plan.md", "checklists/security.md"}, set(result["judged"]))
+        placeholder.unlink()
+        os.symlink(self.outside / "security.md", placeholder)
+        self.assertFalse(self.gate()["pass"])
+        placeholder.unlink()
+        placeholder.mkdir()
+        self.assertFalse(self.gate()["pass"])
+        placeholder.rmdir()
+        os.mkfifo(placeholder)
+        self.assertFalse(self.gate()["pass"])
+        placeholder.unlink()
+        for index in range(read_only.G4_MAX_REPORTS):
+            (checklists / f"ignored-{index}.txt").touch()
+        self.assertFalse(self.gate()["pass"])
+
     def forge_receipt(self, path: Path | None = None, domains: tuple[str, ...] = ("security",)) -> Path:
         """The schema-valid receipt any caller could write without checklist-edits or a verify pass."""
         target = path or self.root / RECEIPT
