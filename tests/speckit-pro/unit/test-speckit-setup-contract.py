@@ -181,9 +181,10 @@ class ReviewabilityPreset(unittest.TestCase):
     """A fresh project gets the shipped reviewability preset through `specify preset add`."""
 
     def fresh_project(self) -> Path:
-        root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
-        (root / ".specify").mkdir()
-        return root
+        """A project that ran `specify init` and holds no preset."""
+        project = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        project.joinpath(".specify").mkdir()
+        return project.resolve()
 
     def state(self, root: Path) -> dict[str, object]:
         return json.loads(detect_presets({"repo_root": str(root)}, root)["stdout"])["reviewability_preset"]
