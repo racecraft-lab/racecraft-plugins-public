@@ -228,7 +228,8 @@ for phase in PHASES starting from first_pending:
        under that rule before spawning any executor.
     3. Normalize Clarify through Rule 4 before reading phase prompts.
        Read the workflow file's prompt(s) for this phase
-    4. For EACH prompt in the phase:
+    4. Checklist: use SKILL.md Dispatch waves instead of the per-prompt dispatch.
+       Other phases: for EACH prompt in the phase:
        a. Resolve <executor>:
           use the matching installed SpecKit custom agent
        b. spawn_agent the resolved <executor>:
@@ -238,15 +239,37 @@ for phase in PHASES starting from first_pending:
           the summary, then close_agent only when that action is exposed. On
           hosted Responses, the host retains the inspectable completed thread.
        d. autopilot-state.json: mark this prompt's item as "completed"
+       Checklist only: executors propose and write no artifact. Run runner helper
+       `checklist-edits` in read_only mode before the first domain wave for the baseline.
+       Request the brief with domains and max_agents; for each domain wave, issue
+       one spawn_agent per entry in one turn, then one bounded wait_agent loop
+       until every entry returned its terminal result.
+       After the last executor returns, run it in apply mode with the domain names
+       in workflow order, the baseline, and each executor's Proposed Edits block. It
+       applies one domain at a time in domain order. A conflict or a gap with no edit
+       goes to consensus below; a refusal applies nothing and is a gate failure under
+       the Failure Escalation Protocol. An interrupted apply names what reached disk
+       (applied domains, a half-written domain's files, canonical paths that moved or could not be verified,
+       whether the record was written or its state is unknown):
+       restore both files before any retry. After consensus, take a read_only baseline, spawn
+       each verify wave of the first brief with both `Pass: verify` and `Mode: verify`,
+       reusing the original domain prompt, phase brief inputs, readable files and
+       dispatch context; consume every result before the next verify wave, then
+       run `checklist-edits` in dry_run mode with no domains, no proposals and that
+       baseline: a refusal means a verify run wrote an artifact.
     5. Run consensus in main session if needed:
-       Parse executor's "Unresolved for consensus" section.
-       For each item → spawn the category-routed analysts (codebase-analyst,
-       spec-context-analyst, domain-researcher) per Rule 7 via
-       spawn_agent → bounded wait_agent loop → consume each analyst result,
-       calling close_agent only when exposed and never exceeding the derived
-       subagent_slots limit (dispatch in waves when items × analysts exceeds
-       the cap) → apply consensus rules → edit
-       artifacts → mark the corresponding Consensus item complete in autopilot-state.json.
+       Parse executor's "Unresolved for consensus" section, in workflow order.
+       Request the phase brief with items and max_agents=subagent_slots.
+       For each brief wave: issue one spawn_agent per entry in one turn,
+       with entry.agent, entry.model.codex.model and entry.model.codex.effort,
+       and the category-routed prompt for that item's position (Rule 7).
+       Then one bounded wait_agent loop until every entry returned its terminal result;
+       consume each analyst result, calling close_agent only when exposed.
+       The brief bounds every wave by subagent_slots. After every sub-wave of
+       the items returned, follow consensus-protocol.md: dispatch and consume
+       the actual security synthesizers, accept the routed low-confidence
+       analysts without a synthesizer, and apply accepted artifact edits serially.
+       Mark the corresponding Consensus item complete in autopilot-state.json.
        An item that ends in [ROUND_3_TIEBREAK] follows
        consensus-protocol.md#round-3-tiebreak: a fresh analyst plus a
        max-effort `consensus-tiebreaker` resolve it in an interactive and an

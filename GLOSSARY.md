@@ -12,6 +12,10 @@ _Avoid_: pilot run, evidence run, canary
 A file holding every scaffold interview answer in advance, so scaffold runs without asking. A missing or unknown answer fails scaffold rather than turning into a question.
 _Avoid_: pre-answered interview, scaffold script
 
+**Application record**:
+The checklist run's account of the domain edits it applied. An interrupted run distinguishes a record known to be present, known to be absent or different, and one whose state could not be verified.
+_Avoid_: presumed absence
+
 **Blocked-for-UAT**:
 Work a run cannot finish or verify and hands to human review with its reason and evidence, while independent safe work continues. Accepting a documented gap does not make that work complete.
 _Avoid_: completed with deferrals, failed run, waived completion
@@ -37,8 +41,12 @@ The run's record of every judgment it made instead of asking the user: the optio
 _Avoid_: end-of-run request, Decisions for you
 
 **Dispatch wave**:
-The agents a host launches together in one turn, such as the checklist domains or the analysts of one consensus round. The next wave starts only after every agent of the wave returned. A wave holds independent work; edits to a shared artifact stay serial, so two agents that write the same artifact never share a wave. Until checklist executors only propose edits, each checklist domain run is a wave of its own.
+The agents a host launches together in one turn, such as the checklist domains or the analysts of one consensus round. The next wave starts only after every agent of the wave returned. A wave holds independent work; edits to a shared artifact stay serial, so two agents that write the same artifact never share a wave. Checklist executors propose edits together; the runner applies those edits one domain at a time.
 _Avoid_: parallel group, fan-out
+
+**Edit proposal**:
+A checklist domain executor's return: its gaps and the edits it would make to the spec and plan. The executor never writes them. The runner applies the proposals one domain at a time, in workflow order, and refuses the batch if an executor wrote either file.
+_Avoid_: patch, remediation, fix pass
 
 **Gate**:
 A checkpoint that validates whether a run meets its requirements at a fixed point. A gate is a check, never a phase.

@@ -3125,9 +3125,72 @@ class InstallInventoryLoaderTests(unittest.TestCase):
                          [record["path"] for record in json.loads((REPO_ROOT / self.INVENTORY_PATHS[0]).read_text())["files"]])
 
 
+
+class SourceSnapshotTests(unittest.TestCase):
+    """The payload gate snapshots the live source tree, which other processes may be importing from."""
+
+    def snapshot_while(self, change: str) -> dict[Path, Any]:
+        """Snapshot a small package, running `change` in its subpackage while a file there is read."""
+        from speckit_pro_runner import trusted_io
+
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name).resolve()
+        package = root / "pkg"
+        (package / "sub").mkdir(parents=True)
+        (package / "a.py").write_text("a = 1\n", encoding="utf-8")
+        (package / "sub" / "b.py").write_text("b = 2\n", encoding="utf-8")
+        if change.startswith("nested"):
+            (package / "early").mkdir()
+            (package / "early" / "source.py").write_text("value = 1\n", encoding="utf-8")
+        real = trusted_io.read_tree_entry
+
+        def read_while_changing(parent_fd: int, name: str, expected: Any = None, **kwargs: Any) -> Any:
+            if name == "b.py":
+                if change == "bytecode cache":
+                    (package / "sub" / "__pycache__").mkdir(exist_ok=True)
+                    (package / "sub" / "__pycache__" / "b.cpython-311.pyc").write_bytes(b"cache")
+                elif change == "new source file":
+                    (package / "sub" / "c.py").write_text("c = 3\n", encoding="utf-8")
+                elif change == "replaced sibling":
+                    replacement = root / "a-new.py"
+                    replacement.write_text("a = 99\n", encoding="utf-8")
+                    os.replace(replacement, package / "a.py")
+                elif change == "nested replaced sibling":
+                    replacement = root / "source-new.py"
+                    replacement.write_text("value = 1\n", encoding="utf-8")
+                    os.replace(replacement, package / "early" / "source.py")
+                elif change == "nested edited sibling":
+                    (package / "early" / "source.py").write_text("value = 99\n", encoding="utf-8")
+                elif change == "nested new source file":
+                    (package / "early" / "new.py").write_text("new = 1\n", encoding="utf-8")
+            return real(parent_fd, name, expected, **kwargs)
+
+        with patch.object(trusted_io, "read_tree_entry", read_while_changing):
+            return trusted_io.trusted_tree_snapshot(package, root)
+
+    def test_a_bytecode_cache_written_while_reading_does_not_fail_the_snapshot(self) -> None:
+        # Linux preflight: a concurrent test importing the runner created __pycache__ mid-snapshot.
+        captured = self.snapshot_while("bytecode cache")
+        self.assertEqual({Path(), Path("a.py"), Path("sub"), Path("sub/b.py")}, set(captured))
+
+    def survives(self, change: str) -> bool:
+        try:
+            self.snapshot_while(change)
+        except OSError:
+            return False
+        return True
+
+    def test_a_source_change_while_reading_still_fails_the_snapshot(self) -> None:
+        self.assertEqual([], [change for change in (
+            "new source file", "replaced sibling", "nested replaced sibling",
+            "nested edited sibling", "nested new source file",
+        ) if self.survives(change)])
+
 if __name__ == "__main__":
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(GateFoundationTests)
     suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(InstallInventoryLoaderTests))
+    suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(SourceSnapshotTests))
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     total = result.testsRun
     failed = len(result.failures) + len(result.errors)

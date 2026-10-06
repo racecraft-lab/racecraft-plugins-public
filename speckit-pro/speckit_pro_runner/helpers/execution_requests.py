@@ -1,11 +1,11 @@
-"""Runner envelope adapter for the execution-control, execute-verification and task-results helpers."""
+"""Runner envelope adapters shared by mutation helpers: execution-control and its siblings, and repository-contained requests."""
 
 from __future__ import annotations
 
 from collections.abc import Callable
 from functools import partial
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 from ..envelope import diagnostic, response
 from ..execution_control import execution_control
@@ -39,3 +39,27 @@ def run_execution_helper(entry: Any, request: Any) -> dict[str, Any]:
     result.update(helper_id=entry.helper_id, operation=entry.operation, mode=request.mode,
                   promotion_status=entry.promotion_status)
     return response(status, request_id=request.request_id, data=result)
+
+
+class Refusal(NamedTuple):
+    """How a helper explains a request it refuses: a diagnostic code, a summary and up to three actions."""
+
+    code: str
+    summary: str
+    actions: list[str]
+
+
+def run_contained_helper(entry: Any, request: Any, work: Callable[[Path, dict[str, Any], str], dict[str, Any]],
+                         refusal: Refusal) -> dict[str, Any]:
+    """Resolve the repository root and run `work` on it; a refused request is an input error, with nothing written."""
+    try:
+        root = resolve_repo_root(request.inputs)
+        if isinstance(root, dict):
+            return response("input_error", request_id=request.request_id, diagnostics=[root])
+        data = work(root, request.inputs, request.mode)
+    except (ValueError, OSError) as error:
+        explained = diagnostic(refusal.code, str(error), remediation_summary=refusal.summary,
+                               remediation_actions=refusal.actions)
+        return response("input_error", request_id=request.request_id, diagnostics=[explained])
+    identity = {"helper_id": entry.helper_id, "operation": entry.operation, "mode": request.mode}
+    return response("ok", request_id=request.request_id, data={**data, **identity})

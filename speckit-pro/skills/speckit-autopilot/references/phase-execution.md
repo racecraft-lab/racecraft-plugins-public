@@ -392,7 +392,8 @@ for phase in PHASES starting from first_pending:
        under that rule before spawning any executor.
     3. Normalize Clarify through Rule 4 before reading phase prompts.
        Read the workflow file's prompt(s) for this phase
-    4. For EACH prompt in the phase:
+    4. Checklist: use SKILL.md Dispatch waves instead of the per-prompt dispatch.
+       Other phases: for EACH prompt in the phase:
        a. Resolve <executor>:
           use the matching installed SpecKit custom agent
        b. spawn_agent the resolved <executor>:
@@ -402,15 +403,37 @@ for phase in PHASES starting from first_pending:
           the summary, then close_agent only when that action is exposed. On
           hosted Responses, the host retains the inspectable completed thread.
        d. autopilot-state.json: mark this prompt's item as "completed"
+       Checklist only: executors propose and write no artifact. Run runner helper
+       `checklist-edits` in read_only mode before the first domain wave for the baseline.
+       Request the brief with domains and max_agents; for each domain wave, issue
+       one spawn_agent per entry in one turn, then one bounded wait_agent loop
+       until every entry returned its terminal result.
+       After the last executor returns, run it in apply mode with the domain names
+       in workflow order, the baseline, and each executor's Proposed Edits block. It
+       applies one domain at a time in domain order. A conflict or a gap with no edit
+       goes to consensus below; a refusal applies nothing and is a gate failure under
+       the Failure Escalation Protocol. An interrupted apply names what reached disk
+       (applied domains, a half-written domain's files, canonical paths that moved or could not be verified,
+       whether the record was written or its state is unknown):
+       restore both files before any retry. After consensus, take a read_only baseline, spawn
+       each verify wave of the first brief with both `Pass: verify` and `Mode: verify`,
+       reusing the original domain prompt, phase brief inputs, readable files and
+       dispatch context; consume every result before the next verify wave, then
+       run `checklist-edits` in dry_run mode with no domains, no proposals and that
+       baseline: a refusal means a verify run wrote an artifact.
     5. Run consensus in main session if needed:
-       Parse executor's "Unresolved for consensus" section.
-       For each item → spawn the category-routed analysts (codebase-analyst,
-       spec-context-analyst, domain-researcher) per Rule 7 via
-       spawn_agent → bounded wait_agent loop → consume each analyst result,
-       calling close_agent only when exposed and never exceeding the derived
-       subagent_slots limit (dispatch in waves when items × analysts exceeds
-       the cap) → apply consensus rules → edit
-       artifacts → mark the corresponding Consensus item complete in autopilot-state.json.
+       Parse executor's "Unresolved for consensus" section, in workflow order.
+       Request the phase brief with items and max_agents=subagent_slots.
+       For each brief wave: issue one spawn_agent per entry in one turn,
+       with entry.agent, entry.model.codex.model and entry.model.codex.effort,
+       and the category-routed prompt for that item's position (Rule 7).
+       Then one bounded wait_agent loop until every entry returned its terminal result;
+       consume each analyst result, calling close_agent only when exposed.
+       The brief bounds every wave by subagent_slots. After every sub-wave of
+       the items returned, follow consensus-protocol.md: dispatch and consume
+       the actual security synthesizers, accept the routed low-confidence
+       analysts without a synthesizer, and apply accepted artifact edits serially.
+       Mark the corresponding Consensus item complete in autopilot-state.json.
        An item that ends in [ROUND_3_TIEBREAK] follows
        consensus-protocol.md#round-3-tiebreak: a fresh analyst plus a
        max-effort `consensus-tiebreaker` resolve it in an interactive and an
@@ -777,25 +800,34 @@ executor must not produce or substitute the G3 evidence it receives.
 <!-- host:claude: Claude documents each phase's dispatch, gate, and commit in its own section -->
 ### Phase 4: Checklist
 
-Run the checklist domains as dispatch waves, one domain per wave while their
-executors edit the shared artifacts themselves, then two-layer resolution over
-all domains' gaps, then a verify wave:
+Run the checklist domains as dispatch waves in check-and-propose mode:
+each returns its gaps and proposed edits and writes neither `spec.md` nor
+`plan.md`. Apply edits in domain order, then resolve all domains' gaps and
+run the verify waves:
 
 ```text
+0. runner helper `checklist-edits`, mode read_only → baseline
 1. autopilot-state.json: every domain task → in_progress
 2. Request the phase brief with `domains` (the `/speckit-checklist <domain>`
    names under brief.inputs.prompt_section, in file order) and `max_agents`.
-   Domain waves, in file order, each launched and consumed before the next
-   (one entry per wave, with its own domain prompt):
+   For each domain wave: launch every entry in ONE turn, with its own prompt:
      Agent(subagent_type: "speckit-pro:checklist-executor", model: entry.model.claude.model,
            run_in_background: true,
            prompt: "Run /speckit-checklist with: <domain prompt>\nReference slices: <brief.slices, verbatim>")
    The phase brief supplies the slices; the executor reads no reference file.
    Each checklist-executor runs the checklist, researches gaps,
-   applies fixes, and re-runs once to verify (Layer 1).
-   Consume each domain's terminal result before the next wave.
-3. Collect each executor's "Unresolved for consensus" items, in domain order
-4. If unresolved gaps exist:
+   and returns them with Proposed Edits (Layer 1).
+   Consume every terminal result before the next domain wave.
+3. After every domain executor has returned, run runner helper `checklist-edits`,
+   mode apply, with the domain names in workflow order, the baseline, and each
+   executor's Proposed Edits block. It applies one domain at a time in domain
+   order. Route a conflict or a gap with no edit to step 5. A refusal applies
+   nothing: handle it as a gate failure under the Failure Escalation Protocol.
+   An interrupted apply names what reached disk (applied domains, a half-written
+   domain's files, canonical paths that moved or could not be verified, whether
+   the record was written or its state is unknown): restore both files before any retry
+4. Collect each executor's "Unresolved for consensus" items, in domain order
+5. If unresolved gaps exist:
    a. autopilot-state.json: each affected "<domain> Consensus" → in_progress
    b. Request the phase brief again with `items` and `max_agents`, then follow
       consensus-protocol.md §Batched Dispatch: the brief's security wave and
@@ -804,27 +836,35 @@ all domains' gaps, then a verify wave:
       Round 2 escape-hatch: also batched across all queued gaps.
       [ROUND_3_TIEBREAK]: consensus-protocol.md#round-3-tiebreak
    c. autopilot-state.json: each "<domain> Consensus" → completed
-5. For each verify wave of the first brief: launch its `pass: verify` entries
-   in ONE turn, each with that domain's prompt plus a `Pass: verify` line;
-   consume every result before the next verify wave. Each entry re-runs its
-   domain checklist, refreshes its report, and keeps spec.md and plan.md unchanged
-6. autopilot-state.json: every domain task → completed
+6. runner helper `checklist-edits`, mode read_only → verify baseline
+   Reuse the phase brief inputs, readable files and dispatch context from
+   the original domain prompt (SKILL.md Step 2).
+   For each verify wave of the first brief: launch its `pass: verify` entries in ONE turn:
+     Agent(subagent_type: "speckit-pro:checklist-executor", model: entry.model.claude.model,
+           run_in_background: true,
+           prompt: "Mode: verify\nPass: verify\nRun /speckit-checklist with: <domain prompt>\nReference slices: <brief.slices, verbatim>")
+   Then consume every result before the next verify wave.
+   Each entry re-runs its domain checklist, refreshes its report, and keeps
+   spec.md and plan.md unchanged.
+   Then runner helper `checklist-edits`, mode dry_run, with no domains, no
+   proposals and the verify baseline: a refusal means a verify run wrote an artifact
+7. autopilot-state.json: every domain task → completed
 ```
 
 **Layer 1 (executor):** The checklist-executor handles
-gap research and remediation internally using the research
-broker's web search and library docs, and codebase exploration.
+gap research internally using the research
+broker's web search and library docs, and codebase exploration, and proposes
+the fix for each gap.
 
 **Layer 2 (consensus):** For gaps the executor flagged (low
 confidence, security tag or keyword), the main session follows the
 `tier` that `parse-consensus-categories` returns.
 
-**Why one wave per domain:** Every executor repairs `spec.md` and `plan.md`
-itself, and two writers at once can drop each other's edits. The brief
-therefore never puts two domain runs in one wave. Once executors only propose
-edits and the runner applies them in domain order, the brief puts all domain
-runs in one wave. Consensus edits stay serial, and the verify wave re-runs
-every domain after the last edit; it keeps `spec.md` and `plan.md` unchanged.
+**Why ordered application after a wave:** Executors only propose edits, so
+independent domain checks can run together. Domain 2's edit may build on
+Domain 1's: the runner applies proposals one at a time in workflow order,
+so the result does not depend on which executor returned first. Consensus
+edits stay serial, and the verify waves re-run every domain after the last edit.
 
 **Gate:** G4 — verify 0 `[Gap]` markers
 

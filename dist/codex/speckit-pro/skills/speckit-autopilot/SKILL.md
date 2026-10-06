@@ -285,7 +285,7 @@ For planning, use the runner's phase brief in Step 2 as the dispatch authority.
 | ----- | ----- | --------------- |
 | Specify, Plan, Tasks | `phase-executor` | Heavy reasoning (Specify, Plan); mechanical for Tasks. Single skill invocation, single summary. |
 | Clarify | `clarify-executor` | Read-only question set; parent answers and edits |
-| Checklist | `checklist-executor` | Must run checklist AND remediate gaps with research |
+| Checklist | `checklist-executor` | Must run checklist AND propose gap fixes with research |
 | Analyze | `analyze-executor` | Resolve required defects at every severity using relevant evidence and the shared repair reservation |
 | Implement | `implement-executor` | Strict TDD with validated capability batches of up to four sequential tasks; parallel waves must respect metadata ownership/dependencies and derived `subagent_slots`. Consume each actual per-task result before marking completion. Legacy workflows use singleton execution. |
 | Read-only consensus | analyst agents | Read-heavy code/spec/domain analysis |
@@ -347,8 +347,8 @@ rows with that one session; reconcile pending Clarify task items in state to
 the same session. Keep completed session evidence. If a Clarify session has
 already completed, proceed to G2 instead of dispatching another session.
 Spawn a **separate subagent for each prompt**. Clarify has one. Checklist
-domains run one dispatch wave each while their executors write the shared
-artifacts (see Dispatch waves), then the two-layer resolution (Rule 6) runs
+domains run together as dispatch waves while their executors only propose
+edits (see Dispatch waves), then the two-layer resolution (Rule 6) runs
 once over every domain's unresolved items, then the verify wave re-runs each
 domain.
 
@@ -880,10 +880,9 @@ lists, in order: the domain waves, the security wave (the three analysts of
 each security item), the low-confidence wave (the routed analyst of each
 low-confidence item), and the verify wave (each domain's `pass: verify`
 re-run, refreshing its checklist report while keeping spec.md and plan.md
-unchanged); a wave with no agents is omitted. A checklist executor still
-edits `spec.md` and `plan.md` itself, so the brief gives each domain its own
-wave and no two writers run at once; one wave per domain is the rule the
-brief names, never a choice to batch them.
+unchanged); a wave with no agents is omitted. Checklist executors only
+propose edits, so domain checks share a wave within the host limit. The
+runner applies their proposals one domain at a time, in workflow order.
 Pass `max_agents=subagent_slots`, derived as in the capacity rule above. The
 cap is `agents.max_concurrent_threads_per_session` (legacy alias
 `agents.max_threads`; spawned threads, primary excluded; Codex picks the
@@ -893,7 +892,7 @@ With no count exposed, `subagent_slots` is 1.
 Launch every entry of a wave in one turn, then consume every result before the
 next wave. A synthesizer or the confidence rule starts only after every wave of
 its items returned. Each entry names its agent, prompt `inputs` and model. A domain entry
-takes that domain's workflow prompt, plus a `Pass: verify` line when its inputs
+takes that domain's workflow prompt, plus both `Pass: verify` and `Mode: verify` lines when its inputs
 say `pass: verify`; an analyst entry (`inputs.item` only) takes the consensus
 prompt for `items[inputs.item - 1]`, built from your own copy of that item. Checklist runs two requests: `domains` before the executors
 (domain waves and verify wave), `items` once every domain's unresolved items are
@@ -951,6 +950,19 @@ for phase in PHASES starting from first_pending:
                      message=<entry.inputs + the wave prompt, see Dispatch waves>),
        then one bounded wait_agent loop until every entry returned its terminal result.
     4. Checklist: domain waves -> consensus -> verify wave (Dispatch waves above).
+       Before the first domain wave: runner helper `checklist-edits`, mode read_only → baseline.
+       After every domain executor returned: `checklist-edits`, mode apply, with
+       domain names in workflow order, the baseline and each Proposed Edits block.
+       It applies one domain at a time in domain order; conflicts or gaps with no
+       edit go to consensus. A refusal applies nothing and is a gate failure under
+       the Failure Escalation Protocol. An interrupted apply names what reached
+       disk (applied domains, partial files, moved or unverified canonical paths,
+       whether the record was written or its state is unknown): restore both files before any retry.
+       After consensus: `checklist-edits`, mode read_only → verify baseline.
+       Launch each verify wave with both Pass: verify and Mode: verify, retaining
+       the original domain prompt, brief inputs, readable files and dispatch context.
+       Then `checklist-edits`, mode dry_run, with no domains, no proposals and
+       the verify baseline: a refusal means a verify run wrote an artifact.
        Other phases: run consensus (Clarify/Analyze only) — see Rule 6
     5. Specify, Plan, Checklist, Tasks and Analyze only:
        handle optional brief.hooks with event=after_<phase> under the confirmation

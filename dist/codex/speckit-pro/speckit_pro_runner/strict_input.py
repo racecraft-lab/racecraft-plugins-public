@@ -4,6 +4,10 @@ from __future__ import annotations
 
 import re
 from typing import Any
+from unicodedata import category
+
+# Controls, format characters (bidirectional and zero-width) and line or paragraph separators hide what a reader sees.
+HIDDEN_CATEGORIES = frozenset({"Cc", "Cf", "Zl", "Zp"})
 
 
 class SelectionError(ValueError):
@@ -25,6 +29,11 @@ def require_text(value: Any, label: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise SelectionError(f"{label} must be a non-empty string")
     return value
+
+
+def has_hidden_characters(text: str, *, keep: str = "") -> bool:
+    """True when `text` holds a control, format or line separator character other than those in `keep`."""
+    return any(char not in keep and category(char) in HIDDEN_CATEGORIES for char in text)
 
 
 def next_fence(fence: str | None, line: str) -> str | None:

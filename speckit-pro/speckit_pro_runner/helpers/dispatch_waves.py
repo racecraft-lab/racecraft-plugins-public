@@ -18,9 +18,9 @@ MAX_DOMAINS, MAX_ITEMS, MAX_LINE = 12, 100, 2000
 ITEM_FIELDS = {"line", "confidence"}
 WAVE_INPUTS = ("domains", "items", "max_agents")
 MAX_AGENTS = 1000
-# Checklist executors still edit spec.md and plan.md themselves, so concurrent domain runs could drop each other's
-# edits. False gives each domain run a wave of its own. Flip it once executors only propose edits (#1201).
-CHECKLIST_DOMAINS_PARALLEL = False
+# Checklist executors only propose edits; checklist-edits applies them in domain order after every result returns.
+# Keeping the switch retains the serial fallback for executors that write shared artifacts.
+CHECKLIST_DOMAINS_PARALLEL = True
 
 
 def checked_domains(phase: str, raw: Any) -> list[str]:
