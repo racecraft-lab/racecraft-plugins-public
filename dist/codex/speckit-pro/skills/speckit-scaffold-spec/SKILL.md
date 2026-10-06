@@ -990,6 +990,7 @@ per item:
 | `reviewability_report` | reusing the setup gate result, with its report or roadmap path in `files` and SPEC-ID as `values.spec_id` |
 | `git_write` | sending `data.observation` from the Git Write Probe unchanged |
 | `formal_methods` | judging whether the Design Concept's design suits a formal model, by the [coach's formal-methods guide](../speckit-coach/references/formal-methods-guide.md): `verified` when it suits one, `not_applicable` when it does not; cite the deciding behavior as `evidence_source` |
+| `preview_surface` | checking whether this session can open an HTML page in a preview that the agent can also observe, by the capability-discovery directive: `verified` with the surface name as `values.surface` when it can, `unavailable` with the observed absence as `values.surface` when the run is headless or has none, `unknown` when it cannot tell |
 
 The helper records `permission_probe`, `plugin_scope` and `mcp_authentication`
 as `not_applicable` on Codex (Claude Code only). Do not send them.

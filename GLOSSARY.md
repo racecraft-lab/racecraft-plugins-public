@@ -71,6 +71,10 @@ _Avoid_: planning run, planning phase
 One of the six steps inside the plan stage: specify, clarify, plan, checklist, tasks and analyze. Every SPEC runs all six.
 _Avoid_: stage, step, gate, quality gate, optional phase
 
+**Preview surface**:
+A place in the host where the agent can open a generated HTML page and see it rendered. Scaffold records whether the host has one in the readiness record; a run spawns a preview observer for a page only when the record does not say there is none.
+_Avoid_: preview support, browser access
+
 **Progress block**:
 The fixed summary of an autopilot run's phases and tasks that the runner renders from autopilot state at every phase transition. It is the only place a run shows its progress.
 _Avoid_: task list, todo list, checklist

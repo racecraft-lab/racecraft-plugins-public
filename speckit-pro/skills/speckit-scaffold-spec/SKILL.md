@@ -1130,6 +1130,7 @@ per item:
 | `git_write` | sending `data.observation` from the Git Write Probe unchanged |
 <!-- /host -->
 | `formal_methods` | judging whether the Design Concept's design suits a formal model, by the [coach's formal-methods guide](../speckit-coach/references/formal-methods-guide.md): `verified` when it suits one, `not_applicable` when it does not; cite the deciding behavior as `evidence_source` |
+| `preview_surface` | checking whether this session can open an HTML page in a preview that the agent can also observe, by the capability-discovery directive: `verified` with the surface name as `values.surface` when it can, `unavailable` with the observed absence as `values.surface` when the run is headless or has none, `unknown` when it cannot tell |
 
 <!-- host:claude: Claude Code observes its own permission, plugin scope and MCP approval state -->
 Claude Code items. Send only the raw observation (`item`, `evidence_source`, and
