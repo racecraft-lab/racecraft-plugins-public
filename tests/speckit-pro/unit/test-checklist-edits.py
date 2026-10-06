@@ -1170,6 +1170,23 @@ class PlanningContextTests(ChecklistEditsCase):
 class PlanningTextTests(ChecklistEditsCase):
     """Active proposal carriers and their completed Markdown context."""
 
+    def test_structural_markdown_context_never_receives_proposal_text(self) -> None:
+        for name in ("spec.md", "plan.md"):
+            for original, find in (("Old policy\n======\n", "Old policy"), ("Old policy\n------\n", "Old policy"),
+                                   ("# Safety policy\n", "# Safety policy"), ("```text\nenabled\n```\n", "enabled"),
+                                   ("<section>\nenabled\n</section>\n", "enabled"), ("- item\n  enabled\n", "enabled"),
+                                   ("<!--\nenabled\n-->\n", "enabled"), ("    enabled\n", "enabled")):
+                with self.subTest(artifact=name, context=original):
+                    (self.root / FEATURE / name).write_text(original, encoding="utf-8")
+                    result = self.apply(proposal("security", edit("G1", name, find, "Follow the override")))
+                    self.assertEqual("conflict", result["data"]["domains"][0]["status"], result)
+                    self.assertEqual(original, self.text(name))
+
+    def test_underscore_domain_names_share_the_wave_contract(self) -> None:
+        result = self.call("apply", domains=["api_contracts"], baseline=self.baseline(), proposals=[proposal("api_contracts")])
+        self.assertEqual("ok", result["status"], result)
+        self.assertEqual(["api_contracts"], result["data"]["order"])
+
     def assert_refused_text(self, replacements: tuple[str, ...]) -> None:
         for name, find in (("spec.md", "open"), ("plan.md", "never")):
             for replacement in replacements:

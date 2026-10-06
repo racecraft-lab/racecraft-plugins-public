@@ -246,11 +246,11 @@ PRIVATE_KEY_RE = re.compile(
 PREFIX_SECRET_RULES = (
     (
         "github_token",
-        re.compile(r"\b((?:ghp|gho|ghu|ghs|ghr)_(?=[A-Za-z0-9]*[0-9])[A-Za-z0-9]{36,255})"),
+        re.compile(r"\b((?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36,255})"),
     ),
     (
         "github_fine_grained_pat",
-        re.compile(r"\b(github_pat_(?=[A-Za-z0-9_]*[0-9])[A-Za-z0-9_]{82,255})"),
+        re.compile(r"\b(github_pat_[A-Za-z0-9_]{82,255})"),
     ),
     (
         "slack_token",

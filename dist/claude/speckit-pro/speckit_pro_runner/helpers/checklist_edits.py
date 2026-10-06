@@ -38,6 +38,7 @@ from ..envelope import diagnostic, response
 from ..execution_control import confined_path, ignore_owned_directory, workflow_process_directory
 from ..strict_input import SelectionError, has_hidden_characters, require_fields, require_text
 from ..sweep_isolation import secret_matches
+from .dispatch_waves import DOMAIN_NAME
 from .execution_requests import Refusal, run_contained_helper
 
 SCHEMA_VERSION = "checklist-edits/v1"
@@ -46,7 +47,8 @@ MAX_TEXT = 20000
 # Auto-application accepts prose, not Markdown syntax, references or path/token alphabets.
 PLAIN_PROSE = re.compile(r"[A-Za-z0-9 ,;!?'\"().-]*")
 PROSE_STRUCTURE = re.compile(r"^ {4}|^\s*(?:[-.()]|[0-9]+[.)]\s)|\.(?=[A-Za-z0-9-])")
-PROPOSAL_LABEL = re.compile(r"[A-Za-z0-9][A-Za-z0-9-]{0,63}")
+PROPOSAL_LABEL = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}")
+UNCHANGED_HEADING = re.compile(r"#{1,6} +[^\r\n]+")
 
 
 class CanonicalMismatch(ValueError):
@@ -114,12 +116,12 @@ def prose_problem(text: str) -> str | None:
     return None
 
 
-def checked_label(value: Any, label: str) -> str:
+def checked_label(value: Any, label: str, pattern: re.Pattern[str] = PROPOSAL_LABEL) -> str:
     """Record identifiers have no prose, active syntax or credential alphabet."""
     text = checked_text(value, label)
-    if not PROPOSAL_LABEL.fullmatch(text) or secret_matches(text):
-        raise SelectionError(f"{label} must be 1 to 64 ASCII letters, digits or hyphens, starting with a letter or digit")
-    return text
+    if pattern.fullmatch(text) and not secret_matches(text):
+        return text
+    raise SelectionError(f"{label} must be a bounded non-credential identifier")
 
 
 def prose_edit(before: str, find: str, replacement: str) -> tuple[str, str | None]:
@@ -134,6 +136,10 @@ def prose_edit(before: str, find: str, replacement: str) -> tuple[str, str | Non
     line = before[start:position] + replacement + before[position + len(find):end]
     # Check the touched line, even if identical text already exists elsewhere.
     problem = prose_problem(line)
+    if problem is None and (prose_problem(before[start:end]) is not None or
+                            any(prose_problem(row) is not None and not UNCHANGED_HEADING.fullmatch(row)
+                                for row in before.splitlines())):
+        problem = "automatic edits require plain prose documents with unchanged ATX headings; review structural content separately"
     return (before if problem else before[:position] + replacement + before[position + len(find):]), problem
 
 
@@ -161,7 +167,7 @@ def checked_proposal(value: Any) -> tuple[str, list[str], list[dict[str, str]]]:
         if problem:
             raise SelectionError(problem)
         edits.append({key: edit[key] for key in ("gap", "file", "find", "replace")})
-    return checked_label(item["domain"], "domain"), gaps, edits
+    return checked_label(item["domain"], "domain", DOMAIN_NAME), gaps, edits
 
 
 def checked_request(request: dict[str, Any]) -> tuple[list[str], dict[str, str], dict[str, tuple[list[str], list[dict[str, str]]]]]:
@@ -171,7 +177,7 @@ def checked_request(request: dict[str, Any]) -> tuple[list[str], dict[str, str],
         raise SelectionError("domains must be a list of domain names")
     if len(set(domains)) != len(domains):
         raise SelectionError("domains must be unique")
-    domains = [checked_label(name, "domain") for name in domains]
+    domains = [checked_label(name, "domain", DOMAIN_NAME) for name in domains]
     baseline = require_fields(request["baseline"], set(ARTIFACTS), "baseline")
     if not isinstance(request["proposals"], list):
         raise SelectionError("proposals must be a list")

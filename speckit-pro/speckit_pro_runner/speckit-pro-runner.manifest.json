@@ -551,7 +551,7 @@
         "value": "speckit_pro_runner/helpers/checklist_edits.py",
         "display": "speckit_pro_runner/helpers/checklist_edits.py"
       },
-      "sha256": "c2d6b1940b7bdff308f8a3f9843c069d227b03b99d34851c47a381e11a407180"
+      "sha256": "4b4f5bda3748a1fd6d0cecefae198cbdc7fa2015fab6f1023f415d313019725b"
     },
     {
       "path": {
@@ -967,7 +967,7 @@
         "value": "speckit_pro_runner/sweep_isolation.py",
         "display": "speckit_pro_runner/sweep_isolation.py"
       },
-      "sha256": "fd793c92584c8a3e98c54a965af44e00ba6d51e3bb808ba9104583b60ef79e9d"
+      "sha256": "70687b6c9b57819c6a5ddb942ead9534207a955d32c730b8c23803ac9fcce511"
     },
     {
       "path": {

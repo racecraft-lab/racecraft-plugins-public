@@ -138,6 +138,11 @@ class SnapshotIsolationTests(unittest.TestCase):
             with self.subTest(prose=prose):
                 self.assertFalse(sweep_isolation.secret_matches(prose))
 
+    def test_digit_free_github_token_shapes_are_credentials(self) -> None:
+        for prefix, size in (("ghp_", 36), ("gho_", 36), ("ghu_", 36), ("ghs_", 36), ("ghr_", 76), ("github_pat_", 82)):
+            with self.subTest(prefix=prefix):
+                self.assertTrue(sweep_isolation.secret_matches(prefix + "a" * size))
+
     def test_outbound_redactor_removes_each_issuer_secret_and_preserves_url_context(self) -> None:
         for index, secret in enumerate(issuer_secret_cases()):
             with self.subTest(case=index):
