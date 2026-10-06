@@ -110,24 +110,27 @@ dispatches all three analysts, so Round 2 fires only for a failed or
 escaped analyst. A `low_confidence` item stops after its one analyst.
 
 ```text
-ROUND 1 — category-routed
-  Call parse-consensus-categories on the unresolved item line.
-  Spawn exactly the N analysts (1 ≤ N ≤ 3) it returns.
-  consensus-synthesizer always runs (becomes "edit-applier" in 1-analyst case).
+ROUND 1 — security (all three)
+  Call parse-consensus-categories with the unresolved item line and confidence.
+  Enter these rounds only when its tier is security.
+  Spawn all three analysts it returns and await their responses.
 
-  IF synthesizer flags confidence: high
-     AND no analyst response contains escape-hatch keywords
+  IF an analyst failed OR its response contains escape-hatch keywords
      ("insufficient context", "not in this codebase", "no precedent",
       "outside my scope", "cannot answer from this perspective"):
-       APPLY edit, log result, done.
+       queue only that analyst for ROUND 2.
 
-  ELSE (low confidence OR escape-hatch keyword detected):
-       fall through to ROUND 2.
+  ELSE:
+       Run consensus-synthesizer with all three responses.
+       Apply the Consensus Rules below: APPLY edit and log, OR flag [ROUND_3_TIEBREAK].
+       Low synthesizer confidence goes to ROUND 3, not another analyst fan-out.
 
-ROUND 2 — full fan-out
-  Spawn the remaining (3 - N) analysts.
-  Re-invoke consensus-synthesizer with all 3 responses.
-  Apply the multi-analyst rules below.
+ROUND 2 — retry failed or escaped analysts
+  Retry only the failed or escaped analysts, once, with the missing context.
+  Keep the successful Round-1 responses from the other perspectives.
+  If a retry fails, follow the fresh-analyst replacement in §Round 3 Tiebreak.
+  Once all three responses are valid, run consensus-synthesizer with them.
+  Apply the Consensus Rules below.
   APPLY edit OR flag [ROUND_3_TIEBREAK].
 
 ROUND 3 — agent tiebreak (only after a [ROUND_3_TIEBREAK] flag)
@@ -286,14 +289,15 @@ Stage 3 — Apply Artifact Edits SERIALLY (orchestrator's own Edit calls):
     IF Flags = None AND (Confidence = high OR 2-of-3 OR 3-of-3 agree):
       Apply Artifact Edit to spec.md / plan.md / tasks.md
       Write a CRL row: Round=1, Routed Categories=Sx, Outcome=<outcome>, Analysts Used=Sx
-    IF Flags includes [ESCAPE_TO_ROUND_2] OR low confidence:
-      Push (Ix, Sx) onto ROUND_2_QUEUE
-    IF Flags includes [ROUND_3_TIEBREAK]: run the Round 3 tiebreak per
+    IF Flags includes [ESCAPE_TO_ROUND_2]:
+      Push (Ix, failed or escaped analysts) onto ROUND_2_QUEUE
+    IF Flags includes [ROUND_3_TIEBREAK] OR low confidence: run the Round 3 tiebreak per
       §Round 3 Tiebreak after this batch's other edits are applied; the
       flag is the Round 3 trigger and never a question or a stop
 
 If ROUND_2_QUEUE non-empty:
-  Stage 4 — All Round-2 analysts (the remaining (3 − |Sx|) per queued item) in ONE message
+  Stage 4 — Retry only each queued item's failed or escaped analysts in ONE message;
+            retain successful Round-1 responses from the other perspectives
   Stage 5 — All Round-2 synthesizers in ONE message
   Stage 6 — Apply Round-2 edits serially (same as Stage 3), including §Round 3 Tiebreak.
 ```

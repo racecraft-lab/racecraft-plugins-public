@@ -541,13 +541,28 @@ class ReferenceProseTests(unittest.TestCase):
         self.assertIn("parse-consensus-categories", paragraph)
 
     def test_the_round_one_pseudocode_names_the_helper(self) -> None:
-        round_one = section_between(self.text, "ROUND 1 — category-routed", "ROUND 2 — full fan-out")
+        round_one = section_between(self.text, "ROUND 1 — security (all three)", "ROUND 2 — retry failed or escaped analysts")
         self.assertIn("parse-consensus-categories", round_one)
 
     def test_the_single_analyst_path_follows_runner_selection_without_escalation(self) -> None:
         single = section_between(self.text, "### Single-analyst confidence rule", "### Two-analyst rule")
         self.assertEqual([True, False, False], [phrase in single for phrase in (
             "answer_source", "Fall through to Round 2", "synthesizer's output")])
+
+    def test_security_rounds_retry_only_failed_or_escaped_analysts_on_both_hosts(self) -> None:
+        surfaces = [("source", REFERENCE_DOC), *((host, host_skill_root(host) / TIER_REFERENCE) for host in HOSTS)]
+        for surface, path in surfaces:
+            with self.subTest(surface=surface):
+                text = path.read_text(encoding="utf-8")
+                rounds = section_between(text, "### Two-round protocol", "### Single-analyst confidence rule")
+                self.assertIn("Spawn all three analysts", rounds)
+                self.assertIn("Retry only the failed or escaped analysts", rounds)
+                self.assertIn("Keep the successful Round-1 responses", rounds)
+                for retired in ("1 ≤ N ≤ 3", "edit-applier", "remaining (3 - N)", "ELSE (low confidence"):
+                    self.assertNotIn(retired, rounds)
+                batch = section_between(text, "Stage 3 — Apply Artifact Edits", "### What stays serial")
+                self.assertNotIn("remaining (3 − |Sx|)", batch)
+                self.assertNotIn("[ESCAPE_TO_ROUND_2] OR low confidence", batch)
 
 
 class SecurityKeywordCopyTests(unittest.TestCase):
