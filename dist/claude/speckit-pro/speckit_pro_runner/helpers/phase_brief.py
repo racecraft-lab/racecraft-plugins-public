@@ -15,6 +15,7 @@ from ..trusted_io import resolve_repo_root
 from .checklist_edits import checklist_edits
 from .dispatch_waves import WAVE_INPUTS, WaveRequest, checked_wave_request, compose_waves
 from .extension_hooks import optional_hooks
+from .read_only import checked_g4_judged, check_g4_inputs
 
 PHASES = {
     "Specify": ("phase-executor", "G1", ()),
@@ -169,9 +170,9 @@ def brief_data(phase: str, workflow: str, feature: str, waves: WaveRequest) -> d
     }
 
 
-def checked_request(raw: Any) -> tuple[str, str, str, WaveRequest]:
+def checked_request(raw: Any) -> tuple[str, str, str, WaveRequest, dict[str, str] | None]:
     """The closed phase-brief inputs as (phase, workflow_file, feature_dir, waves); anything else raises ValueError."""
-    optional = {key: raw[key] for key in WAVE_INPUTS if isinstance(raw, dict) and key in raw}
+    optional = {key: raw[key] for key in (*WAVE_INPUTS, "g4_judged") if isinstance(raw, dict) and key in raw}
     inputs = require_fields({key: value for key, value in raw.items() if key not in optional} if isinstance(raw, dict) else raw,
                             {"phase", "workflow_file", "feature_dir"}, "phase-brief inputs")
     phase = require_text(inputs["phase"], "phase")
@@ -181,7 +182,10 @@ def checked_request(raw: Any) -> tuple[str, str, str, WaveRequest]:
         raise ValueError("feature_dir must name a directory")
     if phase not in PHASES:
         raise ValueError("phase must be Specify, Clarify, Plan, Checklist, Tasks or Analyze")
-    return phase, workflow, feature, checked_wave_request(phase, optional)
+    judged = checked_g4_judged(optional.pop("g4_judged", None)) if phase == "Tasks" else None
+    if "g4_judged" in optional:
+        raise ValueError("g4_judged applies to Tasks only")
+    return phase, workflow, feature, checked_wave_request(phase, optional), judged
 
 
 def internal_failure(request: Any, code: str, exc: Exception) -> dict[str, Any]:
@@ -203,11 +207,13 @@ def observed_checklist_waves(root: Path, workflow: str, feature: str, waves: Wav
 def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     """Return phase-brief/v1 dispatch data; gate and stop decisions stay separate.
 
-    The closed request inputs are phase, workflow_file and feature_dir strings, and optional domains, items, verify_items, verify_baseline and max_agents
+    The closed request inputs are phase, workflow_file and feature_dir strings, and Tasks-only g4_judged and optional domains, items, verify_items, verify_baseline and max_agents
     for waves (dispatch_waves.py).
     Paths reject parent segments and control, format and line separator characters.
     feature_dir is workflow-root relative; workflow_file may be absolute but must name a file.
-    Validation is lexical, except that a verify_baseline is compared with checklist-edits' on-disk digests.
+    Tasks requires g4_judged, the preceding G4 digest map. Before returning a Tasks
+    brief, the G4 owner re-reads the bounded inputs and refuses any digest or report-set drift.
+    Other phases remain lexical except for verify_baseline's on-disk comparison.
     Successful data has exactly these fields. Records have only the named keys;
     a wave dispatch's inputs is an open JSON object for its prompt arguments.
 
@@ -247,13 +253,20 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     Input errors return no data; uninterpretable hooks are internal_failure.
     """
     try:
-        phase, workflow, feature, waves = checked_request(request.inputs)
+        phase, workflow, feature, waves, judged = checked_request(request.inputs)
     except ValueError as exc:
         return response("input_error", request_id=request.request_id,
                         diagnostics=[diagnostic("invalid_phase_brief", str(exc))])
     root = resolve_repo_root({})
     if isinstance(root, dict):
         return response("missing_prerequisite", request_id=request.request_id, diagnostics=[root])
+    if judged is not None:
+        try:
+            check_g4_inputs(root / feature, root, judged)
+        except ValueError as exc:
+            # The owner reports only runner-controlled file kinds, never content.
+            return response("input_error", request_id=request.request_id,
+                            diagnostics=[diagnostic("g4_input_drift", str(exc))])
     try:
         data = brief_data(phase, workflow, feature, observed_checklist_waves(root, workflow, feature, waves))
     except (OSError, ValueError) as exc:

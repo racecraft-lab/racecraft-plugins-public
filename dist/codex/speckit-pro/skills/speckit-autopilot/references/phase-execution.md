@@ -520,8 +520,15 @@ Before dispatching Tasks for an enabled formal selection, reconcile and renew
 the `planning` checkpoint per [Selected formal checkpoints](formal-methods.md#later-planning-implementation-and-closeout).
 Include the selected properties' implementation obligations and declared scope.
 
+Before requesting the Tasks phase brief, pass `g4_judged` unchanged from the
+latest successful G4 response. The runner re-reads spec.md, plan.md and the flat
+checklist report set, compares every digest, and refuses the brief on missing,
+unsafe or changed inputs. A refusal names the input kind, never file text.
+Return to Checklist/G4 under the existing repair policy; neither host may
+spawn the Tasks executor without a successful checked brief.
+
 Read the workflow file's `### Tasks Prompt` section.
-Spawn a subagent.
+Spawn a subagent from the successful Tasks brief.
 
 **Gate:** G5 — cross-reference every FR in spec.md with
 tasks.md

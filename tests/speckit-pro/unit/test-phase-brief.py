@@ -4,6 +4,7 @@
 from pathlib import Path
 from itertools import product
 import json
+import hashlib
 import os
 import re
 import sys
@@ -17,17 +18,31 @@ from unicodedata import category
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO / "speckit-pro"), str(REPO / "tests/speckit-pro/lib")]
-from speckit_pro_runner.helpers import dispatch_waves, phase_brief, checklist_edits
+from speckit_pro_runner.helpers import dispatch_waves, phase_brief, checklist_edits, read_only
 from speckit_pro_runner.helpers.registry import dispatch_helper  # noqa: E402
 from test_result import run_counted  # noqa: E402
 from host_skill_views import host_skill_root  # noqa: E402
 from isolated_child import run_python  # noqa: E402
 
 
+def with_tasks_fixture_evidence(inputs):
+    """Existing positive Tasks fixtures provide the same clean G4 baseline explicitly."""
+    if inputs.get("phase") != "Tasks" or "g4_judged" in inputs:
+        return inputs
+    feature = Path.cwd() / inputs["feature_dir"]
+    (feature / "checklists").mkdir(parents=True, exist_ok=True)
+    judged = {}
+    for name in ("spec.md", "plan.md", "checklists/security.md"):
+        target = feature / name
+        target.write_bytes(b"clean fixture\n")
+        judged[name] = hashlib.sha256(b"clean fixture\n").hexdigest()
+    return {**inputs, "g4_judged": judged}
+
+
 def dispatch_brief(inputs, request_id=None):
     """Exercise the public dispatch seam with a complete caller-owned input set."""
     return dispatch_helper(SimpleNamespace(helper_id="phase-brief", operation="phase-brief",
-                                           mode="read_only", request_id=request_id, inputs=inputs))
+                                           mode="read_only", request_id=request_id, inputs=with_tasks_fixture_evidence(inputs)))
 
 
 @contextmanager
@@ -84,7 +99,7 @@ def run_isolated(runner, program, *args, cwd=None, **kwargs):
 
 def payload_briefs(inputs, include_status=False):
     """The brief each shipped payload returns, run from the current project directory."""
-    request = {"schema_version": "1.0", "helper_id": "phase-brief", "operation": "phase-brief", "mode": "read_only", "inputs": inputs}
+    request = {"schema_version": "1.0", "helper_id": "phase-brief", "operation": "phase-brief", "mode": "read_only", "inputs": with_tasks_fixture_evidence(inputs)}
     reports = []
     for host in ("claude", "codex"):
         payload = REPO / "dist" / host / "speckit-pro"
@@ -222,6 +237,14 @@ for case in json.load(sys.stdin):
         try:
             with patch.object(os, "open", opened):
                 inputs = {"phase": case["phase"], "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
+                if case["phase"] == "Tasks":
+                    import hashlib
+                    feature = root / "specs/example"
+                    (feature / "checklists").mkdir(parents=True)
+                    inputs["g4_judged"] = {}
+                    for name in ("spec.md", "plan.md", "checklists/security.md"):
+                        (feature / name).write_bytes(b"clean fixture\n")
+                        inputs["g4_judged"][name] = hashlib.sha256(b"clean fixture\n").hexdigest()
                 request = SimpleNamespace(helper_id="phase-brief", operation="phase-brief", mode="read_only",
                                           request_id=None, inputs=inputs)
                 report = dispatch_helper(request)
@@ -582,6 +605,80 @@ class PhaseBriefTests(InProjectCase):
                 self.assertEqual(brief["readable_files"], ["docs/workflow.md", ".specify/memory/constitution.md", ".specify/extensions.yml"] + ["specs/example/" + name for name in artifacts])
                 self.assertEqual([brief[key] for key in ("waves", "hooks")], [[], []])
                 self.assertEqual(bool(brief["slices"]), agent in SLICE_AGENTS)
+
+
+class TasksG4BindingTests(InProjectCase):
+    """Tasks dispatch revalidates G4's judged bytes before returning a launch brief."""
+
+    def tree(self):
+        feature = Path.cwd() / "specs/example"
+        (feature / "checklists").mkdir(parents=True, exist_ok=True)
+        for name in ("spec.md", "plan.md", "checklists/security.md"):
+            (feature / name).write_text("Clean planning input.\n", encoding="utf-8")
+        verdict = json.loads(read_only.validate_gate({"gate": "G4", "feature_dir": "specs/example"}, Path.cwd())["stdout"])
+        self.assertTrue(verdict["pass"])
+        return feature, verdict["judged"]
+
+    def test_drift_in_each_judged_file_kind_refuses_tasks_on_both_hosts(self):
+        for name, kind in (("spec.md", "spec.md"), ("plan.md", "plan.md"), ("checklists/security.md", "checklist report")):
+            with self.subTest(input=name):
+                feature, judged = self.tree()
+                (feature / name).write_text("[Gap] sensitive replacement text\n", encoding="utf-8")
+                inputs = {"phase": "Tasks", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example", "g4_judged": judged}
+                for result in (dispatch_brief(inputs), *payload_briefs(inputs, include_status=True)):
+                    self.assertEqual("input_error", result["status"])
+                    self.assertEqual({}, result["data"])
+                    self.assertEqual("g4_input_drift", result["diagnostics"][0]["code"])
+                    self.assertIn(kind, result["diagnostics"][0]["message"])
+                    self.assertNotIn("sensitive replacement text", json.dumps(result))
+
+    def test_no_drift_starts_tasks_as_today_on_both_hosts(self):
+        _, judged = self.tree()
+        inputs = {"phase": "Tasks", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example", "g4_judged": judged}
+        source = dispatch_brief(inputs)
+        self.assertEqual("ok", source["status"])
+        self.assertEqual("phase-executor", source["data"]["agent"])
+        self.assertEqual("speckit-tasks", source["data"]["inputs"]["skill"])
+        for result in payload_briefs(inputs, include_status=True):
+            self.assertEqual("ok", result["status"])
+            self.assertEqual(source["data"], result["data"])
+
+    def test_malformed_or_underinclusive_judged_maps_refuse_both_hosts(self):
+        _, judged = self.tree()
+        variants = [None, {}, [], {"spec.md": judged["spec.md"], "plan.md": judged["plan.md"]},
+                    {**judged, "spec.md": "not a digest"}, {**judged, "checklists/../outside.md": "0" * 64},
+                    {**judged, "<secret>.md": "0" * 64},
+                    {**judged, **{f"checklists/{index}.md": "0" * 64 for index in range(65)}}]
+        for expected in variants:
+            with self.subTest(judged_type=type(expected).__name__):
+                inputs = {"phase": "Tasks", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example", "g4_judged": expected}
+                for result in (dispatch_brief(inputs), *payload_briefs(inputs, include_status=True)):
+                    self.assertEqual("input_error", result["status"])
+                    self.assertEqual({}, result["data"])
+                    self.assertNotIn("<secret>", json.dumps(result))
+        (Path.cwd() / "specs/example/checklists/other.md").write_text("Unrecorded report.\n", encoding="utf-8")
+        inputs = {"phase": "Tasks", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example", "g4_judged": judged}
+        for result in (dispatch_brief(inputs), *payload_briefs(inputs, include_status=True)):
+            self.assertEqual("g4_input_drift", result["diagnostics"][0]["code"])
+            self.assertEqual({}, result["data"])
+
+    def test_judged_maps_cannot_authorize_a_gap_or_attach_to_another_phase(self):
+        feature, judged = self.tree()
+        (feature / "spec.md").write_text("[Gap]\n", encoding="utf-8")
+        forged = {**judged, "spec.md": hashlib.sha256(b"[Gap]\n").hexdigest()}
+        for phase, evidence in (("Tasks", forged), ("Plan", judged)):
+            inputs = {"phase": phase, "workflow_file": "docs/workflow.md", "feature_dir": "specs/example", "g4_judged": evidence}
+            for result in (dispatch_brief(inputs), *payload_briefs(inputs, include_status=True)):
+                self.assertEqual("input_error", result["status"])
+                self.assertEqual({}, result["data"])
+
+    def test_missing_evidence_cannot_dispatch_tasks(self):
+        self.tree()
+        request = SimpleNamespace(helper_id="phase-brief", operation="phase-brief", mode="read_only", request_id=None,
+                                  inputs={"phase": "Tasks", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"})
+        result = dispatch_helper(request)
+        self.assertEqual("input_error", result["status"])
+        self.assertEqual({}, result["data"])
 
 
 class PhaseBriefWaveTests(InProjectCase):
@@ -1617,5 +1714,5 @@ class PhaseBriefExecutorContractTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, PhaseBriefWaveTests, ChecklistCheckpointTests, PhaseBriefPathTests, PhaseBriefModelTests, CodexEffectiveEffortTests, RetryLadderTopRungTests, PhaseBriefSliceTests, PhaseBriefEncodingTests, PhaseBriefEncodingHostTests, PhaseBriefEncodingPathTests, PhaseBriefHookTests, OptionalHookConsentTests, OptionalHookDisplayBoundaryTests, ChildImportIsolationTests, PhaseBriefExecutorContractTests))
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, TasksG4BindingTests, PhaseBriefWaveTests, ChecklistCheckpointTests, PhaseBriefPathTests, PhaseBriefModelTests, CodexEffectiveEffortTests, RetryLadderTopRungTests, PhaseBriefSliceTests, PhaseBriefEncodingTests, PhaseBriefEncodingHostTests, PhaseBriefEncodingPathTests, PhaseBriefHookTests, OptionalHookConsentTests, OptionalHookDisplayBoundaryTests, ChildImportIsolationTests, PhaseBriefExecutorContractTests))
     sys.exit(run_counted(suite, label="test-phase-brief"))

@@ -187,13 +187,13 @@ must not rewrite their provenance.
 
 ### G4 — After Checklist
 
-**Check:** All gap markers resolved in one bounded snapshot of the feature.
+**Check:** Count gap markers in a bounded read transaction; the verdict covers the captured bytes.
 
 ```
 1. Find all checklist files: specs/<feature>/checklists/*.md
-2. Count [Gap] markers across ALL files: grep -c "\[Gap\]" checklists/*.md,
-   plus spec.md and plan.md (runner `validate-gate` G4 counts all three)
-3. Total must be 0
+2. Invoke runner `validate-gate` G4; it counts [Gap] markers in the reports,
+   spec.md and plan.md.
+3. Zero markers passes only for those captured bytes, not the later live tree.
 4. The runner reads each file once into memory and judges only those bytes.
    It fails closed when spec.md, plan.md or checklists/ is missing, linked or
    unreadable, when checklists/ holds no report, a nested directory, a link or
@@ -212,12 +212,22 @@ only the captured bytes during its read transaction. Only those bytes are counte
 and hashed. Report names use ASCII letters, digits, dot, underscore and hyphen;
 unsafe names fail without being echoed.
 
-The verdict covers the returned digests, not later edits. An input can change
-after its last validation, including before G4 returns; no point-in-time reader
-can freeze a directory tree. A change after G4 returns is caught only by a later
-digest check. Binding Phase 5 Tasks to consumer-side re-verification of G4's `judged`
-digests is tracked in
+Never report the live tree as verified from this snapshot. An input can change
+after its last validation, including before G4 returns. This applies to spec.md,
+plan.md, report set additions or removals, the live checklists entry and the live
+feature entry, including deletion, replacement, direct or hard-link writes,
+links and special files. No point-in-time reader freezes this namespace.
+
+The Tasks phase brief rechecks the judged digests before returning dispatch
+facts. Pass G4's complete `judged` map as `g4_judged` to runner `phase-brief` for
+Tasks on both hosts. It recomputes all digests and the report set through the G4
+reader and refuses the brief on drift or unsafe inputs. A refusal names the
+input kind, never file text. Follow the repair policy and obtain a new successful
+G4 response before retrying; never dispatch Tasks from failed or missing data.
+This implements the pre-dispatch check proposed in
 [issue #1284](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1284).
+The check covers changes between G4 and that dispatch check; subsequent live
+path reads remain mutable. It does not attest an immutable tree or verifier runs.
 G4 does not attest that an executor ran.
 
 G4 counts only `[Gap]` markers, by design. Unticked checklist items are

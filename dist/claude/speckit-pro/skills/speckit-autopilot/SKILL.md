@@ -729,6 +729,11 @@ For each planning phase, request
 `helper_id=phase-brief operation=phase-brief mode=read_only` with inputs
 `phase` (Specify, Clarify, Plan, Checklist, Tasks or Analyze),
 `workflow_file=WORKFLOW_FILE` and `feature_dir=<feature-dir>`.
+For Tasks, also pass `g4_judged=<the complete judged map from the latest
+successful G4 response>`. The runner rechecks that map before returning a Tasks
+brief. Missing, malformed or changed inputs return no dispatch facts; rerun
+Checklist and G4 through the existing repair policy before requesting Tasks
+again. Neither host may dispatch Tasks from a failed brief or omit this check.
 Use the successful response's data as `brief`: dispatch `brief.agent`,
 read the exact workflow prompt(s) under `brief.inputs.prompt_section`, and
 prefix each with `brief.inputs.instruction`. Pass `brief.inputs` and
@@ -897,6 +902,7 @@ for phase in PHASES starting from first_pending:
        `helper_id=validate-gate operation=validate-gate mode=read_only`
        with `gate=brief.gate` for planning (`G7` for Implement), `feature_dir=<feature-dir>`, and
        `workflow_file=<workflow-file>`, then branch on the JSON `pass` field
+       On G4 PASS: retain the complete `judged` map for the Tasks phase-brief request.
        On FAIL: reserve a corrective cycle through execution-control;
        honor its shared family/spec budget and checkpoint disposition
     7. Update workflow file; auto-commit if configured
