@@ -12,6 +12,10 @@ _Avoid_: pilot run, evidence run, canary
 A file holding every scaffold interview answer in advance, so scaffold runs without asking. A missing or unknown answer fails scaffold rather than turning into a question.
 _Avoid_: pre-answered interview, scaffold script
 
+**Application record**:
+The checklist run's account of the domain edits it applied. An interrupted run distinguishes a record known to be present, known to be absent or different, and one whose state could not be verified.
+_Avoid_: presumed absence
+
 **Blocked-for-UAT**:
 Work a run cannot finish or verify and hands to human review with its reason and evidence, while independent safe work continues. Accepting a documented gap does not make that work complete.
 _Avoid_: completed with deferrals, failed run, waived completion
@@ -35,6 +39,10 @@ _Avoid_: classifier, LLM judge
 **Decisions list**:
 The run's record of every judgment it made instead of asking the user: the option chosen, the rejected alternative and the evidence. It never asks for a reply; the reviewer accepts or overturns each entry at review.
 _Avoid_: end-of-run request, Decisions for you
+
+**Edit proposal**:
+A checklist domain executor's return: its gaps and the edits it would make to the spec and plan. The executor never writes them. The runner applies the proposals one domain at a time, in workflow order, and refuses the batch if an executor wrote either file.
+_Avoid_: patch, remediation, fix pass
 
 **Gate**:
 A checkpoint that validates whether a run meets its requirements at a fixed point. A gate is a check, never a phase.

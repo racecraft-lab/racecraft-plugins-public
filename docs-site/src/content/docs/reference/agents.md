@@ -160,7 +160,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 ### Checklist Executor
 
-- **Purpose:** Executes a single /speckit-checklist domain and remediates any [Gap] markers found.
+- **Purpose:** Executes a single /speckit-checklist domain and proposes a fix for any [Gap] markers found.
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro checklist-executor agent
 - **Claude Code:** plugin agent (required)

@@ -239,7 +239,7 @@ For planning, use the runner's phase brief in Step 2 as the dispatch authority.
 | ----- | ----- | --------------- |
 | Specify, Plan, Tasks | `speckit-pro:phase-executor` | Heavy reasoning (Specify, Plan); mechanical for Tasks. Single skill invocation, single summary. |
 | Clarify | `speckit-pro:clarify-executor` | Read-only question set; parent answers and edits |
-| Checklist | `speckit-pro:checklist-executor` | Must run checklist AND remediate gaps with research |
+| Checklist | `speckit-pro:checklist-executor` | Must run checklist AND propose gap fixes with research |
 | Analyze | `speckit-pro:analyze-executor` | Resolve required defects at every severity using relevant evidence and the shared repair reservation |
 | Implement | per-task routing | Route tasks with TDD; dispatch validated capability batches or legacy singletons |
 

@@ -11,10 +11,9 @@ import json
 from contextlib import nullcontext
 from typing import Any
 
-from ..envelope import diagnostic, response
 from ..execution_control import confined_path, durable_json, exclusive_ledger, workflow_process_directory
 from ..strict_input import SelectionError, require_fields, require_text, unique_object
-from ..trusted_io import resolve_repo_root
+from .execution_requests import Refusal, run_contained_helper
 
 SCHEMA_VERSION = "decisions-list/v1"
 MAX_TEXT = 1000
@@ -103,19 +102,12 @@ def decisions_list(root: Any, inputs: dict[str, Any], mode: str) -> dict[str, An
             "message": terminal_message(len(entries), link), "writes_state": mode == "apply"}
 
 
+REFUSAL = Refusal(
+    "invalid_decisions_list_request",
+    "Send the workflow file and, to record, a non-empty list of well-formed entries.",
+    ["Correct the named field.", "Rerun decisions-list; nothing was written."],
+)
+
+
 def run_decisions_list_helper(entry: Any, request: Any) -> dict[str, Any]:
-    try:
-        root = resolve_repo_root(request.inputs)
-        if isinstance(root, dict):
-            return response("input_error", request_id=request.request_id, diagnostics=[root])
-        data = decisions_list(root, request.inputs, request.mode)
-    except (ValueError, OSError) as error:
-        refusal = diagnostic(
-            "invalid_decisions_list_request",
-            str(error),
-            remediation_summary="Send the workflow file and, to record, a non-empty list of well-formed entries.",
-            remediation_actions=["Correct the named field.", "Rerun decisions-list; nothing was written."],
-        )
-        return response("input_error", request_id=request.request_id, diagnostics=[refusal])
-    identity = {"helper_id": entry.helper_id, "operation": entry.operation, "mode": request.mode}
-    return response("ok", request_id=request.request_id, data={**data, **identity})
+    return run_contained_helper(entry, request, decisions_list, REFUSAL)

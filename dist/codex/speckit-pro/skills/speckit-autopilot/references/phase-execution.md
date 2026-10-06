@@ -238,6 +238,19 @@ for phase in PHASES starting from first_pending:
           the summary, then close_agent only when that action is exposed. On
           hosted Responses, the host retains the inspectable completed thread.
        d. autopilot-state.json: mark this prompt's item as "completed"
+       Checklist only: executors propose and write no artifact. Run runner helper
+       `checklist-edits` in read_only mode before the first prompt for the baseline.
+       After the last executor returns, run it in apply mode with the domain names
+       in workflow order, the baseline, and each executor's Proposed Edits block. It
+       applies one domain at a time in domain order. A conflict or a gap with no edit
+       goes to consensus below; a refusal applies nothing and is a gate failure under
+       the Failure Escalation Protocol. An interrupted apply names what reached disk
+       (applied domains, a half-written domain's files, canonical paths that moved or could not be verified,
+       whether the record was written or its state is unknown):
+       restore both files before any retry. After consensus, take a read_only baseline, spawn
+       each domain's executor again with `Mode: verify` to confirm its gaps closed, then
+       run `checklist-edits` in dry_run mode with no domains, no proposals and that
+       baseline: a refusal means a verify run wrote an artifact.
     5. Run consensus in main session if needed:
        Parse executor's "Unresolved for consensus" section.
        For each item → spawn the category-routed analysts (codebase-analyst,
