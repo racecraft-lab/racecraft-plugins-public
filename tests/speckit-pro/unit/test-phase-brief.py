@@ -5,6 +5,7 @@ from pathlib import Path
 from itertools import product
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -824,6 +825,32 @@ class OptionalHookConsentTests(unittest.TestCase):
                     self.assertIn(f"handle optional brief.hooks with event={window}_<phase>", text)
                     self.assertNotIn("run each brief.hooks entry once", text)
                     self.assertNotIn("auto-accept", text)
+
+    def test_no_phase_bypasses_optional_hook_confirmation(self):
+        pointer = "./references/phase-execution.md#extension-hook-events"
+        for host in ("claude", "codex"):
+            skill = (host_skill_root(host) / "speckit-autopilot/SKILL.md").read_text()
+            loop = skill.split("## Step 2: Main Execution Loop", 1)[1].split("\n## ", 1)[0]
+            directives = re.findall(
+                r"[^\n]*\b(?:runs?|executes?|invokes?)\s+[^\n]*\bhooks?\b[^\n]*",
+                loop, re.IGNORECASE)
+            for directive in directives:
+                if "mandatory hooks" in directive:
+                    continue
+                with self.subTest(host=host, directive=directive.strip()):
+                    self.assertRegex(
+                        directive, r"\b(?:confirmed|approved)\s+(?:optional\s+)?hooks?\b"
+                        r"|\bonly after explicit operator confirmation\b")
+            steps = re.findall(
+                r"Clarify and Implement only:(.*?)(?=\n\s*(?:Other planning phases:|[0-9]+\.))",
+                loop, re.DOTALL)
+            with self.subTest(host=host):
+                self.assertEqual(len(steps), 2, "both event windows must be guarded")
+            for window, step in zip(("before", "after"), steps, strict=True):
+                with self.subTest(host=host, event=f"{window}_<phase>"):
+                    self.assertIn(f"{window}_<phase>", step)
+                    self.assertIn("confirmation rule", step)
+                    self.assertIn(pointer, step)
 
     def test_one_command_registered_in_both_windows_retains_both_confirmations(self):
         text = extensions_yml(hook("before_plan", "speckit.same.run", prompt='"Before?"'),

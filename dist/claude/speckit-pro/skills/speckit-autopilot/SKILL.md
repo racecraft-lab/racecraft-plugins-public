@@ -778,9 +778,9 @@ with `workflow_file` and one `entries` item per hook (`kind`:
 `optional_hook_run` for a confirmed run or `authority_action_skipped` for a
 skip; `option_chosen`: the action taken; `rejected_alternative`: the other
 action; `evidence`: the extension, event and explicit confirmation or its absence; `affected_unit`: the
-phase). Clarify and Implement load no Spec Kit command, so for those two the
-orchestrator runs the registered hooks of `before_<phase>` and `after_<phase>`
-from `.specify/extensions.yml`.
+phase). Clarify and Implement load no Spec Kit command. For their registered
+`before_<phase>` and `after_<phase>` hooks from `.specify/extensions.yml`, apply
+the confirmation rule in [Extension Hook Events](./references/phase-execution.md#extension-hook-events).
 
 For each pending phase, spawn a subagent, collect the result, validate
 the gate, advance. Every step is a tool call.
@@ -793,7 +793,8 @@ for phase in PHASES starting from first_pending:
        autopilot-state.json. Exit 0 is required; on nonzero, repair the plan
        and the workflow status table, then repeat before executing this phase.
     1. autopilot-state.json: phase item → in_progress
-    2. Clarify and Implement only: run before_<phase> hooks from .specify/extensions.yml
+    2. Clarify and Implement only: handle before_<phase> hooks from .specify/extensions.yml
+       under the confirmation rule in [Extension Hook Events](./references/phase-execution.md#extension-hook-events).
        Other planning phases: handle optional brief.hooks with event=before_<phase>
        under the confirmation rule above before spawning any executor.
     3. For each workflow prompt in this phase:
@@ -805,7 +806,8 @@ for phase in PHASES starting from first_pending:
     5. Specify, Plan, Checklist, Tasks and Analyze only:
        handle optional brief.hooks with event=after_<phase> under the confirmation
        rule above; record runs and skips in the decisions list.
-       Clarify and Implement only: run after_<phase> hooks from .specify/extensions.yml
+       Clarify and Implement only: handle after_<phase> hooks from .specify/extensions.yml
+       under the confirmation rule in [Extension Hook Events](./references/phase-execution.md#extension-hook-events).
     6. Validate the gate (G1-G7): run runner helper
        `helper_id=validate-gate operation=validate-gate mode=read_only`
        with `gate=brief.gate` for planning (`G7` for Implement), `feature_dir=<feature-dir>`, and
