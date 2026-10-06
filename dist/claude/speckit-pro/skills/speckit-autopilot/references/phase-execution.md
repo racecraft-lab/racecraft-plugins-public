@@ -895,7 +895,8 @@ to proceed, surface a remediation hint, or stop.
             - After remediation completes, dispatch the
               consensus-synthesizer agent (single fan-out), with the
               `Protocol:` line, to re-emit the pre-Implement
-              Confidence block to the workflow file.
+              Confidence block to the workflow file (confidence block
+              only; no Artifact Edit).
             - Re-run confidence-gate.
             - Increment iteration_count.
        c. If iteration_count == 3 OR exit 0 reached: stop iterating.

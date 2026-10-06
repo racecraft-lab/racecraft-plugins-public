@@ -1529,7 +1529,8 @@ and keeps executing independent work.
             - After remediation completes, dispatch the
               consensus-synthesizer agent (single fan-out), with the
               `Protocol:` line, to re-emit the pre-Implement
-              Confidence block to the workflow file.
+              Confidence block to the workflow file (confidence block
+              only; no Artifact Edit).
 <!-- /host -->
 <!-- host:codex: Codex dispatches the analyst and the installed synthesizer with spawn_agent and consumes each result -->
             - spawn_agent on the appropriate analyst for that target
@@ -1538,9 +1539,11 @@ and keeps executing independent work.
               presence).
             - The parent session dispatches the installed
               `consensus-synthesizer` with the fresh analyst result, consumes
-              its actual result, applies any accepted serial artifact edit,
-              and persists the returned canonical `Pre-Implement Confidence`
-              block exactly once in the workflow file.
+              its actual result, and
+              persists the returned canonical `Pre-Implement Confidence`
+              block exactly once in the workflow file. This dispatch carries
+              no consensus item, so its result has no Artifact Edit; the
+              remediation pass already applied any edits.
 <!-- /host -->
             - Re-run confidence-gate.
             - Increment iteration_count.

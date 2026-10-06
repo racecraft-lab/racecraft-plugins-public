@@ -70,9 +70,10 @@ agent.
    - the sections the parent should edit if it accepts the answer
 
 5. **Flag items needing consensus, with a category prefix.** If a
-   question meets EITHER of these criteria, include it in the
+   question meets ANY of these criteria, include it in the
    "Unresolved for consensus" section of your summary:
    - You have low confidence in the answer you gave
+   - It is a question you tag `[security]`, at any confidence
    - The question contains security keywords (auth, token, secret,
      encryption, PII, credential, permission, password, authentication,
      authorization, session, cookie, jwt, api-key, access-control)

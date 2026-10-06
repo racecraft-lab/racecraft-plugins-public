@@ -5,13 +5,6 @@
     "A default or general-purpose worker is not the named synthesizer"
   ],
   "ConsensusSynthesizerRegressionTests.test_all_agreement_branches_are_explicit_and_fail_closed#1": [
-    "N = 1:",
-    "A high-confidence answer with no escape phrase",
-    "Low confidence or any escape phrase",
-    "N = 2:",
-    "Agreement produces `confidence: high`",
-    "Disagreement produces",
-    "N = 3:",
     "Unanimity produces high confidence",
     "A 2/3 majority wins while the dissent is preserved",
     "If all three disagree",

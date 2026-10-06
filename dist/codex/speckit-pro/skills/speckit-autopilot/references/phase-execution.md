@@ -1039,9 +1039,11 @@ and keeps executing independent work.
               presence).
             - The parent session dispatches the installed
               `consensus-synthesizer` with the fresh analyst result, consumes
-              its actual result, applies any accepted serial artifact edit,
-              and persists the returned canonical `Pre-Implement Confidence`
-              block exactly once in the workflow file.
+              its actual result, and
+              persists the returned canonical `Pre-Implement Confidence`
+              block exactly once in the workflow file. This dispatch carries
+              no consensus item, so its result has no Artifact Edit; the
+              remediation pass already applied any edits.
             - Re-run confidence-gate.
             - Increment iteration_count.
        c. If iteration_count == 3 OR exit 0 reached: stop iterating.

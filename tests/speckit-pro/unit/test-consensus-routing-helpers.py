@@ -694,6 +694,10 @@ RETIRED_ROUND_PHRASES = (
     "Round 1, two-analyst, agreement",
     "Round 2, classic agreement counts",
     "OR its response contains escape-hatch keywords",
+    "single-analyst, category-routed Round 1",
+    "two-analyst, category-routed Round 1",
+    "spawns the remaining analysts",
+    "Analysts Run:** N (1, 2, or 3)",
 )
 RETIRED_PHRASE_SUFFIXES = frozenset({".md", ".toml", ".json", ".yaml", ".yml"})
 

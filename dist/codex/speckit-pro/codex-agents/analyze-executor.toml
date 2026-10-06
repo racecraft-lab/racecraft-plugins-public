@@ -92,6 +92,7 @@ authorize this executor to invoke their commands.
    of your summary:
    - Findings where your fix has low confidence (conflicting
      research, no clear precedent, multiple valid approaches)
+   - Findings you tag `[security]`, at any confidence
    - Findings containing security keywords (auth, token, secret,
      encryption, PII, credential, permission, password, authentication,
      authorization, session, cookie, jwt, api-key, access-control)

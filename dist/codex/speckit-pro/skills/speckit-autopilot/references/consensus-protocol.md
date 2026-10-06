@@ -674,7 +674,10 @@ consensus-synthesizer after remediation, even when there were zero findings.
 It validates that the returned block has all five criterion lines, then
 persists that block exactly once for the current Analyze pass. A missing,
 failed, malformed, or duplicate confidence block does not complete Analyze and
-cannot be reconstructed by the parent.
+cannot be reconstructed by the parent. This dispatch, and the G6.5 re-emit,
+carry no consensus item: the synthesizer returns the block alone, no
+`Consensus Result` and no `Artifact Edit`, and the parent applies nothing from
+it.
 
 **Format (canonical, regex-parseable):**
 
