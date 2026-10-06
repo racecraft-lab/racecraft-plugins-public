@@ -64,7 +64,7 @@ def checked_wave_request(phase: str, raw: dict[str, Any]) -> WaveRequest:
     items = checked_items(phase, raw["items"]) if "items" in raw else []
     edited = checked_domains(phase, raw["consensus_edited"], "consensus_edited") if "consensus_edited" in raw else []
     limit = raw.get("max_agents", 1)
-    if any(key in raw for key in WAVE_INPUTS[:3]) and "max_agents" not in raw:
+    if any(key in raw for key in WAVE_INPUTS if key != "max_agents") and "max_agents" not in raw:
         raise ValueError("max_agents is required with domains, items or consensus_edited")
     if isinstance(limit, bool) or not isinstance(limit, int) or not 0 < limit <= MAX_AGENTS:
         raise ValueError(f"max_agents must be a whole number from 1 to {MAX_AGENTS}")
