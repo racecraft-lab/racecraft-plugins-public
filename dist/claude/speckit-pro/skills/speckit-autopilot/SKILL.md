@@ -434,7 +434,9 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
    resolver at G6.5; G6.5 reads `CONFIDENCE_GATE_MODE` directly.**
    See [Gate Validation §G6.5](./references/gate-validation.md#g65--pre-implement-confidence-gate-between-analyze-and-implement).
 6c. **Resolve the stage** — run runner helper `resolve-autopilot-stage`
-   with the invocation argv and the workflow file path. It returns one
+   with the invocation argv and the workflow file path, and
+   `inputs.host` set to `claude`.
+   The runner reads that host's readiness record for the preview surface. It returns one
    JSON envelope; record `stage` as `AUTOPILOT_STAGE` and keep `source`,
    `basis`, `recorded_stage`, `planning_complete`, and
    `confidence_gate_status` for the phase loop. The committed

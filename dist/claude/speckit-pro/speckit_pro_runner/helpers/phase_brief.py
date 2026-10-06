@@ -6,7 +6,7 @@ import re
 from collections.abc import Iterator
 from pathlib import Path, PureWindowsPath
 from typing import Any
-from unicodedata import category
+from unicodedata import category, normalize
 
 from ..agent_inventory import AGENT_INVENTORY
 from ..envelope import diagnostic, response
@@ -46,12 +46,18 @@ PROMPT_SECTIONS = {"Clarify": "Clarify Prompts", "Checklist": "Step 2: Run Enric
 def brief_path(value: Any, label: str) -> str:
     """Validate path text without filesystem access, with portable separators."""
     text = require_text(value, label)
-    if any(category(char) in {"Cc", "Zl", "Zp"} for char in text):
-        raise ValueError(f"{label} must not contain control characters or line separators")
-    path = PureWindowsPath(text)
-    if ".." in path.parts:
+    if any(category(char) in {"Cc", "Cf", "Zl", "Zp"} for char in text):
+        raise ValueError(f"{label} must not contain control, format or line separator characters")
+    # Check compatibility-normalized text too, but preserve the caller's path.
+    normalized = normalize("NFKC", text).rstrip()
+    paths = (PureWindowsPath(text), PureWindowsPath(normalized))
+    if label == "workflow_file" and (normalized.endswith(("/", "\\"))
+                                     or normalized.replace("\\", "/").rsplit("/", 1)[-1] == "."
+                                     or not paths[1].name):
+        raise ValueError("workflow_file must name a file, not a directory")
+    if any(".." in path.parts for path in paths):
         raise ValueError(f"{label} must not contain parent traversal segments")
-    if label == "feature_dir" and path.anchor:
+    if label == "feature_dir" and any(path.anchor for path in paths):
         raise ValueError("feature_dir must be relative to the workflow root")
     return text
 
@@ -181,9 +187,9 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     """Return phase-brief/v1 dispatch data; gate and stop decisions stay separate.
 
     The closed request inputs are phase, workflow_file and feature_dir strings.
-    Paths reject parent segments and controls; feature_dir is workflow-root
-    relative, workflow_file may be absolute. This is lexical validation only:
-    no files are opened, symlinks resolved or read permissions enforced.
+    Paths reject parent segments and control, format and line separator characters.
+    feature_dir is workflow-root relative; workflow_file may be absolute but must name a file.
+    Validation is lexical: no files opened, symlinks resolved or read permissions enforced.
     Successful data has exactly these fields. Records have only the named keys;
     a wave dispatch's inputs is an open JSON object for its prompt arguments.
 

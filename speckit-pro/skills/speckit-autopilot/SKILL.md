@@ -683,10 +683,10 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
 3. **Run the G0 setup seam** — call runner helper `g0-setup` in `read_only`
    mode once per `inputs.probe`, in order: `prerequisites`, `commands`,
    `presets`. Each call carries `inputs.workflow_file` and `inputs.surface`.
-<!-- host:claude: Claude's G0 stop message names a slash-command skill -->
+<!-- host:claude: Claude's G0 unratified-defaults flag names a slash-command skill -->
    Set `G0_SURFACE` and `inputs.surface` to `claude`.
 <!-- /host -->
-<!-- host:codex: Codex's G0 stop message names a dollar-sign skill -->
+<!-- host:codex: Codex's G0 unratified-defaults flag names a dollar-sign skill -->
    Set `G0_SURFACE` and `inputs.surface` to `codex`.
 <!-- /host -->
    Read each unchanged probe report from `data.result.stdout_json`, its exit
@@ -748,7 +748,14 @@ Run the pre-flight sequence before any phase work. A failure goes to the owning 
    resolver at G6.5; G6.5 reads `CONFIDENCE_GATE_MODE` directly.**
    See [Gate Validation §G6.5](./references/gate-validation.md#g65--pre-implement-confidence-gate-between-analyze-and-implement).
 6c. **Resolve the stage** — run runner helper `resolve-autopilot-stage`
-   with the invocation argv and the workflow file path. It returns one
+   with the invocation argv and the workflow file path, and
+<!-- host:claude: Claude names its own host so the runner reads the right readiness record -->
+   `inputs.host` set to `claude`.
+<!-- /host -->
+<!-- host:codex: Codex names its own host so the runner reads the right readiness record -->
+   `inputs.host` set to `codex`.
+<!-- /host -->
+   The runner reads that host's readiness record for the preview surface. It returns one
    JSON envelope; record `stage` as `AUTOPILOT_STAGE` and keep `source`,
    `basis`, `recorded_stage`, `planning_complete`, and
    `confidence_gate_status` for the phase loop. The committed

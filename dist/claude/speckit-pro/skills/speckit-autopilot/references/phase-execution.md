@@ -260,13 +260,12 @@ Plan-stage G0 reads the codebase and records the quality-gate slots; the
 typecheck, test, build, and lint baseline belongs to
 [Phase 7 Setup: Project Baseline](#phase-7-setup-project-baseline).
 
-**Gate:** G0 — `quality_gates.status` from Step 0.11 must be
-`present`, `DEPENDENCY_RULES` must pass, and no blocking slot may
-exit 2. A `COMPLEXITY` baseline over the ceiling is recorded, not a
-block. If any fail, route the failing gate to the implement-executor, which repairs
-it; run the repair loop within its allowance, then defer per the Failure Escalation Protocol.
-A missing or invalid `.specify/quality-gates.json` stops with the Step 0.11
-message naming the file and the coach flow.
+**Gate:** G0 — `DEPENDENCY_RULES` must pass, and no blocking slot may
+exit 2. A missing or invalid `.specify/quality-gates.json` is not a failure:
+G0 runs on the unratified defaults that Step 0.11 records. A `COMPLEXITY`
+baseline over the ceiling is recorded, not a block. If any fail, route the
+failing gate to the implement-executor, which repairs it; run the repair loop
+within its allowance, then defer per the Failure Escalation Protocol.
 
 **Doctor Health Check (ALWAYS — plugin skill):**
 After G0 passes, run `/speckit.speckit-utils.doctor` for a full
@@ -1278,6 +1277,11 @@ Resume with: `/speckit-pro:speckit-autopilot <workflow-file> --stage implement`
   in one line, and a copy-paste command that opens it locally.
 - **The resume/status block** names the stage the run stopped at and the exact
   command that resumes it.
+
+When G0 recorded `UNRATIFIED_FLAG`, include that exact one-line warning below the
+Artifacts table and pass it as `inputs.unratified_defaults` to the packet helper.
+This flags the initial draft as well as the final PR body; keep the draft's two
+H2 sections. Omit the warning and input when G0 found a valid ratified file.
 
 **Forbidden in a draft description**: a release-note fence, any verification
 section, any scope or UAT section, and any placeholder final-writeup content. The
@@ -3704,7 +3708,8 @@ should understand what the presets enforce:
    sections than core defaults. The autopilot's task parsing
    should handle any structure.
 4. **Debug with `specify preset resolve`** — if artifacts have
-   unexpected structure, run `specify preset resolve <template>`
+   unexpected structure, run `spec_kit.cli_argv + ["preset", "resolve", "<template>"]`
+   (the verified prefix from `check-prerequisites`; never bare `specify`)
    to see which file the `/speckit-*` command actually used
 
 ## PR Creation Protocol

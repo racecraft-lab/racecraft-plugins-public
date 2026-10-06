@@ -14,6 +14,7 @@ from contextlib import ExitStack, contextmanager
 from unittest.mock import patch
 from types import SimpleNamespace
 import unittest
+from unicodedata import category
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO / "speckit-pro"), str(REPO / "tests/speckit-pro/lib")]
@@ -81,6 +82,10 @@ def payload_briefs(inputs, include_status=False):
 REFERENCES = REPO / "speckit-pro/skills/speckit-autopilot/references"
 WHOLE_REFERENCES = ("capability-discovery.md", "grounding.md", "execution-efficiency.md", "consensus-protocol.md")
 SLICE_AGENTS = ("clarify-executor", "checklist-executor", "analyze-executor")
+DIRECTORY_WORKFLOWS = (".", "docs/.", "docs\\.", "docs/./", "docs/\\.",
+                       "docs/ ", "docs\\\u00a0", "docs/. ", "docs/\uff0f", "docs/\uff3c", "docs/\uff0e")
+TRAVERSAL_PATHS = ("docs/..\\workflow.md", "docs\\../workflow.md", "docs/\uff0e\uff0e/workflow.md",
+                   "docs\uff0f..\uff3cworkflow.md", "docs/.. ")
 UNSUPPORTED_SEPARATORS = ("\r", "\v", "\f", "\x1c", "\x1d", "\x1e", "\x85", "\u2028", "\u2029")
 
 
@@ -403,6 +408,10 @@ class PhaseBriefTests(InProjectCase):
         for key in ("feature_dir", "workflow_file"):
             for control in ("\n", "\r", "\t", "\x00", "\x1f", "\x7f", "\x85", "\u2028", "\u2029"):
                 cases.extend((key, value) for value in (control + valid[key], valid[key] + control, "docs/" + control + "example"))
+        cases += [("workflow_file", value) for value in ("docs/", "docs\\", "/", "C:\\docs\\")]
+        for key in ("feature_dir", "workflow_file"):
+            for fmt in ("\u202e", "\u200b", "\u200d", "\ufeff", "\u00ad"):
+                cases.extend((key, value) for value in (fmt + valid[key], valid[key] + fmt, "docs/" + fmt + "example"))
         for key, value in cases:
             with self.subTest(key=key, value=value):
                 result = dispatch_brief({**valid, key: value}, request_id="unsafe-path")
@@ -416,16 +425,6 @@ class PhaseBriefTests(InProjectCase):
             with self.subTest(phase=phase):
                 result = dispatch_brief({"phase": phase, "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"})
                 self.assertIn(".specify/extensions.yml", result["data"]["readable_files"])
-
-    def test_safe_path_text_is_preserved(self):
-        for feature, workflow in (("specs/example/", "docs/workflow.md"),
-                                  ("specs/version..two", "/workflow.md"),
-                                  (r"specs\example", r"C:\docs\workflow.md")):
-            with self.subTest(feature=feature, workflow=workflow):
-                result = dispatch_brief({"phase": "Plan", "workflow_file": workflow, "feature_dir": feature})
-                self.assertEqual(result["status"], "ok")
-                self.assertEqual(result["data"]["inputs"]["feature_dir"], feature.rstrip("/"))
-                self.assertEqual(result["data"]["inputs"]["workflow_file"], workflow)
 
     def test_prompt_sections_match_the_workflow_template(self):
         template = (REPO / "speckit-pro/skills/speckit-coach/templates/workflow-template.md").read_text()
@@ -525,6 +524,53 @@ class RetryLadderTopRungTests(unittest.TestCase):
         self.assertIn(rung, (REPO / "docs/adr/0004-retry-ladder.md").read_text())
         self.assertIn(rung, (REFERENCES / "stop-policy.md").read_text())
         self.assertIn(rung, run_finalization._tier_steps("tier3"))
+
+class PhaseBriefPathTests(InProjectCase):
+    def test_safe_path_text_is_preserved(self):
+        for feature, workflow in (("specs/example/", "docs/workflow.md"),
+                                  ("specs/version..two", "/workflow.md"),
+                                  (r"specs\example", r"C:\docs\workflow.md")):
+            with self.subTest(feature=feature, workflow=workflow):
+                result = dispatch_brief({"phase": "Plan", "workflow_file": workflow, "feature_dir": feature})
+                self.assertEqual(result["status"], "ok")
+                self.assertEqual(result["data"]["inputs"]["feature_dir"], feature.rstrip("/"))
+                self.assertEqual(result["data"]["inputs"]["workflow_file"], workflow)
+
+    def test_payload_hosts_reject_directory_and_format_paths(self):
+        valid = {"phase": "Plan", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
+        for key, value in (("workflow_file", "docs/"), ("workflow_file", "docs\\"),
+                           ("workflow_file", "docs/\u202eworkflow.md"), ("feature_dir", "specs/\u200bexample"),
+                           *(("workflow_file", value) for value in DIRECTORY_WORKFLOWS + TRAVERSAL_PATHS)):
+            for host in ("claude", "codex"):
+                with self.subTest(host=host, key=key, value=value):
+                    request = {"schema_version": "1.0", "helper_id": "phase-brief", "operation": "phase-brief",
+                               "mode": "read_only", "inputs": {**valid, key: value}}
+                    payload = REPO / "dist" / host / "speckit-pro"
+                    done = subprocess.run([sys.executable, "-m", "speckit_pro_runner"],
+                                          cwd=payload, env={**os.environ, "PYTHONPATH": str(payload)},
+                                          input=json.dumps(request), text=True, capture_output=True, check=False)
+                    report = json.loads(done.stdout)
+                    self.assertEqual(report["status"], "input_error")
+                    self.assertEqual(report["data"], {})
+
+    def test_unsafe_path_variants_fail_before_io(self):
+        valid = {"phase": "Clarify", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
+        cases = [("workflow_file", value, "file") for value in DIRECTORY_WORKFLOWS]
+        cases += [(key, value, "parent traversal") for key in ("workflow_file", "feature_dir") for value in TRAVERSAL_PATHS]
+        formats = [chr(code) for code in range(sys.maxunicode + 1) if category(chr(code)) == "Cf"]
+        self.assertTrue(formats)
+        cases += [(key, "docs/" + char + "example", "format") for key in ("workflow_file", "feature_dir") for char in formats]
+        with patch.object(Path, "open", side_effect=AssertionError("input validation accessed filesystem")):
+            for key, value, reason in cases:
+                with self.subTest(key=key, value=ascii(value)):
+                    result = dispatch_brief({**valid, key: value})
+                    self.assertEqual(result["status"], "input_error")
+                    self.assertEqual(result["data"], {})
+                    self.assertEqual(result["diagnostics"][0]["code"], "invalid_phase_brief")
+                    self.assertIn(key, result["diagnostics"][0]["message"])
+                    self.assertIn(reason, result["diagnostics"][0]["message"])
+                    self.assertNotIn(value, result["diagnostics"][0]["message"])
+
 
 
 class PhaseBriefSliceTests(InProjectCase):
@@ -828,6 +874,11 @@ class PhaseBriefHookTests(unittest.TestCase):
                                                           "event": f"after_{phase.lower()}", "optional": True,
                                                           **SAFE_CONSENT}])
 
+    def test_a_missing_optional_field_defaults_to_optional(self):
+        text = extensions_yml(hook("after_plan", "speckit.default.run", "d", optional=None))
+        self.assertEqual(self.hooks("Plan", text), [{"extension": "d", "command": "speckit.default.run",
+                                                   "event": "after_plan", "optional": True, **SAFE_CONSENT}])
+
     def test_hooks_run_in_priority_then_file_order(self):
         text = extensions_yml(
             hook("after_plan", "speckit.c.run", "c", priority=20),
@@ -1119,5 +1170,5 @@ class PhaseBriefExecutorContractTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, PhaseBriefModelTests, CodexEffectiveEffortTests, RetryLadderTopRungTests, PhaseBriefSliceTests, PhaseBriefEncodingTests, PhaseBriefEncodingHostTests, PhaseBriefEncodingPathTests, PhaseBriefHookTests, OptionalHookConsentTests, OptionalHookDisplayBoundaryTests, PhaseBriefExecutorContractTests))
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, PhaseBriefPathTests, PhaseBriefModelTests, CodexEffectiveEffortTests, RetryLadderTopRungTests, PhaseBriefSliceTests, PhaseBriefEncodingTests, PhaseBriefEncodingHostTests, PhaseBriefEncodingPathTests, PhaseBriefHookTests, OptionalHookConsentTests, OptionalHookDisplayBoundaryTests, PhaseBriefExecutorContractTests))
     sys.exit(run_counted(suite, label="test-phase-brief"))
