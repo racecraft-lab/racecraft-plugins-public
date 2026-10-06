@@ -13,6 +13,7 @@ import fcntl
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 from pathlib import Path
 import sys
@@ -282,7 +283,7 @@ class RefusalTests(ChecklistEditsCase):
                 self.assertEqual("input_error", self.call("read_only", feature_dir=bad)["status"])
 
     def test_a_record_write_failure_reports_the_domains_already_applied(self) -> None:
-        with patch.object(checklist_edits, "durable_json", side_effect=OSError("disk full")):
+        with patch.object(checklist_edits, "publish_record", side_effect=OSError("disk full")):
             result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
         self.assertEqual("expected_failure", result["status"], result)
         self.assertEqual(["security", "ux", "api"], result["data"]["applied"])
@@ -423,16 +424,11 @@ class CommittedStateTests(ChecklistEditsCase):
     """F1278-d7ff996f and F1278-afb94c5e: a failure after the first write reports what is on disk."""
 
     def failing_write(self, failing_call: int) -> Any:
-        real = checklist_edits.write_bytes_atomic
-        calls = [0]
-
-        def failing(path: Path, content: bytes, **kwargs: Any) -> Any:
-            calls[0] += 1
-            if calls[0] == failing_call:
+        def fail(number: int) -> None:
+            if number == failing_call:
                 raise OSError("disk full")
-            return real(path, content, **kwargs)
 
-        return patch.object(checklist_edits, "write_bytes_atomic", failing)
+        return self.before_write(fail)
 
     def test_a_half_written_first_domain_is_reported_as_partial(self) -> None:
         with self.failing_write(2):
@@ -450,13 +446,13 @@ class CommittedStateTests(ChecklistEditsCase):
         self.assertIn("private", self.text("spec.md"))
 
     def test_a_record_published_before_its_failure_is_reported_written(self) -> None:
-        real = checklist_edits.durable_json
+        real = checklist_edits.publish_record
 
-        def publish_then_fail(path: Path, value: dict[str, Any]) -> None:
-            real(path, value)
+        def publish_then_fail(root: Path, path: Path, value: dict[str, Any]) -> None:
+            real(root, path, value)
             raise OSError("directory sync failed")
 
-        with patch.object(checklist_edits, "durable_json", publish_then_fail):
+        with patch.object(checklist_edits, "publish_record", publish_then_fail):
             result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
         self.assertEqual(("expected_failure", "apply_interrupted"), (result["status"], result["diagnostics"][0]["code"]), result)
         self.assertEqual((["security", "ux", "api"], True), (result["data"]["applied"], result["data"].get("record_written")), result)
@@ -470,14 +466,8 @@ class CommittedStateTests(ChecklistEditsCase):
         self.assertIn("private", self.text("spec.md"))
 
     def test_a_refusal_raised_after_the_writes_reports_them(self) -> None:
-        # The record directory's ignore rule turns into a directory mid-apply: a ValueError, not an OSError.
-        def act(number: int) -> None:
-            ignore = self.root / RECORD
-            ignore = ignore.parent / ".gitignore"
-            ignore.unlink(missing_ok=True)
-            ignore.mkdir(parents=True, exist_ok=True)
-
-        with self.before_write(act):
+        # A ValueError, not an OSError, after the artifacts reached disk.
+        with patch.object(checklist_edits, "publish_record", side_effect=ValueError("record directory is not usable")):
             result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
         self.assertEqual(("expected_failure", ["security", "ux", "api"]), (result["status"], result["data"].get("applied")), result)
         self.assertIn("private", self.text("spec.md"))
@@ -499,6 +489,23 @@ class CommittedStateTests(ChecklistEditsCase):
         self.assertIn("private", self.text("spec.md"))
 
 
+    def test_a_record_directory_swapped_for_a_link_is_not_followed(self) -> None:
+        # Validator differential: the record path is checked link-free, then must be written the same way.
+        outside = self.root / "outside"
+        outside.mkdir()
+
+        def act(number: int) -> None:
+            if number == 1:
+                directory = (self.root / RECORD).parent
+                shutil.rmtree(directory)
+                directory.symlink_to(outside, target_is_directory=True)
+
+        with self.before_write(act):
+            result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private")))
+        self.assertEqual([], sorted(path.name for path in outside.iterdir()))
+        self.assertEqual(("expected_failure", "application record", False),
+                         (result["status"], result["data"].get("failed"), result["data"].get("record_written")), result)
+
 class UntrustedTextTests(ChecklistEditsCase):
     """F1278-5ad50d38: hidden characters and credential-shaped text never reach spec.md or plan.md."""
 
@@ -516,6 +523,16 @@ class UntrustedTextTests(ChecklistEditsCase):
                 result = self.apply(proposal("security", bad))
                 self.assertEqual("input_error", result["status"], result)
                 self.assertEqual((SPEC, PLAN), (self.text("spec.md"), self.text("plan.md")))
+
+    def test_edits_that_only_together_form_a_credential_are_a_conflict(self) -> None:
+        # Validator differential: each replace passes the credential check alone; the written line does not.
+        first, second = "a1" * 10, "b2" * 10
+        result = self.apply(proposal("security", edit("G1", "spec.md", "open", f"open ghp_{first}")),
+                            proposal("ux", edit("G2", "spec.md", f"{first}.", f"{first}{second}.")))
+        self.assertEqual("ok", result["status"], result)
+        self.assertEqual(["security", "api"], result["data"]["order"])
+        self.assertEqual("edits would write credential-shaped text", result["data"]["domains"][1]["conflicts"][0]["reason"])
+        self.assertNotIn(first + second, self.text("spec.md"))
 
     def test_markdown_tabs_and_line_breaks_still_apply(self) -> None:
         result = self.apply(proposal("security", edit("G1", "spec.md", "open", "private:\n\t- see [ADR](docs/adr.md)")))

@@ -28,9 +28,10 @@ from functools import partial
 from pathlib import Path
 from typing import Any
 
-from ..atomic_write import WritePreconditionChanged, file_identity, open_safe_parent_fd, snapshot_write_target_fd, write_bytes_atomic
+from ..atomic_write import (WritePreconditionChanged, file_identity, open_safe_parent_fd, snapshot_write_target_fd,
+                            write_bytes_atomic, write_file_atomic)
 from ..envelope import diagnostic, response
-from ..execution_control import confined_path, durable_json, ignore_owned_directory, workflow_process_directory
+from ..execution_control import confined_path, ignore_owned_directory, workflow_process_directory
 from ..strict_input import SelectionError, has_hidden_characters, require_fields, require_text
 from ..sweep_isolation import secret_matches
 from ..trusted_io import trusted_bytes
@@ -138,7 +139,11 @@ def apply_domain(texts: dict[str, str], edits: list[dict[str, str]]) -> tuple[di
     for edit in edits:
         count = work[edit["file"]].count(edit["find"])
         if count == 1:
-            work[edit["file"]] = work[edit["file"]].replace(edit["find"], edit["replace"], 1)
+            before = work[edit["file"]]
+            work[edit["file"]] = before.replace(edit["find"], edit["replace"], 1)
+            # Check the lines as written, not just the replace text: edits can complete a credential together.
+            if any(secret_matches(line) for line in set(work[edit["file"]].splitlines()) - set(before.splitlines())):
+                conflicts.append({"gap": edit["gap"], "file": edit["file"], "reason": "edits would write credential-shaped text"})
         else:
             reason = "find text not found" if count == 0 else f"find text matches {count} times"
             conflicts.append({"gap": edit["gap"], "file": edit["file"], "reason": reason})
@@ -219,6 +224,11 @@ def apply_proposals(texts: dict[str, str], domains: list[str], proposals: dict[s
     return rows
 
 
+def publish_record(root: Path, record: Path, value: dict[str, Any]) -> None:
+    """Write the record through the same link-free walk that checked its path."""
+    write_file_atomic(record, json.dumps(value, sort_keys=True, indent=2, allow_nan=False), trust_root=root)
+
+
 def record_on_disk(root: Path, record: Path, value: dict[str, Any] | None) -> bool:
     """Whether the record this apply meant to publish is the one on disk."""
     content = trusted_bytes(record, root)
@@ -280,7 +290,7 @@ def locked_apply(root: Path, feature: Path, record: Path, mode: str,
                 raise ArtifactChanged(changed)
             return rows
         progress.step, progress.record = "application record", {"schema_version": SCHEMA_VERSION, "domains": rows}
-        durable_json(record, progress.record)
+        publish_record(root, record, progress.record)
         progress.step = "lock release"
     return rows
 
