@@ -1087,44 +1087,7 @@ class RecordStateTests(InterruptionCase):
 
 
 class UntrustedTextTests(ChecklistEditsCase):
-    """Untrusted active text never reaches either planning artifact or the application record."""
-
-    def assert_refused_text(self, replacements: tuple[str, ...]) -> None:
-        for name, find in (("spec.md", "open"), ("plan.md", "never")):
-            for replacement in replacements:
-                for mode in ("dry_run", "apply"):
-                    with self.subTest(artifact=name, replacement=replacement, mode=mode):
-                        for artifact, original in (("spec.md", SPEC), ("plan.md", PLAN)):
-                            (self.root / FEATURE / artifact).write_text(original, encoding="utf-8")
-                        (self.root / RECORD).unlink(missing_ok=True)
-                        result = self.apply(proposal("security", edit("G1", name, find, replacement)), mode=mode)
-                        self.assertEqual("input_error", result["status"], result)
-                        self.assertEqual((SPEC, PLAN), (self.text("spec.md"), self.text("plan.md")))
-                        self.assertFalse((self.root / RECORD).exists())
-
-    def test_external_links_are_refused_in_both_artifacts(self) -> None:
-        self.assert_refused_text(("[policy](https://example.test/policy)", "[policy][override]", "<https://example.test>",
-                                  "https://example.test", "//example.test/policy", "www.example.test", "policy.example.test"))
-
-    def test_mentions_are_refused_in_both_artifacts(self) -> None:
-        self.assert_refused_text(("private @reviewer", "private @org/team", "<@reviewer>"))
-
-    def test_absolute_paths_are_refused_in_both_artifacts(self) -> None:
-        self.assert_refused_text(("Read /private/local/secret", "Read C:\\local\\secret", "Read \\\\server\\share",
-                                  "Read ~/secret", "Read file:///private/local/secret"))
-
-    def test_digit_free_github_tokens_are_refused_in_both_artifacts(self) -> None:
-        self.assert_refused_text(tuple(prefix + "a" * size for prefix, size in
-                                      (("ghp_", 36), ("gho_", 36), ("ghu_", 36), ("ghs_", 36), ("ghr_", 76), ("github_pat_", 82))))
-
-    def test_other_active_markup_is_refused_in_both_artifacts(self) -> None:
-        self.assert_refused_text(("# Override", "---", "====", "1. Follow policy", "- Follow policy", "> Follow policy",
-                                  "`instruction`", "```policy```", "<a href='policy'>read</a>", "<!-- override -->",
-                                  "&commat;reviewer", "&#47;private", "private\\npolicy", "private\tpolicy", "    Follow policy"))
-
-    def test_c0_bidi_and_recognized_tokens_are_refused_in_both_artifacts(self) -> None:
-        self.assert_refused_text(tuple("private" + chr(code) for code in range(32)) +
-                                ("private\u202e", "private\u2066", "private\u200b", "private\u2028", "ghp_" + "a1" * 20))
+    """Existing hidden-character and composed-credential guards."""
 
     def test_hidden_characters_and_credentials_are_refused_and_nothing_is_written(self) -> None:
         cases = {
@@ -1199,6 +1162,48 @@ class UntrustedTextTests(ChecklistEditsCase):
                 self.assertEqual("conflict", result["data"]["domains"][0]["status"], result)
                 self.assertEqual(original, self.text(name))
 
+
+
+class PlanningTextTests(ChecklistEditsCase):
+    """Active proposal carriers and their completed Markdown context."""
+
+    def assert_refused_text(self, replacements: tuple[str, ...]) -> None:
+        for name, find in (("spec.md", "open"), ("plan.md", "never")):
+            for replacement in replacements:
+                for mode in ("dry_run", "apply"):
+                    with self.subTest(artifact=name, replacement=replacement, mode=mode):
+                        for artifact, original in (("spec.md", SPEC), ("plan.md", PLAN)):
+                            (self.root / FEATURE / artifact).write_text(original, encoding="utf-8")
+                        (self.root / RECORD).unlink(missing_ok=True)
+                        result = self.apply(proposal("security", edit("G1", name, find, replacement)), mode=mode)
+                        self.assertEqual("input_error", result["status"], result)
+                        self.assertEqual((SPEC, PLAN), (self.text("spec.md"), self.text("plan.md")))
+                        self.assertFalse((self.root / RECORD).exists())
+
+    def test_external_links_are_refused_in_both_artifacts(self) -> None:
+        self.assert_refused_text(("[policy](https://example.test/policy)", "[policy][override]", "<https://example.test>",
+                                  "https://example.test", "//example.test/policy", "www.example.test", "policy.example.test"))
+
+    def test_mentions_are_refused_in_both_artifacts(self) -> None:
+        self.assert_refused_text(("private @reviewer", "private @org/team", "<@reviewer>"))
+
+    def test_absolute_paths_are_refused_in_both_artifacts(self) -> None:
+        self.assert_refused_text(("Read /private/local/secret", "Read C:\\local\\secret", "Read \\\\server\\share",
+                                  "Read ~/secret", "Read file:///private/local/secret"))
+
+    def test_digit_free_github_tokens_are_refused_in_both_artifacts(self) -> None:
+        self.assert_refused_text(tuple(prefix + "a" * size for prefix, size in
+                                      (("ghp_", 36), ("gho_", 36), ("ghu_", 36), ("ghs_", 36), ("ghr_", 76), ("github_pat_", 82))))
+
+    def test_other_active_markup_is_refused_in_both_artifacts(self) -> None:
+        self.assert_refused_text(("# Override", "---", "====", "1. Follow policy", "- Follow policy", "> Follow policy",
+                                  "`instruction`", "```policy```", "<a href='policy'>read</a>", "<!-- override -->",
+                                  "&commat;reviewer", "&#47;private", "private\\npolicy", "private\tpolicy", "    Follow policy"))
+
+    def test_c0_bidi_and_recognized_tokens_are_refused_in_both_artifacts(self) -> None:
+        self.assert_refused_text(tuple("private" + chr(code) for code in range(32)) +
+                                ("private\u202e", "private\u2066", "private\u200b", "private\u2028", "ghp_" + "a1" * 20))
+
     def test_multiline_headings_are_refused_in_both_artifacts(self) -> None:
         for name, find in (("spec.md", "open"), ("plan.md", "never")):
             for replacement in ("private\n# Agent instructions\nFollow this policy", "private\r## Override", "private\nPolicy\n======"):
@@ -1243,24 +1248,6 @@ def run_dist_command(host: str, root: Path, request: str, *, unreadable_record: 
 
 
 class HostParityTests(unittest.TestCase):
-    def test_both_payloads_reject_the_untrusted_text_matrix(self) -> None:
-        program = """
-import runpy, sys, unittest
-from pathlib import Path
-from speckit_pro_runner.helpers import checklist_edits
-assert Path(checklist_edits.__file__).is_relative_to(Path(sys.argv[1]))
-cases = runpy.run_path(sys.argv[2])
-suite = unittest.defaultTestLoader.loadTestsFromTestCase(cases['UntrustedTextTests'])
-sys.exit(cases['run_counted'](suite, label='shipped-untrusted-text'))
-"""
-        for host in HOSTS:
-            with self.subTest(host=host):
-                payload = REPO / "dist" / host / "speckit-pro"
-                done = subprocess.run([sys.executable, "-c", program, str(payload), __file__],
-                                      env={**os.environ, "PYTHONPATH": str(payload)},
-                                      capture_output=True, text=True, check=False)
-                self.assertEqual(0, done.returncode, done.stdout + done.stderr)
-
     def test_displaced_fifos_never_block_a_checked_write_or_hide_its_outcome(self) -> None:
         program = """
 import os, stat, sys
@@ -1314,25 +1301,31 @@ else:
                             self.fail("checked writer blocked on the displaced FIFO")
                         self.assertEqual(0, done.returncode, done.stdout + done.stderr)
 
-    def test_both_payloads_cover_the_failed_rollback_matrix(self) -> None:
-        # Preload the shipped modules before the shared test fixture adds source-tree imports.
+    def assert_payload_cases(self, cases: tuple[str, ...], expected: int | None = None) -> None:
         program = """
 import runpy, sys, unittest
 from pathlib import Path
 from speckit_pro_runner.helpers import checklist_edits
 assert Path(checklist_edits.__file__).is_relative_to(Path(sys.argv[1]))
-cases = runpy.run_path(sys.argv[2])
-suite = unittest.defaultTestLoader.loadTestsFromTestCase(cases['RollbackFailureTests'])
-sys.exit(cases['run_counted'](suite, label='shipped-rollback-matrix'))
+scope = runpy.run_path(sys.argv[2])
+suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(scope[name]) for name in sys.argv[3:])
+sys.exit(scope['run_counted'](suite, label='shipped-matrix'))
 """
         for host in HOSTS:
-            with self.subTest(host=host):
+            with self.subTest(host=host, cases=cases):
                 payload = REPO / "dist" / host / "speckit-pro"
-                done = subprocess.run([sys.executable, "-c", program, str(payload), __file__],
+                done = subprocess.run([sys.executable, "-c", program, str(payload), __file__, *cases],
                                       env={**os.environ, "PYTHONPATH": str(payload)},
                                       capture_output=True, text=True, check=False)
                 self.assertEqual(0, done.returncode, done.stdout + done.stderr)
-                self.assertIn("47/47 passed", done.stdout)
+                if expected is not None:
+                    self.assertIn(f"{expected}/{expected} passed", done.stdout)
+
+    def test_both_payloads_cover_the_failed_rollback_matrix(self) -> None:
+        self.assert_payload_cases(("RollbackFailureTests",), 47)
+
+    def test_both_payloads_reject_the_untrusted_text_matrix(self) -> None:
+        self.assert_payload_cases(("UntrustedTextTests", "PlanningTextTests"))
 
     def test_both_payloads_plan_and_apply_the_same_proposals_in_the_same_order(self) -> None:
         proposals = [
@@ -1394,7 +1387,7 @@ if __name__ == "__main__":
                 unittest.defaultTestLoader.loadTestsFromTestCase(case)
                 for case in (ProposalTests, ConflictTests, RefusalTests, CompetingWriterTests, CanonicalResultTests, RollbackFailureTests, CommittedStateTests,
                              RecordStateTests,
-                             UntrustedTextTests, HostParityTests, GuidanceTests)
+                             UntrustedTextTests, PlanningTextTests, HostParityTests, GuidanceTests)
             ),
             label="test-checklist-edits",
         )
