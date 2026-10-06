@@ -27,8 +27,9 @@ without an interactive terminal. Each `<kind> add <id> --from <archive_url>` inh
 so the owner reads and answers Spec Kit's own trust prompt; nothing here pipes, scripts or bypasses
 it. YAML evidence is read with the standard library (`read_yaml`), which refuses what it cannot read exactly.
 
-An entry is `installed` only when `specify` exits 0 and every piece of Spec Kit v1.1.0's on-disk
-evidence holds; otherwise it is `failed`, or `not-run` when nothing was attempted:
+Every install runs first. An entry is then `installed` only when its `specify` exited 0 and every
+piece of Spec Kit v1.1.0's on-disk evidence holds in the tree the last install left, checked for all
+entries in one pass; otherwise it is `failed`, or `not-run` when nothing was attempted:
 
 - bound to this run: reads are descriptor-relative and no-follow from the project directory this
   run created, `.specify` and `.claude` must be the directories its `specify init` made, nothing
@@ -596,42 +597,38 @@ def check_configuration(tree: BoundTree, entry_id: str, doc: dict) -> None:
     require(actual == expected_hooks(doc, entry_id), "hook registrations differ from the manifest's")
 
 
-def completion_evidence(project: int, identities: dict[str, tuple[int, int]], entry: dict[str, str],
-                        files: dict[str, bytes], window: tuple[datetime, datetime]) -> tuple[str, list[str]]:
+Install = tuple[dict[str, bytes], tuple[datetime, datetime]]  # the pinned archive's files, the install window
+
+
+def completion_evidence(tree: BoundTree, entry: dict[str, str], files: dict[str, bytes],
+                        window: tuple[datetime, datetime]) -> tuple[str, list[str]]:
     """`installed` with its evidence, or `failed` naming the first evidence that does not hold."""
     kind, entry_id = entry["kind"], entry["id"]
     label = f"{kind} {entry_id}"
     try:
-        with ExitStack() as stack:
-            tree = BoundTree(stack, project, identities)
-            pinned = files[MANIFEST_NAMES[kind]]
-            doc = read_yaml(pinned)
-            require(isinstance(doc, dict) and (doc.get(kind) or {}).get("id") == entry_id,
-                    "pinned manifest does not declare this id")
-            assert isinstance(doc, dict)
-            # Manifest events become native hooks and a dispatcher outside this evidence
-            # (events/__init__.py L1071-1100, L1350-1392), so such an entry is never certified here.
-            require("events" not in doc, "the manifest declares Spec Kit events, which this check does not verify")
-            home = (".specify", f"{kind}s", entry_id)
-            manifest = tree.read((*home, MANIFEST_NAMES[kind]))
-            require(manifest == pinned, "installed manifest differs from the pinned archive's")
-            payload, names = declared(doc, kind)
-            for path in payload:
-                require(path in files and tree.read((*home, *path.split("/"))) == files[path],
-                        f"declared file {path} is missing or differs from the pinned archive's")
-            record = check_registration(tree, entry, doc, manifest, window)
-            check_artifacts(tree, entry, record, names)
-            if kind == "extension":
-                check_configuration(tree, entry_id, doc)
-            tree.verify_unchanged()
-    except (EvidenceError, OSError, ValueError, KeyError, TypeError, AttributeError) as error:
-        return "failed", [f"{label}: {error}"]
+        pinned = files[MANIFEST_NAMES[kind]]
+        doc = read_yaml(pinned)
+        require(isinstance(doc, dict) and (doc.get(kind) or {}).get("id") == entry_id,
+                "pinned manifest does not declare this id")
+        assert isinstance(doc, dict)
+        # Manifest events become native hooks and a dispatcher outside this evidence
+        # (events/__init__.py L1071-1100, L1350-1392), so such an entry is never certified here.
+        require("events" not in doc, "the manifest declares Spec Kit events, which this check does not verify")
+        home = (".specify", f"{kind}s", entry_id)
+        manifest = tree.read((*home, MANIFEST_NAMES[kind]))
+        require(manifest == pinned, "installed manifest differs from the pinned archive's")
+        payload, names = declared(doc, kind)
+        for path in payload:
+            require(path in files and tree.read((*home, *path.split("/"))) == files[path],
+                    f"declared file {path} is missing or differs from the pinned archive's")
+        record = check_registration(tree, entry, doc, manifest, window)
+        check_artifacts(tree, entry, record, names)
+        if kind == "extension":
+            check_configuration(tree, entry_id, doc)
     except Exception as error:  # noqa: BLE001 (unreadable evidence is missing evidence, not a crash)
-        return "failed", [f"{label}: unreadable evidence ({type(error).__name__})"]
-    return "installed", [f"{label}: version {doc[kind]['version']}, manifest and {len(payload)} declared files match "
-                         f"the pinned archive, registered from source local with priority {DEFAULT_PRIORITY}, "
-                         f"enabled, {len(names)} commands registered with skills"
-                         + (", hooks and installed: match in .specify/extensions.yml" if kind == "extension" else "")]
+        return "failed", [f"{label}: {error if isinstance(error, EvidenceError) else repr(error)}"]
+    return "installed", [f"{label}: version {doc[kind]['version']}, {len(payload)} declared files and "
+                         f"{len(names)} commands match the pinned archive and are registered"]
 
 
 def registered_before(tree: BoundTree, entry: dict[str, str]) -> bool:
@@ -683,8 +680,10 @@ def operator_specify(args: list[str], cwd: Path) -> int:
     return subprocess.run(["specify", *args], cwd=cwd, env=env, shell=False, check=False).returncode
 
 
-def accept_entry(entry: dict[str, str], project: Path, root: int,
-                 identities: dict[str, tuple[int, int]]) -> tuple[str, list[str]]:
+def accept_entry(entry: dict[str, str], project: Path, root: int, identities: dict[str, tuple[int, int]],
+                 installs: dict[str, Install]) -> tuple[str, list[str]]:
+    """Install one entry on the operator's terminal. A clean exit is only `pending`: its evidence is
+    judged after the last install, so a later install cannot leave stale evidence certified."""
     label = f"{entry['kind']} {entry['id']}"
     if "archive_url" not in entry:
         return "not-run", [f"{label}: no archive_url"]
@@ -707,7 +706,25 @@ def accept_entry(entry: dict[str, str], project: Path, root: int,
     if code != 0:
         how = f"was terminated by signal {-code}" if code < 0 else f"exited {code}"
         return "failed", [f"{label}: specify {how}"]
-    return completion_evidence(root, identities, entry, files, (started, datetime.now(timezone.utc)))
+    installs[label] = (files, (started, datetime.now(timezone.utc)))
+    return "pending", []
+
+
+def final_evidence(root: int, identities: dict[str, tuple[int, int]], entries: list[dict[str, str]],
+                   results: list[tuple[str, list[str]]], installs: dict[str, Install]) -> list[tuple[str, list[str]]]:
+    """Judge every pending entry against the tree as the last install left it, in one bound pass:
+    a node that changes before the pass ends fails every entry that pass would certify."""
+    with ExitStack() as stack:
+        tree = BoundTree(stack, root, identities)
+        labels = [f"{entry['kind']} {entry['id']}" for entry in entries]
+        results = [completion_evidence(tree, entry, *installs[label]) if status == "pending" else (status, details)
+                   for entry, label, (status, details) in zip(entries, labels, results, strict=True)]
+        try:
+            tree.verify_unchanged()
+        except EvidenceError as error:
+            results = [("failed", [f"{label}: {error}"]) if status == "installed" else (status, details)
+                       for label, (status, details) in zip(labels, results, strict=True)]
+    return results
 
 
 def interactive() -> bool:
@@ -739,7 +756,9 @@ def run_acceptance(entries: list[dict[str, str]]) -> list[tuple[str, list[str]]]
                 setup_failures = [f"setup failed: {error}"]
         if setup_failures:
             return [("not-run", setup_failures)] * len(entries)
-        return [accept_entry(entry, project, root, identities) for entry in entries]
+        installs: dict[str, Install] = {}
+        results = [accept_entry(entry, project, root, identities, installs) for entry in entries]
+        return final_evidence(root, identities, entries, results, installs)
 
 
 def owner_acceptance(entries: list[dict[str, str]]) -> int:

@@ -930,6 +930,26 @@ class OwnerAcceptanceTests(unittest.TestCase):
 class OwnerAcceptanceScopeTests(unittest.TestCase):
     """--owner-acceptance certifies only what its evidence covers."""
 
+    def test_a_later_install_that_breaks_an_earlier_entry_fails_it(self):
+        """cr1274i High: only the tree after the last install is certified, so a later install's damage counts."""
+        home = Path(check.REGISTRY_DIRS[TARGET["kind"]]) / TARGET["id"]
+        damage = {
+            "manifest": lambda project: (project / home / check.MANIFEST_NAMES[TARGET["kind"]]).write_text("destroyed\n"),
+            "registry-entry": lambda project: register(project / home.parent, TARGET["kind"], TARGET["id"],
+                                                       {"enabled": False}, None),
+            "skill": lambda project: (project / ".claude/skills" / check.skill_name(f"speckit.{TARGET['id']}.run")
+                                      / "SKILL.md").write_text(skill_text(TARGET, "commands/run.md", "skill-foreign", True)),
+            "hooks": lambda project: (project / ".specify/extensions.yml").write_bytes(
+                yaml_bytes({**check.read_yaml((project / ".specify/extensions.yml").read_bytes()), "hooks": {}})),
+        }
+        for name, change in damage.items():
+            with self.subTest(damaged=name):
+                def later(project, entry, change=change):
+                    if entry is ENTRIES[-1]:
+                        change(project)
+                code, statuses, _calls, _fresh, output = run_acceptance(after_install=later)
+                self.assertEqual((code, statuses.get(TARGET["id"])), (1, "FAILED"), output)
+
     def test_an_entry_declaring_events_is_never_certified(self):
         """Daybreak F1274-ec6eb5b5: manifest events become native hooks and a dispatcher outside this evidence."""
         for entry, event in product(EXTENSIONS, EVENTS):
