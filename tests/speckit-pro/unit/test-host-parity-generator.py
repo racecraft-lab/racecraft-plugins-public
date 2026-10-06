@@ -438,9 +438,10 @@ class MergedSkillViewTests(unittest.TestCase):
 SETUP_SKILL_DRIFT = (
     # autopilot-state-status.schema.json retires the spelling "completed archived".
     ("speckit-archive-cleanup", ("`completed_archived`",), ("completed archived",)),
-    # find_specify checks PATH, then ~/.local/bin; setup checks read bash scripts.
-    ("speckit-install", ("`~/.local/bin/specify`",
-                         "`specify init --here --integration <first-key> --script sh`"), ("on macOS/Linux",)),
+    # The runner supplies the verified launch prefix; setup selects the script flavor.
+    ("speckit-install", ("`spec_kit.cli_argv`",
+                         '`spec_kit.cli_argv + ["init", "--here", "--integration", "<first-key>", "--script", "sh"]`'),
+     ("on macOS/Linux", "`specify init --here")),
     # research_preflight warns on every environment-only key.
     ("speckit-install", ("A key held only in an environment variable is a warning",), ()),
     ("speckit-upgrade", ("A key held only in an environment variable is a warning",), ()),
