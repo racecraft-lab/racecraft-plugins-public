@@ -13,6 +13,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .canonical_json import canonical_bytes
 from .trusted_io import trusted_tree_snapshot
 
 PRESET_ID = "speckit-pro-reviewability"
@@ -116,4 +117,4 @@ def content_fingerprint(content: dict[Path, bytes | None]) -> str:
     """Bind every relative path, directory and byte to a known legacy tree."""
     tree = {path.as_posix(): data.hex() if data is not None else None
             for path, data in content.items()}
-    return hashlib.sha256(json.dumps(tree, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    return hashlib.sha256(canonical_bytes(tree)).hexdigest()
