@@ -559,12 +559,15 @@ class TreeEntryReadOptions:
     byte_limit: int | None = None
 
 
+_DEFAULT_TREE_ENTRY_READ_OPTIONS = TreeEntryReadOptions()
+
+
 def read_tree_entry(
     parent_fd: int,
     name: str,
     expected: os.stat_result | None = None,
     *,
-    options: TreeEntryReadOptions = TreeEntryReadOptions(),
+    options: TreeEntryReadOptions = _DEFAULT_TREE_ENTRY_READ_OPTIONS,
 ) -> dict[Path, tuple[int, bytes | None]]:
     """Read one entry through its parent descriptor; reject links and changing evidence."""
     signatures, byte_limit = options.signatures, options.byte_limit
