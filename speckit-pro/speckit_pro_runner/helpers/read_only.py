@@ -2121,6 +2121,8 @@ def g4_input_kind(kind: str) -> Any:
     """Translate unsafe snapshot reads into a sanitized input-kind diagnostic."""
     try:
         yield
+    except G4InputDrift:
+        raise
     except (OSError, ValueError):
         raise G4InputDrift(f"G4 input drift: {kind} is unsafe, changed or unreadable") from None
 

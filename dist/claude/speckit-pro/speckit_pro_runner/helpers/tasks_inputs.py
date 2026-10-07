@@ -55,6 +55,17 @@ def create_tasks_snapshot(captured: dict[str, bytes], judged: dict[str, str]) ->
         os.close(directory)
 
 
+def bind_tasks_snapshot(data: dict[str, Any], captured: dict[str, bytes], judged: dict[str, str]) -> None:
+    """Bind dispatch input paths to private checked copies; retain the live output target."""
+    with g4_input_kind("snapshot entry"):
+        snapshot = create_tasks_snapshot(captured, judged)
+    feature = data["inputs"]["feature_dir"]
+    data["inputs"]["tasks_snapshot"] = snapshot
+    bound_paths = {feature + "/" + name: snapshot["snapshot_dir"] + "/" + name for name in judged}
+    data["readable_files"] = [bound_paths.get(path, path) for path in data["readable_files"]]
+    data["readable_files"] += [snapshot["snapshot_dir"] + "/" + name for name in judged if name.startswith("checklists/")]
+
+
 def run_read_tasks_inputs_helper(entry: Any, request: Any) -> dict[str, Any]:
     """Closed read-tasks-inputs: snapshot_dir and judged; return verified text for direct use."""
     try:

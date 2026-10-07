@@ -29,7 +29,7 @@ from unittest.mock import patch
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO / "speckit-pro"), str(REPO / "tests/speckit-pro/lib")]
 from speckit_pro_runner import atomic_write  # noqa: E402
-from speckit_pro_runner.helpers import checklist_edits, read_only, phase_brief, tasks_inputs  # noqa: E402
+from speckit_pro_runner.helpers import checklist_edits, read_only, phase_brief  # noqa: E402
 from speckit_pro_runner.helpers.registry import MUTATION_HELPERS, dispatch_helper  # noqa: E402
 from guide_text import PHASE_EXECUTION_GUIDES, guide_text, guide_view  # noqa: E402
 from mutation_request_case import MutationRequestCase  # noqa: E402
