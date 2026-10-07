@@ -132,6 +132,34 @@ def tasks_output_failure(request_id: str | None, published: bool, exc: Exception
                     diagnostics=[diagnostic("tasks_output_unsafe", kind)])
 
 
+def _read_snapshot_tasks(directory: str, stack: ExitStack) -> bytes:
+    with g4_input_kind("snapshot tasks.md"):
+        path = Path(directory)
+        info = path.lstat()
+        if not path.is_absolute() or ".." in path.parts or not stat.S_ISDIR(info.st_mode):
+            raise ValueError("unsafe snapshot entry")
+        if stat.S_IMODE(info.st_mode) != 0o700 or info.st_uid != os.getuid():
+            raise ValueError("unsafe snapshot entry")
+        source = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        stack.callback(os.close, source)
+        opened = os.fstat(source)
+        if (opened.st_dev, opened.st_ino) != (info.st_dev, info.st_ino):
+            raise ValueError("changed snapshot entry")
+        leaf = os.stat("tasks.md", dir_fd=source, follow_symlinks=False)
+        if not stat.S_ISREG(leaf.st_mode):
+            raise ValueError("unsafe output")
+        content = read_tree_entry(
+            source,
+            "tasks.md",
+            leaf,
+            options=TreeEntryReadOptions(byte_limit=BOUNDED_TEXT_INPUT_BYTES),
+        )[Path()][1]
+        if content is None:
+            raise ValueError("missing output")
+        content.decode("utf-8", errors="strict")
+    return content
+
+
 def run_publish_tasks_output_helper(entry: Any, request: Any) -> dict[str, Any]:
     """Publish only snapshot tasks.md through the G4-bound parent, using the atomic writer."""
     published = False
@@ -150,30 +178,7 @@ def run_publish_tasks_output_helper(entry: Any, request: Any) -> dict[str, Any]:
         feature = root / relative
         with ExitStack() as stack:
             parent = open_tasks_parent(feature, root, identity, stack)
-            with g4_input_kind("snapshot tasks.md"):
-                path = Path(directory)
-                info = path.lstat()
-                if not path.is_absolute() or ".." in path.parts or not stat.S_ISDIR(info.st_mode):
-                    raise ValueError("unsafe snapshot entry")
-                if stat.S_IMODE(info.st_mode) != 0o700 or info.st_uid != os.getuid():
-                    raise ValueError("unsafe snapshot entry")
-                source = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
-                stack.callback(os.close, source)
-                opened = os.fstat(source)
-                if (opened.st_dev, opened.st_ino) != (info.st_dev, info.st_ino):
-                    raise ValueError("changed snapshot entry")
-                leaf = os.stat("tasks.md", dir_fd=source, follow_symlinks=False)
-                if not stat.S_ISREG(leaf.st_mode):
-                    raise ValueError("unsafe output")
-                content = read_tree_entry(
-                    source,
-                    "tasks.md",
-                    leaf,
-                    options=TreeEntryReadOptions(byte_limit=BOUNDED_TEXT_INPUT_BYTES),
-                )[Path()][1]
-                if content is None:
-                    raise ValueError("missing output")
-                content.decode("utf-8", errors="strict")
+            content = _read_snapshot_tasks(directory, stack)
             with g4_input_kind("tasks.md"):
                 ensure_safe_write_target_fd(parent, "tasks.md", single_link=True)
                 expected = snapshot_write_target_fd(parent, "tasks.md")
