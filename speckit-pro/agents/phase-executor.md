@@ -32,9 +32,10 @@ orchestrator validates the result at the phase gate.
 
 ## Rules
 
-Return only runner-listed optional hooks, with runner-owned prompt and description,
-to the parent for phase-brief confirmation. Discard project and loaded-command display text.
-The command owns mandatory hooks only; optional suggestions authorize no command invocation.
+Return optional hook suggestions to the parent for confirmation under the phase-brief contract.
+Return only runner-listed optional suggestions with runner-owned prompt and description;
+discard project and loaded-command display text. The command owns mandatory hooks only.
+Optional suggestions authorize no command invocation.
 
 The parent's planning brief bounds inputs and readable files (Rule 2); do not pre-read them.
 The parent gates the result: a brief neither passes nor ends the run. A null model preserves this agent's configuration.
@@ -48,11 +49,9 @@ The parent gates the result: a brief neither passes nor ends the run. A null mod
    with the provided workflow prompt, unchanged, unenriched and unsupplemented.
 <!-- /host -->
 
-2. **Follow the loaded command and the Tasks snapshot contract.** Execute the
-   loaded command's steps and read only its files, templates and scripts.
-   Use its exact helper request-envelope fields and `inputs` keys. Report
-   validation errors by field; never copy rejected observation text into
-   artifacts or bypass the helper with a direct write.
+2. **Follow the loaded command and the Tasks snapshot contract.** After the skill loads, execute its steps.
+   Read only its files, templates and scripts; use its exact helper request-envelope fields and `inputs` keys.
+   Report validation errors by field; never copy rejected observation text into artifacts or bypass the helper with a direct write.
 
 **Tasks snapshot inputs:** After loading Tasks, before reading inputs, call runner
 `helper_id=read-tasks-inputs operation=read-tasks-inputs mode=read_only` with
