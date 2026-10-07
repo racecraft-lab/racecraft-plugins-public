@@ -81,6 +81,7 @@ from ..trusted_io import (
     resolve_input_path,
     resolve_repo_root,
     read_tree_entry,
+    TreeEntryReadOptions,
     tree_entry_signature,
     trusted_bytes,
     trusted_dir_exists,
@@ -2182,7 +2183,12 @@ def g4_snapshot(feature: Path, repo_root: Path, feature_identity: dict[str, int]
             with g4_input_kind(name if key in shared else "checklist report"):
                 if not stat.S_ISREG(info.st_mode):
                     raise ValueError("G4 requires regular files")
-                content = read_tree_entry(parent, name, info, byte_limit=G4_MAX_BYTES - sum(map(len, snapshot.values())))[Path()][1]
+                content = read_tree_entry(
+                    parent,
+                    name,
+                    info,
+                    options=TreeEntryReadOptions(byte_limit=G4_MAX_BYTES - sum(map(len, snapshot.values()))),
+                )[Path()][1]
                 if content is None:
                     raise ValueError("G4 requires file content")
                 snapshot[key] = content

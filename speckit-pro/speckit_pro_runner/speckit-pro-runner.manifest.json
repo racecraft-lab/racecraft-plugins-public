@@ -71,7 +71,7 @@
         "value": "speckit_pro_runner/atomic_write.py",
         "display": "speckit_pro_runner/atomic_write.py"
       },
-      "sha256": "7ed60f938e39fcc9b2d382c6d1c2128de81f90314dfda57e72cb0e68c74f07f7"
+      "sha256": "d7f2fbeef5d8eb35a4b5a9625ea2344c9a362ec64a1a3358a9c7b38655a58a0d"
     },
     {
       "path": {
@@ -719,7 +719,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "a2646aa2c52e0760804ae2aa11ec88d1fd8c1e1e988f48abf7199c5f4c5b8e47"
+      "sha256": "a471f570650f3ba2c664d96707a128bbd67705c6cf48d0c2a1be77fb7bc82686"
     },
     {
       "path": {
@@ -807,7 +807,7 @@
         "value": "speckit_pro_runner/helpers/tasks_inputs.py",
         "display": "speckit_pro_runner/helpers/tasks_inputs.py"
       },
-      "sha256": "dd27b78f7efa9d0418a42b3a09a6472fbec1833c62b00b306e4b51f0bad2b58a"
+      "sha256": "aa1f0a7662cc80b51e21851571c76d14711ec9cf72c973c12420e012c367e7fe"
     },
     {
       "path": {
@@ -1015,7 +1015,7 @@
         "value": "speckit_pro_runner/trusted_io.py",
         "display": "speckit_pro_runner/trusted_io.py"
       },
-      "sha256": "8258a31bd50016bb930c43c5199fb84630976ae3f93f8c806c6bf4f01a826c98"
+      "sha256": "4107d91daaa597c6182308a91a7344e23c1894c89adde3e0c92a390dd6112ed1"
     },
     {
       "path": {

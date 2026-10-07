@@ -6,6 +6,7 @@ import json
 import os
 import re
 import stat
+from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -552,10 +553,21 @@ def read_tree_file(fd: int, before: os.stat_result, byte_limit: int | None) -> b
     return content
 
 
-def read_tree_entry(parent_fd: int, name: str, expected: os.stat_result | None = None,
-                    *, signatures: dict[Path, tuple[int, ...]] | None = None,
-                    byte_limit: int | None = None) -> dict[Path, tuple[int, bytes | None]]:
+@dataclass(frozen=True)
+class TreeEntryReadOptions:
+    signatures: dict[Path, tuple[int, ...]] | None = None
+    byte_limit: int | None = None
+
+
+def read_tree_entry(
+    parent_fd: int,
+    name: str,
+    expected: os.stat_result | None = None,
+    *,
+    options: TreeEntryReadOptions = TreeEntryReadOptions(),
+) -> dict[Path, tuple[int, bytes | None]]:
     """Read one entry through its parent descriptor; reject links and changing evidence."""
+    signatures, byte_limit = options.signatures, options.byte_limit
     before = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
     if expected is not None and tree_entry_signature(before) != tree_entry_signature(expected):
         raise OSError("tree entry changed before capture")
@@ -591,7 +603,8 @@ def read_tree_directory(fd: int, *, signatures: dict[Path, tuple[int, ...]] | No
     for name in names:
         immediate_signatures[name] = tree_entry_signature(os.stat(name, dir_fd=fd, follow_symlinks=False))
         child_signatures: dict[Path, tuple[int, ...]] = {}
-        for relative, entry in read_tree_entry(fd, name, signatures=child_signatures).items():
+        options = TreeEntryReadOptions(signatures=child_signatures)
+        for relative, entry in read_tree_entry(fd, name, options=options).items():
             captured[Path(name) / relative] = entry
         if signatures is not None:
             signatures.update((Path(name) / relative, signature) for relative, signature in child_signatures.items())
@@ -617,9 +630,14 @@ def trusted_tree_snapshot(path: Path, repo_root: Path, *, expected: os.stat_resu
     try:
         before = os.fstat(parent_fd)
         signatures: dict[Path, tuple[int, ...]] = {}
-        captured = read_tree_entry(parent_fd, path.name, expected, signatures=signatures)
+        captured = read_tree_entry(parent_fd, path.name, expected, options=TreeEntryReadOptions(signatures=signatures))
         checked_signatures: dict[Path, tuple[int, ...]] = {}
-        checked = read_tree_entry(parent_fd, path.name, expected, signatures=checked_signatures)
+        checked = read_tree_entry(
+            parent_fd,
+            path.name,
+            expected,
+            options=TreeEntryReadOptions(signatures=checked_signatures),
+        )
         # A later sibling can change a subtree whose local checks already completed.
         if signatures != checked_signatures or captured != checked:
             raise OSError("tree changed after capture")

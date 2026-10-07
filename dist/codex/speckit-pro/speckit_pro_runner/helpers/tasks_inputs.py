@@ -17,7 +17,7 @@ from ..atomic_write import (
     snapshot_write_target_fd,
     write_bytes_atomic_with_options,
 )
-from ..trusted_io import BOUNDED_TEXT_INPUT_BYTES, read_tree_entry, resolve_repo_root, trusted_open_directory
+from ..trusted_io import BOUNDED_TEXT_INPUT_BYTES, TreeEntryReadOptions, read_tree_entry, resolve_repo_root, trusted_open_directory
 from ..envelope import diagnostic, response
 from ..strict_input import require_fields, require_text
 from .read_only import G4InputDrift, checked_g4_judged, check_g4_inputs, g4_input_kind
@@ -165,7 +165,12 @@ def run_publish_tasks_output_helper(entry: Any, request: Any) -> dict[str, Any]:
                 leaf = os.stat("tasks.md", dir_fd=source, follow_symlinks=False)
                 if not stat.S_ISREG(leaf.st_mode):
                     raise ValueError("unsafe output")
-                content = read_tree_entry(source, "tasks.md", leaf, byte_limit=BOUNDED_TEXT_INPUT_BYTES)[Path()][1]
+                content = read_tree_entry(
+                    source,
+                    "tasks.md",
+                    leaf,
+                    options=TreeEntryReadOptions(byte_limit=BOUNDED_TEXT_INPUT_BYTES),
+                )[Path()][1]
                 if content is None:
                     raise ValueError("missing output")
                 content.decode("utf-8", errors="strict")

@@ -23,6 +23,7 @@ from .trusted_io import (
     repo_relative,
     read_tree_entry,
     resolve_input_path,
+    TreeEntryReadOptions,
 )
 
 
@@ -332,7 +333,12 @@ def verify_bound_publication(binding: WriteBinding | None, held_fd: int, name: s
     if binding is None:
         return
     try:
-        captured = read_tree_entry(binding.parent_fd, name, os.fstat(held_fd), byte_limit=len(content))
+        captured = read_tree_entry(
+            binding.parent_fd,
+            name,
+            os.fstat(held_fd),
+            options=TreeEntryReadOptions(byte_limit=len(content)),
+        )
         if captured[Path()][1] != content:
             raise WritePreconditionChanged("written content changed before publication confirmation")
     except OSError as exc:
