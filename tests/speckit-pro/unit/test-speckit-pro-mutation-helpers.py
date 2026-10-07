@@ -16,7 +16,7 @@ import hashlib
 import ctypes
 import dataclasses
 import errno
-from contextlib import ExitStack
+from contextlib import ExitStack, contextmanager
 from pathlib import Path, PosixPath
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -592,6 +592,38 @@ def bind_required_primary_probe(manifest: dict[str, object]) -> None:
             "expected_result_shape": {"available": "boolean"},
         }
     }
+
+
+
+@contextmanager
+def _final_parent_close_failure():
+    real_replace, real_close = mutation.os.replace, mutation.os.close
+    replace_seen = False
+    failed_fd: int | None = None
+    pending: set[int] = set()
+
+    def tracking_replace(*args, **kwargs):
+        nonlocal replace_seen
+        result = real_replace(*args, **kwargs)
+        replace_seen = True
+        return result
+
+    def fail_first_close_after_replace(fd: int) -> None:
+        nonlocal failed_fd
+        if replace_seen and failed_fd is None:
+            failed_fd = fd
+            pending.add(fd)
+            raise OSError("injected close failure")
+        real_close(fd)
+        pending.discard(fd)
+
+    try:
+        with (patch.object(mutation.os, "replace", side_effect=tracking_replace),
+              patch.object(mutation.os, "close", side_effect=fail_first_close_after_replace)):
+            yield
+    finally:
+        for fd in pending:
+            real_close(fd)
 
 
 class MutationHelperTests(unittest.TestCase):
@@ -8449,39 +8481,13 @@ This line must not be copied.
                     ]
                 },
             )
-            real_replace = mutation.os.replace
-            real_close = mutation.os.close
-            replace_seen = False
-            failed_fd: int | None = None
-
-            def tracking_replace(*args, **kwargs):
-                nonlocal replace_seen
-                result = real_replace(*args, **kwargs)
-                replace_seen = True
-                return result
-
-            def fail_first_close_after_replace(fd: int) -> None:
-                nonlocal failed_fd
-                if replace_seen and failed_fd is None:
-                    failed_fd = fd
-                    raise OSError("injected close failure")
-                real_close(fd)
-
             old_cwd = Path.cwd()
             os.chdir(git_root)
             try:
-                with (
-                    patch.object(mutation.os, "replace", side_effect=tracking_replace),
-                    patch.object(mutation.os, "close", side_effect=fail_first_close_after_replace),
-                ):
+                with _final_parent_close_failure():
                     response = mutation.run_mutation_helper(registry.MUTATION_HELPERS["mutation-foundation"], request)
             finally:
                 os.chdir(old_cwd)
-                if failed_fd is not None:
-                    try:
-                        real_close(failed_fd)
-                    except OSError:
-                        pass
 
             self.assert_response(response, "expected_failure", 1)
             self.assertEqual(response["data"]["mutation"]["mutation_status"], "partial_failure")
