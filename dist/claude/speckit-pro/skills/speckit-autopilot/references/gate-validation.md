@@ -240,10 +240,15 @@ checks G4's device/inode pair, and holds that descriptor through publication.
 It refuses missing, replaced or symlinked parents and symlinked, hard-linked or
 nonregular output leaves. It creates a fresh exclusive temporary file and
 renames within that held directory; refusals name only the file kind.
-The current publisher reports even a clean write as unconfirmed and explicitly
-withholds after-hook authority. Its last installed-output observation cannot
-bind a later pathname consumer. Keep all after_tasks hooks, G5 and completion
-blocked and retain the snapshot; retrying clean publication cannot unblock them.
+Successful publication returns `after_hooks_ready=true` and `tasks_binding`
+containing the captured snapshot text and SHA-256 digest. Follow the
+[bound-consumer handoff](phase-execution.md#phase-5-tasks): hooks consume
+`read-tasks-output` returned text and G5 receives the unchanged `tasks_binding`.
+G5 evaluates those bytes and returns `tasks_sha256`; neither consumer reopens
+the writable live path. A consumer given `live_path` must pass it to
+`read-tasks-output`, which compares its bounded read to the binding and refuses
+on mismatch. Pre/post-install and cleanup-window refusals still withhold hook
+authority. Publication observations alone do not certify future pathname reads.
 Snapshot generation and publication failures are blockers; neither host writes
 tasks.md through a live feature path.
 This closes the Tasks input handoff in

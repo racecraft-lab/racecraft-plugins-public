@@ -20,6 +20,7 @@ from ..atomic_write import (
 from ..trusted_io import BOUNDED_TEXT_INPUT_BYTES, TreeEntryReadOptions, read_tree_entry, resolve_repo_root, trusted_open_directory
 from ..envelope import diagnostic, response
 from ..strict_input import require_fields, require_text
+from .tasks_output import bind_tasks_text, check_live_tasks
 from .read_only import G4InputDrift, checked_g4_judged, check_g4_inputs, g4_input_kind
 
 
@@ -162,13 +163,7 @@ def _read_snapshot_tasks(directory: str, stack: ExitStack) -> bytes:
 
 
 def run_publish_tasks_output_helper(entry: Any, request: Any) -> dict[str, Any]:
-    """Attempt snapshot publication without certifying a later live-path consumer.
-
-    A writable parent and inode can change after every observation, including
-    descriptor cleanup and response construction. The current hook interface
-    reopens that path; neither a successful rename nor another check can grant
-    it authority. Retain the snapshot and fail closed even for a clean write.
-    """
+    """Publish captured bytes and bind downstream consumers to the value, not the path."""
     published = False
     try:
         with g4_input_kind("tasks.md"):
@@ -205,7 +200,14 @@ def run_publish_tasks_output_helper(entry: Any, request: Any) -> dict[str, Any]:
             )
             published = True
             check_tasks_parent(feature, root, identity)
+        binding = bind_tasks_text(content)
+        result = response("ok", request_id=request.request_id,
+                          data={"publication": "bound", "published": "tasks.md",
+                                "after_hooks_ready": True, "tasks_binding": binding})
+        # Reject observed cleanup/response-window drift. This observation is not
+        # authority for a future path read: consumers verify and use binding text.
+        check_tasks_parent(feature, root, identity)
+        check_live_tasks(feature / "tasks.md", root, binding)
+        return result
     except (G4InputDrift, OSError, ValueError) as exc:
         return tasks_output_failure(request.request_id, published, exc)
-    return tasks_output_failure(request.request_id, published,
-                                G4InputDrift("Tasks live output cannot authorize pathname consumers"))

@@ -966,8 +966,10 @@ class RecordStateTests(InterruptionCase):
         with patch.object(os, "fsync", fail_record_parent_sync):
             result = self.apply_both()
         self.assertEqual(1, len(faults))
-        # The shared writer treats a directory sync failure after installation as best-effort.
-        self.assertEqual("ok", result["status"], result)
+        # Installation happened, but the shared writer must report the durability failure.
+        self.assertEqual("expected_failure", result["status"], result)
+        self.assertEqual("apply_interrupted", result["diagnostics"][0]["code"])
+        self.assertIs(True, result["data"]["record_written"])
         self.assert_both_written()
         record = json.loads((self.root / RECORD).read_text(encoding="utf-8"))
         self.assertEqual(["security", "ux", "api"], [row["domain"] for row in record["domains"]])
@@ -1017,7 +1019,10 @@ class RecordStateTests(InterruptionCase):
                                  (result["status"], result["diagnostics"][0]["code"], result["data"].get("applied")), result)
                 self.assertIsNone(result["data"]["record_written"], result)
                 self.assertIn("state unknown", result["diagnostics"][0]["message"])
-                self.assertIn("publication completed", result["diagnostics"][0]["message"])
+                if fault == "parent_close":
+                    self.assertIn("published write cleanup failed", result["diagnostics"][0]["message"])
+                else:
+                    self.assertIn("publication completed", result["diagnostics"][0]["message"])
                 self.assertNotIn("not written", result["diagnostics"][0]["message"])
 
     def test_both_payloads_report_unknown_for_an_unreadable_published_record(self) -> None:

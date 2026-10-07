@@ -9,7 +9,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from speckit_pro_runner import atomic_write
-from speckit_pro_runner.helpers import tasks_inputs
+from speckit_pro_runner.helpers import tasks_inputs, read_only
 from speckit_pro_runner.helpers.registry import dispatch_helper
 
 
@@ -174,6 +174,8 @@ def verify_mutated(state, binding, held_fd, name, content, installed=False):
 
 
 def response_mutated(state, *args, **kwargs):
+    if state["fired"][0]:
+        return state["real_response"](*args, **kwargs)
     with ExitStack() as stack:
         parent = os.open(state["feature"], os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
         stack.callback(os.close, parent)
@@ -216,6 +218,44 @@ def publish(state, output):
     return result
 
 
+def consume(state, result):
+    assert result['status'] == 'ok', result
+    binding = result['data']['tasks_binding']
+    original = binding['text']
+    if state['variant'].startswith('bound swap:'):
+        parent = os.open(state['feature'], os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            mutate_output(state, 'tasks.md', parent)
+        finally:
+            os.close(parent)
+    if state['variant'] == 'bound snapshot changed':
+        (state['snapshot'] / 'tasks.md').write_text('Changed after publication')
+    if state['variant'] == 'bound tampered text':
+        binding = {**binding, 'text': 'Injected output'}
+    if state['variant'] == 'bound tampered digest':
+        binding = {**binding, 'sha256': '0' * 64}
+    hook = call('read-tasks-output', {'tasks_binding': binding})
+    with patch.object(read_only, 'trusted_text', side_effect=AssertionError('G5 reopened the live path')):
+        gate = call('validate-gate', {'gate': 'G5', 'feature_dir': 'specs/example', 'tasks_binding': binding})
+    if 'tampered' in state['variant']:
+        assert hook['status'] == 'input_error', hook
+        assert hook['data']['after_hooks_ready'] is False, hook
+        assert not gate['data']['stdout_json']['pass'], gate
+        return
+    assert hook['status'] == 'ok', hook
+    assert hook['data']['text'] == original, hook
+    assert hook['data']['sha256'] == binding['sha256'], hook
+    assert gate['data']['stdout_json']['pass'], gate
+    assert gate['data']['stdout_json']['tasks_sha256'] == binding['sha256'], gate
+    live = call('read-tasks-output', {'tasks_binding': binding, 'live_path': 'specs/example/tasks.md'})
+    if state['variant'].startswith('bound swap:'):
+        assert live['status'] == 'input_error', live
+        assert live['data']['after_hooks_ready'] is False, live
+    else:
+        assert live['status'] == 'ok', live
+        assert live['data']['text'] == original, live
+
+
 def report(state, brief, result):
     variant = state["variant"]
     tree = state["old"] if state["old"].exists() else state["feature"]
@@ -244,6 +284,8 @@ def main():
         setup_leaf_variant(state)
         try:
             result = publish(state, output)
+            if variant.startswith('bound '):
+                consume(state, result)
             print(json.dumps(report(state, brief, result)))
         finally:
             shutil.rmtree(state["snapshot"], ignore_errors=True)

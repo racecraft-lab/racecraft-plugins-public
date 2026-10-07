@@ -31,6 +31,7 @@ from ..json_schema import json_schema_failures
 from ..runtime import detect_plugin_root
 from .. import reviewability_preset, spec_kit_pin
 from ..strict_input import unique_object
+from .tasks_output import checked_tasks_text
 from .formal_policy import apply_resume_guard, gate_checkpoint
 from .readiness_record import HOSTS, preview_surface
 from .feedback_sweep import (
@@ -2040,6 +2041,16 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     if gate == "G4":
         return g4_result(feature, repo_root)
     if gate == "G5":
+        if "tasks_binding" in inputs:
+            try:
+                text = checked_tasks_text(inputs["tasks_binding"])
+            except ValueError:
+                return make_result(json_text({"gate": "G5", "pass": False,
+                                              "reason": "Tasks binding is invalid or changed"}), exit_code=1)
+            result = g5_tasks_text(text, tasks, repo_root)
+            verdict = json.loads(result["stdout"])
+            verdict["tasks_sha256"] = inputs["tasks_binding"]["sha256"]
+            return make_result(json_text(verdict), exit_code=result["exit_code"])
         if not trusted_file_exists(tasks, repo_root):
             return make_result(json_text({"gate": "G5", "pass": False, "reason": "tasks.md not found", "markers": 0, "details": []}), exit_code=1)
         return g5_tasks_text(trusted_text(tasks, repo_root) or "", tasks, repo_root)

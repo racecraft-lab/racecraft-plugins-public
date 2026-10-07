@@ -295,8 +295,9 @@ for phase in PHASES starting from first_pending:
        Keep Consensus items incomplete until this checkpoint succeeds.
     6. Specify, Plan, Checklist, Tasks and Analyze only:
        Tasks only: publish-tasks-output with brief.inputs.tasks_output unchanged;
-       its unconfirmed response blocks all after_tasks hooks and G5, even
-       for a clean write. Retain the snapshot and escalate the blocker.
+       a refusal blocks all after_tasks hooks and G5. On success, carry
+       data.tasks_binding unchanged through the bound-consumer handoff in
+       Phase 5: Tasks for mandatory and confirmed optional hooks, then G5.
        handle optional brief.hooks with event=after_<phase> under the confirmation
        rule in Extension Hook Events; record runs and skips in the decisions list.
        Clarify and Implement only: skip optional hooks; check .specify/extensions.yml for mandatory after_<phase>
@@ -536,11 +537,27 @@ The executor consumes spec.md, plan.md and checklist reports only through
 its snapshot_dir. On successful return, call `publish-tasks-output`, mode apply,
 with `inputs=brief.inputs.tasks_output` before after_Tasks hooks and G5.
 Pass `brief.inputs.defer_after_hooks=true`: the executor defers every
-mandatory and optional after_tasks hook. The current helper always withholds
-authority with `data.after_hooks_ready=false`; even clean output remains
-unconfirmed for a later pathname consumer. Retain the snapshot and keep
-after_tasks hooks, G5 and completion blocked. Repeating clean publication
-cannot release this blocker; use the existing failure escalation policy.
+mandatory and optional after_tasks hook. A publication refusal keeps hooks,
+G5 and completion blocked; retain the snapshot and escalate. A successful
+`status=ok` with `data.after_hooks_ready=true` permits this bound-consumer handoff:
+
+1. Retain `data.tasks_binding` unchanged (`text` and `sha256` captured from the
+   executor snapshot). It binds bytes, not future reads of the live pathname.
+2. Before each deferred mandatory hook or confirmed optional after_tasks hook,
+   call `helper_id=read-tasks-output operation=read-tasks-output mode=read_only`
+   with `tasks_binding=<publisher data.tasks_binding unchanged>`. Pass the
+   successful returned `data.text` and `data.sha256` as the hook's Tasks input.
+   The hook consumes that text directly. A hook requiring a pathname must use
+   the same helper with `live_path=<feature-dir>/tasks.md` and use its returned
+   text; a mismatch refuses. A hook that cannot consume this interface remains
+   blocked; do not invoke it with unrestricted live-path access.
+3. Call `validate-gate` for G5 with `feature_dir` and the unchanged
+   `tasks_binding`. G5 checks the binding and evaluates that text for task
+   entries, gate-task loops and empty coverage rows. Record `tasks_sha256`.
+4. Complete Tasks after required hooks and G5 succeed. Preserve the binding
+   for every later Tasks read in this handoff; any live-path read goes through
+   `read-tasks-output` with `live_path` and refuses a digest mismatch.
+
 The runner publishes through the G4-bound directory descriptor. Snapshot
 consumption or publication failure is a blocker; the live feature path is
 never an executor write destination.
@@ -3667,9 +3684,9 @@ Hooks are configured in `.specify/extensions.yml`.
 Plan, Checklist and Analyze the orchestrator never dispatches one. Tasks
 runs its mandatory before_tasks hooks in the command, but the runner brief
 sets `defer_after_hooks=true`: the executor defers all after_tasks hooks to
-the parent. The current publisher returns unconfirmed with
-after_hooks_ready=false even for a clean write; the parent keeps all
-after_tasks hooks and G5 blocked and retains the snapshot for repair.
+the parent. Follow the bound-consumer handoff in Phase 5: Tasks for every
+mandatory or confirmed optional after_tasks hook, then G5. Publication or
+consumption refusal blocks completion and retains the snapshot for repair.
 `brief.hooks` lists optional suggestions with their event, optional marker,
 prompt and description. Present only the runner-owned prompt and description,
 along with the validated extension, command and event. Use only runner-listed
@@ -3719,7 +3736,7 @@ for each phase:
   1. Apply optional-hook confirmation or skip before_<phase> hooks
   2. Spawn subagent for the phase (the loaded command runs its mandatory hooks)
   3. Receive result; Tasks attempts publication, retains its snapshot and
-     stops on the current publisher's unconfirmed result with hooks deferred
+     uses the Phase 5 bound-consumer handoff on success; refusals keep hooks deferred
   4. Apply optional-hook confirmation or skip after_<phase> hooks; record runs
      and skips in the decisions list (workflow file for Clarify and Implement)
   5. Validate gate

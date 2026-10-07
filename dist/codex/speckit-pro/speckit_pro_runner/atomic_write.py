@@ -239,11 +239,7 @@ def _install_atomic_temporary(state: _AtomicWriteState, content: bytes, options:
     ):
         os.replace(state.temporary_name, state.target_name, src_dir_fd=state.parent_fd, dst_dir_fd=state.parent_fd)
     state.replaced = True
-    try:
-        os.fsync(state.parent_fd)
-    except OSError:
-        # Directory fsync is best-effort after replace; the atomic swap already succeeded.
-        pass
+    os.fsync(state.parent_fd)
     verify_bound_publication(options.binding, state.temporary_fd, state.target_name, content, installed=True)
 
 
@@ -253,31 +249,30 @@ def _publish_atomic_write(state: _AtomicWriteState, content: bytes, options: Ato
     _install_atomic_temporary(state, content, options)
 
 
-def _cleanup_atomic_write(state: _AtomicWriteState, options: AtomicWriteOptions) -> None:
-    if state.temporary_fd >= 0:
-        try:
-            os.close(state.temporary_fd)
-        except OSError:
-            # A close error cannot safely change the write outcome.
-            pass
-    temporary_cleanup_errors = cleanup_temporary_entry(state.parent_fd, state.temporary_name, state.failure)
-    close_error: OSError | None = None
+def _close_write_descriptor(descriptor: int, label: str) -> list[str]:
+    """Close once and report errors; retrying close could close a reused descriptor."""
+    if descriptor < 0:
+        return []
     try:
-        os.close(state.parent_fd)
+        os.close(descriptor)
     except OSError as exc:
-        close_error = exc
-    if close_error is not None and not state.replaced:
-        if state.failure is None:
-            raise close_error
-        cleanup_errors = atomic_write_cleanup_errors(state.failure)
-        cleanup_errors.append(f"parent_fd:{type(close_error).__name__}")
-        state.failure.cleanup_errors = cleanup_errors
-    if state.failure is not None and not state.replaced and temporary_cleanup_errors:
-        state.failure.cleanup_errors = [*atomic_write_cleanup_errors(state.failure), *temporary_cleanup_errors]
+        return [f"{label}:{type(exc).__name__}"]
+    return []
+
+
+def _cleanup_atomic_write(state: _AtomicWriteState, options: AtomicWriteOptions) -> None:
+    cleanup_errors = _close_write_descriptor(state.temporary_fd, "temporary_fd")
+    cleanup_errors.extend(cleanup_temporary_entry(state.parent_fd, state.temporary_name, state.failure))
+    cleanup_errors.extend(_close_write_descriptor(state.parent_fd, "parent_fd"))
     if options.trust_root is not None and state.failure is not None and not state.replaced and state.created_dirs:
-        cleanup_errors = remove_created_parent_dirs(state.created_dirs, options.trust_root)
-        if cleanup_errors:
+        cleanup_errors.extend(remove_created_parent_dirs(state.created_dirs, options.trust_root))
+    if cleanup_errors:
+        if state.failure is not None:
             state.failure.cleanup_errors = [*atomic_write_cleanup_errors(state.failure), *cleanup_errors]
+        else:
+            failure = AtomicWriteInterrupted("published write cleanup failed") if state.replaced else OSError("write cleanup failed")
+            failure.cleanup_errors = cleanup_errors
+            raise failure
 
 
 def _write_atomic(target: Path, content: bytes, options: AtomicWriteOptions) -> dict[str, Any]:
@@ -286,6 +281,9 @@ def _write_atomic(target: Path, content: bytes, options: AtomicWriteOptions) -> 
         try:
             _publish_atomic_write(state, content, options)
         except OSError as exc:
+            if state.replaced and not isinstance(exc, AtomicWriteInterrupted):
+                state.failure = AtomicWriteInterrupted("write reached disk but publication failed")
+                raise state.failure from exc
             state.failure = exc
             raise
     finally:

@@ -748,6 +748,57 @@ with tempfile.TemporaryDirectory() as directory:
     assert target.read_bytes() == b'ordinary output'
 """
 
+ATOMIC_FAILURE_PROBE = r"""
+import os, stat, sys, tempfile
+from pathlib import Path
+from unittest.mock import patch
+from speckit_pro_runner.atomic_write import AtomicWriteOptions, WriteBinding, write_bytes_atomic_with_options
+
+for failure in (sys.argv[1],):
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory).resolve()
+        parent = os.open(root, os.O_RDONLY | os.O_DIRECTORY)
+        opened = []
+        temporary = []
+        fired = []
+        real_close, real_sync, real_open = os.close, os.fsync, os.open
+        def record(*args, **kwargs):
+            fd = real_open(*args, **kwargs)
+            opened.append(fd)
+            if args[1] & os.O_CREAT:
+                temporary.append(fd)
+            return fd
+        def sync(fd):
+            if failure == 'directory sync' and stat.S_ISDIR(os.fstat(fd).st_mode):
+                fired.append(fd)
+                raise OSError('injected directory sync failure')
+            return real_sync(fd)
+        def close(fd):
+            is_dir = stat.S_ISDIR(os.fstat(fd).st_mode)
+            real_close(fd)
+            if not fired and ((failure == 'temporary close' and fd in temporary)
+                              or (failure == 'parent close' and is_dir)):
+                fired.append(fd)
+                raise OSError('injected close failure')
+        try:
+            with patch.object(os, 'open', record), patch.object(os, 'fsync', sync), patch.object(os, 'close', close):
+                try:
+                    write_bytes_atomic_with_options(root / 'tasks.md', b'captured',
+                                                    AtomicWriteOptions(trust_root=root, binding=WriteBinding(parent, True)))
+                except OSError as error:
+                    assert fired, (failure, error)
+                else:
+                    raise AssertionError(failure + ' was swallowed')
+            for fd in opened:
+                try:
+                    os.fstat(fd)
+                except OSError:
+                    continue
+                raise AssertionError('temporary descriptor leaked')
+        finally:
+            real_close(parent)
+"""
+
 class _TasksOutputSupport:
     def probe(self, variant):
         results = []
@@ -774,8 +825,19 @@ class _TasksOutputSupport:
             self.assertEqual(expected["diagnostic"], result["diagnostics"][0]["code"])
 
 
+TASKS_MUTATION_FORMS = ('regular', 'hard link', 'symlink in-root', 'symlink out-root',
+                        'fifo', 'deleted', 'direct write', 'transient hard link')
+
+
 class TasksOutputTests(_TasksOutputSupport, unittest.TestCase):
     """G4 -> Tasks brief -> executor snapshot -> runner publication, on both shipped hosts."""
+
+    def test_atomic_sync_and_close_failures_are_explicit_on_every_payload(self):
+        for host, payload in RUNNER_ROOTS:
+            for failure in ('directory sync', 'temporary close', 'parent close'):
+                with self.subTest(host=host, failure=failure):
+                    done = run_isolated(payload, ATOMIC_FAILURE_PROBE, failure)
+                    self.assertEqual(0, done.returncode, done.stdout + done.stderr)
 
     def test_unbound_writes_preserve_close_before_rename_on_both_payloads(self):
         for payload in (REPO / 'speckit-pro', REPO / 'dist/claude/speckit-pro', REPO / 'dist/codex/speckit-pro'):
@@ -783,11 +845,13 @@ class TasksOutputTests(_TasksOutputSupport, unittest.TestCase):
                 done = run_isolated(payload, UNBOUND_PUBLICATION_PROBE)
                 self.assertEqual(0, done.returncode, done.stdout + done.stderr)
 
-    def test_clean_output_attempts_publication_and_replaces_regular_leaf(self):
+    def test_clean_output_publishes_bound_bytes_and_replaces_regular_leaf(self):
         for variant in ('clean', 'existing regular'):
             for result, published in self.probe(variant):
-                self.assertEqual('expected_failure', result['status'])
-                self.assertIs(False, result['data']['after_hooks_ready'])
+                self.assertEqual('ok', result['status'])
+                self.assertIs(True, result['data']['after_hooks_ready'])
+                self.assertEqual(hashlib.sha256(published.encode()).hexdigest(), result['data']['tasks_binding']['sha256'])
+                self.assertEqual(published, result['data']['tasks_binding']['text'])
                 self.assertEqual('# Tasks\n\n- [ ] T001 Build the feature\n', published)
 
     def test_output_refuses_each_daybreak_redirect_and_special_file(self):
@@ -810,8 +874,7 @@ class TasksOutputTests(_TasksOutputSupport, unittest.TestCase):
 
     def test_temporary_and_installed_output_mutations_never_authorize_hooks(self):
         for window in ('temp during check', 'temp during rename', 'output during rename'):
-            for form in ('regular', 'hard link', 'symlink in-root', 'symlink out-root',
-                         'fifo', 'deleted', 'direct write', 'transient hard link'):
+            for form in TASKS_MUTATION_FORMS:
                 with self.subTest(window=window, form=form):
                     for result, _ in self.probe(window + ':' + form):
                         self.assertNotEqual('ok', result['status'])
@@ -820,19 +883,29 @@ class TasksOutputTests(_TasksOutputSupport, unittest.TestCase):
                             self.assertEqual('expected_failure', result['status'])
                             self.assertEqual('unconfirmed', result['data']['publication'])
 
-    def test_publication_cannot_authorize_a_later_live_path_consumer(self):
-        for variant in ('clean', 'existing regular'):
-            for result, published in self.probe(variant):
-                self.assertEqual('expected_failure', result['status'])
-                self.assertEqual('unconfirmed', result['data']['publication'])
-                self.assertIs(False, result['data']['after_hooks_ready'])
-                self.assertNotIn('digest', result['data'])
-                self.assertEqual('# Tasks\n\n- [ ] T001 Build the feature\n', published)
+    def test_bound_consumer_reaches_hooks_and_g5_and_refuses_swapped_live_path(self):
+        variants = ['bound clean', 'bound snapshot changed', 'bound tampered text', 'bound tampered digest']
+        variants += ['bound swap:' + form for form in TASKS_MUTATION_FORMS]
+        for variant in variants:
+            for result, _ in self.probe(variant):
+                self.assertEqual('ok', result['status'])
+                self.assertIs(True, result['data']['after_hooks_ready'])
+
+    def test_both_hosts_require_bound_hook_and_gate_consumers(self):
+        for root in (REPO / 'speckit-pro', REPO / 'dist/claude/speckit-pro', REPO / 'dist/codex/speckit-pro'):
+            with self.subTest(payload=root):
+                skill = (root / 'skills/speckit-autopilot/SKILL.md').read_text()
+                guide = (root / 'skills/speckit-autopilot/references/phase-execution.md').read_text()
+                self.assertIn('tasks_binding=<publisher data.tasks_binding unchanged>', skill)
+                self.assertIn('helper_id=read-tasks-output operation=read-tasks-output mode=read_only', guide)
+                self.assertIn('Complete Tasks after required hooks and G5 succeed', guide)
+                self.assertIn('live_path=<feature-dir>/tasks.md', guide)
+                self.assertNotIn('even for a clean write', guide)
+                self.assertNotIn('current helper refuses even a clean write', skill)
 
     def test_every_postcheck_output_form_explicitly_withholds_hook_authority(self):
         for existing in ('', ' existing'):
-            for form in ('regular', 'hard link', 'symlink in-root', 'symlink out-root',
-                         'fifo', 'deleted', 'direct write', 'transient hard link'):
+            for form in TASKS_MUTATION_FORMS:
                 with self.subTest(existing=bool(existing), form=form):
                     for result, _ in self.probe('output after check' + existing + ':' + form):
                         self.assertEqual('expected_failure', result['status'])
@@ -843,8 +916,7 @@ class TasksOutputTests(_TasksOutputSupport, unittest.TestCase):
     def test_every_earlier_window_explicitly_withholds_hook_authority(self):
         for window in ('temp before check', 'temp after check', 'temp during rename',
                        'output during rename', 'output before check'):
-            for form in ('regular', 'hard link', 'symlink in-root', 'symlink out-root',
-                         'fifo', 'deleted', 'direct write', 'transient hard link'):
+            for form in TASKS_MUTATION_FORMS:
                 with self.subTest(window=window, form=form):
                     for result, _ in self.probe(window + ':' + form):
                         self.assertNotEqual('ok', result['status'])
@@ -852,8 +924,7 @@ class TasksOutputTests(_TasksOutputSupport, unittest.TestCase):
                         self.assertNotIn('digest', result['data'])
 
     def test_response_time_output_forms_cannot_reintroduce_hook_authority(self):
-        for form in ('regular', 'hard link', 'symlink in-root', 'symlink out-root',
-                     'fifo', 'deleted', 'direct write', 'transient hard link'):
+        for form in TASKS_MUTATION_FORMS:
             with self.subTest(form=form):
                 for result, _ in self.probe('output at response:' + form):
                     self.assertEqual('expected_failure', result['status'])
