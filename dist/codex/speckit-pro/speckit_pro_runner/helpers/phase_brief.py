@@ -206,6 +206,48 @@ def observed_checklist_waves(root: Path, workflow: str, feature: str, waves: Wav
     return waves._replace(shared_changed=snapshot["baseline"] != waves.verify_baseline)
 
 
+def _phase_brief_response(
+    request: Any,
+    root: Path,
+    context: tuple[
+        str,
+        str,
+        str,
+        WaveRequest,
+        dict[str, str] | None,
+        dict[str, int] | None,
+    ],
+) -> dict[str, Any]:
+    """Build the phase brief response after input validation."""
+    phase, workflow, feature, waves, judged, identity = context
+    try:
+        if identity is not None:
+            check_tasks_parent(root / feature, root, identity)
+        captured = check_g4_inputs(root / feature, root, judged) if judged is not None else None
+        data = brief_data(phase, workflow, feature, observed_checklist_waves(root, workflow, feature, waves))
+        if captured is not None and judged is not None:
+            bind_tasks_snapshot(data, captured, judged)
+            data["inputs"]["defer_after_hooks"] = True
+            data["inputs"]["tasks_output"] = {
+                "feature_dir": feature,
+                "snapshot_dir": data["inputs"]["tasks_snapshot"]["snapshot_dir"],
+                "feature_identity": identity,
+            }
+    except G4InputDrift as exc:
+        return response(
+            "input_error",
+            request_id=request.request_id,
+            diagnostics=[diagnostic("g4_input_drift", str(exc))],
+        )
+    except (OSError, ValueError) as exc:
+        return internal_failure(request, "phase_brief_slices_unavailable", exc)
+    try:
+        data["hooks"] = optional_hooks(root, ("before_" + phase.lower(), "after_" + phase.lower())) if phase in HOOK_PHASES else []
+    except ValueError as exc:
+        return internal_failure(request, "phase_brief_hooks_unavailable", exc)
+    return response("ok", request_id=request.request_id, data=data)
+
+
 def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     """Return phase-brief/v1 dispatch data; gate and stop decisions stay separate.
 
@@ -241,30 +283,11 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     Input errors return no data; uninterpretable hooks are internal_failure.
     """
     try:
-        phase, workflow, feature, waves, judged, identity = checked_request(request.inputs)
+        context = checked_request(request.inputs)
     except ValueError as exc:
         return response("input_error", request_id=request.request_id,
                         diagnostics=[diagnostic("invalid_phase_brief", str(exc))])
     root = resolve_repo_root({})
     if isinstance(root, dict):
         return response("missing_prerequisite", request_id=request.request_id, diagnostics=[root])
-    try:
-        if identity is not None:
-            check_tasks_parent(root / feature, root, identity)
-        captured = check_g4_inputs(root / feature, root, judged) if judged is not None else None
-        data = brief_data(phase, workflow, feature, observed_checklist_waves(root, workflow, feature, waves))
-        if captured is not None and judged is not None:
-            bind_tasks_snapshot(data, captured, judged)
-            data["inputs"]["defer_after_hooks"] = True
-            data["inputs"]["tasks_output"] = {"feature_dir": feature,
-                "snapshot_dir": data["inputs"]["tasks_snapshot"]["snapshot_dir"], "feature_identity": identity}
-    except G4InputDrift as exc:
-        return response("input_error", request_id=request.request_id,
-                        diagnostics=[diagnostic("g4_input_drift", str(exc))])
-    except (OSError, ValueError) as exc:
-        return internal_failure(request, "phase_brief_slices_unavailable", exc)
-    try:
-        data["hooks"] = optional_hooks(root, ("before_" + phase.lower(), "after_" + phase.lower())) if phase in HOOK_PHASES else []
-    except ValueError as exc:
-        return internal_failure(request, "phase_brief_hooks_unavailable", exc)
-    return response("ok", request_id=request.request_id, data=data)
+    return _phase_brief_response(request, root, context)
