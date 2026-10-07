@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -538,8 +539,23 @@ class GenerateSpecIndexTests(_SpecIndexGitIgnoreTests, unittest.TestCase):
         self.assertEqual(moc.read_text(encoding="utf-8"), before)
         self.assertFalse(body["data"]["writes_state"])
 
+    def _apply_spec_index_write(self, fixture, request_id: str, fault):
+        RunnerRequest, mutation, registry, root = fixture
+        request = RunnerRequest(request_id, "generate-spec-index-write", "generate-spec-index-write", "apply",
+                                {"repo_root": root.name})
+        with chdir(self.work), fault:
+            return mutation.run_spec_index_write(registry.MUTATION_HELPERS["generate-spec-index-write"], request)
+
+    def _assert_applied_map_failure(self, body, code: str) -> None:
+        self.assertEqual(body["status"], "expected_failure")
+        self.assertEqual([diag["code"] for diag in body["diagnostics"]], [code])
+        self.assertEqual(body["data"]["mutation"]["mutation_status"], "partial_failure")
+        self.assertEqual(body["data"]["mutation"]["touched_paths"], ["specs/prsg-901-stale/SPEC-MOC.md"])
+        self.assertTrue(body["data"]["writes_state"])
+
     def test_write_rechecks_applied_map_before_success(self) -> None:
-        RunnerRequest, mutation, registry, root = self._spec_index_write_fixture()
+        fixture = self._spec_index_write_fixture()
+        mutation, root = fixture[1], fixture[3]
         moc = root / "specs" / "prsg-901-stale" / "SPEC-MOC.md"
         real_after_write = mutation.snapshot_changed_diagnostic_after_write
 
@@ -549,27 +565,35 @@ class GenerateSpecIndexTests(_SpecIndexGitIgnoreTests, unittest.TestCase):
                 moc.write_text("concurrent\n", encoding="utf-8")
             return result
 
-        request = RunnerRequest(
-            "test-spec-index-final-target-recheck",
-            "generate-spec-index-write",
-            "generate-spec-index-write",
-            "apply",
-            {"repo_root": root.name},
-        )
-        old_cwd = Path.cwd()
-        os.chdir(self.work)
-        try:
-            with patch.object(mutation, "snapshot_changed_diagnostic_after_write", side_effect=mutate_after_applied_snapshot):
-                body = mutation.run_spec_index_write(registry.MUTATION_HELPERS["generate-spec-index-write"], request)
-        finally:
-            os.chdir(old_cwd)
+        fault = patch.object(mutation, "snapshot_changed_diagnostic_after_write", side_effect=mutate_after_applied_snapshot)
+        body = self._apply_spec_index_write(fixture, "test-spec-index-final-target-recheck", fault)
 
-        self.assertEqual(body["status"], "expected_failure")
-        self.assertEqual([diag["code"] for diag in body["diagnostics"]], ["source_changed"])
-        self.assertEqual(body["data"]["mutation"]["mutation_status"], "partial_failure")
-        self.assertEqual(body["data"]["mutation"]["touched_paths"], ["specs/prsg-901-stale/SPEC-MOC.md"])
+        self._assert_applied_map_failure(body, "source_changed")
         self.assertEqual(moc.read_text(encoding="utf-8"), "concurrent\n")
-        self.assertTrue(body["data"]["writes_state"])
+
+    def test_write_tracks_interrupted_map_when_parent_sync_fails_after_replace(self) -> None:
+        fixture = self._spec_index_write_fixture()
+        mutation, root = fixture[1], fixture[3]
+        moc = root / "specs" / "prsg-901-stale" / "SPEC-MOC.md"
+        before = moc.read_text(encoding="utf-8")
+        real_fsync = mutation.os.fsync
+        failed = False
+
+        def fail_first_directory_sync(descriptor: int) -> None:
+            # The writer syncs the parent directory only after the map replaced its target.
+            nonlocal failed
+            if not failed and stat.S_ISDIR(os.fstat(descriptor).st_mode):
+                failed = True
+                raise OSError("injected parent sync failure")
+            real_fsync(descriptor)
+
+        fault = patch.object(mutation.os, "fsync", side_effect=fail_first_directory_sync)
+        body = self._apply_spec_index_write(fixture, "test-spec-index-parent-sync-after-replace", fault)
+
+        self.assertTrue(failed)
+        self._assert_applied_map_failure(body, "write_failure")
+        self.assertEqual(body["diagnostics"][0]["details"]["error"], "AtomicWriteInterrupted")
+        self.assertNotEqual(moc.read_text(encoding="utf-8"), before)
 
     def test_current_marker_spelling_is_rendered_and_preserved(self) -> None:
         root = self.copy_fixture("stale-fill")

@@ -335,6 +335,10 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
                 diagnostics=[diag],
             )
         except OSError as exc:
+            if isinstance(exc, AtomicWriteInterrupted):
+                # The map reached disk; report it so the caller reconciles it.
+                mutation["applied_operations"].append(operation_record(operation))
+                mutation["touched_paths"].append(rel)
             mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
             mutation["failure_operation"] = operation_record(operation)
             cleanup_errors = atomic_write_cleanup_errors(exc)
