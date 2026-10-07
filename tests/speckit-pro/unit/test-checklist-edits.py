@@ -67,6 +67,16 @@ def proposal(domain: str, *edits: dict[str, str], gaps: list[str] | None = None)
     return {"domain": domain, "gaps": [{"id": gap, "description": f"{domain} {gap}"} for gap in ids], "edits": list(edits)}
 
 
+def _both_artifact_proposals() -> list[dict[str, Any]]:
+    return [proposal("security", edit("G1", "spec.md", "open", "private"),
+                     edit("G2", "plan.md", "never", "always")), proposal("ux"), proposal("api")]
+
+
+def _restore_artifact_texts(root: Path) -> None:
+    (root / FEATURE / "spec.md").write_text(SPEC, encoding="utf-8")
+    (root / FEATURE / "plan.md").write_text(PLAN, encoding="utf-8")
+
+
 def raise_error(error: Exception) -> None:
     raise error
 
@@ -522,8 +532,7 @@ class InterruptionCase(ChecklistEditsCase):
         return patch.object(checklist_edits, "held_feature", hooked)
 
     def apply_both(self) -> dict[str, Any]:
-        return self.apply(proposal("security", edit("G1", "spec.md", "open", "private"),
-                                   edit("G2", "plan.md", "never", "always")))
+        return self.apply(*_both_artifact_proposals())
 
     def assert_both_written(self) -> None:
         self.assertEqual("# Spec\nLogin uses a password.\nExports are private.\n", self.text("spec.md"))
@@ -979,8 +988,7 @@ class RecordStateTests(InterruptionCase):
             with self.subTest(fault=fault):
                 record = self.root / RECORD
                 record.unlink(missing_ok=True)
-                (self.root / FEATURE / "spec.md").write_text(SPEC, encoding="utf-8")
-                (self.root / FEATURE / "plan.md").write_text(PLAN, encoding="utf-8")
+                _restore_artifact_texts(self.root)
                 real = os.open
                 faults: list[str] = []
                 snapshot = checklist_edits.snapshot_write_target_fd
@@ -1029,12 +1037,8 @@ class RecordStateTests(InterruptionCase):
         for host in HOSTS:
             with self.subTest(host=host):
                 (self.root / RECORD).unlink(missing_ok=True)
-                (self.root / FEATURE / "spec.md").write_text(SPEC, encoding="utf-8")
-                (self.root / FEATURE / "plan.md").write_text(PLAN, encoding="utf-8")
-                inputs = {"domains": DOMAINS, "baseline": self.baseline(), "proposals": [
-                    proposal("security", edit("G1", "spec.md", "open", "private"), edit("G2", "plan.md", "never", "always")),
-                    proposal("ux"), proposal("api"),
-                ]}
+                _restore_artifact_texts(self.root)
+                inputs = {"domains": DOMAINS, "baseline": self.baseline(), "proposals": _both_artifact_proposals()}
                 result = run_dist_command(host, self.root, dist_request("apply", inputs), unreadable_record=True)
                 self.assertEqual(("expected_failure", ["security", "ux", "api"]),
                                  (result["status"], result["data"].get("applied")), result)
@@ -1046,8 +1050,7 @@ class RecordStateTests(InterruptionCase):
     def test_a_missing_or_different_published_record_is_reported_as_observed(self) -> None:
         for content in (None, b"not JSON", b"\xff", b'{"other": true}'):
             with self.subTest(content=content):
-                (self.root / FEATURE / "spec.md").write_text(SPEC, encoding="utf-8")
-                (self.root / FEATURE / "plan.md").write_text(PLAN, encoding="utf-8")
+                _restore_artifact_texts(self.root)
                 def change_record(observed: bytes | None = content) -> None:
                     record = self.root / RECORD
                     if observed is None:
