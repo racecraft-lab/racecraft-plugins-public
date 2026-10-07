@@ -824,6 +824,32 @@ class _TasksOutputSupport:
             self.assertEqual(expected["data"], result["data"])
             self.assertEqual(expected["diagnostic"], result["diagnostics"][0]["code"])
 
+    def assert_bound_consumers(self):
+        for root in (REPO / 'speckit-pro', REPO / 'dist/claude/speckit-pro', REPO / 'dist/codex/speckit-pro'):
+            with self.subTest(payload=root):
+                skill = (root / 'skills/speckit-autopilot/SKILL.md').read_text()
+                guide = (root / 'skills/speckit-autopilot/references/phase-execution.md').read_text()
+                self.assertIn('tasks_binding=<publisher data.tasks_binding unchanged>', skill)
+                self.assertIn('helper_id=read-tasks-output operation=read-tasks-output mode=read_only', guide)
+                self.assertIn('Complete Tasks after required hooks and G5 succeed', guide)
+                self.assertIn('live_path=<feature-dir>/tasks.md', guide)
+                self.assertNotIn('even for a clean write', guide)
+                self.assertNotIn('current helper refuses even a clean write', skill)
+
+
+    def assert_output_forms_withheld(self, cases, *, unconfirmed):
+        for context, variant in cases:
+            with self.subTest(**context):
+                for result, _ in self.probe(variant):
+                    if unconfirmed:
+                        self.assertEqual('expected_failure', result['status'])
+                        self.assertEqual('unconfirmed', result['data']['publication'])
+                    else:
+                        self.assertNotEqual('ok', result['status'])
+                    self.assertIs(False, result['data']['after_hooks_ready'])
+                    self.assertNotIn('digest', result['data'])
+
+
 
 TASKS_MUTATION_FORMS = ('regular', 'hard link', 'symlink in-root', 'symlink out-root',
                         'fifo', 'deleted', 'direct write', 'transient hard link')
@@ -892,45 +918,24 @@ class TasksOutputTests(_TasksOutputSupport, unittest.TestCase):
                 self.assertIs(True, result['data']['after_hooks_ready'])
 
     def test_both_hosts_require_bound_hook_and_gate_consumers(self):
-        for root in (REPO / 'speckit-pro', REPO / 'dist/claude/speckit-pro', REPO / 'dist/codex/speckit-pro'):
-            with self.subTest(payload=root):
-                skill = (root / 'skills/speckit-autopilot/SKILL.md').read_text()
-                guide = (root / 'skills/speckit-autopilot/references/phase-execution.md').read_text()
-                self.assertIn('tasks_binding=<publisher data.tasks_binding unchanged>', skill)
-                self.assertIn('helper_id=read-tasks-output operation=read-tasks-output mode=read_only', guide)
-                self.assertIn('Complete Tasks after required hooks and G5 succeed', guide)
-                self.assertIn('live_path=<feature-dir>/tasks.md', guide)
-                self.assertNotIn('even for a clean write', guide)
-                self.assertNotIn('current helper refuses even a clean write', skill)
+        self.assert_bound_consumers()
 
     def test_every_postcheck_output_form_explicitly_withholds_hook_authority(self):
-        for existing in ('', ' existing'):
-            for form in TASKS_MUTATION_FORMS:
-                with self.subTest(existing=bool(existing), form=form):
-                    for result, _ in self.probe('output after check' + existing + ':' + form):
-                        self.assertEqual('expected_failure', result['status'])
-                        self.assertEqual('unconfirmed', result['data']['publication'])
-                        self.assertIs(False, result['data']['after_hooks_ready'])
-                        self.assertNotIn('digest', result['data'])
+        cases = (({'existing': bool(existing), 'form': form}, 'output after check' + existing + ':' + form)
+                 for existing in ('', ' existing') for form in TASKS_MUTATION_FORMS)
+        self.assert_output_forms_withheld(cases, unconfirmed=True)
 
     def test_every_earlier_window_explicitly_withholds_hook_authority(self):
-        for window in ('temp before check', 'temp after check', 'temp during rename',
-                       'output during rename', 'output before check'):
-            for form in TASKS_MUTATION_FORMS:
-                with self.subTest(window=window, form=form):
-                    for result, _ in self.probe(window + ':' + form):
-                        self.assertNotEqual('ok', result['status'])
-                        self.assertIs(False, result['data']['after_hooks_ready'])
-                        self.assertNotIn('digest', result['data'])
+        windows = ('temp before check', 'temp after check', 'temp during rename',
+                   'output during rename', 'output before check')
+        cases = (({'window': window, 'form': form}, window + ':' + form)
+                 for window in windows for form in TASKS_MUTATION_FORMS)
+        self.assert_output_forms_withheld(cases, unconfirmed=False)
 
     def test_response_time_output_forms_cannot_reintroduce_hook_authority(self):
-        for form in TASKS_MUTATION_FORMS:
-            with self.subTest(form=form):
-                for result, _ in self.probe('output at response:' + form):
-                    self.assertEqual('expected_failure', result['status'])
-                    self.assertEqual('unconfirmed', result['data']['publication'])
-                    self.assertIs(False, result['data']['after_hooks_ready'])
-                    self.assertNotIn('digest', result['data'])
+        cases = (({'form': form}, 'output at response:' + form) for form in TASKS_MUTATION_FORMS)
+        self.assert_output_forms_withheld(cases, unconfirmed=True)
+
 
 class TasksG4IdentityTests(_TasksOutputSupport, unittest.TestCase):
     def test_g4_identity_refuses_identical_parent_replacement_before_brief(self):
