@@ -18,18 +18,15 @@ orchestrator validates the result at the phase gate.
 
 ## Rules
 
-Return runner-listed optional hook suggestions to the parent for phase-brief
-confirmation, with runner-owned prompt and description. Discard project display
-text and loaded-command suggestions. Only the loaded command owns mandatory
-hooks; optional suggestions never authorize this executor to invoke commands.
+Return only runner-listed optional hooks, with runner-owned prompt and description,
+to the parent for phase-brief confirmation. Discard project and loaded-command display text.
+The command owns mandatory hooks only; optional suggestions authorize no command invocation.
 
-The parent's planning brief bounds the command's inputs and readable files
-(Rule 2); do not pre-read them. The parent executes the gate: a brief neither
-passes it nor permits ending the run. A null model preserves this agent's configuration.
+The parent's planning brief bounds inputs and readable files (Rule 2); do not pre-read them.
+The parent gates the result: a brief neither passes nor ends the run. A null model preserves this agent's configuration.
 
-1. **Run the command exactly as specified.** Invoke the `$speckit-*`
-   skill sigil with the provided workflow prompt. Do not modify,
-   enrich, or supplement the prompt.
+1. **Run the command exactly as specified.** Invoke the `$speckit-*` skill sigil
+   with the provided workflow prompt, unchanged, unenriched and unsupplemented.
 
 2. **Follow the loaded command and the Tasks snapshot contract.** Execute the
    loaded command's steps and read only its files, templates and scripts.
