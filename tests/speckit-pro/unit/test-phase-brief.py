@@ -214,9 +214,7 @@ SAFE_CONSENT = {"prompt": "Run this optional extension hook?",
                 "description": "Confirm the exact extension, command and event."}
 
 
-def consent_probe(runner, cases):
-    """Dispatch hostile registrations with deterministic filesystem changes at the open seam."""
-    program = '''
+CONSENT_PROBE = r'''
 import json, os, sys, tempfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -271,8 +269,8 @@ for case in json.load(sys.stdin):
                     inputs["g4_feature_identity"] = {"device": info.st_dev, "inode": info.st_ino}
                     inputs["g4_judged"] = {}
                     for name in ("spec.md", "plan.md", "checklists/security.md"):
-                        (feature / name).write_bytes(b"clean fixture\\n")
-                        inputs["g4_judged"][name] = hashlib.sha256(b"clean fixture\\n").hexdigest()
+                        (feature / name).write_bytes(b"clean fixture\n")
+                        inputs["g4_judged"][name] = hashlib.sha256(b"clean fixture\n").hexdigest()
                 request = SimpleNamespace(helper_id="phase-brief", operation="phase-brief", mode="read_only",
                                           request_id=None, inputs=inputs)
                 report = dispatch_helper(request)
@@ -281,9 +279,13 @@ for case in json.load(sys.stdin):
             os.chdir(previous)
 print(json.dumps(reports))
 '''
+
+
+def consent_probe(runner, cases):
+    """Dispatch hostile registrations with deterministic filesystem changes at the open seam."""
     # Release regeneration replaces runner directories, and a checkout root may hold
     # importable modules; the child starts in an empty directory with only `runner` selected.
-    done = run_isolated(runner, program, input=json.dumps(cases))
+    done = run_isolated(runner, CONSENT_PROBE, input=json.dumps(cases))
     if done.returncode:
         raise AssertionError(done.stderr + done.stdout)
     return json.loads(done.stdout)
@@ -656,9 +658,7 @@ class PhaseBriefTests(InProjectCase):
                 self.assertEqual(bool(brief["slices"]), agent in SLICE_AGENTS)
 
 
-class TasksG4BindingTests(InProjectCase):
-    """Tasks dispatch revalidates G4's judged bytes before returning a launch brief."""
-
+class _TasksG4BindingSupport(InProjectCase):
     def tree(self):
         feature = Path.cwd() / "specs/example"
         (feature / "checklists").mkdir(parents=True, exist_ok=True)
@@ -668,6 +668,23 @@ class TasksG4BindingTests(InProjectCase):
         self.assertTrue(verdict["pass"])
         return feature, verdict["judged"]
 
+    def results(self, inputs):
+        return dispatch_brief(inputs), *payload_briefs(inputs, include_status=True)
+
+    def assert_rejected(self, result, expected):
+        self.assertEqual("input_error", result["status"])
+        self.assertEqual({}, result["data"])
+        if "code" in expected:
+            self.assertEqual(expected["code"], result["diagnostics"][0]["code"])
+        if "kind" in expected:
+            self.assertIn(expected["kind"], result["diagnostics"][0]["message"])
+        if "forbidden" in expected:
+            self.assertNotIn(expected["forbidden"], json.dumps(result))
+
+
+class TasksG4DriftTests(_TasksG4BindingSupport):
+    """Tasks dispatch revalidates G4's judged bytes before returning a launch brief."""
+
     def test_drift_in_each_judged_file_kind_refuses_tasks_on_both_hosts(self):
         for (name, kind), content in product((("spec.md", "spec.md"), ("plan.md", "plan.md"), ("checklists/security.md", "checklist report")),
                                             ("[Gap] sensitive replacement text\n", "Marker-free sensitive replacement text\n")):
@@ -675,19 +692,16 @@ class TasksG4BindingTests(InProjectCase):
                 feature, judged = self.tree()
                 (feature / name).write_text(content, encoding="utf-8")
                 inputs = {"phase": "Tasks", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example", "g4_judged": judged}
-                for result in (dispatch_brief(inputs), *payload_briefs(inputs, include_status=True)):
-                    self.assertEqual("input_error", result["status"])
-                    self.assertEqual({}, result["data"])
-                    self.assertEqual("g4_input_drift", result["diagnostics"][0]["code"])
-                    self.assertIn(kind, result["diagnostics"][0]["message"])
-                    self.assertNotIn("sensitive replacement text", json.dumps(result))
+                for result in self.results(inputs):
+                    self.assert_rejected(result, {"kind": kind, "code": "g4_input_drift",
+                                                  "forbidden": "sensitive replacement text"})
 
     def test_no_drift_accepts_every_report_name_g4_accepts(self):
         feature, _ = self.tree()
         (feature / "checklists/security.md").rename(feature / "checklists/.md")
         judged = json.loads(read_only.validate_gate({"gate": "G4", "feature_dir": "specs/example"}, Path.cwd())["stdout"])["judged"]
         inputs = {"phase": "Tasks", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example", "g4_judged": judged}
-        for result in (dispatch_brief(inputs), *payload_briefs(inputs, include_status=True)):
+        for result in self.results(inputs):
             self.assertEqual("ok", result["status"])
 
     def test_missing_inputs_name_the_failed_kind_on_both_hosts(self):
@@ -696,11 +710,11 @@ class TasksG4BindingTests(InProjectCase):
                 feature, judged = self.tree()
                 (feature / name).unlink()
                 inputs = {"phase": "Tasks", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example", "g4_judged": judged}
-                for result in (dispatch_brief(inputs), *payload_briefs(inputs, include_status=True)):
-                    self.assertEqual("input_error", result["status"])
-                    self.assertEqual({}, result["data"])
-                    self.assertIn(kind, result["diagnostics"][0]["message"])
+                for result in self.results(inputs):
+                    self.assert_rejected(result, {"kind": kind})
 
+
+class TasksG4EvidenceTests(_TasksG4BindingSupport):
     def test_no_drift_starts_tasks_as_today_on_both_hosts(self):
         _, judged = self.tree()
         inputs = {"phase": "Tasks", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example", "g4_judged": judged}
@@ -721,13 +735,11 @@ class TasksG4BindingTests(InProjectCase):
         for expected in variants:
             with self.subTest(judged_type=type(expected).__name__):
                 inputs = {"phase": "Tasks", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example", "g4_judged": expected}
-                for result in (dispatch_brief(inputs), *payload_briefs(inputs, include_status=True)):
-                    self.assertEqual("input_error", result["status"])
-                    self.assertEqual({}, result["data"])
-                    self.assertNotIn("<secret>", json.dumps(result))
+                for result in self.results(inputs):
+                    self.assert_rejected(result, {"forbidden": "<secret>"})
         (Path.cwd() / "specs/example/checklists/other.md").write_text("Unrecorded report.\n", encoding="utf-8")
         inputs = {"phase": "Tasks", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example", "g4_judged": judged}
-        for result in (dispatch_brief(inputs), *payload_briefs(inputs, include_status=True)):
+        for result in self.results(inputs):
             self.assertEqual("g4_input_drift", result["diagnostics"][0]["code"])
             self.assertEqual({}, result["data"])
 
@@ -737,7 +749,7 @@ class TasksG4BindingTests(InProjectCase):
         forged = {**judged, "spec.md": hashlib.sha256(b"[Gap]\n").hexdigest()}
         for phase, evidence in (("Tasks", forged), ("Plan", judged)):
             inputs = {"phase": phase, "workflow_file": "docs/workflow.md", "feature_dir": "specs/example", "g4_judged": evidence}
-            for result in (dispatch_brief(inputs), *payload_briefs(inputs, include_status=True)):
+            for result in self.results(inputs):
                 self.assertEqual("input_error", result["status"])
                 self.assertEqual({}, result["data"])
 
@@ -751,160 +763,7 @@ class TasksG4BindingTests(InProjectCase):
 
 
 
-TASKS_OUTPUT_PROBE = r"""
-import json, os, shutil, sys, tempfile
-from pathlib import Path
-from types import SimpleNamespace
-from speckit_pro_runner.helpers.registry import dispatch_helper
-from speckit_pro_runner.helpers import tasks_inputs
-from speckit_pro_runner import atomic_write
-from unittest.mock import patch
-from contextlib import ExitStack
-
-variant = sys.argv[1]
-def call(helper, inputs, mode='read_only'):
-    return dispatch_helper(SimpleNamespace(helper_id=helper, operation=helper, mode=mode,
-                                          inputs=inputs, request_id=None))
-with tempfile.TemporaryDirectory() as directory, tempfile.TemporaryDirectory() as outside:
-    root = Path(directory).resolve()
-    os.chdir(root)
-    (root / '.specify').mkdir()
-    feature = root / 'specs/example'
-    (feature / 'checklists').mkdir(parents=True)
-    for name in ('spec.md', 'plan.md', 'checklists/security.md'):
-        (feature / name).write_text('Clean planning input.\n')
-    verdict = call('validate-gate', {'gate':'G4', 'feature_dir':'specs/example'})['data']['stdout_json']
-    if variant == 'before brief replacement':
-        feature.rename(root / 'original')
-        shutil.copytree(root / 'original', feature)
-    brief = call('phase-brief', {'phase':'Tasks', 'workflow_file':'docs/workflow.md',
-                 'feature_dir':'specs/example', 'g4_judged':verdict['judged'],
-                 'g4_feature_identity':verdict.get('feature_identity')})
-    if variant == 'before brief replacement':
-        print(json.dumps({'result': brief, 'victim':'Victim must stay unchanged\n', 'published':None, 'entries':[]}))
-        sys.exit(0)
-    assert brief['status'] == 'ok', brief
-    output = brief['data']['inputs']['tasks_output']
-    snapshot = Path(output['snapshot_dir'])
-    try:
-        (snapshot / 'tasks.md').write_text('# Tasks\n\n- [ ] T001 Build the feature\n')
-        victim = (Path(outside).resolve() if 'out-root' in variant else root / 'victim')
-        victim.mkdir(exist_ok=True)
-        (victim / 'tasks.md').write_text('Victim must stay unchanged\n')
-        old = root / 'original'
-        leaf = feature / 'tasks.md'
-        if variant == 'parent replacement':
-            feature.rename(old)
-            feature.mkdir()
-        elif variant.startswith('parent symlink'):
-            feature.rename(old)
-            feature.symlink_to(victim, target_is_directory=True)
-        elif variant.startswith('leaf symlink') and 'during' not in variant:
-            leaf.symlink_to(victim / 'tasks.md')
-        elif variant == 'hard-linked leaf':
-            os.link(victim / 'tasks.md', leaf)
-        elif variant == 'fifo leaf':
-            os.mkfifo(leaf)
-        elif variant == 'directory leaf':
-            leaf.mkdir()
-        elif variant == 'existing regular':
-            leaf.write_text('Old tasks\n')
-        elif variant == 'parent missing':
-            feature.rename(old)
-        elif variant == 'parent file':
-            feature.rename(old)
-            feature.write_text('Not a directory')
-        fired = False
-        def move_parent():
-            feature.rename(old)
-            feature.symlink_to(victim, target_is_directory=True)
-        real_open_parent = tasks_inputs.trusted_open_directory
-        def acquire(*args, **kwargs):
-            global fired
-            value = real_open_parent(*args, **kwargs)
-            if not fired:
-                fired = True
-                move_parent()
-            return value
-        real_replace = os.replace
-        def replace_after_move(*args, **kwargs):
-            global fired
-            fired = True
-            move_parent()
-            return real_replace(*args, **kwargs)
-        real_open = os.open
-        def create_temp(path, flags, *args, **kwargs):
-            global fired
-            value = real_open(path, flags, *args, **kwargs)
-            if flags & os.O_CREAT and not fired:
-                fired = True
-                if variant.startswith('parent during temp'):
-                    move_parent()
-                elif variant == 'hard link during temp':
-                    os.link(victim / 'tasks.md', leaf)
-                else:
-                    leaf.symlink_to(victim / 'tasks.md')
-            return value
-        def mutate_output(name, parent):
-            form = variant.rsplit(':', 1)[1]
-            path = feature / name
-            if form == 'direct write':
-                path.write_text('Injected output')
-                return
-            if form == 'transient hard link':
-                alias = root / 'alias'
-                os.link(path, alias)
-                alias.write_text('Injected output')
-                alias.unlink()
-                return
-            os.unlink(name, dir_fd=parent)
-            if form == 'regular':
-                path.write_text('Injected output')
-            elif form == 'hard link':
-                os.link(victim / 'tasks.md', path)
-            elif form.startswith('symlink'):
-                path.symlink_to(victim / 'tasks.md')
-            elif form == 'fifo':
-                os.mkfifo(path)
-        def replace_mutated(source, target, **kwargs):
-            global fired
-            fired = True
-            if variant.startswith('temp during rename:'):
-                mutate_output(source, kwargs['src_dir_fd'])
-            value = real_replace(source, target, **kwargs)
-            if variant.startswith('output during rename:'):
-                mutate_output(target, kwargs['dst_dir_fd'])
-            return value
-        real_check = atomic_write.ensure_write_target_matches_snapshot_fd
-        def check_mutated(parent, target, expected):
-            global fired
-            value = real_check(parent, target, expected)
-            fired = True
-            name = next(p.name for p in feature.glob('.tasks.md.tmp-*'))
-            mutate_output(name, parent)
-            return value
-        with ExitStack() as stack:
-            if variant.startswith(('temp during rename:', 'output during rename:')):
-                stack.enter_context(patch.object(os, 'replace', replace_mutated))
-            if variant.startswith('temp during check:'):
-                stack.enter_context(patch.object(atomic_write, 'ensure_write_target_matches_snapshot_fd', check_mutated))
-            if variant == 'parent during acquisition':
-                stack.enter_context(patch.object(tasks_inputs, 'trusted_open_directory', acquire))
-            if variant == 'parent during rename out-root':
-                stack.enter_context(patch.object(os, 'replace', replace_after_move))
-            if 'during temp' in variant:
-                stack.enter_context(patch.object(os, 'open', create_temp))
-            result = call('publish-tasks-output', output, 'apply')
-        if 'during' in variant:
-            assert fired, 'fault was not exercised'
-        print(json.dumps({'result':result, 'victim':(victim/'tasks.md').read_text(),
-                          'published': leaf.read_text() if variant in ('clean', 'existing regular') and leaf.exists() else None,
-                          'deferred_hooks': brief['data']['inputs'].get('defer_after_hooks', False),
-                          'entries': sorted(p.name for p in (old if old.exists() else feature).iterdir())
-                                     if variant != 'parent file' else []}))
-    finally:
-        shutil.rmtree(snapshot, ignore_errors=True)
-"""
+TASKS_OUTPUT_PROBE = (REPO / "tests/speckit-pro/unit/fixtures/tasks-output-probe.py").read_text(encoding="utf-8")
 
 UNBOUND_PUBLICATION_PROBE = r"""
 import os, tempfile
@@ -936,9 +795,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert target.read_bytes() == b'ordinary output'
 """
 
-class TasksOutputTests(unittest.TestCase):
-    """G4 -> Tasks brief -> executor snapshot -> runner publication, on both shipped hosts."""
-
+class _TasksOutputSupport:
     def probe(self, variant):
         results = []
         for host, payload in (('source', REPO / 'speckit-pro'),
@@ -956,6 +813,16 @@ class TasksOutputTests(unittest.TestCase):
                     self.assertNotIn('tasks.md', report['entries'], 'refused parent must not receive Tasks output')
                 results.append((report['result'], report['published']))
         return results
+
+    def assert_probe_result(self, expected):
+        for result, _ in self.probe(expected["variant"]):
+            self.assertEqual(expected["status"], result["status"])
+            self.assertEqual(expected["data"], result["data"])
+            self.assertEqual(expected["diagnostic"], result["diagnostics"][0]["code"])
+
+
+class TasksOutputTests(_TasksOutputSupport, unittest.TestCase):
+    """G4 -> Tasks brief -> executor snapshot -> runner publication, on both shipped hosts."""
 
     def test_unbound_writes_preserve_close_before_rename_on_both_payloads(self):
         for payload in (REPO / 'speckit-pro', REPO / 'dist/claude/speckit-pro', REPO / 'dist/codex/speckit-pro'):
@@ -986,10 +853,9 @@ class TasksOutputTests(unittest.TestCase):
 
 
     def test_parent_moved_at_rename_reports_unconfirmed_publication_and_blocks_g5(self):
-        for result, _ in self.probe('parent during rename out-root'):
-            self.assertEqual('expected_failure', result['status'])
-            self.assertEqual({'publication': 'unconfirmed', 'published': 'tasks.md'}, result['data'])
-            self.assertEqual('tasks_output_unconfirmed', result['diagnostics'][0]['code'])
+        self.assert_probe_result({"variant": "parent during rename out-root", "status": "expected_failure",
+                                  "data": {"publication": "unconfirmed", "published": "tasks.md"},
+                                  "diagnostic": "tasks_output_unconfirmed"})
 
     def test_temporary_and_installed_output_mutations_never_authorize_hooks(self):
         for window in ('temp during check', 'temp during rename', 'output during rename'):
@@ -1003,11 +869,10 @@ class TasksOutputTests(unittest.TestCase):
                             self.assertEqual('expected_failure', result['status'])
                             self.assertEqual('unconfirmed', result['data']['publication'])
 
+class TasksG4IdentityTests(_TasksOutputSupport, unittest.TestCase):
     def test_g4_identity_refuses_identical_parent_replacement_before_brief(self):
-        for result, _ in self.probe('before brief replacement'):
-            self.assertEqual('input_error', result['status'])
-            self.assertEqual({}, result['data'])
-            self.assertEqual('g4_input_drift', result['diagnostics'][0]['code'])
+        self.assert_probe_result({"variant": "before brief replacement", "status": "input_error",
+                                  "data": {}, "diagnostic": "g4_input_drift"})
 
 class PhaseBriefWaveTests(InProjectCase):
     """Dispatch waves (ADR 0018, P4): the agents a host launches together, then the next wave."""
@@ -1216,14 +1081,6 @@ class PhaseBriefWaveTests(InProjectCase):
             text = (host_skill_root(host) / "speckit-autopilot/references/consensus-protocol.md").read_text()
             self.assertTrue('Agent(subagent_type: "speckit-pro:" + <entry.agent>,' in text, host)
 
-    def test_both_hosts_run_each_checklist_domain_in_its_own_wave(self):
-        for host in ("claude", "codex"):
-            with self.subTest(host=host):
-                skill = " ".join((host_skill_root(host) / "speckit-autopilot/SKILL.md").read_text().split())
-                self.assertIn("Checklist domains run together as dispatch waves while their executors only propose edits", skill)
-                self.assertNotIn("BEFORE spawning the next", skill)
-                self.assertNotIn("Do not batch all domains", skill)
-
     def test_checklist_main_loop_uses_the_wave_flow_instead_of_serial_dispatch(self):
         for host in ("claude", "codex"):
             with self.subTest(host=host):
@@ -1241,37 +1098,21 @@ class PhaseBriefWaveTests(InProjectCase):
                               text)
 
 
-class ChecklistCheckpointTests(InProjectCase):
-    """The final checklist checkpoint: observed spec.md and plan.md digests choose its verify wave, never edit labels."""
+class ChecklistWaveHostTests(InProjectCase):
+    def test_both_hosts_run_each_checklist_domain_in_its_own_wave(self):
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                skill = " ".join((host_skill_root(host) / "speckit-autopilot/SKILL.md").read_text().split())
+                self.assertIn("Checklist domains run together as dispatch waves while their executors only propose edits", skill)
+                self.assertNotIn("BEFORE spawning the next", skill)
+                self.assertNotIn("Do not batch all domains", skill)
+
+
+class _ChecklistCheckpointSupport(InProjectCase):
+    """Shared setup for the final checklist checkpoint tests."""
 
     BRIEF = PhaseBriefWaveTests.BRIEF
     brief = PhaseBriefWaveTests.brief
-
-    def test_shared_spec_edit_reverifies_every_original_domain(self):
-        self.shared_edit_checkpoint("spec.md")
-
-    def test_shared_plan_edit_reverifies_every_original_domain(self):
-        self.shared_edit_checkpoint("plan.md")
-
-    def test_edit_labels_are_not_inputs_so_attribution_cannot_shape_verification(self):
-        # The runner observes shared-artifact digests; no caller label can narrow, misattribute or suppress the final wave.
-        baseline = self.checklist_snapshot()["baseline"]
-        for labels in ([], ["security"], ["ux"], ["api"], ["security", "ux"]):
-            for extra in ({}, {"verify_baseline": baseline}):
-                inputs = {"phase": "Checklist", **self.BRIEF, "domains": ["security", "ux"], "consensus_edited": labels, **extra}
-                for result in [dispatch_brief(inputs), *payload_briefs(inputs, include_status=True)]:
-                    self.assertEqual((result["status"], result["data"]), ("input_error", {}), (labels, extra))
-
-    def test_no_consensus_edit_keeps_each_domain_at_two_runs(self):
-        snapshot = self.checklist_snapshot()
-        inputs = {"phase": "Checklist", **self.BRIEF, "domains": ["security", "ux"]}
-        first = dispatch_brief(inputs)["data"]["waves"]
-        for result in [dispatch_brief(inputs | {"verify_baseline": snapshot["baseline"]}),
-                       *payload_briefs(inputs | {"verify_baseline": snapshot["baseline"]}, include_status=True)]:
-            self.assertEqual(result["status"], "ok", result)
-            self.assertEqual(result["data"]["waves"], [])
-            self.assertEqual([entry["inputs"]["domain"] for wave in first for entry in wave],
-                             ["security", "ux", "security", "ux"])
 
     def checklist_snapshot(self):
         feature = Path(self.BRIEF["feature_dir"])
@@ -1303,6 +1144,39 @@ class ChecklistCheckpointTests(InProjectCase):
                   "verify_baseline": baseline["baseline"], "max_agents": max_agents}
         entries = [{"domain": "security", "pass": "verify"}, {"domain": "ux", "pass": "verify"}]
         self.assert_final_wave(inputs, [entries[start:start + max_agents] for start in range(0, len(entries), max_agents)])
+
+class ChecklistCheckpointEditTests(_ChecklistCheckpointSupport):
+    """Shared spec and plan changes determine which domains run verification again."""
+
+    def test_shared_spec_edit_reverifies_every_original_domain(self):
+        self.shared_edit_checkpoint("spec.md")
+
+    def test_shared_plan_edit_reverifies_every_original_domain(self):
+        self.shared_edit_checkpoint("plan.md")
+
+    def test_edit_labels_are_not_inputs_so_attribution_cannot_shape_verification(self):
+        # The runner observes shared-artifact digests; no caller label can narrow, misattribute or suppress the final wave.
+        baseline = self.checklist_snapshot()["baseline"]
+        for labels in ([], ["security"], ["ux"], ["api"], ["security", "ux"]):
+            for extra in ({}, {"verify_baseline": baseline}):
+                inputs = {"phase": "Checklist", **self.BRIEF, "domains": ["security", "ux"], "consensus_edited": labels, **extra}
+                for result in [dispatch_brief(inputs), *payload_briefs(inputs, include_status=True)]:
+                    self.assertEqual((result["status"], result["data"]), ("input_error", {}), (labels, extra))
+
+    def test_no_consensus_edit_keeps_each_domain_at_two_runs(self):
+        snapshot = self.checklist_snapshot()
+        inputs = {"phase": "Checklist", **self.BRIEF, "domains": ["security", "ux"]}
+        first = dispatch_brief(inputs)["data"]["waves"]
+        for result in [dispatch_brief(inputs | {"verify_baseline": snapshot["baseline"]}),
+                       *payload_briefs(inputs | {"verify_baseline": snapshot["baseline"]}, include_status=True)]:
+            self.assertEqual(result["status"], "ok", result)
+            self.assertEqual(result["data"]["waves"], [])
+            self.assertEqual([entry["inputs"]["domain"] for wave in first for entry in wave],
+                             ["security", "ux", "security", "ux"])
+
+
+class ChecklistCheckpointEvidenceTests(_ChecklistCheckpointSupport):
+    """Malformed or missing checkpoint evidence must not authorize verification."""
 
     def test_final_checkpoint_observes_atomic_replacements_and_host_limits(self):
         self.shared_edit_checkpoint("plan.md", max_agents=1)
@@ -2042,5 +1916,5 @@ class PhaseBriefExecutorContractTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, TasksG4BindingTests, TasksOutputTests, PhaseBriefWaveTests, ChecklistCheckpointTests, PhaseBriefPathTests, PhaseBriefModelTests, CodexEffectiveEffortTests, RetryLadderTopRungTests, PhaseBriefSliceTests, PhaseBriefEncodingTests, PhaseBriefEncodingHostTests, PhaseBriefEncodingPathTests, PhaseBriefHookTests, OptionalHookConsentTests, OptionalHookDisplayBoundaryTests, ChildImportIsolationTests, PhaseBriefExecutorContractTests))
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, TasksG4DriftTests, TasksG4EvidenceTests, TasksOutputTests, TasksG4IdentityTests, PhaseBriefWaveTests, ChecklistWaveHostTests, ChecklistCheckpointEditTests, ChecklistCheckpointEvidenceTests, PhaseBriefPathTests, PhaseBriefModelTests, CodexEffectiveEffortTests, RetryLadderTopRungTests, PhaseBriefSliceTests, PhaseBriefEncodingTests, PhaseBriefEncodingHostTests, PhaseBriefEncodingPathTests, PhaseBriefHookTests, OptionalHookConsentTests, OptionalHookDisplayBoundaryTests, ChildImportIsolationTests, PhaseBriefExecutorContractTests))
     sys.exit(run_counted(suite, label="test-phase-brief"))
