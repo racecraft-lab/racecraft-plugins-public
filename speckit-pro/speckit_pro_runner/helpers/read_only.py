@@ -6588,10 +6588,6 @@ def count_tasks(path: Path, repo_root: Path | None = None) -> int:
     return sum(1 for line in trusted_lines(path, repo_root) if re.match(r"^\s*-\s+\[[ xX]\]\s+T[0-9]", line))
 
 
-def count_unchecked_tasks(path: Path, repo_root: Path | None = None) -> int:
-    return sum(1 for line in trusted_lines(path, repo_root) if re.match(r"^\s*-\s+\[ \]\s+T[0-9]", line))
-
-
 def count_done_tasks(path: Path, repo_root: Path | None = None) -> int:
     return sum(1 for line in trusted_lines(path, repo_root) if re.match(r"^\s*-\s+\[[xX]\]\s+T[0-9]", line))
 
