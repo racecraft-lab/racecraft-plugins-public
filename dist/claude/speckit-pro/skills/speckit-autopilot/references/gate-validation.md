@@ -240,6 +240,10 @@ checks G4's device/inode pair, and holds that descriptor through publication.
 It refuses missing, replaced or symlinked parents and symlinked, hard-linked or
 nonregular output leaves. It creates a fresh exclusive temporary file and
 renames within that held directory; refusals name only the file kind.
+The current publisher reports even a clean write as unconfirmed and explicitly
+withholds after-hook authority. Its last installed-output observation cannot
+bind a later pathname consumer. Keep all after_tasks hooks, G5 and completion
+blocked and retain the snapshot; retrying clean publication cannot unblock them.
 Snapshot generation and publication failures are blockers; neither host writes
 tasks.md through a live feature path.
 This closes the Tasks input handoff in

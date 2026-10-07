@@ -127,9 +127,10 @@ def tasks_output_failure(request_id: str | None, published: bool, exc: Exception
     if published or isinstance(exc, AtomicWriteInterrupted):
         return response("expected_failure", request_id=request_id,
                         diagnostics=[diagnostic("tasks_output_unconfirmed", kind)],
-                        data={"publication": "unconfirmed", "published": "tasks.md"})
+                        data={"publication": "unconfirmed", "published": "tasks.md", "after_hooks_ready": False})
     return response("input_error", request_id=request_id,
-                    diagnostics=[diagnostic("tasks_output_unsafe", kind)])
+                    diagnostics=[diagnostic("tasks_output_unsafe", kind)],
+                    data={"after_hooks_ready": False})
 
 
 def _read_snapshot_tasks(directory: str, stack: ExitStack) -> bytes:
@@ -161,7 +162,13 @@ def _read_snapshot_tasks(directory: str, stack: ExitStack) -> bytes:
 
 
 def run_publish_tasks_output_helper(entry: Any, request: Any) -> dict[str, Any]:
-    """Publish only snapshot tasks.md through the G4-bound parent, using the atomic writer."""
+    """Attempt snapshot publication without certifying a later live-path consumer.
+
+    A writable parent and inode can change after every observation, including
+    descriptor cleanup and response construction. The current hook interface
+    reopens that path; neither a successful rename nor another check can grant
+    it authority. Retain the snapshot and fail closed even for a clean write.
+    """
     published = False
     try:
         with g4_input_kind("tasks.md"):
@@ -187,7 +194,7 @@ def run_publish_tasks_output_helper(entry: Any, request: Any) -> dict[str, Any]:
                 expected.pop("identity", None)
                 expected["parent"] = (identity["device"], identity["inode"])
             check_tasks_parent(feature, root, identity)
-            result = write_bytes_atomic_with_options(
+            write_bytes_atomic_with_options(
                 feature / "tasks.md",
                 content,
                 AtomicWriteOptions(
@@ -200,5 +207,5 @@ def run_publish_tasks_output_helper(entry: Any, request: Any) -> dict[str, Any]:
             check_tasks_parent(feature, root, identity)
     except (G4InputDrift, OSError, ValueError) as exc:
         return tasks_output_failure(request.request_id, published, exc)
-    return response("ok", request_id=request.request_id,
-                    data={"published": "tasks.md", "digest": result["digest"], "after_hooks_ready": True})
+    return tasks_output_failure(request.request_id, published,
+                                G4InputDrift("Tasks live output cannot authorize pathname consumers"))

@@ -52,6 +52,8 @@ def prepare_targets(state, output):
             "victim": victim, "old": root / "original", "leaf": feature / "tasks.md",
             "fired": [False], "real_open_parent": tasks_inputs.trusted_open_directory,
             "real_replace": os.replace, "real_open": os.open,
+            "real_verify": atomic_write.verify_bound_publication,
+            "real_response": tasks_inputs.response,
             "real_check": atomic_write.ensure_write_target_matches_snapshot_fd}
 
 
@@ -75,7 +77,7 @@ def setup_leaf_variant(state):
         os.mkfifo(leaf)
     elif variant == "directory leaf":
         leaf.mkdir()
-    elif variant == "existing regular":
+    elif variant == "existing regular" or "existing:" in variant:
         leaf.write_text("Old tasks\n")
     elif variant == "parent missing":
         feature.rename(old)
@@ -158,8 +160,36 @@ def check_mutated(state, parent, target, expected):
     return value
 
 
+def verify_mutated(state, binding, held_fd, name, content, installed=False):
+    window = state["variant"].split(":", 1)[0]
+    selected = installed == window.startswith("output")
+    if selected and "before check" in window:
+        mutate_output(state, name, binding.parent_fd)
+        state["fired"][0] = True
+    value = state["real_verify"](binding, held_fd, name, content, installed=installed)
+    if selected and "after check" in window:
+        mutate_output(state, name, binding.parent_fd)
+        state["fired"][0] = True
+    return value
+
+
+def response_mutated(state, *args, **kwargs):
+    with ExitStack() as stack:
+        parent = os.open(state["feature"], os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        stack.callback(os.close, parent)
+        mutate_output(state, "tasks.md", parent)
+    state["fired"][0] = True
+    return state["real_response"](*args, **kwargs)
+
+
 def install_hooks(stack, state):
     variant = state["variant"]
+    if variant.startswith("output at response:"):
+        hook = lambda *args, **kwargs: response_mutated(state, *args, **kwargs)
+        stack.enter_context(patch.object(tasks_inputs, "response", hook))
+    if variant.startswith(("temp before check", "temp after check", "output before check", "output after check")):
+        hook = lambda *args, **kwargs: verify_mutated(state, *args, **kwargs)
+        stack.enter_context(patch.object(atomic_write, "verify_bound_publication", hook))
     if variant.startswith(("temp during rename:", "output during rename:")):
         hook = lambda *args, **kwargs: replace_mutated(state, *args, **kwargs)
         stack.enter_context(patch.object(os, "replace", hook))
@@ -181,7 +211,7 @@ def publish(state, output):
     with ExitStack() as stack:
         install_hooks(stack, state)
         result = call("publish-tasks-output", output, "apply")
-    if "during" in state["variant"]:
+    if "during" in state["variant"] or "check" in state["variant"] or "at response" in state["variant"]:
         assert state["fired"][0], "fault was not exercised"
     return result
 

@@ -328,7 +328,9 @@ def verify_bound_publication(binding: WriteBinding | None, held_fd: int, name: s
     """Bind a protected publication to the still-open written inode and exact bytes.
 
     A rename consumes a pathname, not a descriptor. Check both sides of that
-    boundary and never certify a substituted or mutated entry as published.
+    boundary to reject observed substitution or mutation. These observations
+    cannot certify a later pathname consumer: the parent and inode remain
+    mutable after this function returns.
     """
     if binding is None:
         return

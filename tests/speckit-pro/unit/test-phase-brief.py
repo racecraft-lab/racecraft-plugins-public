@@ -712,7 +712,7 @@ class TasksG4EvidenceTests(_TasksG4BindingSupport):
 TASKS_OUTPUT_PROBE = (REPO / "tests/speckit-pro/unit/fixtures/tasks-output-probe.py").read_text(encoding="utf-8")
 TASKS_OUTPUT_EXPECTATIONS = {
     "parent rename": {"variant": "parent during rename out-root", "status": "expected_failure",
-                      "data": {"publication": "unconfirmed", "published": "tasks.md"},
+                      "data": {"publication": "unconfirmed", "published": "tasks.md", "after_hooks_ready": False},
                       "diagnostic": "tasks_output_unconfirmed"},
     "g4 identity": {"variant": "before brief replacement", "status": "input_error",
                     "data": {}, "diagnostic": "g4_input_drift"},
@@ -783,11 +783,11 @@ class TasksOutputTests(_TasksOutputSupport, unittest.TestCase):
                 done = run_isolated(payload, UNBOUND_PUBLICATION_PROBE)
                 self.assertEqual(0, done.returncode, done.stdout + done.stderr)
 
-    def test_clean_output_publishes_tasks_and_replaces_regular_leaf(self):
+    def test_clean_output_attempts_publication_and_replaces_regular_leaf(self):
         for variant in ('clean', 'existing regular'):
             for result, published in self.probe(variant):
-                self.assertEqual('ok', result['status'])
-                self.assertTrue(result['data']['after_hooks_ready'])
+                self.assertEqual('expected_failure', result['status'])
+                self.assertIs(False, result['data']['after_hooks_ready'])
                 self.assertEqual('# Tasks\n\n- [ ] T001 Build the feature\n', published)
 
     def test_output_refuses_each_daybreak_redirect_and_special_file(self):
@@ -799,7 +799,7 @@ class TasksOutputTests(_TasksOutputSupport, unittest.TestCase):
                         'hard link during temp'):
             for result, _ in self.probe(variant):
                 self.assertEqual('input_error', result['status'])
-                self.assertEqual({}, result['data'])
+                self.assertEqual({'after_hooks_ready': False}, result['data'])
                 self.assertEqual('tasks_output_unsafe', result['diagnostics'][0]['code'])
                 self.assertNotIn('victim', json.dumps(result))
                 self.assertNotIn('original', json.dumps(result))
@@ -819,6 +819,47 @@ class TasksOutputTests(_TasksOutputSupport, unittest.TestCase):
                         if window != 'temp during check' and not (window == 'temp during rename' and form == 'deleted'):
                             self.assertEqual('expected_failure', result['status'])
                             self.assertEqual('unconfirmed', result['data']['publication'])
+
+    def test_publication_cannot_authorize_a_later_live_path_consumer(self):
+        for variant in ('clean', 'existing regular'):
+            for result, published in self.probe(variant):
+                self.assertEqual('expected_failure', result['status'])
+                self.assertEqual('unconfirmed', result['data']['publication'])
+                self.assertIs(False, result['data']['after_hooks_ready'])
+                self.assertNotIn('digest', result['data'])
+                self.assertEqual('# Tasks\n\n- [ ] T001 Build the feature\n', published)
+
+    def test_every_postcheck_output_form_explicitly_withholds_hook_authority(self):
+        for existing in ('', ' existing'):
+            for form in ('regular', 'hard link', 'symlink in-root', 'symlink out-root',
+                         'fifo', 'deleted', 'direct write', 'transient hard link'):
+                with self.subTest(existing=bool(existing), form=form):
+                    for result, _ in self.probe('output after check' + existing + ':' + form):
+                        self.assertEqual('expected_failure', result['status'])
+                        self.assertEqual('unconfirmed', result['data']['publication'])
+                        self.assertIs(False, result['data']['after_hooks_ready'])
+                        self.assertNotIn('digest', result['data'])
+
+    def test_every_earlier_window_explicitly_withholds_hook_authority(self):
+        for window in ('temp before check', 'temp after check', 'temp during rename',
+                       'output during rename', 'output before check'):
+            for form in ('regular', 'hard link', 'symlink in-root', 'symlink out-root',
+                         'fifo', 'deleted', 'direct write', 'transient hard link'):
+                with self.subTest(window=window, form=form):
+                    for result, _ in self.probe(window + ':' + form):
+                        self.assertNotEqual('ok', result['status'])
+                        self.assertIs(False, result['data']['after_hooks_ready'])
+                        self.assertNotIn('digest', result['data'])
+
+    def test_response_time_output_forms_cannot_reintroduce_hook_authority(self):
+        for form in ('regular', 'hard link', 'symlink in-root', 'symlink out-root',
+                     'fifo', 'deleted', 'direct write', 'transient hard link'):
+            with self.subTest(form=form):
+                for result, _ in self.probe('output at response:' + form):
+                    self.assertEqual('expected_failure', result['status'])
+                    self.assertEqual('unconfirmed', result['data']['publication'])
+                    self.assertIs(False, result['data']['after_hooks_ready'])
+                    self.assertNotIn('digest', result['data'])
 
 class TasksG4IdentityTests(_TasksOutputSupport, unittest.TestCase):
     def test_g4_identity_refuses_identical_parent_replacement_before_brief(self):

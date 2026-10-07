@@ -838,12 +838,13 @@ tasks.md only into its snapshot_dir. After a successful executor return, both
 hosts call `helper_id=publish-tasks-output operation=publish-tasks-output mode=apply`
 with `inputs=brief.inputs.tasks_output`, before after_Tasks hooks or G5.
 Pass `brief.inputs.defer_after_hooks=true` to the executor; it defers every
-after_tasks hook. On successful publication with `data.after_hooks_ready=true`,
-run the loaded command's mandatory hooks registered for after_tasks from the parent, then
-handle optional after_tasks suggestions under the existing confirmation rule.
-Only successful publication permits hooks and G5. A refusal is a blocker under the
-existing repair policy; retain the snapshot for repair and report only its
-file-kind diagnostic. The runner owns publication into the G4-bound feature directory.
+after_tasks hook. The current publisher always withholds hook authority: even
+a clean write returns `publication=unconfirmed` and `after_hooks_ready=false`,
+because later pathname consumers can observe changed output. Keep all
+after_tasks hooks, G5 and phase completion blocked; retain the snapshot and
+report the runner diagnostic under the existing failure escalation policy.
+Repeating a clean publication cannot release this blocker. The runner owns
+publication into the G4-bound feature directory.
 Missing, malformed or changed inputs return no dispatch facts; rerun
 Checklist and G4 through the existing repair policy before requesting Tasks
 again. Neither host may dispatch Tasks from a failed brief or omit this check.
@@ -938,7 +939,7 @@ attribution, so no label can narrow or suppress verification.
 
 Hooks: a loaded planning command runs its own mandatory hooks (`optional:
 false`), except Tasks defers mandatory after_tasks hooks to the orchestrator
-until publish-tasks-output confirms publication. Other mandatory planning
+while publish-tasks-output withholds hook authority. Other mandatory planning
 hooks stay with the loaded command. For optional hooks,
 handle optional brief.hooks with event=before_<phase> before dispatch and
 handle optional brief.hooks with event=after_<phase> after completion.
@@ -1015,9 +1016,9 @@ for phase in PHASES starting from first_pending:
        Other phases: run consensus (Clarify/Analyze only) — see Rule 6
     5. Tasks only: call publish-tasks-output, mode apply, with
        inputs=brief.inputs.tasks_output unchanged. A refusal blocks hooks,
-       G5 and phase completion; use the existing repair policy. On ok with
-       data.after_hooks_ready=true, run mandatory hooks registered for after_tasks once from
-       the parent using the loaded command's hook instructions.
+       G5 and phase completion; use the existing failure escalation policy.
+       The current helper refuses even a clean write: retain the snapshot and
+       keep every after_tasks hook deferred.
        Specify, Plan, Checklist, Tasks and Analyze only:
        handle optional brief.hooks with event=after_<phase> under the confirmation
        rule above; record runs and skips in the decisions list.

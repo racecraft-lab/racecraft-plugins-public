@@ -638,9 +638,11 @@ The executor consumes spec.md, plan.md and checklist reports only through
 its snapshot_dir. On successful return, call `publish-tasks-output`, mode apply,
 with `inputs=brief.inputs.tasks_output` before after_Tasks hooks and G5.
 Pass `brief.inputs.defer_after_hooks=true`: the executor defers every
-mandatory and optional after_tasks hook. Only an ok publication with
-`data.after_hooks_ready=true` releases the loaded command's mandatory
-after_tasks hooks to the parent, followed by optional-hook confirmation.
+mandatory and optional after_tasks hook. The current helper always withholds
+authority with `data.after_hooks_ready=false`; even clean output remains
+unconfirmed for a later pathname consumer. Retain the snapshot and keep
+after_tasks hooks, G5 and completion blocked. Repeating clean publication
+cannot release this blocker; use the existing failure escalation policy.
 The runner publishes through the G4-bound directory descriptor. Snapshot
 consumption or publication failure is a blocker; the live feature path is
 never an executor write destination.
@@ -3680,9 +3682,9 @@ Hooks are configured in `.specify/extensions.yml`.
 Plan, Checklist and Analyze the orchestrator never dispatches one. Tasks
 runs its mandatory before_tasks hooks in the command, but the runner brief
 sets `defer_after_hooks=true`: the executor defers all after_tasks hooks to
-the parent until publish-tasks-output returns ok with after_hooks_ready=true.
-Then the parent runs mandatory after_tasks hooks once using the loaded
-command's hook instructions, before optional after_tasks suggestions or G5.
+the parent. The current publisher returns unconfirmed with
+after_hooks_ready=false even for a clean write; the parent keeps all
+after_tasks hooks and G5 blocked and retains the snapshot for repair.
 `brief.hooks` lists optional suggestions with their event, optional marker,
 prompt and description. Present only the runner-owned prompt and description,
 along with the validated extension, command and event. Use only runner-listed
@@ -3731,8 +3733,8 @@ error recovery, never by guessing.
 for each phase:
   1. Apply optional-hook confirmation or skip before_<phase> hooks
   2. Spawn subagent for the phase (the loaded command runs its mandatory hooks)
-  3. Receive result; Tasks publishes output and requires after_hooks_ready,
-     then the parent runs deferred mandatory after_tasks hooks
+  3. Receive result; Tasks attempts publication, retains its snapshot and
+     stops on the current publisher's unconfirmed result with hooks deferred
   4. Apply optional-hook confirmation or skip after_<phase> hooks; record runs
      and skips in the decisions list (workflow file for Clarify and Implement)
   5. Validate gate
