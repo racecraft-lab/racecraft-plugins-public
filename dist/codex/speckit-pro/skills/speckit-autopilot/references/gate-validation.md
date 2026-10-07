@@ -212,22 +212,27 @@ only the captured bytes during its read transaction. Only those bytes are counte
 and hashed. Report names use ASCII letters, digits, dot, underscore and hyphen;
 unsafe names fail without being echoed.
 
-Never report the live tree as verified from this snapshot. An input can change
-after its last validation, including before G4 returns. This applies to spec.md,
-plan.md, report set additions or removals, the live checklists entry and the live
-feature entry, including deletion, replacement, direct or hard-link writes,
-links and special files. No point-in-time reader freezes this namespace.
+Never report the live tree as verified from this snapshot. G4 judges captured
+bytes, not executor runs. The Tasks phase brief rechecks the judged digests and
+copies the exact bytes it read and hashed into a fresh run-owned snapshot.
+Pass G4's complete `judged` map as `g4_judged` to runner `phase-brief` for Tasks
+on both hosts. The bounded descriptor reads reject drift, gaps, missing inputs,
+links, special files and over-limit input trees. The report set, checklists entry
+and feature entry are included in capture validation.
 
-The Tasks phase brief rechecks the judged digests before returning dispatch
-facts. Pass G4's complete `judged` map as `g4_judged` to runner `phase-brief` for
-Tasks on both hosts. It recomputes all digests and the report set through the G4
-reader and refuses the brief on drift or unsafe inputs. A refusal names the
-input kind, never file text. Follow the repair policy and obtain a new successful
-G4 response before retrying; never dispatch Tasks from failed or missing data.
-This implements the pre-dispatch check proposed in
+The runner creates the snapshot directory exclusively with mode 0700, creates
+files with O_EXCL/O_NOFOLLOW, and re-hashes the written copies against every
+judged digest. Any capture or write failure refuses dispatch and names only the
+input kind. Obtain a new successful G4 result under the repair policy before retrying.
+
+Both Tasks executors receive `brief.inputs.tasks_snapshot` with `snapshot_dir`
+and `judged`. Use runner `read-tasks-inputs` to consume that snapshot: it checks
+and returns the same bounded bytes as text. Use only its successful `data.files`
+for spec.md, plan.md and checklist reports, without reopening paths afterward.
+Snapshot tampering refuses consumption; later changes to the live feature tree
+cannot change the consumed Tasks inputs. Write tasks.md to `feature_dir` as before.
+This closes the Tasks input handoff in
 [issue #1284](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1284).
-The check covers changes between G4 and that dispatch check; subsequent live
-path reads remain mutable. It does not attest an immutable tree or verifier runs.
 G4 does not attest that an executor ran.
 
 G4 counts only `[Gap]` markers, by design. Unticked checklist items are

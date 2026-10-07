@@ -2208,6 +2208,11 @@ def g4_result(feature: Path, repo_root: Path) -> dict[str, Any]:
     except (OSError, ValueError) as error:
         reason = "G4 cannot read stable regular inputs" if isinstance(error, OSError) else str(error)
         return make_result(json_text({"gate": "G4", "pass": False, "reason": reason, "markers": 0, "details": []}), exit_code=1)
+    return g4_judgment(snapshot)
+
+
+def g4_judgment(snapshot: dict[str, bytes]) -> dict[str, Any]:
+    """Judge and hash the exact captured bytes without reopening their live paths."""
     counts = {name: sum(1 for line in content.decode("utf-8", errors="replace").splitlines() if "[Gap]" in line)
               for name, content in snapshot.items()}
     judged = {name: hashlib.sha256(content).hexdigest() for name, content in snapshot.items()}
@@ -2236,9 +2241,10 @@ def checked_g4_judged(raw: Any) -> dict[str, str]:
     return dict(raw)
 
 
-def check_g4_inputs(feature: Path, repo_root: Path, judged: dict[str, str]) -> None:
-    """Refuse Tasks dispatch unless a fresh bounded G4 read matches every prior judged digest."""
-    current = json.loads(g4_result(feature, repo_root)["stdout"])
+def check_g4_inputs(feature: Path, repo_root: Path, judged: dict[str, str]) -> dict[str, bytes]:
+    """Return the exact bounded bytes matching G4; callers must consume these bytes."""
+    snapshot = g4_snapshot(feature, repo_root)
+    current = json.loads(g4_judgment(snapshot)["stdout"])
     actual = current.get("judged")
     if not isinstance(actual, dict):
         raise G4InputDrift(current["reason"])
@@ -2251,6 +2257,7 @@ def check_g4_inputs(feature: Path, repo_root: Path, judged: dict[str, str]) -> N
         raise G4InputDrift("G4 input drift: checklist report set or content")
     if not current["pass"]:
         raise G4InputDrift("G4 input drift: shared artifact or checklist report contains gaps")
+    return snapshot
 
 
 COVERAGE_TASK_HEADER = re.compile(r"tasks?(?:\s*\(s\)|\s*ids?)?", re.IGNORECASE)

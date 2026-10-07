@@ -628,7 +628,12 @@ Include the selected properties' implementation obligations and declared scope.
 Before requesting the Tasks phase brief, pass `g4_judged` unchanged from the
 latest successful G4 response. The runner re-reads spec.md, plan.md and the flat
 checklist report set, compares every digest, and refuses the brief on missing,
-unsafe or changed inputs. A refusal names the input kind, never file text.
+unsafe or changed inputs. It copies the exact checked bytes to a fresh private
+run-owned snapshot and re-hashes the copies. A refusal names the input kind,
+never file text. Pass `brief.inputs.tasks_snapshot` unchanged to the executor.
+The executor consumes spec.md, plan.md and checklist reports only through
+`read-tasks-inputs` and uses the returned text; tasks.md still goes to the live
+`feature_dir`. Snapshot consumption failure returns a blocker before generating tasks.
 Return to Checklist/G4 under the existing repair policy; neither host may
 spawn the Tasks executor without a successful checked brief.
 

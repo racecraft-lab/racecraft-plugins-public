@@ -39,6 +39,14 @@ def with_tasks_fixture_evidence(inputs):
     return {**inputs, "g4_judged": judged}
 
 
+def comparable_brief(data):
+    """Compare host behavior while preserving the exclusively allocated snapshot path contract."""
+    snapshot = data["inputs"].get("tasks_snapshot")
+    if snapshot is None:
+        return data
+    return json.loads(json.dumps(data).replace(snapshot["snapshot_dir"], "<run-owned-snapshot>"))
+
+
 def dispatch_brief(inputs, request_id=None):
     """Exercise the public dispatch seam with a complete caller-owned input set."""
     return dispatch_helper(SimpleNamespace(helper_id="phase-brief", operation="phase-brief",
@@ -511,8 +519,8 @@ class PhaseBriefTests(InProjectCase):
             with self.subTest(phase=phase):
                 inputs = {"phase": phase, "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
                 reports = payload_briefs(inputs)
-                self.assertEqual(reports[0], reports[1])
-                self.assertEqual(reports[0], dispatch_brief(inputs)["data"])
+                self.assertEqual(comparable_brief(reports[0]), comparable_brief(reports[1]))
+                self.assertEqual(comparable_brief(reports[0]), comparable_brief(dispatch_brief(inputs)["data"]))
 
     def test_invalid_requests_return_no_dispatch_facts(self):
         valid = {"phase": "Plan", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
@@ -597,12 +605,17 @@ class PhaseBriefTests(InProjectCase):
                                               "gate", "slices", "waves", "model", "hooks"})
                 self.assertEqual(brief["schema_version"], "phase-brief/v1")
                 self.assertEqual(brief["phase"], phase)
-                self.assertEqual(set(brief["inputs"]), {"workflow_file", "feature_dir", "instruction", "skill", "prompt_section"})
+                self.assertEqual(set(brief["inputs"]), {"workflow_file", "feature_dir", "instruction", "skill", "prompt_section"} | ({"tasks_snapshot"} if phase == "Tasks" else set()))
                 self.assertEqual(brief["agent"], agent)
                 self.assertEqual(brief["gate"], gate)
                 self.assertEqual(brief["inputs"]["workflow_file"], "docs/workflow.md")
                 self.assertEqual(brief["inputs"]["feature_dir"], "specs/example")
-                self.assertEqual(brief["readable_files"], ["docs/workflow.md", ".specify/memory/constitution.md", ".specify/extensions.yml"] + ["specs/example/" + name for name in artifacts])
+                expected = ["specs/example/" + name for name in artifacts]
+                if phase == "Tasks":
+                    snapshot = brief["inputs"]["tasks_snapshot"]
+                    expected = [snapshot["snapshot_dir"] + "/" + name if name in snapshot["judged"] else "specs/example/" + name for name in artifacts]
+                    expected += [snapshot["snapshot_dir"] + "/" + name for name in snapshot["judged"] if name.startswith("checklists/")]
+                self.assertEqual(brief["readable_files"], ["docs/workflow.md", ".specify/memory/constitution.md", ".specify/extensions.yml"] + expected)
                 self.assertEqual([brief[key] for key in ("waves", "hooks")], [[], []])
                 self.assertEqual(bool(brief["slices"]), agent in SLICE_AGENTS)
 
@@ -661,7 +674,7 @@ class TasksG4BindingTests(InProjectCase):
         self.assertEqual("speckit-tasks", source["data"]["inputs"]["skill"])
         for result in payload_briefs(inputs, include_status=True):
             self.assertEqual("ok", result["status"])
-            self.assertEqual(source["data"], result["data"])
+            self.assertEqual(comparable_brief(source["data"]), comparable_brief(result["data"]))
 
     def test_malformed_or_underinclusive_judged_maps_refuse_both_hosts(self):
         _, judged = self.tree()

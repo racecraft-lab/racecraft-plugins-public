@@ -52,6 +52,12 @@ _Avoid_: patch, remediation, fix pass
 A checkpoint that validates whether a run meets its requirements at a fixed point. A gate is a check, never a phase.
 _Avoid_: quality gate, phase
 
+**Tasks input snapshot**:
+The runner-owned private copy of the exact spec, plan and checklist bytes matched
+against G4's judged digests. Tasks consumes its checked text through
+`read-tasks-inputs`; the live feature directory remains the tasks.md output target.
+_Avoid_: verified live tree, coverage attestation
+
 **Harm halt**:
 The only reason a run ends before a terminal state: the next action could cause damage a later review cannot undo, such as an exposed secret, forged evidence, or a write to the wrong branch. Nothing leaves the machine after it, and a human must clear it before resume.
 _Avoid_: integrity failure, hard stop

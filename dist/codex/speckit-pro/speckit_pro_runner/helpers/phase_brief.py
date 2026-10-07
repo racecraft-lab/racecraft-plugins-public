@@ -16,6 +16,7 @@ from .checklist_edits import checklist_edits
 from .dispatch_waves import WAVE_INPUTS, WaveRequest, checked_wave_request, compose_waves
 from .extension_hooks import optional_hooks
 from .read_only import G4InputDrift, checked_g4_judged, check_g4_inputs
+from .tasks_inputs import create_tasks_snapshot
 
 PHASES = {
     "Specify": ("phase-executor", "G1", ()),
@@ -211,6 +212,7 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     dispatch_waves.py owns optional domains, items, verify_items, verify_baseline and max_agents.
     Paths reject traversal and hidden characters; feature_dir is workflow-root relative.
     G4 re-reads bounded Tasks inputs and refuses digest/report-set drift before dispatch.
+    Tasks copies those exact bytes into a private snapshot; read-tasks-inputs returns its verified text.
     verify_baseline compares on-disk checklist digests; other validation is lexical.
 
     schema_version: str, the literal "phase-brief/v1".
@@ -253,8 +255,7 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     if isinstance(root, dict):
         return response("missing_prerequisite", request_id=request.request_id, diagnostics=[root])
     try:
-        if judged is not None:
-            check_g4_inputs(root / feature, root, judged)
+        captured = check_g4_inputs(root / feature, root, judged) if judged is not None else None
         data = brief_data(phase, workflow, feature, observed_checklist_waves(root, workflow, feature, waves))
     except G4InputDrift as exc:
         return response("input_error", request_id=request.request_id,
@@ -265,4 +266,17 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
         data["hooks"] = optional_hooks(root, ("before_" + phase.lower(), "after_" + phase.lower())) if phase in HOOK_PHASES else []
     except ValueError as exc:
         return internal_failure(request, "phase_brief_hooks_unavailable", exc)
+    if captured is not None and judged is not None:
+        try:
+            snapshot = create_tasks_snapshot(captured, judged)
+        except G4InputDrift as exc:
+            return response("input_error", request_id=request.request_id,
+                            diagnostics=[diagnostic("g4_input_drift", str(exc))])
+        except (OSError, ValueError):
+            return response("input_error", request_id=request.request_id,
+                            diagnostics=[diagnostic("g4_input_drift", "Tasks snapshot input kind is unsafe, changed or unreadable")])
+        data["inputs"]["tasks_snapshot"] = snapshot
+        bound_paths = {feature + "/" + name: snapshot["snapshot_dir"] + "/" + name for name in judged}
+        data["readable_files"] = [bound_paths.get(path, path) for path in data["readable_files"]]
+        data["readable_files"] += [snapshot["snapshot_dir"] + "/" + name for name in judged if name.startswith("checklists/")]
     return response("ok", request_id=request.request_id, data=data)

@@ -56,13 +56,26 @@ or permission to end the run. A null model preserves this agent's configuration.
    enrich, or supplement the prompt.
 <!-- /host -->
 
-2. **Follow only the loaded command's instructions.** After the
+2. **Follow the loaded command and the Tasks snapshot contract above.** After the
    skill loads, execute its steps. Do not read additional files
    for "pattern consistency" or "reference." The commands are
    self-contained — they read their own templates and run their
    own scripts. For helper calls, use the exact request-envelope fields and `inputs` keys it names.
    Report helper validation errors by the named field, without copying rejected
    observation text into artifacts or bypassing the helper with a direct write.
+
+**Tasks snapshot inputs:** After loading the Tasks command, before its input
+reads, call runner `helper_id=read-tasks-inputs operation=read-tasks-inputs
+mode=read_only` with `inputs` equal to the parent's
+`brief.inputs.tasks_snapshot` (`snapshot_dir` and `judged`, unchanged).
+Use only successful `data.files` text for spec.md, plan.md and checklist
+reports. This overrides the loaded command's live input paths and prerequisite
+scripts that read those artifacts. Read these inputs only from the snapshot
+through that helper; never reopen their paths after consumption or fall back to
+the live feature tree. Missing snapshot data or any helper failure is a blocker
+before generating tasks. Keep the workflow prompt verbatim. Write tasks.md to
+`brief.inputs.feature_dir` as today. Other allowed planning inputs retain their
+existing paths.
 
 Use the parent's `PROJECT_COMMANDS` and `PRESET_CONVENTIONS` from the
 `g0-setup` probe reports as supplied in the workflow prompt.

@@ -829,7 +829,11 @@ For each planning phase, request
 `workflow_file=WORKFLOW_FILE` and `feature_dir=<feature-dir>`.
 For Tasks, also pass `g4_judged=<the complete judged map from the latest
 successful G4 response>`. The runner rechecks that map before returning a Tasks
-brief. Missing, malformed or changed inputs return no dispatch facts; rerun
+brief and copies the exact checked bytes to a private run-owned snapshot.
+Pass `brief.inputs.tasks_snapshot` unchanged. Both hosts consume spec.md,
+plan.md and checklist reports only through `read-tasks-inputs`, using its
+returned text. The live feature directory remains the tasks.md output target.
+Missing, malformed or changed inputs return no dispatch facts; rerun
 Checklist and G4 through the existing repair policy before requesting Tasks
 again. Neither host may dispatch Tasks from a failed brief or omit this check.
 Use the successful response's data as `brief`: dispatch `brief.agent`,

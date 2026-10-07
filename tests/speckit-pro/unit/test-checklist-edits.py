@@ -29,7 +29,7 @@ from unittest.mock import patch
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO / "speckit-pro"), str(REPO / "tests/speckit-pro/lib")]
 from speckit_pro_runner import atomic_write  # noqa: E402
-from speckit_pro_runner.helpers import checklist_edits, read_only, phase_brief  # noqa: E402
+from speckit_pro_runner.helpers import checklist_edits, read_only, phase_brief, tasks_inputs  # noqa: E402
 from speckit_pro_runner.helpers.registry import MUTATION_HELPERS, dispatch_helper  # noqa: E402
 from guide_text import PHASE_EXECUTION_GUIDES, guide_text, guide_view  # noqa: E402
 from mutation_request_case import MutationRequestCase  # noqa: E402
@@ -1381,7 +1381,7 @@ else:
         program = """
 import runpy, sys, unittest
 from pathlib import Path
-from speckit_pro_runner.helpers import checklist_edits, read_only, phase_brief
+from speckit_pro_runner.helpers import checklist_edits, read_only, phase_brief, tasks_inputs
 assert Path(checklist_edits.__file__).is_relative_to(Path(sys.argv[1]))
 scope = runpy.run_path(sys.argv[2])
 suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(scope[name]) for name in sys.argv[3:])
@@ -1929,6 +1929,205 @@ class GateFourTests(ChecklistEditsCase):
                         self.assertEqual({}, result["data"])
                         self.assertEqual("g4_input_drift", result["diagnostics"][0]["code"])
 
+    def tasks_brief(self, judged: dict[str, str]) -> dict[str, Any]:
+        with patch.object(phase_brief, "resolve_repo_root", return_value=self.root):
+            return dispatch_helper(SimpleNamespace(helper_id="phase-brief", operation="phase-brief", mode="read_only",
+                                   request_id=None, inputs={"phase": "Tasks", "workflow_file": WORKFLOW,
+                                   "feature_dir": FEATURE, "g4_judged": judged}))
+
+    def consume_tasks(self, brief: dict[str, Any]) -> dict[str, Any]:
+        return dispatch_helper(SimpleNamespace(helper_id="read-tasks-inputs", operation="read-tasks-inputs", mode="read_only",
+                               request_id=None, inputs=brief["data"]["inputs"]["tasks_snapshot"]))
+
+    def test_tasks_consumes_checked_bytes_after_every_post_check_mutation(self) -> None:
+        leaves = ("deleted", "regular", "direct write", "transient hard link", "in-root link", "out-of-root link", "fifo")
+        directories = ("deleted", "regular", "file", "in-root link", "out-of-root link")
+        targets = {"spec.md": leaves, "plan.md": leaves,
+                   "checklists/security.md": (*leaves, "add report", "add nested report"),
+                   "checklists": directories, ".": directories}
+        for window in ("after check", "before consumption"):
+            for relative, variants in targets.items():
+                for variant in variants:
+                    with self.subTest(window=window, target=relative, variant=variant):
+                        self.reset_tree()
+                        judged = self.gate()["judged"]
+                        target = self.feature / relative
+                        def mutate() -> None:
+                            if variant in ("add report", "add nested report"):
+                                parent = target.parent / "nested" if variant == "add nested report" else target.parent
+                                parent.mkdir(exist_ok=True)
+                                (parent / "added.md").write_text(GAP_LINE, encoding="utf-8")
+                            elif variant in ("direct write", "transient hard link"):
+                                writer = self.root / "alias.md" if variant == "transient hard link" else target
+                                if writer != target:
+                                    os.link(target, writer)
+                                writer.write_text(GAP_LINE, encoding="utf-8")
+                                if writer != target:
+                                    writer.unlink()
+                            else:
+                                self.swap_entry(target, variant)
+                        original = phase_brief.check_g4_inputs
+                        def checked(*args: Any) -> Any:
+                            value = original(*args)
+                            mutate()
+                            return value
+                        if window == "after check":
+                            with patch.object(phase_brief, "check_g4_inputs", checked):
+                                brief = self.tasks_brief(judged)
+                        else:
+                            brief = self.tasks_brief(judged)
+                            mutate()
+                        self.assertEqual("ok", brief["status"])
+                        self.assertIn("tasks_snapshot", brief["data"]["inputs"])
+                        snapshot = Path(brief["data"]["inputs"]["tasks_snapshot"]["snapshot_dir"])
+                        self.addCleanup(shutil.rmtree, snapshot)
+                        self.assertEqual(0o700, stat.S_IMODE(snapshot.stat().st_mode))
+                        consumed = self.consume_tasks(brief)
+                        self.assertEqual("ok", consumed["status"])
+                        self.assertEqual({"spec.md": SPEC, "plan.md": PLAN, "checklists/security.md": CLEAN_REPORT},
+                                         consumed["data"]["files"])
+                        self.assertEqual(judged, consumed["data"]["judged"])
+                        self.assertFalse(any(path == FEATURE + "/" + name for path in brief["data"]["readable_files"] for name in judged))
+                        self.assertEqual(FEATURE, brief["data"]["inputs"]["feature_dir"])
+
+    def test_tasks_snapshot_tamper_refuses_every_file_and_parent_kind(self) -> None:
+        leaves = ("deleted", "regular", "hard link", "in-root link", "out-of-root link", "fifo", "marker-free write")
+        targets = {"spec.md": leaves, "plan.md": leaves, "checklists/security.md": (*leaves, "add report", "add nested report"),
+                   "checklists": ("deleted", "regular", "file", "in-root link", "out-of-root link"),
+                   ".": ("deleted", "regular", "file", "in-root link", "out-of-root link")}
+        for relative, variants in targets.items():
+            for variant in variants:
+                with self.subTest(target=relative, variant=variant):
+                    self.reset_tree()
+                    brief = self.tasks_brief(self.gate()["judged"])
+                    self.assertIn("tasks_snapshot", brief["data"]["inputs"])
+                    snapshot = Path(brief["data"]["inputs"]["tasks_snapshot"]["snapshot_dir"])
+                    self.addCleanup(lambda path=snapshot: shutil.rmtree(path, ignore_errors=True) if not path.is_symlink() else path.unlink())
+                    target = snapshot / relative
+                    if variant in ("add report", "add nested report"):
+                        parent = target.parent / "nested" if variant == "add nested report" else target.parent
+                        parent.mkdir(exist_ok=True)
+                        (parent / "added.md").write_text(GAP_LINE, encoding="utf-8")
+                    elif variant == "marker-free write":
+                        target.write_text("Changed marker-free private text", encoding="utf-8")
+                    else:
+                        self.swap_entry(target, variant)
+                        if relative == "." and variant == "regular":
+                            (target / "spec.md").write_text(GAP_LINE, encoding="utf-8")
+                    result = self.consume_tasks(brief)
+                    self.assertEqual("input_error", result["status"])
+                    self.assertEqual({}, result["data"])
+                    self.assertNotIn("Changed marker-free private text", json.dumps(result))
+                    self.assertNotIn(str(snapshot), json.dumps(result))
+
+    def test_tasks_snapshot_creation_failures_refuse_without_launch_data(self) -> None:
+        from speckit_pro_runner.helpers import tasks_inputs
+        for kind in ("snapshot entry", "spec.md", "plan.md", "checklist report"):
+            with self.subTest(kind=kind):
+                self.reset_tree()
+                judged = self.gate()["judged"]
+                original = os.open
+                fired = []
+                def fail_open(path: Any, flags: int, *args: Any, **kwargs: Any) -> int:
+                    matches = flags & os.O_EXCL and Path(path).name == {"spec.md": "spec.md", "plan.md": "plan.md", "checklist report": "security.md"}.get(kind)
+                    if matches:
+                        fired.append(True)
+                        raise PermissionError("private fixture text")
+                    return original(path, flags, *args, **kwargs)
+                with ExitStack() as stack:
+                    if kind == "snapshot entry":
+                        stack.enter_context(patch.object(tasks_inputs.tempfile, "mkdtemp", side_effect=PermissionError("private fixture text")))
+                    else:
+                        stack.enter_context(patch.object(os, "open", fail_open))
+                    result = self.tasks_brief(judged)
+                self.assertEqual("input_error", result["status"])
+                self.assertEqual({}, result["data"])
+                self.assertIn(kind, result["diagnostics"][0]["message"])
+                self.assertNotIn("private fixture text", json.dumps(result))
+                if kind != "snapshot entry":
+                    self.assertEqual([True], fired)
+
+    def test_tasks_rehashes_written_copies_and_creates_files_exclusively(self) -> None:
+        from speckit_pro_runner.helpers import tasks_inputs
+        for name in ("spec.md", "plan.md", "checklists/security.md"):
+            with self.subTest(target=name):
+                self.reset_tree()
+                judged = self.gate()["judged"]
+                original = tasks_inputs.snapshot_bytes
+                real_open = os.open
+                flags_seen = []
+                def opened(path: Any, flags: int, *args: Any, **kwargs: Any) -> int:
+                    if flags & os.O_CREAT:
+                        flags_seen.append(flags)
+                    return real_open(path, flags, *args, **kwargs)
+                def tamper(directory: str, digests: dict[str, str]) -> dict[str, bytes]:
+                    self.addCleanup(shutil.rmtree, directory)
+                    (Path(directory) / name).write_text("Changed marker-free bytes", encoding="utf-8")
+                    return original(directory, digests)
+                with patch.object(tasks_inputs, "snapshot_bytes", tamper), patch.object(os, "open", opened):
+                    result = self.tasks_brief(judged)
+                self.assertEqual("input_error", result["status"])
+                self.assertEqual({}, result["data"])
+                self.assertEqual(3, len(flags_seen))
+                self.assertTrue(all(flags & os.O_EXCL and flags & os.O_NOFOLLOW for flags in flags_seen))
+
+    def test_tasks_consumer_uses_captured_text_even_after_snapshot_read(self) -> None:
+        from speckit_pro_runner.helpers import tasks_inputs
+        for name in ("spec.md", "plan.md", "checklists/security.md"):
+            with self.subTest(target=name):
+                self.reset_tree()
+                brief = self.tasks_brief(self.gate()["judged"])
+                directory = Path(brief["data"]["inputs"]["tasks_snapshot"]["snapshot_dir"])
+                self.addCleanup(shutil.rmtree, directory)
+                original = tasks_inputs.snapshot_bytes
+                def mutate_after_read(path: str, judged: dict[str, str]) -> dict[str, bytes]:
+                    captured = original(path, judged)
+                    (directory / name).write_text(GAP_LINE, encoding="utf-8")
+                    return captured
+                with patch.object(tasks_inputs, "snapshot_bytes", mutate_after_read):
+                    result = self.consume_tasks(brief)
+                self.assertEqual("ok", result["status"])
+                self.assertEqual({"spec.md": SPEC, "plan.md": PLAN, "checklists/security.md": CLEAN_REPORT}, result["data"]["files"])
+
+    def test_tasks_recheck_windows_bind_the_exact_captured_bytes(self) -> None:
+        leaves = ("deleted", "regular", "direct write", "transient hard link", "in-root link", "out-of-root link", "fifo")
+        directories = ("deleted", "regular", "file", "in-root link", "out-of-root link")
+        targets = {"spec.md": leaves, "plan.md": leaves,
+                   "checklists/security.md": (*leaves, "add report", "add nested report"),
+                   "checklists": directories, ".": directories}
+        for window in ("entry recheck", "last check", "snapshot return", "verdict serialization"):
+            for relative, variants in targets.items():
+                for variant in variants:
+                    with self.subTest(window=window, target=relative, variant=variant):
+                        self.reset_tree()
+                        judged = self.gate()["judged"]
+                        def mutate() -> None:
+                            target = self.feature / relative
+                            if variant in ("add report", "add nested report"):
+                                parent = target.parent / "nested" if variant == "add nested report" else target.parent
+                                parent.mkdir(exist_ok=True)
+                                (parent / "added.md").write_text(GAP_LINE, encoding="utf-8")
+                            elif variant in ("direct write", "transient hard link"):
+                                writer = self.root / "alias.md" if variant == "transient hard link" else target
+                                if writer != target:
+                                    os.link(target, writer)
+                                writer.write_text(GAP_LINE, encoding="utf-8")
+                                if writer != target:
+                                    writer.unlink()
+                            else:
+                                self.swap_entry(target, variant)
+                        with self.after_last_validation(relative, mutate, window):
+                            brief = self.tasks_brief(judged)
+                        if brief["status"] != "ok":
+                            self.assertEqual("input_error", brief["status"])
+                            self.assertEqual({}, brief["data"])
+                            continue
+                        snapshot = Path(brief["data"]["inputs"]["tasks_snapshot"]["snapshot_dir"])
+                        self.addCleanup(shutil.rmtree, snapshot)
+                        consumed = self.consume_tasks(brief)
+                        self.assertEqual("ok", consumed["status"])
+                        self.assertEqual({"spec.md": SPEC, "plan.md": PLAN, "checklists/security.md": CLEAN_REPORT}, consumed["data"]["files"])
+
     def test_g4_report_drift_diagnostics_keep_shared_basenames_distinct(self) -> None:
         for name in ("spec.md", "plan.md"):
             with self.subTest(report=name):
@@ -2054,6 +2253,9 @@ class GuidanceTests(unittest.TestCase):
                     self.assertIn(kind, passage)
                     self.assertIn("Never report the live tree as verified from this snapshot", passage)
                     self.assertIn("Tasks phase brief rechecks the judged digests", passage)
+                    self.assertIn("read-tasks-inputs", passage)
+                    self.assertIn("exact bytes", passage)
+                    self.assertNotIn("subsequent live path reads remain mutable", passage)
                     self.assertNotIn("Total must be 0", passage)
 
     def test_the_checklist_executor_proposes_edits_and_never_writes_spec_or_plan_on_either_host(self) -> None:
