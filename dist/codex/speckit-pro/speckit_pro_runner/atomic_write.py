@@ -315,8 +315,11 @@ def write_bytes_atomic(
     expected_snapshot: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Atomically replace a target with optional mode and snapshot checks."""
-    options = AtomicWriteOptions(trust_root, mode, expected_snapshot)
-    return write_bytes_atomic_with_options(target, content, options)
+    return write_bytes_atomic_with_options(
+        target,
+        content,
+        AtomicWriteOptions(trust_root, mode, expected_snapshot),
+    )
 
 
 def verify_bound_publication(binding: WriteBinding | None, held_fd: int, name: str, content: bytes,
