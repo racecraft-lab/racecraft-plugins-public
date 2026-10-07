@@ -99,8 +99,7 @@ Use the parent's `PROJECT_COMMANDS` and `PRESET_CONVENTIONS` from the
 **Errors:** None (or describe any errors)
 ```
 
-Specify metrics cover functional requirements, user stories and acceptance scenarios;
-Plan covers artifact status and any rescope of plan.md; Tasks covers task counts.
+Adjust metrics to the phase: Specify reports FR/story and acceptance scenario counts, Plan reports artifact status and any rescope of plan.md, Tasks reports task counts.
 
 ### Terminal Deliverable
 
