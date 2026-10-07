@@ -137,6 +137,179 @@ class WriteBinding:
     validate_parent: collections.abc.Callable[[], None] | None = None
 
 
+@dataclass(frozen=True)
+class _AtomicWriteOptions:
+    trust_root: Path | None
+    mode: int | None
+    expected_snapshot: dict[str, Any] | None
+    binding: WriteBinding | None
+
+
+@dataclass
+class _AtomicWriteState:
+    parent_fd: int
+    target_name: str
+    temporary_name: str
+    created_dirs: list[str]
+    temporary_fd: int = -1
+    failure: OSError | None = None
+    replaced: bool = False
+    applied_mode: int | None = None
+    identity: tuple[int, int, int] | None = None
+
+
+def _open_atomic_write_state(target: Path, options: _AtomicWriteOptions) -> _AtomicWriteState:
+    created_dirs: list[str] = []
+    if options.binding is not None:
+        parent_fd = os.dup(options.binding.parent_fd)
+        target_name = target.name
+        temporary_name = f".{target_name}.tmp-{os.getpid()}-{uuid.uuid4().hex}"
+    elif options.trust_root is None:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        temporary_name = f".{target.name}.tmp-{os.getpid()}-{uuid.uuid4().hex}"
+        parent_fd = os.open(target.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0))
+        target_name = target.name
+    else:
+        opened = open_safe_parent_fd(target, options.trust_root, create=True)
+        if opened is None:
+            raise OSError("target parent missing")
+        parent_fd, target_name, created_dirs = opened
+        temporary_name = f".{target_name}.tmp-{os.getpid()}-{uuid.uuid4().hex}"
+    return _AtomicWriteState(parent_fd, target_name, temporary_name, created_dirs)
+
+
+def _check_atomic_write_parent(state: _AtomicWriteState, options: _AtomicWriteOptions) -> None:
+    expected_snapshot = options.expected_snapshot
+    expected_parent = expected_snapshot.get("parent") if expected_snapshot is not None else None
+    if expected_parent is not None and file_identity(os.fstat(state.parent_fd)) != tuple(expected_parent):
+        raise WritePreconditionChanged("write target directory changed after snapshot capture")
+    if options.trust_root is not None:
+        binding = options.binding
+        if binding is not None and binding.single_link:
+            ensure_safe_write_target_fd(state.parent_fd, state.target_name, single_link=True)
+        else:
+            ensure_safe_write_target_fd(state.parent_fd, state.target_name)
+
+
+def _create_atomic_temporary(state: _AtomicWriteState, options: _AtomicWriteOptions) -> None:
+    _check_atomic_write_parent(state, options)
+    existing_mode = options.mode if options.mode is not None else current_file_mode_fd(state.parent_fd, state.target_name)
+    write_mode = existing_mode if existing_mode is not None else 0o666
+    state.temporary_fd = os.open(
+        state.temporary_name,
+        os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0),
+        write_mode,
+        dir_fd=state.parent_fd,
+    )
+    if existing_mode is not None:
+        os.fchmod(state.temporary_fd, existing_mode)
+    temporary_stat = os.fstat(state.temporary_fd)
+    state.applied_mode = stat.S_IMODE(temporary_stat.st_mode)
+    state.identity = entry_identity(temporary_stat)
+
+
+def _write_atomic_temporary(state: _AtomicWriteState, content: bytes, options: _AtomicWriteOptions) -> None:
+    binding = options.binding
+    with os.fdopen(state.temporary_fd, "wb", closefd=binding is None) as handle:
+        state.temporary_fd = handle.fileno() if binding is not None else -1
+        handle.write(content)
+        handle.flush()
+        os.fsync(handle.fileno())
+    _check_atomic_write_parent(state, options)
+
+
+def _validate_atomic_install(state: _AtomicWriteState, content: bytes, options: _AtomicWriteOptions) -> None:
+    expected_snapshot = options.expected_snapshot
+    if expected_snapshot is not None:
+        ensure_write_target_matches_snapshot_fd(state.parent_fd, state.target_name, expected_snapshot)
+    binding = options.binding
+    if binding is not None and binding.validate_parent is not None:
+        binding.validate_parent()
+    verify_bound_publication(binding, state.temporary_fd, state.temporary_name, content)
+
+
+def _install_atomic_temporary(state: _AtomicWriteState, content: bytes, options: _AtomicWriteOptions) -> None:
+    _validate_atomic_install(state, content, options)
+    expected_snapshot = options.expected_snapshot
+    if not (
+        expected_snapshot is not None
+        and "identity" in expected_snapshot
+        and install_checked(state.parent_fd, state.temporary_name, state.target_name, expected_snapshot)
+    ):
+        os.replace(state.temporary_name, state.target_name, src_dir_fd=state.parent_fd, dst_dir_fd=state.parent_fd)
+    state.replaced = True
+    try:
+        os.fsync(state.parent_fd)
+    except OSError:
+        # Directory fsync is best-effort after replace; the atomic swap already succeeded.
+        pass
+    verify_bound_publication(options.binding, state.temporary_fd, state.target_name, content, installed=True)
+
+
+def _publish_atomic_write(state: _AtomicWriteState, content: bytes, options: _AtomicWriteOptions) -> None:
+    _create_atomic_temporary(state, options)
+    _write_atomic_temporary(state, content, options)
+    _install_atomic_temporary(state, content, options)
+
+
+def _cleanup_atomic_write(state: _AtomicWriteState, options: _AtomicWriteOptions) -> None:
+    if state.temporary_fd >= 0:
+        try:
+            os.close(state.temporary_fd)
+        except OSError:
+            # A close error cannot safely change the write outcome.
+            pass
+    temporary_cleanup_errors = cleanup_temporary_entry(state.parent_fd, state.temporary_name, state.failure)
+    close_error: OSError | None = None
+    try:
+        os.close(state.parent_fd)
+    except OSError as exc:
+        close_error = exc
+    if close_error is not None and not state.replaced:
+        if state.failure is None:
+            raise close_error
+        cleanup_errors = atomic_write_cleanup_errors(state.failure)
+        cleanup_errors.append(f"parent_fd:{type(close_error).__name__}")
+        state.failure.cleanup_errors = cleanup_errors
+    if state.failure is not None and not state.replaced and temporary_cleanup_errors:
+        state.failure.cleanup_errors = [*atomic_write_cleanup_errors(state.failure), *temporary_cleanup_errors]
+    if options.trust_root is not None and state.failure is not None and not state.replaced and state.created_dirs:
+        cleanup_errors = remove_created_parent_dirs(state.created_dirs, options.trust_root)
+        if cleanup_errors:
+            state.failure.cleanup_errors = [*atomic_write_cleanup_errors(state.failure), *cleanup_errors]
+
+
+def _write_atomic(target: Path, content: bytes, options: _AtomicWriteOptions) -> dict[str, Any]:
+    state = _open_atomic_write_state(target, options)
+    try:
+        try:
+            _publish_atomic_write(state, content, options)
+        except OSError as exc:
+            state.failure = exc
+            raise
+    finally:
+        _cleanup_atomic_write(state, options)
+    return {
+        "digest": hashlib.sha256(content).hexdigest(),
+        "mode": state.applied_mode,
+        "identity": state.identity,
+        "created_parent_dirs": state.created_dirs,
+    }
+
+
+def write_bound_bytes_atomic(
+    target: Path,
+    content: bytes,
+    *,
+    trust_root: Path,
+    expected_snapshot: dict[str, Any],
+    binding: WriteBinding,
+) -> dict[str, Any]:
+    """Replace a target through a caller-bound parent descriptor."""
+    options = _AtomicWriteOptions(trust_root, None, expected_snapshot, binding)
+    return _write_atomic(target, content, options)
+
+
 def write_bytes_atomic(
     target: Path,
     content: bytes,
@@ -144,117 +317,10 @@ def write_bytes_atomic(
     trust_root: Path | None = None,
     mode: int | None = None,
     expected_snapshot: dict[str, Any] | None = None,
-    binding: WriteBinding | None = None,
 ) -> dict[str, Any]:
-    """Replace `target` atomically; an expected snapshot that no longer holds raises WritePreconditionChanged.
-
-    A snapshot that names the file's `identity` binds the write further: its optional `parent` identity must
-    still be the directory written into, and the new file is swapped in with the displaced entry checked
-    after the swap, so an entry put there after the last check is swapped back and the write refused.
-    """
-    # A supplied descriptor is duplicated: this writer owns its copy, the caller retains its parent.
-    # single_link and validate_parent add preconditions without changing existing callers.
-    guard = functools.partial(ensure_safe_write_target_fd, single_link=True) if binding and binding.single_link else ensure_safe_write_target_fd
-    created_dirs: list[str] = []
-    if binding is not None:
-        parent_fd = os.dup(binding.parent_fd)
-        target_name = target.name
-        tmp_name = f".{target_name}.tmp-{os.getpid()}-{uuid.uuid4().hex}"
-    elif trust_root is None:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        tmp_name = f".{target.name}.tmp-{os.getpid()}-{uuid.uuid4().hex}"
-        parent_fd = os.open(target.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0))
-        target_name = target.name
-    else:
-        opened = open_safe_parent_fd(target, trust_root, create=True)
-        if opened is None:
-            raise OSError("target parent missing")
-        parent_fd, target_name, created_dirs = opened
-        tmp_name = f".{target_name}.tmp-{os.getpid()}-{uuid.uuid4().hex}"
-    tmp_fd = -1
-    failure: OSError | None = None
-    replaced = False
-    applied_mode: int | None = None
-    identity: tuple[int, int, int] | None = None
-    tmp_cleanup_errors: list[str] = []
-    try:
-        try:
-            # The descriptor pins the directory, so a rename after this check cannot redirect the write.
-            expected_parent = expected_snapshot.get("parent") if expected_snapshot is not None else None
-            if expected_parent is not None and file_identity(os.fstat(parent_fd)) != tuple(expected_parent):
-                raise WritePreconditionChanged("write target directory changed after snapshot capture")
-            if trust_root is not None:
-                guard(parent_fd, target_name)
-            existing_mode = mode if mode is not None else current_file_mode_fd(parent_fd, target_name)
-            write_mode = existing_mode if existing_mode is not None else 0o666
-            tmp_fd = os.open(
-                tmp_name,
-                os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0),
-                write_mode,
-                dir_fd=parent_fd,
-            )
-            if existing_mode is not None:
-                os.fchmod(tmp_fd, existing_mode)
-            tmp_stat = os.fstat(tmp_fd)
-            applied_mode, identity = stat.S_IMODE(tmp_stat.st_mode), entry_identity(tmp_stat)
-            # Only descriptor-bound publication retains the inode across rename.
-            # Ordinary writes keep their existing close-before-rename portability.
-            with os.fdopen(tmp_fd, "wb", closefd=binding is None) as fh:
-                tmp_fd = fh.fileno() if binding is not None else -1
-                fh.write(content)
-                fh.flush()
-                os.fsync(fh.fileno())
-            if trust_root is not None:
-                guard(parent_fd, target_name)
-            if expected_snapshot is not None:
-                ensure_write_target_matches_snapshot_fd(parent_fd, target_name, expected_snapshot)
-            if binding is not None and binding.validate_parent is not None:
-                binding.validate_parent()
-            verify_bound_publication(binding, tmp_fd, tmp_name, content)
-            if not (expected_snapshot is not None and "identity" in expected_snapshot
-                    and install_checked(parent_fd, tmp_name, target_name, expected_snapshot)):
-                os.replace(tmp_name, target_name, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
-            replaced = True
-            try:
-                os.fsync(parent_fd)
-            except OSError:
-                # Directory fsync is best-effort after replace; the atomic swap already succeeded.
-                pass
-            verify_bound_publication(binding, tmp_fd, target_name, content, installed=True)
-        except OSError as exc:
-            failure = exc
-            raise
-    finally:
-        if tmp_fd >= 0:
-            try:
-                os.close(tmp_fd)
-            except OSError:
-                # Best-effort cleanup only; a close error cannot safely change the write outcome.
-                pass
-        tmp_cleanup_errors = cleanup_temporary_entry(parent_fd, tmp_name, failure)
-        close_error: OSError | None = None
-        try:
-            os.close(parent_fd)
-        except OSError as exc:
-            close_error = exc
-        if close_error is not None and not replaced:
-            if failure is None:
-                raise close_error
-            cleanup_errors = atomic_write_cleanup_errors(failure)
-            cleanup_errors.append(f"parent_fd:{type(close_error).__name__}")
-            failure.cleanup_errors = cleanup_errors
-        if failure is not None and not replaced and tmp_cleanup_errors:
-            failure.cleanup_errors = [*atomic_write_cleanup_errors(failure), *tmp_cleanup_errors]
-        if trust_root is not None and failure is not None and not replaced and created_dirs:
-            cleanup_errors = remove_created_parent_dirs(created_dirs, trust_root)
-            if cleanup_errors:
-                failure.cleanup_errors = [*atomic_write_cleanup_errors(failure), *cleanup_errors]
-    return {
-        "digest": hashlib.sha256(content).hexdigest(),
-        "mode": applied_mode,
-        "identity": identity,
-        "created_parent_dirs": created_dirs,
-    }
+    """Atomically replace a target with optional mode and snapshot checks."""
+    options = _AtomicWriteOptions(trust_root, mode, expected_snapshot, None)
+    return _write_atomic(target, content, options)
 
 
 def verify_bound_publication(binding: WriteBinding | None, held_fd: int, name: str, content: bytes,

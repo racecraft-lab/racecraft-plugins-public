@@ -9,7 +9,13 @@ from contextlib import ExitStack
 from pathlib import Path
 from typing import Any
 
-from ..atomic_write import AtomicWriteInterrupted, WriteBinding, ensure_safe_write_target_fd, snapshot_write_target_fd, write_bytes_atomic
+from ..atomic_write import (
+    AtomicWriteInterrupted,
+    WriteBinding,
+    ensure_safe_write_target_fd,
+    snapshot_write_target_fd,
+    write_bound_bytes_atomic,
+)
 from ..trusted_io import BOUNDED_TEXT_INPUT_BYTES, read_tree_entry, resolve_repo_root, trusted_open_directory
 from ..envelope import diagnostic, response
 from ..strict_input import require_fields, require_text
@@ -170,9 +176,13 @@ def run_publish_tasks_output_helper(entry: Any, request: Any) -> dict[str, Any]:
                 expected.pop("identity", None)
                 expected["parent"] = (identity["device"], identity["inode"])
             check_tasks_parent(feature, root, identity)
-            result = write_bytes_atomic(feature / "tasks.md", content, trust_root=root,
-                                        expected_snapshot=expected, binding=WriteBinding(parent, True,
-                                            lambda: check_tasks_parent(feature, root, identity)))
+            result = write_bound_bytes_atomic(
+                feature / "tasks.md",
+                content,
+                trust_root=root,
+                expected_snapshot=expected,
+                binding=WriteBinding(parent, True, lambda: check_tasks_parent(feature, root, identity)),
+            )
             published = True
             check_tasks_parent(feature, root, identity)
     except (G4InputDrift, OSError, ValueError) as exc:
