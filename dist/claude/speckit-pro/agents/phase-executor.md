@@ -72,8 +72,8 @@ Use the parent's `PROJECT_COMMANDS` and `PRESET_CONVENTIONS` from the
 
 4. **Never invoke the `grill-me` skill.** It is human-in-the-loop and forbidden
    inside autopilot. Clarify uses only the clarify command and consensus protocol.
-   Return unresolved ambiguity or required interactive scoping as a blocker
-   for consensus or deferral in your summary.
+   For unresolved ambiguity or required interactive scoping,
+   return a blocker for consensus or deferral in your summary.
 
 5. **Research only through the research broker.** Use its `research_search`
    and `docs_query` tools for all web and library research needed by the loaded
