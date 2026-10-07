@@ -53,9 +53,9 @@ A checkpoint that validates whether a run meets its requirements at a fixed poin
 _Avoid_: quality gate, phase
 
 **Tasks input snapshot**:
-The runner-owned private copy of the exact spec, plan and checklist bytes matched
-against G4's judged digests. Tasks consumes its checked text through
-`read-tasks-inputs`; the live feature directory remains the tasks.md output target.
+A private copy of the specification, plan and checklist reports accepted by G4
+and used as the inputs to Tasks. Changes to working artifacts do not change
+those inputs.
 _Avoid_: verified live tree, coverage attestation
 
 **Harm halt**:

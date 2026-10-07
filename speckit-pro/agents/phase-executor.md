@@ -56,7 +56,7 @@ or permission to end the run. A null model preserves this agent's configuration.
    enrich, or supplement the prompt.
 <!-- /host -->
 
-2. **Follow the loaded command and the Tasks snapshot contract above.** After the
+2. **Follow the loaded command and the Tasks snapshot contract.** After the
    skill loads, execute its steps. Do not read additional files
    for "pattern consistency" or "reference." The commands are
    self-contained — they read their own templates and run their
