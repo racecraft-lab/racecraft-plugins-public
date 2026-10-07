@@ -35,7 +35,7 @@ class AtomicSwapUnavailable(OSError):
 
 
 class AtomicWriteInterrupted(OSError):
-    """The new entry reached disk but rollback failed; the displaced entry must survive cleanup."""
+    """A write may have reached disk; any displaced temporary entry must survive cleanup."""
 
 
 def atomic_write_cleanup_errors(exc: OSError) -> list[str]:
@@ -197,7 +197,10 @@ def write_bytes_atomic(
                 os.fchmod(tmp_fd, existing_mode)
             tmp_stat = os.fstat(tmp_fd)
             applied_mode, identity = stat.S_IMODE(tmp_stat.st_mode), entry_identity(tmp_stat)
-            with os.fdopen(tmp_fd, "wb", closefd=False) as fh:
+            # Only descriptor-bound publication retains the inode across rename.
+            # Ordinary writes keep their existing close-before-rename portability.
+            with os.fdopen(tmp_fd, "wb", closefd=binding is None) as fh:
+                tmp_fd = fh.fileno() if binding is not None else -1
                 fh.write(content)
                 fh.flush()
                 os.fsync(fh.fileno())

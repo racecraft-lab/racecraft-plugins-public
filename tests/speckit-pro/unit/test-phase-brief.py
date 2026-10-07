@@ -906,6 +906,36 @@ with tempfile.TemporaryDirectory() as directory, tempfile.TemporaryDirectory() a
         shutil.rmtree(snapshot, ignore_errors=True)
 """
 
+UNBOUND_PUBLICATION_PROBE = r"""
+import os, tempfile
+from pathlib import Path
+from unittest.mock import patch
+from speckit_pro_runner.atomic_write import write_bytes_atomic
+
+opened = []
+real_open, real_replace = os.open, os.replace
+def record(path, flags, *args, **kwargs):
+    fd = real_open(path, flags, *args, **kwargs)
+    if flags & os.O_CREAT:
+        opened.append(fd)
+    return fd
+def replace_closed(*args, **kwargs):
+    assert len(opened) == 1, opened
+    try:
+        os.fstat(opened[0])
+    except OSError:
+        pass
+    else:
+        raise PermissionError('rename requires the unbound staging handle to be closed')
+    return real_replace(*args, **kwargs)
+with tempfile.TemporaryDirectory() as directory:
+    root = Path(directory).resolve()
+    target = root / 'output.md'
+    with patch.object(os, 'open', record), patch.object(os, 'replace', replace_closed):
+        write_bytes_atomic(target, b'ordinary output', trust_root=root)
+    assert target.read_bytes() == b'ordinary output'
+"""
+
 class TasksOutputTests(unittest.TestCase):
     """G4 -> Tasks brief -> executor snapshot -> runner publication, on both shipped hosts."""
 
@@ -926,6 +956,12 @@ class TasksOutputTests(unittest.TestCase):
                     self.assertNotIn('tasks.md', report['entries'], 'refused parent must not receive Tasks output')
                 results.append((report['result'], report['published']))
         return results
+
+    def test_unbound_writes_preserve_close_before_rename_on_both_payloads(self):
+        for payload in (REPO / 'speckit-pro', REPO / 'dist/claude/speckit-pro', REPO / 'dist/codex/speckit-pro'):
+            with self.subTest(payload=payload.name):
+                done = run_isolated(payload, UNBOUND_PUBLICATION_PROBE)
+                self.assertEqual(0, done.returncode, done.stdout + done.stderr)
 
     def test_clean_output_publishes_tasks_and_replaces_regular_leaf(self):
         for variant in ('clean', 'existing regular'):
