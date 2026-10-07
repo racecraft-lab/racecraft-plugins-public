@@ -591,6 +591,15 @@ class ComposeReleaseNotesTests(unittest.TestCase):
         self.assertEqual(template.count("```release-note"), 1)
         self.assertIsNone(COMPOSER.extract_release_note(template))
 
+    @inventory_check
+    def test_metadata_dispatch_preserves_body_for_fence_validation(self) -> None:
+        workflow = (REPO_ROOT / ".github/workflows/pr-metadata.yml").read_text(encoding="utf-8")
+        dispatch = workflow.split("  workflow_dispatch:", 1)[1].split("# Top-level:", 1)[0]
+        self.assertIn("      pr_body:", dispatch)
+        self.assertIn("github.event.pull_request.body || inputs.pr_body", workflow)
+        body = "```release-note\nAnchored artifact publication.\n```"
+        self.assertEqual(run_validation(title="fix(core): anchor artifacts", body=body).returncode, 0)
+
     def test_required_check_fails_feat_fix_without_exactly_one_nonempty_block(self) -> None:
         bodies = (
             "",
