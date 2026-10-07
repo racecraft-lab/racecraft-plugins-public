@@ -641,7 +641,7 @@ class PhaseBriefTests(InProjectCase):
                                               "gate", "slices", "waves", "model", "hooks"})
                 self.assertEqual(brief["schema_version"], "phase-brief/v1")
                 self.assertEqual(brief["phase"], phase)
-                self.assertEqual(set(brief["inputs"]), {"workflow_file", "feature_dir", "instruction", "skill", "prompt_section"} | ({"tasks_snapshot", "tasks_output"} if phase == "Tasks" else set()))
+                self.assertEqual(set(brief["inputs"]), {"workflow_file", "feature_dir", "instruction", "skill", "prompt_section"} | ({"tasks_snapshot", "tasks_output", "defer_after_hooks"} if phase == "Tasks" else set()))
                 self.assertEqual(brief["agent"], agent)
                 self.assertEqual(brief["gate"], gate)
                 self.assertEqual(brief["inputs"]["workflow_file"], "docs/workflow.md")
@@ -825,6 +825,12 @@ with tempfile.TemporaryDirectory() as directory, tempfile.TemporaryDirectory() a
                 fired = True
                 move_parent()
             return value
+        real_replace = os.replace
+        def replace_after_move(*args, **kwargs):
+            global fired
+            fired = True
+            move_parent()
+            return real_replace(*args, **kwargs)
         real_open = os.open
         def create_temp(path, flags, *args, **kwargs):
             global fired
@@ -841,13 +847,16 @@ with tempfile.TemporaryDirectory() as directory, tempfile.TemporaryDirectory() a
         with ExitStack() as stack:
             if variant == 'parent during acquisition':
                 stack.enter_context(patch.object(tasks_inputs, 'trusted_open_directory', acquire))
+            if variant == 'parent during rename out-root':
+                stack.enter_context(patch.object(os, 'replace', replace_after_move))
             if 'during temp' in variant:
                 stack.enter_context(patch.object(os, 'open', create_temp))
             result = call('publish-tasks-output', output, 'apply')
         if 'during' in variant:
-            assert fired, 'fault was not exercised' 
+            assert fired, 'fault was not exercised'
         print(json.dumps({'result':result, 'victim':(victim/'tasks.md').read_text(),
                           'published': leaf.read_text() if variant in ('clean', 'existing regular') and leaf.exists() else None,
+                          'deferred_hooks': brief['data']['inputs'].get('defer_after_hooks', False),
                           'entries': sorted(p.name for p in (old if old.exists() else feature).iterdir())
                                      if variant != 'parent file' else []}))
     finally:
@@ -858,6 +867,7 @@ class TasksOutputTests(unittest.TestCase):
     """G4 -> Tasks brief -> executor snapshot -> runner publication, on both shipped hosts."""
 
     def probe(self, variant):
+        results = []
         for host, payload in (('source', REPO / 'speckit-pro'),
                               ('claude', REPO / 'dist/claude/speckit-pro'),
                               ('codex', REPO / 'dist/codex/speckit-pro')):
@@ -865,16 +875,20 @@ class TasksOutputTests(unittest.TestCase):
                 done = run_isolated(payload, TASKS_OUTPUT_PROBE, variant)
                 self.assertEqual(0, done.returncode, done.stderr + done.stdout)
                 report = json.loads(done.stdout)
+                if not variant.startswith('before brief'):
+                    self.assertTrue(report['deferred_hooks'], 'Tasks must defer all after hooks')
                 self.assertEqual('Victim must stay unchanged\n', report['victim'])
                 self.assertFalse(any(name.startswith('.tasks.md.tmp-') for name in report['entries']))
-                if variant.startswith('parent'):
+                if variant.startswith('parent') and 'during rename' not in variant:
                     self.assertNotIn('tasks.md', report['entries'], 'refused parent must not receive Tasks output')
-                yield report['result'], report['published']
+                results.append((report['result'], report['published']))
+        return results
 
     def test_clean_output_publishes_tasks_and_replaces_regular_leaf(self):
         for variant in ('clean', 'existing regular'):
             for result, published in self.probe(variant):
                 self.assertEqual('ok', result['status'])
+                self.assertTrue(result['data']['after_hooks_ready'])
                 self.assertEqual('# Tasks\n\n- [ ] T001 Build the feature\n', published)
 
     def test_output_refuses_each_daybreak_redirect_and_special_file(self):
@@ -891,6 +905,12 @@ class TasksOutputTests(unittest.TestCase):
                 self.assertNotIn('victim', json.dumps(result))
                 self.assertNotIn('original', json.dumps(result))
 
+
+    def test_parent_moved_at_rename_reports_unconfirmed_publication_and_blocks_g5(self):
+        for result, _ in self.probe('parent during rename out-root'):
+            self.assertEqual('expected_failure', result['status'])
+            self.assertEqual({'publication': 'unconfirmed', 'published': 'tasks.md'}, result['data'])
+            self.assertEqual('tasks_output_unconfirmed', result['diagnostics'][0]['code'])
 
     def test_g4_identity_refuses_identical_parent_replacement_before_brief(self):
         for result, _ in self.probe('before brief replacement'):

@@ -6,7 +6,7 @@
       "helper_id": "publish-tasks-output",
       "operation": "publish-tasks-output",
       "modes": ["apply"],
-      "failure_classes": ["tasks_output_unsafe"],
+      "failure_classes": ["tasks_output_unsafe", "tasks_output_unconfirmed"],
       "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/mutation-helpers/requests/publish-tasks-output.json"
     },
     {

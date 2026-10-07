@@ -257,6 +257,7 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
         data = brief_data(phase, workflow, feature, observed_checklist_waves(root, workflow, feature, waves))
         if captured is not None and judged is not None:
             bind_tasks_snapshot(data, captured, judged)
+            data["inputs"]["defer_after_hooks"] = True
             data["inputs"]["tasks_output"] = {"feature_dir": feature,
                 "snapshot_dir": data["inputs"]["tasks_snapshot"]["snapshot_dir"], "feature_identity": identity}
     except G4InputDrift as exc:

@@ -458,6 +458,9 @@ for phase in PHASES starting from first_pending:
        keep domain and Consensus tasks incomplete.
        Keep Consensus items incomplete until this checkpoint succeeds.
     6. Specify, Plan, Checklist, Tasks and Analyze only:
+       Tasks only: publish-tasks-output with brief.inputs.tasks_output unchanged;
+       a non-ok response blocks all after_tasks hooks and G5. On ok with
+       data.after_hooks_ready=true, run mandatory after_tasks hooks once.
        handle optional brief.hooks with event=after_<phase> under the confirmation
        rule in Extension Hook Events; record runs and skips in the decisions list.
        Clarify and Implement only: skip optional hooks; check .specify/extensions.yml for mandatory after_<phase>
@@ -944,6 +947,10 @@ The executor consumes spec.md, plan.md and checklist reports only through
 `brief.inputs.tasks_output` unchanged: the executor generates tasks.md only in
 its snapshot_dir. On successful return, call `publish-tasks-output`, mode apply,
 with `inputs=brief.inputs.tasks_output` before after_Tasks hooks and G5.
+Pass `brief.inputs.defer_after_hooks=true`: the executor defers every
+mandatory and optional after_tasks hook. Only an ok publication with
+`data.after_hooks_ready=true` releases the loaded command's mandatory
+after_tasks hooks to the parent, followed by optional-hook confirmation.
 The runner publishes through the G4-bound directory descriptor. Snapshot
 consumption or publication failure is a blocker; the live feature path is
 never an executor write destination.
@@ -4946,7 +4953,12 @@ Hooks are configured in `.specify/extensions.yml`.
 
 **Who runs a hook.** The loaded Spec Kit command runs the mandatory hooks
 (`optional: false`) of its own `before_` and `after_` events, so for Specify,
-Plan, Checklist, Tasks and Analyze the orchestrator never dispatches one.
+Plan, Checklist and Analyze the orchestrator never dispatches one. Tasks
+runs its mandatory before_tasks hooks in the command, but the runner brief
+sets `defer_after_hooks=true`: the executor defers all after_tasks hooks to
+the parent until publish-tasks-output returns ok with after_hooks_ready=true.
+Then the parent runs mandatory after_tasks hooks once using the loaded
+command's hook instructions, before optional after_tasks suggestions or G5.
 `brief.hooks` lists optional suggestions with their event, optional marker,
 prompt and description. Present only the runner-owned prompt and description,
 along with the validated extension, command and event. Use only runner-listed
@@ -4995,7 +5007,8 @@ error recovery, never by guessing.
 for each phase:
   1. Apply optional-hook confirmation or skip before_<phase> hooks
   2. Spawn subagent for the phase (the loaded command runs its mandatory hooks)
-  3. Receive result
+  3. Receive result; Tasks publishes output and requires after_hooks_ready,
+     then the parent runs deferred mandatory after_tasks hooks
   4. Apply optional-hook confirmation or skip after_<phase> hooks; record runs
      and skips in the decisions list (workflow file for Clarify and Implement)
   5. Validate gate
@@ -5018,14 +5031,14 @@ for each phase:
    and after_implement have hooks. Extensions may register
    hooks for any event. Use `brief.hooks` for optional suggestions;
    project display fields are excluded from confirmation. Inspect
-   `.specify/extensions.yml` only for mandatory Clarify and Implement hooks.
+   `.specify/extensions.yml` only for mandatory Clarify, Implement and deferred after_tasks hooks.
 
 **Hook `optional` field behavior:**
 - `optional: true` (also the default when omitted) — require explicit
   operator confirmation at the registered event window. If the host has no
   usable confirmation tool or the run is unattended, skip and record why.
 - `optional: false` — The hook is mandatory. The loaded command runs it;
-  the orchestrator runs it only for Clarify and Implement.
+  the orchestrator runs it for Clarify, Implement and deferred after_tasks hooks.
 - `enabled: false` — The hook is disabled. Skip it entirely.
 
 <!-- host:claude: Claude's preset execution, PR creation, and workflow update sections -->

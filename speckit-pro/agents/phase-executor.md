@@ -79,8 +79,10 @@ only at `brief.inputs.tasks_output.snapshot_dir`/tasks.md. The parent passes
 `brief.inputs.tasks_output` unchanged; treat `brief.inputs.feature_dir` as
 context, never a Tasks write destination. Override any command script that
 writes the live feature tree. Return completion to the parent for runner
-publication before G5; a command that cannot honor the snapshot output is a
-blocker. Other allowed planning inputs retain their existing paths.
+publication before G5. Require `brief.inputs.defer_after_hooks=true`: defer
+all after_tasks hooks, including mandatory hooks, to the parent after confirmed
+publication. This overrides the loaded command's after-hook step. A command
+that cannot honor snapshot output or hook deferral is a blocker. Other allowed planning inputs retain their existing paths.
 
 Use the parent's `PROJECT_COMMANDS` and `PRESET_CONVENTIONS` from the
 `g0-setup` probe reports as supplied in the workflow prompt.

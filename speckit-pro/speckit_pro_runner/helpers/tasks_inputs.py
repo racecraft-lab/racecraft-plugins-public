@@ -116,6 +116,7 @@ def check_tasks_parent(feature: Path, root: Path, identity: dict[str, int]) -> N
 
 def run_publish_tasks_output_helper(entry: Any, request: Any) -> dict[str, Any]:
     """Publish only snapshot tasks.md through the G4-bound parent, using the atomic writer."""
+    published = False
     try:
         with g4_input_kind("tasks.md"):
             inputs = require_fields(request.inputs, {"feature_dir", "snapshot_dir", "feature_identity"}, "Tasks output")
@@ -162,10 +163,15 @@ def run_publish_tasks_output_helper(entry: Any, request: Any) -> dict[str, Any]:
                 result = write_bytes_atomic(feature / "tasks.md", content, trust_root=root,
                                             expected_snapshot=expected, binding=WriteBinding(parent, True,
                                                 lambda: check_tasks_parent(feature, root, identity)))
+            published = True
             check_tasks_parent(feature, root, identity)
     except (G4InputDrift, OSError, ValueError) as exc:
         kind = str(exc) if isinstance(exc, G4InputDrift) else "Tasks output kind is unsafe, changed or unreadable"
+        if published:
+            return response("expected_failure", request_id=request.request_id,
+                            diagnostics=[diagnostic("tasks_output_unconfirmed", kind)],
+                            data={"publication": "unconfirmed", "published": "tasks.md"})
         return response("input_error", request_id=request.request_id,
                         diagnostics=[diagnostic("tasks_output_unsafe", kind)])
     return response("ok", request_id=request.request_id,
-                    data={"published": "tasks.md", "digest": result["digest"]})
+                    data={"published": "tasks.md", "digest": result["digest"], "after_hooks_ready": True})

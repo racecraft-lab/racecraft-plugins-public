@@ -1109,7 +1109,11 @@ returned text. Pass `brief.inputs.tasks_output` unchanged. The executor writes
 tasks.md only into its snapshot_dir. After a successful executor return, both
 hosts call `helper_id=publish-tasks-output operation=publish-tasks-output mode=apply`
 with `inputs=brief.inputs.tasks_output`, before after_Tasks hooks or G5.
-Only successful publication permits G5. A refusal is a blocker under the
+Pass `brief.inputs.defer_after_hooks=true` to the executor; it defers every
+after_tasks hook. On successful publication with `data.after_hooks_ready=true`,
+run the loaded command's mandatory after_tasks hooks from the parent, then
+handle optional after_tasks suggestions under the existing confirmation rule.
+Only successful publication permits hooks and G5. A refusal is a blocker under the
 existing repair policy; retain the snapshot for repair and report only its
 file-kind diagnostic. The runner owns publication into the G4-bound feature directory.
 Missing, malformed or changed inputs return no dispatch facts; rerun
@@ -1213,7 +1217,9 @@ so each domain still runs exactly twice. The runner compares disk content, not
 attribution, so no label can narrow or suppress verification.
 
 Hooks: a loaded planning command runs its own mandatory hooks (`optional:
-false`), so the orchestrator never dispatches one. For optional hooks,
+false`), except Tasks defers mandatory after_tasks hooks to the orchestrator
+until publish-tasks-output confirms publication. Other mandatory planning
+hooks stay with the loaded command. For optional hooks,
 handle optional brief.hooks with event=before_<phase> before dispatch and
 handle optional brief.hooks with event=after_<phase> after completion.
 Present only the runner-owned prompt and description, along with the validated extension,
@@ -1308,7 +1314,9 @@ for phase in PHASES starting from first_pending:
        Other phases: run consensus (Clarify/Analyze only) — see Rule 6
     5. Tasks only: call publish-tasks-output, mode apply, with
        inputs=brief.inputs.tasks_output unchanged. A refusal blocks hooks,
-       G5 and phase completion; use the existing repair policy.
+       G5 and phase completion; use the existing repair policy. On ok with
+       data.after_hooks_ready=true, run mandatory after_tasks hooks once from
+       the parent using the loaded command's hook instructions.
        Specify, Plan, Checklist, Tasks and Analyze only:
        handle optional brief.hooks with event=after_<phase> under the confirmation
        rule above; record runs and skips in the decisions list.
