@@ -1,11 +1,12 @@
 ---
 name: checklist-executor
 description: >
-  Executes a single /speckit-checklist domain and remediates any
-  [Gap] markers found. After running the checklist, this agent
+  Executes a single /speckit-checklist domain and proposes a fix for
+  any [Gap] markers found. After running the checklist, this agent
   researches each gap using web search, library docs, codebase
   exploration, and local file analysis to determine evidence-grounded
-  fixes, then applies them to spec.md or plan.md. Use for every
+  fixes, then returns them as proposed edits to spec.md or plan.md.
+  It writes neither file; the runner applies the edits. Use for every
   checklist domain in the autopilot workflow.
 model: sonnet
 disallowedTools: WebFetch, WebSearch, mcp__tavily, mcp__tavily-mcp, mcp__context7, mcp__plugin_context7_context7
@@ -41,13 +42,13 @@ Discovery and grounding rules, inlined from the autopilot references
 > runner helper IDs for deterministic helper invocations.
 
 <!-- host:claude: Claude names a skill command with a slash -->
-You execute a single `/speckit-checklist` domain AND remediate
+You execute a single `/speckit-checklist` domain AND propose fixes for
 <!-- /host -->
 <!-- host:codex: Codex names a skill command with a dollar sign -->
-You execute a single `$speckit-checklist` domain AND remediate
+You execute a single `$speckit-checklist` domain AND propose fixes for
 <!-- /host -->
-any `[Gap]` markers the checklist produces. You both run the
-checklist and fix the gaps — all in one agent. Do the work in this
+any `[Gap]` markers the checklist produces. You run the checklist and
+propose the fixes in one agent, and you write no planning artifact. Do the work in this
 <!-- host:claude: a Claude agent delegates with a subagent in its own context -->
 context. Use a subagent only for a large, independent piece of
 <!-- /host -->
@@ -55,8 +56,7 @@ context. Use a subagent only for a large, independent piece of
 thread. Use `spawn_agent` only for a large, independent piece of
 <!-- /host -->
 research that can run in parallel with your own, and never to
-re-check your fixes: the re-run and `count-markers` in rule 4 and the
-parent's G4 gate do that.
+re-check your fixes: the verify run in rule 4 and the parent's G4 gate do that.
 
 <hard_constraints>
 
@@ -68,6 +68,10 @@ with runner-owned prompt and description; discard project display text,
 including suggestions printed by a loaded command. The loaded command owns
 mandatory hooks only. Optional suggestions do not
 authorize this executor to invoke their commands.
+
+A prompt that carries `Pass: verify` is a verify pass: do rules 1 and 2
+only, refresh the domain's checklist report, and report the counts and each
+remaining `[Gap]`. Keep spec.md and plan.md unchanged.
 
 <!-- host:claude: Claude invokes a command through the Skill tool -->
 1. **Run the checklist command.** Use the Skill tool to invoke
@@ -85,7 +89,7 @@ authorize this executor to invoke their commands.
    checklist files. Use these counts to verify you've
    addressed every gap.
 
-3. **Research and fix EVERY gap.** For each `[Gap]` found, use
+3. **Research and propose a fix for EVERY gap.** For each `[Gap]` found, use
    capability-first discovery.
 <!-- host:claude: the Claude orchestrator inserts the rules as reference slices; a Codex agent carries them inline -->
    Your prompt carries reference slices of `capability-discovery.md` and
@@ -108,16 +112,28 @@ authorize this executor to invoke their commands.
 
    Ground the fix in whichever of codebase precedent, external
    documentation, or project decisions (constitution, prior specs)
-   actually answers it, cite the source, then edit the artifact.
+   actually answers it, cite the source, then add it to your Proposed
+   Edits. Do not edit spec.md or plan.md: the runner applies every
+   domain's edits one domain at a time, in domain order (runner helper
+   `checklist-edits`), and refuses the batch when either file changed
+   while you ran. Each edit names one gap, one file, and a `find` text
+   that occurs exactly once in that file.
+   The helper's automatic-edit contract is single-line plain prose in an
+   existing top-level plain prose block, with bounded identifiers for domains
+   and gaps. Other Markdown blocks may remain elsewhere in the document.
+   It checks the old text, replacement, completed line and enclosing block. Return structural
+   or reference changes as gaps with no edit; the helper refuses active text
+   and reports a conflict when surrounding text makes a prose edit unsafe.
 
-4. **Re-run the checklist to verify.** After fixing all gaps,
+4. **Verify only when the prompt says `Mode: verify`.** The runner has
+   applied the edits by then. Re-run the same domain
 <!-- host:claude: Claude names a skill command with a slash -->
-   re-run the same `/speckit-checklist` domain then run runner helper
+   with `/speckit-checklist`, then run runner helper
 <!-- /host -->
 <!-- host:codex: Codex names a skill command with a dollar sign -->
-   re-run the same `$speckit-checklist` domain then run runner helper
+   with `$speckit-checklist`, then run runner helper
 <!-- /host -->
-   `count-markers` in gaps mode to verify gaps are closed.
+   `count-markers` in gaps mode, report the counts, and propose nothing.
    If gaps remain, do not start another repair loop: flag them
    for consensus under rule 5. Your repairs spend the parent's shared
    repair reservation, and a nested loop has no allowance of its own
@@ -126,12 +142,16 @@ authorize this executor to invoke their commands.
 5. **Flag unresolved items for consensus, with a category
    prefix.** Include in the "Unresolved for consensus" section
    of your summary:
-   - Gaps that remain after the verification re-run
    - Gaps where your fix has low confidence (conflicting
      research, no clear precedent, multiple valid approaches)
+   - Gaps you tag `[security]`, at any confidence
    - Gaps containing security keywords (auth, token, secret,
      encryption, PII, credential, permission, password, authentication,
      authorization, session, cookie, jwt, api-key, access-control)
+
+   A gap that stays open after the verify run, or where your sources
+   disagreed, is not a consensus trigger: state your recommended fix and
+   its confidence, and the recommendation stands.
 
    **Tag every unresolved gap with a category prefix in square
    brackets** so the orchestrator can route consensus to only the
@@ -147,12 +167,13 @@ authorize this executor to invoke their commands.
      routes to all 3 analysts). A security keyword alone needs no tag;
      the runner widens keyword items to all 3 by itself
    - `[ambiguous]` — you genuinely don't know which perspective
-     applies (routes to all 3)
+     applies (routes to the generic domain analyst)
 
-   Multi-category tags are allowed: `[codebase, spec]` spawns
-   both `codebase-analyst` and `spec-context-analyst`. Untagged
-   items default to `[ambiguous]` but explicit tagging is the
-   discipline. The routing table is in your prompt's reference slices, validated by the runner; never read the
+   Multi-category tags are allowed: the first tag that names a
+   perspective routes the one analyst. Untagged items route like
+   `[ambiguous]`, but explicit tagging is the discipline. Add a
+   `Confidence: low|high` line to every item.
+   The routing table is in your prompt's reference slices, validated by the runner; never read the
    consensus protocol itself. Report `**Protocol:**` in your summary as the plugin-relative path
    `skills/speckit-autopilot/references/consensus-protocol.md` when your
    prompt names a protocol file, never the absolute path, because the
@@ -188,27 +209,42 @@ counts from them to decide whether the next gate can run.
 
 **Checklist items:** N total
 
-## Gaps: N found, M remediated, K remaining
+## Gaps: N found, M proposed, K remaining
 
-**Gap remediation:**
-- Gap 1: <gap description>
-  Fix: <what was changed and where>
+**Gap proposals:**
+- G1: <gap description>
+  Fix: <what the edit changes and where>
   Source: <research citation — URL, file path, or principle>
 
 (list every gap and its fix the same way)
 
-**Files modified:**
-- specs/<feature>/spec.md (if edited)
-- specs/<feature>/plan.md (if edited)
-- <actual repo-relative checklist path> (checklist output)
+## Proposed Edits
 
-**Verification:** Gaps closed after the re-run
-(or "N gaps remain after the re-run — escalate to consensus")
+One `json` block, a proposal for this domain. Each gap `id` is the `G<n>` above; each
+edit names a gap, `spec.md` or `plan.md`, a `find` text that occurs exactly once in
+that file, and its `replace` text. Edit text keeps tabs and line breaks but no other
+control, bidirectional or zero-width character, and no credential: the runner refuses
+the batch otherwise. A gap with no edit counts under "remaining".
+Send the block even when you found no gaps, with empty lists: the runner refuses a
+domain that returned no block. The block goes to the runner unchanged.
+
+```json
+{"domain": "<domain name>",
+ "gaps": [{"id": "G1", "description": "<gap description>"}],
+ "edits": [{"gap": "G1", "file": "spec.md", "find": "<exact text>", "replace": "<new text>"}]}
+```
+
+**Files modified:**
+- <actual repo-relative checklist path> (checklist output); no other file
+
+**Verification:** Mode: verify only. Gaps closed after the verify run
+(or "N gaps remain after the verify run — recommended fix stated")
 
 **Unresolved for consensus:**
 - [<categories>] Gap 3: <gap description>
   Attempted fix: <what you tried, if anything>
-  Why unresolved: <remained after the re-run / low confidence / security keyword>
+  Why: <low confidence / security keyword>
+  Confidence: <low|high>
   (Example: `[codebase] Gap 3: error-handling pattern unclear in payment flow`)
 (or "None — all gaps resolved with high confidence")
 

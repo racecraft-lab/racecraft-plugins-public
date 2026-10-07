@@ -1923,8 +1923,8 @@ def reviewability_preset_state(root: Path, repo_root: Path) -> dict[str, Any]:
     """Whether the project has the reviewability preset, and the `specify` arguments that add it.
 
     `installed` requires coherent registry evidence and the exact shipped preset bytes.
-    `missing` supplies add_args; `unavailable` means unsafe or unavailable evidence,
-    or a stale registration that needs repair before Spec Kit will accept add.
+    `missing` supplies add_args; `upgrade` supplies upgrade_args for an exact known
+    shipped version; `unavailable` means unsafe, unknown or unavailable evidence.
     """
     return reviewability_preset.state(root, repo_root)
 
@@ -3505,7 +3505,7 @@ def consensus_category_tags(line: str) -> list[str]:
 
     An item may arrive as a bare line or as a list item, so one leading bullet
     or ordinal is dropped before the prefix is read. Anything else in front of
-    the bracket means there is no prefix, which routes to all three analysts.
+    the bracket means there is no prefix, which routes to the generic domain analyst.
     """
     candidate = CONSENSUS_LIST_MARKER_RE.sub("", line, count=1)
     match = CONSENSUS_PREFIX_RE.match(candidate)
@@ -3519,56 +3519,65 @@ def consensus_category_tags(line: str) -> list[str]:
     return tags
 
 
-def parse_consensus_categories(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
-    """The Tier A routing table from consensus-protocol.md, executed.
+def consensus_route(inputs: dict[str, Any]) -> dict[str, Any]:
+    """Plan-stage consensus tier for one executor item (ADR 0022), executed.
 
-    Every widening rule fails toward all three analysts, so a tag the table does
-    not define costs a wider fan-out and never a narrower one. The table defines
-    `[security]` by the keywords the item text carries, so the text is scanned
-    too: an executor that tags a keyword-bearing item narrowly still gets all
-    three, which is the defense in depth the reference promises.
+    Three tiers, decided in this order:
+    - `security`: an explicit `[security]` tag or a Security Keyword in the item
+      text, whatever the executor's confidence. All three analysts, every round.
+    - `low_confidence`: the executor doubts its own answer. One analyst, picked by
+      the first tag that names a perspective, else the generic domain analyst. No
+      synthesizer: a high-confidence analyst answer replaces the recommendation.
+    - `recommendation`: every other item. No analyst; the recommendation stands.
 
-    `security_route` says which security rule widened the item: `tag` for an
-    explicit `[security]` tag, `keyword` for a keyword in the text alone, and
-    None otherwise. The synthesizer keeps a tag at unanimous agreement and lets
-    a keyword-only route use the item's own rule when no analyst finds security
-    content in it.
+    `security_route` says which security rule fired: `tag` for an explicit tag,
+    `keyword` for a keyword in the text alone, None otherwise. The synthesizer keeps
+    a tag at unanimous agreement and lets a keyword-only route use the item's own
+    rule when no analyst finds security content in it. A missing `confidence` counts
+    as `low`, so an item never skips its second opinion by omission.
+
+    Raises ValueError when `confidence` is neither low nor high.
     """
+    confidence = "low" if inputs.get("confidence") is None else str(inputs["confidence"]).strip().casefold()
+    if confidence not in ("low", "high"):
+        raise ValueError("confidence must be low or high")
     line = str(inputs.get("line") or "")
     tags = consensus_category_tags(line)
-    unknown = next((tag for tag in tags if tag not in CONSENSUS_ROUTED_ANALYSTS), None)
     keyword = CONSENSUS_SECURITY_RE.search(line)
     security_route: str | None = None
     if "security" in tags:
         security_route = "tag"
-        reason = "security tag: all three analysts (defense in depth)"
+        tier, reason = "security", "security tag: all three analysts (defense in depth)"
     elif keyword is not None:
         security_route = "keyword"
-        reason = f"security keyword {keyword.group(0).casefold()} in item text: all three analysts (defense in depth)"
-    elif not tags:
-        reason = "no category prefix: all three analysts (safe default)"
-    elif "ambiguous" in tags:
-        reason = "ambiguous tag: all three analysts (safe default)"
-    elif unknown is not None:
-        reason = f"unknown category tag {unknown}: all three analysts (safe default)"
+        tier, reason = "security", f"security keyword {keyword.group(0).casefold()} in item text: all three analysts (defense in depth)"
+    elif confidence == "high":
+        tier, reason = "recommendation", "high confidence: the executor's recommendation stands"
     else:
-        routed = {CONSENSUS_ROUTED_ANALYSTS[tag] for tag in tags}
-        analysts = [name for name in CONSENSUS_ALL_ANALYSTS if name in routed]
-        return make_result(
-            json_text(
-                {"tags": tags, "analysts": analysts, "reason": "category-routed dispatch", "security_route": None}
-            )
-        )
-    return make_result(
-        json_text(
-            {
-                "tags": tags,
-                "analysts": list(CONSENSUS_ALL_ANALYSTS),
-                "reason": reason,
-                "security_route": security_route,
-            }
-        )
-    )
+        tier = "low_confidence"
+        tag = next((tag for tag in tags if tag in CONSENSUS_ROUTED_ANALYSTS), "domain")
+        reason = f"low confidence: one {tag} analyst" + ("" if tag in tags else " (no usable tag: generic domain)")
+    analysts = {
+        "security": list(CONSENSUS_ALL_ANALYSTS),
+        "low_confidence": [CONSENSUS_ROUTED_ANALYSTS[tag]] if tier == "low_confidence" else [],
+        "recommendation": [],
+    }[tier]
+    # Security resolution remains with its consensus rounds. For other tiers,
+    # only an explicit high-confidence second opinion replaces the executor.
+    analyst_confidence = inputs.get("analyst_confidence")
+    answer_source = None if tier == "security" else "executor"
+    if tier == "low_confidence" and isinstance(analyst_confidence, str) and analyst_confidence.strip().casefold() == "high":
+        answer_source = "analyst"
+    return {"tags": tags, "tier": tier, "analysts": analysts, "reason": reason, "security_route": security_route,
+            "answer_source": answer_source}
+
+
+def parse_consensus_categories(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+    """The `parse-consensus-categories` helper: one item's tier as JSON; the rules live in consensus_route."""
+    try:
+        return make_result(json_text(consensus_route(inputs)))
+    except ValueError as exc:
+        return make_result(json_text({"error": str(exc)}), exit_code=2)
 
 
 CRL_HEADING = "Consensus Resolution Log"

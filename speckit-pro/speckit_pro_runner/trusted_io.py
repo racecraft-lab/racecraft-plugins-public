@@ -525,12 +525,24 @@ def descriptor_read_supported() -> bool:
 
 
 def tree_entry_signature(info: os.stat_result) -> tuple[int, ...]:
-    """Identity and mutation evidence for a captured filesystem entry."""
+    """Identity and mutation evidence for a captured filesystem entry.
+
+    A directory's times, size and link count also move when an ignored bytecode cache appears in it,
+    so a directory is compared by identity and mode here, and by its captured entries in read_tree_directory.
+    """
+    if stat.S_ISDIR(info.st_mode):
+        return (info.st_dev, info.st_ino, info.st_mode)
     return (info.st_dev, info.st_ino, info.st_mode, info.st_nlink,
             info.st_size, info.st_mtime_ns, info.st_ctime_ns)
 
 
-def read_tree_entry(parent_fd: int, name: str, expected: os.stat_result | None = None) -> dict[Path, tuple[int, bytes | None]]:
+def captured_tree_names(fd: int) -> list[str]:
+    """A directory's entries a tree snapshot captures: everything but bytecode caches."""
+    return sorted(name for name in os.listdir(fd) if name != "__pycache__" and not name.endswith(".pyc"))
+
+
+def read_tree_entry(parent_fd: int, name: str, expected: os.stat_result | None = None,
+                    *, signatures: dict[Path, tuple[int, ...]] | None = None) -> dict[Path, tuple[int, bytes | None]]:
     """Read one entry through its parent descriptor; reject links and changing evidence."""
     before = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
     if expected is not None and tree_entry_signature(before) != tree_entry_signature(expected):
@@ -545,7 +557,7 @@ def read_tree_entry(parent_fd: int, name: str, expected: os.stat_result | None =
         if tree_entry_signature(before) != tree_entry_signature(os.fstat(fd)):
             raise OSError("tree entry changed while opening")
         if stat.S_ISDIR(before.st_mode):
-            captured = read_tree_directory(fd)
+            captured = read_tree_directory(fd, signatures=signatures)
         else:
             if before.st_nlink != 1:
                 raise OSError("hard-linked tree file refused")
@@ -555,19 +567,30 @@ def read_tree_entry(parent_fd: int, name: str, expected: os.stat_result | None =
         named = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
         if tree_entry_signature(before) != tree_entry_signature(after) or tree_entry_signature(after) != tree_entry_signature(named):
             raise OSError("tree entry changed while reading")
+        if signatures is not None:
+            signatures[Path()] = tree_entry_signature(before)
         return captured
     finally:
         os.close(fd)
 
 
-def read_tree_directory(fd: int) -> dict[Path, tuple[int, bytes | None]]:
+def read_tree_directory(fd: int, *, signatures: dict[Path, tuple[int, ...]] | None = None) -> dict[Path, tuple[int, bytes | None]]:
     """Capture a directory without ever traversing a child pathname."""
     captured: dict[Path, tuple[int, bytes | None]] = {Path(): (stat.S_IMODE(os.fstat(fd).st_mode), None)}
-    for name in sorted(os.listdir(fd)):
-        if name == "__pycache__" or name.endswith(".pyc"):
-            continue
-        for relative, entry in read_tree_entry(fd, name).items():
+    names = captured_tree_names(fd)
+    immediate_signatures = {}
+    for name in names:
+        immediate_signatures[name] = tree_entry_signature(os.stat(name, dir_fd=fd, follow_symlinks=False))
+        child_signatures: dict[Path, tuple[int, ...]] = {}
+        for relative, entry in read_tree_entry(fd, name, signatures=child_signatures).items():
             captured[Path(name) / relative] = entry
+        if signatures is not None:
+            signatures.update((Path(name) / relative, signature) for relative, signature in child_signatures.items())
+    # Every captured entry must still be there, unchanged, with nothing added beside it.
+    if captured_tree_names(fd) != names or any(
+            tree_entry_signature(os.stat(name, dir_fd=fd, follow_symlinks=False)) != signature
+            for name, signature in immediate_signatures.items()):
+        raise OSError("tree directory changed while reading")
     return captured
 
 
@@ -584,7 +607,13 @@ def trusted_tree_snapshot(path: Path, repo_root: Path, *, expected: os.stat_resu
         raise OSError("unsafe tree parent")
     try:
         before = os.fstat(parent_fd)
-        captured = read_tree_entry(parent_fd, path.name, expected)
+        signatures: dict[Path, tuple[int, ...]] = {}
+        captured = read_tree_entry(parent_fd, path.name, expected, signatures=signatures)
+        checked_signatures: dict[Path, tuple[int, ...]] = {}
+        checked = read_tree_entry(parent_fd, path.name, expected, signatures=checked_signatures)
+        # A later sibling can change a subtree whose local checks already completed.
+        if signatures != checked_signatures or captured != checked:
+            raise OSError("tree changed after capture")
         check_fd = trusted_open_directory(path.parent, repo_root)
         if check_fd is None:
             raise OSError("tree parent changed while reading")

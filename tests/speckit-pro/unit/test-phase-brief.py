@@ -6,7 +6,6 @@ from itertools import product
 import json
 import os
 import re
-import subprocess
 import sys
 import tempfile
 import tomllib
@@ -18,10 +17,11 @@ from unicodedata import category
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO / "speckit-pro"), str(REPO / "tests/speckit-pro/lib")]
-from speckit_pro_runner.helpers import phase_brief
+from speckit_pro_runner.helpers import dispatch_waves, phase_brief
 from speckit_pro_runner.helpers.registry import dispatch_helper  # noqa: E402
 from test_result import run_counted  # noqa: E402
 from host_skill_views import host_skill_root  # noqa: E402
+from isolated_child import run_python  # noqa: E402
 
 
 def dispatch_brief(inputs, request_id=None):
@@ -64,14 +64,31 @@ def extensions_yml(*entries):
         "\n".join([head, *rest]) for head, rest in events.items()) + "\n"
 
 
+# The env.* names the hook-condition fixtures below read; no other parent variable reaches a child.
+HOOK_CONDITION_KEYS = ("SPK_CONSENT_MISSING", "SPK_CONSENT_MODE", "SPK_CONSENT_SET", "SPK_DISPLAY_NEVER_SET",
+                       "SPK_HOOK_MODE", "SPK_HOOK_SET", "SPK_HOOK_UNSET")
+SELECT_RUNNER = "import sys\nsys.path.insert(0, sys.argv.pop(1))\n"
+RUN_RUNNER = "import runpy\nrunpy.run_module('speckit_pro_runner', run_name='__main__', alter_sys=True)\n"
+
+
+def run_isolated(runner, program, *args, cwd=None, **kwargs):
+    """Run `program` in a child that imports only the selected runner and the standard library.
+
+    The shared helper starts `python -I` with a minimal environment, so neither a checkout- or
+    project-root module nor an inherited PYTHON* variable reaches the child. Of the parent's
+    other variables, only the HOOK_CONDITION_KEYS the fixtures set are forwarded.
+    """
+    conditions = {key: os.environ[key] for key in HOOK_CONDITION_KEYS if key in os.environ}
+    return run_python(["-c", SELECT_RUNNER + program, str(runner), *args], cwd=cwd, env_extra=conditions, **kwargs)
+
+
 def payload_briefs(inputs, include_status=False):
     """The brief each shipped payload returns, run from the current project directory."""
     request = {"schema_version": "1.0", "helper_id": "phase-brief", "operation": "phase-brief", "mode": "read_only", "inputs": inputs}
     reports = []
     for host in ("claude", "codex"):
         payload = REPO / "dist" / host / "speckit-pro"
-        done = subprocess.run([sys.executable, "-m", "speckit_pro_runner"], cwd=Path.cwd(), env={**os.environ, "PYTHONPATH": str(payload)},
-                              input=json.dumps(request), text=True, capture_output=True, check=False)
+        done = run_isolated(payload, RUN_RUNNER, cwd=Path.cwd(), input=json.dumps(request))
         if done.returncode and not include_status:
             raise AssertionError(done.stderr + done.stdout)
         report = json.loads(done.stdout)
@@ -95,7 +112,7 @@ def reference_probe(root, references, cases):
 import json, sys, tempfile
 from pathlib import Path
 from types import SimpleNamespace
-from speckit_pro_runner.helpers import phase_brief
+from speckit_pro_runner.helpers import dispatch_waves, phase_brief
 from speckit_pro_runner.helpers.registry import dispatch_helper
 references, cases = json.load(sys.stdin)
 reports = []
@@ -119,9 +136,8 @@ with tempfile.TemporaryDirectory() as directory:
         reports.append(report)
 print(json.dumps(reports))
 '''
-    done = subprocess.run([sys.executable, "-c", program], cwd=root,
-                          env={**os.environ, "PYTHONPATH": str(root)},
-                          input=json.dumps([references, cases]), text=True, capture_output=True, check=False)
+    with project() as cwd:  # dispatch needs a project root; the throwaway one holds no code
+        done = run_isolated(root, program, cwd=cwd, input=json.dumps([references, cases]))
     if done.returncode:
         raise AssertionError(done.stderr + done.stdout)
     return json.loads(done.stdout)
@@ -214,16 +230,106 @@ for case in json.load(sys.stdin):
             os.chdir(previous)
 print(json.dumps(reports))
 '''
-    done = subprocess.run([sys.executable, "-c", program], cwd=runner,
-                          env={**os.environ, "PYTHONPATH": str(runner)}, input=json.dumps(cases),
-                          text=True, capture_output=True, check=False)
+    # Release regeneration replaces runner directories, and a checkout root may hold
+    # importable modules; the child starts in an empty directory with only `runner` selected.
+    done = run_isolated(runner, program, input=json.dumps(cases))
     if done.returncode:
         raise AssertionError(done.stderr + done.stdout)
     return json.loads(done.stdout)
 
 
+SHADOW_KINDS = ("runner", "json", "unittest")
+SHADOW_FORMS = ("regular", "symlink", "hard_link", "rename")
+
+
+def plant_shadow(root, store, kind, form):
+    """Place one contributor-controlled module at `root`; any import of it writes the returned marker."""
+    marker = store / "marker"
+    stamp = f"open({str(marker)!r}, 'a').write({kind!r})\n"
+    files = {"runner": {"speckit_pro_runner/__init__.py": stamp,
+                        "speckit_pro_runner/__main__.py": stamp + "print('{\"status\": \"checkout-shadow\"}')\n",
+                        "speckit_pro_runner/helpers/__init__.py": stamp,
+                        "speckit_pro_runner/helpers/registry.py":
+                            stamp + "def dispatch_helper(request):\n    return {'status': 'checkout-shadow'}\n"},
+             "json": {"json.py": stamp},
+             "unittest": {"unittest/__init__.py": stamp}}[kind]
+    top = next(iter(files)).split("/")[0]
+    source = {"regular": root, "rename": root / ".staged"}.get(form, store / "shadow")
+    for name, body in files.items():
+        (source / name).parent.mkdir(parents=True, exist_ok=True)
+        (source / name).write_text(body, encoding="utf-8")
+    if form == "rename":
+        (source / top).rename(root / top)
+    elif form == "symlink":
+        (root / top).symlink_to(source / top, target_is_directory=(source / top).is_dir())
+    elif form == "hard_link":
+        for name in files:
+            (root / name).parent.mkdir(parents=True, exist_ok=True)
+            os.link(source / name, root / name)
+    return marker
+
+
+class ChildImportIsolationTests(unittest.TestCase):
+    """A checkout- or project-root module never shadows the selected runner or the standard library."""
+
+    def test_consent_probe_ignores_checkout_root_modules_for_every_host(self):
+        case = {"phase": "Plan", "text": extensions_yml(hook("before_plan", "speckit.safe.run"))}
+        for (host, runner), kind, form in product(RUNNER_ROOTS, SHADOW_KINDS, SHADOW_FORMS):
+            with self.subTest(host=host, kind=kind, form=form), tempfile.TemporaryDirectory() as directory:
+                checkout, store = Path(directory) / "checkout", Path(directory) / "store"
+                checkout.mkdir()
+                store.mkdir()
+                marker = plant_shadow(checkout, store, kind, form)
+                with patch.dict(globals(), {"REPO": checkout}), patch.dict(os.environ, {"PYTHONPATH": str(checkout)}):
+                    reports = consent_probe(runner, [case])
+                self.assertFalse(marker.exists(), "checkout-root module executed")
+                self.assertEqual(reports[0]["result"]["status"], "ok", reports)
+                self.assertEqual(reports[0]["result"]["data"]["hooks"][0]["command"], "speckit.safe.run")
+
+    def test_children_receive_no_python_environment(self):
+        hostile = {"PYTHONPATH": str(REPO), "PYTHONHOME": str(REPO), "PYTHONSTARTUP": str(REPO / "startup.py"),
+                   "PYTHONSAFEPATH": "", "UNRELATED_SECRET": "review-sentinel",
+                   "SPK_UNRELATED_SECRET": "review-sentinel", "SPK_HOOK_SET": "1"}
+        with patch.dict(os.environ, hostile):
+            done = run_isolated(RUNNER_ROOTS[0][1], "import json, os\nprint(json.dumps(dict(os.environ)))\n")
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertNotIn("review-sentinel", done.stdout)
+        names = json.loads(done.stdout)
+        self.assertEqual([name for name in names if name.upper().startswith("PYTHON")], [])
+        self.assertEqual([name for name in names if name.startswith("SPK_")], ["SPK_HOOK_SET"])
+
+    def test_hook_condition_allowlist_names_exactly_the_fixture_variables(self):
+        source = Path(__file__).read_text(encoding="utf-8")
+        self.assertEqual(sorted(HOOK_CONDITION_KEYS), sorted(set(re.findall(r"env\.(SPK_[A-Z_]+)", source))))
+
+    def test_payload_hosts_ignore_project_root_modules(self):
+        inputs = {"phase": "Plan", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
+        for kind, form in product(SHADOW_KINDS, SHADOW_FORMS):
+            with (self.subTest(kind=kind, form=form), tempfile.TemporaryDirectory() as directory,
+                  project() as root):
+                marker = plant_shadow(root, Path(directory), kind, form)
+                reports = payload_briefs(inputs, include_status=True)
+                self.assertFalse(marker.exists(), "project-root module executed")
+                self.assertEqual([report["status"] for report in reports], ["ok", "ok"], reports)
+
+
 class OptionalHookDisplayBoundaryTests(unittest.TestCase):
     """Project display text never enters an execute-capable confirmation surface."""
+
+    def test_payload_refresh_cannot_delete_probe_working_directory(self):
+        for host in ("claude", "codex"):
+            with self.subTest(host=host), tempfile.TemporaryDirectory() as directory:
+                runner = Path(directory) / host
+                helpers = runner / "speckit_pro_runner/helpers"
+                helpers.mkdir(parents=True)
+                (helpers / "registry.py").write_text(
+                    "import shutil\nfrom pathlib import Path\n"
+                    "shutil.rmtree(Path(__file__).resolve().parents[2])\n"
+                    "def dispatch_helper(request):\n    return {'status': 'ok'}\n",
+                    encoding="utf-8",
+                )
+                reports = consent_probe(runner, [{"phase": "Plan", "text": ""}] * 2)
+                self.assertEqual(reports, [{"result": {"status": "ok"}, "opened": False}] * 2)
 
     def assert_fixed_consent(self, report, event, command="speckit.safe.run"):
         result = report["result"]
@@ -478,6 +584,237 @@ class PhaseBriefTests(InProjectCase):
                 self.assertEqual(bool(brief["slices"]), agent in SLICE_AGENTS)
 
 
+class PhaseBriefWaveTests(InProjectCase):
+    """Dispatch waves (ADR 0018, P4): the agents a host launches together, then the next wave."""
+
+    BRIEF = {"workflow_file": "docs/workflow.md", "feature_dir": "specs/example", "max_agents": 20}
+    ANALYSTS = ("codebase-analyst", "spec-context-analyst", "domain-researcher")
+    ITEMS = (
+        {"line": "[security] Q1: where do tokens live?", "confidence": "high"},
+        {"line": "[codebase] Q2: reuse the batch helper?", "confidence": "low"},
+        {"line": "[domain] Q3: which retry limit?", "confidence": "high"},
+        {"line": "[spec, domain] Q4: which story owns this?"},
+    )
+
+    def brief(self, phase, **extra):
+        return dispatch_brief({"phase": phase, **self.BRIEF, **extra})
+
+    def waves(self, phase, **extra):
+        result = self.brief(phase, **extra)
+        self.assertEqual(result["status"], "ok", result)
+        return result["data"]["waves"]
+
+    def dispatch(self, phase, agent, inputs=None, **named):
+        """One wave entry: the role, its prompt inputs and its own model on each host."""
+        return {"agent": agent, "inputs": inputs or named, "model": phase_brief.phase_model(phase, agent)}
+
+    def test_checklist_domains_run_one_wave_each_then_their_verify_reruns_together(self):
+        domains = ["security", "state-management", "ux"]
+        runs = [[self.dispatch("Checklist", "checklist-executor", domain=name)] for name in domains]
+        verify = [self.dispatch("Checklist", "checklist-executor", {"domain": name, "pass": "verify"}) for name in domains]
+        with patch.object(dispatch_waves, "CHECKLIST_DOMAINS_PARALLEL", False):
+            self.assertEqual(self.waves("Checklist", domains=domains), [*runs, verify])
+
+    def test_no_two_checklist_domain_runs_share_a_wave_while_their_writes_are_serial(self):
+        # The serial fallback keeps executors that write shared artifacts in separate waves.
+        inputs = {"phase": "Checklist", **self.BRIEF, "domains": ["security", "state-management", "ux"]}
+        request = {"schema_version": "1.0", "helper_id": "phase-brief", "operation": "phase-brief",
+                   "mode": "read_only", "inputs": inputs}
+        program = ("from speckit_pro_runner.helpers import dispatch_waves\n"
+                   "dispatch_waves.CHECKLIST_DOMAINS_PARALLEL = False\n" + RUN_RUNNER)
+        for host, runner in RUNNER_ROOTS:
+            with self.subTest(host=host):
+                done = run_isolated(runner, program, cwd=Path.cwd(), input=json.dumps(request))
+                self.assertEqual(done.returncode, 0, done.stderr)
+                waves = json.loads(done.stdout)["data"]["waves"]
+                runs = [[entry for entry in wave if "pass" not in entry["inputs"]] for wave in waves]
+                self.assertEqual([len(wave) for wave in runs], [1, 1, 1, 0])
+                self.assertEqual([wave[0]["inputs"]["domain"] for wave in runs[:3]], ["security", "state-management", "ux"])
+
+    def test_check_and_propose_domains_share_a_wave_on_every_host(self):
+        inputs = {"phase": "Checklist", **self.BRIEF, "domains": ["security", "ux"]}
+        reports = [dispatch_brief(inputs)["data"], *payload_briefs(inputs)]
+        for report in reports:
+            self.assertEqual([[entry["inputs"].get("pass") for entry in wave] for wave in report["waves"]],
+                             [[None, None], ["verify", "verify"]])
+        for host in ("claude", "codex"):
+            loop = self.loop(host)
+            self.assertIn("mode read_only", loop)
+            self.assertIn("mode apply", loop)
+            self.assertIn("mode dry_run", loop)
+            self.assertIn("Mode: verify", loop)
+            self.assertIn("restore both files before any retry", loop)
+
+    def test_one_switch_puts_every_domain_run_in_one_wave(self):
+        with patch.object(dispatch_waves, "CHECKLIST_DOMAINS_PARALLEL", True):
+            waves = self.waves("Checklist", domains=["security", "ux"])
+        self.assertEqual([[entry["inputs"].get("pass") for entry in wave] for wave in waves], [[None, None], ["verify", "verify"]])
+
+    def test_a_wave_larger_than_the_host_limit_runs_as_ordered_sub_waves(self):
+        items = [{"line": "[security] Q1: where do tokens live?"}, {"line": "[security] Q2: who may read secrets?"}]
+        whole = self.waves("Analyze", items=items)
+        self.assertEqual([len(wave) for wave in whole], [6])
+        for limit, sizes in ((4, [4, 2]), (2, [2, 2, 2]), (1, [1] * 6)):
+            with self.subTest(limit=limit):
+                waves = self.waves("Analyze", items=items, max_agents=limit)
+                self.assertEqual([len(wave) for wave in waves], sizes)
+                self.assertEqual([entry for wave in waves for entry in wave], whole[0])
+
+    def test_every_kind_of_wave_is_bounded_by_the_host_limit(self):
+        waves = self.waves("Checklist", domains=["security", "state-management", "ux"], items=list(self.ITEMS), max_agents=2)
+        self.assertEqual([len(wave) for wave in waves], [2, 1, 2, 1, 2, 2, 1])
+
+    def test_checklist_reference_preserves_the_briefs_verify_wave_boundaries(self):
+        waves = self.waves("Checklist", domains=["security", "ux"], max_agents=1)
+        self.assertEqual([[entry["inputs"]["domain"] for entry in wave] for wave in waves if "pass" in wave[0]["inputs"]],
+                         [["security"], ["ux"]])
+        text = " ".join((host_skill_root("claude") / "speckit-autopilot/references/phase-execution.md").read_text().split())
+        self.assertIn("For each verify wave of the first brief", text)
+        self.assertIn("consume every result before the next verify wave", text)
+
+    def test_both_payload_hosts_return_the_same_sub_waves(self):
+        inputs = {"phase": "Analyze", **self.BRIEF, "items": list(self.ITEMS), "max_agents": 2}
+        source = dispatch_brief(inputs)["data"]["waves"]
+        self.assertEqual([len(wave) for wave in source], [2, 1, 2])
+        self.assertEqual([report["waves"] for report in payload_briefs(inputs)], [source, source])
+
+    def test_wave_inputs_need_the_host_limit_and_it_must_be_a_positive_count(self):
+        bare = {"phase": "Analyze", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example", "items": list(self.ITEMS)}
+        for extra in ({}, {"max_agents": 0}, {"max_agents": -1}, {"max_agents": True}, {"max_agents": "4"}, {"max_agents": 1.5},
+                      {"max_agents": 1001}):
+            with self.subTest(extra=extra):
+                result = dispatch_brief({**bare, **extra})
+                self.assertEqual((result["status"], result["data"]), ("input_error", {}))
+
+    def test_both_hosts_name_their_own_limit_and_cite_its_source(self):
+        needles = {"claude": ("max_agents=SUBAGENT_WAVE_SIZE", "CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS", "code.claude.com/docs/en/env-vars"),
+                   "codex": ("max_agents=subagent_slots", "agents.max_concurrent_threads_per_session",
+                             "learn.chatgpt.com/docs/config-file/config-reference")}
+        for host, expected in needles.items():
+            with self.subTest(host=host):
+                loop = self.loop(host)
+                for needle in expected:
+                    self.assertIn(needle, loop)
+
+    def test_analyst_entries_carry_the_item_number_and_never_its_text(self):
+        entries = [entry for wave in self.waves("Analyze", items=list(self.ITEMS)) for entry in wave]
+        self.assertEqual([entry["inputs"] for entry in entries], [{"item": 1}] * 3 + [{"item": 2}, {"item": 4}])
+        self.assertNotIn("tokens", json.dumps(entries))
+
+    def test_a_consensus_round_and_the_low_confidence_analysts_each_form_a_wave(self):
+        security = [self.dispatch("Analyze", name, item=1) for name in self.ANALYSTS]
+        low = [self.dispatch("Analyze", "codebase-analyst", item=2), self.dispatch("Analyze", "spec-context-analyst", item=4)]
+        self.assertEqual(self.waves("Analyze", items=list(self.ITEMS)), [security, low])
+
+    def test_every_consensus_phase_composes_its_waves_from_the_same_rules(self):
+        for phase in ("Clarify", "Checklist", "Analyze"):
+            with self.subTest(phase=phase):
+                waves = self.waves(phase, items=list(self.ITEMS))
+                self.assertEqual([[entry["inputs"]["item"] for entry in wave] for wave in waves], [[1, 1, 1], [2, 4]])
+                self.assertEqual({entry["agent"] for entry in waves[0]}, set(self.ANALYSTS))
+
+    def test_each_wave_entry_names_the_model_of_its_own_agent(self):
+        for entry in [entry for wave in self.waves("Analyze", items=list(self.ITEMS)) for entry in wave]:
+            self.assertEqual(entry["model"], {"claude": {"model": "sonnet", "effort": "high"},
+                                              "codex": {"model": "gpt-6-luna", "effort": "high"}}, entry["agent"])
+        entry = self.waves("Checklist", domains=["ux"])[0][0]
+        self.assertEqual(entry["model"], self.brief("Checklist")["data"]["model"])
+
+    def test_items_the_executor_answered_dispatch_no_analyst(self):
+        items = [{"line": "[codebase] Q1: reuse?", "confidence": "high"}, {"line": "Q2: which name?", "confidence": "high"}]
+        self.assertEqual(self.waves("Analyze", items=items), [])
+        self.assertEqual(self.waves("Analyze", items=[]), [])
+
+    def test_a_missing_confidence_counts_as_low_and_an_unknown_tag_routes_to_the_domain_analyst(self):
+        waves = self.waves("Clarify", items=[{"line": "[ambiguous] Q1: which name?"}])
+        self.assertEqual([[entry["agent"] for entry in wave] for wave in waves], [["domain-researcher"]])
+
+    def test_a_security_keyword_in_the_text_widens_the_item_to_the_full_wave(self):
+        waves = self.waves("Analyze", items=[{"line": "[codebase] Q1: how are credentials stored?", "confidence": "low"}])
+        self.assertEqual(len(waves), 1)
+        self.assertEqual({entry["agent"] for entry in waves[0]}, set(self.ANALYSTS))
+
+    def test_domains_and_items_compose_in_dispatch_order(self):
+        waves = self.waves("Checklist", domains=["ux"], items=list(self.ITEMS))
+        self.assertEqual([wave[0]["agent"] for wave in waves],
+                         ["checklist-executor", "codebase-analyst", "codebase-analyst", "checklist-executor"])
+        self.assertEqual([wave[0]["inputs"].get("pass") for wave in waves], [None, None, None, "verify"])
+
+    def test_a_brief_without_wave_inputs_has_no_waves(self):
+        phases = tuple(phase_brief.PHASES)
+        self.assertEqual({phase: self.waves(phase) for phase in phases}, dict.fromkeys(phases, []))
+
+    def test_wave_inputs_the_phase_cannot_use_return_no_dispatch_facts(self):
+        bad = [("Plan", {"domains": ["ux"]}), ("Analyze", {"domains": ["ux"]}), ("Clarify", {"domains": ["ux"]}),
+               ("Specify", {"items": []}), ("Plan", {"items": []}), ("Tasks", {"items": []}),
+               ("Checklist", {"domains": []}), ("Checklist", {"domains": "ux"}), ("Checklist", {"domains": ["ux", "ux"]}),
+               ("Checklist", {"domains": ["UX Review"]}), ("Checklist", {"domains": [""]}), ("Checklist", {"domains": [7]}),
+               ("Checklist", {"domains": ["a"] * 13}), ("Analyze", {"items": "Q1"}), ("Analyze", {"items": ["Q1"]}),
+               ("Analyze", {"items": [{"line": ""}]}), ("Analyze", {"items": [{"line": "Q1", "confidence": "medium"}]}),
+               ("Analyze", {"items": [{"line": "Q1", "extra": 1}]}), ("Analyze", {"items": [{"confidence": "low"}]}),
+               ("Analyze", {"items": [{"line": "x" * 2001}]}), ("Analyze", {"items": [{"line": "Q"}] * 101})]
+        for phase, extra in bad:
+            with self.subTest(phase=phase, extra=str(extra)[:40]):
+                result = self.brief(phase, **extra)
+                self.assertEqual((result["status"], result["data"]), ("input_error", {}))
+
+    def test_both_payload_hosts_return_identical_waves(self):
+        for phase, extra in (("Checklist", {"domains": ["security", "ux"], "items": list(self.ITEMS)}),
+                             ("Clarify", {"items": list(self.ITEMS)}), ("Analyze", {"items": list(self.ITEMS)})):
+            with self.subTest(phase=phase):
+                inputs = {"phase": phase, **self.BRIEF, **extra}
+                source = dispatch_brief(inputs)["data"]["waves"]
+                self.assertTrue(source)
+                self.assertEqual([report["waves"] for report in payload_briefs(inputs)], [source, source])
+
+    def loop(self, host):
+        return (host_skill_root(host) / "speckit-autopilot/SKILL.md").read_text().split("## Step 2: Main Execution Loop", 1)[1]
+
+    def test_both_hosts_launch_a_wave_in_one_turn_and_wait_for_all_of_it(self):
+        for host, needle in (("claude", "run_in_background: true"), ("codex", "one bounded wait_agent loop until every entry returned")):
+            self.assertIn(needle, self.loop(host), host)
+        self.assertIn("model: entry.model.claude.model", self.loop("claude"))
+        self.assertIn("issue one spawn_agent per entry in one turn", self.loop("codex"))
+        self.assertIn("model=entry.model.codex.model", self.loop("codex"))
+        reference = (host_skill_root("codex") / "speckit-autopilot/references/phase-execution.md").read_text()
+        self.assertIn("For each brief wave: issue one spawn_agent per entry in one turn", reference)
+        self.assertIn("one bounded wait_agent loop until every entry returned its terminal result", reference)
+        self.assertNotIn("For each item → spawn the category-routed analysts", reference)
+        for host in ("claude", "codex"):
+            self.assertTrue(all(needle in self.loop(host) for needle in ("### Dispatch waves", "Each brief wave")), host)
+
+    def test_consensus_reference_qualifies_the_briefs_host_neutral_roles(self):
+        entry = self.waves("Analyze", items=[{"line": "[security] Q1: credentials?"}])[0][0]
+        self.assertEqual(entry["agent"], "codebase-analyst")
+        for host in ("claude", "codex"):
+            text = (host_skill_root(host) / "speckit-autopilot/references/consensus-protocol.md").read_text()
+            self.assertTrue('Agent(subagent_type: "speckit-pro:" + <entry.agent>,' in text, host)
+
+    def test_both_hosts_run_each_checklist_domain_in_its_own_wave(self):
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                skill = " ".join((host_skill_root(host) / "speckit-autopilot/SKILL.md").read_text().split())
+                self.assertIn("Checklist domains run together as dispatch waves while their executors only propose edits", skill)
+                self.assertNotIn("BEFORE spawning the next", skill)
+                self.assertNotIn("Do not batch all domains", skill)
+
+    def test_checklist_main_loop_uses_the_wave_flow_instead_of_serial_dispatch(self):
+        for host in ("claude", "codex"):
+            with self.subTest(host=host):
+                loop = self.loop(host)
+                self.assertIn("Checklist: use the Dispatch waves flow below instead of the per-prompt dispatch", loop)
+                self.assertIn("Other phases: for each workflow prompt", loop)
+                self.assertIn("domain waves -> consensus -> verify wave", loop)
+                self.assertIn("Other phases: run consensus", loop)
+
+    def test_the_checklist_executor_only_refreshes_checklist_reports_on_a_verify_pass_on_both_hosts(self):
+        for root, suffix in ((REPO / "speckit-pro/agents", ".md"), (REPO / "speckit-pro/codex-agents", ".toml")):
+            with self.subTest(root=str(root.relative_to(REPO))):
+                text = " ".join((root / ("checklist-executor" + suffix)).read_text().split())
+                self.assertIn("`Pass: verify` is a verify pass: do rules 1 and 2 only, refresh the domain's checklist report, and report the counts and each remaining `[Gap]`. Keep spec.md and plan.md unchanged",
+                              text)
+
+
 class PhaseBriefModelTests(unittest.TestCase):
     def test_brief_names_the_model_for_each_dispatch(self):
         # The owner's plan-stage table (issue 1150); Specify and Tasks run phase-executor below its Plan default.
@@ -546,9 +883,7 @@ class PhaseBriefPathTests(InProjectCase):
                     request = {"schema_version": "1.0", "helper_id": "phase-brief", "operation": "phase-brief",
                                "mode": "read_only", "inputs": {**valid, key: value}}
                     payload = REPO / "dist" / host / "speckit-pro"
-                    done = subprocess.run([sys.executable, "-m", "speckit_pro_runner"],
-                                          cwd=payload, env={**os.environ, "PYTHONPATH": str(payload)},
-                                          input=json.dumps(request), text=True, capture_output=True, check=False)
+                    done = run_isolated(payload, RUN_RUNNER, input=json.dumps(request))
                     report = json.loads(done.stdout)
                     self.assertEqual(report["status"], "input_error")
                     self.assertEqual(report["data"], {})
@@ -598,9 +933,7 @@ class PhaseBriefSliceTests(InProjectCase):
                     with self.subTest(host=host, invalid=invalid):
                         text = expected + "\n## Next\n" + ("Setext\n===\n" if invalid else "excluded\n")
                         path.write_bytes(text.replace("\n", "\r\n").encode())
-                        done = subprocess.run([sys.executable, "-c", program, directory], cwd=payload,
-                                              env={**os.environ, "PYTHONPATH": str(payload)},
-                                              text=True, capture_output=True, check=False)
+                        done = run_isolated(payload, program, directory)
                         if invalid:
                             self.assertNotEqual(done.returncode, 0)
                             self.assertIn("setext underline", done.stderr)
@@ -1170,5 +1503,5 @@ class PhaseBriefExecutorContractTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, PhaseBriefPathTests, PhaseBriefModelTests, CodexEffectiveEffortTests, RetryLadderTopRungTests, PhaseBriefSliceTests, PhaseBriefEncodingTests, PhaseBriefEncodingHostTests, PhaseBriefEncodingPathTests, PhaseBriefHookTests, OptionalHookConsentTests, OptionalHookDisplayBoundaryTests, PhaseBriefExecutorContractTests))
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, PhaseBriefWaveTests, PhaseBriefPathTests, PhaseBriefModelTests, CodexEffectiveEffortTests, RetryLadderTopRungTests, PhaseBriefSliceTests, PhaseBriefEncodingTests, PhaseBriefEncodingHostTests, PhaseBriefEncodingPathTests, PhaseBriefHookTests, OptionalHookConsentTests, OptionalHookDisplayBoundaryTests, ChildImportIsolationTests, PhaseBriefExecutorContractTests))
     sys.exit(run_counted(suite, label="test-phase-brief"))

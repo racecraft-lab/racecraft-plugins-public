@@ -378,9 +378,10 @@ codebase exploration, and local file analysis. It does not
 edit artifacts. It returns questions and recommendations to the parent.
 
 **Layer 2 (consensus):** For items the executor flagged
-(low confidence, conflicting sources, security keywords),
-the main session spawns 3 consensus agents to get distinct
-perspectives and applies consensus rules. An item that ends in
+(low confidence, security tag or keyword), the main session follows the
+`tier` that `parse-consensus-categories` returns: 3 consensus agents and the
+consensus rules for a security item, one analyst for a low-confidence item.
+An item that ends in
 `[ROUND_3_TIEBREAK]` takes the Round 3 agent tiebreak in
 [consensus-protocol.md](./consensus-protocol.md#round-3-tiebreak), in an
 interactive and an unattended run alike; it never asks the operator and never
@@ -529,46 +530,71 @@ executor must not produce or substitute the G3 evidence it receives.
 
 ### Phase 4: Checklist
 
-Spawn a **separate subagent for each checklist domain**,
-with two-layer resolution **after each domain**:
+Run the checklist domains as dispatch waves in check-and-propose mode:
+each returns its gaps and proposed edits and writes neither `spec.md` nor
+`plan.md`. Apply edits in domain order, then resolve all domains' gaps and
+run the verify waves:
 
 ```text
-For each checklist domain in the workflow file:
-  1. autopilot-state.json: domain task → in_progress
-  2. Agent(subagent_type: "speckit-pro:checklist-executor",
-          run_in_background: false,
-          prompt: "Run /speckit-checklist with: <domain prompt>\nReference slices: <brief.slices, verbatim>")
-     The phase brief supplies the slices; the executor reads no reference file.
-     The checklist-executor runs the checklist, researches
-     gaps, applies fixes, and re-runs to verify (Layer 1)
-  3. Parse executor's "Unresolved for consensus" section
-  4. If unresolved gaps exist:
-     a. autopilot-state.json: "<domain> Consensus" → in_progress
-     b. BATCHED dispatch (see consensus-protocol.md §Batched Dispatch):
-        Stage 1: spawn ALL routed analysts for ALL gaps in ONE
-                 assistant message via run_in_background: true.
-        Stage 2: await all → spawn ALL synthesizers in ONE message.
-        Stage 3: apply each synthesizer's Artifact Edit SERIALLY
-                 to spec.md or plan.md.
-        Round 2 escape-hatch: also batched across all queued gaps.
-        [ROUND_3_TIEBREAK]: consensus-protocol.md#round-3-tiebreak (Round 3 agent tiebreak)
-     c. Re-run domain checklist to verify gaps closed
-     d. autopilot-state.json: "<domain> Consensus" → completed
-  5. autopilot-state.json: domain task → completed
-  6. Proceed to next domain
+0. runner helper `checklist-edits`, mode read_only → baseline
+1. autopilot-state.json: every domain task → in_progress
+2. Request the phase brief with `domains` (the `/speckit-checklist <domain>`
+   names under brief.inputs.prompt_section, in file order) and `max_agents`.
+   For each domain wave: launch every entry in ONE turn, with its own prompt:
+     Agent(subagent_type: "speckit-pro:checklist-executor", model: entry.model.claude.model,
+           run_in_background: true,
+           prompt: "Run /speckit-checklist with: <domain prompt>\nReference slices: <brief.slices, verbatim>")
+   The phase brief supplies the slices; the executor reads no reference file.
+   Each checklist-executor runs the checklist, researches gaps,
+   and returns them with Proposed Edits (Layer 1).
+   Consume every terminal result before the next domain wave.
+3. After every domain executor has returned, run runner helper `checklist-edits`,
+   mode apply, with the domain names in workflow order, the baseline, and each
+   executor's Proposed Edits block. It applies one domain at a time in domain
+   order. Route a conflict or a gap with no edit to step 5. A refusal applies
+   nothing: handle it as a gate failure under the Failure Escalation Protocol.
+   An interrupted apply names what reached disk (applied domains, a half-written
+   domain's files, canonical paths that moved or could not be verified, whether
+   the record was written or its state is unknown): restore both files before any retry
+4. Collect each executor's "Unresolved for consensus" items, in domain order
+5. If unresolved gaps exist:
+   a. autopilot-state.json: each affected "<domain> Consensus" → in_progress
+   b. Request the phase brief again with `items` and `max_agents`, then follow
+      consensus-protocol.md §Batched Dispatch: the brief's security wave and
+      low-confidence wave, each in ONE turn; await → synthesizers in ONE
+      message; apply each Artifact Edit SERIALLY to spec.md or plan.md.
+      Round 2 escape-hatch: also batched across all queued gaps.
+      [ROUND_3_TIEBREAK]: consensus-protocol.md#round-3-tiebreak
+   c. autopilot-state.json: each "<domain> Consensus" → completed
+6. runner helper `checklist-edits`, mode read_only → verify baseline
+   Reuse the phase brief inputs, readable files and dispatch context from
+   the original domain prompt (SKILL.md Step 2).
+   For each verify wave of the first brief: launch its `pass: verify` entries in ONE turn:
+     Agent(subagent_type: "speckit-pro:checklist-executor", model: entry.model.claude.model,
+           run_in_background: true,
+           prompt: "Mode: verify\nPass: verify\nRun /speckit-checklist with: <domain prompt>\nReference slices: <brief.slices, verbatim>")
+   Then consume every result before the next verify wave.
+   Each entry re-runs its domain checklist, refreshes its report, and keeps
+   spec.md and plan.md unchanged.
+   Then runner helper `checklist-edits`, mode dry_run, with no domains, no
+   proposals and the verify baseline: a refusal means a verify run wrote an artifact
+7. autopilot-state.json: every domain task → completed
 ```
 
 **Layer 1 (executor):** The checklist-executor handles
-gap research and remediation internally using the research
-broker's web search and library docs, and codebase exploration.
+gap research internally using the research
+broker's web search and library docs, and codebase exploration, and proposes
+the fix for each gap.
 
-**Layer 2 (consensus):** For gaps the executor couldn't
-resolve (shared reservation exhausted, low confidence, security
-keywords), the main session spawns 3 consensus agents.
+**Layer 2 (consensus):** For gaps the executor flagged (low
+confidence, security tag or keyword), the main session follows the
+`tier` that `parse-consensus-categories` returns.
 
-**Why after each domain:** Domain 2 may depend on Domain
-1's gap fixes. Both layers complete before the next
-domain runs.
+**Why ordered application after a wave:** Executors only propose edits, so
+independent domain checks can run together. Domain 2's edit may build on
+Domain 1's: the runner applies proposals one at a time in workflow order,
+so the result does not depend on which executor returned first. Consensus
+edits stay serial, and the verify waves re-run every domain after the last edit.
 
 **Gate:** G4 — verify 0 `[Gap]` markers
 
@@ -894,7 +920,8 @@ to proceed, surface a remediation hint, or stop.
             - After remediation completes, dispatch the
               consensus-synthesizer agent (single fan-out), with the
               `Protocol:` line, to re-emit the pre-Implement
-              Confidence block to the workflow file.
+              Confidence block to the workflow file (confidence block
+              only; no Artifact Edit).
             - Re-run confidence-gate.
             - Increment iteration_count.
        c. If iteration_count == 3 OR exit 0 reached: stop iterating.
@@ -2126,10 +2153,11 @@ Clarify, Checklist, and Analyze keep the shared analysts and those flows
 unchanged.
 
 **When consensus does not answer, the item takes a Round 3 tiebreak.** Three
-ways lead there: all three analysts disagreeing after Round 2, a Round-1 escape
-whose Round 2 still cannot resolve, and an analyst that fails its single
-retry. The first two return `human_review` from `sweep-apply-result` with basis
-`all_disagree` or `escape_unresolved`. An analyst that fails its retry is
+ways lead there: all three analysts disagreeing, a perspective that escapes,
+and an analyst that fails its single retry. The sweep has no Round 2: its
+synthesis runs once over the three accepted perspectives. The first two return
+`human_review` from `sweep-apply-result` with basis `all_disagree` or
+`escape_unresolved`. An analyst that fails its retry is
 replaced by a fresh analyst, not a human: launch that perspective once more
 through `launch_claude`, which mints a new capability and replaces the failed
 perspective's record. If the replacement fails too, no synthesis is possible,

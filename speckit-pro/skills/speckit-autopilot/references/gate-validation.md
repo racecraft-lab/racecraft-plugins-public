@@ -202,8 +202,7 @@ Phase 7 setup records that decision as the Implement Checklist Gate (see
 phase-execution.md).
 
 **Auto-Fix:** This is the **Checklist Gap Remediation Loop**.
-Runs after each domain subagent returns (not batched — see
-SKILL.md Rule 6).
+Runs once the checklist domain wave has returned (see SKILL.md Rule 6).
 
 ```text
 For EACH [Gap] marker found after a domain subagent:
@@ -497,7 +496,8 @@ disagreement is named in `reason`.
        understanding" low → re-evaluate spec.md ambiguity;
        "Approach clarity" low → re-evaluate plan.md TBDs)
      - Re-invoke the synthesizer's pre-Implement confidence
-       emit (consensus-synthesizer agent, single fan-out)
+       emit (consensus-synthesizer agent, single fan-out); the
+       result is the block alone, with no Artifact Edit
      - Re-run confidence-gate
    - After 3 iterations OR exit 0: stop iterating
 ```

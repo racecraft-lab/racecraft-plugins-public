@@ -1,8 +1,8 @@
 """The decisions list: every judgment a run made instead of asking, in one runner-owned file.
 
-The runner is the only writer. Entries sort spec-affecting first, then authority
-skips, then notes; one malformed entry refuses the whole batch. The terminal
-message is the count and a link, nothing else (ADR 0010).
+The runner is the only writer. Entries sort low-confidence answers first (ADR 0022),
+then spec-affecting, then authority skips, then notes; one malformed entry refuses the
+whole batch. The terminal message is the count and a link, nothing else (ADR 0010).
 """
 
 from __future__ import annotations
@@ -11,17 +11,17 @@ import json
 from contextlib import nullcontext
 from typing import Any
 
-from ..envelope import diagnostic, response
 from ..execution_control import confined_path, durable_json, exclusive_ledger, workflow_process_directory
 from ..strict_input import SelectionError, require_fields, require_text, unique_object
-from ..trusted_io import resolve_repo_root
+from .execution_requests import Refusal, run_contained_helper
 
 SCHEMA_VERSION = "decisions-list/v1"
 MAX_TEXT = 1000
 TEXT_FIELDS = ("option_chosen", "rejected_alternative", "evidence", "affected_unit")
-SPEC_AFFECTING, AUTHORITY_SKIP, NOTE = 0, 1, 2
+LOW_CONFIDENCE, SPEC_AFFECTING, AUTHORITY_SKIP, NOTE = 0, 1, 2, 3
 # The closed set of kinds, each with its sort class.
 KINDS = {
+    "low_confidence_answer": LOW_CONFIDENCE,
     "scope_answer": SPEC_AFFECTING,
     "split_recommendation": SPEC_AFFECTING,
     "unratified_default": SPEC_AFFECTING,
@@ -102,19 +102,12 @@ def decisions_list(root: Any, inputs: dict[str, Any], mode: str) -> dict[str, An
             "message": terminal_message(len(entries), link), "writes_state": mode == "apply"}
 
 
+REFUSAL = Refusal(
+    "invalid_decisions_list_request",
+    "Send the workflow file and, to record, a non-empty list of well-formed entries.",
+    ["Correct the named field.", "Rerun decisions-list; nothing was written."],
+)
+
+
 def run_decisions_list_helper(entry: Any, request: Any) -> dict[str, Any]:
-    try:
-        root = resolve_repo_root(request.inputs)
-        if isinstance(root, dict):
-            return response("input_error", request_id=request.request_id, diagnostics=[root])
-        data = decisions_list(root, request.inputs, request.mode)
-    except (ValueError, OSError) as error:
-        refusal = diagnostic(
-            "invalid_decisions_list_request",
-            str(error),
-            remediation_summary="Send the workflow file and, to record, a non-empty list of well-formed entries.",
-            remediation_actions=["Correct the named field.", "Rerun decisions-list; nothing was written."],
-        )
-        return response("input_error", request_id=request.request_id, diagnostics=[refusal])
-    identity = {"helper_id": entry.helper_id, "operation": entry.operation, "mode": request.mode}
-    return response("ok", request_id=request.request_id, data={**data, **identity})
+    return run_contained_helper(entry, request, decisions_list, REFUSAL)

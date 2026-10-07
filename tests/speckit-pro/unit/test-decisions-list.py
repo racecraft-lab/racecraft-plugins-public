@@ -7,27 +7,24 @@ the whole batch; the terminal message carries the count and a link only.
 """
 
 import json
-import os
 from collections.abc import Mapping
 from pathlib import Path
 import sys
-import tempfile
-from types import SimpleNamespace
 from typing import Any
 import unittest
 from unittest.mock import patch
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO / "speckit-pro"), str(REPO / "tests/speckit-pro/lib")]
-from speckit_pro_runner.helpers.registry import MUTATION_HELPERS, dispatch_helper  # noqa: E402
+from speckit_pro_runner.helpers.registry import MUTATION_HELPERS  # noqa: E402
 from speckit_pro_runner.trusted_io import resolve_repo_root  # noqa: E402
+from mutation_request_case import MutationRequestCase  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 HELPER_ID = "decisions-list"
 WORKFLOW = "specs/001-feature/.process/workflow.md"
 LIST_FILE = "specs/001-feature/.process/decisions-list/decisions.json"
 TEXT_FIELDS = ("option_chosen", "rejected_alternative", "evidence", "affected_unit")
-FIXTURE = REPO / "tests/speckit-pro/unit/fixtures/mutation-helpers/requests" / f"{HELPER_ID}.json"
 
 
 def entry(kind: str, tag: str) -> dict[str, str]:
@@ -41,35 +38,20 @@ SPLIT = entry("split_recommendation", "split")
 DEFAULT = entry("unratified_default", "default")
 PR_PROBLEM = entry("pr_record_problem", "pr")
 STOP = entry("unregistered_stop", "stop")
+LOW = entry("low_confidence_answer", "low")
 HOOK = entry("optional_hook_run", "hook")
 
 
-class DecisionsListTests(unittest.TestCase):
-    def setUp(self) -> None:
-        temporary = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary.cleanup)
-        self.root = Path(temporary.name).resolve()
-        (self.root / ".specify").mkdir()
-        (self.root / WORKFLOW).parent.mkdir(parents=True)
-        (self.root / WORKFLOW).write_text("# Workflow\n", encoding="utf-8")
-        previous = Path.cwd()
-        os.chdir(self.root)
-        self.addCleanup(os.chdir, previous)
-
-    def call(self, mode: str, **inputs: object) -> dict[str, Any]:
-        """Replay the committed request fixture with this test's mode and inputs."""
-        document = json.loads(FIXTURE.read_text(encoding="utf-8"))
-        document["inputs"] = {**document["inputs"], "workflow_file": WORKFLOW, **inputs}
-        request = SimpleNamespace(**{**document, "mode": mode})
-        return dispatch_helper(request)
+class DecisionsListTests(MutationRequestCase):
+    helper_id = HELPER_ID
+    files = {WORKFLOW: "# Workflow\n"}
+    fixed_inputs = {"workflow_file": WORKFLOW}
 
     def append(self, *entries: Mapping[str, object] | str) -> dict[str, Any]:
         return self.call("apply", entries=list(entries))
 
     def listed(self) -> dict[str, Any]:
-        result = self.call("read_only")
-        self.assertEqual("ok", result["status"], result)
-        return result["data"]
+        return self.read_only_data()
 
     def test_the_committed_request_fixture_is_served_by_the_registry(self) -> None:
         self.assertIn("read_only", MUTATION_HELPERS[HELPER_ID].modes)
@@ -106,6 +88,14 @@ class DecisionsListTests(unittest.TestCase):
             sent = next(each for each in (NOTE, SKIP, SCOPE, SPLIT, DEFAULT, PR_PROBLEM, STOP, HOOK)
                         if each["kind"] == item["kind"])
             self.assertEqual(sent, {key: value for key, value in item.items() if key != "seq"})
+
+    def test_low_confidence_items_render_before_every_other_entry(self) -> None:
+        self.assertEqual("ok", self.append(NOTE, SKIP, SCOPE, LOW)["status"])
+        self.assertEqual("ok", self.append(SPLIT, entry("low_confidence_answer", "later"))["status"])
+        entries = self.listed()["entries"]
+        self.assertEqual(["low_confidence_answer"] * 2, [item["kind"] for item in entries[:2]])
+        self.assertEqual(["evidence low", "evidence later"], [item["evidence"] for item in entries[:2]])
+        self.assertEqual("scope_answer", entries[2]["kind"])
 
     def test_entries_of_one_class_keep_the_order_they_were_appended(self) -> None:
         self.append(SPLIT)

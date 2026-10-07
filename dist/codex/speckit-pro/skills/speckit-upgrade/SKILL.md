@@ -311,7 +311,9 @@ for the full list.
 
 First add the reviewability preset when the project lacks it, because
 scaffold requires it. Send the `detect-presets` helper request with `repo_root`
-set to `.` and read `reviewability_preset`. When `status` is `missing`, run
+set to `.` and read `reviewability_preset`. When `status` is `upgrade`, run
+`spec_kit.cli_argv + upgrade_args`, stop on failure, then require `installed`
+from `detect-presets` and report the upgrade. When `status` is `missing`, run
 `spec_kit.cli_argv + add_args` without asking, then send the
 `check-prerequisites` request again and report a failing `template_resolution`
 check. When `status` is `unavailable`, report it and continue.
@@ -324,8 +326,15 @@ Compare `.specify/extensions/` and `.specify/presets/` against the entries in
 
 - Otherwise, list the missing entries and ask which to install. Recommended
   default is **all**. For each accepted entry, give the operator the
-  `spec_kit.cli_argv + ["extension", "add", "<id>"]` or `spec_kit.cli_argv + ["preset", "add", "<id>"]` command and run it
-  only after they confirm. Skipped entries leave the
+  `spec_kit.cli_argv + ["<kind>", "add", "<id>", "--from", "<archive_url>"]`
+  command from the curated set (`<kind>` is `extension` or `preset`). Spec Kit
+  refuses a bare `add <id>` for these entries. Run a preset command yourself after
+  the operator confirms. Do not run an extension command: it stops at Spec Kit's
+  trust prompt, so the operator runs it in their own terminal. The pin
+  pins the bytes but does not vet them: before the operator confirms, ask them to
+  review the archive's commands, scripts, and hooks.
+  [The curated set](../speckit-coach/references/presets-extensions-guide.md)
+  says how to vet the archive and verify the result. Skipped entries leave the
   autopilot's post-implementation parallel group running with reduced
   coverage; it does not fail.
 

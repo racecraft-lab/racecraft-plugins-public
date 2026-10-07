@@ -882,13 +882,18 @@ workflow prompts. Pass the doc path forward.
 
 All file operations happen in the worktree directory.
 
-0. Install the generic `speckit-pro-reviewability` preset into the worktree
-   when it is absent. From `<worktree_root>/`, send runner helper `detect-presets`
-   with `repo_root` set to `.` and read `reviewability_preset`. When `status` is
-   `missing`, run `spec_kit.cli_argv + add_args` from `<worktree_root>/`, then
-   send `check-prerequisites` again and STOP on a failing `template_resolution`
-   check. When `status` is `unavailable`, or the command fails, STOP and report
-   the missing prerequisite.
+0. Ensure the generic `speckit-pro-reviewability` preset is current in the
+   worktree. From `<worktree_root>/`, send runner helper `detect-presets` with
+   `repo_root` set to `.` and read `reviewability_preset`:
+   - `missing`: run `spec_kit.cli_argv + add_args` from `<worktree_root>/`.
+   - `upgrade`: run `spec_kit.cli_argv + upgrade_args` there. The runner has
+     verified a known shipped version; this replaces it with the current preset.
+   - `unavailable`: STOP and report the runner's reason.
+
+   STOP if either command fails. After adding or upgrading, send `detect-presets`
+   again and require `installed`, then send `check-prerequisites` again and STOP
+   on a failing `template_resolution` check. After a verified upgrade, report:
+   "Upgraded speckit-pro-reviewability to the current shipped preset."
 
    Verify resolution from `<worktree_root>/` with
    `spec_kit.cli_argv + ["preset", "resolve", "spec-template"]`,
@@ -1167,15 +1172,112 @@ you send for these.
 | --- | --- | --- |
 | `codex_agents` | `agents`: `{"installation": {...}, "inventory": [{"agent": "<name>", "state": "current", "stale" or "missing", "repair": "none", "applied", "declined" or "failed"}], "expected_revision": "<plugin_revision>", "loaded_revision": "<version>"}` | reusing the `install-codex-agents` `mode="dry_run"` plan from step -0.5 for `inventory`, and its repair outcome in `repair`; copy the selected installation inputs into `installation` exactly as that request sent them, with no added keys; omit `loaded_revision` unless this session reports the revision it loaded, since a repaired agent loads only after a restart |
 | `extension_versions` | `extensions`: `{"extension": "<id>", "installed": "<version>" or null, "expected": "<version>" or null}` | reading each required extension's version from `spec_kit.cli_argv + ["extension", "list"]`; `expected` is its project pin or curated-set version, and a drifted or missing extension is flagged |
-| `codex_approval_posture` | `posture`: `{"approval_policy": "on-request", "never", "on-failure" or {"granular": {"sandbox_approval": <bool>, "rules": <bool>, "mcp_elicitations": <bool>, "request_permissions": <bool>, "skill_approval": <bool>}}, "sandbox_mode": "read-only", "workspace-write" or "danger-full-access", "approvals_reviewer": "user" or "auto_review", "mcp_approval_mode": "auto", "prompt", "writes" or "approve", "mcp_consent": "granted" or "not_granted", "mcp_startup_timeout_sec": <seconds>, null or "unobservable", "mcp_tool_timeout_sec": <seconds>, null or "unobservable", "external_delegation": "allowed" or "blocked"}` | reading an effective running-thread source; use `/status` or `/permissions` only for values they actually expose in this version, and do not change settings while inspecting; their complete live approval, sandbox and MCP coverage is unconfirmed. Send `"unobservable"` for anything unreadable; send null for a timeout only when its effective setting is confirmed unset. Disk configuration alone does not prove launch overrides or running-thread permissions |
+| `codex_approval_posture` | `posture`: `{"approval_policy": "on-request", "never", "on-failure" or {"granular": {"sandbox_approval": <bool>, "rules": <bool>, "mcp_elicitations": <bool>, "request_permissions": <bool>, "skill_approval": <bool>}}, "sandbox_mode": "read-only", "workspace-write" or "danger-full-access", "approvals_reviewer": "user" or "auto_review", "mcp_approval_mode": "auto", "prompt", "writes" or "approve", "mcp_consent": "granted" or "not_granted", "mcp_startup_timeout_sec": <seconds>, null or "unobservable", "mcp_tool_timeout_sec": <seconds>, null or "unobservable", "external_delegation": "allowed" or "blocked", "controls": {"workspace_network_access": "disabled" or "enabled", "workspace_writable_roots": "none" or "added", "workspace_slash_tmp": "excluded" or "writable", "workspace_tmpdir": "excluded" or "writable", "permission_profile": "none", "read-only", "workspace", "danger-full-access" or "custom", "web_search": "disabled", "cached", "indexed" or "live", "web_search_tool": "disabled" or "enabled", "app_approvals_reviewer": "user" or "auto_review", "auto_review_policy": "unset" or "set", "app_tool_approval": "none", "prompt", "auto", "writes" or "approve", "app_destructive_tools": "disabled" or "enabled", "app_open_world_tools": "disabled" or "enabled", "mcp_tool_approval": "none", "prompt", "auto", "writes" or "approve", "plugin_mcp_tool_approval": "none", "prompt", "auto", "writes" or "approve"}, "settings": {"<dotted key>": <value>, ...} or "unobservable"}` | reading an effective running-thread source; use `/status` or `/permissions` only for values they actually expose in this version, and do not change settings while inspecting; their complete live approval, sandbox and MCP coverage is unconfirmed. Send `"unobservable"` for anything unreadable; send null for a timeout only when its effective setting is confirmed unset. Disk configuration alone does not prove launch overrides or running-thread permissions |
 | `codex_hook_trust` | `hooks`: `{"hook": "<Event:group-index:handler-index>", "state": "trusted", "untrusted" or "unobservable", "hash": "<SHA-256 digest>" or null, "enabled": true, false or null}` | reviewing every shipped handler in `/hooks`; obtain the exact hash from an effective hook metadata source when available. Codex 0.160.0 `hooks/list` returns `sha256:` plus 64 lowercase hex digits; whether `/hooks` prints the hash is unconfirmed. The helper compares the complete shipped handler set and normalized expected hashes. Send `trusted` only with its trusted hash and observable enablement; ask the user to review and trust untrusted hooks in `/hooks`, never trust them yourself |
 | `codex_local_access` | `access`: `{"loopback": "allowed", "blocked" or "unobservable", "temp_dir": "healthy", "leaky" or "unobservable", "egress_policy_ref": "<name>" or null, "egress_policy_digest": "<hex digest>" or null}` | running one bounded loopback connection to a local port you open, reusing the `local_capability` temporary directory probe result, and naming the applicable egress policy by reference and digest together, or both null when none applies; do not copy its entries |
 
+Read each posture control from the effective configuration, launch overrides
+included, and send `"unobservable"` for any you cannot read:
+`workspace_network_access`, `workspace_writable_roots`, `workspace_slash_tmp`
+and `workspace_tmpdir` are `sandbox_workspace_write.network_access`, any
+`writable_roots` entry, `exclude_slash_tmp` and `exclude_tmpdir_env_var`;
+`permission_profile` is `default_permissions` (`none` when unset, `custom` for
+a `permissions.<name>` profile); `web_search` is the top-level mode and
+`web_search_tool` is `tools.web_search`; `app_approvals_reviewer` is
+`auto_review` when `apps._default` or any app reviews automatically;
+`auto_review_policy` is `set` when `auto_review.policy` or `extra_policy` is
+set. `app_tool_approval`, `mcp_tool_approval` and `plugin_mcp_tool_approval`
+are `prompt` only when every enabled tool of every app, MCP server, or
+plugin-provided MCP server prompts after default and per-tool overrides,
+another observed mode otherwise, and `none` when no such tool is enabled.
+`app_destructive_tools` and `app_open_world_tools` are `enabled` when any app
+allows tools with that hint. Without `controls`, or with any control
+unobservable, the posture is never `verified`.
+
+Send `settings` as the inventory of every configuration key set in any
+effective layer (user, project, profile, managed and launch overrides), each
+as a dotted TOML key path with its effective value, such as
+`"shell_environment_policy.set.PATH": "<value>"` or
+`"projects.\"<name>\".trust_level": "untrusted"`. A key path is segments
+joined by single dots with no spaces; a segment is bare (letters, digits, `_`
+and `-`) or double-quoted without `"` or `\`. Quote a segment that holds a
+dot or another character outside the bare set; a quoted dot stays inside its
+segment. A quoted segment and a bare one with the same text are the same key,
+so send each key once: a key named twice, a key that is also a table holding
+another key, or a key outside this grammar is refused. Name each key of a
+table by its own path; a table sent as one value is refused. Include the keys
+the controls above summarize and keys you do not recognize. Send
+`"unobservable"` for a key whose value you cannot read, and send `settings` as
+`"unobservable"` when you cannot list every layer.
+
+The helper accounts for each key, and the posture verifies only when the
+inventory proves it. A key a summary fact or control models must agree with
+that fact or control where it is observed and can act: for example
+`sandbox_mode`, `sandbox_workspace_write.network_access`, `default_permissions`,
+`web_search`, `tools.web_search`, and each app, MCP or plugin MCP approval mode
+or timeout. A contradiction makes the posture `unavailable`. The tool approval
+controls aggregate every app, MCP server and plugin MCP server, so each
+explicit enablement, enabled-tools list and approval mode is reconciled with
+its aggregate before the aggregate counts: unless the inventory switches that
+app, server, plugin or tool off, it rules out `none`. The helper reads each
+key under the exact path Codex reads it from, listed in one key table with
+the effect Codex gives it: `apps._default` takes only `enabled`,
+`approvals_reviewer`, `default_tools_approval_mode`, `destructive_enabled`
+and `open_world_enabled`, and `apps._default.enabled` false disables only
+apps with no `[apps.<id>]` table. A key under a path Codex does not read it
+from, such as `apps._default.default_tools_enabled`, switches nothing off
+and makes the posture `unavailable`. `_default` is reserved only as an app id;
+elsewhere it is an ordinary name. A local `plugins.<name>@<marketplace>.enabled`
+false counts only when `settings` configures that marketplace
+(`marketplaces.<marketplace>.source_type` `local` or `git`), the one source
+Codex provably loads locally; a remote installation replaces the local
+enabled state of every other plugin key, so a remote family, an OpenAI-managed
+or unconfigured marketplace, or a bare name proves nothing and makes the
+posture `unavailable`; per-server switches still hold. Other keys are on
+the helper's list of inert keys (model, display, notice and local history
+settings), or hold their conservative value: `allow_login_shell` false,
+`shell_environment_policy.inherit` `core` or `none`,
+`shell_environment_policy.ignore_default_excludes` false,
+`shell_environment_policy.experimental_use_profile` false, and any
+`shell_environment_policy.exclude`, `shell_environment_policy.include_only` or
+`shell_environment_policy.filters.*` entry, since those only remove inherited
+variables; `projects.*.trust_level` `untrusted`, since trust activates project
+configuration, hooks and rules; `plugins.*.enabled` false (a marketplace
+`settings` configures only), `features.plugins` false and
+`features.remote_plugin` false, since no summary judges plugin instructions,
+agents or hooks; `features.hooks` false and its deprecated alias
+`features.codex_hooks` false, each judged alone, since no summary judges hooks
+beyond the shipped ones; `project_doc_max_bytes` a whole number at most 32768,
+the Codex default for project instructions read into context (0 reads none);
+each numeric key takes exactly its Codex type and range (a whole number from
+0 for `u64` and `usize` keys, from 1 for `NonZeroUsize`, and a finite
+non-negative number of seconds for the timeouts), else it is refused;
+and `check_for_update_on_startup` false,
+since the check sends a request. `shell_environment_policy.set.*`,
+`marketplaces.*.source`, `marketplaces.*.source_type`, `marketplaces.*.ref`,
+`marketplaces.*.sparse_paths`, `tool_output_token_limit` and
+`mcp_servers.*.tools.*.output_token_limit` have no conservative value: they
+add a variable, select external plugin content, or raise a bound on tool
+output whose default the model sets. Rules name exact keys, and `*` stands for
+one name you chose, such as a project, plugin or server name. Any other key,
+an unknown one or one nested under a known table included, makes the posture
+`unavailable`, or `unknown` when its value is unobservable. Values and key
+names stay out of the record; the helper keeps one digest of each key path and
+its class.
+
 The helper owns the conservative scaffold posture profile: confined sandbox,
-MCP prompt mode, granted consent and delegation, and timeouts no larger than
-the documented defaults. A complete supported approval policy (including the
+MCP prompt mode, granted consent and delegation, timeouts no larger than
+the documented defaults, and every posture control at its first, conservative
+value (`permission_profile` also `read-only`, `web_search` also `cached`, tool
+approval also `none`). Workspace controls do not apply when `settings` sets
+`sandbox_mode` to `read-only`, nor the two app tool hints when it sets
+`features.apps` to false; another control's value never makes a control
+inapplicable. A complete supported approval policy (including the
 five granular booleans) and either supported reviewer are observations, not
-consent; `never` does not remove sandbox controls. Other observed profiles are
+consent; `never` does not remove sandbox controls. `auto_review` is
+conservative only under `never` or a granular policy with every category
+false, since otherwise the reviewer subagent, not the operator, decides
+approval prompts. Other observed profiles are
 `unavailable`, and unreadable values remain `unknown`. This profile is a
 conservative readiness check, not an ADR-defined security threshold.
 
@@ -1187,7 +1289,7 @@ normalize hex case and an optional case-insensitive `sha256:` prefix. The
 record retains the observed hash text and canonicalizes hash fingerprints.
 
 On Codex, send `codex_hook_trust` as the trust source; the helper mirrors it
-into `hooks` and refuses contradictory duplicate observations. The runner
+into `hooks` and refuses any `hooks` observation beside hash evidence, an empty one included. The runner
 temporary-storage probe can downgrade caller local-access evidence.
 
 These three record facts, never consent. Scaffold never broadens a permission,
@@ -1268,7 +1370,7 @@ equal the resolver's `branch_name` and must not be `main`; otherwise STOP.
    `specs/<branch-name>/SPEC-MOC.md`, then commit with
    `chore(SPEC-XXX): add design concept and workflow for autopilot`.
    When Step 6.4 wrote `.specify/quality-gates.json`, add it to the same commit.
-   When Step 5.0 installed the reviewability preset, add `.specify/presets/` to
+   When Step 5.0 installed or upgraded the reviewability preset, add `.specify/presets/` to
    it too, so the branch carries the preset.
 
 2. Push the WORKTREE BRANCH to the detected remote:

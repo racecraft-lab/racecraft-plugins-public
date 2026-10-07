@@ -102,7 +102,8 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
         route_line = "**Security Route:** tag | keyword | none"
         rule = (
             "When the route is `keyword` and every routed response returns "
-            "`security_relevant: false`, apply the ordinary rule for N above"
+            "`security_relevant: false`, apply the ordinary three-response rule, "
+            "so a 2/3 majority wins"
         )
         fail_closed = "returns `security_relevant: true`, or omits the field"
         for label, text in (
@@ -113,19 +114,14 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
             with self.subTest(platform=label):
                 assert_contains(self, text, (route_line,))
                 self.assertIn("null is written as none", flat)
-                assert_contains(self, flat, (rule, fail_closed, "a 2/3 majority wins at N = 3"))
+                assert_contains(self, flat, (rule, fail_closed))
         protocol = " ".join(PROTOCOL.read_text(encoding="utf-8").split())
         assert_contains(self, protocol, PHRASES["ConsensusSynthesizerRegressionTests.test_keyword_only_route_uses_the_items_own_rule_when_no_analyst_flags_security#1"])
 
     def test_security_relevant_raises_the_bar_only_on_a_security_route(self) -> None:
-        # A `true` from one analyst on a two-analyst non-security route must
-        # not skip the Round 2 escape and send the item to the Round 3 tiebreak. Only
-        # a `tag` or `keyword` route can raise the bar to unanimity.
-        none_route = (
-            "When the route is `none`, a `security_relevant: true` answer does "
-            "not raise the bar: apply the ordinary rule for N above, so two "
-            "disagreeing analysts still escape to Round 2"
-        )
+        # Only a `tag` or `keyword` route sends an item to the synthesizer, and
+        # either can raise the bar to unanimity. A route `none` item never
+        # reaches the synthesizer, so the agent carries no rule for it.
         for label, text in (
             ("codex", instructions()),
             ("claude", CLAUDE_SYNTHESIZER.read_text(encoding="utf-8")),
@@ -137,8 +133,8 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
                 assert_contains(self, flat, (
                     "When the route is `tag`, apply the answer only when all three analysts agree",
                     "When the route is `keyword` and any routed response returns `security_relevant: true`, or omits the field",
-                    none_route,
                 ))
+                self.assertNotIn("When the route is `none`", flat)
         protocol = " ".join(PROTOCOL.read_text(encoding="utf-8").split())
         assert_contains(self, protocol, PHRASES["ConsensusSynthesizerRegressionTests.test_security_relevant_raises_the_bar_only_on_a_security_route#1"])
 
@@ -151,6 +147,22 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
                 self.assertNotIn("contains a security keyword (always", flat)
                 self.assertIn("substance is about security", flat)
                 self.assertIn("A security keyword alone needs no tag", flat)
+
+    def test_executor_eligibility_names_the_security_tag_on_both_hosts(self) -> None:
+        # The parent routes only items an executor surfaces, so a high-confidence
+        # `[security]` item with no keyword must still be surfaced: the tag is
+        # its own trigger, beside low confidence and a security keyword.
+        for path in EXECUTORS:
+            text = path.read_text(encoding="utf-8")
+            if path.suffix == ".toml":
+                text = tomllib.loads(text)["developer_instructions"]
+            else:
+                text = guide_text(f"agents/{path.name}", "claude")
+            flat = " ".join(text.split())
+            start = flat.index('"Unresolved for consensus" section')
+            eligibility = flat[start:flat.index("access-control)", start)]
+            with self.subTest(path=f"{path.parent.name}/{path.name}"):
+                self.assertIn("you tag `[security]`, at any confidence", eligibility)
 
     def test_orchestrator_passes_the_active_protocol_path(self) -> None:
         # Every synthesizer prompt carries the protocol path resolved from the loaded plugin root.
@@ -228,6 +240,29 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
         protocol = " ".join(PROTOCOL.read_text(encoding="utf-8").split())
         self.assertIn("IF Flags = None AND", protocol)
 
+    def test_confidence_emit_and_routing_violation_return_no_edit(self) -> None:
+        # The Phase 6 emit and the G6.5 re-emit carry no consensus item, and
+        # only confidence-gate reads their result, so an Artifact Edit there
+        # would have no consumer. A routing violation applies nothing either.
+        for host, flat in synthesizer_texts():
+            with self.subTest(host=host):
+                assert_contains(self, flat, (
+                    "or re-dispatches you after a G6.5 remediation, the prompt carries no consensus item",
+                    "no `Consensus Result` and no `Artifact Edit`",
+                    "that result carries no `Answer` and no `Artifact Edit`",
+                    "**Analysts Run:** 3",
+                ))
+                self.assertNotIn("after all per-finding `Consensus Result` blocks", flat)
+        claude_phase = " ".join(phase_execution_text().split())
+        self.assertIn("Confidence block to the workflow file (confidence block only; no Artifact Edit)", claude_phase)
+        codex_phase = " ".join(CODEX_PHASE_EXECUTION.read_text(encoding="utf-8").split())
+        self.assertIn("This dispatch carries no consensus item, so its result has no Artifact Edit", codex_phase)
+        self.assertNotIn("applies any accepted serial artifact edit, and persists", codex_phase)
+        gate = " ".join((REFERENCES / "gate-validation.md").read_text(encoding="utf-8").split())
+        self.assertIn("the result is the block alone, with no Artifact Edit", gate)
+        protocol = " ".join(PROTOCOL.read_text(encoding="utf-8").split())
+        self.assertIn("the parent applies nothing from it", protocol)
+
     def test_missing_failed_or_malformed_synthesis_cannot_apply_or_complete(self) -> None:
         required = (
             "MUST NOT synthesize directly or silently",
@@ -248,7 +283,7 @@ class ConsensusSynthesizerRegressionTests(unittest.TestCase):
         for host, flat in synthesizer_texts():
             with self.subTest(host=host):
                 self.assertIn("including a clean pass with zero findings", flat)
-                self.assertIn("append exactly one block", flat)
+                self.assertIn("return exactly one block and nothing else", flat)
                 self.assertIn("never emit it more than once in an Analyze pass", flat)
                 for label in (
                     "Task understanding",

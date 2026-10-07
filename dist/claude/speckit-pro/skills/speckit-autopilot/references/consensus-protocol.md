@@ -10,11 +10,12 @@ Consensus dispatch runs as batched ordinary subagents; see
 ## Contents
 
 - [Two-Layer Resolution Architecture](#two-layer-resolution-architecture) — executor first-pass then consensus second-pass
+- [Plan-Stage Tiers](#plan-stage-tiers) — security, low-confidence and recommendation routing (ADR 0022)
 - [Category-Routed Dispatch (Tier A)](#category-routed-dispatch-tier-a) — `[codebase|spec|domain|security|ambiguous]` routing rules + escape-hatch
 - [Batched Dispatch](#batched-dispatch) — multi-item fan-out in ONE tool turn
-- [Three-Analyst Consensus Rules (Round 2 / N=3)](#three-analyst-consensus-rules-round-2--n3) — full fan-out behavior
+- [Three-Analyst Consensus Rules (Round 2 / N=3)](#three-analyst-consensus-rules-round-2--n3) — security agreement rules
 - [The 3 Perspective Agents](#the-3-perspective-agents) — codebase-analyst / spec-context-analyst / domain-researcher
-- [Consensus Rules](#consensus-rules) — N=1, N=2, N=3 agreement rules + escape-hatch + STOP conditions
+- [Consensus Rules](#consensus-rules) — three-analyst agreement and tiebreak rules
 - [Security Keywords](#security-keywords) — always-all-3 trigger words
 - [Round 3 Tiebreak](#round-3-tiebreak) — a fresh analyst plus a max-effort `consensus-tiebreaker` resolve what Rounds 1 and 2 could not; nothing asks a human or stops
 - [Phase-Specific Consensus Flows](#phase-specific-consensus-flows) — Clarify, Checklist, Analyze patterns + per-phase prompt templates ("Specification Context" / "Question" / "Your Task" sub-sections appear inside each flow)
@@ -35,107 +36,124 @@ and repo-local helpers. Follow
 ([capability-discovery.md](./capability-discovery.md)) for selection,
 fallback, evidence, inventory, and metadata rules. The executor
 resolves most items directly (~80%) and applies fixes to
-artifacts. Items it can't resolve with high confidence are
-flagged in its "Unresolved for consensus" summary section,
-with a category prefix (see "Category-Routed Dispatch" below).
+artifacts. Items it doubts, and items that carry a security tag or
+keyword, are flagged in its "Unresolved for consensus" summary
+section with a category prefix and a `Confidence: low|high` line
+(see "Category-Routed Dispatch" below). Every other item takes the
+executor's recommendation.
 
 **Layer 2 — Consensus agents (second pass):** The main
-session (not the executor) routes each unresolved item to the
-relevant analyst(s) based on the executor's category prefix.
-Single-analyst paths apply when one perspective is sufficient;
-all-three paths apply for security keywords, untagged items,
-multi-perspective tags spanning all categories, or when the
-single-analyst path returns low confidence.
+session (not the executor) runs `parse-consensus-categories` on
+each flagged item and follows the `tier` it returns (see
+[Plan-Stage Tiers](#plan-stage-tiers)).
 
 **Why two layers:** Single-agent research handles
-straightforward items efficiently. Category-routed consensus
-spends model effort only on the perspective(s) the executor
-identified as relevant, with a defense-in-depth fallback to
-all-three for ambiguous, security-sensitive, or low-confidence
-items.
+straightforward items efficiently. Consensus spends model effort
+only where a second opinion pays: all three analysts on security
+items, one analyst on items the executor doubts.
 
 **When consensus is triggered:**
-- Executor flagged the item as low-confidence
-- Executor's research sources disagreed
-- Item remained unresolved after the executor's one fix pass and re-run
-- Item contains security keywords (always goes to all-three consensus)
+- Item carries a `[security]` tag or a security keyword (all-three consensus, every round)
+- Executor marked the item `Confidence: low` (one analyst, no synthesizer)
+
+Sources that disagree and items left over after the executor's fix pass
+trigger nothing: the executor states a confidence and a recommendation.
+
+## Plan-Stage Tiers
+
+ADR 0022. `parse-consensus-categories` takes the item `line` and the
+executor's `confidence` (`low` or `high`; a missing value counts as
+`low`) and returns one `tier`. Dispatch exactly the analysts it returns.
+
+| `tier` | Items | Analysts | Resolution |
+|--------|-------|----------|------------|
+| `security` | `[security]` tag or a [Security Keyword](#security-keywords), at any confidence | All 3 | Rounds, synthesizer and tiebreak as below |
+| `low_confidence` | Everything else the executor marked `low` | One: the first tag that names a perspective, else `speckit-pro:domain-researcher` | Follow the helper's `answer_source` after the analyst returns (see [Single-analyst confidence rule](#single-analyst-confidence-rule-n1)) |
+| `recommendation` | Everything else | None | The executor's recommendation stands |
+
+Record every `low_confidence` and `recommendation` outcome in the
+decisions list. Use kind `low_confidence_answer` for a `low_confidence`
+item: the list renders those entries before all others. The plan stage
+makes no decision-model call (ADR 0020).
 
 ## Category-Routed Dispatch (Tier A)
 
 Each item in the executor's "Unresolved for consensus" section
-MUST carry a category prefix. The orchestrator calls the
-`parse-consensus-categories` runner helper on the item line and
-dispatches exactly the analysts it returns. The table below states
+MUST carry a category prefix and a `Confidence: low|high` line. The
+orchestrator calls the `parse-consensus-categories` runner helper on
+the item line and the confidence, and dispatches exactly the analysts
+it returns. The table below states
 what that helper implements; it is not a procedure to run by hand.
 
 ### Category tags
 
 | Tag | Meaning | Routes to |
 |-----|---------|-----------|
-| `[codebase]` | Resolution depends on existing patterns/conventions in this repo's code | `speckit-pro:codebase-analyst` only |
-| `[spec]` | Resolution depends on project decisions in spec/plan/constitution/roadmap | `speckit-pro:spec-context-analyst` only |
-| `[domain]` | Resolution depends on external standards, RFCs, library docs, or community best practice | `speckit-pro:domain-researcher` only |
+| `[codebase]` | Resolution depends on existing patterns/conventions in this repo's code | `speckit-pro:codebase-analyst` |
+| `[spec]` | Resolution depends on project decisions in spec/plan/constitution/roadmap | `speckit-pro:spec-context-analyst` |
+| `[domain]` | Resolution depends on external standards, RFCs, library docs, or community best practice | `speckit-pro:domain-researcher` |
 | `[security]` | Item's substance is about security (credentials, access control, secrets, personal data). A [Security Keyword](#security-keywords) alone needs no tag: the helper widens it | All 3 (defense-in-depth, never single-routed) |
-| `[ambiguous]` | Executor uncertain which perspective applies | All 3 (safe default) |
-| *(missing/unparseable prefix)* | Treated as `[ambiguous]` | All 3 (safe default) |
+| `[ambiguous]`, unknown, or missing/unparseable prefix | Executor uncertain which perspective applies | `speckit-pro:domain-researcher` (the generic domain) |
 
-**Multi-category tags** are valid: `[codebase, domain]` dispatches
-both `speckit-pro:codebase-analyst` and `speckit-pro:domain-researcher`.
-`parse-consensus-categories` reads the comma-separated category list
-inside the bracket and returns that union.
+The Routes-to column applies to a `low` confidence item. A `high` item
+that is not security needs no analyst.
+
+**Multi-category tags** are valid: `parse-consensus-categories` reads
+the comma-separated category list inside the bracket and routes the
+first tag that names a perspective, so `[codebase, domain]` dispatches
+`speckit-pro:codebase-analyst` alone.
 
 ### Two-round protocol with escape hatch
 
+Only the `security` tier runs these rounds, and its Round 1 already
+dispatches all three analysts, so Round 2 fires only for a failed or
+escaped analyst. A `low_confidence` item stops after its one analyst.
+
 ```text
-ROUND 1 — category-routed
-  Call parse-consensus-categories on the unresolved item line.
-  Spawn exactly the N analysts (1 ≤ N ≤ 3) it returns.
-  consensus-synthesizer always runs (becomes "edit-applier" in 1-analyst case).
+ROUND 1 — security (all three)
+  Call parse-consensus-categories with the unresolved item line and confidence.
+  Enter these rounds only when its tier is security.
+  Spawn all three analysts it returns and await their responses.
 
-  IF synthesizer flags confidence: high
-     AND no analyst response contains escape-hatch keywords
-     ("insufficient context", "not in this codebase", "no precedent",
-      "outside my scope", "cannot answer from this perspective"):
-       APPLY edit, log result, done.
+  IF an analyst failed (no valid response):
+       queue only that analyst for ROUND 2; the item is not synthesized yet.
 
-  ELSE (low confidence OR escape-hatch keyword detected):
-       fall through to ROUND 2.
+  ELSE:
+       Run consensus-synthesizer with all three responses.
+       IF its Flags include [ESCAPE_TO_ROUND_2] (a response carried an escape
+          phrase such as "insufficient context", "not in this codebase",
+          "no precedent", "outside my scope", or
+          "cannot answer from this perspective"):
+            queue only the escaped analysts for ROUND 2.
+       ELSE apply the Consensus Rules below: APPLY edit and log, OR flag [ROUND_3_TIEBREAK].
+       Low synthesizer confidence goes to ROUND 3, not another analyst fan-out.
 
-ROUND 2 — full fan-out
-  Spawn the remaining (3 - N) analysts.
-  Re-invoke consensus-synthesizer with all 3 responses.
-  Apply the multi-analyst rules below.
+ROUND 2 — retry failed or escaped analysts
+  Retry only the failed or escaped analysts, once, with the missing context.
+  Keep the successful Round-1 responses from the other perspectives.
+  If a retry fails or escapes again, follow the fresh-analyst replacement in §Round 3 Tiebreak.
+  Once all three responses are valid, run consensus-synthesizer with them.
+  Apply the Consensus Rules below.
   APPLY edit OR flag [ROUND_3_TIEBREAK].
 
 ROUND 3 — agent tiebreak (only after a [ROUND_3_TIEBREAK] flag)
   Run §Round 3 Tiebreak. Its result is applied like any other edit.
 ```
 
-The escape hatch is the asymmetry that keeps routing cheap when
-right and safe when wrong. A `[codebase]` tag that should have
-been `[domain]` triggers Round 2 the moment `speckit-pro:codebase-analyst`
-admits "no precedent in this repo" — no silently-shipped
-low-confidence answers.
-
 ### Single-analyst confidence rule (N=1)
 
-When only one analyst ran in Round 1, the synthesizer's output
-includes a `confidence: high | low` field instead of an
-agreement count.
+For a `low_confidence` item, call `parse-consensus-categories` again with
+its original `line` and executor `confidence`, plus `analyst_confidence`
+from the completed analyst response. Follow the returned `answer_source`:
 
-| Synthesizer output | Action |
-|--------------------|--------|
-| `confidence: high` AND no escape-hatch keyword | Apply edit, log, done |
-| `confidence: low` | Fall through to Round 2 |
-| Escape-hatch keyword in analyst response | Fall through to Round 2 |
+| `answer_source` | Action |
+|-----------------|--------|
+| `analyst` | Apply the analyst answer; record the executor recommendation as the rejected alternative |
+| `executor` | Keep the executor recommendation |
 
-### Two-analyst rule (N=2)
-
-| Analysts | Action |
-|----------|--------|
-| Both agree | Apply edit, log, done |
-| Disagree | Fall through to Round 2 (spawn the missing analyst, re-synthesize) |
-| Either flagged escape-hatch | Fall through to Round 2 |
+Missing or malformed analyst confidence keeps the executor recommendation.
+Record the outcome as `low_confidence_answer` and finish the item after this
+one analyst. No synthesizer or later analyst round runs for this tier.
 
 ### Three-analyst rules (N=3)
 
@@ -157,15 +175,15 @@ The helpers are what executes.
 
 | Helper | Purpose |
 |--------|---------|
-| `parse-consensus-categories` | Reads one unresolved-item line and returns `tags`, the `analysts` to spawn, the dispatch `reason`, and `security_route` (`tag` for an explicit `[security]` tag, `keyword` for a keyword alone, `null` otherwise). Implements every routing rule in the table above: security override, ambiguous safe default, unknown-tag safe default, multi-tag union, untagged → all 3. It reads the whole line, not just the bracket, so a [Security Keyword](#security-keywords) anywhere in the item text widens to all 3 even when the executor tagged the item narrowly. |
+| `parse-consensus-categories` | Reads one unresolved-item `line` plus the executor's `confidence` and optional `analyst_confidence`; returns `answer_source` (`analyst` or `executor` for nonsecurity items, `null` for security), `tags`, the `tier`, the `analysts` to spawn, the dispatch `reason`, and `security_route` (`tag` for an explicit `[security]` tag, `keyword` for a keyword alone, `null` otherwise). Implements every routing rule in [Plan-Stage Tiers](#plan-stage-tiers). It reads the whole line, not just the bracket, so a [Security Keyword](#security-keywords) anywhere in the item text widens to all 3 even when the executor tagged the item narrowly or marked it `high`. |
 | `aggregate-crl` | Reads the Consensus Resolution Log table out of a workflow file and returns `total_items`, `round1`, `round2`, `escape_hatch`, `escape_rate_percent`, the `threshold_percent` it was given (default 10), and `exceeds_threshold`. |
 
 **Call `parse-consensus-categories` for every unresolved item and
 dispatch exactly the analysts it returns.** Do not route by reading
-the table yourself. The helper is the only place the widening rules
-run: a tag it does not recognize widens to all three analysts rather
-than narrowing to a guess, and so does a security keyword in the item
-text, whatever the executor put in the bracket.
+the table yourself. The helper is the only place the tier rules run:
+a security keyword in the item text widens to all three analysts
+whatever the executor put in the bracket or wrote as its confidence,
+and a tag it does not recognize routes to the generic domain analyst.
 
 ```text
 resolved_python -m speckit_pro_runner < request.json
@@ -177,7 +195,7 @@ request.json:
   "helper_id": "parse-consensus-categories",
   "operation": "parse-consensus-categories",
   "mode": "read_only",
-  "inputs": { "line": "[codebase, domain] Q3: bcrypt or argon2?" }
+  "inputs": { "line": "[codebase, domain] Q3: bcrypt or argon2?", "confidence": "low" }
 }
 ```
 
@@ -209,22 +227,29 @@ serial (write contention on spec.md / plan.md / tasks.md).
 ### Stages
 
 ```text
-Stage 1 — All routed analysts, ONE assistant message:
-  For each unresolved item Ix (x = 1..N):
-    Call parse-consensus-categories on the item line → analyst set Sx
-    For each analyst a in Sx:
-      Agent(subagent_type: <a>,
+Stage 1 — All routed analysts, as the brief's waves (one turn each):
+  Request the phase brief with `items` (each unresolved item's line and confidence)
+  and `max_agents` (the host's concurrent-agent limit).
+  Its security wave holds the three analysts of every security item; its
+  low-confidence wave holds the one routed analyst of every low-confidence item.
+  A wave over the limit arrives as consecutive waves of at most `max_agents`.
+  (A recommendation item has no entry: apply the recommendation, no dispatch.)
+  For each entry of a wave, all in ONE turn:
+      Agent(subagent_type: "speckit-pro:" + <entry.agent>,
             run_in_background: true,
-            description: "SPEC-XXX consensus R1 [I<x>]: <item>",
-            prompt: <consensus prompt for item Ix from a's perspective>)
-  Total dispatches in one message: Σ |Sx|
+            description: "SPEC-XXX consensus R1 [I<entry.inputs.item>]: <item>",
+            prompt: <consensus prompt for entry.inputs.item from that analyst's perspective>)
+  Total dispatches across the two waves: Σ |Sx|
   Each analyst prompt ends with the `Reference dir:` line, built from the
   `plugin_root` that `validate-agent-install` returned.
   ↓
-  Await ALL spawned analysts to complete.
+  Await ALL analysts of a wave before the next wave; the security wave's
+  synthesizers (Stage 2) need only the security wave.
 
 Stage 2 — All synthesizers, ONE assistant message:
-  For each item Ix:
+  A low_confidence item follows the Single-analyst confidence rule above and
+  finishes before this stage.
+  For each security item Ix:
     Agent(subagent_type: "speckit-pro:consensus-synthesizer",
           run_in_background: true,
           description: "SPEC-XXX consensus synthesis (R1) [I<x>]",
@@ -260,19 +285,22 @@ Stage 2 — All synthesizers, ONE assistant message:
 Stage 3 — Apply Artifact Edits SERIALLY (orchestrator's own Edit calls):
   ROUND_2_QUEUE = []
   For each synthesizer result, in item order:
-    IF Flags = None AND (Confidence = high OR 2-of-3 OR 3-of-3 agree):
+    IF Flags = None AND Confidence = high AND agreement meets the Consensus Rules:
       Apply Artifact Edit to spec.md / plan.md / tasks.md
       Write a CRL row: Round=1, Routed Categories=Sx, Outcome=<outcome>, Analysts Used=Sx
-    IF Flags includes [ESCAPE_TO_ROUND_2] OR low confidence:
-      Push (Ix, Sx) onto ROUND_2_QUEUE
-    IF Flags includes [ROUND_3_TIEBREAK]: run the Round 3 tiebreak per
+    IF Flags includes [ESCAPE_TO_ROUND_2]:
+      Push (Ix, failed or escaped analysts) onto ROUND_2_QUEUE
+    ELSE IF Flags includes [ROUND_3_TIEBREAK] OR low confidence: run the Round 3 tiebreak per
       §Round 3 Tiebreak after this batch's other edits are applied; the
       flag is the Round 3 trigger and never a question or a stop
 
 If ROUND_2_QUEUE non-empty:
-  Stage 4 — All Round-2 analysts (the remaining (3 − |Sx|) per queued item) in ONE message
+  Stage 4 — Retry only each queued item's failed or escaped analysts in ONE message;
+            retain successful Round-1 responses from the other perspectives
   Stage 5 — All Round-2 synthesizers in ONE message
-  Stage 6 — Apply Round-2 edits serially (same as Stage 3), including §Round 3 Tiebreak.
+  Stage 6 — Apply accepted Round-2 edits serially; unresolved items go to Round 3.
+            A repeated escape exhausts the retry; use the fresh replacement below,
+            then Round 3 if it also fails or escapes. No item re-enters Round 2.
 ```
 
 ### What stays serial — and why
@@ -330,7 +358,6 @@ One rule set applies to every run; no setting changes it.
 | **All 3 disagree** | Flag as `[ROUND_3_TIEBREAK]` with all 3 perspectives, which starts the [Round 3 Tiebreak](#round-3-tiebreak). |
 | **Security item** (`[security]` tag, or keyword with any analyst returning `security_relevant: true` or omitting the field) | Apply only on 3/3 agreement. A 2/3 majority or all-disagree flags `[ROUND_3_TIEBREAK]` and starts the Round 3 tiebreak. |
 | **Keyword-only item** (every routed analyst returns `security_relevant: false`) | Use the ordinary rules above: a 2/3 majority applies. |
-| **Non-security route** (`Security Route: none`) | Use the item's own rule: a `security_relevant: true` answer does not raise the bar, so two disagreeing Round 1 analysts still escape to Round 2 and a 2/3 majority applies at N = 3. |
 
 ## Security Keywords
 
@@ -360,9 +387,10 @@ Consensus that cannot agree is resolved by agents, never by a question or a
 stop. A synthesizer result flagged `[ROUND_3_TIEBREAK]` is the Round 3
 trigger; it asks no human. Three situations raise it:
 
-- a Round 2 all-disagree (or a Round-1 escape that Round 2 cannot resolve),
+- all three analysts disagreeing, in Round 1 or after a Round 2 retry,
 - a security item without 3/3 agreement, and
-- an analyst that fails its retry (see below).
+- an analyst that fails or escapes its retry and whose fresh replacement
+  also fails or escapes (see below).
 
 The parent orchestrator, never an executor, analyst, or synthesizer, runs
 Round 3 after the batch's other edits are applied. An interactive run and an
@@ -404,10 +432,11 @@ Then:
   item naming the item, the assumption, and the dissent, so the PR body lists
   them under `## Known Gaps`.
 
-An analyst that fails its retry is replaced by a fresh analyst, never by a
+An analyst that fails or escapes its retry is replaced by a fresh analyst, never by a
 human: dispatch one new instance of the same perspective with the same prompt.
-If it returns, the item continues under the ordinary rules with that answer.
-If the replacement also fails, raise the flag and run Round 3 on the answers in
+If it returns a valid answer without escape keywords, the item continues under
+the ordinary rules with that answer.
+If the replacement fails or escapes, raise the flag and run Round 3 on the answers in
 hand.
 
 **Product scope is the one deferral.** When the tiebreaker finds that the
@@ -433,15 +462,12 @@ Checklist, and Analyze consensus.
 Each flow follows the same pattern: executor handles Layer 1,
 main session handles Layer 2 (consensus) for unresolved items.
 
-> **Note on the diagrams below.** They depict the **Round 2**
-> (full fan-out) path that fires after a Round 1 escape, or
-> directly when an item is tagged `[security]`, `[ambiguous]`,
-> or untagged. Round 1 follows the same shape but spawns only
-> the analyst(s) `parse-consensus-categories` returns for the
-> item (1 ≤ N ≤ 3).
-> Both rounds invoke `consensus-synthesizer` with whichever
-> analyst responses ran — see "Category-Routed Dispatch" above
-> for the routing rules.
+> **Note on the diagrams below.** Security items start Round 1 with
+> all three analysts; Round 2 retries only failed or escaped analysts. A
+> `low_confidence` item spawns the one analyst
+> `parse-consensus-categories` returns and no synthesizer. The
+> synthesizer runs only for `security` items — see
+> "Plan-Stage Tiers" above for the routing rules.
 
 ### Clarify Consensus
 
@@ -463,16 +489,18 @@ clarify-executor prepares read-only Clarify Question Set
         ├── Stage 1: spawn all routed analysts for all items in ONE
         │   assistant message (background). Per-item routing comes
         │   from parse-consensus-categories (Category-Routed Dispatch).
+        │   Recommendation items finish with the executor answer;
+        │   low_confidence items finish via answer_source and the decisions list.
         │
         ├── Stage 2: spawn all consensus-synthesizers in ONE message
-        │   (one synthesizer per item).
+        │   (one synthesizer per security item).
         │
         ├── Stage 3: apply Artifact Edits SERIALLY in item order:
-        │   ├── Security item → apply only on 3/3; otherwise Round 3 tiebreak
-        │   ├── N=1 high-confidence | N=2 both-agree | N=3 2/3 or 3/3 agree
+        │   ├── Security tier → follow Consensus Rules; otherwise Round 3 tiebreak
+        │   ├── Accepted consensus
         │   │   → Edit spec.md with the consensus answer, remove marker
         │   ├── [ESCAPE_TO_ROUND_2] → enqueue for Round 2 batch
-        │   └── All disagree (after Round 2) → [ROUND_3_TIEBREAK] → Round 3 tiebreak
+        │   └── All disagree → [ROUND_3_TIEBREAK] → Round 3 tiebreak
 ```
 
 The diagram above is per-item educational. The actual dispatch is
@@ -494,7 +522,7 @@ with high confidence.
 
 ## Executor's Attempt
 [Insert the executor's answer and why it was flagged —
-conflicting sources, low confidence, or security keyword]
+low confidence or security keyword]
 
 ## Your Task
 Propose the best answer to this question from your
@@ -515,31 +543,34 @@ Reference dir: <plugin_root>/skills/speckit-autopilot/references/
 checklist-executor runs /speckit-checklist domain
     │
     ├── Layer 1: Executor runs checklist, researches each gap,
-    │   applies fixes, re-runs once to verify
+    │   proposes edits (the runner applies them in domain order),
+    │   then a verify run follows
     │
     ├── Executor returns summary with:
-    │   ├── Gaps fixed (with citations)
+    │   ├── Gaps and proposed edits (with citations)
     │   └── "Unresolved for consensus" section
     │
     └── Main session Layer 2 (BATCHED across all unresolved gaps —
         see §Batched Dispatch above for the canonical 3-stage flow):
         │
         ├── Stage 1: spawn all routed analysts for all gaps in ONE
-        │   message (background). Per-gap routing per [<categories>].
+        │   message (background). Per-gap routing from parse-consensus-categories.
+        │   Recommendation gaps finish with the executor answer;
+        │   low_confidence gaps finish via answer_source and the decisions list.
         │
         ├── Stage 2: spawn all consensus-synthesizers in ONE message
-        │   (one synthesizer per gap).
+        │   (one synthesizer per security gap).
         │
         ├── Stage 3: apply Artifact Edits SERIALLY in gap order:
-        │   ├── Security item → apply only on 3/3; otherwise Round 3 tiebreak
-        │   ├── N=1 high-confidence | N=2 both-agree | N=3 2/3 or 3/3 agree
+        │   ├── Security tier → follow Consensus Rules; otherwise Round 3 tiebreak
+        │   ├── Accepted consensus
         │   │   → Apply edit to spec.md or plan.md, log to workflow
         │   ├── [ESCAPE_TO_ROUND_2] → enqueue for Round 2 batch
-        │   └── All disagree (after Round 2) → [ROUND_3_TIEBREAK] → Round 3 tiebreak
+        │   └── All disagree → [ROUND_3_TIEBREAK] → Round 3 tiebreak
 ```
 
 The diagram above is per-gap educational. Actual dispatch is
-**batched across N gaps per checklist domain** — see §Batched Dispatch.
+**batched across N gaps from the whole checklist domain wave** — see §Batched Dispatch.
 
 **Prompt template for consensus agents during Gap Remediation:**
 
@@ -556,8 +587,7 @@ confidence.
 
 ## Executor's Attempt
 [Insert what the executor tried, if anything, and why it
-was flagged — remained after the verification re-run, low confidence, or
-security keyword]
+was flagged — low confidence or security keyword]
 
 ## Your Task
 Propose how to close this gap. Specifically:
@@ -586,17 +616,19 @@ analyze-executor runs /speckit-analyze
         see §Batched Dispatch above for the canonical 3-stage flow):
         │
         ├── Stage 1: spawn all routed analysts for all findings in ONE
-        │   message (background). Per-finding routing per [<categories>].
+        │   message (background). Per-finding routing from parse-consensus-categories.
+        │   Recommendation findings finish with the executor answer;
+        │   low_confidence findings finish via answer_source and the decisions list.
         │
         ├── Stage 2: spawn all consensus-synthesizers in ONE message
-        │   (one synthesizer per finding).
+        │   (one synthesizer per security finding).
         │
         ├── Stage 3: apply Artifact Edits SERIALLY in finding order:
-        │   ├── Security item → apply only on 3/3; otherwise Round 3 tiebreak
-        │   ├── N=1 high-confidence | N=2 both-agree | N=3 2/3 or 3/3 agree
+        │   ├── Security tier → follow Consensus Rules; otherwise Round 3 tiebreak
+        │   ├── Accepted consensus
         │   │   → Apply fix to tasks.md / spec.md / plan.md, log to workflow
         │   ├── [ESCAPE_TO_ROUND_2] → enqueue for Round 2 batch
-        │   └── All disagree (after Round 2) → [ROUND_3_TIEBREAK] → Round 3 tiebreak
+        │   └── All disagree → [ROUND_3_TIEBREAK] → Round 3 tiebreak
 ```
 
 The diagram above is per-finding educational. Actual dispatch is
@@ -618,8 +650,7 @@ Description: [Insert finding text]
 
 ## Executor's Attempt
 [Insert what the executor tried, if anything, and why it
-was flagged — remained after the verification re-run, low confidence, or
-security keyword]
+was flagged — low confidence or security keyword]
 
 ## Your Task
 Propose how to fix this finding. Specifically:
@@ -648,7 +679,10 @@ consensus-synthesizer after remediation, even when there were zero findings.
 It validates that the returned block has all five criterion lines, then
 persists that block exactly once for the current Analyze pass. A missing,
 failed, malformed, or duplicate confidence block does not complete Analyze and
-cannot be reconstructed by the parent.
+cannot be reconstructed by the parent. This dispatch, and the G6.5 re-emit,
+carry no consensus item: the synthesizer returns the block alone, no
+`Consensus Result` and no `Artifact Edit`, and the parent applies nothing from
+it.
 
 **Format (canonical, regex-parseable):**
 
@@ -756,10 +790,10 @@ from the log alone.
 
 | # | Type    | Question/Gap/Finding         | Categories         | Round | Outcome        | Resolution                 | Analysts Used                          |
 |---|---------|------------------------------|--------------------|-------|----------------|----------------------------|----------------------------------------|
-| 1 | Clarify | Session token format?        | [domain]           | 1     | high-confidence| JWT with 24h expiry        | domain-researcher                      |
-| 2 | Gap     | Rate limit thresholds        | [codebase, domain] | 1     | both-agree     | Added to spec §4.2         | codebase-analyst, domain-researcher    |
-| 3 | Finding | Missing integration tests    | [ambiguous]        | 2     | 3/3            | Added task T050            | codebase-analyst, spec-context-analyst, domain-researcher |
-| 4 | Clarify | Bcrypt vs argon2?            | [codebase]         | 1→2   | escape-hatch   | Argon2 (NIST SP 800-63B)   | codebase-analyst (Round 1) + spec-context-analyst, domain-researcher (Round 2) |
+| 1 | Clarify | Session token format?        | [security]         | 1     | 3/3            | JWT with 24h expiry        | codebase-analyst, spec-context-analyst, domain-researcher |
+| 2 | Gap     | Token budget per request     | [domain]           | 1     | 2/3            | Added to spec §4.2         | All (keyword `token`; every analyst `security_relevant: false`) |
+| 3 | Finding | Password reset rate limit    | [codebase]         | 2     | 3/3            | Added task T050            | All (keyword `password`); domain-researcher failed in Round 1 and answered on its Round 2 retry |
+| 4 | Clarify | Bcrypt vs argon2?            | [security]         | 1→2   | escape-hatch   | Argon2 (NIST SP 800-63B)   | All; codebase-analyst escaped in Round 1 and answered on its Round 2 retry |
 | 5 | Finding | OAuth callback URL handling  | [security]         | 1→3   | [ROUND 3]      | assumption: reject unknown callback URLs; dissent: allow-list per tenant | All (security tag → all-3; not unanimous) + fresh spec-context-analyst |
 ```
 
@@ -778,8 +812,6 @@ the source discriminator, so a breach of the threshold can be attributed to
 sweep rows or to phase rows without either being excluded from the rate.
 
 **Outcome values:**
-- `high-confidence` — Round 1, single-analyst, synthesizer flagged high
-- `both-agree` — Round 1, two-analyst, agreement
-- `3/3`, `2/3` — Round 2, classic agreement counts
-- `escape-hatch` — Round 1 escaped to Round 2 (count this in the 10% trigger metric)
-- `[ROUND 3]` — the item took the Round 3 tiebreak (Round 2 all-disagree, a security item without 3/3, or a failed analyst). The Resolution cell reads `assumption: <chosen option>; dissent: <positions not chosen>`, or adds `scope deferred` when the synthesizer flagged `[SCOPE_DEFERRED]`. Count it in the 10% trigger metric like an escape
+- `3/3`, `2/3` — the three-analyst agreement count, in Round 1 or after a Round 2 retry (a 2/3 row is a keyword-only item whose analysts all returned `security_relevant: false`)
+- `escape-hatch` — an analyst escaped in Round 1 and was retried in Round 2 (count this in the 10% trigger metric)
+- `[ROUND 3]` — the item took the Round 3 tiebreak (all three disagree, a security item without 3/3, or a failed analyst). The Resolution cell reads `assumption: <chosen option>; dissent: <positions not chosen>`, or adds `scope deferred` when the synthesizer flagged `[SCOPE_DEFERRED]`. Count it in the 10% trigger metric like an escape

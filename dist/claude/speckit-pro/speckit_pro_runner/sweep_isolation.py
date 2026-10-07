@@ -246,36 +246,36 @@ PRIVATE_KEY_RE = re.compile(
 PREFIX_SECRET_RULES = (
     (
         "github_token",
-        re.compile(r"\b((?:ghp|gho|ghu|ghs|ghr)_(?=[A-Za-z0-9]*[0-9])[A-Za-z0-9]{36,255})"),
+        re.compile(r"((?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36,255})"),
     ),
     (
         "github_fine_grained_pat",
-        re.compile(r"\b(github_pat_(?=[A-Za-z0-9_]*[0-9])[A-Za-z0-9_]{82,255})"),
+        re.compile(r"(github_pat_[A-Za-z0-9_]{82,255})"),
     ),
     (
         "slack_token",
-        re.compile(r"\b(xox[abceprs]-(?=[A-Za-z0-9-]*[0-9])[A-Za-z0-9-]{17,250})"),
+        re.compile(r"(xox[abceprs]-(?=[A-Za-z0-9-]*[0-9])[A-Za-z0-9-]{17,250})"),
     ),
     (
         "anthropic_api_key",
-        re.compile(r"\b(sk-ant-(?=[A-Za-z0-9_-]*[0-9])[A-Za-z0-9_-]{24,120})"),
+        re.compile(r"(sk-ant-(?=[A-Za-z0-9_-]*[0-9])[A-Za-z0-9_-]{24,120})"),
     ),
     (
         "openai_api_key",
-        re.compile(r"\b(sk-(?:proj-|svcacct-|admin-)?[A-Za-z0-9_-]{20,}?T3BlbkFJ[A-Za-z0-9_-]{20,})"),
+        re.compile(r"(sk-(?:proj-|svcacct-|admin-)?[A-Za-z0-9_-]{20,}?T3BlbkFJ[A-Za-z0-9_-]{20,})"),
     ),
     (
         "google_api_key",
-        re.compile(r"\b(AIza(?=[0-9A-Za-z_-]*[0-9])[0-9A-Za-z_-]{35})\b"),
+        re.compile(r"(AIza(?=[0-9A-Za-z_-]*[0-9])[0-9A-Za-z_-]{35})"),
     ),
     (
         "aws_access_key_id",
-        re.compile(r"\b((?:AKIA|ASIA|ABIA|ACCA|A3T[A-Z0-9])[A-Z2-7]{16})\b"),
+        re.compile(r"((?:AKIA|ASIA|ABIA|ACCA|A3T[A-Z0-9])[A-Z2-7]{16})"),
     ),
     (
         "url_credentials",
         re.compile(
-            r"(?i)\b[a-z][a-z0-9+.-]{1,30}://[^\s:/@'\"<>`]{1,64}"
+            r"(?i)[a-z][a-z0-9+.-]{1,30}://[^\s:/@'\"<>`]{1,64}"
             r":((?=[^\s/@]*[0-9])[^\s/@'\"<>${}`]{8,256})@"
         ),
     ),
