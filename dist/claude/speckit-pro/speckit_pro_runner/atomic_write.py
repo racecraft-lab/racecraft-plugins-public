@@ -138,11 +138,11 @@ class WriteBinding:
 
 
 @dataclass(frozen=True)
-class _AtomicWriteOptions:
-    trust_root: Path | None
-    mode: int | None
-    expected_snapshot: dict[str, Any] | None
-    binding: WriteBinding | None
+class AtomicWriteOptions:
+    trust_root: Path | None = None
+    mode: int | None = None
+    expected_snapshot: dict[str, Any] | None = None
+    binding: WriteBinding | None = None
 
 
 @dataclass
@@ -158,7 +158,7 @@ class _AtomicWriteState:
     identity: tuple[int, int, int] | None = None
 
 
-def _open_atomic_write_state(target: Path, options: _AtomicWriteOptions) -> _AtomicWriteState:
+def _open_atomic_write_state(target: Path, options: AtomicWriteOptions) -> _AtomicWriteState:
     created_dirs: list[str] = []
     if options.binding is not None:
         parent_fd = os.dup(options.binding.parent_fd)
@@ -178,7 +178,7 @@ def _open_atomic_write_state(target: Path, options: _AtomicWriteOptions) -> _Ato
     return _AtomicWriteState(parent_fd, target_name, temporary_name, created_dirs)
 
 
-def _check_atomic_write_parent(state: _AtomicWriteState, options: _AtomicWriteOptions) -> None:
+def _check_atomic_write_parent(state: _AtomicWriteState, options: AtomicWriteOptions) -> None:
     expected_snapshot = options.expected_snapshot
     expected_parent = expected_snapshot.get("parent") if expected_snapshot is not None else None
     if expected_parent is not None and file_identity(os.fstat(state.parent_fd)) != tuple(expected_parent):
@@ -191,7 +191,7 @@ def _check_atomic_write_parent(state: _AtomicWriteState, options: _AtomicWriteOp
             ensure_safe_write_target_fd(state.parent_fd, state.target_name)
 
 
-def _create_atomic_temporary(state: _AtomicWriteState, options: _AtomicWriteOptions) -> None:
+def _create_atomic_temporary(state: _AtomicWriteState, options: AtomicWriteOptions) -> None:
     _check_atomic_write_parent(state, options)
     existing_mode = options.mode if options.mode is not None else current_file_mode_fd(state.parent_fd, state.target_name)
     write_mode = existing_mode if existing_mode is not None else 0o666
@@ -208,7 +208,7 @@ def _create_atomic_temporary(state: _AtomicWriteState, options: _AtomicWriteOpti
     state.identity = entry_identity(temporary_stat)
 
 
-def _write_atomic_temporary(state: _AtomicWriteState, content: bytes, options: _AtomicWriteOptions) -> None:
+def _write_atomic_temporary(state: _AtomicWriteState, content: bytes, options: AtomicWriteOptions) -> None:
     binding = options.binding
     with os.fdopen(state.temporary_fd, "wb", closefd=binding is None) as handle:
         state.temporary_fd = handle.fileno() if binding is not None else -1
@@ -218,7 +218,7 @@ def _write_atomic_temporary(state: _AtomicWriteState, content: bytes, options: _
     _check_atomic_write_parent(state, options)
 
 
-def _validate_atomic_install(state: _AtomicWriteState, content: bytes, options: _AtomicWriteOptions) -> None:
+def _validate_atomic_install(state: _AtomicWriteState, content: bytes, options: AtomicWriteOptions) -> None:
     expected_snapshot = options.expected_snapshot
     if expected_snapshot is not None:
         ensure_write_target_matches_snapshot_fd(state.parent_fd, state.target_name, expected_snapshot)
@@ -228,7 +228,7 @@ def _validate_atomic_install(state: _AtomicWriteState, content: bytes, options: 
     verify_bound_publication(binding, state.temporary_fd, state.temporary_name, content)
 
 
-def _install_atomic_temporary(state: _AtomicWriteState, content: bytes, options: _AtomicWriteOptions) -> None:
+def _install_atomic_temporary(state: _AtomicWriteState, content: bytes, options: AtomicWriteOptions) -> None:
     _validate_atomic_install(state, content, options)
     expected_snapshot = options.expected_snapshot
     if not (
@@ -246,13 +246,13 @@ def _install_atomic_temporary(state: _AtomicWriteState, content: bytes, options:
     verify_bound_publication(options.binding, state.temporary_fd, state.target_name, content, installed=True)
 
 
-def _publish_atomic_write(state: _AtomicWriteState, content: bytes, options: _AtomicWriteOptions) -> None:
+def _publish_atomic_write(state: _AtomicWriteState, content: bytes, options: AtomicWriteOptions) -> None:
     _create_atomic_temporary(state, options)
     _write_atomic_temporary(state, content, options)
     _install_atomic_temporary(state, content, options)
 
 
-def _cleanup_atomic_write(state: _AtomicWriteState, options: _AtomicWriteOptions) -> None:
+def _cleanup_atomic_write(state: _AtomicWriteState, options: AtomicWriteOptions) -> None:
     if state.temporary_fd >= 0:
         try:
             os.close(state.temporary_fd)
@@ -279,7 +279,7 @@ def _cleanup_atomic_write(state: _AtomicWriteState, options: _AtomicWriteOptions
             state.failure.cleanup_errors = [*atomic_write_cleanup_errors(state.failure), *cleanup_errors]
 
 
-def _write_atomic(target: Path, content: bytes, options: _AtomicWriteOptions) -> dict[str, Any]:
+def _write_atomic(target: Path, content: bytes, options: AtomicWriteOptions) -> dict[str, Any]:
     state = _open_atomic_write_state(target, options)
     try:
         try:
@@ -297,16 +297,12 @@ def _write_atomic(target: Path, content: bytes, options: _AtomicWriteOptions) ->
     }
 
 
-def write_bound_bytes_atomic(
+def write_bytes_atomic_with_options(
     target: Path,
     content: bytes,
-    *,
-    trust_root: Path,
-    expected_snapshot: dict[str, Any],
-    binding: WriteBinding,
+    options: AtomicWriteOptions,
 ) -> dict[str, Any]:
-    """Replace a target through a caller-bound parent descriptor."""
-    options = _AtomicWriteOptions(trust_root, None, expected_snapshot, binding)
+    """Atomically replace a target using explicit write options."""
     return _write_atomic(target, content, options)
 
 
@@ -319,8 +315,8 @@ def write_bytes_atomic(
     expected_snapshot: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Atomically replace a target with optional mode and snapshot checks."""
-    options = _AtomicWriteOptions(trust_root, mode, expected_snapshot, None)
-    return _write_atomic(target, content, options)
+    options = AtomicWriteOptions(trust_root, mode, expected_snapshot)
+    return write_bytes_atomic_with_options(target, content, options)
 
 
 def verify_bound_publication(binding: WriteBinding | None, held_fd: int, name: str, content: bytes,

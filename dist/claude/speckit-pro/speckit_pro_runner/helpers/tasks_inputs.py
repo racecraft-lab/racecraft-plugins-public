@@ -11,10 +11,11 @@ from typing import Any
 
 from ..atomic_write import (
     AtomicWriteInterrupted,
+    AtomicWriteOptions,
     WriteBinding,
     ensure_safe_write_target_fd,
     snapshot_write_target_fd,
-    write_bound_bytes_atomic,
+    write_bytes_atomic_with_options,
 )
 from ..trusted_io import BOUNDED_TEXT_INPUT_BYTES, read_tree_entry, resolve_repo_root, trusted_open_directory
 from ..envelope import diagnostic, response
@@ -176,12 +177,14 @@ def run_publish_tasks_output_helper(entry: Any, request: Any) -> dict[str, Any]:
                 expected.pop("identity", None)
                 expected["parent"] = (identity["device"], identity["inode"])
             check_tasks_parent(feature, root, identity)
-            result = write_bound_bytes_atomic(
+            result = write_bytes_atomic_with_options(
                 feature / "tasks.md",
                 content,
-                trust_root=root,
-                expected_snapshot=expected,
-                binding=WriteBinding(parent, True, lambda: check_tasks_parent(feature, root, identity)),
+                AtomicWriteOptions(
+                    trust_root=root,
+                    expected_snapshot=expected,
+                    binding=WriteBinding(parent, True, lambda: check_tasks_parent(feature, root, identity)),
+                ),
             )
             published = True
             check_tasks_parent(feature, root, identity)
