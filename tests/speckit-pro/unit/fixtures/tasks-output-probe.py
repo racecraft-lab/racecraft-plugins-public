@@ -4,6 +4,8 @@ import shutil
 import sys
 import tempfile
 from contextlib import ExitStack
+from dataclasses import dataclass
+from typing import Any
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -160,15 +162,24 @@ def check_mutated(state, parent, target, expected):
     return value
 
 
-def verify_mutated(state, binding, held_fd, name, content, installed=False):
+@dataclass(frozen=True)
+class _PublicationCheck:
+    binding: Any
+    held_fd: int
+    name: str
+    content: bytes
+    installed: bool = False
+
+
+def verify_mutated(state, check):
     window = state["variant"].split(":", 1)[0]
-    selected = installed == window.startswith("output")
+    selected = check.installed == window.startswith("output")
     if selected and "before check" in window:
-        mutate_output(state, name, binding.parent_fd)
+        mutate_output(state, check.name, check.binding.parent_fd)
         state["fired"][0] = True
-    value = state["real_verify"](binding, held_fd, name, content, installed=installed)
+    value = state["real_verify"](check.binding, check.held_fd, check.name, check.content, installed=check.installed)
     if selected and "after check" in window:
-        mutate_output(state, name, binding.parent_fd)
+        mutate_output(state, check.name, check.binding.parent_fd)
         state["fired"][0] = True
     return value
 
@@ -190,7 +201,7 @@ def install_hooks(stack, state):
         hook = lambda *args, **kwargs: response_mutated(state, *args, **kwargs)
         stack.enter_context(patch.object(tasks_inputs, "response", hook))
     if variant.startswith(("temp before check", "temp after check", "output before check", "output after check")):
-        hook = lambda *args, **kwargs: verify_mutated(state, *args, **kwargs)
+        hook = lambda *args, **kwargs: verify_mutated(state, _PublicationCheck(*args, **kwargs))
         stack.enter_context(patch.object(atomic_write, "verify_bound_publication", hook))
     if variant.startswith(("temp during rename:", "output during rename:")):
         hook = lambda *args, **kwargs: replace_mutated(state, *args, **kwargs)

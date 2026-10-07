@@ -855,21 +855,34 @@ TASKS_MUTATION_FORMS = ('regular', 'hard link', 'symlink in-root', 'symlink out-
                         'fifo', 'deleted', 'direct write', 'transient hard link')
 
 
+_UNSAFE_TASKS_OUTPUT_VARIANTS = ('parent replacement', 'parent symlink in-root', 'parent symlink out-root',
+                        'leaf symlink in-root', 'leaf symlink out-root', 'hard-linked leaf',
+                        'fifo leaf', 'directory leaf', 'parent missing', 'parent file',
+                        'parent during acquisition', 'parent during temp out-root',
+                        'leaf symlink during temp in-root', 'leaf symlink during temp out-root',
+                        'hard link during temp')
+
+
+def _assert_isolated_probes(case, cases, script, *, stderr_first=False):
+    for context, payload, arguments in cases:
+        with case.subTest(**context):
+            done = run_isolated(payload, script, *arguments)
+            output = done.stderr + done.stdout if stderr_first else done.stdout + done.stderr
+            case.assertEqual(0, done.returncode, output)
+
+
 class TasksOutputTests(_TasksOutputSupport, unittest.TestCase):
     """G4 -> Tasks brief -> executor snapshot -> runner publication, on both shipped hosts."""
 
     def test_atomic_sync_and_close_failures_are_explicit_on_every_payload(self):
-        for host, payload in RUNNER_ROOTS:
-            for failure in ('directory sync', 'temporary close', 'parent close'):
-                with self.subTest(host=host, failure=failure):
-                    done = run_isolated(payload, ATOMIC_FAILURE_PROBE, failure)
-                    self.assertEqual(0, done.returncode, done.stdout + done.stderr)
+        cases = (({'host': host, 'failure': failure}, payload, (failure,)) for host, payload in RUNNER_ROOTS
+                 for failure in ('directory sync', 'temporary close', 'parent close'))
+        _assert_isolated_probes(self, cases, ATOMIC_FAILURE_PROBE)
 
     def test_unbound_writes_preserve_close_before_rename_on_both_payloads(self):
-        for payload in (REPO / 'speckit-pro', REPO / 'dist/claude/speckit-pro', REPO / 'dist/codex/speckit-pro'):
-            with self.subTest(payload=payload.name):
-                done = run_isolated(payload, UNBOUND_PUBLICATION_PROBE)
-                self.assertEqual(0, done.returncode, done.stdout + done.stderr)
+        cases = (({'payload': payload.name}, payload, ())
+                 for payload in (REPO / 'speckit-pro', REPO / 'dist/claude/speckit-pro', REPO / 'dist/codex/speckit-pro'))
+        _assert_isolated_probes(self, cases, UNBOUND_PUBLICATION_PROBE, stderr_first=True)
 
     def test_clean_output_publishes_bound_bytes_and_replaces_regular_leaf(self):
         for variant in ('clean', 'existing regular'):
@@ -881,12 +894,7 @@ class TasksOutputTests(_TasksOutputSupport, unittest.TestCase):
                 self.assertEqual('# Tasks\n\n- [ ] T001 Build the feature\n', published)
 
     def test_output_refuses_each_daybreak_redirect_and_special_file(self):
-        for variant in ('parent replacement', 'parent symlink in-root', 'parent symlink out-root',
-                        'leaf symlink in-root', 'leaf symlink out-root', 'hard-linked leaf',
-                        'fifo leaf', 'directory leaf', 'parent missing', 'parent file',
-                        'parent during acquisition', 'parent during temp out-root',
-                        'leaf symlink during temp in-root', 'leaf symlink during temp out-root',
-                        'hard link during temp'):
+        for variant in _UNSAFE_TASKS_OUTPUT_VARIANTS:
             for result, _ in self.probe(variant):
                 self.assertEqual('input_error', result['status'])
                 self.assertEqual({'after_hooks_ready': False}, result['data'])
