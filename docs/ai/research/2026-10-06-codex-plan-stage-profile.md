@@ -8,7 +8,7 @@
 
 ## Answer first
 
-The Codex plan stage runs its waves concurrently, but the orchestrator launches each wave one agent per model response instead of all agents in one turn, and it polls with 10 second waits that cost about a third of its input tokens.
+The Codex plan stage runs its waves concurrently, but the orchestrator launches each wave one agent per model response instead of all agents in one turn, and it polls with short waits (10 s on every call in Run B) that cost about a third of its input tokens.
 
 | Finding | Evidence |
 | --- | --- |
@@ -102,14 +102,15 @@ Run A per-agent rows are in the same range: checklist domains 805K to 1.50M toke
 | Measure | Run B | Run A |
 | --- | --- | --- |
 | `wait_agent` calls | 50 | 33 |
-| Timed out (10 s with no result) | 37 (74%) | 18 (55%) |
+| `timeout_ms` used | 10000 on all 50 | 10000 on 20, 50000 on 13 |
+| Timed out (no result within `timeout_ms`) | 37 (74%) | 18 (55%): 13 of the 20 short waits, 5 of the 13 long waits |
 | Orchestrator input tokens spent on poll responses | 9,218,503 | 5,296,694 |
 | Share of orchestrator input | 36% | 26% |
 | Output tokens on poll responses | 3,711 | 2,182 |
-| Wall time blocked in `wait_agent` | 411 s (26%) | 556 s (34%) |
+| Wall time blocked in `wait_agent` | 411 s (26%) | 556 s (34%): 159 s in the 20 short waits, 398 s in the 13 long waits |
 | `list_agents`, `send_message`, `followup_task` calls | 3, 6, 6 | 2, 2, 4 |
 
-Every poll response re-reads about 184K cached tokens to emit a call of under 100 tokens. The plugin text says to "bound each `wait_agent` poll with `timeout_ms`" and gives no value. The orchestrator chose 10000 on every call. The Codex subagent documentation does not state a default or minimum for `timeout_ms` that I could find; the value was not confirmed against a vendor source. Whether a longer timeout returns early when a child finishes, and so cuts polls without adding latency, was not tested.
+Every poll response re-reads about 184K cached tokens to emit a call of under 100 tokens. The plugin text says to "bound each `wait_agent` poll with `timeout_ms`" and gives no value. Run B's orchestrator chose 10000 on every call. Run A's chose 10000 on 20 calls and 50000 on 13. The 50 s waits account for most of Run A's 556 s blocked time. Run A's poll input share (26%) is lower than Run B's (36%), consistent with fewer, longer waits, though two runs do not establish that. The Codex subagent documentation does not state a default or minimum for `timeout_ms` that I could find; the value was not confirmed against a vendor source. Whether a longer timeout returns early when a child finishes, and so cuts polls without adding latency, was not tested.
 
 ## Child-token sums
 
@@ -138,4 +139,4 @@ The plan stage reached its boundary and opened a draft pull request in the fixtu
 
 - One new run and one earlier run, one fixture, one host version. Figures vary run to run: the two plan stages differ by 2% in wall time and 18% in tokens.
 - Per-phase orchestrator tokens are attributed by the time window of each model response, so a phase boundary is approximate to one response.
-- The fixture is small (a word-frequency feature). Larger specs raise executor tokens; the orchestrator's context and poll costs scale with run length rather than spec size.
+- One small fixture (a word-frequency feature), one host version, two runs. The profile does not show how executor tokens, orchestrator context or poll cost change with a larger spec or a longer run; that is unconfirmed.
