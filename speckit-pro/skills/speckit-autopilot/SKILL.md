@@ -1111,7 +1111,7 @@ hosts call `helper_id=publish-tasks-output operation=publish-tasks-output mode=a
 with `inputs=brief.inputs.tasks_output`, before after_Tasks hooks or G5.
 Pass `brief.inputs.defer_after_hooks=true` to the executor; it defers every
 after_tasks hook. On successful publication with `data.after_hooks_ready=true`,
-run the loaded command's mandatory after_tasks hooks from the parent, then
+run the loaded command's mandatory hooks registered for after_tasks from the parent, then
 handle optional after_tasks suggestions under the existing confirmation rule.
 Only successful publication permits hooks and G5. A refusal is a blocker under the
 existing repair policy; retain the snapshot for repair and report only its
@@ -1315,7 +1315,7 @@ for phase in PHASES starting from first_pending:
     5. Tasks only: call publish-tasks-output, mode apply, with
        inputs=brief.inputs.tasks_output unchanged. A refusal blocks hooks,
        G5 and phase completion; use the existing repair policy. On ok with
-       data.after_hooks_ready=true, run mandatory after_tasks hooks once from
+       data.after_hooks_ready=true, run mandatory hooks registered for after_tasks once from
        the parent using the loaded command's hook instructions.
        Specify, Plan, Checklist, Tasks and Analyze only:
        handle optional brief.hooks with event=after_<phase> under the confirmation
