@@ -14,7 +14,7 @@ The Codex plan stage runs its waves concurrently, but the orchestrator launches 
 | --- | --- |
 | Concurrent dispatch works on Codex | Three checklist executors overlapped (peak 3 live children). The wave took 200 s; the same three agents run end to end sum to 558 s. |
 | Wave launch is serial, against the skill text | Each wave entry was its own `spawn_agent` call in its own model response, 9 to 13 s apart. The skill says to issue one `spawn_agent` per entry "in one turn". |
-| Polling is a large cost | 50 `wait_agent` calls with `timeout_ms` 10000. 37 timed out. They re-read 9.2M input tokens (about 36% of the orchestrator's input) and blocked 411 s (26% of wall time). |
+| Polling is a large cost | In Run B, 50 `wait_agent` calls with `timeout_ms` 10000. 37 timed out. They re-read 9.2M input tokens (about 36% of the orchestrator's input) and blocked 411 s (26% of wall time). |
 | The orchestrator is the token driver | The orchestrator spent 25.8M of 36.1M plan-stage tokens (71%). Cache reads are 99% of its input. Its context peaked at 228K of a 258K window and was compacted once. |
 | The plan target is half met | Wall time 1,584 s is under the 1,800 s limit. Tokens 36.1M are 2.4 times the 15M limit. |
 
@@ -127,7 +127,7 @@ Confirms:
 Corrects:
 
 - "Several `spawn_agent` calls and one wait." Observed: one `spawn_agent` per response, then many waits. The wave still runs in parallel, but it costs one orchestrator response per agent and staggers starts.
-- "One wait." Observed: a loop of 33 to 50 ten-second waits per plan stage, most of them timeouts.
+- "One wait." Observed: a loop of 33 (Run A) to 50 (Run B) waits per plan stage. Run B used 10 s on every call; Run A used 10 s on 20 and 50 s on 13. Most waits timed out in both runs (55% and 74%).
 - Verify wave launch is `followup_task` to existing threads, not `spawn_agent`. The ADR names only `spawn_agent`.
 - Still unmeasured: multi-analyst consensus waves (this fixture raises none), and any wave larger than `max_agents` 3.
 
