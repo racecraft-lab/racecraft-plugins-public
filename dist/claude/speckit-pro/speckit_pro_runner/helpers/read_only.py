@@ -2042,30 +2042,7 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     if gate == "G5":
         if not trusted_file_exists(tasks, repo_root):
             return make_result(json_text({"gate": "G5", "pass": False, "reason": "tasks.md not found", "markers": 0, "details": []}), exit_code=1)
-        count = count_unchecked_tasks(tasks, repo_root)
-        passed = count > 0
-        obj = {
-            "gate": "G5",
-            "pass": passed,
-            "reason": f"{count} tasks found" if passed else "No task entries found in tasks.md",
-            "markers": 0,
-            "task_count": count,
-        }
-        if passed:
-            obj.update(g5_gate_task_loops(tasks, repo_root))
-            rows = g5_empty_coverage_rows(trusted_text(tasks, repo_root) or "")
-            if rows:
-                reason = (f"{len(rows)} requirement coverage row(s) have no task IDs: "
-                          + ", ".join(row["requirement"] for row in rows))
-                obj["reason"] = reason if obj["pass"] else f"{obj['reason']}; {reason}"
-                obj["details"] = [*obj.get("details", []), *(
-                    f"Line {row['line']}: {row['requirement']} has an empty or placeholder task cell "
-                    + f"('{row['cell']}'). Fill it with the task IDs that cover the requirement."
-                    for row in rows)]
-                obj["empty_coverage_rows"] = rows
-                obj["pass"] = False
-            passed = obj["pass"]
-        return make_result(json_text(obj), exit_code=0 if passed else 1)
+        return g5_tasks_text(trusted_text(tasks, repo_root) or "", tasks, repo_root)
     if gate == "G7":
         if not trusted_file_exists(tasks, repo_root):
             return make_result(json_text({"gate": "G7", "pass": False, "reason": "tasks.md not found", "markers": 0, "details": []}), exit_code=1)
@@ -2107,6 +2084,34 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     if count == 0:
         return make_result(json_text({"gate": gate, "pass": True, "reason": "0 CRITICAL/HIGH findings", "markers": 0, "analysis_findings": findings, "details": []}))
     return make_result(json_text({"gate": gate, "pass": False, "reason": f"{count} CRITICAL/HIGH findings remain", "markers": count, "analysis_findings": findings, "details": []}), exit_code=1)
+
+
+def g5_tasks_text(text: str, tasks: Path, repo_root: Path) -> dict[str, Any]:
+    """Evaluate the Tasks text consumed by G5 without reopening its path."""
+    count = sum(1 for line in text.splitlines() if re.match(r"^\s*-\s+\[ \]\s+T[0-9]", line))
+    passed = count > 0
+    obj = {
+        "gate": "G5",
+        "pass": passed,
+        "reason": f"{count} tasks found" if passed else "No task entries found in tasks.md",
+        "markers": 0,
+        "task_count": count,
+    }
+    if passed:
+        obj.update(g5_gate_task_loops(tasks, repo_root, text))
+        rows = g5_empty_coverage_rows(text)
+        if rows:
+            reason = (f"{len(rows)} requirement coverage row(s) have no task IDs: "
+                      + ", ".join(row["requirement"] for row in rows))
+            obj["reason"] = reason if obj["pass"] else f"{obj['reason']}; {reason}"
+            obj["details"] = [*obj.get("details", []), *(
+                f"Line {row['line']}: {row['requirement']} has an empty or placeholder task cell "
+                + f"('{row['cell']}'). Fill it with the task IDs that cover the requirement."
+                for row in rows)]
+            obj["empty_coverage_rows"] = rows
+            obj["pass"] = False
+        passed = obj["pass"]
+    return make_result(json_text(obj), exit_code=0 if passed else 1)
 
 
 G4_MAX_REPORTS = 64
@@ -2310,7 +2315,7 @@ def g5_empty_coverage_rows(text: str) -> list[dict[str, Any]]:
     return rows
 
 
-def g5_gate_task_loops(tasks: Path, repo_root: Path) -> dict[str, Any]:
+def g5_gate_task_loops(tasks: Path, repo_root: Path, text: str) -> dict[str, Any]:
     """Fail G5 when a task gating source work needs evidence its dependents produce (#773)."""
     from ..task_execution import TaskExecutionError, gate_task_loops, sidecar_dependencies
 
@@ -2325,7 +2330,7 @@ def g5_gate_task_loops(tasks: Path, repo_root: Path) -> dict[str, Any]:
         except TaskExecutionError as exc:
             reason = f"task-execution metadata cannot be read for the gate-task check ({exc}); run validate-task-execution"
             return {"pass": False, "reason": reason, "details": []}
-    loops = gate_task_loops(trusted_text(tasks, repo_root) or "", depends_on)
+    loops = gate_task_loops(text, depends_on)
     if not loops:
         return {}
     details = [
