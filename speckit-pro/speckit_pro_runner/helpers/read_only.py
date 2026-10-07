@@ -2058,7 +2058,7 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
         if not trusted_file_exists(tasks, repo_root):
             return make_result(json_text({"gate": "G7", "pass": False, "reason": "tasks.md not found", "markers": 0, "details": []}), exit_code=1)
         total = count_tasks(tasks, repo_root)
-        done = count_done_tasks(tasks, repo_root)
+        done = count_tasks(tasks, repo_root, completed_only=True)
         remaining = total - done
         if remaining == 0 and total > 0:
             return make_result(
@@ -6584,12 +6584,9 @@ def count_pattern_dir(directory: Path, pattern: str, repo_root: Path | None = No
     return count_pattern([path for path in directory.rglob("*") if path.is_file()], pattern, repo_root)
 
 
-def count_tasks(path: Path, repo_root: Path | None = None) -> int:
-    return sum(1 for line in trusted_lines(path, repo_root) if re.match(r"^\s*-\s+\[[ xX]\]\s+T[0-9]", line))
-
-
-def count_done_tasks(path: Path, repo_root: Path | None = None) -> int:
-    return sum(1 for line in trusted_lines(path, repo_root) if re.match(r"^\s*-\s+\[[xX]\]\s+T[0-9]", line))
+def count_tasks(path: Path, repo_root: Path | None = None, *, completed_only: bool = False) -> int:
+    checkbox = r"\[[xX]\]" if completed_only else r"\[[ xX]\]"
+    return count_pattern([path], r"^\s*-\s+" + checkbox + r"\s+T[0-9]", repo_root)
 
 
 def last_number(text: str, pattern: str) -> int:
