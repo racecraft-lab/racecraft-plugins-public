@@ -18,7 +18,7 @@ The Codex plan stage runs its waves concurrently, but the orchestrator launches 
 | The orchestrator is the token driver | The orchestrator spent 25.8M of 36.1M plan-stage tokens (71%). Cache reads are 99% of its input. Its context peaked at 228K of a 258K window and was compacted once. |
 | The plan target is half met | Wall time 1,584 s is under the 1,800 s limit. Tokens 36.1M are 2.4 times the 15M limit. |
 
-A follow-up ticket covers the two wave defects (serial launch, short polls). It is linked from the pull request.
+Follow-up [#1286](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1286) covers the two wave defects (serial launch, short polls).
 
 ## Method
 
