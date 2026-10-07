@@ -28,6 +28,7 @@ from .read_only import (
     trusted_regular_file_bytes_and_mode,
 )
 from ..atomic_write import (
+    AtomicWriteInterrupted,
     WritePreconditionChanged,
     atomic_write_cleanup_errors,
     ensure_final_newline,
@@ -1085,6 +1086,10 @@ def run_mutation_helper(
                     ],
                 )
             except OSError as exc:
+                if isinstance(exc, AtomicWriteInterrupted):
+                    # The entry reached disk; rollback still requires an observed applied snapshot.
+                    mutation["applied_operations"].append(operation_record(op))
+                    mutation["touched_paths"].append(rel)
                 mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
                 mutation["failure_operation"] = operation_record(op)
                 rollback_errors = rollback_applied_writes(mutation["touched_paths"], snapshots, repo_root)

@@ -8430,7 +8430,7 @@ This line must not be copied.
             self.assertFalse(target.exists())
             self.assertTrue(parent.is_dir())
 
-    def test_apply_tracks_successful_write_when_final_parent_close_fails(self) -> None:
+    def test_apply_tracks_interrupted_write_when_final_parent_close_fails(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
             request = RunnerRequest(
@@ -8483,7 +8483,10 @@ This line must not be copied.
                     except OSError:
                         pass
 
-            self.assert_response(response, "ok", 0)
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual(response["data"]["mutation"]["mutation_status"], "partial_failure")
+            self.assertEqual(response["diagnostics"][0]["code"], "write_failure")
+            self.assertEqual(response["diagnostics"][0]["details"]["error"], "AtomicWriteInterrupted")
             self.assertEqual(response["data"]["mutation"]["applied_operations"][0]["operation_id"], "write-new")
             self.assertEqual(response["data"]["mutation"]["touched_paths"], ["new.md"])
             self.assertTrue(response["data"]["writes_state"])
