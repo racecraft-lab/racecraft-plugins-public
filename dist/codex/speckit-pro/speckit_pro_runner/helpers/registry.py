@@ -26,7 +26,7 @@ from .quality_gates_proposal import run_quality_gates_proposal_helper
 from .readiness_record import run_readiness_record_helper
 from .scaffold_answers import run_scaffold_answers_helper
 from .phase_brief import run_phase_brief_helper
-from .tasks_inputs import run_read_tasks_inputs_helper
+from .tasks_inputs import run_read_tasks_inputs_helper, run_publish_tasks_output_helper
 from .run_finalization import run_run_finalization_helper
 from .mutation import empty_mutation, run_mutation_helper, run_spec_index_write, run_sweep_apply_result
 from .pr_emission import generate_pr_body, plan_commands
@@ -476,6 +476,11 @@ HELPERS: dict[str, HelperEntry] = {
 
 
 MUTATION_HELPERS: dict[str, MutationEntry] = {
+    "publish-tasks-output": MutationEntry(
+        "publish-tasks-output", "publish-tasks-output", ("apply",), None,
+        "golden_only", "fixture_semantic", mutation_authoritative_request("publish-tasks-output"),
+        ("g4-parent-identity", "snapshot-output", "unsafe-leaf"),
+    ),
     "task-results": MutationEntry(
         "task-results", "task-results", ("read_only", "dry_run", "apply"), None,
         "golden_only", "fixture_semantic", mutation_authoritative_request("task-results"),
@@ -875,6 +880,9 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
 
     if entry.helper_id == "decisions-list":
         return run_decisions_list_helper(entry, request)
+
+    if entry.helper_id == "publish-tasks-output":
+        return run_publish_tasks_output_helper(entry, request)
 
     if entry.helper_id == "checklist-edits":
         return run_checklist_edits_helper(entry, request)

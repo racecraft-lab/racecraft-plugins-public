@@ -9,6 +9,8 @@ import os
 import re
 import sys
 import tempfile
+import shutil
+from functools import cache
 import tomllib
 from contextlib import ExitStack, contextmanager
 from unittest.mock import patch
@@ -27,16 +29,22 @@ from isolated_child import run_python  # noqa: E402
 
 def with_tasks_fixture_evidence(inputs):
     """Existing positive Tasks fixtures provide the same clean G4 baseline explicitly."""
-    if inputs.get("phase") != "Tasks" or "g4_judged" in inputs:
+    if inputs.get("phase") != "Tasks":
         return inputs
     feature = Path.cwd() / inputs["feature_dir"]
+    if "g4_judged" in inputs:
+        if not feature.is_dir() or "g4_feature_identity" in inputs:
+            return inputs
+        info = feature.stat()
+        return {**inputs, "g4_feature_identity": {"device": info.st_dev, "inode": info.st_ino}}
     (feature / "checklists").mkdir(parents=True, exist_ok=True)
     judged = {}
     for name in ("spec.md", "plan.md", "checklists/security.md"):
         target = feature / name
         target.write_bytes(b"clean fixture\n")
         judged[name] = hashlib.sha256(b"clean fixture\n").hexdigest()
-    return {**inputs, "g4_judged": judged}
+    info = feature.stat()
+    return {**inputs, "g4_judged": judged, "g4_feature_identity": {"device": info.st_dev, "inode": info.st_ino}}
 
 
 def comparable_brief(data):
@@ -94,6 +102,15 @@ SELECT_RUNNER = "import sys\nsys.path.insert(0, sys.argv.pop(1))\n"
 RUN_RUNNER = "import runpy\nrunpy.run_module('speckit_pro_runner', run_name='__main__', alter_sys=True)\n"
 
 
+@cache
+def frozen_runner(runner):
+    """One stable payload per test process; regenerating dist cannot remove a child's imports or references."""
+    temporary = tempfile.TemporaryDirectory(prefix="speckit-test-payload-")
+    target = Path(temporary.name) / "payload"
+    shutil.copytree(runner, target, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    return target, temporary
+
+
 def run_isolated(runner, program, *args, cwd=None, **kwargs):
     """Run `program` in a child that imports only the selected runner and the standard library.
 
@@ -101,8 +118,9 @@ def run_isolated(runner, program, *args, cwd=None, **kwargs):
     project-root module nor an inherited PYTHON* variable reaches the child. Of the parent's
     other variables, only the HOOK_CONDITION_KEYS the fixtures set are forwarded.
     """
+    selected, _ = frozen_runner(runner)
     conditions = {key: os.environ[key] for key in HOOK_CONDITION_KEYS if key in os.environ}
-    return run_python(["-c", SELECT_RUNNER + program, str(runner), *args], cwd=cwd, env_extra=conditions, **kwargs)
+    return run_python(["-c", SELECT_RUNNER + program, str(selected), *args], cwd=cwd, env_extra=conditions, **kwargs)
 
 
 def payload_briefs(inputs, include_status=False):
@@ -249,6 +267,8 @@ for case in json.load(sys.stdin):
                     import hashlib
                     feature = root / "specs/example"
                     (feature / "checklists").mkdir(parents=True)
+                    info = feature.stat()
+                    inputs["g4_feature_identity"] = {"device": info.st_dev, "inode": info.st_ino}
                     inputs["g4_judged"] = {}
                     for name in ("spec.md", "plan.md", "checklists/security.md"):
                         (feature / name).write_bytes(b"clean fixture\\n")
@@ -316,6 +336,22 @@ class ChildImportIsolationTests(unittest.TestCase):
                 self.assertFalse(marker.exists(), "checkout-root module executed")
                 self.assertEqual(reports[0]["result"]["status"], "ok", reports)
                 self.assertEqual(reports[0]["result"]["data"]["hooks"][0]["command"], "speckit.safe.run")
+
+    def test_payload_refresh_cannot_remove_child_inputs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            payload = Path(directory) / "payload"
+            payload.mkdir()
+            (payload / "stable_module.py").write_text("ANSWER = 42\n")
+            (payload / "reference.md").write_text("Stable section\n")
+            real = run_python
+            def refresh_before_child(*args, **kwargs):
+                shutil.rmtree(payload)
+                return real(*args, **kwargs)
+            with patch.dict(globals(), {"run_python": refresh_before_child}):
+                done = run_isolated(payload, "import stable_module\nfrom pathlib import Path\n"
+                                    "print(stable_module.ANSWER, (Path(sys.path[0]) / 'reference.md').read_text().strip())")
+            self.assertEqual(0, done.returncode, done.stderr)
+            self.assertEqual("42 Stable section", done.stdout.strip())
 
     def test_children_receive_no_python_environment(self):
         hostile = {"PYTHONPATH": str(REPO), "PYTHONHOME": str(REPO), "PYTHONSTARTUP": str(REPO / "startup.py"),
@@ -605,7 +641,7 @@ class PhaseBriefTests(InProjectCase):
                                               "gate", "slices", "waves", "model", "hooks"})
                 self.assertEqual(brief["schema_version"], "phase-brief/v1")
                 self.assertEqual(brief["phase"], phase)
-                self.assertEqual(set(brief["inputs"]), {"workflow_file", "feature_dir", "instruction", "skill", "prompt_section"} | ({"tasks_snapshot"} if phase == "Tasks" else set()))
+                self.assertEqual(set(brief["inputs"]), {"workflow_file", "feature_dir", "instruction", "skill", "prompt_section"} | ({"tasks_snapshot", "tasks_output"} if phase == "Tasks" else set()))
                 self.assertEqual(brief["agent"], agent)
                 self.assertEqual(brief["gate"], gate)
                 self.assertEqual(brief["inputs"]["workflow_file"], "docs/workflow.md")
@@ -713,6 +749,154 @@ class TasksG4BindingTests(InProjectCase):
         self.assertEqual("input_error", result["status"])
         self.assertEqual({}, result["data"])
 
+
+
+TASKS_OUTPUT_PROBE = r"""
+import json, os, shutil, sys, tempfile
+from pathlib import Path
+from types import SimpleNamespace
+from speckit_pro_runner.helpers.registry import dispatch_helper
+from speckit_pro_runner.helpers import tasks_inputs
+from unittest.mock import patch
+from contextlib import ExitStack
+
+variant = sys.argv[1]
+def call(helper, inputs, mode='read_only'):
+    return dispatch_helper(SimpleNamespace(helper_id=helper, operation=helper, mode=mode,
+                                          inputs=inputs, request_id=None))
+with tempfile.TemporaryDirectory() as directory, tempfile.TemporaryDirectory() as outside:
+    root = Path(directory).resolve()
+    os.chdir(root)
+    (root / '.specify').mkdir()
+    feature = root / 'specs/example'
+    (feature / 'checklists').mkdir(parents=True)
+    for name in ('spec.md', 'plan.md', 'checklists/security.md'):
+        (feature / name).write_text('Clean planning input.\n')
+    verdict = call('validate-gate', {'gate':'G4', 'feature_dir':'specs/example'})['data']['stdout_json']
+    if variant == 'before brief replacement':
+        feature.rename(root / 'original')
+        shutil.copytree(root / 'original', feature)
+    brief = call('phase-brief', {'phase':'Tasks', 'workflow_file':'docs/workflow.md',
+                 'feature_dir':'specs/example', 'g4_judged':verdict['judged'],
+                 'g4_feature_identity':verdict.get('feature_identity')})
+    if variant == 'before brief replacement':
+        print(json.dumps({'result': brief, 'victim':'Victim must stay unchanged\n', 'published':None, 'entries':[]}))
+        sys.exit(0)
+    assert brief['status'] == 'ok', brief
+    output = brief['data']['inputs']['tasks_output']
+    snapshot = Path(output['snapshot_dir'])
+    try:
+        (snapshot / 'tasks.md').write_text('# Tasks\n\n- [ ] T001 Build the feature\n')
+        victim = (Path(outside).resolve() if 'out-root' in variant else root / 'victim')
+        victim.mkdir(exist_ok=True)
+        (victim / 'tasks.md').write_text('Victim must stay unchanged\n')
+        old = root / 'original'
+        leaf = feature / 'tasks.md'
+        if variant == 'parent replacement':
+            feature.rename(old)
+            feature.mkdir()
+        elif variant.startswith('parent symlink'):
+            feature.rename(old)
+            feature.symlink_to(victim, target_is_directory=True)
+        elif variant.startswith('leaf symlink') and 'during' not in variant:
+            leaf.symlink_to(victim / 'tasks.md')
+        elif variant == 'hard-linked leaf':
+            os.link(victim / 'tasks.md', leaf)
+        elif variant == 'fifo leaf':
+            os.mkfifo(leaf)
+        elif variant == 'directory leaf':
+            leaf.mkdir()
+        elif variant == 'existing regular':
+            leaf.write_text('Old tasks\n')
+        elif variant == 'parent missing':
+            feature.rename(old)
+        elif variant == 'parent file':
+            feature.rename(old)
+            feature.write_text('Not a directory')
+        fired = False
+        def move_parent():
+            feature.rename(old)
+            feature.symlink_to(victim, target_is_directory=True)
+        real_open_parent = tasks_inputs.trusted_open_directory
+        def acquire(*args, **kwargs):
+            global fired
+            value = real_open_parent(*args, **kwargs)
+            if not fired:
+                fired = True
+                move_parent()
+            return value
+        real_open = os.open
+        def create_temp(path, flags, *args, **kwargs):
+            global fired
+            value = real_open(path, flags, *args, **kwargs)
+            if flags & os.O_CREAT and not fired:
+                fired = True
+                if variant.startswith('parent during temp'):
+                    move_parent()
+                elif variant == 'hard link during temp':
+                    os.link(victim / 'tasks.md', leaf)
+                else:
+                    leaf.symlink_to(victim / 'tasks.md')
+            return value
+        with ExitStack() as stack:
+            if variant == 'parent during acquisition':
+                stack.enter_context(patch.object(tasks_inputs, 'trusted_open_directory', acquire))
+            if 'during temp' in variant:
+                stack.enter_context(patch.object(os, 'open', create_temp))
+            result = call('publish-tasks-output', output, 'apply')
+        if 'during' in variant:
+            assert fired, 'fault was not exercised' 
+        print(json.dumps({'result':result, 'victim':(victim/'tasks.md').read_text(),
+                          'published': leaf.read_text() if variant in ('clean', 'existing regular') and leaf.exists() else None,
+                          'entries': sorted(p.name for p in (old if old.exists() else feature).iterdir())
+                                     if variant != 'parent file' else []}))
+    finally:
+        shutil.rmtree(snapshot, ignore_errors=True)
+"""
+
+class TasksOutputTests(unittest.TestCase):
+    """G4 -> Tasks brief -> executor snapshot -> runner publication, on both shipped hosts."""
+
+    def probe(self, variant):
+        for host, payload in (('source', REPO / 'speckit-pro'),
+                              ('claude', REPO / 'dist/claude/speckit-pro'),
+                              ('codex', REPO / 'dist/codex/speckit-pro')):
+            with self.subTest(host=host, variant=variant):
+                done = run_isolated(payload, TASKS_OUTPUT_PROBE, variant)
+                self.assertEqual(0, done.returncode, done.stderr + done.stdout)
+                report = json.loads(done.stdout)
+                self.assertEqual('Victim must stay unchanged\n', report['victim'])
+                self.assertFalse(any(name.startswith('.tasks.md.tmp-') for name in report['entries']))
+                if variant.startswith('parent'):
+                    self.assertNotIn('tasks.md', report['entries'], 'refused parent must not receive Tasks output')
+                yield report['result'], report['published']
+
+    def test_clean_output_publishes_tasks_and_replaces_regular_leaf(self):
+        for variant in ('clean', 'existing regular'):
+            for result, published in self.probe(variant):
+                self.assertEqual('ok', result['status'])
+                self.assertEqual('# Tasks\n\n- [ ] T001 Build the feature\n', published)
+
+    def test_output_refuses_each_daybreak_redirect_and_special_file(self):
+        for variant in ('parent replacement', 'parent symlink in-root', 'parent symlink out-root',
+                        'leaf symlink in-root', 'leaf symlink out-root', 'hard-linked leaf',
+                        'fifo leaf', 'directory leaf', 'parent missing', 'parent file',
+                        'parent during acquisition', 'parent during temp out-root',
+                        'leaf symlink during temp in-root', 'leaf symlink during temp out-root',
+                        'hard link during temp'):
+            for result, _ in self.probe(variant):
+                self.assertEqual('input_error', result['status'])
+                self.assertEqual({}, result['data'])
+                self.assertEqual('tasks_output_unsafe', result['diagnostics'][0]['code'])
+                self.assertNotIn('victim', json.dumps(result))
+                self.assertNotIn('original', json.dumps(result))
+
+
+    def test_g4_identity_refuses_identical_parent_replacement_before_brief(self):
+        for result, _ in self.probe('before brief replacement'):
+            self.assertEqual('input_error', result['status'])
+            self.assertEqual({}, result['data'])
+            self.assertEqual('g4_input_drift', result['diagnostics'][0]['code'])
 
 class PhaseBriefWaveTests(InProjectCase):
     """Dispatch waves (ADR 0018, P4): the agents a host launches together, then the next wave."""
@@ -1747,5 +1931,5 @@ class PhaseBriefExecutorContractTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, TasksG4BindingTests, PhaseBriefWaveTests, ChecklistCheckpointTests, PhaseBriefPathTests, PhaseBriefModelTests, CodexEffectiveEffortTests, RetryLadderTopRungTests, PhaseBriefSliceTests, PhaseBriefEncodingTests, PhaseBriefEncodingHostTests, PhaseBriefEncodingPathTests, PhaseBriefHookTests, OptionalHookConsentTests, OptionalHookDisplayBoundaryTests, ChildImportIsolationTests, PhaseBriefExecutorContractTests))
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, TasksG4BindingTests, TasksOutputTests, PhaseBriefWaveTests, ChecklistCheckpointTests, PhaseBriefPathTests, PhaseBriefModelTests, CodexEffectiveEffortTests, RetryLadderTopRungTests, PhaseBriefSliceTests, PhaseBriefEncodingTests, PhaseBriefEncodingHostTests, PhaseBriefEncodingPathTests, PhaseBriefHookTests, OptionalHookConsentTests, OptionalHookDisplayBoundaryTests, ChildImportIsolationTests, PhaseBriefExecutorContractTests))
     sys.exit(run_counted(suite, label="test-phase-brief"))

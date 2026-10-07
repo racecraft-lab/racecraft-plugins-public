@@ -3,6 +3,13 @@
   "mode": "mutation",
   "helpers": [
     {
+      "helper_id": "publish-tasks-output",
+      "operation": "publish-tasks-output",
+      "modes": ["apply"],
+      "failure_classes": ["tasks_output_unsafe"],
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/mutation-helpers/requests/publish-tasks-output.json"
+    },
+    {
       "helper_id": "task-results",
       "operation": "task-results",
       "modes": ["read_only", "dry_run", "apply"],

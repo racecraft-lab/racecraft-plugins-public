@@ -216,7 +216,9 @@ Never report the live tree as verified from this snapshot. G4 judges captured
 bytes, not executor runs. The Tasks phase brief rechecks the judged digests and
 copies the exact bytes it read and hashed into a fresh run-owned snapshot.
 Pass G4's complete `judged` map as `g4_judged` to runner `phase-brief` for Tasks
-on both hosts. The bounded descriptor reads reject drift, gaps, missing inputs,
+and its `feature_identity` as `g4_feature_identity` on both hosts. G4 records
+the held feature directory's device and inode; a replaced parent refuses Tasks
+even when its content digests match. The bounded descriptor reads reject drift, gaps, missing inputs,
 links, special files and over-limit input trees. The report set, checklists entry
 and feature entry are included in capture validation.
 
@@ -230,7 +232,16 @@ and `judged`. Use runner `read-tasks-inputs` to consume that snapshot: it checks
 and returns the same bounded bytes as text. Use only its successful `data.files`
 for spec.md, plan.md and checklist reports, without reopening paths afterward.
 Snapshot tampering refuses consumption; later changes to the live feature tree
-cannot change the consumed Tasks inputs. Write tasks.md to `feature_dir` as before.
+cannot change the consumed Tasks inputs. The executor writes tasks.md only to
+`brief.inputs.tasks_output.snapshot_dir`. The orchestrator passes
+`brief.inputs.tasks_output` unchanged to `publish-tasks-output`, mode apply,
+before G5. The runner reopens the feature parent without following symlinks,
+checks G4's device/inode pair, and holds that descriptor through publication.
+It refuses missing, replaced or symlinked parents and symlinked, hard-linked or
+nonregular output leaves. It creates a fresh exclusive temporary file and
+renames within that held directory; refusals name only the file kind.
+Snapshot generation and publication failures are blockers; neither host writes
+tasks.md through a live feature path.
 This closes the Tasks input handoff in
 [issue #1284](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1284).
 G4 does not attest that an executor ran.

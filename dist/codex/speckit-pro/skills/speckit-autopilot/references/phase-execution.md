@@ -521,14 +521,20 @@ the `planning` checkpoint per [Selected formal checkpoints](formal-methods.md#la
 Include the selected properties' implementation obligations and declared scope.
 
 Before requesting the Tasks phase brief, pass `g4_judged` unchanged from the
-latest successful G4 response. The runner re-reads spec.md, plan.md and the flat
+latest successful G4 response, together with its `feature_identity` as
+`g4_feature_identity`. The runner re-reads spec.md, plan.md and the flat
 checklist report set, compares every digest, and refuses the brief on missing,
 unsafe or changed inputs. It copies the exact checked bytes to a fresh private
 run-owned snapshot and re-hashes the copies. A refusal names the input kind,
 never file text. Pass `brief.inputs.tasks_snapshot` unchanged to the executor.
 The executor consumes spec.md, plan.md and checklist reports only through
-`read-tasks-inputs` and uses the returned text; tasks.md still goes to the live
-`feature_dir`. Snapshot consumption failure returns a blocker before generating tasks.
+`read-tasks-inputs` and uses the returned text. Pass
+`brief.inputs.tasks_output` unchanged: the executor generates tasks.md only in
+its snapshot_dir. On successful return, call `publish-tasks-output`, mode apply,
+with `inputs=brief.inputs.tasks_output` before after_Tasks hooks and G5.
+The runner publishes through the G4-bound directory descriptor. Snapshot
+consumption or publication failure is a blocker; the live feature path is
+never an executor write destination.
 Return to Checklist/G4 under the existing repair policy; neither host may
 spawn the Tasks executor without a successful checked brief.
 

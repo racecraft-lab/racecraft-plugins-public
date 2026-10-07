@@ -16,7 +16,7 @@ from .checklist_edits import checklist_edits
 from .dispatch_waves import WAVE_INPUTS, WaveRequest, checked_wave_request, compose_waves
 from .extension_hooks import optional_hooks
 from .read_only import G4InputDrift, checked_g4_judged, check_g4_inputs
-from .tasks_inputs import bind_tasks_snapshot
+from .tasks_inputs import bind_tasks_snapshot, checked_feature_identity, check_tasks_parent
 
 PHASES = {
     "Specify": ("phase-executor", "G1", ()),
@@ -171,9 +171,9 @@ def brief_data(phase: str, workflow: str, feature: str, waves: WaveRequest) -> d
     }
 
 
-def checked_request(raw: Any) -> tuple[str, str, str, WaveRequest, dict[str, str] | None]:
+def checked_request(raw: Any) -> tuple[str, str, str, WaveRequest, dict[str, str] | None, dict[str, int] | None]:
     """Validate the phase, paths, waves and Tasks-only G4 digest binding."""
-    optional = {key: raw[key] for key in (*WAVE_INPUTS, "g4_judged") if isinstance(raw, dict) and key in raw}
+    optional = {key: raw[key] for key in (*WAVE_INPUTS, "g4_judged", "g4_feature_identity") if isinstance(raw, dict) and key in raw}
     inputs = require_fields({key: value for key, value in raw.items() if key not in optional} if isinstance(raw, dict) else raw,
                             {"phase", "workflow_file", "feature_dir"}, "phase-brief inputs")
     phase = require_text(inputs["phase"], "phase")
@@ -184,9 +184,10 @@ def checked_request(raw: Any) -> tuple[str, str, str, WaveRequest, dict[str, str
     if phase not in PHASES:
         raise ValueError("phase must be Specify, Clarify, Plan, Checklist, Tasks or Analyze")
     judged = checked_g4_judged(optional.pop("g4_judged", None)) if phase == "Tasks" else None
-    if "g4_judged" in optional:
+    identity = checked_feature_identity(optional.pop("g4_feature_identity", None)) if phase == "Tasks" else None
+    if "g4_judged" in optional or "g4_feature_identity" in optional:
         raise ValueError("g4_judged applies to Tasks only")
-    return phase, workflow, feature, checked_wave_request(phase, optional), judged
+    return phase, workflow, feature, checked_wave_request(phase, optional), judged, identity
 
 
 def internal_failure(request: Any, code: str, exc: Exception) -> dict[str, Any]:
@@ -208,11 +209,9 @@ def observed_checklist_waves(root: Path, workflow: str, feature: str, waves: Wav
 def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     """Return phase-brief/v1 dispatch data; gate and stop decisions stay separate.
 
-    Closed inputs: phase, workflow_file, feature_dir; Tasks requires g4_judged.
+    Closed inputs: phase, workflow_file, feature_dir; Tasks requires g4_judged and g4_feature_identity.
     dispatch_waves.py owns optional domains, items, verify_items, verify_baseline and max_agents.
-    Paths reject traversal and hidden characters; feature_dir is workflow-root relative.
     Tasks copies exact G4-matched bytes into a private snapshot; read-tasks-inputs returns verified text.
-    verify_baseline compares on-disk checklist digests; other validation is lexical.
 
     schema_version: str, the literal "phase-brief/v1".
     phase: str, Specify/Clarify/Plan/Checklist/Tasks/Analyze; agent: host-neutral executor role.
@@ -222,7 +221,6 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
         hosts add invocation syntax; feature_dir loses trailing slashes.
     readable_files: list[str], ordered phase input paths when present, relative
         to the workflow root unless absolute; a trailing slash means contents.
-        Loaded command instructions, templates and scripts remain implicit.
     gate: str, G1 through G6 for the parent's separate validate-gate request.
     slices: list[str], ordered verbatim plugin-reference sections for the dispatch prompt.
         Clarify, Checklist and Analyze carry discovery, grounding and category-tag
@@ -233,8 +231,7 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
         model below); empty without domains or items.
     model: {claude: {model: str, effort: str},
         codex: {model: str, effort: str}}, host-specific dispatch configuration;
-        top-level dispatch only; Claude passes model and keeps agent effort,
-        Codex passes both. Inventory defaults and phase overrides select them.
+        top-level dispatch only; Claude passes model, Codex passes both.
     hooks: list[{extension, command, event, optional: true, prompt, description}],
         enabled optional suggestions from .specify/extensions.yml, once per event.
         Fields except optional are strings; prompt/description are runner-owned.
@@ -246,7 +243,7 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     Input errors return no data; uninterpretable hooks are internal_failure.
     """
     try:
-        phase, workflow, feature, waves, judged = checked_request(request.inputs)
+        phase, workflow, feature, waves, judged, identity = checked_request(request.inputs)
     except ValueError as exc:
         return response("input_error", request_id=request.request_id,
                         diagnostics=[diagnostic("invalid_phase_brief", str(exc))])
@@ -254,10 +251,14 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     if isinstance(root, dict):
         return response("missing_prerequisite", request_id=request.request_id, diagnostics=[root])
     try:
+        if identity is not None:
+            check_tasks_parent(root / feature, root, identity)
         captured = check_g4_inputs(root / feature, root, judged) if judged is not None else None
         data = brief_data(phase, workflow, feature, observed_checklist_waves(root, workflow, feature, waves))
         if captured is not None and judged is not None:
             bind_tasks_snapshot(data, captured, judged)
+            data["inputs"]["tasks_output"] = {"feature_dir": feature,
+                "snapshot_dir": data["inputs"]["tasks_snapshot"]["snapshot_dir"], "feature_identity": identity}
     except G4InputDrift as exc:
         return response("input_error", request_id=request.request_id,
                         diagnostics=[diagnostic("g4_input_drift", str(exc))])

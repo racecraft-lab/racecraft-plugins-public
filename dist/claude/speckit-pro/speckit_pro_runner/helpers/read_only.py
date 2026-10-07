@@ -2158,7 +2158,7 @@ def g4_check_entries(directory: int, entries: dict[str, os.stat_result], kind: s
                 raise ValueError("G4 input changed during capture")
 
 
-def g4_snapshot(feature: Path, repo_root: Path) -> dict[str, bytes]:
+def g4_snapshot(feature: Path, repo_root: Path, feature_identity: dict[str, int] | None = None) -> dict[str, bytes]:
     """Capture stable bounded bytes relative to held parents, then validate their namespace."""
     with ExitStack() as stack:
         with g4_input_kind("feature entry"):
@@ -2200,17 +2200,25 @@ def g4_snapshot(feature: Path, repo_root: Path) -> dict[str, bytes]:
         with g4_input_kind("feature entry"):
             if tree_entry_signature(os.fstat(current_fd)) != tree_entry_signature(os.fstat(feature_fd)):
                 raise ValueError("G4 feature directory changed during capture")
+        if feature_identity is not None:
+            info = os.fstat(feature_fd)
+            feature_identity.update(device=info.st_dev, inode=info.st_ino)
         return snapshot
 
 
 def g4_result(feature: Path, repo_root: Path) -> dict[str, Any]:
     """Zero [Gap] markers in one bounded snapshot passes; `judged` holds the SHA-256 of every file the verdict covers."""
     try:
-        snapshot = g4_snapshot(feature, repo_root)
+        identity: dict[str, int] = {}
+        snapshot = g4_snapshot(feature, repo_root, identity)
     except (OSError, ValueError) as error:
         reason = "G4 cannot read stable regular inputs" if isinstance(error, OSError) else str(error)
         return make_result(json_text({"gate": "G4", "pass": False, "reason": reason, "markers": 0, "details": []}), exit_code=1)
-    return g4_judgment(snapshot)
+    result = g4_judgment(snapshot)
+    verdict = json.loads(result["stdout"])
+    verdict["feature_identity"] = identity
+    result["stdout"] = json_text(verdict)
+    return result
 
 
 def g4_judgment(snapshot: dict[str, bytes]) -> dict[str, Any]:

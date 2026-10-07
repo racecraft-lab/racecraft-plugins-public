@@ -11,6 +11,7 @@ import stat
 import sys
 import uuid
 import collections.abc
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -126,6 +127,15 @@ def write_file_atomic(
     )
 
 
+@dataclass(frozen=True)
+class WriteBinding:
+    """A caller-held directory and publication preconditions; the writer duplicates its descriptor."""
+
+    parent_fd: int
+    single_link: bool = False
+    validate_parent: collections.abc.Callable[[], None] | None = None
+
+
 def write_bytes_atomic(
     target: Path,
     content: bytes,
@@ -133,6 +143,7 @@ def write_bytes_atomic(
     trust_root: Path | None = None,
     mode: int | None = None,
     expected_snapshot: dict[str, Any] | None = None,
+    binding: WriteBinding | None = None,
 ) -> dict[str, Any]:
     """Replace `target` atomically; an expected snapshot that no longer holds raises WritePreconditionChanged.
 
@@ -140,8 +151,15 @@ def write_bytes_atomic(
     still be the directory written into, and the new file is swapped in with the displaced entry checked
     after the swap, so an entry put there after the last check is swapped back and the write refused.
     """
+    # A supplied descriptor is duplicated: this writer owns its copy, the caller retains its parent.
+    # single_link and validate_parent add preconditions without changing existing callers.
+    guard = functools.partial(ensure_safe_write_target_fd, single_link=True) if binding and binding.single_link else ensure_safe_write_target_fd
     created_dirs: list[str] = []
-    if trust_root is None:
+    if binding is not None:
+        parent_fd = os.dup(binding.parent_fd)
+        target_name = target.name
+        tmp_name = f".{target_name}.tmp-{os.getpid()}-{uuid.uuid4().hex}"
+    elif trust_root is None:
         target.parent.mkdir(parents=True, exist_ok=True)
         tmp_name = f".{target.name}.tmp-{os.getpid()}-{uuid.uuid4().hex}"
         parent_fd = os.open(target.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0))
@@ -165,7 +183,7 @@ def write_bytes_atomic(
             if expected_parent is not None and file_identity(os.fstat(parent_fd)) != tuple(expected_parent):
                 raise WritePreconditionChanged("write target directory changed after snapshot capture")
             if trust_root is not None:
-                ensure_safe_write_target_fd(parent_fd, target_name)
+                guard(parent_fd, target_name)
             existing_mode = mode if mode is not None else current_file_mode_fd(parent_fd, target_name)
             write_mode = existing_mode if existing_mode is not None else 0o666
             tmp_fd = os.open(
@@ -184,9 +202,11 @@ def write_bytes_atomic(
                 fh.flush()
                 os.fsync(fh.fileno())
             if trust_root is not None:
-                ensure_safe_write_target_fd(parent_fd, target_name)
+                guard(parent_fd, target_name)
             if expected_snapshot is not None:
                 ensure_write_target_matches_snapshot_fd(parent_fd, target_name, expected_snapshot)
+            if binding is not None and binding.validate_parent is not None:
+                binding.validate_parent()
             if not (expected_snapshot is not None and "identity" in expected_snapshot
                     and install_checked(parent_fd, tmp_name, target_name, expected_snapshot)):
                 os.replace(tmp_name, target_name, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
@@ -367,14 +387,15 @@ def open_safe_parent_fd(target: Path, trust_root: Path, *, create: bool) -> tupl
     return parent_fd, target_name, created_dirs
 
 
-def ensure_safe_write_target_fd(parent_fd: int, name: str) -> None:
+def ensure_safe_write_target_fd(parent_fd: int, name: str, *, single_link: bool = False) -> None:
     if "/" in name or name in {"", ".", ".."}:
         raise OSError("unsafe target name")
     try:
-        mode = os.stat(name, dir_fd=parent_fd, follow_symlinks=False).st_mode
+        info = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+        mode = info.st_mode
     except FileNotFoundError:
         return
-    if stat.S_ISLNK(mode) or not stat.S_ISREG(mode):
+    if stat.S_ISLNK(mode) or not stat.S_ISREG(mode) or (single_link and info.st_nlink > 1):
         raise OSError("unsafe existing target")
 
 

@@ -730,11 +730,18 @@ For each planning phase, request
 `phase` (Specify, Clarify, Plan, Checklist, Tasks or Analyze),
 `workflow_file=WORKFLOW_FILE` and `feature_dir=<feature-dir>`.
 For Tasks, also pass `g4_judged=<the complete judged map from the latest
-successful G4 response>`. The runner rechecks that map before returning a Tasks
+successful G4 response>` and `g4_feature_identity=<its feature_identity>`.
+The runner rechecks that map before returning a Tasks
 brief and copies the exact checked bytes to a private run-owned snapshot.
 Pass `brief.inputs.tasks_snapshot` unchanged. Both hosts consume spec.md,
 plan.md and checklist reports only through `read-tasks-inputs`, using its
-returned text. The live feature directory remains the tasks.md output target.
+returned text. Pass `brief.inputs.tasks_output` unchanged. The executor writes
+tasks.md only into its snapshot_dir. After a successful executor return, both
+hosts call `helper_id=publish-tasks-output operation=publish-tasks-output mode=apply`
+with `inputs=brief.inputs.tasks_output`, before after_Tasks hooks or G5.
+Only successful publication permits G5. A refusal is a blocker under the
+existing repair policy; retain the snapshot for repair and report only its
+file-kind diagnostic. The runner owns publication into the G4-bound feature directory.
 Missing, malformed or changed inputs return no dispatch facts; rerun
 Checklist and G4 through the existing repair policy before requesting Tasks
 again. Neither host may dispatch Tasks from a failed brief or omit this check.
@@ -897,7 +904,10 @@ for phase in PHASES starting from first_pending:
        The runner compares shared spec.md/plan.md digests: any change verifies every
        domain, no change returns no final wave, and missing evidence fails closed.
        Other phases: run consensus (Clarify/Analyze only) — see Rule 6
-    5. Specify, Plan, Checklist, Tasks and Analyze only:
+    5. Tasks only: call publish-tasks-output, mode apply, with
+       inputs=brief.inputs.tasks_output unchanged. A refusal blocks hooks,
+       G5 and phase completion; use the existing repair policy.
+       Specify, Plan, Checklist, Tasks and Analyze only:
        handle optional brief.hooks with event=after_<phase> under the confirmation
        rule above; record runs and skips in the decisions list.
        Clarify and Implement only: skip optional hooks; handle mandatory after_<phase> hooks from .specify/extensions.yml
@@ -906,7 +916,8 @@ for phase in PHASES starting from first_pending:
        `helper_id=validate-gate operation=validate-gate mode=read_only`
        with `gate=brief.gate` for planning (`G7` for Implement), `feature_dir=<feature-dir>`, and
        `workflow_file=<workflow-file>`, then branch on the JSON `pass` field
-       On G4 PASS: retain the complete `judged` map for the Tasks phase-brief request.
+       On G4 PASS: retain the complete `judged` map and `feature_identity`
+       for the Tasks phase-brief request.
        On FAIL: reserve a corrective cycle through execution-control;
        honor its shared family/spec budget and checkpoint disposition
     7. Update workflow file; auto-commit if configured

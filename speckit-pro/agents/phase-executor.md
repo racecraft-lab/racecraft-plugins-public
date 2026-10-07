@@ -73,9 +73,14 @@ reports. This overrides the loaded command's live input paths and prerequisite
 scripts that read those artifacts. Read these inputs only from the snapshot
 through that helper; never reopen their paths after consumption or fall back to
 the live feature tree. Missing snapshot data or any helper failure is a blocker
-before generating tasks. Keep the workflow prompt verbatim. Write tasks.md to
-`brief.inputs.feature_dir` as today. Other allowed planning inputs retain their
-existing paths.
+before generating tasks. Keep the workflow prompt verbatim.
+**Tasks output:** Override the loaded command's output path: generate tasks.md
+only at `brief.inputs.tasks_output.snapshot_dir`/tasks.md. The parent passes
+`brief.inputs.tasks_output` unchanged; treat `brief.inputs.feature_dir` as
+context, never a Tasks write destination. Override any command script that
+writes the live feature tree. Return completion to the parent for runner
+publication before G5; a command that cannot honor the snapshot output is a
+blocker. Other allowed planning inputs retain their existing paths.
 
 Use the parent's `PROJECT_COMMANDS` and `PRESET_CONVENTIONS` from the
 `g0-setup` probe reports as supplied in the workflow prompt.

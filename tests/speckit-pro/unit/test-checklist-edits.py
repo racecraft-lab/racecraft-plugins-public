@@ -1469,7 +1469,9 @@ class GateFourTests(ChecklistEditsCase):
         # ExitStack callbacks must close them before the public gate returns.
         with record_open_descriptors() as opened:
             try:
-                return dict(json.loads(read_only.validate_gate(G4_INPUTS, self.root)["stdout"]))
+                verdict = dict(json.loads(read_only.validate_gate(G4_INPUTS, self.root)["stdout"]))
+                self.feature_identity = verdict.get("feature_identity")
+                return verdict
             finally:
                 leaked = []
                 for descriptor in set(opened):
@@ -1867,8 +1869,8 @@ class GateFourTests(ChecklistEditsCase):
                 fire()
             return value
 
-        def snapshot(feature: Path, root: Path) -> dict[str, bytes]:
-            value = original_snapshot(feature, root)
+        def snapshot(feature: Path, root: Path, identity: dict[str, int] | None = None) -> dict[str, bytes]:
+            value = original_snapshot(feature, root, identity)
             fire()
             return value
 
@@ -1924,7 +1926,7 @@ class GateFourTests(ChecklistEditsCase):
                         judged = verdict["judged"]
                         with patch.object(phase_brief, "resolve_repo_root", return_value=self.root):
                             result = dispatch_helper(SimpleNamespace(helper_id="phase-brief", operation="phase-brief", mode="read_only",
-                                     request_id=None, inputs={"phase": "Tasks", "workflow_file": WORKFLOW, "feature_dir": FEATURE, "g4_judged": judged}))
+                                     request_id=None, inputs={"phase": "Tasks", "workflow_file": WORKFLOW, "feature_dir": FEATURE, "g4_judged": judged, "g4_feature_identity": self.feature_identity}))
                         self.assertEqual("input_error", result["status"])
                         self.assertEqual({}, result["data"])
                         self.assertEqual("g4_input_drift", result["diagnostics"][0]["code"])
@@ -1933,7 +1935,7 @@ class GateFourTests(ChecklistEditsCase):
         with patch.object(phase_brief, "resolve_repo_root", return_value=self.root):
             return dispatch_helper(SimpleNamespace(helper_id="phase-brief", operation="phase-brief", mode="read_only",
                                    request_id=None, inputs={"phase": "Tasks", "workflow_file": WORKFLOW,
-                                   "feature_dir": FEATURE, "g4_judged": judged}))
+                                   "feature_dir": FEATURE, "g4_judged": judged, "g4_feature_identity": self.feature_identity}))
 
     def consume_tasks(self, brief: dict[str, Any]) -> dict[str, Any]:
         return dispatch_helper(SimpleNamespace(helper_id="read-tasks-inputs", operation="read-tasks-inputs", mode="read_only",
