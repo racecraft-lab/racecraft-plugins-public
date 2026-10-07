@@ -21,6 +21,7 @@ from .trusted_io import (
     normalize_display,
     path_diagnostic,
     repo_relative,
+    read_tree_entry,
     resolve_input_path,
 )
 
@@ -196,8 +197,7 @@ def write_bytes_atomic(
                 os.fchmod(tmp_fd, existing_mode)
             tmp_stat = os.fstat(tmp_fd)
             applied_mode, identity = stat.S_IMODE(tmp_stat.st_mode), entry_identity(tmp_stat)
-            with os.fdopen(tmp_fd, "wb") as fh:
-                tmp_fd = -1
+            with os.fdopen(tmp_fd, "wb", closefd=False) as fh:
                 fh.write(content)
                 fh.flush()
                 os.fsync(fh.fileno())
@@ -207,6 +207,7 @@ def write_bytes_atomic(
                 ensure_write_target_matches_snapshot_fd(parent_fd, target_name, expected_snapshot)
             if binding is not None and binding.validate_parent is not None:
                 binding.validate_parent()
+            verify_bound_publication(binding, tmp_fd, tmp_name, content)
             if not (expected_snapshot is not None and "identity" in expected_snapshot
                     and install_checked(parent_fd, tmp_name, target_name, expected_snapshot)):
                 os.replace(tmp_name, target_name, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
@@ -216,6 +217,7 @@ def write_bytes_atomic(
             except OSError:
                 # Directory fsync is best-effort after replace; the atomic swap already succeeded.
                 pass
+            verify_bound_publication(binding, tmp_fd, target_name, content, installed=True)
         except OSError as exc:
             failure = exc
             raise
@@ -250,6 +252,25 @@ def write_bytes_atomic(
         "identity": identity,
         "created_parent_dirs": created_dirs,
     }
+
+
+def verify_bound_publication(binding: WriteBinding | None, held_fd: int, name: str, content: bytes,
+                             installed: bool = False) -> None:
+    """Bind a protected publication to the still-open written inode and exact bytes.
+
+    A rename consumes a pathname, not a descriptor. Check both sides of that
+    boundary and never certify a substituted or mutated entry as published.
+    """
+    if binding is None:
+        return
+    try:
+        captured = read_tree_entry(binding.parent_fd, name, os.fstat(held_fd), byte_limit=len(content))
+        if captured[Path()][1] != content:
+            raise WritePreconditionChanged("written content changed before publication confirmation")
+    except OSError as exc:
+        if installed:
+            raise AtomicWriteInterrupted("publication reached disk but its identity or content is unconfirmed") from exc
+        raise
 
 
 def file_identity(file_stat: os.stat_result) -> tuple[int, int]:

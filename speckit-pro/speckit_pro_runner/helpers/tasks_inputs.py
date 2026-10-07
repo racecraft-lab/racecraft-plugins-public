@@ -9,7 +9,7 @@ from contextlib import ExitStack
 from pathlib import Path
 from typing import Any
 
-from ..atomic_write import WriteBinding, ensure_safe_write_target_fd, snapshot_write_target_fd, write_bytes_atomic
+from ..atomic_write import AtomicWriteInterrupted, WriteBinding, ensure_safe_write_target_fd, snapshot_write_target_fd, write_bytes_atomic
 from ..trusted_io import BOUNDED_TEXT_INPUT_BYTES, read_tree_entry, resolve_repo_root, trusted_open_directory
 from ..envelope import diagnostic, response
 from ..strict_input import require_fields, require_text
@@ -117,7 +117,7 @@ def check_tasks_parent(feature: Path, root: Path, identity: dict[str, int]) -> N
 def tasks_output_failure(request_id: str | None, published: bool, exc: Exception) -> dict[str, Any]:
     """Report whether a failed publication may already have reached disk, with sanitized diagnostics."""
     kind = str(exc) if isinstance(exc, G4InputDrift) else "Tasks output kind is unsafe, changed or unreadable"
-    if published:
+    if published or isinstance(exc, AtomicWriteInterrupted):
         return response("expected_failure", request_id=request_id,
                         diagnostics=[diagnostic("tasks_output_unconfirmed", kind)],
                         data={"publication": "unconfirmed", "published": "tasks.md"})
@@ -170,10 +170,9 @@ def run_publish_tasks_output_helper(entry: Any, request: Any) -> dict[str, Any]:
                 expected.pop("identity", None)
                 expected["parent"] = (identity["device"], identity["inode"])
             check_tasks_parent(feature, root, identity)
-            with g4_input_kind("tasks.md"):
-                result = write_bytes_atomic(feature / "tasks.md", content, trust_root=root,
-                                            expected_snapshot=expected, binding=WriteBinding(parent, True,
-                                                lambda: check_tasks_parent(feature, root, identity)))
+            result = write_bytes_atomic(feature / "tasks.md", content, trust_root=root,
+                                        expected_snapshot=expected, binding=WriteBinding(parent, True,
+                                            lambda: check_tasks_parent(feature, root, identity)))
             published = True
             check_tasks_parent(feature, root, identity)
     except (G4InputDrift, OSError, ValueError) as exc:

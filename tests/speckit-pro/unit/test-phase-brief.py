@@ -757,6 +757,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from speckit_pro_runner.helpers.registry import dispatch_helper
 from speckit_pro_runner.helpers import tasks_inputs
+from speckit_pro_runner import atomic_write
 from unittest.mock import patch
 from contextlib import ExitStack
 
@@ -844,7 +845,49 @@ with tempfile.TemporaryDirectory() as directory, tempfile.TemporaryDirectory() a
                 else:
                     leaf.symlink_to(victim / 'tasks.md')
             return value
+        def mutate_output(name, parent):
+            form = variant.rsplit(':', 1)[1]
+            path = feature / name
+            if form == 'direct write':
+                path.write_text('Injected output')
+                return
+            if form == 'transient hard link':
+                alias = root / 'alias'
+                os.link(path, alias)
+                alias.write_text('Injected output')
+                alias.unlink()
+                return
+            os.unlink(name, dir_fd=parent)
+            if form == 'regular':
+                path.write_text('Injected output')
+            elif form == 'hard link':
+                os.link(victim / 'tasks.md', path)
+            elif form.startswith('symlink'):
+                path.symlink_to(victim / 'tasks.md')
+            elif form == 'fifo':
+                os.mkfifo(path)
+        def replace_mutated(source, target, **kwargs):
+            global fired
+            fired = True
+            if variant.startswith('temp during rename:'):
+                mutate_output(source, kwargs['src_dir_fd'])
+            value = real_replace(source, target, **kwargs)
+            if variant.startswith('output during rename:'):
+                mutate_output(target, kwargs['dst_dir_fd'])
+            return value
+        real_check = atomic_write.ensure_write_target_matches_snapshot_fd
+        def check_mutated(parent, target, expected):
+            global fired
+            value = real_check(parent, target, expected)
+            fired = True
+            name = next(p.name for p in feature.glob('.tasks.md.tmp-*'))
+            mutate_output(name, parent)
+            return value
         with ExitStack() as stack:
+            if variant.startswith(('temp during rename:', 'output during rename:')):
+                stack.enter_context(patch.object(os, 'replace', replace_mutated))
+            if variant.startswith('temp during check:'):
+                stack.enter_context(patch.object(atomic_write, 'ensure_write_target_matches_snapshot_fd', check_mutated))
             if variant == 'parent during acquisition':
                 stack.enter_context(patch.object(tasks_inputs, 'trusted_open_directory', acquire))
             if variant == 'parent during rename out-root':
@@ -911,6 +954,18 @@ class TasksOutputTests(unittest.TestCase):
             self.assertEqual('expected_failure', result['status'])
             self.assertEqual({'publication': 'unconfirmed', 'published': 'tasks.md'}, result['data'])
             self.assertEqual('tasks_output_unconfirmed', result['diagnostics'][0]['code'])
+
+    def test_temporary_and_installed_output_mutations_never_authorize_hooks(self):
+        for window in ('temp during check', 'temp during rename', 'output during rename'):
+            for form in ('regular', 'hard link', 'symlink in-root', 'symlink out-root',
+                         'fifo', 'deleted', 'direct write', 'transient hard link'):
+                with self.subTest(window=window, form=form):
+                    for result, _ in self.probe(window + ':' + form):
+                        self.assertNotEqual('ok', result['status'])
+                        self.assertFalse(result['data'].get('after_hooks_ready', False))
+                        if window != 'temp during check' and not (window == 'temp during rename' and form == 'deleted'):
+                            self.assertEqual('expected_failure', result['status'])
+                            self.assertEqual('unconfirmed', result['data']['publication'])
 
     def test_g4_identity_refuses_identical_parent_replacement_before_brief(self):
         for result, _ in self.probe('before brief replacement'):
