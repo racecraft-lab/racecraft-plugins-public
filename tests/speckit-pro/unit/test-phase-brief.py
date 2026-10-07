@@ -214,71 +214,7 @@ SAFE_CONSENT = {"prompt": "Run this optional extension hook?",
                 "description": "Confirm the exact extension, command and event."}
 
 
-CONSENT_PROBE = r'''
-import json, os, sys, tempfile
-from pathlib import Path
-from types import SimpleNamespace
-from unittest.mock import patch
-from speckit_pro_runner.helpers.registry import dispatch_helper
-reports = []
-original_open = os.open
-for case in json.load(sys.stdin):
-    with tempfile.TemporaryDirectory() as directory:
-        root = Path(directory) / "project"
-        root.mkdir()
-        parent = root / ".specify"
-        parent.mkdir()
-        target = parent / "extensions.yml"
-        target.write_text(case["text"], encoding="utf-8")
-        topology = case.get("topology", "regular")
-        replacement = Path(directory) / "replacement.yml"
-        replacement.write_text(case.get("replacement", case["text"]), encoding="utf-8")
-        if topology == "pre_open":
-            replacement.replace(target)
-        elif topology == "hard_link":
-            target.unlink()
-            os.link(replacement, target)
-        elif topology == "final_symlink":
-            target.unlink()
-            target.symlink_to(replacement)
-        elif topology == "directory_symlink":
-            parent.rename(root / "held")
-            parent.symlink_to(root / "held", target_is_directory=True)
-        fired = []
-        def opened(path, flags, *args, **kwargs):
-            fd = original_open(path, flags, *args, **kwargs)
-            if path == "extensions.yml" and not fired:
-                fired.append(True)
-                if topology == "post_open":
-                    replacement.replace(target)
-                elif topology == "post_directory":
-                    parent.rename(root / "held")
-                    parent.mkdir()
-                    replacement.replace(target)
-            return fd
-        previous = Path.cwd()
-        os.chdir(root)
-        try:
-            with patch.object(os, "open", opened):
-                inputs = {"phase": case["phase"], "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
-                if case["phase"] == "Tasks":
-                    import hashlib
-                    feature = root / "specs/example"
-                    (feature / "checklists").mkdir(parents=True)
-                    info = feature.stat()
-                    inputs["g4_feature_identity"] = {"device": info.st_dev, "inode": info.st_ino}
-                    inputs["g4_judged"] = {}
-                    for name in ("spec.md", "plan.md", "checklists/security.md"):
-                        (feature / name).write_bytes(b"clean fixture\n")
-                        inputs["g4_judged"][name] = hashlib.sha256(b"clean fixture\n").hexdigest()
-                request = SimpleNamespace(helper_id="phase-brief", operation="phase-brief", mode="read_only",
-                                          request_id=None, inputs=inputs)
-                report = dispatch_helper(request)
-            reports.append({"result": report, "opened": bool(fired)})
-        finally:
-            os.chdir(previous)
-print(json.dumps(reports))
-'''
+CONSENT_PROBE = (REPO / "tests/speckit-pro/unit/fixtures/consent-probe.py").read_text(encoding="utf-8")
 
 
 def consent_probe(runner, cases):
@@ -681,20 +617,33 @@ class _TasksG4BindingSupport(InProjectCase):
         if "forbidden" in expected:
             self.assertNotIn(expected["forbidden"], json.dumps(result))
 
+    def assert_file_rejections(self, cases):
+        for name, content, expected, subtest in cases:
+            with self.subTest(input=name, **subtest):
+                feature, judged = self.tree()
+                target = feature / name
+                if content is None:
+                    target.unlink()
+                else:
+                    target.write_text(content, encoding="utf-8")
+                inputs = {"phase": "Tasks", "workflow_file": "docs/workflow.md",
+                          "feature_dir": "specs/example", "g4_judged": judged}
+                for result in self.results(inputs):
+                    self.assert_rejected(result, expected)
+
 
 class TasksG4DriftTests(_TasksG4BindingSupport):
     """Tasks dispatch revalidates G4's judged bytes before returning a launch brief."""
 
     def test_drift_in_each_judged_file_kind_refuses_tasks_on_both_hosts(self):
-        for (name, kind), content in product((("spec.md", "spec.md"), ("plan.md", "plan.md"), ("checklists/security.md", "checklist report")),
-                                            ("[Gap] sensitive replacement text\n", "Marker-free sensitive replacement text\n")):
-            with self.subTest(input=name, contains_gap="[Gap]" in content):
-                feature, judged = self.tree()
-                (feature / name).write_text(content, encoding="utf-8")
-                inputs = {"phase": "Tasks", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example", "g4_judged": judged}
-                for result in self.results(inputs):
-                    self.assert_rejected(result, {"kind": kind, "code": "g4_input_drift",
-                                                  "forbidden": "sensitive replacement text"})
+        files = (("spec.md", "spec.md"), ("plan.md", "plan.md"),
+                 ("checklists/security.md", "checklist report"))
+        contents = ("[Gap] sensitive replacement text\n", "Marker-free sensitive replacement text\n")
+        cases = [(name, content, {"kind": kind, "code": "g4_input_drift",
+                                  "forbidden": "sensitive replacement text"},
+                  {"contains_gap": "[Gap]" in content})
+                 for (name, kind), content in product(files, contents)]
+        self.assert_file_rejections(cases)
 
     def test_no_drift_accepts_every_report_name_g4_accepts(self):
         feature, _ = self.tree()
@@ -705,13 +654,10 @@ class TasksG4DriftTests(_TasksG4BindingSupport):
             self.assertEqual("ok", result["status"])
 
     def test_missing_inputs_name_the_failed_kind_on_both_hosts(self):
-        for name, kind in (("spec.md", "spec.md"), ("plan.md", "plan.md"), ("checklists/security.md", "checklist report")):
-            with self.subTest(input=name):
-                feature, judged = self.tree()
-                (feature / name).unlink()
-                inputs = {"phase": "Tasks", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example", "g4_judged": judged}
-                for result in self.results(inputs):
-                    self.assert_rejected(result, {"kind": kind})
+        files = (("spec.md", "spec.md"), ("plan.md", "plan.md"),
+                 ("checklists/security.md", "checklist report"))
+        cases = [(name, None, {"kind": kind}, {}) for name, kind in files]
+        self.assert_file_rejections(cases)
 
 
 class TasksG4EvidenceTests(_TasksG4BindingSupport):
@@ -764,6 +710,13 @@ class TasksG4EvidenceTests(_TasksG4BindingSupport):
 
 
 TASKS_OUTPUT_PROBE = (REPO / "tests/speckit-pro/unit/fixtures/tasks-output-probe.py").read_text(encoding="utf-8")
+TASKS_OUTPUT_EXPECTATIONS = {
+    "parent rename": {"variant": "parent during rename out-root", "status": "expected_failure",
+                      "data": {"publication": "unconfirmed", "published": "tasks.md"},
+                      "diagnostic": "tasks_output_unconfirmed"},
+    "g4 identity": {"variant": "before brief replacement", "status": "input_error",
+                    "data": {}, "diagnostic": "g4_input_drift"},
+}
 
 UNBOUND_PUBLICATION_PROBE = r"""
 import os, tempfile
@@ -853,9 +806,7 @@ class TasksOutputTests(_TasksOutputSupport, unittest.TestCase):
 
 
     def test_parent_moved_at_rename_reports_unconfirmed_publication_and_blocks_g5(self):
-        self.assert_probe_result({"variant": "parent during rename out-root", "status": "expected_failure",
-                                  "data": {"publication": "unconfirmed", "published": "tasks.md"},
-                                  "diagnostic": "tasks_output_unconfirmed"})
+        self.assert_probe_result(TASKS_OUTPUT_EXPECTATIONS["parent rename"])
 
     def test_temporary_and_installed_output_mutations_never_authorize_hooks(self):
         for window in ('temp during check', 'temp during rename', 'output during rename'):
@@ -871,8 +822,7 @@ class TasksOutputTests(_TasksOutputSupport, unittest.TestCase):
 
 class TasksG4IdentityTests(_TasksOutputSupport, unittest.TestCase):
     def test_g4_identity_refuses_identical_parent_replacement_before_brief(self):
-        self.assert_probe_result({"variant": "before brief replacement", "status": "input_error",
-                                  "data": {}, "diagnostic": "g4_input_drift"})
+        self.assert_probe_result(TASKS_OUTPUT_EXPECTATIONS["g4 identity"])
 
 class PhaseBriefWaveTests(InProjectCase):
     """Dispatch waves (ADR 0018, P4): the agents a host launches together, then the next wave."""
