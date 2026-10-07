@@ -120,6 +120,41 @@
       "rollback": "Remove phase-brief consumption and registration together."
     },
     {
+      "helper_id": "read-tasks-inputs",
+      "operation": "read-tasks-inputs",
+      "promotion_status": "python_authoritative",
+      "failure_classes": [
+        "g4_input_drift"
+      ],
+      "rejected_stdout_schema": {
+        "status": "input_error",
+        "data": "object"
+      },
+      "deterministic_remediation": {
+        "summary": "Obtain a fresh Tasks phase brief after Checklist/G4 repair.",
+        "actions": [
+          "Pass the successful brief tasks_snapshot unchanged and consume the returned text."
+        ]
+      },
+      "subprocess_policy": {
+        "shell": false,
+        "spawns": false
+      },
+      "path_boundary_policy": {
+        "boundary": "bounded_descriptor_snapshot",
+        "rejects": [
+          "parent_traversal",
+          "links",
+          "special_files",
+          "digest_drift",
+          "report_set_drift",
+          "nonprivate_snapshot"
+        ]
+      },
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/read-only-helpers/requests/read-tasks-inputs.json",
+      "rollback": "Remove snapshot consumption and registration together."
+    },
+    {
       "helper_id": "helper-registry-dispatch",
       "operation": "helper-registry-dispatch",
       "promotion_status": "python_authoritative",

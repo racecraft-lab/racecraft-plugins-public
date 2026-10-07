@@ -211,8 +211,7 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     Closed inputs: phase, workflow_file, feature_dir; Tasks requires g4_judged.
     dispatch_waves.py owns optional domains, items, verify_items, verify_baseline and max_agents.
     Paths reject traversal and hidden characters; feature_dir is workflow-root relative.
-    G4 re-reads bounded Tasks inputs and refuses digest/report-set drift before dispatch.
-    Tasks copies those exact bytes into a private snapshot; read-tasks-inputs returns its verified text.
+    Tasks copies exact G4-matched bytes into a private snapshot; read-tasks-inputs returns verified text.
     verify_baseline compares on-disk checklist digests; other validation is lexical.
 
     schema_version: str, the literal "phase-brief/v1".

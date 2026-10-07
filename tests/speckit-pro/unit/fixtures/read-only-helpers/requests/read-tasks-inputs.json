@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "helper_id": "read-tasks-inputs",
+  "operation": "read-tasks-inputs",
+  "mode": "read_only",
+  "inputs": {
+    "snapshot_dir": "<snapshot-dir-from-Tasks-brief>",
+    "judged": {
+      "spec.md": "0000000000000000000000000000000000000000000000000000000000000000",
+      "plan.md": "0000000000000000000000000000000000000000000000000000000000000000",
+      "checklists/security.md": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  }
+}
