@@ -45,6 +45,12 @@ RECORD = f"{FEATURE}/.process/checklist-edits/applied.json"
 OTHER_WORKFLOW = "docs/workflows/other.md"
 FIXTURE = REPO / "tests/speckit-pro/unit/fixtures/mutation-helpers/requests" / f"{HELPER_ID}.json"
 HOSTS = ("claude", "codex")
+G4_FAILURE_CASES = (
+    "GateFourResourceTests", "GateFourCoverageTests", "GateFourAttestationTests",
+    "GateFourReportInputTests", "GateFourContainedInputTests", "GateFourNamespaceMutationTests", "GateFourPostValidationTests",
+    "TasksCheckedBytesTests", "TasksSnapshotMutationTests", "TasksSnapshotWriteTests",
+    "TasksRecheckTests", "GateFourDiagnosticTests", "GateFourFilesystemEdgeTests", "GateFourReportLimitTests",
+)
 RETIRED = ("then applies them to spec.md or plan.md", "then edit the artifact")
 SPEC = "# Spec\nLogin uses a password.\nExports are open.\n"
 PLAN = "# Plan\nSessions never expire.\n"
@@ -1433,12 +1439,7 @@ else:
 
 class GateFourHostParityTests(_HostParitySupport, unittest.TestCase):
     def test_both_payloads_fail_g4_closed_on_unstable_or_missing_evidence(self) -> None:
-        self.assert_payload_cases((
-            "GateFourResourceTests", "GateFourCoverageTests", "GateFourAttestationTests",
-            "GateFourReportInputTests", "GateFourContainedInputTests", "GateFourNamespaceMutationTests", "GateFourPostValidationTests",
-            "TasksCheckedBytesTests", "TasksSnapshotMutationTests", "TasksSnapshotWriteTests",
-            "TasksRecheckTests", "GateFourDiagnosticTests", "GateFourFilesystemEdgeTests", "GateFourReportLimitTests",
-        ))
+        self.assert_payload_cases(G4_FAILURE_CASES)
 
 
 EXECUTOR_GUIDES = ("agents/checklist-executor.md", "codex-agents/checklist-executor.toml")
@@ -1606,49 +1607,45 @@ class _ValidationMutationWindow:
     opens: int = 0
 
 
-def _g4_checks_hook(
-    state: _ValidationMutationWindow, original: Callable[..., Any], fire: Callable[[], None]
-) -> Callable[..., None]:
-    def checks(directory: int, entries: dict[str, os.stat_result], kind: str | None = None) -> None:
-        if state.window == "entry recheck":
+@dataclass
+class _G4ChecksHook:
+    state: _ValidationMutationWindow
+    original: Callable[..., Any]
+    fire: Callable[[], None]
+
+    def __call__(self, directory: int, entries: dict[str, os.stat_result], kind: str | None = None) -> None:
+        if self.state.window == "entry recheck":
             for name, info in entries.items():
-                original(directory, {name: info}, kind)
-                if state.relative == name or state.relative == f"checklists/{name}":
-                    fire()
+                self.original(directory, {name: info}, kind)
+                if self.state.relative == name or self.state.relative == f"checklists/{name}":
+                    self.fire()
             return
-        original(directory, entries, kind)
-        if state.relative in ("spec.md", "plan.md") and state.relative in entries:
-            fire()
-        if state.relative == "checklists" and "checklists" in entries:
-            fire()
-
-    return checks
+        self.original(directory, entries, kind)
+        if self.state.relative in ("spec.md", "plan.md") and self.state.relative in entries:
+            self.fire()
+        if self.state.relative == "checklists" and "checklists" in entries:
+            self.fire()
 
 
-def _g4_reports_hook(
-    state: _ValidationMutationWindow, original: Callable[..., Any], fire: Callable[[], None]
-) -> Callable[[int], dict[str, os.stat_result]]:
-    def reports(directory: int) -> dict[str, os.stat_result]:
-        value = original(directory)
-        state.listings += 1
-        if state.listings == 2 and state.relative.startswith("checklists/"):
-            fire()
+@dataclass
+class _G4CountedHook:
+    state: _ValidationMutationWindow
+    original: Callable[..., Any]
+    fire: Callable[[], None]
+    counter: str
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        value = self.original(*args, **kwargs)
+        count = getattr(self.state, self.counter) + 1
+        setattr(self.state, self.counter, count)
+        should_fire = (
+            self.state.relative.startswith("checklists/")
+            if self.counter == "listings"
+            else self.state.relative == "."
+        )
+        if count == 2 and should_fire:
+            self.fire()
         return value
-
-    return reports
-
-
-def _g4_directory_hook(
-    state: _ValidationMutationWindow, original: Callable[..., Any], fire: Callable[[], None]
-) -> Callable[[Path, Path], int | None]:
-    def directory(path: Path, root: Path) -> int | None:
-        value = original(path, root)
-        state.opens += 1
-        if state.opens == 2 and state.relative == ".":
-            fire()
-        return value
-
-    return directory
 
 
 def _g4_snapshot_hook(original: Callable[..., Any], fire: Callable[[], None]) -> Callable[..., Any]:
@@ -1674,9 +1671,9 @@ def _g4_validation_patches(
 ) -> list[tuple[Any, str, Callable[..., Any]]]:
     if state.window in ("entry recheck", "last check"):
         return [
-            (read_only, "g4_check_entries", _g4_checks_hook(state, read_only.g4_check_entries, fire)),
-            (read_only, "g4_reports", _g4_reports_hook(state, read_only.g4_reports, fire)),
-            (read_only, "trusted_open_directory", _g4_directory_hook(state, read_only.trusted_open_directory, fire)),
+            (read_only, "g4_check_entries", _G4ChecksHook(state, read_only.g4_check_entries, fire)),
+            (read_only, "g4_reports", _G4CountedHook(state, read_only.g4_reports, fire, "listings")),
+            (read_only, "trusted_open_directory", _G4CountedHook(state, read_only.trusted_open_directory, fire, "opens")),
         ]
     if state.window == "snapshot return":
         return [(read_only, "g4_snapshot", _g4_snapshot_hook(read_only.g4_snapshot, fire))]
