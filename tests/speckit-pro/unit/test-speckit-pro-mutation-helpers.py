@@ -595,6 +595,13 @@ def bind_required_primary_probe(manifest: dict[str, object]) -> None:
 
 
 
+
+def _new_file_request(request_id: str, target: str, content: str) -> RunnerRequest:
+    return RunnerRequest(request_id, "mutation-foundation", "mutation-foundation", "apply", {
+        "operations": [{"operation_id": "write-new", "kind": "write_file", "target": target, "content": content}],
+    })
+
+
 @contextmanager
 def _final_parent_close_failure():
     real_replace, real_close = mutation.os.replace, mutation.os.close
@@ -8465,22 +8472,7 @@ This line must not be copied.
     def test_apply_tracks_interrupted_write_when_final_parent_close_fails(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
-            request = RunnerRequest(
-                "test-final-parent-close-after-replace",
-                "mutation-foundation",
-                "mutation-foundation",
-                "apply",
-                {
-                    "operations": [
-                        {
-                            "operation_id": "write-new",
-                            "kind": "write_file",
-                            "target": "new.md",
-                            "content": "new\n",
-                        }
-                    ]
-                },
-            )
+            request = _new_file_request('test-final-parent-close-after-replace', 'new.md', 'new\n')
             old_cwd = Path.cwd()
             os.chdir(git_root)
             try:
@@ -8501,22 +8493,7 @@ This line must not be copied.
     def test_apply_cleans_parent_created_before_traversal_failure(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
-            request = RunnerRequest(
-                "test-created-parent-traversal-failure",
-                "mutation-foundation",
-                "mutation-foundation",
-                "apply",
-                {
-                    "operations": [
-                        {
-                            "operation_id": "write-new",
-                            "kind": "write_file",
-                            "target": "nested/new.md",
-                            "content": "new\n",
-                        }
-                    ]
-                },
-            )
+            request = _new_file_request('test-created-parent-traversal-failure', 'nested/new.md', 'new\n')
             real_open = mutation.os.open
 
             def fail_reopen_created_parent(path, *args, **kwargs):
@@ -8540,22 +8517,7 @@ This line must not be copied.
     def test_apply_reports_temp_unlink_failure_after_failed_replace(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
-            request = RunnerRequest(
-                "test-temp-unlink-cleanup-failure",
-                "mutation-foundation",
-                "mutation-foundation",
-                "apply",
-                {
-                    "operations": [
-                        {
-                            "operation_id": "write-new",
-                            "kind": "write_file",
-                            "target": "new.md",
-                            "content": "new\n",
-                        }
-                    ]
-                },
-            )
+            request = _new_file_request('test-temp-unlink-cleanup-failure', 'new.md', 'new\n')
             real_unlink = mutation.os.unlink
 
             def fail_replace(*args, **kwargs):
@@ -8634,22 +8596,7 @@ This line must not be copied.
     def test_write_failure_cleanup_errors_mark_writes_state(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
-            request = RunnerRequest(
-                "test-cleanup-errors",
-                "mutation-foundation",
-                "mutation-foundation",
-                "apply",
-                {
-                    "operations": [
-                        {
-                            "operation_id": "write-new",
-                            "kind": "write_file",
-                            "target": "nested/new.md",
-                            "content": "new\n",
-                        }
-                    ]
-                },
-            )
+            request = _new_file_request('test-cleanup-errors', 'nested/new.md', 'new\n')
             injected = OSError("injected")
             injected.cleanup_errors = ["nested:OSError"]
 
@@ -8670,22 +8617,7 @@ This line must not be copied.
     def test_apply_file_writes_fail_closed_on_unsupported_descriptor_platform(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
-            request = RunnerRequest(
-                "test-unsupported-platform",
-                "mutation-foundation",
-                "mutation-foundation",
-                "apply",
-                {
-                    "operations": [
-                        {
-                            "operation_id": "write-new",
-                            "kind": "write_file",
-                            "target": "new.md",
-                            "content": "new\n",
-                        }
-                    ]
-                },
-            )
+            request = _new_file_request('test-unsupported-platform', 'new.md', 'new\n')
             old_cwd = Path.cwd()
             os.chdir(git_root)
             try:
