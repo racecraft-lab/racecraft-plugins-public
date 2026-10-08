@@ -1,5 +1,52 @@
 # Changelog
 
+## [2.41.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.40.0...speckit-pro-v2.41.0) (2026-10-08)
+
+
+### Features
+
+* **speckit-pro:** checklist check-and-propose with ordered edit application ([#1278](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1278)) ([0f1a446](https://github.com/racecraft-lab/racecraft-plugins-public/commit/0f1a44638b392624b0638967f8bc1da129f410d4))
+* **speckit-pro:** choose artifact pages by runner rules ([#1249](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1249)) ([f3258e9](https://github.com/racecraft-lab/racecraft-plugins-public/commit/f3258e9d204fb891d96cdc920cdd54abb17f0dc9))
+* **speckit-pro:** consensus only for security and low-confidence items ([#1262](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1262)) ([53bb9db](https://github.com/racecraft-lab/racecraft-plugins-public/commit/53bb9db80b2e5f7b452f5549ddb47025cd3bf81e))
+* **speckit-pro:** executors get only their phase's reference slices ([#1240](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1240)) ([0c23c6c](https://github.com/racecraft-lab/racecraft-plugins-public/commit/0c23c6c9cd5633d9af1555e7476a50db0dd6d562))
+* **speckit-pro:** G0 reads readiness without stopping ([#1257](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1257)) ([8574ed5](https://github.com/racecraft-lab/racecraft-plugins-public/commit/8574ed58b84bca9c2d3a967d6637bcb683a09c6d))
+* **speckit-pro:** no preview observers without a preview surface ([#1270](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1270)) ([f27d2f7](https://github.com/racecraft-lab/racecraft-plugins-public/commit/f27d2f7d2b39c8c144d39a26d1d06ac90a7db0c4))
+* **speckit-pro:** pin the Spec Kit CLI to v1.1.0 with a runner version check ([#1209](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1209)) ([49785f3](https://github.com/racecraft-lab/racecraft-plugins-public/commit/49785f3cf6d889677d3ee127cfdcb9d48500bc2b))
+* **speckit-pro:** plan-stage dispatch waves ([#1277](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1277)) ([5f1858a](https://github.com/racecraft-lab/racecraft-plugins-public/commit/5f1858ab0e6c7790af8fb9e732991288a8b61ab0))
+* **speckit-pro:** record Claude Code and hook readiness items at scaffold ([#1232](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1232)) ([8f96758](https://github.com/racecraft-lab/racecraft-plugins-public/commit/8f96758969a5d29ab076ddd0f27f8380aa7f888c))
+* **speckit-pro:** record Codex agent and extension readiness items at scaffold ([#1234](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1234)) ([37f577d](https://github.com/racecraft-lab/racecraft-plugins-public/commit/37f577d626406f34d04b02bac9ac827b8bb14971))
+* **speckit-pro:** record Codex approval, trust and sandbox readiness at scaffold ([#1243](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1243)) ([1f8e214](https://github.com/racecraft-lab/racecraft-plugins-public/commit/1f8e21497758e13d696599f7093bac6ba5ebb221))
+* **speckit-pro:** run G0 on unratified quality-gate defaults ([#1219](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1219)) ([e72c7e2](https://github.com/racecraft-lab/racecraft-plugins-public/commit/e72c7e21f2c388c6a9b724630de47fc42001df27))
+* **speckit-pro:** run one clarify session of at most 5 questions ([#1261](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1261)) ([6dbcf2b](https://github.com/racecraft-lab/racecraft-plugins-public/commit/6dbcf2b686a734565e40839a73a80f2a558fcfbb))
+* **speckit-pro:** runner pins the Spec Kit CLI and checks its version ([#1218](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1218)) ([a022acf](https://github.com/racecraft-lab/racecraft-plugins-public/commit/a022acf9ea93ccbbf14728d569cca8a5c0094501))
+* **speckit-pro:** runner-owned decisions list ([#1203](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1203)) ([6d5a569](https://github.com/racecraft-lab/racecraft-plugins-public/commit/6d5a569f29ea34efae6785e8f4015dd0abacdec2))
+* **speckit-pro:** scaffold offers formal methods and verification Docker ([#1222](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1222)) ([d06353f](https://github.com/racecraft-lab/racecraft-plugins-public/commit/d06353f92653422eccf3ad99551c4f7508dc16f0))
+* **speckit-pro:** scaffold proposes quality-gate thresholds ([#1236](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1236)) ([cadd38e](https://github.com/racecraft-lab/racecraft-plugins-public/commit/cadd38e3ee64fda987908d6e657af773cc81dbd3))
+* **speckit-pro:** scaffold writes the readiness record ([#1212](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1212)) ([c7df7be](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c7df7bed189dd232552fd59d19ca64430c878685))
+* **speckit-pro:** the project baseline runs at implement entry ([#1271](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1271)) ([8afd425](https://github.com/racecraft-lab/racecraft-plugins-public/commit/8afd4250a7a91d9d92d1d4bd49b3838a44c772c2))
+* **speckit-pro:** the runner briefs each planning phase ([#1225](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1225)) ([9e296e8](https://github.com/racecraft-lab/racecraft-plugins-public/commit/9e296e8bb9a1b4dbb498313b73b81c722cd2a13a))
+* **speckit-pro:** upstream commands own mandatory hooks; the brief lists optional hooks ([#1264](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1264)) ([86ba508](https://github.com/racecraft-lab/racecraft-plugins-public/commit/86ba50883e9ee998cdd149cc9d13fc40b946c667))
+
+
+### Bug Fixes
+
+* **speckit-pro:** bind checklist verification to Tasks inputs ([#1281](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1281)) ([e9eb59e](https://github.com/racecraft-lab/racecraft-plugins-public/commit/e9eb59e4783ac541e0173567c5bf861571f32a16))
+* **speckit-pro:** complete host task-list removal ([#1215](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1215)) ([e62c598](https://github.com/racecraft-lab/racecraft-plugins-public/commit/e62c5989627c77b884e420a2d1260616239eae41))
+* **speckit-pro:** contain git write probes and preserve replacements ([#1266](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1266)) ([9c34d13](https://github.com/racecraft-lab/racecraft-plugins-public/commit/9c34d1367beb22142e16705d54933bff0fef3f12))
+* **speckit-pro:** curated install commands work on default catalogs ([#1274](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1274)) ([3f8943e](https://github.com/racecraft-lab/racecraft-plugins-public/commit/3f8943e4a3e2d2a955a8dd65dbba10b9690ad904))
+* **speckit-pro:** escape artifact fills and reject active markup in review ([#1268](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1268)) ([0ccb869](https://github.com/racecraft-lab/racecraft-plugins-public/commit/0ccb86995d9642bab6cf78baf7c0acf23e34f52c))
+* **speckit-pro:** follow CommonMark for reference slice structure ([#1265](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1265)) ([1b20fa8](https://github.com/racecraft-lab/racecraft-plugins-public/commit/1b20fa8bc54496e649ad4198ddb203df935127f9))
+* **speckit-pro:** match readiness slash-command exemptions as whole tokens ([#1256](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1256)) ([de92fa4](https://github.com/racecraft-lab/racecraft-plugins-public/commit/de92fa4a0c849380023423b2d52cc0b5ed35f003))
+* **speckit-pro:** name exact scaffold helper inputs ([#1204](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1204)) ([3835c39](https://github.com/racecraft-lab/racecraft-plugins-public/commit/3835c391c45f630b0ffd4970051cd3a4a18bd3a8))
+* **speckit-pro:** never suggest trusting unverified legacy hooks; reject overlapping hook evidence ([#1263](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1263)) ([21dbc81](https://github.com/racecraft-lab/racecraft-plugins-public/commit/21dbc81955f96983286778a0651fe63cab1f88c9))
+* **speckit-pro:** phase brief rejects directory workflow files and format characters ([#1260](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1260)) ([bb2e7f0](https://github.com/racecraft-lab/racecraft-plugins-public/commit/bb2e7f0c0afbe5a67765e290be61562ab807a89b))
+* **speckit-pro:** print the plan stage stop reason ([#1202](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1202)) ([807779e](https://github.com/racecraft-lab/racecraft-plugins-public/commit/807779e28a6ef65204381cd553f9438aae61b021))
+* **speckit-pro:** stop Codex scaffold early when .git is read-only ([#1231](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1231)) ([2c0bf69](https://github.com/racecraft-lab/racecraft-plugins-public/commit/2c0bf691cff7d87bc0be262efe0e5eb34a18af0f))
+* **speckit-pro:** stop failed research providers for each workflow run ([#1207](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1207)) ([9787cf0](https://github.com/racecraft-lab/racecraft-plugins-public/commit/9787cf06c642a5df48a85b94211b686a59d7266e)), closes [#1192](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1192)
+* **speckit-pro:** the plugin ships and installs the reviewability preset ([#1276](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1276)) ([c886ebe](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c886ebeee6b8d1714f16061a5d53e6c1b11da66e))
+* **speckit-pro:** upgrade known legacy reviewability presets during scaffold ([#1283](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1283)) ([cf4f074](https://github.com/racecraft-lab/racecraft-plugins-public/commit/cf4f074e3eaf4ce937ea1441d3660e5d3d21532e))
+* **speckit-pro:** use run state for autopilot progress ([#1214](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1214)) ([000b9b9](https://github.com/racecraft-lab/racecraft-plugins-public/commit/000b9b92d57b7d6c750ff97009c244e8172ca6cf))
+
 ## [2.40.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.39.2...speckit-pro-v2.40.0) (2026-10-04)
 
 
