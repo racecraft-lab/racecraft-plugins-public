@@ -12,7 +12,7 @@ TEST_DIR = Path(__file__).resolve().parent
 LIB_DIR = TEST_DIR.parent / "lib"
 sys.path.insert(0, str(LIB_DIR))
 
-from readiness_case import ReadinessCase, scaffold_step  # noqa: E402
+from readiness_case import current_plugin_revision, ReadinessCase, scaffold_step  # noqa: E402
 from runner_invocation import assert_runner_response  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
@@ -52,15 +52,15 @@ class ReadinessHostItemsTest(ReadinessCase):
         self.assertEqual([], response["data"]["allow_rules"])
 
     def test_stale_worktree_scope_is_unavailable_with_the_fix(self) -> None:
-        scope = {"scope": "project", "loaded_version": "2.39.0", "expected_version": "2.40.0"}
+        scope = {"scope": "project", "loaded_version": "2.39.0", "expected_version": current_plugin_revision()}
         item = self.items(self.run_helper([detail("plugin_scope", "scope", scope)]))["plugin_scope"]
         self.assertEqual("unavailable", item["status"])
         self.assertIn("claude plugin update speckit-pro --scope project", item["action"])
         self.assertIn("/reload-plugins", item["action"])
-        current = {**scope, "loaded_version": "2.40.0"}
+        current = {**scope, "loaded_version": current_plugin_revision()}
         item = self.items(self.run_helper([detail("plugin_scope", "scope", current)]))["plugin_scope"]
         self.assertEqual("verified", item["status"])
-        unobserved = {"scope": "project", "expected_version": "2.40.0"}
+        unobserved = {"scope": "project", "expected_version": current_plugin_revision()}
         item = self.items(self.run_helper([detail("plugin_scope", "scope", unobserved)]))["plugin_scope"]
         self.assertEqual("unknown", item["status"])
         self.assertTrue(item["action"])
@@ -122,7 +122,7 @@ class ReadinessHostItemsTest(ReadinessCase):
             "unknown probe": ("claude", detail("permission_probe", "probes",
                                                [{"probe": "rm", "outcome": "denied"}])),
             "absolute scope version": ("claude", detail("plugin_scope", "scope", {
-                "scope": "project", "loaded_version": "/" + "tmp/x", "expected_version": "2.40.0"})),
+                "scope": "project", "loaded_version": "/" + "tmp/x", "expected_version": current_plugin_revision()})),
             "bad scope": ("claude", detail("plugin_scope", "scope", {
                 "scope": "managed", "loaded_version": "1", "expected_version": "2"})),
             "bad hook name": ("claude", detail("hooks", "hooks", [{"hook": "a b", "defined": True,
@@ -159,9 +159,9 @@ class ReadinessHostItemsTest(ReadinessCase):
         response = self.run_helper([detail("plugin_scope", "scope", scope)])
         item = self.items(response)["plugin_scope"]
         self.assertEqual("unavailable", item["status"])
-        self.assertIn("2.40.0", item["evidence_source"])
+        self.assertIn(current_plugin_revision(), item["evidence_source"])
         self.assertIn("claude plugin update speckit-pro --scope local", item["action"])
-        current = {**scope, "loaded_version": "2.40.0", "expected_version": "2.40.0"}
+        current = {**scope, "loaded_version": current_plugin_revision(), "expected_version": current_plugin_revision()}
         self.assertEqual("verified", self.items(self.run_helper([detail("plugin_scope", "scope", current)]))[
             "plugin_scope"]["status"])
 
