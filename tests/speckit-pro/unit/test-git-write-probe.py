@@ -26,6 +26,7 @@ from speckit_pro_runner.helpers.git_write_probe import probe_result  # noqa: E40
 from speckit_pro_runner.helpers import git_write_probe as probe  # noqa: E402
 from host_skill_views import host_skill_root  # noqa: E402
 from runner_invocation import assert_runner_response, run_runner  # noqa: E402
+from readiness_case import current_plugin_revision  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 REQUEST = {"schema_version": "1.0", "request_id": "test-git-write", "helper_id": "probe-git-write",
@@ -250,7 +251,7 @@ class GitWriteProbeTest(GitWriteProbeFixture):
             observation = self.probe_current_repository()["data"]["observation"]
         request = {"schema_version": "1.0", "request_id": "denied-readiness", "helper_id": "write-readiness-record",
                    "operation": "write-readiness-record", "mode": "apply", "inputs": {
-                       "host": "codex", "execution_mode": "answers-file", "plugin_revision": "2.40.0",
+                       "host": "codex", "execution_mode": "answers-file", "plugin_revision": current_plugin_revision(),
                        "observations": [observation]}}
         _, result, _ = run_runner(request, cwd=self.root)
         assert_runner_response(self, result, "ok", 0)
@@ -315,7 +316,7 @@ class GitWriteProbeTest(GitWriteProbeFixture):
                 step = (host_skill_root(host) / SKILL).read_text(encoding="utf-8").split("### 6.5 Write the Readiness Record", 1)[1].split("\n### ", 1)[0]
                 self.assertIn("`git_write`", step)
         item = {"item": "git_write", "status": "not_applicable", "evidence_source": "Claude Code has no git sandbox probe"}
-        body = {"host": "claude", "execution_mode": "interactive", "plugin_revision": "2.40.0", "observations": [item]}
+        body = {"host": "claude", "execution_mode": "interactive", "plugin_revision": current_plugin_revision(), "observations": [item]}
         request = {"schema_version": "1.0", "request_id": "test-readiness", "helper_id": "write-readiness-record",
                    "operation": "write-readiness-record", "mode": "dry_run", "inputs": body}
         completed, response, _ = run_runner(request, cwd=self.root)

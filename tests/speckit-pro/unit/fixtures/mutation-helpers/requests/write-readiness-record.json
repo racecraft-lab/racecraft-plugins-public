@@ -8,7 +8,7 @@
     "host": "claude",
     "host_version": "2.1.0",
     "execution_mode": "interactive",
-    "plugin_revision": "2.40.0",
+    "plugin_revision": "1.0.0",
     "observations": [
       {"item": "github_auth", "status": "unavailable", "evidence_source": "gh auth status", "action": "Run gh auth login, then rerun scaffold."}
     ]

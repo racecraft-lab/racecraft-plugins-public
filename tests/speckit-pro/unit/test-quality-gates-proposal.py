@@ -19,6 +19,7 @@ sys.path.insert(0, str(REPO_ROOT / "speckit-pro"))
 
 from host_skill_views import host_skill_root  # noqa: E402
 from runner_invocation import assert_runner_response, run_runner  # noqa: E402
+from readiness_case import current_plugin_revision  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 GATES_FILE = ".specify/quality-gates.json"
@@ -87,7 +88,7 @@ def assert_a_yes_cannot_write_a_changed_proposal(case) -> None:
 
 def observe_quality_gates_source(case) -> dict:
     record = envelope("write-readiness-record", "dry_run", {
-        "host": "claude", "execution_mode": "interactive", "plugin_revision": "2.40.0", "observations": []})
+        "host": "claude", "execution_mode": "interactive", "plugin_revision": current_plugin_revision(), "observations": []})
     _, response, _ = run_runner(record, cwd=case.root, extra_env={"PATH": str(case.tools)})
     return response["data"]["record"]["items"]["quality_gates"]
 
