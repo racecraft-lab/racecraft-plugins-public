@@ -26,6 +26,8 @@ from .quality_gates_proposal import run_quality_gates_proposal_helper
 from .readiness_record import run_readiness_record_helper
 from .scaffold_answers import run_scaffold_answers_helper
 from .phase_brief import run_phase_brief_helper
+from .tasks_output import run_read_tasks_output_helper
+from .tasks_inputs import run_read_tasks_inputs_helper, run_publish_tasks_output_helper
 from .run_finalization import run_run_finalization_helper
 from .mutation import empty_mutation, run_mutation_helper, run_spec_index_write, run_sweep_apply_result
 from .pr_emission import generate_pr_body, plan_commands
@@ -123,6 +125,14 @@ HELPERS: dict[str, HelperEntry] = {
     "select-artifact-pages": HelperEntry(
         "select-artifact-pages", "select-artifact-pages", None, "python_authoritative", "python_contract",
         authoritative_request("select-artifact-pages"),
+    ),
+    "read-tasks-output": HelperEntry(
+        "read-tasks-output", "read-tasks-output", None, "python_authoritative", "python_contract",
+        authoritative_request("read-tasks-output"),
+    ),
+    "read-tasks-inputs": HelperEntry(
+        "read-tasks-inputs", "read-tasks-inputs", None, "python_authoritative", "python_contract",
+        authoritative_request("read-tasks-inputs"),
     ),
     "phase-brief": HelperEntry(
         "phase-brief", "phase-brief", None, "python_authoritative", "python_contract",
@@ -471,6 +481,11 @@ HELPERS: dict[str, HelperEntry] = {
 
 
 MUTATION_HELPERS: dict[str, MutationEntry] = {
+    "publish-tasks-output": MutationEntry(
+        "publish-tasks-output", "publish-tasks-output", ("apply",), None,
+        "golden_only", "fixture_semantic", mutation_authoritative_request("publish-tasks-output"),
+        ("g4-parent-identity", "snapshot-output", "unsafe-leaf"),
+    ),
     "task-results": MutationEntry(
         "task-results", "task-results", ("read_only", "dry_run", "apply"), None,
         "golden_only", "fixture_semantic", mutation_authoritative_request("task-results"),
@@ -758,6 +773,8 @@ SPECIAL_HELPER_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
     "g0-setup": run_g0_setup_helper,
     "probe-git-write": run_git_write_probe_helper,
     "phase-brief": run_phase_brief_helper,
+    "read-tasks-output": run_read_tasks_output_helper,
+    "read-tasks-inputs": run_read_tasks_inputs_helper,
 }
 
 
@@ -869,6 +886,9 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
 
     if entry.helper_id == "decisions-list":
         return run_decisions_list_helper(entry, request)
+
+    if entry.helper_id == "publish-tasks-output":
+        return run_publish_tasks_output_helper(entry, request)
 
     if entry.helper_id == "checklist-edits":
         return run_checklist_edits_helper(entry, request)

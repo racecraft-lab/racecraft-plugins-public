@@ -6,11 +6,12 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
 import unittest
-from contextlib import chdir
+from contextlib import ExitStack, chdir
 from pathlib import Path
 from unittest.mock import patch
 
@@ -391,7 +392,8 @@ class GenerateSpecIndexTests(_SpecIndexGitIgnoreTests, unittest.TestCase):
         self.assertEqual(moc.read_bytes(), first_write)
 
     def test_write_rejects_target_swap_between_conflict_check_and_replace(self) -> None:
-        RunnerRequest, mutation, registry, root = self._spec_index_write_fixture()
+        fixture = self._spec_index_write_fixture()
+        root = fixture[3]
         moc = root / "specs" / "prsg-901-stale" / "SPEC-MOC.md"
         calls = 0
         real_ensure = atomic_write.ensure_safe_write_target_fd
@@ -403,20 +405,8 @@ class GenerateSpecIndexTests(_SpecIndexGitIgnoreTests, unittest.TestCase):
                 moc.write_text("concurrent\n", encoding="utf-8")
             real_ensure(parent_fd, name)
 
-        request = RunnerRequest(
-            "test-spec-index-target-swap",
-            "generate-spec-index-write",
-            "generate-spec-index-write",
-            "apply",
-            {"repo_root": root.name},
-        )
-        old_cwd = Path.cwd()
-        os.chdir(self.work)
-        try:
-            with patch.object(atomic_write, "ensure_safe_write_target_fd", side_effect=swap_before_final_guard):
-                body = mutation.run_spec_index_write(registry.MUTATION_HELPERS["generate-spec-index-write"], request)
-        finally:
-            os.chdir(old_cwd)
+        fault = patch.object(atomic_write, "ensure_safe_write_target_fd", side_effect=swap_before_final_guard)
+        body = self._apply_spec_index_write(fixture, "test-spec-index-target-swap", fault)
 
         self.assertEqual(body["status"], "expected_failure")
         self.assertEqual(body["exit_code"], 1)
@@ -425,7 +415,8 @@ class GenerateSpecIndexTests(_SpecIndexGitIgnoreTests, unittest.TestCase):
         self.assertFalse(body["data"]["mutation"]["live_mutation"])
 
     def test_write_acquires_lock_before_rendering_sources(self) -> None:
-        RunnerRequest, mutation, registry, root = self._spec_index_write_fixture()
+        fixture = self._spec_index_write_fixture()
+        mutation = fixture[1]
         lock_acquired = False
         real_acquire = mutation.acquire_mutation_lock
         real_render = mutation.render_spec_index
@@ -440,29 +431,17 @@ class GenerateSpecIndexTests(_SpecIndexGitIgnoreTests, unittest.TestCase):
             self.assertTrue(lock_acquired)
             return real_render(target_root)
 
-        request = RunnerRequest(
-            "test-spec-index-lock-before-render",
-            "generate-spec-index-write",
-            "generate-spec-index-write",
-            "apply",
-            {"repo_root": root.name},
-        )
-        old_cwd = Path.cwd()
-        os.chdir(self.work)
-        try:
-            with (
-                patch.object(mutation, "acquire_mutation_lock", side_effect=tracking_acquire),
-                patch.object(mutation, "render_spec_index", side_effect=assert_locked_render),
-            ):
-                body = mutation.run_spec_index_write(registry.MUTATION_HELPERS["generate-spec-index-write"], request)
-        finally:
-            os.chdir(old_cwd)
+        with ExitStack() as faults:
+            faults.enter_context(patch.object(mutation, "acquire_mutation_lock", side_effect=tracking_acquire))
+            faults.enter_context(patch.object(mutation, "render_spec_index", side_effect=assert_locked_render))
+            body = self._apply_spec_index_write(fixture, "test-spec-index-lock-before-render", faults)
 
         self.assertEqual(body["status"], "ok")
         self.assertEqual(body["data"]["mutation"]["mutation_status"], "applied")
 
     def test_write_rejects_render_dependency_change_between_render_and_commit(self) -> None:
-        RunnerRequest, mutation, registry, root = self._spec_index_write_fixture()
+        fixture = self._spec_index_write_fixture()
+        mutation, root = fixture[1], fixture[3]
         moc = root / "specs" / "prsg-901-stale" / "SPEC-MOC.md"
         before = moc.read_text(encoding="utf-8")
         prs = root / "specs" / "prsg-901-stale" / ".process" / "prs.json"
@@ -479,20 +458,8 @@ class GenerateSpecIndexTests(_SpecIndexGitIgnoreTests, unittest.TestCase):
                 prs.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
             return rendered
 
-        request = RunnerRequest(
-            "test-spec-index-render-source-changed",
-            "generate-spec-index-write",
-            "generate-spec-index-write",
-            "apply",
-            {"repo_root": root.name},
-        )
-        old_cwd = Path.cwd()
-        os.chdir(self.work)
-        try:
-            with patch.object(mutation, "render_spec_index", side_effect=mutate_prs_after_initial_render):
-                body = mutation.run_spec_index_write(registry.MUTATION_HELPERS["generate-spec-index-write"], request)
-        finally:
-            os.chdir(old_cwd)
+        fault = patch.object(mutation, "render_spec_index", side_effect=mutate_prs_after_initial_render)
+        body = self._apply_spec_index_write(fixture, "test-spec-index-render-source-changed", fault)
 
         self.assertEqual(body["status"], "expected_failure")
         self.assertEqual([diag["code"] for diag in body["diagnostics"]], ["source_changed"])
@@ -500,7 +467,8 @@ class GenerateSpecIndexTests(_SpecIndexGitIgnoreTests, unittest.TestCase):
         self.assertFalse(body["data"]["writes_state"])
 
     def test_write_rolls_back_render_dependency_change_immediately_before_replace(self) -> None:
-        RunnerRequest, mutation, registry, root = self._spec_index_write_fixture()
+        fixture = self._spec_index_write_fixture()
+        mutation, root = fixture[1], fixture[3]
         moc = root / "specs" / "prsg-901-stale" / "SPEC-MOC.md"
         before = moc.read_text(encoding="utf-8")
         prs = root / "specs" / "prsg-901-stale" / ".process" / "prs.json"
@@ -516,20 +484,8 @@ class GenerateSpecIndexTests(_SpecIndexGitIgnoreTests, unittest.TestCase):
                 prs.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
             return real_write(*args, **kwargs)
 
-        request = RunnerRequest(
-            "test-spec-index-render-source-changed-before-replace",
-            "generate-spec-index-write",
-            "generate-spec-index-write",
-            "apply",
-            {"repo_root": root.name},
-        )
-        old_cwd = Path.cwd()
-        os.chdir(self.work)
-        try:
-            with patch.object(mutation, "write_file_atomic", side_effect=mutate_prs_before_replace):
-                body = mutation.run_spec_index_write(registry.MUTATION_HELPERS["generate-spec-index-write"], request)
-        finally:
-            os.chdir(old_cwd)
+        fault = patch.object(mutation, "write_file_atomic", side_effect=mutate_prs_before_replace)
+        body = self._apply_spec_index_write(fixture, "test-spec-index-render-source-changed-before-replace", fault)
 
         self.assertEqual(body["status"], "expected_failure")
         self.assertEqual([diag["code"] for diag in body["diagnostics"]], ["source_changed"])
@@ -538,8 +494,23 @@ class GenerateSpecIndexTests(_SpecIndexGitIgnoreTests, unittest.TestCase):
         self.assertEqual(moc.read_text(encoding="utf-8"), before)
         self.assertFalse(body["data"]["writes_state"])
 
+    def _apply_spec_index_write(self, fixture, request_id: str, fault):
+        RunnerRequest, mutation, registry, root = fixture
+        request = RunnerRequest(request_id, "generate-spec-index-write", "generate-spec-index-write", "apply",
+                                {"repo_root": root.name})
+        with chdir(self.work), fault:
+            return mutation.run_spec_index_write(registry.MUTATION_HELPERS["generate-spec-index-write"], request)
+
+    def _assert_applied_map_failure(self, body, code: str) -> None:
+        self.assertEqual(body["status"], "expected_failure")
+        self.assertEqual([diag["code"] for diag in body["diagnostics"]], [code])
+        self.assertEqual(body["data"]["mutation"]["mutation_status"], "partial_failure")
+        self.assertEqual(body["data"]["mutation"]["touched_paths"], ["specs/prsg-901-stale/SPEC-MOC.md"])
+        self.assertTrue(body["data"]["writes_state"])
+
     def test_write_rechecks_applied_map_before_success(self) -> None:
-        RunnerRequest, mutation, registry, root = self._spec_index_write_fixture()
+        fixture = self._spec_index_write_fixture()
+        mutation, root = fixture[1], fixture[3]
         moc = root / "specs" / "prsg-901-stale" / "SPEC-MOC.md"
         real_after_write = mutation.snapshot_changed_diagnostic_after_write
 
@@ -549,27 +520,35 @@ class GenerateSpecIndexTests(_SpecIndexGitIgnoreTests, unittest.TestCase):
                 moc.write_text("concurrent\n", encoding="utf-8")
             return result
 
-        request = RunnerRequest(
-            "test-spec-index-final-target-recheck",
-            "generate-spec-index-write",
-            "generate-spec-index-write",
-            "apply",
-            {"repo_root": root.name},
-        )
-        old_cwd = Path.cwd()
-        os.chdir(self.work)
-        try:
-            with patch.object(mutation, "snapshot_changed_diagnostic_after_write", side_effect=mutate_after_applied_snapshot):
-                body = mutation.run_spec_index_write(registry.MUTATION_HELPERS["generate-spec-index-write"], request)
-        finally:
-            os.chdir(old_cwd)
+        fault = patch.object(mutation, "snapshot_changed_diagnostic_after_write", side_effect=mutate_after_applied_snapshot)
+        body = self._apply_spec_index_write(fixture, "test-spec-index-final-target-recheck", fault)
 
-        self.assertEqual(body["status"], "expected_failure")
-        self.assertEqual([diag["code"] for diag in body["diagnostics"]], ["source_changed"])
-        self.assertEqual(body["data"]["mutation"]["mutation_status"], "partial_failure")
-        self.assertEqual(body["data"]["mutation"]["touched_paths"], ["specs/prsg-901-stale/SPEC-MOC.md"])
+        self._assert_applied_map_failure(body, "source_changed")
         self.assertEqual(moc.read_text(encoding="utf-8"), "concurrent\n")
-        self.assertTrue(body["data"]["writes_state"])
+
+    def test_write_tracks_interrupted_map_when_parent_sync_fails_after_replace(self) -> None:
+        fixture = self._spec_index_write_fixture()
+        mutation, root = fixture[1], fixture[3]
+        moc = root / "specs" / "prsg-901-stale" / "SPEC-MOC.md"
+        before = moc.read_text(encoding="utf-8")
+        real_fsync = mutation.os.fsync
+        failed = False
+
+        def fail_first_directory_sync(descriptor: int) -> None:
+            # The writer syncs the parent directory only after the map replaced its target.
+            nonlocal failed
+            if not failed and stat.S_ISDIR(os.fstat(descriptor).st_mode):
+                failed = True
+                raise OSError("injected parent sync failure")
+            real_fsync(descriptor)
+
+        fault = patch.object(mutation.os, "fsync", side_effect=fail_first_directory_sync)
+        body = self._apply_spec_index_write(fixture, "test-spec-index-parent-sync-after-replace", fault)
+
+        self.assertTrue(failed)
+        self._assert_applied_map_failure(body, "write_failure")
+        self.assertEqual(body["diagnostics"][0]["details"]["error"], "AtomicWriteInterrupted")
+        self.assertNotEqual(moc.read_text(encoding="utf-8"), before)
 
     def test_current_marker_spelling_is_rendered_and_preserved(self) -> None:
         root = self.copy_fixture("stale-fill")

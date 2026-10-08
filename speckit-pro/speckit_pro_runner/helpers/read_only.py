@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import ast
+from contextlib import ExitStack, contextmanager
 import hashlib
+import itertools
 import json
 import math
 import os
@@ -29,6 +31,7 @@ from ..json_schema import json_schema_failures
 from ..runtime import detect_plugin_root
 from .. import reviewability_preset, spec_kit_pin
 from ..strict_input import unique_object
+from .tasks_output import checked_tasks_text
 from .formal_policy import apply_resume_guard, gate_checkpoint
 from .readiness_record import HOSTS, preview_surface
 from .feedback_sweep import (
@@ -78,6 +81,9 @@ from ..trusted_io import (
     request_path_display,
     resolve_input_path,
     resolve_repo_root,
+    read_tree_entry,
+    TreeEntryReadOptions,
+    tree_entry_signature,
     trusted_bytes,
     trusted_dir_exists,
     trusted_file_exists,
@@ -2033,56 +2039,26 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
             exit_code=1,
         )
     if gate == "G4":
-        spec_gaps = count_pattern([spec], r"\[Gap\]", repo_root)
-        plan_gaps = count_pattern([plan], r"\[Gap\]", repo_root)
-        checklist_gaps = count_pattern_dir(feature / "checklists", r"\[Gap\]", repo_root)
-        gaps = spec_gaps + plan_gaps + checklist_gaps
-        if gaps == 0:
-            return make_result(json_text({"gate": "G4", "pass": True, "reason": "0 [Gap] markers", "markers": 0, "details": []}))
-        return make_result(
-            json_text(
-                {
-                    "gate": "G4",
-                    "pass": False,
-                    "reason": f"{gaps} [Gap] markers (spec:{spec_gaps}, plan:{plan_gaps}, checklists:{checklist_gaps})",
-                    "markers": gaps,
-                    "details": [],
-                }
-            ),
-            exit_code=1,
-        )
+        return g4_result(feature, repo_root)
     if gate == "G5":
+        if "tasks_binding" in inputs:
+            try:
+                text = checked_tasks_text(inputs["tasks_binding"])
+            except ValueError:
+                return make_result(json_text({"gate": "G5", "pass": False,
+                                              "reason": "Tasks binding is invalid or changed"}), exit_code=1)
+            result = g5_tasks_text(text, tasks, repo_root)
+            verdict = json.loads(result["stdout"])
+            verdict["tasks_sha256"] = inputs["tasks_binding"]["sha256"]
+            return make_result(json_text(verdict), exit_code=result["exit_code"])
         if not trusted_file_exists(tasks, repo_root):
             return make_result(json_text({"gate": "G5", "pass": False, "reason": "tasks.md not found", "markers": 0, "details": []}), exit_code=1)
-        count = count_unchecked_tasks(tasks, repo_root)
-        passed = count > 0
-        obj = {
-            "gate": "G5",
-            "pass": passed,
-            "reason": f"{count} tasks found" if passed else "No task entries found in tasks.md",
-            "markers": 0,
-            "task_count": count,
-        }
-        if passed:
-            obj.update(g5_gate_task_loops(tasks, repo_root))
-            rows = g5_empty_coverage_rows(trusted_text(tasks, repo_root) or "")
-            if rows:
-                reason = (f"{len(rows)} requirement coverage row(s) have no task IDs: "
-                          + ", ".join(row["requirement"] for row in rows))
-                obj["reason"] = reason if obj["pass"] else f"{obj['reason']}; {reason}"
-                obj["details"] = [*obj.get("details", []), *(
-                    f"Line {row['line']}: {row['requirement']} has an empty or placeholder task cell "
-                    + f"('{row['cell']}'). Fill it with the task IDs that cover the requirement."
-                    for row in rows)]
-                obj["empty_coverage_rows"] = rows
-                obj["pass"] = False
-            passed = obj["pass"]
-        return make_result(json_text(obj), exit_code=0 if passed else 1)
+        return g5_tasks_text(trusted_text(tasks, repo_root) or "", tasks, repo_root)
     if gate == "G7":
         if not trusted_file_exists(tasks, repo_root):
             return make_result(json_text({"gate": "G7", "pass": False, "reason": "tasks.md not found", "markers": 0, "details": []}), exit_code=1)
         total = count_tasks(tasks, repo_root)
-        done = count_done_tasks(tasks, repo_root)
+        done = count_tasks(tasks, repo_root, completed_only=True)
         remaining = total - done
         if remaining == 0 and total > 0:
             return make_result(
@@ -2121,6 +2097,201 @@ def validate_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     return make_result(json_text({"gate": gate, "pass": False, "reason": f"{count} CRITICAL/HIGH findings remain", "markers": count, "analysis_findings": findings, "details": []}), exit_code=1)
 
 
+def g5_tasks_text(text: str, tasks: Path, repo_root: Path) -> dict[str, Any]:
+    """Evaluate the Tasks text consumed by G5 without reopening its path."""
+    count = sum(1 for line in text.splitlines() if re.match(r"^\s*-\s+\[ \]\s+T[0-9]", line))
+    passed = count > 0
+    obj = {
+        "gate": "G5",
+        "pass": passed,
+        "reason": f"{count} tasks found" if passed else "No task entries found in tasks.md",
+        "markers": 0,
+        "task_count": count,
+    }
+    if passed:
+        obj.update(g5_gate_task_loops(tasks, repo_root, text))
+        rows = g5_empty_coverage_rows(text)
+        if rows:
+            reason = (f"{len(rows)} requirement coverage row(s) have no task IDs: "
+                      + ", ".join(row["requirement"] for row in rows))
+            obj["reason"] = reason if obj["pass"] else f"{obj['reason']}; {reason}"
+            obj["details"] = [*obj.get("details", []), *(
+                f"Line {row['line']}: {row['requirement']} has an empty or placeholder task cell "
+                + f"('{row['cell']}'). Fill it with the task IDs that cover the requirement."
+                for row in rows)]
+            obj["empty_coverage_rows"] = rows
+            obj["pass"] = False
+        passed = obj["pass"]
+    return make_result(json_text(obj), exit_code=0 if passed else 1)
+
+
+G4_MAX_REPORTS = 64
+G4_MAX_BYTES = 8 * 1024 * 1024
+
+
+class G4InputDrift(ValueError):
+    """A Tasks input no longer matches the preceding G4 snapshot."""
+
+
+@contextmanager
+def g4_input_kind(kind: str) -> Any:
+    """Translate unsafe snapshot reads into a sanitized input-kind diagnostic."""
+    try:
+        yield
+    except G4InputDrift:
+        raise
+    except (OSError, ValueError):
+        raise G4InputDrift(f"G4 input drift: {kind} is unsafe, changed or unreadable") from None
+
+
+def g4_report_name(name: str) -> bool:
+    """The one display-safe, flat Markdown report-name contract."""
+    return name.endswith(".md") and re.fullmatch(r"[A-Za-z0-9_.-]+", name) is not None
+
+
+def g4_reports(directory: int) -> dict[str, os.stat_result]:
+    """Capture the bounded flat entry set through a held directory descriptor."""
+    with os.scandir(directory) as listing:
+        names = sorted(entry.name for entry in itertools.islice(listing, G4_MAX_REPORTS + 1))
+    if len(names) > G4_MAX_REPORTS:
+        raise ValueError(f"checklists/ holds more than {G4_MAX_REPORTS} entries")
+    entries = {name: os.stat(name, dir_fd=directory, follow_symlinks=False) for name in names}
+    for name, info in entries.items():
+        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+            raise ValueError("checklists/ holds a directory, link or special file")
+        if name.endswith(".md") and not g4_report_name(name):
+            raise ValueError("checklists/ holds an unsafe report name")
+    if not any(name.endswith(".md") for name in entries):
+        raise ValueError("checklists/ holds no checklist report")
+    return entries
+
+
+def g4_check_entries(directory: int, entries: dict[str, os.stat_result], kind: str | None = None) -> None:
+    """Refuse a changed name, inode or mutation signature without re-reading content."""
+    for name, before in entries.items():
+        with g4_input_kind(kind or name):
+            after = os.stat(name, dir_fd=directory, follow_symlinks=False)
+            if tree_entry_signature(before) != tree_entry_signature(after):
+                raise ValueError("G4 input changed during capture")
+
+
+def g4_snapshot(feature: Path, repo_root: Path, feature_identity: dict[str, int] | None = None) -> dict[str, bytes]:
+    """Capture stable bounded bytes relative to held parents, then validate their namespace."""
+    with ExitStack() as stack:
+        with g4_input_kind("feature entry"):
+            feature_fd = trusted_open_directory(feature, repo_root)
+            if feature_fd is None:
+                raise ValueError("G4 feature directory is missing, linked or unreadable")
+        stack.callback(os.close, feature_fd)
+        with g4_input_kind("checklists entry"):
+            directory_fd = os.open("checklists", os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=feature_fd)
+        stack.callback(os.close, directory_fd)
+        with g4_input_kind("checklist report set"):
+            reports = g4_reports(directory_fd)
+        shared = {}
+        for name in ("spec.md", "plan.md"):
+            with g4_input_kind(name):
+                shared[name] = os.stat(name, dir_fd=feature_fd, follow_symlinks=False)
+        files = [(name, feature_fd, name, info) for name, info in shared.items()]
+        files += [(f"checklists/{name}", directory_fd, name, info) for name, info in reports.items() if name.endswith(".md")]
+        snapshot: dict[str, bytes] = {}
+        for key, parent, name, info in files:
+            with g4_input_kind(name if key in shared else "checklist report"):
+                if not stat.S_ISREG(info.st_mode):
+                    raise ValueError("G4 requires regular files")
+                content = read_tree_entry(
+                    parent,
+                    name,
+                    info,
+                    options=TreeEntryReadOptions(byte_limit=G4_MAX_BYTES - sum(map(len, snapshot.values()))),
+                )[Path()][1]
+                if content is None:
+                    raise ValueError("G4 requires file content")
+                snapshot[key] = content
+        g4_check_entries(feature_fd, shared)
+        g4_check_entries(directory_fd, reports, "checklist report")
+        with g4_input_kind("checklist report set"):
+            if set(g4_reports(directory_fd)) != set(reports):
+                raise ValueError("G4 checklist entries changed during capture")
+        g4_check_entries(feature_fd, {"checklists": os.fstat(directory_fd)}, "checklists entry")
+        with g4_input_kind("feature entry"):
+            current_fd = trusted_open_directory(feature, repo_root)
+            if current_fd is None:
+                raise ValueError("G4 feature directory changed during capture")
+        stack.callback(os.close, current_fd)
+        with g4_input_kind("feature entry"):
+            if tree_entry_signature(os.fstat(current_fd)) != tree_entry_signature(os.fstat(feature_fd)):
+                raise ValueError("G4 feature directory changed during capture")
+        if feature_identity is not None:
+            info = os.fstat(feature_fd)
+            feature_identity.update(device=info.st_dev, inode=info.st_ino)
+        return snapshot
+
+
+def g4_result(feature: Path, repo_root: Path) -> dict[str, Any]:
+    """Zero [Gap] markers in one bounded snapshot passes; `judged` holds the SHA-256 of every file the verdict covers."""
+    try:
+        identity: dict[str, int] = {}
+        snapshot = g4_snapshot(feature, repo_root, identity)
+    except (OSError, ValueError) as error:
+        reason = "G4 cannot read stable regular inputs" if isinstance(error, OSError) else str(error)
+        return make_result(json_text({"gate": "G4", "pass": False, "reason": reason, "markers": 0, "details": []}), exit_code=1)
+    result = g4_judgment(snapshot)
+    verdict = json.loads(result["stdout"])
+    verdict["feature_identity"] = identity
+    result["stdout"] = json_text(verdict)
+    return result
+
+
+def g4_judgment(snapshot: dict[str, bytes]) -> dict[str, Any]:
+    """Judge and hash the exact captured bytes without reopening their live paths."""
+    counts = {name: sum(1 for line in content.decode("utf-8", errors="replace").splitlines() if "[Gap]" in line)
+              for name, content in snapshot.items()}
+    judged = {name: hashlib.sha256(content).hexdigest() for name, content in snapshot.items()}
+    spec, plan = counts.pop("spec.md"), counts.pop("plan.md")
+    gaps, reports = spec + plan + sum(counts.values()), len(counts)
+    if gaps == 0:
+        reason = f"0 [Gap] markers in spec.md, plan.md and {reports} checklist report{'s' if reports > 1 else ''}"
+        return make_result(json_text({"gate": "G4", "pass": True, "reason": reason, "markers": 0, "details": [], "judged": judged}))
+    reason = f"{gaps} [Gap] markers (spec:{spec}, plan:{plan}, checklists:{sum(counts.values())})"
+    return make_result(json_text({"gate": "G4", "pass": False, "reason": reason, "markers": gaps, "details": [], "judged": judged}),
+                       exit_code=1)
+
+
+def checked_g4_judged(raw: Any) -> dict[str, str]:
+    """Validate the bounded, flat digest map returned by G4 without echoing caller content."""
+    if not isinstance(raw, dict) or not 3 <= len(raw) <= G4_MAX_REPORTS + 2:
+        raise ValueError("Tasks requires G4 judged digests")
+    if not {"spec.md", "plan.md"} <= raw.keys():
+        raise ValueError("G4 judged digests require spec.md and plan.md")
+    for name, digest in raw.items():
+        if not isinstance(name, str) or (name not in ("spec.md", "plan.md")
+                and not (name.startswith("checklists/") and g4_report_name(name.removeprefix("checklists/")))):
+            raise ValueError("G4 judged digests require flat checklist report names")
+        if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+            raise ValueError("G4 judged digests require SHA-256 values")
+    return dict(raw)
+
+
+def check_g4_inputs(feature: Path, repo_root: Path, judged: dict[str, str]) -> dict[str, bytes]:
+    """Return the exact bounded bytes matching G4; callers must consume these bytes."""
+    snapshot = g4_snapshot(feature, repo_root)
+    current = json.loads(g4_judgment(snapshot)["stdout"])
+    actual = current.get("judged")
+    if not isinstance(actual, dict):
+        raise G4InputDrift(current["reason"])
+    for name in ("spec.md", "plan.md"):
+        if actual.get(name) != judged[name]:
+            raise G4InputDrift(f"G4 input drift: {name}")
+    reports = {name: digest for name, digest in actual.items() if name.startswith("checklists/")}
+    expected = {name: digest for name, digest in judged.items() if name.startswith("checklists/")}
+    if reports != expected:
+        raise G4InputDrift("G4 input drift: checklist report set or content")
+    if not current["pass"]:
+        raise G4InputDrift("G4 input drift: shared artifact or checklist report contains gaps")
+    return snapshot
+
+
 COVERAGE_TASK_HEADER = re.compile(r"tasks?(?:\s*\(s\)|\s*ids?)?", re.IGNORECASE)
 COVERAGE_REQUIREMENT = re.compile(r"(?:FR|NFR|SC|AC|INV|REQ)-[A-Za-z0-9.]+")
 COVERAGE_TASK_ID = re.compile(r"\bT\d+[a-z]?\b")
@@ -2155,7 +2326,7 @@ def g5_empty_coverage_rows(text: str) -> list[dict[str, Any]]:
     return rows
 
 
-def g5_gate_task_loops(tasks: Path, repo_root: Path) -> dict[str, Any]:
+def g5_gate_task_loops(tasks: Path, repo_root: Path, text: str) -> dict[str, Any]:
     """Fail G5 when a task gating source work needs evidence its dependents produce (#773)."""
     from ..task_execution import TaskExecutionError, gate_task_loops, sidecar_dependencies
 
@@ -2170,7 +2341,7 @@ def g5_gate_task_loops(tasks: Path, repo_root: Path) -> dict[str, Any]:
         except TaskExecutionError as exc:
             reason = f"task-execution metadata cannot be read for the gate-task check ({exc}); run validate-task-execution"
             return {"pass": False, "reason": reason, "details": []}
-    loops = gate_task_loops(trusted_text(tasks, repo_root) or "", depends_on)
+    loops = gate_task_loops(text, depends_on)
     if not loops:
         return {}
     details = [
@@ -6413,16 +6584,9 @@ def count_pattern_dir(directory: Path, pattern: str, repo_root: Path | None = No
     return count_pattern([path for path in directory.rglob("*") if path.is_file()], pattern, repo_root)
 
 
-def count_tasks(path: Path, repo_root: Path | None = None) -> int:
-    return sum(1 for line in trusted_lines(path, repo_root) if re.match(r"^\s*-\s+\[[ xX]\]\s+T[0-9]", line))
-
-
-def count_unchecked_tasks(path: Path, repo_root: Path | None = None) -> int:
-    return sum(1 for line in trusted_lines(path, repo_root) if re.match(r"^\s*-\s+\[ \]\s+T[0-9]", line))
-
-
-def count_done_tasks(path: Path, repo_root: Path | None = None) -> int:
-    return sum(1 for line in trusted_lines(path, repo_root) if re.match(r"^\s*-\s+\[[xX]\]\s+T[0-9]", line))
+def count_tasks(path: Path, repo_root: Path | None = None, *, completed_only: bool = False) -> int:
+    checkbox = r"\[[xX]\]" if completed_only else r"\[[ xX]\]"
+    return count_pattern([path], r"^\s*-\s+" + checkbox + r"\s+T[0-9]", repo_root)
 
 
 def last_number(text: str, pattern: str) -> int:

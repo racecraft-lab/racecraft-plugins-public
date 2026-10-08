@@ -9,6 +9,8 @@ workflow order under one lock, so no two writes touch the files at once.
 
 from collections.abc import Callable, Iterator
 from contextlib import ExitStack, contextmanager
+from dataclasses import dataclass
+import errno
 import fcntl
 from functools import partial
 import hashlib
@@ -17,20 +19,23 @@ import os
 import shutil
 import stat
 import subprocess
+from itertools import product
 from pathlib import Path
 import sys
 import tempfile
 from typing import Any
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO / "speckit-pro"), str(REPO / "tests/speckit-pro/lib")]
 from speckit_pro_runner import atomic_write  # noqa: E402
-from speckit_pro_runner.helpers import checklist_edits  # noqa: E402
-from speckit_pro_runner.helpers.registry import MUTATION_HELPERS  # noqa: E402
+from speckit_pro_runner.helpers import checklist_edits, read_only, phase_brief  # noqa: E402
+from speckit_pro_runner.helpers.registry import MUTATION_HELPERS, dispatch_helper  # noqa: E402
 from guide_text import PHASE_EXECUTION_GUIDES, guide_text, guide_view  # noqa: E402
 from mutation_request_case import MutationRequestCase  # noqa: E402
+from descriptor_observer import record_open_descriptors  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 HELPER_ID = "checklist-edits"
@@ -40,6 +45,12 @@ RECORD = f"{FEATURE}/.process/checklist-edits/applied.json"
 OTHER_WORKFLOW = "docs/workflows/other.md"
 FIXTURE = REPO / "tests/speckit-pro/unit/fixtures/mutation-helpers/requests" / f"{HELPER_ID}.json"
 HOSTS = ("claude", "codex")
+G4_FAILURE_CASES = (
+    "GateFourResourceTests", "GateFourCoverageTests", "GateFourAttestationTests",
+    "GateFourReportInputTests", "GateFourContainedInputTests", "GateFourNamespaceMutationTests", "GateFourPostValidationTests",
+    "TasksCheckedBytesTests", "TasksSnapshotMutationTests", "TasksSnapshotWriteTests",
+    "TasksRecheckTests", "GateFourDiagnosticTests", "GateFourFilesystemEdgeTests", "GateFourReportLimitTests",
+)
 RETIRED = ("then applies them to spec.md or plan.md", "then edit the artifact")
 SPEC = "# Spec\nLogin uses a password.\nExports are open.\n"
 PLAN = "# Plan\nSessions never expire.\n"
@@ -54,6 +65,16 @@ def edit(*fields: str) -> dict[str, str]:
 def proposal(domain: str, *edits: dict[str, str], gaps: list[str] | None = None) -> dict[str, Any]:
     ids = gaps if gaps is not None else sorted({item["gap"] for item in edits})
     return {"domain": domain, "gaps": [{"id": gap, "description": f"{domain} {gap}"} for gap in ids], "edits": list(edits)}
+
+
+def _both_artifact_proposals() -> list[dict[str, Any]]:
+    return [proposal("security", edit("G1", "spec.md", "open", "private"),
+                     edit("G2", "plan.md", "never", "always")), proposal("ux"), proposal("api")]
+
+
+def _restore_artifact_texts(root: Path) -> None:
+    (root / FEATURE / "spec.md").write_text(SPEC, encoding="utf-8")
+    (root / FEATURE / "plan.md").write_text(PLAN, encoding="utf-8")
 
 
 def raise_error(error: Exception) -> None:
@@ -511,8 +532,7 @@ class InterruptionCase(ChecklistEditsCase):
         return patch.object(checklist_edits, "held_feature", hooked)
 
     def apply_both(self) -> dict[str, Any]:
-        return self.apply(proposal("security", edit("G1", "spec.md", "open", "private"),
-                                   edit("G2", "plan.md", "never", "always")))
+        return self.apply(*_both_artifact_proposals())
 
     def assert_both_written(self) -> None:
         self.assertEqual("# Spec\nLogin uses a password.\nExports are private.\n", self.text("spec.md"))
@@ -955,8 +975,10 @@ class RecordStateTests(InterruptionCase):
         with patch.object(os, "fsync", fail_record_parent_sync):
             result = self.apply_both()
         self.assertEqual(1, len(faults))
-        # The shared writer treats a directory sync failure after installation as best-effort.
-        self.assertEqual("ok", result["status"], result)
+        # Installation happened, but the shared writer must report the durability failure.
+        self.assertEqual("expected_failure", result["status"], result)
+        self.assertEqual("apply_interrupted", result["diagnostics"][0]["code"])
+        self.assertIs(True, result["data"]["record_written"])
         self.assert_both_written()
         record = json.loads((self.root / RECORD).read_text(encoding="utf-8"))
         self.assertEqual(["security", "ux", "api"], [row["domain"] for row in record["domains"]])
@@ -966,8 +988,7 @@ class RecordStateTests(InterruptionCase):
             with self.subTest(fault=fault):
                 record = self.root / RECORD
                 record.unlink(missing_ok=True)
-                (self.root / FEATURE / "spec.md").write_text(SPEC, encoding="utf-8")
-                (self.root / FEATURE / "plan.md").write_text(PLAN, encoding="utf-8")
+                _restore_artifact_texts(self.root)
                 real = os.open
                 faults: list[str] = []
                 snapshot = checklist_edits.snapshot_write_target_fd
@@ -1006,19 +1027,18 @@ class RecordStateTests(InterruptionCase):
                                  (result["status"], result["diagnostics"][0]["code"], result["data"].get("applied")), result)
                 self.assertIsNone(result["data"]["record_written"], result)
                 self.assertIn("state unknown", result["diagnostics"][0]["message"])
-                self.assertIn("publication completed", result["diagnostics"][0]["message"])
+                if fault == "parent_close":
+                    self.assertIn("published write cleanup failed", result["diagnostics"][0]["message"])
+                else:
+                    self.assertIn("publication completed", result["diagnostics"][0]["message"])
                 self.assertNotIn("not written", result["diagnostics"][0]["message"])
 
     def test_both_payloads_report_unknown_for_an_unreadable_published_record(self) -> None:
         for host in HOSTS:
             with self.subTest(host=host):
                 (self.root / RECORD).unlink(missing_ok=True)
-                (self.root / FEATURE / "spec.md").write_text(SPEC, encoding="utf-8")
-                (self.root / FEATURE / "plan.md").write_text(PLAN, encoding="utf-8")
-                inputs = {"domains": DOMAINS, "baseline": self.baseline(), "proposals": [
-                    proposal("security", edit("G1", "spec.md", "open", "private"), edit("G2", "plan.md", "never", "always")),
-                    proposal("ux"), proposal("api"),
-                ]}
+                _restore_artifact_texts(self.root)
+                inputs = {"domains": DOMAINS, "baseline": self.baseline(), "proposals": _both_artifact_proposals()}
                 result = run_dist_command(host, self.root, dist_request("apply", inputs), unreadable_record=True)
                 self.assertEqual(("expected_failure", ["security", "ux", "api"]),
                                  (result["status"], result["data"].get("applied")), result)
@@ -1030,8 +1050,7 @@ class RecordStateTests(InterruptionCase):
     def test_a_missing_or_different_published_record_is_reported_as_observed(self) -> None:
         for content in (None, b"not JSON", b"\xff", b'{"other": true}'):
             with self.subTest(content=content):
-                (self.root / FEATURE / "spec.md").write_text(SPEC, encoding="utf-8")
-                (self.root / FEATURE / "plan.md").write_text(PLAN, encoding="utf-8")
+                _restore_artifact_texts(self.root)
                 def change_record(observed: bytes | None = content) -> None:
                     record = self.root / RECORD
                     if observed is None:
@@ -1320,7 +1339,29 @@ def run_dist_command(host: str, root: Path, request: str, *, unreadable_record: 
     return json.loads(done.stdout)
 
 
-class HostParityTests(unittest.TestCase):
+class _HostParitySupport:
+    def assert_payload_cases(self, cases: tuple[str, ...], expected: int | None = None) -> None:
+        program = """
+import runpy, sys, unittest
+from pathlib import Path
+from speckit_pro_runner.helpers import checklist_edits, read_only, phase_brief, tasks_inputs
+assert Path(checklist_edits.__file__).is_relative_to(Path(sys.argv[1]))
+scope = runpy.run_path(sys.argv[2])
+suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(scope[name]) for name in sys.argv[3:])
+sys.exit(scope['run_counted'](suite, label='shipped-matrix'))
+"""
+        for host in HOSTS:
+            with self.subTest(host=host, cases=cases):
+                payload = REPO / "dist" / host / "speckit-pro"
+                done = subprocess.run([sys.executable, "-c", program, str(payload), __file__, *cases],
+                                      env={**os.environ, "PYTHONPATH": str(payload)},
+                                      capture_output=True, text=True, check=False)
+                self.assertEqual(0, done.returncode, done.stdout + done.stderr)
+                if expected is not None:
+                    self.assertIn(f"{expected}/{expected} passed", done.stdout)
+
+
+class HostParityTests(_HostParitySupport, unittest.TestCase):
     def test_displaced_fifos_never_block_a_checked_write_or_hide_its_outcome(self) -> None:
         program = """
 import os, stat, sys
@@ -1374,26 +1415,6 @@ else:
                             self.fail("checked writer blocked on the displaced FIFO")
                         self.assertEqual(0, done.returncode, done.stdout + done.stderr)
 
-    def assert_payload_cases(self, cases: tuple[str, ...], expected: int | None = None) -> None:
-        program = """
-import runpy, sys, unittest
-from pathlib import Path
-from speckit_pro_runner.helpers import checklist_edits
-assert Path(checklist_edits.__file__).is_relative_to(Path(sys.argv[1]))
-scope = runpy.run_path(sys.argv[2])
-suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(scope[name]) for name in sys.argv[3:])
-sys.exit(scope['run_counted'](suite, label='shipped-matrix'))
-"""
-        for host in HOSTS:
-            with self.subTest(host=host, cases=cases):
-                payload = REPO / "dist" / host / "speckit-pro"
-                done = subprocess.run([sys.executable, "-c", program, str(payload), __file__, *cases],
-                                      env={**os.environ, "PYTHONPATH": str(payload)},
-                                      capture_output=True, text=True, check=False)
-                self.assertEqual(0, done.returncode, done.stdout + done.stderr)
-                if expected is not None:
-                    self.assertIn(f"{expected}/{expected} passed", done.stdout)
-
     def test_both_payloads_cover_the_failed_rollback_matrix(self) -> None:
         self.assert_payload_cases(("RollbackFailureTests",), 47)
 
@@ -1424,7 +1445,964 @@ sys.exit(scope['run_counted'](suite, label='shipped-matrix'))
         self.assertEqual(outcomes[0], outcomes[1])
 
 
+class GateFourHostParityTests(_HostParitySupport, unittest.TestCase):
+    def test_both_payloads_fail_g4_closed_on_unstable_or_missing_evidence(self) -> None:
+        self.assert_payload_cases(G4_FAILURE_CASES)
+
+
 EXECUTOR_GUIDES = ("agents/checklist-executor.md", "codex-agents/checklist-executor.toml")
+
+
+G4_INPUTS = {"gate": "G4", "feature_dir": FEATURE}
+RECEIPT = f"{FEATURE}/.process/checklist-edits/coverage.json"
+CLEAN_REPORT = "- [x] CHK001 Is token expiry defined?\n"
+GAP_LINE = "- [ ] CHK009 Is account lockout defined? [Gap]\n"
+
+
+class _GateFourFixtureSupport:
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.feature = self.root / FEATURE
+        self.outside = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.outside)
+        (self.outside / "security.md").write_text(GAP_LINE, encoding="utf-8")
+        self.reset_tree()
+
+
+    def reset_tree(self) -> None:
+        """A marker-free feature with one checklist report, rebuilt from scratch for each variant."""
+        for path in (self.feature, self.root / "previous", self.root / "alias.md"):
+            if path.is_symlink() or path.is_file():
+                path.unlink()
+            elif path.exists():
+                shutil.rmtree(path)
+        (self.feature / "checklists").mkdir(parents=True)
+        (self.root / WORKFLOW).parent.mkdir(parents=True)
+        (self.root / WORKFLOW).write_text("# Workflow\n", encoding="utf-8")
+        (self.feature / "spec.md").write_text(SPEC, encoding="utf-8")
+        (self.feature / "plan.md").write_text(PLAN, encoding="utf-8")
+        (self.feature / "checklists/security.md").write_text(CLEAN_REPORT, encoding="utf-8")
+
+
+    def gate(self) -> dict[str, Any]:
+        # Observe real OS descriptors across every clean and refused snapshot.
+        # ExitStack callbacks must close them before the public gate returns.
+        with record_open_descriptors() as opened:
+            try:
+                verdict = dict(json.loads(read_only.validate_gate(G4_INPUTS, self.root)["stdout"]))
+                self.feature_identity = verdict.get("feature_identity")
+                return verdict
+            finally:
+                leaked = []
+                for descriptor in set(opened):
+                    try:
+                        os.fstat(descriptor)
+                    except OSError as error:
+                        self.assertEqual(errno.EBADF, error.errno)
+                    else:
+                        leaked.append(descriptor)
+                        os.close(descriptor)
+                self.assertEqual([], leaked, "G4 left acquired descriptors open")
+
+
+    def forge_receipt(self, path: Path | None = None, domains: tuple[str, ...] = ("security",)) -> Path:
+        """The schema-valid receipt any caller could write without checklist-edits or a verify pass."""
+        target = path or self.root / RECEIPT
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps({"schema_version": "checklist-coverage/v1", "domains": list(domains),
+                                      "verified_baseline": {name: digest(self.text(name)) for name in ("spec.md", "plan.md")}}),
+                          encoding="utf-8")
+        return target
+
+
+class _GateFourReadSupport:
+
+    @contextmanager
+    def during_read(self, target: Path, mutate: Callable[[], None], *, torn: bool = False) -> Iterator[None]:
+        """Inject at the descriptor boundary, including buffered descriptor consumers."""
+        identity = target.stat().st_ino
+        real_read, real_fdopen = os.read, os.fdopen
+        fired: list[bool] = []
+
+        def read(fd: int, size: int) -> bytes:
+            selected = os.fstat(fd).st_ino == identity
+            chunk = real_read(fd, min(size, 4096) if selected else size)
+            if selected and not fired and (bool(chunk) if torn else not chunk):
+                fired.append(True)
+                mutate()
+            return chunk
+
+        @contextmanager
+        def stream(fd: int, *args: Any, **kwargs: Any) -> Iterator[Any]:
+            with real_fdopen(fd, *args, **kwargs) as opened:
+                class Reader:
+                    def read(self, size: int = -1) -> bytes:
+                        chunks: list[bytes] = []
+                        remaining = size
+                        while remaining != 0:
+                            chunk = read(opened.fileno(), 4096 if remaining < 0 else min(4096, remaining))
+                            if not chunk:
+                                break
+                            chunks.append(chunk)
+                            if remaining > 0:
+                                remaining -= len(chunk)
+                        return b"".join(chunks)
+                yield Reader()
+
+        with patch.object(os, "read", read), patch.object(os, "fdopen", stream):
+            yield
+        self.assertTrue(fired, "fault did not reach the descriptor read")
+
+
+    @contextmanager
+    def after_read(self, target: Path, mutate: Callable[[], None]) -> Iterator[None]:
+        """Mutate after a complete stable read, before the remaining snapshot checks."""
+        fired: list[bool] = []
+        def hooked(real: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
+            value = real(*args, **kwargs)
+            name = args[1] if isinstance(args[0], int) else Path(args[0]).name
+            if name == target.name and not fired:
+                fired.append(True)
+                mutate()
+            return value
+        with ExitStack() as stack:
+            for name in ("read_tree_entry", "trusted_bytes"):
+                real = getattr(read_only, name, None)
+                if real is not None:
+                    stack.enter_context(patch.object(read_only, name, partial(hooked, real)))
+            yield
+        self.assertTrue(fired, "fault did not reach a complete file read")
+
+
+class _GateFourPathSupport:
+
+    def link_checklists_out_of_root(self) -> None:
+        """Move the real checklists/ aside and put a link to a directory of [Gap] reports in its place."""
+        os.rename(self.feature / "checklists", self.feature / "checklists-old")
+        os.symlink(self.outside, self.feature / "checklists", target_is_directory=True)
+
+
+    def swap_entry(self, target: Path, variant: str) -> None:
+        """Every recorded replacement shape, with an explicit gap in replacement content."""
+        if variant == "hard link":
+            os.link(target, self.root / "alias.md")
+            (self.root / "alias.md").write_text(GAP_LINE, encoding="utf-8")
+            return
+        saved = self.root / "previous"
+        target.rename(saved)
+        if variant == "regular":
+            if saved.is_dir():
+                shutil.copytree(saved, target)
+                (target / ("spec.md" if target == self.feature else "security.md")).write_text(GAP_LINE, encoding="utf-8")
+            else:
+                target.write_text(GAP_LINE, encoding="utf-8")
+        elif variant == "file":
+            target.write_text(GAP_LINE, encoding="utf-8")
+        elif variant == "in-root link":
+            target.symlink_to(saved, target_is_directory=saved.is_dir())
+        elif variant == "out-of-root link":
+            target.symlink_to(self.outside if saved.is_dir() else self.outside / "security.md")
+        elif variant == "fifo":
+            os.mkfifo(target)
+
+
+@dataclass
+class _ValidationMutationWindow:
+    relative: str
+    window: str
+    listings: int = 0
+    opens: int = 0
+
+
+@dataclass
+class _G4ChecksHook:
+    state: _ValidationMutationWindow
+    original: Callable[..., Any]
+    fire: Callable[[], None]
+
+    def __call__(self, directory: int, entries: dict[str, os.stat_result], kind: str | None = None) -> None:
+        if self.state.window == "entry recheck":
+            for name, info in entries.items():
+                self.original(directory, {name: info}, kind)
+                if self.state.relative == name or self.state.relative == f"checklists/{name}":
+                    self.fire()
+            return
+        self.original(directory, entries, kind)
+        if self.state.relative in ("spec.md", "plan.md") and self.state.relative in entries:
+            self.fire()
+        if self.state.relative == "checklists" and "checklists" in entries:
+            self.fire()
+
+
+@dataclass
+class _G4CountedHook:
+    state: _ValidationMutationWindow
+    original: Callable[..., Any]
+    fire: Callable[[], None]
+    counter: str
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        value = self.original(*args, **kwargs)
+        count = getattr(self.state, self.counter) + 1
+        setattr(self.state, self.counter, count)
+        should_fire = (
+            self.state.relative.startswith("checklists/")
+            if self.counter == "listings"
+            else self.state.relative == "."
+        )
+        if count == 2 and should_fire:
+            self.fire()
+        return value
+
+
+def _g4_snapshot_hook(original: Callable[..., Any], fire: Callable[[], None]) -> Callable[..., Any]:
+    def snapshot(feature: Path, root: Path, identity: dict[str, int] | None = None) -> dict[str, bytes]:
+        value = original(feature, root, identity)
+        fire()
+        return value
+
+    return snapshot
+
+
+def _g4_serialization_hook(original: Callable[..., Any], fire: Callable[[], None]) -> Callable[[Any], str]:
+    def serialize(value: Any) -> str:
+        result = original(value)
+        fire()
+        return result
+
+    return serialize
+
+
+def _g4_validation_patches(
+    state: _ValidationMutationWindow, fire: Callable[[], None]
+) -> list[tuple[Any, str, Callable[..., Any]]]:
+    if state.window in ("entry recheck", "last check"):
+        return [
+            (read_only, "g4_check_entries", _G4ChecksHook(state, read_only.g4_check_entries, fire)),
+            (read_only, "g4_reports", _G4CountedHook(state, read_only.g4_reports, fire, "listings")),
+            (read_only, "trusted_open_directory", _G4CountedHook(state, read_only.trusted_open_directory, fire, "opens")),
+        ]
+    if state.window == "snapshot return":
+        return [(read_only, "g4_snapshot", _g4_snapshot_hook(read_only.g4_snapshot, fire))]
+    return [(read_only, "json_text", _g4_serialization_hook(read_only.json_text, fire))]
+
+
+class _GateFourFinalValidationSupport:
+    @contextmanager
+    def after_last_validation(self, relative: str, mutate: Callable[[], None], window: str) -> Iterator[None]:
+        """Fault-inject after the relevant last check, snapshot return or verdict serialization."""
+        state = _ValidationMutationWindow(relative, window)
+        fired: list[bool] = []
+
+        def fire() -> None:
+            if not fired:
+                fired.append(True)
+                mutate()
+
+        with ExitStack() as stack:
+            for owner, name, hook in _g4_validation_patches(state, fire):
+                stack.enter_context(patch.object(owner, name, hook))
+            yield
+        self.assertEqual([True], fired, "mutation must reach the specified window")
+
+
+
+
+class _TasksInputSupport:
+
+    def tasks_brief(self, judged: dict[str, str]) -> dict[str, Any]:
+        with patch.object(phase_brief, "resolve_repo_root", return_value=self.root):
+            return dispatch_helper(SimpleNamespace(helper_id="phase-brief", operation="phase-brief", mode="read_only",
+                                   request_id=None, inputs={"phase": "Tasks", "workflow_file": WORKFLOW,
+                                   "feature_dir": FEATURE, "g4_judged": judged, "g4_feature_identity": self.feature_identity}))
+
+
+    def consume_tasks(self, brief: dict[str, Any]) -> dict[str, Any]:
+        return dispatch_helper(SimpleNamespace(helper_id="read-tasks-inputs", operation="read-tasks-inputs", mode="read_only",
+                               request_id=None, inputs=brief["data"]["inputs"]["tasks_snapshot"]))
+
+
+class _TasksMutationSupport:
+    @staticmethod
+    def task_target_cases(targets: dict[str, tuple[str, ...]]) -> list[tuple[str, str]]:
+        return [(relative, variant) for relative, variants in targets.items() for variant in variants]
+
+    def mutate_task_target(self, target: Path, variant: str, forge_receipt: bool = False) -> None:
+        if variant in ("add report", "add nested report"):
+            parent = target.parent / "nested" if variant == "add nested report" else target.parent
+            parent.mkdir(exist_ok=True)
+            (parent / "added.md").write_text(GAP_LINE, encoding="utf-8")
+        elif variant in ("direct write", "transient hard link"):
+            writer = self.root / "alias.md" if variant == "transient hard link" else target
+            if writer != target:
+                os.link(target, writer)
+            writer.write_text(GAP_LINE, encoding="utf-8")
+            if writer != target:
+                writer.unlink()
+        else:
+            self.swap_entry(target, variant)
+        if forge_receipt and variant in ("regular", "direct write", "transient hard link"):
+            self.forge_receipt()
+
+    def mutate_snapshot_target(self, target: Path, relative: str, variant: str) -> None:
+        if variant in ("add report", "add nested report"):
+            parent = target.parent / "nested" if variant == "add nested report" else target.parent
+            parent.mkdir(exist_ok=True)
+            (parent / "added.md").write_text(GAP_LINE, encoding="utf-8")
+        elif variant == "marker-free write":
+            target.write_text("Changed marker-free private text", encoding="utf-8")
+        else:
+            self.swap_entry(target, variant)
+            if relative == "." and variant == "regular":
+                (target / "spec.md").write_text(GAP_LINE, encoding="utf-8")
+
+
+class _TasksMutationFlowSupport:
+    def tasks_brief_after_mutation(self, judged: dict[str, str], mutate: Callable[[], None], window: str) -> dict[str, Any]:
+        if window == "after check":
+            original = phase_brief.check_g4_inputs
+
+            def checked(*args: Any) -> Any:
+                value = original(*args)
+                mutate()
+                return value
+
+            with patch.object(phase_brief, "check_g4_inputs", checked):
+                return self.tasks_brief(judged)
+        brief = self.tasks_brief(judged)
+        mutate()
+        return brief
+
+    def assert_checked_bytes_consumed(self, brief: dict[str, Any], judged: dict[str, str]) -> None:
+        self.assertEqual("ok", brief["status"])
+        self.assertIn("tasks_snapshot", brief["data"]["inputs"])
+        snapshot = Path(brief["data"]["inputs"]["tasks_snapshot"]["snapshot_dir"])
+        self.addCleanup(shutil.rmtree, snapshot)
+        self.assertEqual(0o700, stat.S_IMODE(snapshot.stat().st_mode))
+        consumed = self.consume_tasks(brief)
+        self.assertEqual("ok", consumed["status"])
+        self.assertEqual({"spec.md": SPEC, "plan.md": PLAN, "checklists/security.md": CLEAN_REPORT},
+                         consumed["data"]["files"])
+        self.assertEqual(judged, consumed["data"]["judged"])
+        self.assertFalse(any(path == FEATURE + "/" + name for path in brief["data"]["readable_files"] for name in judged))
+        self.assertEqual(FEATURE, brief["data"]["inputs"]["feature_dir"])
+
+
+class _GateFourNamespaceSupport:
+    def namespace_mutation_cases(self) -> list[tuple[Callable[..., Any], str, str]]:
+        variants = ("deleted", "regular", "in-root link", "out-of-root link")
+        targets = (
+            ("spec.md", (*variants, "fifo", "hard link")),
+            ("plan.md", (*variants, "fifo", "hard link")),
+            ("checklists/security.md", (*variants, "fifo", "hard link")),
+            ("checklists", (*variants, "file")),
+            (".", variants),
+        )
+        target_cases = [(relative, variant) for relative, options in targets for variant in options]
+        return [(inject, relative, variant)
+                for inject, (relative, variant) in product((self.during_read, self.after_read), target_cases)]
+
+    def assert_namespace_mutation_rejected(
+        self, inject: Callable[..., Any], relative: str, variant: str
+    ) -> None:
+        self.reset_tree()
+        target = self.feature / relative
+        trigger = target if relative.endswith(".md") else self.feature / "checklists/security.md"
+
+        def mutate() -> None:
+            self.swap_entry(target, variant)
+            if relative in ("spec.md", "plan.md", ".") and variant in ("regular", "hard link"):
+                self.forge_receipt()
+
+        with inject(trigger, mutate):
+            verdict = self.gate()
+        self.assertFalse(verdict["pass"], verdict)
+
+    def assert_added_report_rejected(self, nested: bool) -> None:
+        self.reset_tree()
+        report = self.feature / "checklists/security.md"
+
+        def add_report() -> None:
+            parent = report.parent / "nested" if nested else report.parent
+            parent.mkdir(exist_ok=True)
+            (parent / "added.md").write_text(GAP_LINE, encoding="utf-8")
+
+        with self.during_read(report, add_report):
+            self.assertFalse(self.gate()["pass"])
+
+
+class _GateFourTestSupport(
+    _GateFourFixtureSupport,
+    _GateFourReadSupport,
+    _GateFourPathSupport,
+    _GateFourFinalValidationSupport,
+    _TasksInputSupport,
+    _TasksMutationSupport,
+    _TasksMutationFlowSupport,
+    _GateFourNamespaceSupport,
+):
+    """G4 judges one stable read of shared artifacts and checklist reports."""
+
+class GateFourResourceTests(_GateFourTestSupport, ChecklistEditsCase):
+    def test_g4_closes_acquired_descriptors_when_directory_open_fails(self) -> None:
+        # Root/specs/feature, checklists, then root/specs/feature for revalidation.
+        for fail_at in range(1, 8):
+            with self.subTest(directory_open=fail_at):
+                real_open = os.open
+                calls = 0
+
+                def refuse_open(path: Any, flags: int, *args: Any, **kwargs: Any) -> int:
+                    nonlocal calls
+                    if flags & os.O_DIRECTORY:
+                        calls += 1
+                        if calls == fail_at:
+                            raise PermissionError("G4 fixture denies directory acquisition")
+                    return real_open(path, flags, *args, **kwargs)
+
+                with patch.object(os, "open", refuse_open):
+                    self.assertFalse(self.gate()["pass"])
+                self.assertEqual(fail_at, calls, "the acquisition failure must be exercised")
+
+
+    def test_g4_requires_a_markdown_report_not_a_placeholder(self) -> None:
+        checklists = self.feature / "checklists"
+        for name in (".gitkeep", "notes.txt", "security.MD"):
+            with self.subTest(entry=name):
+                self.reset_tree()
+                (checklists / "security.md").unlink()
+                placeholder = checklists / name
+                placeholder.write_bytes(b"")
+                result = self.gate()
+                self.assertFalse(result["pass"], result)
+                self.assertIn("checklist report", result["reason"])
+                placeholder.unlink()
+
+
+    def test_g4_ignores_non_reports_but_validates_every_entry(self) -> None:
+        checklists = self.feature / "checklists"
+        placeholder = checklists / ".gitkeep"
+        placeholder.write_text(GAP_LINE, encoding="utf-8")
+        result = self.gate()
+        self.assertTrue(result["pass"], result)
+        self.assertIn("1 checklist report", result["reason"])
+        self.assertEqual({"spec.md", "plan.md", "checklists/security.md"}, set(result["judged"]))
+        placeholder.unlink()
+        os.symlink(self.outside / "security.md", placeholder)
+        self.assertFalse(self.gate()["pass"])
+        placeholder.unlink()
+        placeholder.mkdir()
+        self.assertFalse(self.gate()["pass"])
+        placeholder.rmdir()
+        os.mkfifo(placeholder)
+        self.assertFalse(self.gate()["pass"])
+        placeholder.unlink()
+        for index in range(read_only.G4_MAX_REPORTS):
+            (checklists / f"ignored-{index}.txt").touch()
+        self.assertFalse(self.gate()["pass"])
+
+
+
+class GateFourCoverageTests(_GateFourTestSupport, ChecklistEditsCase):
+    # F1281-fa5e5023: a verification claim is not evidence that any verify pass ran, and no domain list is stored.
+    def test_checklist_edits_records_no_domain_list_and_refuses_every_verification_claim(self) -> None:
+        statuses = [self.call("apply", domains=["security"], baseline=self.baseline(), proposals=[proposal("security")])["status"]]
+        statuses += [self.call("apply", domains=[], proposals=[], baseline=self.baseline(), verified_domains=claimed)["status"]
+                     for claimed in (DOMAINS, ["security"], ["security", "ux", "foreign"])]
+        self.assertEqual(["ok", "input_error", "input_error", "input_error"], statuses)
+        self.assertEqual([], sorted(path.name for path in (self.root / RECEIPT).parent.glob("coverage*")))
+        verdict = self.gate()
+        self.assertEqual((True, "0 [Gap] markers in spec.md, plan.md and 1 checklist report"), (verdict["pass"], verdict["reason"]))
+
+
+    # F1281-d099791e and F1281-510e5f28: caller-written evidence never changes the verdict.
+    def test_g4_verdict_ignores_caller_written_coverage_receipts(self) -> None:
+        receipt = self.root / RECEIPT
+        nested = "[" * 1100 + "]" * 1100
+        many = tuple(f"d{index}" for index in range(5000))
+
+        def hard_link() -> None:
+            self.forge_receipt(self.root / "alias.md")
+            os.link(self.root / "alias.md", receipt)
+
+        variants: dict[str, Callable[[], object]] = {
+            "regular": self.forge_receipt, "hard link": hard_link,
+            "deep nesting": lambda: receipt.write_text(nested, encoding="utf-8"),
+            "5000 domains": lambda: self.forge_receipt(domains=many)}
+        for tree in ("reports", "no reports"):
+            for name, forge in variants.items():
+                with self.subTest(tree=tree, receipt=name):
+                    self.reset_tree()
+                    if tree == "no reports":
+                        shutil.rmtree(self.feature / "checklists")
+                    expected = self.gate()
+                    receipt.parent.mkdir(parents=True, exist_ok=True)
+                    forge()
+                    self.assertEqual(expected, self.gate())
+
+
+    def test_g4_receipt_forms_never_supply_verification_evidence(self) -> None:
+        receipt = self.root / RECEIPT
+        for form in ("missing", "regular", "hard link", "symlink", "malformed", "stale"):
+            with self.subTest(receipt=form):
+                self.reset_tree()
+                if form in ("regular", "hard link", "symlink"):
+                    origin = self.forge_receipt(self.root / "alias.md")
+                    receipt.parent.mkdir(parents=True, exist_ok=True)
+                    if form == "regular":
+                        receipt.write_bytes(origin.read_bytes())
+                    elif form == "hard link":
+                        os.link(origin, receipt)
+                    else:
+                        receipt.symlink_to(origin)
+                elif form != "missing":
+                    receipt.parent.mkdir(parents=True, exist_ok=True)
+                    receipt.write_text("{" if form == "malformed" else json.dumps({"schema_version": "checklist-coverage/v1", "domains": ["security"], "verified_baseline": {"spec.md": "0" * 64, "plan.md": "0" * 64}}), encoding="utf-8")
+                verdict = self.gate()
+                self.assertEqual({"spec.md": digest(SPEC), "plan.md": digest(PLAN),
+                                  "checklists/security.md": digest(CLEAN_REPORT)}, verdict.get("judged"))
+                self.assertNotIn("coverage", verdict)
+
+
+
+class GateFourAttestationTests(_GateFourTestSupport, ChecklistEditsCase):
+    def test_g4_judges_replaced_report_bytes_without_preserving_an_attestation(self) -> None:
+        self.forge_receipt()
+        target = self.feature / "checklists/security.md"
+        target.rename(self.feature / "checklists/previous.txt")
+        target.write_text("Different unverified report.\n", encoding="utf-8")
+        verdict = self.gate()
+        self.assertEqual(digest("Different unverified report.\n"), verdict.get("judged", {}).get("checklists/security.md"))
+        self.assertNotIn("coverage", verdict)
+
+
+    def test_no_verify_run_or_result_set_can_be_attested(self) -> None:
+        # Completion, failure and staleness of external results do not grant a
+        # caller authority to attest. Every verified_domains input is rejected.
+        claims = {"zero runs": DOMAINS, "partial set": DOMAINS, "failed set": DOMAINS,
+                  "stale set": DOMAINS, "empty claim": [], "duplicate claim": ["security", "security"],
+                  "foreign claim": ["foreign"], "underinclusive claim": ["security"]}
+        for label, claim in claims.items():
+            with self.subTest(verify=label):
+                self.reset_tree()
+                self.assertEqual("ok", self.apply()["status"])
+                outcome = self.call("apply", domains=[], proposals=[], baseline=self.baseline(), verified_domains=claim)
+                self.assertEqual("input_error", outcome["status"])
+                self.assertFalse((self.root / RECEIPT).exists())
+
+
+    def test_initial_domain_lists_cannot_become_coverage_evidence(self) -> None:
+        for domains in (["security"], ["foreign"], [], ["security", "security"]):
+            with self.subTest(initial=domains):
+                self.reset_tree()
+                (self.feature / "checklists/ux.md").write_text(CLEAN_REPORT, encoding="utf-8")
+                result = self.call("apply", domains=domains, proposals=[proposal(name) for name in set(domains)], baseline=self.baseline())
+                self.assertEqual("ok" if len(domains) == len(set(domains)) else "input_error", result["status"])
+                self.assertFalse((self.root / RECEIPT).exists())
+                claim = self.call("apply", domains=[], proposals=[], baseline=self.baseline(), verified_domains=domains)
+                self.assertEqual("input_error", claim["status"])
+                self.assertFalse((self.root / RECEIPT).exists())
+
+
+
+class GateFourReportInputTests(_GateFourTestSupport, ChecklistEditsCase):
+
+
+    def test_g4_fails_closed_on_any_checklist_entry_it_cannot_read_or_classify(self) -> None:
+        # checklists/ is flat: a nested directory, readable or not, fails G4 instead of hiding a [Gap] report.
+        checklists = self.feature / "checklists"
+        locked: list[Path] = []
+        real_open = os.open
+        denied: list[str] = []
+
+        def open_readable(path: Any, *args: Any, **kwargs: Any) -> int:
+            # Containers may run as root, which bypasses chmod(0). Inject the
+            # actual failed-open condition at the OS boundary on every platform.
+            if Path(path).name in {item.name for item in locked}:
+                denied.append(Path(path).name)
+                raise PermissionError("G4 fixture denies read access")
+            return real_open(path, *args, **kwargs)
+
+        def nested(mode: int) -> None:
+            (checklists / "hidden").mkdir()
+            (checklists / "hidden/gap.md").write_text(GAP_LINE, encoding="utf-8")
+            os.chmod(checklists / "hidden", mode)
+            locked.append(checklists / "hidden")
+
+        def lock(path: Path) -> None:
+            os.chmod(path, 0)
+            locked.append(path)
+
+        variants: dict[str, Callable[[], None]] = {
+            "readable nested directory": lambda: nested(0o755),
+            "unreadable nested directory": lambda: nested(0),
+            "unreadable report": lambda: lock(checklists / "security.md"),
+            "unreadable checklists directory": lambda: lock(checklists),
+            "fifo": lambda: os.mkfifo(checklists / "pipe.md")}
+        for name, mutate in variants.items():
+            with self.subTest(variant=name):
+                self.reset_tree()
+                mutate()
+                try:
+                    denied.clear()
+                    with patch.object(os, "open", open_readable):
+                        verdict = self.gate()
+                    if name in ("unreadable report", "unreadable checklists directory"):
+                        self.assertEqual([locked[-1].name], denied, "must reach the failed-open boundary")
+                finally:
+                    while locked:
+                        os.chmod(locked.pop(), 0o755)
+                self.assertFalse(verdict["pass"], (name, verdict))
+
+
+
+class GateFourNamespaceMutationTests(_GateFourTestSupport, ChecklistEditsCase):
+
+
+    def test_g4_refuses_every_post_read_namespace_mutation(self) -> None:
+        for inject, relative, variant in self.namespace_mutation_cases():
+            with self.subTest(target=relative, variant=variant):
+                self.assert_namespace_mutation_rejected(inject, relative, variant)
+        for nested in (False, True):
+            with self.subTest(added_report_nested=nested):
+                self.assert_added_report_rejected(nested)
+
+
+
+
+
+class GateFourPostValidationTests(_GateFourTestSupport, ChecklistEditsCase):
+    def test_tasks_refuses_every_post_g4_validation_mutation(self) -> None:
+        leaves = ("deleted", "regular", "direct write", "transient hard link", "in-root link", "out-of-root link", "fifo")
+        directories = ("deleted", "regular", "file", "in-root link", "out-of-root link")
+        targets = {"spec.md": leaves, "plan.md": leaves,
+                   "checklists/security.md": (*leaves, "add report", "add nested report"),
+                   "checklists": directories, ".": directories}
+        windows = ("entry recheck", "last check", "snapshot return", "verdict serialization")
+        for window, (relative, variant) in product(windows, self.task_target_cases(targets)):
+            with self.subTest(window=window, target=relative, variant=variant):
+                self.reset_tree()
+                target = self.feature / relative
+                mutate = partial(self.mutate_task_target, target, variant, True)
+                with self.after_last_validation(relative, mutate, window):
+                    verdict = self.gate()
+                if not verdict["pass"]:
+                    self.assertNotIn("judged", verdict, "unsafe capture must not supply dispatch evidence")
+                    continue
+                judged = verdict["judged"]
+                with patch.object(phase_brief, "resolve_repo_root", return_value=self.root):
+                    result = dispatch_helper(SimpleNamespace(helper_id="phase-brief", operation="phase-brief", mode="read_only",
+                             request_id=None, inputs={"phase": "Tasks", "workflow_file": WORKFLOW, "feature_dir": FEATURE,
+                             "g4_judged": judged, "g4_feature_identity": self.feature_identity}))
+                self.assertEqual("input_error", result["status"])
+                self.assertEqual({}, result["data"])
+                self.assertEqual("g4_input_drift", result["diagnostics"][0]["code"])
+
+
+
+
+
+class TasksCheckedBytesTests(_GateFourTestSupport, ChecklistEditsCase):
+    def test_tasks_consumes_checked_bytes_after_every_post_check_mutation(self) -> None:
+        leaves = ("deleted", "regular", "direct write", "transient hard link", "in-root link", "out-of-root link", "fifo")
+        directories = ("deleted", "regular", "file", "in-root link", "out-of-root link")
+        targets = {"spec.md": leaves, "plan.md": leaves,
+                   "checklists/security.md": (*leaves, "add report", "add nested report"),
+                   "checklists": directories, ".": directories}
+        windows = ("after check", "before consumption")
+        for window, (relative, variant) in product(windows, self.task_target_cases(targets)):
+            with self.subTest(window=window, target=relative, variant=variant):
+                self.reset_tree()
+                judged = self.gate()["judged"]
+                mutate = partial(self.mutate_task_target, self.feature / relative, variant)
+                brief = self.tasks_brief_after_mutation(judged, mutate, window)
+                self.assert_checked_bytes_consumed(brief, judged)
+
+
+
+
+
+class TasksSnapshotMutationTests(_GateFourTestSupport, ChecklistEditsCase):
+    def test_tasks_snapshot_tamper_refuses_every_file_and_parent_kind(self) -> None:
+        leaves = ("deleted", "regular", "hard link", "in-root link", "out-of-root link", "fifo", "marker-free write")
+        targets = {"spec.md": leaves, "plan.md": leaves, "checklists/security.md": (*leaves, "add report", "add nested report"),
+                   "checklists": ("deleted", "regular", "file", "in-root link", "out-of-root link"),
+                   ".": ("deleted", "regular", "file", "in-root link", "out-of-root link")}
+        for relative, variant in self.task_target_cases(targets):
+            with self.subTest(target=relative, variant=variant):
+                self.reset_tree()
+                brief = self.tasks_brief(self.gate()["judged"])
+                self.assertIn("tasks_snapshot", brief["data"]["inputs"])
+                snapshot = Path(brief["data"]["inputs"]["tasks_snapshot"]["snapshot_dir"])
+                self.addCleanup(lambda path=snapshot: shutil.rmtree(path, ignore_errors=True) if not path.is_symlink() else path.unlink())
+                target = snapshot / relative
+                self.mutate_snapshot_target(target, relative, variant)
+                result = self.consume_tasks(brief)
+                self.assertEqual("input_error", result["status"])
+                self.assertEqual({}, result["data"])
+                self.assertNotIn("Changed marker-free private text", json.dumps(result))
+                self.assertNotIn(str(snapshot), json.dumps(result))
+
+
+
+
+    def test_tasks_snapshot_creation_failures_refuse_without_launch_data(self) -> None:
+        from speckit_pro_runner.helpers import tasks_inputs
+        for kind in ("snapshot entry", "spec.md", "plan.md", "checklist report"):
+            with self.subTest(kind=kind):
+                self.reset_tree()
+                judged = self.gate()["judged"]
+                original = os.open
+                fired = []
+                def fail_open(path: Any, flags: int, *args: Any, **kwargs: Any) -> int:
+                    matches = flags & os.O_EXCL and Path(path).name == {"spec.md": "spec.md", "plan.md": "plan.md", "checklist report": "security.md"}.get(kind)
+                    if matches:
+                        fired.append(True)
+                        raise PermissionError("private fixture text")
+                    return original(path, flags, *args, **kwargs)
+                with ExitStack() as stack:
+                    if kind == "snapshot entry":
+                        stack.enter_context(patch.object(tasks_inputs.tempfile, "mkdtemp", side_effect=PermissionError("private fixture text")))
+                    else:
+                        stack.enter_context(patch.object(os, "open", fail_open))
+                    result = self.tasks_brief(judged)
+                self.assertEqual("input_error", result["status"])
+                self.assertEqual({}, result["data"])
+                self.assertIn(kind, result["diagnostics"][0]["message"])
+                self.assertNotIn("private fixture text", json.dumps(result))
+                if kind != "snapshot entry":
+                    self.assertEqual([True], fired)
+
+
+
+class TasksSnapshotWriteTests(_GateFourTestSupport, ChecklistEditsCase):
+    def test_tasks_rehashes_written_copies_and_creates_files_exclusively(self) -> None:
+        from speckit_pro_runner.helpers import tasks_inputs
+        for name in ("spec.md", "plan.md", "checklists/security.md"):
+            with self.subTest(target=name):
+                self.reset_tree()
+                judged = self.gate()["judged"]
+                original = tasks_inputs.snapshot_bytes
+                real_open = os.open
+                flags_seen = []
+                def opened(path: Any, flags: int, *args: Any, **kwargs: Any) -> int:
+                    if flags & os.O_CREAT:
+                        flags_seen.append(flags)
+                    return real_open(path, flags, *args, **kwargs)
+                def tamper(directory: str, digests: dict[str, str]) -> dict[str, bytes]:
+                    self.addCleanup(shutil.rmtree, directory)
+                    (Path(directory) / name).write_text("Changed marker-free bytes", encoding="utf-8")
+                    return original(directory, digests)
+                with patch.object(tasks_inputs, "snapshot_bytes", tamper), patch.object(os, "open", opened):
+                    result = self.tasks_brief(judged)
+                self.assertEqual("input_error", result["status"])
+                self.assertEqual({}, result["data"])
+                self.assertEqual(3, len(flags_seen))
+                self.assertTrue(all(flags & os.O_EXCL and flags & os.O_NOFOLLOW for flags in flags_seen))
+
+
+    def test_tasks_consumer_uses_captured_text_even_after_snapshot_read(self) -> None:
+        from speckit_pro_runner.helpers import tasks_inputs
+        for name in ("spec.md", "plan.md", "checklists/security.md"):
+            with self.subTest(target=name):
+                self.reset_tree()
+                brief = self.tasks_brief(self.gate()["judged"])
+                directory = Path(brief["data"]["inputs"]["tasks_snapshot"]["snapshot_dir"])
+                self.addCleanup(shutil.rmtree, directory)
+                original = tasks_inputs.snapshot_bytes
+                def mutate_after_read(path: str, judged: dict[str, str]) -> dict[str, bytes]:
+                    captured = original(path, judged)
+                    (directory / name).write_text(GAP_LINE, encoding="utf-8")
+                    return captured
+                with patch.object(tasks_inputs, "snapshot_bytes", mutate_after_read):
+                    result = self.consume_tasks(brief)
+                self.assertEqual("ok", result["status"])
+                self.assertEqual({"spec.md": SPEC, "plan.md": PLAN, "checklists/security.md": CLEAN_REPORT}, result["data"]["files"])
+
+
+
+class TasksRecheckTests(_GateFourTestSupport, ChecklistEditsCase):
+    def test_tasks_recheck_windows_bind_the_exact_captured_bytes(self) -> None:
+        leaves = ("deleted", "regular", "direct write", "transient hard link", "in-root link", "out-of-root link", "fifo")
+        directories = ("deleted", "regular", "file", "in-root link", "out-of-root link")
+        targets = {"spec.md": leaves, "plan.md": leaves, "checklists/security.md": (*leaves, "add report", "add nested report"),
+                   "checklists": directories, ".": directories}
+        windows = ("entry recheck", "last check", "snapshot return", "verdict serialization")
+        for window, (relative, variant) in product(windows, self.task_target_cases(targets)):
+            with self.subTest(window=window, target=relative, variant=variant):
+                self.reset_tree()
+                judged = self.gate()["judged"]
+                mutate = partial(self.mutate_task_target, self.feature / relative, variant)
+                with self.after_last_validation(relative, mutate, window):
+                    brief = self.tasks_brief(judged)
+                if brief["status"] != "ok":
+                    self.assertEqual("input_error", brief["status"])
+                    self.assertEqual({}, brief["data"])
+                    continue
+                snapshot = Path(brief["data"]["inputs"]["tasks_snapshot"]["snapshot_dir"])
+                self.addCleanup(shutil.rmtree, snapshot)
+                consumed = self.consume_tasks(brief)
+                self.assertEqual("ok", consumed["status"])
+                self.assertEqual({"spec.md": SPEC, "plan.md": PLAN, "checklists/security.md": CLEAN_REPORT},
+                                 consumed["data"]["files"])
+
+
+
+
+
+class GateFourDiagnosticTests(_GateFourTestSupport, ChecklistEditsCase):
+    def test_g4_report_drift_diagnostics_keep_shared_basenames_distinct(self) -> None:
+        for name in ("spec.md", "plan.md"):
+            with self.subTest(report=name):
+                self.reset_tree()
+                report = self.feature / "checklists" / name
+                (self.feature / "checklists/security.md").rename(report)
+                judged = self.gate()["judged"]
+                real_read = read_only.read_tree_entry
+                reached = []
+                def mutate_report(directory: int, entry: str, *args: Any, **kwargs: Any) -> Any:
+                    result = real_read(directory, entry, *args, **kwargs)
+                    if entry == name and os.fstat(directory).st_ino == report.parent.stat().st_ino:
+                        reached.append(True)
+                        report.write_text(GAP_LINE, encoding="utf-8")
+                    return result
+                with patch.object(read_only, "read_tree_entry", mutate_report):
+                    with self.assertRaises(read_only.G4InputDrift) as refusal:
+                        read_only.check_g4_inputs(self.feature, self.root, judged)
+                self.assertIn("checklist report", str(refusal.exception))
+                self.assertNotIn(name, str(refusal.exception))
+                self.assertEqual([True], reached)
+
+
+    def test_g4_judges_completed_changes_and_refuses_device_inputs(self) -> None:
+        for relative in ("spec.md", "plan.md", "checklists/security.md"):
+            with self.subTest(input=relative, mutation="before read"):
+                self.reset_tree()
+                (self.feature / relative).write_text(GAP_LINE, encoding="utf-8")
+                result = self.gate()
+                self.assertFalse(result["pass"])
+                self.assertEqual(digest(GAP_LINE), result["judged"][relative])
+            for device_mode in (stat.S_IFCHR, stat.S_IFBLK):
+                with self.subTest(input=relative, device=device_mode):
+                    self.reset_tree()
+                    real_stat = os.stat
+                    reached = []
+                    def device(path: Any, *args: Any, **kwargs: Any) -> os.stat_result:
+                        info = real_stat(path, *args, **kwargs)
+                        if path == Path(relative).name and kwargs.get("dir_fd") is not None:
+                            reached.append(True)
+                            fields = list(info)
+                            fields[0] = device_mode | 0o600
+                            return os.stat_result(fields)
+                        return info
+                    with patch.object(os, "stat", device):
+                        self.assertFalse(self.gate()["pass"])
+                    self.assertEqual([True], reached, "device kind must reach the contained stat")
+
+
+
+class GateFourFilesystemEdgeTests(_GateFourTestSupport, ChecklistEditsCase):
+    def test_g4_refuses_torn_reads_and_transient_hard_links(self) -> None:
+        before = b"a" * 4096 + b"[Gap]" + b"b" * 4091
+        after = b"[Gap]" + b"a" * 4091 + b"b" * 4096
+        for relative in ("spec.md", "plan.md", "checklists/security.md"):
+            for alias in (False, True):
+                with self.subTest(target=relative, hard_link=alias):
+                    self.reset_tree()
+                    target = self.feature / relative
+                    target.write_bytes(before)
+                    def rewrite() -> None:
+                        writer = self.root / "alias.md" if alias else target
+                        if alias:
+                            os.link(target, writer)
+                        writer.write_bytes(after)
+                        if alias:
+                            writer.unlink()
+                    with self.during_read(target, rewrite, torn=True):
+                        verdict = self.gate()
+                    self.assertFalse(verdict["pass"], verdict)
+                    self.assertNotIn("judged", verdict, "a torn buffer must not be judged")
+
+
+    def test_g4_rejects_preexisting_hard_links_and_reports_exact_clean_digests(self) -> None:
+        expected = {"spec.md": digest(SPEC), "plan.md": digest(PLAN), "checklists/security.md": digest(CLEAN_REPORT)}
+        self.assertEqual(expected, self.gate()["judged"])
+        for relative in expected:
+            with self.subTest(target=relative):
+                self.reset_tree()
+                os.link(self.feature / relative, self.root / "alias.md")
+                self.assertFalse(self.gate()["pass"])
+
+
+    def test_g4_rejects_unsafe_report_names_without_echoing_them(self) -> None:
+        for name in ("[click](evil).md", "@everyone.md", "bidi\u202e.md", "line\nfeed.md", "control\x7f.md", "<tag>.md"):
+            with self.subTest(name=ascii(name)):
+                self.reset_tree()
+                (self.feature / "checklists" / name).write_text(CLEAN_REPORT, encoding="utf-8")
+                verdict = self.gate()
+                self.assertFalse(verdict["pass"], verdict)
+                self.assertNotIn(name, json.dumps(verdict, ensure_ascii=False))
+
+
+
+
+
+
+
+def checklist_passages() -> list[str]:
+    """Each host's checklist flow rendered from the shared source."""
+    return [" ".join(guide_view(guide).split(anchor, 1)[1][:8000].split())
+            for guide, anchor in zip(PHASE_EXECUTION_GUIDES,
+                                     ("### Phase 4: Checklist", "Checklist only:"), strict=True)]
+
+
+class GateFourContainedInputTests(_GateFourTestSupport, ChecklistEditsCase):
+    def test_g4_fails_closed_without_contained_checklist_reports(self) -> None:
+        checklists = self.feature / "checklists"
+        variants: dict[str, Callable[[], object]] = {
+            "deleted": lambda: shutil.rmtree(checklists),
+            "emptied": lambda: (checklists / "security.md").unlink(),
+            "renamed": lambda: checklists.rename(self.feature / "checklists-old"),
+            "linked out of root": self.link_checklists_out_of_root,
+            "linked report": lambda: os.symlink(self.outside / "security.md", checklists / "linked.md")}
+        for name, mutate in variants.items():
+            with self.subTest(variant=name):
+                self.reset_tree()
+                mutate()
+                self.forge_receipt()
+                self.assertFalse(self.gate()["pass"], name)
+
+    def test_g4_fails_closed_on_missing_or_linked_shared_artifacts(self) -> None:
+        for name in ("spec.md", "plan.md"):
+            for linked in (False, True):
+                with self.subTest(artifact=name, linked=linked):
+                    self.reset_tree()
+                    self.forge_receipt()
+                    (self.feature / name).unlink()
+                    if linked:
+                        (self.feature / name).symlink_to(self.outside / "security.md")
+                    self.assertFalse(self.gate()["pass"])
+
+
+class GateFourReportLimitTests(_GateFourTestSupport, ChecklistEditsCase):
+    # F1281-2350a979: fixed bounds on report count and total bytes fail closed; the flat layout bounds depth.
+    def test_g4_fails_closed_beyond_its_report_count_or_byte_limits(self) -> None:
+        checklists = self.feature / "checklists"
+
+        def reports(count: int, content: bytes) -> None:
+            for index in range(count):
+                (checklists / f"extra-{index}.md").write_bytes(content)
+
+        variants: dict[str, tuple[Callable[[], None], bool]] = {
+            "64 reports": (lambda: reports(63, CLEAN_REPORT.encode()), True),
+            "65 reports": (lambda: reports(64, CLEAN_REPORT.encode()), False),
+            "one report over the byte limit": (lambda: reports(1, b"x" * 8 * 1024 * 1024), False),
+            "reports over the byte limit together": (lambda: reports(3, b"x" * 3 * 1024 * 1024), False)}
+        for name, (mutate, passes) in variants.items():
+            with self.subTest(variant=name):
+                self.reset_tree()
+                mutate()
+                self.assertEqual(passes, self.gate()["pass"], name)
 
 
 class GuidanceTests(unittest.TestCase):
@@ -1439,10 +2417,14 @@ class GuidanceTests(unittest.TestCase):
     def test_the_phase_four_flow_applies_proposals_through_the_helper_on_both_hosts(self) -> None:
         # Each host's own checklist passage: Claude's Phase 4 section, Codex's checklist-only loop step.
         for guide, anchor in zip(PHASE_EXECUTION_GUIDES, ("### Phase 4: Checklist", "Checklist only:"), strict=True):
-            passage = guide_view(guide).split(anchor, 1)[1][:3500]
-            apply_at, consensus_at, verify_at = (passage.find(text) for text in ("mode apply" if "Phase" in anchor else "in apply mode",
-                                                                               "consensus", "Mode: verify"))
-            self.assertTrue(0 <= apply_at < consensus_at < verify_at, (guide, apply_at, consensus_at, verify_at))
+            passage = guide_view(guide).split(anchor, 1)[1][:5000]
+            claude = "Phase" in anchor
+            apply_at, verify_at, consensus_at, rerun_at = (
+                passage.find(text) for text in ("mode apply" if claude else "in apply mode", "Mode: verify",
+                                                "Request the phase brief again with `items`" if claude else "Request the phase brief with items",
+                                                "verify_baseline"))
+            self.assertTrue(0 <= apply_at < verify_at < consensus_at < rerun_at, (guide, apply_at, verify_at, consensus_at, rerun_at))
+            self.assertIn("every original domain", passage)
             for phrase in ("runner helper `checklist-edits`", "in domain order", "dry_run"):
                 self.assertIn(phrase, passage, guide)
             self.assertNotIn("Domain 2 may depend on Domain 1's gap fixes", passage)
@@ -1453,6 +2435,31 @@ class GuidanceTests(unittest.TestCase):
                 self.assertIn("Reference slices: <brief.slices, verbatim>", verify_prompt)
 
 
+class GateFourGuidanceTests(unittest.TestCase):
+    def test_g4_instructions_never_promote_snapshot_digests_to_live_tree_proof(self) -> None:
+        for guide in (REPO / "speckit-pro/skills/speckit-autopilot/references/gate-validation.md",
+                      *(REPO / "dist" / host / "speckit-pro/skills/speckit-autopilot/references/gate-validation.md" for host in HOSTS)):
+            passage = " ".join(guide.read_text(encoding="utf-8").split("### G4 — After Checklist", 1)[1].split("### G5", 1)[0].split())
+            for kind in ("spec.md", "plan.md", "report set", "checklists entry", "feature entry"):
+                with self.subTest(host=guide.parts[-6], input_kind=kind):
+                    self.assertIn(kind, passage)
+                    self.assertIn("Never report the live tree as verified from this snapshot", passage)
+                    self.assertIn("Tasks phase brief rechecks the judged digests", passage)
+                    self.assertIn("read-tasks-inputs", passage)
+                    self.assertIn("exact bytes", passage)
+                    self.assertNotIn("subsequent live path reads remain mutable", passage)
+                    self.assertNotIn("Total must be 0", passage)
+
+    def test_every_verify_gap_reaches_consensus_and_the_final_checkpoint_always_runs_on_both_hosts(self) -> None:
+        for passage in checklist_passages():
+            queue_at = passage.index("initial run items plus every verify-pass 'Unresolved for consensus' item")
+            self.assertLess(queue_at, passage.index("phase brief", queue_at))
+            for phrase in ("verify_items", "Always request the final phase brief", "verify_baseline",
+                           "before marking any domain completed", "final verify-pass unresolved items return to consensus"):
+                self.assertIn(phrase, passage)
+            self.assertEqual([], [phrase for phrase in ("send no third request", "verified_domains") if phrase in passage])
+
+
 if __name__ == "__main__":
     sys.exit(
         run_counted(
@@ -1460,7 +2467,12 @@ if __name__ == "__main__":
                 unittest.defaultTestLoader.loadTestsFromTestCase(case)
                 for case in (ProposalTests, ConflictTests, RefusalTests, CompetingWriterTests, CanonicalResultTests, RollbackFailureTests, CommittedStateTests,
                              RecordStateTests,
-                             UntrustedTextTests, PlanningTextTests, PlanningContextTests, HostParityTests, GuidanceTests)
+                             UntrustedTextTests, PlanningTextTests, PlanningContextTests, HostParityTests,
+                             GateFourHostParityTests, GateFourResourceTests, GateFourCoverageTests,
+                             GateFourAttestationTests, GateFourReportInputTests, GateFourContainedInputTests, GateFourNamespaceMutationTests,
+                             GateFourPostValidationTests, TasksCheckedBytesTests, TasksSnapshotMutationTests,
+                             TasksSnapshotWriteTests, TasksRecheckTests, GateFourDiagnosticTests,
+                             GateFourFilesystemEdgeTests, GateFourReportLimitTests, GuidanceTests, GateFourGuidanceTests)
             ),
             label="test-checklist-edits",
         )

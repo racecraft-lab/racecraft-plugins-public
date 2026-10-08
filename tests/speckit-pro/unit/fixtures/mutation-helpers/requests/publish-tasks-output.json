@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "helper_id": "publish-tasks-output",
+  "operation": "publish-tasks-output",
+  "mode": "apply",
+  "inputs": {
+    "feature_dir": "specs/example",
+    "snapshot_dir": "<snapshot-dir-from-Tasks-brief>",
+    "feature_identity": {
+      "device": 0,
+      "inode": 0
+    }
+  }
+}

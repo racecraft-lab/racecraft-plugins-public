@@ -149,9 +149,9 @@ remaining `[Gap]`. Keep spec.md and plan.md unchanged.
      encryption, PII, credential, permission, password, authentication,
      authorization, session, cookie, jwt, api-key, access-control)
 
-   A gap that stays open after the verify run, or where your sources
-   disagreed, is not a consensus trigger: state your recommended fix and
-   its confidence, and the recommendation stands.
+   Include every gap remaining after any verify pass, with your recommended
+   fix and confidence. The orchestrator combines those items with pending
+   initial-run items and routes them through the runner's consensus tiers.
 
    **Tag every unresolved gap with a category prefix in square
    brackets** so the orchestrator can route consensus to only the

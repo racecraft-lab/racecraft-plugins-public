@@ -28,6 +28,7 @@ from .read_only import (
     trusted_regular_file_bytes_and_mode,
 )
 from ..atomic_write import (
+    AtomicWriteInterrupted,
     WritePreconditionChanged,
     atomic_write_cleanup_errors,
     ensure_final_newline,
@@ -334,8 +335,7 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
                 diagnostics=[diag],
             )
         except OSError as exc:
-            mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
-            mutation["failure_operation"] = operation_record(operation)
+            _record_write_error(mutation, operation, rel, exc)
             cleanup_errors = atomic_write_cleanup_errors(exc)
             mutation["manual_remediation"] = [
                 "Inspect touched_paths and the failed map.",
@@ -1085,8 +1085,7 @@ def run_mutation_helper(
                     ],
                 )
             except OSError as exc:
-                mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
-                mutation["failure_operation"] = operation_record(op)
+                _record_write_error(mutation, op, rel, exc)
                 rollback_errors = rollback_applied_writes(mutation["touched_paths"], snapshots, repo_root)
                 rollback_errors.extend(atomic_write_cleanup_errors(exc))
                 mutation["manual_remediation"] = [
@@ -1693,6 +1692,16 @@ def empty_mutation(mode: str) -> dict[str, Any]:
         "manual_remediation": [],
         "live_mutation": False,
     }
+
+
+
+def _record_write_error(mutation: dict[str, Any], operation: dict[str, Any], rel: str, error: OSError) -> None:
+    # Interrupted publication reached disk; rollback still needs an observed applied snapshot.
+    if isinstance(error, AtomicWriteInterrupted):
+        mutation["applied_operations"].append(operation_record(operation))
+        mutation["touched_paths"].append(rel)
+    mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
+    mutation["failure_operation"] = operation_record(operation)
 
 
 def operation_records(operations: list[dict[str, Any]]) -> list[dict[str, Any]]:

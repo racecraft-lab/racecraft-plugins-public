@@ -12,8 +12,11 @@ from ..agent_inventory import AGENT_INVENTORY
 from ..envelope import diagnostic, response
 from ..strict_input import has_hidden_characters, require_fields, require_text
 from ..trusted_io import resolve_repo_root
+from .checklist_edits import checklist_edits
 from .dispatch_waves import WAVE_INPUTS, WaveRequest, checked_wave_request, compose_waves
 from .extension_hooks import optional_hooks
+from .read_only import G4InputDrift, checked_g4_judged, check_g4_inputs
+from .tasks_inputs import bind_tasks_snapshot, checked_feature_identity, check_tasks_parent
 
 PHASES = {
     "Specify": ("phase-executor", "G1", ()),
@@ -168,9 +171,9 @@ def brief_data(phase: str, workflow: str, feature: str, waves: WaveRequest) -> d
     }
 
 
-def checked_request(raw: Any) -> tuple[str, str, str, WaveRequest]:
-    """The closed phase-brief inputs as (phase, workflow_file, feature_dir, waves); anything else raises ValueError."""
-    optional = {key: raw[key] for key in WAVE_INPUTS if isinstance(raw, dict) and key in raw}
+def checked_request(raw: Any) -> tuple[str, str, str, WaveRequest, dict[str, str] | None, dict[str, int] | None]:
+    """Validate the phase, paths, waves and Tasks-only G4 digest binding."""
+    optional = {key: raw[key] for key in (*WAVE_INPUTS, "g4_judged", "g4_feature_identity") if isinstance(raw, dict) and key in raw}
     inputs = require_fields({key: value for key, value in raw.items() if key not in optional} if isinstance(raw, dict) else raw,
                             {"phase", "workflow_file", "feature_dir"}, "phase-brief inputs")
     phase = require_text(inputs["phase"], "phase")
@@ -180,69 +183,62 @@ def checked_request(raw: Any) -> tuple[str, str, str, WaveRequest]:
         raise ValueError("feature_dir must name a directory")
     if phase not in PHASES:
         raise ValueError("phase must be Specify, Clarify, Plan, Checklist, Tasks or Analyze")
-    return phase, workflow, feature, checked_wave_request(phase, optional)
+    judged = checked_g4_judged(optional.pop("g4_judged", None)) if phase == "Tasks" else None
+    identity = checked_feature_identity(optional.pop("g4_feature_identity", None)) if phase == "Tasks" else None
+    if "g4_judged" in optional or "g4_feature_identity" in optional:
+        raise ValueError("g4_judged applies to Tasks only")
+    return phase, workflow, feature, checked_wave_request(phase, optional), judged, identity
 
 
 def internal_failure(request: Any, code: str, exc: Exception) -> dict[str, Any]:
     return response("internal_failure", request_id=request.request_id, diagnostics=[diagnostic(code, str(exc))])
 
 
-def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
-    """Return phase-brief/v1 dispatch data; gate and stop decisions stay separate.
+def observed_checklist_waves(root: Path, workflow: str, feature: str, waves: WaveRequest) -> WaveRequest:
+    """Select the final verify wave from the shared-artifact digests on disk, never from caller attribution.
 
-    The closed request inputs are phase, workflow_file and feature_dir strings, and optional domains, items and max_agents
-    for waves (dispatch_waves.py).
-    Paths reject parent segments and control, format and line separator characters.
-    feature_dir is workflow-root relative; workflow_file may be absolute but must name a file.
-    Validation is lexical: no files opened, symlinks resolved or read permissions enforced.
-    Successful data has exactly these fields. Records have only the named keys;
-    a wave dispatch's inputs is an open JSON object for its prompt arguments.
-
-    schema_version: str, the literal "phase-brief/v1".
-    phase: str, one of Specify, Clarify, Plan, Checklist, Tasks, Analyze.
-    agent: str, host-neutral installed executor role, without a namespace.
-    inputs: {workflow_file: str, feature_dir: str, prompt_section: str,
-        instruction: str, skill: str | null}; workflow context, verbatim prompt
-        heading and dispatch prefix. skill is a bare skill id, null for Clarify;
-        hosts add their invocation syntax. feature_dir loses trailing slashes.
-    readable_files: list[str], ordered phase input paths when present, relative
-        to the workflow root unless absolute; a trailing slash means contents.
-        Loaded command instructions, templates and scripts remain implicit.
-    gate: str, G1 through G6 for the parent's separate validate-gate request.
-    slices: list[str], ordered reference excerpts, each a section copied
-        verbatim from the plugin's own references, for the orchestrator to
-        insert into the dispatch prompt; never paths to whole references.
-        Clarify, Checklist and Analyze carry discovery, grounding and
-        category-tag sections; the other phases return [].
-    waves: list[list[{agent: str, inputs: object, model: ModelSelection}]],
-        ordered sequential waves; each inner list holds concurrent dispatches, with a
-        host-neutral role, JSON prompt inputs and its own model selection (the shape of
-        model below); empty without domains or items.
-    model: {claude: {model: str, effort: str},
-        codex: {model: str, effort: str}}, host-specific dispatch configuration;
-        applies to the top-level agent only. Codex phase-executor omits file
-        effort; this field supplies it per phase. Other phases follow their
-        inventory row. Claude passes model and keeps agent effort; Codex passes both.
-    hooks: list[{extension, command, event, optional: true, prompt, description}],
-        enabled optional suggestions from .specify/extensions.yml, once per event.
-        Fields except optional are strings; prompt/description are runner-owned.
-        Env conditions must hold; others raise. Confirm the exact extension,
-        command and event or skip and record. Before stays before dispatch;
-        after stays afterward. Mandatory hooks belong to the loaded command;
-        Clarify loads none and lists none.
-
-    Input errors return no data; uninterpretable hooks are internal_failure.
+    verify_baseline is the pre-consensus read_only snapshot. The checklist-edits owner reads the contained workflow
+    and both shared artifacts without following links; missing or unreadable evidence fails closed.
     """
+    if waves.verify_baseline is None:
+        return waves
+    snapshot = checklist_edits(root, {"workflow_file": workflow, "feature_dir": feature}, "read_only")
+    return waves._replace(shared_changed=snapshot["baseline"] != waves.verify_baseline)
+
+
+def _phase_brief_response(
+    request: Any,
+    root: Path,
+    context: tuple[
+        str,
+        str,
+        str,
+        WaveRequest,
+        dict[str, str] | None,
+        dict[str, int] | None,
+    ],
+) -> dict[str, Any]:
+    """Build the phase brief response after input validation."""
+    phase, workflow, feature, waves, judged, identity = context
     try:
-        phase, workflow, feature, waves = checked_request(request.inputs)
-    except ValueError as exc:
-        return response("input_error", request_id=request.request_id,
-                        diagnostics=[diagnostic("invalid_phase_brief", str(exc))])
-    root = resolve_repo_root({})
-    if isinstance(root, dict):
-        return response("missing_prerequisite", request_id=request.request_id, diagnostics=[root])
-    try:
-        data = brief_data(phase, workflow, feature, waves)
+        if identity is not None:
+            check_tasks_parent(root / feature, root, identity)
+        captured = check_g4_inputs(root / feature, root, judged) if judged is not None else None
+        data = brief_data(phase, workflow, feature, observed_checklist_waves(root, workflow, feature, waves))
+        if captured is not None and judged is not None:
+            bind_tasks_snapshot(data, captured, judged)
+            data["inputs"]["defer_after_hooks"] = True
+            data["inputs"]["tasks_output"] = {
+                "feature_dir": feature,
+                "snapshot_dir": data["inputs"]["tasks_snapshot"]["snapshot_dir"],
+                "feature_identity": identity,
+            }
+    except G4InputDrift as exc:
+        return response(
+            "input_error",
+            request_id=request.request_id,
+            diagnostics=[diagnostic("g4_input_drift", str(exc))],
+        )
     except (OSError, ValueError) as exc:
         return internal_failure(request, "phase_brief_slices_unavailable", exc)
     try:
@@ -250,3 +246,48 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     except ValueError as exc:
         return internal_failure(request, "phase_brief_hooks_unavailable", exc)
     return response("ok", request_id=request.request_id, data=data)
+
+
+def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
+    """Return phase-brief/v1 dispatch data; gate and stop decisions stay separate.
+
+    Closed inputs: phase, workflow_file, feature_dir; Tasks requires g4_judged and g4_feature_identity.
+    dispatch_waves.py owns optional domains, items, verify_items, verify_baseline and max_agents.
+    Tasks copies exact G4-matched bytes into a private snapshot; read-tasks-inputs returns verified text.
+
+    schema_version: str, the literal "phase-brief/v1".
+    phase: str, Specify/Clarify/Plan/Checklist/Tasks/Analyze; agent: host-neutral executor role.
+    inputs: {workflow_file: str, feature_dir: str, prompt_section: str,
+        instruction: str, skill: str | null}; workflow context, verbatim prompt
+        heading and dispatch prefix. skill is a bare skill id, null for Clarify;
+        hosts add invocation syntax; feature_dir loses trailing slashes.
+    readable_files: list[str], ordered phase input paths when present, relative
+        to the workflow root unless absolute; a trailing slash means contents.
+    gate: str, G1 through G6 for the parent's separate validate-gate request.
+    slices: list[str], ordered verbatim plugin-reference sections for the dispatch prompt.
+        Clarify, Checklist and Analyze carry discovery, grounding and category-tag
+        sections; the other phases return [].
+    waves: list[list[{agent: str, inputs: object, model: ModelSelection}]],
+        ordered sequential waves; each inner list holds concurrent dispatches, with a
+        host-neutral role, JSON prompt inputs and its own model selection (the shape of
+        model below); empty without domains or items.
+    model: {claude: {model: str, effort: str},
+        codex: {model: str, effort: str}}, host-specific dispatch configuration;
+        top-level dispatch only; Claude passes model, Codex passes both.
+    hooks: list[{extension, command, event, optional: true, prompt, description}],
+        enabled optional suggestions from .specify/extensions.yml, once per event.
+        Fields except optional are strings; prompt/description are runner-owned.
+        Before hooks precede dispatch. Tasks defers after hooks until confirmed publication;
+        other mandatory hooks belong to the loaded command. Clarify lists none.
+
+    Input errors return no data; uninterpretable hooks are internal_failure.
+    """
+    try:
+        context = checked_request(request.inputs)
+    except ValueError as exc:
+        return response("input_error", request_id=request.request_id,
+                        diagnostics=[diagnostic("invalid_phase_brief", str(exc))])
+    root = resolve_repo_root({})
+    if isinstance(root, dict):
+        return response("missing_prerequisite", request_id=request.request_id, diagnostics=[root])
+    return _phase_brief_response(request, root, context)

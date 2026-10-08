@@ -27,6 +27,7 @@ sys.path.insert(0, str(REPO_ROOT / "tests" / "speckit-pro" / "lib"))
 from script_loader import load_script  # noqa: E402
 from test_result import run_counted  # noqa: E402
 from isolated_child import BASE_KEYS, run_python  # noqa: E402
+from descriptor_observer import record_open_descriptors  # noqa: E402
 
 VERIFIER = REPO_ROOT / "tests/speckit-pro/run-curated-install-check.py"
 check = load_script("curated_install_check", VERIFIER)
@@ -1031,7 +1032,6 @@ class OwnerAcceptanceGuardTests(unittest.TestCase):
 
 class OwnerAcceptanceDescriptorTests(unittest.TestCase):
     def test_project_descriptor_closes_on_every_acceptance_exit(self):
-        real_open = os.open
         tempfile.gettempdir()  # Initialize tempdir discovery before recording project opens.
         installed = [("installed", [])]
         cases = (
@@ -1045,14 +1045,7 @@ class OwnerAcceptanceDescriptorTests(unittest.TestCase):
         )
         for name, phase, outcome in cases:
             with self.subTest(exit=name):
-                roots = []
-
-                def opened(*args, **kwargs):
-                    # Ownership passes to the caller; closing here would hide its leak.
-                    roots.append(real_open(*args, **kwargs))
-                    return roots[-1]
-
-                with (mock.patch.object(check.os, "open", side_effect=opened),
+                with (record_open_descriptors() as roots,
                       mock.patch.object(check, "fresh_project", return_value=[]) as setup,
                       mock.patch.object(check, "bind_project", return_value={}) as binding,
                       mock.patch.object(check, "accept_entry", return_value=installed[0]) as install,

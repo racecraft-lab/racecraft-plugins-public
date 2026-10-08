@@ -6,6 +6,7 @@ import json
 import os
 import re
 import stat
+from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -541,9 +542,35 @@ def captured_tree_names(fd: int) -> list[str]:
     return sorted(name for name in os.listdir(fd) if name != "__pycache__" and not name.endswith(".pyc"))
 
 
-def read_tree_entry(parent_fd: int, name: str, expected: os.stat_result | None = None,
-                    *, signatures: dict[Path, tuple[int, ...]] | None = None) -> dict[Path, tuple[int, bytes | None]]:
+def read_tree_file(fd: int, before: os.stat_result, byte_limit: int | None) -> bytes:
+    """Read one single-link descriptor, optionally bounded to its captured size."""
+    if before.st_nlink != 1:
+        raise OSError("hard-linked tree file refused")
+    with os.fdopen(os.dup(fd), "rb") as stream:
+        content = stream.read() if byte_limit is None else stream.read(byte_limit + 1)
+    if byte_limit is not None and (len(content) > byte_limit or len(content) != before.st_size):
+        raise OSError("tree file exceeded its byte limit or changed size")
+    return content
+
+
+@dataclass(frozen=True)
+class TreeEntryReadOptions:
+    signatures: dict[Path, tuple[int, ...]] | None = None
+    byte_limit: int | None = None
+
+
+_DEFAULT_TREE_ENTRY_READ_OPTIONS = TreeEntryReadOptions()
+
+
+def read_tree_entry(
+    parent_fd: int,
+    name: str,
+    expected: os.stat_result | None = None,
+    *,
+    options: TreeEntryReadOptions = _DEFAULT_TREE_ENTRY_READ_OPTIONS,
+) -> dict[Path, tuple[int, bytes | None]]:
     """Read one entry through its parent descriptor; reject links and changing evidence."""
+    signatures, byte_limit = options.signatures, options.byte_limit
     before = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
     if expected is not None and tree_entry_signature(before) != tree_entry_signature(expected):
         raise OSError("tree entry changed before capture")
@@ -559,10 +586,7 @@ def read_tree_entry(parent_fd: int, name: str, expected: os.stat_result | None =
         if stat.S_ISDIR(before.st_mode):
             captured = read_tree_directory(fd, signatures=signatures)
         else:
-            if before.st_nlink != 1:
-                raise OSError("hard-linked tree file refused")
-            with os.fdopen(os.dup(fd), "rb") as stream:
-                captured = {Path(): (stat.S_IMODE(before.st_mode), stream.read())}
+            captured = {Path(): (stat.S_IMODE(before.st_mode), read_tree_file(fd, before, byte_limit))}
         after = os.fstat(fd)
         named = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
         if tree_entry_signature(before) != tree_entry_signature(after) or tree_entry_signature(after) != tree_entry_signature(named):
@@ -582,7 +606,8 @@ def read_tree_directory(fd: int, *, signatures: dict[Path, tuple[int, ...]] | No
     for name in names:
         immediate_signatures[name] = tree_entry_signature(os.stat(name, dir_fd=fd, follow_symlinks=False))
         child_signatures: dict[Path, tuple[int, ...]] = {}
-        for relative, entry in read_tree_entry(fd, name, signatures=child_signatures).items():
+        options = TreeEntryReadOptions(signatures=child_signatures)
+        for relative, entry in read_tree_entry(fd, name, options=options).items():
             captured[Path(name) / relative] = entry
         if signatures is not None:
             signatures.update((Path(name) / relative, signature) for relative, signature in child_signatures.items())
@@ -608,9 +633,14 @@ def trusted_tree_snapshot(path: Path, repo_root: Path, *, expected: os.stat_resu
     try:
         before = os.fstat(parent_fd)
         signatures: dict[Path, tuple[int, ...]] = {}
-        captured = read_tree_entry(parent_fd, path.name, expected, signatures=signatures)
+        captured = read_tree_entry(parent_fd, path.name, expected, options=TreeEntryReadOptions(signatures=signatures))
         checked_signatures: dict[Path, tuple[int, ...]] = {}
-        checked = read_tree_entry(parent_fd, path.name, expected, signatures=checked_signatures)
+        checked = read_tree_entry(
+            parent_fd,
+            path.name,
+            expected,
+            options=TreeEntryReadOptions(signatures=checked_signatures),
+        )
         # A later sibling can change a subtree whose local checks already completed.
         if signatures != checked_signatures or captured != checked:
             raise OSError("tree changed after capture")

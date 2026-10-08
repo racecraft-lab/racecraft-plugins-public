@@ -16,7 +16,7 @@ import hashlib
 import ctypes
 import dataclasses
 import errno
-from contextlib import ExitStack
+from contextlib import ExitStack, contextmanager
 from pathlib import Path, PosixPath
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -592,6 +592,45 @@ def bind_required_primary_probe(manifest: dict[str, object]) -> None:
             "expected_result_shape": {"available": "boolean"},
         }
     }
+
+
+
+
+def _new_file_request(request_id: str, target: str, content: str) -> RunnerRequest:
+    return RunnerRequest(request_id, "mutation-foundation", "mutation-foundation", "apply", {
+        "operations": [{"operation_id": "write-new", "kind": "write_file", "target": target, "content": content}],
+    })
+
+
+@contextmanager
+def _final_parent_close_failure():
+    real_replace, real_close = mutation.os.replace, mutation.os.close
+    replace_seen = False
+    failed_fd: int | None = None
+    pending: set[int] = set()
+
+    def tracking_replace(*args, **kwargs):
+        nonlocal replace_seen
+        result = real_replace(*args, **kwargs)
+        replace_seen = True
+        return result
+
+    def fail_first_close_after_replace(fd: int) -> None:
+        nonlocal failed_fd
+        if replace_seen and failed_fd is None:
+            failed_fd = fd
+            pending.add(fd)
+            raise OSError("injected close failure")
+        real_close(fd)
+        pending.discard(fd)
+
+    try:
+        with (patch.object(mutation.os, "replace", side_effect=tracking_replace),
+              patch.object(mutation.os, "close", side_effect=fail_first_close_after_replace)):
+            yield
+    finally:
+        for fd in pending:
+            real_close(fd)
 
 
 class MutationHelperTests(unittest.TestCase):
@@ -8430,60 +8469,22 @@ This line must not be copied.
             self.assertFalse(target.exists())
             self.assertTrue(parent.is_dir())
 
-    def test_apply_tracks_successful_write_when_final_parent_close_fails(self) -> None:
+    def test_apply_tracks_interrupted_write_when_final_parent_close_fails(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
-            request = RunnerRequest(
-                "test-final-parent-close-after-replace",
-                "mutation-foundation",
-                "mutation-foundation",
-                "apply",
-                {
-                    "operations": [
-                        {
-                            "operation_id": "write-new",
-                            "kind": "write_file",
-                            "target": "new.md",
-                            "content": "new\n",
-                        }
-                    ]
-                },
-            )
-            real_replace = mutation.os.replace
-            real_close = mutation.os.close
-            replace_seen = False
-            failed_fd: int | None = None
-
-            def tracking_replace(*args, **kwargs):
-                nonlocal replace_seen
-                result = real_replace(*args, **kwargs)
-                replace_seen = True
-                return result
-
-            def fail_first_close_after_replace(fd: int) -> None:
-                nonlocal failed_fd
-                if replace_seen and failed_fd is None:
-                    failed_fd = fd
-                    raise OSError("injected close failure")
-                real_close(fd)
-
+            request = _new_file_request('test-final-parent-close-after-replace', 'new.md', 'new\n')
             old_cwd = Path.cwd()
             os.chdir(git_root)
             try:
-                with (
-                    patch.object(mutation.os, "replace", side_effect=tracking_replace),
-                    patch.object(mutation.os, "close", side_effect=fail_first_close_after_replace),
-                ):
+                with _final_parent_close_failure():
                     response = mutation.run_mutation_helper(registry.MUTATION_HELPERS["mutation-foundation"], request)
             finally:
                 os.chdir(old_cwd)
-                if failed_fd is not None:
-                    try:
-                        real_close(failed_fd)
-                    except OSError:
-                        pass
 
-            self.assert_response(response, "ok", 0)
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual(response["data"]["mutation"]["mutation_status"], "partial_failure")
+            self.assertEqual(response["diagnostics"][0]["code"], "write_failure")
+            self.assertEqual(response["diagnostics"][0]["details"]["error"], "AtomicWriteInterrupted")
             self.assertEqual(response["data"]["mutation"]["applied_operations"][0]["operation_id"], "write-new")
             self.assertEqual(response["data"]["mutation"]["touched_paths"], ["new.md"])
             self.assertTrue(response["data"]["writes_state"])
@@ -8492,22 +8493,7 @@ This line must not be copied.
     def test_apply_cleans_parent_created_before_traversal_failure(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
-            request = RunnerRequest(
-                "test-created-parent-traversal-failure",
-                "mutation-foundation",
-                "mutation-foundation",
-                "apply",
-                {
-                    "operations": [
-                        {
-                            "operation_id": "write-new",
-                            "kind": "write_file",
-                            "target": "nested/new.md",
-                            "content": "new\n",
-                        }
-                    ]
-                },
-            )
+            request = _new_file_request('test-created-parent-traversal-failure', 'nested/new.md', 'new\n')
             real_open = mutation.os.open
 
             def fail_reopen_created_parent(path, *args, **kwargs):
@@ -8531,22 +8517,7 @@ This line must not be copied.
     def test_apply_reports_temp_unlink_failure_after_failed_replace(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
-            request = RunnerRequest(
-                "test-temp-unlink-cleanup-failure",
-                "mutation-foundation",
-                "mutation-foundation",
-                "apply",
-                {
-                    "operations": [
-                        {
-                            "operation_id": "write-new",
-                            "kind": "write_file",
-                            "target": "new.md",
-                            "content": "new\n",
-                        }
-                    ]
-                },
-            )
+            request = _new_file_request('test-temp-unlink-cleanup-failure', 'new.md', 'new\n')
             real_unlink = mutation.os.unlink
 
             def fail_replace(*args, **kwargs):
@@ -8625,22 +8596,7 @@ This line must not be copied.
     def test_write_failure_cleanup_errors_mark_writes_state(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
-            request = RunnerRequest(
-                "test-cleanup-errors",
-                "mutation-foundation",
-                "mutation-foundation",
-                "apply",
-                {
-                    "operations": [
-                        {
-                            "operation_id": "write-new",
-                            "kind": "write_file",
-                            "target": "nested/new.md",
-                            "content": "new\n",
-                        }
-                    ]
-                },
-            )
+            request = _new_file_request('test-cleanup-errors', 'nested/new.md', 'new\n')
             injected = OSError("injected")
             injected.cleanup_errors = ["nested:OSError"]
 
@@ -8661,22 +8617,7 @@ This line must not be copied.
     def test_apply_file_writes_fail_closed_on_unsupported_descriptor_platform(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
-            request = RunnerRequest(
-                "test-unsupported-platform",
-                "mutation-foundation",
-                "mutation-foundation",
-                "apply",
-                {
-                    "operations": [
-                        {
-                            "operation_id": "write-new",
-                            "kind": "write_file",
-                            "target": "new.md",
-                            "content": "new\n",
-                        }
-                    ]
-                },
-            )
+            request = _new_file_request('test-unsupported-platform', 'new.md', 'new\n')
             old_cwd = Path.cwd()
             os.chdir(git_root)
             try:

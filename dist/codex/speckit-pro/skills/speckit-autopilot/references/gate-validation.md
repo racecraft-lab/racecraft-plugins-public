@@ -187,14 +187,73 @@ must not rewrite their provenance.
 
 ### G4 — After Checklist
 
-**Check:** All gap markers resolved across all checklist files.
+**Check:** Count gap markers in a bounded read transaction; the verdict covers the captured bytes.
 
 ```
 1. Find all checklist files: specs/<feature>/checklists/*.md
-2. Count [Gap] markers across ALL files: grep -c "\[Gap\]" checklists/*.md,
-   plus spec.md and plan.md (runner `validate-gate` G4 counts all three)
-3. Total must be 0
+2. Invoke runner `validate-gate` G4; it counts [Gap] markers in the reports,
+   spec.md and plan.md.
+3. Zero markers passes only for those captured bytes, not the later live tree.
+4. The runner reads each file once into memory and judges only those bytes.
+   It fails closed when spec.md, plan.md or checklists/ is missing, linked or
+   unreadable, when checklists/ holds no report, a nested directory, a link or
+   a special file, or more than 64 entries, or when the files exceed 8 MiB in all.
+   checklists/ is flat: reports are direct *.md files; at least one is required.
+   Every entry counts toward the 64-entry limit and must be a regular file.
+   Regular non-report entries (such as .gitkeep) are ignored, not read or judged.
+5. The result's `judged` field holds the SHA-256 of every file the verdict covers.
 ```
+
+The runner holds directory descriptors and opens files relative to them without
+following links. Its shared tree reader rejects hard links and changes in device,
+inode, mode, link count, size, mtime_ns or ctime_ns across the read. The bounded
+read must match the recorded size. G4 checks the captured namespace and judges
+only the captured bytes during its read transaction. Only those bytes are counted
+and hashed. Report names use ASCII letters, digits, dot, underscore and hyphen;
+unsafe names fail without being echoed.
+
+Never report the live tree as verified from this snapshot. G4 judges captured
+bytes, not executor runs. The Tasks phase brief rechecks the judged digests and
+copies the exact bytes it read and hashed into a fresh run-owned snapshot.
+Pass G4's complete `judged` map as `g4_judged` to runner `phase-brief` for Tasks
+and its `feature_identity` as `g4_feature_identity` on both hosts. G4 records
+the held feature directory's device and inode; a replaced parent refuses Tasks
+even when its content digests match. The bounded descriptor reads reject drift, gaps, missing inputs,
+links, special files and over-limit input trees. The report set, checklists entry
+and feature entry are included in capture validation.
+
+The runner creates the snapshot directory exclusively with mode 0700, creates
+files with O_EXCL/O_NOFOLLOW, and re-hashes the written copies against every
+judged digest. Any capture or write failure refuses dispatch and names only the
+input kind. Obtain a new successful G4 result under the repair policy before retrying.
+
+Both Tasks executors receive `brief.inputs.tasks_snapshot` with `snapshot_dir`
+and `judged`. Use runner `read-tasks-inputs` to consume that snapshot: it checks
+and returns the same bounded bytes as text. Use only its successful `data.files`
+for spec.md, plan.md and checklist reports, without reopening paths afterward.
+Snapshot tampering refuses consumption; later changes to the live feature tree
+cannot change the consumed Tasks inputs. The executor writes tasks.md only to
+`brief.inputs.tasks_output.snapshot_dir`. The orchestrator passes
+`brief.inputs.tasks_output` unchanged to `publish-tasks-output`, mode apply,
+before G5. The runner reopens the feature parent without following symlinks,
+checks G4's device/inode pair, and holds that descriptor through publication.
+It refuses missing, replaced or symlinked parents and symlinked, hard-linked or
+nonregular output leaves. It creates a fresh exclusive temporary file and
+renames within that held directory; refusals name only the file kind.
+Successful publication returns `after_hooks_ready=true` and `tasks_binding`
+containing the captured snapshot text and SHA-256 digest. Follow the
+[bound-consumer handoff](phase-execution.md#phase-5-tasks): hooks consume
+`read-tasks-output` returned text and G5 receives the unchanged `tasks_binding`.
+G5 evaluates those bytes and returns `tasks_sha256`; neither consumer reopens
+the writable live path. A consumer given `live_path` must pass it to
+`read-tasks-output`, which compares its bounded read to the binding and refuses
+on mismatch. Pre/post-install and cleanup-window refusals still withhold hook
+authority. Publication observations alone do not certify future pathname reads.
+Snapshot generation and publication failures are blockers; neither host writes
+tasks.md through a live feature path.
+This closes the Tasks input handoff in
+[issue #1284](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1284).
+G4 does not attest that an executor ran.
 
 G4 counts only `[Gap]` markers, by design. Unticked checklist items are
 reviewer-owned, so they do not fail G4. They are deferred to PR review, and

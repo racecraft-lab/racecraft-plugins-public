@@ -520,9 +520,10 @@ the same session. Keep completed session evidence. If a Clarify session has
 already completed, proceed to G2 instead of dispatching another session.
 Spawn a **separate subagent for each prompt**. Clarify has one. Checklist
 domains run together as dispatch waves while their executors only propose
-edits (see Dispatch waves), then the two-layer resolution (Rule 6) runs
-once over every domain's unresolved items, then the verify wave re-runs each
-domain.
+edits (see Dispatch waves), then the verify wave re-runs each domain once,
+then the two-layer resolution (Rule 6) runs once over every domain's
+unresolved items. Every domain runs again only when a consensus edit changed
+spec.md or plan.md.
 
 Per-phase flow templates (the Clarify session, per-domain for
 Checklist) live in
@@ -1098,6 +1099,27 @@ For each planning phase, request
 `helper_id=phase-brief operation=phase-brief mode=read_only` with inputs
 `phase` (Specify, Clarify, Plan, Checklist, Tasks or Analyze),
 `workflow_file=WORKFLOW_FILE` and `feature_dir=<feature-dir>`.
+For Tasks, also pass `g4_judged=<the complete judged map from the latest
+successful G4 response>` and `g4_feature_identity=<its feature_identity>`.
+The runner rechecks that map before returning a Tasks
+brief and copies the exact checked bytes to a private run-owned snapshot.
+Pass `brief.inputs.tasks_snapshot` unchanged. Both hosts consume spec.md,
+plan.md and checklist reports only through `read-tasks-inputs`, using its
+returned text. Pass `brief.inputs.tasks_output` unchanged. The executor writes
+tasks.md only into its snapshot_dir. After a successful executor return, both
+hosts call `helper_id=publish-tasks-output operation=publish-tasks-output mode=apply`
+with `inputs=brief.inputs.tasks_output`, before after_Tasks hooks or G5.
+Pass `brief.inputs.defer_after_hooks=true` to the executor; it defers every
+after_tasks hook. On `status=ok` and `data.after_hooks_ready=true`, retain
+`data.tasks_binding` unchanged. Follow the bound-consumer handoff in
+[Phase 5: Tasks](./references/phase-execution.md#phase-5-tasks): pass that binding
+to every after_tasks hook through `read-tasks-output`, then to G5 as
+`tasks_binding`. Consumers use returned text, never reopen tasks.md. A refusal
+blocks hooks, G5 and completion; retain the snapshot and escalate.
+The runner owns publication into the G4-bound feature directory.
+Missing, malformed or changed inputs return no dispatch facts; rerun
+Checklist and G4 through the existing repair policy before requesting Tasks
+again. Neither host may dispatch Tasks from a failed brief or omit this check.
 Use the successful response's data as `brief`: dispatch `brief.agent`,
 read the exact workflow prompt(s) under `brief.inputs.prompt_section`, and
 prefix each with `brief.inputs.instruction`. Pass `brief.inputs` and
@@ -1148,11 +1170,16 @@ and Analyze: each unresolved item as `{line, confidence}`), and must carry
 `max_agents` with either (the host's concurrent-agent limit, below). A wave
 larger than `max_agents` arrives as consecutive waves of at most that size, in
 order. `brief.waves` then
-lists, in order: the domain waves, the security wave (the three analysts of
-each security item), the low-confidence wave (the routed analyst of each
-low-confidence item), and the verify wave (each domain's `pass: verify`
-re-run, refreshing its checklist report while keeping spec.md and plan.md
-unchanged); a wave with no agents is omitted. Checklist executors only
+lists, in order: the domain waves, the verify wave (each domain's
+`pass: verify` re-run, refreshing its checklist report while keeping spec.md
+and plan.md unchanged), the security wave (the three analysts of each
+security item), the low-confidence wave (the routed analyst of each
+low-confidence item). The final checkpoint request supplies `domains` (the
+original full list), `verify_baseline` (the pre-consensus spec/plan digests from
+`checklist-edits`, read_only), and `max_agents`. The runner reads both shared
+artifacts: if either changed, it returns only `pass: verify` waves for every
+original domain; otherwise it returns no waves. Missing or unreadable evidence
+fails closed, and edit labels are not inputs. Checklist executors only
 propose edits, so domain checks share a wave within the host limit. The
 runner applies their proposals one domain at a time, in workflow order.
 <!-- host:claude: Claude Code caps concurrent subagents per session -->
@@ -1174,14 +1201,26 @@ next wave. A synthesizer or the confidence rule starts only after every wave of
 its items returned. Each entry names its agent, prompt `inputs` and model. A domain entry
 takes that domain's workflow prompt, plus both `Pass: verify` and `Mode: verify` lines when its inputs
 say `pass: verify`; an analyst entry (`inputs.item` only) takes the consensus
-prompt for `items[inputs.item - 1]`, built from your own copy of that item. Checklist runs two requests: `domains` before the executors
-(domain waves and verify wave), `items` once every domain's unresolved items are
-in (security and low-confidence waves, then the consensus rounds of
-[consensus-protocol.md](./references/consensus-protocol.md)). Run the verify
-wave after the serial artifact edits.
+prompt for `items[inputs.item - 1]`, built from your own copy of that item. Checklist runs three requests: `domains` before the executors
+(domain waves and verify wave; launch the verify wave only after `checklist-edits`
+applied every proposal), `items` plus `verify_items` after the first verify pass
+(initial run items plus every verify-pass 'Unresolved for consensus' item,
+including apply conflicts, in domain order within each list). Item numbers index
+`items + verify_items`; use that combined queue for analyst prompts and the
+Consensus Resolution Log. Follow the consensus rounds of
+[consensus-protocol.md](./references/consensus-protocol.md), applying edits serially.
+Always request the final phase brief with the original `domains`,
+`verify_baseline` saved before consensus and `max_agents`, even with no queued
+items or edit labels, before marking any domain completed. Consume every returned
+verify wave and guard it with a fresh `checklist-edits` read_only baseline and
+dry_run as for the first verify pass. With no shared edit the final brief is empty,
+so each domain still runs exactly twice. The runner compares disk content, not
+attribution, so no label can narrow or suppress verification.
 
 Hooks: a loaded planning command runs its own mandatory hooks (`optional:
-false`), so the orchestrator never dispatches one. For optional hooks,
+false`), except Tasks defers mandatory after_tasks hooks to the orchestrator
+until publish-tasks-output returns a successful bound-consumer handoff. Other mandatory planning
+hooks stay with the loaded command. For optional hooks,
 handle optional brief.hooks with event=before_<phase> before dispatch and
 handle optional brief.hooks with event=after_<phase> after completion.
 Present only the runner-owned prompt and description, along with the validated extension,
@@ -1248,7 +1287,7 @@ for phase in PHASES starting from first_pending:
                      message=<entry.inputs + the wave prompt, see Dispatch waves>),
        then one bounded wait_agent loop until every entry returned its terminal result.
 <!-- /host -->
-    4. Checklist: domain waves -> consensus -> verify wave (Dispatch waves above).
+    4. Checklist: domain waves -> verify wave -> consensus -> final shared-artifact checkpoint (Dispatch waves above).
        Before the first domain wave: runner helper `checklist-edits`, mode read_only → baseline.
        After every domain executor returned: `checklist-edits`, mode apply, with
        domain names in workflow order, the baseline and each Proposed Edits block.
@@ -1257,21 +1296,43 @@ for phase in PHASES starting from first_pending:
        the Failure Escalation Protocol. An interrupted apply names what reached
        disk (applied domains, partial files, moved or unverified canonical paths,
        whether the record was written or its state is unknown): restore both files before any retry.
-       After consensus: `checklist-edits`, mode read_only → verify baseline.
+       After the apply: `checklist-edits`, mode read_only → verify baseline.
        Launch each verify wave with both Pass: verify and Mode: verify, retaining
        the original domain prompt, brief inputs, readable files and dispatch context.
        Then `checklist-edits`, mode dry_run, with no domains, no proposals and
        the verify baseline: a refusal means a verify run wrote an artifact.
+       Build the consensus queue from initial run items plus every verify-pass 'Unresolved for consensus' item.
+       Request the phase brief with items and verify_items, preserving initial apply conflicts.
+       Always request the final phase brief with the original domains, verify_baseline
+       saved before consensus and max_agents before marking any domain completed.
+       Consume its returned verify waves using a fresh baseline and dry_run guard.
+       The final verify-pass unresolved items return to consensus under the existing
+       shared reservation and round bounds; preserve pending items, append verify_items,
+       and repeat the checkpoint using the just-verified baseline before further edits.
+       Exhaustion follows Failure Escalation; tasks remain incomplete.
+       The runner compares shared spec.md/plan.md digests: any change verifies every
+       domain, no change returns no final wave, and missing evidence fails closed.
        Other phases: run consensus (Clarify/Analyze only) — see Rule 6
-    5. Specify, Plan, Checklist, Tasks and Analyze only:
+    5. Tasks only: call publish-tasks-output, mode apply, with
+       inputs=brief.inputs.tasks_output unchanged. A refusal blocks hooks,
+       G5 and phase completion; use the existing failure escalation policy.
+       On success, retain data.tasks_binding unchanged. Run deferred mandatory
+       after_tasks hooks through the bound-consumer handoff in Phase 5: Tasks;
+       optional hooks use the same handoff after the confirmation below.
+       Specify, Plan, Checklist, Tasks and Analyze only:
        handle optional brief.hooks with event=after_<phase> under the confirmation
        rule above; record runs and skips in the decisions list.
        Clarify and Implement only: skip optional hooks; handle mandatory after_<phase> hooks from .specify/extensions.yml
        under the confirmation rule in [Extension Hook Events](./references/phase-execution.md#extension-hook-events).
-    6. Validate the gate (G1-G7): run runner helper
+    6. Tasks only: include tasks_binding=<publisher data.tasks_binding unchanged>
+       in the G5 request. A successful bound G5 permits phase completion after
+       the deferred hooks finish; record its tasks_sha256 with the result.
+       Validate the gate (G1-G7): run runner helper
        `helper_id=validate-gate operation=validate-gate mode=read_only`
        with `gate=brief.gate` for planning (`G7` for Implement), `feature_dir=<feature-dir>`, and
        `workflow_file=<workflow-file>`, then branch on the JSON `pass` field
+       On G4 PASS: retain the complete `judged` map and `feature_identity`
+       for the Tasks phase-brief request.
        On FAIL: reserve a corrective cycle through execution-control;
        honor its shared family/spec budget and checkpoint disposition
     7. Update workflow file; auto-commit if configured

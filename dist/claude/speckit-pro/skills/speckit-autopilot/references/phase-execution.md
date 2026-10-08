@@ -532,8 +532,8 @@ executor must not produce or substitute the G3 evidence it receives.
 
 Run the checklist domains as dispatch waves in check-and-propose mode:
 each returns its gaps and proposed edits and writes neither `spec.md` nor
-`plan.md`. Apply edits in domain order, then resolve all domains' gaps and
-run the verify waves:
+`plan.md`. Each domain runs once, is fixed once and is verified once. Apply
+edits in domain order, run the verify waves, then resolve all domains' gaps:
 
 ```text
 0. runner helper `checklist-edits`, mode read_only → baseline
@@ -551,22 +551,13 @@ run the verify waves:
 3. After every domain executor has returned, run runner helper `checklist-edits`,
    mode apply, with the domain names in workflow order, the baseline, and each
    executor's Proposed Edits block. It applies one domain at a time in domain
-   order. Route a conflict or a gap with no edit to step 5. A refusal applies
+   order. Route a conflict or a gap with no edit to step 6. A refusal applies
    nothing: handle it as a gate failure under the Failure Escalation Protocol.
    An interrupted apply names what reached disk (applied domains, a half-written
    domain's files, canonical paths that moved or could not be verified, whether
    the record was written or its state is unknown): restore both files before any retry
 4. Collect each executor's "Unresolved for consensus" items, in domain order
-5. If unresolved gaps exist:
-   a. autopilot-state.json: each affected "<domain> Consensus" → in_progress
-   b. Request the phase brief again with `items` and `max_agents`, then follow
-      consensus-protocol.md §Batched Dispatch: the brief's security wave and
-      low-confidence wave, each in ONE turn; await → synthesizers in ONE
-      message; apply each Artifact Edit SERIALLY to spec.md or plan.md.
-      Round 2 escape-hatch: also batched across all queued gaps.
-      [ROUND_3_TIEBREAK]: consensus-protocol.md#round-3-tiebreak
-   c. autopilot-state.json: each "<domain> Consensus" → completed
-6. runner helper `checklist-edits`, mode read_only → verify baseline
+5. runner helper `checklist-edits`, mode read_only → verify baseline
    Reuse the phase brief inputs, readable files and dispatch context from
    the original domain prompt (SKILL.md Step 2).
    For each verify wave of the first brief: launch its `pass: verify` entries in ONE turn:
@@ -577,8 +568,33 @@ run the verify waves:
    Each entry re-runs its domain checklist, refreshes its report, and keeps
    spec.md and plan.md unchanged.
    Then runner helper `checklist-edits`, mode dry_run, with no domains, no
-   proposals and the verify baseline: a refusal means a verify run wrote an artifact
-7. autopilot-state.json: every domain task → completed
+   proposals and the verify baseline: a refusal means a verify run wrote an artifact.
+6. Build the consensus queue from initial run items plus every verify-pass 'Unresolved for consensus' item.
+   Retain apply conflicts and gaps with no edit; preserve domain order within each list.
+   Item numbers index items + verify_items; use that combined queue for prompts and logs.
+   If unresolved gaps exist:
+   a. autopilot-state.json: each affected "<domain> Consensus" → in_progress
+   b. Request the phase brief again with `items`, `verify_items` and `max_agents`, then follow
+      consensus-protocol.md §Batched Dispatch: the brief's security wave and
+      low-confidence wave, each in ONE turn; await → synthesizers in ONE
+      message; apply each Artifact Edit SERIALLY to spec.md or plan.md.
+      Round 2 escape-hatch: also batched across all queued gaps.
+      [ROUND_3_TIEBREAK]: consensus-protocol.md#round-3-tiebreak
+7. Always request the final phase brief with the original domains, verify_baseline
+   saved in step 5 before consensus and max_agents, even with no queued items or
+   edit labels, before marking any domain completed. The runner compares both
+   shared artifacts on disk: any spec.md/plan.md change returns only verify waves
+   for every original domain; no change returns none. Missing or unreadable evidence
+   fails closed; edit labels are not inputs. For returned waves, take a fresh
+   read_only baseline, launch every verify wave as in step 5, consume all results,
+   then run checklist-edits in dry_run mode with that baseline. Keep Consensus
+   items incomplete until this checkpoint succeeds. The final verify-pass unresolved items return to consensus
+   before completion, under the existing shared repair reservation and consensus-round
+   bounds: retain pending items, append new verify_items, save the just-verified baseline
+   before further edits, and return to step 6. If the reservation is exhausted, use the
+   Failure Escalation Protocol and keep tasks incomplete.
+   Then mark Consensus items completed.
+8. autopilot-state.json: every domain task → completed
 ```
 
 **Layer 1 (executor):** The checklist-executor handles
@@ -593,8 +609,9 @@ confidence, security tag or keyword), the main session follows the
 **Why ordered application after a wave:** Executors only propose edits, so
 independent domain checks can run together. Domain 2's edit may build on
 Domain 1's: the runner applies proposals one at a time in workflow order,
-so the result does not depend on which executor returned first. Consensus
-edits stay serial, and the verify waves re-run every domain after the last edit.
+so the result does not depend on which executor returned first. The verify
+waves re-run every domain once after those edits. Consensus edits stay serial,
+and the final checkpoint refreshes every domain when either shared artifact changed.
 
 **Gate:** G4 — verify 0 `[Gap]` markers
 
@@ -608,8 +625,48 @@ Before dispatching Tasks for an enabled formal selection, reconcile and renew
 the `planning` checkpoint per [Selected formal checkpoints](formal-methods.md#later-planning-implementation-and-closeout).
 Include the selected properties' implementation obligations and declared scope.
 
+Before requesting the Tasks phase brief, pass `g4_judged` unchanged from the
+latest successful G4 response, together with its `feature_identity` as
+`g4_feature_identity`. The runner re-reads spec.md, plan.md and the flat
+checklist report set, compares every digest, and refuses the brief on missing,
+unsafe or changed inputs. It copies the exact checked bytes to a fresh private
+run-owned snapshot and re-hashes the copies. A refusal names the input kind,
+never file text. Pass `brief.inputs.tasks_snapshot` unchanged to the executor.
+The executor consumes spec.md, plan.md and checklist reports only through
+`read-tasks-inputs` and uses the returned text. Pass
+`brief.inputs.tasks_output` unchanged: the executor generates tasks.md only in
+its snapshot_dir. On successful return, call `publish-tasks-output`, mode apply,
+with `inputs=brief.inputs.tasks_output` before after_Tasks hooks and G5.
+Pass `brief.inputs.defer_after_hooks=true`: the executor defers every
+mandatory and optional after_tasks hook. A publication refusal keeps hooks,
+G5 and completion blocked; retain the snapshot and escalate. A successful
+`status=ok` with `data.after_hooks_ready=true` permits this bound-consumer handoff:
+
+1. Retain `data.tasks_binding` unchanged (`text` and `sha256` captured from the
+   executor snapshot). It binds bytes, not future reads of the live pathname.
+2. Before each deferred mandatory hook or confirmed optional after_tasks hook,
+   call `helper_id=read-tasks-output operation=read-tasks-output mode=read_only`
+   with `tasks_binding=<publisher data.tasks_binding unchanged>`. Pass the
+   successful returned `data.text` and `data.sha256` as the hook's Tasks input.
+   The hook consumes that text directly. A hook requiring a pathname must use
+   the same helper with `live_path=<feature-dir>/tasks.md` and use its returned
+   text; a mismatch refuses. A hook that cannot consume this interface remains
+   blocked; do not invoke it with unrestricted live-path access.
+3. Call `validate-gate` for G5 with `feature_dir` and the unchanged
+   `tasks_binding`. G5 checks the binding and evaluates that text for task
+   entries, gate-task loops and empty coverage rows. Record `tasks_sha256`.
+4. Complete Tasks after required hooks and G5 succeed. Preserve the binding
+   for every later Tasks read in this handoff; any live-path read goes through
+   `read-tasks-output` with `live_path` and refuses a digest mismatch.
+
+The runner publishes through the G4-bound directory descriptor. Snapshot
+consumption or publication failure is a blocker; the live feature path is
+never an executor write destination.
+Return to Checklist/G4 under the existing repair policy; neither host may
+spawn the Tasks executor without a successful checked brief.
+
 Read the workflow file's `### Tasks Prompt` section.
-Spawn a subagent.
+Spawn a subagent from the successful Tasks brief.
 
 **Gate:** G5 — cross-reference every FR in spec.md with
 tasks.md
@@ -3638,7 +3695,12 @@ Hooks are configured in `.specify/extensions.yml`.
 
 **Who runs a hook.** The loaded Spec Kit command runs the mandatory hooks
 (`optional: false`) of its own `before_` and `after_` events, so for Specify,
-Plan, Checklist, Tasks and Analyze the orchestrator never dispatches one.
+Plan, Checklist and Analyze the orchestrator never dispatches one. Tasks
+runs its mandatory before_tasks hooks in the command, but the runner brief
+sets `defer_after_hooks=true`: the executor defers all after_tasks hooks to
+the parent. Follow the bound-consumer handoff in Phase 5: Tasks for every
+mandatory or confirmed optional after_tasks hook, then G5. Publication or
+consumption refusal blocks completion and retains the snapshot for repair.
 `brief.hooks` lists optional suggestions with their event, optional marker,
 prompt and description. Present only the runner-owned prompt and description,
 along with the validated extension, command and event. Use only runner-listed
@@ -3687,7 +3749,8 @@ error recovery, never by guessing.
 for each phase:
   1. Apply optional-hook confirmation or skip before_<phase> hooks
   2. Spawn subagent for the phase (the loaded command runs its mandatory hooks)
-  3. Receive result
+  3. Receive result; Tasks attempts publication, retains its snapshot and
+     uses the Phase 5 bound-consumer handoff on success; refusals keep hooks deferred
   4. Apply optional-hook confirmation or skip after_<phase> hooks; record runs
      and skips in the decisions list (workflow file for Clarify and Implement)
   5. Validate gate
@@ -3710,14 +3773,14 @@ for each phase:
    and after_implement have hooks. Extensions may register
    hooks for any event. Use `brief.hooks` for optional suggestions;
    project display fields are excluded from confirmation. Inspect
-   `.specify/extensions.yml` only for mandatory Clarify and Implement hooks.
+   `.specify/extensions.yml` only for mandatory Clarify, Implement and deferred after_tasks hooks.
 
 **Hook `optional` field behavior:**
 - `optional: true` (also the default when omitted) — require explicit
   operator confirmation at the registered event window. If the host has no
   usable confirmation tool or the run is unattended, skip and record why.
 - `optional: false` — The hook is mandatory. The loaded command runs it;
-  the orchestrator runs it only for Clarify and Implement.
+  the orchestrator runs it for Clarify, Implement and deferred after_tasks hooks.
 - `enabled: false` — The hook is disabled. Skip it entirely.
 
 ### Preset-Aware Phase Execution

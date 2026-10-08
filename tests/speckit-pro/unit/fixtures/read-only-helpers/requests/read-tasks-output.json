@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "helper_id": "read-tasks-output",
+  "operation": "read-tasks-output",
+  "mode": "read_only",
+  "inputs": {
+    "tasks_binding": {
+      "text": "<captured-text-from-publisher>",
+      "sha256": "<sha256-from-publisher>"
+    }
+  }
+}
