@@ -25,7 +25,7 @@ sys.path.insert(0, str(REPO_ROOT / "speckit-pro"))
 
 from speckit_pro_runner.helpers import readiness_record  # noqa: E402
 from host_skill_views import host_skill_root  # noqa: E402
-from readiness_case import readiness_request  # noqa: E402
+from readiness_case import current_plugin_revision, readiness_request  # noqa: E402
 from runner_invocation import assert_runner_response, run_runner  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
@@ -76,7 +76,7 @@ class ReadinessRecordTest(unittest.TestCase):
     def test_writer_records_verified_unavailable_and_unknown_items_with_fingerprints(self) -> None:
         (self.root / ".specify" / "constitution.md").write_text("principles\n", encoding="utf-8")
         observations = [
-            observation("plugin_payload", values={"revision": "2.40.0"}),
+            observation("plugin_payload", values={"revision": current_plugin_revision()}),
             observation("project_integration", files=[".specify/constitution.md", ".specify/missing.md"]),
             observation("github_auth", "unavailable"),
             observation("mcp_servers", "unknown"),
@@ -221,7 +221,7 @@ class ReadinessRecordTest(unittest.TestCase):
                 assert_runner_response(self, response, "input_error", 2)
                 self.assertFalse(self.record_path().exists())
 
-        response = self.run_helper([observation("plugin_payload", values={"revision": "2.40.0"}),
+        response = self.run_helper([observation("plugin_payload", values={"revision": current_plugin_revision()}),
                                     observation("reviewability_report", files=[".specify/roadmap.md"],
                                                 values={"spec_id": "TEST-001"})])
         assert_runner_response(self, response, "ok", 0)

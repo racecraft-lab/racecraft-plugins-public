@@ -2,17 +2,24 @@
 
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
 
 from host_skill_views import host_skill_root
-from runner_invocation import assert_runner_response, run_runner
+from runner_invocation import PLUGIN_ROOT, assert_runner_response, run_runner
+
+
+def current_plugin_revision() -> str:
+    """The executing runner manifest owns the revision for valid readiness fixtures."""
+    manifest = PLUGIN_ROOT / "speckit_pro_runner/speckit-pro-runner.manifest.json"
+    return json.loads(manifest.read_text(encoding="utf-8"))["plugin_version"]
 
 
 def readiness_request(observations: list[dict[str, object]], host: str = "claude", request_id: str = "test-readiness",
                       mode: str = "apply", **inputs: object) -> dict[str, object]:
-    body = {"host": host, "execution_mode": "interactive", "plugin_revision": "2.40.0",
+    body = {"host": host, "execution_mode": "interactive", "plugin_revision": current_plugin_revision(),
             "observations": observations, **inputs}
     return {"schema_version": "1.0", "request_id": request_id, "helper_id": "write-readiness-record",
             "operation": "write-readiness-record", "mode": mode, "inputs": body}

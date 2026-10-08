@@ -25,6 +25,7 @@ from speckit_pro_runner.helpers import readiness_record
 from speckit_pro_runner.agent_materialization import digest
 from speckit_pro_runner.helpers.read_only import resolve_autopilot_stage, trusted_bytes
 from guide_text import guide_text, host_source
+from readiness_case import current_plugin_revision
 from test_result import run_counted
 
 
@@ -339,7 +340,7 @@ class ArtifactReviewTests(_ReviewFixture):
 
     def readiness(self, host: str, status: str, action: str | None = "Run autopilot where a preview pane exists.") -> dict:
         """A record shaped like the writer's, so only the field under test differs."""
-        inputs = {"host": host, "host_version": "2.1.0", "execution_mode": "interactive", "plugin_revision": "2.40.0",
+        inputs = {"host": host, "host_version": "2.1.0", "execution_mode": "interactive", "plugin_revision": current_plugin_revision(),
                   "observations": [{"item": "preview_surface", "status": status, "evidence_source": "session tools",
                                     "values": {"surface": "pane"}, **({"action": action or "Rerun scaffold."} if status != "verified" else {})}]}
         with unittest.mock.patch.object(readiness_record.shutil, "which", return_value=None):
