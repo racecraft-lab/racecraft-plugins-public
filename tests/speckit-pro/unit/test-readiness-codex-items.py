@@ -12,7 +12,7 @@ TEST_DIR = Path(__file__).resolve().parent
 LIB_DIR = TEST_DIR.parent / "lib"
 sys.path.insert(0, str(LIB_DIR))
 
-from readiness_case import ReadinessCase, scaffold_step  # noqa: E402
+from readiness_case import current_plugin_revision, ReadinessCase, scaffold_step  # noqa: E402
 from runner_invocation import assert_runner_response  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
@@ -25,7 +25,7 @@ STALE = [{"agent": "analyze-executor", "state": "stale", "repair": "none"},
 
 
 def agents(inventory: list[dict[str, str]], installation: dict[str, object] | None = None,
-           loaded: str | None = "2.40.0", expected: str = "2.40.0") -> dict[str, object]:
+           loaded: str | None = current_plugin_revision(), expected: str = current_plugin_revision()) -> dict[str, object]:
     value: dict[str, object] = {"installation": STATIC if installation is None else installation,
                                 "inventory": inventory, "expected_revision": expected}
     if loaded is not None:
