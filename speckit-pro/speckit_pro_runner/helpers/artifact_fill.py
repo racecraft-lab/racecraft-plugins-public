@@ -27,7 +27,7 @@ PLANNING = {"plan": ("plan_file", True), "spec": ("spec_file", True), "tasks": (
 NARRATIVE_LIMIT = 1200
 LIFT_LIMIT = 600
 NOT_RECORDED = "Not recorded in the planning files."
-PROSE_START = re.compile(r"(?![-*+]\s)[A-Za-z0-9`\"(*_]")
+PROSE_START = re.compile(r"(?![-*+]\s|\d+\.\s)[A-Za-z0-9`\"(*_]")
 TASK = re.compile(r"^\s*[-*] \[[ xX]\] (T\d+)\s+(?:\[[^\]]*\]\s*)*(.+)$")
 QUESTION = re.compile(r"^Q:\s*(.+?)\s*(?:→|->)\s*A:\s*(.+)$")
 CRITERION = re.compile(r"^\*\*(SC-\d+)\*\*:?\s*(.*)$", re.DOTALL)
@@ -250,7 +250,8 @@ REGIONS: dict[str, Callable[[Page], str]] = {
     "document-title": lambda page: f"<title>{escaped(page.kind)} — {escaped(page.feature)} {escaped(page.name)}</title>",
     "feature-header": header, "plan-stats": plan_stats, "phases": phases, "task-inventory": task_inventory,
     "data-flow": lambda page: ('<figure class="flow"><figcaption>'
-                               + page.prose("data-flow", lead(section(page.texts["plan"], "Summary"), 1))
+                               + page.prose("data-flow", lead(section(page.texts["plan"], "Summary"), 1)
+                                            or lead(section(page.texts["plan"], "Technical Context")))
                                + "</figcaption></figure>"),
     "mockups": lambda page: page.prose("mockups", lead(section(page.texts["design"], "Interface"))
                                        or "The planning files record no interface sketch."),
@@ -258,8 +259,7 @@ REGIONS: dict[str, Callable[[Page], str]] = {
     "tldr": lambda page: '<div class="tldr">' + page.prose("tldr", lead(section(page.texts["spec"], "User Story"))) + "</div>",
     "goals": goals, "non-goals": non_goals, "acceptance-criteria": acceptance, "clarification-faq": faq,
     "approaches": approaches, "recommendation": recommendation,
-    "module-summary": lambda page: page.prose("module-summary", lead(section(page.texts["plan"], "Summary"), 1),
-                                              "summary"),
+    "module-summary": lambda page: page.prose("module-summary", lead(section(page.texts["plan"], "Summary")), "summary"),
     "module-graph": module_graph, "modules": modules, "key-files": key_files,
 }
 
