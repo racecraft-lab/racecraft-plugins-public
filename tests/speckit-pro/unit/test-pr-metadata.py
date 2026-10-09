@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import subprocess
 import copy
 import io
 import json
@@ -12,6 +11,7 @@ import sys
 import unittest
 from contextlib import redirect_stderr
 from pathlib import Path
+from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -26,11 +26,7 @@ dispatch = load_script(
 
 class ManualMetadataDispatchTests(unittest.TestCase):
     def test_release_dispatch_supplies_only_the_pr_number(self) -> None:
-        calls: list[list[str]] = []
-
-        def run(argv, **kwargs):
-            calls.append(list(argv))
-            return subprocess.CompletedProcess(argv, 0)
+        run = mock.Mock()
 
         dispatch.dispatch_release_pr_checks(
             [{"branch": "release-branch", "number": "302", "title": "stale title"}],
@@ -42,7 +38,7 @@ class ManualMetadataDispatchTests(unittest.TestCase):
                 "gh", "workflow", "run", "pr-metadata.yml", "--ref",
                 "release-branch", "-f", "pr_number=302",
             ],
-            calls[1],
+            run.call_args_list[1].args[0],
         )
 
 
