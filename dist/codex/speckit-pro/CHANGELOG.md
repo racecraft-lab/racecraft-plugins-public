@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.42.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.41.0...speckit-pro-v2.42.0) (2026-10-09)
+
+
+### Features
+
+* **speckit-pro:** the runner fills artifact pages and one dispatch writes their narrative ([#1290](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1290)) ([4729e65](https://github.com/racecraft-lab/racecraft-plugins-public/commit/4729e659c9948f28ec16d9941468b0b56ce7e5fc)), closes [#1190](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1190)
+
 ## [2.41.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.40.0...speckit-pro-v2.41.0) (2026-10-08)
 
 
