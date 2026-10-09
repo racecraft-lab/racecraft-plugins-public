@@ -3546,27 +3546,17 @@ retry it and do not route it into the report as a freshness outcome.
 bookkeeping, reply, and push cadence.** Its `amended` rows are not ancestors of
 the last artifacts commit, so the verdict is `stale` by construction. A later
 resumed run runs it the same way when its verdict is `stale`.
-<!-- host:claude: Claude dispatches the agent with the Agent tool and a namespaced subagent type -->
-A `stale` verdict re-dispatches the shipped `speckit-pro:artifact-author` agent
-against the committed planning record and runs this sequence:
-<!-- /host -->
-<!-- host:codex: Codex dispatches the installed agent with spawn_agent and bounded wait_agent polls -->
-A `stale` verdict regenerates through the installed `artifact-author` agent:
-<!-- /host -->
+A `stale` verdict regenerates the pages the way the draft-PR emission sequence
+first generated them, against the committed planning record, and runs this
+sequence:
 
 ```text
 0. Invalidate the private sweep session, and confirm every amendment commit is
    pushed.
 1. Evaluate freshness through the `verdict` surface.
-<!-- host:claude: Claude dispatches the agent with the Agent tool and a namespaced subagent type -->
-2. On `stale`, re-dispatch `speckit-pro:artifact-author` against the committed
-   planning record.
-<!-- /host -->
-<!-- host:codex: Codex dispatches the installed agent with spawn_agent and bounded wait_agent polls -->
-2. On `stale`, one `spawn_agent` call on `artifact-author` against the committed
-   planning record, then a bounded `wait_agent` loop until its outcome list
-   arrives.
-<!-- /host -->
+2. On `stale`, run Step 1a (the runner fills every selected page) and then
+   Step 1b (one `artifact-author` narrative dispatch) of the draft-PR emission
+   sequence against the committed planning record.
 3. Compute the removal set through the `removal_diff` surface, and delete
    those files.
 3b. Delete the superseded file behind each per-page gap. Skipped entirely on
@@ -3582,8 +3572,8 @@ A `stale` verdict regenerates through the installed `artifact-author` agent:
 <!-- host:codex: Codex resolves agents by bare installed name -->
 **Name the agent by its bare installed name**, exactly as the plan-stage
 dispatch above does, and hand it the same inputs: the feature's planning
-record and the shipped gallery. Codex resolves it from the installed agent
-bundle, so it carries no namespace prefix.
+record, the filled page IDs, and the shipped gallery. Codex resolves it from
+the installed agent bundle, so it carries no namespace prefix.
 <!-- /host -->
 
 **Step 0 is a security boundary.** The `artifact-author` worker in step 2 is
@@ -3600,9 +3590,10 @@ record**, never the page list the previous run happened to produce. A run that
 regenerates decides its page set the same way a first generation does.
 
 **Every selected page is authored fresh.** No page is patched, diffed, or
-partially updated, and there is no second page-authoring path: the dispatch,
-its per-page `generated` and `gap` outcomes, and its on-disk verification are
-the ones the draft-PR emission sequence above describes.
+partially updated, and there is no second page-authoring path: the runner fill,
+the narrative dispatch, their per-page `generated` and `gap` outcomes, and the
+on-disk verification are the ones the draft-PR emission sequence above
+describes.
 
 #### Phase 7 Setup: Freshness Runs on Every Sweep Leg
 
@@ -3635,9 +3626,9 @@ reserved for a page re-selection no longer selects.
 
 **The ground is the one the on-disk verification above already gives** for
 deleting a page that fails its two tests: a plausible-looking document about a
-plan that is not this one is worse than no document at all. A page the author
-declined to rewrite is that same hazard one degree sharper, because it is
-about the right feature and the wrong, superseded plan.
+plan that is not this one is worse than no document at all. A page the runner
+could not refill is that same hazard one degree sharper, because it is about
+the right feature and the wrong, superseded plan.
 
 **The exclusion is explicit: a whole-set gap deletes nothing.** Step 3b is
 skipped in its entirety there, and the directory is left unmoved.

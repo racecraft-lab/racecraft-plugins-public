@@ -102,10 +102,20 @@ class FallbackAndNarrativeTests(FillFixture):
                     self.assertEqual(REGION.sub("", page), REGION.sub("", template))
                     for name, body in REGION.findall(page):
                         self.assertEqual(_active_content(body.encode()), [], name)
+                    self.assertFalse([banner for banner in ('class="sample-notice"', 'class="notice"', 'class="note"')
+                                      if banner in page])
                     self.assertTrue(data["narrative_slots"])
                     for slot in data["narrative_slots"]:
                         self.assertIn(slot["slot"], dict(REGION.findall(page)))
                         self.assertTrue(slot["fallback"])
+
+    def test_planning_markup_lands_as_escaped_text(self) -> None:
+        tasks = self.root / FEATURE / "tasks.md"
+        tasks.write_text('## Phase 1: <img src=x onerror="alert(1)">\n\n- [ ] T001 Ship <b>it</b>\n', encoding="utf-8")
+        regions = self.regions("implementation-plan")
+        self.assertIn("&lt;img src=x onerror=&quot;alert(1)&quot;&gt;", regions["phases"])
+        self.assertIn('<p class="what">1 task</p>', regions["phases"])
+        self.assertEqual([], [name for name, body in regions.items() if _active_content(body.encode())])
 
     def test_narrative_lands_as_escaped_text_in_its_slot(self) -> None:
         regions = self.regions("spec-explainer", narrative={"tldr": "<script>alert(1)</script> Plain & short."})

@@ -82,16 +82,22 @@ def bullets(lines: Iterable[str]) -> list[str]:
     """Top-level list items with their wrapped continuation lines, Markdown kept."""
     items: list[str] = []
     for line in lines:
-        if re.match(r"[-*+]\s", line):
-            items.append(line[2:].strip())
+        marker = re.match(r"(?:[-*+]|\d+\.)\s", line)
+        if marker:
+            items.append(line[marker.end():].strip())
         elif items and line.startswith(" ") and line.strip():
             items[-1] += " " + line.strip()
     return items
 
 
 def lead(lines: Iterable[str], index: int = 0) -> str:
+    """The `index`-th prose paragraph, or nothing; a missing paragraph is never borrowed from another."""
     found = paragraphs(lines)
-    return clip(found[min(index, len(found) - 1)]) if found else ""
+    return clip(found[index]) if index < len(found) else ""
+
+
+def counted(number: int, noun: str) -> str:
+    return f"{number} {noun}" + ("" if number == 1 else "s")
 
 
 @dataclasses.dataclass
@@ -109,7 +115,7 @@ class Page:
         """One prose slot: the narrative text when written, else the lifted fallback."""
         self.slots[slot] = fallback or NOT_RECORDED
         attribute = f' class="{css}"' if css else ""
-        return f"<p{attribute}>{text(self.narrative.get(slot, self.slots[slot]))}</p>"
+        return f"<p{attribute}>{escaped(self.narrative.get(slot, self.slots[slot]))}</p>"
 
     def anchor(self, prefix: str, label: str) -> str:
         base = f"{prefix}-{re.sub(r'[^a-z0-9]+', '-', label.lower()).strip('-') or 'item'}"
@@ -130,7 +136,7 @@ class Page:
         return groups
 
 
-def text(value: str) -> str:
+def escaped(value: str) -> str:
     return escape(value, quote=True)
 
 
@@ -139,8 +145,8 @@ def listing(items: list[str], opening: str, closing: str) -> str:
 
 
 def header(page: Page) -> str:
-    return (f'<p class="eyebrow"><span id="feature-id">{text(page.feature)}</span> · draft pull request</p>'
-            f'<h1 id="feature-name">{text(page.name)}</h1>'
+    return (f'<p class="eyebrow"><span id="feature-id">{escaped(page.feature)}</span> · draft pull request</p>'
+            f'<h1 id="feature-name">{escaped(page.name)}</h1>'
             + page.prose("feature-header", lead(section(page.texts["plan"], "Summary")), "lede"))
 
 
@@ -148,18 +154,18 @@ def plan_stats(page: Page) -> str:
     size = SIZE.search(page.texts["spec"] + page.texts["plan"])
     rows = (("Phases", len(page.phases())), ("Files touched", len(declared_file_entries(page.texts["plan"]))),
             ("Projected size", f"{size[1]} lines" if size else "not recorded"), ("Behind flag", "none recorded"))
-    return listing([f'<div class="stat"><dt>{label}</dt><dd>{text(str(value))}</dd></div>' for label, value in rows],
+    return listing([f'<div class="stat"><dt>{label}</dt><dd>{escaped(str(value))}</dd></div>' for label, value in rows],
                    '<dl class="stats">', "</dl>")
 
 
 def phases(page: Page) -> str:
-    return "".join(f'<div class="milestone" id="{page.anchor("phases", title)}"><h3>{text(title)}</h3>'
-                   f'<p class="what">{len(tasks)} tasks</p></div>' for title, tasks in page.phases()) or listing([], "", "")
+    return "".join(f'<div class="milestone" id="{page.anchor("phases", title)}"><h3>{escaped(title)}</h3>'
+                   f'<p class="what">{counted(len(tasks), "task")}</p></div>' for title, tasks in page.phases()) or listing([], "", "")
 
 
 def task_inventory(page: Page) -> str:
-    panels = [f'<div class="task-panel"><h3>{text(title)}</h3><p class="task-count">{len(tasks)} tasks</p>'
-              + listing([f'<li><span class="task-id">{text(task)}</span>{text(clip(body))}</li>' for task, body in tasks],
+    panels = [f'<div class="task-panel"><h3>{escaped(title)}</h3><p class="task-count">{counted(len(tasks), "task")}</p>'
+              + listing([f'<li><span class="task-id">{escaped(task)}</span>{escaped(clip(body))}</li>' for task, body in tasks],
                         '<ul class="task-list">', "</ul>") + "</div>" for title, tasks in page.phases()]
     return listing(panels, '<div class="task-grid">', "</div>")
 
@@ -169,31 +175,31 @@ def risk_register(page: Page) -> str:
     for item in bullets(section(page.texts["spec"], "Edge Cases")):
         match = LEAD.match(item)
         risk, handling = (match[1], match[2]) if match else (item, "")
-        rows.append(f'<tr><th scope="row">{text(clip(plain(risk)))}</th><td>Not rated</td>'
-                    f"<td>{text(clip(plain(handling)) or NOT_RECORDED)}</td></tr>")
+        rows.append(f'<tr><th scope="row">{escaped(clip(plain(risk)))}</th><td>Not rated</td>'
+                    f"<td>{escaped(clip(plain(handling)) or NOT_RECORDED)}</td></tr>")
     return listing(rows, '<table class="risks"><thead><tr><th scope="col">Risk</th><th scope="col">Severity</th>'
                    '<th scope="col">Mitigation</th></tr></thead><tbody>', "</tbody></table>")
 
 
 def goals(page: Page) -> str:
     stories = [match[1] for name, _ in sections(page.texts["spec"]) if (match := STORY.match(name))]
-    return listing([f"<li>{text(story)}</li>" for story in stories], '<ul class="points">', "</ul>")
+    return listing([f"<li>{escaped(story)}</li>" for story in stories], '<ul class="points">', "</ul>")
 
 
 def non_goals(page: Page) -> str:
     items = bullets(section(page.texts["spec"], "Out of Scope")) or bullets(section(page.texts["design"], "Non-goals"))
-    return listing([f"<li>{text(clip(plain(item)))}</li>" for item in items], '<ul class="points">', "</ul>")
+    return listing([f"<li>{escaped(clip(plain(item)))}</li>" for item in items], '<ul class="points">', "</ul>")
 
 
 def acceptance(page: Page) -> str:
     criteria = [match for item in bullets(section(page.texts["spec"], "Success Criteria")) if (match := CRITERION.match(item))]
-    return listing([f'<details><summary>{text(match[1])}</summary><div class="body"><p>{text(clip(plain(match[2])))}'
+    return listing([f'<details><summary>{escaped(match[1])}</summary><div class="body"><p>{escaped(clip(plain(match[2])))}'
                     "</p></div></details>" for match in criteria], "", "")
 
 
 def faq(page: Page) -> str:
     pairs = [match for item in bullets(section(page.texts["spec"], "Clarifications")) if (match := QUESTION.match(plain(item)))]
-    return listing([f"<dt>{text(match[1])}</dt><dd>{text(clip(match[2]))}</dd>" for match in pairs],
+    return listing([f"<dt>{escaped(match[1])}</dt><dd>{escaped(clip(match[2]))}</dd>" for match in pairs],
                    '<dl class="faq">', "</dl>")
 
 
@@ -210,8 +216,8 @@ def decisions(page: Page) -> list[tuple[str, str, list[str]]]:
 
 def approaches(page: Page) -> str:
     return "".join(f'<article class="approach" id="{page.anchor("approaches", title)}"><header class="approach-head">'
-                   f"<h3>{text(title)}</h3><p>{text(clip(chosen) or NOT_RECORDED)}</p></header>"
-                   + listing([f'<li class="chip">{text(clip(item))}</li>' for item in options], '<ul class="chips">', "</ul>")
+                   f"<h3>{escaped(title)}</h3><p>{escaped(clip(chosen) or NOT_RECORDED)}</p></header>"
+                   + listing([f'<li class="chip">{escaped(clip(item))}</li>' for item in options], '<ul class="chips">', "</ul>")
                    + "</article>" for title, chosen, options in decisions(page)) or listing([], "", "")
 
 
@@ -220,26 +226,28 @@ def recommendation(page: Page) -> str:
 
 
 def module_graph(page: Page) -> str:
-    rows = [f"<li>{text(directory)}: {len(files)} files</li>" for directory, files in page.modules().items()]
-    return ('<figure class="graph"><figcaption>' + page.prose("module-graph", lead(section(page.texts["plan"], "Summary"), 1))
+    groups = page.modules()
+    rows = [f"<li>{escaped(directory)}: {counted(len(files), 'file')}</li>" for directory, files in groups.items()]
+    caption = f"The change touches {counted(len(groups), 'module')}, one per directory below." if groups else ""
+    return ('<figure class="graph"><figcaption>' + page.prose("module-graph", caption)
             + "</figcaption>" + listing(rows, "<ul>", "</ul>") + "</figure>")
 
 
 def modules(page: Page) -> str:
     return "".join(f'<div class="module" id="{page.anchor("modules", directory)}"><div class="module-body">'
-                   f'<p class="module-loc">{text(directory)}</p><h3>{text(directory)}</h3><p class="what">'
-                   + text(", ".join(f"{status.lower()} {Path(path).name}" for status, path in files)) + "</p></div></div>"
+                   f'<p class="module-loc">{escaped(directory)}</p><h3>{escaped(directory)}</h3><p class="what">'
+                   + escaped(", ".join(f"{status.lower()} {Path(path).name}" for status, path in files)) + "</p></div></div>"
                    for directory, files in page.modules().items()) or listing([], "", "")
 
 
 def key_files(page: Page) -> str:
     files = sorted(declared_file_entries(page.texts["plan"]), key=lambda entry: entry[0] != "MODIFIED")
-    return listing([f'<li><span class="path">{text(path)}</span><span class="desc">{status.capitalize()} file</span></li>'
+    return listing([f'<li><span class="path">{escaped(path)}</span><span class="desc">{status.capitalize()} file</span></li>'
                     for status, path in files], '<div class="panel"><ul class="key-files">', "</ul></div>")
 
 
 REGIONS: dict[str, Callable[[Page], str]] = {
-    "document-title": lambda page: f"<title>{text(page.kind)} — {text(page.feature)} {text(page.name)}</title>",
+    "document-title": lambda page: f"<title>{escaped(page.kind)} — {escaped(page.feature)} {escaped(page.name)}</title>",
     "feature-header": header, "plan-stats": plan_stats, "phases": phases, "task-inventory": task_inventory,
     "data-flow": lambda page: ('<figure class="flow"><figcaption>'
                                + page.prose("data-flow", lead(section(page.texts["plan"], "Summary"), 1))
@@ -250,7 +258,8 @@ REGIONS: dict[str, Callable[[Page], str]] = {
     "tldr": lambda page: '<div class="tldr">' + page.prose("tldr", lead(section(page.texts["spec"], "User Story"))) + "</div>",
     "goals": goals, "non-goals": non_goals, "acceptance-criteria": acceptance, "clarification-faq": faq,
     "approaches": approaches, "recommendation": recommendation,
-    "module-summary": lambda page: page.prose("module-summary", lead(section(page.texts["plan"], "Summary")), "summary"),
+    "module-summary": lambda page: page.prose("module-summary", lead(section(page.texts["plan"], "Summary"), 1),
+                                              "summary"),
     "module-graph": module_graph, "modules": modules, "key-files": key_files,
 }
 
@@ -272,6 +281,9 @@ def render(page: Page, entry_id: str) -> str:
     kind = re.search(r"<title>([^<]*?) —", source)
     page.kind = kind[1] if kind else page.kind
     page.guidance = {slot: " ".join(fills.split()) for slot, fills in SLOT.findall(source)}
+    missing = {name for name, _ in artifact_publication.REGION.findall(source)} - set(REGIONS)
+    if missing:
+        raise ValueError(f"the runner has no filler for template regions: {', '.join(sorted(missing))}")
     filled = artifact_publication.REGION.sub(
         lambda match: f"<!-- FILL:{match[1]}:START -->\n{REGIONS[match[1]](page)}\n<!-- FILL:{match[1]}:END -->", source)
     if set(page.narrative) - set(page.slots):
