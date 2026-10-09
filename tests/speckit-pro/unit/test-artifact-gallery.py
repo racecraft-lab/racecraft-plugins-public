@@ -95,6 +95,7 @@ def narrative_contract_errors(value: str) -> list[str]:
         "Invoke the loaded runner's `fill-artifact-page` helper in `dry_run` mode",
         "Invoke `fill-artifact-page` again in `apply` mode with the same inputs plus `narrative`",
         "Send plain text. The runner escapes every character and wraps the text in the page's markup",
+        "markup or Markdown you send shows on the page as literal characters",
     )
     return [clause for clause in required if clause not in policy]
 
@@ -141,9 +142,10 @@ def contract_errors(value: str) -> list[str]:
 
 class ArtifactGalleryTests(unittest.TestCase):
     def test_author_roles_write_plain_narrative_through_the_runner(self) -> None:
-        for path in ("agents/artifact-author.md", "codex-agents/artifact-author.toml"):
-            with self.subTest(path=path):
-                self.assertEqual([], narrative_contract_errors(read(REPO_ROOT / "speckit-pro" / path)))
+        # The runner escapes narrative text (test-artifact-page-fill.py); no author writes markup.
+        authors = ("agents/artifact-author.md", "codex-agents/artifact-author.toml")
+        self.assertEqual({path: [] for path in authors},
+                         {path: narrative_contract_errors(read(REPO_ROOT / "speckit-pro" / path)) for path in authors})
 
     def test_narrative_contract_guard_rejects_a_dropped_clause(self) -> None:
         for path in ("agents/artifact-author.md", "codex-agents/artifact-author.toml"):
@@ -235,14 +237,6 @@ class GalleryGuidanceTests(unittest.TestCase):
             text = " ".join(read(REPO_ROOT / "speckit-pro" / path).split())
             with self.subTest(path=path):
                 self.assertTrue(PLANNED_RULE in text, f"{path} does not state the planned-entry rule")
-
-    def test_both_author_hosts_leave_markup_and_escaping_to_the_runner(self) -> None:
-        # The runner escapes narrative text (test-artifact-page-fill.py); no author writes markup.
-        for path in ("agents/artifact-author.md", "codex-agents/artifact-author.toml"):
-            text = " ".join(read(REPO_ROOT / "speckit-pro" / path).split())
-            with self.subTest(path=path):
-                self.assertIn("markup or Markdown you send shows on the page as literal characters", text)
-                self.assertNotIn("Write only between a `START` marker and its matching `END`", text)
 
     def test_contract_names_the_suite_that_enforces_each_rule(self) -> None:
         text = " ".join(read(GALLERY / "SPA-CONTRACT.md").split())

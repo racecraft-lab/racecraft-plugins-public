@@ -307,6 +307,12 @@ def variant_failures(variant):
     for key, passed in conditions.items():
         if not passed:
             failures.append(f"{variant['name']}.{key}")
+    return failures + stage_failures(variant)
+
+
+def stage_failures(variant):
+    """Stage timings are finite; artifact author time fits inside its stage (ADR 0019)."""
+    failures = []
     for name, stage in variant["stages"].items():
         if not math.isfinite(stage["wall_seconds"]):
             failures.append(f"{variant['name']}.{name}.wall_seconds")

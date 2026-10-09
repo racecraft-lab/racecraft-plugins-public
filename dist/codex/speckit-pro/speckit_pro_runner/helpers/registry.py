@@ -765,6 +765,12 @@ def mutation_registry_report() -> dict[str, Any]:
     }
 
 
+# Artifact page writers: the runner fills a page, or publishes one a caller rendered (ADR 0019).
+ARTIFACT_PAGE_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
+    "fill-artifact-page": run_artifact_fill_helper,
+    "publish-artifact-page": run_artifact_publication_helper,
+}
+
 # Helpers with their own response contracts share one dispatch path.
 SPECIAL_HELPER_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
     "select-artifact-pages": run_artifact_selection_helper,
@@ -909,11 +915,8 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
     if entry.helper_id == "write-readiness-record":
         return run_readiness_record_helper(entry, request)
 
-    if entry.helper_id == "publish-artifact-page":
-        return run_artifact_publication_helper(entry, request)
-
-    if entry.helper_id == "fill-artifact-page":
-        return run_artifact_fill_helper(entry, request)
+    if entry.helper_id in ARTIFACT_PAGE_HANDLERS:
+        return ARTIFACT_PAGE_HANDLERS[entry.helper_id](entry, request)
 
     if entry.helper_id == "propose-quality-gates":
         return run_quality_gates_proposal_helper(entry, request)
