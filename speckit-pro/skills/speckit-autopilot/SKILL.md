@@ -1519,7 +1519,10 @@ descriptor as `publish-artifact-page`. A non-`ok` selection is a whole-set
 artifact gap under the existing fail-open reporting protocol. Then one
 artifact-author dispatch writes the narrative of the filled pages through
 `fill-artifact-page`; the author never touches `artifacts/` with a native tool,
-and a failed dispatch leaves the runner's pages in place.
+and a failed dispatch leaves the runner's pages in place. Publication failures
+return `data.retained_page` only when the previous page is verified at its
+canonical path. The author consumes that receipt as its agent instructions
+describe; restoration uncertainty remains a gap.
 
 <!-- host:claude: Claude supplies inputs through the Agent tool's prompt -->
 Pass those planning inputs and the filled page IDs in the
