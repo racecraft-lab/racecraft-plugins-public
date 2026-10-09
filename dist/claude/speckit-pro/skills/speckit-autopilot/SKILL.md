@@ -1070,19 +1070,21 @@ not reconstruct those contracts from this entrypoint.
 
 ### Artifact page selection
 
-At every artifact-author dispatch, including regeneration, pass the current
-plan and the optional research and design-concept paths inside the established
-workflow root. Require the author to invoke the loaded runner's
-`select-artifact-pages` helper in `read_only` mode before filling templates,
-per its agent instructions. The helper owns selection; the author consumes
-`selected_pages` in returned order and reports one outcome per selected page.
-A non-`ok` selection is a whole-set artifact gap under the existing fail-open
-reporting protocol. The author publishes each page only through the runner's
-`publish-artifact-page` helper, which performs every artifact file operation
-through one held directory descriptor; the author never touches `artifacts/`
-with a native tool.
+At every artifact generation, including regeneration, the runner builds the
+pages. Invoke the loaded runner's `select-artifact-pages` helper in `read_only`
+mode with the current plan and the optional research and design-concept paths
+inside the established workflow root, then its `fill-artifact-page` helper in
+`apply` mode once per entry in `selected_pages`, in returned order. The runner
+fills every region from the planning files, gives each prose slot a lifted-text
+fallback, validates the page, and publishes it through the same held directory
+descriptor as `publish-artifact-page`. A non-`ok` selection is a whole-set
+artifact gap under the existing fail-open reporting protocol. Then one
+artifact-author dispatch writes the narrative of the filled pages through
+`fill-artifact-page`; the author never touches `artifacts/` with a native tool,
+and a failed dispatch leaves the runner's pages in place.
 
-Pass those planning inputs in the `speckit-pro:artifact-author` Agent prompt.
+Pass those planning inputs and the filled page IDs in the
+`speckit-pro:artifact-author` Agent prompt.
 
 ## Step 3: Post-Implementation
 

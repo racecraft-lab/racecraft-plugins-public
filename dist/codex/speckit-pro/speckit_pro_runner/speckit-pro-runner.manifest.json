@@ -532,6 +532,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/artifact_fill.py",
+        "display": "speckit_pro_runner/helpers/artifact_fill.py"
+      },
+      "sha256": "9752ad8a6860b73bc407dc962900b0d4c1b1970a3b9995626d5987a30ce18fa2"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/helpers/artifact_publication.py",
         "display": "speckit_pro_runner/helpers/artifact_publication.py"
       },
@@ -759,7 +767,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "1993f3beb6f50e453ca7347487d2ac7e2d855be864769fefeaeb569ca18ef558"
+      "sha256": "524cb440e5d9d502f2b18e95abe582d60b4989502f088a81a0a8f82e497f7e5d"
     },
     {
       "path": {
