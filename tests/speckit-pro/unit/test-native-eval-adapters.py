@@ -57,6 +57,32 @@ NATIVE_CODEX_SANDBOX_PROBES = (
 )
 
 
+@contextmanager
+def owned_git_fixture(root: Path):
+    """Keep real Git ownership valid even when a user namespace unmaps root."""
+    source = Path(shutil.which("git")).resolve()
+    exec_path = Path(subprocess.check_output([str(source), "--exec-path"], text=True).strip()).resolve()
+    # The core helper is the real binary even when PATH discovers a platform shim.
+    core_git = exec_path / "git"
+    if core_git.is_file():
+        source = core_git
+    binary = root / "bin" / "git"
+    binary.parent.mkdir(parents=True)
+    helpers = root / "libexec" / "git-core"
+    shutil.copytree(exec_path, helpers, symlinks=False)
+    shutil.copyfile(source, binary)
+    binary.chmod(0o755)
+    base_environment = adapter_common._base_environment
+    # Bind the known fixture path; production probes intentionally strip ambient Git variables.
+    with mock.patch.dict(os.environ, {
+        "PATH": str(binary.parent) + os.pathsep + os.environ["PATH"],
+        "GIT_EXEC_PATH": str(helpers),
+    }), mock.patch.object(adapter_common, "_base_environment", side_effect=lambda: {
+        **base_environment(), "GIT_EXEC_PATH": str(helpers),
+    }):
+        yield
+
+
 def assert_prepared_codex_progress_contract(test: unittest.TestCase, prepared: adapter_common.PreparedTrial) -> None:
     command = list(prepared.command)
     overrides = codex_config_overrides(command)
@@ -4360,6 +4386,35 @@ STAGED_MODULES = (
 
 
 class AdapterScaffoldTests(unittest.TestCase):
+    def test_owned_git_fixture_qualifies_unmapped_system_ownership(self) -> None:
+        source = Path(shutil.which("git")).resolve()
+        exec_path = Path(subprocess.check_output([str(source), "--exec-path"], text=True).strip()).resolve()
+        if (exec_path / "git").is_file():
+            source = exec_path / "git"
+        original_lstat = Path.lstat
+
+        def unmapped_lstat(path: Path):
+            status = original_lstat(path)
+            if path.resolve() in {source, exec_path}:
+                fields = list(status)
+                fields[4] = 65534
+                return os.stat_result(fields)
+            return status
+
+        with tempfile.TemporaryDirectory() as temporary, \
+                mock.patch.object(Path, "lstat", autospec=True, side_effect=unmapped_lstat):
+            with self.assertRaisesRegex(ValueError, "protected Git .* ownership or mode is unsafe"):
+                codex_adapter._protected_git_source()
+            with owned_git_fixture(Path(temporary)):
+                self.assertEqual(adapter_common._base_environment()["GIT_EXEC_PATH"],
+                                 str(Path(temporary) / "libexec" / "git-core"))
+                staged, helpers, identity = codex_adapter._protected_git_source()
+                self.assertEqual(staged.read_bytes(), source.read_bytes())
+                self.assertEqual(staged.stat().st_uid, os.getuid())
+                self.assertEqual(helpers.stat().st_uid, os.getuid())
+                self.assertEqual(identity["exec_path"], str(helpers))
+                self.assertIn("git version", subprocess.check_output([str(staged), "--version"], text=True))
+
     def test_adapters_embed_no_python_program_as_a_string(self) -> None:
         modules = (adapter_common, adapters, claude_adapter, codex_adapter)
         embedded = []
@@ -4422,5 +4477,6 @@ class StagedScaffoldTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    raise SystemExit(run_counted(unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__]),
-                                 label="test-native-eval-adapters"))
+    with tempfile.TemporaryDirectory() as git_runtime, owned_git_fixture(Path(git_runtime)):
+        raise SystemExit(run_counted(unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__]),
+                                     label="test-native-eval-adapters"))

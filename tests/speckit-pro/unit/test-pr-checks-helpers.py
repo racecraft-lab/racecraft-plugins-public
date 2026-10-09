@@ -479,6 +479,7 @@ class SupersededRunLookupTests(unittest.TestCase):
             raise AssertionError("API must not be called")
 
         cases = [("GITHUB_EVENT_NAME", "workflow_dispatch"), ("GITHUB_REPOSITORY", ""),
+                 ("GITHUB_REPOSITORY", "../project"),
                  ("GITHUB_RUN_ID", "abc"), ("GITHUB_EVENT_PATH", str(self.event) + ".missing")]
         for key, value in cases:
             with self.subTest(key=key, value=value):
