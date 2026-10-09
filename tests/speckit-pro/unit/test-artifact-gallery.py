@@ -88,16 +88,13 @@ def document_errors(value: str, entry: dict[str, object]) -> list[str]:
     return errors
 
 
-def sequential_template_errors(value: str) -> list[str]:
+def narrative_contract_errors(value: str) -> list[str]:
     policy = " ".join(value.split())
     required = (
-        "Process selected entries in manifest order.",
-        "Read only the current entry's template; never batch-read, prefetch, or read templates in parallel.",
-        "Do not read the next template until the current page is completely rendered, "
-        "validated as a closed sibling temporary file, atomically published, re-read and "
-        "validated at the final path, and recorded as `generated`.",
-        "On a recoverable failure, complete the cleanup below and record that page's `gap` "
-        "before reading the next template.",
+        "Work one page at a time, in the listed order.",
+        "Invoke the loaded runner's `fill-artifact-page` helper in `dry_run` mode",
+        "Invoke `fill-artifact-page` again in `apply` mode with the same inputs plus `narrative`",
+        "Send plain text. The runner escapes every character and wraps the text in the page's markup",
     )
     return [clause for clause in required if clause not in policy]
 
@@ -143,29 +140,19 @@ def contract_errors(value: str) -> list[str]:
 
 
 class ArtifactGalleryTests(unittest.TestCase):
-    def test_author_roles_close_each_page_before_reading_the_next_template(self) -> None:
+    def test_author_roles_write_plain_narrative_through_the_runner(self) -> None:
         for path in ("agents/artifact-author.md", "codex-agents/artifact-author.toml"):
             with self.subTest(path=path):
-                self.assertEqual([], sequential_template_errors(read(REPO_ROOT / "speckit-pro" / path)))
+                self.assertEqual([], narrative_contract_errors(read(REPO_ROOT / "speckit-pro" / path)))
 
-    def test_sequential_template_guard_rejects_missing_or_reordered_boundaries(self) -> None:
+    def test_narrative_contract_guard_rejects_a_dropped_clause(self) -> None:
         for path in ("agents/artifact-author.md", "codex-agents/artifact-author.toml"):
             value = read(REPO_ROOT / "speckit-pro" / path)
-            for old, new in (
-                ("never batch-read, prefetch, or read templates in parallel", "batch-read templates"),
-                ("manifest order", "any order"),
-                ("completely rendered", "partly rendered"),
-                ("validated as a closed sibling temporary file", "validated in memory"),
-                ("atomically published", "written directly"),
-                ("re-read and", ""),
-                ("validated at the final path", "assumed valid at the final path"),
-                ("recorded as `generated`", "considered ready"),
-                ("before reading", "after reading"),
-                ("atomically published, re-read and", "re-read and atomically published,"),
-            ):
+            for old, new in (("in the listed order", "in any order"), ("`dry_run` mode", "`apply` mode"),
+                             ("Send plain text.", "Send HTML.")):
                 with self.subTest(path=path, mutation=old):
                     self.assertIn(old, value)
-                    self.assertTrue(sequential_template_errors(value.replace(old, new, 1)))
+                    self.assertTrue(narrative_contract_errors(value.replace(old, new, 1)))
 
     def test_frozen_catalog_maps_every_manifest_row_and_file(self) -> None:
         expected = catalog()
@@ -249,23 +236,13 @@ class GalleryGuidanceTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertTrue(PLANNED_RULE in text, f"{path} does not state the planned-entry rule")
 
-    def test_both_author_hosts_escape_every_fill_and_keep_fills_inert(self) -> None:
-        clauses = (
-            "Escape every value you take from the planning record, in every fill region, `document-title` included",
-            "Escape `&`, `<`, `>`, `\"`, and `'` before the value lands in element text or a double-quoted attribute value",
-            "no `on*` or `srcdoc` attribute",
-            "no `javascript:`, `vbscript:`, or non-image, non-font `data:` URL",
-            "only escaped text inside a `<title>` or `<textarea>`, closed in the same region",
-            "The artifact review rejects a page whose fill carries active content and names the region",
-            "no fill region carries active content",
-        )
+    def test_both_author_hosts_leave_markup_and_escaping_to_the_runner(self) -> None:
+        # The runner escapes narrative text (test-artifact-page-fill.py); no author writes markup.
         for path in ("agents/artifact-author.md", "codex-agents/artifact-author.toml"):
-            text = " ".join(read(REPO_ROOT / "speckit-pro" / path).replace('\\"', '"').replace("\\'", "'").split())
-            for clause in clauses:
-                with self.subTest(path=path, clause=clause):
-                    self.assertIn(clause, text)
-            with self.subTest(path=path, clause="title-only escaping"):
-                self.assertNotIn("Fill `document-title` with one static, HTML-escaped `<title>` element.", text)
+            text = " ".join(read(REPO_ROOT / "speckit-pro" / path).split())
+            with self.subTest(path=path):
+                self.assertIn("markup or Markdown you send shows on the page as literal characters", text)
+                self.assertNotIn("Write only between a `START` marker and its matching `END`", text)
 
     def test_contract_names_the_suite_that_enforces_each_rule(self) -> None:
         text = " ".join(read(GALLERY / "SPA-CONTRACT.md").split())

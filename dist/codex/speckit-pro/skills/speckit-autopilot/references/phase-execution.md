@@ -1304,10 +1304,22 @@ request. This revalidation is in addition to the startup guard: a resumed
 session or operator-directed continuation must not turn a stale or bypassed
 binding into a normal fail-open page outcome.
 
-Step 1 is a single `spawn_agent` call on the installed `artifact-author` agent,
-followed by repeated bounded `wait_agent` polls until its outcome list arrives.
-The agent receives the feature's planning record and the shipped gallery, and
-answers with one outcome per page it wrote or could not write:
+**Step 1a: the runner fills every page.** Invoke the loaded runner's
+`select-artifact-pages` helper in `read_only` mode, then its
+`fill-artifact-page` helper in `apply` mode once per entry in `selected_pages`,
+in returned order. Send `entry_id`, `plan_file`, `spec_file`, and `tasks_file`,
+plus `research_file` and `design_concept_file` when they exist, as
+repository-relative paths. An `ok` result with `writes_state: true` is that
+page's `generated` outcome; any other result is that page's `gap` with the
+diagnostic reason. A non-`ok` selection is one whole-set gap, and Step 1b does
+not run. Each filled page is complete: every prose slot holds text the runner
+lifted from the planning files.
+
+**Step 1b: one dispatch writes the narrative.** A single `spawn_agent` call on
+the installed `artifact-author` agent, followed by repeated bounded
+`wait_agent` polls until its outcome list arrives, replaces the lifted prose of
+the generated pages with short plain text, through the same helper. The agent
+answers with one outcome per listed page:
 
 ```text
 spawn_agent("artifact-author", prompt="""
@@ -1315,19 +1327,21 @@ spawn_agent("artifact-author", prompt="""
   Use WORKFLOW_ROOT as the workdir for every shell call and as the base for
   every filesystem path. Write and return paths only inside WORKFLOW_ROOT.
 
-  Author this feature's draft-stage gallery pages and write them into
-  specs/<feature>/artifacts/.
+  Write the narrative of this feature's draft artifact pages. The runner
+  already filled them in specs/<feature>/artifacts/.
 
   Inputs, all read-only:
   - Specification: specs/<feature>/spec.md
   - Plan: specs/<feature>/plan.md
+  - Research (when present): specs/<feature>/research.md
   - Tasks: specs/<feature>/tasks.md
   - Design concept: docs/ai/specs/.process/<SPEC-ID>-design-concept.md
+  - Pages: <the generated entry IDs from Step 1a, in order>
 
   Gallery dir: <plugin-root>/artifact-gallery/
 
-  Select, fill, and report per your agent instructions. Return one outcome
-  per selected page.
+  Write and report per your agent instructions. Return one outcome per
+  listed page.
 """)
 wait_agent(...)
 ```
@@ -1345,14 +1359,13 @@ interrupt the worker for crossing one. A separately declared execution deadline
 or confirmed no-progress condition may use the recovery lifecycle in the parent
 skill; absent that evidence, a poll timeout is non-terminal.
 
-**Selection lives inside the agent and is driven by the manifest.** The
-orchestrator names no page list of its own. The agent reads `manifest.json`
-from the `Gallery dir:` directory, built from `plugin_root`, keeps the `shipped`
-entries whose `stage` is `draft-pr`, and applies each surviving entry's
-`trigger`: `{"always": true}` selects on every run, and `{"any_of": [...]}`
-selects only when the feature carries at least one signal the entry names. A
-`planned` entry has no template yet, so it is never selected and never reported
-as a gap.
+**Selection lives in the runner and is driven by the manifest.** The
+orchestrator names no page list of its own. `select-artifact-pages` reads the
+shipped `manifest.json`, keeps the `shipped` entries whose `stage` is
+`draft-pr`, and applies each surviving entry's `trigger`: `{"always": true}`
+selects on every run, and `{"any_of": [...]}` selects only when the feature
+carries at least one signal the entry names. A `planned` entry has no template
+yet, so it is never selected and never reported as a gap.
 
 **The gallery is input, never output.** `<plugin_root>/artifact-gallery/` holds
 the shipped manifest and the shipped templates, and writing anything into that
@@ -1362,35 +1375,35 @@ entry's `id` as the filename stem.
 
 **Each outcome is `generated` or `gap`**, one per selected page, and a gap names
 what is missing and why. **A page with any unfilled slot is a gap for that page,
-not a partial success** — a half-filled page is never reported as generated.
+not a partial success** — the runner refuses to publish one. Step 1a's list is
+the outcome list; the author's outcome for a page replaces it only when the
+author reports a `gap` or a new `sha256`.
 Feed the outcome list to the three sinks under fail-open below. That subsection
 owns where each outcome is written and which runs reach it; this step owes it
 nothing but the outcomes themselves.
 
-**A dispatch that never delivers a readable result is a whole-set gap rather
-than a failed step.** An agent that reaches a terminal error, remains terminal
-without a result after mailbox drain and lifecycle recovery, or replies with
-something that cannot be read as an outcome list lands the same way: zero
-generated pages, and one whole-set gap carrying that reason. A running worker
-whose latest bounded poll timed out is explicitly not in this set. The
-precondition rule above governs the steps that halt the sequence, and generation
-is not among them, because fail-open below converts every shortfall this step can
-produce into an outcome. This applies only after the workflow-binding
-precondition passed; a drifted or non-executable binding never reaches the
-dispatch and cannot be downgraded to a whole-set gap. Step 2 runs regardless of
-content-generation outcomes.
+**A dispatch that never delivers a readable result leaves Step 1a's outcomes
+standing rather than failing the step.** An agent that reaches a terminal error,
+remains terminal without a result after mailbox drain and lifecycle recovery, or
+replies with something that cannot be read as an outcome list changes no
+outcome: each runner-filled page stays `generated` with its lifted prose, and
+the reason is recorded as `narrative not written`. A running worker whose latest
+bounded poll timed out is explicitly not in this set. The precondition rule
+above governs the steps that halt the sequence, and generation is not among
+them. This applies only after the workflow-binding precondition passed; a
+drifted or non-executable binding never reaches the runner fill or the dispatch.
+Step 2 runs regardless of content-generation outcomes.
 
 **A truncated report is not a clean one.** An agent that exhausts its budget
-while composing its summary returns a fragment, and a fragment that does not
-carry one outcome per selected page is exactly the "cannot be read as an outcome
-list" case above — it takes the whole-set gap rather than being read as far as it
-got. A partial summary is missing information, never evidence of success, and a
-gap count read off one is not a measurement.
+while composing its summary returns a fragment. Read it only for pages it names
+with a complete outcome; every other page keeps its Step 1a outcome. A partial
+summary is missing information, never evidence of success, and a gap count read
+off one is not a measurement.
 
 **Reconcile current-run ownership before trusting any artifact file.** Read the
-manifest's `draft-pr` entry IDs after the dispatch. A complete outcome list owns
-only the IDs it reports as `generated`; an error, timeout, truncated result, or
-unreadable list owns none. Delete every draft-stage final `.html` whose ID lacks
+manifest's `draft-pr` entry IDs after the dispatch. The merged outcome list
+owns only the IDs it reports as `generated`; a whole-set selection gap owns
+none. Delete every draft-stage final `.html` whose ID lacks
 a complete current-run `generated` outcome, and delete every sibling
 `.artifact-author-*.tmp` file. This cleanup removes stale results from prior
 runs as well as interrupted writes. After deletion, re-read the artifact
