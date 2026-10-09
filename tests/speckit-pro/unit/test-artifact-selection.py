@@ -309,7 +309,22 @@ class PublicationRecoveryTests(PublicationFixture):
                     page.write_bytes(previous)
                     self.publish(status="expected_failure", plugin=plugin, race={step: ["fail"]})
                     self.assertEqual(page.read_bytes(), previous)
+                    self.assertEqual(list(page.parent.glob("*.tmp")), [])
                     self.assert_outside_untouched()
+
+    def test_failed_restore_names_the_saved_previous_page_on_both_hosts(self) -> None:
+        for plugin in PLUGINS:
+            with self.subTest(plugin=plugin):
+                self.setUp()
+                result = self.publish(status="expected_failure", plugin=plugin,
+                                      race={"readback": ["fail"], "restore": ["fail"]})
+                saved = list((self.root / "artifacts").glob("*.tmp"))
+                self.assertEqual(len(saved), 1)
+                self.assertEqual(saved[0].read_bytes(), b"old page")
+                self.assertIn(saved[0].name, result["diagnostics"][0]["message"])
+                self.assertEqual(result["data"]["page_outcome"], "gap")
+                self.assertNotIn("retained_page", result["data"])
+                self.assert_outside_untouched()
 
     def test_restore_does_not_overwrite_a_page_replaced_in_the_last_window(self) -> None:
         result = self.publish(status="expected_failure", race={"readback": ["fail"], "restore": ["replace-final"]})

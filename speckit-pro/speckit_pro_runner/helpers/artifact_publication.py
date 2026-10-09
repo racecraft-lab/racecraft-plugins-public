@@ -175,7 +175,12 @@ class PagePublication:
             return
         if not owned_entry(self.directory, self.name, self.owned, single_link=False):
             raise PublicationRefused(f"the final page changed; the previous page is kept as {self.temporary}") from error
-        restore_page(self.directory, self.temporary, self.name, self.previous, self.owned)
+        try:
+            restore_page(self.directory, self.temporary, self.name, self.previous, self.owned)
+        except (OSError, NotImplementedError) as recovery_error:
+            raise PublicationRefused(
+                f"could not restore the previous page from {self.temporary}: {recovery_error}"
+            ) from recovery_error
 
 
 def retained_receipt(state: PagePublication, root: Path, feature: Path) -> dict[str, Any] | None:
