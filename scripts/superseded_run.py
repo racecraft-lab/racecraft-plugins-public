@@ -27,8 +27,8 @@ from typing import Any
 
 Fetch = Callable[[str], Any]
 
-_SHA = re.compile(r"[0-9a-f]{40}")
-_REPOSITORY = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
+COMMIT_SHA_PATTERN = re.compile(r"[0-9a-f]{40}")
+REPOSITORY_PATTERN = re.compile(r"[A-Za-z0-9-]+/[A-Za-z0-9_.-]+")
 
 
 def github_fetch(token: str, api_url: str, timeout: float = 15.0) -> Fetch:
@@ -72,7 +72,8 @@ def sibling_run_id(env: Mapping[str, str], fetch: Fetch | None = None) -> int | 
     repository = env.get("GITHUB_REPOSITORY", "")
     head_sha = event_head_sha(env.get("GITHUB_EVENT_PATH", ""))
     raw_run_id = env.get("GITHUB_RUN_ID", "")
-    if not (_REPOSITORY.fullmatch(repository) and _SHA.fullmatch(head_sha) and raw_run_id.isdigit()):
+    if not (REPOSITORY_PATTERN.fullmatch(repository)
+            and COMMIT_SHA_PATTERN.fullmatch(head_sha) and raw_run_id.isdigit()):
         return None
     run_id = int(raw_run_id)
     if fetch is None:

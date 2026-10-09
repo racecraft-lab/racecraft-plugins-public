@@ -98,8 +98,8 @@ def dispatch_release_pr_checks(
     run: Callable[..., subprocess.CompletedProcess[Any]] = subprocess.run,
 ) -> None:
     for release_pr in release_prs:
-        # PR Checks runs the suite; PR Metadata runs the required title and
-        # release-note checks. Each workflow accepts only its own inputs.
+        # PR Checks runs the suite; PR Metadata authenticates the live PR and
+        # emits advisory title/release-note checks with distinct manual names.
         dispatches = (
             (
                 "PR Checks",

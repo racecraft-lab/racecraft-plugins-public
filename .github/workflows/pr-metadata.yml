@@ -1,8 +1,9 @@
 # PR Metadata — validates the PR title and the release-note block.
 #
-# These two checks read only the title, body, and labels, so they live apart
-# from PR Checks. A title, body, or label edit reruns them in seconds without
-# rerunning the full test suite. The job names are the required status-check
+# PR-event checks read title, body, labels and draft state. Manual runs fetch
+# them from the live PR after authenticating its repository, branch and SHA.
+# Metadata edits rerun these checks without rerunning the full test suite.
+# The job names are the required status-check
 # contexts on PR events; manual job names are advisory and distinct. Draft
 # PRs are skipped after manual runs authenticate their live identity.
 # Release automation also dispatches this workflow for release-please PRs

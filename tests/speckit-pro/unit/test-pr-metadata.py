@@ -39,6 +39,27 @@ LIVE_PR = {
     "draft": False,
 }
 
+INVALID_DISPATCH_IDENTITY = [
+    ("GITHUB_REF", "refs/tags/release-branch"),
+    ("GITHUB_REF", "release-branch"),
+    ("GITHUB_REF", "refs/heads/"),
+    ("GITHUB_SHA", "short-sha"),
+    ("GITHUB_SHA", ""),
+    ("GITHUB_REPOSITORY", "../project"),
+    ("GITHUB_REPOSITORY", ""),
+    ("PR_NUMBER", "0"),
+    ("PR_NUMBER", "302/../303"),
+    ("PR_NUMBER", ""),
+    ("GITHUB_EVENT_NAME", "pull_request"),
+]
+INVALID_LIVE_METADATA = [
+    ("title", None), ("title", ""), ("title", 123),
+    ("body", False), ("body", 123),
+    ("draft", None), ("draft", "false"),
+    ("labels", {}), ("labels", [{"name": None}]),
+    ("labels", [{"name": ""}]),
+]
+
 
 class ManualMetadataDispatchTests(unittest.TestCase):
     def test_release_dispatch_supplies_only_the_pr_number(self) -> None:
@@ -86,8 +107,9 @@ class MetadataFixture(unittest.TestCase):
             )
         return status, [call.args[0] for call in fetch.call_args_list], errors.getvalue()
 
-    def assert_rejected_changes(self, target, mutations, *, paths, existing=None):
+    def assert_rejected_changes(self, target, mutations, *, existing=None):
         for keys, value in mutations:
+            keys = (keys,) if isinstance(keys, str) else keys
             with self.subTest(field=".".join(keys), value=value):
                 changed = copy.deepcopy(target)
                 field = changed
@@ -100,12 +122,20 @@ class MetadataFixture(unittest.TestCase):
                     **{"pr" if target is self.pr else "environment": changed}
                 )
                 self.assertEqual(1, status)
-                self.assertEqual(paths, actual_paths)
+                self.assertEqual(
+                    ["/repos/example/project/pulls/302"] if target is self.pr else [], actual_paths,
+                )
                 self.assertTrue(errors)
                 self.assertEqual(existing, self.output.read_text() if self.output.exists() else None)
 
 
 class LiveMetadataTests(MetadataFixture):
+    def test_same_repository_identity_is_valid_when_the_repository_is_a_fork(self) -> None:
+        self.pr["head"]["repo"]["fork"] = True
+        self.assertEqual(0, self.invoke()[0])
+        self.assertEqual("fix(ci): use live metadata", json.loads(
+            self.output.read_text().removeprefix("metadata=")
+        )["title"])
 
     def test_reads_actual_metadata_from_the_pull_request_endpoint(self) -> None:
         status, paths, errors = self.invoke()
@@ -147,50 +177,24 @@ class LiveIdentityRejectionTests(MetadataFixture):
             (("number",), 303),
             (("base", "repo", "full_name"), "other/project"),
             (("head", "repo", "full_name"), "fork/project"),
-            (("head", "repo", "fork"), True),
             (("head", "ref"), "different-branch"),
             (("head", "sha"), "b" * 40),
             (("state",), "closed"),
         ]
         self.assert_rejected_changes(
-            self.pr, mutations, paths=["/repos/example/project/pulls/302"],
+            self.pr, mutations,
             existing="existing=preserved\n",
         )
 
 
 class DispatchIdentityRejectionTests(MetadataFixture):
     def test_rejects_tag_and_missing_or_malformed_dispatch_identity_before_api(self) -> None:
-        mutations = [
-            ("GITHUB_REF", "refs/tags/release-branch"),
-            ("GITHUB_REF", "release-branch"),
-            ("GITHUB_REF", "refs/heads/"),
-            ("GITHUB_SHA", "short-sha"),
-            ("GITHUB_SHA", ""),
-            ("GITHUB_REPOSITORY", "../project"),
-            ("GITHUB_REPOSITORY", ""),
-            ("PR_NUMBER", "0"),
-            ("PR_NUMBER", "302/../303"),
-            ("PR_NUMBER", ""),
-            ("GITHUB_EVENT_NAME", "pull_request"),
-        ]
-        self.assert_rejected_changes(
-            self.environment, [((key,), value) for key, value in mutations], paths=[],
-        )
+        self.assert_rejected_changes(self.environment, INVALID_DISPATCH_IDENTITY)
 
 
 class MetadataSchemaRejectionTests(MetadataFixture):
     def test_rejects_malformed_live_metadata_without_outputs(self) -> None:
-        mutations = [
-            ("title", None), ("title", ""), ("title", 123),
-            ("body", False), ("body", 123),
-            ("draft", None), ("draft", "false"),
-            ("labels", {}), ("labels", [{"name": None}]),
-            ("labels", [{"name": ""}]),
-        ]
-        self.assert_rejected_changes(
-            self.pr, [((key,), value) for key, value in mutations],
-            paths=["/repos/example/project/pulls/302"],
-        )
+        self.assert_rejected_changes(self.pr, INVALID_LIVE_METADATA)
 
 
 class ApiFailureTests(MetadataFixture):

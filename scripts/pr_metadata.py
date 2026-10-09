@@ -11,17 +11,17 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from superseded_run import Fetch, github_fetch
+from superseded_run import COMMIT_SHA_PATTERN, REPOSITORY_PATTERN, Fetch, github_fetch
 
 
 def validate_dispatch_context(environment: Mapping[str, str]) -> None:
     if environment["GITHUB_EVENT_NAME"] != "workflow_dispatch":
         raise ValueError("metadata authentication requires a manual dispatch")
-    patterns = {
-        "GITHUB_REPOSITORY": r"[A-Za-z0-9-]+/[A-Za-z0-9_.-]+",
+    patterns: dict[str, str | re.Pattern[str]] = {
+        "GITHUB_REPOSITORY": REPOSITORY_PATTERN,
         "PR_NUMBER": r"[1-9][0-9]*",
         "GITHUB_REF": r"refs/heads/.+",
-        "GITHUB_SHA": r"[0-9a-f]{40}",
+        "GITHUB_SHA": COMMIT_SHA_PATTERN,
     }
     for field, pattern in patterns.items():
         if not re.fullmatch(pattern, environment[field]):
@@ -33,8 +33,8 @@ def manual_pr_metadata(environment: Mapping[str, str], *, fetch: Fetch) -> dict[
     repository = environment["GITHUB_REPOSITORY"]
     number = environment["PR_NUMBER"]
     pr = fetch(f"/repos/{repository}/pulls/{number}")
-    if type(pr["number"]) is not int or pr["head"]["repo"]["fork"] is not False:
-        raise ValueError("PR number must be an integer and the head must not be a fork")
+    if type(pr["number"]) is not int:
+        raise ValueError("PR number must be an integer")
     bindings = (
         (pr["number"], int(number), "PR number"),
         (pr["base"]["repo"]["full_name"], repository, "base repository"),
