@@ -63,6 +63,7 @@
         { "path": "tests/speckit-pro/unit/test-artifact-fill-regions.py", "label": "test-artifact-fill-regions" },
         { "path": "tests/speckit-pro/unit/test-artifact-freshness.py", "label": "test-artifact-freshness" },
         { "path": "tests/speckit-pro/unit/test-artifact-gallery.py", "label": "test-artifact-gallery" },
+        { "path": "tests/speckit-pro/unit/test-artifact-page-fill.py", "label": "test-artifact-page-fill" },
         { "path": "tests/speckit-pro/unit/test-artifact-review.py", "label": "test-artifact-review" },
         { "path": "tests/speckit-pro/unit/test-artifact-selection.py", "label": "test-artifact-selection" },
         { "path": "tests/speckit-pro/unit/test-atomicity-additive-routing.py", "label": "test-atomicity-additive-routing" },

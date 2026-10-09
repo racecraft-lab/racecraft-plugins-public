@@ -10,6 +10,7 @@ from ..envelope import diagnostic, response
 from ..formal.helper import run_formal_helper
 from ..research_preflight import run_research_broker_preflight_helper
 from .archive_sweep import run_archive_sweep_helper
+from .artifact_fill import run_artifact_fill_helper
 from .artifact_publication import run_artifact_publication_helper
 from .artifact_selection import run_artifact_selection_helper
 # The two CODEX_ names are re-exported: tests read them through the registry.
@@ -728,6 +729,12 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         ("descriptor-bound-publication",),
         rollback="Delete the page under the feature artifacts directory; the next artifact run republishes it.",
     ),
+    "fill-artifact-page": MutationEntry(
+        "fill-artifact-page", "fill-artifact-page", ("dry_run", "apply"), None,
+        "golden_only", "fixture_semantic", mutation_authoritative_request("fill-artifact-page"),
+        ("runner-filled-publication",),
+        rollback="Delete the page under the feature artifacts directory; the next artifact run refills it.",
+    ),
     "write-readiness-record": MutationEntry(
         "write-readiness-record", "write-readiness-record", ("dry_run", "apply"), None,
         "golden_only", "fixture_semantic", mutation_authoritative_request("write-readiness-record"),
@@ -757,6 +764,12 @@ def mutation_registry_report() -> dict[str, Any]:
         ),
     }
 
+
+# Artifact page writers: the runner fills a page, or publishes one a caller rendered (ADR 0019).
+ARTIFACT_PAGE_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
+    "fill-artifact-page": run_artifact_fill_helper,
+    "publish-artifact-page": run_artifact_publication_helper,
+}
 
 # Helpers with their own response contracts share one dispatch path.
 SPECIAL_HELPER_HANDLERS: dict[str, Callable[[Any, Any], dict[str, Any]]] = {
@@ -902,8 +915,8 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
     if entry.helper_id == "write-readiness-record":
         return run_readiness_record_helper(entry, request)
 
-    if entry.helper_id == "publish-artifact-page":
-        return run_artifact_publication_helper(entry, request)
+    if entry.helper_id in ARTIFACT_PAGE_HANDLERS:
+        return ARTIFACT_PAGE_HANDLERS[entry.helper_id](entry, request)
 
     if entry.helper_id == "propose-quality-gates":
         return run_quality_gates_proposal_helper(entry, request)

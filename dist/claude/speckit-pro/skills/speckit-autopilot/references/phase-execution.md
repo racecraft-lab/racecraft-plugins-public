@@ -1126,9 +1126,21 @@ only recovery path.
 #### Artifact generation: the `artifact-author` dispatch
 
 
-Step 1 is one dispatch of the `speckit-pro:artifact-author` subagent. The
-orchestrator hands it the feature's planning record and the shipped gallery, and
-it returns one outcome per page it wrote or could not write:
+**Step 1a: the runner fills every page.** Invoke the loaded runner's
+`select-artifact-pages` helper in `read_only` mode, then its
+`fill-artifact-page` helper in `apply` mode once per entry in `selected_pages`,
+in returned order. Send `entry_id`, `plan_file`, `spec_file`, and `tasks_file`,
+plus `research_file` and `design_concept_file` when they exist, as
+repository-relative paths. An `ok` result with `writes_state: true` is that
+page's `generated` outcome; any other result is that page's `gap` with the
+diagnostic reason. A non-`ok` selection is one whole-set gap, and Step 1b does
+not run. Each filled page is complete: every prose slot holds text the runner
+lifted from the planning files.
+
+**Step 1b: one dispatch writes the narrative.** One dispatch of the
+`speckit-pro:artifact-author` subagent replaces the lifted prose of the
+generated pages with short plain text, through the same helper, and returns one
+outcome per listed page:
 
 ```text
 Agent(
@@ -1136,33 +1148,34 @@ Agent(
   description: "SPEC-XXX draft artifact generation",
   run_in_background: false,
   prompt: """
-    Author this feature's draft-stage gallery pages and write them into
-    specs/<feature>/artifacts/.
+    Write the narrative of this feature's draft artifact pages. The runner
+    already filled them in specs/<feature>/artifacts/.
 
     Inputs, all read-only:
     - Specification: specs/<feature>/spec.md
     - Plan: specs/<feature>/plan.md
+    - Research (when present): specs/<feature>/research.md
     - Tasks: specs/<feature>/tasks.md
     - Design concept: docs/ai/specs/.process/<SPEC-ID>-design-concept.md
+    - Pages: <the generated entry IDs from Step 1a, in order>
 
     Reference dir: <plugin_root>/skills/speckit-autopilot/references/
     Gallery dir: <plugin_root>/artifact-gallery/
 
-    Select, fill, and report per your agent instructions. Return one outcome
-    per selected page.
+    Write and report per your agent instructions. Return one outcome per
+    listed page.
   """
 )
 ```
 
 
-**Selection lives inside the agent and is driven by the manifest.** The
-orchestrator names no page list of its own. The agent reads `manifest.json`
-from the `Gallery dir:` directory, built from `plugin_root`, keeps the `shipped`
-entries whose `stage` is `draft-pr`, and applies each surviving entry's
-`trigger`: `{"always": true}` selects on every run, and `{"any_of": [...]}`
-selects only when the feature carries at least one signal the entry names. A
-`planned` entry has no template yet, so it is never selected and never reported
-as a gap.
+**Selection lives in the runner and is driven by the manifest.** The
+orchestrator names no page list of its own. `select-artifact-pages` reads the
+shipped `manifest.json`, keeps the `shipped` entries whose `stage` is
+`draft-pr`, and applies each surviving entry's `trigger`: `{"always": true}`
+selects on every run, and `{"any_of": [...]}` selects only when the feature
+carries at least one signal the entry names. A `planned` entry has no template
+yet, so it is never selected and never reported as a gap.
 
 **The gallery is input, never output.** `<plugin_root>/artifact-gallery/` holds
 the shipped manifest and the shipped templates, and writing anything into that
@@ -1172,30 +1185,30 @@ entry's `id` as the filename stem.
 
 **Each outcome is `generated` or `gap`**, one per selected page, and a gap names
 what is missing and why. **A page with any unfilled slot is a gap for that page,
-not a partial success** — a half-filled page is never reported as generated.
+not a partial success** — the runner refuses to publish one. Step 1a's list is
+the outcome list; the author's outcome for a page replaces it only when the
+author reports a `gap` or a new `sha256`.
 Feed the outcome list to the three sinks under fail-open below. That subsection
 owns where each outcome is written and which runs reach it; this step owes it
 nothing but the outcomes themselves.
 
-**A dispatch that cannot report is a whole-set gap, not a failed step.** An
-agent that errors, returns nothing, or returns something that cannot be read as
-an outcome list leaves the run with zero generated pages and one whole-set gap
-naming that reason. The precondition rule above binds the steps that stop the
-sequence; generation is not one of them, because fail-open below turns every
-shortfall this step can produce into an outcome. The sequence continues to
-step 2 either way.
+**A dispatch that cannot report leaves Step 1a's outcomes standing, not a failed
+step.** An agent that errors, returns nothing, or returns something that cannot
+be read as an outcome list changes no outcome: each runner-filled page stays
+`generated` with its lifted prose. Record the reason as `narrative not
+written`. The precondition rule above binds the steps that stop the sequence;
+generation is not one of them. The sequence continues to step 2 either way.
 
 **A truncated report is not a clean one.** An agent that exhausts its budget
-while composing its summary returns a fragment, and a fragment that does not
-carry one outcome per selected page is exactly the "cannot be read as an outcome
-list" case above — it takes the whole-set gap rather than being read as far as it
-got. A partial summary is missing information, never evidence of success, and a
-gap count read off one is not a measurement.
+while composing its summary returns a fragment. Read it only for pages it names
+with a complete outcome; every other page keeps its Step 1a outcome. A partial
+summary is missing information, never evidence of success, and a gap count read
+off one is not a measurement.
 
 **Reconcile current-run ownership before trusting any artifact file.** Read the
-manifest's `draft-pr` entry IDs after the dispatch. A complete outcome list owns
-only the IDs it reports as `generated`; an error, timeout, truncated result, or
-unreadable list owns none. Delete every draft-stage final `.html` whose ID lacks
+manifest's `draft-pr` entry IDs after the dispatch. The merged outcome list
+owns only the IDs it reports as `generated`; a whole-set selection gap owns
+none. Delete every draft-stage final `.html` whose ID lacks
 a complete current-run `generated` outcome, and delete every sibling
 `.artifact-author-*.tmp` file. This cleanup removes stale results from prior
 runs as well as interrupted writes. After deletion, re-read the artifact
@@ -2523,15 +2536,17 @@ retry it and do not route it into the report as a freshness outcome.
 bookkeeping, reply, and push cadence.** Its `amended` rows are not ancestors of
 the last artifacts commit, so the verdict is `stale` by construction. A later
 resumed run runs it the same way when its verdict is `stale`.
-A `stale` verdict re-dispatches the shipped `speckit-pro:artifact-author` agent
-against the committed planning record and runs this sequence:
+A `stale` verdict regenerates the pages the way the draft-PR emission sequence
+first generated them, against the committed planning record, and runs this
+sequence:
 
 ```text
 0. Invalidate the private sweep session, and confirm every amendment commit is
    pushed.
 1. Evaluate freshness through the `verdict` surface.
-2. On `stale`, re-dispatch `speckit-pro:artifact-author` against the committed
-   planning record.
+2. On `stale`, run Step 1a (the runner fills every selected page) and then
+   Step 1b (one `artifact-author` narrative dispatch) of the draft-PR emission
+   sequence against the committed planning record.
 3. Compute the removal set through the `removal_diff` surface, and delete
    those files.
 3b. Delete the superseded file behind each per-page gap. Skipped entirely on
@@ -2559,9 +2574,10 @@ record**, never the page list the previous run happened to produce. A run that
 regenerates decides its page set the same way a first generation does.
 
 **Every selected page is authored fresh.** No page is patched, diffed, or
-partially updated, and there is no second page-authoring path: the dispatch,
-its per-page `generated` and `gap` outcomes, and its on-disk verification are
-the ones the draft-PR emission sequence above describes.
+partially updated, and there is no second page-authoring path: the runner fill,
+the narrative dispatch, their per-page `generated` and `gap` outcomes, and the
+on-disk verification are the ones the draft-PR emission sequence above
+describes.
 
 #### Phase 7 Setup: Freshness Runs on Every Sweep Leg
 
@@ -2594,9 +2610,9 @@ reserved for a page re-selection no longer selects.
 
 **The ground is the one the on-disk verification above already gives** for
 deleting a page that fails its two tests: a plausible-looking document about a
-plan that is not this one is worse than no document at all. A page the author
-declined to rewrite is that same hazard one degree sharper, because it is
-about the right feature and the wrong, superseded plan.
+plan that is not this one is worse than no document at all. A page the runner
+could not refill is that same hazard one degree sharper, because it is about
+the right feature and the wrong, superseded plan.
 
 **The exclusion is explicit: a whole-set gap deletes nothing.** Step 3b is
 skipped in its entirety there, and the directory is left unmoved.

@@ -1,7 +1,8 @@
 # Artifact Review Handoff
 
 This is the shared Claude/Codex plan-stage delivery contract. The parent owns
-preview delivery; artifact-author still owns generation. Publication, generation,
+preview delivery; the runner fills the pages and artifact-author writes their
+narrative. Publication, generation,
 rendered delivery, human approval, and UAT are separate facts.
 
 ## Durable record
@@ -39,8 +40,9 @@ identity. The scaffold does not write an empty placeholder. Use this exact shape
 Expand `pages` to the complete selected outcome list, including always-selected
 entries. A gap has only `id`, `generation: "gap"`, and `reason`; it has no
 preview. Every selected ID has a `template_hashes` entry; `null` means that
-template was absent, never that its hash was not checked. A whole-set author
-failure has empty `pages` and `template_hashes` and a nonempty `generation_error`.
+template was absent, never that its hash was not checked. A whole-set
+generation failure has empty `pages` and `template_hashes` and a nonempty
+`generation_error`.
 Keep planned/missing-template gaps separate from preview failures.
 
 Compute hashes from bytes; never invent receipts. Include the design-concept
