@@ -127,8 +127,6 @@ def dispatch_release_pr_checks(
                     release_pr["branch"],
                     "-f",
                     f"pr_number={release_pr['number']}",
-                    "-f",
-                    f"pr_title={release_pr['title']}",
                 ],
             ),
         )

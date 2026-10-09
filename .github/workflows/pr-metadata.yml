@@ -3,7 +3,8 @@
 # These two checks read only the title, body, and labels, so they live apart
 # from PR Checks. A title, body, or label edit reruns them in seconds without
 # rerunning the full test suite. The job names are the required status-check
-# contexts, so they must not change. Draft PRs are skipped.
+# contexts on PR events; manual job names are advisory and distinct. Draft
+# PRs are skipped after manual runs authenticate their live identity.
 # Release automation also dispatches this workflow for release-please PRs
 # created or updated with GITHUB_TOKEN, because those pull_request events are
 # suppressed by GitHub's recursive workflow guard.
@@ -29,14 +30,6 @@ on:
         description: Pull request number to validate
         required: true
         type: string
-      pr_title:
-        description: Pull request title to validate
-        required: true
-        type: string
-      pr_body:
-        description: Pull request body containing the release-note block
-        required: false
-        type: string
 
 # Top-level: no permissions granted by default.
 # Each job declares only what it needs (principle of least privilege).
@@ -47,10 +40,13 @@ jobs:
   # Validate PR title against Conventional Commits format
   # ───────────────────────────────────────────────────────────────────
   validate-pr-title:
+    name: ${{ github.event_name == 'workflow_dispatch' && 'manual-validate-pr-title' || 'validate-pr-title' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
-    permissions: {}
+    permissions:
+      contents: read
+      pull-requests: read
 
     steps:
       - name: Checkout repository
@@ -59,20 +55,30 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Check PR title
+      - name: Authenticate manual PR metadata
+        id: metadata
+        if: github.event_name == 'workflow_dispatch'
         env:
-          TITLE: ${{ github.event_name == 'pull_request' && github.event.pull_request.title || inputs.pr_title }}
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: python3 scripts/pr_metadata.py
+
+      - name: Check PR title
+        if: github.event_name != 'workflow_dispatch' || fromJSON(steps.metadata.outputs.metadata).draft == false
+        env:
+          TITLE: ${{ github.event_name == 'workflow_dispatch' && fromJSON(steps.metadata.outputs.metadata).title || github.event.pull_request.title }}
         run: PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/validate-pr-title-live.json
 
   # Required release-note contract. All event text enters through env values;
   # the Python validator never evaluates PR-controlled text as shell syntax.
   validate-release-note:
-    name: validate-release-note
+    name: ${{ github.event_name == 'workflow_dispatch' && 'manual-validate-release-note' || 'validate-release-note' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
     permissions:
       contents: read
+      pull-requests: read
 
     steps:
       - name: Checkout repository
@@ -80,10 +86,19 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Validate release note block
+      - name: Authenticate manual PR metadata
+        id: metadata
+        if: github.event_name == 'workflow_dispatch'
         env:
-          PR_TITLE: ${{ github.event_name == 'pull_request' && github.event.pull_request.title || inputs.pr_title }}
-          PR_BODY: ${{ github.event_name == 'pull_request' && github.event.pull_request.body || inputs.pr_body }}
-          PR_LABELS_JSON: ${{ github.event_name == 'pull_request' && toJSON(github.event.pull_request.labels.*.name) || '[]' }}
-          PR_DRAFT: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft || false }}
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: python3 scripts/pr_metadata.py
+
+      - name: Validate release note block
+        if: github.event_name != 'workflow_dispatch' || fromJSON(steps.metadata.outputs.metadata).draft == false
+        env:
+          PR_TITLE: ${{ github.event_name == 'workflow_dispatch' && fromJSON(steps.metadata.outputs.metadata).title || github.event.pull_request.title }}
+          PR_BODY: ${{ github.event_name == 'workflow_dispatch' && fromJSON(steps.metadata.outputs.metadata).body || github.event.pull_request.body }}
+          PR_LABELS_JSON: ${{ github.event_name == 'workflow_dispatch' && toJSON(fromJSON(steps.metadata.outputs.metadata).labels) || toJSON(github.event.pull_request.labels.*.name) }}
+          PR_DRAFT: ${{ github.event_name == 'workflow_dispatch' && fromJSON(steps.metadata.outputs.metadata).draft || github.event.pull_request.draft || false }}
         run: python3 scripts/compose-release-notes.py --validate-pr
