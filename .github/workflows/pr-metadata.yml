@@ -1,10 +1,10 @@
 # PR Metadata — validates the PR title and the release-note block.
 #
 # PR-event checks read title, body, labels and draft state. Manual runs fetch
-# them from the live PR after authenticating its repository, branch and SHA.
-# Metadata edits rerun these checks without rerunning the full test suite.
-# The job names are the required status-check
-# contexts on PR events; manual job names are advisory and distinct. Draft
+# them from the live PR and authenticate its repository, branch and SHA before
+# validation. Metadata edits rerun checks without the full test suite.
+# Job names are required status-check contexts on PR events; manual job names
+# are advisory and distinct. Draft
 # PRs are skipped after manual runs authenticate their live identity.
 # Release automation also dispatches this workflow for release-please PRs
 # created or updated with GITHUB_TOKEN, because those pull_request events are
