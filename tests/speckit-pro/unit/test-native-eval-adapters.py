@@ -72,9 +72,13 @@ def owned_git_fixture(root: Path):
     shutil.copytree(exec_path, helpers, symlinks=False)
     shutil.copyfile(source, binary)
     binary.chmod(0o755)
+    base_environment = adapter_common._base_environment
+    # Bind the known fixture path; production probes intentionally strip ambient Git variables.
     with mock.patch.dict(os.environ, {
         "PATH": str(binary.parent) + os.pathsep + os.environ["PATH"],
         "GIT_EXEC_PATH": str(helpers),
+    }), mock.patch.object(adapter_common, "_base_environment", side_effect=lambda: {
+        **base_environment(), "GIT_EXEC_PATH": str(helpers),
     }):
         yield
 
@@ -4402,6 +4406,8 @@ class AdapterScaffoldTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "protected Git .* ownership or mode is unsafe"):
                 codex_adapter._protected_git_source()
             with owned_git_fixture(Path(temporary)):
+                self.assertEqual(adapter_common._base_environment()["GIT_EXEC_PATH"],
+                                 str(Path(temporary) / "libexec" / "git-core"))
                 staged, helpers, identity = codex_adapter._protected_git_source()
                 self.assertEqual(staged.read_bytes(), source.read_bytes())
                 self.assertEqual(staged.stat().st_uid, os.getuid())
