@@ -220,7 +220,7 @@ class MetadataWorkflowTests(unittest.TestCase):
                 self.assertIn(f"'manual-{job}' || '{job}'", block)
                 self.assertIn("pull-requests: read", block)
                 self.assertLess(block.index("run: python3 scripts/pr_metadata.py"), block.index(validator))
-                self.assertIn("PR_NUMBER: ${{ inputs.pr_number }}", block)
+                self.assertIn("PR_NUMBER: '${{ inputs.pr_number }}'", block)
                 self.assertIn("fromJSON(steps.metadata.outputs.metadata).draft == false", block)
                 self.assertIn("fromJSON(steps.metadata.outputs.metadata).title", block)
         self.assertIn("fromJSON(steps.metadata.outputs.metadata).body", content)

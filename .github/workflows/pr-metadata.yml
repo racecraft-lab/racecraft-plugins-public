@@ -44,9 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
-    permissions:
-      contents: read
-      pull-requests: read
+    permissions: {contents: read, pull-requests: read}
 
     steps:
       - name: Checkout repository
@@ -58,9 +56,7 @@ jobs:
       - name: Authenticate manual PR metadata
         id: metadata
         if: github.event_name == 'workflow_dispatch'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ inputs.pr_number }}
+        env: {GH_TOKEN: '${{ github.token }}', PR_NUMBER: '${{ inputs.pr_number }}'}
         run: python3 scripts/pr_metadata.py
 
       - name: Check PR title
@@ -76,9 +72,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
-    permissions:
-      contents: read
-      pull-requests: read
+    permissions: {contents: read, pull-requests: read}
 
     steps:
       - name: Checkout repository
@@ -89,9 +83,7 @@ jobs:
       - name: Authenticate manual PR metadata
         id: metadata
         if: github.event_name == 'workflow_dispatch'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ inputs.pr_number }}
+        env: {GH_TOKEN: '${{ github.token }}', PR_NUMBER: '${{ inputs.pr_number }}'}
         run: python3 scripts/pr_metadata.py
 
       - name: Validate release note block
