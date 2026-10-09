@@ -261,7 +261,8 @@ class PublicationFixture(SelectionFixture):
         self.page = rendered_page("implementation-plan")
 
     def publish(self, *, status: str = "ok", race: dict | None = None, plugin: str = "speckit-pro",
-                mode: str = "apply", helper: str = "publish-artifact-page", **inputs: object) -> dict:
+                mode: str = "apply", **inputs: object) -> dict:
+        helper = inputs.pop("helper", "publish-artifact-page")
         content = {"content": self.page} if helper == "publish-artifact-page" else {}
         request = {"schema_version": "1.0", "request_id": "artifact-publication-test",
                    "helper_id": helper, "operation": helper, "mode": mode,
@@ -294,6 +295,8 @@ class PublicationRecoveryTests(PublicationFixture):
                                       "outside/victim.html": "outside page"})
         self.assertEqual(result["data"].get("retained_page"),
                          {"sha256": hashlib.sha256(b"old page").hexdigest(), "bytes": 8})
+        self.assertEqual(result["data"].get("page_outcome"), "generated")
+        self.assertEqual(result["diagnostics"][0]["code"], "artifact_publication_retained")
 
     def test_failure_at_each_publication_step_keeps_the_previous_bytes_on_both_hosts(self) -> None:
         previous = b"previous page\r\n\x00with exact bytes\n"
@@ -309,7 +312,9 @@ class PublicationRecoveryTests(PublicationFixture):
                     self.assert_outside_untouched()
 
     def test_restore_does_not_overwrite_a_page_replaced_in_the_last_window(self) -> None:
-        self.publish(status="expected_failure", race={"readback": ["fail"], "restore": ["replace-final"]})
+        result = self.publish(status="expected_failure", race={"readback": ["fail"], "restore": ["replace-final"]})
+        self.assertEqual(result["data"]["page_outcome"], "gap")
+        self.assertNotIn("retained_page", result["data"])
         self.assertEqual((self.root / "artifacts/implementation-plan.html").read_bytes(), b"foreign page")
         self.assertEqual([path.read_bytes() for path in (self.root / "artifacts").glob("*.tmp")], [b"old page"])
 

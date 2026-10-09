@@ -225,6 +225,24 @@ def publish(root: Path, feature: Path, name: str, content: bytes) -> None:
         os.close(directory)
 
 
+def publication_failure(error: OSError | NotImplementedError, request_id: str | None,
+                        data: dict[str, Any]) -> dict[str, Any]:
+    """Decide the page outcome from verified recovery evidence, before guidance relays it."""
+    receipt = error.retained_page if isinstance(error, PublicationRefused) else None
+    retained = receipt is not None
+    data["page_outcome"] = "generated" if retained else "gap"
+    if retained:
+        data["retained_page"] = receipt
+    return response("expected_failure", request_id=request_id, data=data, diagnostics=[diagnostic(
+        "artifact_publication_retained" if retained else "artifact_publication_refused",
+        f"the replacement was refused: {error}",
+        remediation_summary=("Report the retained page as generated; the replacement was refused." if retained
+                             else "Report this page as a gap; the pull request still opens."),
+        remediation_actions=["Leave the artifact directory alone.",
+                             "Relay data.page_outcome and include this diagnostic in the page result."],
+    )])
+
+
 def run_artifact_publication_helper(entry: Any, request: Any) -> dict[str, Any]:
     root = resolve_repo_root(request.inputs)
     if isinstance(root, dict):
@@ -253,12 +271,6 @@ def run_artifact_publication_helper(entry: Any, request: Any) -> dict[str, Any]:
         try:
             publish(root, Path(inputs["plan_file"]).parent, f"{entry_id}.html", content)
         except (OSError, NotImplementedError) as error:  # no dir_fd support refuses rather than falls back
-            if isinstance(error, PublicationRefused) and error.retained_page is not None:
-                data["retained_page"] = error.retained_page
-            return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diagnostic(
-                "artifact_publication_refused", f"the page was not published: {error}",
-                remediation_summary="Report this page as a gap; the pull request still opens.",
-                remediation_actions=["Leave the artifact directory alone.", "Report the diagnostic in the gap."],
-            )])
+            return publication_failure(error, request.request_id, data)
         data["writes_state"] = True
     return response("ok", request_id=request.request_id, data=data)

@@ -103,10 +103,9 @@ shortfall reads identically everywhere it is reported:
 - An `input_error` on your `apply` call published nothing, so the runner's
   filled page stands: report `generated` with the note `narrative refused` and
   the diagnostic reason.
-- An `expected_failure` means your replacement was refused. When the result
-  includes `data.retained_page`, report `generated` with that receipt's
-  `sha256`, the note `narrative refused`, and the diagnostic reason. Otherwise
-  report `gap` with the diagnostic reason. Leave the retained page alone;
+- An `expected_failure` means your replacement was refused. Relay the runner's
+  `data.page_outcome` and diagnostic reason. Include `data.retained_page.sha256`
+  when supplied, with the note `narrative refused`. Leave the retained page alone;
   a fallback publication would replace the previous good page again.
 
 **Reserve your last turns for the result.** When your turn budget runs low,
@@ -122,7 +121,7 @@ caller and never return a blocking status.
 | What went wrong | What you do |
 | --- | --- |
 | one page's narrative is refused | keep the runner's page; report the reason |
-| a replacement fails | consume the retained-page receipt above; a gap when restoration is unconfirmed |
+| a replacement fails | relay the runner's `data.page_outcome`, retained-page receipt, and diagnostic |
 | an optional planning file is missing | leave its input out of both calls |
 
 For every externally-sourced fact in your output, include the grounding evidence note: `Capability path: <need> -> <selected capability/source>; Evidence: <citations or local file refs>; Confidence: <high|medium|low>`. If nothing grounds a claim, say so instead of asserting it.
