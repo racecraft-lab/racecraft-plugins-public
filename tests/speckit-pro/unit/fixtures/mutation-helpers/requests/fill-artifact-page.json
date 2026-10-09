@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-fill-artifact-page",
+  "helper_id": "fill-artifact-page",
+  "operation": "fill-artifact-page",
+  "mode": "dry_run",
+  "inputs": {
+    "plan_file": "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature/plan.md",
+    "spec_file": "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature/spec.md",
+    "tasks_file": "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature/tasks.md",
+    "entry_id": "implementation-plan"
+  }
+}
