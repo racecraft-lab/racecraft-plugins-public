@@ -35,9 +35,9 @@ SPEC_DRIVEN_MODEL = {"claude": {"model": "sonnet", "effort": "high"}, "codex": {
 PHASE_MODEL_OVERRIDES = {"Specify": SPEC_DRIVEN_MODEL, "Tasks": SPEC_DRIVEN_MODEL, "Plan": {"codex": {"model": "gpt-6-sol", "effort": "high"}}}
 # Codex wait_agent returns early on any mailbox update, final-status notices included, so its timeout_ms only bounds
 # an idle poll and a longer bound adds no latency to a result. The tool's default is 30,000 ms and its floor 10,000 ms;
-# the first plan-stage profile (issue 1286) saw 10,000 ms on every call and 74% of the polls time out.
+# the first plan-stage profile (issue 1198, follow-up 1286) saw 10,000 ms on every call of its second run, and 74% of
+# those polls timed out.
 # https://github.com/openai/codex/blob/rust-v0.160.0/codex-rs/core/src/tools/handlers/multi_agents_v2/wait.rs
-# A call that has an execution deadline passes the time left instead, when that is shorter.
 CODEX_WAIT_TIMEOUT_MS = 60_000
 REFERENCES = Path(__file__).resolve().parents[2] / "skills" / "speckit-autopilot" / "references"
 EXECUTOR_SLICES = (
