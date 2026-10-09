@@ -1147,23 +1147,22 @@ class PhaseBriefWaveTests(InProjectCase):
         for host in ("claude", "codex"):
             self.assertTrue(all(needle in self.loop(host) for needle in ("### Dispatch waves", "Each brief wave")), host)
 
-    def test_codex_launches_a_wave_in_one_model_response_not_one_turn(self):
+    def test_codex_launches_one_response_and_waits_with_the_briefs_timeout(self):
         # A Codex turn spans many model responses (the plan-stage profile counts 175 responses in 1 turn), so
         # "in one turn" was satisfied by one spawn_agent per response. Issue 1286.
-        codex = " ".join(self.loop("codex").split())
-        for text in (codex, " ".join((host_skill_root("codex") / "speckit-autopilot/references/phase-execution.md").read_text().split())):
-            self.assertIn("in one model response", text)
-            self.assertIn("before any wait_agent", text)
-            self.assertNotIn("one spawn_agent per entry in one turn", text)
-        self.assertNotIn("in one model response", " ".join(self.loop("claude").split()))
-
-    def test_codex_waits_use_the_briefs_timeout_everywhere_the_plan_stage_polls(self):
-        codex = " ".join(self.loop("codex").split())
-        self.assertIn("timeout_ms=brief.wait.codex.timeout_ms", codex)
-        for name in ("phase-execution.md", "error-recovery.md"):
-            text = " ".join((host_skill_root("codex") / "speckit-autopilot/references" / name).read_text().split())
+        flat = lambda text: " ".join(text.split())
+        references = host_skill_root("codex") / "speckit-autopilot/references"
+        texts = {"SKILL.md": flat(self.loop("codex")), **{name: flat((references / name).read_text())
+                                                          for name in ("phase-execution.md", "error-recovery.md")}}
+        for name, text in texts.items():
             self.assertIn("brief.wait.codex.timeout_ms", text, name)
-        self.assertNotIn("brief.wait", " ".join(self.loop("claude").split()))
+            if name != "error-recovery.md":
+                self.assertIn("in one model response", text, name)
+                self.assertIn("before any wait_agent", text, name)
+                self.assertNotIn("one spawn_agent per entry in one turn", text, name)
+        claude = flat(self.loop("claude"))
+        self.assertNotIn("in one model response", claude)
+        self.assertNotIn("brief.wait", claude)
 
     def test_consensus_reference_qualifies_the_briefs_host_neutral_roles(self):
         entry = self.waves("Analyze", items=[{"line": "[security] Q1: credentials?"}])[0][0]
