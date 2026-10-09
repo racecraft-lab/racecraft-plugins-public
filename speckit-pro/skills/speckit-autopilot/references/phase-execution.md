@@ -398,16 +398,17 @@ for phase in PHASES starting from first_pending:
           use the matching installed SpecKit custom agent
        b. spawn_agent the resolved <executor>:
           "Run $speckit-<phase> with: <prompt>"
-       c. Loop bounded wait_agent calls until this executor's actual summary is
-          delivered; a status update or timeout alone is not the result. Record
+       c. Loop bounded wait_agent calls (timeout_ms=brief.wait.codex.timeout_ms) until this
+          executor's actual summary is delivered; a status update or timeout alone is not the result. Record
           the summary, then close_agent only when that action is exposed. On
           hosted Responses, the host retains the inspectable completed thread.
        d. Other phases: autopilot-state.json: mark this prompt's item as "completed"
        Checklist only: executors propose and write no artifact. Run runner helper
        `checklist-edits` in read_only mode before the first domain wave for the baseline.
        Request the brief with domains and max_agents; for each domain wave, issue
-       one spawn_agent per entry in one turn, then one bounded wait_agent loop
-       until every entry returned its terminal result.
+       every entry's spawn_agent in one model response (parallel tool calls) before any
+       wait_agent, then one bounded wait_agent loop until every entry returned its terminal
+       result, each wait_agent with timeout_ms=brief.wait.codex.timeout_ms.
        After the last executor returns, run it in apply mode with the domain names
        in workflow order, the baseline, and each executor's Proposed Edits block. It
        applies one domain at a time in domain order. A conflict or a gap with no edit
@@ -429,10 +430,12 @@ for phase in PHASES starting from first_pending:
        (initial run) and verify_items (verify reports), plus max_agents=subagent_slots.
        Item numbers index items + verify_items; use that combined queue for prompts.
        Other phases: Request the phase brief with items and max_agents=subagent_slots.
-       For each brief wave: issue one spawn_agent per entry in one turn,
+       For each brief wave: issue every entry's spawn_agent in one model response
+       (parallel tool calls) before any wait_agent,
        with entry.agent, entry.model.codex.model and entry.model.codex.effort,
        and the category-routed prompt for that item's position (Rule 7).
-       Then one bounded wait_agent loop until every entry returned its terminal result;
+       Then one bounded wait_agent loop until every entry returned its terminal result
+       (each wait_agent with timeout_ms=brief.wait.codex.timeout_ms);
        consume each analyst result, calling close_agent only when exposed.
        The brief bounds every wave by subagent_slots. After every sub-wave of
        the items returned, follow consensus-protocol.md: dispatch and consume

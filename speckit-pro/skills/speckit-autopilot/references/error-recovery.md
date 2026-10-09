@@ -135,7 +135,7 @@ when its disposition permits. Resume and agent replacement never reset budget.
   `close_agent` is expected on hosted Responses Multi-agent and MUST NOT stop
   the run. When explicit closure is exposed but returns already-gone, log and
   continue without retry-looping. Bound each `wait_agent` poll with
-  `timeout_ms`, but treat one timeout only as a poll boundary: continue waiting
+  `timeout_ms` (`brief.wait.codex.timeout_ms` on the plan stage), but treat one timeout only as a poll boundary: continue waiting
   and inspect `list_agents` when possible. Use `interrupt_agent` only when
   exposed and a separate deadline or repeated no-progress check confirms the
   turn is stuck. Interruption preserves context and is not closure or a result;

@@ -783,6 +783,7 @@ stable fields, shared by both hosts:
 | `slices` | Ordered, structurally validated reference sections copied verbatim for the dispatch prompt; empty for Specify, Plan and Tasks |
 | `waves` | Ordered dispatch waves, empty unless the request names `domains` or `items` (see Dispatch waves) |
 | `model` | `claude` and `codex` entries, each with `model` and `effort`, for this dispatch. Claude Code passes `model` per call and keeps effort in the agent file; Codex passes both per spawn |
+| `wait` | `codex.timeout_ms`, the `timeout_ms` Codex passes on every `wait_agent` call of the phase; Claude Code waits on nothing and has no entry |
 | `hooks` | Optional suggestions `{extension, command, event, optional: true, prompt, description}`, once per event: enabled, condition met, `before_<phase>` then `after_<phase>`, in priority order within an event; empty for Clarify |
 
 Loaded commands still read their own instructions, templates and scripts.
@@ -816,8 +817,9 @@ Pass `max_agents=SUBAGENT_WAVE_SIZE`. It comes from
 `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS` (default 20; see the Claude Code
 [environment variables](https://code.claude.com/docs/en/env-vars)), with one
 slot kept for recovery, as the subagent-runtime record resolves it.
-Launch every entry of a wave in one turn, then consume every result before the
-next wave. A synthesizer or the confidence rule starts only after every wave of
+Launch every entry of a wave together, then consume every result before the
+next wave.
+A synthesizer or the confidence rule starts only after every wave of
 its items returned. Each entry names its agent, prompt `inputs` and model. A domain entry
 takes that domain's workflow prompt, plus both `Pass: verify` and `Mode: verify` lines when its inputs
 say `pass: verify`; an analyst entry (`inputs.item` only) takes the consensus
