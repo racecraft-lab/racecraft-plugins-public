@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.42.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.42.0...speckit-pro-v2.42.1) (2026-10-09)
+
+
+### Bug Fixes
+
+* **speckit-pro:** Codex plan stage launches each wave in one response and polls with a longer wait ([#1293](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1293)) ([49fd0e6](https://github.com/racecraft-lab/racecraft-plugins-public/commit/49fd0e67ece917e12bd7729a0ba992785a46df62)), closes [#1286](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1286)
+* **speckit-pro:** keep the previous artifact page when publication fails ([#1294](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1294)) ([2bd821c](https://github.com/racecraft-lab/racecraft-plugins-public/commit/2bd821c3f506c1e5eead9b3a937ccfa657129c1b)), closes [#1280](https://github.com/racecraft-lab/racecraft-plugins-public/issues/1280)
+
 ## [2.42.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.41.0...speckit-pro-v2.42.0) (2026-10-09)
 
 
