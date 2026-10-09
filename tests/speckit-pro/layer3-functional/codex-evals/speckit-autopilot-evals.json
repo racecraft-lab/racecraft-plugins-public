@@ -676,7 +676,7 @@
       "prompt": "Draft publication and its bookkeeping push succeeded. Four selected HTML pages exist and passed generation checks. Native preview requests return queued or a generic open-success receipt; there is no rendered-page observation. Complete the plan-stage handoff.",
       "expected_output": "Preserves successful publication and records previews as unverified rather than reporting delivery complete.",
       "expectations": [
-        "Parent owns preview delivery after publication bookkeeping; artifact-author still owns generation",
+        "Parent owns preview delivery after publication bookkeeping; the runner fill and artifact-author narrative own generation",
         "Queued, open success, file existence, HTTP success, and a URL cannot verify rendering",
         "Records per-page pending or unavailable dispositions with exact blockers and canonical local file links",
         "Preserves the valid PR and artifacts and does not claim user approval or UAT completion"
@@ -710,7 +710,7 @@
       "expected_output": "Resumes preview delivery while reusing the published artifacts and existing PR.",
       "expectations": [
         "A default invocation resolves plan for unfinished preview delivery while planning_complete remains true",
-        "Bypasses artifact-author dispatch and current-run artifact cleanup",
+        "Bypasses the runner fill, artifact-author dispatch, and current-run artifact cleanup",
         "Does not rerun completed planning phases or G6.5 solely for previews",
         "Corroborates the existing PR and skips already-completed publication work without duplicate creation or unnecessary refresh",
         "Preserves evidence for unchanged pages and persists remaining per-page dispositions"
@@ -741,12 +741,12 @@
     },
     {
       "id": 119,
-      "prompt": "All four generated draft pages have current rendered evidence. Architecture Viewer was selected but its template is planned and absent. In another run artifact-author returned no complete outcome list. Can previews erase these generation gaps?",
+      "prompt": "All four generated draft pages have current rendered evidence. Architecture Viewer was selected but its template is planned and absent. In another run artifact page selection failed. Can previews erase these generation gaps?",
       "expected_output": "Keeps generation gaps distinct from verified previews and preserves fail-open draft publication.",
       "expectations": [
         "Reports four verified generated pages and a separate missing Architecture Viewer template gap",
         "Does not implement a new template as part of preview delivery",
-        "Whole-set author failure is generation_error with no generated pages; previews are not_applicable rather than successful generation",
+        "Whole-set generation failure is generation_error with no generated pages; previews are not_applicable rather than successful generation",
         "Missing files, sample content, and unfilled slots still fail generation checks"
       ]
     }

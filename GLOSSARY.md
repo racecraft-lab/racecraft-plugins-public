@@ -110,6 +110,10 @@ _Avoid_: preview support, browser access
 The fixed summary of an autopilot run's phases and tasks that the runner renders from autopilot state at every phase transition. It is the only place a run shows its progress.
 _Avoid_: task list, todo list, checklist
 
+**Prose slot**:
+The narrative part of a draft artifact page. The runner fills it with a lifted-text fallback, a passage copied from the planning files, so the page is complete before any model writes; one narrative dispatch may replace it with short plain text, which the runner escapes and wraps in markup. Every other part of the page is structure the runner derives from the planning files.
+_Avoid_: narrative region, text slot
+
 **Quality-gate thresholds**:
 The repository's user-confirmed limits that the complexity, mutation and dependency-rule checks judge changed code against, with the checks it skips or opts into. Only a user's confirmation makes them; an agent never sets them alone.
 _Avoid_: gate config, quality settings
