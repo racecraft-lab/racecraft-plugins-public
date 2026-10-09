@@ -17,6 +17,7 @@ from unittest import mock
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 from script_loader import load_script  # noqa: E402
+from test_result import run_counted  # noqa: E402
 
 
 dispatch = load_script(
@@ -229,4 +230,5 @@ class MetadataWorkflowTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])
+    raise SystemExit(run_counted(suite, label="test-pr-metadata"))
