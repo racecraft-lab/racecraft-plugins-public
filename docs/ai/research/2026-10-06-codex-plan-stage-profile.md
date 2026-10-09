@@ -147,6 +147,8 @@ The plan stage reached its boundary and opened a draft pull request in the fixtu
 
 ## Limits
 
+- Accepted review limits for #1293: the live canary remains unmeasured, so the wording and brief checks do not establish model behavior or polling savings.
+- The earlier review also noted that artifact-page display text preserves Unicode bidi controls and supplied paths. That helper came from main and is outside this PR's dispatch change. Contributors already control the planning text or narrative shown; active HTML is escaped, and the demonstrated path adds no execution, disclosure, or signalling capability. This is an accepted display-integrity limit.
 - One new run and one earlier run, one fixture, one host version. Figures vary run to run: the two plan stages differ by 2% in wall time and 18% in tokens.
 - Per-phase orchestrator tokens are attributed by the time window of each model response, so a phase boundary is approximate to one response.
 - One small fixture (a word-frequency feature), one host version, two runs. The profile does not show how executor tokens, orchestrator context or poll cost change with a larger spec or a longer run; that is unconfirmed.
