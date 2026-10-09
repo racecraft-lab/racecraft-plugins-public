@@ -1153,6 +1153,7 @@ stable fields, shared by both hosts:
 | `slices` | Ordered, structurally validated reference sections copied verbatim for the dispatch prompt; empty for Specify, Plan and Tasks |
 | `waves` | Ordered dispatch waves, empty unless the request names `domains` or `items` (see Dispatch waves) |
 | `model` | `claude` and `codex` entries, each with `model` and `effort`, for this dispatch. Claude Code passes `model` per call and keeps effort in the agent file; Codex passes both per spawn |
+| `wait` | `codex.timeout_ms`, the `timeout_ms` Codex passes on every `wait_agent` call of the phase; Claude Code waits on nothing and has no entry |
 | `hooks` | Optional suggestions `{extension, command, event, optional: true, prompt, description}`, once per event: enabled, condition met, `before_<phase>` then `after_<phase>`, in priority order within an event; empty for Clarify |
 
 Loaded commands still read their own instructions, templates and scripts.
@@ -1196,8 +1197,19 @@ default when unset; see the Codex
 [configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference)).
 With no count exposed, `subagent_slots` is 1.
 <!-- /host -->
-Launch every entry of a wave in one turn, then consume every result before the
-next wave. A synthesizer or the confidence rule starts only after every wave of
+Launch every entry of a wave together, then consume every result before the
+next wave.
+<!-- host:codex: A Codex turn spans many model responses, so together means one response -->
+On Codex, together means one model response: put every `spawn_agent` call of
+the wave in the same response, before any `wait_agent`. A turn holds many
+responses, so a launch spread over several responses still satisfies "one
+turn"; it costs one orchestrator response per agent and staggers the starts.
+Pass `brief.wait.codex.timeout_ms` as `timeout_ms` on every `wait_agent` call.
+`wait_agent` returns early on any mailbox update, final-status notices
+included, so the bound adds no latency to a result; it only stops idle polls
+from re-reading the orchestrator context.
+<!-- /host -->
+A synthesizer or the confidence rule starts only after every wave of
 its items returned. Each entry names its agent, prompt `inputs` and model. A domain entry
 takes that domain's workflow prompt, plus both `Pass: verify` and `Mode: verify` lines when its inputs
 say `pass: verify`; an analyst entry (`inputs.item` only) takes the consensus
@@ -1278,14 +1290,17 @@ for phase in PHASES starting from first_pending:
          spawn_agent(agent_type=brief.agent, model=brief.model.codex.model,
                      reasoning_effort=brief.model.codex.effort, fork_turns="none",
                      message=<"$" + brief.inputs.skill (omitted when null) + newline +
-                              brief.inputs.instruction + workflow prompt + brief context + brief.slices>) then wait_agent
+                              brief.inputs.instruction + workflow prompt + brief context + brief.slices>) then
+         wait_agent(timeout_ms=brief.wait.codex.timeout_ms)
          Implement: use the implementation executor and task-specific TDD prompt.
        Checklist uses the ordered flow in step 4; this is the launch mechanism for each wave.
-       Each brief wave: issue one spawn_agent per entry in one turn, each
+       Each brief wave: issue every entry's spawn_agent in one model response (parallel
+       tool calls), before any wait_agent, each
          spawn_agent(agent_type=entry.agent, model=entry.model.codex.model,
                      reasoning_effort=entry.model.codex.effort, fork_turns="none",
                      message=<entry.inputs + the wave prompt, see Dispatch waves>),
-       then one bounded wait_agent loop until every entry returned its terminal result.
+       then one bounded wait_agent loop until every entry returned its terminal result,
+       each wait_agent(timeout_ms=brief.wait.codex.timeout_ms).
 <!-- /host -->
     4. Checklist: domain waves -> verify wave -> consensus -> final shared-artifact checkpoint (Dispatch waves above).
        Before the first domain wave: runner helper `checklist-edits`, mode read_only → baseline.

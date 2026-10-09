@@ -375,6 +375,7 @@
         "When close_agent is exposed, treats cleanup as best-effort and does not retry-loop an already-gone result",
         "When close_agent is absent, leaves the completed inspectable thread to the host without stopping",
         "Treats one wait_agent timeout as a poll boundary rather than proof the agent is stuck",
+        "Launches every spawn_agent of a brief wave in one model response (parallel tool calls) before any wait_agent, and passes the brief's wait.codex.timeout_ms on each wait_agent",
         "Uses interrupt_agent only for a confirmed stuck running turn and states interruption is neither closure nor a result",
         "Requires any interrupted required item to be re-spawned and return a real result before completion",
         "Before reporting completion, audits list_agents when exposed or tracked dispatch IDs and consumed results otherwise"

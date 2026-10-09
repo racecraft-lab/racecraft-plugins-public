@@ -112,6 +112,16 @@ Run A per-agent rows are in the same range: checklist domains 805K to 1.50M toke
 
 Every poll response re-reads about 184K cached tokens to emit a call of under 100 tokens. The plugin text says to "bound each `wait_agent` poll with `timeout_ms`" and gives no value. Run B's orchestrator chose 10000 on every call. Run A's chose 10000 on 20 calls and 50000 on 13. The 50 s waits account for most of Run A's 556 s blocked time. Run A's poll input share (26%) is lower than Run B's (36%), consistent with fewer, longer waits, though two runs do not establish that. The Codex subagent documentation does not state a default or minimum for `timeout_ms` that I could find; the value was not confirmed against a vendor source. Whether a longer timeout returns early when a child finishes, and so cuts polls without adding latency, was not tested.
 
+## Follow-up from #1286: what the Codex source says
+
+Added after the profile; not measured in a canary run. Read from the open Codex source at tag `rust-v0.160.0` (the CLI version of the profile runs), under `codex-rs/core/src/tools/handlers/`:
+
+- `wait_agent` (`multi_agents_v2/wait.rs`, defaults in `core/src/config/mod.rs`): `timeout_ms` defaults to 30,000, a lower value is raised to the floor of 10,000, and the ceiling is 3,600,000. The three bounds are config values with those defaults. Run B's 10,000 on every call is the floor.
+- The tool description says it waits for a mailbox update from any live agent, "including queued messages and final-status notifications", and ends early when user input is steered in. The handler returns on the first mailbox activity, so a longer `timeout_ms` returns as soon as a child reports and adds no latency to a result. It only cuts the idle polls that time out. This answers the "not tested" line under Poll cost from source; a canary re-run still has to confirm the saving.
+- A Codex turn holds many model responses (Run B: 1 orchestrator turn, 175 responses, per the table above). The skill text "in one turn" is therefore met by one `spawn_agent` per response. This is the likeliest reason for the serial launch, and is still unconfirmed: the model's choice is not in the source. The host does accept several tool calls in one response; whether it runs them concurrently or in turn (its parallel-call switch is per tool, and unlisted tools take the serial path) is unconfirmed for `spawn_agent`.
+
+The brief now carries `wait.codex.timeout_ms` (60,000) and the Codex text says "in one model response ... before any `wait_agent`". The canary re-run against the figures above (50 polls, 411 s blocked, staggered starts of 9 to 22 s) has not been run: the canary harness is not part of this repository. Record it here when it lands.
+
 ## Child-token sums
 
 Per-agent and per-phase sums match the receipt. Children: 10,336,919 tokens across 10 rollouts (Run B), 10,022,141 across 11 (Run A). Executors average 1.0M tokens each, and cache reads are 73% to 98% of their input. The three checklist domains, tasks and analyze are 7.9M of the 10.3M (76%): checklist 3,508,029, tasks 2,025,767, analyze 2,368,805.

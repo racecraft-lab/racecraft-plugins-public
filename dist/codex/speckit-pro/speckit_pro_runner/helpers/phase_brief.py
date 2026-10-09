@@ -33,6 +33,12 @@ PHASES = {
 # Specify and Tasks follow a written spec and also run Sonnet on Claude Code. Other phases use their agent's inventory row.
 SPEC_DRIVEN_MODEL = {"claude": {"model": "sonnet", "effort": "high"}, "codex": {"model": "gpt-6-sol", "effort": "medium"}}
 PHASE_MODEL_OVERRIDES = {"Specify": SPEC_DRIVEN_MODEL, "Tasks": SPEC_DRIVEN_MODEL, "Plan": {"codex": {"model": "gpt-6-sol", "effort": "high"}}}
+# Codex wait_agent returns early on any mailbox update, final-status notices included, so its timeout_ms only bounds
+# an idle poll and a longer bound adds no latency to a result. The tool's default is 30,000 ms and its floor 10,000 ms;
+# the first plan-stage profile (issue 1286) saw 10,000 ms on every call and 74% of the polls time out.
+# https://github.com/openai/codex/blob/rust-v0.160.0/codex-rs/core/src/tools/handlers/multi_agents_v2/wait.rs
+# A call that has an execution deadline passes the time left instead, when that is shorter.
+CODEX_WAIT_TIMEOUT_MS = 60_000
 REFERENCES = Path(__file__).resolve().parents[2] / "skills" / "speckit-autopilot" / "references"
 EXECUTOR_SLICES = (
     ("capability-discovery.md", ("Capability Categories", "Discovery Step", "Research Broker Rule", "Selection Rule", "Capability Boundaries by Role",
@@ -166,7 +172,8 @@ def brief_data(phase: str, workflow: str, feature: str, waves: WaveRequest) -> d
                    "prompt_section": PROMPT_SECTIONS.get(phase, phase + " Prompt"), "instruction": instruction,
                    "skill": skill},
         "readable_files": [workflow, ".specify/memory/constitution.md", ".specify/extensions.yml"] + [feature + "/" + name for name in artifacts],
-        "gate": gate, "slices": phase_slices(phase), "model": phase_model(phase, agent), "hooks": [],
+        "gate": gate, "slices": phase_slices(phase), "model": phase_model(phase, agent), "wait": {"codex": {"timeout_ms": CODEX_WAIT_TIMEOUT_MS}},
+        "hooks": [],
         "waves": compose_waves(waves, lambda role: phase_model(phase, role)),
     }
 
@@ -274,6 +281,8 @@ def run_phase_brief_helper(entry: Any, request: Any) -> dict[str, Any]:
     model: {claude: {model: str, effort: str},
         codex: {model: str, effort: str}}, host-specific dispatch configuration;
         top-level dispatch only; Claude passes model, Codex passes both.
+    wait: {codex: {timeout_ms: int}}, the timeout_ms Codex passes on every wait_agent call of the
+        phase (single dispatches and waves); Claude Code waits on nothing, so it has no entry.
     hooks: list[{extension, command, event, optional: true, prompt, description}],
         enabled optional suggestions from .specify/extensions.yml, once per event.
         Fields except optional are strings; prompt/description are runner-owned.

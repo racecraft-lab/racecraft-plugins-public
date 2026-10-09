@@ -576,7 +576,7 @@ class PhaseBriefTests(InProjectCase):
                 self.assertEqual(result["status"], "ok", result)
                 brief = result["data"]
                 self.assertEqual(set(brief), {"schema_version", "phase", "agent", "inputs", "readable_files",
-                                              "gate", "slices", "waves", "model", "hooks"})
+                                              "gate", "slices", "waves", "model", "wait", "hooks"})
                 self.assertEqual(brief["schema_version"], "phase-brief/v1")
                 self.assertEqual(brief["phase"], phase)
                 self.assertEqual(set(brief["inputs"]), {"workflow_file", "feature_dir", "instruction", "skill", "prompt_section"} | ({"tasks_snapshot", "tasks_output", "defer_after_hooks"} if phase == "Tasks" else set()))
@@ -1136,18 +1136,34 @@ class PhaseBriefWaveTests(InProjectCase):
     def loop(self, host):
         return (host_skill_root(host) / "speckit-autopilot/SKILL.md").read_text().split("## Step 2: Main Execution Loop", 1)[1]
 
-    def test_both_hosts_launch_a_wave_in_one_turn_and_wait_for_all_of_it(self):
+    def test_both_hosts_launch_a_wave_together_and_wait_for_all_of_it(self):
         for host, needle in (("claude", "run_in_background: true"), ("codex", "one bounded wait_agent loop until every entry returned")):
             self.assertIn(needle, self.loop(host), host)
         self.assertIn("model: entry.model.claude.model", self.loop("claude"))
-        self.assertIn("issue one spawn_agent per entry in one turn", self.loop("codex"))
         self.assertIn("model=entry.model.codex.model", self.loop("codex"))
-        reference = (host_skill_root("codex") / "speckit-autopilot/references/phase-execution.md").read_text()
-        self.assertIn("For each brief wave: issue one spawn_agent per entry in one turn", reference)
+        reference = " ".join((host_skill_root("codex") / "speckit-autopilot/references/phase-execution.md").read_text().split())
         self.assertIn("one bounded wait_agent loop until every entry returned its terminal result", reference)
         self.assertNotIn("For each item → spawn the category-routed analysts", reference)
         for host in ("claude", "codex"):
             self.assertTrue(all(needle in self.loop(host) for needle in ("### Dispatch waves", "Each brief wave")), host)
+
+    def test_codex_launches_a_wave_in_one_model_response_not_one_turn(self):
+        # A Codex turn spans many model responses (the plan-stage profile counts 175 responses in 1 turn), so
+        # "in one turn" was satisfied by one spawn_agent per response. Issue 1286.
+        codex = " ".join(self.loop("codex").split())
+        for text in (codex, " ".join((host_skill_root("codex") / "speckit-autopilot/references/phase-execution.md").read_text().split())):
+            self.assertIn("in one model response", text)
+            self.assertIn("before any wait_agent", text)
+            self.assertNotIn("one spawn_agent per entry in one turn", text)
+        self.assertNotIn("in one model response", " ".join(self.loop("claude").split()))
+
+    def test_codex_waits_use_the_briefs_timeout_everywhere_the_plan_stage_polls(self):
+        codex = " ".join(self.loop("codex").split())
+        self.assertIn("timeout_ms=brief.wait.codex.timeout_ms", codex)
+        for name in ("phase-execution.md", "error-recovery.md"):
+            text = " ".join((host_skill_root("codex") / "speckit-autopilot/references" / name).read_text().split())
+            self.assertIn("brief.wait.codex.timeout_ms", text, name)
+        self.assertNotIn("brief.wait", " ".join(self.loop("claude").split()))
 
     def test_consensus_reference_qualifies_the_briefs_host_neutral_roles(self):
         entry = self.waves("Analyze", items=[{"line": "[security] Q1: credentials?"}])[0][0]
@@ -1326,6 +1342,25 @@ class PhaseBriefModelTests(InProjectCase):
                     self.assertIn(needle, loop)
                 if host == "codex":
                     self.assertNotIn("model_reasoning_effort=", loop)
+
+
+class PhaseBriefWaitTests(InProjectCase):
+    def test_every_brief_names_the_codex_wait_timeout_and_claude_polls_nothing(self):
+        # Codex wait_agent (rust-v0.160.0): default 30,000 ms, floor 10,000 ms, ceiling 3,600,000 ms, and it
+        # returns early on any mailbox update, so a long bound adds no latency to results. The profile's 10,000 ms
+        # polls timed out 74% of the time (issue 1286).
+        for phase in phase_brief.PHASES:
+            with self.subTest(phase=phase):
+                brief = dispatch_brief({"phase": phase, "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"})["data"]
+                self.assertEqual(set(brief["wait"]), {"codex"})
+                timeout = brief["wait"]["codex"]["timeout_ms"]
+                self.assertIsInstance(timeout, int)
+                self.assertTrue(30_000 <= timeout <= 3_600_000, timeout)
+
+    def test_the_wait_is_the_same_on_both_payload_hosts(self):
+        inputs = {"phase": "Checklist", "workflow_file": "docs/workflow.md", "feature_dir": "specs/example"}
+        source = dispatch_brief(inputs)["data"]["wait"]
+        self.assertEqual([report["wait"] for report in payload_briefs(inputs)], [source, source])
 
 
 class CodexEffectiveEffortTests(InProjectCase):
@@ -1991,5 +2026,5 @@ class PhaseBriefExecutorContractTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, TasksG4DriftTests, TasksG4EvidenceTests, TasksOutputTests, TasksG4IdentityTests, PhaseBriefWaveTests, ChecklistWaveHostTests, ChecklistCheckpointEditTests, ChecklistCheckpointEvidenceTests, PhaseBriefPathTests, PhaseBriefModelTests, CodexEffectiveEffortTests, RetryLadderTopRungTests, PhaseBriefSliceTests, PhaseBriefEncodingTests, PhaseBriefEncodingHostTests, PhaseBriefEncodingPathTests, PhaseBriefHookTests, OptionalHookConsentTests, OptionalHookDisplayBoundaryTests, ChildImportIsolationTests, PhaseBriefExecutorContractTests))
+    suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case) for case in (PhaseBriefTests, TasksG4DriftTests, TasksG4EvidenceTests, TasksOutputTests, TasksG4IdentityTests, PhaseBriefWaveTests, ChecklistWaveHostTests, ChecklistCheckpointEditTests, ChecklistCheckpointEvidenceTests, PhaseBriefPathTests, PhaseBriefModelTests, PhaseBriefWaitTests, CodexEffectiveEffortTests, RetryLadderTopRungTests, PhaseBriefSliceTests, PhaseBriefEncodingTests, PhaseBriefEncodingHostTests, PhaseBriefEncodingPathTests, PhaseBriefHookTests, OptionalHookConsentTests, OptionalHookDisplayBoundaryTests, ChildImportIsolationTests, PhaseBriefExecutorContractTests))
     sys.exit(run_counted(suite, label="test-phase-brief"))

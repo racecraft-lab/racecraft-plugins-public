@@ -227,7 +227,7 @@ serial (write contention on spec.md / plan.md / tasks.md).
 ### Stages
 
 ```text
-Stage 1 — All routed analysts, as the brief's waves (one turn each):
+Stage 1 — All routed analysts, as the brief's waves (one launch each):
   Request the phase brief with `items` (each unresolved item's line and confidence)
   and `max_agents` (the host's concurrent-agent limit).
   Its security wave holds the three analysts of every security item; its
