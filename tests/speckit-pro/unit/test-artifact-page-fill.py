@@ -53,8 +53,8 @@ class FillFixture(unittest.TestCase):
         page = (self.root / FEATURE / "artifacts" / f"{entry_id}.html").read_text(encoding="utf-8")
         return dict(REGION.findall(page))
 
-    def assert_regions(self, entry_id: str, expected: dict[str, tuple[str, ...]]) -> None:
-        regions = self.regions(entry_id)
+    def assert_regions(self, entry_id: str, expected: dict[str, tuple[str, ...]], **inputs: object) -> None:
+        regions = self.regions(entry_id, **inputs)
         for name, fragments in expected.items():
             for fragment in fragments:
                 with self.subTest(entry_id=entry_id, region=name, fragment=fragment):
@@ -86,6 +86,16 @@ class StructuredRegionTests(FillFixture):
         })
         self.assert_regions("code-approaches", {"approaches": (
             "D1 — Draft mode is a third value on the existing packet mode", "A separate draft-packet schema.")})
+
+    def test_approaches_keep_the_plan_workflows_bulleted_research_fields(self) -> None:
+        research = ROOT / "tests/speckit-pro/evals/fixtures/functional/native-orchestration/plan-research/research.md"
+        shutil.copy(research, self.root / FEATURE / "research.md")
+        for plugin in PLUGINS:
+            with self.subTest(plugin=plugin):
+                self.assert_regions("code-approaches", {"approaches": (
+                    "Retain refresh tokens for 30 days.", "7 days; 90 days.",
+                    "Exponential backoff with full jitter, capped at 60 seconds.", "Fixed delay; linear backoff."),
+                    "recommendation": ("Retain refresh tokens for 30 days.",)}, plugin=plugin)
 
 
 class FallbackAndNarrativeTests(FillFixture):

@@ -209,8 +209,11 @@ def decisions(page: Page) -> list[tuple[str, str, list[str]]]:
     for title, lines in sections(page.texts["research"] + "\n" + page.texts["design"], 2):
         start = next((index for index, line in enumerate(lines) if "alternatives" in line.lower()), None)
         if start is not None and artifact_selection.records_alternatives("\n".join(lines)):
-            chosen = next((block[9:].strip() for block in paragraphs(lines) if block.startswith("Decision:")), "")
-            found.append((title, chosen, [plain(item) for item in bullets(lines[start + 1:])]))
+            blocks = [*paragraphs(lines), *(plain(item) for item in bullets(lines))]
+            chosen = next((block[9:].strip() for block in blocks if block.startswith("Decision:")), "")
+            field = artifact_selection.ALTERNATIVES_FIELD.match(lines[start].strip())
+            inline = [plain(field[1])] if field and field[1].strip() else []
+            found.append((title, chosen, inline + [plain(item) for item in bullets(lines[start + 1:])]))
     return found
 
 
