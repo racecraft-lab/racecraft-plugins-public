@@ -9,9 +9,9 @@ import json
 import tempfile
 import sys
 import unittest
+import unittest.mock
 from contextlib import redirect_stderr
 from pathlib import Path
-from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -24,10 +24,25 @@ dispatch = load_script(
     "metadata_release_dispatch", REPO_ROOT / "scripts" / "dispatch-release-pr-checks.py"
 )
 
+LIVE_PR = {
+    "number": 302,
+    "state": "open",
+    "base": {"repo": {"full_name": "example/project"}},
+    "head": {
+        "ref": "release-branch",
+        "sha": "a" * 40,
+        "repo": {"full_name": "example/project", "fork": False},
+    },
+    "title": "fix(ci): use live metadata",
+    "body": "Live release note",
+    "labels": [{"name": "release-note/skip"}],
+    "draft": False,
+}
+
 
 class ManualMetadataDispatchTests(unittest.TestCase):
     def test_release_dispatch_supplies_only_the_pr_number(self) -> None:
-        run = mock.Mock()
+        run = unittest.mock.Mock()
 
         dispatch.dispatch_release_pr_checks(
             [{"branch": "release-branch", "number": "302", "title": "stale title"}],
@@ -43,7 +58,7 @@ class ManualMetadataDispatchTests(unittest.TestCase):
         )
 
 
-class LiveMetadataTests(unittest.TestCase):
+class MetadataFixture(unittest.TestCase):
     def setUp(self) -> None:
         self.metadata = load_script("pr_metadata", REPO_ROOT / "scripts" / "pr_metadata.py")
         self.directory = tempfile.TemporaryDirectory()
@@ -61,33 +76,36 @@ class LiveMetadataTests(unittest.TestCase):
             "PR_TITLE": "forged title",
             "PR_BODY": "forged body",
         }
-        self.pr = {
-            "number": 302,
-            "state": "open",
-            "base": {"repo": {"full_name": "example/project"}},
-            "head": {
-                "ref": "release-branch",
-                "sha": "a" * 40,
-                "repo": {"full_name": "example/project", "fork": False},
-            },
-            "title": "fix(ci): use live metadata",
-            "body": "Live release note",
-            "labels": [{"name": "release-note/skip"}],
-            "draft": False,
-        }
+        self.pr = copy.deepcopy(LIVE_PR)
 
     def invoke(self, pr=None, environment=None):
-        paths: list[str] = []
-
-        def fetch(path):
-            paths.append(path)
-            return self.pr if pr is None else pr
-
+        fetch = unittest.mock.Mock(return_value=self.pr if pr is None else pr)
         with redirect_stderr(io.StringIO()) as errors:
             status = self.metadata.main(
                 self.environment if environment is None else environment, fetch=fetch
             )
-        return status, paths, errors.getvalue()
+        return status, [call.args[0] for call in fetch.call_args_list], errors.getvalue()
+
+    def assert_rejected_changes(self, target, mutations, *, paths, existing=None):
+        for keys, value in mutations:
+            with self.subTest(field=".".join(keys), value=value):
+                changed = copy.deepcopy(target)
+                field = changed
+                for key in keys[:-1]:
+                    field = field[key]
+                field[keys[-1]] = value
+                if existing is not None:
+                    self.output.write_text(existing)
+                status, actual_paths, errors = self.invoke(
+                    **{"pr" if target is self.pr else "environment": changed}
+                )
+                self.assertEqual(1, status)
+                self.assertEqual(paths, actual_paths)
+                self.assertTrue(errors)
+                self.assertEqual(existing, self.output.read_text() if self.output.exists() else None)
+
+
+class LiveMetadataTests(MetadataFixture):
 
     def test_reads_actual_metadata_from_the_pull_request_endpoint(self) -> None:
         status, paths, errors = self.invoke()
@@ -101,69 +119,6 @@ class LiveMetadataTests(unittest.TestCase):
             },
             json.loads(self.output.read_text().removeprefix("metadata=")),
         )
-
-    def test_rejects_each_live_identity_mismatch_before_emitting_metadata(self) -> None:
-        mutations = [
-            (("number",), 303),
-            (("base", "repo", "full_name"), "other/project"),
-            (("head", "repo", "full_name"), "fork/project"),
-            (("head", "repo", "fork"), True),
-            (("head", "ref"), "different-branch"),
-            (("head", "sha"), "b" * 40),
-            (("state",), "closed"),
-        ]
-        for keys, value in mutations:
-            with self.subTest(field=".".join(keys), value=value):
-                pr = copy.deepcopy(self.pr)
-                field = pr
-                for key in keys[:-1]:
-                    field = field[key]
-                field[keys[-1]] = value
-                self.output.write_text("existing=preserved\n")
-                status, paths, errors = self.invoke(pr)
-                self.assertEqual(1, status)
-                self.assertEqual(["/repos/example/project/pulls/302"], paths)
-                self.assertTrue(errors)
-                self.assertEqual("existing=preserved\n", self.output.read_text())
-
-    def test_rejects_tag_and_missing_or_malformed_dispatch_identity_before_api(self) -> None:
-        mutations = [
-            ("GITHUB_REF", "refs/tags/release-branch"),
-            ("GITHUB_REF", "release-branch"),
-            ("GITHUB_REF", "refs/heads/"),
-            ("GITHUB_SHA", "short-sha"),
-            ("GITHUB_SHA", ""),
-            ("GITHUB_REPOSITORY", "../project"),
-            ("GITHUB_REPOSITORY", ""),
-            ("PR_NUMBER", "0"),
-            ("PR_NUMBER", "302/../303"),
-            ("PR_NUMBER", ""),
-            ("GITHUB_EVENT_NAME", "pull_request"),
-        ]
-        for key, value in mutations:
-            with self.subTest(key=key, value=value):
-                env = dict(self.environment, **{key: value})
-                status, paths, errors = self.invoke(environment=env)
-                self.assertEqual(1, status)
-                self.assertEqual([], paths)
-                self.assertTrue(errors)
-                self.assertFalse(self.output.exists())
-
-    def test_rejects_malformed_live_metadata_without_outputs(self) -> None:
-        mutations = [
-            ("title", None), ("title", ""), ("title", 123),
-            ("body", False), ("body", 123),
-            ("draft", None), ("draft", "false"),
-            ("labels", {}), ("labels", [{"name": None}]),
-            ("labels", [{"name": ""}]),
-        ]
-        for key, value in mutations:
-            with self.subTest(key=key, value=value):
-                pr = dict(self.pr, **{key: value})
-                status, _paths, errors = self.invoke(pr)
-                self.assertEqual(1, status)
-                self.assertTrue(errors)
-                self.assertFalse(self.output.exists())
 
     def test_draft_and_null_body_are_taken_from_api(self) -> None:
         pr = dict(self.pr, draft=True, body=None, labels=[])
@@ -185,6 +140,60 @@ class LiveMetadataTests(unittest.TestCase):
             json.loads(lines[0].removeprefix("metadata=")),
         )
 
+
+class LiveIdentityRejectionTests(MetadataFixture):
+    def test_rejects_each_live_identity_mismatch_before_emitting_metadata(self) -> None:
+        mutations = [
+            (("number",), 303),
+            (("base", "repo", "full_name"), "other/project"),
+            (("head", "repo", "full_name"), "fork/project"),
+            (("head", "repo", "fork"), True),
+            (("head", "ref"), "different-branch"),
+            (("head", "sha"), "b" * 40),
+            (("state",), "closed"),
+        ]
+        self.assert_rejected_changes(
+            self.pr, mutations, paths=["/repos/example/project/pulls/302"],
+            existing="existing=preserved\n",
+        )
+
+
+class DispatchIdentityRejectionTests(MetadataFixture):
+    def test_rejects_tag_and_missing_or_malformed_dispatch_identity_before_api(self) -> None:
+        mutations = [
+            ("GITHUB_REF", "refs/tags/release-branch"),
+            ("GITHUB_REF", "release-branch"),
+            ("GITHUB_REF", "refs/heads/"),
+            ("GITHUB_SHA", "short-sha"),
+            ("GITHUB_SHA", ""),
+            ("GITHUB_REPOSITORY", "../project"),
+            ("GITHUB_REPOSITORY", ""),
+            ("PR_NUMBER", "0"),
+            ("PR_NUMBER", "302/../303"),
+            ("PR_NUMBER", ""),
+            ("GITHUB_EVENT_NAME", "pull_request"),
+        ]
+        self.assert_rejected_changes(
+            self.environment, [((key,), value) for key, value in mutations], paths=[],
+        )
+
+
+class MetadataSchemaRejectionTests(MetadataFixture):
+    def test_rejects_malformed_live_metadata_without_outputs(self) -> None:
+        mutations = [
+            ("title", None), ("title", ""), ("title", 123),
+            ("body", False), ("body", 123),
+            ("draft", None), ("draft", "false"),
+            ("labels", {}), ("labels", [{"name": None}]),
+            ("labels", [{"name": ""}]),
+        ]
+        self.assert_rejected_changes(
+            self.pr, [((key,), value) for key, value in mutations],
+            paths=["/repos/example/project/pulls/302"],
+        )
+
+
+class ApiFailureTests(MetadataFixture):
     def test_api_failures_and_missing_evidence_fail_closed(self) -> None:
         def failed_fetch(path):
             raise OSError("API unavailable")
