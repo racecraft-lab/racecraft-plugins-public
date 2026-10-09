@@ -89,7 +89,7 @@ Claude Code and Codex agent responsibilities derived from the authoritative ship
 
 ### Artifact Author
 
-- **Purpose:** Fills the shipped HTML artifact-gallery templates for a feature and publishes the finished pages into the feature's `artifacts/` directory through the runner.
+- **Purpose:** Writes the short narrative of the draft artifact pages the runner already filled from the planning record.
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro artifact-author agent
 - **Claude Code:** plugin agent (required)
