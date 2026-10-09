@@ -40,7 +40,8 @@
       "type": "object", "additionalProperties": false,
       "required": ["wall_seconds", "tokens"],
       "properties": {"wall_seconds": {"type": "number", "minimum": 0}, "tokens": {"$ref": "#/$defs/count"},
-        "codex_tokens": {"$ref": "#/$defs/codex_tokens"}}
+        "codex_tokens": {"$ref": "#/$defs/codex_tokens"},
+        "artifact_author_seconds": {"type": "number", "minimum": 0, "description": "Plan stage only: time from the runner's artifact fill to the narrative dispatch's last outcome (ADR 0019)."}}
     },
     "codex_tokens": {
       "description": "Stage-scoped root usage and one token count per descendant rollout, including nested children. Each count excludes inherited history and usage outside this stage; repeated cumulative snapshots are not separate counts.",

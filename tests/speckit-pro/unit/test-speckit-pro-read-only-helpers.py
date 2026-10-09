@@ -5446,6 +5446,19 @@ class CanaryReceiptTests(unittest.TestCase):
         value["install_probe"]["skill_expansion"] = "failed"
         self.assertTrue(self.validator.validate_receipt(value))
 
+    def test_reports_the_plan_stage_artifact_author_time(self):
+        value = receipt()
+        value["variants"][0]["stages"]["plan"]["wall_seconds"] = 600
+        self.assertIsNone(self.validator.receipt_report(value)["variants"][0]["plan_target"]["artifact_author_seconds"])
+        value["variants"][0]["stages"]["plan"]["artifact_author_seconds"] = 90
+        report = self.validator.receipt_report(value)
+        self.assertTrue(report["valid"], report)
+        self.assertEqual(90, report["variants"][0]["plan_target"]["artifact_author_seconds"])
+        for bad in (float("nan"), -1, 601):
+            with self.subTest(bad=bad):
+                value["variants"][0]["stages"]["plan"]["artifact_author_seconds"] = bad
+                self.assertTrue(self.validator.validate_receipt(value))
+
     def test_rejects_nonfinite_stage_evidence_through_api_and_cli(self):
         for number in (float("nan"), float("inf"), -float("inf")):
             value = receipt()
@@ -5781,7 +5794,8 @@ class CanaryPlanTargetContractTests(CanaryVariantCase):
                 self.assertFalse(report["valid"])
                 self.assertEqual(["base.plan.tokens_sum"], report["failed_assertions"])
                 self.assertEqual({"wall_seconds_limit": 1800, "tokens_limit": 15000000,
-                                  "wall_seconds": 1, "tokens": 30, "target_met": False},
+                                  "wall_seconds": 1, "tokens": 30, "artifact_author_seconds": None,
+                                  "target_met": False},
                                  report["variants"][0]["plan_target"])
 
 

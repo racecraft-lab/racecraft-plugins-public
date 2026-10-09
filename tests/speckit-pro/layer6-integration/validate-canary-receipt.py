@@ -235,8 +235,9 @@ def plan_target_report(variant, measured_tokens):
     plan = variant["stages"]["plan"]
     measured = {"wall_seconds": plan["wall_seconds"], "tokens": measured_tokens}
     met = all(measured[metric] <= limit for metric, limit in PLAN_TARGET_LIMITS.items())
+    # ADR 0019: artifact author time, or an explicit unknown when the harness did not record it.
     return {**{f"{metric}_limit": limit for metric, limit in PLAN_TARGET_LIMITS.items()},
-            **measured, "target_met": met}
+            **measured, "artifact_author_seconds": plan.get("artifact_author_seconds"), "target_met": met}
 
 
 def variant_report(variant, checks, host):
@@ -309,6 +310,9 @@ def variant_failures(variant):
     for name, stage in variant["stages"].items():
         if not math.isfinite(stage["wall_seconds"]):
             failures.append(f"{variant['name']}.{name}.wall_seconds")
+        author = stage.get("artifact_author_seconds", 0)
+        if not math.isfinite(author) or author > stage["wall_seconds"]:
+            failures.append(f"{variant['name']}.{name}.artifact_author_seconds")
     return failures
 
 
