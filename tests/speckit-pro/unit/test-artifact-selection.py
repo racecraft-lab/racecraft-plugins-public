@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import os
 import re
@@ -129,9 +130,10 @@ class OutputSecurityTests(SelectionFixture):
 # temporary is created), "written" (after the temporary is written, before its entry is
 # re-checked), "publish" (inside the last window, just before the rename), and "readback"
 # (before the final page is reopened). Unfired hooks are written out so a test can prove its race ran.
-RACE_RUNNER = """
+RACE_ACTIONS = """
 import atexit, json, os, runpy, sys
 from pathlib import Path
+from speckit_pro_runner import atomic_write
 plan = json.loads(sys.argv[1])
 sys.argv = sys.argv[:1]
 atexit.register(lambda: Path('race-unfired.json').write_text(json.dumps(plan), encoding='utf-8'))
@@ -141,7 +143,9 @@ opened = {}
 def act(point, name):
     for action in plan.pop(point, []):
         entry = Path('artifacts', name)
-        if action == 'owned-open':
+        if action == 'fail':
+            raise OSError('injected publication failure')
+        elif action == 'owned-open':
             os.fstat(state['owned_fd'])
         elif action == 'swap':
             Path('artifacts').rename('held-artifacts')
@@ -166,6 +170,12 @@ def act(point, name):
         elif action == 'leaf-replace':
             entry.unlink()
             entry.write_text('foreign page', encoding='utf-8')
+        elif action == 'replace-final':
+            final = Path('artifacts/implementation-plan.html')
+            final.unlink()
+            final.write_text('foreign page', encoding='utf-8')
+"""
+RACE_IO = """
 def hooked_open(path, flags, *args, **kwargs):
     name = str(path)
     if kwargs.get('dir_fd') is not None:
@@ -176,19 +186,22 @@ def hooked_open(path, flags, *args, **kwargs):
             state['temporary'] = name
         elif state['published'] and name.endswith('.html') and not flags & os.O_CREAT:
             act('readback', name)
+        elif state['published'] and name == 'artifacts':
+            act('bound', name)
     fd = real_open(path, flags, *args, **kwargs)
     if flags & os.O_CREAT and name.startswith('.artifact-author-'):
         state['owned_fd'] = fd
     return fd
 def hooked(real):
     def move(src, dst, *args, **kwargs):
-        act('publish', str(src))
+        act('restore' if state['published'] else 'publish', str(src))
         result = real(src, dst, *args, **kwargs)
         state['published'] = True
         return result
     return move
 real_fsync = os.fsync
 def hooked_fsync(fd):
+    act('sync', state.get('temporary', ''))
     result = real_fsync(fd)
     if 'temporary' in state:
         act('written', state['temporary'])
@@ -199,8 +212,36 @@ def hooked_mkdir(path, *args, **kwargs):
         act('mkdir', str(path))
     return real_mkdir(path, *args, **kwargs)
 os.open, os.rename, os.replace, os.mkdir = hooked_open, hooked(real_rename), hooked(real_replace), hooked_mkdir
+"""
+RACE_FAILURES = """
+real_write, real_read, real_close, real_unlink = os.write, os.read, os.close, os.unlink
+def hooked_write(fd, data):
+    if fd == state.get('owned_fd'):
+        act('write', state['temporary'])
+    return real_write(fd, data)
+def hooked_read(fd, size):
+    if state['published']:
+        act('read', '')
+    return real_read(fd, size)
+def hooked_close(fd):
+    if fd == state.get('owned_fd'):
+        act('close', state['temporary'])
+    return real_close(fd)
+def hooked_unlink(path, *args, **kwargs):
+    if state['published'] and str(path) == state.get('temporary'):
+        act('cleanup', str(path))
+    return real_unlink(path, *args, **kwargs)
+os.write, os.read, os.close, os.unlink = hooked_write, hooked_read, hooked_close, hooked_unlink
+real_swap = atomic_write.swap_entries
+def hooked_swap(directory, src, dst):
+    act('restore' if state['published'] else 'publish', src)
+    result = real_swap(directory, src, dst)
+    state['published'] = result
+    return result
+atomic_write.swap_entries = hooked_swap
 runpy.run_module('speckit_pro_runner', run_name='__main__')
 """
+RACE_RUNNER = "\n".join((RACE_ACTIONS, RACE_IO, RACE_FAILURES))
 PLUGINS = ("speckit-pro", "dist/claude/speckit-pro", "dist/codex/speckit-pro")
 FILL = re.compile(r"(<!-- FILL:([a-z0-9-]+):START -->)(.*?)(<!-- FILL:\2:END -->)", re.DOTALL)
 
@@ -221,9 +262,11 @@ class PublicationFixture(SelectionFixture):
 
     def publish(self, *, status: str = "ok", race: dict | None = None, plugin: str = "speckit-pro",
                 mode: str = "apply", **inputs: object) -> dict:
+        helper = inputs.pop("helper", "publish-artifact-page")
+        content = {"content": self.page} if helper == "publish-artifact-page" else {}
         request = {"schema_version": "1.0", "request_id": "artifact-publication-test",
-                   "helper_id": "publish-artifact-page", "operation": "publish-artifact-page", "mode": mode,
-                   "inputs": {"plan_file": "plan.md", "entry_id": "implementation-plan", "content": self.page,
+                   "helper_id": helper, "operation": helper, "mode": mode,
+                   "inputs": {"plan_file": "plan.md", "entry_id": "implementation-plan", **content,
                               **inputs}}
         done = subprocess.run([sys.executable, "-c", RACE_RUNNER, json.dumps(race or {})],
                               input=json.dumps(request), text=True, capture_output=True, check=False,
@@ -243,6 +286,64 @@ class PublicationFixture(SelectionFixture):
     def assert_outside_untouched(self) -> None:
         self.assertEqual({name: text for name, text in self.tree().items() if name.startswith("outside/")},
                          {"outside/victim.html": "outside page"})
+
+
+class PublicationRecoveryTests(PublicationFixture):
+    def test_failed_readback_keeps_the_previous_page_byte_for_byte(self) -> None:
+        result = self.publish(status="expected_failure", race={"readback": ["fail"]})
+        self.assertEqual(self.tree(), {"artifacts/implementation-plan.html": "old page",
+                                      "outside/victim.html": "outside page"})
+        self.assertEqual(result["data"].get("retained_page"),
+                         {"sha256": hashlib.sha256(b"old page").hexdigest(), "bytes": 8})
+        self.assertEqual(result["data"].get("page_outcome"), "generated")
+        self.assertEqual(result["diagnostics"][0]["code"], "artifact_publication_retained")
+
+    def test_failure_at_each_publication_step_keeps_the_previous_bytes_on_both_hosts(self) -> None:
+        previous = b"previous page\r\n\x00with exact bytes\n"
+        steps = ("create", "write", "sync", "written", "publish", "readback", "read", "bound", "close", "cleanup")
+        for plugin in PLUGINS:
+            for step in steps:
+                with self.subTest(plugin=plugin, step=step):
+                    self.setUp()
+                    page = self.root / "artifacts/implementation-plan.html"
+                    page.write_bytes(previous)
+                    self.publish(status="expected_failure", plugin=plugin, race={step: ["fail"]})
+                    self.assertEqual(page.read_bytes(), previous)
+                    self.assertEqual(list(page.parent.glob("*.tmp")), [])
+                    self.assert_outside_untouched()
+
+    def test_failed_restore_names_the_saved_previous_page_on_both_hosts(self) -> None:
+        for plugin in PLUGINS:
+            with self.subTest(plugin=plugin):
+                self.setUp()
+                result = self.publish(status="expected_failure", plugin=plugin,
+                                      race={"readback": ["fail"], "restore": ["fail"]})
+                saved = list((self.root / "artifacts").glob("*.tmp"))
+                self.assertEqual(len(saved), 1)
+                self.assertEqual(saved[0].read_bytes(), b"old page")
+                self.assertIn(saved[0].name, result["diagnostics"][0]["message"])
+                self.assertEqual(result["data"]["page_outcome"], "gap")
+                self.assertNotIn("retained_page", result["data"])
+                self.assert_outside_untouched()
+
+    def test_restore_does_not_overwrite_a_page_replaced_in_the_last_window(self) -> None:
+        result = self.publish(status="expected_failure", race={"readback": ["fail"], "restore": ["replace-final"]})
+        self.assertEqual(result["data"]["page_outcome"], "gap")
+        self.assertNotIn("retained_page", result["data"])
+        self.assertEqual((self.root / "artifacts/implementation-plan.html").read_bytes(), b"foreign page")
+        self.assertEqual([path.read_bytes() for path in (self.root / "artifacts").glob("*.tmp")], [b"old page"])
+
+    def test_failed_narrative_fill_forwards_the_verified_retained_page_on_both_hosts(self) -> None:
+        for plugin in PLUGINS:
+            with self.subTest(plugin=plugin):
+                self.setUp()
+                (self.root / "spec.md").write_text("# Feature: previous page\n", encoding="utf-8")
+                (self.root / "tasks.md").write_text("- [ ] T001 implement the page\n", encoding="utf-8")
+                result = self.publish(status="expected_failure", plugin=plugin, helper="fill-artifact-page",
+                                      spec_file="spec.md", tasks_file="tasks.md", race={"readback": ["fail"]})
+                self.assertEqual((self.root / "artifacts/implementation-plan.html").read_bytes(), b"old page")
+                self.assertEqual(result["data"]["retained_page"],
+                                 {"sha256": hashlib.sha256(b"old page").hexdigest(), "bytes": 8})
 
 
 class PublicationSecurityTests(PublicationFixture):
