@@ -1497,7 +1497,12 @@ later tasks run.
 **Extension availability**: Step 0.12 records which extensions are
 installed in `.registry`. If an extension is missing, log a warning
 and mark its task `skipped: <ext> not installed` — do NOT fail the
-autopilot. Recommend `specify extension add <name>` in the warning.
+autopilot. For a curated extension, read its `archive_url` from the plugin's
+`scripts/curated-set.json` and recommend
+`specify extension add <name> --from <archive_url>` with those values filled in.
+The operator vets the archive and runs the install, accepting Spec Kit's trust
+prompt; autopilot does not install extensions. For an unlisted extension, ask
+the operator to choose and vet an archive before using the same `--from` form.
 
 **Dynamic task updates:** If consensus reveals new questions or
 remediation adds loops, add the items to `autopilot-state.json`.
