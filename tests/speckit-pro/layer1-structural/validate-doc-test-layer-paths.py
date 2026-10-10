@@ -66,21 +66,19 @@ class ValidateDocTestLayerPaths(unittest.TestCase):
             (root / "docs" / "adr").mkdir(parents=True)
             (root / "docs" / "adr" / "0001-x.md").write_text(
                 "Run `tests/speckit-pro/layer7-integration/`.\n"
-                "Also `tests/speckit-pro/layer6-integration/canary.json`.\n",
+                "Also `tests/speckit-pro/layer6-integration/canary.json` and `tests/speckit-pro/layer6-integration/`.\n"
+                "Prefix `tests/speckit-pro/layer6-integ/` is not a directory.\n",
                 encoding="utf-8",
             )
             tracked = ["docs/adr/0001-x.md", "tests/speckit-pro/layer6-integration/canary.json"]
             errors = collect_errors(root, tracked)
         self.assertEqual(
             errors,
-            ["docs/adr/0001-x.md:1 cites tests/speckit-pro/layer7-integration, which is not a tracked path"],
+            [
+                "docs/adr/0001-x.md:1 cites tests/speckit-pro/layer7-integration, which is not a tracked path",
+                "docs/adr/0001-x.md:3 cites tests/speckit-pro/layer6-integ, which is not a tracked path",
+            ],
         )
-
-    def test_directory_and_file_citations_resolve(self) -> None:
-        tracked = ["tests/speckit-pro/layer6-integration/a.json"]
-        self.assertTrue(path_exists("tests/speckit-pro/layer6-integration", tracked))
-        self.assertTrue(path_exists("tests/speckit-pro/layer6-integration/a.json", tracked))
-        self.assertFalse(path_exists("tests/speckit-pro/layer6-integ", tracked))
 
     def test_trailing_punctuation_is_not_part_of_the_path(self) -> None:
         self.assertEqual(
