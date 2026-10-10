@@ -39,7 +39,8 @@ its requested name; there is no second entry to mask a target-specific bypass.
   directory policy. A writer already controls replacement names in that external
   namespace. This is an accepted policy limit, not a newly introduced regression;
   the acceptance test pins it for all three non-host CLIs.
-- Ownership and effective access are modeled at their operating-system inputs.
+- Ownership is modeled by patching `os.stat` and `os.lstat`, which every Python 3.11 to 3.14
+  `Path` read reaches, and effective access by patching `os.access` and `os.geteuid`.
   The tests exercise actual filesystem traversal and lookup, but do not require
   privileged ownership changes or claim to simulate concurrent replacement.
 - Linux verification does not establish macOS plugin CI coverage. The orchestrator

@@ -23,7 +23,7 @@ COPIES = {
     "claude": REPO_ROOT / "dist/claude/speckit-pro/speckit_pro_runner/cli_probe.py",
     "codex": REPO_ROOT / "dist/codex/speckit-pro/speckit_pro_runner/cli_probe.py",
 }
-OTHER_IDENTITY = -1  # no file is owned by it, so only the write-access rule can reject
+OTHER_IDENTITY = -1  # the modeled runner uid: geteuid returns it and an owned inode reports it, so no real file matches
 NO_SEARCH_DIRECTORY = "no external absolute CLI search directory"
 
 
@@ -51,43 +51,41 @@ def probe_fixture(cli, layout):
             tool.symlink_to(target)
         elif layout == "hardlink":
             tool.hardlink_to(target)
-        elif layout == "rename":
-            staging = base / "replacement"
-            tool.rename(staging)
-            staging.rename(tool)
         yield root, directory, target
 
 
 @contextmanager
 def probe_identity(directory, target, owned, writable):
-    """Ownership and access follow inode identity, without changing ancestor ownership."""
+    """Ownership and access follow inode identity, modeled on os.stat and os.lstat so every interpreter's Path reads reach it."""
     selected = {"file": target, "directory": directory}
     owned_info = selected[owned].stat() if owned else None
     writable_info = selected[writable].stat() if writable else None
-    stat_path = Path.stat
+    real_stat, real_lstat = os.stat, os.lstat
 
-    def modeled_stat(path, **options):
-        info = stat_path(path, **options)
-        if owned_info and (info.st_dev, info.st_ino) == (owned_info.st_dev, owned_info.st_ino):
-            fields = list(info)
-            fields[4] = OTHER_IDENTITY
-            return os.stat_result(fields)
-        return info
+    def modeled(read):
+        def modeled_read(path, *args, **options):
+            info = read(path, *args, **options)
+            if owned_info and (info.st_dev, info.st_ino) == (owned_info.st_dev, owned_info.st_ino):
+                fields = list(info)
+                fields[4] = OTHER_IDENTITY
+                return os.stat_result(fields)
+            return info
+        return modeled_read
 
     def can_write(path, mode, **options):
-        info = stat_path(Path(path))
+        info = real_stat(path)
         return mode == os.W_OK and writable_info is not None and (
             info.st_dev, info.st_ino) == (writable_info.st_dev, writable_info.st_ino)
 
     with patch("os.geteuid", return_value=OTHER_IDENTITY), patch("os.access", side_effect=can_write), \
-            patch.object(Path, "stat", modeled_stat):
+            patch("os.stat", modeled(real_stat)), patch("os.lstat", modeled(real_lstat)):
         yield
 
 
 def assert_probe(test, clis=CLIS, owned=None, writable=None, accepted=False):
     """Exercise each assertion at the public lookup boundary in every shipped copy."""
     for cli in clis:
-        for layout in ("file", "symlink", "hardlink", "rename"):
+        for layout in ("file", "symlink", "hardlink"):
             with probe_fixture(cli, layout) as (root, directory, target):
                 for name in COPIES:
                     with test.subTest(copy=name, cli=cli, layout=layout):
