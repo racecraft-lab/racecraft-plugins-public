@@ -205,6 +205,21 @@ class ValidateDocTestLayerPaths(unittest.TestCase):
             ],
         )
 
+    def test_complete_cited_filename_is_checked(self) -> None:
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "AGENTS.md").write_text(
+                "Run `tests/speckit-pro/layer6-integration/canary-budget.json+typo`.\n",
+                encoding="utf-8",
+            )
+            tracked = ["AGENTS.md", "tests/speckit-pro/layer6-integration/canary-budget.json"]
+            self.assertEqual(
+                collect_errors(root, tracked),
+                ["AGENTS.md:1 cites tests/speckit-pro/layer6-integration/canary-budget.json+typo, which is not a tracked path"],
+            )
+
     def test_trailing_punctuation_is_not_part_of_the_path(self) -> None:
         self.assertEqual(
             cited_paths("see tests/speckit-pro/layer1-structural/, and tests/speckit-pro/layer2-trigger."),
