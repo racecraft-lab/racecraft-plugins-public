@@ -131,7 +131,96 @@ def preflight_with(
         return runtime.preflight("test-preflight", {})
 
 
+class DocumentedRunnerArgvSecurityTests(unittest.TestCase):
+    def assert_rejected_on_both_hosts(self, documented_argv: str) -> None:
+        """Exercise the coverage test itself without running injected commands."""
+        skills = ("speckit-autopilot", "speckit-scaffold-spec", "speckit-status",
+                  "speckit-install", "speckit-upgrade", "speckit-archive-cleanup")
+        valid = '`[resolved_python, "<plugin-root>/scripts/run-speckit-pro.py"]`'
+        forged = json.dumps({"status": "ok", "data": {"report": {
+            "paths": {"plugin_root": {"value": "."}},
+            "source_vs_installed_context": "installed_payload",
+        }}})
+        for host in ("claude", "codex"):
+            for skill in skills:
+                with self.subTest(host=host, skill=skill):
+                    def skill_text(path: Path, **_kwargs: object) -> str:
+                        return f"`{documented_argv}`" if path.parts[-5] == host and path.parts[-2] == skill else valid
+
+                    with (
+                        mock.patch.object(payloads, "build_installed_plugin_payloads"),
+                        mock.patch.object(Path, "read_text", autospec=True, side_effect=skill_text),
+                        mock.patch.object(subprocess, "run", return_value=subprocess.CompletedProcess(
+                            [], 0, forged, "",
+                        )) as launch,
+                    ):
+                        with self.assertRaisesRegex(AssertionError, "installed runner argv must match"):
+                            RunnerFoundationTests().test_documented_installed_argv_resolves_runner_on_both_hosts()
+                    for call in launch.call_args_list:
+                        self.assertEqual(len(call.args[0]), 2)
+                        self.assertEqual(call.args[0][0], sys.executable)
+                        self.assertTrue(call.args[0][1].endswith("/scripts/run-speckit-pro.py"))
+
+    def test_inline_python_cannot_forge_launcher_coverage(self) -> None:
+        code = 'print(\'{"status":"ok","data":{"report":{"paths":{"plugin_root":{"value":"."}},"source_vs_installed_context":"installed_payload"}}}\')'
+        self.assert_rejected_on_both_hosts(f'[resolved_python, "-c", {code!r}]')
+
+    def test_importable_module_cannot_replace_launcher(self) -> None:
+        self.assert_rejected_on_both_hosts('[resolved_python, "-m", "json"]')
+
+    def test_absolute_plugin_script_cannot_replace_launcher(self) -> None:
+        self.assert_rejected_on_both_hosts('[resolved_python, "<plugin-root>/scripts/other.py"]')
+
+    def test_relative_project_script_cannot_replace_launcher(self) -> None:
+        self.assert_rejected_on_both_hosts('[resolved_python, "project.py"]')
+
+    def test_extra_interpreter_or_launcher_arguments_are_rejected(self) -> None:
+        for argv in (
+            '[resolved_python, "-i", "<plugin-root>/scripts/run-speckit-pro.py"]',
+            '[resolved_python, "<plugin-root>/scripts/run-speckit-pro.py", "--version"]',
+            '[resolved_python, "<plugin-root>/scripts/../scripts/run-speckit-pro.py"]',
+        ):
+            with self.subTest(argv=argv):
+                self.assert_rejected_on_both_hosts(argv)
+
+
 class RunnerFoundationTests(unittest.TestCase):
+    def assert_same_transport(self, actual: subprocess.CompletedProcess[str],
+                              expected: subprocess.CompletedProcess[str]) -> None:
+        self.assertEqual((actual.returncode, actual.stderr), (expected.returncode, expected.stderr))
+        outputs: list[object] = []
+        for completed in (actual, expected):
+            output: object = completed.stdout
+            if completed.stdout.startswith("{"):
+                response = json.loads(completed.stdout)
+                data = response.get("data", {})
+                if "duration_ms" in data:
+                    self.assertIs(type(data["duration_ms"]), int)
+                    self.assertGreaterEqual(data["duration_ms"], 0)
+                    # Independent executions measure different elapsed times.
+                    data["duration_ms"] = "<elapsed>"
+                output = response
+            outputs.append(output)
+        self.assertEqual(outputs[0], outputs[1])
+
+    def test_transport_comparison_accepts_elapsed_time_variation_only(self) -> None:
+        expected = subprocess.CompletedProcess([], 0, '{"data":{"duration_ms":0,"result":"resolved"}}', "")
+        for elapsed in range(50):
+            with self.subTest(elapsed=elapsed):
+                actual = subprocess.CompletedProcess(
+                    [], 0, json.dumps({"data": {"duration_ms": elapsed, "result": "resolved"}}), "",
+                )
+                self.assert_same_transport(actual, expected)
+                for changed in (
+                    subprocess.CompletedProcess([], 1, actual.stdout, ""),
+                    subprocess.CompletedProcess([], 0, actual.stdout, "diagnostic"),
+                    subprocess.CompletedProcess([], 0, actual.stdout.replace("resolved", "blocked"), ""),
+                    subprocess.CompletedProcess([], 0, '{"data":{"result":"resolved"}}', ""),
+                    subprocess.CompletedProcess([], 0, '{"data":{"duration_ms":-1,"result":"resolved"}}', ""),
+                ):
+                    with self.assertRaises(AssertionError):
+                        self.assert_same_transport(changed, expected)
+
     def test_documented_installed_argv_resolves_runner_on_both_hosts(self) -> None:
         with tempfile.TemporaryDirectory(prefix="installed runner ") as tmp:
             root = Path(tmp)
@@ -150,10 +239,13 @@ class RunnerFoundationTests(unittest.TestCase):
                         self.assertIsNotNone(match, "skill must document its installed runner argv")
                         assert match is not None
                         argv = ast.literal_eval(match[1].replace("resolved_python", repr(sys.executable)))
-                        argv = [arg.replace("<plugin-root>", str(plugin_root)) for arg in argv]
-                        self.assertEqual(argv[0], sys.executable)
+                        self.assertEqual(
+                            argv, [sys.executable, "<plugin-root>/scripts/run-speckit-pro.py"],
+                            "installed runner argv must match the exact launcher contract",
+                        )
                         completed = subprocess.run(
-                            [sys.executable, *argv[1:]], input=json.dumps(base_request()), cwd=worktree, env=env,
+                            [sys.executable, str(plugin_root / "scripts/run-speckit-pro.py")],
+                            input=json.dumps(base_request()), cwd=worktree, env=env,
                             text=True, capture_output=True, check=False,
                         )
                         self.assertEqual(completed.returncode, 0, completed.stderr)
@@ -189,8 +281,7 @@ class RunnerFoundationTests(unittest.TestCase):
                             cwd=worktree, env={**env, "PYTHONPATH": str(plugin_root)},
                             text=True, capture_output=True, check=False,
                         )
-                        self.assertEqual((actual.returncode, actual.stdout, actual.stderr),
-                                         (expected.returncode, expected.stdout, expected.stderr))
+                        self.assert_same_transport(actual, expected)
                 binding_run = subprocess.run(argv, input=json.dumps(request), cwd=worktree, env=env,
                                              text=True, capture_output=True, check=False)
                 self.assertEqual(binding_run.returncode, 0, binding_run.stderr)
@@ -625,6 +716,7 @@ if __name__ == "__main__":
     suite = unittest.TestSuite(
         loader.loadTestsFromTestCase(case)
         for case in (
+            DocumentedRunnerArgvSecurityTests,
             RunnerFoundationTests,
             RunnerTrustRosterTests,
             PayloadRequiredSourceTests,
