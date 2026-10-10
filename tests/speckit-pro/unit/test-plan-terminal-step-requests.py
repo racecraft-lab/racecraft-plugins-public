@@ -11,6 +11,7 @@ packet producer owns the draft title's shape instead (GeneratedTitleScopeTests).
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 import unittest
@@ -32,7 +33,8 @@ HOSTS = ("claude", "codex")
 START = re.compile(r"^#{3,4} Plan [Ss]tage: .*[Tt]erminal [Ss]tep\s*$", re.M)
 END = re.compile(r"^#{2,3} Phase 7: Implement", re.M)
 HELPER_ID = re.compile(r"helper_id=([a-z0-9-]+)|\"helper_id\": \"([a-z0-9-]+)\"")
-CODE_SPAN = re.compile(r"`([a-z0-9-]+)`")
+SEQUENCE_HEADING = "Draft-PR emission: the terminal-step sequence"
+DRAFT_REQUEST = re.compile(r'```json\n(\{\n  "schema_version": "1\.0",\n  "request_id": "example-draft-packet".*?)\n```', re.S)
 DRAFT_PR_ROW = re.compile(r"^\| \*\*Draft PR\*\* \|.*\|$", re.M)
 
 
@@ -45,7 +47,10 @@ def terminal_step(host: str) -> str:
     end = END.search(text, start.end())
     if end is None:
         raise AssertionError(f"{host}: phase-execution.md has no Phase 7 heading after the terminal step")
-    return text[start.start():end.start()]
+    section = text[start.start():end.start()]
+    if SEQUENCE_HEADING not in section:
+        raise AssertionError(f"{host}: the terminal-step slice no longer holds the draft-PR sequence")
+    return section
 
 
 def named_helpers(text: str) -> set[str]:
@@ -65,10 +70,20 @@ class TerminalStepRequestTests(unittest.TestCase):
         repo_only = set(RELEASE_INPUT_FIELDS)
         self.assertIn("validate-pr-title", repo_only)
         for host in HOSTS:
-            spans = set(CODE_SPAN.findall(terminal_step(host))) | named_helpers(terminal_step(host))
-            self.assertEqual(spans & repo_only, set(),
-                             f"{host}: the terminal step names a release-gate operation, which needs a "
-                             "SpecKit Pro source checkout and refuses in a user repository")
+            text = terminal_step(host)
+            for operation in sorted(repo_only):
+                self.assertNotIn(operation, text,
+                                 f"{host}: the terminal step names release-gate operation {operation!r}, which needs a "
+                                 "SpecKit Pro source checkout and refuses in a user repository")
+
+    def test_documented_draft_request_sends_the_checked_title_fields(self) -> None:
+        # A supplied generated_title skips the packet's type and description checks; the three fields do not.
+        for host in HOSTS:
+            match = DRAFT_REQUEST.search(terminal_step(host))
+            self.assertIsNotNone(match, f"{host}: the terminal step shows no example draft packet request")
+            inputs = json.loads(match.group(1))["inputs"]
+            self.assertLessEqual({"title_type", "title_scope", "title_description"}, set(inputs), host)
+            self.assertNotIn("generated_title", inputs, host)
 
     def test_packet_validation_request_is_spelled_out(self) -> None:
         for host in HOSTS:

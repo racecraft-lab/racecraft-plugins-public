@@ -2157,10 +2157,12 @@ final-shape at creation and is not re-derived at the later ready flip:
 `<type>(<lowercase-scope>): <plain English description>`
 
 `type` is one of `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, and the
-scope is **lowercase**. The `pr-packet-output` dry run below refuses any other
-type, an uppercase scope, and a description under 8 characters, and returns the
-title it accepts as `generated_title.value`. Create the pull request with that
-value. That dry run is the whole title check; no separate gate request runs.
+scope is **lowercase**. Send the title as `title_type`, `title_scope` and
+`title_description`, as the request below does. The `pr-packet-output` dry run
+then refuses any other type, an uppercase scope, and a description under 8
+characters, and returns the title it accepts as `generated_title.value`. Create
+the pull request with that value. That dry run is the whole title check; no
+separate gate request runs.
 Do **not** substitute the
 `validate-pr-workflow-contract` operation, which the ready pull request's
 packet check runs later: its scope rule upper-cases `prsg-`, `spec-`, `doc-`,
@@ -2170,7 +2172,7 @@ checks the conventional shape only — it does not ask the description to refere
 verification or evidence a draft has not produced.
 
 **On a dry run that refuses the title, do not create the pull request.**
-Report through the could-not-be-opened shape below rather than opening one whose
+Report through the failed PR-packet step shape below rather than opening one whose
 title a human would have to repair.
 
 #### The draft description: one H1 and two H2 sections
@@ -2313,8 +2315,7 @@ the report alone is enough to hand off.
   remain local and which commits exist; and name the resume path. No push or
   create-or-refresh follows the failed step. Do not claim the boundary or packet was committed when that step failed.
 - **The pull request could not be opened.** Say so and name the step that
-  refused — title self-validation, an existence query that could not answer, or
-  creation itself. Note that the artifacts and the boundary commit are already
+  refused — an existence query that could not answer, or creation itself. Note that the artifacts and the boundary commit are already
   committed on the branch, so no planning work is lost, and name the resume path.
 - **The branch push failed.** Name the failed push, state that no pull request
   was opened and no `Draft PR` row was written, and name the resume path. The
