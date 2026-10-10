@@ -19,6 +19,9 @@ UNSAFE_TEXT_RE = re.compile(
     r"[\x00-\x1f\x7f-\x9f\u061c\u200e\u200f\u2028-\u202e\u2066-\u2069]")
 # Archive recommendations contain remote paths; keep checking the rest of the line for local paths.
 HTTPS_URL_RE = re.compile(r"https://[A-Za-z0-9.-]+(?:/[A-Za-z0-9._~%/-]*)?")
+# Userinfo ends at @ inside the authority, before any path, query or fragment.
+# Whitespace must not hide userinfo in an otherwise malformed authority.
+HTTPS_USERINFO_RE = re.compile(r"https://[^/?#]*@", re.IGNORECASE)
 
 
 def clean_text(value: Any, label: str) -> str:
@@ -29,7 +32,7 @@ def clean_text(value: Any, label: str) -> str:
     text = text.strip()
     if len(text) > MAX_TEXT:
         raise SelectionError(f"{label} must be one line of at most {MAX_TEXT} characters")
-    if secret_matches(text):
+    if HTTPS_USERINFO_RE.search(text) or secret_matches(text):
         raise SelectionError(f"{label} looks like a credential; the record never stores one")
     if LOCAL_PATH_RE.search(HTTPS_URL_RE.sub("<https-url>", text)):
         raise SelectionError(f"{label} holds an absolute local path; use a repository-relative path")
