@@ -17,7 +17,8 @@ parity layer with no run-all block.
 
 Headline: ``speckit-pro test suite: X/Y passed`` (``X/Y passed (Z failed)`` on
 failure), where X/Y sums each child's ``<label>: X/Y passed`` line. Exit 0 iff
-no failures, 1 on any failure, 2 on an unknown flag.
+no failures, 1 on any failure, 2 on an unknown flag, 75 when another suite
+already holds this checkout (``speckit_pro_runner/suite_checkout_lock.py``).
 
 Every executable manifest entry is Python-authoritative. A non-``.py`` entry
 fails closed instead of falling back to a platform shell.
@@ -35,8 +36,19 @@ from pathlib import Path
 TEST_LIB = Path(__file__).resolve().parent / "lib"
 if str(TEST_LIB) not in sys.path:
     sys.path.insert(0, str(TEST_LIB))
+PLUGIN_ROOT = Path(__file__).resolve().parents[2] / "speckit-pro"
+if str(PLUGIN_ROOT) not in sys.path:
+    sys.path.insert(0, str(PLUGIN_ROOT))
 
 from runner_invocation import run_runner  # noqa: E402
+from speckit_pro_runner.suite_checkout_lock import (  # noqa: E402
+    REFUSED_STATUS,
+    UNLOCKED,
+    SuiteLock,
+    SuiteLockHeld,
+    SuiteLockUnavailable,
+    hold_suite_lock,
+)
 from suite_child_env import child_environment  # noqa: E402
 from test_result import classify_counted_child, failure_report  # noqa: E402
 
@@ -142,6 +154,7 @@ def dispatch_script(
     layer: dict,
     config: Config,
     root: Path,
+    suite_lock: SuiteLock = UNLOCKED,
 ) -> tuple[str, int]:
     """Run one Python child test and fail closed on a non-Python manifest entry."""
     pass_live = config.live and layer.get("key") in LIVE_AWARE_LAYER_KEYS
@@ -159,14 +172,15 @@ def dispatch_script(
         cwd=root,
         text=True,
         capture_output=True,
-        env=child_environment(root, verbose=config.verbose),
+        env=suite_lock.environment(child_environment(root, verbose=config.verbose)),
+        pass_fds=suite_lock.pass_fds,
         shell=False,
         check=False,
     )
     return (completed.stdout + completed.stderr, completed.returncode)
 
 
-def run_execute_layer(layer: dict, config: Config, root: Path) -> tuple[int, int]:
+def run_execute_layer(layer: dict, config: Config, root: Path, suite_lock: SuiteLock = UNLOCKED) -> tuple[int, int]:
     print(f"\nLayer {layer['id']}: {layer['label']}")
     print(RULE)
     layer_pass = layer_fail = 0
@@ -180,7 +194,7 @@ def run_execute_layer(layer: dict, config: Config, root: Path) -> tuple[int, int
             print(f"  FAIL: {label} (not found)")
             layer_fail += 1
             continue
-        output, exit_code = dispatch_script(path, layer, config, root)
+        output, exit_code = dispatch_script(path, layer, config, root, suite_lock)
         disposition, passed, failed, _detail = classify_counted_child(
             exit_code,
             output,
@@ -218,7 +232,7 @@ def print_layer_commands(layer: dict, root: Path) -> None:
         print(f"    python3 {script['path']}{argument_hint}")
 
 
-def run_toolchain_preflight(root: Path) -> bool:
+def run_toolchain_preflight(root: Path, suite_lock: SuiteLock = UNLOCKED) -> bool:
     request = {
         "schema_version": "1.0",
         "request_id": "run-all-py-toolchain",
@@ -228,7 +242,9 @@ def run_toolchain_preflight(root: Path) -> bool:
         "inputs": {"mode": "tests", "repo_root": "."},
     }
     try:
-        _, response, _ = run_runner(request, cwd=root, extra_env={"PYTHONDONTWRITEBYTECODE": "1"})
+        _, response, _ = run_runner(
+            request, cwd=root, extra_env=suite_lock.environment({"PYTHONDONTWRITEBYTECODE": "1"})
+        )
     except json.JSONDecodeError:
         return False
     return response.get("status") == "ok"
@@ -251,6 +267,17 @@ def main(argv: list[str]) -> int:
         return 2
 
     root = repo_root()
+    try:
+        with hold_suite_lock(root) as suite_lock:
+            if suite_lock.unguarded_warning:
+                print(suite_lock.unguarded_warning, file=sys.stderr)
+            return run_selected_layers(config, root, suite_lock)
+    except (SuiteLockHeld, SuiteLockUnavailable) as exc:
+        print(f"run-all: {exc}", file=sys.stderr)
+        return REFUSED_STATUS
+
+
+def run_selected_layers(config: Config, root: Path, suite_lock: SuiteLock) -> int:
     manifest = load_manifest(root)
     total_pass = total_fail = 0
     layer_results: list[str] = []
@@ -259,7 +286,7 @@ def main(argv: list[str]) -> int:
     if os.environ.get("SPECKIT_SKIP_TOOLCHAIN_CHECK") != "1" and toolchain_should_run(manifest, config):
         print("\nToolchain Preflight")
         print(RULE)
-        if not run_toolchain_preflight(root):
+        if not run_toolchain_preflight(root, suite_lock):
             print("  FAIL check-toolchain (gate)")
             print("\nToolchain preflight failed — aborting before running any layer.", file=sys.stderr)
             print("Fix the tools listed above, or set SPECKIT_SKIP_TOOLCHAIN_CHECK=1 to bypass the gate.", file=sys.stderr)
@@ -274,7 +301,7 @@ def main(argv: list[str]) -> int:
         if layer["execution"] == "print-commands":
             print_layer_commands(layer, root)
             continue
-        layer_pass, layer_fail = run_execute_layer(layer, config, root)
+        layer_pass, layer_fail = run_execute_layer(layer, config, root, suite_lock)
         total_pass += layer_pass
         total_fail += layer_fail
         layer_results.append(f"L{layer['id']}: {layer_pass}/{layer_pass + layer_fail}")
