@@ -65,3 +65,13 @@ results, exit codes, stderr, missing timing and invalid timing.
 - Ripwire reports the new unittest methods as dead code despite their
   execution, and increased prose/class length as advisory verbosity. These
   are non-gating rows; no quality acknowledgements were added or changed.
+- The coach's quality-gates guide (`quality-gates-guide.md`, steps for
+  `validate` and `recommend`) still calls the submodule
+  `speckit_pro_runner.quality_gates` with `-m`, which hits the same import
+  error in an installed session. The launcher runs only the package's main
+  module, so fixing it needs a wider launcher interface or a helper id. It is
+  outside the workflow transport: scaffold runs only the guide's
+  `crap-score.py` steps and uses the `propose-quality-gates` helper instead.
+  The call fails loudly, never with a silent pass.
+- The launcher equivalence test drops `duration_ms` before comparing runner
+  stdout, because that field is wall-clock time and differs between two runs.

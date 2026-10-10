@@ -79,6 +79,9 @@ class ActivePathGuardPolicyTests(unittest.TestCase):
                 self.assertFalse(case["absent"] & result["data"].keys())
                 self.assertEqual([diag["code"] for diag in result["diagnostics"]], [case["code"]])
 
+    def test_runtime_guard_remediation_names_the_installed_launcher(self) -> None:
+        self.assertIn("with <plugin-root>/scripts/run-speckit-pro.py", " ".join(runtime_guard.RUNTIME_GUARD_POLICY.blocked_actions))
+
 
 if __name__ == "__main__":
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(ActivePathGuardPolicyTests)
