@@ -38,6 +38,9 @@ match the installed launcher invocation.
 - Entry-point argv is repeated at each skill and calling agent so the first
   call and agent handoff are explicit. Root resolution and transport rules
   have one reference; import setup lives in one launcher.
+- The permission-probe prefix rule quotes the resolved launcher path. A call
+  with different quoting can miss that prefix and prompt or be denied;
+  the probe stops before phase work, so this mismatch fails closed.
 - A complete live canary and interactive question flows were not exercised.
   Deterministic payload and workflow-binding tests cover this failure seam;
   live canary acceptance remains a separate check.

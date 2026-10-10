@@ -520,6 +520,8 @@ def shipped_autopilot_text(host: str, relative: str) -> str:
 # (case, autopilot file, phrases both hosts carry, phrases neither host carries).
 # Each pin is a behavior the two copies once disagreed on; the runner settled it.
 AUTOPILOT_AGREEMENT = (
+    ("installed runner root comes from the loaded skill", "references/installed-runtime.md",
+     ("parent of `skills/`",), ("Use the absolute `${CLAUDE_PLUGIN_ROOT}` value",)),
     # stop_policy.STOP_REASONS has no model-tier reason, so a weak tier warns and routes.
     ("a weak model tier warns and routes instead of stopping", "SKILL.md",
      ("warn the operator once and route gate and consensus dispatches to the strongest available tier",),
@@ -552,13 +554,6 @@ AUTOPILOT_AGREEMENT = (
 
 class AutopilotHostAgreementTests(unittest.TestCase):
     """Behavior the runner owns reads the same on both hosts' shipped autopilot."""
-
-    def test_installed_runner_root_comes_from_the_loaded_skill_on_both_hosts(self) -> None:
-        for host in ("claude", "codex"):
-            with self.subTest(host=host):
-                text = shipped_autopilot_text(host, "references/installed-runtime.md")
-                self.assertIn("parent of `skills/`", text)
-                self.assertNotIn("Use the absolute `${CLAUDE_PLUGIN_ROOT}` value", text)
 
     def test_both_hosts_state_the_runner_behavior(self) -> None:
         for case, relative, present, absent in AUTOPILOT_AGREEMENT:
