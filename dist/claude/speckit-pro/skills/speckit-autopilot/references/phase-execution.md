@@ -1061,7 +1061,7 @@ does not end at the boundary commit above. It runs this sequence, in this order:
 ```text
 1. Generate and validate the artifacts; initialize their pending review record.
 2. Take the stage-boundary commit above.
-3. On the clean worktree, run `pr-packet-output` dry-run and apply; validate the packet, then commit its packet and body files.
+3. On the clean worktree, run `pr-packet-output` dry-run and apply; validate the packet with `validate-pr-packet-read-only`, then commit its packet and body files.
 4. Push the branch.
 5. Create or refresh the draft pull request using the validated packet.
 6. Write the `Draft PR` record to the workflow file.
@@ -1329,16 +1329,17 @@ for creation. It refuses to create and reports through the could-not-be-opened
 shape below, rather than risking a duplicate pull request on a branch it could
 not observe.
 
-**Self-validate the title before creation.** The title is final-shape at
-creation and is not re-derived at the later ready flip:
+**The packet dry run validates the title before creation.** The title is
+final-shape at creation and is not re-derived at the later ready flip:
 
 `<type>(<lowercase-scope>): <plain English description>`
 
 `type` is one of `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, and the
-scope is **lowercase**. Validate the exact string through the release-readiness
-gate's `validate-pr-title` operation before creating. The packet schema and the
-release-readiness shape both reject an uppercase scope, so the lowercase form is
-the only valid one. Do **not** substitute the
+scope is **lowercase**. The `pr-packet-output` dry run below refuses any other
+type, an uppercase scope, and a description under 8 characters, and returns the
+title it accepts as `generated_title.value`. Create the pull request with that
+value. That dry run is the whole title check; no separate gate request runs.
+Do **not** substitute the
 `validate-pr-workflow-contract` operation, which the ready pull request's
 packet check runs later: its scope rule upper-cases `prsg-`, `spec-`, `doc-`,
 and `xplat-` slugs, so on those spec families it would demand an uppercase
@@ -1346,7 +1347,7 @@ scope that this lowercase requirement can never satisfy. Draft-mode title valida
 checks the conventional shape only — it does not ask the description to reference
 verification or evidence a draft has not produced.
 
-**On a title that fails its self-validation, do not create the pull request.**
+**On a dry run that refuses the title, do not create the pull request.**
 Report through the could-not-be-opened shape below rather than opening one whose
 title a human would have to repair.
 
@@ -1418,7 +1419,10 @@ An explicit empty `verification_evidence` array records that a draft has no
 verification yet; supplied records must match the [packet evidence schema](../contracts/pr-packet.schema.json).
 The body must have one H1 matching the generated title, then exactly the
 Artifacts and Resume H2 sections. Validate the emitted packet before opening the
-PR. Commit its packet and body files before another clean-worktree-gated helper
+PR with `helper_id=validate-pr-packet-read-only operation=validate-pr-packet-read-only mode=read_only`
+and `inputs.packet_path` set to the packet path. Continue only when
+`data.stdout_json.status` is `passed`, `data.stdout_json.pr_blocked` is false and
+`data.writes_state` is false. Commit its packet and body files before another clean-worktree-gated helper
 runs; an unrelated dirty file blocks apply. Correct validation failures through
 the packet helper instead of bypassing them with raw PR creation. The producer
 uses `inputs.body` verbatim; the single/split `build_packet_body` fallback is not
@@ -1534,8 +1538,15 @@ printed; the operator and the canary read the run's end from it.
 #### The `Draft PR` row
 
 The pull request's identity is recorded as one scalar row keyed `Draft PR` in the
-workflow file's `### Basic Information` table. Its placement, grammar, and legal
-states are in
+workflow file's `### Basic Information` table, written as one link to the pull
+request:
+
+```text
+| **Draft PR** | [#438](https://github.com/owner/repo/pull/438) |
+```
+
+A generation shortfall adds its gap note after the link. The full grammar and
+legal states are in
 [workflow-file-protocol.md §The Draft PR Entry](./workflow-file-protocol.md#the-draft-pr-entry).
 What the emission sequence owes it:
 
