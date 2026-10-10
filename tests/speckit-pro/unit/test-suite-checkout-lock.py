@@ -6,6 +6,7 @@ from __future__ import annotations
 import contextlib
 import io
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -43,9 +44,8 @@ EMPTY_LAYER = {
 
 def fresh_checkout(case: unittest.TestCase, *, git_dir: bool = True) -> Path:
     """Return a directory standing in for a checkout; removed after the test."""
-    temp = tempfile.TemporaryDirectory()
-    case.addCleanup(temp.cleanup)
-    root = Path(temp.name).resolve()
+    root = Path(tempfile.mkdtemp(prefix="suite-lock-")).resolve()
+    case.addCleanup(shutil.rmtree, root, ignore_errors=True)
     if git_dir:
         (root / ".git").mkdir()
     return root
@@ -174,19 +174,15 @@ class EntryPointTests(unittest.TestCase):
             status = run_ci_suite.main([])
         return status, err.getvalue(), run
 
-    def test_quick_suite_refuses_while_another_suite_holds_the_checkout(self) -> None:
+    def test_each_entry_point_refuses_while_another_suite_holds_the_checkout(self) -> None:
         with lock.hold_suite_lock(self.root):
-            status, out, err = self.quick_suite()
-        self.assertEqual(status, lock.REFUSED_STATUS)
-        self.assertIn("another suite is already running", err)
-        self.assertNotIn("Layer 4", out)
-
-    def test_ci_suite_refuses_while_another_suite_holds_the_checkout(self) -> None:
-        with lock.hold_suite_lock(self.root):
-            status, err, run = self.ci_suite()
-        self.assertEqual(status, lock.REFUSED_STATUS)
-        self.assertIn("another suite is already running", err)
-        run.assert_not_called()
+            quick_status, quick_out, quick_err = self.quick_suite()
+            ci_status, ci_err, ci_run = self.ci_suite()
+        for status, err in ((quick_status, quick_err), (ci_status, ci_err)):
+            self.assertEqual(status, lock.REFUSED_STATUS)
+            self.assertIn("another suite is already running", err)
+        self.assertNotIn("Layer 4", quick_out)
+        ci_run.assert_not_called()
 
     def test_quick_suite_refuses_while_the_ci_suite_runs(self) -> None:
         results: list[tuple[int, str, str]] = []
