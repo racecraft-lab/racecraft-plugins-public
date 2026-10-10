@@ -273,17 +273,46 @@ def _unique_workflow_block(text: str, header: str, indent: int) -> str:
                 if len(lines[i]) - len(lines[i].lstrip()) <= indent), len(lines))
     return '\n'.join(lines[start:end])
 
+def _workflow_mapping_keys(text: str, indent: int) -> list[str]:
+    """Canonical keys only: quoted keys, merges and aliases fail the contract."""
+    keys = []
+    for line in text.splitlines():
+        if len(line) - len(line.lstrip()) == indent:
+            mapping = _split_mapping(line.strip())
+            keys.append(mapping[0] if mapping else '')
+    return keys
+
 def _required_workflow_step(text: str, job: str, name: str) -> str:
     """Read only a real named step under jobs.<job>.steps in the pinned layout."""
-    jobs = _unique_workflow_block(_workflow_structure(text), 'jobs:', 0)
+    structure = _workflow_structure(text)
+    root_keys = _workflow_mapping_keys(structure, 0)
+    allowed_root = {'name', 'run-name', 'on', 'permissions', 'concurrency', 'jobs'}
+    if not set(root_keys) <= allowed_root or len(root_keys) != len(set(root_keys)):
+        return ''
+    jobs = _unique_workflow_block(structure, 'jobs:', 0)
     job_block = _unique_workflow_block(jobs, job + ':', 2)
+    job_keys = _workflow_mapping_keys(job_block, 4)
+    allowed_job = {'name', 'runs-on', 'timeout-minutes', 'if', 'permissions', 'steps'}
+    if job == 'test':
+        allowed_job |= {'needs', 'strategy'}
+    if set(job_keys) != allowed_job or len(job_keys) != len(allowed_job):
+        return ''
+    conditions = {
+        'test': "needs.detect.result == 'success' && needs.detect.outputs.plugins != '[]'",
+        'validate-pr-title': "github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false",
+    }
+    if _scalar_values(job_block, 'if', 4) != [conditions[job]]:
+        return ''
     steps = _unique_workflow_block(job_block, 'steps:', 4)
     return _unique_workflow_block(steps, '- name: ' + name, 6)
 
-class ValidateExecutableWorkflowContracts(unittest.TestCase):
+class WorkflowMutationCase(unittest.TestCase):
     """Exercise the actual sentinel with contributor-controlled workflow text."""
 
-    def assert_sentinel_rejects(self, source: str, replacement: str) -> None:
+    def assert_sentinel_rejects(
+        self, source: str, replacement: str,
+        changes: tuple[tuple[str, str], ...] = (),
+    ) -> None:
         paths = {
             'workflow': validate_pr_checks_sentinel_WORKFLOW_FILE,
             'metadata': PR_METADATA_WORKFLOW_FILE,
@@ -300,6 +329,9 @@ class ValidateExecutableWorkflowContracts(unittest.TestCase):
         original = '        run: ' + commands[source]
         self.assertEqual(1, content.count(original))
         mutated = content.replace(original, replacement)
+        for old, new in changes:
+            self.assertIn(old, mutated)
+            mutated = mutated.replace(old, new, 1)
         self.assertTrue(yaml_syntax_sane(mutated), 'probe must remain sane YAML')
         with tempfile.TemporaryDirectory() as temporary:
             workflow = Path(temporary) / paths[source].name
@@ -312,6 +344,7 @@ class ValidateExecutableWorkflowContracts(unittest.TestCase):
             self.assertFalse(result.errors, result.errors)
             self.assertFalse(result.wasSuccessful(), 'sentinel accepted a disabled gate')
 
+class ValidateExecutableWorkflowContracts(WorkflowMutationCase):
     def test_suite_command_only_in_comment_is_rejected(self) -> None:
         self.assert_sentinel_rejects('workflow',
             "        run: python3 -c 'pass'\n"
@@ -355,6 +388,31 @@ class ValidateExecutableWorkflowContracts(unittest.TestCase):
             for variant, replacement in variants.items():
                 with self.subTest(source=source, variant=variant):
                     self.assert_sentinel_rejects(source, replacement)
+
+class ValidateInheritedWorkflowContracts(WorkflowMutationCase):
+    def test_inherited_execution_controls_are_rejected(self) -> None:
+        cases = (
+            ('workflow', validate_pr_checks_sentinel_WORKFLOW_FILE, 'test',
+             'python3 scripts/run-ci-suite.py',
+             "needs.detect.result == 'success' && needs.detect.outputs.plugins != '[]'"),
+            ('metadata', PR_METADATA_WORKFLOW_FILE, 'validate-pr-title',
+             'python3 scripts/check-pr-title.py "$TITLE"',
+             "github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false"),
+        )
+        for source, path, job, command, condition in cases:
+            header = _job_block(path.read_text(encoding='utf-8'), job).split('    steps:', 1)[0]
+            variants = {
+                'workflow shell default': ('jobs:',
+                    'defaults:\n  "run":\n    shell: python3 -c pass {0}\njobs:'),
+                'job shell default': ('  ' + job + ':',
+                    '  ' + job + ':\n    defaults:\n      "run":\n        shell: python3 -c pass {0}'),
+                'job skipped': (header, header.replace('    if: ' + condition, '    if: false')),
+                'job failure ignored': ('  ' + job + ':',
+                    '  ' + job + ':\n    continue-on-error: true'),
+            }
+            for variant, change in variants.items():
+                with self.subTest(source=source, variant=variant):
+                    self.assert_sentinel_rejects(source, '        run: ' + command, (change,))
 
 class ValidatePrChecksSentinel(unittest.TestCase):
 
