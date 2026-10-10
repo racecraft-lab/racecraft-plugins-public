@@ -110,21 +110,12 @@ jobs:
           PLUGIN: ${{ matrix.plugin }}
         run: PYTHONPATH="${PLUGIN}" python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-toolchain-preflight.json
 
+      # scripts/run-ci-suite.py sets the suite environment for the child
+      # process only: it skips the toolchain check and runs with no ambient Git
+      # identity, so the privacy scan tests the intended condition on a hosted
+      # runner. Its exit status, including 128+N for a signal, is the job's.
       - name: Run test suite
-        env:
-          PLUGIN: ${{ matrix.plugin }}
-          SPECKIT_SKIP_TOOLCHAIN_CHECK: "1"
-          # The privacy scan derives sensitive terms from the ambient Git
-          # identity so it can catch an operator's machine leaking into the
-          # tree. A hosted runner is not an operator, and its image identity
-          # (for example a github-actions bot address) collides with the
-          # repository's own legitimate references to that bot. Run the suite
-          # with no ambient identity so the check tests the intended condition
-          # and its result does not depend on the runner image.
-          GIT_CONFIG_GLOBAL: /dev/null
-          GIT_CONFIG_SYSTEM: /dev/null
-          GIT_CONFIG_NOSYSTEM: "1"
-        run: PYTHONPATH="${PLUGIN}" python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-ci-suite.json
+        run: python3 scripts/run-ci-suite.py
 
   # ───────────────────────────────────────────────────────────────────
   # Job 3: Validate GitHub Actions workflow syntax and semantics
