@@ -16,7 +16,7 @@ if str(LIB_DIR) not in sys.path:
 
 from test_result import run_counted
 
-CITED_PATH = re.compile(r"tests/speckit-pro/layer\d+-[A-Za-z0-9_.\-]+(?:/[A-Za-z0-9_.\-]+)*/?")
+CITED_PATH = re.compile(r"""tests/speckit-pro/layer\d+-[^\s`'"<>\[\](){},;:]+""")
 
 
 def tracked_files(repo_root: Path) -> list[str]:
@@ -79,6 +79,21 @@ class ValidateDocTestLayerPaths(unittest.TestCase):
                 "docs/adr/0001-x.md:3 cites tests/speckit-pro/layer6-integ, which is not a tracked path",
             ],
         )
+
+    def test_complete_cited_filename_is_checked(self) -> None:
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "AGENTS.md").write_text(
+                "Run `tests/speckit-pro/layer6-integration/canary-budget.json+typo`.\n",
+                encoding="utf-8",
+            )
+            tracked = ["AGENTS.md", "tests/speckit-pro/layer6-integration/canary-budget.json"]
+            self.assertEqual(
+                collect_errors(root, tracked),
+                ["AGENTS.md:1 cites tests/speckit-pro/layer6-integration/canary-budget.json+typo, which is not a tracked path"],
+            )
 
     def test_trailing_punctuation_is_not_part_of_the_path(self) -> None:
         self.assertEqual(
