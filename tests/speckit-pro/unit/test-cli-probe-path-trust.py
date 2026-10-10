@@ -63,14 +63,12 @@ def probe_identity(directory, target, owned, writable):
     real_stat, real_lstat = os.stat, os.lstat
 
     def modeled(read):
-        def modeled_read(path, *args, **options):
+        def owned_as_runner(path, *args, **options):
             info = read(path, *args, **options)
-            if owned_info and (info.st_dev, info.st_ino) == (owned_info.st_dev, owned_info.st_ino):
-                fields = list(info)
-                fields[4] = OTHER_IDENTITY
-                return os.stat_result(fields)
-            return info
-        return modeled_read
+            if not (owned_info and (info.st_dev, info.st_ino) == (owned_info.st_dev, owned_info.st_ino)):
+                return info
+            return os.stat_result([*info[:4], OTHER_IDENTITY, *info[5:]])
+        return owned_as_runner
 
     def can_write(path, mode, **options):
         info = real_stat(path)
