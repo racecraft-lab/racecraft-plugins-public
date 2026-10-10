@@ -64,7 +64,7 @@ jobs:
         if: github.event_name != 'workflow_dispatch' || fromJSON(steps.metadata.outputs.metadata).draft == false
         env:
           TITLE: ${{ github.event_name == 'workflow_dispatch' && fromJSON(steps.metadata.outputs.metadata).title || github.event.pull_request.title }}
-        run: PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/validate-pr-title-live.json
+        run: python3 scripts/check-pr-title.py "$TITLE"
 
   # Required release-note contract. All event text enters through env values;
   # the Python validator never evaluates PR-controlled text as shell syntax.
