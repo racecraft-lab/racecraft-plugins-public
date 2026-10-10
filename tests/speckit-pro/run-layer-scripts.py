@@ -39,6 +39,7 @@ if str(PLUGIN_ROOT) not in sys.path:
 
 from speckit_pro_runner.suite_checkout_lock import (  # noqa: E402
     REFUSED_STATUS,
+    UNLOCKED,
     SuiteLock,
     SuiteLockHeld,
     SuiteLockUnavailable,
@@ -116,7 +117,7 @@ def layer_workers() -> int:
     return min(DEFAULT_LAYER_WORKERS, os.cpu_count() or 1)
 
 
-def run_script(test_path: Path, repo_root: Path, suite_lock: SuiteLock = SuiteLock()) -> tuple[str, bool, str]:
+def run_script(test_path: Path, repo_root: Path, suite_lock: SuiteLock = UNLOCKED) -> tuple[str, bool, str]:
     if not test_path.is_file():
         return (rel(test_path, repo_root), False, "test file missing")
     if test_path.suffix != ".py":
@@ -142,7 +143,7 @@ def run_script(test_path: Path, repo_root: Path, suite_lock: SuiteLock = SuiteLo
     return (rel(test_path, repo_root), ok, detail)
 
 
-def run_script_suite(label: str, tests: list[Path], repo_root: Path, suite_lock: SuiteLock = SuiteLock()) -> int:
+def run_script_suite(label: str, tests: list[Path], repo_root: Path, suite_lock: SuiteLock = UNLOCKED) -> int:
     workers = min(layer_workers(), len(tests))
     if workers <= 1:
         checks = [run_script(test_path, repo_root, suite_lock) for test_path in tests]

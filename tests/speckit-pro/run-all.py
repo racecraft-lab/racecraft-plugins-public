@@ -43,6 +43,7 @@ if str(PLUGIN_ROOT) not in sys.path:
 from runner_invocation import run_runner  # noqa: E402
 from speckit_pro_runner.suite_checkout_lock import (  # noqa: E402
     REFUSED_STATUS,
+    UNLOCKED,
     SuiteLock,
     SuiteLockHeld,
     SuiteLockUnavailable,
@@ -153,7 +154,7 @@ def dispatch_script(
     layer: dict,
     config: Config,
     root: Path,
-    suite_lock: SuiteLock = SuiteLock(),
+    suite_lock: SuiteLock = UNLOCKED,
 ) -> tuple[str, int]:
     """Run one Python child test and fail closed on a non-Python manifest entry."""
     pass_live = config.live and layer.get("key") in LIVE_AWARE_LAYER_KEYS
@@ -179,7 +180,7 @@ def dispatch_script(
     return (completed.stdout + completed.stderr, completed.returncode)
 
 
-def run_execute_layer(layer: dict, config: Config, root: Path, suite_lock: SuiteLock = SuiteLock()) -> tuple[int, int]:
+def run_execute_layer(layer: dict, config: Config, root: Path, suite_lock: SuiteLock = UNLOCKED) -> tuple[int, int]:
     print(f"\nLayer {layer['id']}: {layer['label']}")
     print(RULE)
     layer_pass = layer_fail = 0
@@ -231,7 +232,7 @@ def print_layer_commands(layer: dict, root: Path) -> None:
         print(f"    python3 {script['path']}{argument_hint}")
 
 
-def run_toolchain_preflight(root: Path, suite_lock: SuiteLock = SuiteLock()) -> bool:
+def run_toolchain_preflight(root: Path, suite_lock: SuiteLock = UNLOCKED) -> bool:
     request = {
         "schema_version": "1.0",
         "request_id": "run-all-py-toolchain",

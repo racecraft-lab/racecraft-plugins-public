@@ -16,7 +16,7 @@ from typing import Any
 
 from ..envelope import diagnostic, response
 from ..path_utils import find_repo_root, is_relative_to, resolves_to_current_python
-from ..suite_checkout_lock import SuiteLock, SuiteLockHeld, SuiteLockUnavailable, hold_suite_lock
+from ..suite_checkout_lock import UNLOCKED, SuiteLock, SuiteLockHeld, SuiteLockUnavailable, hold_suite_lock
 from .gate_response import gate_base_data
 
 CAPTURE_LIMIT_BYTES = 16 * 1024
@@ -463,7 +463,7 @@ def external_layer_script_spec(command_id: str) -> CommandSpec:
     )
 
 
-def run_command(command: CommandSpec, repo_root: Path, suite_lock: SuiteLock = SuiteLock()) -> dict[str, Any]:
+def run_command(command: CommandSpec, repo_root: Path, suite_lock: SuiteLock = UNLOCKED) -> dict[str, Any]:
     if command.internal:
         return run_internal_command(command, repo_root)
     missing = missing_executable(command.argv[0], repo_root)

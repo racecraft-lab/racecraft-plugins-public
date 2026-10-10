@@ -349,10 +349,10 @@ class KilledParentTests(unittest.TestCase):
             "inputs": {"repo_root": ".", "layer": "4", "test_commands": {"layer-4": command}},
         }
 
-    def start(self, argv: list[str], *, stdin: bytes | None = None) -> subprocess.Popen:
+    def start(self, arguments: list[str], *, stdin: bytes | None = None) -> subprocess.Popen:
         # A new session puts the parent and every child it starts in one group the cleanup can kill.
         parent = subprocess.Popen(
-            argv,
+            [sys.executable, *arguments],
             cwd=self.root,
             env=self.environment,
             stdin=subprocess.PIPE,
@@ -400,7 +400,7 @@ class KilledParentTests(unittest.TestCase):
         request = self.root / "request.json"
         request.write_text(json.dumps(self.sleeper_request()), encoding="utf-8")
         parent = self.start(
-            [sys.executable, "-c", CI_WRAPPER_DRIVER, str(REPO_ROOT / "scripts"), str(TESTS_LIB), str(self.root), str(request)]
+            ["-c", CI_WRAPPER_DRIVER, str(REPO_ROOT / "scripts"), str(TESTS_LIB), str(self.root), str(request)]
         )
         self.assert_lock_outlives_killed_parent(parent)
 
@@ -408,7 +408,7 @@ class KilledParentTests(unittest.TestCase):
         environment = dict(self.environment, PYTHONPATH=str(REPO_ROOT / "speckit-pro"))
         self.environment = environment
         parent = self.start(
-            [sys.executable, "-m", "speckit_pro_runner"], stdin=json.dumps(self.sleeper_request()).encode()
+            ["-m", "speckit_pro_runner"], stdin=json.dumps(self.sleeper_request()).encode()
         )
         self.assert_lock_outlives_killed_parent(parent)
 
@@ -416,7 +416,6 @@ class KilledParentTests(unittest.TestCase):
         manifest = {"layers": [self.layer]}
         parent = self.start(
             [
-                sys.executable,
                 "-c",
                 QUICK_SUITE_DRIVER,
                 str(TESTS_LIB),
@@ -432,7 +431,6 @@ class KilledParentTests(unittest.TestCase):
         manifest.write_text(json.dumps({"layers": [self.layer]}), encoding="utf-8")
         parent = self.start(
             [
-                sys.executable,
                 "-c",
                 LAYER_DISPATCHER_DRIVER,
                 str(TESTS_LIB),

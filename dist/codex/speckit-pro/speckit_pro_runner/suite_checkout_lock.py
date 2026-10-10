@@ -79,6 +79,10 @@ class SuiteLock:
         return () if self.descriptor is None else (self.descriptor,)
 
 
+# The handle for code that runs outside any suite lock: children get no marker.
+UNLOCKED = SuiteLock()
+
+
 def _git_dir(checkout: Path) -> Path | None:
     """Return the checkout's git directory, following a worktree ``.git`` file."""
     marker = checkout / ".git"
